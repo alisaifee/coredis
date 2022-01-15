@@ -1,6 +1,15 @@
 Changelog
 =========
 
+v2.0.1
+------
+Release Date: 2022-01-15
+
+Bug Fix:
+
+    * Ensure installation succeeds without gcc
+
+
 v2.0.0
 ------
 Release Date: 2022-01-05
@@ -126,6 +135,7 @@ v1.0.1
     * fix bug of `PubSub.run_in_thread`
     * add more examples
     * change `Script.register` to `Script.execute`
+
 
 
 
