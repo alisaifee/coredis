@@ -1,5 +1,5 @@
-.. |ci| image:: https://github.com/alisaifee/coredis/workflows/CI/badge.svg?branch=master
-    :target: https://github.com/alisaifee/coredis/actions?query=branch%3Amaster+workflow%3ACI
+.. |ci| image:: https://github.com/alisaifee/coredis/workflows/CI/badge.svg?branch=2.x
+    :target: https://github.com/alisaifee/coredis/actions?query=branch%3A2.x+workflow%3ACI
 
 .. |pypi-ver| image::  https://img.shields.io/pypi/v/coredis.svg
     :target: https://pypi.python.org/pypi/coredis/
@@ -12,7 +12,7 @@
 .. |docs| image:: https://readthedocs.org/projects/coredis/badge/?version=stable
    :target: https://coredis.readthedocs.org
 
-.. |codecov| image:: https://codecov.io/gh/alisaifee/coredis/branch/master/graph/badge.svg
+.. |codecov| image:: https://codecov.io/gh/alisaifee/coredis/branch/2.x/graph/badge.svg
    :target: https://codecov.io/gh/alisaifee/coredis
 
 coredis
@@ -99,9 +99,10 @@ To see a full list of supported redis commands refer to the `Command compatibili
 Links
 -----
 
+* `Documentation (2.x) <http://coredis.readthedocs.org/en/2.x>`_
 * `Documentation (Stable) <http://coredis.readthedocs.org/en/stable>`_
 * `Documentation (Latest) <http://coredis.readthedocs.org/en/latest>`_
 * `Changelog <http://coredis.readthedocs.org/en/stable/release_notes.html>`_
 * `aredis <https://github.com/NoneGG/aredis>`_
 
-.. _Command compatibility: https://coredis.readthedocs.org/en/stable/compatibility
+.. _Command compatibility: https://coredis.readthedocs.org/en/2.x/compatibility
