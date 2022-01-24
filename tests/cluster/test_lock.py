@@ -3,12 +3,11 @@ import time
 import pytest
 
 from coredis.exceptions import LockError
-from coredis.lock import ClusterLock
+from coredis.lock import LuaLock
 
 
-@pytest.mark.flaky
 class TestLock:
-    lock_class = ClusterLock
+    lock_class = LuaLock
 
     def get_lock(self, redis, *args, **kwargs):
         kwargs["lock_class"] = self.lock_class
