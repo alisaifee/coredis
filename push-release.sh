@@ -1,8 +1,5 @@
-#!/bin/bash 
+#!/bin/bash
 cur=$(git rev-parse --abbrev-ref HEAD)
-git checkout master 
-git push origin master --tags 
-git checkout stable
-git merge master
-git push origin stable
+git checkout 2.x
+git push origin 2.x --tags
 git checkout $cur
