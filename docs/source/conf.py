@@ -48,15 +48,6 @@ autodoc_default_options = {
 version, _ = release, part = coredis.__version__.split("+")
 
 html_title = f"{project} <small><b style='color: var(--color-brand-primary)'>{{{release}}}</b></small>"
-try:
-    ahead = int(part.rsplit(".")[0])
-    if ahead > 0:
-        html_theme_options["announcement"] = f"""
-        This is a development version. The documentation for the latest version: <b>{release}</b> can be found <a href="/en/stable">here</a>
-        """
-        html_title = f"{project} <small><b style='color: var(--color-brand-primary)'>{{dev}}</b></small>"
-except:
-    pass
 
 add_module_names = False
 autoclass_content = "both"
