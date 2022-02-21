@@ -104,10 +104,10 @@ class ListsCommandMixin(CommandMixin):
 
         return await self.execute_command("LLEN", key)
 
-    async def lpop(self, key):
-        """RemoveS and returns the first item of the list ``key``"""
+    async def lpop(self, key, count=1):
+        """RemoveS and returns the first ``count`` items of the list ``key``"""
 
-        return await self.execute_command("LPOP", key)
+        return await self.execute_command("LPOP", key, count)
 
     async def lpush(self, key, *elements):
         """Pushes ``elements`` onto the head of the list ``key``"""
@@ -161,10 +161,10 @@ class ListsCommandMixin(CommandMixin):
 
         return await self.execute_command("LTRIM", key, start, stop)
 
-    async def rpop(self, key):
-        """Removes and return the last item of the list ``key``"""
+    async def rpop(self, key, count=1):
+        """Removes and return the last ``count`` items of the list ``key``"""
 
-        return await self.execute_command("RPOP", key)
+        return await self.execute_command("RPOP", key, count)
 
     async def rpoplpush(self, source, destination):
         """
