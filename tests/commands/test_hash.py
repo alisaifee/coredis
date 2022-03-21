@@ -4,7 +4,7 @@ from coredis.utils import iterkeys, itervalues
 from tests.conftest import targets
 
 
-@targets("redis_basic", "redis_cluster")
+@targets("redis_basic", "redis_basic_resp3", "redis_cluster")
 @pytest.mark.asyncio()
 class TestHash:
     async def test_hget_and_hset(self, client):
@@ -100,13 +100,13 @@ class TestHash:
         assert await client.hrandfield("key") is None
         await client.hmset("key", {"a": 1, "b": 2, "c": 3, "d": 4, "e": 5})
         assert await client.hrandfield("key") is not None
-        assert len(await client.hrandfield("key", 2)) == 2
+        assert len(await client.hrandfield("key", count=2)) == 2
         # with values
-        assert len(await client.hrandfield("key", 2, True)) == 2
+        assert len(await client.hrandfield("key", count=2, withvalues=True)) == 2
         # without duplications
-        assert len(await client.hrandfield("key", 10)) == 5
+        assert len(await client.hrandfield("key", count=10)) == 5
         # with duplications
-        assert len(await client.hrandfield("key", -10)) == 10
+        assert len(await client.hrandfield("key", count=-10)) == 10
         assert await client.hrandfield("key-not-exist") is None
 
     async def test_hscan(self, client):

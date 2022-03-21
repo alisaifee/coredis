@@ -160,6 +160,7 @@ class RedisConnection:
         max_idle_time: int = 0,
         idle_check_interval: float = 1,
         client_name: Optional[str] = None,
+        protocol_version: Literal[2, 3] = 2,
         **kwargs,
     ):
         if not connection_pool:
@@ -176,6 +177,7 @@ class RedisConnection:
                 "max_idle_time": max_idle_time,
                 "idle_check_interval": idle_check_interval,
                 "client_name": client_name,
+                "protocol_version": protocol_version,
             }
             # based on input, setup appropriate connection args
 
@@ -230,8 +232,7 @@ class ResponseParser:
 
         if command_name in self.response_callbacks:
             callback = self.response_callbacks[command_name]
-
-            return callback(response, **options)
+            return callback(response, version=connection.protocol_version, **options)
 
         return response
 
@@ -835,6 +836,7 @@ class Redis(
         max_idle_time: float = ...,
         idle_check_interval: float = ...,
         client_name: Optional[str] = ...,
+        protocol_version: Literal[2, 3] = 2,
         **kwargs,
     ):
         ...
@@ -865,6 +867,7 @@ class Redis(
         max_idle_time: float = ...,
         idle_check_interval: float = ...,
         client_name: Optional[str] = ...,
+        protocol_version: Literal[2, 3] = 2,
         **kwargs,
     ):
         ...
@@ -894,6 +897,7 @@ class Redis(
         max_idle_time: float = 0,
         idle_check_interval: float = 1,
         client_name: Optional[str] = None,
+        protocol_version: Literal[2, 3] = 2,
         **kwargs,
     ):
         super(Redis, self).__init__(
@@ -919,6 +923,7 @@ class Redis(
             max_idle_time=max_idle_time,
             idle_check_interval=idle_check_interval,
             client_name=client_name,
+            protocol_version=protocol_version,
         )
         self._use_lua_lock: Optional[bool] = None
 

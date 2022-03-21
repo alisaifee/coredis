@@ -7,7 +7,7 @@ from coredis.utils import iteritems
 from tests.conftest import targets
 
 
-@targets("redis_basic", "redis_cluster")
+@targets("redis_basic", "redis_basic_resp3", "redis_cluster")
 @pytest.mark.asyncio()
 class TestString:
     async def test_append(self, client):

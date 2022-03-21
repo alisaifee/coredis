@@ -7,6 +7,14 @@ VALID_ZADD_OPTIONS = {"NX", "XX", "CH", "INCR"}
 
 
 class ZMembersOrScoredMembers(ParametrizedCallback):
+    def transform_3(
+        self, response: Any, **kwargs: Any
+    ) -> Tuple[Union[AnyStr, ScoredMember], ...]:
+        if kwargs.get("withscores"):
+            return tuple(ScoredMember(*v) for v in response)
+        else:
+            return tuple(response)
+
     def transform(
         self, response: Any, **kwargs: Any
     ) -> Tuple[Union[AnyStr, ScoredMember], ...]:
@@ -14,13 +22,19 @@ class ZMembersOrScoredMembers(ParametrizedCallback):
             return ()
         elif kwargs.get("withscores"):
             it = iter(response)
-
             return tuple(ScoredMember(*v) for v in zip(it, map(float, it)))
         else:
             return tuple(response)
 
 
 class ZSetScorePairCallback(ParametrizedCallback):
+    def transform_3(
+        self, response: Any, **kwargs: Any
+    ) -> Optional[Union[ScoredMember, ScoredMembers]]:
+        if not (kwargs.get("withscores") or kwargs.get("count")):
+            return ScoredMember(*response)
+        return tuple(ScoredMember(*v) for v in response)
+
     def transform(
         self, response: Any, **kwargs: Any
     ) -> Optional[Union[ScoredMember, ScoredMembers]]:
@@ -60,6 +74,11 @@ class ZScanCallback(SimpleCallback):
 
 
 class ZRandMemberCallback(ParametrizedCallback):
+    def transform_3(self, response: Any, **kwargs: Any) -> Union[AnyStr, ScoredMembers]:
+        if not response or not kwargs.get("withscores"):
+            return response
+        return tuple(ScoredMember(*v) for v in response)
+
     def transform(self, response: Any, **kwargs: Any) -> Union[AnyStr, ScoredMembers]:
         if not response or not kwargs.get("withscores"):
             return response
@@ -74,6 +93,11 @@ class BZPopCallback(SimpleCallback):
 
 
 class ZAddCallback(ParametrizedCallback):
+    def transform_3(
+        self, response: Any, *args: Any, **kwargs: Any
+    ) -> Union[int, float]:
+        return response
+
     def transform(self, response: Any, *args: Any, **kwargs: Any) -> Union[int, float]:
         if kwargs.get("condition"):
             return float(response)

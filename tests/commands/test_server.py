@@ -6,7 +6,7 @@ from pytest import approx
 from tests.conftest import targets
 
 
-@targets("redis_basic")
+@targets("redis_basic", "redis_basic_resp3")
 @pytest.mark.asyncio()
 class TestServer:
     async def slowlog(self, client):
@@ -22,6 +22,7 @@ class TestServer:
         await client.config_set({"slowlog-log-slower-than": old_slower_than_value})
         await client.config_set({"slowlog-max-len": old_max_legnth_value})
 
+    @pytest.mark.nohiredis("6.2.0")
     async def test_commands_get(self, client):
         commands = await client.command()
         assert commands["get"]
@@ -29,6 +30,7 @@ class TestServer:
         assert commands["get"]["name"] == "get"
         assert commands["get"]["arity"] == 2
 
+    @pytest.mark.nohiredis("6.2.0")
     async def test_command_info(self, client):
         commands = await client.command_info("get")
         assert list(commands.keys()) == ["get"]
@@ -128,7 +130,7 @@ class TestServer:
         assert "Redis ver." in lolwut
 
     async def test_memory_doctor(self, client):
-        assert "Hi Sam" in (await client.memory_doctor())
+        assert "Sam" in (await client.memory_doctor())
 
     async def test_memory_malloc_stats(self, client):
         assert "jemalloc" in (await client.memory_malloc_stats())
