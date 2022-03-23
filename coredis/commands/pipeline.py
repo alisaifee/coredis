@@ -78,14 +78,14 @@ def wrap_pipeline_method(
 
     wrapper.__annotations__ = wrapper.__annotations__.copy()
     wrapper.__annotations__["return"] = kls
-    wrapper.__doc__ = f"""Pipeline variant that does not execute immediately
+    wrapper.__doc__ = f"""{wrapper.__doc__ or ''}
+
+Pipeline variant that does not execute immediately
 and instead returns the instance of :class:`{kls.__name__}` itself.
 
-To fetch the return values call :meth:`{kls.__name__}.execute` to fetch responses for all commands
-executed in the pipeline.
-
-{wrapper.__doc__}
-    """
+To fetch the return values call :meth:`{kls.__name__}.execute` to fetch responses
+for all commands executed in the pipeline.
+"""
     return wrapper
 
 

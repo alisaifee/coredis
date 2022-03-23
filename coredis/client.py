@@ -6,8 +6,6 @@ from abc import ABCMeta
 from ssl import SSLContext
 from typing import overload
 
-from deprecated.sphinx import versionadded
-
 from coredis.commands import ClusterCommandConfig, CommandGroup, redis_command
 from coredis.commands.core import CoreCommands
 from coredis.commands.extra import ExtraCommandMixin
@@ -59,14 +57,21 @@ from coredis.utils import (
     NodeFlag,
     blocked_command,
     clusterdown_wrapper,
+    deprecated,
     first_key,
     iteritems,
     nativestr,
+    versionadded,
 )
 from coredis.validators import mutually_inclusive_parameters
 
 P = ParamSpec("P")
 R = TypeVar("R")
+
+CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE = """Custom implementations for redis
+cluster will be removed in version 3.2.0 and will be replaced with the implementations
+in :class:`coredis.Redis`
+"""
 
 
 class ClusterMeta(ABCMeta):
@@ -92,8 +97,8 @@ class ClusterMeta(ABCMeta):
                     kls.NODES_FLAGS[cmd.command] = cmd.cluster.flag
                     doc_addition = f"""
 .. admonition:: Cluster note
-   
-   The command will be run on {cls.NODE_FLAG_DOC_MAPPING[cmd.cluster.flag]} 
+
+   The command will be run on {cls.NODE_FLAG_DOC_MAPPING[cmd.cluster.flag]}
                     """
                 if cmd.response_callback:
                     kls.RESPONSE_CALLBACKS[cmd.command] = cmd.response_callback
@@ -107,6 +112,19 @@ class ClusterMeta(ABCMeta):
                     ).pop()
                 if cmd.readonly:
                     ConnectionPool.READONLY_COMMANDS.add(cmd.command)
+            if doc_addition:
+
+                def __w(func: Callable[P, R]) -> Callable[P, R]:
+                    @functools.wraps(func)
+                    def _w(*a: P.args, **k: P.kwargs) -> R:
+                        return func(*a, **k)
+
+                    return _w
+
+                __w.__doc__ = f"""{method.__doc__}
+{doc_addition}
+                """
+                setattr(kls, name, __w(method))
         return kls
 
 
@@ -373,6 +391,7 @@ class AbstractRedis(
 
 
 class AbstractRedisCluster(AbstractRedis[AnyStr]):
+    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
         "RENAME",
         group=CommandGroup.GENERIC,
@@ -382,9 +401,10 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         """
         Rename key ``src`` to ``dst``
 
-        Cluster impl:
-            This operation is no longer atomic because each key must be querried
-            then set in separate calls because they maybe will change cluster node
+        .. admonition:: Cluster note
+
+           This operation is no longer atomic because each key must be queried
+           then set in separate calls because they maybe will change cluster node
         """
 
         if key == newkey:
@@ -406,6 +426,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
 
         return True
 
+    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command("DEL", group=CommandGroup.GENERIC)
     async def delete(self, keys: Iterable[KeyT]) -> int:
         """
@@ -418,6 +439,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
 
         return count
 
+    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
         "RENAMENX",
         group=CommandGroup.GENERIC,
@@ -434,6 +456,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
 
         return False
 
+    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @mutually_inclusive_parameters("offset", "count")
     @redis_command(
         "SORT", group=CommandGroup.GENERIC, cluster=ClusterCommandConfig(pipeline=False)
@@ -577,16 +600,17 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
 
         return [x[0] for x in sorted(sorted_data, key=lambda x: x[1])]
 
+    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command("MGET", readonly=True, group=CommandGroup.STRING)
     async def mget(self, keys: Iterable[KeyT]) -> Tuple[Optional[AnyStr], ...]:
         """
         Returns values ordered identically to ``keys``
 
-        Cluster impl:
-            Itterate all keys and send GET for each key.
-            This will go alot slower than a normal mget call in Redis.
+        .. admonition:: Cluster note
 
-            Operation is no longer atomic.
+           Iterate all keys and send GET for each key.
+           This will go alot slower than a normal mget call in Redis.
+           **Operation is no longer atomic**
         """
         res = list()
 
@@ -595,6 +619,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
 
         return tuple(res)
 
+    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
         "MSET", group=CommandGroup.STRING, cluster=ClusterCommandConfig(pipeline=False)
     )
@@ -603,10 +628,10 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         Sets key/values based on a mapping. Mapping can be supplied as a single
         dictionary argument or as kwargs.
 
-        Cluster impl:
-            Itterate over all items and do SET on each (k,v) pair
+        .. admonition:: Cluster note
 
-            Operation is no longer atomic.
+           Iterate over all items and do SET on each (k,v) pair.
+           **Operation is no longer atomic**
         """
 
         for pair in iteritems(key_values):
@@ -614,6 +639,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
 
         return True
 
+    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
         "MSETNX",
         group=CommandGroup.STRING,
@@ -625,10 +651,11 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         Mapping can be supplied as a single dictionary argument or as kwargs.
         Returns a boolean indicating if the operation was successful.
 
-        Clutser impl:
-            Itterate over all items and do GET to determine if all keys do not exists.
+        .. admonition:: Cluster note
 
-            If true then call mset() on all keys.
+            Iterate over all items and do GET to determine if all keys do not exists.
+            If true then call mset() on all keysu.
+            **Operation is no longer atomic**
         """
 
         for k, _ in key_values.items():
@@ -637,6 +664,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
 
         return await self.mset(key_values)
 
+    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
         "SDIFF",
         readonly=True,
@@ -647,8 +675,9 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         """
         Returns the difference of sets specified by ``keys``
 
-        Cluster impl:
-            Query all keys and diff all sets and return result
+        .. admonition:: Cluster note
+
+           Query all keys and diff all sets in memory and return the result
         """
         _keys = list(keys)
         res = await self.smembers(_keys[0])
@@ -658,6 +687,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
 
         return res
 
+    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
         "SDIFFSTORE",
         group=CommandGroup.SET,
@@ -669,8 +699,9 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         set named ``destination``.  Returns the number of keys in the new set.
         Overwrites dest key if it exists.
 
-        Cluster impl:
-            Use sdiff() --> Delete dest key --> store result in dest key
+        .. admonition:: Cluster note
+
+           Use sdiff() --> Delete dest key --> store result in dest key
         """
         res = await self.sdiff(keys)
         await self.delete([destination])
@@ -680,6 +711,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
 
         return await self.sadd(destination, res)
 
+    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
         "SINTER",
         readonly=True,
@@ -690,8 +722,9 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         """
         Returns the intersection of sets specified by ``keys``
 
-        Cluster impl:
-            Query all keys, intersection and return result
+        .. admonition:: Cluster note
+
+           Query all keys, perform intersection in memory and return the result
         """
         _keys = list(keys)
         res = await self.smembers(_keys[0])
@@ -701,6 +734,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
 
         return res
 
+    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
         "SINTERSTORE",
         group=CommandGroup.SET,
@@ -711,8 +745,9 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         Stores the intersection of sets specified by ``keys`` into a new
         set named ``destination``.  Returns the number of keys in the new set.
 
-        Cluster impl:
-            Use sinter() --> Delete dest key --> store result in dest key
+        .. admonition:: Cluster note
+
+           Uses sinter() --> Delete dest key --> store result in dest key
         """
         res = await self.sinter(keys)
         await self.delete([destination])
@@ -724,6 +759,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         else:
             return 0
 
+    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
         "SMOVE", group=CommandGroup.SET, cluster=ClusterCommandConfig(pipeline=False)
     )
@@ -731,8 +767,10 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         """
         Moves ``member`` from set ``source`` to set ``destination`` atomically
 
-        Cluster impl:
-            SMEMBERS --> SREM --> SADD. Function is no longer atomic.
+        .. admonition:: Cluster note
+
+           Uses smembers() --> srem() --> sadd.
+           **Function is no longer atomic**
         """
         res = await self.srem(source, [member])
 
@@ -743,6 +781,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
 
         return bool(res)
 
+    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
         "SUNION",
         readonly=True,
@@ -753,10 +792,11 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         """
         Returns the union of sets specified by ``keys``
 
-        Cluster impl:
-            Query all keys, union and return result
+        .. admonition:: Cluster note
 
-            Operation is no longer atomic.
+           Query all keys, perform union in memory and return result
+
+           **Operation is no longer atomic**
         """
         _keys = list(keys)
         res = await self.smembers(_keys[0])
@@ -766,6 +806,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
 
         return res
 
+    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
         "SUNIONSTORE",
         group=CommandGroup.SET,
@@ -776,16 +817,18 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         Stores the union of sets specified by ``keys`` into a new
         set named ``destination``.  Returns the number of keys in the new set.
 
-        Cluster impl:
-            Use sunion() --> Dlete dest key --> store result in dest key
+        .. admonition:: Cluster note
 
-            Operation is no longer atomic.
+           Use sunion() --> delete() dest key --> store result in dest key
+
+           **Operation is no longer atomic**
         """
         res = await self.sunion(keys)
         await self.delete([destination])
 
         return await self.sadd(destination, res)
 
+    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
         "BRPOPLPUSH",
         version_deprecated="6.2.0",
@@ -803,10 +846,11 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         seconds elapse, whichever is first. A ``timeout`` value of 0 blocks
         forever.
 
-        Cluster impl:
-            Call brpop() then send the result into lpush()
+        .. admonition:: Cluster note
 
-            Operation is no longer atomic.
+           Calls brpop() then sends the result into lpush()
+
+           **Operation is no longer atomic**
         """
         try:
             values = await self.brpop([source], timeout=timeout)
@@ -819,6 +863,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
 
         return values[1]
 
+    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
         "RPOPLPUSH",
         version_deprecated="6.2.0",
@@ -830,10 +875,11 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         RPOP a value off of the ``source`` list and atomically LPUSH it
         on to the ``destination`` list.  Returns the value.
 
-        Cluster impl:
-            Call rpop() then send the result into lpush()
+        .. admonition:: Cluster note
 
-            Operation is no longer atomic.
+           Calls rpop() then send the result into lpush()
+
+           **Operation is no longer atomic**
         """
         value = await self.rpop(source)
 

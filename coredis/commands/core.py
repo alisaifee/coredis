@@ -2,8 +2,6 @@ import datetime
 import itertools
 from typing import overload
 
-from deprecated.sphinx import deprecated, versionadded
-
 from coredis.commands import (
     ClusterCommandConfig,
     CommandGroup,
@@ -114,6 +112,7 @@ from coredis.utils import (
     NodeFlag,
     b,
     defaultvalue,
+    deprecated,
     dict_to_flat_list,
     iteritems,
     normalized_milliseconds,
@@ -124,6 +123,7 @@ from coredis.utils import (
     pairs_to_ordered_dict,
     quadruples_to_dict,
     tuples_to_flat_list,
+    versionadded,
 )
 from coredis.validators import (
     mutually_exclusive_parameters,
@@ -304,22 +304,23 @@ class CoreCommands(CommandMixin[AnyStr]):
     @overload
     async def lcs(
         self,
-        key1: Union[str, bytes],
-        key2: Union[str, bytes],
+        key1: KeyT,
+        key2: KeyT,
     ) -> AnyStr:
         ...
 
     @overload
     async def lcs(
-        self, key1: Union[str, bytes], key2: Union[str, bytes], len_: Literal[True]
+        self, key1: Union[str, bytes], key2: Union[str, bytes], *, len_: Literal[True]
     ) -> int:
         ...
 
     @overload
     async def lcs(
         self,
-        key1: Union[str, bytes],
-        key2: Union[str, bytes],
+        key1: KeyT,
+        key2: KeyT,
+        *,
         idx: Literal[True],
         len_: Optional[bool] = ...,
         minmatchlen: Optional[int] = ...,
@@ -337,8 +338,8 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def lcs(
         self,
-        key1: Union[str, bytes],
-        key2: Union[str, bytes],
+        key1: KeyT,
+        key2: KeyT,
         *,
         len_: Optional[bool] = None,
         idx: Optional[bool] = None,
@@ -639,8 +640,6 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def cluster_countkeysinslot(self, slot: int) -> int:
         """
         Return the number of local keys in the specified hash slot
-
-        Send to node based on specified slot_id
         """
 
         return await self.execute_command("CLUSTER COUNTKEYSINSLOT", slot, slot_id=slot)

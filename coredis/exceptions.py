@@ -175,3 +175,9 @@ class AuthorizationError(RedisError):
     """
     Base class for authorization errors
     """
+
+
+class FunctionError(RedisError):
+    """
+    Raised for errors relating to redis functions
+    """

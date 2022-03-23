@@ -1,5 +1,6 @@
 import weakref
 
+from coredis.exceptions import FunctionError
 from coredis.typing import (
     TYPE_CHECKING,
     Any,
@@ -74,7 +75,11 @@ class Library:
         self._functions.clear()
         if self._code:
             await self.client.function_load(self._engine, self._name, self._code)
-        library = (await self.client.function_list(self._name)).get(self._name, {})
+        library = (await self.client.function_list(self._name)).get(self._name)
+
+        if not library:
+            raise FunctionError(f"No library found for {self._name}")
+
         for name, function in library["functions"].items():
             name = nativestr(name)
             self._functions[name] = Function(self.client, self._name, name)

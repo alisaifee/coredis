@@ -150,6 +150,13 @@ Cluster
 .. autoexception:: RedisClusterException
    :no-inherited-members:
 
+Scripting Errors
+----------------
+.. autoexception:: NoScriptError
+   :no-inherited-members:
+.. autoexception:: FunctionError
+   :no-inherited-members:
+
 General Exceptions
 -------------------
 .. autoexception:: BusyLoadingError
@@ -167,8 +174,6 @@ General Exceptions
 .. autoexception:: LockError
    :no-inherited-members:
 .. autoexception:: NoKeyError
-   :no-inherited-members:
-.. autoexception:: NoScriptError
    :no-inherited-members:
 .. autoexception:: PubSubError
    :no-inherited-members:

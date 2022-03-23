@@ -1,26 +1,33 @@
 import datetime
 import enum
+import functools
 import time
 from collections import UserDict
 from functools import wraps
-from typing import (
+
+from deprecated.sphinx import deprecated as _deprecated
+from deprecated.sphinx import versionadded as _versionadded
+from frozendict import frozendict
+
+from coredis.exceptions import ClusterDownError, RedisClusterException
+from coredis.typing import (
+    Any,
     Callable,
+    Coroutine,
     Dict,
     Iterable,
     Iterator,
     List,
     Mapping,
     Optional,
+    OrderedDict,
+    ParamSpec,
     Tuple,
     TypeVar,
     Union,
 )
 
-from frozendict import frozendict
-
-from coredis.exceptions import ClusterDownError, RedisClusterException
-from coredis.typing import OrderedDict
-
+P = ParamSpec("P")
 T = TypeVar("T")
 U = TypeVar("U")
 V = TypeVar("V")
@@ -102,7 +109,7 @@ def normalized_time_milliseconds(value: Union[int, datetime.datetime]) -> int:
     return value
 
 
-# ++++++++++ response callbacks ++++++++++++++
+# ++++++++++ response callback helpers ++++++++++++++
 def iteritems(x: Mapping[T, U]) -> Iterator[Tuple[T, U]]:
     return iter(x.items())
 
@@ -201,7 +208,7 @@ def dict_to_flat_list(mapping: Mapping[T, U], reverse=False) -> List[Union[T, U]
     return ret
 
 
-# ++++++++++ result callbacks (cluster)++++++++++++++
+# ++++++++++ result callbacks helpers ++++++++++++++
 def merge_result(res):
     """
     Merges all items in `res` into a list.
@@ -274,6 +281,44 @@ def clusterdown_wrapper(func):
         raise ClusterDownError("CLUSTERDOWN error. Unable to rebuild the cluster")
 
     return inner
+
+
+def versionadded(
+    version: str,
+    reason: str = "",
+) -> Callable[
+    [Callable[P, Coroutine[Any, Any, T]]], Callable[P, Coroutine[Any, Any, T]]
+]:
+    def wrapper(
+        func: Callable[P, Coroutine[Any, Any, T]]
+    ) -> Callable[P, Coroutine[Any, Any, T]]:
+        @_versionadded(reason=reason, version=version)
+        @functools.wraps(func)
+        async def wrapped(*args: P.args, **kwargs: P.kwargs):
+            return await func(*args, **kwargs)
+
+        return wrapped
+
+    return wrapper
+
+
+def deprecated(
+    version: str,
+    reason: str = "",
+) -> Callable[
+    [Callable[P, Coroutine[Any, Any, T]]], Callable[P, Coroutine[Any, Any, T]]
+]:
+    def wrapper(
+        func: Callable[P, Coroutine[Any, Any, T]]
+    ) -> Callable[P, Coroutine[Any, Any, T]]:
+        @_deprecated(reason=reason, version=version, action="once")
+        @functools.wraps(func)
+        async def wrapped(*args: P.args, **kwargs: P.kwargs):
+            return await func(*args, **kwargs)
+
+        return wrapped
+
+    return wrapper
 
 
 if not _C_EXTENSION_SPEEDUP:
