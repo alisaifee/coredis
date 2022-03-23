@@ -572,6 +572,23 @@ class TestGeo:
         assert await client.georadius(
             "barcelona", 2.191, 41.433, 3000, count=1, unit=PureToken.M
         ) == ("place1",)
+
+    @pytest.mark.min_server_version("6.2.0")
+    async def test_georadius_count_any(self, client):
+        values = [
+            (2.1909389952632, 41.433791470673, "place1"),
+            (
+                2.1873744593677,
+                41.406342043777,
+                "place2",
+            ),
+        ]
+
+        await client.geoadd("barcelona", values)
+        assert await client.georadius(
+            "barcelona", 2.191, 41.433, 3000, count=1, unit=PureToken.M
+        ) == ("place1",)
+
         assert (
             len(
                 await client.georadius(

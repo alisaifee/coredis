@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import functools
 import inspect
 from abc import ABCMeta
 from ssl import SSLContext
@@ -72,16 +73,28 @@ class ClusterMeta(ABCMeta):
     NODES_FLAGS: Dict[str, NodeFlag]
     RESPONSE_CALLBACKS: Dict[str, Callable]
     RESULT_CALLBACKS: Dict[str, Callable]
+    NODE_FLAG_DOC_MAPPING = {
+        NodeFlag.PRIMARIES: "all primaries",
+        NodeFlag.REPLICAS: "all replicas",
+        NodeFlag.RANDOM: "a random node",
+        NodeFlag.ALL: "all nodes",
+        NodeFlag.SLOT_ID: "a node selected by :paramref:`slot`",
+    }
 
     def __new__(cls, name, bases, dct):
         kls = super(ClusterMeta, cls).__new__(cls, name, bases, dct)
         methods = dict(k for k in inspect.getmembers(kls) if inspect.isfunction(k[1]))
 
         for name, method in methods.items():
+            doc_addition = ""
             if cmd := getattr(method, "__coredis_command", None):
                 if cmd.cluster.flag:
                     kls.NODES_FLAGS[cmd.command] = cmd.cluster.flag
-
+                    doc_addition = f"""
+.. admonition:: Cluster note
+   
+   The command will be run on {cls.NODE_FLAG_DOC_MAPPING[cmd.cluster.flag]} 
+                    """
                 if cmd.response_callback:
                     kls.RESPONSE_CALLBACKS[cmd.command] = cmd.response_callback
                 if cmd.cluster.multi_node:
