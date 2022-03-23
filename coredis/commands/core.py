@@ -1063,10 +1063,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             pieces.append(PureToken.CHANGE)
 
         pieces.extend(tuples_to_flat_list(longitude_latitude_members))
-
-        return await self.execute_command(
-            "GEOADD", key, *tuples_to_flat_list(longitude_latitude_members)
-        )
+        return await self.execute_command("GEOADD", *pieces)
 
     @redis_command(
         "GEODIST",
@@ -1086,7 +1083,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Returns the distance between two members of a geospatial index
 
-        :return:  Distance in the unit specified by :paramref:`unit`
+        :return: Distance in the unit specified by :paramref:`unit`
         """
         pieces: CommandArgList = [key, member1, member2]
 
@@ -1214,6 +1211,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @mutually_exclusive_parameters("store", "storedist")
     @mutually_exclusive_parameters("store", ("withdist", "withhash", "withcoord"))
     @mutually_exclusive_parameters("storedist", ("withdist", "withhash", "withcoord"))
+    @mutually_inclusive_parameters("any_", leaders=("count",))
     @redis_command(
         "GEORADIUS",
         version_deprecated="6.2.0",
@@ -1269,6 +1267,10 @@ class CoreCommands(CommandMixin[AnyStr]):
             any_=any_,
         )
 
+    @mutually_exclusive_parameters("store", "storedist")
+    @mutually_exclusive_parameters("store", ("withdist", "withhash", "withcoord"))
+    @mutually_exclusive_parameters("storedist", ("withdist", "withhash", "withcoord"))
+    @mutually_inclusive_parameters("any_", leaders=("count",))
     @redis_command(
         "GEORADIUSBYMEMBER",
         version_deprecated="6.2.0",
@@ -1326,9 +1328,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         if kwargs["unit"]:
             pieces.append(kwargs["unit"].lower())
 
-        if kwargs["any_"] and kwargs["count"] is None:
-            raise DataError("``any`` can't be provided without ``count``")
-
         for arg_name, byte_repr in (
             ("withdist", PureToken.WITHDIST),
             ("withcoord", PureToken.WITHCOORD),
@@ -1346,9 +1345,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         if kwargs["order"]:
             pieces.append(kwargs["order"])
 
-        if kwargs["store"] and kwargs["storedist"]:
-            raise DataError("GEORADIUS store and storedist cant be set" " together")
-
         if kwargs["store"]:
             pieces.extend(["STORE", kwargs["store"]])
 
@@ -1360,6 +1356,8 @@ class CoreCommands(CommandMixin[AnyStr]):
     @mutually_inclusive_parameters("longitude", "latitude")
     @mutually_inclusive_parameters("radius", "circle_unit")
     @mutually_inclusive_parameters("width", "height", "box_unit")
+    @mutually_inclusive_parameters("any_", leaders=("count",))
+    @mutually_exclusive_parameters("member", ("longitude", "latitude"))
     @redis_command(
         "GEOSEARCH",
         readonly=True,
@@ -1396,8 +1394,6 @@ class CoreCommands(CommandMixin[AnyStr]):
            is simply the names of places matched (optionally ordered if `order` is provided).
          - If any of the ``with{coord,dist,hash}`` options are set each result entry contains
            `(name, distance, geohash, coordinate pair)``
-         - If a key for ``store`` or ``storedist`` is provided, the return is the count of places
-           stored.
         """
 
         return await self._geosearchgeneric(
@@ -1423,6 +1419,8 @@ class CoreCommands(CommandMixin[AnyStr]):
     @mutually_inclusive_parameters("longitude", "latitude")
     @mutually_inclusive_parameters("radius", "circle_unit")
     @mutually_inclusive_parameters("width", "height", "box_unit")
+    @mutually_inclusive_parameters("any_", leaders=("count",))
+    @mutually_exclusive_parameters("member", ("longitude", "latitude"))
     @redis_command("GEOSEARCHSTORE", version_introduced="6.2.0", group=CommandGroup.GEO)
     async def geosearchstore(
         self,
@@ -1445,7 +1443,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         any_: Optional[bool] = None,
         storedist: Optional[bool] = None,
     ) -> int:
-        """ """
+        """
+        :return: The number of elements stored in the resulting set
+        """
 
         return await self._geosearchgeneric(
             "GEOSEARCHSTORE",
@@ -1471,39 +1471,20 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def _geosearchgeneric(self, command, *args, **kwargs):
         pieces = list(args)
 
-        if kwargs["member"] is None:
-            if kwargs["longitude"] is None or kwargs["latitude"] is None:
-                raise DataError(
-                    "GEOSEARCH must have member or" " longitude and latitude"
-                )
-
         if kwargs["member"]:
-            if kwargs["longitude"] or kwargs["latitude"]:
-                raise DataError(
-                    "GEOSEARCH member and longitude or latitude" " cant be set together"
-                )
             pieces.extend(["FROMMEMBER", kwargs["member"]])
 
         if kwargs["longitude"] and kwargs["latitude"]:
             pieces.extend(["FROMLONLAT", kwargs["longitude"], kwargs["latitude"]])
 
         # BYRADIUS or BYBOX
-
-        if kwargs["radius"] is None:
-            if kwargs["width"] is None or kwargs["height"] is None:
-                raise DataError("GEOSEARCH must have radius or" " width and height")
-
         if kwargs["unit"] is None:
             raise DataError("GEOSEARCH must have unit")
 
-        if kwargs["unit"].lower() not in ("m", "km", "mi", "ft"):
+        if kwargs["unit"].lower() not in {"m", "km", "mi", "ft"}:
             raise DataError("GEOSEARCH invalid unit")
 
         if kwargs["radius"]:
-            if kwargs["width"] or kwargs["height"]:
-                raise DataError(
-                    "GEOSEARCH radius and width or height" " cant be set together"
-                )
             pieces.extend(["BYRADIUS", kwargs["radius"], kwargs["unit"].lower()])
 
         if kwargs["width"] and kwargs["height"]:
@@ -1517,19 +1498,15 @@ class CoreCommands(CommandMixin[AnyStr]):
             )
 
         # sort
-
         if kwargs["order"]:
             pieces.append(kwargs["order"])
 
         # count any
-
         if kwargs["count"]:
             pieces.extend(["COUNT", kwargs["count"]])
 
             if kwargs["any_"]:
                 pieces.append(PureToken.ANY)
-        elif kwargs["any_"]:
-            raise DataError("GEOSEARCH ``any`` can't be provided " "without count")
 
         # other properties
 

@@ -20,6 +20,50 @@ class TestGeo:
         assert await client.geoadd("barcelona", values) == 2
         assert await client.zcard("barcelona") == 2
 
+    @pytest.mark.min_server_version("6.2.0")
+    async def test_geoadd_conditional(self, client):
+        values = [
+            (2.1909389952632, 41.433791470673, "place1"),
+            (
+                2.1873744593677,
+                41.406342043777,
+                "place2",
+            ),
+        ]
+
+        assert await client.geoadd("barcelona", values) == 2
+        assert await client.zcard("barcelona") == 2
+        assert await client.geoadd("barcelona", values, change=True) == 0
+        assert (
+            await client.geoadd(
+                "barcelona",
+                [
+                    (2.2909389952632, 41.533791470673, "place1"),
+                    (2.1686, 41.3871, "place3"),
+                ],
+                condition=PureToken.XX,
+                change=True,
+            )
+            == 1
+        )
+        assert set(await client.zrange("barcelona", 0, 10)) == {"place1", "place2"}
+        assert (
+            await client.geoadd(
+                "barcelona",
+                [
+                    (2.2909389952632, 41.533791470673, "place1"),
+                    (2.1686, 41.3871, "place3"),
+                ],
+                condition=PureToken.NX,
+            )
+            == 1
+        )
+        assert set(await client.zrange("barcelona", 0, 10)) == {
+            "place1",
+            "place2",
+            "place3",
+        }
+
     async def test_geodist(self, client):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
@@ -288,39 +332,46 @@ class TestGeo:
     async def test_geosearch_negative(self, client):
         # not specifying member nor longitude and latitude
         with pytest.raises(DataError):
-            assert await client.geosearch("barcelona")
+            await client.geosearch("barcelona")
         # specifying member and longitude and latitude
-        with pytest.raises(DataError):
-            assert await client.geosearch(
-                "barcelona", member="Paris", longitude=2, latitude=1
-            )
+        with pytest.raises(CommandSyntaxError):
+            await client.geosearch("barcelona", member="Paris", longitude=2, latitude=1)
         # specifying one of longitude and latitude
         with pytest.raises(CommandSyntaxError):
-            assert await client.geosearch("barcelona", longitude=2)
+            await client.geosearch("barcelona", longitude=2)
         with pytest.raises(CommandSyntaxError):
-            assert await client.geosearch("barcelona", latitude=2)
+            await client.geosearch("barcelona", latitude=2)
 
         # not specifying radius nor width and height
         with pytest.raises(DataError):
-            assert await client.geosearch("barcelona", member="Paris")
+            await client.geosearch("barcelona", member="Paris")
         # specifying radius and width and height
         with pytest.raises(CommandSyntaxError):
-            assert await client.geosearch(
+            await client.geosearch(
                 "barcelona", member="Paris", radius=3, width=2, height=1
             )
         with pytest.raises(CommandSyntaxError):
-            assert await client.geosearch(
+            await client.geosearch(
                 "barcelona", member="Paris", radius=3, width=2, height=1
             )
         # specifying one of width and height
         with pytest.raises(CommandSyntaxError):
-            assert await client.geosearch("barcelona", member="Paris", width=2)
+            await client.geosearch("barcelona", member="Paris", width=2)
         with pytest.raises(CommandSyntaxError):
-            assert await client.geosearch("barcelona", member="Paris", height=2)
+            await client.geosearch("barcelona", member="Paris", height=2)
+        # missing units
+        with pytest.raises(CommandSyntaxError):
+            await client.geosearch(
+                "barcelona",
+                member="place1",
+                radius=10,
+            ) == ("place1",)
+        with pytest.raises(CommandSyntaxError):
+            await client.geosearch("barcelona", member="place1", width=2, height=1)
 
         # use any without count
-        with pytest.raises(DataError):
-            assert await client.geosearch(
+        with pytest.raises(CommandSyntaxError):
+            await client.geosearch(
                 "barcelona",
                 member="place3",
                 radius=100,
@@ -492,6 +543,21 @@ class TestGeo:
             == ()
         )
 
+        with pytest.raises(CommandSyntaxError):
+            await client.georadius(
+                "barcelona", 2, 1, 1, unit=PureToken.KM, withdist=True, store="somehere"
+            )
+        with pytest.raises(CommandSyntaxError):
+            await client.georadius(
+                "barcelona",
+                2,
+                1,
+                1,
+                unit=PureToken.KM,
+                withdist=True,
+                storedist="somehere",
+            )
+
     async def test_georadius_count(self, client):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
@@ -506,6 +572,24 @@ class TestGeo:
         assert await client.georadius(
             "barcelona", 2.191, 41.433, 3000, count=1, unit=PureToken.M
         ) == ("place1",)
+        assert (
+            len(
+                await client.georadius(
+                    "barcelona",
+                    2.191,
+                    41.433,
+                    3000,
+                    count=1,
+                    any_=True,
+                    unit=PureToken.M,
+                )
+            )
+            == 1
+        )
+        with pytest.raises(CommandSyntaxError):
+            assert await client.georadius(
+                "barcelona", 2.191, 41.433, 3000, any_=True, unit=PureToken.M
+            ) == ("place1",)
 
     async def test_georadius_sort(self, client):
         values = [
