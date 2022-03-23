@@ -39,17 +39,6 @@ RUNTIME_TYPECHECKS = False
 if os.environ.get("COREDIS_RUNTIME_CHECKS"):
     try:
         import beartype
-        from beartype.typing import (  # noqa: F811
-            Dict,
-            Iterable,
-            Iterator,
-            List,
-            Mapping,
-            OrderedDict,
-            Set,
-            Tuple,
-            TypedDict,
-        )
 
         RUNTIME_TYPECHECKS = True
     except ImportError:  # noqa

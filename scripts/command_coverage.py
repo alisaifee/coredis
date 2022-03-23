@@ -2,8 +2,10 @@ import collections
 import datetime
 import functools
 import inspect
+import json
 import os
 import re
+import shutil
 import typing  # noqa
 
 from typing import (
@@ -42,7 +44,8 @@ from coredis.response.types import (
     StreamEntry,
     StreamInfo,
     StreamPending,
-    StreamPendingExt, LibraryDefinition,
+    StreamPendingExt,
+    LibraryDefinition,
 )
 from coredis.typing import OrderedDict, ValueT, KeyT, StringT
 from coredis import PureToken, NodeFlag  # noqa
@@ -366,7 +369,8 @@ def version_added_from_doc(doc):
 
 @functools.lru_cache
 def get_commands():
-    return requests.get("https://redis.io/commands.json").json()
+    cur_dir = os.path.split(__file__)[0]
+    return json.loads(open(os.path.join(cur_dir, "commands.json")).read())
 
 
 def render_signature(signature):
@@ -678,6 +682,19 @@ def find_method(kls, command_name):
 
     return mapping.get(command_name)
 
+def compare_methods(l, r):
+    _l = l
+    wrapped = getattr(l, "__wrapped__", None)
+    while wrapped:
+        _l = _l.__wrapped__
+        wrapped = getattr(_l, "__wrapped__", None)
+    _r = r
+    wrapped = getattr(r, "__wrapped__", None)
+    while wrapped:
+        _r = _r.__wrapped__
+        wrapped = getattr(_r, "__wrapped__", None)
+    return _l == _r
+
 
 def redis_command_link(command):
     return (
@@ -779,7 +796,20 @@ def get_type(arg, command):
         return bool
     if (
         arg["name"]
-        in ["value", "element", "pivot", "member", "id", "min", "max", "start", "end", "argument", "arg", "port"]
+        in [
+            "value",
+            "element",
+            "pivot",
+            "member",
+            "id",
+            "min",
+            "max",
+            "start",
+            "end",
+            "argument",
+            "arg",
+            "port",
+        ]
         and inferred_type == StringT
     ):
         return ValueT
@@ -878,7 +908,9 @@ def get_argument(
                 synthetic_parent = arg.copy()
                 synthetic_parent["type"] = "pure-token"
                 synthetic_parent.pop("arguments")
-                plist_p, declist, vmap = get_argument(synthetic_parent, parent, command, arg_type, False)
+                plist_p, declist, vmap = get_argument(
+                    synthetic_parent, parent, command, arg_type, False
+                )
                 param_list.extend(plist_p)
                 meta_mapping.update(vmap)
             for child in sorted(
@@ -1296,7 +1328,7 @@ def generate_compatibility_section(
 {{section}}
 {{len(section)*'^'}}
 
-{% if preamble.strip() %} 
+{% if preamble.strip() %}
 .. note:: {{preamble}}
 {% endif %}
 {% for group in groups %}
@@ -1399,7 +1431,7 @@ def generate_compatibility_section(
          {% if len(method["arg_mapping"]) > 0 -%}
          pieces: CommandArgList = []
          {% for name, arg  in method["arg_mapping"].items() -%}
-         
+
          {% if len(arg[1]) > 0 -%}
          {%- for param in arg[1] -%}
          {%- if not arg[0].get("optional") %}
@@ -1466,7 +1498,7 @@ def generate_compatibility_section(
 - Recommended Signature:
 
   .. code::
-  
+
      {% for decorator in method["rec_decorators"] %}
      {{decorator}}
      {% endfor -%}
@@ -1490,7 +1522,7 @@ def generate_compatibility_section(
      async def {{method["name"]}}{{render_signature(method["rec_signature"])}}:
          \"\"\"
          {{method["summary"]}}
-  
+
          {% if "rec_signature" in method %}
          {% for p in list(method["rec_signature"].parameters)[1:] %}
          :param {{p}}:
@@ -1528,11 +1560,11 @@ def generate_compatibility_section(
          {% endif -%}
          {% else -%}
          {% if arg[0].get("multiple") %}
-  
+
          if {{arg[1][0].name}}:
             pieces.extend({{param.name}})
          {% else %}
-  
+
          if {{param.name}}{% if arg[0].get("type") != "pure-token" %} is not None{%endif%}:
          {%- if arg[0].get("token")  and arg[0].get("type") == "oneof" %}
             pieces.append({{param.name}}.value)
@@ -1544,13 +1576,13 @@ def generate_compatibility_section(
          {% endfor -%}
          {% endif -%}
          {% endfor -%}
-  
+
          return await self.execute_command("{{method["command"]["name"]}}", *pieces)
          {% else -%}
- 
+
         return await self.execute_command("{{method["command"]["name"]}}")
         {% endif -%}
-{% else %} 
+{% else %}
 - Not Implemented
 {% endif %}
 {% endfor %}
@@ -1593,7 +1625,7 @@ def generate_compatibility_section(
             if (
                 parent_kls
                 and located
-                and find_method(parent_kls, sanitized(method["name"])) == located
+                and compare_methods(find_method(parent_kls, sanitized(method["name"])), located)
             ):
                 continue
             if located:
@@ -1714,13 +1746,14 @@ def generate_compatibility_section(
 @click.option("--next-version", default="6.6.6", help="Next version")
 @click.pass_context
 def code_gen(ctx, debug: bool, next_version: str):
+    cur_dir = os.path.split(__file__)[0]
     ctx.ensure_object(dict)
     if debug:
         if not os.path.isdir("/var/tmp/redis-doc"):
             os.system("git clone git@github.com:redis/redis-doc /var/tmp/redis-doc")
         else:
             os.system("cd /var/tmp/redis-doc && git pull")
-
+        shutil.copy("/var/tmp/redis-doc/commands.json", cur_dir)
     ctx.obj["DEBUG"] = debug
     ctx.obj["NEXT_VERSION"] = next_version
 
@@ -1755,7 +1788,7 @@ This document is generated by parsing the `official redis command documentation 
         f"""
         The Cluster client generally follows the API of :class:`~coredis.Redis`
         however for cross-slot commands certain commands have to be implemented
-        client side. 
+        client side.
         """,
         cluster_kls,
         kls,
@@ -1793,7 +1826,7 @@ class PureToken(str, enum.Enum):
     #:  - ``{{c}}``
     {% endfor -%}
     {{ token[0].upper() }} = "{{token[1]}}"
-    
+
     {% endfor %}
 
 

@@ -3128,7 +3128,7 @@ PSUBSCRIBE [X]
 Listen for messages published to channels matching the given patterns
 
 - Documentation: `PSUBSCRIBE <https://redis.io/commands/psubscribe>`_
- 
+
 - Not Implemented
 
 
@@ -3138,7 +3138,7 @@ PUBSUB SHARDCHANNELS [X]
 List active shard channels
 
 - Documentation: `PUBSUB SHARDCHANNELS <https://redis.io/commands/pubsub-shardchannels>`_
- 
+
 - Not Implemented
 
 
@@ -3148,7 +3148,7 @@ PUBSUB SHARDNUMSUB [X]
 Get the count of subscribers for shard channels
 
 - Documentation: `PUBSUB SHARDNUMSUB <https://redis.io/commands/pubsub-shardnumsub>`_
- 
+
 - Not Implemented
 
 
@@ -3158,7 +3158,7 @@ PUNSUBSCRIBE [X]
 Stop listening for messages posted to channels matching the given patterns
 
 - Documentation: `PUNSUBSCRIBE <https://redis.io/commands/punsubscribe>`_
- 
+
 - Not Implemented
 
 
@@ -3168,7 +3168,7 @@ SPUBLISH [X]
 Post a message to a shard channel
 
 - Documentation: `SPUBLISH <https://redis.io/commands/spublish>`_
- 
+
 - Not Implemented
 
 
@@ -3178,7 +3178,7 @@ SSUBSCRIBE [X]
 Listen for messages published to the given shard channels
 
 - Documentation: `SSUBSCRIBE <https://redis.io/commands/ssubscribe>`_
- 
+
 - Not Implemented
 
 
@@ -3188,7 +3188,7 @@ SUBSCRIBE [X]
 Listen for messages published to the given channels
 
 - Documentation: `SUBSCRIBE <https://redis.io/commands/subscribe>`_
- 
+
 - Not Implemented
 
 
@@ -3198,7 +3198,7 @@ SUNSUBSCRIBE [X]
 Stop listening for messages posted to the given shard channels
 
 - Documentation: `SUNSUBSCRIBE <https://redis.io/commands/sunsubscribe>`_
- 
+
 - Not Implemented
 
 
@@ -3208,7 +3208,7 @@ UNSUBSCRIBE [X]
 Stop listening for messages posted to the given channels
 
 - Documentation: `UNSUBSCRIBE <https://redis.io/commands/unsubscribe>`_
- 
+
 - Not Implemented
 
 
@@ -3226,7 +3226,7 @@ DISCARD [X]
 Discard all commands issued after MULTI
 
 - Documentation: `DISCARD <https://redis.io/commands/discard>`_
- 
+
 - Not Implemented
 
 
@@ -3236,7 +3236,7 @@ EXEC [X]
 Execute all commands issued after MULTI
 
 - Documentation: `EXEC <https://redis.io/commands/exec>`_
- 
+
 - Not Implemented
 
 
@@ -3246,7 +3246,7 @@ MULTI [X]
 Mark the start of a transaction block
 
 - Documentation: `MULTI <https://redis.io/commands/multi>`_
- 
+
 - Not Implemented
 
 
@@ -3256,7 +3256,7 @@ UNWATCH [X]
 Forget about all watched keys
 
 - Documentation: `UNWATCH <https://redis.io/commands/unwatch>`_
- 
+
 - Not Implemented
 
 
@@ -3266,7 +3266,7 @@ WATCH [X]
 Watch the given keys to determine execution of the MULTI/EXEC block
 
 - Documentation: `WATCH <https://redis.io/commands/watch>`_
- 
+
 - Not Implemented
 
 
@@ -4070,7 +4070,7 @@ COMMAND DOCS [X]
 Get array of specific Redis command documentation
 
 - Documentation: `COMMAND DOCS <https://redis.io/commands/command-docs>`_
- 
+
 - Not Implemented
 
 
@@ -4080,7 +4080,7 @@ COMMAND GETKEYSANDFLAGS [X]
 Extract keys given a full Redis command
 
 - Documentation: `COMMAND GETKEYSANDFLAGS <https://redis.io/commands/command-getkeysandflags>`_
- 
+
 - Not Implemented
 
 
@@ -4090,7 +4090,7 @@ COMMAND LIST [X]
 Get an array of Redis command names
 
 - Documentation: `COMMAND LIST <https://redis.io/commands/command-list>`_
- 
+
 - Not Implemented
 
 
@@ -4100,7 +4100,7 @@ LATENCY HISTOGRAM [X]
 Return the cumulative distribution of latencies of a subset of commands or all.
 
 - Documentation: `LATENCY HISTOGRAM <https://redis.io/commands/latency-histogram>`_
- 
+
 - Not Implemented
 
 
@@ -4110,7 +4110,7 @@ MODULE LIST [X]
 List all modules loaded by the server
 
 - Documentation: `MODULE LIST <https://redis.io/commands/module-list>`_
- 
+
 - Not Implemented
 
 
@@ -4120,7 +4120,7 @@ MODULE LOAD [X]
 Load a module
 
 - Documentation: `MODULE LOAD <https://redis.io/commands/module-load>`_
- 
+
 - Not Implemented
 
 
@@ -4130,7 +4130,7 @@ MODULE UNLOAD [X]
 Unload a module
 
 - Documentation: `MODULE UNLOAD <https://redis.io/commands/module-unload>`_
- 
+
 - Not Implemented
 
 
@@ -4484,7 +4484,7 @@ CLIENT NO-EVICT [X]
 Set client eviction mode for the current connection
 
 - Documentation: `CLIENT NO-EVICT <https://redis.io/commands/client-no-evict>`_
- 
+
 - Not Implemented
 
 
@@ -4820,7 +4820,7 @@ CLUSTER ADDSLOTSRANGE [X]
 Assign new hash slots to receiving node
 
 - Documentation: `CLUSTER ADDSLOTSRANGE <https://redis.io/commands/cluster-addslotsrange>`_
- 
+
 - Not Implemented
 
 
@@ -4830,7 +4830,7 @@ CLUSTER DELSLOTSRANGE [X]
 Set hash slots as unbound in receiving node
 
 - Documentation: `CLUSTER DELSLOTSRANGE <https://redis.io/commands/cluster-delslotsrange>`_
- 
+
 - Not Implemented
 
 
@@ -4840,7 +4840,7 @@ CLUSTER LINKS [X]
 Returns a list of all TCP links to and from peer nodes in cluster
 
 - Documentation: `CLUSTER LINKS <https://redis.io/commands/cluster-links>`_
- 
+
 - Not Implemented
 
 
@@ -4850,7 +4850,7 @@ CLUSTER MYID [X]
 Return the node id
 
 - Documentation: `CLUSTER MYID <https://redis.io/commands/cluster-myid>`_
- 
+
 - Not Implemented
 
 
@@ -4860,7 +4860,7 @@ READONLY [X]
 Enables read queries for a connection to a cluster replica node
 
 - Documentation: `READONLY <https://redis.io/commands/readonly>`_
- 
+
 - Not Implemented
 
 
@@ -4870,7 +4870,7 @@ READWRITE [X]
 Disables read queries for a connection to a cluster replica node
 
 - Documentation: `READWRITE <https://redis.io/commands/readwrite>`_
- 
+
 - Not Implemented
 
 
@@ -4881,11 +4881,11 @@ Disables read queries for a connection to a cluster replica node
 Redis Cluster Client
 ^^^^^^^^^^^^^^^^^^^^
 
- 
+
 .. note:: 
         The Cluster client generally follows the API of :class:`~coredis.Redis`
         however for cross-slot commands certain commands have to be implemented
-        client side. 
+        client side.
         
 
 
@@ -5223,7 +5223,7 @@ PSUBSCRIBE [X]
 Listen for messages published to channels matching the given patterns
 
 - Documentation: `PSUBSCRIBE <https://redis.io/commands/psubscribe>`_
- 
+
 - Not Implemented
 
 
@@ -5233,7 +5233,7 @@ PUBSUB SHARDCHANNELS [X]
 List active shard channels
 
 - Documentation: `PUBSUB SHARDCHANNELS <https://redis.io/commands/pubsub-shardchannels>`_
- 
+
 - Not Implemented
 
 
@@ -5243,7 +5243,7 @@ PUBSUB SHARDNUMSUB [X]
 Get the count of subscribers for shard channels
 
 - Documentation: `PUBSUB SHARDNUMSUB <https://redis.io/commands/pubsub-shardnumsub>`_
- 
+
 - Not Implemented
 
 
@@ -5253,7 +5253,7 @@ PUNSUBSCRIBE [X]
 Stop listening for messages posted to channels matching the given patterns
 
 - Documentation: `PUNSUBSCRIBE <https://redis.io/commands/punsubscribe>`_
- 
+
 - Not Implemented
 
 
@@ -5263,7 +5263,7 @@ SPUBLISH [X]
 Post a message to a shard channel
 
 - Documentation: `SPUBLISH <https://redis.io/commands/spublish>`_
- 
+
 - Not Implemented
 
 
@@ -5273,7 +5273,7 @@ SSUBSCRIBE [X]
 Listen for messages published to the given shard channels
 
 - Documentation: `SSUBSCRIBE <https://redis.io/commands/ssubscribe>`_
- 
+
 - Not Implemented
 
 
@@ -5283,7 +5283,7 @@ SUBSCRIBE [X]
 Listen for messages published to the given channels
 
 - Documentation: `SUBSCRIBE <https://redis.io/commands/subscribe>`_
- 
+
 - Not Implemented
 
 
@@ -5293,7 +5293,7 @@ SUNSUBSCRIBE [X]
 Stop listening for messages posted to the given shard channels
 
 - Documentation: `SUNSUBSCRIBE <https://redis.io/commands/sunsubscribe>`_
- 
+
 - Not Implemented
 
 
@@ -5303,7 +5303,7 @@ UNSUBSCRIBE [X]
 Stop listening for messages posted to the given channels
 
 - Documentation: `UNSUBSCRIBE <https://redis.io/commands/unsubscribe>`_
- 
+
 - Not Implemented
 
 
@@ -5321,7 +5321,7 @@ DISCARD [X]
 Discard all commands issued after MULTI
 
 - Documentation: `DISCARD <https://redis.io/commands/discard>`_
- 
+
 - Not Implemented
 
 
@@ -5331,7 +5331,7 @@ EXEC [X]
 Execute all commands issued after MULTI
 
 - Documentation: `EXEC <https://redis.io/commands/exec>`_
- 
+
 - Not Implemented
 
 
@@ -5341,7 +5341,7 @@ MULTI [X]
 Mark the start of a transaction block
 
 - Documentation: `MULTI <https://redis.io/commands/multi>`_
- 
+
 - Not Implemented
 
 
@@ -5351,7 +5351,7 @@ UNWATCH [X]
 Forget about all watched keys
 
 - Documentation: `UNWATCH <https://redis.io/commands/unwatch>`_
- 
+
 - Not Implemented
 
 
@@ -5361,7 +5361,7 @@ WATCH [X]
 Watch the given keys to determine execution of the MULTI/EXEC block
 
 - Documentation: `WATCH <https://redis.io/commands/watch>`_
- 
+
 - Not Implemented
 
 
@@ -5379,7 +5379,7 @@ COMMAND DOCS [X]
 Get array of specific Redis command documentation
 
 - Documentation: `COMMAND DOCS <https://redis.io/commands/command-docs>`_
- 
+
 - Not Implemented
 
 
@@ -5389,7 +5389,7 @@ COMMAND GETKEYSANDFLAGS [X]
 Extract keys given a full Redis command
 
 - Documentation: `COMMAND GETKEYSANDFLAGS <https://redis.io/commands/command-getkeysandflags>`_
- 
+
 - Not Implemented
 
 
@@ -5399,7 +5399,7 @@ COMMAND LIST [X]
 Get an array of Redis command names
 
 - Documentation: `COMMAND LIST <https://redis.io/commands/command-list>`_
- 
+
 - Not Implemented
 
 
@@ -5409,7 +5409,7 @@ LATENCY HISTOGRAM [X]
 Return the cumulative distribution of latencies of a subset of commands or all.
 
 - Documentation: `LATENCY HISTOGRAM <https://redis.io/commands/latency-histogram>`_
- 
+
 - Not Implemented
 
 
@@ -5419,7 +5419,7 @@ MODULE LIST [X]
 List all modules loaded by the server
 
 - Documentation: `MODULE LIST <https://redis.io/commands/module-list>`_
- 
+
 - Not Implemented
 
 
@@ -5429,7 +5429,7 @@ MODULE LOAD [X]
 Load a module
 
 - Documentation: `MODULE LOAD <https://redis.io/commands/module-load>`_
- 
+
 - Not Implemented
 
 
@@ -5439,7 +5439,7 @@ MODULE UNLOAD [X]
 Unload a module
 
 - Documentation: `MODULE UNLOAD <https://redis.io/commands/module-unload>`_
- 
+
 - Not Implemented
 
 
@@ -5449,7 +5449,7 @@ MONITOR [X]
 Listen for all requests received by the server in real time
 
 - Documentation: `MONITOR <https://redis.io/commands/monitor>`_
- 
+
 - Not Implemented
 
 
@@ -5481,7 +5481,7 @@ CLIENT NO-EVICT [X]
 Set client eviction mode for the current connection
 
 - Documentation: `CLIENT NO-EVICT <https://redis.io/commands/client-no-evict>`_
- 
+
 - Not Implemented
 
 
@@ -5499,7 +5499,7 @@ CLUSTER ADDSLOTSRANGE [X]
 Assign new hash slots to receiving node
 
 - Documentation: `CLUSTER ADDSLOTSRANGE <https://redis.io/commands/cluster-addslotsrange>`_
- 
+
 - Not Implemented
 
 
@@ -5509,7 +5509,7 @@ CLUSTER DELSLOTSRANGE [X]
 Set hash slots as unbound in receiving node
 
 - Documentation: `CLUSTER DELSLOTSRANGE <https://redis.io/commands/cluster-delslotsrange>`_
- 
+
 - Not Implemented
 
 
@@ -5519,7 +5519,7 @@ CLUSTER LINKS [X]
 Returns a list of all TCP links to and from peer nodes in cluster
 
 - Documentation: `CLUSTER LINKS <https://redis.io/commands/cluster-links>`_
- 
+
 - Not Implemented
 
 
@@ -5529,7 +5529,7 @@ CLUSTER MYID [X]
 Return the node id
 
 - Documentation: `CLUSTER MYID <https://redis.io/commands/cluster-myid>`_
- 
+
 - Not Implemented
 
 
@@ -5539,7 +5539,7 @@ READONLY [X]
 Enables read queries for a connection to a cluster replica node
 
 - Documentation: `READONLY <https://redis.io/commands/readonly>`_
- 
+
 - Not Implemented
 
 
@@ -5549,7 +5549,7 @@ READWRITE [X]
 Disables read queries for a connection to a cluster replica node
 
 - Documentation: `READWRITE <https://redis.io/commands/readwrite>`_
- 
+
 - Not Implemented
 
 

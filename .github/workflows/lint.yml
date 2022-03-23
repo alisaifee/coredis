@@ -42,8 +42,3 @@ jobs:
       run: |
         pyright coredis
         mypy coredis
-    - name: Check docs
-      run: |
-        make generate-compatibility-docs
-        if [[ $(git diff --stat docs/source/compatibility.rst) != '' ]]; then echo 'Compatibility docs need updating'; exit 1; fi;
-
