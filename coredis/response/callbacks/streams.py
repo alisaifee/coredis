@@ -43,6 +43,20 @@ class AutoClaimCallback(ParametrizedCallback):
 
 
 class MultiStreamRangeCallback(SimpleCallback):
+    def transform_3(
+        self, response: Any
+    ) -> Optional[Dict[AnyStr, Tuple[StreamEntry, ...]]]:
+        if response:
+            mapping = {}
+
+            for stream_id, entries in response.items():
+                mapping[stream_id] = tuple(
+                    StreamEntry(r[0], pairs_to_ordered_dict(r[1])) for r in entries
+                )
+
+            return mapping
+        return None
+
     def transform(
         self, response: Any
     ) -> Optional[Dict[AnyStr, Tuple[StreamEntry, ...]]]:

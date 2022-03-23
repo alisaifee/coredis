@@ -13,6 +13,8 @@ class SScanCallback(SimpleCallback):
 class ItemOrSetCallback(ParametrizedCallback):
     def transform(self, response: Any, **options: Any) -> Union[str, Set[AnyStr]]:
         if options.get("count"):
+            if isinstance(response, set):
+                return response
             return response and set(response)
         else:
             return response

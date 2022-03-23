@@ -5,7 +5,7 @@ from coredis import PureToken, ResponseError
 from tests.conftest import targets
 
 
-@targets("redis_basic")
+@targets("redis_basic", "redis_basic_resp3")
 @pytest.mark.asyncio()
 class TestConnection:
     async def test_ping(self, client):
@@ -35,14 +35,14 @@ class TestConnection:
     @pytest.mark.min_server_version("6.2.0")
     async def test_client_trackinginfo_no_tracking(self, client):
         info = await client.client_trackinginfo()
-        assert info["flags"] == ["off"]
+        assert info["flags"] == {"off"}
 
     @pytest.mark.min_server_version("6.2.0")
     async def test_client_trackinginfo_tracking_set(self, client):
         resp = await client.client_tracking(PureToken.ON)
         assert resp
         info = await client.client_trackinginfo()
-        assert info["flags"] == ["on"]
+        assert info["flags"] == {"on"}
 
     async def test_client_list(self, client):
         clients = await client.client_list()

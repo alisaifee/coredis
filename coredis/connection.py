@@ -8,7 +8,9 @@ import time
 import warnings
 from abc import ABC, abstractmethod
 from io import BytesIO
-from typing import Callable, Dict, Literal, Optional, Type, Union, cast
+from typing import Callable, Dict, List, Literal, Optional, Type, Union, cast
+
+import frozendict as frozendict
 
 from coredis.exceptions import (
     AskError,
@@ -181,6 +183,9 @@ class BaseParser(ABC):
         "NOPERM": AuthorizationError,
     }
 
+    def __init__(self, *args):
+        pass
+
     def parse_error(self, response):
         """Parse an error response"""
         error_code = response.split(" ")[0]
@@ -258,7 +263,7 @@ class PythonParser(BaseParser):
 
         byte, response = chr(response[0]), response[1:]
 
-        if byte not in ("-", "+", ":", "$", "*", "%", "~", ",", "_", "#"):
+        if byte not in ("-", "+", ":", "$", "=", "*", "%", "~", ",", "_", "#", ">"):
             raise InvalidResponse("Protocol Error: %s, %s" % (str(byte), str(response)))
 
         # server returned an error
@@ -299,6 +304,24 @@ class PythonParser(BaseParser):
             if length == -1:
                 return None
             response = await self._buffer.read(length)
+        # verbatim string
+        elif byte == "=":
+            length = int(response)
+
+            if length == -1:
+                return None
+            response = await self._buffer.read(length)
+            if response[:3] != b"txt":
+                raise RedisError("unexpected verbatim string")
+            response = response[4:]
+        # push data response
+        elif byte == ">":
+            num_items = int(response)
+            push_data = []
+            for i in range(num_items):
+                push_data.append(await self.read_response(decode=decode))
+            response = push_data
+
         # multi-bulk response
         elif byte == "*":
             length = int(response)
@@ -319,13 +342,14 @@ class PythonParser(BaseParser):
                 key = await self.read_response(decode=decode)
                 value = await self.read_response(decode=decode)
                 response[key] = value
+            response = frozendict.frozendict(response)
         # set
         elif byte == "~":
             length = int(response)
             response = set()
             for i in range(length):
                 response.add(await self.read_response(decode=decode))
-            return response
+            return frozenset(response)
         need_decode = self.encoding
         if decode is not None:
             need_decode = decode
@@ -468,15 +492,16 @@ class BaseConnection:
 
     def __init__(
         self,
-        retry_on_timeout=False,
-        stream_timeout=None,
-        parser_class=DefaultParser,
-        reader_read_size=65535,
-        encoding="utf-8",
-        decode_responses=False,
+        retry_on_timeout: bool = False,
+        stream_timeout: Optional[float] = None,
+        parser_class: Type[BaseParser] = DefaultParser,
+        reader_read_size: int = 65535,
+        encoding: str = "utf-8",
+        decode_responses: bool = False,
         *,
-        client_name=None,
-        loop=None,
+        client_name: Optional[str] = None,
+        loop: Optional[asyncio.events.AbstractEventLoop] = None,
+        protocol_version: Literal[2, 3] = 2,
     ):
         self._parser: BaseParser = parser_class(reader_read_size)
         self._stream_timeout = stream_timeout
@@ -487,10 +512,11 @@ class BaseConnection:
         self.db = ""
         self.pid = os.getpid()
         self.retry_on_timeout = retry_on_timeout
-        self._description_args = dict()
-        self._connect_callbacks = list()
+        self._description_args: Dict[str, Union[str, bytes, int, float]] = dict()
+        self._connect_callbacks: List[Callable] = list()
         self.encoding = encoding
         self.decode_responses = decode_responses
+        self.protocol_version = protocol_version
         self.loop = loop
         self.client_name = client_name
         # flag to show if a connection is waiting for response
@@ -562,9 +588,13 @@ class BaseConnection:
             elif self.password:
                 await self.send_command("AUTH", self.password)
                 await self.check_auth_response()
+        if self.protocol_version == 3:
+            await self.send_command("HELLO", 3)
+            resp = await self.read_response()
+            if not resp["proto"] == 3:
+                raise RedisError("Unexpected response when negotiating RESP3", resp)
 
         # if a database is specified, switch to it
-
         if self.db:
             await self.send_command("SELECT", self.db)
 
@@ -739,6 +769,7 @@ class Connection(BaseConnection):
         *,
         client_name=None,
         loop=None,
+        protocol_version: Literal[2, 3] = 2,
     ):
         super(Connection, self).__init__(
             retry_on_timeout,
@@ -749,6 +780,7 @@ class Connection(BaseConnection):
             decode_responses,
             client_name=client_name,
             loop=loop,
+            protocol_version=protocol_version,
         )
         self.host = host
         self.port = port
@@ -810,6 +842,7 @@ class UnixDomainSocketConnection(BaseConnection):
         *,
         client_name=None,
         loop=None,
+        protocol_version: Literal[2, 3] = 2,
     ):
         super(UnixDomainSocketConnection, self).__init__(
             retry_on_timeout,
@@ -820,6 +853,7 @@ class UnixDomainSocketConnection(BaseConnection):
             decode_responses,
             client_name=client_name,
             loop=loop,
+            protocol_version=protocol_version,
         )
         self.path = path
         self.db = db

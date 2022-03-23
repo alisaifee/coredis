@@ -375,11 +375,7 @@ class BasePipeline:
 
                 if command_name in self.response_callbacks:
                     callback = self.response_callbacks[command_name]
-                    r = callback(r, **cmd.options)
-                    # typing.Awaitable is not available in Python3.5
-                    # so use inspect.isawaitable instead
-                    # according to issue https://github.com/alisaifee/coredis/issues/77
-
+                    r = callback(r, version=connection.protocol_version, **cmd.options)
                     if inspect.isawaitable(response):
                         r = await r
 

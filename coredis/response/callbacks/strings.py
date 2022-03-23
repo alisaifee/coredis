@@ -29,3 +29,20 @@ class LCSCallback(ParametrizedCallback):
             )
 
         return response
+
+    def transform_3(
+        self, response: Any, **options: Any
+    ) -> Union[AnyStr, int, LCSResult]:
+        if options.get("idx") is not None:
+            return LCSResult(
+                tuple(
+                    LCSMatch(
+                        (int(k[0][0]), int(k[0][1])),
+                        (int(k[1][0]), int(k[1][1])),
+                        k[2] if len(k) > 2 else None,
+                    )
+                    for k in response["matches"]
+                ),
+                response["len"],
+            )
+        return response

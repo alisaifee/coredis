@@ -26,21 +26,31 @@ P = ParamSpec("P")
 
 
 class SimpleCallback(ABC):
-    def __call__(self, response: Any) -> Any:
+    def __call__(self, response: Any, version: int = 2) -> Any:
+        if version == 3:
+            return self.transform_3(response)
         return self.transform(response)
 
     @abstractmethod
     def transform(self, response: Any) -> Any:
         pass
 
+    def transform_3(self, response: Any) -> Any:
+        return self.transform(response)
+
 
 class ParametrizedCallback(ABC):
-    def __call__(self, response: Any, **kwargs: Any) -> Any:
+    def __call__(self, response: Any, version: int = 2, **kwargs: Any) -> Any:
+        if version == 3:
+            return self.transform_3(response, **kwargs)
         return self.transform(response, **kwargs)
 
     @abstractmethod
     def transform(self, response: Any, **kwargs: Any) -> Any:
         pass
+
+    def transform_3(self, response: Any, **kwargs: Any) -> Any:
+        return self.transform(response, **kwargs)
 
 
 class SimpleStringCallback(SimpleCallback):
@@ -62,7 +72,7 @@ class PrimitiveCallback(SimpleCallback, Generic[R]):
 
 class FloatCallback(PrimitiveCallback[float]):
     def transform(self, response: Any) -> float:
-        return float(response)
+        return response if isinstance(response, float) else float(response)
 
 
 class BoolCallback(PrimitiveCallback[bool]):
@@ -72,7 +82,7 @@ class BoolCallback(PrimitiveCallback[bool]):
 
 class SimpleStringOrIntCallback(SimpleCallback):
     def transform(self, response: Any) -> Union[bool, int]:
-        if isinstance(response, int):
+        if isinstance(response, (int, bool)):
             return response
         else:
             return SimpleStringCallback()(response)
@@ -97,7 +107,10 @@ class DateTimeCallback(ParametrizedCallback):
 
 
 class DictCallback(PrimitiveCallback[Dict]):
-    def __init__(self, transform_function=Optional[Callable[[List], Dict]]):
+    def __init__(
+        self,
+        transform_function: Optional[Callable[[Any], Dict]] = None,
+    ):
         self.transform_function = transform_function
 
     def transform(self, response: Any) -> Dict:

@@ -10,6 +10,7 @@ import redis
 from packaging import version
 
 import coredis
+import coredis.connection
 import coredis.sentinel
 
 REDIS_VERSIONS = {}
@@ -36,7 +37,7 @@ async def get_version(client):
     return REDIS_VERSIONS[client]
 
 
-async def check_test_constraints(request, client):
+async def check_test_constraints(request, client, protocol=2):
     await get_version(client)
     for marker in request.node.iter_markers():
         if marker.name == "min_server_version" and marker.args:
@@ -59,6 +60,12 @@ async def check_test_constraints(request, client):
             and not marker.args[0].lower() == platform.system().lower()
         ):
             return pytest.skip(f"Skipped for {platform.system()}")
+
+        if protocol == 3 and REDIS_VERSIONS[client] < version.parse("6.0.0"):
+            return pytest.skip(f"Skipped RESP3 for {REDIS_VERSIONS[client]}")
+
+        if marker.name == "nohiredis" and coredis.connection.HIREDIS_AVAILABLE:
+            return pytest.skip("Skipped for hiredis")
 
 
 async def set_default_test_config(client):
@@ -171,6 +178,17 @@ def redis_sentinel_auth_server(docker_services):
 async def redis_basic(redis_basic_server, request):
     client = coredis.Redis("localhost", 6379, decode_responses=True)
     await check_test_constraints(request, client)
+    await client.flushall()
+    await set_default_test_config(client)
+
+    return client
+
+
+@pytest.fixture
+async def redis_basic_resp3(redis_basic_server, request):
+    client = coredis.Redis("localhost", 6379, decode_responses=True)
+    await check_test_constraints(request, client, protocol=3)
+    client = coredis.Redis("localhost", 6379, decode_responses=True, protocol_version=3)
     await client.flushall()
     await set_default_test_config(client)
 

@@ -59,7 +59,7 @@ def make_subscribe_test_data(pubsub, type):
 
 
 @pytest.mark.asyncio()
-@targets("redis_basic")
+@targets("redis_basic", "redis_basic_resp3")
 class TestPubSubSubscribeUnsubscribe:
     async def _test_subscribe_unsubscribe(
         self, p, sub_type, unsub_type, sub_func, unsub_func, keys
