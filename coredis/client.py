@@ -3,6 +3,7 @@ import contextlib
 import inspect
 from abc import ABCMeta
 from ssl import SSLContext
+from typing import overload
 
 from deprecated.sphinx import versionadded
 
@@ -52,7 +53,6 @@ from coredis.typing import (
     Union,
     ValueT,
     add_runtime_checks,
-    overload,
 )
 from coredis.utils import (
     NodeFlag,

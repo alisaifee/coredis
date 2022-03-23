@@ -10,7 +10,7 @@ end
 local function bar(keys, args)
     return 1.0*args[1]
 end
-redis.register_function('fu', fu)
+redis.register_function{function_name='fu', callback=fu, flags={ 'no-writes' }}
 redis.register_function('bar', bar)
 """
 
@@ -53,7 +53,9 @@ class TestFunctions:
         assert await client.function_flush()
         assert await client.function_list() == {}
         assert await client.function_restore(dump, policy=PureToken.FLUSH)
-        assert len((await client.function_list())["coredis"]["functions"]) == 2
+        function_list = await client.function_list()
+        assert len(function_list["coredis"]["functions"]) == 2
+        assert function_list["coredis"]["functions"]["fu"]["flags"] == {"no-writes"}
 
 
 @targets("redis_basic", "redis_basic_resp3", "redis_cluster")

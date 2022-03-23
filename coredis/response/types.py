@@ -5,14 +5,12 @@ import shlex
 
 from coredis.typing import (
     Dict,
-    List,
     Literal,
     NamedTuple,
     Optional,
     OrderedDict,
     Set,
     Tuple,
-    TypeAlias,
     TypedDict,
     Union,
 )
@@ -114,8 +112,8 @@ class LibraryDefinition(TypedDict):
     engine: Literal["LUA"]
     #: the library's description
     description: Union[str, bytes]
-    #: List of functions in the library
-    functions: List[FunctionDefinition]
+    #: Mapping of function names to functions in the library
+    functions: Dict[Union[str, bytes], FunctionDefinition]
     #: The library's source code
     library_code: Optional[Union[str, bytes]]
 
@@ -142,7 +140,7 @@ class GeoCoordinates(NamedTuple):
     latitude: float
 
 
-ScoredMembers: TypeAlias = Tuple[ScoredMember, ...]
+ScoredMembers = Tuple[ScoredMember, ...]
 
 
 class GeoSearchResult(NamedTuple):

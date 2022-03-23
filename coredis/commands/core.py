@@ -1,5 +1,6 @@
 import datetime
 import itertools
+from typing import overload
 
 from deprecated.sphinx import deprecated, versionadded
 
@@ -108,7 +109,6 @@ from coredis.typing import (
     Tuple,
     Union,
     ValueT,
-    overload,
 )
 from coredis.utils import (
     NodeFlag,

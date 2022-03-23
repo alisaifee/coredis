@@ -22,37 +22,30 @@ from typing import (
     Tuple,
     TypeVar,
     Union,
-    overload,
 )
 
-from typing_extensions import OrderedDict, ParamSpec, TypeAlias, TypedDict, runtime_checkable
+from typing_extensions import (
+    OrderedDict,
+    ParamSpec,
+    TypeAlias,
+    TypedDict,
+    runtime_checkable,
+)
 
 RUNTIME_TYPECHECKS = False
 
 if os.environ.get("COREDIS_RUNTIME_CHECKS"):
     try:
-        from beartype.typing import (
-            Any,
-            AnyStr,
-            AsyncGenerator,
-            Awaitable,
-            Callable,
+        import beartype
+        from beartype.typing import (  # noqa: F811
             Dict,
-            Generic,
             Iterable,
             Iterator,
             List,
-            Literal,
-            Optional,
             OrderedDict,
-            ParamSpec,
             Set,
             Tuple,
             TypedDict,
-            TypeVar,
-            Union,
-            overload,
-            runtime_checkable,
         )
 
         RUNTIME_TYPECHECKS = True
@@ -71,8 +64,8 @@ StringT: TypeAlias = KeyT
 
 
 def add_runtime_checks(func: Callable[P, R]) -> Callable[P, R]:
-    # if RUNTIME_TYPECHECKS:
-    #    return beartype.beartype(func)
+    if RUNTIME_TYPECHECKS:
+        return beartype.beartype(func)
 
     return func
 
@@ -145,7 +138,6 @@ __all__ = [
     "Iterator",
     "List",
     "Literal",
-    "overload",
     "NamedTuple",
     "OrderedDict",
     "Optional",

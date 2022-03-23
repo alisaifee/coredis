@@ -10,7 +10,7 @@ from coredis.typing import (
     Optional,
     ValueT,
 )
-from coredis.utils import AnyDict, nativestr
+from coredis.utils import nativestr
 
 if TYPE_CHECKING:
     import coredis.client
@@ -75,8 +75,8 @@ class Library:
         if self._code:
             await self.client.function_load(self._engine, self._name, self._code)
         library = (await self.client.function_list(self._name)).get(self._name, {})
-        for function in library["functions"]:
-            name = nativestr(AnyDict(function)["name"])
+        for name, function in library["functions"].items():
+            name = nativestr(name)
             self._functions[name] = Function(self.client, self._name, name)
 
     def __await__(self):

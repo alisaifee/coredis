@@ -10,19 +10,18 @@ class FunctionListCallback(SimpleCallback):
         transformed = {}
         for library in libraries:
             lib_name = library["library_name"]
-            functions = []
+            functions = {}
             for function in AnyDict(library).get("functions", []):
                 function_definition = AnyDict(pairs_to_dict(function))
-                functions.append(
-                    FunctionDefinition(
-                        name=function_definition["name"],
-                        description=function_definition["description"],
-                        flags=function_definition["flags"],
-                    )
+                functions[function_definition["name"]] = FunctionDefinition(
+                    name=function_definition["name"],
+                    description=function_definition["description"],
+                    flags=set(function_definition["flags"]),
                 )
             library["functions"] = functions
             transformed[nativestr(lib_name)] = LibraryDefinition(
                 name=library["name"],
+                engine=library["engine"],
                 description=library["description"],
                 functions=library["functions"],
                 library_code=library["library_code"],
