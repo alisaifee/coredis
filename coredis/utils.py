@@ -71,15 +71,6 @@ def nativestr(x) -> str:
     return x if isinstance(x, str) else x.decode("utf-8", "replace")
 
 
-def string_if_bytes(
-    x: Union[List[Union[str, bytes]], Union[str, bytes]]
-) -> Union[List[str], str]:
-    if isinstance(x, list):
-        return [string_if_bytes(y) for y in x]  # type:ignore
-
-    return x.decode("utf-8", "replace") if isinstance(x, bytes) else x
-
-
 def normalized_seconds(value: Union[int, datetime.timedelta]) -> int:
     if isinstance(value, datetime.timedelta):
         value = value.seconds + value.days * 24 * 3600
@@ -109,21 +100,6 @@ def normalized_time_milliseconds(value: Union[int, datetime.datetime]) -> int:
         value = int(time.mktime(value.timetuple())) * 1000 + ms
 
     return value
-
-
-class dummy:
-    """
-    Instances of this class can be used as an attribute container.
-    """
-
-    def __init__(self):
-        self.token = None
-
-    def set(self, value):
-        self.token = value
-
-    def get(self):
-        return self.token
 
 
 # ++++++++++ response callbacks ++++++++++++++
@@ -156,17 +132,6 @@ def dict_merge(*dicts):
         merged.update(d)
 
     return merged
-
-
-def bool_ok(response):
-    return nativestr(response) == "OK"
-
-
-def bool_ok_or_int(response):
-    if type(response) == int:
-        return response
-
-    return nativestr(response) == "OK"
 
 
 def list_or_args(keys, args):
@@ -208,10 +173,6 @@ def pairs_to_ordered_dict(response: Tuple[T, ...]) -> OrderedDict[T, T]:
     """Creates a dict given a flat list of key/value pairs"""
     it = iter(response)
     return OrderedDict(zip(it, it))
-
-
-def triples_to_dict(response: Iterable[Tuple[T, U, V]]) -> Dict[T, Tuple[U, V]]:
-    return {k[0]: (k[1], k[2]) for k in response}
 
 
 def quadruples_to_dict(
