@@ -1862,7 +1862,7 @@ def generate_changes():
                     new_methods[group].append(method)
                 if vchanged and vchanged > cur_version:
                     changed_methods[group].append(method)
-            if cluster_method and method != cluster_method:
+            if cluster_method and not compare_methods(method, cluster_method):
                 vchanged = version_changed_from_doc(cluster_method.__doc__)
                 vadded = version_added_from_doc(cluster_method.__doc__)
                 if vadded and vadded > cur_version:
