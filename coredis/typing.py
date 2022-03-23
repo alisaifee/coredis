@@ -3,37 +3,64 @@ import warnings
 from abc import ABC, abstractmethod
 from numbers import Number
 from typing import (
+    TYPE_CHECKING,
     Any,
     AnyStr,
+    AsyncGenerator,
+    Awaitable,
     Callable,
+    Dict,
     Generic,
     Iterable,
+    Iterator,
     List,
+    Literal,
+    NamedTuple,
     Optional,
     Protocol,
+    Set,
+    Tuple,
     TypeVar,
     Union,
+    overload,
 )
 
-from typing_extensions import (
-    Annotated,
-    OrderedDict,
-    ParamSpec,
-    TypeAlias,
-    runtime_checkable,
-)
-
-CommandArgList: TypeAlias = List[Union[str, bytes, float, Number]]
+from typing_extensions import OrderedDict, ParamSpec, TypeAlias, TypedDict, runtime_checkable
 
 RUNTIME_TYPECHECKS = False
-try:
-    if os.environ.get("COREDIS_RUNTIME_CHECKS"):
-        import beartype
 
-        warnings.filterwarnings("ignore", module="beartype")
+if os.environ.get("COREDIS_RUNTIME_CHECKS"):
+    try:
+        from beartype.typing import (
+            Any,
+            AnyStr,
+            AsyncGenerator,
+            Awaitable,
+            Callable,
+            Dict,
+            Generic,
+            Iterable,
+            Iterator,
+            List,
+            Literal,
+            Optional,
+            OrderedDict,
+            ParamSpec,
+            Set,
+            Tuple,
+            TypedDict,
+            TypeVar,
+            Union,
+            overload,
+            runtime_checkable,
+        )
+
         RUNTIME_TYPECHECKS = True
-except ImportError:  # noqa
-    warnings.warn("Runtime checks were requested but could not import beartype")
+    except ImportError:  # noqa
+        warnings.warn("Runtime checks were requested but could not import beartype")
+
+CommandArgList = List[Union[str, bytes, float, Number]]
+
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -44,8 +71,8 @@ StringT: TypeAlias = KeyT
 
 
 def add_runtime_checks(func: Callable[P, R]) -> Callable[P, R]:
-    if RUNTIME_TYPECHECKS:
-        return beartype.beartype(func)
+    # if RUNTIME_TYPECHECKS:
+    #    return beartype.beartype(func)
 
     return func
 
@@ -58,7 +85,7 @@ class SupportsWatch(Protocol):  # noqa
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         ...
 
-    async def watch(self, *keys: ValueT) -> bool:
+    async def watch(self, *keys: KeyT) -> bool:
         ...
 
     async def execute(self, raise_on_error=True) -> Any:
@@ -69,21 +96,21 @@ class SupportsWatch(Protocol):  # noqa
 class SupportsScript(Protocol):  # noqa
     async def evalsha(
         self,
-        sha1: ValueT,
-        keys: Optional[Iterable[ValueT]] = None,
+        sha1: StringT,
+        keys: Optional[Iterable[KeyT]] = None,
         args: Optional[Iterable[ValueT]] = None,
     ) -> Any:
         ...
 
     async def evalsha_ro(
         self,
-        sha1: ValueT,
-        keys: Optional[Iterable[ValueT]] = None,
+        sha1: StringT,
+        keys: Optional[Iterable[KeyT]] = None,
         args: Optional[Iterable[ValueT]] = None,
     ) -> Any:
         ...
 
-    async def script_load(self, script: ValueT) -> AnyStr:
+    async def script_load(self, script: StringT) -> AnyStr:
         ...
 
 
@@ -92,7 +119,7 @@ class SupportsPipeline(Protocol):  # noqa
     async def pipeline(
         self,
         transaction: Optional[bool] = True,
-        watches: Optional[Iterable[ValueT]] = None,
+        watches: Optional[Iterable[StringT]] = None,
     ) -> SupportsWatch:
         ...
 
@@ -105,14 +132,35 @@ class AbstractExecutor(ABC, Generic[AnyStr]):
 
 __all__ = [
     "AbstractExecutor",
-    "Annotated",
+    "Any",
+    "AnyStr",
+    "AsyncGenerator",
+    "Awaitable",
+    "Callable",
     "CommandArgList",
+    "Dict",
+    "Generic",
     "KeyT",
+    "Iterable",
+    "Iterator",
+    "List",
+    "Literal",
+    "overload",
+    "NamedTuple",
     "OrderedDict",
+    "Optional",
     "ParamSpec",
+    "Protocol",
+    "Set",
     "SupportsWatch",
     "SupportsScript",
     "SupportsPipeline",
-    "TypeAlias",
+    "StringT",
+    "Tuple",
+    "TypedDict",
+    "TypeVar",
+    "Union",
     "ValueT",
+    "TYPE_CHECKING",
+    "RUNTIME_TYPECHECKS",
 ]

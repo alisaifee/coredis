@@ -1,6 +1,5 @@
-from typing import Any, AnyStr, Dict, Optional, Tuple
-
 from coredis.response.callbacks import SimpleStringCallback
+from coredis.typing import Any, AnyStr, Dict, Optional, Tuple
 from coredis.utils import nativestr
 
 from ..typing import ValueT

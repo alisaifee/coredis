@@ -1,5 +1,3 @@
-from typing import Any, AnyStr, Dict, Optional, Tuple, Union
-
 from coredis.commands import ParametrizedCallback, SimpleCallback
 from coredis.response.types import (
     StreamEntry,
@@ -7,6 +5,7 @@ from coredis.response.types import (
     StreamPending,
     StreamPendingExt,
 )
+from coredis.typing import Any, AnyStr, Dict, Optional, Tuple, Union
 from coredis.utils import pairs_to_dict, pairs_to_ordered_dict
 
 

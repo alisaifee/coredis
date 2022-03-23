@@ -1,15 +1,14 @@
 import asyncio
 from abc import ABC
-from typing import AnyStr
 
 from coredis.exceptions import WatchError
+from coredis.typing import AnyStr, StringT, SupportsPipeline
 
-from ..typing import SupportsPipeline, ValueT
 from . import CommandMixin
 
 
 class TransactionCommandMixin(CommandMixin[AnyStr], ABC):
-    async def transaction(self: SupportsPipeline, func, *watches: ValueT, **kwargs):
+    async def transaction(self: SupportsPipeline, func, *watches: StringT, **kwargs):
         """
         Convenience method for executing the callable `func` as a transaction
         while watching all keys specified in `watches`. The 'func' callable
@@ -32,7 +31,7 @@ class TransactionCommandMixin(CommandMixin[AnyStr], ABC):
 
 
 class ClusterTransactionCommandMixin(TransactionCommandMixin[AnyStr], ABC):
-    async def transaction(self: SupportsPipeline, func, *watches: ValueT, **kwargs):
+    async def transaction(self: SupportsPipeline, func, *watches: StringT, **kwargs):
         """
         Convenience method for executing the callable `func` as a transaction
         while watching all keys specified in `watches`. The 'func' callable

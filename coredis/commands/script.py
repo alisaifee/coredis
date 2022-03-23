@@ -1,8 +1,7 @@
 import hashlib
-from typing import Iterable, Optional
 
 from coredis.exceptions import NoScriptError
-from coredis.typing import SupportsScript
+from coredis.typing import Iterable, Optional, SupportsScript
 from coredis.utils import b
 
 

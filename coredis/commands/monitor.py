@@ -3,10 +3,10 @@ import threading
 import weakref
 from asyncio import CancelledError
 from concurrent.futures import Future
-from typing import TYPE_CHECKING, Callable, Optional
 
 from coredis.exceptions import RedisError
 from coredis.response.types import MonitorResult
+from coredis.typing import TYPE_CHECKING, Callable, Optional
 from coredis.utils import nativestr
 
 if TYPE_CHECKING:

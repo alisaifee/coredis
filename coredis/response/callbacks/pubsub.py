@@ -1,6 +1,5 @@
-from typing import Any, AnyStr, Dict
-
 from coredis.commands import SimpleCallback
+from coredis.typing import Any, AnyStr, Dict
 
 
 class NumSubCallback(SimpleCallback):

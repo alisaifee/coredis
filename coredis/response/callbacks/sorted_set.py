@@ -1,7 +1,6 @@
-from typing import Any, AnyStr, Optional, Tuple, Union
-
 from coredis.commands import ParametrizedCallback, SimpleCallback
 from coredis.response.types import ScoredMember, ScoredMembers
+from coredis.typing import Any, AnyStr, Optional, Tuple, Union
 
 VALID_ZADD_OPTIONS = {"NX", "XX", "CH", "INCR"}
 

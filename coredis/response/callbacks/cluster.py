@@ -1,7 +1,5 @@
-from typing import Any, Dict, List, Tuple, TypedDict, Union
-
 from coredis.commands import ParametrizedCallback, SimpleCallback
-from coredis.typing import ValueT
+from coredis.typing import Any, Dict, List, Tuple, TypedDict, Union, ValueT
 from coredis.utils import nativestr
 
 

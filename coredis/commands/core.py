@@ -1,21 +1,7 @@
 import datetime
 import itertools
-from typing import (
-    Any,
-    AnyStr,
-    Dict,
-    Iterable,
-    List,
-    Literal,
-    Optional,
-    Set,
-    Tuple,
-    Union,
-    overload,
-)
 
 from deprecated.sphinx import deprecated, versionadded
-from typing_extensions import OrderedDict
 
 from coredis.commands import (
     ClusterCommandConfig,
@@ -106,7 +92,24 @@ from coredis.response.types import (
     StreamPendingExt,
 )
 from coredis.tokens import PureToken
-from coredis.typing import CommandArgList, KeyT, StringT, ValueT
+from coredis.typing import (
+    Any,
+    AnyStr,
+    CommandArgList,
+    Dict,
+    Iterable,
+    KeyT,
+    List,
+    Literal,
+    Optional,
+    OrderedDict,
+    Set,
+    StringT,
+    Tuple,
+    Union,
+    ValueT,
+    overload,
+)
 from coredis.utils import (
     NodeFlag,
     b,

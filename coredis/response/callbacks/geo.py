@@ -1,7 +1,6 @@
-from typing import Any, List, Optional, Tuple, Union
-
 from coredis.commands import ParametrizedCallback, SimpleCallback
 from coredis.response.types import GeoCoordinates, GeoSearchResult
+from coredis.typing import Any, List, Optional, Tuple, Union
 
 
 class GeoSearchCallback(ParametrizedCallback):

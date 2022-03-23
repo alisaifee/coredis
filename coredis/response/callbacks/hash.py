@@ -1,8 +1,7 @@
-from typing import Any, AnyStr, Dict, Tuple, Union
-
 from frozendict import frozendict
 
 from coredis.commands import ParametrizedCallback, SimpleCallback
+from coredis.typing import Any, AnyStr, Dict, Tuple, Union
 from coredis.utils import pairs_to_dict
 
 

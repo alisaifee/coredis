@@ -1,7 +1,6 @@
-from typing import Any, AnyStr, Dict, Union
-
 from coredis.response.callbacks import SimpleCallback
 from coredis.response.types import FunctionDefinition, LibraryDefinition
+from coredis.typing import Any, AnyStr, Dict, Union
 from coredis.utils import AnyDict, nativestr, pairs_to_dict
 
 

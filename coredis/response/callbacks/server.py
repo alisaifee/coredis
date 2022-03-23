@@ -1,8 +1,8 @@
 import datetime
-from typing import Any, AnyStr, Dict, List, Tuple, Union
 
 from coredis.commands import ParametrizedCallback, SimpleCallback
 from coredis.response.types import ClientInfo, RoleInfo, SlowLogInfo
+from coredis.typing import Any, AnyStr, Dict, List, Tuple, Union
 from coredis.utils import nativestr
 
 

@@ -5,17 +5,6 @@ from abc import ABCMeta
 from concurrent.futures import CancelledError
 from dataclasses import dataclass, field
 from itertools import chain
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Tuple,
-    TypeVar,
-)
 
 from coredis.client import AbstractRedis, AbstractRedisCluster, ResponseParser
 from coredis.exceptions import (
@@ -32,7 +21,19 @@ from coredis.exceptions import (
     WatchError,
 )
 from coredis.pool import ClusterConnectionPool
-from coredis.typing import KeyT, ParamSpec, ValueT
+from coredis.typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    Iterable,
+    KeyT,
+    List,
+    Optional,
+    ParamSpec,
+    Tuple,
+    TypeVar,
+)
 from coredis.utils import NodeFlag, clusterdown_wrapper, dict_merge
 
 P = ParamSpec("P")
@@ -499,7 +500,7 @@ class BasePipeline:
         finally:
             await self.reset()
 
-    async def watch(self, *keys: ValueT) -> bool:
+    async def watch(self, *keys: KeyT) -> bool:
         """Watches the values at keys ``keys``"""
 
         if self.explicit_transaction:
@@ -595,7 +596,7 @@ class ClusterPipeline(
         self.watching = False
         self.explicit_transaction = False
 
-    async def watch(self, *keys: ValueT) -> bool:
+    async def watch(self, *keys: KeyT) -> bool:
         raise NotImplementedError
 
     def __repr__(self):

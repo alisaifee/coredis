@@ -1,10 +1,9 @@
-from typing import Any, AnyStr, Dict, Tuple, Union
-
 from coredis.response.callbacks import (
     DictCallback,
     ParametrizedCallback,
     SimpleStringCallback,
 )
+from coredis.typing import Any, AnyStr, Dict, Tuple, Union
 from coredis.utils import pairs_to_dict
 
 

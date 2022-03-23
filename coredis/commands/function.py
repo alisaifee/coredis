@@ -1,7 +1,15 @@
 import weakref
-from typing import TYPE_CHECKING, Any, Dict, Iterable, Literal, Optional
 
-from coredis.typing import KeyT, ValueT
+from coredis.typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterable,
+    KeyT,
+    Literal,
+    Optional,
+    ValueT,
+)
 from coredis.utils import AnyDict, nativestr
 
 if TYPE_CHECKING:

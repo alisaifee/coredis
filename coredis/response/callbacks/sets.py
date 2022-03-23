@@ -1,6 +1,5 @@
-from typing import Any, AnyStr, Set, Tuple, Union
-
 from coredis.commands import ParametrizedCallback, SimpleCallback
+from coredis.typing import Any, AnyStr, Set, Tuple, Union
 
 
 class SScanCallback(SimpleCallback):

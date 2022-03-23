@@ -1,8 +1,7 @@
-from typing import Any, AnyStr, Union
-
 from coredis.commands import ParametrizedCallback
 from coredis.response.callbacks import SimpleStringCallback
 from coredis.response.types import LCSMatch, LCSResult
+from coredis.typing import Any, AnyStr, Union
 
 
 class StringSetCallback(ParametrizedCallback):

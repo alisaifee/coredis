@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Any, AnyStr, Tuple, Union
 
 from coredis.exceptions import DataError, NoKeyError, RedisError
 from coredis.response.callbacks import (
@@ -7,6 +6,7 @@ from coredis.response.callbacks import (
     ParametrizedCallback,
     SimpleCallback,
 )
+from coredis.typing import Any, AnyStr, Tuple, Union
 from coredis.utils import int_or_none
 
 

@@ -2,19 +2,20 @@ import dataclasses
 import datetime
 import re
 import shlex
-from typing import (
+
+from coredis.typing import (
     Dict,
     List,
     Literal,
     NamedTuple,
     Optional,
+    OrderedDict,
     Set,
     Tuple,
+    TypeAlias,
     TypedDict,
     Union,
 )
-
-from typing_extensions import OrderedDict, TypeAlias
 
 #: Response from `CLIENT INFO <https://redis.io/commands/client-info>`__
 #:
@@ -75,17 +76,47 @@ ClientInfo = TypedDict(
     },
 )
 
+#: Script/Function flags
+#: See: `<https://redis.io/topics/lua-api#a-namescriptflagsa-script-flags>`__
+ScriptFlag = Literal[
+    "no-writes",
+    "allow-oom",
+    "allow-stale",
+    "no-cluster",
+    b"no-writes",
+    b"allow-oom",
+    b"allow-stale",
+    b"no-cluster",
+]
+
 
 class FunctionDefinition(TypedDict):
+    """
+    Function definition as returned by `FUNCTION LIST <https://redis.io/commands/function-list>`__
+    """
+
+    #: the name of the function
     name: Union[str, bytes]
+    #: the description of the function
     description: Union[str, bytes]
-    flags: Set[Union[str, bytes]]
+    #: function flags
+    flags: Set[ScriptFlag]
 
 
 class LibraryDefinition(TypedDict):
+    """
+    Library definition as returned by `FUNCTION LIST <https://redis.io/commands/function-list>`__
+    """
+
+    #: the name of the library
     name: Union[str, bytes]
+    #: the engine used by the library
+    engine: Literal["LUA"]
+    #: the library's description
     description: Union[str, bytes]
+    #: List of functions in the library
     functions: List[FunctionDefinition]
+    #: The library's source code
     library_code: Optional[Union[str, bytes]]
 
 
