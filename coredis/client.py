@@ -22,9 +22,12 @@ from typing import (
     overload,
 )
 
+from deprecated.sphinx import versionadded
+
 from coredis.commands import ClusterCommandConfig, CommandGroup, redis_command
 from coredis.commands.core import CoreCommands
 from coredis.commands.extra import ExtraCommandMixin
+from coredis.commands.function import Library
 from coredis.commands.monitor import Monitor
 from coredis.commands.sentinel import SentinelCommands
 from coredis.commands.transaction import TransactionCommandMixin
@@ -48,6 +51,7 @@ from coredis.typing import (
     CommandArgList,
     KeyT,
     ParamSpec,
+    StringT,
     SupportsWatch,
     ValueT,
     add_runtime_checks,
@@ -249,9 +253,9 @@ class AbstractRedis(
 
     async def scan_iter(
         self,
-        match: Optional[ValueT] = None,
+        match: Optional[StringT] = None,
         count: Optional[int] = None,
-        type_: Optional[ValueT] = None,
+        type_: Optional[StringT] = None,
     ):
         """
         Make an iterator using the SCAN command so that the client doesn't
@@ -270,7 +274,7 @@ class AbstractRedis(
     async def sscan_iter(
         self,
         key: KeyT,
-        match: Optional[ValueT] = None,
+        match: Optional[StringT] = None,
         count: Optional[int] = None,
     ):
         """
@@ -290,7 +294,7 @@ class AbstractRedis(
     async def hscan_iter(
         self,
         key: KeyT,
-        match: Optional[ValueT] = None,
+        match: Optional[StringT] = None,
         count: Optional[int] = None,
     ) -> AsyncGenerator[Tuple[AnyStr, AnyStr], None]:
         """
@@ -310,7 +314,7 @@ class AbstractRedis(
     async def zscan_iter(
         self,
         key: KeyT,
-        match: Optional[ValueT] = None,
+        match: Optional[StringT] = None,
         count: Optional[int] = None,
     ):
         """
@@ -329,6 +333,31 @@ class AbstractRedis(
 
             for item in data:
                 yield item
+
+    @versionadded(version="3.1.0")
+    async def register_library(
+        self,
+        name: str,
+        code: str,
+        engine: Literal["LUA"] = "LUA",
+    ) -> Library:
+        """
+        Register a new library
+
+        :param name: name of the library
+        :param engine: type of engine
+        :param code: raw code for the library
+        """
+        return await Library(self, name, code=code, engine=engine)
+
+    @versionadded(version="3.1.0")
+    async def get_library(self, name: str) -> Library:
+        """
+        Fetch a pre registered library
+
+        :param name: name of the library
+        """
+        return await Library(self, name)
 
 
 class AbstractRedisCluster(AbstractRedis[AnyStr]):
@@ -400,8 +429,8 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
     async def sort(
         self,
         key: KeyT,
-        gets: Optional[Iterable[ValueT]] = None,
-        by: Optional[ValueT] = None,
+        gets: Optional[Iterable[KeyT]] = None,
+        by: Optional[StringT] = None,
         offset: Optional[int] = None,
         count: Optional[int] = None,
         order: Optional[Literal[PureToken.ASC, PureToken.DESC]] = None,
@@ -1040,7 +1069,7 @@ class Redis(
     async def pipeline(
         self,
         transaction: Optional[bool] = True,
-        watches: Optional[Iterable[ValueT]] = None,
+        watches: Optional[Iterable[StringT]] = None,
     ) -> SupportsWatch:
         """
         Returns a new pipeline object that can queue multiple commands for
@@ -1298,10 +1327,13 @@ class RedisCluster(
             )
         command = args[0]
 
-        if command in ["EVAL", "EVALSHA"]:
+        if command in ["EVAL", "EVALSHA", "FCALL"]:
             numkeys = args[2]
             keys = args[3 : 3 + numkeys]
-            slots = {self.connection_pool.nodes.keyslot(key) for key in keys}
+            if not keys:
+                return
+            else:
+                slots = {self.connection_pool.nodes.keyslot(key) for key in keys}
 
             if len(slots) != 1:
                 raise RedisClusterException(
@@ -1419,7 +1451,12 @@ class RedisCluster(
         asking = False
 
         try_random_node = False
+        try_random_type = NodeFlag.ALL
         slot = self._determine_slot(*args)
+        if not slot:
+            try_random_node = True
+            try_random_type = NodeFlag.PRIMARIES
+
         ttl = int(self.RedisClusterRequestTTL)
 
         while ttl > 0:
@@ -1429,7 +1466,9 @@ class RedisCluster(
                 node = self.connection_pool.nodes.nodes[redirect_addr]
                 r = self.connection_pool.get_connection_by_node(node)
             elif try_random_node:
-                r = self.connection_pool.get_random_connection()
+                r = self.connection_pool.get_random_connection(
+                    primary=try_random_type == NodeFlag.PRIMARIES
+                )
                 try_random_node = False
             else:
                 if self.refresh_table_asap:
@@ -1525,7 +1564,7 @@ class RedisCluster(
     async def pipeline(
         self,
         transaction: Optional[bool] = None,
-        watches: Optional[Iterable[ValueT]] = None,
+        watches: Optional[Iterable[StringT]] = None,
     ) -> SupportsWatch:
         """
         Pipelines do not work in cluster mode the same way they do in normal mode.
@@ -1550,9 +1589,9 @@ class RedisCluster(
 
     async def scan_iter(
         self,
-        match: Optional[ValueT] = None,
+        match: Optional[StringT] = None,
         count: Optional[int] = None,
-        type_: Optional[ValueT] = None,
+        type_: Optional[StringT] = None,
     ):
         for node in self.primaries:
             cursor = "0"
