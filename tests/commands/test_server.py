@@ -22,7 +22,13 @@ class TestServer:
         await client.config_set({"slowlog-log-slower-than": old_slower_than_value})
         await client.config_set({"slowlog-max-len": old_max_legnth_value})
 
-    @pytest.mark.nohiredis("6.2.0")
+    @pytest.mark.min_server_version("6.9.0")
+    async def test_command_docs(self, client):
+        docs = await client.command_docs("geosearch")
+        assert "summary" in docs["geosearch"]
+        assert "arguments" in docs["geosearch"]
+
+    @pytest.mark.nohiredis
     async def test_commands_get(self, client):
         commands = await client.command()
         assert commands["get"]
@@ -30,12 +36,29 @@ class TestServer:
         assert commands["get"]["name"] == "get"
         assert commands["get"]["arity"] == 2
 
-    @pytest.mark.nohiredis("6.2.0")
+    @pytest.mark.nohiredis
     async def test_command_info(self, client):
         commands = await client.command_info("get")
         assert list(commands.keys()) == ["get"]
         assert commands["get"]["name"] == "get"
         assert commands["get"]["arity"] == 2
+
+    @pytest.mark.min_server_version("6.9.0")
+    async def test_command_list(self, client):
+        assert "get" in await client.command_list()
+        assert "acl|getuser" in await client.command_list(aclcat="admin")
+        assert "zrevrange" in await client.command_list(pattern="zrev*")
+
+    @pytest.mark.min_server_version("6.9.0")
+    async def test_command_getkeys(self, client):
+        assert await client.command_getkeys("MSET", ["a", 1, "b", 2]) == ("a", "b")
+
+    @pytest.mark.min_server_version("6.9.0")
+    async def test_command_getkeysandflags(self, client):
+        assert await client.command_getkeysandflags("MSET", ["a", 1, "b", 2]) == {
+            "a": {"OW", "update"},
+            "b": {"OW", "update"},
+        }
 
     async def test_config_get(self, client):
         data = await client.config_get("*")

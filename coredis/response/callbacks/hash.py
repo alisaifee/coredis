@@ -2,14 +2,14 @@ from frozendict import frozendict
 
 from coredis.commands import ParametrizedCallback, SimpleCallback
 from coredis.typing import Any, AnyStr, Dict, Tuple, Union
-from coredis.utils import pairs_to_dict
+from coredis.utils import flat_pairs_to_dict
 
 
 class HScanCallback(SimpleCallback):
     def transform(self, response: Any) -> Tuple[int, Dict[AnyStr, AnyStr]]:
         cursor, r = response
 
-        return int(cursor), r and pairs_to_dict(r) or {}
+        return int(cursor), r and flat_pairs_to_dict(r) or {}
 
 
 class HRandFieldCallback(ParametrizedCallback):
@@ -27,7 +27,7 @@ class HRandFieldCallback(ParametrizedCallback):
     ) -> Union[str, Tuple[AnyStr, ...], Dict[AnyStr, AnyStr]]:
         if options.get("count"):
             if options.get("withvalues"):
-                return pairs_to_dict(response)
+                return flat_pairs_to_dict(response)
             else:
                 return tuple(response)
         else:
@@ -41,4 +41,4 @@ class HGetAllCallback(SimpleCallback):
         return response
 
     def transform(self, response: Any) -> Dict[AnyStr, AnyStr]:
-        return pairs_to_dict(response) if response else {}
+        return flat_pairs_to_dict(response) if response else {}

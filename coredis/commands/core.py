@@ -30,7 +30,11 @@ from coredis.response.callbacks.cluster import (
     ClusterNodesCallback,
     ClusterSlotsCallback,
 )
-from coredis.response.callbacks.command import CommandCallback
+from coredis.response.callbacks.command import (
+    CommandCallback,
+    CommandDocCallback,
+    CommandKeyFlagCallback,
+)
 from coredis.response.callbacks.connection import ClientTrackingInfoCallback
 from coredis.response.callbacks.geo import GeoCoordinatessCallback, GeoSearchCallback
 from coredis.response.callbacks.hash import (
@@ -114,13 +118,13 @@ from coredis.utils import (
     defaultvalue,
     deprecated,
     dict_to_flat_list,
+    flat_pairs_to_dict,
+    flat_pairs_to_ordered_dict,
     iteritems,
     normalized_milliseconds,
     normalized_seconds,
     normalized_time_milliseconds,
     normalized_time_seconds,
-    pairs_to_dict,
-    pairs_to_ordered_dict,
     quadruples_to_dict,
     tuples_to_flat_list,
     versionadded,
@@ -955,7 +959,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         "HELLO",
         version_introduced="6.0.0",
         group=CommandGroup.CONNECTION,
-        response_callback=DictCallback(transform_function=pairs_to_dict),
+        response_callback=DictCallback(transform_function=flat_pairs_to_dict),
     )
     async def hello(
         self,
@@ -4678,7 +4682,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         "PUBSUB NUMSUB",
         group=CommandGroup.PUBSUB,
-        response_callback=DictCallback(pairs_to_ordered_dict),
+        response_callback=DictCallback(flat_pairs_to_ordered_dict),
     )
     async def pubsub_numsub(self, *channels: ValueT) -> OrderedDict[AnyStr, int]:
         """
@@ -5653,7 +5657,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         "MEMORY STATS",
         group=CommandGroup.SERVER,
-        response_callback=DictCallback(transform_function=pairs_to_dict),
+        response_callback=DictCallback(transform_function=flat_pairs_to_dict),
     )
     async def memory_stats(self) -> Dict[AnyStr, Union[AnyStr, int, float]]:
         """
@@ -5909,7 +5913,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         "ACL GETUSER",
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
-        response_callback=DictCallback(transform_function=pairs_to_dict),
+        response_callback=DictCallback(transform_function=flat_pairs_to_dict),
     )
     async def acl_getuser(self, username: StringT) -> Dict[AnyStr, List[AnyStr]]:
         """
@@ -6093,10 +6097,26 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return await self.execute_command("COMMAND COUNT")
 
+    @versionadded(version="3.1.0")
+    @redis_command(
+        "COMMAND DOCS",
+        version_introduced="7.0.0",
+        group=CommandGroup.SERVER,
+        response_callback=CommandDocCallback(),
+        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
+    )
+    async def command_docs(self, *command_names: StringT) -> Dict[AnyStr, Command]:
+        """
+        Mapping of commands to their documentation
+        """
+        return await self.execute_command("COMMAND DOCS", *command_names)
+
     @versionadded(version="3.0.0")
     @redis_command(
         "COMMAND GETKEYS",
         group=CommandGroup.SERVER,
+        response_callback=TupleCallback(),
+        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
     )
     async def command_getkeys(
         self, command: StringT, arguments: Iterable[ValueT]
@@ -6104,10 +6124,30 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Extract keys given a full Redis command
 
-        :return: keys from your command.
+        :return: Keys from your command.
         """
 
         return await self.execute_command("COMMAND GETKEYS", command, *arguments)
+
+    @versionadded(version="3.1.0")
+    @redis_command(
+        "COMMAND GETKEYSANDFLAGS",
+        version_introduced="7.0.0",
+        group=CommandGroup.SERVER,
+        response_callback=CommandKeyFlagCallback(),
+        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
+    )
+    async def command_getkeysandflags(
+        self, command: StringT, arguments: Iterable[ValueT]
+    ) -> Dict[AnyStr, Tuple[AnyStr, ...]]:
+        """
+        Extract keys from a full Redis command and their usage flags.
+
+        :return: Mapping of keys from your command to flags
+        """
+        return await self.execute_command(
+            "COMMAND GETKEYSANDFLAGS", command, *arguments
+        )
 
     @versionadded(version="3.0.0")
     @redis_command(
@@ -6125,10 +6165,40 @@ class CoreCommands(CommandMixin[AnyStr]):
         pieces = command_names if command_names else []
         return await self.execute_command("COMMAND INFO", *pieces)
 
+    @mutually_exclusive_parameters("module", "aclcat", "pattern")
+    @versionadded(version="3.1.0")
+    @redis_command(
+        "COMMAND LIST",
+        version_introduced="7.0.0",
+        group=CommandGroup.SERVER,
+        response_callback=SetCallback(),
+    )
+    async def command_list(
+        self,
+        module: Optional[StringT] = None,
+        aclcat: Optional[StringT] = None,
+        pattern: Optional[StringT] = None,
+    ) -> Set[AnyStr]:
+        """
+        Get an array of Redis command names
+        """
+        pieces: CommandArgList = []
+
+        if any([module, aclcat, pattern]):
+            pieces.append("FILTERBY")
+
+        if module is not None:
+            pieces.extend(["MODULE", module])
+        if aclcat is not None:
+            pieces.extend(["ACLCAT", aclcat])
+        if pattern is not None:
+            pieces.extend(["PATTERN", pattern])
+        return await self.execute_command("COMMAND LIST", *pieces)
+
     @redis_command(
         "CONFIG GET",
         group=CommandGroup.SERVER,
-        response_callback=DictCallback(pairs_to_dict),
+        response_callback=DictCallback(flat_pairs_to_dict),
     )
     async def config_get(self, parameters: Iterable[StringT]) -> Dict[AnyStr, AnyStr]:
         """

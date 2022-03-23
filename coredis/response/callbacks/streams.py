@@ -6,12 +6,14 @@ from coredis.response.types import (
     StreamPendingExt,
 )
 from coredis.typing import Any, AnyStr, Dict, Optional, Tuple, Union
-from coredis.utils import pairs_to_dict, pairs_to_ordered_dict
+from coredis.utils import flat_pairs_to_dict, flat_pairs_to_ordered_dict
 
 
 class StreamRangeCallback(SimpleCallback):
     def transform(self, response: Any) -> Tuple[StreamEntry, ...]:
-        return tuple(StreamEntry(r[0], pairs_to_ordered_dict(r[1])) for r in response)
+        return tuple(
+            StreamEntry(r[0], flat_pairs_to_ordered_dict(r[1])) for r in response
+        )
 
 
 class ClaimCallback(ParametrizedCallback):
@@ -50,7 +52,7 @@ class MultiStreamRangeCallback(SimpleCallback):
 
             for stream_id, entries in response.items():
                 mapping[stream_id] = tuple(
-                    StreamEntry(r[0], pairs_to_ordered_dict(r[1])) for r in entries
+                    StreamEntry(r[0], flat_pairs_to_ordered_dict(r[1])) for r in entries
                 )
 
             return mapping
@@ -64,7 +66,7 @@ class MultiStreamRangeCallback(SimpleCallback):
 
             for stream_id, entries in response:
                 mapping[stream_id] = tuple(
-                    StreamEntry(r[0], pairs_to_ordered_dict(r[1])) for r in entries
+                    StreamEntry(r[0], flat_pairs_to_ordered_dict(r[1])) for r in entries
                 )
 
             return mapping
@@ -80,7 +82,7 @@ class PendingCallback(ParametrizedCallback):
                 response[0],
                 response[1],
                 response[2],
-                pairs_to_ordered_dict(response[3:]),
+                flat_pairs_to_ordered_dict(response[3:]),
             )
         else:
             return tuple(
@@ -90,12 +92,12 @@ class PendingCallback(ParametrizedCallback):
 
 class XInfoCallback(SimpleCallback):
     def transform(self, response: Any) -> Tuple[Dict[AnyStr, AnyStr], ...]:
-        return tuple(pairs_to_dict(row) for row in response)
+        return tuple(flat_pairs_to_dict(row) for row in response)
 
 
 class StreamInfoCallback(ParametrizedCallback):
     def transform(self, response: Any, **options: Any) -> StreamInfo:
-        res = pairs_to_dict(response)
+        res = flat_pairs_to_dict(response)
         if not options.get("full"):
 
             k1 = "first-entry"
@@ -103,21 +105,21 @@ class StreamInfoCallback(ParametrizedCallback):
             e1, en = None, None
 
             if res[k1] and len(res[k1]) > 0:
-                e1 = StreamEntry(res[k1][0], pairs_to_ordered_dict(res[k1][1]))
+                e1 = StreamEntry(res[k1][0], flat_pairs_to_ordered_dict(res[k1][1]))
                 res.pop(k1)
 
             if res[kn] and len(res[kn]) > 0:
-                en = StreamEntry(res[kn][0], pairs_to_ordered_dict(res[kn][1]))
+                en = StreamEntry(res[kn][0], flat_pairs_to_ordered_dict(res[kn][1]))
                 res.pop(kn)
             res.update({"first-entry": e1, "last-entry": en})
         else:
             groups = res.get("groups")
             if groups:
-                res.update({"groups": pairs_to_dict(groups)})
+                res.update({"groups": flat_pairs_to_dict(groups)})
             res.update(
                 {
                     "entries": tuple(
-                        StreamEntry(k[0], pairs_to_ordered_dict(k[1]))
+                        StreamEntry(k[0], flat_pairs_to_ordered_dict(k[1]))
                         for k in res.get("entries", [])
                     )
                 }

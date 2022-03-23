@@ -1,18 +1,18 @@
 from coredis.response.callbacks import SimpleCallback
 from coredis.response.types import FunctionDefinition, LibraryDefinition
 from coredis.typing import Any, AnyStr, Dict, Union
-from coredis.utils import AnyDict, nativestr, pairs_to_dict
+from coredis.utils import AnyDict, flat_pairs_to_dict, nativestr
 
 
 class FunctionListCallback(SimpleCallback):
     def transform(self, response: Any) -> Dict[str, LibraryDefinition]:
-        libraries = [AnyDict(pairs_to_dict(library)) for library in response]
+        libraries = [AnyDict(flat_pairs_to_dict(library)) for library in response]
         transformed = {}
         for library in libraries:
             lib_name = library["library_name"]
             functions = {}
             for function in AnyDict(library).get("functions", []):
-                function_definition = AnyDict(pairs_to_dict(function))
+                function_definition = AnyDict(flat_pairs_to_dict(function))
                 functions[function_definition["name"]] = FunctionDefinition(
                     name=function_definition["name"],
                     description=function_definition["description"],
@@ -31,9 +31,9 @@ class FunctionListCallback(SimpleCallback):
 
 class FunctionStatsCallback(SimpleCallback):
     def transform(self, response: Any) -> Dict[AnyStr, Union[AnyStr, Dict]]:
-        transformed = pairs_to_dict(response)
+        transformed = flat_pairs_to_dict(response)
         key = b"engines" if b"engines" in transformed else "engines"
-        engines = pairs_to_dict(transformed.pop(key))
+        engines = flat_pairs_to_dict(transformed.pop(key))
         for engine, stats in engines.items():
-            transformed.setdefault(key, {})[engine] = pairs_to_dict(stats)
+            transformed.setdefault(key, {})[engine] = flat_pairs_to_dict(stats)
         return transformed

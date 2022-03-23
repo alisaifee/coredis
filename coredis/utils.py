@@ -166,7 +166,7 @@ def int_or_none(response):
     return int(response)
 
 
-def pairs_to_dict(response: Union[Mapping[T, T], Tuple[T, ...]]) -> Dict[T, T]:
+def flat_pairs_to_dict(response: Union[Mapping[T, T], Tuple[T, ...]]) -> Dict[T, T]:
     """Creates a dict given a flat list of key/value pairs"""
     if isinstance(response, frozendict):
         return dict(response)
@@ -176,10 +176,21 @@ def pairs_to_dict(response: Union[Mapping[T, T], Tuple[T, ...]]) -> Dict[T, T]:
     return dict(zip(it, it))
 
 
-def pairs_to_ordered_dict(response: Tuple[T, ...]) -> OrderedDict[T, T]:
+def flat_pairs_to_ordered_dict(response: Tuple[T, ...]) -> OrderedDict[T, T]:
     """Creates a dict given a flat list of key/value pairs"""
     it = iter(response)
     return OrderedDict(zip(it, it))
+
+
+def pairs_to_dict(
+    response: Union[Mapping[T, T], Tuple[Tuple[T, T], ...]]
+) -> Dict[T, T]:
+    """Creates a dict given an array of tuples"""
+    if isinstance(response, frozendict):
+        return dict(response)
+    if isinstance(response, dict):
+        return response
+    return dict(response)
 
 
 def quadruples_to_dict(

@@ -22,6 +22,7 @@ from typing import (
     Protocol,
     Set,
     Tuple,
+    Type,
     TypeVar,
     Union,
 )
@@ -39,6 +40,19 @@ RUNTIME_TYPECHECKS = False
 if os.environ.get("COREDIS_RUNTIME_CHECKS"):
     try:
         import beartype
+
+        if not TYPE_CHECKING:
+            from beartype.typing import (  # noqa: F811
+                Dict,
+                Iterable,
+                Iterator,
+                List,
+                Mapping,
+                OrderedDict,
+                Set,
+                Tuple,
+                TypedDict,
+            )
 
         RUNTIME_TYPECHECKS = True
     except ImportError:  # noqa
@@ -143,6 +157,7 @@ __all__ = [
     "SupportsPipeline",
     "StringT",
     "Tuple",
+    "Type",
     "TypedDict",
     "TypeVar",
     "Union",

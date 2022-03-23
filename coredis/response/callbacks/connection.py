@@ -2,7 +2,7 @@ from frozendict import frozendict
 
 from coredis.response.callbacks import SimpleCallback
 from coredis.typing import Any, AnyStr, Dict, List, Set, Union
-from coredis.utils import pairs_to_dict
+from coredis.utils import flat_pairs_to_dict
 
 
 class ClientTrackingInfoCallback(SimpleCallback):
@@ -16,6 +16,6 @@ class ClientTrackingInfoCallback(SimpleCallback):
     def transform(
         self, response: Any
     ) -> Dict[AnyStr, Union[AnyStr, Set[AnyStr], List[AnyStr]]]:
-        response = dict(pairs_to_dict(response))
+        response = dict(flat_pairs_to_dict(response))
         response["flags"] = set(response["flags"])
         return response

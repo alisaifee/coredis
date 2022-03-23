@@ -4,21 +4,21 @@ coredis.response.callbacks
 """
 import datetime
 from abc import ABC, abstractmethod
-from typing import (
+
+from coredis.typing import (
     Any,
     Callable,
     Dict,
     Generic,
     List,
     Optional,
+    ParamSpec,
     Set,
     Tuple,
     Type,
     TypeVar,
     Union,
 )
-
-from coredis.typing import ParamSpec
 from coredis.utils import nativestr
 
 R = TypeVar("R")

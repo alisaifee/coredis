@@ -4,7 +4,7 @@ from coredis.response.callbacks import (
     SimpleStringCallback,
 )
 from coredis.typing import Any, AnyStr, Dict, Tuple, Union
-from coredis.utils import pairs_to_dict
+from coredis.utils import flat_pairs_to_dict
 
 
 class ACLLogCallback(ParametrizedCallback):
@@ -15,5 +15,5 @@ class ACLLogCallback(ParametrizedCallback):
             return SimpleStringCallback()(response)
         else:
             return tuple(
-                DictCallback(transform_function=pairs_to_dict)(r) for r in response
+                DictCallback(transform_function=flat_pairs_to_dict)(r) for r in response
             )

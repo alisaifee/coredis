@@ -3554,6 +3554,24 @@ Get total number of Redis commands
 
 
 
+COMMAND DOCS
+************
+
+Get array of specific Redis command documentation
+
+- Documentation: `COMMAND DOCS <https://redis.io/commands/command-docs>`_
+- Implementation: :meth:`~coredis.Redis.command_docs`
+
+- New in redis: 7.0.0
+
+
+
+- .. versionadded:: 3.1.0
+
+
+
+
+
 COMMAND GETKEYS
 ***************
 
@@ -3570,6 +3588,24 @@ Extract keys given a full Redis command
 
 
 
+COMMAND GETKEYSANDFLAGS
+***********************
+
+Extract keys given a full Redis command
+
+- Documentation: `COMMAND GETKEYSANDFLAGS <https://redis.io/commands/command-getkeysandflags>`_
+- Implementation: :meth:`~coredis.Redis.command_getkeysandflags`
+
+- New in redis: 7.0.0
+
+
+
+- .. versionadded:: 3.1.0
+
+
+
+
+
 COMMAND INFO
 ************
 
@@ -3581,6 +3617,24 @@ Get array of specific Redis command details, or all when no argument is given.
 
 
 - .. versionadded:: 3.0.0
+
+
+
+
+
+COMMAND LIST
+************
+
+Get an array of Redis command names
+
+- Documentation: `COMMAND LIST <https://redis.io/commands/command-list>`_
+- Implementation: :meth:`~coredis.Redis.command_list`
+
+- New in redis: 7.0.0
+
+
+
+- .. versionadded:: 3.1.0
 
 
 
@@ -4062,36 +4116,6 @@ Return the current server time
 
 
 
-
-
-COMMAND DOCS [X]
-****************
-
-Get array of specific Redis command documentation
-
-- Documentation: `COMMAND DOCS <https://redis.io/commands/command-docs>`_
-
-- Not Implemented
-
-
-COMMAND GETKEYSANDFLAGS [X]
-***************************
-
-Extract keys given a full Redis command
-
-- Documentation: `COMMAND GETKEYSANDFLAGS <https://redis.io/commands/command-getkeysandflags>`_
-
-- Not Implemented
-
-
-COMMAND LIST [X]
-****************
-
-Get an array of Redis command names
-
-- Documentation: `COMMAND LIST <https://redis.io/commands/command-list>`_
-
-- Not Implemented
 
 
 LATENCY HISTOGRAM [X]
@@ -5371,36 +5395,6 @@ Watch the given keys to determine execution of the MULTI/EXEC block
 Server
 ------
 
-
-
-COMMAND DOCS [X]
-****************
-
-Get array of specific Redis command documentation
-
-- Documentation: `COMMAND DOCS <https://redis.io/commands/command-docs>`_
-
-- Not Implemented
-
-
-COMMAND GETKEYSANDFLAGS [X]
-***************************
-
-Extract keys given a full Redis command
-
-- Documentation: `COMMAND GETKEYSANDFLAGS <https://redis.io/commands/command-getkeysandflags>`_
-
-- Not Implemented
-
-
-COMMAND LIST [X]
-****************
-
-Get an array of Redis command names
-
-- Documentation: `COMMAND LIST <https://redis.io/commands/command-list>`_
-
-- Not Implemented
 
 
 LATENCY HISTOGRAM [X]
