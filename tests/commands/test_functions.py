@@ -25,7 +25,7 @@ async def simple_library(client):
     await client.function_load("lua", "coredis", library_definition)
 
 
-@targets("redis_basic", "redis_cluster")
+@targets("redis_basic", "redis_basic_resp3", "redis_cluster")
 @pytest.mark.asyncio
 @pytest.mark.min_server_version("6.9.0")
 class TestFunctions:
@@ -56,7 +56,7 @@ class TestFunctions:
         assert len((await client.function_list())["coredis"]["functions"]) == 2
 
 
-@targets("redis_basic", "redis_cluster")
+@targets("redis_basic", "redis_basic_resp3", "redis_cluster")
 @pytest.mark.asyncio
 @pytest.mark.min_server_version("6.9.0")
 class TestLibrary:
