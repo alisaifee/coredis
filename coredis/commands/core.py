@@ -46,6 +46,7 @@ from coredis.response.callbacks.cluster import (
     ClusterSlotsCallback,
 )
 from coredis.response.callbacks.command import CommandCallback
+from coredis.response.callbacks.connection import ClientTrackingInfoCallback
 from coredis.response.callbacks.geo import GeoCoordinatessCallback, GeoSearchCallback
 from coredis.response.callbacks.hash import (
     HGetAllCallback,
@@ -1724,6 +1725,25 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return await self.execute_command("HSTRLEN", key, field)
 
+    @overload
+    async def hrandfield(
+        self,
+        key: KeyT,
+        *,
+        withvalues: Literal[True],
+        count: int = ...,
+    ) -> Dict[AnyStr, AnyStr]:
+        ...
+
+    @overload
+    async def hrandfield(
+        self,
+        key: KeyT,
+        *,
+        count: int = ...,
+    ) -> Tuple[AnyStr, ...]:
+        ...
+
     @redis_command(
         "HRANDFIELD",
         readonly=True,
@@ -1734,6 +1754,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def hrandfield(
         self,
         key: KeyT,
+        *,
         count: Optional[int] = None,
         withvalues: Optional[bool] = None,
     ) -> Union[AnyStr, Tuple[AnyStr, ...], Dict[AnyStr, AnyStr]]:
@@ -5414,7 +5435,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         "CLIENT TRACKINGINFO",
         version_introduced="6.2.0",
         group=CommandGroup.CONNECTION,
-        response_callback=DictCallback(pairs_to_dict),
+        response_callback=ClientTrackingInfoCallback(),
     )
     async def client_trackinginfo(self) -> Dict[AnyStr, AnyStr]:
         """
@@ -5590,7 +5611,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         "LATENCY LATEST",
         group=CommandGroup.SERVER,
-        response_callback=DictCallback(transform_function=quadruples_to_dict),
+        response_callback=DictCallback(
+            transform_function=quadruples_to_dict,
+        ),
     )
     async def latency_latest(self) -> Dict[AnyStr, Tuple[int, int, int]]:
         """

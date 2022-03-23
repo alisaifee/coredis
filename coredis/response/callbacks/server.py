@@ -157,5 +157,4 @@ class RoleCallback(SimpleCallback):
             "slave": _parse_slave,
             "sentinel": _parse_sentinel,
         }[role]
-        print(response)
         return RoleInfo(**parser(response))  # type: ignore

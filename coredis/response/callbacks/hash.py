@@ -1,5 +1,7 @@
 from typing import Any, AnyStr, Dict, Tuple, Union
 
+from frozendict import frozendict
+
 from coredis.commands import ParametrizedCallback, SimpleCallback
 from coredis.utils import pairs_to_dict
 
@@ -12,6 +14,15 @@ class HScanCallback(SimpleCallback):
 
 
 class HRandFieldCallback(ParametrizedCallback):
+    def transform_3(
+        self, response: Any, **options: Any
+    ) -> Union[str, Tuple[AnyStr, ...], Dict[AnyStr, AnyStr]]:
+        if options.get("count"):
+            if options.get("withvalues"):
+                return dict(response)
+            return tuple(response)
+        return response
+
     def transform(
         self, response: Any, **options: Any
     ) -> Union[str, Tuple[AnyStr, ...], Dict[AnyStr, AnyStr]]:
@@ -25,5 +36,10 @@ class HRandFieldCallback(ParametrizedCallback):
 
 
 class HGetAllCallback(SimpleCallback):
+    def transform_3(self, response: Any) -> Dict[AnyStr, AnyStr]:
+        if isinstance(response, frozendict):
+            return dict(response)
+        return response
+
     def transform(self, response: Any) -> Dict[AnyStr, AnyStr]:
         return pairs_to_dict(response) if response else {}

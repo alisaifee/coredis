@@ -8,7 +8,7 @@ from coredis import DataError, NoKeyError, PureToken, ResponseError
 from tests.conftest import targets
 
 
-@targets("redis_basic", "redis_cluster")
+@targets("redis_basic", "redis_basic_resp3", "redis_cluster")
 @pytest.mark.asyncio()
 class TestGeneric:
     async def test_sort_basic(self, client):
@@ -169,10 +169,9 @@ class TestGeneric:
     @pytest.mark.nocluster
     async def test_migrate_single_key(self, client, redis_auth):
         auth_connection = await redis_auth.connection_pool.get_connection()
+        await redis_auth.flushall()
         await client.set("a", "1")
         assert not await client.migrate("172.17.0.1", auth_connection.port, 0, 100, "b")
-        with pytest.raises(ResponseError):
-            assert await client.migrate("172.17.0.1", auth_connection.port, 0, 100, "a")
         assert await client.migrate(
             "172.17.0.1", auth_connection.port, 0, 100, "a", auth="sekret"
         )

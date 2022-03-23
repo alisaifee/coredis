@@ -3,7 +3,7 @@ import pytest
 from tests.conftest import targets
 
 
-@targets("redis_basic", "redis_cluster")
+@targets("redis_basic", "redis_basic_resp3", "redis_cluster")
 @pytest.mark.asyncio()
 class TestSet:
     async def test_sadd(self, client):

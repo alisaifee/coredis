@@ -6,7 +6,7 @@ from coredis import CommandSyntaxError, DataError, PureToken
 from tests.conftest import targets
 
 
-@targets("redis_basic", "redis_cluster")
+@targets("redis_basic", "redis_basic_resp3", "redis_cluster")
 @pytest.mark.asyncio()
 class TestSortedSet:
     async def test_zadd(self, client):

@@ -42,7 +42,7 @@ return cycles
 
 
 @pytest.mark.asyncio()
-@targets("redis_basic")
+@targets("redis_basic", "redis_basic_resp3")
 class TestScripting:
     async def test_eval(self, client):
         await client.set("a", "2")
@@ -128,7 +128,8 @@ class TestScripting:
         assert await client.script_exists([multiply.sha]) == (True,)
 
     @pytest.mark.nocluster
-    async def test_eval_msgpack_pipeline_error_in_lua(self, client):
+    async def testscript_flush_eval_msgpack_pipeline_error_in_lua(self, client):
+        await client.script_flush()
         msgpack_hello = client.register_script(msgpack_hello_script)
         assert msgpack_hello.sha
 

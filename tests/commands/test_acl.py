@@ -10,7 +10,7 @@ async def teardown(client):
     await client.acl_deluser(["test_user"])
 
 
-@targets("redis_basic", "redis_auth", "redis_cluster")
+@targets("redis_basic", "redis_basic_resp3", "redis_auth", "redis_cluster")
 @pytest.mark.min_server_version("6.0.0")
 @pytest.mark.asyncio()
 class TestACL:

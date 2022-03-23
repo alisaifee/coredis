@@ -16,6 +16,8 @@ from typing import (
     Union,
 )
 
+from frozendict import frozendict
+
 from coredis.exceptions import ClusterDownError, RedisClusterException
 from coredis.typing import OrderedDict
 
@@ -192,8 +194,12 @@ def int_or_none(response):
     return int(response)
 
 
-def pairs_to_dict(response: Union[Dict[T, T], Tuple[T, ...]]) -> Dict[T, T]:
+def pairs_to_dict(response: Union[Mapping[T, T], Tuple[T, ...]]) -> Dict[T, T]:
     """Creates a dict given a flat list of key/value pairs"""
+    if isinstance(response, frozendict):
+        return dict(response)
+    if isinstance(response, dict):
+        return response
     it = iter(response)
     return dict(zip(it, it))
 
@@ -218,7 +224,7 @@ def tuples_to_flat_list(nested_list):
     return [item for sublist in nested_list for item in sublist]
 
 
-def dict_to_flat_list(mapping: Dict[T, U], reverse=False) -> List[Union[T, U]]:
+def dict_to_flat_list(mapping: Mapping[T, U], reverse=False) -> List[Union[T, U]]:
     e1: List[Union[T, U]] = list(mapping.keys())
     e2: List[Union[T, U]] = list(mapping.values())
 
