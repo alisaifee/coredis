@@ -9,7 +9,7 @@ inflect
 isort
 mypy==0.941
 jinja2
-pyright==1.1.231
+pyright==1.1.232
 requests
 redis
 types-frozendict
