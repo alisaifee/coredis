@@ -4899,7 +4899,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             combine=lambda res: res and list(res.values()).pop(),
         ),
     )
-    async def script_load(self, script: ValueT) -> AnyStr:
+    async def script_load(self, script: StringT) -> AnyStr:
         """
         Loads a Lua ``script`` into the script cache.
 
