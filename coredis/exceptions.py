@@ -26,6 +26,18 @@ class UnknownCommandError(RedisError):
         super(UnknownCommandError, self).__init__(self, message)
 
 
+class CommandNotSupportedError(RedisError):
+    """
+    Raised when the target server doesn't support a command due to
+    version mismatch
+    """
+
+    def __init__(self, cmd, current_version):
+        super(CommandNotSupportedError, self).__init__(
+            self, f"{cmd} is not supported on server version {current_version}"
+        )
+
+
 class ConnectionError(RedisError):
     pass
 

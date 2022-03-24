@@ -260,7 +260,12 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return await self.execute_command("GETRANGE", key, start, end)
 
-    @redis_command("GETSET", version_deprecated="6.2.0", group=CommandGroup.STRING)
+    @redis_command(
+        "GETSET",
+        version_deprecated="6.2.0",
+        deprecation_reason="Use set() with the get argument",
+        group=CommandGroup.STRING,
+    )
     async def getset(self, key: KeyT, value: ValueT) -> Optional[AnyStr]:
         """
         Set the string value of a key and return its old value
@@ -900,6 +905,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         "CLUSTER SLAVES",
         version_deprecated="5.0.0",
+        deprecation_reason="Use cluster_replicas()",
         group=CommandGroup.CLUSTER,
         response_callback=ClusterNodesCallback(),
         cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
@@ -976,9 +982,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         pieces: CommandArgList = []
         if protover is not None:
             pieces.append(protover)
-        if username is not None:
-            pieces.append(username)
-        if password is not None:
+        if password:
+            pieces.append("AUTH")
+            pieces.append(username or "default")
             pieces.append(password)
         if setname is not None:
             pieces.append(setname)
@@ -1221,6 +1227,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         "GEORADIUS",
         version_deprecated="6.2.0",
+        deprecation_reason="Use geosearch() and geosearchstore() with the radius argument",
         group=CommandGroup.GEO,
         arguments={"any_": {"version_introduced": "6.2.0"}},
         response_callback=GeoSearchCallback(),
@@ -1280,6 +1287,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         "GEORADIUSBYMEMBER",
         version_deprecated="6.2.0",
+        deprecation_reason="""
+        Use geosearch() and geosearchstore() with the radius and member arguments
+        """,
         group=CommandGroup.GEO,
         response_callback=GeoSearchCallback(),
     )
@@ -2515,7 +2525,12 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return await self.execute_command("BRPOP", *keys, timeout)
 
-    @redis_command("BRPOPLPUSH", version_deprecated="6.2.0", group=CommandGroup.LIST)
+    @redis_command(
+        "BRPOPLPUSH",
+        version_deprecated="6.2.0",
+        deprecation_reason="Use blmove() with the `wherefrom` and `whereto` arguments",
+        group=CommandGroup.LIST,
+    )
     async def brpoplpush(
         self, source: KeyT, destination: KeyT, timeout: Union[int, float]
     ) -> Optional[AnyStr]:
@@ -2766,7 +2781,12 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return await self.execute_command("RPOP", key, *pieces)
 
-    @redis_command("RPOPLPUSH", version_deprecated="6.2.0", group=CommandGroup.LIST)
+    @redis_command(
+        "RPOPLPUSH",
+        version_deprecated="6.2.0",
+        deprecation_reason="Use lmove() with the wherefrom and whereto arguments",
+        group=CommandGroup.LIST,
+    )
     async def rpoplpush(self, source: KeyT, destination: KeyT) -> Optional[AnyStr]:
         """
         Remove the last element in a list, prepend it to another list and return it
@@ -3527,6 +3547,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         "ZRANGEBYLEX",
         readonly=True,
         version_deprecated="6.2.0",
+        deprecation_reason=" Use zrange() with the sortby=BYLEX argument",
         group=CommandGroup.SORTED_SET,
         response_callback=TupleCallback(),
     )
@@ -3557,6 +3578,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         "ZRANGEBYSCORE",
         readonly=True,
         version_deprecated="6.2.0",
+        deprecation_reason=" Use zrange() with the sortby=BYSCORE argument",
         group=CommandGroup.SORTED_SET,
         response_callback=ZMembersOrScoredMembers(),
     )
@@ -3688,6 +3710,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         "ZREVRANGE",
         readonly=True,
         version_deprecated="6.2.0",
+        deprecation_reason="Use zrange() with the rev argument",
         group=CommandGroup.SORTED_SET,
         response_callback=ZMembersOrScoredMembers(),
     )
@@ -3718,6 +3741,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         "ZREVRANGEBYLEX",
         readonly=True,
         version_deprecated="6.2.0",
+        deprecation_reason="Use zrange() with the rev and sort=BYLEX arguments",
         group=CommandGroup.SORTED_SET,
         response_callback=ZMembersOrScoredMembers(),
     )
@@ -3749,6 +3773,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         "ZREVRANGEBYSCORE",
         readonly=True,
         version_deprecated="6.2.0",
+        deprecation_reason="Use zrange() with the rev and sort=BYSCORE arguments",
         group=CommandGroup.SORTED_SET,
         response_callback=ZMembersOrScoredMembers(),
     )
@@ -5721,7 +5746,12 @@ class CoreCommands(CommandMixin[AnyStr]):
             return True
         raise RedisError("SHUTDOWN seems to have failed.")
 
-    @redis_command("SLAVEOF", version_deprecated="5.0.0", group=CommandGroup.SERVER)
+    @redis_command(
+        "SLAVEOF",
+        version_deprecated="5.0.0",
+        deprecation_reason="Use replicaof()",
+        group=CommandGroup.SERVER,
+    )
     async def slaveof(self, host: StringT, port: ValueT) -> bool:
         """
         Sets the server to be a replicated slave of the instance identified

@@ -196,6 +196,7 @@ class RedisConnection:
         idle_check_interval: float = 1,
         client_name: Optional[str] = None,
         protocol_version: Literal[2, 3] = 2,
+        verify_version: bool = True,
         **kwargs,
     ):
         if not connection_pool:
@@ -238,7 +239,9 @@ class RedisConnection:
         self.connection_pool = connection_pool
         self.encoding = encoding
         self.decode_responses = decode_responses
+        self.protocol_version = protocol_version
         self.server_version: Optional[Version] = None
+        self.verify_version = verify_version
 
     def __await__(self):
         async def closure():
@@ -395,11 +398,11 @@ class AbstractRedis(
         return await Library(self, name)
 
     def _ensure_server_version(self, version: Optional[str]):
-        if not (self.server_version or version):
+        if not version:
             return
         if not self.server_version and version:
-            self.server_version = Version(version)
-        elif str(self.server_version) != version:
+            self.server_version = Version(nativestr(version))
+        elif str(self.server_version) != nativestr(version):
             raise Exception(
                 f"Server version changed from {self.server_version} to {version}"
             )
@@ -938,6 +941,7 @@ class Redis(
         idle_check_interval: float = ...,
         client_name: Optional[str] = ...,
         protocol_version: Literal[2, 3] = 2,
+        verify_version: bool = ...,
         **kwargs,
     ):
         ...
@@ -969,6 +973,7 @@ class Redis(
         idle_check_interval: float = ...,
         client_name: Optional[str] = ...,
         protocol_version: Literal[2, 3] = 2,
+        verify_version: bool = ...,
         **kwargs,
     ):
         ...
@@ -999,6 +1004,7 @@ class Redis(
         idle_check_interval: float = 1,
         client_name: Optional[str] = None,
         protocol_version: Literal[2, 3] = 2,
+        verify_version: bool = True,
         **kwargs,
     ):
         super(Redis, self).__init__(
@@ -1025,6 +1031,7 @@ class Redis(
             idle_check_interval=idle_check_interval,
             client_name=client_name,
             protocol_version=protocol_version,
+            verify_version=verify_version,
         )
         self._use_lua_lock: Optional[bool] = None
 
@@ -1191,6 +1198,7 @@ class RedisCluster(
         nodemanager_follow_cluster: bool = ...,
         decode_responses: Literal[False] = ...,
         connection_pool: Optional[ClusterConnectionPool] = ...,
+        verify_version: bool = ...,
         **kwargs,
     ):
         ...
@@ -1210,6 +1218,7 @@ class RedisCluster(
         nodemanager_follow_cluster: bool = ...,
         decode_responses: Literal[True],
         connection_pool: Optional[ClusterConnectionPool] = ...,
+        verify_version: bool = ...,
         **kwargs,
     ):
         ...
@@ -1228,6 +1237,7 @@ class RedisCluster(
         nodemanager_follow_cluster: bool = False,
         decode_responses: bool = False,
         connection_pool: Optional[ClusterConnectionPool] = None,
+        verify_version: bool = True,
         **kwargs,
     ):
         """
@@ -1242,8 +1252,8 @@ class RedisCluster(
         :param nodemanager_follow_cluster: The node manager will during initialization try the
          last set of nodes that it was operating on. This will allow the client to drift along
          side the cluster if the cluster nodes move around alot.
+        :param verify_version: Ensure requested methods are supported on the target server
         """
-        # Tweaks to Redis client arguments when running in cluster mode
 
         if "db" in kwargs:
             raise RedisClusterException(
@@ -1272,7 +1282,10 @@ class RedisCluster(
             )
 
         super(RedisCluster, self).__init__(
-            connection_pool=pool, decode_responses=decode_responses, **kwargs
+            connection_pool=pool,
+            decode_responses=decode_responses,
+            verify_version=verify_version,
+            **kwargs,
         )
 
         self.refresh_table_asap: bool = False

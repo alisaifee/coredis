@@ -1,6 +1,7 @@
 import pytest
 from packaging.version import Version
 
+from coredis.exceptions import CommandNotSupportedError
 from tests.conftest import targets
 
 
@@ -18,3 +19,26 @@ class TestClient:
         assert client.server_version is None
         await client.ping()
         assert client.server_version is None
+
+    @pytest.mark.min_server_version("6.0.0")
+    @pytest.mark.max_server_version("6.2.0")
+    async def test_unsupported_command_6_0_x(self, client):
+        await client.ping()
+        with pytest.raises(CommandNotSupportedError):
+            await client.getex("test")
+
+    @pytest.mark.min_server_version("6.2.0")
+    @pytest.mark.max_server_version("6.9.0")
+    async def test_unsupported_command_6_2_x(self, client):
+        await client.ping()
+        with pytest.raises(CommandNotSupportedError):
+            await client.function_list()
+
+    @pytest.mark.min_server_version("6.2.0")
+    @pytest.mark.max_server_version("6.9.0")
+    async def test_deprecated_command(self, client, caplog):
+        await client.ping()
+        assert await client.set("a", 1)
+        with pytest.warns(UserWarning) as warning:
+            assert "1" == await client.getset("a", 2)
+        assert warning[0].message.args[0] == "Use set() with the get argument"

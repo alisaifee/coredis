@@ -5,6 +5,7 @@ coredis.commands
 import dataclasses
 import enum
 import functools
+import warnings
 from abc import ABC
 from types import FunctionType
 from typing import (
@@ -19,9 +20,12 @@ from typing import (
     Optional,
     TypeVar,
     Union,
+    cast,
 )
 
 from packaging import version
+
+from coredis.exceptions import CommandNotSupportedError
 
 if TYPE_CHECKING:
     import coredis.client
@@ -33,6 +37,30 @@ from coredis.utils import NodeFlag
 
 R = TypeVar("R")
 P = ParamSpec("P")
+
+
+def check_version(
+    instance: Any,
+    command: str,
+    function_name: str,
+    min_version: Optional[version.Version],
+    deprecated_version: Optional[version.Version],
+    deprecation_reason: Optional[str],
+):
+    if not any([min_version, deprecated_version]):
+        return
+
+    client = cast("coredis.client.RedisConnection", instance)
+    if client.server_version:
+        if min_version and client.server_version < min_version:
+            raise CommandNotSupportedError(command, client.server_version)
+        if deprecated_version and client.server_version >= deprecated_version:
+            if deprecation_reason:
+                warnings.warn(deprecation_reason.strip())
+            else:
+                warnings.warn(
+                    f"{function_name}() is deprecated since redis version {deprecated_version}. "
+                )
 
 
 @dataclasses.dataclass
@@ -64,6 +92,7 @@ def redis_command(
     group: Optional["CommandGroup"] = None,
     version_introduced: Optional[str] = None,
     version_deprecated: Optional[str] = None,
+    deprecation_reason: Optional[str] = None,
     arguments: Optional[Dict[str, Dict[str, str]]] = None,
     readonly: bool = False,
     response_callback: Optional[
@@ -88,6 +117,14 @@ def redis_command(
     ) -> Callable[P, Coroutine[Any, Any, R]]:
         @functools.wraps(func)
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
+            check_version(
+                args[0],  # type: ignore
+                command_name,
+                func.__name__,
+                command_details.version_introduced,
+                command_details.version_deprecated,
+                deprecation_reason,
+            )
             return await func(*args, **kwargs)
 
         wrapped.__doc__ = f"""

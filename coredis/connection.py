@@ -588,15 +588,14 @@ class BaseConnection:
 
     async def on_connect(self):
         self._parser.on_connect(self)
+        hello_command_args: List[Union[int, str, bytes]] = [self.protocol_version]
+        auth_attempted = False
         if self.username or self.password:
-            if self.username and self.password:
-                await self.send_command("AUTH", self.username, self.password)
-                await self.check_auth_response()
-            elif self.password:
-                await self.send_command("AUTH", self.password)
-                await self.check_auth_response()
-
-        await self.send_command("HELLO", self.protocol_version)
+            hello_command_args.extend(
+                ["AUTH", self.username or "default", self.password]
+            )
+            auth_attempted = True
+        await self.send_command("HELLO", *hello_command_args)
         try:
             resp = await self.read_response()
             if self.protocol_version > 2:
@@ -605,8 +604,16 @@ class BaseConnection:
                 self.server_version = resp["version"]
             else:
                 self.server_version = resp[3]
-        except UnknownCommandError:
+        except (UnknownCommandError, AuthenticationRequiredError):
             self.version = None
+            auth_attempted = False
+        if not auth_attempted and (self.username or self.password):
+            if self.username and self.password:
+                await self.send_command("AUTH", self.username, self.password)
+                await self.check_auth_response()
+            elif self.password:
+                await self.send_command("AUTH", self.password)
+                await self.check_auth_response()
 
         if self.db:
             await self.send_command("SELECT", self.db)
