@@ -337,10 +337,11 @@ class PythonParser(BaseParser):
 
             if length == -1:
                 return None
-            response = []
+            response = deque(maxlen=length)
 
             for i in range(length):
                 response.append(await self.read_response(decode=decode))
+            response = list(response)
         # map response
         elif byte == "%":
             length = int(response)
