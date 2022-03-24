@@ -7,6 +7,7 @@ import sys
 import time
 import warnings
 from abc import ABC, abstractmethod
+from collections import deque
 from io import BytesIO
 from typing import Callable, Dict, List, Literal, Optional, Type, Union, cast
 
@@ -345,11 +346,11 @@ class PythonParser(BaseParser):
             length = int(response)
             if length == -1:
                 return {}
-            response = {}
+            response = deque(maxlen=length)
             for i in range(length):
                 key = await self.read_response(decode=decode)
                 value = await self.read_response(decode=decode)
-                response[key] = value
+                response.append((key, value))
             response = frozendict.frozendict(response)
         # set
         elif byte == "~":
