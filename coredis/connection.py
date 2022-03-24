@@ -30,6 +30,7 @@ from coredis.exceptions import (
     ResponseError,
     TimeoutError,
     TryAgainError,
+    UnknownCommandError,
 )
 from coredis.utils import b, nativestr
 
@@ -168,7 +169,10 @@ class BaseParser(ABC):
     """Plain Python parsing class"""
 
     EXCEPTION_CLASSES = {
-        "ERR": {"max number of clients reached": ConnectionError},
+        "ERR": {
+            "max number of clients reached": ConnectionError,
+            "unknown command": UnknownCommandError,
+        },
         "EXECABORT": ExecAbortError,
         "LOADING": BusyLoadingError,
         "NOSCRIPT": NoScriptError,
@@ -189,16 +193,18 @@ class BaseParser(ABC):
     def parse_error(self, response):
         """Parse an error response"""
         error_code = response.split(" ")[0]
-
         if error_code in self.EXCEPTION_CLASSES:
             response = response[len(error_code) + 1 :]
             exception_class = self.EXCEPTION_CLASSES[error_code]
 
             if isinstance(exception_class, dict):
-                exception_class = exception_class.get(response, ResponseError)
-
+                options = exception_class.items()
+                exception_class = ResponseError
+                for err, exc in options:
+                    if response.startswith(err):
+                        exception_class = exc
+                        break
             return cast(Callable, exception_class)(response)
-
         return ResponseError(response)
 
     @abstractmethod
@@ -517,6 +523,7 @@ class BaseConnection:
         self.encoding = encoding
         self.decode_responses = decode_responses
         self.protocol_version = protocol_version
+        self.server_version: Optional[str] = None
         self.loop = loop
         self.client_name = client_name
         # flag to show if a connection is waiting for response
@@ -588,13 +595,19 @@ class BaseConnection:
             elif self.password:
                 await self.send_command("AUTH", self.password)
                 await self.check_auth_response()
-        if self.protocol_version == 3:
-            await self.send_command("HELLO", 3)
-            resp = await self.read_response()
-            if not resp["proto"] == 3:
-                raise RedisError("Unexpected response when negotiating RESP3", resp)
 
-        # if a database is specified, switch to it
+        await self.send_command("HELLO", self.protocol_version)
+        try:
+            resp = await self.read_response()
+            if self.protocol_version > 2:
+                if not resp["proto"] == 3:
+                    raise RedisError("Unexpected response when negotiating RESP3", resp)
+                self.server_version = resp["version"]
+            else:
+                self.server_version = resp[3]
+        except UnknownCommandError:
+            self.version = None
+
         if self.db:
             await self.send_command("SELECT", self.db)
 

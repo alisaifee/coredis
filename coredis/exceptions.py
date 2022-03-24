@@ -1,3 +1,4 @@
+import re
 from typing import Set
 
 
@@ -13,6 +14,16 @@ class CommandSyntaxError(RedisError):
     def __init__(self, arguments: Set[str], message: str):
         self.arguments: Set[str] = arguments
         super().__init__(message)
+
+
+class UnknownCommandError(RedisError):
+    ERROR_REGEX = re.compile("unknown command `(.*?)`")
+    #: Name of command requested
+    command: str
+
+    def __init__(self, message):
+        self.command = self.ERROR_REGEX.findall(message).pop()
+        super(UnknownCommandError, self).__init__(self, message)
 
 
 class ConnectionError(RedisError):

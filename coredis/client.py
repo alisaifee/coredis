@@ -6,6 +6,8 @@ from abc import ABCMeta
 from ssl import SSLContext
 from typing import overload
 
+from packaging.version import Version
+
 from coredis.commands import ClusterCommandConfig, CommandGroup, redis_command
 from coredis.commands.core import CoreCommands
 from coredis.commands.extra import ExtraCommandMixin
@@ -236,6 +238,7 @@ class RedisConnection:
         self.connection_pool = connection_pool
         self.encoding = encoding
         self.decode_responses = decode_responses
+        self.server_version: Optional[Version] = None
 
     def __await__(self):
         async def closure():
@@ -280,6 +283,8 @@ class AbstractRedis(
     """
     Async Redis client
     """
+
+    server_version: Optional[Version]
 
     async def scan_iter(
         self,
@@ -388,6 +393,16 @@ class AbstractRedis(
         :param name: name of the library
         """
         return await Library(self, name)
+
+    def _ensure_server_version(self, version: Optional[str]):
+        if not (self.server_version or version):
+            return
+        if not self.server_version and version:
+            self.server_version = Version(version)
+        elif str(self.server_version) != version:
+            raise Exception(
+                f"Server version changed from {self.server_version} to {version}"
+            )
 
 
 class AbstractRedisCluster(AbstractRedis[AnyStr]):
@@ -1090,6 +1105,8 @@ class Redis(
         """Executes a command and returns a parsed response"""
         pool = self.connection_pool
         connection = await pool.get_connection()
+        self._ensure_server_version(connection.server_version)
+
         try:
             await connection.send_command(command, *args)
 
@@ -1490,7 +1507,6 @@ class RedisCluster(
         """
         Sends a command to a node in the cluster
         """
-
         if not self.connection_pool.initialized:
             await self.connection_pool.initialize()
 
@@ -1539,6 +1555,7 @@ class RedisCluster(
                 else:
                     node = self.connection_pool.get_node_by_slot(slot, command)
                 r = self.connection_pool.get_connection_by_node(node)
+            self._ensure_server_version(r.server_version)
 
             try:
                 if asking:
@@ -1580,6 +1597,7 @@ class RedisCluster(
             except AskError as e:
                 redirect_addr, asking = "{0}:{1}".format(e.host, e.port), True
             finally:
+
                 self.connection_pool.release(r)
 
         raise ClusterError("TTL exhausted.")

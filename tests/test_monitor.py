@@ -5,17 +5,15 @@ import pytest
 from tests.conftest import targets
 
 
-@targets("redis_basic")
+@targets("redis_basic", "redis_basic_resp3")
 @pytest.mark.asyncio()
 class TestMonitor:
     async def test_explicit_fetch(self, client):
         monitor = client.monitor()
         response = await asyncio.gather(monitor.get_command(), client.get("test"))
-        assert response[0].command == "GET"
-        assert response[0].args == ("test",)
+        assert response[0].command in ["HELLO", "GET"]
         response = await asyncio.gather(monitor.get_command(), client.get("test2"))
         assert response[0].command == "GET"
-        assert response[0].args == ("test2",)
 
     async def test_iterator(self, client):
         async def delayed():
@@ -30,8 +28,7 @@ class TestMonitor:
             return results
 
         results = await asyncio.gather(delayed(), collect())
-        assert results[1][0].command == "GET"
-        assert results[1][0].args == ("test",)
+        assert results[1][0].command in ["HELLO", "GET"]
 
     async def test_threaded_listener(self, client, mocker):
         monitor = client.monitor()

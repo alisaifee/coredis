@@ -36,6 +36,7 @@ from coredis.exceptions import (
     ResponseError,
     TimeoutError,
     TryAgainError,
+    UnknownCommandError,
     WatchError,
 )
 from coredis.pool import BlockingConnectionPool, ClusterConnectionPool, ConnectionPool
@@ -82,6 +83,7 @@ __all__ = [
     "ResponseError",
     "TimeoutError",
     "TryAgainError",
+    "UnknownCommandError",
     "WatchError",
 ]
 
