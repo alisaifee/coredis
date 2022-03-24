@@ -4,6 +4,7 @@ coredis.egg-info
 build/
 dist/
 .idea/
+.benchmarks/
 .tool-versions
 env/
 env3.6/

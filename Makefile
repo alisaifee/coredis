@@ -19,3 +19,9 @@ generate-compatibility-docs:
 generate-token-enum:
 	rm -rf docs/source/compatibility.rst
 	PYTHONPATH=${CURDIR} python scripts/command_coverage.py --debug=${DEBUG} --next-version=${NEXT_VERSION} token-enum
+benchmark:
+	./scripts/benchmark.sh
+benchmark-light:
+	./scripts/benchmark.sh --data-size=10 --data-size=1000
+benchmark-self:
+	./scripts/benchmark.sh --data-size=10 --data-size=1000 -m coredis

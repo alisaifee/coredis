@@ -1,0 +1,3 @@
+[submodule "python-redis-benchmark"]
+	path = python-redis-benchmark
+	url = git@github.com:alisaifee/python-redis-benchmark
