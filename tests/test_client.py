@@ -1,7 +1,8 @@
 import pytest
 from packaging.version import Version
 
-from coredis.exceptions import CommandNotSupportedError
+from coredis import Redis
+from coredis.exceptions import CommandNotSupportedError, ProtocolError
 from coredis.utils import nativestr
 from tests.conftest import targets
 
@@ -43,3 +44,11 @@ class TestClient:
         with pytest.warns(UserWarning) as warning:
             assert "1" == nativestr(await client.getset("a", 2))
         assert warning[0].message.args[0] == "Use set() with the get argument"
+
+
+@pytest.mark.asyncio
+@pytest.mark.min_server_version("6.0.0")
+async def test_invalid_protocol_version(redis_basic):
+    r = Redis(protocol_version=4)
+    with pytest.raises(ProtocolError):
+        await r.ping()

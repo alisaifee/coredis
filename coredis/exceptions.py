@@ -42,6 +42,12 @@ class ConnectionError(RedisError):
     pass
 
 
+class ProtocolError(ConnectionError):
+    """
+    Raised on errors related to protocol version
+    """
+
+
 class TimeoutError(RedisError):
     pass
 

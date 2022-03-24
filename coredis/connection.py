@@ -25,6 +25,7 @@ from coredis.exceptions import (
     InvalidResponse,
     MovedError,
     NoScriptError,
+    ProtocolError,
     ReadOnlyError,
     RedisError,
     ResponseError,
@@ -185,6 +186,7 @@ class BaseParser(ABC):
         "WRONGPASS": AuthenticationFailureError,
         "NOAUTH": AuthenticationRequiredError,
         "NOPERM": AuthorizationError,
+        "NOPROTO": ProtocolError,
     }
 
     def __init__(self, *args):
@@ -600,7 +602,9 @@ class BaseConnection:
             resp = await self.read_response(decode=False)
             if self.protocol_version == 3:
                 if not resp[b"proto"] == 3:
-                    raise RedisError("Unexpected response when negotiating RESP3", resp)
+                    raise ConnectionError(
+                        f"Unexpected response when negotiating protocol: [{resp}]"
+                    )
                 self.server_version = nativestr(resp[b"version"])
             else:
                 self.server_version = nativestr(resp[3])
