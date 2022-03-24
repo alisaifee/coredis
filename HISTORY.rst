@@ -3,6 +3,40 @@
 Changelog
 =========
 
+v3.1.0
+------
+Release Date: 2022-03-23
+
+* Features
+  * Added support for functions
+  * Added runtime checks to bail out early if server version
+    doesn't support the command
+  * Deprecate custom cluster methods
+  * Issue warning when a deprecated redis command is used
+  * Add support for RESP3 protocol
+
+* New APIs:
+
+  * Scripting:
+
+    * ``Redis.fcall``
+    * ``Redis.fcall_ro``
+    * ``Redis.function_delete``
+    * ``Redis.function_dump``
+    * ``Redis.function_flush``
+    * ``Redis.function_kill``
+    * ``Redis.function_list``
+    * ``Redis.function_load``
+    * ``Redis.function_restore``
+    * ``Redis.function_stats``
+
+  * Server:
+
+    * ``Redis.command_docs``
+    * ``Redis.command_getkeysandflags``
+    * ``Redis.command_list``
+
+
 v3.0.3
 ------
 Release Date: 2022-03-21
@@ -430,6 +464,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
