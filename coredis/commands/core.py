@@ -340,7 +340,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="3.0.0")
     @redis_command(
         "LCS",
-        version_introduced="7.0.0",
+        version_introduced="6.9.0",
         group=CommandGroup.STRING,
         readonly=True,
         response_callback=LCSCallback(),
@@ -1882,7 +1882,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         "EXPIRE",
         group=CommandGroup.GENERIC,
-        arguments={"condition": {"version_introduced": "7.0.0"}},
+        arguments={"condition": {"version_introduced": "6.9.0"}},
         response_callback=BoolCallback(),
     )
     async def expire(
@@ -1911,7 +1911,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         "EXPIREAT",
         group=CommandGroup.GENERIC,
         response_callback=BoolCallback(),
-        arguments={"condition": {"version_introduced": "7.0.0"}},
+        arguments={"condition": {"version_introduced": "6.9.0"}},
     )
     async def expireat(
         self,
@@ -1938,7 +1938,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="3.0.0")
     @redis_command(
         "EXPIRETIME",
-        version_introduced="7.0.0",
+        version_introduced="6.9.0",
         group=CommandGroup.GENERIC,
         response_callback=ExpiryCallback(),
         readonly=True,
@@ -2108,7 +2108,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         "PEXPIRE",
         group=CommandGroup.GENERIC,
-        arguments={"condition": {"version_introduced": "7.0.0"}},
+        arguments={"condition": {"version_introduced": "6.9.0"}},
         response_callback=BoolCallback(),
     )
     async def pexpire(
@@ -2133,7 +2133,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         "PEXPIREAT",
         group=CommandGroup.GENERIC,
-        arguments={"condition": {"version_introduced": "7.0.0"}},
+        arguments={"condition": {"version_introduced": "6.9.0"}},
         response_callback=BoolCallback(),
     )
     async def pexpireat(
@@ -2162,7 +2162,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="3.0.0")
     @redis_command(
         "PEXPIRETIME",
-        version_introduced="7.0.0",
+        version_introduced="6.9.0",
         group=CommandGroup.GENERIC,
         response_callback=ExpiryCallback(),
         readonly=True,
@@ -2323,7 +2323,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="3.0.0")
     @redis_command(
         "SORT_RO",
-        version_introduced="7.0.0",
+        version_introduced="6.9.0",
         group=CommandGroup.GENERIC,
         response_callback=SortCallback(),
         readonly=True,
@@ -2469,7 +2469,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return await self.execute_command("BLMOVE", *params)
 
     @versionadded(version="3.0.0")
-    @redis_command("BLMPOP", version_introduced="7.0.0", group=CommandGroup.LIST)
+    @redis_command("BLMPOP", version_introduced="6.9.0", group=CommandGroup.LIST)
     async def blmpop(
         self,
         keys: Iterable[KeyT],
@@ -2599,7 +2599,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return await self.execute_command("LMOVE", *params)
 
     @versionadded(version="3.0.0")
-    @redis_command("LMPOP", version_introduced="7.0.0", group=CommandGroup.LIST)
+    @redis_command("LMPOP", version_introduced="6.9.0", group=CommandGroup.LIST)
     async def lmpop(
         self,
         keys: Iterable[Union[str, bytes]],
@@ -2883,7 +2883,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="3.0.0")
     @redis_command(
-        "SINTERCARD", version_introduced="7.0.0", group=CommandGroup.SET, readonly=True
+        "SINTERCARD", version_introduced="6.9.0", group=CommandGroup.SET, readonly=True
     )
     async def sintercard(
         self,
@@ -3076,7 +3076,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="3.0.0")
     @redis_command(
         "BZMPOP",
-        version_introduced="7.0.0",
+        version_introduced="6.9.0",
         group=CommandGroup.SORTED_SET,
         response_callback=ZMPopCallback(),
     )
@@ -3322,7 +3322,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="3.0.0")
     @redis_command(
         "ZINTERCARD",
-        version_introduced="7.0.0",
+        version_introduced="6.9.0",
         group=CommandGroup.SORTED_SET,
         readonly=True,
     )
@@ -3354,7 +3354,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="3.0.0")
     @redis_command(
         "ZMPOP",
-        version_introduced="7.0.0",
+        version_introduced="6.9.0",
         group=CommandGroup.SORTED_SET,
         response_callback=ZMPopCallback(),
     )
@@ -4394,7 +4394,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         "XGROUP CREATE",
-        arguments={"entriesread": {"version_introduced": "7.0.0"}},
+        arguments={"entriesread": {"version_introduced": "6.9.0"}},
         group=CommandGroup.STREAM,
         response_callback=SimpleStringCallback(),
     )
@@ -4526,7 +4526,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         "BITCOUNT",
         readonly=True,
         group=CommandGroup.BITMAP,
-        arguments={"index_unit": {"version_introduced": "7.0.0"}},
+        arguments={"index_unit": {"version_introduced": "6.9.0"}},
     )
     @mutually_inclusive_parameters("start", "end")
     async def bitcount(
@@ -4590,7 +4590,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         "BITPOS",
         readonly=True,
         group=CommandGroup.BITMAP,
-        arguments={"end_index_unit": {"version_introduced": "7.0.0"}},
+        arguments={"end_index_unit": {"version_introduced": "6.9.0"}},
     )
     async def bitpos(
         self,
@@ -4753,7 +4753,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return await self._eval("EVAL", script, keys, args)
 
     @versionadded(version="3.0.0")
-    @redis_command("EVAL_RO", version_introduced="7.0.0", group=CommandGroup.SCRIPTING)
+    @redis_command("EVAL_RO", version_introduced="6.9.0", group=CommandGroup.SCRIPTING)
     async def eval_ro(
         self,
         script: StringT,
@@ -4800,7 +4800,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="3.0.0")
     @redis_command(
-        "EVALSHA_RO", version_introduced="7.0.0", group=CommandGroup.SCRIPTING
+        "EVALSHA_RO", version_introduced="6.9.0", group=CommandGroup.SCRIPTING
     )
     async def evalsha_ro(
         self,
@@ -4922,7 +4922,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="3.1.0")
     @redis_command(
         "FCALL",
-        version_introduced="7.0.0",
+        version_introduced="6.9.0",
         group=CommandGroup.SCRIPTING,
     )
     async def fcall(
@@ -4941,7 +4941,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="3.1.0")
     @redis_command(
         "FCALL_RO",
-        version_introduced="7.0.0",
+        version_introduced="6.9.0",
         group=CommandGroup.SCRIPTING,
     )
     async def fcall_ro(
@@ -4960,7 +4960,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="3.1.0")
     @redis_command(
         "FUNCTION DELETE",
-        version_introduced="7.0.0",
+        version_introduced="6.9.0",
         group=CommandGroup.SCRIPTING,
         response_callback=SimpleStringCallback(),
         cluster=ClusterCommandConfig(
@@ -4977,7 +4977,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="3.1.0")
     @redis_command(
         "FUNCTION DUMP",
-        version_introduced="7.0.0",
+        version_introduced="6.9.0",
         group=CommandGroup.SCRIPTING,
         cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
     )
@@ -4990,7 +4990,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="3.1.0")
     @redis_command(
         "FUNCTION FLUSH",
-        version_introduced="7.0.0",
+        version_introduced="6.9.0",
         group=CommandGroup.SCRIPTING,
         response_callback=SimpleStringCallback(),
         cluster=ClusterCommandConfig(
@@ -5012,7 +5012,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="3.1.0")
     @redis_command(
         "FUNCTION KILL",
-        version_introduced="7.0.0",
+        version_introduced="6.9.0",
         group=CommandGroup.SCRIPTING,
         response_callback=SimpleStringCallback(),
     )
@@ -5025,7 +5025,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="3.1.0")
     @redis_command(
         "FUNCTION LIST",
-        version_introduced="7.0.0",
+        version_introduced="6.9.0",
         group=CommandGroup.SCRIPTING,
         response_callback=FunctionListCallback(),
         cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
@@ -5047,7 +5047,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="3.1.0")
     @redis_command(
         "FUNCTION LOAD",
-        version_introduced="7.0.0",
+        version_introduced="6.9.0",
         group=CommandGroup.SCRIPTING,
         response_callback=SimpleStringCallback(),
         cluster=ClusterCommandConfig(
@@ -5079,7 +5079,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="3.1.0")
     @redis_command(
         "FUNCTION RESTORE",
-        version_introduced="7.0.0",
+        version_introduced="6.9.0",
         group=CommandGroup.SCRIPTING,
         response_callback=SimpleStringCallback(),
         cluster=ClusterCommandConfig(
@@ -5107,7 +5107,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="3.1.0")
     @redis_command(
         "FUNCTION STATS",
-        version_introduced="7.0.0",
+        version_introduced="6.9.0",
         group=CommandGroup.SCRIPTING,
         response_callback=FunctionStatsCallback(),
         cluster=ClusterCommandConfig(
@@ -5900,7 +5900,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="3.0.0")
     @redis_command(
         "ACL DRYRUN",
-        version_introduced="7.0.0",
+        version_introduced="6.9.0",
         group=CommandGroup.SERVER,
         response_callback=SimpleStringCallback(AuthorizationError),
     )
@@ -6130,7 +6130,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="3.1.0")
     @redis_command(
         "COMMAND DOCS",
-        version_introduced="7.0.0",
+        version_introduced="6.9.0",
         group=CommandGroup.SERVER,
         response_callback=CommandDocCallback(),
         cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
@@ -6162,7 +6162,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="3.1.0")
     @redis_command(
         "COMMAND GETKEYSANDFLAGS",
-        version_introduced="7.0.0",
+        version_introduced="6.9.0",
         group=CommandGroup.SERVER,
         response_callback=CommandKeyFlagCallback(),
         cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
@@ -6199,7 +6199,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="3.1.0")
     @redis_command(
         "COMMAND LIST",
-        version_introduced="7.0.0",
+        version_introduced="6.9.0",
         group=CommandGroup.SERVER,
         response_callback=SetCallback(),
     )
