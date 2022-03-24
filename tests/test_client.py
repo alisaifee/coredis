@@ -2,10 +2,11 @@ import pytest
 from packaging.version import Version
 
 from coredis.exceptions import CommandNotSupportedError
+from coredis.utils import nativestr
 from tests.conftest import targets
 
 
-@targets("redis_basic", "redis_basic_resp3")
+@targets("redis_basic", "redis_basic_resp3", "redis_basic_raw", "redis_basic_raw_resp3")
 @pytest.mark.asyncio
 class TestClient:
     @pytest.mark.min_server_version("6.0.0")
@@ -40,5 +41,5 @@ class TestClient:
         await client.ping()
         assert await client.set("a", 1)
         with pytest.warns(UserWarning) as warning:
-            assert "1" == await client.getset("a", 2)
+            assert "1" == nativestr(await client.getset("a", 2))
         assert warning[0].message.args[0] == "Use set() with the get argument"

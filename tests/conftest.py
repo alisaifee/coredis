@@ -196,6 +196,30 @@ async def redis_basic_resp3(redis_basic_server, request):
 
 
 @pytest.fixture
+async def redis_basic_raw(redis_basic_server, request):
+    client = coredis.Redis("localhost", 6379, decode_responses=False)
+    await check_test_constraints(request, client, protocol=2)
+    client = coredis.Redis("localhost", 6379, decode_responses=False)
+    await client.flushall()
+    await set_default_test_config(client)
+
+    return client
+
+
+@pytest.fixture
+async def redis_basic_raw_resp3(redis_basic_server, request):
+    client = coredis.Redis("localhost", 6379, decode_responses=False)
+    await check_test_constraints(request, client, protocol=3)
+    client = coredis.Redis(
+        "localhost", 6379, decode_responses=False, protocol_version=3
+    )
+    await client.flushall()
+    await set_default_test_config(client)
+
+    return client
+
+
+@pytest.fixture
 async def redis_ssl(redis_ssl_server, request):
     storage_url = (
         "rediss://localhost:8379/0?ssl_cert_reqs=required"

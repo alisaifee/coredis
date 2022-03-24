@@ -597,13 +597,13 @@ class BaseConnection:
             auth_attempted = True
         await self.send_command("HELLO", *hello_command_args)
         try:
-            resp = await self.read_response()
-            if self.protocol_version > 2:
-                if not resp["proto"] == 3:
+            resp = await self.read_response(decode=False)
+            if self.protocol_version == 3:
+                if not resp[b"proto"] == 3:
                     raise RedisError("Unexpected response when negotiating RESP3", resp)
-                self.server_version = resp["version"]
+                self.server_version = nativestr(resp[b"version"])
             else:
-                self.server_version = resp[3]
+                self.server_version = nativestr(resp[3])
         except (UnknownCommandError, AuthenticationRequiredError):
             self.version = None
             auth_attempted = False
