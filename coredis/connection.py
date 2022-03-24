@@ -296,7 +296,7 @@ class PythonParser(BaseParser):
             pass
         # int value
         elif byte == ":":
-            response = int(response)
+            return int(response)
         # double
         elif byte == ",":
             return float(response)
@@ -329,19 +329,17 @@ class PythonParser(BaseParser):
             push_data = []
             for i in range(num_items):
                 push_data.append(await self.read_response(decode=decode))
-            response = push_data
-
+            return push_data
         # multi-bulk response
         elif byte == "*":
             length = int(response)
 
             if length == -1:
                 return None
-            response = deque(maxlen=length)
-
+            response = [None] * length
             for i in range(length):
-                response.append(await self.read_response(decode=decode))
-            response = list(response)
+                response[i] = await self.read_response(decode=decode)
+            return response
         # map response
         elif byte == "%":
             length = int(response)
@@ -352,13 +350,13 @@ class PythonParser(BaseParser):
                 key = await self.read_response(decode=decode)
                 value = await self.read_response(decode=decode)
                 response.append((key, value))
-            response = frozendict.frozendict(response)
+            return frozendict.frozendict(response)
         # set
         elif byte == "~":
             length = int(response)
-            response = set()
+            response = deque(maxlen=length)  # set()
             for i in range(length):
-                response.add(await self.read_response(decode=decode))
+                response.append(await self.read_response(decode=decode))
             return frozenset(response)
         need_decode = self.encoding
         if decode is not None:
