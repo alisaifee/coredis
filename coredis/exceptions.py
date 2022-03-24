@@ -210,3 +210,21 @@ class FunctionError(RedisError):
     """
     Raised for errors relating to redis functions
     """
+
+
+class SentinelConnectionError(ConnectionError):
+    pass
+
+
+class PrimaryNotFoundError(SentinelConnectionError):
+    """
+    Raised when a primary cannot be located in a
+    sentinel managed redis
+    """
+
+
+class ReplicaNotFoundError(SentinelConnectionError):
+    """
+    Raised when a replica cannot be located in a
+    sentinel managed redis
+    """

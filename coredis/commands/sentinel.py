@@ -173,3 +173,14 @@ class SentinelCommands(CommandMixin[AnyStr]):
         """Returns a list of slaves for ``service_name``"""
 
         return await self.execute_command("SENTINEL SLAVES", service_name)
+
+    @redis_command(
+        "SENTINEL REPLICAS",
+        response_callback=SentinelsStateCallback(),
+    )
+    async def sentinel_replicas(
+        self, service_name: ValueT
+    ) -> Tuple[Dict[AnyStr, Any], ...]:
+        """Returns a list of replicas for ``service_name``"""
+
+        return await self.execute_command("SENTINEL REPLICAS", service_name)

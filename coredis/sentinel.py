@@ -1,25 +1,21 @@
 import os
 import random
 import weakref
+from typing import overload
 
 from coredis import Redis
 from coredis.connection import Connection
 from coredis.exceptions import (
     ConnectionError,
+    PrimaryNotFoundError,
     ReadOnlyError,
+    ReplicaNotFoundError,
     ResponseError,
     TimeoutError,
 )
 from coredis.pool import ConnectionPool
-from coredis.utils import iteritems, nativestr
-
-
-class MasterNotFoundError(ConnectionError):
-    pass
-
-
-class SlaveNotFoundError(ConnectionError):
-    pass
+from coredis.typing import AnyStr, Generic, Iterable, Literal, Tuple, Type
+from coredis.utils import deprecated, iteritems, nativestr
 
 
 class SentinelManagedConnection(Connection):
@@ -50,12 +46,12 @@ class SentinelManagedConnection(Connection):
         if self.connection_pool.is_master:
             await self.connect_to(await self.connection_pool.get_master_address())
         else:
-            for slave in await self.connection_pool.rotate_slaves():
+            for slave in await self.connection_pool.rotate_replicas():
                 try:
                     return await self.connect_to(slave)
                 except ConnectionError:
                     continue
-            raise SlaveNotFoundError  # Never be here
+            raise ReplicaNotFoundError  # Never be here
 
     async def read_response(self, decode=False):
         try:
@@ -115,7 +111,7 @@ class SentinelConnectionPool(ConnectionPool):
                 self.disconnect()
         return master_address
 
-    async def rotate_slaves(self):
+    async def rotate_replicas(self):
         """Round-robin slave balancer"""
         slaves = await self.sentinel_manager.discover_slaves(self.service_name)
         slave_address = list()
@@ -129,9 +125,9 @@ class SentinelConnectionPool(ConnectionPool):
         # Fallback to the master connection
         try:
             return [await self.get_master_address()]
-        except MasterNotFoundError:
+        except PrimaryNotFoundError:
             pass
-        raise SlaveNotFoundError("No slave found for %r" % (self.service_name))
+        raise ReplicaNotFoundError("No replica found for %r" % (self.service_name))
 
     def _checkpid(self):
         if self.pid != os.getpid():
@@ -148,7 +144,7 @@ class SentinelConnectionPool(ConnectionPool):
             )
 
 
-class Sentinel:
+class Sentinel(Generic[AnyStr]):
     """
     Redis Sentinel client
 
@@ -157,18 +153,44 @@ class Sentinel:
         from coredis.sentinel import Sentinel
         sentinel = Sentinel([('localhost', 26379)], stream_timeout=0.1)
         async def test():
-            master = await sentinel.master_for('mymaster', stream_timeout=0.1)
-            await master.set('foo', 'bar')
-            slave = await sentinel.slave_for('mymaster', stream_timeout=0.1)
-            await slave.get('foo')
+            primary = await sentinel.primary_for('my-instance', stream_timeout=0.1)
+            await primary.set('foo', 'bar')
+            replica = await sentinel.replica_for('my-instance', stream_timeout=0.1)
+            await replica.get('foo')
 
     """
 
+    @overload
+    def __init__(
+        self: "Sentinel[bytes]",
+        sentinels: Iterable[Tuple[str, int]],
+        min_other_sentinels: int = ...,
+        sentinel_kwargs=None,
+        decode_responses: Literal[False] = ...,
+        protocol_version: Literal[2, 3] = ...,
+        **connection_kwargs
+    ):
+        ...
+
+    @overload
+    def __init__(
+        self: "Sentinel[str]",
+        sentinels: Iterable[Tuple[str, int]],
+        min_other_sentinels: int = ...,
+        sentinel_kwargs=None,
+        decode_responses: Literal[True] = ...,
+        protocol_version: Literal[2, 3] = ...,
+        **connection_kwargs
+    ):
+        ...
+
     def __init__(
         self,
-        sentinels,
-        min_other_sentinels=0,
+        sentinels: Iterable[Tuple[str, int]],
+        min_other_sentinels: int = 0,
         sentinel_kwargs=None,
+        decode_responses: bool = False,
+        protocol_version: Literal[2, 3] = 2,
         **connection_kwargs
     ):
         """
@@ -195,14 +217,22 @@ class Sentinel:
                     if k.startswith("socket_")
                 ]
             )
+
         self.sentinel_kwargs = sentinel_kwargs
+        self.min_other_sentinels = min_other_sentinels
+        self.connection_kwargs = connection_kwargs
+
+        self.connection_kwargs["decode_responses"] = self.sentinel_kwargs[
+            "decode_responses"
+        ] = decode_responses
+        self.connection_kwargs["protocol_version"] = self.sentinel_kwargs[
+            "protocol_version"
+        ] = protocol_version
 
         self.sentinels = [
             Redis(hostname, port, **self.sentinel_kwargs)
             for hostname, port in sentinels
         ]
-        self.min_other_sentinels = min_other_sentinels
-        self.connection_kwargs = connection_kwargs
 
     def __repr__(self):
         sentinel_addresses = []
@@ -225,7 +255,7 @@ class Sentinel:
             return False
         return True
 
-    async def discover_master(self, service_name):
+    async def discover_primary(self, service_name):
         """
         Asks sentinel servers for the Redis master's address corresponding
         to the service labeled ``service_name``.
@@ -246,36 +276,36 @@ class Sentinel:
                     self.sentinels[0],
                 )
                 return state["ip"], state["port"]
-        raise MasterNotFoundError("No master found for %r" % (service_name,))
+        raise PrimaryNotFoundError("No primary found for %r" % (service_name,))
 
-    def filter_slaves(self, slaves):
-        """Removes slaves that are in an ODOWN or SDOWN state"""
-        slaves_alive = []
-        for slave in slaves:
-            if slave["is_odown"] or slave["is_sdown"]:
+    def filter_replicas(self, replicas):
+        """Removes replicas that are in an ODOWN or SDOWN state"""
+        replicas_alive = []
+        for replica in replicas:
+            if replica["is_odown"] or replica["is_sdown"]:
                 continue
-            slaves_alive.append((slave["ip"], slave["port"]))
-        return slaves_alive
+            replicas_alive.append((replica["ip"], replica["port"]))
+        return replicas_alive
 
-    async def discover_slaves(self, service_name):
+    async def discover_replicas(self, service_name):
         """Returns a list of alive slaves for service ``service_name``"""
         for sentinel in self.sentinels:
             try:
-                slaves = await sentinel.sentinel_slaves(service_name)
+                replicas = await sentinel.sentinel_replicas(service_name)
             except (ConnectionError, ResponseError, TimeoutError):
                 continue
-            slaves = self.filter_slaves(slaves)
-            if slaves:
-                return slaves
+            replicas = self.filter_replicas(replicas)
+            if replicas:
+                return replicas
         return []
 
-    def master_for(
+    def primary_for(
         self,
-        service_name,
+        service_name: str,
         redis_class=Redis,
-        connection_pool_class=SentinelConnectionPool,
+        connection_pool_class: Type[SentinelConnectionPool] = SentinelConnectionPool,
         **kwargs
-    ):
+    ) -> Redis[AnyStr]:
         """
         Returns a redis client instance for the ``service_name`` master.
 
@@ -305,13 +335,13 @@ class Sentinel:
             )
         )
 
-    def slave_for(
+    def replica_for(
         self,
         service_name,
         redis_class=Redis,
         connection_pool_class=SentinelConnectionPool,
         **kwargs
-    ):
+    ) -> Redis[AnyStr]:
         """
         Returns redis client instance for the ``service_name`` slave(s).
 
@@ -337,3 +367,14 @@ class Sentinel:
                 service_name, self, **connection_kwargs
             )
         )
+
+    @deprecated(version="3.1.0", reason="Use discover_primaries() instead")
+    async def discover_master(self, *a, **k):
+        return await self.discover_primary(*a, **k)
+
+    @deprecated(version="3.1.0", reason="Use discover_replicas() instead")
+    async def discover_slaves(self, *a, **k):
+        return await self.discover_replicas(*a, **k)
+
+    slave_for = replica_for
+    master_for = primary_for

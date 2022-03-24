@@ -150,6 +150,13 @@ Cluster
 .. autoexception:: RedisClusterException
    :no-inherited-members:
 
+Sentinel
+--------
+.. autoexception:: PrimaryNotFoundError
+   :no-inherited-members:
+.. autoexception:: ReplicaNotFoundError
+   :no-inherited-members:
+
 Scripting Errors
 ----------------
 .. autoexception:: NoScriptError
