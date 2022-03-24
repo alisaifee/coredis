@@ -12,4 +12,3 @@ pytest-env
 pytest-lazy-fixture
 pytest-mock
 redis
-contextvars
