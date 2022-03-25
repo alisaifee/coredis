@@ -92,6 +92,8 @@ REDIS_RETURN_ARGUMENT_TYPE_MAPPING = {
 REDIS_ARGUMENT_NAME_OVERRIDES = {
     "BITPOS": {"end_index_index_unit": "end_index_unit"},
     "BITCOUNT": {"index_index_unit": "index_unit"},
+    "CLUSTER ADDSLOTSRANGE": {"start_slot_end_slot": "slots"},
+    "CLUSTER DELSLOTSRANGE": {"start_slot_end_slot": "slots"},
     "CLIENT REPLY": {"on_off_skip": "mode"},
     "GEOSEARCH": {"bybox": "width", "byradius": "radius", "frommember": "member"},
     "GEOSEARCHSTORE": {"bybox": "width", "byradius": "radius", "frommember": "member"},
@@ -370,8 +372,11 @@ def version_added_from_doc(doc):
 @functools.lru_cache
 def get_commands():
     cur_dir = os.path.split(__file__)[0]
-    return json.loads(open(os.path.join(cur_dir, "commands.json")).read())
-
+    data = json.loads(open(os.path.join(cur_dir, "commands.json")).read())
+    for command, details in data.items():
+        if details.get("since") == "7.0.0":
+            details["since"] = "6.9.0"
+    return data
 
 def render_signature(signature):
     v = str(signature)
