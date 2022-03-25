@@ -6,7 +6,7 @@ flake8
 hiredis
 inflect
 isort
-mypy==0.941
+mypy==0.942
 jinja2
 pyright==1.1.231
 requests
