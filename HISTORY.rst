@@ -3,11 +3,29 @@
 Changelog
 =========
 
+v3.1.1
+------
+Release Date: 2022-03-24
+
+* Bug Fix
+
+  * Fix extracting version/protocol with binary clients
+
+* Features
+
+  * New APIs:
+
+    * ``Redis.cluster_addslotsrange``
+    * ``Redis.cluster_delslotsrange``
+    * ``Redis.cluster_links``
+    * ``Redis.cluster_myid``
+
 v3.1.0
 ------
 Release Date: 2022-03-23
 
 * Features
+
   * Added support for functions
   * Added runtime checks to bail out early if server version
     doesn't support the command
@@ -464,6 +482,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
