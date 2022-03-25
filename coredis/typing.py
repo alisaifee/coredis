@@ -125,7 +125,7 @@ class SupportsPipeline(Protocol):  # noqa
 
 class AbstractExecutor(ABC, Generic[AnyStr]):
     @abstractmethod
-    async def execute_command(self, command: Any, *args: Any, **options: Any) -> Any:
+    async def execute_command(self, command: bytes, *args: Any, **options: Any) -> Any:
         pass
 
 

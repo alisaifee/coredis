@@ -37,4 +37,4 @@ class TestMonitor:
         send_command = mocker.spy(monitor.connection, "send_command")
         thread.stop()
         await asyncio.sleep(0.01)
-        send_command.assert_called_with("RESET")
+        send_command.assert_called_with(b"RESET")

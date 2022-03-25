@@ -11,7 +11,7 @@ async def test_connect_tcp(event_loop, redis_basic):
     assert conn.host == "127.0.0.1"
     assert conn.port == 6379
     assert str(conn) == "Connection<host=127.0.0.1,port=6379,db=0>"
-    await conn.send_command("PING")
+    await conn.send_command(b"PING")
     res = await conn.read_response()
     assert res == b"PONG"
     assert (conn._reader is not None) and (conn._writer is not None)
@@ -63,7 +63,7 @@ async def test_connect_unix_socket(redis_uds):
     await conn.connect()
     assert conn.path == path
     assert str(conn) == "UnixDomainSocketConnection<path={},db=0>".format(path)
-    await conn.send_command("PING")
+    await conn.send_command(b"PING")
     res = await conn.read_response()
     assert res == b"PONG"
     assert (conn._reader is not None) and (conn._writer is not None)

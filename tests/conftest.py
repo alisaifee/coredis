@@ -162,7 +162,7 @@ def redis_sentinel_server(docker_services):
     docker_services.start("redis-sentinel")
     docker_services.wait_for_service("redis-sentinel", 26379, ping_socket)
 
-    return coredis.sentinel.Sentinel([("localhost", 26379)])
+    yield
 
 
 @pytest.fixture(scope="session")

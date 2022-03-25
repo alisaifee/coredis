@@ -594,10 +594,10 @@ class BaseConnection:
         auth_attempted = False
         if self.username or self.password:
             hello_command_args.extend(
-                ["AUTH", self.username or "default", self.password]
+                ["AUTH", self.username or b"default", self.password]
             )
             auth_attempted = True
-        await self.send_command("HELLO", *hello_command_args)
+        await self.send_command(b"HELLO", *hello_command_args)
         try:
             resp = await self.read_response(decode=False)
             if self.protocol_version == 3:
@@ -613,20 +613,20 @@ class BaseConnection:
             auth_attempted = False
         if not auth_attempted and (self.username or self.password):
             if self.username and self.password:
-                await self.send_command("AUTH", self.username, self.password)
+                await self.send_command(b"AUTH", self.username, self.password)
                 await self.check_auth_response()
             elif self.password:
-                await self.send_command("AUTH", self.password)
+                await self.send_command(b"AUTH", self.password)
                 await self.check_auth_response()
 
         if self.db:
-            await self.send_command("SELECT", self.db)
+            await self.send_command(b"SELECT", self.db)
 
-            if nativestr(await self.read_response()) != "OK":
+            if await self.read_response() != b"OK":
                 raise ConnectionError("Invalid Database")
 
         if self.client_name is not None:
-            await self.send_command("CLIENT SETNAME", self.client_name)
+            await self.send_command(b"CLIENT SETNAME", self.client_name)
 
             if nativestr(await self.read_response()) != "OK":
                 raise ConnectionError(f"Failed to set client name: {self.client_name}")
@@ -688,16 +688,14 @@ class BaseConnection:
 
     def encode(self, value):
         """Returns a bytestring representation of the value"""
-
         if isinstance(value, bytes):
             return value
         elif isinstance(value, int):
-            value = b(str(value))
+            return b"%d" % value
         elif isinstance(value, float):
-            value = b(repr(value))
+            return b"%.15g" % value
         elif not isinstance(value, str):
-            value = str(value)
-
+            value = f"{value}"
         if isinstance(value, str):
             value = value.encode(self.encoding)
 
@@ -723,29 +721,27 @@ class BaseConnection:
         # manually. All of these arguements get wrapped in the Token class
         # to prevent them from being encoded.
         command = args[0]
-
-        if " " in command:
-            args = tuple([b(s) for s in command.split()]) + args[1:]
+        if b" " in command:
+            args = tuple([s for s in command.split()]) + args[1:]
         else:
-            args = (b(command),) + args[1:]
+            args = (command,) + args[1:]
 
-        buff = SYM_EMPTY.join((SYM_STAR, b(str(len(args))), SYM_CRLF))
+        buff = SYM_EMPTY.join((SYM_STAR, b"%d" % len(args), SYM_CRLF))
 
         for arg in map(self.encode, args):
             # to avoid large string mallocs, chunk the command into the
             # output list if we're sending large values
 
             if len(buff) > 6000 or len(arg) > 6000:
-                buff = SYM_EMPTY.join((buff, SYM_DOLLAR, b(str(len(arg))), SYM_CRLF))
+                buff = SYM_EMPTY.join((buff, SYM_DOLLAR, b"%d" % len(arg), SYM_CRLF))
                 output.append(buff)
-                output.append(b(arg))
+                output.append(arg)
                 buff = SYM_CRLF
             else:
                 buff = SYM_EMPTY.join(
-                    (buff, SYM_DOLLAR, b(str(len(arg))), SYM_CRLF, b(arg), SYM_CRLF)
+                    (buff, SYM_DOLLAR, b"%d" % len(arg), SYM_CRLF, arg, SYM_CRLF)
                 )
         output.append(buff)
-
         return output
 
     def pack_commands(self, commands):
@@ -918,7 +914,7 @@ class ClusterConnection(Connection):
         await super(ClusterConnection, self).on_connect()
 
         if self.readonly:
-            await self.send_command("READONLY")
+            await self.send_command(b"READONLY")
 
-            if nativestr(await self.read_response()) != "OK":
+            if await self.read_response(decode=False) != b"OK":
                 raise ConnectionError("READONLY command failed")

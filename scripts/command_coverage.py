@@ -1818,10 +1818,27 @@ def token_enum(ctx, path):
 import enum
 
 
-class PureToken(str, enum.Enum):
+class PureToken(bytes, enum.Enum):
     \"\"\"
     Enum for using pure-tokens with the redis api.
     \"\"\"
+
+    def __eq__(self, other):
+        \"\"\"
+        Since redis tokens are case insensitive allow mixed case
+        Additionally allow strings to be passed in instead of
+        bytes.
+        \"\"\"
+        if other:
+            if isinstance(other, PureToken):
+                return self.value == other.value
+            _other = other
+            if isinstance(other, str):
+                _other = other.encode("utf-8")
+            return _other.upper() == self.value
+
+    def __hash__(self):
+        return hash(self.value)
 
     {% for token, command_usage in token_mapping.items() -%}
 
@@ -1830,7 +1847,7 @@ class PureToken(str, enum.Enum):
     {% for c in sorted(command_usage) -%}
     #:  - ``{{c}}``
     {% endfor -%}
-    {{ token[0].upper() }} = "{{token[1]}}"
+    {{ token[0].upper() }} = b"{{token[1]}}"
 
     {% endfor %}
 

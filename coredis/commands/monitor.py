@@ -7,7 +7,6 @@ from concurrent.futures import Future
 from coredis.exceptions import RedisError
 from coredis.response.types import MonitorResult
 from coredis.typing import TYPE_CHECKING, Callable, Optional
-from coredis.utils import nativestr
 
 if TYPE_CHECKING:
     import coredis.client
@@ -100,17 +99,17 @@ class Monitor:
             return
         await self.__connect()
         assert self.connection
-        await self.connection.send_command("MONITOR")
-        response = nativestr(await self.connection.read_response())
-        if not response == "OK":  # noqa
+        await self.connection.send_command(b"MONITOR")
+        response = await self.connection.read_response(decode=False)
+        if not response == b"OK":  # noqa
             raise RedisError(f"Failed to start MONITOR {response}")
         self.monitoring = True
 
     async def __stop_monitoring(self):
         if self.connection:
-            await self.connection.send_command("RESET")
-            response = await self.connection.read_response()
-            if not nativestr(response) == "RESET":  # noqa
+            await self.connection.send_command(b"RESET")
+            response = await self.connection.read_response(decode=False)
+            if not response == b"RESET":  # noqa
                 raise RedisError("Failed to reset connection")
         self.__reset()
 
