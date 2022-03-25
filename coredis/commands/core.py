@@ -4672,7 +4672,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.PUBSUB,
         cluster=ClusterCommandConfig(pipeline=False),
     )
-    async def publish(self, channel: ValueT, message: ValueT) -> int:
+    async def publish(self, channel: StringT, message: StringT) -> int:
         """
         Publish ``message`` on ``channel``.
         Returns the number of subscribers the message was delivered to.
@@ -4685,7 +4685,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         response_callback=TupleCallback(),
     )
     async def pubsub_channels(
-        self, *, pattern: Optional[ValueT] = None
+        self, *, pattern: Optional[StringT] = None
     ) -> Tuple[AnyStr, ...]:
         """
         Return channels that have at least one subscriber
@@ -4709,7 +4709,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.PUBSUB,
         response_callback=DictCallback(flat_pairs_to_ordered_dict),
     )
-    async def pubsub_numsub(self, *channels: ValueT) -> OrderedDict[AnyStr, int]:
+    async def pubsub_numsub(self, *channels: StringT) -> OrderedDict[AnyStr, int]:
         """
         Get the count of subscribers for channels
 
