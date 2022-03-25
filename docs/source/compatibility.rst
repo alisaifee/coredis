@@ -112,7 +112,7 @@ Get the expiration Unix timestamp for a key
 - Documentation: `EXPIRETIME <https://redis.io/commands/expiretime>`_
 - Implementation: :meth:`~coredis.Redis.expiretime`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -272,7 +272,7 @@ Get the expiration Unix timestamp for a key in milliseconds
 - Documentation: `PEXPIRETIME <https://redis.io/commands/pexpiretime>`_
 - Implementation: :meth:`~coredis.Redis.pexpiretime`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -388,7 +388,7 @@ Sort the elements in a list, set or sorted set. Read-only variant of SORT.
 - Documentation: `SORT_RO <https://redis.io/commands/sort_ro>`_
 - Implementation: :meth:`~coredis.Redis.sort_ro`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -644,7 +644,7 @@ Find longest common substring
 - Documentation: `LCS <https://redis.io/commands/lcs>`_
 - Implementation: :meth:`~coredis.Redis.lcs`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -1168,7 +1168,7 @@ Pop elements from a list, or block until one is available
 - Documentation: `BLMPOP <https://redis.io/commands/blmpop>`_
 - Implementation: :meth:`~coredis.Redis.blmpop`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -1288,7 +1288,7 @@ Pop elements from a list
 - Documentation: `LMPOP <https://redis.io/commands/lmpop>`_
 - Implementation: :meth:`~coredis.Redis.lmpop`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -1556,7 +1556,7 @@ Intersect multiple sets and return the cardinality of the result
 - Documentation: `SINTERCARD <https://redis.io/commands/sintercard>`_
 - Implementation: :meth:`~coredis.Redis.sintercard`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -1738,7 +1738,7 @@ Remove and return members with scores in a sorted set or block until one is avai
 - Documentation: `BZMPOP <https://redis.io/commands/bzmpop>`_
 - Implementation: :meth:`~coredis.Redis.bzmpop`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -1888,7 +1888,7 @@ Intersect multiple sorted sets and return the cardinality of the result
 - Documentation: `ZINTERCARD <https://redis.io/commands/zintercard>`_
 - Implementation: :meth:`~coredis.Redis.zintercard`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -1934,7 +1934,7 @@ Remove and return members with scores in a sorted set
 - Documentation: `ZMPOP <https://redis.io/commands/zmpop>`_
 - Implementation: :meth:`~coredis.Redis.zmpop`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -2778,7 +2778,7 @@ Execute a read-only Lua script server side
 - Documentation: `EVALSHA_RO <https://redis.io/commands/evalsha_ro>`_
 - Implementation: :meth:`~coredis.Redis.evalsha_ro`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -2796,7 +2796,7 @@ Execute a read-only Lua script server side
 - Documentation: `EVAL_RO <https://redis.io/commands/eval_ro>`_
 - Implementation: :meth:`~coredis.Redis.eval_ro`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -2814,7 +2814,7 @@ Invoke a function
 - Documentation: `FCALL <https://redis.io/commands/fcall>`_
 - Implementation: :meth:`~coredis.Redis.fcall`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -2832,7 +2832,7 @@ Invoke a read-only function
 - Documentation: `FCALL_RO <https://redis.io/commands/fcall_ro>`_
 - Implementation: :meth:`~coredis.Redis.fcall_ro`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -2850,7 +2850,7 @@ Delete a function by name
 - Documentation: `FUNCTION DELETE <https://redis.io/commands/function-delete>`_
 - Implementation: :meth:`~coredis.Redis.function_delete`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -2868,7 +2868,7 @@ Dump all functions into a serialized binary payload
 - Documentation: `FUNCTION DUMP <https://redis.io/commands/function-dump>`_
 - Implementation: :meth:`~coredis.Redis.function_dump`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -2886,7 +2886,7 @@ Deleting all functions
 - Documentation: `FUNCTION FLUSH <https://redis.io/commands/function-flush>`_
 - Implementation: :meth:`~coredis.Redis.function_flush`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -2904,7 +2904,7 @@ Kill the function currently in execution.
 - Documentation: `FUNCTION KILL <https://redis.io/commands/function-kill>`_
 - Implementation: :meth:`~coredis.Redis.function_kill`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -2922,7 +2922,7 @@ List information about all the functions
 - Documentation: `FUNCTION LIST <https://redis.io/commands/function-list>`_
 - Implementation: :meth:`~coredis.Redis.function_list`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -2940,7 +2940,7 @@ Create a function with the given arguments (name, code, description)
 - Documentation: `FUNCTION LOAD <https://redis.io/commands/function-load>`_
 - Implementation: :meth:`~coredis.Redis.function_load`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -2958,7 +2958,7 @@ Restore all the functions on the given payload
 - Documentation: `FUNCTION RESTORE <https://redis.io/commands/function-restore>`_
 - Implementation: :meth:`~coredis.Redis.function_restore`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -2976,7 +2976,7 @@ Return information about the function currently running (name, description, dura
 - Documentation: `FUNCTION STATS <https://redis.io/commands/function-stats>`_
 - Implementation: :meth:`~coredis.Redis.function_stats`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -3322,7 +3322,7 @@ Returns whether the user can execute the given command without executing the com
 - Documentation: `ACL DRYRUN <https://redis.io/commands/acl-dryrun>`_
 - Implementation: :meth:`~coredis.Redis.acl_dryrun`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -3562,7 +3562,7 @@ Get array of specific Redis command documentation
 - Documentation: `COMMAND DOCS <https://redis.io/commands/command-docs>`_
 - Implementation: :meth:`~coredis.Redis.command_docs`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -3596,7 +3596,7 @@ Extract keys given a full Redis command
 - Documentation: `COMMAND GETKEYSANDFLAGS <https://redis.io/commands/command-getkeysandflags>`_
 - Implementation: :meth:`~coredis.Redis.command_getkeysandflags`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -3630,7 +3630,7 @@ Get an array of Redis command names
 - Documentation: `COMMAND LIST <https://redis.io/commands/command-list>`_
 - Implementation: :meth:`~coredis.Redis.command_list`
 
-- New in redis: 7.0.0
+- New in redis: 6.9.0
 
 
 
@@ -4550,6 +4550,24 @@ Assign new hash slots to receiving node
 
 
 
+CLUSTER ADDSLOTSRANGE
+*********************
+
+Assign new hash slots to receiving node
+
+- Documentation: `CLUSTER ADDSLOTSRANGE <https://redis.io/commands/cluster-addslotsrange>`_
+- Implementation: :meth:`~coredis.Redis.cluster_addslotsrange`
+
+- New in redis: 6.9.0
+
+
+
+- .. versionadded:: 3.1.1
+
+
+
+
+
 CLUSTER BUMPEPOCH
 *****************
 
@@ -4603,6 +4621,24 @@ Set hash slots as unbound in receiving node
 - Implementation: :meth:`~coredis.Redis.cluster_delslots`
 
 
+
+
+
+
+
+CLUSTER DELSLOTSRANGE
+*********************
+
+Set hash slots as unbound in receiving node
+
+- Documentation: `CLUSTER DELSLOTSRANGE <https://redis.io/commands/cluster-delslotsrange>`_
+- Implementation: :meth:`~coredis.Redis.cluster_delslotsrange`
+
+- New in redis: 6.9.0
+
+
+
+- .. versionadded:: 3.1.1
 
 
 
@@ -4696,6 +4732,24 @@ Returns the hash slot of the specified key
 
 
 
+CLUSTER LINKS
+*************
+
+Returns a list of all TCP links to and from peer nodes in cluster
+
+- Documentation: `CLUSTER LINKS <https://redis.io/commands/cluster-links>`_
+- Implementation: :meth:`~coredis.Redis.cluster_links`
+
+- New in redis: 6.9.0
+
+
+
+- .. versionadded:: 3.1.1
+
+
+
+
+
 CLUSTER MEET
 ************
 
@@ -4705,6 +4759,22 @@ Force a node cluster to handshake with another node
 - Implementation: :meth:`~coredis.Redis.cluster_meet`
 
 
+
+
+
+
+
+CLUSTER MYID
+************
+
+Return the node id
+
+- Documentation: `CLUSTER MYID <https://redis.io/commands/cluster-myid>`_
+- Implementation: :meth:`~coredis.Redis.cluster_myid`
+
+
+
+- .. versionadded:: 3.1.1
 
 
 
@@ -4836,46 +4906,6 @@ Get array of Cluster slot to node mappings
 
 
 
-
-
-CLUSTER ADDSLOTSRANGE [X]
-*************************
-
-Assign new hash slots to receiving node
-
-- Documentation: `CLUSTER ADDSLOTSRANGE <https://redis.io/commands/cluster-addslotsrange>`_
-
-- Not Implemented
-
-
-CLUSTER DELSLOTSRANGE [X]
-*************************
-
-Set hash slots as unbound in receiving node
-
-- Documentation: `CLUSTER DELSLOTSRANGE <https://redis.io/commands/cluster-delslotsrange>`_
-
-- Not Implemented
-
-
-CLUSTER LINKS [X]
-*****************
-
-Returns a list of all TCP links to and from peer nodes in cluster
-
-- Documentation: `CLUSTER LINKS <https://redis.io/commands/cluster-links>`_
-
-- Not Implemented
-
-
-CLUSTER MYID [X]
-****************
-
-Return the node id
-
-- Documentation: `CLUSTER MYID <https://redis.io/commands/cluster-myid>`_
-
-- Not Implemented
 
 
 READONLY [X]
@@ -5485,46 +5515,6 @@ Set client eviction mode for the current connection
 Cluster
 -------
 
-
-
-CLUSTER ADDSLOTSRANGE [X]
-*************************
-
-Assign new hash slots to receiving node
-
-- Documentation: `CLUSTER ADDSLOTSRANGE <https://redis.io/commands/cluster-addslotsrange>`_
-
-- Not Implemented
-
-
-CLUSTER DELSLOTSRANGE [X]
-*************************
-
-Set hash slots as unbound in receiving node
-
-- Documentation: `CLUSTER DELSLOTSRANGE <https://redis.io/commands/cluster-delslotsrange>`_
-
-- Not Implemented
-
-
-CLUSTER LINKS [X]
-*****************
-
-Returns a list of all TCP links to and from peer nodes in cluster
-
-- Documentation: `CLUSTER LINKS <https://redis.io/commands/cluster-links>`_
-
-- Not Implemented
-
-
-CLUSTER MYID [X]
-****************
-
-Return the node id
-
-- Documentation: `CLUSTER MYID <https://redis.io/commands/cluster-myid>`_
-
-- Not Implemented
 
 
 READONLY [X]

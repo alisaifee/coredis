@@ -1,6 +1,6 @@
 from coredis.commands import ParametrizedCallback, SimpleCallback
 from coredis.typing import Any, Dict, List, Tuple, TypedDict, Union, ValueT
-from coredis.utils import nativestr
+from coredis.utils import flat_pairs_to_dict, nativestr
 
 
 class ClusterNode(TypedDict):
@@ -8,6 +8,17 @@ class ClusterNode(TypedDict):
     port: int
     node_id: ValueT
     server_type: ValueT
+
+
+class ClusterLinksCallback(SimpleCallback):
+    def transform(self, response: Any) -> List[Dict[str, Any]]:
+        transformed = []
+        for item in response:
+            transformed.append(flat_pairs_to_dict(item))
+        return transformed
+
+    def transform_3(self, response: Any) -> List[Dict[str, Any]]:
+        return response
 
 
 class ClusterInfoCallback(SimpleCallback):

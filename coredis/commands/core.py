@@ -26,6 +26,7 @@ from coredis.response.callbacks import (
 from coredis.response.callbacks.acl import ACLLogCallback
 from coredis.response.callbacks.cluster import (
     ClusterInfoCallback,
+    ClusterLinksCallback,
     ClusterNode,
     ClusterNodesCallback,
     ClusterSlotsCallback,
@@ -605,12 +606,26 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.CLUSTER,
         response_callback=SimpleStringCallback(),
     )
-    async def cluster_addslots(self, *slots: int) -> bool:
+    async def cluster_addslots(self, slots: Iterable[int]) -> bool:
         """
         Assign new hash slots to receiving node
         """
 
         return await self.execute_command("CLUSTER ADDSLOTS", *slots)
+
+    @versionadded(version="3.1.1")
+    @redis_command(
+        "CLUSTER ADDSLOTSRANGE", version_introduced="6.9.0", group=CommandGroup.CLUSTER
+    )
+    async def cluster_addslotsrange(self, slots: Iterable[Tuple[int, int]]) -> bool:
+        """
+        Assign new hash slots to receiving node
+        """
+        pieces: CommandArgList = []
+        for slot in slots:
+            pieces.extend(slot)
+
+        return await self.execute_command("CLUSTER ADDSLOTSRANGE", *pieces)
 
     @versionadded(version="3.0.0")
     @redis_command("ASKING", group=CommandGroup.CLUSTER)
@@ -632,7 +647,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return await self.execute_command("CLUSTER BUMPEPOCH")
 
     @redis_command("CLUSTER COUNT-FAILURE-REPORTS", group=CommandGroup.CLUSTER)
-    async def cluster_count_failure_reports(self, node_id: ValueT) -> int:
+    async def cluster_count_failure_reports(self, node_id: StringT) -> int:
         """
         Return the number of failure reports active for a given node
 
@@ -658,12 +673,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.CLUSTER,
         response_callback=SimpleStringCallback(),
     )
-    async def cluster_delslots(self, *slots: int) -> bool:
+    async def cluster_delslots(self, slots: Iterable[int]) -> bool:
         """
         Set hash slots as unbound in the cluster.
         It determines by it self what node the slot is in and sends it there
-
-        Returns a list of the results for each processed slot.
         """
         cluster_nodes = CoreCommands.nodes_slots_to_slots_nodes(
             await self.cluster_nodes()
@@ -678,6 +691,20 @@ class CoreCommands(CommandMixin[AnyStr]):
             )
 
         return len(res) > 0
+
+    @versionadded(version="3.1.1")
+    @redis_command(
+        "CLUSTER DELSLOTSRANGE", version_introduced="6.9.0", group=CommandGroup.CLUSTER
+    )
+    async def cluster_delslotsrange(self, slots: Iterable[Tuple[int, int]]) -> bool:
+        """
+        Set hash slots as unbound in receiving node
+        """
+        pieces: CommandArgList = []
+        for slot in slots:
+            pieces.extend(slot)
+
+        return await self.execute_command("CLUSTER DELSLOTSRANGE", *pieces)
 
     @redis_command(
         "CLUSTER FAILOVER",
@@ -714,7 +741,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.CLUSTER,
         response_callback=SimpleStringCallback(),
     )
-    async def cluster_forget(self, node_id: ValueT) -> bool:
+    async def cluster_forget(self, node_id: StringT) -> bool:
         """
         remove a node via its node ID from the set of known nodes
         of the Redis Cluster node receiving the command
@@ -767,6 +794,23 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return await self.execute_command("CLUSTER KEYSLOT", key)
 
+    @versionadded(version="3.1.1")
+    @redis_command(
+        "CLUSTER LINKS",
+        version_introduced="6.9.0",
+        group=CommandGroup.CLUSTER,
+        response_callback=ClusterLinksCallback(),
+    )
+    async def cluster_links(self) -> List[Dict[AnyStr, Any]]:
+        """
+        Returns a list of all TCP links to and from peer nodes in cluster
+
+        :return: A map of maps where each map contains various attributes
+         and their values of a cluster link.
+
+        """
+        return await self.execute_command("CLUSTER LINKS")
+
     @redis_command(
         "CLUSTER MEET",
         group=CommandGroup.CLUSTER,
@@ -779,6 +823,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return await self.execute_command("CLUSTER MEET", ip, port)
+
+    @versionadded(version="3.1.1")
+    @redis_command("CLUSTER MYID", group=CommandGroup.CLUSTER)
+    async def cluster_myid(self) -> AnyStr:
+        """
+        Return the node id
+        """
+        return await self.execute_command("CLUSTER MYID")
 
     @redis_command(
         "CLUSTER NODES",
@@ -861,9 +913,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def cluster_setslot(
         self,
         slot: int,
-        importing: Optional[ValueT] = None,
-        migrating: Optional[ValueT] = None,
-        node: Optional[ValueT] = None,
+        importing: Optional[StringT] = None,
+        migrating: Optional[StringT] = None,
+        node: Optional[StringT] = None,
         stable: Optional[bool] = None,
     ) -> bool:
         """
@@ -895,7 +947,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         response_callback=ClusterNodesCallback(),
         cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
     )
-    async def cluster_replicas(self, node_id: ValueT) -> List[Dict[AnyStr, AnyStr]]:
+    async def cluster_replicas(self, node_id: StringT) -> List[Dict[AnyStr, AnyStr]]:
         """
         List replica nodes of the specified master node
         """
@@ -910,7 +962,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         response_callback=ClusterNodesCallback(),
         cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
     )
-    async def cluster_slaves(self, node_id: ValueT) -> List[Dict[AnyStr, AnyStr]]:
+    async def cluster_slaves(self, node_id: StringT) -> List[Dict[AnyStr, AnyStr]]:
         """
         List replica nodes of the specified master node
         """

@@ -274,6 +274,23 @@ async def redis_cluster(redis_cluster_server, request):
 
 
 @pytest.fixture
+async def redis_cluster_resp3(redis_cluster_server, request):
+    cluster = coredis.RedisCluster(
+        "localhost", 7000, stream_timeout=10, decode_responses=True, protocol_version=3
+    )
+    await check_test_constraints(request, cluster, protocol=3)
+    await cluster
+    await cluster.flushall()
+    await cluster.flushdb()
+
+    for primary in cluster.primaries:
+        await set_default_test_config(primary)
+    yield cluster
+
+    cluster.connection_pool.disconnect()
+
+
+@pytest.fixture
 async def redis_sentinel(redis_sentinel_server, request):
     sentinel = coredis.sentinel.Sentinel(
         [("localhost", 26379)],

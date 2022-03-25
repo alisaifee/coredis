@@ -1,9 +1,11 @@
+import asyncio
+
 import pytest
 
 from tests.conftest import targets
 
 
-@targets("redis_cluster")
+@targets("redis_cluster", "redis_cluster_resp3")
 @pytest.mark.asyncio()
 class TestCluster:
     async def test_cluster_info(self, client):
@@ -30,3 +32,25 @@ class TestCluster:
             [n["id"] for n in nodes if "master" in n["flags"]].pop()
         )
         assert len(replicas) == 1
+
+    @pytest.mark.min_server_version("6.9.0")
+    async def test_cluster_links(self, client):
+        links = []
+        for node in client.primaries:
+            links.append(await node.cluster_links())
+        for node in client.replicas:
+            links.append(await node.cluster_links())
+        assert len(links) == 6
+
+    @pytest.mark.min_server_version("6.9.0")
+    async def test_cluster_my_id(self, client):
+        ids = []
+        for node in client.primaries:
+            ids.append(node.cluster_myid())
+        for node in client.replicas:
+            ids.append(node.cluster_myid())
+        ids = await asyncio.gather(*ids)
+        known_nodes = (
+            node["node_id"] for node in client.connection_pool.nodes.all_nodes()
+        )
+        assert set(ids) == set(known_nodes)
