@@ -140,11 +140,7 @@ Supported python versions
     api_reference
     api
     compatibility
-    pubsub
     sentinel
-    scripting
-    pipelines
-    extra
     release_notes
     testing
     history
