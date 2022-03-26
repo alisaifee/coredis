@@ -190,7 +190,7 @@ class BasePipeline:
     """
 
     command_stack: List[PipelineCommand]
-    UNWATCH_COMMANDS = {"DISCARD", "EXEC", "UNWATCH"}
+    UNWATCH_COMMANDS = {b"DISCARD", b"EXEC", b"UNWATCH"}
 
     def __init__(self, connection_pool, response_callbacks, transaction):
         self.connection_pool = connection_pool
@@ -219,7 +219,7 @@ class BasePipeline:
             try:
                 # call this manually since our unwatch or
                 # immediate_execute_command methods can call reset()
-                await self.connection.send_command("UNWATCH")
+                await self.connection.send_command(b"UNWATCH")
                 await self.connection.read_response()
             except ConnectionError:
                 # disconnect will also remove any previous WATCHes
@@ -250,7 +250,7 @@ class BasePipeline:
         self.explicit_transaction = True
 
     async def execute_command(self, *args, **kwargs) -> Any:
-        if (self.watching or args[0] == "WATCH") and not self.explicit_transaction:
+        if (self.watching or args[0] == b"WATCH") and not self.explicit_transaction:
             return await self.immediate_execute_command(*args, **kwargs)
 
         return self.pipeline_execute_command(*args, **kwargs)
@@ -309,9 +309,9 @@ class BasePipeline:
     async def _execute_transaction(self, connection, commands, raise_on_error):
 
         cmds = chain(
-            [PipelineCommand(args=("MULTI",))],
+            [PipelineCommand(args=(b"MULTI",))],
             commands,
-            [PipelineCommand(args=("EXEC",))],
+            [PipelineCommand(args=(b"EXEC",))],
         )
         all_cmds = connection.pack_commands([cmd.args for cmd in cmds])
         await connection.send_packed_command(all_cmds)
@@ -341,7 +341,7 @@ class BasePipeline:
             response = await self.parse_response(connection, "_")
         except ExecAbortError:
             if self.explicit_transaction:
-                await self.immediate_execute_command("DISCARD")
+                await self.immediate_execute_command(b"DISCARD")
 
             if errors and errors[0][1]:
                 raise errors[0][1]
@@ -411,10 +411,12 @@ class BasePipeline:
                 raise r
 
     def annotate_exception(self, exception, number, command):
-        cmd = str(" ").join(map(str, command))
-        msg = str("Command # %d (%s) of pipeline caused error: %s") % (
+        cmd = command[0].decode("latin-1")
+        args = str(" ").join(map(str, command[1:]))
+        msg = str("Command # {0} ({1} {2}) of pipeline caused error: {3}").format(
             number,
             cmd,
+            args,
             str(exception.args[0]),
         )
         exception.args = (msg,) + exception.args[1:]
@@ -434,7 +436,7 @@ class BasePipeline:
 
         if command_name in self.UNWATCH_COMMANDS:
             self.watching = False
-        elif command_name == "WATCH":
+        elif command_name == b"WATCH":
             self.watching = True
 
         return result
@@ -446,12 +448,12 @@ class BasePipeline:
         shas = [s.sha for s in scripts]
         # we can't use the normal script_* methods because they would just
         # get buffered in the pipeline.
-        exists = await immediate("SCRIPT EXISTS", *shas)
+        exists = await immediate(b"SCRIPT EXISTS", *shas)
 
         if not all(exists):
             for s, exist in zip(scripts, exists):
                 if not exist:
-                    s.sha = await immediate("SCRIPT LOAD", s.script)
+                    s.sha = await immediate(b"SCRIPT LOAD", s.script)
 
     async def execute(self, raise_on_error=True) -> Any:
         """Executes all the commands in the current pipeline"""
@@ -506,12 +508,12 @@ class BasePipeline:
         if self.explicit_transaction:
             raise RedisError("Cannot issue a WATCH after a MULTI")
 
-        return await self.execute_command("WATCH", *keys)
+        return await self.execute_command(b"WATCH", *keys)
 
     async def unwatch(self) -> bool:
         """Unwatches all previously specified keys"""
 
-        return self.watching and await self.execute_command("UNWATCH") or True
+        return self.watching and await self.execute_command(b"UNWATCH") or True
 
 
 class PipelineMeta(ABCMeta):
@@ -623,14 +625,16 @@ class ClusterPipeline(
             )
         command = args[0]
 
-        if command in ["EVAL", "EVALSHA"]:
+        if command in [b"EVAL", b"EVALSHA"]:
             numkeys = args[2]
             keys = args[3 : 3 + numkeys]
             slots = {self.connection_pool.nodes.keyslot(key) for key in keys}
 
             if len(slots) != 1:
                 raise RedisClusterException(
-                    "{0} - all keys must map to the same key slot".format(command)
+                    "{0} - all keys must map to the same key slot".format(
+                        command.decode("latin-1")
+                    )
                 )
 
             return slots.pop()
@@ -660,9 +664,10 @@ class ClusterPipeline(
                 raise r
 
     def annotate_exception(self, exception, number, command):
-        cmd = " ".join(str(x) for x in command)
-        msg = "Command # {0} ({1}) of pipeline caused error: {2}".format(
-            number, cmd, exception.args[0]
+        cmd = command[0].decode("latin-1")
+        args = " ".join(str(x) for x in command[1:])
+        msg = "Command # {0} ({1} {2}) of pipeline caused error: {3}".format(
+            number, cmd, args, exception.args[0]
         )
         exception.args = (msg,) + exception.args[1:]
 
@@ -724,9 +729,9 @@ class ClusterPipeline(
         if self.watches:
             await self._watch(node, conn, self.watches)
         node_commands = NodeCommands(self.parse_response, conn, in_transaction=True)
-        node_commands.append(ClusterPipelineCommand(("MULTI",)))
+        node_commands.append(ClusterPipelineCommand((b"MULTI",)))
         node_commands.extend(attempt)
-        node_commands.append(ClusterPipelineCommand(("EXEC",)))
+        node_commands.append(ClusterPipelineCommand((b"EXEC",)))
         self.explicit_transaction = True
         await node_commands.write()
         # todo: make this place clear
@@ -734,7 +739,7 @@ class ClusterPipeline(
             await node_commands.read()
         except ExecAbortError:
             if self.explicit_transaction:
-                await conn.send_command("DISCARD")
+                await conn.send_command(b"DISCARD")
                 await conn.read_response()
 
         # If at least one watched key is modified before the EXEC command,
@@ -890,7 +895,7 @@ class ClusterPipeline(
         "Watches the values at keys ``names``"
 
         for name in names:
-            slot = self._determine_slot("WATCH", name)
+            slot = self._determine_slot(b"WATCH", name)
             dist_node = self.connection_pool.get_node_by_slot(slot)
 
             if node.get("name") != dist_node["name"]:
@@ -903,13 +908,13 @@ class ClusterPipeline(
 
         if self.explicit_transaction:
             raise RedisError("Cannot issue a WATCH after a MULTI")
-        await conn.send_command("WATCH", *names)
+        await conn.send_command(b"WATCH", *names)
 
         return await conn.read_response()
 
     async def _unwatch(self, conn):
         """Unwatches all previously specified keys"""
-        await conn.send_command("UNWATCH")
+        await conn.send_command(b"UNWATCH")
         res = await conn.read_response()
 
         return self.watching and res or True
@@ -928,4 +933,4 @@ class ClusterPipeline(
                 "deleting multiple keys is not implemented in pipeline command"
             )
 
-        return self.execute_command("DEL", _keys[0])
+        return self.execute_command(b"DEL", _keys[0])

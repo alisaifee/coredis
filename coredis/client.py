@@ -262,12 +262,12 @@ class ResponseParser:
 
     def __init__(self, **kwargs):
         self.response_callbacks: Dict[
-            str, Callable
+            bytes, Callable
         ] = self.__class__.RESPONSE_CALLBACKS.copy()
         super(ResponseParser, self).__init__(**kwargs)
 
     async def parse_response(
-        self, connection: Connection, command_name: str, **options: Any
+        self, connection: Connection, command_name: bytes, **options: Any
     ) -> Any:
         """Parses a response from the Redis server"""
         response = await connection.read_response(decode=options.get("decode"))
@@ -457,7 +457,7 @@ class AbstractRedisCluster(
         count = 0
 
         for arg in keys:
-            count += await self.execute_command("DEL", arg)
+            count += await self.execute_command(b"DEL", arg)
 
         return count
 
@@ -1220,9 +1220,9 @@ class RedisCluster(
 ):
 
     RedisClusterRequestTTL = 16
-    NODES_FLAGS: Dict[str, NodeFlag] = {}
-    RESPONSE_CALLBACKS: Dict[str, Callable] = {}
-    RESULT_CALLBACKS: Dict[str, Callable] = {}
+    NODES_FLAGS: Dict[bytes, NodeFlag] = {}
+    RESPONSE_CALLBACKS: Dict[bytes, Callable] = {}
+    RESULT_CALLBACKS: Dict[bytes, Callable] = {}
 
     connection_pool: ClusterConnectionPool
 
@@ -1332,12 +1332,12 @@ class RedisCluster(
         )
 
         self.refresh_table_asap: bool = False
-        self.nodes_flags: Dict[str, NodeFlag] = self.__class__.NODES_FLAGS.copy()
+        self.nodes_flags: Dict[bytes, NodeFlag] = self.__class__.NODES_FLAGS.copy()
         self.result_callbacks: Dict[
-            str, Callable
+            bytes, Callable
         ] = self.__class__.RESULT_CALLBACKS.copy()
         self.response_callbacks: Dict[
-            str, Callable
+            bytes, Callable
         ] = self.__class__.RESPONSE_CALLBACKS.copy()
 
     @classmethod
@@ -1460,9 +1460,9 @@ class RedisCluster(
             raise RedisClusterException(
                 f"No way to dispatch this command:{args} to Redis Cluster. Missing key."
             )
-        command = args[0]
-
-        if command in ["EVAL", "EVALSHA", "FCALL"]:
+        command: bytes = args[0]
+        keys: Tuple[Any, ...]
+        if command in [b"EVAL", b"EVALSHA", b"FCALL"]:
             numkeys = args[2]
             keys = args[3 : 3 + numkeys]
             if not keys:
@@ -1472,50 +1472,80 @@ class RedisCluster(
 
             if len(slots) != 1:
                 raise RedisClusterException(
-                    "{0} - all keys must map to the same key slot".format(command)
+                    f"{command!r} - all keys must map to the same key slot"
                 )
 
             return slots.pop()
-        elif command in ("XREAD", "XREADGROUP"):
+        elif command in (b"XREAD", b"XREADGROUP"):
             try:
-                idx = args.index("STREAMS") + 1
+                idx = args.index(b"STREAMS") + 1
             except ValueError:
                 raise RedisClusterException(
-                    "{0} arguments do not contain STREAMS operand".format(command)
+                    f"{command!r} arguments do not contain STREAMS operand"
                 )
-            key = args[idx]
-        elif command in ("XGROUP", "XINFO"):
-            key = args[2]
-        elif command in (
-            "LMPOP",
-            "SINTERCARD",
-            "ZINTER",
-            "ZINTERCARD",
-            "ZMPOP",
-            "ZDIFF",
-            "ZUNION",
-        ):
-            keys = args[2 : args[1] + 2]
-            slots = {self.connection_pool.nodes.keyslot(key) for key in keys}
-
-            return slots.pop()
-        elif command in (
-            "BLMPOP",
-            "BZMPOP",
-            "ZINTERSTORE",
-            "ZDIFFSTORE",
-            "ZUNIONSTORE",
-        ):
-            keys = args[3 : args[2] + 3]
-            slots = {self.connection_pool.nodes.keyslot(key) for key in keys}
-
-            return slots.pop()
-        elif command == "OBJECT":
-            key = args[2]
+            keys = (args[idx],)
+        elif command in (b"XGROUP", b"XINFO"):
+            keys = (args[2],)
+        elif command == b"OBJECT":
+            keys = (args[2],)
+        elif command in {
+            b"BLMPOP",
+            b"BZMPOP",
+        }:
+            keys = args[3 : args[2] + 3 : 1]
+        elif command in {b"BZPOPMAX", b"BRPOP", b"BZPOPMIN", b"BLPOP"}:
+            keys = args[1 : len(args) - 1]
+        elif command in {
+            b"SINTER",
+            b"SDIFF",
+            b"SSUBSCRIBE",
+            b"MGET",
+            b"PFCOUNT",
+            b"EXISTS",
+            b"SUNION",
+            b"DEL",
+            b"TOUCH",
+            b"WATCH",
+            b"SUNSUBSCRIBE",
+            b"UNLINK",
+        }:
+            keys = args[1:]
+        elif command in {"LCS"}:
+            keys = args[1:3]
+        elif command in {
+            b"LMPOP",
+            b"ZINTERCARD",
+            b"ZMPOP",
+            b"ZUNION",
+            b"ZINTER",
+            b"ZDIFF",
+            b"SINTERCARD",
+        }:
+            keys = args[2 : args[1] + 2 : 1]
+        elif command in {
+            b"MEMORY USAGE",
+            b"XGROUP CREATE",
+            b"XGROUP DESTROY",
+            b"XGROUP SETID",
+            b"XINFO STREAM",
+            b"XINFO GROUPS",
+            b"OBJECT ENCODING",
+            b"OBJECT REFCOUNT",
+            b"OBJECT IDLETIME",
+            b"XGROUP DELCONSUMER",
+            b"XGROUP CREATECONSUMER",
+            b"OBJECT FREQ",
+            b"XINFO CONSUMERS",
+        }:
+            keys = (args[1],)
+        elif command in {b"MSETNX", b"MSET"}:
+            keys = args[1:-1:2]
         else:
-            key = args[1]
+            keys = (args[1],)
 
-        return self.connection_pool.nodes.keyslot(key)
+        slots = {self.connection_pool.nodes.keyslot(key) for key in keys}
+        if len(slots) == 1:
+            return slots.pop()
 
     def _merge_result(self, command, res, **kwargs):
         """
@@ -1615,8 +1645,8 @@ class RedisCluster(
 
             try:
                 if asking:
-                    await r.send_command("ASKING")
-                    await self.parse_response(r, "ASKING", **kwargs)
+                    await r.send_command(b"ASKING")
+                    await self.parse_response(r, b"ASKING", **kwargs)
                     asking = False
 
                 await r.send_command(*args)
@@ -1775,15 +1805,15 @@ class RedisCluster(
                 pieces: CommandArgList = [cursor]
 
                 if match is not None:
-                    pieces.extend(["MATCH", match])
+                    pieces.extend([b"MATCH", match])
 
                 if count is not None:
-                    pieces.extend(["COUNT", count])
+                    pieces.extend([b"COUNT", count])
 
                 if type_ is not None:
-                    pieces.extend(["TYPE", type_])
+                    pieces.extend([b"TYPE", type_])
 
-                response = await node.execute_command("SCAN", *pieces)
+                response = await node.execute_command(b"SCAN", *pieces)
                 cursor, data = response
 
                 for item in data:

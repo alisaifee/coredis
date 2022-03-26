@@ -184,7 +184,7 @@ class PubSub:
 
         for pattern, handler in iteritems(kwargs):
             new_patterns[self.encode(pattern)] = handler
-        ret_val = await self.execute_command("PSUBSCRIBE", *iterkeys(new_patterns))
+        ret_val = await self.execute_command(b"PSUBSCRIBE", *iterkeys(new_patterns))
         # update the patterns dict AFTER we send the command. we don't want to
         # subscribe twice to these patterns, once for the command and again
         # for the reconnection.
@@ -201,7 +201,7 @@ class PubSub:
 
         if args:
             args = list_or_args(args[0], args[1:])
-        return await self.execute_command("PUNSUBSCRIBE", *args)
+        return await self.execute_command(b"PUNSUBSCRIBE", *args)
 
     async def subscribe(self, *args, **kwargs):
         """
@@ -221,7 +221,7 @@ class PubSub:
 
         for channel, handler in iteritems(kwargs):
             new_channels[self.encode(channel)] = handler
-        ret_val = await self.execute_command("SUBSCRIBE", *iterkeys(new_channels))
+        ret_val = await self.execute_command(b"SUBSCRIBE", *iterkeys(new_channels))
         # update the channels dict AFTER we send the command. we don't want to
         # subscribe twice to these channels, once for the command and again
         # for the reconnection.
@@ -240,7 +240,7 @@ class PubSub:
         if args:
             args = list_or_args(args[0], args[1:])
 
-        return await self.execute_command("UNSUBSCRIBE", *args)
+        return await self.execute_command(b"UNSUBSCRIBE", *args)
 
     async def listen(self):
         """

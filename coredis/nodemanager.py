@@ -3,7 +3,7 @@ import random
 from typing import Any, Dict, Iterable, Optional
 
 from coredis.exceptions import ConnectionError, RedisClusterException
-from coredis.utils import b, hash_slot, nativestr
+from coredis.utils import hash_slot, nativestr
 
 HASH_SLOTS = 16384
 HASH_SLOTS_SET = set(range(HASH_SLOTS))
@@ -49,11 +49,11 @@ class NodeManager:
         if isinstance(value, bytes):
             return value
         elif isinstance(value, int):
-            value = b(str(value))
+            return b"%d" % value
         elif isinstance(value, float):
-            value = b(repr(value))
+            return b"%.15g" % value
         elif not isinstance(value, str):
-            value = str(value)
+            value = f"{value}"
         if isinstance(value, str):
             value = value.encode()
         return value

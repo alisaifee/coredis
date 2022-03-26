@@ -1,47 +1,64 @@
 import enum
 
 
-class PureToken(str, enum.Enum):
+class PureToken(bytes, enum.Enum):
     """
     Enum for using pure-tokens with the redis api.
     """
 
+    def __eq__(self, other):
+        """
+        Since redis tokens are case insensitive allow mixed case
+        Additionally allow strings to be passed in instead of
+        bytes.
+        """
+        if other:
+            if isinstance(other, PureToken):
+                return self.value == other.value
+            _other = other
+            if isinstance(other, str):
+                _other = other.encode("utf-8")
+            return _other.upper() == self.value
+
+    def __hash__(self):
+        return hash(self.value)
+
     #: Used by:
     #:
     #:  - ``ACL LOG``
-    RESET = "RESET"
+    RESET = b"RESET"
 
     #: Used by:
     #:
     #:  - ``BGSAVE``
-    SCHEDULE = "SCHEDULE"
+    SCHEDULE = b"SCHEDULE"
 
     #: Used by:
     #:
     #:  - ``BITCOUNT``
     #:  - ``BITPOS``
-    BIT = "BIT"
+    BIT = b"BIT"
 
     #: Used by:
     #:
     #:  - ``BITCOUNT``
     #:  - ``BITPOS``
-    BYTE = "BYTE"
+    BYTE = b"BYTE"
 
     #: Used by:
     #:
     #:  - ``BITFIELD``
-    FAIL = "FAIL"
+    FAIL = b"FAIL"
 
     #: Used by:
     #:
     #:  - ``BITFIELD``
-    SAT = "SAT"
+    SAT = b"SAT"
 
     #: Used by:
     #:
     #:  - ``BITFIELD``
-    WRAP = "WRAP"
+    WRAP = b"WRAP"
 
     #: Used by:
     #:
@@ -49,7 +66,7 @@ class PureToken(str, enum.Enum):
     #:  - ``BLMPOP``
     #:  - ``LMOVE``
     #:  - ``LMPOP``
-    LEFT = "LEFT"
+    LEFT = b"LEFT"
 
     #: Used by:
     #:
@@ -57,7 +74,7 @@ class PureToken(str, enum.Enum):
     #:  - ``BLMPOP``
     #:  - ``LMOVE``
     #:  - ``LMPOP``
-    RIGHT = "RIGHT"
+    RIGHT = b"RIGHT"
 
     #: Used by:
     #:
@@ -67,7 +84,7 @@ class PureToken(str, enum.Enum):
     #:  - ``ZMPOP``
     #:  - ``ZUNION``
     #:  - ``ZUNIONSTORE``
-    MAX = "MAX"
+    MAX = b"MAX"
 
     #: Used by:
     #:
@@ -77,107 +94,107 @@ class PureToken(str, enum.Enum):
     #:  - ``ZMPOP``
     #:  - ``ZUNION``
     #:  - ``ZUNIONSTORE``
-    MIN = "MIN"
+    MIN = b"MIN"
 
     #: Used by:
     #:
     #:  - ``CLIENT CACHING``
     #:  - ``SCRIPT DEBUG``
-    NO = "NO"
+    NO = b"NO"
 
     #: Used by:
     #:
     #:  - ``CLIENT CACHING``
     #:  - ``SCRIPT DEBUG``
-    YES = "YES"
+    YES = b"YES"
 
     #: Used by:
     #:
     #:  - ``CLIENT KILL``
     #:  - ``CLIENT LIST``
-    MASTER = "MASTER"
+    MASTER = b"MASTER"
 
     #: Used by:
     #:
     #:  - ``CLIENT KILL``
     #:  - ``CLIENT LIST``
-    NORMAL = "NORMAL"
+    NORMAL = b"NORMAL"
 
     #: Used by:
     #:
     #:  - ``CLIENT KILL``
     #:  - ``CLIENT LIST``
-    PUBSUB = "PUBSUB"
+    PUBSUB = b"PUBSUB"
 
     #: Used by:
     #:
     #:  - ``CLIENT KILL``
     #:  - ``CLIENT LIST``
-    REPLICA = "REPLICA"
+    REPLICA = b"REPLICA"
 
     #: Used by:
     #:
     #:  - ``CLIENT KILL``
-    SLAVE = "SLAVE"
+    SLAVE = b"SLAVE"
 
     #: Used by:
     #:
     #:  - ``CLIENT NO-EVICT``
     #:  - ``CLIENT REPLY``
     #:  - ``CLIENT TRACKING``
-    OFF = "OFF"
+    OFF = b"OFF"
 
     #: Used by:
     #:
     #:  - ``CLIENT NO-EVICT``
     #:  - ``CLIENT REPLY``
     #:  - ``CLIENT TRACKING``
-    ON = "ON"
+    ON = b"ON"
 
     #: Used by:
     #:
     #:  - ``CLIENT PAUSE``
-    ALL = "ALL"
+    ALL = b"ALL"
 
     #: Used by:
     #:
     #:  - ``CLIENT PAUSE``
-    WRITE = "WRITE"
+    WRITE = b"WRITE"
 
     #: Used by:
     #:
     #:  - ``CLIENT REPLY``
-    SKIP = "SKIP"
+    SKIP = b"SKIP"
 
     #: Used by:
     #:
     #:  - ``CLIENT TRACKING``
-    BCAST = "BCAST"
+    BCAST = b"BCAST"
 
     #: Used by:
     #:
     #:  - ``CLIENT TRACKING``
-    NOLOOP = "NOLOOP"
+    NOLOOP = b"NOLOOP"
 
     #: Used by:
     #:
     #:  - ``CLIENT TRACKING``
-    OPTIN = "OPTIN"
+    OPTIN = b"OPTIN"
 
     #: Used by:
     #:
     #:  - ``CLIENT TRACKING``
-    OPTOUT = "OPTOUT"
+    OPTOUT = b"OPTOUT"
 
     #: Used by:
     #:
     #:  - ``CLIENT UNBLOCK``
-    ERROR = "ERROR"
+    ERROR = b"ERROR"
 
     #: Used by:
     #:
     #:  - ``CLIENT UNBLOCK``
-    TIMEOUT = "TIMEOUT"
+    TIMEOUT = b"TIMEOUT"
 
     #: Used by:
     #:
@@ -185,27 +202,27 @@ class PureToken(str, enum.Enum):
     #:  - ``FAILOVER``
     #:  - ``SHUTDOWN``
     #:  - ``XCLAIM``
-    FORCE = "FORCE"
+    FORCE = b"FORCE"
 
     #: Used by:
     #:
     #:  - ``CLUSTER FAILOVER``
-    TAKEOVER = "TAKEOVER"
+    TAKEOVER = b"TAKEOVER"
 
     #: Used by:
     #:
     #:  - ``CLUSTER RESET``
-    HARD = "HARD"
+    HARD = b"HARD"
 
     #: Used by:
     #:
     #:  - ``CLUSTER RESET``
-    SOFT = "SOFT"
+    SOFT = b"SOFT"
 
     #: Used by:
     #:
     #:  - ``CLUSTER SETSLOT``
-    STABLE = "STABLE"
+    STABLE = b"STABLE"
 
     #: Used by:
     #:
@@ -214,7 +231,7 @@ class PureToken(str, enum.Enum):
     #:  - ``FUNCTION RESTORE``
     #:  - ``MIGRATE``
     #:  - ``RESTORE``
-    REPLACE = "REPLACE"
+    REPLACE = b"REPLACE"
 
     #: Used by:
     #:
@@ -223,7 +240,7 @@ class PureToken(str, enum.Enum):
     #:  - ``PEXPIRE``
     #:  - ``PEXPIREAT``
     #:  - ``ZADD``
-    GT = "GT"
+    GT = b"GT"
 
     #: Used by:
     #:
@@ -232,18 +249,7 @@ class PureToken(str, enum.Enum):
     #:  - ``PEXPIRE``
     #:  - ``PEXPIREAT``
     #:  - ``ZADD``
-    LT = "LT"
-
-    #: Used by:
-    #:
-    #:  - ``EXPIRE``
-    #:  - ``EXPIREAT``
-    #:  - ``GEOADD``
-    #:  - ``PEXPIRE``
-    #:  - ``PEXPIREAT``
-    #:  - ``SET``
-    #:  - ``ZADD``
-    NX = "NX"
+    LT = b"LT"
 
     #: Used by:
     #:
@@ -254,13 +260,24 @@ class PureToken(str, enum.Enum):
     #:  - ``PEXPIREAT``
     #:  - ``SET``
     #:  - ``ZADD``
-    XX = "XX"
+    NX = b"NX"
+
+    #: Used by:
+    #:
+    #:  - ``EXPIRE``
+    #:  - ``EXPIREAT``
+    #:  - ``GEOADD``
+    #:  - ``PEXPIRE``
+    #:  - ``PEXPIREAT``
+    #:  - ``SET``
+    #:  - ``ZADD``
+    XX = b"XX"
 
     #: Used by:
     #:
     #:  - ``FAILOVER``
     #:  - ``SHUTDOWN``
-    ABORT = "ABORT"
+    ABORT = b"ABORT"
 
     #: Used by:
     #:
@@ -268,7 +285,7 @@ class PureToken(str, enum.Enum):
     #:  - ``FLUSHDB``
     #:  - ``FUNCTION FLUSH``
     #:  - ``SCRIPT FLUSH``
-    ASYNC = "ASYNC"
+    ASYNC = b"ASYNC"
 
     #: Used by:
     #:
@@ -277,28 +294,28 @@ class PureToken(str, enum.Enum):
     #:  - ``FUNCTION FLUSH``
     #:  - ``SCRIPT DEBUG``
     #:  - ``SCRIPT FLUSH``
-    SYNC = "SYNC"
+    SYNC = b"SYNC"
 
     #: Used by:
     #:
     #:  - ``FUNCTION LIST``
-    WITHCODE = "WITHCODE"
+    WITHCODE = b"WITHCODE"
 
     #: Used by:
     #:
     #:  - ``FUNCTION RESTORE``
-    APPEND = "APPEND"
+    APPEND = b"APPEND"
 
     #: Used by:
     #:
     #:  - ``FUNCTION RESTORE``
-    FLUSH = "FLUSH"
+    FLUSH = b"FLUSH"
 
     #: Used by:
     #:
     #:  - ``GEOADD``
     #:  - ``ZADD``
-    CHANGE = "CH"
+    CHANGE = b"CH"
 
     #: Used by:
     #:
@@ -309,7 +326,7 @@ class PureToken(str, enum.Enum):
     #:  - ``GEORADIUS_RO``
     #:  - ``GEOSEARCH``
     #:  - ``GEOSEARCHSTORE``
-    FT = "FT"
+    FT = b"FT"
 
     #: Used by:
     #:
@@ -320,7 +337,7 @@ class PureToken(str, enum.Enum):
     #:  - ``GEORADIUS_RO``
     #:  - ``GEOSEARCH``
     #:  - ``GEOSEARCHSTORE``
-    KM = "KM"
+    KM = b"KM"
 
     #: Used by:
     #:
@@ -331,7 +348,7 @@ class PureToken(str, enum.Enum):
     #:  - ``GEORADIUS_RO``
     #:  - ``GEOSEARCH``
     #:  - ``GEOSEARCHSTORE``
-    M = "M"
+    M = b"M"
 
     #: Used by:
     #:
@@ -342,7 +359,7 @@ class PureToken(str, enum.Enum):
     #:  - ``GEORADIUS_RO``
     #:  - ``GEOSEARCH``
     #:  - ``GEOSEARCHSTORE``
-    MI = "MI"
+    MI = b"MI"
 
     #: Used by:
     #:
@@ -352,7 +369,7 @@ class PureToken(str, enum.Enum):
     #:  - ``GEORADIUS_RO``
     #:  - ``GEOSEARCH``
     #:  - ``GEOSEARCHSTORE``
-    ANY = "ANY"
+    ANY = b"ANY"
 
     #: Used by:
     #:
@@ -364,7 +381,7 @@ class PureToken(str, enum.Enum):
     #:  - ``GEOSEARCHSTORE``
     #:  - ``SORT``
     #:  - ``SORT_RO``
-    ASC = "ASC"
+    ASC = b"ASC"
 
     #: Used by:
     #:
@@ -376,7 +393,7 @@ class PureToken(str, enum.Enum):
     #:  - ``GEOSEARCHSTORE``
     #:  - ``SORT``
     #:  - ``SORT_RO``
-    DESC = "DESC"
+    DESC = b"DESC"
 
     #: Used by:
     #:
@@ -385,7 +402,7 @@ class PureToken(str, enum.Enum):
     #:  - ``GEORADIUSBYMEMBER_RO``
     #:  - ``GEORADIUS_RO``
     #:  - ``GEOSEARCH``
-    WITHCOORD = "WITHCOORD"
+    WITHCOORD = b"WITHCOORD"
 
     #: Used by:
     #:
@@ -394,7 +411,7 @@ class PureToken(str, enum.Enum):
     #:  - ``GEORADIUSBYMEMBER_RO``
     #:  - ``GEORADIUS_RO``
     #:  - ``GEOSEARCH``
-    WITHDIST = "WITHDIST"
+    WITHDIST = b"WITHDIST"
 
     #: Used by:
     #:
@@ -403,154 +420,154 @@ class PureToken(str, enum.Enum):
     #:  - ``GEORADIUSBYMEMBER_RO``
     #:  - ``GEORADIUS_RO``
     #:  - ``GEOSEARCH``
-    WITHHASH = "WITHHASH"
+    WITHHASH = b"WITHHASH"
 
     #: Used by:
     #:
     #:  - ``GEOSEARCHSTORE``
-    STOREDIST = "STOREDIST"
+    STOREDIST = b"STOREDIST"
 
     #: Used by:
     #:
     #:  - ``GETEX``
-    PERSIST = "PERSIST"
+    PERSIST = b"PERSIST"
 
     #: Used by:
     #:
     #:  - ``HRANDFIELD``
-    WITHVALUES = "WITHVALUES"
+    WITHVALUES = b"WITHVALUES"
 
     #: Used by:
     #:
     #:  - ``LCS``
-    IDX = "IDX"
+    IDX = b"IDX"
 
     #: Used by:
     #:
     #:  - ``LCS``
-    LEN = "LEN"
+    LEN = b"LEN"
 
     #: Used by:
     #:
     #:  - ``LCS``
-    WITHMATCHLEN = "WITHMATCHLEN"
+    WITHMATCHLEN = b"WITHMATCHLEN"
 
     #: Used by:
     #:
     #:  - ``LINSERT``
-    AFTER = "AFTER"
+    AFTER = b"AFTER"
 
     #: Used by:
     #:
     #:  - ``LINSERT``
-    BEFORE = "BEFORE"
+    BEFORE = b"BEFORE"
 
     #: Used by:
     #:
     #:  - ``MIGRATE``
-    COPY = "COPY"
+    COPY = b"COPY"
 
     #: Used by:
     #:
     #:  - ``MIGRATE``
-    EMPTY_STRING = ""
+    EMPTY_STRING = b""
 
     #: Used by:
     #:
     #:  - ``RESTORE``
-    ABSTTL = "ABSTTL"
+    ABSTTL = b"ABSTTL"
 
     #: Used by:
     #:
     #:  - ``SET``
-    GET = "GET"
+    GET = b"GET"
 
     #: Used by:
     #:
     #:  - ``SET``
-    KEEPTTL = "KEEPTTL"
+    KEEPTTL = b"KEEPTTL"
 
     #: Used by:
     #:
     #:  - ``SHUTDOWN``
-    NOSAVE = "NOSAVE"
+    NOSAVE = b"NOSAVE"
 
     #: Used by:
     #:
     #:  - ``SHUTDOWN``
-    NOW = "NOW"
+    NOW = b"NOW"
 
     #: Used by:
     #:
     #:  - ``SHUTDOWN``
-    SAVE = "SAVE"
+    SAVE = b"SAVE"
 
     #: Used by:
     #:
     #:  - ``SORT``
     #:  - ``SORT_RO``
-    SORTING = "ALPHA"
+    SORTING = b"ALPHA"
 
     #: Used by:
     #:
     #:  - ``XADD``
     #:  - ``XTRIM``
-    APPROXIMATELY = "~"
+    APPROXIMATELY = b"~"
 
     #: Used by:
     #:
     #:  - ``XADD``
-    AUTO_ID = "*"
-
-    #: Used by:
-    #:
-    #:  - ``XADD``
-    #:  - ``XTRIM``
-    EQUAL = "="
+    AUTO_ID = b"*"
 
     #: Used by:
     #:
     #:  - ``XADD``
     #:  - ``XTRIM``
-    MAXLEN = "MAXLEN"
+    EQUAL = b"="
 
     #: Used by:
     #:
     #:  - ``XADD``
     #:  - ``XTRIM``
-    MINID = "MINID"
+    MAXLEN = b"MAXLEN"
 
     #: Used by:
     #:
     #:  - ``XADD``
-    NOMKSTREAM = "NOMKSTREAM"
+    #:  - ``XTRIM``
+    MINID = b"MINID"
+
+    #: Used by:
+    #:
+    #:  - ``XADD``
+    NOMKSTREAM = b"NOMKSTREAM"
 
     #: Used by:
     #:
     #:  - ``XAUTOCLAIM``
     #:  - ``XCLAIM``
-    JUSTID = "JUSTID"
+    JUSTID = b"JUSTID"
 
     #: Used by:
     #:
     #:  - ``XGROUP CREATE``
-    MKSTREAM = "MKSTREAM"
+    MKSTREAM = b"MKSTREAM"
 
     #: Used by:
     #:
     #:  - ``XGROUP CREATE``
     #:  - ``XGROUP SETID``
-    NEW_ID = "$"
+    NEW_ID = b"$"
 
     #: Used by:
     #:
     #:  - ``XREADGROUP``
-    NOACK = "NOACK"
+    NOACK = b"NOACK"
 
     #: Used by:
     #:
     #:  - ``ZADD``
-    INCREMENT = "INCR"
+    INCREMENT = b"INCR"
 
     #: Used by:
     #:
@@ -562,7 +579,7 @@ class PureToken(str, enum.Enum):
     #:  - ``ZREVRANGE``
     #:  - ``ZREVRANGEBYSCORE``
     #:  - ``ZUNION``
-    WITHSCORES = "WITHSCORES"
+    WITHSCORES = b"WITHSCORES"
 
     #: Used by:
     #:
@@ -570,22 +587,22 @@ class PureToken(str, enum.Enum):
     #:  - ``ZINTERSTORE``
     #:  - ``ZUNION``
     #:  - ``ZUNIONSTORE``
-    SUM = "SUM"
+    SUM = b"SUM"
 
     #: Used by:
     #:
     #:  - ``ZRANGE``
     #:  - ``ZRANGESTORE``
-    BYLEX = "BYLEX"
+    BYLEX = b"BYLEX"
 
     #: Used by:
     #:
     #:  - ``ZRANGE``
     #:  - ``ZRANGESTORE``
-    BYSCORE = "BYSCORE"
+    BYSCORE = b"BYSCORE"
 
     #: Used by:
     #:
     #:  - ``ZRANGE``
     #:  - ``ZRANGESTORE``
-    REV = "REV"
+    REV = b"REV"

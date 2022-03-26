@@ -174,12 +174,12 @@ class TestServer:
 
     @pytest.mark.max_server_version("6.9.9")
     async def test_latency_all(self, client):
-        await client.execute_command("debug", "sleep", 0.05)
+        await client.execute_command(b"debug", "sleep", 0.05)
         history = await client.latency_history("command")
         assert len(history) >= 1
         await client.latency_reset([])
 
-        await client.execute_command("debug", "sleep", 0.05)
+        await client.execute_command(b"debug", "sleep", 0.05)
         history = await client.latency_history("command")
         assert len(history) == 1
         assert history[0][1] == approx(50, 60)
@@ -189,7 +189,7 @@ class TestServer:
 
     @pytest.mark.max_server_version("6.9.9")
     async def test_latency_graph(self, client):
-        await client.execute_command("debug", "sleep", 0.05)
+        await client.execute_command(b"debug", "sleep", 0.05)
         graph = await client.latency_graph("command")
         assert "command - high" in graph
 

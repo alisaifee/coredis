@@ -102,7 +102,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
         """Returns a (host, port) pair for the given ``service_name``"""
 
         return await self.execute_command(
-            "SENTINEL GET-MASTER-ADDR-BY-NAME", service_name
+            b"SENTINEL GET-MASTER-ADDR-BY-NAME", service_name
         )
 
     @redis_command(
@@ -112,7 +112,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     async def sentinel_master(self, service_name: ValueT) -> Dict[str, Any]:
         """Returns a dictionary containing the specified masters state."""
 
-        return await self.execute_command("SENTINEL MASTER", service_name)
+        return await self.execute_command(b"SENTINEL MASTER", service_name)
 
     @redis_command(
         "SENTINEL MASTERS",
@@ -121,7 +121,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     async def sentinel_masters(self) -> Dict[str, Dict[str, Any]]:
         """Returns a list of dictionaries containing each master's state."""
 
-        return await self.execute_command("SENTINEL MASTERS")
+        return await self.execute_command(b"SENTINEL MASTERS")
 
     @redis_command(
         "SENTINEL MONITOR",
@@ -132,7 +132,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     ) -> bool:
         """Adds a new master to Sentinel to be monitored"""
 
-        return await self.execute_command("SENTINEL MONITOR", name, ip, port, quorum)
+        return await self.execute_command(b"SENTINEL MONITOR", name, ip, port, quorum)
 
     @redis_command(
         "SENTINEL REMOVE",
@@ -141,7 +141,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     async def sentinel_remove(self, name: ValueT) -> bool:
         """Removes a master from Sentinel's monitoring"""
 
-        return await self.execute_command("SENTINEL REMOVE", name)
+        return await self.execute_command(b"SENTINEL REMOVE", name)
 
     @redis_command(
         "SENTINEL SENTINELS",
@@ -152,7 +152,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     ) -> Tuple[Dict[AnyStr, Any], ...]:
         """Returns a list of sentinels for ``service_name``"""
 
-        return await self.execute_command("SENTINEL SENTINELS", service_name)
+        return await self.execute_command(b"SENTINEL SENTINELS", service_name)
 
     @redis_command(
         "SENTINEL SET",
@@ -161,7 +161,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     async def sentinel_set(self, name: ValueT, option, value) -> bool:
         """Sets Sentinel monitoring parameters for a given master"""
 
-        return await self.execute_command("SENTINEL SET", name, option, value)
+        return await self.execute_command(b"SENTINEL SET", name, option, value)
 
     @redis_command(
         "SENTINEL SLAVES",
@@ -172,7 +172,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     ) -> Tuple[Dict[AnyStr, Any], ...]:
         """Returns a list of slaves for ``service_name``"""
 
-        return await self.execute_command("SENTINEL SLAVES", service_name)
+        return await self.execute_command(b"SENTINEL SLAVES", service_name)
 
     @redis_command(
         "SENTINEL REPLICAS",
@@ -183,4 +183,4 @@ class SentinelCommands(CommandMixin[AnyStr]):
     ) -> Tuple[Dict[AnyStr, Any], ...]:
         """Returns a list of replicas for ``service_name``"""
 
-        return await self.execute_command("SENTINEL REPLICAS", service_name)
+        return await self.execute_command(b"SENTINEL REPLICAS", service_name)

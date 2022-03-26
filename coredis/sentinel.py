@@ -15,7 +15,7 @@ from coredis.exceptions import (
 )
 from coredis.pool import ConnectionPool
 from coredis.typing import AnyStr, Generic, Iterable, Literal, Tuple, Type
-from coredis.utils import deprecated, iteritems, nativestr
+from coredis.utils import deprecated, iteritems
 
 
 class SentinelManagedConnection(Connection):
@@ -36,8 +36,8 @@ class SentinelManagedConnection(Connection):
         self.host, self.port = address
         await super(SentinelManagedConnection, self).connect()
         if self.connection_pool.check_connection:
-            await self.send_command("PING")
-            if nativestr(await self.read_response()) != "PONG":
+            await self.send_command(b"PING")
+            if await self.read_response() != b"PONG":
                 raise ConnectionError("PING failed")
 
     async def connect(self):

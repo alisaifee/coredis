@@ -593,7 +593,7 @@ class TestConnection:
         """
         client = coredis.Redis(loop=event_loop)
         with pytest.raises(BusyLoadingError):
-            await client.execute_command("DEBUG", "ERROR", "LOADING fake message")
+            await client.execute_command(b"DEBUG", b"ERROR", b"LOADING fake message")
         pool = client.connection_pool
         assert len(pool._available_connections) == 0
 
@@ -608,7 +608,7 @@ class TestConnection:
         pipe = await client.pipeline()
         with pytest.raises(BusyLoadingError):
             await pipe.immediate_execute_command(
-                "DEBUG", "ERROR", "LOADING fake message"
+                b"DEBUG", b"ERROR", b"LOADING fake message"
             )
         pool = client.connection_pool
         assert not pipe.connection
@@ -622,7 +622,7 @@ class TestConnection:
         """
         client = coredis.Redis(loop=event_loop)
         pipe = await client.pipeline()
-        await pipe.execute_command("DEBUG", "ERROR", "LOADING fake message")
+        await pipe.execute_command(b"DEBUG", b"ERROR", b"LOADING fake message")
         with pytest.raises(RedisError):
             await pipe.execute()
         pool = client.connection_pool
@@ -637,7 +637,7 @@ class TestConnection:
         "READONLY errors get turned in ReadOnlyError exceptions"
         client = coredis.Redis(loop=event_loop)
         with pytest.raises(ReadOnlyError):
-            await client.execute_command("DEBUG", "ERROR", "READONLY blah blah")
+            await client.execute_command(b"DEBUG", b"ERROR", b"READONLY blah blah")
 
     def test_connect_from_url_tcp(self):
         connection = coredis.Redis.from_url("redis://localhost")

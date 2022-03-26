@@ -76,7 +76,7 @@ class ClusterCommandConfig:
 
 
 class CommandDetails(NamedTuple):
-    command: str
+    command: bytes
     readonly: bool
     version_introduced: Optional[version.Version]
     version_deprecated: Optional[version.Version]
@@ -103,7 +103,7 @@ def redis_command(
     [Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]
 ]:
     command_details = CommandDetails(
-        command_name,
+        command_name.encode("latin-1"),
         readonly,
         version.Version(version_introduced) if version_introduced else None,
         version.Version(version_deprecated) if version_deprecated else None,

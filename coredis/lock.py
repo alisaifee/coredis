@@ -355,7 +355,7 @@ class ClusterLock(LuaLock):
                     conn = ClusterConnection(
                         host=node["host"], port=node["port"], **conn_kwargs
                     )
-                    await conn.send_command("get", self.name)
+                    await conn.send_command(b"GET", self.name)
                     res = await conn.read_response()
                     if nativestr(res) == nativestr(token):
                         count += 1
