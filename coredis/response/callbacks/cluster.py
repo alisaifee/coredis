@@ -1,13 +1,13 @@
 from coredis.commands import ParametrizedCallback, SimpleCallback
-from coredis.typing import Any, Dict, List, Tuple, TypedDict, Union, ValueT
+from coredis.typing import Any, Dict, List, Tuple, TypedDict, Union
 from coredis.utils import flat_pairs_to_dict, nativestr
 
 
 class ClusterNode(TypedDict):
-    host: ValueT
+    host: str
     port: int
-    node_id: ValueT
-    server_type: ValueT
+    node_id: str
+    server_type: str
 
 
 class ClusterLinksCallback(SimpleCallback):
