@@ -51,10 +51,14 @@ def check_version(
         return
 
     client = cast("coredis.client.RedisConnection", instance)
-    if client.server_version:
-        if min_version and client.server_version < min_version:
+
+    if getattr(client, "verify_version", False):
+        server_version = getattr(client, "server_version", None)
+        if not server_version:
+            return
+        if min_version and server_version < min_version:
             raise CommandNotSupportedError(command, client.server_version)
-        if deprecated_version and client.server_version >= deprecated_version:
+        if deprecated_version and server_version >= deprecated_version:
             if deprecation_reason:
                 warnings.warn(deprecation_reason.strip())
             else:

@@ -176,7 +176,9 @@ def redis_sentinel_auth_server(docker_services):
 
 @pytest.fixture
 async def redis_basic(redis_basic_server, request):
-    client = coredis.Redis("localhost", 6379, decode_responses=True)
+    client = coredis.Redis(
+        "localhost", 6379, decode_responses=True, verify_version=True
+    )
     await check_test_constraints(request, client)
     await client.flushall()
     await set_default_test_config(client)
@@ -186,9 +188,17 @@ async def redis_basic(redis_basic_server, request):
 
 @pytest.fixture
 async def redis_basic_resp3(redis_basic_server, request):
-    client = coredis.Redis("localhost", 6379, decode_responses=True)
+    client = coredis.Redis(
+        "localhost", 6379, decode_responses=True, verify_version=True
+    )
     await check_test_constraints(request, client, protocol=3)
-    client = coredis.Redis("localhost", 6379, decode_responses=True, protocol_version=3)
+    client = coredis.Redis(
+        "localhost",
+        6379,
+        decode_responses=True,
+        protocol_version=3,
+        verify_version=True,
+    )
     await client.flushall()
     await set_default_test_config(client)
 
@@ -197,9 +207,13 @@ async def redis_basic_resp3(redis_basic_server, request):
 
 @pytest.fixture
 async def redis_basic_raw(redis_basic_server, request):
-    client = coredis.Redis("localhost", 6379, decode_responses=False)
+    client = coredis.Redis(
+        "localhost", 6379, decode_responses=False, verify_version=True
+    )
     await check_test_constraints(request, client, protocol=2)
-    client = coredis.Redis("localhost", 6379, decode_responses=False)
+    client = coredis.Redis(
+        "localhost", 6379, decode_responses=False, verify_version=True
+    )
     await client.flushall()
     await set_default_test_config(client)
 
@@ -208,10 +222,16 @@ async def redis_basic_raw(redis_basic_server, request):
 
 @pytest.fixture
 async def redis_basic_raw_resp3(redis_basic_server, request):
-    client = coredis.Redis("localhost", 6379, decode_responses=False)
+    client = coredis.Redis(
+        "localhost", 6379, decode_responses=False, verify_version=True
+    )
     await check_test_constraints(request, client, protocol=3)
     client = coredis.Redis(
-        "localhost", 6379, decode_responses=False, protocol_version=3
+        "localhost",
+        6379,
+        decode_responses=False,
+        protocol_version=3,
+        verify_version=True,
     )
     await client.flushall()
     await set_default_test_config(client)

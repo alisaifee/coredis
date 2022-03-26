@@ -1008,7 +1008,7 @@ class Redis(
         idle_check_interval: float = 1,
         client_name: Optional[str] = None,
         protocol_version: Literal[2, 3] = 2,
-        verify_version: bool = True,
+        verify_version: bool = False,
         **kwargs,
     ):
         super(Redis, self).__init__(
@@ -1280,7 +1280,7 @@ class RedisCluster(
         nodemanager_follow_cluster: bool = False,
         decode_responses: bool = False,
         connection_pool: Optional[ClusterConnectionPool] = None,
-        verify_version: bool = True,
+        verify_version: bool = False,
         **kwargs,
     ):
         """
