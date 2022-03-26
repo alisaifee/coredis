@@ -1,30 +1,21 @@
 import asyncio
 import contextvars
 import time as mod_time
+import typing
 import uuid
 import warnings
-from typing import Optional, Union
+from types import SimpleNamespace
 
 from coredis.commands.script import Script
 from coredis.connection import ClusterConnection
 from coredis.exceptions import LockError, WatchError
 from coredis.tokens import PureToken
-from coredis.utils import b, nativestr
+from coredis.typing import Optional, StringT, Union
+from coredis.utils import nativestr
 
-
-class dummy:
-    """
-    Instances of this class can be used as an attribute container.
-    """
-
-    def __init__(self):
-        self.token = None
-
-    def set(self, value):
-        self.token = value
-
-    def get(self):
-        return self.token
+if typing.TYPE_CHECKING:
+    import coredis.client
+    import coredis.commands.pipeline
 
 
 class Lock:
@@ -36,17 +27,17 @@ class Lock:
     multiple clients play nicely together.
     """
 
-    local: Union[dummy, contextvars.ContextVar]
+    local: Union[SimpleNamespace, contextvars.ContextVar]
 
     def __init__(
         self,
-        redis,
-        name,
-        timeout=None,
-        sleep=0.1,
-        blocking=True,
-        blocking_timeout=None,
-        thread_local=True,
+        redis: Union["coredis.client.Redis", "coredis.client.RedisCluster"],
+        name: StringT,
+        timeout: Optional[float] = None,
+        sleep: float = 0.1,
+        blocking: bool = True,
+        blocking_timeout: Optional[float] = None,
+        thread_local: bool = True,
     ):
         """
         Create a new Lock instance named ``name`` using the Redis client
@@ -107,8 +98,8 @@ class Lock:
         self.thread_local = bool(thread_local)
         self.local = (
             contextvars.ContextVar("token", default=None)
-            if self.thread_local
-            else dummy()
+            if thread_local
+            else SimpleNamespace()
         )
         if self.timeout and self.sleep > self.timeout:
             raise LockError("'sleep' must be less than 'timeout'")
@@ -122,7 +113,9 @@ class Lock:
     async def __aexit__(self, exc_type, exc_value, traceback):
         await self.release()
 
-    async def acquire(self, blocking=None, blocking_timeout=None):
+    async def acquire(
+        self, blocking: Optional[bool] = None, blocking_timeout: Optional[float] = None
+    ) -> bool:
         """
         Use Redis to hold a shared, distributed lock named ``name``.
         Returns True once the lock is acquired.
@@ -132,6 +125,8 @@ class Lock:
 
         ``blocking_timeout`` specifies the maximum number of seconds to
         wait trying to acquire the lock.
+
+        :raises: :exc:`~coredis.LockError`
         """
         sleep = self.sleep
         token = uuid.uuid1().hex
@@ -163,14 +158,18 @@ class Lock:
         )
 
     async def release(self):
-        """Releases the already acquired lock"""
+        """
+        Releases the already acquired lock
+
+        :raises: :exc:`~coredis.LockError`
+        """
         expected_token = self.local.get()
         if expected_token is None:
             raise LockError("Cannot release an unlocked lock")
         self.local.set(None)
         await self.do_release(expected_token)
 
-    async def do_release(self, expected_token):
+    async def do_release(self, expected_token):  # noqa
         name = self.name
 
         async def execute_release(pipe):
@@ -181,12 +180,14 @@ class Lock:
 
         await self.redis.transaction(execute_release, name)
 
-    async def extend(self, additional_time):
+    async def extend(self, additional_time: float) -> bool:
         """
         Adds more time to an already acquired lock.
 
         ``additional_time`` can be specified as an integer or a float, both
         representing the number of seconds to add.
+
+        :raises: :exc:`~coredis.LockError`
         """
         if self.local.get() is None:
             raise LockError("Cannot extend an unlocked lock")
@@ -194,8 +195,11 @@ class Lock:
             raise LockError("Cannot extend a lock with no timeout")
         return await self.do_extend(additional_time)
 
-    async def do_extend(self, additional_time):
-        pipe = await self.redis.pipeline()
+    async def do_extend(self, additional_time: float) -> bool:  # noqa
+        pipe = typing.cast(
+            "coredis.commands.pipeline.Pipeline",
+            await self.redis.pipeline(),
+        )
         await pipe.watch(self.name)
         lock_value = await pipe.get(self.name)
         if lock_value != self.local.get():
@@ -221,8 +225,7 @@ class Lock:
 
 class LuaLock(Lock):
     """
-    A lock implementation that uses Lua scripts rather than pipelines
-    and watches.
+    A lock implementation that uses Lua scripts.
     """
 
     lua_release: Optional[Script] = None
@@ -245,19 +248,19 @@ class LuaLock(Lock):
     # ARGS[2] - additional milliseconds
     # return 1 if the locks time was extended, otherwise 0
     LUA_EXTEND_SCRIPT = """
-        local token = redis.call('get', KEYS[1])
-        if not token or token ~= ARGV[1] then
-            return 0
-        end
-        local expiration = redis.call('pttl', KEYS[1])
-        if not expiration then
-            expiration = 0
-        end
-        if expiration < 0 then
-            return 0
-        end
-        redis.call('pexpire', KEYS[1], expiration + ARGV[2])
-        return 1
+local token = redis.call('get', KEYS[1])
+if not token or token ~= ARGV[1] then
+    return 0
+end
+local expiration = redis.call('pttl', KEYS[1])
+if not expiration then
+    expiration = 0
+end
+if expiration < 0 then
+    return 0
+end
+redis.call('pexpire', KEYS[1], expiration + ARGV[2])
+return 1
     """
 
     def __init__(self, *args, **kwargs):
@@ -280,7 +283,7 @@ class LuaLock(Lock):
         ):
             raise LockError("Cannot release a lock that's no longer owned")
 
-    async def do_extend(self, additional_time):
+    async def do_extend(self, additional_time: float):
         assert self.lua_extend
         additional_time = int(additional_time * 1000)
         if not bool(
@@ -297,7 +300,7 @@ class LuaLock(Lock):
 class ClusterLock(LuaLock):
     """
     Cluster lock is supposed to solve lock problem in redis cluster.
-    Since high availability is provided by redis cluster using master-slave model,
+    Since high availability is provided by redis cluster using master-replica model,
     the kind of lock aims to solve the fail-over problem referred in distributed lock
     post given by redis official.
 
@@ -307,54 +310,68 @@ class ClusterLock(LuaLock):
     in a specific rule and make sure they do not migrated in cluster.
     In the worst situation, all key slots may exists in one node.
     Then the availability will be the same as one key in one node.
-    For more discussion please see:
-    https://github.com/alisaifee/coredis/issues/55
+    For more discussion please see: `<https://github.com/NoneGG/aredis/issues/55>`__
 
-    My solution is to take advantage of `READONLY` mode of slaves to ensure
-    the lock key is synced from master to N/2 + 1 of its slaves to avoid the fail-over problem.
+    The solution is to take advantage of `READONLY` mode of replicas to ensure
+    the lock key is synced from master to N/2 + 1 of its replicas to avoid the fail-over problem.
     Since it is a single-key solution, the migration problem also do no matter.
 
     Please read these article below before using this cluster lock in your app.
-    https://redis.io/topics/distlock
-    http://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html
-    http://antirez.com/news/101
+
+    - https://redis.io/topics/distlock
+    - http://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html
+    - http://antirez.com/news/101
     """
 
+    redis: "coredis.client.RedisCluster"
+
     def __init__(self, *args, **kwargs):
+        import coredis.client  # noqa
+        import coredis.pool  # noqa
+
         super(ClusterLock, self).__init__(*args, **kwargs)
+
+        assert isinstance(self.redis, coredis.client.RedisCluster)
+        assert isinstance(
+            self.redis.connection_pool, coredis.pool.ClusterConnectionPool
+        )
         if not self.timeout:
             raise LockError("timeout must be provided for cluster lock")
 
-    async def check_lock_in_slaves(self, token):
+    async def check_lock_in_replicas(self, token):  # noqa
         node_manager = self.redis.connection_pool.nodes
         slot = node_manager.keyslot(self.name)
-        master_node_id = node_manager.node_from_slot(slot)["node_id"]
-        slave_nodes = await self.redis.cluster_slaves(master_node_id)
-        count, quorum = 0, (len(slave_nodes) // 2) + 1
-        conn_kwargs = self.redis.connection_pool.connection_kwargs
-        conn_kwargs["readonly"] = True
-        for node in slave_nodes:
-            try:
-                # todo: a little bit dirty here, try to reuse Redis later
-                # todo: it may be optimized by using a new connection pool
-                conn = ClusterConnection(
-                    host=node["host"], port=node["port"], **conn_kwargs
-                )
-                await conn.send_command("get", self.name)
-                res = await conn.read_response()
-                if res == token:
-                    count += 1
-                if count >= quorum:
-                    return True
-            except Exception as exc:
-                warnings.warn(
-                    "error {} during check lock {} status in slave nodes".format(
-                        exc, self.name
+        primary_node = node_manager.node_from_slot(slot)
+        if primary_node:
+            primary_node_id = primary_node["node_id"]
+            replica_nodes = await self.redis.cluster_replicas(primary_node_id)
+            count, quorum = 0, (len(replica_nodes) // 2) + 1
+            conn_kwargs = self.redis.connection_pool.connection_kwargs
+            conn_kwargs["readonly"] = True
+            for node in replica_nodes:
+                try:
+                    # todo: a little bit dirty here, try to reuse Redis later
+                    # todo: it may be optimized by using a new connection pool
+                    conn = ClusterConnection(
+                        host=node["host"], port=node["port"], **conn_kwargs
                     )
-                )
+                    await conn.send_command("get", self.name)
+                    res = await conn.read_response()
+                    if nativestr(res) == nativestr(token):
+                        count += 1
+                    if count >= quorum:
+                        return True
+                except Exception as exc:
+                    warnings.warn(
+                        "error {} during check lock {} status in replica nodes".format(
+                            exc, nativestr(self.name)
+                        )
+                    )
         return False
 
-    async def acquire(self, blocking=None, blocking_timeout=None):
+    async def acquire(
+        self, blocking: Optional[bool] = None, blocking_timeout: Optional[float] = None
+    ) -> bool:
         """
         Use Redis to hold a shared, distributed lock named ``name``.
         Returns True once the lock is acquired.
@@ -365,20 +382,22 @@ class ClusterLock(LuaLock):
         ``blocking_timeout`` specifies the maximum number of seconds to
         wait trying to acquire the lock. It should not be greater than
         expire time of the lock
+
+        :raises: :exc:`~coredis.LockError`
         """
         sleep = self.sleep
-        token = b(uuid.uuid1().hex)
+        token = uuid.uuid1().hex
         if blocking is None:
             blocking = self.blocking
         if blocking_timeout is None:
             blocking_timeout = self.blocking_timeout
         blocking_timeout = blocking_timeout or self.timeout
-        stop_trying_at = mod_time.time() + min(blocking_timeout, self.timeout)
+        stop_trying_at = mod_time.time() + min(blocking_timeout or 0, self.timeout or 0)
 
         while True:
             if await self.do_acquire(token):
                 lock_acquired_at = mod_time.time()
-                if await self.check_lock_in_slaves(token):
+                if await self.check_lock_in_replicas(token):
                     check_finished_at = mod_time.time()
                     # if time expends on acquiring lock is greater than given time
                     # the lock should be released manually
@@ -399,5 +418,5 @@ class ClusterLock(LuaLock):
 
     async def do_release(self, expected_token):
         await super(ClusterLock, self).do_release(expected_token)
-        if await self.check_lock_in_slaves(expected_token):
-            raise LockError("Lock is released in master but not in slave yet")
+        if await self.check_lock_in_replicas(expected_token):
+            raise LockError("Lock is released in master but not in replica yet")

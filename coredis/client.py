@@ -4,17 +4,19 @@ import functools
 import inspect
 from abc import ABCMeta
 from ssl import SSLContext
-from typing import overload
+from typing import Type, overload
 
 from packaging.version import Version
 
 from coredis.commands import ClusterCommandConfig, CommandGroup, redis_command
 from coredis.commands.core import CoreCommands
-from coredis.commands.extra import ExtraCommandMixin
 from coredis.commands.function import Library
 from coredis.commands.monitor import Monitor
 from coredis.commands.sentinel import SentinelCommands
-from coredis.commands.transaction import TransactionCommandMixin
+from coredis.commands.transaction import (
+    ClusterTransactionCommandMixin,
+    TransactionCommandMixin,
+)
 from coredis.connection import Connection, RedisSSLContext, UnixDomainSocketConnection
 from coredis.exceptions import (
     AskError,
@@ -28,6 +30,7 @@ from coredis.exceptions import (
     TimeoutError,
     TryAgainError,
 )
+from coredis.lock import Lock, LuaLock
 from coredis.pool import ClusterConnectionPool, ConnectionPool
 from coredis.response.callbacks import SimpleStringCallback
 from coredis.tokens import PureToken
@@ -279,7 +282,6 @@ class ResponseParser:
 class AbstractRedis(
     Generic[AnyStr],
     CoreCommands[AnyStr],
-    ExtraCommandMixin,
     SentinelCommands[AnyStr],
     TransactionCommandMixin[AnyStr],
 ):
@@ -408,7 +410,9 @@ class AbstractRedis(
             )
 
 
-class AbstractRedisCluster(AbstractRedis[AnyStr]):
+class AbstractRedisCluster(
+    AbstractRedis[AnyStr], ClusterTransactionCommandMixin[AnyStr]
+):
     @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
         "RENAME",
@@ -1142,6 +1146,45 @@ class Redis(
         """
         return Monitor(self)
 
+    def lock(
+        self,
+        name: StringT,
+        timeout: Optional[float] = None,
+        sleep: float = 0.1,
+        blocking_timeout: Optional[bool] = None,
+        lock_class: Optional[Type[Lock]] = None,
+        thread_local: bool = True,
+    ) -> Lock:
+        """
+        Return a new :class:`~coredis.lock.Lock` object using :paramref:`name` that mimics
+        the behavior of :class:`threading.Lock`.
+
+        See: :class:`~coredis.lock.LuaLock` (the default :paramref:`lock_class`)
+         for more details.
+
+        :raises: :exc:`~coredis.LockError`
+        """
+
+        if lock_class is None:
+            if self._use_lua_lock is None:  # type: ignore
+                # the first time .lock() is called, determine if we can use
+                # Lua by attempting to register the necessary scripts
+                try:
+                    LuaLock.register_scripts(self)
+                    self._use_lua_lock = True
+                except ResponseError:
+                    self._use_lua_lock = False
+            lock_class = self._use_lua_lock and LuaLock or Lock
+
+        return lock_class(
+            self,
+            name,
+            timeout=timeout,
+            sleep=sleep,
+            blocking_timeout=blocking_timeout,
+            thread_local=thread_local,
+        )
+
     def pubsub(self, **kwargs):
         """
         Return a Publish/Subscribe object. With this object, you can
@@ -1648,6 +1691,45 @@ class RedisCluster(
                 self.connection_pool.release(connection)
 
         return self._merge_result(command, res, **kwargs)
+
+    def lock(
+        self,
+        name: StringT,
+        timeout: Optional[float] = None,
+        sleep: float = 0.1,
+        blocking_timeout: Optional[bool] = None,
+        lock_class: Optional[Type[Lock]] = None,
+        thread_local: bool = True,
+    ) -> Lock:
+        """
+        Return a new :class:`~coredis.lock.Lock` object using :paramref:`name` that mimics
+        the behavior of :class:`threading.Lock`.
+
+        See: :class:`~coredis.lock.LuaLock` (the default :paramref:`lock_class`)
+         for more details.
+
+        :raises: :exc:`~coredis.LockError`
+        """
+
+        if lock_class is None:
+            if self._use_lua_lock is None:  # type: ignore
+                # the first time .lock() is called, determine if we can use
+                # Lua by attempting to register the necessary scripts
+                try:
+                    LuaLock.register_scripts(self)
+                    self._use_lua_lock = True
+                except ResponseError:
+                    self._use_lua_lock = False
+            lock_class = self._use_lua_lock and LuaLock or Lock
+
+        return lock_class(
+            self,
+            name,
+            timeout=timeout,
+            sleep=sleep,
+            blocking_timeout=blocking_timeout,
+            thread_local=thread_local,
+        )
 
     def pubsub(self, **kwargs):
         from coredis.commands.pubsub import ClusterPubSub

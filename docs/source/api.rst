@@ -105,17 +105,31 @@ Utility Classes
 
 .. currentmodule:: coredis
 
+Enums
+-----
 .. autoclass:: NodeFlag
    :no-inherited-members:
    :show-inheritance:
 .. autoclass:: PureToken
    :no-inherited-members:
    :show-inheritance:
+
+Threaded Workers
+----------------
 .. autoclass:: coredis.commands.pubsub.PubSubWorkerThread
    :no-inherited-members:
    :show-inheritance:
 .. autoclass:: coredis.commands.monitor.MonitorThread
    :no-inherited-members:
+   :show-inheritance:
+
+Locks
+-----
+.. autoclass:: coredis.lock.Lock
+   :show-inheritance:
+.. autoclass:: coredis.lock.LuaLock
+   :show-inheritance:
+.. autoclass:: coredis.lock.ClusterLock
    :show-inheritance:
 
 Exceptions

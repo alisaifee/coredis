@@ -3,7 +3,7 @@ import time
 import pytest
 
 from coredis.exceptions import LockError
-from coredis.lock import LuaLock
+from coredis.lock import ClusterLock, LuaLock
 
 
 class TestLock:
@@ -123,3 +123,7 @@ class TestLock:
         await redis_cluster.set("foo", "a")
         with pytest.raises(LockError):
             await lock.extend(10)
+
+
+class TestClusterLock(TestLock):
+    lock_class = ClusterLock
