@@ -147,6 +147,7 @@ class TestGeneric:
         freq_now = await client.object_freq("a")
         assert freq + 1 == freq_now
 
+    @pytest.mark.flaky
     async def test_dump_and_restore_with_idle_time(self, client):
         await client.set("a", "foo")
         await asyncio.sleep(1)
