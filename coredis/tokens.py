@@ -12,12 +12,15 @@ class PureToken(bytes, enum.Enum):
         Additionally allow strings to be passed in instead of
         bytes.
         """
+
         if other:
             if isinstance(other, PureToken):
                 return self.value == other.value
             _other = other
+
             if isinstance(other, str):
                 _other = other.encode("utf-8")
+
             return _other.upper() == self.value
 
     def __hash__(self):
@@ -606,3 +609,397 @@ class PureToken(bytes, enum.Enum):
     #:  - ``ZRANGE``
     #:  - ``ZRANGESTORE``
     REV = b"REV"
+
+
+class PrefixToken(bytes, enum.Enum):
+    """
+    Enum for internal use when adding prefixes to arguments
+    """
+
+    def __eq__(self, other):
+        """
+        Since redis tokens are case insensitive allow mixed case
+        Additionally allow strings to be passed in instead of
+        bytes.
+        """
+
+        if other:
+            if isinstance(other, PrefixToken):
+                return self.value == other.value
+            _other = other
+
+            if isinstance(other, str):
+                _other = other.encode("utf-8")
+
+            return _other.upper() == self.value
+
+    def __hash__(self):
+        return hash(self.value)
+
+    #: Used by:
+    #:
+    #:  - ``BITFIELD``
+    #:  - ``BITFIELD_RO``
+    #:  - ``SORT``
+    #:  - ``SORT_RO``
+    GET = b"GET"
+
+    #: Used by:
+    #:
+    #:  - ``BITFIELD``
+    INCRBY = b"INCRBY"
+
+    #: Used by:
+    #:
+    #:  - ``BITFIELD``
+    OVERFLOW = b"OVERFLOW"
+
+    #: Used by:
+    #:
+    #:  - ``BITFIELD``
+    SET = b"SET"
+
+    #: Used by:
+    #:
+    #:  - ``BLMPOP``
+    #:  - ``BZMPOP``
+    #:  - ``GEORADIUS``
+    #:  - ``GEORADIUSBYMEMBER``
+    #:  - ``GEORADIUSBYMEMBER_RO``
+    #:  - ``GEORADIUS_RO``
+    #:  - ``GEOSEARCH``
+    #:  - ``GEOSEARCHSTORE``
+    #:  - ``HSCAN``
+    #:  - ``LMPOP``
+    #:  - ``LPOS``
+    #:  - ``SCAN``
+    #:  - ``SSCAN``
+    #:  - ``XAUTOCLAIM``
+    #:  - ``XINFO STREAM``
+    #:  - ``XRANGE``
+    #:  - ``XREAD``
+    #:  - ``XREADGROUP``
+    #:  - ``XREVRANGE``
+    #:  - ``ZMPOP``
+    #:  - ``ZSCAN``
+    COUNT = b"COUNT"
+
+    #: Used by:
+    #:
+    #:  - ``CLIENT KILL``
+    ADDR = b"ADDR"
+
+    #: Used by:
+    #:
+    #:  - ``CLIENT KILL``
+    #:  - ``CLIENT LIST``
+    ID = b"ID"
+
+    #: Used by:
+    #:
+    #:  - ``CLIENT KILL``
+    LADDR = b"LADDR"
+
+    #: Used by:
+    #:
+    #:  - ``CLIENT KILL``
+    SKIPME = b"SKIPME"
+
+    #: Used by:
+    #:
+    #:  - ``CLIENT KILL``
+    #:  - ``CLIENT LIST``
+    #:  - ``SCAN``
+    TYPE = b"TYPE"
+
+    #: Used by:
+    #:
+    #:  - ``CLIENT KILL``
+    USER = b"USER"
+
+    #: Used by:
+    #:
+    #:  - ``CLIENT TRACKING``
+    PREFIX = b"PREFIX"
+
+    #: Used by:
+    #:
+    #:  - ``CLIENT TRACKING``
+    REDIRECT = b"REDIRECT"
+
+    #: Used by:
+    #:
+    #:  - ``CLUSTER SETSLOT``
+    IMPORTING = b"IMPORTING"
+
+    #: Used by:
+    #:
+    #:  - ``CLUSTER SETSLOT``
+    MIGRATING = b"MIGRATING"
+
+    #: Used by:
+    #:
+    #:  - ``CLUSTER SETSLOT``
+    NODE = b"NODE"
+
+    #: Used by:
+    #:
+    #:  - ``COMMAND LIST``
+    ACLCAT = b"ACLCAT"
+
+    #: Used by:
+    #:
+    #:  - ``COMMAND LIST``
+    FILTERBY = b"FILTERBY"
+
+    #: Used by:
+    #:
+    #:  - ``COMMAND LIST``
+    MODULE = b"MODULE"
+
+    #: Used by:
+    #:
+    #:  - ``COMMAND LIST``
+    PATTERN = b"PATTERN"
+
+    #: Used by:
+    #:
+    #:  - ``COPY``
+    DB = b"DB"
+
+    #: Used by:
+    #:
+    #:  - ``FAILOVER``
+    TIMEOUT = b"TIMEOUT"
+
+    #: Used by:
+    #:
+    #:  - ``FAILOVER``
+    TO = b"TO"
+
+    #: Used by:
+    #:
+    #:  - ``FUNCTION LIST``
+    LIBRARYNAME = b"LIBRARYNAME"
+
+    #: Used by:
+    #:
+    #:  - ``FUNCTION LOAD``
+    DESCRIPTION = b"DESCRIPTION"
+
+    #: Used by:
+    #:
+    #:  - ``GEORADIUS``
+    #:  - ``GEORADIUSBYMEMBER``
+    #:  - ``SORT``
+    STORE = b"STORE"
+
+    #: Used by:
+    #:
+    #:  - ``GEORADIUS``
+    #:  - ``GEORADIUSBYMEMBER``
+    STOREDIST = b"STOREDIST"
+
+    #: Used by:
+    #:
+    #:  - ``GEOSEARCH``
+    #:  - ``GEOSEARCHSTORE``
+    BYBOX = b"BYBOX"
+
+    #: Used by:
+    #:
+    #:  - ``GEOSEARCH``
+    #:  - ``GEOSEARCHSTORE``
+    BYRADIUS = b"BYRADIUS"
+
+    #: Used by:
+    #:
+    #:  - ``GEOSEARCH``
+    #:  - ``GEOSEARCHSTORE``
+    FROMLONLAT = b"FROMLONLAT"
+
+    #: Used by:
+    #:
+    #:  - ``GEOSEARCH``
+    #:  - ``GEOSEARCHSTORE``
+    FROMMEMBER = b"FROMMEMBER"
+
+    #: Used by:
+    #:
+    #:  - ``GETEX``
+    #:  - ``SET``
+    EX = b"EX"
+
+    #: Used by:
+    #:
+    #:  - ``GETEX``
+    #:  - ``SET``
+    EXAT = b"EXAT"
+
+    #: Used by:
+    #:
+    #:  - ``GETEX``
+    #:  - ``SET``
+    PX = b"PX"
+
+    #: Used by:
+    #:
+    #:  - ``GETEX``
+    #:  - ``SET``
+    PXAT = b"PXAT"
+
+    #: Used by:
+    #:
+    #:  - ``HELLO``
+    #:  - ``MIGRATE``
+    AUTH = b"AUTH"
+
+    #: Used by:
+    #:
+    #:  - ``HELLO``
+    SETNAME = b"SETNAME"
+
+    #: Used by:
+    #:
+    #:  - ``HSCAN``
+    #:  - ``SCAN``
+    #:  - ``SSCAN``
+    #:  - ``ZSCAN``
+    MATCH = b"MATCH"
+
+    #: Used by:
+    #:
+    #:  - ``LCS``
+    MINMATCHLEN = b"MINMATCHLEN"
+
+    #: Used by:
+    #:
+    #:  - ``LOLWUT``
+    VERSION = b"VERSION"
+
+    #: Used by:
+    #:
+    #:  - ``LPOS``
+    MAXLEN = b"MAXLEN"
+
+    #: Used by:
+    #:
+    #:  - ``LPOS``
+    RANK = b"RANK"
+
+    #: Used by:
+    #:
+    #:  - ``MEMORY USAGE``
+    SAMPLES = b"SAMPLES"
+
+    #: Used by:
+    #:
+    #:  - ``MIGRATE``
+    AUTH2 = b"AUTH2"
+
+    #: Used by:
+    #:
+    #:  - ``MIGRATE``
+    KEYS = b"KEYS"
+
+    #: Used by:
+    #:
+    #:  - ``RESTORE``
+    FREQ = b"FREQ"
+
+    #: Used by:
+    #:
+    #:  - ``RESTORE``
+    IDLETIME = b"IDLETIME"
+
+    #: Used by:
+    #:
+    #:  - ``SINTERCARD``
+    #:  - ``SORT``
+    #:  - ``SORT_RO``
+    #:  - ``XADD``
+    #:  - ``XTRIM``
+    #:  - ``ZINTERCARD``
+    #:  - ``ZRANGE``
+    #:  - ``ZRANGEBYLEX``
+    #:  - ``ZRANGEBYSCORE``
+    #:  - ``ZRANGESTORE``
+    #:  - ``ZREVRANGEBYLEX``
+    #:  - ``ZREVRANGEBYSCORE``
+    LIMIT = b"LIMIT"
+
+    #: Used by:
+    #:
+    #:  - ``SORT``
+    #:  - ``SORT_RO``
+    BY = b"BY"
+
+    #: Used by:
+    #:
+    #:  - ``XCLAIM``
+    #:  - ``XPENDING``
+    IDLE = b"IDLE"
+
+    #: Used by:
+    #:
+    #:  - ``XCLAIM``
+    RETRYCOUNT = b"RETRYCOUNT"
+
+    #: Used by:
+    #:
+    #:  - ``XCLAIM``
+    TIME = b"TIME"
+
+    #: Used by:
+    #:
+    #:  - ``XGROUP CREATE``
+    #:  - ``XGROUP SETID``
+    ENTRIESREAD = b"ENTRIESREAD"
+
+    #: Used by:
+    #:
+    #:  - ``XINFO STREAM``
+    FULL = b"FULL"
+
+    #: Used by:
+    #:
+    #:  - ``XREAD``
+    #:  - ``XREADGROUP``
+    BLOCK = b"BLOCK"
+
+    #: Used by:
+    #:
+    #:  - ``XREAD``
+    #:  - ``XREADGROUP``
+    STREAMS = b"STREAMS"
+
+    #: Used by:
+    #:
+    #:  - ``XREADGROUP``
+    GROUP = b"GROUP"
+
+    #: Used by:
+    #:
+    #:  - ``XSETID``
+    ENTRIESADDED = b"ENTRIESADDED"
+
+    #: Used by:
+    #:
+    #:  - ``XSETID``
+    MAXDELETEDID = b"MAXDELETEDID"
+
+    #: Used by:
+    #:
+    #:  - ``ZINTER``
+    #:  - ``ZINTERSTORE``
+    #:  - ``ZUNION``
+    #:  - ``ZUNIONSTORE``
+    AGGREGATE = b"AGGREGATE"
+
+    #: Used by:
+    #:
+    #:  - ``ZINTER``
+    #:  - ``ZINTERSTORE``
+    #:  - ``ZUNION``
+    #:  - ``ZUNIONSTORE``
+    WEIGHTS = b"WEIGHTS"

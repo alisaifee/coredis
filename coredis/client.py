@@ -8,7 +8,12 @@ from typing import Type, overload
 
 from packaging.version import Version
 
-from coredis.commands import ClusterCommandConfig, CommandGroup, redis_command
+from coredis.commands import (
+    ClusterCommandConfig,
+    CommandGroup,
+    CommandName,
+    redis_command,
+)
 from coredis.commands.core import CoreCommands
 from coredis.commands.function import Library
 from coredis.commands.monitor import Monitor
@@ -33,7 +38,7 @@ from coredis.exceptions import (
 from coredis.lock import Lock, LuaLock
 from coredis.pool import ClusterConnectionPool, ConnectionPool
 from coredis.response.callbacks import SimpleStringCallback
-from coredis.tokens import PureToken
+from coredis.tokens import PrefixToken, PureToken
 from coredis.typing import (
     Any,
     AnyStr,
@@ -415,7 +420,7 @@ class AbstractRedisCluster(
 ):
     @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
-        "RENAME",
+        CommandName.RENAME,
         group=CommandGroup.GENERIC,
         response_callback=SimpleStringCallback(),
     )
@@ -449,7 +454,7 @@ class AbstractRedisCluster(
         return True
 
     @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
-    @redis_command("DEL", group=CommandGroup.GENERIC)
+    @redis_command(CommandName.DEL, group=CommandGroup.GENERIC)
     async def delete(self, keys: Iterable[KeyT]) -> int:
         """
         "Delete one or more keys specified by ``keys``"
@@ -457,13 +462,13 @@ class AbstractRedisCluster(
         count = 0
 
         for arg in keys:
-            count += await self.execute_command(b"DEL", arg)
+            count += await self.execute_command(CommandName.DEL, arg)
 
         return count
 
     @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
-        "RENAMENX",
+        CommandName.RENAMENX,
         group=CommandGroup.GENERIC,
     )
     async def renamenx(self, key: KeyT, newkey: KeyT) -> bool:
@@ -481,7 +486,9 @@ class AbstractRedisCluster(
     @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @mutually_inclusive_parameters("offset", "count")
     @redis_command(
-        "SORT", group=CommandGroup.GENERIC, cluster=ClusterCommandConfig(pipeline=False)
+        CommandName.SORT,
+        group=CommandGroup.GENERIC,
+        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def sort(
         self,
@@ -623,7 +630,7 @@ class AbstractRedisCluster(
         return [x[0] for x in sorted(sorted_data, key=lambda x: x[1])]
 
     @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
-    @redis_command("MGET", readonly=True, group=CommandGroup.STRING)
+    @redis_command(CommandName.MGET, readonly=True, group=CommandGroup.STRING)
     async def mget(self, keys: Iterable[KeyT]) -> Tuple[Optional[AnyStr], ...]:
         """
         Returns values ordered identically to ``keys``
@@ -643,7 +650,9 @@ class AbstractRedisCluster(
 
     @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
-        "MSET", group=CommandGroup.STRING, cluster=ClusterCommandConfig(pipeline=False)
+        CommandName.MSET,
+        group=CommandGroup.STRING,
+        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def mset(self, key_values: Dict[KeyT, ValueT]) -> bool:
         """
@@ -663,7 +672,7 @@ class AbstractRedisCluster(
 
     @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
-        "MSETNX",
+        CommandName.MSETNX,
         group=CommandGroup.STRING,
         cluster=ClusterCommandConfig(pipeline=False),
     )
@@ -688,7 +697,7 @@ class AbstractRedisCluster(
 
     @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
-        "SDIFF",
+        CommandName.SDIFF,
         readonly=True,
         group=CommandGroup.SET,
         cluster=ClusterCommandConfig(pipeline=False),
@@ -711,7 +720,7 @@ class AbstractRedisCluster(
 
     @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
-        "SDIFFSTORE",
+        CommandName.SDIFFSTORE,
         group=CommandGroup.SET,
         cluster=ClusterCommandConfig(pipeline=False),
     )
@@ -735,7 +744,7 @@ class AbstractRedisCluster(
 
     @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
-        "SINTER",
+        CommandName.SINTER,
         readonly=True,
         group=CommandGroup.SET,
         cluster=ClusterCommandConfig(pipeline=False),
@@ -758,7 +767,7 @@ class AbstractRedisCluster(
 
     @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
-        "SINTERSTORE",
+        CommandName.SINTERSTORE,
         group=CommandGroup.SET,
         cluster=ClusterCommandConfig(pipeline=False),
     )
@@ -783,7 +792,9 @@ class AbstractRedisCluster(
 
     @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
-        "SMOVE", group=CommandGroup.SET, cluster=ClusterCommandConfig(pipeline=False)
+        CommandName.SMOVE,
+        group=CommandGroup.SET,
+        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def smove(self, source: KeyT, destination: KeyT, member: ValueT) -> bool:
         """
@@ -805,7 +816,7 @@ class AbstractRedisCluster(
 
     @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
-        "SUNION",
+        CommandName.SUNION,
         readonly=True,
         group=CommandGroup.SET,
         cluster=ClusterCommandConfig(pipeline=False),
@@ -830,7 +841,7 @@ class AbstractRedisCluster(
 
     @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
-        "SUNIONSTORE",
+        CommandName.SUNIONSTORE,
         group=CommandGroup.SET,
         cluster=ClusterCommandConfig(pipeline=False),
     )
@@ -852,7 +863,7 @@ class AbstractRedisCluster(
 
     @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
-        "BRPOPLPUSH",
+        CommandName.BRPOPLPUSH,
         version_deprecated="6.2.0",
         group=CommandGroup.LIST,
         cluster=ClusterCommandConfig(pipeline=False),
@@ -887,7 +898,7 @@ class AbstractRedisCluster(
 
     @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
-        "RPOPLPUSH",
+        CommandName.RPOPLPUSH,
         version_deprecated="6.2.0",
         group=CommandGroup.LIST,
         cluster=ClusterCommandConfig(pipeline=False),
@@ -1462,7 +1473,7 @@ class RedisCluster(
             )
         command: bytes = args[0]
         keys: Tuple[Any, ...]
-        if command in [b"EVAL", b"EVALSHA", b"FCALL"]:
+        if command in {CommandName.EVAL, CommandName.EVALSHA, CommandName.FCALL}:
             numkeys = args[2]
             keys = args[3 : 3 + numkeys]
             if not keys:
@@ -1472,73 +1483,78 @@ class RedisCluster(
 
             if len(slots) != 1:
                 raise RedisClusterException(
-                    f"{command!r} - all keys must map to the same key slot"
+                    f"{str(command)} - all keys must map to the same key slot"
                 )
 
             return slots.pop()
-        elif command in (b"XREAD", b"XREADGROUP"):
+        elif command in {CommandName.XREAD, CommandName.XREADGROUP}:
             try:
-                idx = args.index(b"STREAMS") + 1
+                idx = args.index(PrefixToken.STREAMS) + 1
             except ValueError:
                 raise RedisClusterException(
-                    f"{command!r} arguments do not contain STREAMS operand"
+                    f"{str(command)} arguments do not contain STREAMS operand"
                 )
             keys = (args[idx],)
-        elif command in (b"XGROUP", b"XINFO"):
+        elif command in {CommandName.XGROUP, CommandName.XINFO}:
             keys = (args[2],)
-        elif command == b"OBJECT":
+        elif command == CommandName.OBJECT:
             keys = (args[2],)
         elif command in {
-            b"BLMPOP",
-            b"BZMPOP",
+            CommandName.BLMPOP,
+            CommandName.BZMPOP,
         }:
             keys = args[3 : args[2] + 3 : 1]
-        elif command in {b"BZPOPMAX", b"BRPOP", b"BZPOPMIN", b"BLPOP"}:
+        elif command in {
+            CommandName.BZPOPMAX,
+            CommandName.BRPOP,
+            CommandName.BZPOPMIN,
+            CommandName.BLPOP,
+        }:
             keys = args[1 : len(args) - 1]
         elif command in {
-            b"SINTER",
-            b"SDIFF",
-            b"SSUBSCRIBE",
-            b"MGET",
-            b"PFCOUNT",
-            b"EXISTS",
-            b"SUNION",
-            b"DEL",
-            b"TOUCH",
-            b"WATCH",
-            b"SUNSUBSCRIBE",
-            b"UNLINK",
+            CommandName.SINTER,
+            CommandName.SDIFF,
+            CommandName.SSUBSCRIBE,
+            CommandName.MGET,
+            CommandName.PFCOUNT,
+            CommandName.EXISTS,
+            CommandName.SUNION,
+            CommandName.DEL,
+            CommandName.TOUCH,
+            CommandName.WATCH,
+            CommandName.SUNSUBSCRIBE,
+            CommandName.UNLINK,
         }:
             keys = args[1:]
-        elif command in {"LCS"}:
+        elif command == CommandName.LCS:
             keys = args[1:3]
         elif command in {
-            b"LMPOP",
-            b"ZINTERCARD",
-            b"ZMPOP",
-            b"ZUNION",
-            b"ZINTER",
-            b"ZDIFF",
-            b"SINTERCARD",
+            CommandName.LMPOP,
+            CommandName.ZINTERCARD,
+            CommandName.ZMPOP,
+            CommandName.ZUNION,
+            CommandName.ZINTER,
+            CommandName.ZDIFF,
+            CommandName.SINTERCARD,
         }:
             keys = args[2 : args[1] + 2 : 1]
         elif command in {
-            b"MEMORY USAGE",
-            b"XGROUP CREATE",
-            b"XGROUP DESTROY",
-            b"XGROUP SETID",
-            b"XINFO STREAM",
-            b"XINFO GROUPS",
-            b"OBJECT ENCODING",
-            b"OBJECT REFCOUNT",
-            b"OBJECT IDLETIME",
-            b"XGROUP DELCONSUMER",
-            b"XGROUP CREATECONSUMER",
-            b"OBJECT FREQ",
-            b"XINFO CONSUMERS",
+            CommandName.MEMORY_USAGE,
+            CommandName.XGROUP_CREATE,
+            CommandName.XGROUP_DESTROY,
+            CommandName.XGROUP_SETID,
+            CommandName.XINFO_STREAM,
+            CommandName.XINFO_GROUPS,
+            CommandName.OBJECT_ENCODING,
+            CommandName.OBJECT_REFCOUNT,
+            CommandName.OBJECT_IDLETIME,
+            CommandName.XGROUP_DELCONSUMER,
+            CommandName.XGROUP_CREATECONSUMER,
+            CommandName.OBJECT_FREQ,
+            CommandName.XINFO_CONSUMERS,
         }:
             keys = (args[1],)
-        elif command in {b"MSETNX", b"MSET"}:
+        elif command in {CommandName.MSETNX, CommandName.MSET}:
             keys = args[1:-1:2]
         else:
             keys = (args[1],)
@@ -1645,8 +1661,8 @@ class RedisCluster(
 
             try:
                 if asking:
-                    await r.send_command(b"ASKING")
-                    await self.parse_response(r, b"ASKING", **kwargs)
+                    await r.send_command(CommandName.ASKING)
+                    await self.parse_response(r, CommandName.ASKING, **kwargs)
                     asking = False
 
                 await r.send_command(*args)
@@ -1805,15 +1821,15 @@ class RedisCluster(
                 pieces: CommandArgList = [cursor]
 
                 if match is not None:
-                    pieces.extend([b"MATCH", match])
+                    pieces.extend([PrefixToken.MATCH, match])
 
                 if count is not None:
-                    pieces.extend([b"COUNT", count])
+                    pieces.extend([PrefixToken.COUNT, count])
 
                 if type_ is not None:
-                    pieces.extend([b"TYPE", type_])
+                    pieces.extend([PrefixToken.TYPE, type_])
 
-                response = await node.execute_command(b"SCAN", *pieces)
+                response = await node.execute_command(CommandName.SCAN, *pieces)
                 cursor, data = response
 
                 for item in data:

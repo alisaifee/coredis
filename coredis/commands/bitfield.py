@@ -1,4 +1,16 @@
+import enum
+
+from coredis.commands import CommandName
 from coredis.exceptions import ReadOnlyError
+from coredis.tokens import PrefixToken, PureToken
+from coredis.typing import Literal
+
+
+class BitFieldSubCommand(bytes, enum.Enum):
+    SET = PrefixToken.SET
+    GET = PrefixToken.GET
+    INCRBY = PrefixToken.INCRBY
+    OVERFLOW = PrefixToken.OVERFLOW
 
 
 class BitFieldOperation:
@@ -15,7 +27,10 @@ class BitFieldOperation:
     """
 
     def __init__(self, redis_client, key, readonly=False):
-        self._command_stack = [b"BITFIELD" if not readonly else b"BITFIELD_RO", key]
+        self._command_stack = [
+            CommandName.BITFIELD if not readonly else CommandName.BITFIELD_RO,
+            key,
+        ]
         self.redis = redis_client
         self.readonly = readonly
 
@@ -30,7 +45,7 @@ class BitFieldOperation:
         if self.readonly:
             raise ReadOnlyError()
 
-        self._command_stack.extend([b"SET", type_, offset, value])
+        self._command_stack.extend([BitFieldSubCommand.SET, type_, offset, value])
 
         return self
 
@@ -39,7 +54,7 @@ class BitFieldOperation:
         Returns the specified bit field.
         """
 
-        self._command_stack.extend([b"GET", type_, offset])
+        self._command_stack.extend([BitFieldSubCommand.GET, type_, offset])
 
         return self
 
@@ -52,11 +67,16 @@ class BitFieldOperation:
         if self.readonly:
             raise ReadOnlyError()
 
-        self._command_stack.extend([b"INCRBY", type_, offset, increment])
+        self._command_stack.extend(
+            [BitFieldSubCommand.INCRBY, type_, offset, increment]
+        )
 
         return self
 
-    def overflow(self, type_="SAT"):
+    def overflow(
+        self,
+        type_: Literal[PureToken.SAT, PureToken.WRAP, PureToken.FAIL] = PureToken.SAT,
+    ):
         """
         fine-tune the behavior of the increment or decrement overflow,
         have no effect unless used before `incrby`
@@ -65,7 +85,7 @@ class BitFieldOperation:
 
         if self.readonly:
             raise ReadOnlyError()
-        self._command_stack.extend([b"OVERFLOW", type_])
+        self._command_stack.extend([BitFieldSubCommand.OVERFLOW, type_])
 
         return self
 

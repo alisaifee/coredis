@@ -3,7 +3,6 @@ coredis.commands
 ----------------
 """
 import dataclasses
-import enum
 import functools
 import warnings
 from abc import ABC
@@ -35,36 +34,10 @@ from coredis.response.callbacks import ParametrizedCallback, SimpleCallback
 from coredis.typing import AbstractExecutor, ParamSpec
 from coredis.utils import NodeFlag
 
+from .constants import CommandGroup, CommandName
+
 R = TypeVar("R")
 P = ParamSpec("P")
-
-
-def check_version(
-    instance: Any,
-    command: str,
-    function_name: str,
-    min_version: Optional[version.Version],
-    deprecated_version: Optional[version.Version],
-    deprecation_reason: Optional[str],
-):
-    if not any([min_version, deprecated_version]):
-        return
-
-    client = cast("coredis.client.RedisConnection", instance)
-
-    if getattr(client, "verify_version", False):
-        server_version = getattr(client, "server_version", None)
-        if not server_version:
-            return
-        if min_version and server_version < min_version:
-            raise CommandNotSupportedError(command, client.server_version)
-        if deprecated_version and server_version >= deprecated_version:
-            if deprecation_reason:
-                warnings.warn(deprecation_reason.strip())
-            else:
-                warnings.warn(
-                    f"{function_name}() is deprecated since redis version {deprecated_version}. "
-                )
 
 
 @dataclasses.dataclass
@@ -91,8 +64,12 @@ class CommandDetails(NamedTuple):
     ]
 
 
+class CommandMixin(Generic[AnyStr], AbstractExecutor[AnyStr], ABC):
+    connection_pool: "coredis.pool.ConnectionPool"
+
+
 def redis_command(
-    command_name: str,
+    command_name: CommandName,
     group: Optional["CommandGroup"] = None,
     version_introduced: Optional[str] = None,
     version_deprecated: Optional[str] = None,
@@ -107,7 +84,7 @@ def redis_command(
     [Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]
 ]:
     command_details = CommandDetails(
-        command_name.encode("latin-1"),
+        command_name,
         readonly,
         version.Version(version_introduced) if version_introduced else None,
         version.Version(version_deprecated) if version_deprecated else None,
@@ -121,7 +98,7 @@ def redis_command(
     ) -> Callable[P, Coroutine[Any, Any, R]]:
         @functools.wraps(func)
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
-            check_version(
+            _check_version(
                 args[0],  # type: ignore
                 command_name,
                 func.__name__,
@@ -149,31 +126,43 @@ def redis_command(
     return wrapper
 
 
-class CommandGroup(enum.Enum):
-    BITMAP = "bitmap"
-    CLUSTER = "cluster"
-    CONNECTION = "connection"
-    GENERIC = "generic"
-    GEO = "geo"
-    HASH = "hash"
-    HYPERLOGLOG = "hyperloglog"
-    LIST = "list"
-    PUBSUB = "pubsub"
-    SCRIPTING = "scripting"
-    SENTINEL = "sentinel"
-    SERVER = "server"
-    SET = "set"
-    SORTED_SET = "sorted-set"
-    STREAM = "stream"
-    STRING = "string"
-    TRANSACTIONS = "transactions"
+def _check_version(
+    instance: Any,
+    command: bytes,
+    function_name: str,
+    min_version: Optional[version.Version],
+    deprecated_version: Optional[version.Version],
+    deprecation_reason: Optional[str],
+):
+    if not any([min_version, deprecated_version]):
+        return
+
+    client = cast("coredis.client.RedisConnection", instance)
+
+    if getattr(client, "verify_version", False):
+        server_version = getattr(client, "server_version", None)
+        if not server_version:
+            return
+        if min_version and server_version < min_version:
+            raise CommandNotSupportedError(command, client.server_version)
+        if deprecated_version and server_version >= deprecated_version:
+            if deprecation_reason:
+                warnings.warn(deprecation_reason.strip())
+            else:
+                warnings.warn(
+                    f"{function_name}() is deprecated since redis version {deprecated_version}. "
+                )
 
 
 def _redis_command_link(command):
-    return (
-        f'`{command} <https://redis.io/commands/{command.lower().replace(" ", "-")}>`_'
-    )
+    return f'`{str(command)} <https://redis.io/commands/{str(command).lower().replace(" ", "-")}>`_'
 
 
-class CommandMixin(Generic[AnyStr], AbstractExecutor[AnyStr], ABC):
-    connection_pool: "coredis.pool.ConnectionPool"
+__all__ = (
+    "CommandGroup",
+    "CommandName",
+    "CommandMixin",
+    "redis_command",
+    "ClusterCommandConfig",
+    "CommandDetails",
+)

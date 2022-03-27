@@ -1,9 +1,9 @@
 from coredis.response.callbacks import SimpleStringCallback
-from coredis.typing import Any, AnyStr, Dict, Optional, Tuple
+from coredis.typing import Any, AnyStr, Dict, Optional, Tuple, ValueT
 from coredis.utils import nativestr
 
-from ..typing import ValueT
 from . import CommandMixin, SimpleCallback, redis_command
+from .constants import CommandName
 
 SENTINEL_STATE_TYPES = {
     "can-failover-its-master": int,
@@ -95,36 +95,36 @@ class GetPrimaryCallback(SimpleCallback):
 
 class SentinelCommands(CommandMixin[AnyStr]):
     @redis_command(
-        "SENTINEL GET-MASTER-ADDR-BY-NAME",
+        CommandName.SENTINEL_GET_MASTER_ADDR_BY_NAME,
         response_callback=GetPrimaryCallback(),
     )
     async def sentinel_get_master_addr_by_name(self, service_name: ValueT):
         """Returns a (host, port) pair for the given ``service_name``"""
 
         return await self.execute_command(
-            b"SENTINEL GET-MASTER-ADDR-BY-NAME", service_name
+            CommandName.SENTINEL_GET_MASTER_ADDR_BY_NAME, service_name
         )
 
     @redis_command(
-        "SENTINEL MASTER",
+        CommandName.SENTINEL_MASTER,
         response_callback=PrimaryCallback(),
     )
     async def sentinel_master(self, service_name: ValueT) -> Dict[str, Any]:
         """Returns a dictionary containing the specified masters state."""
 
-        return await self.execute_command(b"SENTINEL MASTER", service_name)
+        return await self.execute_command(CommandName.SENTINEL_MASTER, service_name)
 
     @redis_command(
-        "SENTINEL MASTERS",
+        CommandName.SENTINEL_MASTERS,
         response_callback=PrimariesCallback(),
     )
     async def sentinel_masters(self) -> Dict[str, Dict[str, Any]]:
         """Returns a list of dictionaries containing each master's state."""
 
-        return await self.execute_command(b"SENTINEL MASTERS")
+        return await self.execute_command(CommandName.SENTINEL_MASTERS)
 
     @redis_command(
-        "SENTINEL MONITOR",
+        CommandName.SENTINEL_MONITOR,
         response_callback=SimpleStringCallback(),
     )
     async def sentinel_monitor(
@@ -132,19 +132,21 @@ class SentinelCommands(CommandMixin[AnyStr]):
     ) -> bool:
         """Adds a new master to Sentinel to be monitored"""
 
-        return await self.execute_command(b"SENTINEL MONITOR", name, ip, port, quorum)
+        return await self.execute_command(
+            CommandName.SENTINEL_MONITOR, name, ip, port, quorum
+        )
 
     @redis_command(
-        "SENTINEL REMOVE",
+        CommandName.SENTINEL_REMOVE,
         response_callback=SimpleStringCallback(),
     )
     async def sentinel_remove(self, name: ValueT) -> bool:
         """Removes a master from Sentinel's monitoring"""
 
-        return await self.execute_command(b"SENTINEL REMOVE", name)
+        return await self.execute_command(CommandName.SENTINEL_REMOVE, name)
 
     @redis_command(
-        "SENTINEL SENTINELS",
+        CommandName.SENTINEL_SENTINELS,
         response_callback=SentinelsStateCallback(),
     )
     async def sentinel_sentinels(
@@ -152,19 +154,19 @@ class SentinelCommands(CommandMixin[AnyStr]):
     ) -> Tuple[Dict[AnyStr, Any], ...]:
         """Returns a list of sentinels for ``service_name``"""
 
-        return await self.execute_command(b"SENTINEL SENTINELS", service_name)
+        return await self.execute_command(CommandName.SENTINEL_SENTINELS, service_name)
 
     @redis_command(
-        "SENTINEL SET",
+        CommandName.SENTINEL_SET,
         response_callback=SimpleStringCallback(),
     )
     async def sentinel_set(self, name: ValueT, option, value) -> bool:
         """Sets Sentinel monitoring parameters for a given master"""
 
-        return await self.execute_command(b"SENTINEL SET", name, option, value)
+        return await self.execute_command(CommandName.SENTINEL_SET, name, option, value)
 
     @redis_command(
-        "SENTINEL SLAVES",
+        CommandName.SENTINEL_SLAVES,
         response_callback=SentinelsStateCallback(),
     )
     async def sentinel_slaves(
@@ -172,10 +174,10 @@ class SentinelCommands(CommandMixin[AnyStr]):
     ) -> Tuple[Dict[AnyStr, Any], ...]:
         """Returns a list of slaves for ``service_name``"""
 
-        return await self.execute_command(b"SENTINEL SLAVES", service_name)
+        return await self.execute_command(CommandName.SENTINEL_SLAVES, service_name)
 
     @redis_command(
-        "SENTINEL REPLICAS",
+        CommandName.SENTINEL_REPLICAS,
         response_callback=SentinelsStateCallback(),
     )
     async def sentinel_replicas(
@@ -183,4 +185,4 @@ class SentinelCommands(CommandMixin[AnyStr]):
     ) -> Tuple[Dict[AnyStr, Any], ...]:
         """Returns a list of replicas for ``service_name``"""
 
-        return await self.execute_command(b"SENTINEL REPLICAS", service_name)
+        return await self.execute_command(CommandName.SENTINEL_REPLICAS, service_name)

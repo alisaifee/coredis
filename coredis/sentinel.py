@@ -4,6 +4,7 @@ import weakref
 from typing import overload
 
 from coredis import Redis
+from coredis.commands import CommandName
 from coredis.connection import Connection
 from coredis.exceptions import (
     ConnectionError,
@@ -36,7 +37,7 @@ class SentinelManagedConnection(Connection):
         self.host, self.port = address
         await super(SentinelManagedConnection, self).connect()
         if self.connection_pool.check_connection:
-            await self.send_command(b"PING")
+            await self.send_command(CommandName.PING)
             if await self.read_response() != b"PONG":
                 raise ConnectionError("PING failed")
 

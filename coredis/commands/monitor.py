@@ -4,6 +4,7 @@ import weakref
 from asyncio import CancelledError
 from concurrent.futures import Future
 
+from coredis.commands import CommandName
 from coredis.exceptions import RedisError
 from coredis.response.types import MonitorResult
 from coredis.typing import TYPE_CHECKING, Callable, Optional
@@ -99,7 +100,7 @@ class Monitor:
             return
         await self.__connect()
         assert self.connection
-        await self.connection.send_command(b"MONITOR")
+        await self.connection.send_command(CommandName.MONITOR)
         response = await self.connection.read_response(decode=False)
         if not response == b"OK":  # noqa
             raise RedisError(f"Failed to start MONITOR {response}")
@@ -107,9 +108,9 @@ class Monitor:
 
     async def __stop_monitoring(self):
         if self.connection:
-            await self.connection.send_command(b"RESET")
+            await self.connection.send_command(CommandName.RESET)
             response = await self.connection.read_response(decode=False)
-            if not response == b"RESET":  # noqa
+            if not response == CommandName.RESET:  # noqa
                 raise RedisError("Failed to reset connection")
         self.__reset()
 

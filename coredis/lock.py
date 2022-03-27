@@ -6,6 +6,7 @@ import uuid
 import warnings
 from types import SimpleNamespace
 
+from coredis.commands import CommandName
 from coredis.commands.script import Script
 from coredis.connection import ClusterConnection
 from coredis.exceptions import LockError, WatchError
@@ -355,7 +356,7 @@ class ClusterLock(LuaLock):
                     conn = ClusterConnection(
                         host=node["host"], port=node["port"], **conn_kwargs
                     )
-                    await conn.send_command(b"GET", self.name)
+                    await conn.send_command(CommandName.GET, self.name)
                     res = await conn.read_response()
                     if nativestr(res) == nativestr(token):
                         count += 1
