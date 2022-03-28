@@ -1,6 +1,7 @@
 import functools
 import inspect
 import sys
+import textwrap
 from abc import ABCMeta
 from concurrent.futures import CancelledError
 from dataclasses import dataclass, field
@@ -64,13 +65,16 @@ def wrap_pipeline_method(
 
     wrapper.__annotations__ = wrapper.__annotations__.copy()
     wrapper.__annotations__["return"] = kls
-    wrapper.__doc__ = f"""{wrapper.__doc__ or ''}
+    wrapper.__doc__ = textwrap.dedent(wrapper.__doc__ or "")
+    wrapper.__doc__ = f"""
+Pipeline variant of :meth:`coredis.Redis.{func.__name__}` that does not execute
+immediately and instead pushes the command into a stack for batch send
+and returns the instance of :class:`{kls.__name__}` itself.
 
-Pipeline variant that does not execute immediately
-and instead returns the instance of :class:`{kls.__name__}` itself.
+To fetch the return values call :meth:`{kls.__name__}.execute` to process the pipeline
+and retrieve responses for the commands executed in the pipeline.
 
-To fetch the return values call :meth:`{kls.__name__}.execute` to fetch responses
-for all commands executed in the pipeline.
+{wrapper.__doc__}
 """
     return wrapper
 

@@ -2415,8 +2415,12 @@ class ClusterPipeline(wrapt.ObjectProxy, Generic[AnyStr]):
         file.write(response)
     print(Path(path))
     print(
-        format_file_in_place(Path(path), fast=False, mode=FileMode()),
-        write_back=WriteBack.YES,
+        format_file_in_place(
+            Path(path),
+            fast=False,
+            mode=FileMode(),
+            write_back=WriteBack.YES,
+        )
     )
 
 

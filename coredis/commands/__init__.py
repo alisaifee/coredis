@@ -4,6 +4,7 @@ coredis.commands
 """
 import dataclasses
 import functools
+import textwrap
 import warnings
 from abc import ABC
 from types import FunctionType
@@ -109,17 +110,17 @@ def redis_command(
             )
             return await func(*args, **kwargs)
 
-        wrapped.__doc__ = f"""
-        {wrapped.__doc__ or ""}
-        """
+        wrapped.__doc__ = textwrap.dedent(wrapped.__doc__ or "")
         if group:
-            wrapped.__doc__ += f"""
-        Redis command documentation: {_redis_command_link(command_name)}
-            """
+            wrapped.__doc__ = f"""
+{wrapped.__doc__}
+
+Redis command documentation: {_redis_command_link(command_name)}
+"""
         if version_introduced:
             wrapped.__doc__ += f"""
-        Introduced in Redis version ``{version_introduced}``
-        """
+Introduced in Redis version ``{version_introduced}``
+"""
 
         setattr(wrapped, "__coredis_command", command_details)
         return wrapped
