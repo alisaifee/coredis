@@ -1,4 +1,5 @@
 *.pyc
+*.pyi
 *.so
 coredis.egg-info
 build/
@@ -18,3 +19,4 @@ vagrant/.vagrant
 *.iml
 .pytest_cache/
 .coverage*
+.DS_Store

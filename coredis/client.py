@@ -4,24 +4,15 @@ import functools
 import inspect
 from abc import ABCMeta
 from ssl import SSLContext
-from typing import Type, overload
+from typing import TYPE_CHECKING, Type, overload
 
 from packaging.version import Version
 
-from coredis.commands import (
-    ClusterCommandConfig,
-    CommandGroup,
-    CommandName,
-    redis_command,
-)
+from coredis.commands import CommandGroup, CommandName, keys_from_command, redis_command
 from coredis.commands.core import CoreCommands
 from coredis.commands.function import Library
 from coredis.commands.monitor import Monitor
 from coredis.commands.sentinel import SentinelCommands
-from coredis.commands.transaction import (
-    ClusterTransactionCommandMixin,
-    TransactionCommandMixin,
-)
 from coredis.connection import Connection, RedisSSLContext, UnixDomainSocketConnection
 from coredis.exceptions import (
     AskError,
@@ -34,6 +25,7 @@ from coredis.exceptions import (
     ResponseError,
     TimeoutError,
     TryAgainError,
+    WatchError,
 )
 from coredis.lock import Lock, LuaLock
 from coredis.pool import ClusterConnectionPool, ConnectionPool
@@ -56,7 +48,6 @@ from coredis.typing import (
     ParamSpec,
     Set,
     StringT,
-    SupportsWatch,
     Tuple,
     TypeVar,
     Union,
@@ -77,6 +68,9 @@ from coredis.validators import mutually_inclusive_parameters
 
 P = ParamSpec("P")
 R = TypeVar("R")
+
+if TYPE_CHECKING:
+    import coredis.commands.pipeline
 
 CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE = """Custom implementations for redis
 cluster will be removed in version 3.2.0 and will be replaced with the implementations
@@ -276,7 +270,6 @@ class ResponseParser:
     ) -> Any:
         """Parses a response from the Redis server"""
         response = await connection.read_response(decode=options.get("decode"))
-
         if command_name in self.response_callbacks:
             callback = self.response_callbacks[command_name]
             return callback(response, version=connection.protocol_version, **options)
@@ -288,7 +281,6 @@ class AbstractRedis(
     Generic[AnyStr],
     CoreCommands[AnyStr],
     SentinelCommands[AnyStr],
-    TransactionCommandMixin[AnyStr],
 ):
     """
     Async Redis client
@@ -415,9 +407,7 @@ class AbstractRedis(
             )
 
 
-class AbstractRedisCluster(
-    AbstractRedis[AnyStr], ClusterTransactionCommandMixin[AnyStr]
-):
+class AbstractRedisCluster(AbstractRedis[AnyStr]):
     @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(
         CommandName.RENAME,
@@ -488,7 +478,6 @@ class AbstractRedisCluster(
     @redis_command(
         CommandName.SORT,
         group=CommandGroup.GENERIC,
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def sort(
         self,
@@ -652,7 +641,6 @@ class AbstractRedisCluster(
     @redis_command(
         CommandName.MSET,
         group=CommandGroup.STRING,
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def mset(self, key_values: Dict[KeyT, ValueT]) -> bool:
         """
@@ -674,7 +662,6 @@ class AbstractRedisCluster(
     @redis_command(
         CommandName.MSETNX,
         group=CommandGroup.STRING,
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def msetnx(self, key_values: Dict[KeyT, ValueT]) -> bool:
         """
@@ -700,7 +687,6 @@ class AbstractRedisCluster(
         CommandName.SDIFF,
         readonly=True,
         group=CommandGroup.SET,
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def sdiff(self, keys: Iterable[KeyT]) -> Set[AnyStr]:
         """
@@ -722,7 +708,6 @@ class AbstractRedisCluster(
     @redis_command(
         CommandName.SDIFFSTORE,
         group=CommandGroup.SET,
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def sdiffstore(self, keys: Iterable[KeyT], destination: KeyT) -> int:
         """
@@ -747,7 +732,6 @@ class AbstractRedisCluster(
         CommandName.SINTER,
         readonly=True,
         group=CommandGroup.SET,
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def sinter(self, keys: Iterable[KeyT]) -> Set[AnyStr]:
         """
@@ -769,7 +753,6 @@ class AbstractRedisCluster(
     @redis_command(
         CommandName.SINTERSTORE,
         group=CommandGroup.SET,
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def sinterstore(self, keys: Iterable[KeyT], destination: KeyT) -> int:
         """
@@ -794,7 +777,6 @@ class AbstractRedisCluster(
     @redis_command(
         CommandName.SMOVE,
         group=CommandGroup.SET,
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def smove(self, source: KeyT, destination: KeyT, member: ValueT) -> bool:
         """
@@ -819,7 +801,6 @@ class AbstractRedisCluster(
         CommandName.SUNION,
         readonly=True,
         group=CommandGroup.SET,
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def sunion(self, keys: Iterable[KeyT]) -> Set[AnyStr]:
         """
@@ -843,7 +824,6 @@ class AbstractRedisCluster(
     @redis_command(
         CommandName.SUNIONSTORE,
         group=CommandGroup.SET,
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def sunionstore(self, keys: Iterable[KeyT], destination: KeyT) -> int:
         """
@@ -866,7 +846,6 @@ class AbstractRedisCluster(
         CommandName.BRPOPLPUSH,
         version_deprecated="6.2.0",
         group=CommandGroup.LIST,
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def brpoplpush(
         self, source: KeyT, destination: KeyT, timeout: Union[int, float]
@@ -901,7 +880,6 @@ class AbstractRedisCluster(
         CommandName.RPOPLPUSH,
         version_deprecated="6.2.0",
         group=CommandGroup.LIST,
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def rpoplpush(self, source: KeyT, destination: KeyT) -> Optional[AnyStr]:
         """
@@ -1210,7 +1188,7 @@ class Redis(
         self,
         transaction: Optional[bool] = True,
         watches: Optional[Iterable[StringT]] = None,
-    ) -> SupportsWatch:
+    ) -> "coredis.commands.pipeline.Pipeline[AnyStr]":
         """
         Returns a new pipeline object that can queue multiple commands for
         later execution. ``transaction`` indicates whether all commands
@@ -1220,10 +1198,34 @@ class Redis(
         """
         from coredis.commands.pipeline import Pipeline
 
-        pipeline = Pipeline(self.connection_pool, self.response_callbacks, transaction)
+        pipeline: Pipeline[AnyStr] = Pipeline.proxy(
+            self.connection_pool, self.response_callbacks, transaction
+        )
         await pipeline.reset()
-
         return pipeline
+
+    async def transaction(self, func, *watches: StringT, **kwargs):
+        """
+        Convenience method for executing the callable :paramref:`func` as a
+        transaction while watching all keys specified in :paramref:`watches`.
+        The :paramref:`func` callable should expect a single argument which is a
+        :class:`coredis.commands.pipeline.Pipeline` object retrieved by calling
+        :meth:`~coredis.Redis.pipeline`.
+        """
+        value_from_callable = kwargs.pop("value_from_callable", False)
+        watch_delay = kwargs.pop("watch_delay", None)
+        async with await self.pipeline(True) as pipe:
+            while True:
+                try:
+                    if watches:
+                        await pipe.watch(*watches)
+                    func_value = await func(pipe)
+                    exec_value = await pipe.execute()
+                    return func_value if value_from_callable else exec_value
+                except WatchError:
+                    if watch_delay is not None and watch_delay > 0:
+                        await asyncio.sleep(watch_delay)
+                    continue
 
 
 class RedisCluster(
@@ -1472,96 +1474,21 @@ class RedisCluster(
                 f"No way to dispatch this command:{args} to Redis Cluster. Missing key."
             )
         command: bytes = args[0]
-        keys: Tuple[Any, ...]
-        if command in {CommandName.EVAL, CommandName.EVALSHA, CommandName.FCALL}:
-            numkeys = args[2]
-            keys = args[3 : 3 + numkeys]
-            if not keys:
-                return
-            else:
-                slots = {self.connection_pool.nodes.keyslot(key) for key in keys}
+        keys: Tuple[ValueT, ...] = keys_from_command(args)
 
-            if len(slots) != 1:
-                raise RedisClusterException(
-                    f"{str(command)} - all keys must map to the same key slot"
-                )
-
-            return slots.pop()
-        elif command in {CommandName.XREAD, CommandName.XREADGROUP}:
-            try:
-                idx = args.index(PrefixToken.STREAMS) + 1
-            except ValueError:
-                raise RedisClusterException(
-                    f"{str(command)} arguments do not contain STREAMS operand"
-                )
-            keys = (args[idx],)
-        elif command in {CommandName.XGROUP, CommandName.XINFO}:
-            keys = (args[2],)
-        elif command == CommandName.OBJECT:
-            keys = (args[2],)
-        elif command in {
-            CommandName.BLMPOP,
-            CommandName.BZMPOP,
-        }:
-            keys = args[3 : args[2] + 3 : 1]
-        elif command in {
-            CommandName.BZPOPMAX,
-            CommandName.BRPOP,
-            CommandName.BZPOPMIN,
-            CommandName.BLPOP,
-        }:
-            keys = args[1 : len(args) - 1]
-        elif command in {
-            CommandName.SINTER,
-            CommandName.SDIFF,
-            CommandName.SSUBSCRIBE,
-            CommandName.MGET,
-            CommandName.PFCOUNT,
-            CommandName.EXISTS,
-            CommandName.SUNION,
-            CommandName.DEL,
-            CommandName.TOUCH,
-            CommandName.WATCH,
-            CommandName.SUNSUBSCRIBE,
-            CommandName.UNLINK,
-        }:
-            keys = args[1:]
-        elif command == CommandName.LCS:
-            keys = args[1:3]
-        elif command in {
-            CommandName.LMPOP,
-            CommandName.ZINTERCARD,
-            CommandName.ZMPOP,
-            CommandName.ZUNION,
-            CommandName.ZINTER,
-            CommandName.ZDIFF,
-            CommandName.SINTERCARD,
-        }:
-            keys = args[2 : args[1] + 2 : 1]
-        elif command in {
-            CommandName.MEMORY_USAGE,
-            CommandName.XGROUP_CREATE,
-            CommandName.XGROUP_DESTROY,
-            CommandName.XGROUP_SETID,
-            CommandName.XINFO_STREAM,
-            CommandName.XINFO_GROUPS,
-            CommandName.OBJECT_ENCODING,
-            CommandName.OBJECT_REFCOUNT,
-            CommandName.OBJECT_IDLETIME,
-            CommandName.XGROUP_DELCONSUMER,
-            CommandName.XGROUP_CREATECONSUMER,
-            CommandName.OBJECT_FREQ,
-            CommandName.XINFO_CONSUMERS,
-        }:
-            keys = (args[1],)
-        elif command in {CommandName.MSETNX, CommandName.MSET}:
-            keys = args[1:-1:2]
-        else:
-            keys = (args[1],)
+        if (
+            command in {CommandName.EVAL, CommandName.EVALSHA, CommandName.FCALL}
+            and not keys
+        ):
+            return
 
         slots = {self.connection_pool.nodes.keyslot(key) for key in keys}
-        if len(slots) == 1:
-            return slots.pop()
+
+        if len(slots) != 1:
+            raise RedisClusterException(
+                f"{str(command)} - all keys must map to the same key slot"
+            )
+        return slots.pop()
 
     def _merge_result(self, command, res, **kwargs):
         """
@@ -1786,20 +1713,23 @@ class RedisCluster(
         self,
         transaction: Optional[bool] = None,
         watches: Optional[Iterable[StringT]] = None,
-    ) -> SupportsWatch:
+    ) -> "coredis.commands.pipeline.ClusterPipeline":
         """
-        Pipelines do not work in cluster mode the same way they do in normal mode.
-        Create a clone of this object so that simulating pipelines will work correctly.
+        Pipelines in cluster mode only provide a subset of the functionality
+        of pipelines in standalone mode.
 
-        Each command will be called directly when used and when calling execute() will only
-        return the result stack. Cluster transaction can only be run with commands in the same
-        node, otherwise error will be raised.
+        Specifically:
+
+        - Transactions are only supported if all commands in the pipeline
+          only access keys which route to the same node.
+        - Each command in the pipeline should only access keys on the same node
+        - Transactions with ``watch`` are not supported.
         """
         await self.connection_pool.initialize()
 
         from coredis.commands.pipeline import ClusterPipeline
 
-        return ClusterPipeline(
+        return ClusterPipeline.proxy(
             connection_pool=self.connection_pool,
             startup_nodes=self.connection_pool.nodes.startup_nodes,
             result_callbacks=self.result_callbacks,
@@ -1807,6 +1737,30 @@ class RedisCluster(
             transaction=transaction,
             watches=watches,
         )
+
+    async def transaction(self, func, *watches: StringT, **kwargs):
+        """
+        Convenience method for executing the callable :paramref:`func` as a
+        transaction while watching all keys specified in :paramref:`watches`.
+        The :paramref:`func` callable should expect a single argument which is a
+        :class:`~coredis.commands.pipeline.ClusterPipeline` instance retrieved
+         by calling :meth:`~coredis.RedisCluster.pipeline`
+
+        .. warning:: Cluster transactions can only be run with commands that route to the
+        same node.
+        """
+        value_from_callable = kwargs.pop("value_from_callable", False)
+        watch_delay = kwargs.pop("watch_delay", None)
+        async with await self.pipeline(True, watches=watches) as pipe:
+            while True:
+                try:
+                    func_value = await func(pipe)
+                    exec_value = await pipe.execute()
+                    return func_value if value_from_callable else exec_value
+                except WatchError:
+                    if watch_delay is not None and watch_delay > 0:
+                        await asyncio.sleep(watch_delay)
+                    continue
 
     async def scan_iter(
         self,

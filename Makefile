@@ -5,6 +5,7 @@ lint:
 	flake8 coredis tests
 
 lint-fix:
+	python setup.py build_stubs 
 	black coredis tests
 	isort -r --profile=black tests coredis
 	autoflake8 -i -r tests coredis

@@ -1,6 +1,12 @@
 import pytest
 
-from coredis.exceptions import ResponseError
+from coredis.commands.pipeline import ClusterPipelineImpl
+from coredis.exceptions import (
+    ClusterCrossSlotError,
+    ClusterTransactionError,
+    RedisClusterException,
+    ResponseError,
+)
 from tests.conftest import targets
 
 
@@ -49,6 +55,36 @@ class TestPipeline:
             assert await client.get("a") == "a1"
             assert await client.get("b") == "b1"
             assert await client.get("c") == "c1"
+
+    async def test_pipeline_transaction_with_watch_not_implemented(self, client):
+        async with await client.pipeline(transaction=True) as pipe:
+            with pytest.raises(NotImplementedError):
+                await pipe.watch("a{fu}")
+
+    async def test_pipeline_transaction(self, client):
+        async with await client.pipeline(transaction=True) as pipe:
+            await (await (await pipe.set("a{fu}", "a1")).set("b{fu}", "b1")).set(
+                "c{fu}", "c1"
+            )
+            assert await pipe.execute() == (
+                True,
+                True,
+                True,
+            )
+            assert await client.get("a{fu}") == "a1"
+            assert await client.get("b{fu}") == "b1"
+            assert await client.get("c{fu}") == "c1"
+
+    async def test_pipeline_transaction_cross_slot(self, client):
+        with pytest.raises(ClusterTransactionError):
+            async with await client.pipeline(transaction=True) as pipe:
+                await (await (await pipe.set("a{fu}", "a1")).set("b{fu}", "b1")).set(
+                    "c{fu}", "c1"
+                )
+                await pipe.set("a{bar}", "fail!")
+                await pipe.execute()
+        assert await client.exists(["a{fu}", "b{fu}", "c{fu}"]) == 0
+        assert await client.exists(["a{bar}"]) == 0
 
     async def test_pipeline_eval(self, client):
         async with await client.pipeline(transaction=False) as pipe:
@@ -133,3 +169,74 @@ class TestPipeline:
             # make sure the pipe was restored to a working state
             assert await (await pipe.set("z", "zzz")).execute() == (True,)
             assert await client.get("z") == "zzz"
+
+    @pytest.mark.parametrize(
+        "function, args, kwargs",
+        [
+            (ClusterPipelineImpl.bgrewriteaof, (), {}),
+            (ClusterPipelineImpl.bgsave, (), {}),
+            (ClusterPipelineImpl.keys, ("*",), {}),
+            (ClusterPipelineImpl.flushdb, (), {}),
+            (ClusterPipelineImpl.flushdb, (), {}),
+            (ClusterPipelineImpl.flushall, (), {}),
+        ],
+    )
+    async def test_no_key_command(self, client, function, args, kwargs):
+        with pytest.raises(RedisClusterException) as exc:
+            async with await client.pipeline() as pipe:
+                await function(pipe, *args, **kwargs)
+                await pipe.execute()
+        exc.match("No way to dispatch this command to Redis Cluster. Missing key")
+
+    @pytest.mark.parametrize(
+        "function, args, kwargs",
+        [
+            (ClusterPipelineImpl.bitop, (["a{fu}"], "not", "b{bar}"), {}),
+            (ClusterPipelineImpl.brpoplpush, ("a{fu}", "b{bar}", 1.0), {}),
+        ],
+    )
+    async def test_multi_key_cross_slot_commands(self, client, function, args, kwargs):
+        with pytest.raises(ClusterCrossSlotError) as exc:
+            async with await client.pipeline() as pipe:
+                await function(pipe, *args, **kwargs)
+                await pipe.execute()
+        exc.match("Keys in request don't hash to the same slot")
+
+    @pytest.mark.parametrize(
+        "function, args, kwargs, expectation",
+        [
+            (ClusterPipelineImpl.bitop, (["a{fu}"], "not", "b{fu}"), {}, (None,)),
+            (ClusterPipelineImpl.brpoplpush, ("a{fu}", "b{fu}", 1.0), {}, (None,)),
+        ],
+    )
+    async def test_multi_key_non_cross_slot(
+        self, client, function, args, kwargs, expectation
+    ):
+        async with await client.pipeline() as pipe:
+            await pipe.set("x{fu}", 1)
+            await function(pipe, *args, **kwargs)
+            res = await pipe.execute()
+        assert res == (True,) + expectation
+        assert await client.get("x{fu}") == "1"
+
+    async def test_multi_node_pipeline(self, client):
+        async with await client.pipeline() as pipe:
+            await pipe.set("x{foo}", 1)
+            await pipe.set("x{bar}", 1)
+            await pipe.set("x{baz}", 1)
+            res = await pipe.execute()
+        assert res == (True, True, True)
+
+    async def test_multi_node_pipeline_partial_success(self, client):
+        await client.lpush("list{baz}", [1, 2, 3])
+        with pytest.raises(ClusterCrossSlotError):
+            async with await client.pipeline() as pipe:
+                await pipe.set("x{foo}", 1)
+                await pipe.set("x{bar}", 1)
+
+                await pipe.set("x{baz}", 1)
+                await pipe.brpoplpush("list{baz}", "list{foo}", 1.0)
+                await pipe.execute()
+        assert await client.get("x{foo}") == "1"
+        assert await client.get("x{bar}") == "1"
+        assert await client.get("x{baz}") == "1"

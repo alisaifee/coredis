@@ -1067,7 +1067,6 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.PING,
         group=CommandGroup.CONNECTION,
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def ping(self, message: Optional[ValueT] = None) -> AnyStr:
         """
@@ -1893,7 +1892,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.PFCOUNT,
         readonly=True,
         group=CommandGroup.HYPERLOGLOG,
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def pfcount(self, keys: Iterable[KeyT]) -> int:
         """
@@ -1908,7 +1906,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.PFMERGE,
         group=CommandGroup.HYPERLOGLOG,
         response_callback=SimpleStringCallback(),
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def pfmerge(self, destkey: KeyT, sourcekeys: Iterable[KeyT]) -> bool:
         """
@@ -2065,7 +2062,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         cluster=ClusterCommandConfig(
             flag=NodeFlag.PRIMARIES,
             combine=lambda r: set(itertools.chain(*r.values())),
-            pipeline=False,
         ),
     )
     async def keys(self, pattern: StringT = "*") -> Set[AnyStr]:
@@ -2309,7 +2305,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.RANDOMKEY,
         readonly=True,
         group=CommandGroup.GENERIC,
-        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM, pipeline=False),
+        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
     )
     async def randomkey(self) -> Optional[AnyStr]:
         """
@@ -2324,7 +2320,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.RENAME,
         group=CommandGroup.GENERIC,
         response_callback=BoolCallback(),
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def rename(self, key: KeyT, newkey: KeyT) -> bool:
         """
@@ -2337,7 +2332,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.RENAMENX,
         group=CommandGroup.GENERIC,
         response_callback=BoolCallback(),
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def renamenx(self, key: KeyT, newkey: KeyT) -> bool:
         """
@@ -2534,7 +2528,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.GENERIC,
         arguments={"type_": {"version_introduced": "6.0.0"}},
         response_callback=ScanCallback(),
-        cluster=ClusterCommandConfig(flag=NodeFlag.PRIMARIES, pipeline=False),
+        cluster=ClusterCommandConfig(flag=NodeFlag.PRIMARIES),
     )
     async def scan(
         self,
@@ -4735,7 +4729,6 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.BITOP,
         group=CommandGroup.BITMAP,
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def bitop(
         self, keys: Iterable[KeyT], operation: StringT, destkey: KeyT
@@ -4831,7 +4824,6 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.PUBLISH,
         group=CommandGroup.PUBSUB,
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def publish(self, channel: StringT, message: StringT) -> int:
         """
@@ -5385,7 +5377,6 @@ class CoreCommands(CommandMixin[AnyStr]):
             "identifiers": {"version_introduced": "6.2.0"},
         },
         response_callback=ClientListCallback(),
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def client_list(
         self,
@@ -5416,7 +5407,6 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.CLIENT_GETNAME,
         group=CommandGroup.CONNECTION,
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def client_getname(self) -> Optional[AnyStr]:
         """
@@ -5431,7 +5421,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CLIENT_SETNAME,
         group=CommandGroup.CONNECTION,
         response_callback=SimpleStringCallback(),
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def client_setname(self, connection_name: StringT) -> bool:
         """
@@ -5623,7 +5612,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.DBSIZE,
         readonly=True,
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def dbsize(self) -> int:
         """Returns the number of keys in the current database"""
@@ -5680,7 +5668,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         cluster=ClusterCommandConfig(
             flag=NodeFlag.PRIMARIES,
             combine=lambda res: res and list(res.values()).pop(),
-            pipeline=False,
         ),
     )
     async def flushall(
@@ -5701,7 +5688,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         cluster=ClusterCommandConfig(
             flag=NodeFlag.PRIMARIES,
             combine=lambda res: res and list(res.values()).pop(),
-            pipeline=False,
         ),
     )
     async def flushdb(
@@ -6428,7 +6414,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CONFIG_SET,
         group=CommandGroup.SERVER,
         response_callback=SimpleStringCallback(),
-        cluster=ClusterCommandConfig(pipeline=False),
     )
     async def config_set(self, parameter_values: Dict[StringT, ValueT]) -> bool:
         """Sets configuration parameters to the given values"""

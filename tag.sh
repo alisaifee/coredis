@@ -28,7 +28,7 @@ then
     git add HISTORY.rst
     git commit -m "updating changelog for  ${new_version}"
     git tag -s ${new_version} -m "tagging version ${new_version}"
-    python setup.py build sdist
+    python setup.py build build_stubs sdist
     test $dryrun != 1 && twine upload dist/*
     rm HISTORY.rst.new
 else
