@@ -7,8 +7,12 @@ import functools
 import warnings
 from abc import ABC
 from types import FunctionType
-from typing import (
-    TYPE_CHECKING,
+from typing import TYPE_CHECKING, cast
+
+from packaging import version
+
+from coredis.exceptions import CommandNotSupportedError
+from coredis.typing import (
     Any,
     AnyStr,
     Callable,
@@ -17,21 +21,19 @@ from typing import (
     Generic,
     NamedTuple,
     Optional,
+    Tuple,
     TypeVar,
     Union,
-    cast,
 )
 
-from packaging import version
-
-from coredis.exceptions import CommandNotSupportedError
+from ..tokens import PrefixToken
 
 if TYPE_CHECKING:
     import coredis.client
 
 import coredis.pool
 from coredis.response.callbacks import ParametrizedCallback, SimpleCallback
-from coredis.typing import AbstractExecutor, ParamSpec
+from coredis.typing import AbstractExecutor, ParamSpec, ValueT
 from coredis.utils import NodeFlag
 
 from .constants import CommandGroup, CommandName
@@ -43,7 +45,6 @@ P = ParamSpec("P")
 @dataclasses.dataclass
 class ClusterCommandConfig:
     enabled: bool = True
-    pipeline: bool = True
     flag: Optional[NodeFlag] = None
     combine: Optional[Callable] = None
 
@@ -124,6 +125,89 @@ def redis_command(
         return wrapped
 
     return wrapper
+
+
+def keys_from_command(args: Tuple[ValueT, ...]) -> Tuple[ValueT, ...]:
+    if len(args) <= 1:
+        return ()
+
+    command = args[0]
+
+    if command in {CommandName.EVAL, CommandName.EVALSHA, CommandName.FCALL}:
+        numkeys = int(args[2])
+        keys = args[3 : 3 + numkeys]
+    elif command in {CommandName.XREAD, CommandName.XREADGROUP}:
+        try:
+            idx = args.index(PrefixToken.STREAMS) + 1
+            keys = (args[idx],)
+        except ValueError:
+            keys = ()
+    elif command in {CommandName.XGROUP, CommandName.XINFO}:
+        keys = (args[2],)
+    elif command == CommandName.OBJECT:
+        keys = (args[2],)
+    elif command in {
+        CommandName.BLMPOP,
+        CommandName.BZMPOP,
+    }:
+        keys = args[3 : int(args[2]) + 3 : 1]
+    elif command in {
+        CommandName.BZPOPMAX,
+        CommandName.BRPOP,
+        CommandName.BZPOPMIN,
+        CommandName.BLPOP,
+    }:
+        keys = args[1 : len(args) - 1]
+    elif command in {
+        CommandName.SINTER,
+        CommandName.SDIFF,
+        CommandName.SSUBSCRIBE,
+        CommandName.MGET,
+        CommandName.PFCOUNT,
+        CommandName.EXISTS,
+        CommandName.SUNION,
+        CommandName.DEL,
+        CommandName.TOUCH,
+        CommandName.WATCH,
+        CommandName.SUNSUBSCRIBE,
+        CommandName.UNLINK,
+    }:
+        keys = args[1:]
+    elif command == CommandName.LCS:
+        keys = args[1:3]
+    elif command in {
+        CommandName.LMPOP,
+        CommandName.ZINTERCARD,
+        CommandName.ZMPOP,
+        CommandName.ZUNION,
+        CommandName.ZINTER,
+        CommandName.ZDIFF,
+        CommandName.SINTERCARD,
+    }:
+        keys = args[2 : int(args[1]) + 2 : 1]
+    elif command in {
+        CommandName.MEMORY_USAGE,
+        CommandName.XGROUP_CREATE,
+        CommandName.XGROUP_DESTROY,
+        CommandName.XGROUP_SETID,
+        CommandName.XINFO_STREAM,
+        CommandName.XINFO_GROUPS,
+        CommandName.OBJECT_ENCODING,
+        CommandName.OBJECT_REFCOUNT,
+        CommandName.OBJECT_IDLETIME,
+        CommandName.XGROUP_DELCONSUMER,
+        CommandName.XGROUP_CREATECONSUMER,
+        CommandName.OBJECT_FREQ,
+        CommandName.XINFO_CONSUMERS,
+    }:
+        keys = (args[1],)
+    elif command in {CommandName.MSETNX, CommandName.MSET}:
+        keys = args[1:-1:2]
+    elif command == CommandName.KEYS:
+        return ()
+    else:
+        keys = (args[1],)
+    return keys
 
 
 def _check_version(

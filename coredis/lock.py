@@ -197,10 +197,7 @@ class Lock:
         return await self.do_extend(additional_time)
 
     async def do_extend(self, additional_time: float) -> bool:  # noqa
-        pipe = typing.cast(
-            "coredis.commands.pipeline.Pipeline",
-            await self.redis.pipeline(),
-        )
+        pipe = await self.redis.pipeline()
         await pipe.watch(self.name)
         lock_value = await pipe.get(self.name)
         if lock_value != self.local.get():

@@ -26,12 +26,12 @@ class Script:
         client: Optional[SupportsScript] = None,
     ):
         """Executes the script, passing any required ``args``"""
-        from coredis.commands.pipeline import BasePipeline
+        from coredis.commands.pipeline import Pipeline
 
         if client is None:
             client = self.registered_client
         # make sure the Redis server knows about the script
-        if isinstance(client, BasePipeline):
+        if isinstance(client, Pipeline):
             # make sure this script is good to go on pipeline
             client.scripts.add(self)
 

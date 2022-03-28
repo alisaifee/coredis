@@ -1,6 +1,6 @@
 {
     "exclude": [
         "coredis/_version.py",
-        "beartype"
+        "wrapt"
     ]
 }

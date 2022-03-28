@@ -168,12 +168,13 @@ execution.
 Pipelines
 ^^^^^^^^^^
 
-Pipelines are a subclass of the base Redis class that provide support for
-buffering multiple commands to the server in a single request. They can be used
-to dramatically increase the performance of groups of commands by reducing the
-number of back-and-forth TCP packets between the client and server.
+Pipelines expose an API "similar" to :class:`~coredis.Redis` with the exception
+that calling any redis command returns the pipeline instance itself.
 
-Pipelines are quite simple to use:
+To retrieve the actual results of each command queued in the pipeline you must call
+:meth:`~coredis.commands.pipeline.Pipeline.execute`
+
+For example:
 
 
 .. code-block:: python

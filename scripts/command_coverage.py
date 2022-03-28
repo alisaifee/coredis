@@ -21,13 +21,12 @@ from typing import (
     Tuple,
     Union,
 )
-from black import format_file_contents, format_file_in_place, FileMode
+from black import format_file_in_place, FileMode, WriteBack
 import click
 import coredis
 import coredis.client
 import coredis.commands.pipeline
 import inflect
-import requests
 from coredis import NodeFlag, PureToken  # noqa
 from coredis.response.callbacks.cluster import ClusterNode
 from coredis.response.types import (
@@ -316,6 +315,16 @@ VERSIONCHANGED_DOC = re.compile("(.. versionchanged:: ([\d\.]+))", re.DOTALL)
 inflection_engine = inflect.engine()
 
 
+def sanitized_rendered_type(rendered_type) -> str:
+    v = re.sub("<class '(.*?)'>", "\\1", rendered_type)
+    v = re.sub("<PureToken.(.*?): b'(.*?)'>", "PureToken.\\1", v)
+    v = v.replace("~str", "str")
+    v = v.replace("~AnyStr", "AnyStr")
+    v = re.sub("typing\.(.*?)", "\\1", v)
+    v = v.replace("Ellipsis", "...")
+    return v
+
+
 def render_annotation(annotation):
     if not annotation:
         return "None"
@@ -340,7 +349,10 @@ def render_annotation(annotation):
                         if getattr(a, "__name__") == "Ellipsis":
                             args.remove(a)
 
-                    return f"Optional[{Union[tuple(args)]}]"
+                    if len(args) > 1:
+                        return f"Optional[{Union[tuple(args)]}]"
+                    else:
+                        return f"Optiona[{args[0]}]"
                 else:
                     sub_annotations = [
                         render_annotation(arg) for arg in annotation.__args__
@@ -349,7 +361,7 @@ def render_annotation(annotation):
 
                     return f"{annotation.__name__}[{sub}]"
 
-        return str(annotation)
+        return sanitized_rendered_type(str(annotation))
 
 
 def version_changed_from_doc(doc):
@@ -382,15 +394,41 @@ def get_commands():
     return data
 
 
-def render_signature(signature):
-    v = str(signature)
-
-    v = re.sub("<class '(.*?)'>", "\\1", v)
-    v = re.sub("<PureToken.(.*?): b'(.*?)'>", "PureToken.\\1", v)
-    v = re.sub("Union\[([\w,\s\.]+), NoneType\]", "Optional[Union[\\1]]", v)
-    v = v.replace("~str", "str")
-    v = v.replace("~AnyStr", "AnyStr")
+def sanitize_parameter(p):
+    v = sanitized_rendered_type(str(p))
+    if (
+        hasattr(p, "annotation")
+        and p.annotation != inspect._empty
+        and hasattr(p.annotation, "__args__")
+    ):
+        annotation_args = p.annotation.__args__
+        if any(
+            getattr(a, "__name__", "NotNoneType") == "NoneType" for a in annotation_args
+        ):
+            new_args = [
+                a
+                for a in annotation_args
+                if getattr(a, "__name__", "NotNoneType") != "NoneType"
+            ]
+            if len(new_args) == 1:
+                v = re.sub("Union\[([\w,\s\[\]\.]+), NoneType\]", "Optional[\\1]", v)
+            else:
+                v = re.sub(
+                    "Union\[([\w,\s\[\]\.]+), NoneType\]", "Optional[Union[\\1]]", v
+                )
     return v
+
+
+def render_signature(signature):
+    params = []
+    for n, p in signature.parameters.items():
+        params.append(sanitize_parameter(p))
+    if signature.return_annotation != inspect._empty:
+        return (
+            f"({', '.join(params)}) -> {render_annotation(signature.return_annotation)}"
+        )
+    else:
+        return f"({', '.join(params)})"
 
 
 def compare_signatures(s1, s2):
@@ -434,7 +472,9 @@ def get_token_mapping():
 
         for token in sorted(_extract_pure_tokens(details), key=lambda token: token[0]):
             pure_token_mapping.setdefault(token, set()).add(command)
-        for token in sorted(_extract_prefix_tokens(details), key=lambda token: token[0]):
+        for token in sorted(
+            _extract_prefix_tokens(details), key=lambda token: token[0]
+        ):
             prefix_token_mapping.setdefault(token, set()).add(command)
 
     return pure_token_mapping, prefix_token_mapping
@@ -586,6 +626,7 @@ def read_command_docs(command, group):
                         or rtypes.get("bulk-string", "").find("a double") >= 0
                     ):
                         mapped_types["bulk-string"] = float
+
                     if rtypes.get("bulk-string", "").lower().find("an error") >= 0:
                         mapped_types.pop("bulk-string")
                         rtypes.pop("bulk-string")
@@ -707,17 +748,21 @@ def find_method(kls, command_name):
 
     return mapping.get(command_name)
 
+
 def compare_methods(l, r):
     _l = l
     wrapped = getattr(l, "__wrapped__", None)
+
     while wrapped:
         _l = _l.__wrapped__
         wrapped = getattr(_l, "__wrapped__", None)
     _r = r
     wrapped = getattr(r, "__wrapped__", None)
+
     while wrapped:
         _r = _r.__wrapped__
         wrapped = getattr(_r, "__wrapped__", None)
+
     return _l == _r
 
 
@@ -747,6 +792,7 @@ def is_deprecated(command, kls):
         replacement_tokens = [k for k in re.findall("(``(.*?)``)", replacement)]
         replacement_string = {}
         all_commands = get_commands()
+
         for token in replacement_tokens:
             if token[1] in all_commands:
                 replacement_string[
@@ -757,6 +803,7 @@ def is_deprecated(command, kls):
 
         for token, mapped in replacement_string.items():
             replacement = replacement.replace(token, mapped)
+
         return version.parse(command["deprecated_since"]), replacement
     else:
         return [None, None]
@@ -799,6 +846,7 @@ def skip_arg(argument, command):
 def relevant_min_version(v, min=True):
     if not v:
         return False
+
     if min:
         return version.parse(v) > MIN_SUPPORTED_VERSION
     else:
@@ -809,6 +857,7 @@ def get_type(arg, command):
     inferred_type = REDIS_ARGUMENT_TYPE_MAPPING.get(arg["type"], Any)
     sanitized_name = sanitized(arg["name"])
     command_arg_overrides = REDIS_ARGUMENT_TYPE_OVERRIDES.get(command["name"], {})
+
     if arg_type_override := command_arg_overrides.get(
         arg["name"], command_arg_overrides.get(sanitized_name)
     ):
@@ -819,6 +868,7 @@ def get_type(arg, command):
 
     if arg["name"] == "yes/no" and inferred_type in [StringT, ValueT]:
         return bool
+
     if (
         arg["name"]
         in [
@@ -838,6 +888,7 @@ def get_type(arg, command):
         and inferred_type == StringT
     ):
         return ValueT
+
     return inferred_type
 
 
@@ -891,11 +942,13 @@ def get_argument(
             else:
                 child_args = arg["arguments"]
             child_types = [get_type(child, command) for child in child_args]
+
             for c in child_args:
                 if relevant_min_version(c.get("since", None)):
                     meta_mapping.setdefault(c["name"], {})["version"] = c.get(
                         "since", None
                     )
+
             if arg_type_override := REDIS_ARGUMENT_TYPE_OVERRIDES.get(
                 command["name"], {}
             ).get(name):
@@ -924,11 +977,13 @@ def get_argument(
             param_list.append(
                 inspect.Parameter(name, arg_type, annotation=annotation, **extra)
             )
+
             if relevant_min_version(arg.get("since", None)):
                 meta_mapping.setdefault(name, {})["version"] = arg.get("since", None)
 
         else:
             plist_d = []
+
             if len(arg["arguments"]) == 1 and not arg.get("multiple"):
                 synthetic_parent = arg.copy()
                 synthetic_parent["type"] = "pure-token"
@@ -938,6 +993,7 @@ def get_argument(
                 )
                 param_list.extend(plist_p)
                 meta_mapping.update(vmap)
+
             for child in sorted(
                 arg["arguments"], key=lambda v: int(v.get("optional") == True)
             ):
@@ -963,6 +1019,7 @@ def get_argument(
 
         if all(child["type"] == "pure-token" for child in arg["arguments"]):
             if parent:
+
                 syn_name = sanitized(f"{parent['name']}_{arg.get('name')}", command)
             else:
                 syn_name = sanitized(f"{arg.get('token', arg.get('name'))}", command)
@@ -981,6 +1038,7 @@ def get_argument(
                     **extra_params,
                 )
             )
+
             if relevant_min_version(arg.get("since", None)):
                 meta_mapping.setdefault(syn_name, {})["version"] = arg.get(
                     "since", None
@@ -995,6 +1053,7 @@ def get_argument(
                 param_list.extend(plist)
                 plist_d.extend(plist)
                 meta_mapping.update(vmap)
+
             if len(plist_d) > 1:
                 mutually_exclusive_params = ",".join(["'%s'" % p.name for p in plist_d])
                 decorators.append(
@@ -1038,8 +1097,10 @@ def get_argument(
             forced_variadicity = ARGUMENT_VARIADICITY.get(command["name"], {}).get(
                 name, None
             )
+
             if forced_variadicity is not None:
                 is_variadic = forced_variadicity
+
             if not is_variadic:
                 if (
                     default := ARGUMENT_DEFAULTS.get(command["name"], {}).get(name)
@@ -1061,6 +1122,7 @@ def get_argument(
             extra_params["default"] = ARGUMENT_DEFAULTS.get(command["name"], {}).get(
                 name, extra_params.get("default")
             )
+
         if relevant_min_version(min_version):
             meta_mapping.setdefault(name, {})["version"] = min_version
         else:
@@ -1084,6 +1146,7 @@ def get_argument(
                 name, arg_type, annotation=type_annotation, **extra_params
             )
         )
+
     return [param_list, decorators, meta_mapping]
 
 
@@ -1113,12 +1176,15 @@ def get_command_spec(command):
     history = command.get("history", [])
     extra_version_info = {}
     num_multiples = len([k for k in arguments if k.get("multiple")])
+
     for arg_name in arg_names:
         for version, entry in history:
             if "`%s`" % arg_name in entry and "added" in entry.lower():
                 extra_version_info[arg_name] = version
+
     for k in arguments:
         version_added = extra_version_info.get(k["name"])
+
         if version_added and not k.get("since"):
             k["since"] = version_added
 
@@ -1281,6 +1347,7 @@ def get_command_spec(command):
             )
         }
     )
+
     return recommended_signature, decorators, mapping, meta_mapping
 
 
@@ -1300,6 +1367,7 @@ def generate_method_details(kls, method, debug):
     method_details["deprecation_info"] = is_deprecated(method, kls)
 
     version_introduced = version.parse(method["since"])
+
     if version_introduced > MIN_SUPPORTED_VERSION:
         method_details["redis_version_introduced"] = version_introduced
     else:
@@ -1336,6 +1404,7 @@ def generate_method_details(kls, method, debug):
             method["name"], "readonly" in method.get("command_flags", [])
         )
         method_details["return_summary"] = return_summary
+
     return method_details
 
 
@@ -1476,6 +1545,7 @@ def generate_compatibility_section(
          {%- endif %}
          {%- else %}
          {% if arg[0].get("multiple") -%}
+
          if {{param.name}}:
          {%- if arg[0].get("multiple_token") %}
              for item in {{param.name}}:
@@ -1486,6 +1556,7 @@ def generate_compatibility_section(
              pieces.extend({{param.name}})
          {%- endif %}
          {%- else %}
+
          if {{param.name}}{% if arg[0].get("type") != "pure-token" %} is not None{%endif%}:
          {%- if arg[0].get("token") and arg[0].get("type") != "pure-token" %}
              pieces.append("{{arg[0].get("token")}}")
@@ -1650,7 +1721,9 @@ def generate_compatibility_section(
             if (
                 parent_kls
                 and located
-                and compare_methods(find_method(parent_kls, sanitized(method["name"])), located)
+                and compare_methods(
+                    find_method(parent_kls, sanitized(method["name"])), located
+                )
             ):
                 continue
             if located:
@@ -1914,8 +1987,12 @@ class PrefixToken(bytes, enum.Enum):
 
     result = t.render(pure_tokens=pure_tokens, prefix_tokens=prefix_tokens)
     open(path, "w").write(result)
-    print(format_file_in_place(Path(path), fast=False, mode=FileMode()))
+    print(
+        format_file_in_place(Path(path), fast=False, mode=FileMode()),
+        write_back=WriteBack.YES,
+    )
     print(f"Generated token enum at {path}")
+
 
 @code_gen.command()
 @click.option("--path", default="coredis/commands/constants.py")
@@ -1925,7 +2002,8 @@ def command_constants(ctx, path):
     sort_fn = lambda command: command.get("since")
     env = Environment()
     env.globals.update(sorted=sorted)
-    t = env.from_string("""\"\"\"
+    t = env.from_string(
+        """\"\"\"
 coredis.commands.constants
 --------------------------
 
@@ -2016,8 +2094,12 @@ class CommandGroup(enum.Enum):
 
     result = t.render(commands=commands, sort_fn=sort_fn)
     open(path, "w").write(result)
-    format_file_in_place(Path(path), fast=False, mode=FileMode())
+    print(Path(path))
+    format_file_in_place(
+        Path(path), fast=False, mode=FileMode(), write_back=WriteBack.YES
+    )
     print(f"Generated command enum at {path}")
+
 
 @code_gen.command()
 def generate_changes():
@@ -2212,12 +2294,11 @@ def generate_implementation(ctx, command, group, expr):
             print(method_template.render(method=method_details))
 
 
-@code_gen.command()
-@click.pass_context
-def generate_stubs(ctx):
-    kls = coredis.Redis
-    cluster_kls = coredis.RedisCluster
+def generate_pipeline_stub(path):
+    kls = coredis.client.AbstractRedis
+    cluster_kls = coredis.client.AbstractRedisCluster
     commands = {}
+
     for group in STD_GROUPS + ["server", "connection", "cluster"]:
         for cmd in get_official_commands(group):
             name = MAPPING.get(
@@ -2225,27 +2306,86 @@ def generate_stubs(ctx):
                 cmd["name"].lower().replace(" ", "_").replace("-", "_"),
             )
             method = find_method(kls, name)
-            if method:
+            cluster_method = find_method(cluster_kls, name)
+            if method and hasattr(method, "__coredis_command"):
                 signature = inspect.signature(method)
-                if signature.return_annotation != inspect._empty:
-                    commands[cmd["name"]] = signature.return_annotation
-
+                cluster_signature = inspect.signature(cluster_method)
+                commands[cmd["name"]] = {
+                    "name": name,
+                    "command_details": method.__coredis_command,
+                    "pipeline": inspect.Signature(
+                        parameters=signature.parameters.values(),
+                        return_annotation="Pipeline",
+                    ),
+                    "cluster": inspect.Signature(
+                        parameters=cluster_signature.parameters.values(),
+                        return_annotation="ClusterPipeline",
+                    ),
+                }
     stub_template_str = """
-import typing
-from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple, Union
-from coredis import BitFieldOperation
+import datetime
 
-class Redis:
-    {% for name, return_type in commands.items() -%}
-    @overload
-    async def execute_command(self, command: Literal["{{name}}"], *args: Any, **options: Any) -> {{render_annotation(return_type) }}: ...
-    {% endfor %}
+import wrapt
 
-class RedisCluster:
-    {% for name, return_type in commands.items() -%}
-    @overload
-    async def execute_command(self, command: Literal["{{name}}"], *args: Any, **options: Any) -> {{render_annotation(return_type) }}: ...
+import coredis.pool
+from coredis import PureToken
+from coredis.client import AbstractRedis, AbstractRedisCluster, ResponseParser
+from coredis.typing import (
+    Any,
+    AnyStr,
+    Dict,
+    Generic,
+    Iterable,
+    List,
+    Literal,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
+
+class PipelineImpl(AbstractRedis[AnyStr]):
+    scripts: Set
+    def __init__{{render_signature(inspect.signature(pipeline_kls.__init__))}}: ...
+    async def watch{{render_signature(inspect.signature(pipeline_kls.watch))}}: ...
+    async def unwatch{{render_signature(inspect.signature(pipeline_kls.unwatch))}}: ...
+    async def execute{{render_signature(inspect.signature(pipeline_kls.execute))}}: ...
+    async def execute_command{{render_signature(inspect.signature(pipeline_kls.execute_command))}}: ...
+    def multi{{render_signature(inspect.signature(pipeline_kls.multi))}}: ...
+    async def __aenter__(self)->"PipelineImpl": ...
+    async def __aexit__(self, exc_type, exc_val, exc_tb): ...
+
+class ClusterPipelineImpl(AbstractRedisCluster[AnyStr], ResponseParser):
+    def __init__{{render_signature(inspect.signature(cluster_kls.__init__))}}: ...
+    async def watch{{render_signature(inspect.signature(cluster_kls.watch))}}: ...
+    async def unwatch{{render_signature(inspect.signature(cluster_kls.unwatch))}}: ...
+    async def execute{{render_signature(inspect.signature(cluster_kls.execute))}}: ...
+    async def execute_command{{render_signature(inspect.signature(cluster_kls.execute_command))}}: ...
+    def multi{{render_signature(inspect.signature(cluster_kls.multi))}}: ...
+    async def __aenter__(self) -> "ClusterPipelineImpl":...
+    async def __aexit__(self, exc_type, exc_val, exc_tb): ...
+
+class Pipeline(wrapt.ObjectProxy, Generic[AnyStr]):
+    scripts: Set
+    {% for name, signature in commands.items() -%}
+    async def {{signature["name"]}}{{render_signature(signature["pipeline"])}}: ...
     {% endfor %}
+    async def watch{{render_signature(inspect.signature(pipeline_kls.watch))}}: ...
+    async def unwatch{{render_signature(inspect.signature(pipeline_kls.unwatch))}}: ...
+    def multi{{render_signature(inspect.signature(pipeline_kls.multi))}}: ...
+    async def execute{{render_signature(inspect.signature(pipeline_kls.execute))}}: ...
+    async def __aenter__(self) -> "Pipeline[AnyStr]":...
+    async def __aexit__(self, exc_type, exc_val, exc_tb): ...
+class ClusterPipeline(wrapt.ObjectProxy, Generic[AnyStr]):
+    {% for name, signature in commands.items() -%}
+    async def {{signature["name"]}}{{render_signature(signature["cluster"])}}: ...
+    {% endfor %}
+    async def watch{{render_signature(inspect.signature(cluster_kls.watch))}}: ...
+    async def unwatch{{render_signature(inspect.signature(cluster_kls.unwatch))}}: ...
+    def multi{{render_signature(inspect.signature(cluster_kls.multi))}}: ...
+    async def execute{{render_signature(inspect.signature(cluster_kls.execute))}}: ...
+    async def __aenter__(self) -> "ClusterPipeline[AnyStr]":...
+    async def __aexit__(self, exc_type, exc_val, exc_tb): ...
 """
     env = Environment()
     env.globals.update(
@@ -2264,11 +2404,26 @@ class RedisCluster:
         find_method=find_method,
         kls=kls,
         render_signature=render_signature,
-        next_version=ctx.obj["NEXT_VERSION"],
         debug=True,
+        pipeline_kls=coredis.commands.pipeline.PipelineImpl,
+        cluster_kls=coredis.commands.pipeline.ClusterPipelineImpl,
     )
     stub_template = env.from_string(stub_template_str)
-    print(stub_template.render(commands=commands))
+    response = stub_template.render(commands=commands)
+    response = response.replace("coredis.commands.pipeline.", "")
+    with open(path, "w") as file:
+        file.write(response)
+    print(Path(path))
+    print(
+        format_file_in_place(Path(path), fast=False, mode=FileMode()),
+        write_back=WriteBack.YES,
+    )
+
+
+@click.option("--path", default="coredis/commands/pipeline.pyi")
+@code_gen.command()
+def render_pipeline_stub(path):
+    return generate_pipeline_stub(path)
 
 
 if __name__ == "__main__":

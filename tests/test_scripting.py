@@ -134,7 +134,6 @@ class TestScripting:
         assert msgpack_hello.sha
 
         pipe = await client.pipeline()
-
         # avoiding a dependency to msgpack, this is the output of
         # msgpack.dumps({"name": "joe"})
         msgpack_message_1 = b"\x81\xa4name\xa3Joe"

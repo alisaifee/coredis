@@ -77,16 +77,15 @@ Functions
 .. autoclass:: coredis.commands.function.Function
    :class-doc-from: both
 
-Transactions
-------------
+Pipelines
+---------
 
 .. autoclass:: coredis.commands.pipeline.Pipeline
-   :no-inherited-members:
    :class-doc-from: both
 
 .. autoclass:: coredis.commands.pipeline.ClusterPipeline
-   :no-inherited-members:
    :class-doc-from: both
+
 
 Monitor
 -------

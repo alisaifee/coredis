@@ -7,7 +7,8 @@ __author__ = "Ali-Akber Saifee"
 __email__ = "ali@indydevs.org"
 __copyright__ = "Copyright 2022, Ali-Akber Saifee"
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
+from distutils.cmd import Command
 from setuptools.command.build_ext import build_ext
 from setuptools.extension import Extension
 
@@ -22,6 +23,24 @@ def get_requirements(req_file):
             requirements.append(r.strip())
 
     return requirements
+
+
+class BuildStubs(Command):
+    description = "Generate any type stubs needed for distribution"
+    user_options = []
+
+    def run(self):
+        import scripts.command_coverage
+
+        pipeline_stub = scripts.command_coverage.generate_pipeline_stub(
+            "coredis/commands/pipeline.pyi"
+        )
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
 
 
 class custom_build_ext(build_ext):
@@ -125,7 +144,9 @@ setup(
     python_requires=">=3.8",
     install_requires=get_requirements("main.txt"),
     extras_require={"hiredis": ["hiredis>=2.0.0"]},
-    cmdclass=versioneer.get_cmdclass({"build_ext": custom_build_ext}),
+    cmdclass=versioneer.get_cmdclass(
+        {"build_ext": custom_build_ext, "build_stubs": BuildStubs}
+    ),
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
