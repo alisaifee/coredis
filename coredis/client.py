@@ -2,9 +2,10 @@ import asyncio
 import contextlib
 import functools
 import inspect
+import textwrap
 from abc import ABCMeta
 from ssl import SSLContext
-from typing import TYPE_CHECKING, Type, overload
+from typing import TYPE_CHECKING, Coroutine, Type, overload
 
 from packaging.version import Version
 
@@ -99,10 +100,18 @@ class ClusterMeta(ABCMeta):
             if cmd := getattr(method, "__coredis_command", None):
                 if cmd.cluster.flag:
                     kls.NODES_FLAGS[cmd.command] = cmd.cluster.flag
+                    aggregate_note = ""
+                    if cmd.cluster.multi_node:
+                        if cmd.cluster.combine:
+                            aggregate_note = "and the results will be aggregated"
+                        else:
+                            aggregate_note = (
+                                "and a mapping of nodes to results will be returned"
+                            )
                     doc_addition = f"""
 .. admonition:: Cluster note
 
-   The command will be run on {cls.NODE_FLAG_DOC_MAPPING[cmd.cluster.flag]}
+   The command will be run on **{cls.NODE_FLAG_DOC_MAPPING[cmd.cluster.flag]}** {aggregate_note}
                     """
                 if cmd.response_callback:
                     kls.RESPONSE_CALLBACKS[cmd.command] = cmd.response_callback
@@ -118,16 +127,18 @@ class ClusterMeta(ABCMeta):
                     ConnectionPool.READONLY_COMMANDS.add(cmd.command)
             if doc_addition:
 
-                def __w(func: Callable[P, R]) -> Callable[P, R]:
+                def __w(
+                    func: Callable[P, Coroutine[Any, Any, R]]
+                ) -> Callable[P, Coroutine[Any, Any, R]]:
                     @functools.wraps(func)
-                    def _w(*a: P.args, **k: P.kwargs) -> R:
-                        return func(*a, **k)
+                    async def _w(*a: P.args, **k: P.kwargs) -> R:
+                        return await func(*a, **k)
 
-                    return _w
-
-                __w.__doc__ = f"""{method.__doc__}
+                    _w.__doc__ = f"""{textwrap.dedent(method.__doc__)}
 {doc_addition}
                 """
+                    return _w
+
                 setattr(kls, name, __w(method))
         return kls
 
