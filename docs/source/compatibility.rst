@@ -3816,6 +3816,24 @@ Return a latency graph for the event.
 
 
 
+LATENCY HISTOGRAM
+*****************
+
+Return the cumulative distribution of latencies of a subset of commands or all.
+
+- Documentation: `LATENCY HISTOGRAM <https://redis.io/commands/latency-histogram>`_
+- Implementation: :meth:`~coredis.Redis.latency_histogram`
+
+- New in redis: 6.9.0
+
+
+
+- .. versionadded:: 3.1.2
+
+
+
+
+
 LATENCY HISTORY
 ***************
 
@@ -3953,6 +3971,54 @@ Estimate the memory usage of a key
 
 
 - .. versionadded:: 3.0.0
+
+
+
+
+
+MODULE LIST
+***********
+
+List all modules loaded by the server
+
+- Documentation: `MODULE LIST <https://redis.io/commands/module-list>`_
+- Implementation: :meth:`~coredis.Redis.module_list`
+
+
+
+- .. versionadded:: 3.1.2
+
+
+
+
+
+MODULE LOAD
+***********
+
+Load a module
+
+- Documentation: `MODULE LOAD <https://redis.io/commands/module-load>`_
+- Implementation: :meth:`~coredis.Redis.module_load`
+
+
+
+- .. versionadded:: 3.1.2
+
+
+
+
+
+MODULE UNLOAD
+*************
+
+Unload a module
+
+- Documentation: `MODULE UNLOAD <https://redis.io/commands/module-unload>`_
+- Implementation: :meth:`~coredis.Redis.module_unload`
+
+
+
+- .. versionadded:: 3.1.2
 
 
 
@@ -4116,46 +4182,6 @@ Return the current server time
 
 
 
-
-
-LATENCY HISTOGRAM [X]
-*********************
-
-Return the cumulative distribution of latencies of a subset of commands or all.
-
-- Documentation: `LATENCY HISTOGRAM <https://redis.io/commands/latency-histogram>`_
-
-- Not Implemented
-
-
-MODULE LIST [X]
-***************
-
-List all modules loaded by the server
-
-- Documentation: `MODULE LIST <https://redis.io/commands/module-list>`_
-
-- Not Implemented
-
-
-MODULE LOAD [X]
-***************
-
-Load a module
-
-- Documentation: `MODULE LOAD <https://redis.io/commands/module-load>`_
-
-- Not Implemented
-
-
-MODULE UNLOAD [X]
-*****************
-
-Unload a module
-
-- Documentation: `MODULE UNLOAD <https://redis.io/commands/module-unload>`_
-
-- Not Implemented
 
 
 
@@ -5425,46 +5451,6 @@ Watch the given keys to determine execution of the MULTI/EXEC block
 Server
 ------
 
-
-
-LATENCY HISTOGRAM [X]
-*********************
-
-Return the cumulative distribution of latencies of a subset of commands or all.
-
-- Documentation: `LATENCY HISTOGRAM <https://redis.io/commands/latency-histogram>`_
-
-- Not Implemented
-
-
-MODULE LIST [X]
-***************
-
-List all modules loaded by the server
-
-- Documentation: `MODULE LIST <https://redis.io/commands/module-list>`_
-
-- Not Implemented
-
-
-MODULE LOAD [X]
-***************
-
-Load a module
-
-- Documentation: `MODULE LOAD <https://redis.io/commands/module-load>`_
-
-- Not Implemented
-
-
-MODULE UNLOAD [X]
-*****************
-
-Unload a module
-
-- Documentation: `MODULE UNLOAD <https://redis.io/commands/module-unload>`_
-
-- Not Implemented
 
 
 MONITOR [X]

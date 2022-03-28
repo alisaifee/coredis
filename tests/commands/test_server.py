@@ -193,6 +193,17 @@ class TestServer:
         graph = await client.latency_graph("command")
         assert "command - high" in graph
 
+    @pytest.mark.min_server_version("6.9.0")
+    async def test_latency_histogram(self, client):
+        await client.set("a", 1)
+        await client.set("a", 1)
+        await client.set("a", 1)
+        await client.get("a")
+        await client.get("a")
+        histogram = await client.latency_histogram()
+        assert "set" in histogram
+        assert "get" in histogram
+
     async def test_role(self, client):
         role_info = await client.role()
         assert role_info.role == "master"

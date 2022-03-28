@@ -28,6 +28,7 @@ import coredis.client
 import coredis.commands.pipeline
 import inflect
 from coredis import NodeFlag, PureToken  # noqa
+from coredis.commands.monitor import Monitor
 from coredis.response.callbacks.cluster import ClusterNode
 from coredis.response.types import (
     ClientInfo,
@@ -193,10 +194,13 @@ REDIS_RETURN_OVERRIDES = {
     "KEYS": Set[AnyStr],
     "LASTSAVE": datetime.datetime,
     "LATENCY LATEST": Dict[AnyStr, Tuple[int, int, int]],
+    "LATENCY HISTOGRAM": Dict[AnyStr, Dict[AnyStr, Any]],
     "LCS": Union[AnyStr, int, LCSResult],
     "LPOS": Optional[Union[int, List[int]]],
     "MEMORY STATS": Dict[AnyStr, Union[AnyStr, int, float]],
     "MGET": Tuple[Optional[AnyStr], ...],
+    "MODULE LIST":  Tuple[Dict, ...],
+    "MONITOR": Monitor,
     "MSETNX": bool,
     "PFADD": bool,
     "PERSIST": bool,
@@ -255,14 +259,16 @@ ARGUMENT_OPTIONALITY = {
     "EVALSHA_RO": {"key": True, "arg": True},
     "FCALL": {"key": True, "arg": True},
     "FCALL_RO": {"key": True, "arg": True},
-    "MIGRATE": {"keys": False},
-    "XADD": {"id_or_auto": True},
-    "SCAN": {"cursor": True},
     "HSCAN": {"cursor": True},
+    "MIGRATE": {"keys": False},
+    "SLAVEOF": {"host": True, "port": True},
+    "REPLICAOF": {"host": True, "port": True},
+    "SCAN": {"cursor": True},
     "SSCAN": {"cursor": True},
-    "ZSCAN": {"cursor": True},
+    "XADD": {"id_or_auto": True},
     "XRANGE": {"start": True, "end": True},
     "XREVRANGE": {"start": True, "end": True},
+    "ZSCAN": {"cursor": True},
 }
 ARGUMENT_VARIADICITY = {"SORT": {"gets": False}, "SORT_RO": {"gets": False}}
 REDIS_ARGUMENT_FORCED_ORDER = {
@@ -1464,7 +1470,7 @@ def generate_compatibility_section(
      {{decorator}}
      {% endfor -%}
      {% if not method["full_match"] -%}
-     @redis_command("{{method["command"]["name"]}}"
+     @redis_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}
      {%- if method["redis_version_introduced"] and method["redis_version_introduced"] > MIN_SUPPORTED_VERSION -%}
      , version_introduced="{{method["command"].get("since")}}"
      {%- endif -%}
@@ -1574,10 +1580,10 @@ def generate_compatibility_section(
          {%- endif %}
          {%- endfor %}
 
-         return await self.execute_command("{{method["command"]["name"]}}", *pieces)
+         return await self.execute_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}, *pieces)
          {% else -%}
 
-         return await self.execute_command("{{method["command"]["name"]}}")
+         return await self.execute_command(CommandName.{{sanitized(method["command"]["name"]).upper()}})
          {% endif -%}
          {% endif -%}
 {% endif %}
@@ -1599,7 +1605,7 @@ def generate_compatibility_section(
      {{decorator}}
      {% endfor -%}
      @versionadded(version="{{next_version}}")
-     @redis_command("{{method["command"]["name"]}}"
+     @redis_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}
      {%- if method["redis_version_introduced"] and method["redis_version_introduced"] > MIN_SUPPORTED_VERSION -%}
      , version_introduced="{{method["command"].get("since")}}"
      {%- endif -%}, group=CommandGroup.{{method["command"]["group"].upper().replace(" ","_").replace("-","_")}}
@@ -1673,10 +1679,10 @@ def generate_compatibility_section(
          {% endif -%}
          {% endfor -%}
 
-         return await self.execute_command("{{method["command"]["name"]}}", *pieces)
+         return await self.execute_command(CommandName.({{sanitized(method["command"]["name"]).upper()}}, *pieces)
          {% else -%}
 
-        return await self.execute_command("{{method["command"]["name"]}}")
+        return await self.execute_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}")
         {% endif -%}
 {% else %}
 - Not Implemented
@@ -1702,6 +1708,7 @@ def generate_compatibility_section(
         next_version=next_version,
         preamble=preamble,
         debug=debug,
+        sanitized=sanitized,
     )
     section_template = env.from_string(section_template_str)
     methods_by_group = {}
@@ -1772,7 +1779,7 @@ def generate_compatibility_section(
                             )
                             if (
                                 src.find("@redis_command") >= 0
-                                and src.find(method["name"]) >= 0
+                                and src.find(sanitized(method["name"]).upper()) >= 0
                                 and command_details
                                 and command_details.readonly
                                 == method_details["readonly"]

@@ -174,6 +174,16 @@ def redis_sentinel_auth_server(docker_services):
     yield
 
 
+@pytest.fixture(scope="session")
+def redis_stack_server(docker_services):
+    if os.environ.get("CI") == "True" and not os.environ.get("REDIS_STACK_VERSION"):
+        pytest.skip("Redis stack tests skipped")
+
+    docker_services.start("redis-stack")
+    docker_services.wait_for_service("redis-stack", 6379, ping_socket)
+    yield ["localhost", 9379]
+
+
 @pytest.fixture
 async def redis_basic(redis_basic_server, request):
     client = coredis.Redis(
@@ -195,6 +205,37 @@ async def redis_basic_resp3(redis_basic_server, request):
     client = coredis.Redis(
         "localhost",
         6379,
+        decode_responses=True,
+        protocol_version=3,
+        verify_version=True,
+    )
+    await client.flushall()
+    await set_default_test_config(client)
+
+    return client
+
+
+@pytest.fixture
+async def redis_stack(redis_stack_server, request):
+    client = coredis.Redis(
+        "localhost", 9379, decode_responses=True, verify_version=True
+    )
+    await check_test_constraints(request, client)
+    await client.flushall()
+    await set_default_test_config(client)
+
+    return client
+
+
+@pytest.fixture
+async def redis_stack_resp3(redis_stack_server, request):
+    client = coredis.Redis(
+        "localhost", 9379, decode_responses=True, verify_version=True
+    )
+    await check_test_constraints(request, client, protocol=3)
+    client = coredis.Redis(
+        "localhost",
+        9379,
         decode_responses=True,
         protocol_version=3,
         verify_version=True,

@@ -112,3 +112,7 @@ services:
       - type: bind
         source: /tmp/
         target: /sockets/
+  redis-stack:
+    image: "redis/redis-stack:${REDIS_STACK_VERSION:-latest}"
+    ports:
+      - '9379:6379'

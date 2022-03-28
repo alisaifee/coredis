@@ -3,7 +3,7 @@ import datetime
 from coredis.commands import ParametrizedCallback, SimpleCallback
 from coredis.response.types import ClientInfo, RoleInfo, SlowLogInfo
 from coredis.typing import Any, AnyStr, Dict, List, Tuple, Union
-from coredis.utils import nativestr
+from coredis.utils import AnyDict, flat_pairs_to_dict, nativestr
 
 
 class TimeCallback(SimpleCallback):
@@ -158,3 +158,14 @@ class RoleCallback(SimpleCallback):
             "sentinel": _parse_sentinel,
         }[role]
         return RoleInfo(**parser(response))  # type: ignore
+
+
+class LatencyHistogramCallback(SimpleCallback):
+    def transform(self, response: Any) -> Dict[AnyStr, Dict]:
+        histogram = flat_pairs_to_dict(response)
+        for key, value in histogram.items():
+            histogram[key] = AnyDict(flat_pairs_to_dict(value))
+            histogram[key]["histogram_usec"] = flat_pairs_to_dict(
+                histogram[key]["histogram_usec"]
+            )
+        return histogram

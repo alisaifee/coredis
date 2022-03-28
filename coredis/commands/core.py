@@ -45,6 +45,7 @@ from coredis.response.callbacks.hash import (
     HScanCallback,
 )
 from coredis.response.callbacks.keys import ExpiryCallback, ScanCallback, SortCallback
+from coredis.response.callbacks.module import ModuleInfoCallback
 from coredis.response.callbacks.script import (
     FunctionListCallback,
     FunctionStatsCallback,
@@ -54,6 +55,7 @@ from coredis.response.callbacks.server import (
     ClientListCallback,
     DebugCallback,
     InfoCallback,
+    LatencyHistogramCallback,
     RoleCallback,
     SlowlogCallback,
     TimeCallback,
@@ -5749,11 +5751,22 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Return a latency graph for the event.
         """
-        pieces: CommandArgList = []
-        # Handle event
-        pieces.append(event)
+        return await self.execute_command(CommandName.LATENCY_GRAPH, event)
 
-        return await self.execute_command(CommandName.LATENCY_GRAPH, *pieces)
+    @versionadded(version="3.1.2")
+    @redis_command(
+        CommandName.LATENCY_HISTOGRAM,
+        version_introduced="6.9.0",
+        group=CommandGroup.SERVER,
+        response_callback=LatencyHistogramCallback(),
+    )
+    async def latency_histogram(
+        self, *commands: Union[str, bytes]
+    ) -> Dict[AnyStr, Dict[AnyStr, Any]]:
+        """
+        Return the cumulative distribution of latencies of a subset of commands or all.
+        """
+        return await self.execute_command(CommandName.LATENCY_HISTOGRAM, *commands)
 
     @versionadded(version="3.0.0")
     @redis_command(
@@ -6438,3 +6451,41 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return await self.execute_command(CommandName.CONFIG_REWRITE)
+
+    @versionadded(version="3.1.2")
+    @redis_command(
+        CommandName.MODULE_LIST,
+        group=CommandGroup.SERVER,
+        response_callback=ModuleInfoCallback(),
+    )
+    async def module_list(self) -> Tuple[Dict[AnyStr, ValueT], ...]:
+        """
+        List all modules loaded by the server
+
+        :return: The loaded modules with each element represents a module
+        containing a mapping with ``name`` and ``ver``
+        """
+        return await self.execute_command(CommandName.MODULE_LIST)
+
+    @versionadded(version="3.1.2")
+    @redis_command(CommandName.MODULE_LOAD, group=CommandGroup.SERVER)
+    async def module_load(
+        self, path: Union[str, bytes], *args: Union[str, bytes, int, float]
+    ) -> bool:
+        """
+        Load a module
+        """
+        pieces: CommandArgList = [path]
+        if args:
+            pieces.extend(args)
+
+        return await self.execute_command(CommandName.MODULE_LOAD, *pieces)
+
+    @versionadded(version="3.1.2")
+    @redis_command(CommandName.MODULE_UNLOAD, group=CommandGroup.SERVER)
+    async def module_unload(self, name: Union[str, bytes]) -> bool:
+        """
+        Unload a module
+        """
+
+        return await self.execute_command(CommandName.MODULE_UNLOAD, name)
