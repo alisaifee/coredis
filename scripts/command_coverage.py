@@ -1987,9 +1987,8 @@ class PrefixToken(bytes, enum.Enum):
 
     result = t.render(pure_tokens=pure_tokens, prefix_tokens=prefix_tokens)
     open(path, "w").write(result)
-    print(
-        format_file_in_place(Path(path), fast=False, mode=FileMode()),
-        write_back=WriteBack.YES,
+    format_file_in_place(
+        Path(path), fast=False, mode=FileMode(), write_back=WriteBack.YES
     )
     print(f"Generated token enum at {path}")
 
