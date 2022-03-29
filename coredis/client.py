@@ -13,6 +13,7 @@ from coredis.commands import CommandGroup, CommandName, keys_from_command, redis
 from coredis.commands.core import CoreCommands
 from coredis.commands.function import Library
 from coredis.commands.monitor import Monitor
+from coredis.commands.script import Script
 from coredis.commands.sentinel import SentinelCommands
 from coredis.connection import Connection, RedisSSLContext, UnixDomainSocketConnection
 from coredis.exceptions import (
@@ -57,6 +58,7 @@ from coredis.typing import (
 )
 from coredis.utils import (
     NodeFlag,
+    b,
     blocked_command,
     clusterdown_wrapper,
     deprecated,
@@ -279,7 +281,11 @@ class ResponseParser:
     async def parse_response(
         self, connection: Connection, command_name: bytes, **options: Any
     ) -> Any:
-        """Parses a response from the Redis server"""
+        """
+        Parses a response from the Redis server
+
+        :meta private:
+        """
         response = await connection.read_response(decode=options.get("decode"))
         if command_name in self.response_callbacks:
             callback = self.response_callbacks[command_name]
@@ -382,6 +388,16 @@ class AbstractRedis(
             for item in data:
                 yield item
 
+    def register_script(self, script: ValueT) -> Script:
+        """
+        Registers a Lua :paramref:`script`
+
+        :return: A :class:`coredis.commands.script.Script` instance that is
+         callable and hides the complexity of dealing with scripts, keys, and
+         shas.
+        """
+        return Script(self, script)  # type: ignore
+
     @versionadded(version="3.1.0")
     async def register_library(
         self,
@@ -427,7 +443,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
     )
     async def rename(self, key: KeyT, newkey: KeyT) -> bool:
         """
-        Rename key ``src`` to ``dst``
+        Rename key :paramref:`key` to :paramref:`newkey`
 
         .. admonition:: Cluster note
 
@@ -458,7 +474,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
     @redis_command(CommandName.DEL, group=CommandGroup.GENERIC)
     async def delete(self, keys: Iterable[KeyT]) -> int:
         """
-        "Delete one or more keys specified by ``keys``"
+        "Delete one or more keys specified by :paramref:`keys`"
         """
         count = 0
 
@@ -474,9 +490,10 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
     )
     async def renamenx(self, key: KeyT, newkey: KeyT) -> bool:
         """
-        Rekeys key ``key`` to ``newkey`` if ``newkey`` doesn't already exist
+        Rekeys key paramref:`key` to :paramref:`newkey` if
+        :paramref:`newkey` doesn't already exist
 
-        :return: False when ``newkey`` already exists.
+        :return: False when :paramref:`newkey` already exists.
         """
 
         if not await self.exists([newkey]) == 1:
@@ -506,8 +523,8 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
 
         :return: sorted elements.
 
-         When the ``store`` option is specified the command returns the number of sorted elements
-         in the destination list.
+         When the :paramref:`store` option is specified the command returns
+         the number of sorted elements in the destination list.
         """
 
         try:
@@ -633,7 +650,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
     @redis_command(CommandName.MGET, readonly=True, group=CommandGroup.STRING)
     async def mget(self, keys: Iterable[KeyT]) -> Tuple[Optional[AnyStr], ...]:
         """
-        Returns values ordered identically to ``keys``
+        Returns values ordered identically to :paramref:`keys`
 
         .. admonition:: Cluster note
 
@@ -701,7 +718,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
     )
     async def sdiff(self, keys: Iterable[KeyT]) -> Set[AnyStr]:
         """
-        Returns the difference of sets specified by ``keys``
+        Returns the difference of sets specified by :paramref:`keys`
 
         .. admonition:: Cluster note
 
@@ -722,8 +739,8 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
     )
     async def sdiffstore(self, keys: Iterable[KeyT], destination: KeyT) -> int:
         """
-        Stores the difference of sets specified by ``keys`` into a new
-        set named ``destination``.  Returns the number of keys in the new set.
+        Stores the difference of sets specified by :paramref:`keys` into a new
+        set named :paramref:`destination`.  Returns the number of keys in the new set.
         Overwrites dest key if it exists.
 
         .. admonition:: Cluster note
@@ -746,7 +763,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
     )
     async def sinter(self, keys: Iterable[KeyT]) -> Set[AnyStr]:
         """
-        Returns the intersection of sets specified by ``keys``
+        Returns the intersection of sets specified by :paramref:`keys`
 
         .. admonition:: Cluster note
 
@@ -767,8 +784,8 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
     )
     async def sinterstore(self, keys: Iterable[KeyT], destination: KeyT) -> int:
         """
-        Stores the intersection of sets specified by ``keys`` into a new
-        set named ``destination``.  Returns the number of keys in the new set.
+        Stores the intersection of sets specified by :paramref:`keys` into a new
+        set named :paramref:`destination`.  Returns the number of keys in the new set.
 
         .. admonition:: Cluster note
 
@@ -791,7 +808,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
     )
     async def smove(self, source: KeyT, destination: KeyT, member: ValueT) -> bool:
         """
-        Moves ``member`` from set ``source`` to set ``destination`` atomically
+        Moves :paramref:`member` from set :paramref:`source` to set :paramref:`destination`
 
         .. admonition:: Cluster note
 
@@ -815,7 +832,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
     )
     async def sunion(self, keys: Iterable[KeyT]) -> Set[AnyStr]:
         """
-        Returns the union of sets specified by ``keys``
+        Returns the union of sets specified by :paramref:`keys`
 
         .. admonition:: Cluster note
 
@@ -838,8 +855,8 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
     )
     async def sunionstore(self, keys: Iterable[KeyT], destination: KeyT) -> int:
         """
-        Stores the union of sets specified by ``keys`` into a new
-        set named ``destination``.  Returns the number of keys in the new set.
+        Stores the union of sets specified by :paramref:`keys` into a new
+        set named :paramref:`destination`.  Returns the number of keys in the new set.
 
         .. admonition:: Cluster note
 
@@ -862,12 +879,12 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         self, source: KeyT, destination: KeyT, timeout: Union[int, float]
     ) -> Optional[AnyStr]:
         """
-        Pops a value off the tail of ``source``, push it on the head of ``destination``
-        and then return it.
+        Pops a value off the tail of :paramref:`source`, push it on the head
+        of :paramref:`destination` and then return it.
 
-        This command blocks until a value is in ``source`` or until ``timeout``
-        seconds elapse, whichever is first. A ``timeout`` value of 0 blocks
-        forever.
+        This command blocks until a value is in :paramref:`source` or until
+        :paramref:`timeout` seconds elapse, whichever is first. A :paramref:`timeout`
+        value of 0 blocks forever.
 
         .. admonition:: Cluster note
 
@@ -894,12 +911,12 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
     )
     async def rpoplpush(self, source: KeyT, destination: KeyT) -> Optional[AnyStr]:
         """
-        RPOP a value off of the ``source`` list and atomically LPUSH it
-        on to the ``destination`` list.  Returns the value.
+        RPOP a value off of the :paramref:`source` list and atomically LPUSH it
+        on to the :paramref:`destination` list.  Returns the value.
 
         .. admonition:: Cluster note
 
-           Calls rpop() then send the result into lpush()
+           Calls :meth:`rpop` then send the result into :meth:`lpush`
 
            **Operation is no longer atomic**
         """
@@ -946,7 +963,7 @@ class Redis(
         client_name: Optional[str] = ...,
         protocol_version: Literal[2, 3] = 2,
         verify_version: bool = ...,
-        **kwargs,
+        **_,
     ):
         ...
 
@@ -978,7 +995,7 @@ class Redis(
         client_name: Optional[str] = ...,
         protocol_version: Literal[2, 3] = 2,
         verify_version: bool = ...,
-        **kwargs,
+        **_,
     ):
         ...
 
@@ -1009,8 +1026,11 @@ class Redis(
         client_name: Optional[str] = None,
         protocol_version: Literal[2, 3] = 2,
         verify_version: bool = False,
-        **kwargs,
+        **_,
     ):
+        """
+        Initializes a new Redis client
+        """
         super(Redis, self).__init__(
             host=host,
             port=port,
@@ -1108,11 +1128,16 @@ class Redis(
             return Redis[bytes](decode_responses=False, connection_pool=connection_pool)
 
     def set_response_callback(self, command, callback):
-        """Sets a custom Response Callback"""
+        """
+        Sets a custom Response Callback
+
+        :meta private:
+        """
         self.response_callbacks[command] = callback
 
-    # COMMAND EXECUTION AND PROTOCOL PARSING
-    async def execute_command(self, command: Any, *args: Any, **options: Any) -> Any:
+    async def execute_command(
+        self, command: StringT, *args: Any, **options: Any
+    ) -> Any:
         """Executes a command and returns a parsed response"""
         pool = self.connection_pool
         connection = await pool.get_connection()
@@ -1121,7 +1146,7 @@ class Redis(
         try:
             await connection.send_command(command, *args)
 
-            return await self.parse_response(connection, command, **options)
+            return await self.parse_response(connection, b(command), **options)
         except asyncio.CancelledError:
             # do not retry when coroutine is cancelled
             connection.disconnect()
@@ -1133,7 +1158,7 @@ class Redis(
                 raise
             await connection.send_command(command, *args)
 
-            return await self.parse_response(connection, command, **options)
+            return await self.parse_response(connection, b(command), **options)
         finally:
             pool.release(connection)
 
@@ -1160,7 +1185,7 @@ class Redis(
         the behavior of :class:`threading.Lock`.
 
         See: :class:`~coredis.lock.LuaLock` (the default :paramref:`lock_class`)
-         for more details.
+        for more details.
 
         :raises: :exc:`~coredis.LockError`
         """
@@ -1185,7 +1210,7 @@ class Redis(
             thread_local=thread_local,
         )
 
-    def pubsub(self, **kwargs):
+    def pubsub(self, ignore_subscribe_messages: bool = False, **kwargs):
         """
         Return a Publish/Subscribe object. With this object, you can
         subscribe to channels and listen for messages that get published to
@@ -1193,7 +1218,11 @@ class Redis(
         """
         from coredis.commands.pubsub import PubSub
 
-        return PubSub(self.connection_pool, **kwargs)
+        return PubSub(
+            self.connection_pool,
+            ignore_subscribe_messages=ignore_subscribe_messages,
+            **kwargs,
+        )
 
     async def pipeline(
         self,
@@ -1202,7 +1231,7 @@ class Redis(
     ) -> "coredis.commands.pipeline.Pipeline[AnyStr]":
         """
         Returns a new pipeline object that can queue multiple commands for
-        later execution. ``transaction`` indicates whether all commands
+        later execution. :paramref:`transaction` indicates whether all commands
         should be executed atomically. Apart from making a group of operations
         atomic, pipelines are useful for reducing the back-and-forth overhead
         between the client and server.
@@ -1543,21 +1572,20 @@ class RedisCluster(
             return None
 
     @clusterdown_wrapper
-    async def execute_command(self, *args, **kwargs):
+    async def execute_command(self, command: StringT, *args: Any, **kwargs: Any):
         """
         Sends a command to a node in the cluster
         """
         if not self.connection_pool.initialized:
             await self.connection_pool.initialize()
 
-        if not args:
+        if not command:
             raise RedisClusterException("Unable to determine command to use")
 
-        command = args[0]
-        node = self.determine_node(*args, **kwargs)
+        node = self.determine_node(command, *args, **kwargs)
 
         if node:
-            return await self.execute_command_on_nodes(node, *args, **kwargs)
+            return await self.execute_command_on_nodes(node, command, *args, **kwargs)
 
         # If set externally we must update it before calling any commands
 
@@ -1570,7 +1598,7 @@ class RedisCluster(
 
         try_random_node = False
         try_random_type = NodeFlag.ALL
-        slot = self._determine_slot(*args)
+        slot = self._determine_slot(command, *args)
         if not slot:
             try_random_node = True
             try_random_type = NodeFlag.PRIMARIES
@@ -1603,9 +1631,9 @@ class RedisCluster(
                     await self.parse_response(r, CommandName.ASKING, **kwargs)
                     asking = False
 
-                await r.send_command(*args)
+                await r.send_command(command, *args)
 
-                return await self.parse_response(r, command, **kwargs)
+                return await self.parse_response(r, b(command), **kwargs)
             except (RedisClusterException, BusyLoadingError, asyncio.CancelledError):
                 raise
             except (ConnectionError, TimeoutError):
@@ -1715,10 +1743,14 @@ class RedisCluster(
             thread_local=thread_local,
         )
 
-    def pubsub(self, **kwargs):
+    def pubsub(self, ignore_subscribe_messages: bool = False, **kwargs):
         from coredis.commands.pubsub import ClusterPubSub
 
-        return ClusterPubSub(self.connection_pool, **kwargs)
+        return ClusterPubSub(
+            self.connection_pool,
+            ignore_subscribe_messages=ignore_subscribe_messages,
+            **kwargs,
+        )
 
     async def pipeline(
         self,
@@ -1734,7 +1766,7 @@ class RedisCluster(
         - Transactions are only supported if all commands in the pipeline
           only access keys which route to the same node.
         - Each command in the pipeline should only access keys on the same node
-        - Transactions with ``watch`` are not supported.
+        - Transactions with :paramref:`watch` are not supported.
         """
         await self.connection_pool.initialize()
 
@@ -1755,10 +1787,10 @@ class RedisCluster(
         transaction while watching all keys specified in :paramref:`watches`.
         The :paramref:`func` callable should expect a single argument which is a
         :class:`~coredis.commands.pipeline.ClusterPipeline` instance retrieved
-         by calling :meth:`~coredis.RedisCluster.pipeline`
+        by calling :meth:`~coredis.RedisCluster.pipeline`
 
-        .. warning:: Cluster transactions can only be run with commands that route to the
-        same node.
+        .. warning:: Cluster transactions can only be run with commands that
+           route to the same node.
         """
         value_from_callable = kwargs.pop("value_from_callable", False)
         watch_delay = kwargs.pop("watch_delay", None)

@@ -42,7 +42,6 @@ from coredis.typing import (
 #: - ``user``: the authenticated username of the client
 #: - ``redir``: client id of current client tracking redirection
 #: - ``resp``: client RESP protocol version. Added in Redis 7.0
-
 ClientInfo = TypedDict(
     "ClientInfo",
     {

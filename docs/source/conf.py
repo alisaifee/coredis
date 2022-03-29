@@ -3,12 +3,15 @@
 
 import os
 import sys
+from typing import List, Tuple
+
 
 sys.path.insert(0, os.path.abspath("../../"))
 sys.path.insert(0, os.path.abspath("./"))
 
 import coredis
 import coredis.sentinel
+import coredis.commands
 import coredis.typing
 from numbers import Number
 
@@ -44,11 +47,11 @@ autodoc_default_options = {
     "members": True,
     "inherited-members": True,
     "inherit-docstrings": True,
-    "member-order": "bysource",
+    "member-order": "groupwise",
 }
 
 
-if '+' in coredis.__version__:
+if "+" in coredis.__version__:
     version, _ = release, part = coredis.__version__.split("+")
 else:
     version = coredis.__version__
@@ -68,7 +71,6 @@ except:
     pass
 
 add_module_names = False
-autoclass_content = "class"
 autodoc_typehints_format = "short"
 
 autosectionlabel_maxdepth = 2
@@ -103,3 +105,52 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "redis-py": ("https://redis-py.readthedocs.io/en/latest/", None),
 }
+
+from sphinx.ext.autodoc import ClassDocumenter, Documenter, _
+
+original_sort_members = Documenter.sort_members
+preferred_redis_command_group_order = [
+    coredis.commands.constants.CommandGroup.STRING,
+    coredis.commands.constants.CommandGroup.BITMAP,
+    coredis.commands.constants.CommandGroup.GENERIC,
+    coredis.commands.constants.CommandGroup.HASH,
+    coredis.commands.constants.CommandGroup.HYPERLOGLOG,
+    coredis.commands.constants.CommandGroup.LIST,
+    coredis.commands.constants.CommandGroup.SET,
+    coredis.commands.constants.CommandGroup.SORTED_SET,
+    coredis.commands.constants.CommandGroup.GEO,
+    coredis.commands.constants.CommandGroup.SCRIPTING,
+    coredis.commands.constants.CommandGroup.TRANSACTIONS,
+    coredis.commands.constants.CommandGroup.PUBSUB,
+    coredis.commands.constants.CommandGroup.STREAM,
+    coredis.commands.constants.CommandGroup.SERVER,
+    coredis.commands.constants.CommandGroup.CLUSTER,
+    coredis.commands.constants.CommandGroup.CONNECTION,
+]
+
+def custom_client_sort(documenter):
+    documenter[0].parse_name()
+    documenter[0].import_object()
+
+    obj = documenter[0].object
+    if hasattr(obj, "__coredis_command"):
+        cmd_details = obj.__coredis_command
+        if cmd_details.group:
+            return (preferred_redis_command_group_order.index(cmd_details.group), documenter[0].fullname)
+        else:
+            return (9999, documenter[0].fullname)
+    else:
+        return (-1.0/(1+documenter[0].member_order), documenter[0].fullname)
+
+def sort_members(
+    self, documenters: List[Tuple["Documenter", bool]], order: str
+) -> List[Tuple["Documenter", bool]]:
+    if self.name == "Redis" or self.name == "RedisCluster":
+        documenters.sort(key=custom_client_sort)
+        return documenters
+    else:
+        return original_sort_members(self, documenters, order)
+
+
+ClassDocumenter.get_overloaded_signatures = lambda *_: []
+Documenter.sort_members = sort_members

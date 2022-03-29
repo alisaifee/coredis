@@ -13,7 +13,7 @@ from coredis.exceptions import RedisClusterException
 from coredis.pool import ClusterConnectionPool, ConnectionPool
 
 
-class DummyConnection:
+class DummyConnection(ClusterConnection):
     description_format = "DummyConnection<>"
 
     def __init__(self, host="localhost", port=7000, socket_timeout=None, **kwargs):

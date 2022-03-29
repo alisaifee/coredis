@@ -1,7 +1,7 @@
 import hashlib
 
 from coredis.exceptions import NoScriptError
-from coredis.typing import Iterable, Optional, SupportsScript
+from coredis.typing import Iterable, Optional, StringT, SupportsScript
 from coredis.utils import b
 
 
@@ -13,8 +13,11 @@ class Script:
     def __init__(
         self,
         registered_client: SupportsScript,
-        script,
+        script: StringT,
     ):
+        """
+        :param script: The lua script that will be used by :meth:`execute`
+        """
         self.registered_client = registered_client
         self.script = script
         self.sha = hashlib.sha1(b(script)).hexdigest()
@@ -25,7 +28,9 @@ class Script:
         args: Optional[Iterable] = None,
         client: Optional[SupportsScript] = None,
     ):
-        """Executes the script, passing any required ``args``"""
+        """
+        Executes the script registered in :paramref:`Script.script`
+        """
         from coredis.commands.pipeline import Pipeline
 
         if client is None:

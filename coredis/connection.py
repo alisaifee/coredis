@@ -34,6 +34,7 @@ from coredis.exceptions import (
     TryAgainError,
     UnknownCommandError,
 )
+from coredis.typing import ValueT
 from coredis.utils import b, nativestr
 
 try:
@@ -679,7 +680,7 @@ class BaseConnection:
             else:
                 raise
 
-    async def send_command(self, *args):
+    async def send_command(self, *args: ValueT):
         if not self.is_connected:
             await self.connect()
         await self.send_packed_command(self.pack_command(*args))
@@ -720,7 +721,7 @@ class BaseConnection:
         # arguments to be sent separately, so split the first argument
         # manually. All of these arguements get wrapped in the Token class
         # to prevent them from being encoded.
-        command = args[0]
+        command = b(args[0])
         if b" " in command:
             args = tuple([s for s in command.split()]) + args[1:]
         else:
@@ -906,6 +907,8 @@ class ClusterConnection(Connection):
         """
         Initialize the connection, authenticate and select a database and send READONLY if it is
         set during object initialization.
+
+        :meta private:
         """
 
         if self.db:

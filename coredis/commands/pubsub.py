@@ -29,7 +29,7 @@ class PubSub:
     def __init__(
         self,
         connection_pool: "coredis.pool.ConnectionPool",
-        ignore_subscribe_messages=False,
+        ignore_subscribe_messages: bool = False,
     ):
         self.connection_pool = connection_pool
         self.ignore_subscribe_messages = ignore_subscribe_messages

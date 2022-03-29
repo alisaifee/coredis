@@ -8,11 +8,13 @@ Redis
 -----
 .. autoclass:: Redis
    :class-doc-from: both
+   :inherited-members:
 
 Cluster
 -------
 .. autoclass:: RedisCluster
    :class-doc-from: both
+   :inherited-members:
 
 
 Sentinel
@@ -20,35 +22,88 @@ Sentinel
 .. currentmodule:: coredis.sentinel
 .. autoclass:: Sentinel
    :class-doc-from: both
+   :inherited-members:
 
 Connection Classes
 ^^^^^^^^^^^^^^^^^^
 .. currentmodule:: coredis
+
+All connection classes derive from the same base-class:
+
+.. autoclass:: BaseConnection
+   :class-doc-from: both
+
+TCP Connection
+--------------
+
 .. autoclass:: Connection
    :class-doc-from: both
+   :show-inheritance:
+   :inherited-members:
+
+Unix Domain Socket Connection
+-----------------------------
 .. autoclass:: UnixDomainSocketConnection
    :class-doc-from: both
+   :show-inheritance:
+   :inherited-members:
+
+Cluster TCP Connection
+----------------------
 .. autoclass:: ClusterConnection
    :class-doc-from: both
+   :show-inheritance:
+   :inherited-members:
+
+Sentinel Connection
+-------------------
+.. currentmodule:: coredis.sentinel
+
+.. autoclass:: SentinelManagedConnection
+   :class-doc-from: both
+   :show-inheritance:
+   :inherited-members:
+
+.. currentmodule:: coredis
 
 Connection Pools
 ^^^^^^^^^^^^^^^^
+Connection Pool
+---------------
 .. autoclass:: ConnectionPool
    :class-doc-from: both
+
+Blocking Connection Pool
+------------------------
 .. autoclass:: BlockingConnectionPool
    :class-doc-from: both
+   :show-inheritance:
+   :inherited-members:
 
-Cluster
--------
+Cluster Connection Pool
+-----------------------
 .. autoclass:: ClusterConnectionPool
    :class-doc-from: both
+   :show-inheritance:
+   :inherited-members:
 
+Sentinel Connection Pool
+------------------------
 .. currentmodule:: coredis.sentinel
+
 .. autoclass:: SentinelConnectionPool
    :class-doc-from: both
+   :show-inheritance:
+   :inherited-members:
 
-Command Builders
+Command Wrappers
 ^^^^^^^^^^^^^^^^
+
+Certain commands and/or concepts in redis cannot be simply
+accomplished by calling the pass through APIs and require some state
+management. The following wrappers provide an abstraction layer to
+simplify operations.
+
 
 BitField Operations
 -------------------
@@ -94,6 +149,10 @@ Monitor
 
 Response Types
 ^^^^^^^^^^^^^^
+In most cases the command API returns native python types as they are described
+in the redis specification. In certain cases these are "lightly" typed using
+:class:`~typing.NamedTuple` or :class:`~typing.TypedDict` for ease of documentation.
+
 .. automodule:: coredis.response.types
    :no-inherited-members:
    :show-inheritance:
@@ -106,9 +165,6 @@ Utility Classes
 
 Enums
 -----
-.. autoclass:: NodeFlag
-   :no-inherited-members:
-   :show-inheritance:
 .. autoclass:: PureToken
    :no-inherited-members:
    :show-inheritance:

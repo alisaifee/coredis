@@ -1,6 +1,5 @@
 import os
 import random
-import weakref
 from typing import overload
 
 from coredis import Redis
@@ -15,13 +14,13 @@ from coredis.exceptions import (
     TimeoutError,
 )
 from coredis.pool import ConnectionPool
-from coredis.typing import AnyStr, Generic, Iterable, Literal, Tuple, Type
-from coredis.utils import deprecated, iteritems
+from coredis.typing import AnyStr, Generic, Iterable, Literal, StringT, Tuple, Type
+from coredis.utils import deprecated, iteritems, nativestr
 
 
 class SentinelManagedConnection(Connection):
-    def __init__(self, **kwargs):
-        self.connection_pool = kwargs.pop("connection_pool")
+    def __init__(self, connection_pool: "SentinelConnectionPool", **kwargs):
+        self.connection_pool = connection_pool
         super(SentinelManagedConnection, self).__init__(**kwargs)
 
     def __repr__(self):
@@ -67,7 +66,7 @@ class SentinelManagedConnection(Connection):
                 # calling disconnect will force the connection to re-query
                 # sentinel during the next connect() attempt.
                 self.disconnect()
-                raise ConnectionError("The previous master is now a slave")
+                raise ConnectionError("The previous master is now a replica")
             raise
 
 
@@ -75,19 +74,27 @@ class SentinelConnectionPool(ConnectionPool):
     """
     Sentinel backed connection pool.
 
-    If ``check_connection`` flag is set to True, SentinelManagedConnection
-    sends a PING command right after establishing the connection.
+    If :paramref:`check_connection` is ``True``,
+    :class:`~coredis.sentinel.SentinelManagedConnection`
+    sends a ``PING`` command right after establishing the connection.
     """
 
-    def __init__(self, service_name, sentinel_manager, **kwargs):
+    def __init__(
+        self,
+        service_name: StringT,
+        sentinel_manager: "Sentinel",
+        is_master: bool = True,
+        check_connection: bool = True,
+        **kwargs
+    ):
+        self.is_master = is_master
+        self.check_connection = check_connection
         kwargs["connection_class"] = kwargs.get(
             "connection_class", SentinelManagedConnection
         )
-        self.is_master = kwargs.pop("is_master", True)
-        self.check_connection = kwargs.pop("check_connection", False)
         super(SentinelConnectionPool, self).__init__(**kwargs)
-        self.connection_kwargs["connection_pool"] = weakref.proxy(self)
-        self.service_name = service_name
+        self.connection_kwargs["connection_pool"] = self
+        self.service_name = nativestr(service_name)
         self.sentinel_manager = sentinel_manager
 
     def __repr__(self):
@@ -113,7 +120,7 @@ class SentinelConnectionPool(ConnectionPool):
         return master_address
 
     async def rotate_replicas(self):
-        """Round-robin slave balancer"""
+        """Round-robin replicas balancer"""
         slaves = await self.sentinel_manager.discover_slaves(self.service_name)
         slave_address = list()
         if slaves:
@@ -203,7 +210,7 @@ class Sentinel(Generic[AnyStr]):
         :param sentinel_kwargs: is a dictionary of connection arguments used when
          connecting to sentinel instances. Any argument that can be passed to
          a normal Redis connection can be specified here. If :paramref:`sentinel_kwargs` is
-         not specified, any stream_timeout and socket_keepalive options specified
+         not specified, any ``stream_timeout`` and ``socket_keepalive`` options specified
          in :paramref:`connection_kwargs` will be used.
         :param connection_kwargs: are keyword arguments that will be used when
          establishing a connection to a Redis server.
@@ -259,7 +266,7 @@ class Sentinel(Generic[AnyStr]):
     async def discover_primary(self, service_name):
         """
         Asks sentinel servers for the Redis master's address corresponding
-        to the service labeled ``service_name``.
+        to the service labeled :paramref:`service_name`.
 
         :return: A pair (address, port) or raises MasterNotFoundError if no
          master is found.
@@ -289,7 +296,7 @@ class Sentinel(Generic[AnyStr]):
         return replicas_alive
 
     async def discover_replicas(self, service_name):
-        """Returns a list of alive slaves for service ``service_name``"""
+        """Returns a list of alive slaves for service :paramref:`service_name`"""
         for sentinel in self.sentinels:
             try:
                 replicas = await sentinel.sentinel_replicas(service_name)
@@ -308,22 +315,22 @@ class Sentinel(Generic[AnyStr]):
         **kwargs
     ) -> Redis[AnyStr]:
         """
-        Returns a redis client instance for the ``service_name`` master.
+        Returns a redis client instance for the :paramref:`service_name` master.
 
-        A SentinelConnectionPool class is used to retrive the master's
-        address before establishing a new connection.
+        A :class:`coredis.sentinel.SentinelConnectionPool` class is used to
+        retrive the master's address before establishing a new connection.
 
         NOTE: If the master's address has changed, any cached connections to
         the old master are closed.
 
-        By default clients will be a redis.Redis instance. Specify a
-        different class to the ``redis_class`` argument if you desire
+        By default clients will be a :class:`~coredis.Redis` instances.
+        Specify a different class to the :paramref:`redis_class` argument if you desire
         something different.
 
-        The ``connection_pool_class`` specifies the connection pool to use.
-        The SentinelConnectionPool will be used by default.
+        The :paramref:`connection_pool_class` specifies the connection pool to use.
+        The :class:`~coredis.sentinel.SentinelConnectionPool` will be used by default.
 
-        All other keyword arguments are merged with any connection_kwargs
+        All other keyword arguments are merged with any :paramref:`Sentinel.connection_kwargs`
         passed to this class and passed to the connection pool as keyword
         arguments to be used to initialize Redis connections.
         """
@@ -344,19 +351,19 @@ class Sentinel(Generic[AnyStr]):
         **kwargs
     ) -> Redis[AnyStr]:
         """
-        Returns redis client instance for the ``service_name`` slave(s).
+        Returns redis client instance for the :paramref:`service_name` slave(s).
 
         A SentinelConnectionPool class is used to retrive the slave's
         address before establishing a new connection.
 
         By default clients will be a redis.Redis instance. Specify a
-        different class to the ``redis_class`` argument if you desire
+        different class to the :paramref:`redis_class` argument if you desire
         something different.
 
-        The ``connection_pool_class`` specifies the connection pool to use.
+        The :paramref:`connection_pool_class` specifies the connection pool to use.
         The SentinelConnectionPool will be used by default.
 
-        All other keyword arguments are merged with any connection_kwargs
+        All other keyword arguments are merged with any :paramref:`Sentinel.connection_kwargs`
         passed to this class and passed to the connection pool as keyword
         arguments to be used to initialize Redis connections.
         """
@@ -369,11 +376,11 @@ class Sentinel(Generic[AnyStr]):
             )
         )
 
-    @deprecated(version="3.1.0", reason="Use discover_primaries() instead")
+    @deprecated(version="3.1.0", reason="Use :meth:`discover_primaries()` instead")
     async def discover_master(self, *a, **k):
         return await self.discover_primary(*a, **k)
 
-    @deprecated(version="3.1.0", reason="Use discover_replicas() instead")
+    @deprecated(version="3.1.0", reason="Use :meth:`discover_replicas()` instead")
     async def discover_slaves(self, *a, **k):
         return await self.discover_replicas(*a, **k)
 

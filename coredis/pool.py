@@ -7,7 +7,7 @@ import threading
 import time
 import warnings
 from itertools import chain
-from typing import Any, Callable, Dict, Iterable, Optional, Set, Type, TypeVar
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Type, TypeVar
 from urllib.parse import parse_qs, unquote, urlparse
 
 from coredis.connection import (
@@ -42,7 +42,7 @@ URL_QUERY_ARGUMENT_PARSERS: Dict[str, Callable] = {
     "reader_read_size": int,
 }
 
-_CT = TypeVar("_CT", bound="ConnectionPool")
+_CPT = TypeVar("_CPT", bound="ConnectionPool")
 
 
 class ConnectionPool:
@@ -52,12 +52,12 @@ class ConnectionPool:
 
     @classmethod
     def from_url(
-        cls: Type[_CT],
+        cls: Type[_CPT],
         url: str,
         db: Optional[int] = None,
         decode_components=False,
         **kwargs: Any
-    ) -> _CT:
+    ) -> _CPT:
         """
         Returns a connection pool configured from the given URL.
 
@@ -69,10 +69,10 @@ class ConnectionPool:
 
         Three URL schemes are supported:
 
-        - ``redis://`` <http://www.iana.org/assignments/uri-schemes/prov/redis>`_ creates a
-          normal TCP socket connection
-        - ``rediss://`` <http://www.iana.org/assignments/uri-schemes/prov/rediss>`_ creates a
-          SSL wrapped TCP socket connection
+        - `redis:// <http://www.iana.org/assignments/uri-schemes/prov/redis>`__
+          creates a normal TCP socket connection
+        - `rediss:// <http://www.iana.org/assignments/uri-schemes/prov/rediss>`__
+          creates a SSL wrapped TCP socket connection
         - ``unix://`` creates a Unix Domain Socket connection
 
         There are several ways to specify a database number. The parse function
@@ -84,7 +84,7 @@ class ConnectionPool:
 
         If none of these options are specified, db=0 is used.
 
-        The ``decode_components`` argument allows this function to work with
+        The :paramref:`decode_components` argument allows this function to work with
         percent-encoded URLs. If this argument is set to ``True`` all ``%xx``
         escapes will be replaced by their single-character equivalents after
         the URL has been parsed. This only applies to the ``hostname``,
@@ -95,8 +95,9 @@ class ConnectionPool:
         arguments ``connect_timeout`` and ``stream_timeout`` if supplied
         are parsed as float values. The arguments ``retry_on_timeout`` are
         parsed to boolean values that accept True/False, Yes/No values to indicate state.
-        Invalid types cause a ``UserWarning`` to be raised.
-        In the case of conflicting arguments, querystring arguments always win.
+        Invalid types cause a :exc:`UserWarning` to be raised.
+
+        .. note:: In the case of conflicting arguments, querystring arguments always win.
         """
         parsed_url = urlparse(url)
         qs = parsed_url.query
@@ -186,10 +187,10 @@ class ConnectionPool:
         **connection_kwargs: Any
     ):
         """
-        Creates a connection pool. If max_connections is set, then this
+        Creates a connection pool. If :paramref:`max_connections` is set, then this
         object raises :class:`~coredis.ConnectionError` when the pool's limit is reached.
 
-        By default, TCP connections are created connection_class is specified.
+        By default, TCP connections are created :paramref:`connection_class` is specified.
         Use :class:`~coredis.UnixDomainSocketConnection` for unix sockets.
 
         Any additional keyword arguments are passed to the constructor of
@@ -237,8 +238,8 @@ class ConnectionPool:
     def reset(self):
         self.pid = os.getpid()
         self._created_connections = 0
-        self._available_connections = []
-        self._in_use_connections = set()
+        self._available_connections: List[Connection] = []
+        self._in_use_connections: Set[Connection] = set()
         self._check_lock = threading.Lock()
 
     def _checkpid(self):
@@ -260,25 +261,15 @@ class ConnectionPool:
         except IndexError:
             if self._created_connections >= self.max_connections:
                 raise ConnectionError("Too many connections")
-            connection = self.make_connection()
+            connection = self._make_connection()
         self._in_use_connections.add(connection)
 
         return connection
 
-    def make_connection(self):
-        """Creates a new connection"""
-
-        self._created_connections += 1
-        connection = self.connection_class(**self.connection_kwargs)
-
-        if self.max_idle_time > self.idle_check_interval > 0:
-            # do not await the future
-            asyncio.ensure_future(self.disconnect_on_idle_time_exceeded(connection))
-
-        return connection
-
-    def release(self, connection):
-        """Releases the connection back to the pool"""
+    def release(self, connection: Connection):
+        """
+        Releases the :paramref:`connection` back to the pool
+        """
         self._checkpid()
 
         if connection.pid != self.pid:
@@ -300,6 +291,20 @@ class ConnectionPool:
             connection.disconnect()
             self._created_connections -= 1
 
+    def _make_connection(self) -> Connection:
+        """
+        Creates a new connection
+        """
+
+        self._created_connections += 1
+        connection = self.connection_class(**self.connection_kwargs)
+
+        if self.max_idle_time > self.idle_check_interval > 0:
+            # do not await the future
+            asyncio.ensure_future(self.disconnect_on_idle_time_exceeded(connection))
+
+        return connection
+
 
 class BlockingConnectionPool(ConnectionPool):
     """
@@ -309,22 +314,22 @@ class BlockingConnectionPool(ConnectionPool):
         >>> client = Redis(connection_pool=BlockingConnectionPool())
 
     It performs the same function as the default
-    :py:class:`~coredis.ConnectionPool` implementation, in that,
-    it maintains a pool of reusable connections that can be shared by
-    multiple redis clients.
+    :class:`~coredis.ConnectionPool`, in that, it maintains a pool of reusable
+    connections that can be shared by multiple redis clients.
+
     The difference is that, in the event that a client tries to get a
-    connection from the pool when all of connections are in use, rather than
-    raising a :py:class:`~coredis.ConnectionError` (as the default
-    :py:class:`~coredis.ConnectionPool` implementation does), it
-    makes the client wait ("blocks") for a specified number of seconds until
+    connection from the pool when all of the connections are in use, rather than
+    raising a :exc:`~coredis.ConnectionError` (as the default
+    :class:`~coredis.ConnectionPool` implementation does), it
+    makes the client blocks for a specified number of seconds until
     a connection becomes available.
 
-    Use ``max_connections`` to increase / decrease the pool size::
+    Use :paramref:`max_connections` to increase / decrease the pool size::
 
         >>> pool = BlockingConnectionPool(max_connections=10)
 
-    Use ``timeout`` to tell it either how many seconds to wait for a connection
-    to become available, or to block forever::
+    Use :paramref:`timeout` to tell it either how many seconds to wait for a
+    connection to become available, or to block forever::
 
         >>> # Block forever.
         >>> pool = BlockingConnectionPool(timeout=None)
@@ -393,7 +398,7 @@ class BlockingConnectionPool(ConnectionPool):
             raise ConnectionError("No connection available.")
 
         if connection is None:
-            connection = self.make_connection()
+            connection = self._make_connection()
 
         self._in_use_connections.add(connection)
 
@@ -442,7 +447,9 @@ class BlockingConnectionPool(ConnectionPool):
 
 
 class ClusterConnectionPool(ConnectionPool):
-    """Custom connection pool for rediscluster"""
+    """
+    Custom connection pool for :class:`~coredis.RedisCluster` client
+    """
 
     RedisClusterDefaultTimeout = None
     nodes: NodeManager
@@ -463,10 +470,10 @@ class ClusterConnectionPool(ConnectionPool):
         **connection_kwargs: Any
     ):
         """
-        :skip_full_coverage_check:
+        :param skip_full_coverage_check:
             Skips the check of cluster-require-full-coverage config, useful for clusters
             without the CONFIG command (like aws)
-        :nodemanager_follow_cluster:
+        :param nodemanager_follow_cluster:
             The node manager will during initialization try the last set of nodes that
             it was operating on. This will allow the client to drift along side the cluster
             if the cluster nodes move around alot.
@@ -591,7 +598,7 @@ class ClusterConnectionPool(ConnectionPool):
         try:
             connection = self._cluster_available_connections.get(node["name"], []).pop()
         except IndexError:
-            connection = self.make_connection(node)
+            connection = self._make_connection(node)
 
         if node["name"] not in self._cluster_in_use_connections:
             self._cluster_in_use_connections[node["name"]] = set()
@@ -600,7 +607,7 @@ class ClusterConnectionPool(ConnectionPool):
 
         return connection
 
-    def make_connection(self, node):
+    def _make_connection(self, node):
         """Creates a new connection"""
 
         if self.count_all_num_connections(node) >= self.max_connections:
@@ -628,8 +635,10 @@ class ClusterConnectionPool(ConnectionPool):
 
         return connection
 
-    def release(self, connection):
+    def release(self, connection: Connection):
         """Releases the connection back to the pool"""
+        assert isinstance(connection, ClusterConnection)
+
         self._checkpid()
 
         if connection.pid != self.pid:
@@ -730,7 +739,7 @@ class ClusterConnectionPool(ConnectionPool):
             # Try to get connection from existing pool
             connection = self._cluster_available_connections.get(node["name"], []).pop()
         except IndexError:
-            connection = self.make_connection(node)
+            connection = self._make_connection(node)
 
         self._cluster_in_use_connections.setdefault(node["name"], set()).add(connection)
 

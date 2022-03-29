@@ -99,7 +99,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
         response_callback=GetPrimaryCallback(),
     )
     async def sentinel_get_master_addr_by_name(self, service_name: ValueT):
-        """Returns a (host, port) pair for the given ``service_name``"""
+        """Returns a (host, port) pair for the given :paramref:`service_name`"""
 
         return await self.execute_command(
             CommandName.SENTINEL_GET_MASTER_ADDR_BY_NAME, service_name
@@ -152,7 +152,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     async def sentinel_sentinels(
         self, service_name: ValueT
     ) -> Tuple[Dict[AnyStr, Any], ...]:
-        """Returns a list of sentinels for ``service_name``"""
+        """Returns a list of sentinels for :paramref:`service_name`"""
 
         return await self.execute_command(CommandName.SENTINEL_SENTINELS, service_name)
 
@@ -172,7 +172,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     async def sentinel_slaves(
         self, service_name: ValueT
     ) -> Tuple[Dict[AnyStr, Any], ...]:
-        """Returns a list of slaves for ``service_name``"""
+        """Returns a list of slaves for paramref:`service_name`"""
 
         return await self.execute_command(CommandName.SENTINEL_SLAVES, service_name)
 
@@ -183,6 +183,6 @@ class SentinelCommands(CommandMixin[AnyStr]):
     async def sentinel_replicas(
         self, service_name: ValueT
     ) -> Tuple[Dict[AnyStr, Any], ...]:
-        """Returns a list of replicas for ``service_name``"""
+        """Returns a list of replicas for :paramref:`service_name`"""
 
         return await self.execute_command(CommandName.SENTINEL_REPLICAS, service_name)

@@ -12,6 +12,97 @@ are used to support response encoding.
 
 If ``decode_responses`` is set to ``True`` and no encoding is specified, client will use ``utf-8`` by default.
 
+Typing
+^^^^^^
+**coredis** provides type hints for the public API. These are tested using
+both :pypi:`mypy` and :pypi:`pyright`.
+
+The :class:`Redis` and :class:`RedisCluster` clients are Generic types constrained
+by :class:`AnyStr`. The constructors and ``from_url`` factory methods infer
+the appropriate specialization automatically.
+
+Without decoding:
+
+.. code-block::
+
+    client = coredis.Redis(
+        "localhost", 6379, db=0, decode_responses=False, encoding="utf-8"
+    )
+    await client.set("string", 1)
+    await client.lpush("list", [1])
+    await client.hset("hash", {"a": 1})
+    await client.sadd("set", ["a"])
+    await client.zadd("sset", {"a": 1.0, "b": 2.0})
+
+    str_response = await client.get("string")
+    list_response_ = await client.lrange("list", 0, 1)
+    hash_response = await client.hgetall("hash")
+    set_response = await client.smembers("set")
+    sorted_set_members_only_response = await client.zrange("sset", -1, 1)
+
+    reveal_locals()
+    # note: Revealed local types are:
+    # note:     client: coredis.client.Redis[builtins.bytes]
+    # note:     hash_response: builtins.dict*[builtins.bytes*, builtins.bytes*]
+    # note:     list_response_: builtins.list*[builtins.bytes*]
+    # note:     set_response: builtins.set*[builtins.bytes*]
+    # note:     sorted_set_members_only_response: builtins.tuple*[builtins.bytes*, ...]
+    # note:     str_response: builtins.bytes*
+
+With decoding:
+
+.. code-block::
+
+    client = coredis.Redis(
+        "localhost", 6379, db=0, decode_responses=True, encoding="utf-8"
+    )
+    await client.set("string", 1)
+    await client.lpush("list", [1])
+    await client.hset("hash", {"a": 1})
+    await client.sadd("set", ["a"])
+    await client.zadd("sset", {"a": 1.0, "b": 2.0})
+
+    str_response = await client.get("string")
+    list_response_ = await client.lrange("list", 0, 1)
+    hash_response = await client.hgetall("hash")
+    set_response = await client.smembers("set")
+    sorted_set_members_only_response = await client.zrange("sset", -1, 1)
+
+    reveal_locals()
+    # note: Revealed local types are:
+    # note:     client: coredis.client.Redis[builtins.str]
+    # note:     hash_response: builtins.dict*[builtins.str*, builtins.str*]
+    # note:     list_response_: builtins.list*[builtins.str*]
+    # note:     set_response: builtins.set*[builtins.str*]
+    # note:     sorted_set_members_only_response: builtins.tuple*[builtins.str*, ...]
+    # note:     str_response: builtins.str*
+
+=====================
+Runtime Type checking
+=====================
+
+.. danger:: Experimental feature
+
+**coredis** optionally wraps all command methods with :pypi:`beartype` decorators to help
+detect errors during testing (or if you are b(ea)rave enough, always).
+
+This can be enabled by installing :pypi:`beartype` and setting the :data:`COREDIS_RUNTIME_CHECKS`
+environment variable.
+
+As an example:
+
+.. code-block:: bash
+
+    $ COREDIS_RUNTIME_CHECKS=1 python -c "
+    import coredis
+    import asyncio
+    asyncio.new_event_loop().run_until_complete(coredis.Redis().set(1,1))
+    """
+    Traceback (most recent call last):
+      File "<@beartype(coredis.commands.core.CoreCommands.set) at 0x10c403130>", line 33, in set
+    beartype.roar.BeartypeCallHintParamViolation: @beartyped coroutine CoreCommands.set() parameter key=1 violates type hint typing.Union[str, bytes], as 1 not str or bytes.
+
+
 Connections
 ^^^^^^^^^^^
 
@@ -90,14 +181,14 @@ can be set to ``3``.
 LUA Scripting
 ^^^^^^^^^^^^^
 
-coredis supports the EVAL, EVALSHA, and SCRIPT commands. However, there are
+coredis supports the ``EVAL``, ``EVALSHA``, and ``SCRIPT`` commands. However, there are
 a number of edge cases that make these commands tedious to use in real world
-scenarios. Therefore, coredis exposes a Script object that makes scripting
-much easier to use.
+scenarios. Therefore, coredis exposes a :class:`~coredis.commands.script.Script`
+class that makes scripting much easier to use.
 
-To create a Script instance, use the `register_script` function on a client
-instance passing the LUA code as the first argument. `register_script` returns
-a Script instance that you can use throughout your code.
+To create a Script instance, use the :meth:`~coredis.Redis.register_script` function on a client
+instance passing the LUA code as the first argument. :meth:`coredis.Redis.register_script` returns
+a :class:`~coredis.commands.script.Script` instance that you can use throughout your code.
 
 The following trivial LUA script accepts two parameters: the name of a key and
 a multiplier value. The script fetches the value stored in the key, multiplies
@@ -112,8 +203,8 @@ it with the multiplier value and returns the result.
     return value * ARGV[1]"""
     multiply = r.register_script(lua)
 
-`multiply` is now a Script instance that is invoked by calling it like a
-function. Script instances accept the following optional arguments:
+`multiply` is now a :class:`~coredis.commands.script.Script` instance that is
+invoked by calling it like a function. Script instances accept the following optional arguments:
 
 * **keys**: A list of key names that the script will access. This becomes the
   KEYS list in LUA.
@@ -122,9 +213,6 @@ function. Script instances accept the following optional arguments:
   script. If client isn't specified, the client that intiially
   created the Script instance (the one that `register_script` was
   invoked from) will be used.
-
-Notice that the `Srcipt.__call__` is no longer useful(`async/await` can't be used in magic method),
-please use `Script.register` instead
 
 Continuing the example from above:
 
@@ -149,10 +237,10 @@ that points to a completely different Redis server.
     # 15
 
 The Script object ensures that the LUA script is loaded into Redis's script
-cache. In the event of a NOSCRIPT error, it will load the script and retry
+cache. In the event of a ``NOSCRIPT`` error, it will load the script and retry
 executing it.
 
-Script objects can also be used in pipelines. The pipeline instance should be
+Script instances can also be used in pipelines. The pipeline instance should be
 passed as the client argument when calling the script. Care is taken to ensure
 that the script is registered in Redis's script cache just prior to pipeline
 execution.
@@ -541,7 +629,7 @@ Cluster Lock
 ============
 
 :class:`~coredis.lock.ClusterLock` is supposed to solve distributed lock problem
-in redis cluster. Since high availability is provided by redis cluster using master-slave model,
+in redis cluster. Since high availability is provided by redis cluster using primary-replica model,
 the kind of lock aims to solve the fail-over problem referred in distributed lock
 post given by redis official. This implementation isGjjk
 
@@ -566,7 +654,7 @@ Quoting the documentation from the original author of :pypi:`aredis`:
 
     1. random token + SETNX + expire time to acquire a lock in cluster master node
 
-    2. if lock is acquired successfully then check the lock in slave nodes(may there be N slave nodes)
+    2. if lock is acquired successfully then check the lock in replica nodes(may there be N replica nodes)
     using READONLY mode, if N/2+1 is synced successfully then break the check and return True,
     time used to check is also accounted into expire time
 
@@ -574,10 +662,11 @@ Quoting the documentation from the original author of :pypi:`aredis`:
     with the client which has the randomly generated token,
     if the client crashes, then wait until the lock key expired.
 
-    Actually you can regard the algorithm as a master-slave version of redlock,
+    Actually you can regard the algorithm as a primary-replica version of redlock,
     which is designed for multi master nodes.
 
     Please read these article below before using this cluster lock in your app.
+
     - https://redis.io/topics/distlock
     - http://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html
     - http://antirez.com/news/101
@@ -599,96 +688,5 @@ Quoting the documentation from the original author of :pypi:`aredis`:
         except LockError as err:
             print(err)
             # coredis.exceptions.LockError: cannot release an unlocked lock
-
-
-Typing
-^^^^^^
-**coredis** provides type hints for the public API. These are tested using
-both :pypi:`mypy` and :pypi:`pyright`.
-
-The :class:`Redis` and :class:`RedisCluster` clients are Generic types constrained
-by :class:`AnyStr`. The constructors and ``from_url`` factory methods infer
-the appropriate specialization automatically.
-
-Without decoding:
-
-.. code-block::
-
-    client = coredis.Redis(
-        "localhost", 6379, db=0, decode_responses=False, encoding="utf-8"
-    )
-    await client.set("string", 1)
-    await client.lpush("list", [1])
-    await client.hset("hash", {"a": 1})
-    await client.sadd("set", ["a"])
-    await client.zadd("sset", {"a": 1.0, "b": 2.0})
-
-    str_response = await client.get("string")
-    list_response_ = await client.lrange("list", 0, 1)
-    hash_response = await client.hgetall("hash")
-    set_response = await client.smembers("set")
-    sorted_set_members_only_response = await client.zrange("sset", -1, 1)
-
-    reveal_locals()
-    # note: Revealed local types are:
-    # note:     client: coredis.client.Redis[builtins.bytes]
-    # note:     hash_response: builtins.dict*[builtins.bytes*, builtins.bytes*]
-    # note:     list_response_: builtins.list*[builtins.bytes*]
-    # note:     set_response: builtins.set*[builtins.bytes*]
-    # note:     sorted_set_members_only_response: builtins.tuple*[builtins.bytes*, ...]
-    # note:     str_response: builtins.bytes*
-
-With decoding:
-
-.. code-block::
-
-    client = coredis.Redis(
-        "localhost", 6379, db=0, decode_responses=True, encoding="utf-8"
-    )
-    await client.set("string", 1)
-    await client.lpush("list", [1])
-    await client.hset("hash", {"a": 1})
-    await client.sadd("set", ["a"])
-    await client.zadd("sset", {"a": 1.0, "b": 2.0})
-
-    str_response = await client.get("string")
-    list_response_ = await client.lrange("list", 0, 1)
-    hash_response = await client.hgetall("hash")
-    set_response = await client.smembers("set")
-    sorted_set_members_only_response = await client.zrange("sset", -1, 1)
-
-    reveal_locals()
-    # note: Revealed local types are:
-    # note:     client: coredis.client.Redis[builtins.str]
-    # note:     hash_response: builtins.dict*[builtins.str*, builtins.str*]
-    # note:     list_response_: builtins.list*[builtins.str*]
-    # note:     set_response: builtins.set*[builtins.str*]
-    # note:     sorted_set_members_only_response: builtins.tuple*[builtins.str*, ...]
-    # note:     str_response: builtins.str*
-
-=====================
-Runtime Type checking
-=====================
-
-.. danger:: Experimental feature
-
-**coredis** optionally wraps all command methods with :pypi:`beartype` decorators to help
-detect errors during testing (or if you are b(ea)rave enough, always).
-
-This can be enabled by installing :pypi:`beartype` and setting the :data:`COREDIS_RUNTIME_CHECKS`
-environment variable.
-
-As an example:
-
-.. code-block:: bash
-
-    $ COREDIS_RUNTIME_CHECKS=1 python -c "
-    import coredis
-    import asyncio
-    asyncio.new_event_loop().run_until_complete(coredis.Redis().set(1,1))
-    """
-    Traceback (most recent call last):
-      File "<@beartype(coredis.commands.core.CoreCommands.set) at 0x10c403130>", line 33, in set
-    beartype.roar.BeartypeCallHintParamViolation: @beartyped coroutine CoreCommands.set() parameter key=1 violates type hint typing.Union[str, bytes], as 1 not str or bytes.
 
 

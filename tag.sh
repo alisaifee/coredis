@@ -9,6 +9,9 @@ while [ "$1" != "" ]; do
 done
 
 rm -rf build dist
+# ensure linting passes before proceeding
+make lint-fix
+make lint
 last_tag=$(git tag | sort -nr | head -n 1)
 echo current version:$(python setup.py --version), current tag: $last_tag
 read -p "new version:" new_version

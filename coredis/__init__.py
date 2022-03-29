@@ -7,7 +7,12 @@ cluster & sentinel.
 """
 
 from coredis.client import Redis, RedisCluster
-from coredis.connection import ClusterConnection, Connection, UnixDomainSocketConnection
+from coredis.connection import (
+    BaseConnection,
+    ClusterConnection,
+    Connection,
+    UnixDomainSocketConnection,
+)
 from coredis.exceptions import (
     AskError,
     AuthenticationError,
@@ -52,6 +57,7 @@ from . import _version
 __all__ = [
     "Redis",
     "RedisCluster",
+    "BaseConnection",
     "Connection",
     "UnixDomainSocketConnection",
     "ClusterConnection",

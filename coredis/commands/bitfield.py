@@ -22,8 +22,9 @@ class BitFieldOperation:
     The supported types are up to 64 bits for signed integers,
     and up to 63 bits for unsigned integers.
 
-    Offset can be num prefixed with `#` character or num directly,
-    for command detail you should see: https://redis.io/commands/bitfield
+    Offset can be num prefixed with `#` character or num directly.
+
+    Redis command documentation: `BITFIELD <https://redios.io/commands/bitfield>`__
     """
 
     def __init__(self, redis_client, key, readonly=False):

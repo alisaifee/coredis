@@ -56,6 +56,7 @@ class ClusterCommandConfig:
 
 class CommandDetails(NamedTuple):
     command: bytes
+    group: Optional[CommandGroup]
     readonly: bool
     version_introduced: Optional[version.Version]
     version_deprecated: Optional[version.Version]
@@ -87,6 +88,7 @@ def redis_command(
 ]:
     command_details = CommandDetails(
         command_name,
+        group,
         readonly,
         version.Version(version_introduced) if version_introduced else None,
         version.Version(version_deprecated) if version_deprecated else None,
