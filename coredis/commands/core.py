@@ -1035,7 +1035,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         arguments={"username": {"version_introduced": "6.0.0"}},
         response_callback=SimpleStringCallback(),
     )
-    async def auth(self, password: ValueT, username: Optional[ValueT] = None) -> bool:
+    async def auth(self, password: StringT, username: Optional[StringT] = None) -> bool:
         """
         Authenticate to the server
         """
@@ -1051,7 +1051,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ECHO,
         group=CommandGroup.CONNECTION,
     )
-    async def echo(self, message: ValueT) -> AnyStr:
+    async def echo(self, message: StringT) -> AnyStr:
         "Echo the string back from the server"
 
         return await self.execute_command(CommandName.ECHO, message)
@@ -1066,9 +1066,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def hello(
         self,
         protover: Optional[int] = None,
-        username: Optional[ValueT] = None,
-        password: Optional[ValueT] = None,
-        setname: Optional[ValueT] = None,
+        username: Optional[StringT] = None,
+        password: Optional[StringT] = None,
+        setname: Optional[StringT] = None,
     ) -> Dict[AnyStr, AnyStr]:
         """
         Handshake with Redis
@@ -1094,12 +1094,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.PING,
         group=CommandGroup.CONNECTION,
     )
-    async def ping(self, message: Optional[ValueT] = None) -> AnyStr:
+    async def ping(self, message: Optional[StringT] = None) -> AnyStr:
         """
         Ping the server
 
-        :return: ``PONG``, when no argument is provided.
-         the argument provided, when applicable.
+        :return: ``PONG``, when no argument is provided else the
+         :paramref:`message` provided
         """
         pieces: CommandArgList = []
 
@@ -1129,8 +1129,6 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def quit(self) -> bool:
         """
         Close the connection
-
-        :return: always OK.
         """
 
         return await self.execute_command(CommandName.QUIT)

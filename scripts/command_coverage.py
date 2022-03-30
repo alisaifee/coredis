@@ -199,7 +199,7 @@ REDIS_RETURN_OVERRIDES = {
     "LPOS": Optional[Union[int, List[int]]],
     "MEMORY STATS": Dict[AnyStr, Union[AnyStr, int, float]],
     "MGET": Tuple[Optional[AnyStr], ...],
-    "MODULE LIST":  Tuple[Dict, ...],
+    "MODULE LIST": Tuple[Dict[AnyStr, ValueT], ...],
     "MONITOR": Monitor,
     "MSETNX": bool,
     "PFADD": bool,
@@ -1779,7 +1779,14 @@ def generate_compatibility_section(
                             )
                             if (
                                 src.find("@redis_command") >= 0
-                                and src.find(sanitized(method["name"]).upper()) >= 0
+                                and src.find(
+                                    method["name"]
+                                    .strip()
+                                    .upper()
+                                    .replace(" ", "_")
+                                    .replace("-", "_")
+                                )
+                                >= 0
                                 and command_details
                                 and command_details.readonly
                                 == method_details["readonly"]
