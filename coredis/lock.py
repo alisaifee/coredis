@@ -1,10 +1,10 @@
 import asyncio
 import contextvars
 import time as mod_time
-import typing
 import uuid
 import warnings
 from types import SimpleNamespace
+from typing import TYPE_CHECKING
 
 from coredis.commands import CommandName
 from coredis.commands.script import Script
@@ -14,7 +14,7 @@ from coredis.tokens import PureToken
 from coredis.typing import Optional, StringT, Union
 from coredis.utils import nativestr
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     import coredis.client
     import coredis.commands.pipeline
 
