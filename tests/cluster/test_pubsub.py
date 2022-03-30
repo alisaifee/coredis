@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # python std lib
-from __future__ import with_statement
+from __future__ import annotations, with_statement
 
 import asyncio
 import time

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from coredis.response.callbacks import SimpleCallback
 from coredis.typing import Any, Dict, Tuple
 from coredis.utils import flat_pairs_to_dict

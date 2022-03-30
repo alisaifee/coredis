@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from coredis.response.callbacks import SimpleCallback
 from coredis.response.types import Command
 from coredis.typing import Any, AnyStr, Dict, Set

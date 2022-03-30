@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from coredis.commands import ParametrizedCallback, SimpleCallback
 from coredis.response.types import (
     StreamEntry,

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import random
 from typing import overload
@@ -87,7 +89,7 @@ class SentinelConnectionPool(ConnectionPool):
         sentinel_manager: "Sentinel",
         is_master: bool = True,
         check_connection: bool = True,
-        **kwargs
+        **kwargs,
     ):
         self.is_master = is_master
         self.check_connection = check_connection
@@ -150,7 +152,7 @@ class SentinelConnectionPool(ConnectionPool):
                 check_connection=self.check_connection,
                 connection_class=self.connection_class,
                 max_connections=self.max_connections,
-                **self.connection_kwargs
+                **self.connection_kwargs,
             )
 
 
@@ -178,7 +180,7 @@ class Sentinel(Generic[AnyStr]):
         sentinel_kwargs=None,
         decode_responses: Literal[False] = ...,
         protocol_version: Literal[2, 3] = ...,
-        **connection_kwargs
+        **connection_kwargs,
     ):
         ...
 
@@ -190,7 +192,7 @@ class Sentinel(Generic[AnyStr]):
         sentinel_kwargs=None,
         decode_responses: Literal[True] = ...,
         protocol_version: Literal[2, 3] = ...,
-        **connection_kwargs
+        **connection_kwargs,
     ):
         ...
 
@@ -201,7 +203,7 @@ class Sentinel(Generic[AnyStr]):
         sentinel_kwargs=None,
         decode_responses: bool = False,
         protocol_version: Literal[2, 3] = 2,
-        **connection_kwargs
+        **connection_kwargs,
     ):
         """
         :param sentinels: is a list of sentinel nodes. Each node is represented by
@@ -314,7 +316,7 @@ class Sentinel(Generic[AnyStr]):
         service_name: str,
         redis_class=Redis,
         connection_pool_class: Type[SentinelConnectionPool] = SentinelConnectionPool,
-        **kwargs
+        **kwargs,
     ) -> Redis[AnyStr]:
         """
         Returns a redis client instance for the :paramref:`service_name` master.
@@ -350,7 +352,7 @@ class Sentinel(Generic[AnyStr]):
         service_name,
         redis_class=Redis,
         connection_pool_class=SentinelConnectionPool,
-        **kwargs
+        **kwargs,
     ) -> Redis[AnyStr]:
         """
         Returns redis client instance for the :paramref:`service_name` slave(s).

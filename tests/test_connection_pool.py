@@ -1,4 +1,4 @@
-from __future__ import with_statement
+from __future__ import annotations, with_statement
 
 import asyncio
 import os
@@ -41,7 +41,7 @@ class TestConnectionPool:
         pool = coredis.ConnectionPool(
             connection_class=connection_class,
             max_connections=max_connections,
-            **connection_kwargs
+            **connection_kwargs,
         )
 
         return pool
@@ -128,7 +128,7 @@ class TestBlockingConnectionPool:
             connection_class=connection_class,
             max_connections=max_connections,
             timeout=timeout,
-            **connection_kwargs
+            **connection_kwargs,
         )
 
         return pool

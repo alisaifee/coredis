@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from coredis.commands import ParametrizedCallback, SimpleCallback
 from coredis.typing import Any, Dict, List, Tuple, TypedDict, Union
 from coredis.utils import flat_pairs_to_dict, nativestr

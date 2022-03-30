@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import threading
 import weakref
@@ -46,7 +48,7 @@ class Monitor:
         assert client
         return client
 
-    def __aiter__(self) -> "Monitor":
+    def __aiter__(self) -> Monitor:
         return self
 
     async def __anext__(self) -> MonitorResult:

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import with_statement
+from __future__ import annotations, with_statement
 
 import asyncio
 import os
@@ -39,7 +39,7 @@ class TestConnectionPool:
             max_connections=max_connections,
             max_connections_per_node=max_connections_per_node,
             startup_nodes=[{"host": "127.0.0.1", "port": 7000}],
-            **connection_kwargs
+            **connection_kwargs,
         )
         await pool.initialize()
 
@@ -232,7 +232,7 @@ class TestReadOnlyConnectionPool:
             max_connections=max_connections,
             startup_nodes=startup_nodes,
             readonly=True,
-            **connection_kwargs
+            **connection_kwargs,
         )
         await pool.initialize()
 

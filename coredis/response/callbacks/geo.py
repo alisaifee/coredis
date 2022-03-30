@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from coredis.commands import ParametrizedCallback, SimpleCallback
 from coredis.response.types import GeoCoordinates, GeoSearchResult
 from coredis.typing import Any, List, Optional, Tuple, Union

@@ -1,5 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+from __future__ import annotations
+
 import asyncio
 import os
 import random
@@ -56,7 +58,7 @@ class ConnectionPool:
         url: str,
         db: Optional[int] = None,
         decode_components=False,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> _CPT:
         """
         Returns a connection pool configured from the given URL.
@@ -184,7 +186,7 @@ class ConnectionPool:
         max_connections: Optional[int] = None,
         max_idle_time: int = 0,
         idle_check_interval: int = 1,
-        **connection_kwargs: Any
+        **connection_kwargs: Any,
     ):
         """
         Creates a connection pool. If :paramref:`max_connections` is set, then this
@@ -346,7 +348,7 @@ class BlockingConnectionPool(ConnectionPool):
         timeout: int = 20,
         max_idle_time: int = 0,
         idle_check_interval: int = 1,
-        **connection_kwargs: Any
+        **connection_kwargs: Any,
     ):
 
         self.timeout = timeout
@@ -359,7 +361,7 @@ class BlockingConnectionPool(ConnectionPool):
             max_connections=max_connections,
             max_idle_time=max_idle_time,
             idle_check_interval=idle_check_interval,
-            **connection_kwargs
+            **connection_kwargs,
         )
 
     async def disconnect_on_idle_time_exceeded(self, connection):
@@ -467,7 +469,7 @@ class ClusterConnectionPool(ConnectionPool):
         readonly: bool = False,
         max_idle_time: int = 0,
         idle_check_interval: int = 1,
-        **connection_kwargs: Any
+        **connection_kwargs: Any,
     ):
         """
         :param skip_full_coverage_check:
@@ -503,7 +505,7 @@ class ClusterConnectionPool(ConnectionPool):
             skip_full_coverage_check=skip_full_coverage_check,
             max_connections=self.max_connections,
             nodemanager_follow_cluster=nodemanager_follow_cluster,
-            **connection_kwargs
+            **connection_kwargs,
         )
         self.initialized = False
 

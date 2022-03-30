@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from coredis.commands import ParametrizedCallback, SimpleCallback
 from coredis.response.types import ScoredMember, ScoredMembers
 from coredis.typing import Any, AnyStr, Optional, Tuple, Union
