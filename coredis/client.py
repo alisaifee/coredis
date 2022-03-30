@@ -75,7 +75,7 @@ if TYPE_CHECKING:
     import coredis.commands.pipeline
 
 CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE = """Custom implementations for redis
-cluster will be removed in version 3.2.0 and will be replaced with the implementations
+cluster will be removed in version 3.5.0 and will be replaced with the implementations
 in :class:`coredis.Redis`
 """
 
