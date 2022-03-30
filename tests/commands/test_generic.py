@@ -401,9 +401,9 @@ class TestGeneric:
         await client.set("c", "3")
         cursor, keys = await client.scan()
         assert cursor == 0
-        assert set(keys) == set(["a", "b", "c"])
+        assert set(keys) == {"a", "b", "c"}
         _, keys = await client.scan(match="a")
-        assert set(keys) == set(["a"])
+        assert set(keys) == {"a"}
 
     async def test_scan_iter(self, client):
         await client.set("a", "1")
@@ -412,6 +412,6 @@ class TestGeneric:
         keys = set()
         async for key in client.scan_iter():
             keys.add(key)
-        assert keys == set(["a", "b", "c"])
+        assert keys == {"a", "b", "c"}
         async for key in client.scan_iter(match="a"):
             assert key == "a"

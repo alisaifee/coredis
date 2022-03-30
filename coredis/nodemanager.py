@@ -70,8 +70,7 @@ class NodeManager:
                 return node
 
     def all_nodes(self):
-        for node in self.nodes.values():
-            yield node
+        yield from self.nodes.values()
 
     def all_primaries(self):
         for node in self.nodes.values():
@@ -196,10 +195,8 @@ class NodeManager:
                             )
                             if len(disagreements) > 5:
                                 raise RedisClusterException(
-                                    (
                                         "startup_nodes could not agree on a valid slots cache."
                                         f" {', '.join(disagreements)}"
-                                    )
                                 )
 
                 self.populate_startup_nodes()

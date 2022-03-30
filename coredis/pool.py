@@ -682,7 +682,7 @@ class ClusterConnectionPool(ConnectionPool):
         if self.max_connections_per_node:
             return self._created_connections_per_node.get(node["name"], 0)
 
-        return sum([i for i in self._created_connections_per_node.values()])
+        return sum(i for i in self._created_connections_per_node.values())
 
     def get_random_connection(self, primary=False):
         """Opens new connection to random redis server"""

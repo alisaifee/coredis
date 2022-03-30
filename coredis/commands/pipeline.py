@@ -822,7 +822,7 @@ class ClusterPipelineImpl(
         # collect all the commands we are allowed to retry.
         # (MOVED, ASK, or connection errors or timeout errors)
         attempt = sorted(
-            [c for c in attempt if isinstance(c.result, ERRORS_ALLOW_RETRY)],
+            (c for c in attempt if isinstance(c.result, ERRORS_ALLOW_RETRY)),
             key=lambda x: x.position,
         )
 

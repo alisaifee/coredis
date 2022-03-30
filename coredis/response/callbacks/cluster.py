@@ -39,7 +39,7 @@ class ClusterSlotsCallback(SimpleCallback):
         for slot_info in response:
             min_slot, max_slot = map(int, slot_info[:2])
             nodes = slot_info[2:]
-            res[(min_slot, max_slot)] = tuple([self.parse_node(node) for node in nodes])
+            res[(min_slot, max_slot)] = tuple(self.parse_node(node) for node in nodes)
             res[(min_slot, max_slot)][0]["server_type"] = "master"
 
         return res

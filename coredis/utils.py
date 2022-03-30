@@ -228,7 +228,7 @@ def merge_result(res):
     if not isinstance(res, dict):
         raise ValueError("Value should be of dict type")
 
-    result = set([])
+    result = set()
 
     for _, v in res.items():
         for value in v:

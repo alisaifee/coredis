@@ -53,7 +53,7 @@ def mutually_exclusive_parameters(
     [Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]
 ]:
 
-    primary = set([k for k in exclusive_params if isinstance(k, str)])
+    primary = {k for k in exclusive_params if isinstance(k, str)}
     secondary = [k for k in set(exclusive_params) - primary if isinstance(k, Iterable)]
 
     def wrapper(
@@ -64,12 +64,12 @@ def mutually_exclusive_parameters(
         @functools.wraps(func)
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
             call_args = sig.bind(*args, **kwargs)
-            params = set(
+            params = {
                 k
                 for k in primary
                 if not call_args.arguments.get(k)
                 == getattr(sig.parameters.get(k), "default")
-            )
+            }
 
             if params:
                 for group in secondary:
@@ -109,12 +109,12 @@ def mutually_inclusive_parameters(
         @functools.wraps(func)
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
             call_args = sig.bind(*args, **kwargs)
-            params = set(
+            params = {
                 k
                 for k in _inclusive_params | _leaders
                 if not call_args.arguments.get(k)
                 == getattr(sig.parameters.get(k), "default")
-            )
+            }
             if _leaders and _leaders & params != _leaders and len(params) > 0:
                 raise MutuallyInclusiveParametersMissing(
                     _inclusive_params, _leaders, details

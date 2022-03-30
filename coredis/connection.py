@@ -291,7 +291,7 @@ class BaseConnection:
         # to prevent them from being encoded.
         command = b(args[0])
         if b" " in command:
-            args = tuple([s for s in command.split()]) + args[1:]
+            args = tuple(s for s in command.split()) + args[1:]
         else:
             args = (command,) + args[1:]
 

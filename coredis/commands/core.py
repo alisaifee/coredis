@@ -6643,7 +6643,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         if not option:
             raise RedisError("ZADDOPTION must take options")
-        options = set(opt.upper() for opt in option.split())
+        options = {opt.upper() for opt in option.split()}
 
         if options - VALID_ZADD_OPTIONS:
             raise RedisError("ZADD only takes XX, NX, CH, or INCR")

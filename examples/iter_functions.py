@@ -14,7 +14,7 @@ async def example():
     collected = set()
     async for key in keys:
         collected.add(key)
-    assert collected == set([b"c", b"b", b"a"]), collected
+    assert collected == {b"c", b"b", b"a"}, collected
 
     await client.hmset("d", {"a": 1, "b": 2, "c": 3})
     hash_keys = [k async for k in client.scan_iter(type_="HASH")]
@@ -31,7 +31,7 @@ async def cluster_example():
     collected = set()
     async for key in keys:
         collected.add(key)
-    assert collected == set([b"c", b"b", b"a"]), collected
+    assert collected == {b"c", b"b", b"a"}, collected
 
     await client.hmset("d", {"a": 1, "b": 2, "c": 3})
     hash_keys = [k async for k in client.scan_iter(type_="HASH")]

@@ -709,15 +709,15 @@ class TestSortedSet:
         await client.zadd("a", dict(a=1, b=2, c=3))
         cursor, pairs = await client.zscan("a")
         assert cursor == 0
-        assert set(pairs) == set([("a", 1), ("b", 2), ("c", 3)])
+        assert set(pairs) == {("a", 1), ("b", 2), ("c", 3)}
         _, pairs = await client.zscan("a", match="a")
-        assert set(pairs) == set([("a", 1)])
+        assert set(pairs) == {("a", 1)}
 
     async def test_zscan_iter(self, client):
         await client.zadd("a", dict(a=1, b=2, c=3))
         pairs = set()
         async for pair in client.zscan_iter("a"):
             pairs.add(pair)
-        assert pairs == set([("a", 1), ("b", 2), ("c", 3)])
+        assert pairs == {("a", 1), ("b", 2), ("c", 3)}
         async for pair in client.zscan_iter("a", match="a"):
             assert pair == ("a", 1)
