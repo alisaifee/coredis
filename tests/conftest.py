@@ -64,7 +64,7 @@ async def check_test_constraints(request, client, protocol=2):
         if protocol == 3 and REDIS_VERSIONS[client] < version.parse("6.0.0"):
             return pytest.skip(f"Skipped RESP3 for {REDIS_VERSIONS[client]}")
 
-        if marker.name == "nohiredis" and coredis.connection.HIREDIS_AVAILABLE:
+        if marker.name == "nohiredis" and coredis.parsers.HIREDIS_AVAILABLE:
             return pytest.skip("Skipped for hiredis")
 
 

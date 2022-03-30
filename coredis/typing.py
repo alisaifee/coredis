@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from numbers import Number
 from typing import (
     TYPE_CHECKING,
+    AbstractSet,
     Any,
     AnyStr,
     AsyncGenerator,
@@ -28,6 +29,7 @@ from typing import (
 )
 
 from typing_extensions import (
+    Deque,
     OrderedDict,
     ParamSpec,
     TypeAlias,
@@ -43,6 +45,7 @@ if os.environ.get("COREDIS_RUNTIME_CHECKS"):
 
         if not TYPE_CHECKING:
             from beartype.typing import (  # noqa: F811
+                Deque,
                 Dict,
                 Iterable,
                 Iterator,
@@ -131,6 +134,7 @@ class AbstractExecutor(ABC, Generic[AnyStr]):
 
 __all__ = [
     "AbstractExecutor",
+    "AbstractSet",
     "Any",
     "AnyStr",
     "AsyncGenerator",
@@ -138,6 +142,7 @@ __all__ = [
     "Callable",
     "CommandArgList",
     "Coroutine",
+    "Deque",
     "Dict",
     "Generic",
     "KeyT",
