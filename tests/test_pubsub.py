@@ -231,7 +231,7 @@ class TestPubSubSubscribeUnsubscribe:
 
 
 @pytest.mark.asyncio()
-@targets("redis_basic")
+@targets("redis_basic", "redis_basic_resp3")
 class TestPubSubMessages:
     def setup_method(self, method):
         self.message = None
