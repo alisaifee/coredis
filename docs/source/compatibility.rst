@@ -4320,6 +4320,24 @@ Get the list of client connections
 
 
 
+CLIENT NO-EVICT
+***************
+
+Set client eviction mode for the current connection
+
+- Documentation: `CLIENT NO-EVICT <https://redis.io/commands/client-no-evict>`_
+- Implementation: :meth:`~coredis.Redis.client_no_evict`
+
+- New in redis: 6.9.0
+
+
+
+- .. versionadded:: 3.1.2
+
+
+
+
+
 CLIENT PAUSE
 ************
 
@@ -4526,16 +4544,6 @@ Change the selected database for the current connection
 
 
 
-
-
-CLIENT NO-EVICT [X]
-*******************
-
-Set client eviction mode for the current connection
-
-- Documentation: `CLIENT NO-EVICT <https://redis.io/commands/client-no-evict>`_
-
-- Not Implemented
 
 
 
@@ -5483,16 +5491,6 @@ Close the connection
 
 
 
-
-
-CLIENT NO-EVICT [X]
-*******************
-
-Set client eviction mode for the current connection
-
-- Documentation: `CLIENT NO-EVICT <https://redis.io/commands/client-no-evict>`_
-
-- Not Implemented
 
 
 

@@ -5652,6 +5652,20 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return await self.execute_command(CommandName.CLIENT_TRACKINGINFO)
 
+    @versionadded(version="3.1.2")
+    @redis_command(
+        CommandName.CLIENT_NO_EVICT,
+        version_introduced="6.9.0",
+        group=CommandGroup.CONNECTION,
+    )
+    async def client_no_evict(
+        self, enabled: Literal[PureToken.ON, PureToken.OFF]
+    ) -> bool:
+        """
+        Set client eviction mode for the current connection
+        """
+        return await self.execute_command(CommandName.CLIENT_NO_EVICT, enabled)
+
     @redis_command(
         CommandName.DBSIZE,
         readonly=True,
