@@ -2344,15 +2344,14 @@ import wrapt
 
 from coredis import PureToken
 from coredis.client import AbstractRedis, AbstractRedisCluster, ResponseParser
-from coredis.pool import ConnectionPool, ClusterConnectionPool
+from coredis.pool import ClusterConnectionPool, ConnectionPool
 from coredis.typing import (
     Any,
     AnyStr,
     Dict,
-    KeyT,
     Generic,
     Iterable,
-    List,
+    KeyT,
     Literal,
     Optional,
     Set,

@@ -19,6 +19,7 @@ from coredis.exceptions import (
     UnknownCommandError,
 )
 from coredis.parsers import BaseParser, DefaultParser
+from coredis.parsers import PythonParser, HiredisParser  # noqa
 from coredis.typing import ValueT
 from coredis.utils import b, nativestr
 
