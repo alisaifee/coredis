@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from coredis.commands import ParametrizedCallback, SimpleCallback
 from coredis.typing import Any, AnyStr, Set, Tuple, Union
 

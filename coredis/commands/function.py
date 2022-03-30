@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import weakref
 
 from coredis.exceptions import FunctionError

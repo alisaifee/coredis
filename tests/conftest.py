@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from __future__ import annotations
+
 import asyncio
 import os
 import platform
@@ -11,6 +13,7 @@ from packaging import version
 
 import coredis
 import coredis.connection
+import coredis.parsers
 import coredis.sentinel
 
 REDIS_VERSIONS = {}

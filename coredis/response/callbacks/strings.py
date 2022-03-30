@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from coredis.commands import ParametrizedCallback
 from coredis.response.callbacks import SimpleStringCallback
 from coredis.response.types import LCSMatch, LCSResult

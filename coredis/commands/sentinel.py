@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from coredis.response.callbacks import SimpleStringCallback
 from coredis.typing import Any, AnyStr, Dict, Optional, Tuple, ValueT
 from coredis.utils import nativestr
