@@ -1,12 +1,12 @@
 # python std lib
-from __future__ import annotations, with_statement
+from __future__ import annotations
 
 import asyncio
 import uuid
 
 # 3rd party imports
 import pytest
-from mock import Mock, patch
+from unittest.mock import Mock, patch
 
 # rediscluster imports
 from coredis import ConnectionError, RedisCluster, RedisClusterException

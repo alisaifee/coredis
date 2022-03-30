@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
-from __future__ import annotations, with_statement
+from __future__ import annotations
 
 import asyncio
 import os
 
 import pytest
-from mock import Mock, patch
+from unittest.mock import Mock, patch
 
 from coredis import Redis
 from coredis.connection import ClusterConnection, Connection, UnixDomainSocketConnection

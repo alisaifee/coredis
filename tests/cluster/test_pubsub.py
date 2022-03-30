@@ -1,5 +1,5 @@
 # python std lib
-from __future__ import annotations, with_statement
+from __future__ import annotations
 
 import asyncio
 import time

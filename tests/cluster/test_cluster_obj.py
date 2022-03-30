@@ -1,14 +1,12 @@
-# -*- coding: utf-8 -*-
-
 # python std lib
-from __future__ import annotations, with_statement
+from __future__ import annotations
 
 import asyncio
 
 import pytest
 
 # 3rd party imports
-from mock import patch
+from unittest.mock import patch
 
 # rediscluster imports
 from coredis import RedisCluster
