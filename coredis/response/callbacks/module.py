@@ -8,4 +8,4 @@ class ModuleInfoCallback(SimpleCallback):
         return tuple(flat_pairs_to_dict(mod) for mod in response)
 
     def transform_3(self, response: Any) -> Tuple[Dict, ...]:
-        return tuple(response)
+        return tuple(dict(r) for r in response)

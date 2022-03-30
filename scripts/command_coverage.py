@@ -199,7 +199,7 @@ REDIS_RETURN_OVERRIDES = {
     "LPOS": Optional[Union[int, List[int]]],
     "MEMORY STATS": Dict[AnyStr, Union[AnyStr, int, float]],
     "MGET": Tuple[Optional[AnyStr], ...],
-    "MODULE LIST": Tuple[Dict[AnyStr, ValueT], ...],
+    "MODULE LIST": Tuple[Dict, ...],
     "MONITOR": Monitor,
     "MSETNX": bool,
     "PFADD": bool,
