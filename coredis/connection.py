@@ -18,8 +18,12 @@ from coredis.exceptions import (
     TimeoutError,
     UnknownCommandError,
 )
-from coredis.parsers import BaseParser, DefaultParser
-from coredis.parsers import PythonParser, HiredisParser  # noqa
+from coredis.parsers import (  # noqa: For backward compatibility
+    BaseParser,
+    DefaultParser,
+    HiredisParser,
+    PythonParser,
+)
 from coredis.typing import ValueT
 from coredis.utils import b, nativestr
 
