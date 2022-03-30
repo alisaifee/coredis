@@ -4942,24 +4942,36 @@ Get array of Cluster slot to node mappings
 
 
 
-READONLY [X]
-************
+READONLY
+********
 
 Enables read queries for a connection to a cluster replica node
 
 - Documentation: `READONLY <https://redis.io/commands/readonly>`_
+- Implementation: :meth:`~coredis.Redis.readonly`
 
-- Not Implemented
 
 
-READWRITE [X]
-*************
+- .. versionadded:: 3.1.2
+
+
+
+
+
+READWRITE
+*********
 
 Disables read queries for a connection to a cluster replica node
 
 - Documentation: `READWRITE <https://redis.io/commands/readwrite>`_
+- Implementation: :meth:`~coredis.Redis.readwrite`
 
-- Not Implemented
+
+
+- .. versionadded:: 3.1.2
+
+
+
 
 
 
@@ -5493,32 +5505,6 @@ Close the connection
 
 
 
-
-
-
-Cluster
--------
-
-
-
-READONLY [X]
-************
-
-Enables read queries for a connection to a cluster replica node
-
-- Documentation: `READONLY <https://redis.io/commands/readonly>`_
-
-- Not Implemented
-
-
-READWRITE [X]
-*************
-
-Disables read queries for a connection to a cluster replica node
-
-- Documentation: `READWRITE <https://redis.io/commands/readwrite>`_
-
-- Not Implemented
 
 
 
