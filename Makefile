@@ -1,11 +1,12 @@
 lint:
+	COREDIS_RUNTIME_CHECKS=0 python setup.py build_stubs
 	black --check coredis tests
 	pyright coredis
 	mypy coredis
 	flake8 coredis tests
 
 lint-fix:
-	python setup.py build_stubs 
+	COREDIS_RUNTIME_CHECKS=0 python setup.py build_stubs
 	black coredis tests
 	isort -r --profile=black tests coredis
 	autoflake8 -i -r tests coredis

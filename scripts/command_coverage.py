@@ -2336,25 +2336,30 @@ def generate_pipeline_stub(path):
                     ),
                 }
     stub_template_str = """
+from __future__ import annotations
+
 import datetime
 
 import wrapt
 
-import coredis.pool
 from coredis import PureToken
 from coredis.client import AbstractRedis, AbstractRedisCluster, ResponseParser
+from coredis.pool import ConnectionPool, ClusterConnectionPool
 from coredis.typing import (
     Any,
     AnyStr,
     Dict,
+    KeyT,
     Generic,
     Iterable,
     List,
     Literal,
     Optional,
     Set,
+    StringT,
     Tuple,
     Union,
+    ValueT,
 )
 
 class PipelineImpl(AbstractRedis[AnyStr]):

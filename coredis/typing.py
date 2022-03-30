@@ -39,7 +39,7 @@ from typing_extensions import (
 
 RUNTIME_TYPECHECKS = False
 
-if os.environ.get("COREDIS_RUNTIME_CHECKS"):
+if os.environ.get("COREDIS_RUNTIME_CHECKS", "").lower() in ["1", "true", "t"]:
     try:
         import beartype
 
