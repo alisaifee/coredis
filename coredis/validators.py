@@ -1,10 +1,18 @@
 import functools
 import inspect
-from typing import Any, Callable, Coroutine, Iterable, Optional, Set, TypeVar, Union
 
-from coredis.typing import ParamSpec
-
-from .exceptions import CommandSyntaxError
+from coredis.exceptions import CommandSyntaxError
+from coredis.typing import (
+    Any,
+    Callable,
+    Coroutine,
+    Iterable,
+    Optional,
+    ParamSpec,
+    Set,
+    TypeVar,
+    Union,
+)
 
 R = TypeVar("R")
 P = ParamSpec("P")

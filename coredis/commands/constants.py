@@ -4,6 +4,7 @@ coredis.commands.constants
 
 Constants relating to redis command names and groups
 """
+
 import enum
 
 
