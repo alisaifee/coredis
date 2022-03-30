@@ -79,6 +79,8 @@ class FloatCallback(PrimitiveCallback[float]):
 
 class BoolCallback(PrimitiveCallback[bool]):
     def transform(self, response: Any) -> bool:
+        if isinstance(response, bool):
+            return response
         return bool(response)
 
 
@@ -97,6 +99,8 @@ class TupleCallback(PrimitiveCallback[Tuple]):
 
 class ListCallback(PrimitiveCallback[List]):
     def transform(self, response: Any) -> List:
+        if isinstance(response, list):
+            return response
         return list(response)
 
 
@@ -117,7 +121,7 @@ class DictCallback(PrimitiveCallback[Dict]):
 
     def transform(self, response: Any) -> Dict:
         return (
-            dict(response)
+            (response if isinstance(response, dict) else dict(response))
             if not self.transform_function
             else self.transform_function(response)
         )
@@ -125,12 +129,14 @@ class DictCallback(PrimitiveCallback[Dict]):
 
 class SetCallback(PrimitiveCallback[Set]):
     def transform(self, response: Any) -> Set:
+        if isinstance(response, set):
+            return response
         return set(response) if response else set()
 
 
 class BoolsCallback(SimpleCallback):
     def transform(self, response: Any) -> Tuple[bool, ...]:
-        return tuple(bool(r) for r in response)
+        return tuple(BoolCallback()(r) for r in response)
 
 
 class OptionalPrimitiveCallback(SimpleCallback, Generic[R]):
@@ -140,16 +146,22 @@ class OptionalPrimitiveCallback(SimpleCallback, Generic[R]):
 
 class OptionalFloatCallback(OptionalPrimitiveCallback[float]):
     def transform(self, response: Any) -> Optional[float]:
+        if isinstance(response, float):
+            return response
         return response and float(response)
 
 
 class OptionalIntCallback(OptionalPrimitiveCallback[int]):
     def transform(self, response: Any) -> Optional[int]:
+        if isinstance(response, int):
+            return response
         return response and int(response)
 
 
 class OptionalSetCallback(OptionalPrimitiveCallback[Set]):
     def transform(self, response: Any) -> Optional[Set]:
+        if isinstance(response, set):
+            return response
         return response and set(response)
 
 
