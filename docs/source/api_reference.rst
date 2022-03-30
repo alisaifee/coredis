@@ -137,10 +137,11 @@ Parsers
 ^^^^^^^
 
 Parser classes provide a way to control how responses from the Redis server
-are parsed. coredis ships with two parser classes, the PythonParser and the
-HiredisParser. By default, coredis will attempt to use the HiredisParser if
-you have the hiredis module installed and will fallback to the PythonParser
-otherwise.
+are parsed. coredis ships with two parser classes, the
+:class:`~coredis.parsers.PythonParser` and the :class:`~coredis.parsers.HiredisParser`.
+By default, coredis will attempt to use the :class:`~coredis.parsers.HiredisParser`
+if you have the :pypi:`hiredis` package installed and will fallback to the
+:class:`~coredis.parsers.PythonParser` otherwise.
 
 Hiredis is a C library maintained by the core Redis team. Pieter Noordhuis was
 kind enough to create Python bindings. Using Hiredis can provide up to a

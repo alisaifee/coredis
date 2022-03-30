@@ -24,6 +24,56 @@ Sentinel
    :class-doc-from: both
    :inherited-members:
 
+Command Wrappers
+^^^^^^^^^^^^^^^^
+
+Certain commands and/or concepts in redis cannot be simply
+accomplished by calling the pass through APIs and require some state
+management. The following wrappers provide an abstraction layer to
+simplify operations.
+
+
+BitField Operations
+-------------------
+
+.. autoclass:: coredis.commands.bitfield.BitFieldOperation
+   :no-inherited-members:
+   :class-doc-from: both
+
+PubSub
+------
+.. autoclass:: coredis.commands.pubsub.PubSub
+   :no-inherited-members:
+   :class-doc-from: both
+
+Scripting
+---------
+.. autoclass:: coredis.commands.script.Script
+   :no-inherited-members:
+   :class-doc-from: both
+
+Functions
+---------
+.. autoclass:: coredis.commands.function.Library
+   :class-doc-from: both
+
+.. autoclass:: coredis.commands.function.Function
+   :class-doc-from: both
+
+Pipelines
+---------
+
+.. autoclass:: coredis.commands.pipeline.Pipeline
+   :class-doc-from: both
+
+.. autoclass:: coredis.commands.pipeline.ClusterPipeline
+   :class-doc-from: both
+
+
+Monitor
+-------
+.. autoclass:: coredis.commands.monitor.Monitor
+
 Connection Classes
 ^^^^^^^^^^^^^^^^^^
 .. currentmodule:: coredis
@@ -96,55 +146,20 @@ Sentinel Connection Pool
    :show-inheritance:
    :inherited-members:
 
-Command Wrappers
-^^^^^^^^^^^^^^^^
 
-Certain commands and/or concepts in redis cannot be simply
-accomplished by calling the pass through APIs and require some state
-management. The following wrappers provide an abstraction layer to
-simplify operations.
+Parsers
+^^^^^^^
 
-
-BitField Operations
--------------------
-
-.. autoclass:: coredis.commands.bitfield.BitFieldOperation
-   :no-inherited-members:
+.. currentmodule:: coredis.parsers
+.. autoclass:: PythonParser
    :class-doc-from: both
-
-PubSub
-------
-.. autoclass:: coredis.commands.pubsub.PubSub
-   :no-inherited-members:
+   :show-inheritance:
+   :inherited-members:
+.. autoclass:: HiredisParser
    :class-doc-from: both
+   :show-inheritance:
+   :inherited-members:
 
-Scripting
----------
-.. autoclass:: coredis.commands.script.Script
-   :no-inherited-members:
-   :class-doc-from: both
-
-Functions
----------
-.. autoclass:: coredis.commands.function.Library
-   :class-doc-from: both
-
-.. autoclass:: coredis.commands.function.Function
-   :class-doc-from: both
-
-Pipelines
----------
-
-.. autoclass:: coredis.commands.pipeline.Pipeline
-   :class-doc-from: both
-
-.. autoclass:: coredis.commands.pipeline.ClusterPipeline
-   :class-doc-from: both
-
-
-Monitor
--------
-.. autoclass:: coredis.commands.monitor.Monitor
 
 
 Response Types
