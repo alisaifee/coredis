@@ -1028,7 +1028,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return await self.execute_command(CommandName.CLUSTER_SLOTS)
 
-    @versionadded(version="3.1.2")
+    @versionadded(version="3.2.0")
     @redis_command(
         CommandName.READONLY,
         group=CommandGroup.CLUSTER,
@@ -1040,7 +1040,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         return await self.execute_command(CommandName.READONLY)
 
-    @versionadded(version="3.1.2")
+    @versionadded(version="3.2.0")
     @redis_command(
         CommandName.READWRITE,
         group=CommandGroup.CLUSTER,
@@ -5676,7 +5676,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return await self.execute_command(CommandName.CLIENT_TRACKINGINFO)
 
-    @versionadded(version="3.1.2")
+    @versionadded(version="3.2.0")
     @redis_command(
         CommandName.CLIENT_NO_EVICT,
         version_introduced="6.9.0",
@@ -5837,7 +5837,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return await self.execute_command(CommandName.LATENCY_GRAPH, event)
 
-    @versionadded(version="3.1.2")
+    @versionadded(version="3.2.0")
     @redis_command(
         CommandName.LATENCY_HISTOGRAM,
         version_introduced="6.9.0",
@@ -6548,7 +6548,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return await self.execute_command(CommandName.CONFIG_REWRITE)
 
-    @versionadded(version="3.1.2")
+    @versionadded(version="3.2.0")
     @redis_command(
         CommandName.MODULE_LIST,
         group=CommandGroup.SERVER,
@@ -6564,7 +6564,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return await self.execute_command(CommandName.MODULE_LIST)
 
-    @versionadded(version="3.1.2")
+    @versionadded(version="3.2.0")
     @redis_command(CommandName.MODULE_LOAD, group=CommandGroup.SERVER)
     async def module_load(
         self, path: Union[str, bytes], *args: Union[str, bytes, int, float]
@@ -6579,7 +6579,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return await self.execute_command(CommandName.MODULE_LOAD, *pieces)
 
-    @versionadded(version="3.1.2")
+    @versionadded(version="3.2.0")
     @redis_command(CommandName.MODULE_UNLOAD, group=CommandGroup.SERVER)
     async def module_unload(self, name: Union[str, bytes]) -> bool:
         """
@@ -6588,7 +6588,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return await self.execute_command(CommandName.MODULE_UNLOAD, name)
 
-    @deprecated(version="3.1.2", reason="Use :meth:`cluster_getkeysinslot` instead")
+    @deprecated(version="3.2.0", reason="Use :meth:`cluster_getkeysinslot` instead")
     async def cluster_get_keys_in_slot(self, slot_id, count):
         """
         Return local key names in the specified hash slot
