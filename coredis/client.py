@@ -7,6 +7,7 @@ from abc import ABCMeta
 from ssl import SSLContext
 from typing import TYPE_CHECKING, Coroutine, Type, overload
 
+from deprecated.sphinx import deprecated, versionadded
 from packaging.version import Version
 
 from coredis.commands import CommandGroup, CommandName, keys_from_command, redis_command
@@ -61,11 +62,9 @@ from coredis.utils import (
     b,
     blocked_command,
     clusterdown_wrapper,
-    deprecated,
     first_key,
     iteritems,
     nativestr,
-    versionadded,
 )
 from coredis.validators import mutually_inclusive_parameters
 

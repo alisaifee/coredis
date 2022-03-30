@@ -2,6 +2,8 @@ import os
 import random
 from typing import overload
 
+from deprecated.sphinx import deprecated
+
 from coredis import Redis
 from coredis.commands import CommandName
 from coredis.connection import Connection
@@ -15,7 +17,7 @@ from coredis.exceptions import (
 )
 from coredis.pool import ConnectionPool
 from coredis.typing import AnyStr, Generic, Iterable, Literal, StringT, Tuple, Type
-from coredis.utils import deprecated, iteritems, nativestr
+from coredis.utils import iteritems, nativestr
 
 
 class SentinelManagedConnection(Connection):
@@ -384,5 +386,10 @@ class Sentinel(Generic[AnyStr]):
     async def discover_slaves(self, *a, **k):
         return await self.discover_replicas(*a, **k)
 
-    slave_for = replica_for
-    master_for = primary_for
+    @deprecated(version="3.1.0", reason="Use :meth:`replica_for()` instead")
+    def slave_for(self, *a, **kw):
+        return self.replica_for(*a, **kw)
+
+    @deprecated(version="3.1.0", reason="Use :meth:`primary_for()` instead")
+    def master_for(self, *a, **kw) -> Redis[AnyStr]:
+        return self.primary_for(*a, **kw)

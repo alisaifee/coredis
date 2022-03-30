@@ -2,6 +2,8 @@ import datetime
 import itertools
 from typing import overload
 
+from deprecated.sphinx import deprecated, versionadded
+
 from coredis.commands import (
     ClusterCommandConfig,
     CommandGroup,
@@ -119,7 +121,6 @@ from coredis.typing import (
 from coredis.utils import (
     NodeFlag,
     defaultvalue,
-    deprecated,
     dict_to_flat_list,
     flat_pairs_to_dict,
     flat_pairs_to_ordered_dict,
@@ -130,7 +131,6 @@ from coredis.utils import (
     normalized_time_seconds,
     quadruples_to_dict,
     tuples_to_flat_list,
-    versionadded,
 )
 from coredis.validators import (
     mutually_exclusive_parameters,
