@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from frozendict import frozendict
-
 from coredis.commands import ParametrizedCallback, SimpleCallback
 from coredis.typing import Any, AnyStr, Dict, Tuple, Union
 from coredis.utils import flat_pairs_to_dict
@@ -38,8 +36,6 @@ class HRandFieldCallback(ParametrizedCallback):
 
 class HGetAllCallback(SimpleCallback):
     def transform_3(self, response: Any) -> Dict[AnyStr, AnyStr]:
-        if isinstance(response, frozendict):
-            return dict(response)
         return response
 
     def transform(self, response: Any) -> Dict[AnyStr, AnyStr]:

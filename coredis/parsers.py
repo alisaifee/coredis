@@ -3,11 +3,8 @@ from __future__ import annotations
 import asyncio
 import sys
 from abc import ABC, abstractmethod
-from collections import deque
 from io import BytesIO
 from typing import cast
-
-import frozendict as frozendict
 
 from coredis.constants import SYM_CRLF, RESPDataType
 from coredis.exceptions import (
@@ -34,13 +31,11 @@ from coredis.typing import (
     AbstractSet,
     Any,
     Callable,
-    Deque,
     List,
     Literal,
     Mapping,
     Optional,
     StringT,
-    Tuple,
     Type,
     Union,
 )
@@ -342,37 +337,31 @@ class PythonParser(BaseParser):
                 raise RedisError("unexpected verbatim string")
             response = response[4:]
         elif marker == RESPDataType.PUSH:
-            num_items = int(chunk)
-            push_data = []
-            for i in range(num_items):
-                data = await self.read_response(decode=decode)
-                push_data.append(data)
-            return push_data
+            length = int(chunk)
+            if length == -1:
+                return []
+            return [await self.read_response(decode=decode) for i in range(length)]
         elif marker == RESPDataType.ARRAY:
             length = int(chunk)
 
             if length == -1:
                 return None
-            parts = []
-            for i in range(length):
-                parts.append(await self.read_response(decode=decode))
-            return parts
+            return [await self.read_response(decode=decode) for i in range(length)]
         elif marker == RESPDataType.MAP:
             length = int(chunk)
             if length == -1:
                 return {}
-            map_parts: Deque[Tuple[StringT, ResponseType]] = deque(maxlen=length)
-            for i in range(length):
-                key = cast(StringT, await self.read_response(decode=decode))
-                value = await self.read_response(decode=decode)
-                map_parts.append((key, value))
-            return frozendict.frozendict[StringT, ResponseType](map_parts)
+            return {
+                cast(
+                    StringT, await self.read_response(decode=decode)
+                ): await self.read_response(decode=decode)
+                for i in range(length)
+            }
         elif marker == RESPDataType.SET:
             length = int(chunk)
-            set_parts: Deque[ResponseType] = deque(maxlen=length)  # set()
-            for i in range(length):
-                set_parts.append(await self.read_response(decode=decode))
-            return frozenset(set_parts)
+            if length == -1:
+                return set()
+            return {await self.read_response(decode=decode) for _ in range(length)}
         else:
             raise ProtocolError(f"Unexpected marker {chr(marker)}")
 

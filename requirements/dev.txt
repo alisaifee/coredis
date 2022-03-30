@@ -11,7 +11,6 @@ jinja2
 pyright==1.1.234
 requests
 redis
-types-frozendict
 twine
 uvloop
 wheel

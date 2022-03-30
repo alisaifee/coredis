@@ -6,8 +6,6 @@ import time
 from collections import UserDict
 from functools import wraps
 
-from frozendict import frozendict
-
 from coredis.exceptions import ClusterDownError, RedisClusterException
 from coredis.typing import (
     Callable,
@@ -165,8 +163,6 @@ def int_or_none(response):
 
 def flat_pairs_to_dict(response: Union[Mapping[T, T], Tuple[T, ...]]) -> Dict[T, T]:
     """Creates a dict given a flat list of key/value pairs"""
-    if isinstance(response, frozendict):
-        return dict(response)
     if isinstance(response, dict):
         return response
     it = iter(response)
@@ -183,8 +179,6 @@ def pairs_to_dict(
     response: Union[Mapping[T, T], Tuple[Tuple[T, T], ...]]
 ) -> Dict[T, T]:
     """Creates a dict given an array of tuples"""
-    if isinstance(response, frozendict):
-        return dict(response)
     if isinstance(response, dict):
         return response
     return dict(response)
