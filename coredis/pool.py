@@ -355,7 +355,7 @@ class BlockingConnectionPool(ConnectionPool):
 
         max_connections = max_connections or 50
 
-        super(BlockingConnectionPool, self).__init__(
+        super().__init__(
             connection_class=connection_class,
             max_connections=max_connections,
             max_idle_time=max_idle_time,
@@ -385,7 +385,7 @@ class BlockingConnectionPool(ConnectionPool):
             except asyncio.QueueFull:
                 break
 
-        super(BlockingConnectionPool, self).reset()
+        super().reset()
 
     async def get_connection(self, *args, **kwargs) -> Connection:
         """Gets a connection from the pool"""
@@ -479,7 +479,7 @@ class ClusterConnectionPool(ConnectionPool):
             it was operating on. This will allow the client to drift along side the cluster
             if the cluster nodes move around alot.
         """
-        super(ClusterConnectionPool, self).__init__(
+        super().__init__(
             connection_class=connection_class, max_connections=max_connections
         )
 

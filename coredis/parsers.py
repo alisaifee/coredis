@@ -267,7 +267,7 @@ class PythonParser(BaseParser):
         self._stream = None
         self._buffer = None
         self.encoding = None
-        super(PythonParser, self).__init__(read_size)
+        super().__init__(read_size)
 
     def __del__(self):
         try:
@@ -397,7 +397,7 @@ class HiredisParser(BaseParser):
         self._reader = None
         self._raw_reader = None
         self._next_response: Union[str, bytes, Literal[False]] = False
-        super(HiredisParser, self).__init__(read_size)
+        super().__init__(read_size)
 
     def __del__(self):
         try:

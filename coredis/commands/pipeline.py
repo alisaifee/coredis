@@ -190,7 +190,7 @@ class PipelineMeta(ABCMeta):
     NODES_FLAGS: Dict[str, NodeFlag]
 
     def __new__(cls, name, bases, dct):
-        kls = super(PipelineMeta, cls).__new__(cls, name, bases, dct)
+        kls = super().__new__(cls, name, bases, dct)
 
         for name, method in PipelineMeta.get_methods(kls).items():
             if getattr(method, "__coredis_command", None):
@@ -205,7 +205,7 @@ class PipelineMeta(ABCMeta):
 
 class ClusterPipelineMeta(PipelineMeta):
     def __new__(cls, name, bases, dct):
-        kls = super(ClusterPipelineMeta, cls).__new__(cls, name, bases, dct)
+        kls = super().__new__(cls, name, bases, dct)
         for name, method in ClusterPipelineMeta.get_methods(kls).items():
             if cmd := getattr(method, "__coredis_command", None):
                 if cmd.cluster.flag:
@@ -849,7 +849,7 @@ class ClusterPipelineImpl(
             for c in attempt:
                 try:
                     # send each command individually like we do in the main client.
-                    c.result = await super(ClusterPipelineImpl, self).execute_command(
+                    c.result = await super().execute_command(
                         *c.args, **c.options
                     )
                 except RedisError as e:

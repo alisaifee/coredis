@@ -23,9 +23,9 @@ from coredis.utils import iteritems, nativestr
 
 
 class SentinelManagedConnection(Connection):
-    def __init__(self, connection_pool: "SentinelConnectionPool", **kwargs):
+    def __init__(self, connection_pool: SentinelConnectionPool, **kwargs):
         self.connection_pool = connection_pool
-        super(SentinelManagedConnection, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def __repr__(self):
         pool = self.connection_pool
@@ -38,7 +38,7 @@ class SentinelManagedConnection(Connection):
 
     async def connect_to(self, address):
         self.host, self.port = address
-        await super(SentinelManagedConnection, self).connect()
+        await super().connect()
         if self.connection_pool.check_connection:
             await self.send_command(CommandName.PING)
             if await self.read_response() != b"PONG":
@@ -59,7 +59,7 @@ class SentinelManagedConnection(Connection):
 
     async def read_response(self, decode=False):
         try:
-            return await super(SentinelManagedConnection, self).read_response(
+            return await super().read_response(
                 decode=decode
             )
         except ReadOnlyError:
@@ -96,7 +96,7 @@ class SentinelConnectionPool(ConnectionPool):
         kwargs["connection_class"] = kwargs.get(
             "connection_class", SentinelManagedConnection
         )
-        super(SentinelConnectionPool, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.connection_kwargs["connection_pool"] = self
         self.service_name = nativestr(service_name)
         self.sentinel_manager = sentinel_manager
@@ -109,7 +109,7 @@ class SentinelConnectionPool(ConnectionPool):
         )
 
     def reset(self):
-        super(SentinelConnectionPool, self).reset()
+        super().reset()
         self.master_address = None
         self.slave_rr_counter = None
 

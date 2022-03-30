@@ -264,7 +264,7 @@ return 1
     """
 
     def __init__(self, *args, **kwargs):
-        super(LuaLock, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         LuaLock.register_scripts(self.redis)
 
     @classmethod
@@ -323,13 +323,13 @@ class ClusterLock(LuaLock):
     - http://antirez.com/news/101
     """
 
-    redis: "coredis.client.RedisCluster"
+    redis: coredis.client.RedisCluster
 
     def __init__(self, *args, **kwargs):
         import coredis.client  # noqa
         import coredis.pool  # noqa
 
-        super(ClusterLock, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         assert isinstance(self.redis, coredis.client.RedisCluster)
         assert isinstance(
@@ -417,6 +417,6 @@ class ClusterLock(LuaLock):
             await asyncio.sleep(sleep)
 
     async def do_release(self, expected_token):
-        await super(ClusterLock, self).do_release(expected_token)
+        await super().do_release(expected_token)
         if await self.check_lock_in_replicas(expected_token):
             raise LockError("Lock is released in master but not in replica yet")

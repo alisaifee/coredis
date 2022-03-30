@@ -25,7 +25,7 @@ class UnknownCommandError(RedisError):
 
     def __init__(self, message):
         self.command = self.ERROR_REGEX.findall(message).pop()
-        super(UnknownCommandError, self).__init__(self, message)
+        super().__init__(self, message)
 
 
 class CommandNotSupportedError(RedisError):
@@ -35,7 +35,7 @@ class CommandNotSupportedError(RedisError):
     """
 
     def __init__(self, cmd, current_version):
-        super(CommandNotSupportedError, self).__init__(
+        super().__init__(
             self, f"{cmd} is not supported on server version {current_version}"
         )
 

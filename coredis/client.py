@@ -95,7 +95,7 @@ class ClusterMeta(ABCMeta):
     }
 
     def __new__(cls, name, bases, dct):
-        kls = super(ClusterMeta, cls).__new__(cls, name, bases, dct)
+        kls = super().__new__(cls, name, bases, dct)
         methods = dict(k for k in inspect.getmembers(kls) if inspect.isfunction(k[1]))
 
         for name, method in methods.items():
@@ -150,7 +150,7 @@ class RedisMeta(ABCMeta):
     RESPONSE_CALLBACKS: Dict
 
     def __new__(cls, name, bases, dct):
-        kls = super(RedisMeta, cls).__new__(cls, name, bases, dct)
+        kls = super().__new__(cls, name, bases, dct)
         methods = dict(k for k in inspect.getmembers(kls) if inspect.isfunction(k[1]))
 
         for name, method in methods.items():
@@ -277,7 +277,7 @@ class ResponseParser:
         self.response_callbacks: Dict[
             bytes, Callable
         ] = self.__class__.RESPONSE_CALLBACKS.copy()
-        super(ResponseParser, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     async def parse_response(
         self, connection: Connection, command_name: bytes, **options: Any
@@ -1032,7 +1032,7 @@ class Redis(
         """
         Initializes a new Redis client
         """
-        super(Redis, self).__init__(
+        super().__init__(
             host=host,
             port=port,
             db=db,
@@ -1378,7 +1378,7 @@ class RedisCluster(
                 **kwargs,
             )
 
-        super(RedisCluster, self).__init__(
+        super().__init__(
             connection_pool=pool,
             decode_responses=decode_responses,
             verify_version=verify_version,

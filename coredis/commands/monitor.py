@@ -139,7 +139,7 @@ class MonitorThread(threading.Thread):
         self._loop = loop
         self._response_handler = response_handler
         self._future: Optional[Future[None]] = None
-        super(MonitorThread, self).__init__()
+        super().__init__()
 
     def run(self):
         self._future = asyncio.run_coroutine_threadsafe(self._run(), self._loop)

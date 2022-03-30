@@ -360,7 +360,7 @@ class Connection(BaseConnection):
         loop=None,
         protocol_version: Literal[2, 3] = 2,
     ):
-        super(Connection, self).__init__(
+        super().__init__(
             retry_on_timeout,
             stream_timeout,
             parser_class,
@@ -433,7 +433,7 @@ class UnixDomainSocketConnection(BaseConnection):
         loop=None,
         protocol_version: Literal[2, 3] = 2,
     ):
-        super(UnixDomainSocketConnection, self).__init__(
+        super().__init__(
             retry_on_timeout,
             stream_timeout,
             parser_class,
@@ -469,7 +469,7 @@ class ClusterConnection(Connection):
 
     def __init__(self, *args, **kwargs):
         self.readonly = kwargs.pop("readonly", False)
-        super(ClusterConnection, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     async def on_connect(self):
         """
@@ -482,7 +482,7 @@ class ClusterConnection(Connection):
         if self.db:
             warnings.warn("SELECT DB is not allowed in cluster mode")
             self.db = ""
-        await super(ClusterConnection, self).on_connect()
+        await super().on_connect()
 
         if self.readonly:
             await self.send_command(b"READONLY")

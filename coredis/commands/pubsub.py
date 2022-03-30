@@ -359,7 +359,7 @@ class PubSubWorkerThread(threading.Thread):
     def __init__(
         self, pubsub: "PubSub", loop: asyncio.events.AbstractEventLoop, poll_timeout=1.0
     ):
-        super(PubSubWorkerThread, self).__init__()
+        super().__init__()
         self._pubsub = pubsub
         self._poll_timeout = poll_timeout
         self._running = False
@@ -393,7 +393,7 @@ class ClusterPubSub(PubSub):
     """Wrappers for the PubSub class"""
 
     def __init__(self, *args, **kwargs):
-        super(ClusterPubSub, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     async def execute_command(self, *args, **kwargs):
         """

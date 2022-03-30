@@ -40,7 +40,7 @@ class ScanCallback(SimpleCallback):
 class ExpiryCallback(DateTimeCallback):
     def transform(self, response: Any, **kwargs: Any) -> datetime:
         if response > 0:
-            return super(ExpiryCallback, self).transform(response, **kwargs)
+            return super().transform(response, **kwargs)
         else:
             if response == -2:
                 raise NoKeyError()
