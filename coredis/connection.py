@@ -403,7 +403,7 @@ class Connection(BaseConnection):
 
                     for k, v in self.socket_keepalive_options.items():
                         sock.setsockopt(socket.SOL_TCP, k, v)
-            except (socket.error, TypeError):
+            except (OSError, TypeError):
                 # `socket_keepalive_options` might contain invalid options
                 # causing an error. Do not leave the connection open.
                 writer.close()

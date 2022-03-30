@@ -109,7 +109,7 @@ class SocketBuffer:
                     continue
 
                 break
-        except socket.error:
+        except OSError:
             e = sys.exc_info()[1]
             if e:
                 raise ConnectionError(f"Error while reading from socket: {e.args}")
