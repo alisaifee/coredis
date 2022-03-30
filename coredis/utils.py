@@ -257,9 +257,7 @@ def blocked_command(self, command):
     """
     Raises a `RedisClusterException` mentioning the command is blocked.
     """
-    raise RedisClusterException(
-        f"Command: {command} is blocked in redis cluster mode"
-    )
+    raise RedisClusterException(f"Command: {command} is blocked in redis cluster mode")
 
 
 def clusterdown_wrapper(func):

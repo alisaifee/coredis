@@ -195,8 +195,8 @@ class NodeManager:
                             )
                             if len(disagreements) > 5:
                                 raise RedisClusterException(
-                                        "startup_nodes could not agree on a valid slots cache."
-                                        f" {', '.join(disagreements)}"
+                                    "startup_nodes could not agree on a valid slots cache."
+                                    f" {', '.join(disagreements)}"
                                 )
 
                 self.populate_startup_nodes()

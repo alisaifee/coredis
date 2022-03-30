@@ -3,10 +3,10 @@ from __future__ import annotations
 
 import asyncio
 
-import pytest
-
 # 3rd party imports
 from unittest.mock import patch
+
+import pytest
 
 # rediscluster imports
 from coredis import RedisCluster

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import socket
 import sys
 from abc import ABC, abstractmethod
 from collections import deque

@@ -37,9 +37,9 @@ class Library:
             lib = await Library(client, "mylib", library_code)
             assert "1" == await lib["myfunc"]([], [1])
         """
-        self._client: weakref.ReferenceType[
-            coredis.client.AbstractRedis
-        ] = weakref.ref(client)
+        self._client: weakref.ReferenceType[coredis.client.AbstractRedis] = weakref.ref(
+            client
+        )
         self._name = name
         self._engine = engine
         self._code = code
@@ -105,9 +105,9 @@ class Function:
             func = await Function(client, "mylib", "myfunc")
             response = await func(keys=["a"], args=[1])
         """
-        self._client: weakref.ReferenceType[
-            coredis.client.AbstractRedis
-        ] = weakref.ref(client)
+        self._client: weakref.ReferenceType[coredis.client.AbstractRedis] = weakref.ref(
+            client
+        )
         self._library = Library(client, library)
         self._name = name
 

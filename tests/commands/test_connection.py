@@ -57,9 +57,7 @@ class TestConnection:
         ids = [c["id"] for c in clients]
         assert ids
         refetch = await client.client_list(identifiers=ids)
-        assert sorted(k["addr"] for k in refetch) == sorted(
-            k["addr"] for k in clients
-        )
+        assert sorted(k["addr"] for k in refetch) == sorted(k["addr"] for k in clients)
 
     async def test_client_kill_fail(self, client):
         with pytest.raises(ResponseError):

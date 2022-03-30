@@ -338,15 +338,11 @@ class PubSub:
         """
         for channel, handler in iteritems(self.channels):
             if handler is None:
-                raise PubSubError(
-                    f"Channel: '{channel}' has no handler registered"
-                )
+                raise PubSubError(f"Channel: '{channel}' has no handler registered")
 
         for pattern, handler in iteritems(self.patterns):
             if handler is None:
-                raise PubSubError(
-                    f"Pattern: '{pattern}' has no handler registered"
-                )
+                raise PubSubError(f"Pattern: '{pattern}' has no handler registered")
         thread = PubSubWorkerThread(
             self, poll_timeout=poll_timeout, loop=asyncio.get_running_loop()
         )

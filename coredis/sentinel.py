@@ -59,9 +59,7 @@ class SentinelManagedConnection(Connection):
 
     async def read_response(self, decode=False):
         try:
-            return await super().read_response(
-                decode=decode
-            )
+            return await super().read_response(decode=decode)
         except ReadOnlyError:
             if self.connection_pool.is_master:
                 # When talking to a master, a ReadOnlyError when likely
@@ -223,9 +221,7 @@ class Sentinel(Generic[AnyStr]):
         # connection_kwargs
         if sentinel_kwargs is None:
             sentinel_kwargs = {
-                    k: v
-                    for k, v in iteritems(connection_kwargs)
-                    if k.startswith("socket_")
+                k: v for k, v in iteritems(connection_kwargs) if k.startswith("socket_")
             }
 
         self.sentinel_kwargs = sentinel_kwargs

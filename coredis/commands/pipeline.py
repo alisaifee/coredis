@@ -849,9 +849,7 @@ class ClusterPipelineImpl(
             for c in attempt:
                 try:
                     # send each command individually like we do in the main client.
-                    c.result = await super().execute_command(
-                        *c.args, **c.options
-                    )
+                    c.result = await super().execute_command(*c.args, **c.options)
                 except RedisError as e:
                     c.result = e
 

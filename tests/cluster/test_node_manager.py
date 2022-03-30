@@ -3,10 +3,10 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from unittest.mock import Mock, patch
 
 # 3rd party imports
 import pytest
-from unittest.mock import Mock, patch
 
 # rediscluster imports
 from coredis import ConnectionError, RedisCluster, RedisClusterException
