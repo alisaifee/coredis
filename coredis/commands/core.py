@@ -1029,7 +1029,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         return await self.execute_command(CommandName.CLUSTER_SLOTS)
 
     @versionadded(version="3.1.2")
-    @redis_command(CommandName.READONLY, group=CommandGroup.CLUSTER, response_callback=BoolCallback())
+    @redis_command(
+        CommandName.READONLY,
+        group=CommandGroup.CLUSTER,
+        response_callback=BoolCallback(),
+    )
     async def readonly(self) -> bool:
         """
         Enables read queries for a connection to a cluster replica node
@@ -1037,7 +1041,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         return await self.execute_command(CommandName.READONLY)
 
     @versionadded(version="3.1.2")
-    @redis_command(CommandName.READWRITE, group=CommandGroup.CLUSTER, response_callback=BoolCallback())
+    @redis_command(
+        CommandName.READWRITE,
+        group=CommandGroup.CLUSTER,
+        response_callback=BoolCallback(),
+    )
     async def readwrite(self) -> bool:
         """
         Disables read queries for a connection to a cluster replica node
@@ -5673,7 +5681,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CLIENT_NO_EVICT,
         version_introduced="6.9.0",
         group=CommandGroup.CONNECTION,
-        response_callback=BoolCallback()
+        response_callback=BoolCallback(),
     )
     async def client_no_evict(
         self, enabled: Literal[PureToken.ON, PureToken.OFF]
