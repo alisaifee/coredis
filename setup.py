@@ -107,7 +107,7 @@ https://api.mongodb.org/python/current/installation.html#osx
             self.warn(e)
             self.warn(
                 self.warning_message.format(
-                    target="The {} extension ".format(ext.name),
+                    target=f"The {ext.name} extension ",
                     comment=(
                         "The output above this warning shows how the "
                         "compilation failed."

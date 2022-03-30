@@ -475,8 +475,8 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
 
     def annotate_exception(self, exception, number, command):
         cmd = command[0].decode("latin-1")
-        args = str(" ").join(map(str, command[1:]))
-        msg = str("Command # {0} ({1} {2}) of pipeline caused error: {3}").format(
+        args = " ".join(map(str, command[1:]))
+        msg = "Command # {} ({} {}) of pipeline caused error: {}".format(
             number,
             cmd,
             args,
@@ -621,7 +621,7 @@ class ClusterPipelineImpl(
         raise NotImplementedError
 
     def __repr__(self):
-        return "{0}".format(type(self).__name__)
+        return f"{type(self).__name__}"
 
     def __del__(self):
         self.reset()
@@ -658,7 +658,7 @@ class ClusterPipelineImpl(
     def annotate_exception(self, exception, number, command):
         cmd = command[0].decode("latin-1")
         args = " ".join(str(x) for x in command[1:])
-        msg = "Command # {0} ({1} {2}) of pipeline caused error: {3}".format(
+        msg = "Command # {} ({} {}) of pipeline caused error: {}".format(
             number, cmd, args, exception.args[0]
         )
         exception.args = (msg,) + exception.args[1:]
@@ -879,7 +879,7 @@ class ClusterPipelineImpl(
 
         if len(slots) != 1:
             raise RedisClusterException(
-                "{0} - all keys must map to the same key slot".format(
+                "{} - all keys must map to the same key slot".format(
                     command.decode("latin-1")
                 )
             )

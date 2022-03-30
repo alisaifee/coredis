@@ -1,5 +1,4 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
 
 import asyncio
 from coredis import RedisCluster
@@ -16,9 +15,9 @@ async def func2():
     )
     while True:
         foobar = int(await cluster.get("foobar") or 0)
-        print("thread: get `foobar` = {}".format(foobar))
+        print(f"thread: get `foobar` = {foobar}")
         if foobar >= 0:
-            print("thread: cluster get foobar == {}, decrease it".format(foobar))
+            print(f"thread: cluster get foobar == {foobar}, decrease it")
             await cluster.decrby("foobar", 1)
         if foobar < 0:
             print("thread: break loop now")

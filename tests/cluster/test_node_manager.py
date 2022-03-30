@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # python std lib
 from __future__ import annotations, with_statement
 
@@ -44,8 +42,8 @@ def test_keyslot():
     assert n.keyslot(1337.1234) == n.keyslot("1337.1234")
     assert n.keyslot(1337) == n.keyslot("1337")
     assert n.keyslot(b"abc") == n.keyslot("abc")
-    assert n.keyslot("abc") == n.keyslot(str("abc"))
-    assert n.keyslot(str("abc")) == n.keyslot(b"abc")
+    assert n.keyslot("abc") == n.keyslot("abc")
+    assert n.keyslot("abc") == n.keyslot(b"abc")
 
 
 @pytest.mark.asyncio

@@ -315,8 +315,8 @@ STD_GROUPS = [
     "transactions",
 ]
 
-VERSIONADDED_DOC = re.compile("(.. versionadded:: ([\d\.]+))", re.DOTALL)
-VERSIONCHANGED_DOC = re.compile("(.. versionchanged:: ([\d\.]+))", re.DOTALL)
+VERSIONADDED_DOC = re.compile(r"(.. versionadded:: ([\d\.]+))", re.DOTALL)
+VERSIONCHANGED_DOC = re.compile(r"(.. versionchanged:: ([\d\.]+))", re.DOTALL)
 
 inflection_engine = inflect.engine()
 
@@ -326,7 +326,7 @@ def sanitized_rendered_type(rendered_type) -> str:
     v = re.sub("<PureToken.(.*?): b'(.*?)'>", "PureToken.\\1", v)
     v = v.replace("~str", "str")
     v = v.replace("~AnyStr", "AnyStr")
-    v = re.sub("typing\.(.*?)", "\\1", v)
+    v = re.sub(r"typing\.(.*?)", "\\1", v)
     v = v.replace("Ellipsis", "...")
     return v
 
@@ -417,10 +417,10 @@ def sanitize_parameter(p):
                 if getattr(a, "__name__", "NotNoneType") != "NoneType"
             ]
             if len(new_args) == 1:
-                v = re.sub("Union\[([\w,\s\[\]\.]+), NoneType\]", "Optional[\\1]", v)
+                v = re.sub(r"Union\[([\w,\s\[\]\.]+), NoneType\]", "Optional[\\1]", v)
             else:
                 v = re.sub(
-                    "Union\[([\w,\s\[\]\.]+), NoneType\]", "Optional[Union[\\1]]", v
+                    r"Union\[([\w,\s\[\]\.]+), NoneType\]", "Optional[Union[\\1]]", v
                 )
     return v
 
@@ -492,7 +492,7 @@ def read_command_docs(command, group):
     ).read()
 
     return_description = re.compile(
-        "(@(.*?)-reply[:,]*\s*(.*?)$)", re.MULTILINE
+        r"(@(.*?)-reply[:,]*\s*(.*?)$)", re.MULTILINE
     ).findall(doc)
 
     def sanitize_description(desc):
@@ -513,7 +513,7 @@ def read_command_docs(command, group):
         )  # lol
         return_description = return_description.replace("@examples", "")  # more lol
         return_description = return_description.replace("@example", "")  # more more lol
-        return_description = re.sub("^\s*([^\w]+)", "", return_description)
+        return_description = re.sub(r"^\s*([^\w]+)", "", return_description)
 
         return return_description
 

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # python std lib
 from __future__ import annotations, with_statement
 

@@ -267,7 +267,7 @@ class RedisConnection:
         return closure().__await__()
 
     def __repr__(self):
-        return "{}<{}>".format(type(self).__name__, repr(self.connection_pool))
+        return f"{type(self).__name__}<{repr(self.connection_pool)}>"
 
 
 class ResponseParser:
@@ -1473,13 +1473,13 @@ class RedisCluster(
     def __repr__(self):
         servers = list(
             {
-                "{0}:{1}".format(info["host"], info["port"])
+                "{}:{}".format(info["host"], info["port"])
                 for info in self.connection_pool.nodes.startup_nodes
             }
         )
         servers.sort()
 
-        return "{0}<{1}>".format(type(self).__name__, ", ".join(servers))
+        return "{}<{}>".format(type(self).__name__, ", ".join(servers))
 
     @property
     def all_nodes(self) -> Iterator[Redis]:
@@ -1565,7 +1565,7 @@ class RedisCluster(
 
             if not slot:
                 raise RedisClusterException(
-                    "slot_id is needed to execute command {}".format(command)
+                    f"slot_id is needed to execute command {command}"
                 )
 
             return [self.connection_pool.nodes.node_from_slot(slot)]
@@ -1664,7 +1664,7 @@ class RedisCluster(
                 if ttl < self.RedisClusterRequestTTL / 2:
                     await asyncio.sleep(0.05)
             except AskError as e:
-                redirect_addr, asking = "{0}:{1}".format(e.host, e.port), True
+                redirect_addr, asking = f"{e.host}:{e.port}", True
             finally:
 
                 self.connection_pool.release(r)

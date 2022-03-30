@@ -64,7 +64,7 @@ async def test_connect_unix_socket(redis_uds):
     conn = UnixDomainSocketConnection(path)
     await conn.connect()
     assert conn.path == path
-    assert str(conn) == "UnixDomainSocketConnection<path={},db=0>".format(path)
+    assert str(conn) == f"UnixDomainSocketConnection<path={path},db=0>"
     await conn.send_command(b"PING")
     res = await conn.read_response()
     assert res == b"PONG"

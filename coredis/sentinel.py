@@ -30,10 +30,10 @@ class SentinelManagedConnection(Connection):
     def __repr__(self):
         pool = self.connection_pool
         if self.host:
-            host_info = ",host=%s,port=%s" % (self.host, self.port)
+            host_info = f",host={self.host},port={self.port}"
         else:
             host_info = ""
-        s = "{}<service={}{}>".format(type(self).__name__, pool.service_name, host_info)
+        s = f"{type(self).__name__}<service={pool.service_name}{host_info}>"
         return s
 
     async def connect_to(self, address):
@@ -288,7 +288,7 @@ class Sentinel(Generic[AnyStr]):
                     self.sentinels[0],
                 )
                 return state["ip"], state["port"]
-        raise PrimaryNotFoundError("No primary found for %r" % (service_name,))
+        raise PrimaryNotFoundError(f"No primary found for {service_name!r}")
 
     def filter_replicas(self, replicas):
         """Removes replicas that are in an ODOWN or SDOWN state"""

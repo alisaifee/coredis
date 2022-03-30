@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import random
@@ -191,7 +190,7 @@ class NodeManager:
                         # Validate that 2 nodes want to use the same slot cache setup
                         if tmp_slots[i][0]["name"] != node["name"]:
                             disagreements.append(
-                                "{0} vs {1} on slot: {2}".format(
+                                "{} vs {} on slot: {}".format(
                                     tmp_slots[i][0]["name"], node["name"], i
                                 ),
                             )
@@ -230,7 +229,7 @@ class NodeManager:
         if not all_slots_covered:
             raise RedisClusterException(
                 "Not all slots are covered after query all startup_nodes. "
-                "{0} of {1} covered...".format(len(tmp_slots), HASH_SLOTS)
+                "{} of {} covered...".format(len(tmp_slots), HASH_SLOTS)
             )
 
         # Set the tmp variables to the real variables
@@ -271,11 +270,11 @@ class NodeManager:
         the node cache dict
         """
         if "name" not in n:
-            n["name"] = "{0}:{1}".format(nativestr(n["host"]), n["port"])
+            n["name"] = "{}:{}".format(nativestr(n["host"]), n["port"])
 
     def set_node(self, host, port, server_type=None):
         """Updates data for a node"""
-        node_name = "{0}:{1}".format(nativestr(host), port)
+        node_name = f"{nativestr(host)}:{port}"
         node = {
             "host": host,
             "port": port,

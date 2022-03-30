@@ -243,7 +243,7 @@ class BaseConnection:
                     errno = e.args[0]
                     errmsg = e.args[1]
                 raise ConnectionError(
-                    "Error %s while writing to socket. %s." % (errno, errmsg)
+                    f"Error {errno} while writing to socket. {errmsg}."
                 )
             else:
                 raise

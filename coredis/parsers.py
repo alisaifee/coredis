@@ -112,7 +112,7 @@ class SocketBuffer:
         except socket.error:
             e = sys.exc_info()[1]
             if e:
-                raise ConnectionError("Error while reading from socket: %s" % (e.args,))
+                raise ConnectionError(f"Error while reading from socket: {e.args}")
             else:
                 raise
 
@@ -307,7 +307,7 @@ class PythonParser(BaseParser):
 
         marker, chunk = chunk[0], chunk[1:]
         if marker not in PythonParser.ALLOWED_TYPES:
-            raise InvalidResponse("Protocol Error: %s, %s" % (chr(marker), str(chunk)))
+            raise InvalidResponse(f"Protocol Error: {chr(marker)}, {str(chunk)}")
 
         # server returned an error
         if marker == RESPDataType.ERROR:
@@ -460,7 +460,7 @@ class HiredisParser(BaseParser):
                 e = sys.exc_info()[1]
                 if e:
                     raise ConnectionError(
-                        "Error {} while reading from stream: {}".format(type(e), e.args)
+                        f"Error {type(e)} while reading from stream: {e.args}"
                     )
                 raise
 

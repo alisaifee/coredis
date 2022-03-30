@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # python std lib
 from __future__ import annotations, with_statement
 
@@ -58,7 +56,7 @@ def make_subscribe_test_data(pubsub, type):
             "unsub_func": pubsub.punsubscribe,
             "keys": ["f*", "b*", "uni" + chr(4456) + "*"],
         }
-    assert False, "invalid subscribe type: {0}".format(type)
+    assert False, f"invalid subscribe type: {type}"
 
 
 class TestPubSubSubscribeUnsubscribe:

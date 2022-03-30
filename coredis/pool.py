@@ -1,5 +1,4 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import asyncio
@@ -527,7 +526,7 @@ class ClusterConnectionPool(ConnectionPool):
         is connected to
         """
 
-        return "{0}<{1}>".format(
+        return "{}<{}>".format(
             type(self).__name__,
             ", ".join(
                 [
@@ -615,7 +614,7 @@ class ClusterConnectionPool(ConnectionPool):
         if self.count_all_num_connections(node) >= self.max_connections:
             if self.max_connections_per_node:
                 raise RedisClusterException(
-                    "Too many connection ({0}) for node: {1}".format(
+                    "Too many connection ({}) for node: {}".format(
                         self.count_all_num_connections(node), node["name"]
                     )
                 )
