@@ -59,7 +59,7 @@ ERRORS_ALLOW_RETRY = (
 
 
 def wrap_pipeline_method(
-    kls: "PipelineMeta", func: Callable[P, Awaitable]
+    kls: PipelineMeta, func: Callable[P, Awaitable]
 ) -> Callable[P, Awaitable]:
     @functools.wraps(func)
     async def wrapper(*args: P.args, **kwargs: P.kwargs):

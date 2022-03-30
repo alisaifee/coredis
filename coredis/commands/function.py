@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 class Library:
     def __init__(
         self,
-        client: "coredis.client.AbstractRedis",
+        client: coredis.client.AbstractRedis,
         name: str,
         code: Optional[str] = None,
         *,
@@ -38,21 +38,21 @@ class Library:
             assert "1" == await lib["myfunc"]([], [1])
         """
         self._client: weakref.ReferenceType[
-            "coredis.client.AbstractRedis"
+            coredis.client.AbstractRedis
         ] = weakref.ref(client)
         self._name = name
         self._engine = engine
         self._code = code
-        self._functions: Dict[str, "Function"] = {}
+        self._functions: Dict[str, Function] = {}
 
     @property
-    def client(self) -> "coredis.client.AbstractRedis":
+    def client(self) -> coredis.client.AbstractRedis:
         c = self._client()
         assert c
         return c
 
     @property
-    def functions(self) -> Dict[str, "Function"]:
+    def functions(self) -> Dict[str, Function]:
         """
         mapping of function names to :class:`~coredis.commands.function.Function`
         instances that can be directly called.
@@ -70,7 +70,7 @@ class Library:
             return True
         return False
 
-    def __getitem__(self, function: str) -> Optional["Function"]:
+    def __getitem__(self, function: str) -> Optional[Function]:
         return self._functions.get(function)
 
     async def __initialize(self):
@@ -95,7 +95,7 @@ class Library:
 
 
 class Function:
-    def __init__(self, client: "coredis.client.AbstractRedis", library: str, name: str):
+    def __init__(self, client: coredis.client.AbstractRedis, library: str, name: str):
         """
         Wrapper to call a redis function that has already been loaded
 
@@ -106,13 +106,13 @@ class Function:
             response = await func(keys=["a"], args=[1])
         """
         self._client: weakref.ReferenceType[
-            "coredis.client.AbstractRedis"
+            coredis.client.AbstractRedis
         ] = weakref.ref(client)
         self._library = Library(client, library)
         self._name = name
 
     @property
-    def client(self) -> "coredis.client.AbstractRedis":
+    def client(self) -> coredis.client.AbstractRedis:
         c = self._client()
         assert c
         return c

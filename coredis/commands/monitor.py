@@ -34,16 +34,16 @@ class Monitor:
 
     """
 
-    def __init__(self, client: "coredis.client.RedisConnection"):
+    def __init__(self, client: coredis.client.RedisConnection):
         self._client: weakref.ReferenceType[
-            "coredis.client.RedisConnection"
+            coredis.client.RedisConnection
         ] = weakref.ref(client)
         self.encoding = client.encoding
-        self.connection: Optional["coredis.connection.Connection"] = None
+        self.connection: Optional[coredis.connection.Connection] = None
         self.monitoring = False
 
     @property
-    def client(self) -> "coredis.client.RedisConnection":
+    def client(self) -> coredis.client.RedisConnection:
         client = self._client()
         assert client
         return client
@@ -78,7 +78,7 @@ class Monitor:
 
     def run_in_thread(
         self, response_handler=Callable[[MonitorResult], None], loop=None
-    ) -> "MonitorThread":
+    ) -> MonitorThread:
         """
         Runs the monitor in a :class:`MonitorThread` and invokes :paramref:`response_handler`
         for every command received.
@@ -131,7 +131,7 @@ class MonitorThread(threading.Thread):
 
     def __init__(
         self,
-        monitor: "Monitor",
+        monitor: Monitor,
         loop: asyncio.events.AbstractEventLoop,
         response_handler: Callable[[MonitorResult], None],
     ):

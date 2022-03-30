@@ -34,7 +34,7 @@ class Lock:
 
     def __init__(
         self,
-        redis: Union["coredis.client.Redis", "coredis.client.RedisCluster"],
+        redis: Union[coredis.client.Redis, coredis.client.RedisCluster],
         name: StringT,
         timeout: Optional[float] = None,
         sleep: float = 0.1,

@@ -86,7 +86,7 @@ class SentinelConnectionPool(ConnectionPool):
     def __init__(
         self,
         service_name: StringT,
-        sentinel_manager: "Sentinel",
+        sentinel_manager: Sentinel,
         is_master: bool = True,
         check_connection: bool = True,
         **kwargs,
@@ -174,7 +174,7 @@ class Sentinel(Generic[AnyStr]):
 
     @overload
     def __init__(
-        self: "Sentinel[bytes]",
+        self: Sentinel[bytes],
         sentinels: Iterable[Tuple[str, int]],
         min_other_sentinels: int = ...,
         sentinel_kwargs=None,
@@ -186,7 +186,7 @@ class Sentinel(Generic[AnyStr]):
 
     @overload
     def __init__(
-        self: "Sentinel[str]",
+        self: Sentinel[str],
         sentinels: Iterable[Tuple[str, int]],
         min_other_sentinels: int = ...,
         sentinel_kwargs=None,

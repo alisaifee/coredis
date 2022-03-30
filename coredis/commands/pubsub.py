@@ -30,12 +30,12 @@ class PubSub:
 
     def __init__(
         self,
-        connection_pool: "coredis.pool.ConnectionPool",
+        connection_pool: coredis.pool.ConnectionPool,
         ignore_subscribe_messages: bool = False,
     ):
         self.connection_pool = connection_pool
         self.ignore_subscribe_messages = ignore_subscribe_messages
-        self.connection: Optional["coredis.connection.Connection"] = None
+        self.connection: Optional[coredis.connection.Connection] = None
         self.reset()
 
     async def _ensure_encoding(self):
@@ -328,7 +328,7 @@ class PubSub:
 
         return message
 
-    def run_in_thread(self, poll_timeout=1.0) -> "PubSubWorkerThread":
+    def run_in_thread(self, poll_timeout=1.0) -> PubSubWorkerThread:
         """
         Run the listeners in a thread. For each message received on a
         subscribed channel or pattern the registered handlers will be invoked.
@@ -357,7 +357,7 @@ class PubSub:
 
 class PubSubWorkerThread(threading.Thread):
     def __init__(
-        self, pubsub: "PubSub", loop: asyncio.events.AbstractEventLoop, poll_timeout=1.0
+        self, pubsub: PubSub, loop: asyncio.events.AbstractEventLoop, poll_timeout=1.0
     ):
         super().__init__()
         self._pubsub = pubsub

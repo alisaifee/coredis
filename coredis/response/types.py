@@ -326,7 +326,7 @@ class MonitorResult:
     args: Optional[Tuple[str, ...]]
 
     @classmethod
-    def parse_response_string(cls, response: str) -> "MonitorResult":
+    def parse_response_string(cls, response: str) -> MonitorResult:
         command_time, command_data = response.split(" ", 1)
         match = cls.EXPR.match(command_data)
         assert match

@@ -70,12 +70,12 @@ class CommandDetails(NamedTuple):
 
 
 class CommandMixin(Generic[AnyStr], AbstractExecutor[AnyStr], ABC):
-    connection_pool: "coredis.pool.ConnectionPool"
+    connection_pool: coredis.pool.ConnectionPool
 
 
 def redis_command(
     command_name: CommandName,
-    group: Optional["CommandGroup"] = None,
+    group: Optional[CommandGroup] = None,
     version_introduced: Optional[str] = None,
     version_deprecated: Optional[str] = None,
     deprecation_reason: Optional[str] = None,

@@ -163,7 +163,7 @@ class RedisMeta(ABCMeta):
 
 class NodeProxy:
     class Capture:
-        def __init__(self, method: str, nodes: List["Redis"]):
+        def __init__(self, method: str, nodes: List[Redis]):
             self.method = method
             self.nodes = nodes
 
@@ -938,7 +938,7 @@ class Redis(
 ):
     @overload
     def __init__(
-        self: "Redis[bytes]",
+        self: Redis[bytes],
         host: Optional[str] = ...,
         port: Optional[int] = ...,
         db: int = ...,
@@ -970,7 +970,7 @@ class Redis(
 
     @overload
     def __init__(
-        self: "Redis[str]",
+        self: Redis[str],
         host: Optional[str] = ...,
         port: Optional[int] = ...,
         db: int = ...,
@@ -1069,7 +1069,7 @@ class Redis(
         *,
         decode_responses: Literal[False] = ...,
         **kwargs,
-    ) -> "Redis[bytes]":
+    ) -> Redis[bytes]:
         ...
 
     @classmethod
@@ -1081,7 +1081,7 @@ class Redis(
         *,
         decode_responses: Literal[True],
         **kwargs,
-    ) -> "Redis[str]":
+    ) -> Redis[str]:
         ...
 
     @classmethod
@@ -1282,7 +1282,7 @@ class RedisCluster(
 
     @overload
     def __init__(
-        self: "RedisCluster[bytes]",
+        self: RedisCluster[bytes],
         host: Optional[str] = ...,
         port: Optional[int] = ...,
         *,
@@ -1302,7 +1302,7 @@ class RedisCluster(
 
     @overload
     def __init__(
-        self: "RedisCluster[str]",
+        self: RedisCluster[str],
         host: Optional[str] = ...,
         port: Optional[int] = ...,
         *,
@@ -1404,7 +1404,7 @@ class RedisCluster(
         skip_full_coverage_check: bool = ...,
         decode_responses: Literal[False] = ...,
         **kwargs,
-    ) -> "RedisCluster[bytes]":
+    ) -> RedisCluster[bytes]:
         ...
 
     @classmethod
@@ -1417,7 +1417,7 @@ class RedisCluster(
         skip_full_coverage_check: bool = ...,
         decode_responses: Literal[True],
         **kwargs,
-    ) -> "RedisCluster[str]":
+    ) -> RedisCluster[str]:
         ...
 
     @classmethod
