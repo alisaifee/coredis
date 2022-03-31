@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     import coredis.client
 
 import coredis.pool
-from coredis.response.callbacks import ParametrizedCallback, SimpleCallback
+from coredis.response.callbacks import ResponseCallback
 from coredis.typing import AbstractExecutor, ParamSpec, ValueT
 from coredis.utils import NodeFlag
 
@@ -64,9 +64,7 @@ class CommandDetails(NamedTuple):
     version_deprecated: Optional[version.Version]
     arguments: Dict[str, Dict[str, str]]
     cluster: ClusterCommandConfig
-    response_callback: Optional[
-        Union[FunctionType, SimpleCallback, ParametrizedCallback]
-    ]
+    response_callback: Optional[Union[FunctionType, ResponseCallback, ResponseCallback]]
 
 
 class CommandMixin(Generic[AnyStr], AbstractExecutor[AnyStr], ABC):
@@ -82,7 +80,7 @@ def redis_command(
     arguments: Optional[Dict[str, Dict[str, str]]] = None,
     readonly: bool = False,
     response_callback: Optional[
-        Union[FunctionType, SimpleCallback, ParametrizedCallback]
+        Union[FunctionType, ResponseCallback, ResponseCallback]
     ] = None,
     cluster: ClusterCommandConfig = ClusterCommandConfig(),
 ) -> Callable[

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from coredis.commands import ParametrizedCallback
+from coredis.commands import ResponseCallback
 from coredis.response.callbacks import SimpleStringCallback
 from coredis.response.types import LCSMatch, LCSResult
 from coredis.typing import Any, AnyStr, Union
 
 
-class StringSetCallback(ParametrizedCallback):
+class StringSetCallback(ResponseCallback):
     def transform(self, response: Any, **options: Any) -> Union[AnyStr, bool]:
         if options.get("get"):
             return response
@@ -14,7 +14,7 @@ class StringSetCallback(ParametrizedCallback):
             return SimpleStringCallback()(response)
 
 
-class LCSCallback(ParametrizedCallback):
+class LCSCallback(ResponseCallback):
     def transform(self, response: Any, **options: Any) -> Union[AnyStr, int, LCSResult]:
         if options.get("idx") is not None:
             return LCSResult(

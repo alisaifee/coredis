@@ -1,18 +1,20 @@
 from __future__ import annotations
 
-from coredis.commands import ParametrizedCallback, SimpleCallback
+from coredis.commands import ResponseCallback
 from coredis.typing import Any, AnyStr, Dict, Tuple, Union
 from coredis.utils import flat_pairs_to_dict
 
 
-class HScanCallback(SimpleCallback):
-    def transform(self, response: Any) -> Tuple[int, Dict[AnyStr, AnyStr]]:
+class HScanCallback(ResponseCallback):
+    def transform(
+        self, response: Any, **options: Any
+    ) -> Tuple[int, Dict[AnyStr, AnyStr]]:
         cursor, r = response
 
         return int(cursor), r and flat_pairs_to_dict(r) or {}
 
 
-class HRandFieldCallback(ParametrizedCallback):
+class HRandFieldCallback(ResponseCallback):
     def transform_3(
         self, response: Any, **options: Any
     ) -> Union[str, Tuple[AnyStr, ...], Dict[AnyStr, AnyStr]]:
@@ -34,9 +36,9 @@ class HRandFieldCallback(ParametrizedCallback):
             return response
 
 
-class HGetAllCallback(SimpleCallback):
-    def transform_3(self, response: Any) -> Dict[AnyStr, AnyStr]:
+class HGetAllCallback(ResponseCallback):
+    def transform_3(self, response: Any, **options: Any) -> Dict[AnyStr, AnyStr]:
         return response
 
-    def transform(self, response: Any) -> Dict[AnyStr, AnyStr]:
+    def transform(self, response: Any, **options: Any) -> Dict[AnyStr, AnyStr]:
         return flat_pairs_to_dict(response) if response else {}

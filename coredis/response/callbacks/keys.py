@@ -3,16 +3,12 @@ from __future__ import annotations
 from datetime import datetime
 
 from coredis.exceptions import DataError, NoKeyError, RedisError
-from coredis.response.callbacks import (
-    DateTimeCallback,
-    ParametrizedCallback,
-    SimpleCallback,
-)
+from coredis.response.callbacks import DateTimeCallback, ResponseCallback
 from coredis.typing import Any, AnyStr, Tuple, Union
 from coredis.utils import int_or_none
 
 
-class SortCallback(ParametrizedCallback):
+class SortCallback(ResponseCallback):
     def transform(
         self, response: Any, **options: Any
     ) -> Union[Tuple[AnyStr, ...], int]:
@@ -31,8 +27,10 @@ def parse_object(response, infotype):
     return response
 
 
-class ScanCallback(SimpleCallback):
-    def transform(self, response: Any) -> Tuple[int, Tuple[AnyStr, ...]]:
+class ScanCallback(ResponseCallback):
+    def transform(
+        self, response: Any, **options: Any
+    ) -> Tuple[int, Tuple[AnyStr, ...]]:
         cursor, r = response
         return int(cursor), tuple(r)
 

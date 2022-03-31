@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from coredis.commands import ParametrizedCallback, SimpleCallback
+from coredis.commands import ResponseCallback
 from coredis.response.types import (
     StreamEntry,
     StreamInfo,
@@ -11,14 +11,14 @@ from coredis.typing import Any, AnyStr, Dict, Optional, Tuple, Union
 from coredis.utils import flat_pairs_to_dict, flat_pairs_to_ordered_dict
 
 
-class StreamRangeCallback(SimpleCallback):
-    def transform(self, response: Any) -> Tuple[StreamEntry, ...]:
+class StreamRangeCallback(ResponseCallback):
+    def transform(self, response: Any, **options: Any) -> Tuple[StreamEntry, ...]:
         return tuple(
             StreamEntry(r[0], flat_pairs_to_ordered_dict(r[1])) for r in response
         )
 
 
-class ClaimCallback(ParametrizedCallback):
+class ClaimCallback(ResponseCallback):
     def transform(
         self, response: Any, **options: Any
     ) -> Union[Tuple[AnyStr, ...], Tuple[StreamEntry, ...]]:
@@ -28,7 +28,7 @@ class ClaimCallback(ParametrizedCallback):
             return StreamRangeCallback()(response)
 
 
-class AutoClaimCallback(ParametrizedCallback):
+class AutoClaimCallback(ResponseCallback):
     def transform(
         self, response: Any, **options: Any
     ) -> Union[
@@ -45,9 +45,9 @@ class AutoClaimCallback(ParametrizedCallback):
             )
 
 
-class MultiStreamRangeCallback(SimpleCallback):
+class MultiStreamRangeCallback(ResponseCallback):
     def transform_3(
-        self, response: Any
+        self, response: Any, **options: Any
     ) -> Optional[Dict[AnyStr, Tuple[StreamEntry, ...]]]:
         if response:
             mapping = {}
@@ -61,7 +61,7 @@ class MultiStreamRangeCallback(SimpleCallback):
         return None
 
     def transform(
-        self, response: Any
+        self, response: Any, **options: Any
     ) -> Optional[Dict[AnyStr, Tuple[StreamEntry, ...]]]:
         if response:
             mapping = {}
@@ -75,7 +75,7 @@ class MultiStreamRangeCallback(SimpleCallback):
         return None
 
 
-class PendingCallback(ParametrizedCallback):
+class PendingCallback(ResponseCallback):
     def transform(
         self, response: Any, **options: Any
     ) -> Union[StreamPending, Tuple[StreamPendingExt, ...]]:
@@ -92,12 +92,14 @@ class PendingCallback(ParametrizedCallback):
             )
 
 
-class XInfoCallback(SimpleCallback):
-    def transform(self, response: Any) -> Tuple[Dict[AnyStr, AnyStr], ...]:
+class XInfoCallback(ResponseCallback):
+    def transform(
+        self, response: Any, **options: Any
+    ) -> Tuple[Dict[AnyStr, AnyStr], ...]:
         return tuple(flat_pairs_to_dict(row) for row in response)
 
 
-class StreamInfoCallback(ParametrizedCallback):
+class StreamInfoCallback(ResponseCallback):
     def transform(self, response: Any, **options: Any) -> StreamInfo:
         res = flat_pairs_to_dict(response)
         if not options.get("full"):

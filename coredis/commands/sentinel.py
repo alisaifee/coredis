@@ -4,7 +4,7 @@ from coredis.response.callbacks import SimpleStringCallback
 from coredis.typing import Any, AnyStr, Dict, Optional, Tuple, ValueT
 from coredis.utils import nativestr
 
-from . import CommandMixin, SimpleCallback, redis_command
+from . import CommandMixin, ResponseCallback, redis_command
 from .constants import CommandName
 
 SENTINEL_STATE_TYPES = {
@@ -69,13 +69,13 @@ def parse_sentinel_state(item) -> Dict[str, Any]:
     return result
 
 
-class PrimaryCallback(SimpleCallback):
-    def transform(self, response: Any) -> Dict[str, Any]:
+class PrimaryCallback(ResponseCallback):
+    def transform(self, response: Any, **options: Any) -> Dict[str, Any]:
         return parse_sentinel_state(response)
 
 
-class PrimariesCallback(SimpleCallback):
-    def transform(self, response: Any) -> Dict[str, Dict[str, Any]]:
+class PrimariesCallback(ResponseCallback):
+    def transform(self, response: Any, **options: Any) -> Dict[str, Dict[str, Any]]:
         result = {}
 
         for item in response:
@@ -85,13 +85,13 @@ class PrimariesCallback(SimpleCallback):
         return result
 
 
-class SentinelsStateCallback(SimpleCallback):
-    def transform(self, response: Any) -> Tuple[Dict[str, Any], ...]:
+class SentinelsStateCallback(ResponseCallback):
+    def transform(self, response: Any, **options: Any) -> Tuple[Dict[str, Any], ...]:
         return tuple(parse_sentinel_state(map(nativestr, item)) for item in response)
 
 
-class GetPrimaryCallback(SimpleCallback):
-    def transform(self, response: Any) -> Optional[Tuple[AnyStr, int]]:
+class GetPrimaryCallback(ResponseCallback):
+    def transform(self, response: Any, **options: Any) -> Optional[Tuple[AnyStr, int]]:
         return response and (response[0], int(response[1]))
 
 

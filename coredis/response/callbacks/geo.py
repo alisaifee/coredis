@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from coredis.commands import ParametrizedCallback, SimpleCallback
+from coredis.commands import ResponseCallback
 from coredis.response.types import GeoCoordinates, GeoSearchResult
 from coredis.typing import Any, List, Optional, Tuple, Union
 
 
-class GeoSearchCallback(ParametrizedCallback):
+class GeoSearchCallback(ResponseCallback):
     def transform(
         self, response: Any, **options: Any
     ) -> Union[int, Tuple[Union[str, GeoSearchResult], ...]]:
@@ -34,8 +34,10 @@ class GeoSearchCallback(ParametrizedCallback):
         return tuple(results)
 
 
-class GeoCoordinatessCallback(SimpleCallback):
-    def transform(self, response: Any) -> Tuple[Optional[GeoCoordinates], ...]:
+class GeoCoordinatessCallback(ResponseCallback):
+    def transform(
+        self, response: Any, **options: Any
+    ) -> Tuple[Optional[GeoCoordinates], ...]:
         return tuple(
             map(
                 lambda ll: (

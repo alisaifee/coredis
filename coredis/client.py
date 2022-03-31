@@ -33,6 +33,7 @@ from coredis.exceptions import (
     WatchError,
 )
 from coredis.lock import Lock, LuaLock
+from coredis.parsers import ResponseProxy
 from coredis.pool import ClusterConnectionPool, ConnectionPool
 from coredis.response.callbacks import SimpleStringCallback
 from coredis.tokens import PrefixToken, PureToken
@@ -290,8 +291,11 @@ class ResponseParser:
         response = await connection.read_response(decode=options.get("decode"))
         if command_name in self.response_callbacks:
             callback = self.response_callbacks[command_name]
-            return callback(response, version=connection.protocol_version, **options)
-
+            response = callback(
+                response, version=connection.protocol_version, **options
+            )
+        if isinstance(response, ResponseProxy):
+            return response.__wrapped__
         return response
 
 

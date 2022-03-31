@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from coredis.response.callbacks import SimpleCallback
+from coredis.response.callbacks import ResponseCallback
 from coredis.response.types import FunctionDefinition, LibraryDefinition
 from coredis.typing import Any, AnyStr, Dict, Union
 from coredis.utils import AnyDict, flat_pairs_to_dict, nativestr
 
 
-class FunctionListCallback(SimpleCallback):
-    def transform(self, response: Any) -> Dict[str, LibraryDefinition]:
+class FunctionListCallback(ResponseCallback):
+    def transform(self, response: Any, **options: Any) -> Dict[str, LibraryDefinition]:
         libraries = [AnyDict(flat_pairs_to_dict(library)) for library in response]
         transformed = {}
         for library in libraries:
@@ -31,8 +31,10 @@ class FunctionListCallback(SimpleCallback):
         return transformed
 
 
-class FunctionStatsCallback(SimpleCallback):
-    def transform(self, response: Any) -> Dict[AnyStr, Union[AnyStr, Dict]]:
+class FunctionStatsCallback(ResponseCallback):
+    def transform(
+        self, response: Any, **options: Any
+    ) -> Dict[AnyStr, Union[AnyStr, Dict]]:
         transformed = flat_pairs_to_dict(response)
         key = b"engines" if b"engines" in transformed else "engines"
         engines = flat_pairs_to_dict(transformed.pop(key))

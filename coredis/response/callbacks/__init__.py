@@ -27,21 +27,7 @@ R = TypeVar("R")
 P = ParamSpec("P")
 
 
-class SimpleCallback(ABC):
-    def __call__(self, response: Any, version: int = 2) -> Any:
-        if version == 3:
-            return self.transform_3(response)
-        return self.transform(response)
-
-    @abstractmethod
-    def transform(self, response: Any) -> Any:
-        pass
-
-    def transform_3(self, response: Any) -> Any:
-        return self.transform(response)
-
-
-class ParametrizedCallback(ABC):
+class ResponseCallback(ABC):
     def __call__(self, response: Any, version: int = 2, **kwargs: Any) -> Any:
         if version == 3:
             return self.transform_3(response, **kwargs)
@@ -55,37 +41,37 @@ class ParametrizedCallback(ABC):
         return self.transform(response, **kwargs)
 
 
-class SimpleStringCallback(SimpleCallback):
+class SimpleStringCallback(ResponseCallback):
     def __init__(self, raise_on_error: Optional[Type[Exception]] = None):
         self.raise_on_error = raise_on_error
 
-    def transform(self, response: Any) -> Any:
+    def transform(self, response: Any, **options: Any) -> Any:
         success = response and nativestr(response) == "OK"
         if not success and self.raise_on_error:
             raise self.raise_on_error(response)
         return success
 
 
-class PrimitiveCallback(SimpleCallback, Generic[R]):
+class PrimitiveCallback(ResponseCallback, Generic[R]):
     @abstractmethod
-    def transform(self, response: Any) -> Any:
+    def transform(self, response: Any, **options: Any) -> Any:
         pass
 
 
 class FloatCallback(PrimitiveCallback[float]):
-    def transform(self, response: Any) -> float:
+    def transform(self, response: Any, **options: Any) -> float:
         return response if isinstance(response, float) else float(response)
 
 
 class BoolCallback(PrimitiveCallback[bool]):
-    def transform(self, response: Any) -> bool:
+    def transform(self, response: Any, **options: Any) -> bool:
         if isinstance(response, bool):
             return response
         return bool(response)
 
 
-class SimpleStringOrIntCallback(SimpleCallback):
-    def transform(self, response: Any) -> Union[bool, int]:
+class SimpleStringOrIntCallback(ResponseCallback):
+    def transform(self, response: Any, **options: Any) -> Union[bool, int]:
         if isinstance(response, (int, bool)):
             return response
         else:
@@ -93,18 +79,18 @@ class SimpleStringOrIntCallback(SimpleCallback):
 
 
 class TupleCallback(PrimitiveCallback[Tuple]):
-    def transform(self, response: Any) -> Tuple:
+    def transform(self, response: Any, **options: Any) -> Tuple:
         return tuple(response)
 
 
 class ListCallback(PrimitiveCallback[List]):
-    def transform(self, response: Any) -> List:
+    def transform(self, response: Any, **options: Any) -> List:
         if isinstance(response, list):
             return response
         return list(response)
 
 
-class DateTimeCallback(ParametrizedCallback):
+class DateTimeCallback(ResponseCallback):
     def transform(self, response: Any, **kwargs: Any) -> datetime.datetime:
         ts = response
         if kwargs.get("unit") == "milliseconds":
@@ -119,7 +105,7 @@ class DictCallback(PrimitiveCallback[Dict]):
     ):
         self.transform_function = transform_function
 
-    def transform(self, response: Any) -> Dict:
+    def transform(self, response: Any, **options: Any) -> Dict:
         return (
             (response if isinstance(response, dict) else dict(response))
             if not self.transform_function
@@ -128,43 +114,43 @@ class DictCallback(PrimitiveCallback[Dict]):
 
 
 class SetCallback(PrimitiveCallback[Set]):
-    def transform(self, response: Any) -> Set:
+    def transform(self, response: Any, **options: Any) -> Set:
         if isinstance(response, set):
             return response
         return set(response) if response else set()
 
 
-class BoolsCallback(SimpleCallback):
-    def transform(self, response: Any) -> Tuple[bool, ...]:
+class BoolsCallback(ResponseCallback):
+    def transform(self, response: Any, **options: Any) -> Tuple[bool, ...]:
         return tuple(BoolCallback()(r) for r in response)
 
 
-class OptionalPrimitiveCallback(SimpleCallback, Generic[R]):
-    def transform(self, response: Any) -> Optional[R]:
+class OptionalPrimitiveCallback(ResponseCallback, Generic[R]):
+    def transform(self, response: Any, **options: Any) -> Optional[R]:
         return response
 
 
 class OptionalFloatCallback(OptionalPrimitiveCallback[float]):
-    def transform(self, response: Any) -> Optional[float]:
+    def transform(self, response: Any, **options: Any) -> Optional[float]:
         if isinstance(response, float):
             return response
         return response and float(response)
 
 
 class OptionalIntCallback(OptionalPrimitiveCallback[int]):
-    def transform(self, response: Any) -> Optional[int]:
+    def transform(self, response: Any, **options: Any) -> Optional[int]:
         if isinstance(response, int):
             return response
         return response and int(response)
 
 
 class OptionalSetCallback(OptionalPrimitiveCallback[Set]):
-    def transform(self, response: Any) -> Optional[Set]:
+    def transform(self, response: Any, **options: Any) -> Optional[Set]:
         if isinstance(response, set):
             return response
         return response and set(response)
 
 
 class OptionalTupleCallback(OptionalPrimitiveCallback[Tuple]):
-    def transform(self, response: Any) -> Optional[Tuple]:
+    def transform(self, response: Any, **options: Any) -> Optional[Tuple]:
         return response and tuple(response)

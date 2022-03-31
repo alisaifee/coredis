@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from coredis.response.callbacks import (
     DictCallback,
-    ParametrizedCallback,
+    ResponseCallback,
     SimpleStringCallback,
 )
 from coredis.typing import Any, AnyStr, Dict, Tuple, Union
 from coredis.utils import flat_pairs_to_dict
 
 
-class ACLLogCallback(ParametrizedCallback):
+class ACLLogCallback(ResponseCallback):
     def transform(
         self, response: Any, **options: Any
     ) -> Union[bool, Tuple[Dict[AnyStr, AnyStr], ...]]:

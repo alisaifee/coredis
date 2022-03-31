@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from coredis.commands import ParametrizedCallback, SimpleCallback
+from coredis.commands import ResponseCallback
 from coredis.typing import Any, Dict, List, Tuple, TypedDict, Union
 from coredis.utils import flat_pairs_to_dict, nativestr
 
@@ -12,27 +12,27 @@ class ClusterNode(TypedDict):
     server_type: str
 
 
-class ClusterLinksCallback(SimpleCallback):
-    def transform(self, response: Any) -> List[Dict[str, Any]]:
+class ClusterLinksCallback(ResponseCallback):
+    def transform(self, response: Any, **options: Any) -> List[Dict[str, Any]]:
         transformed = []
         for item in response:
             transformed.append(flat_pairs_to_dict(item))
         return transformed
 
-    def transform_3(self, response: Any) -> List[Dict[str, Any]]:
+    def transform_3(self, response: Any, **options: Any) -> List[Dict[str, Any]]:
         return response
 
 
-class ClusterInfoCallback(SimpleCallback):
-    def transform(self, response: Any) -> Dict[str, str]:
+class ClusterInfoCallback(ResponseCallback):
+    def transform(self, response: Any, **options: Any) -> Dict[str, str]:
         response = nativestr(response)
 
         return dict([line.split(":") for line in response.splitlines() if line])
 
 
-class ClusterSlotsCallback(SimpleCallback):
+class ClusterSlotsCallback(ResponseCallback):
     def transform(
-        self, response: Any
+        self, response: Any, **options: Any
     ) -> Dict[Tuple[int, int], Tuple[ClusterNode, ...]]:
         res = {}
 
@@ -53,7 +53,7 @@ class ClusterSlotsCallback(SimpleCallback):
         )
 
 
-class ClusterNodesCallback(ParametrizedCallback):
+class ClusterNodesCallback(ResponseCallback):
     def transform(self, response: Any, **options: Any) -> List[Dict[str, str]]:
         resp: Union[List[str], str]
         if isinstance(response, list):
