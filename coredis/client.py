@@ -270,6 +270,18 @@ class RedisConnection:
     def __repr__(self):
         return f"{type(self).__name__}<{repr(self.connection_pool)}>"
 
+    def _ensure_server_version(self, version: Optional[str]):
+        if not self.verify_version:
+            return
+        if not version:
+            return
+        if not self.server_version and version:
+            self.server_version = Version(nativestr(version))
+        elif str(self.server_version) != nativestr(version):
+            raise Exception(
+                f"Server version changed from {self.server_version} to {version}"
+            )
+
 
 class ResponseParser:
     RESPONSE_CALLBACKS: Dict = {}
@@ -427,16 +439,6 @@ class AbstractRedis(
         :param name: name of the library
         """
         return await Library(self, name)
-
-    def _ensure_server_version(self, version: Optional[str]):
-        if not version:
-            return
-        if not self.server_version and version:
-            self.server_version = Version(nativestr(version))
-        elif str(self.server_version) != nativestr(version):
-            raise Exception(
-                f"Server version changed from {self.server_version} to {version}"
-            )
 
 
 class AbstractRedisCluster(AbstractRedis[AnyStr]):
