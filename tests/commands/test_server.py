@@ -30,7 +30,7 @@ class TestServer:
         assert "summary" in docs["geosearch"]
         assert "arguments" in docs["geosearch"]
 
-    @pytest.mark.nohiredis
+    @pytest.mark.noresp3
     async def test_commands_get(self, client):
         commands = await client.command()
         assert commands["get"]
@@ -38,7 +38,7 @@ class TestServer:
         assert commands["get"]["name"] == "get"
         assert commands["get"]["arity"] == 2
 
-    @pytest.mark.nohiredis
+    @pytest.mark.noresp3
     async def test_command_info(self, client):
         commands = await client.command_info("get")
         assert list(commands.keys()) == ["get"]

@@ -27,7 +27,6 @@ from coredis.exceptions import (
     TryAgainError,
     WatchError,
 )
-from coredis.parsers import ResponseProxy
 from coredis.pool import ClusterConnectionPool
 from coredis.typing import (
     Any,
@@ -185,10 +184,7 @@ class NodeCommands:
                     result = callback(transaction_result[idx], **c.options)
                 else:
                     result = transaction_result[idx]
-                if isinstance(result, ResponseProxy):
-                    c.result = result.__wrapped__
-                else:
-                    c.result = result
+                c.result = result
 
 
 class PipelineMeta(ABCMeta):
@@ -450,8 +446,6 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
                     if inspect.isawaitable(response):
                         r = await r
 
-            if isinstance(r, ResponseProxy):
-                r = r.__wrapped__
             data.append(r)
 
         return tuple(data)
@@ -500,8 +494,6 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
             callback = self.response_callbacks[command_name]
             response = callback(response, **options)
 
-        if isinstance(response, ResponseProxy):
-            return response.__wrapped__
         return response
 
     async def parse_response(self, connection, command_name, **options):

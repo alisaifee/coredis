@@ -69,6 +69,9 @@ async def check_test_constraints(request, client, protocol=2):
         if marker.name == "nohiredis" and coredis.parsers.HIREDIS_AVAILABLE:
             return pytest.skip("Skipped for hiredis")
 
+        if marker.name == "noresp3" and protocol == 3:
+            return pytest.skip("Skipped for RESP3")
+
 
 async def set_default_test_config(client):
     await get_version(client)

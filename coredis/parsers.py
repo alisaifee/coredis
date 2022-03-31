@@ -6,8 +6,6 @@ from abc import ABC, abstractmethod
 from io import BytesIO
 from typing import cast
 
-import wrapt
-
 from coredis.constants import SYM_CRLF, RESPDataType
 from coredis.exceptions import (
     AskError,
@@ -65,28 +63,6 @@ ResponseType = Optional[
         Exception,
     ]
 ]
-
-
-class ResponseProxy(wrapt.ObjectProxy):
-    """
-    Simple proxy for any parsed data type.
-    This allows dictionaries, sets & lists to be hashable.
-
-    This allows parsing responses from redis with resp3
-    where maps contains maps or sets (which using native python
-    types is not possible).
-    """
-
-    def __init__(self, parsed: ResponseType):
-        super().__init__(parsed)
-
-    def __hash__(self):
-        if isinstance(self.__wrapped__, dict):
-            return hash(tuple(self.__wrapped__.items()))
-        elif isinstance(self.__wrapped__, (set, list)):
-            return hash(tuple(self.__wrapped__))
-        else:
-            return hash(self.__wrapped__)
 
 
 class SocketBuffer:
@@ -363,36 +339,29 @@ class PythonParser(BaseParser):
             length = int(chunk)
             if length == -1:
                 return []
-            return ResponseProxy(
-                [await self.read_response(decode=decode) for _ in range(length)]
-            )
+            return [await self.read_response(decode=decode) for _ in range(length)]
         elif marker == RESPDataType.ARRAY:
             length = int(chunk)
 
             if length == -1:
                 return None
-            return ResponseProxy(
-                [await self.read_response(decode=decode) for _ in range(length)]
-            )
+            return [await self.read_response(decode=decode) for _ in range(length)]
+
         elif marker == RESPDataType.MAP:
             length = int(chunk)
             if length == -1:
                 return {}
-            return ResponseProxy(
-                {
-                    await self.read_response(decode=decode): await self.read_response(
-                        decode=decode
-                    )
-                    for _ in range(length)
-                }
-            )
+            return {
+                await self.read_response(decode=decode): await self.read_response(
+                    decode=decode
+                )
+                for _ in range(length)
+            }
         elif marker == RESPDataType.SET:
             length = int(chunk)
             if length == -1:
                 return set()
-            return ResponseProxy(
-                {await self.read_response(decode=decode) for _ in range(length)}
-            )
+            return {await self.read_response(decode=decode) for _ in range(length)}
         else:
             raise ProtocolError(f"Unexpected marker {chr(marker)}")
 
