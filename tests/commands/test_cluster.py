@@ -10,24 +10,24 @@ from tests.conftest import targets
 @targets("redis_cluster", "redis_cluster_resp3")
 @pytest.mark.asyncio()
 class TestCluster:
-    async def test_cluster_info(self, client):
+    async def test_cluster_info(self, client, _s):
         info = await client.cluster_info()
-        assert info["cluster_state"] == "ok"
+        assert info["cluster_state"] == _s("ok")
 
         info = await list(client.replicas)[0].cluster_info()
-        assert info["cluster_state"] == "ok"
+        assert info["cluster_state"] == _s("ok")
 
         info = await list(client.primaries)[0].cluster_info()
-        assert info["cluster_state"] == "ok"
+        assert info["cluster_state"] == _s("ok")
 
-    async def test_cluster_keyslot(self, client):
+    async def test_cluster_keyslot(self, client, _s):
         slot = await client.cluster_keyslot("a")
         assert slot is not None
         await client.set("a", "1")
         assert await client.cluster_countkeysinslot(slot) == 1
-        assert await client.cluster_getkeysinslot(slot, 1) == ("a",)
+        assert await client.cluster_getkeysinslot(slot, 1) == (_s("a"),)
 
-    async def test_cluster_nodes(self, client):
+    async def test_cluster_nodes(self, client, _s):
         nodes = await client.cluster_nodes()
         assert len(nodes) == 6
         replicas = await client.cluster_replicas(
@@ -36,7 +36,7 @@ class TestCluster:
         assert len(replicas) == 1
 
     @pytest.mark.min_server_version("6.9.0")
-    async def test_cluster_links(self, client):
+    async def test_cluster_links(self, client, _s):
         links = []
         for node in client.primaries:
             links.append(await node.cluster_links())
@@ -45,7 +45,7 @@ class TestCluster:
         assert len(links) == 6
 
     @pytest.mark.min_server_version("6.9.0")
-    async def test_cluster_my_id(self, client):
+    async def test_cluster_my_id(self, client, _s):
         ids = []
         for node in client.primaries:
             ids.append(node.cluster_myid())

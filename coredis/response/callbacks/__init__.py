@@ -21,7 +21,6 @@ from coredis.typing import (
     TypeVar,
     Union,
 )
-from coredis.utils import nativestr
 
 R = TypeVar("R")
 P = ParamSpec("P")
@@ -46,7 +45,7 @@ class SimpleStringCallback(ResponseCallback):
         self.raise_on_error = raise_on_error
 
     def transform(self, response: Any, **options: Any) -> Any:
-        success = response and nativestr(response) == "OK"
+        success = response and (response in {"OK", b"OK"})
         if not success and self.raise_on_error:
             raise self.raise_on_error(response)
         return success

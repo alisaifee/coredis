@@ -415,8 +415,8 @@ class AbstractRedis(
     @versionadded(version="3.1.0")
     async def register_library(
         self,
-        name: str,
-        code: str,
+        name: StringT,
+        code: StringT,
         engine: Literal["LUA"] = "LUA",
     ) -> Library:
         """
@@ -426,16 +426,16 @@ class AbstractRedis(
         :param engine: type of engine
         :param code: raw code for the library
         """
-        return await Library(self, name, code=code, engine=engine)
+        return await Library[AnyStr](self, name, code=code, engine=engine)
 
     @versionadded(version="3.1.0")
-    async def get_library(self, name: str) -> Library:
+    async def get_library(self, name: StringT) -> Library:
         """
         Fetch a pre registered library
 
         :param name: name of the library
         """
-        return await Library(self, name)
+        return await Library[AnyStr](self, name)
 
 
 class AbstractRedisCluster(AbstractRedis[AnyStr]):

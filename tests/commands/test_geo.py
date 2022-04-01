@@ -6,10 +6,16 @@ from coredis import CommandSyntaxError, DataError, PureToken
 from tests.conftest import targets
 
 
-@targets("redis_basic", "redis_basic_resp3", "redis_cluster")
+@targets(
+    "redis_basic",
+    "redis_basic_raw",
+    "redis_basic_resp3",
+    "redis_basic_raw_resp3",
+    "redis_cluster",
+)
 @pytest.mark.asyncio()
 class TestGeo:
-    async def test_geoadd(self, client):
+    async def test_geoadd(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (
@@ -23,7 +29,7 @@ class TestGeo:
         assert await client.zcard("barcelona") == 2
 
     @pytest.mark.min_server_version("6.2.0")
-    async def test_geoadd_conditional(self, client):
+    async def test_geoadd_conditional(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (
@@ -48,7 +54,10 @@ class TestGeo:
             )
             == 1
         )
-        assert set(await client.zrange("barcelona", 0, 10)) == {"place1", "place2"}
+        assert set(await client.zrange("barcelona", 0, 10)) == {
+            _s("place1"),
+            _s("place2"),
+        }
         assert (
             await client.geoadd(
                 "barcelona",
@@ -61,12 +70,12 @@ class TestGeo:
             == 1
         )
         assert set(await client.zrange("barcelona", 0, 10)) == {
-            "place1",
-            "place2",
-            "place3",
+            _s("place1"),
+            _s("place2"),
+            _s("place3"),
         }
 
-    async def test_geodist(self, client):
+    async def test_geodist(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (
@@ -79,7 +88,7 @@ class TestGeo:
         assert await client.geoadd("barcelona", values) == 2
         assert await client.geodist("barcelona", "place1", "place2") == 3067.4157
 
-    async def test_geodist_units(self, client):
+    async def test_geodist_units(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (
@@ -95,7 +104,7 @@ class TestGeo:
             == 3.0674
         )
 
-    async def test_geohash(self, client):
+    async def test_geohash(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (
@@ -107,14 +116,14 @@ class TestGeo:
 
         await client.geoadd("barcelona", values)
         assert await client.geohash("barcelona", ["place1", "place2"]) == (
-            "sp3e9yg3kd0",
-            "sp3e9cbc3t0",
+            _s("sp3e9yg3kd0"),
+            _s("sp3e9cbc3t0"),
         )
 
-    async def test_geopos_no_value(self, client):
+    async def test_geopos_no_value(self, client, _s):
         assert await client.geopos("barcelona", ["place1", "place2"]) == (None, None)
 
-    async def test_geopos(self, client):
+    async def test_geopos(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (
@@ -135,7 +144,7 @@ class TestGeo:
 
     @pytest.mark.min_server_version("6.2.0")
     @pytest.mark.nocluster
-    async def test_geosearch(self, client):
+    async def test_geosearch(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (2.1873744593677, 41.406342043777, "上海市"),
@@ -148,14 +157,14 @@ class TestGeo:
             latitude=41.433,
             radius=1000,
             circle_unit=PureToken.M,
-        ) == ("place1",)
+        ) == (_s("place1"),)
         assert await client.geosearch(
             "barcelona",
             longitude=2.187,
             latitude=41.406,
             radius=1000,
             circle_unit=PureToken.M,
-        ) == ("上海市",)
+        ) == (_s("上海市"),)
         assert await client.geosearch(
             "barcelona",
             longitude=2.191,
@@ -163,18 +172,18 @@ class TestGeo:
             height=1000,
             width=1000,
             box_unit=PureToken.M,
-        ) == ("place1",)
+        ) == (_s("place1"),)
         assert await client.geosearch(
             "barcelona", member="place3", radius=100, circle_unit=PureToken.KM
         ) == (
-            "上海市",
-            "place1",
-            "place3",
+            _s("上海市"),
+            _s("place1"),
+            _s("place3"),
         )
         # test count
         assert await client.geosearch(
             "barcelona", member="place3", radius=100, circle_unit=PureToken.KM, count=2
-        ) == ("place3", "上海市")
+        ) == (_s("place3"), _s("上海市"))
         assert (
             await client.geosearch(
                 "barcelona",
@@ -184,10 +193,10 @@ class TestGeo:
                 count=1,
                 any_=True,
             )
-        )[0] in ("place1", "place3", "上海市")
+        )[0] in (_s("place1"), _s("place3"), _s("上海市"))
 
     @pytest.mark.min_server_version("6.2.0")
-    async def test_geosearch_member(self, client):
+    async def test_geosearch_member(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (
@@ -201,12 +210,12 @@ class TestGeo:
         assert await client.geosearch(
             "barcelona", member="place1", radius=4000, circle_unit=PureToken.M
         ) == (
-            "上海市",
-            "place1",
+            _s("上海市"),
+            _s("place1"),
         )
         assert await client.geosearch(
             "barcelona", member="place1", radius=10, circle_unit=PureToken.M
-        ) == ("place1",)
+        ) == (_s("place1"),)
 
         assert await client.geosearch(
             "barcelona",
@@ -218,13 +227,13 @@ class TestGeo:
             withhash=True,
         ) == (
             (
-                "上海市",
+                _s("上海市"),
                 3067.4157,
                 3471609625421029,
                 (2.187376320362091, 41.40634178640635),
             ),
             (
-                "place1",
+                _s("place1"),
                 0.0,
                 3471609698139488,
                 (2.1909382939338684, 41.433790281840835),
@@ -232,7 +241,7 @@ class TestGeo:
         )
 
     @pytest.mark.min_server_version("6.2.0")
-    async def test_geosearch_sort(self, client):
+    async def test_geosearch_sort(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (
@@ -249,7 +258,7 @@ class TestGeo:
             radius=3000,
             circle_unit=PureToken.M,
             order=PureToken.ASC,
-        ) == ("place1", "place2")
+        ) == (_s("place1"), _s("place2"))
         assert await client.geosearch(
             "barcelona",
             longitude=2.191,
@@ -257,10 +266,10 @@ class TestGeo:
             radius=3000,
             circle_unit=PureToken.M,
             order=PureToken.DESC,
-        ) == ("place2", "place1")
+        ) == (_s("place2"), _s("place1"))
 
     @pytest.mark.min_server_version("6.2.0")
-    async def test_geosearch_with(self, client):
+    async def test_geosearch_with(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (
@@ -284,7 +293,7 @@ class TestGeo:
             withhash=True,
         ) == (
             (
-                "place1",
+                _s("place1"),
                 0.0881,
                 3471609698139488,
                 (2.19093829393386841, 41.43379028184083523),
@@ -298,7 +307,9 @@ class TestGeo:
             circle_unit=PureToken.KM,
             withdist=True,
             withcoord=True,
-        ) == (("place1", 0.0881, None, (2.19093829393386841, 41.43379028184083523)),)
+        ) == (
+            (_s("place1"), 0.0881, None, (2.19093829393386841, 41.43379028184083523)),
+        )
         assert await client.geosearch(
             "barcelona",
             longitude=2.191,
@@ -309,7 +320,7 @@ class TestGeo:
             withcoord=True,
         ) == (
             (
-                "place1",
+                _s("place1"),
                 None,
                 3471609698139488,
                 (2.19093829393386841, 41.43379028184083523),
@@ -331,7 +342,7 @@ class TestGeo:
         )
 
     @pytest.mark.min_server_version("6.2.0")
-    async def test_geosearch_negative(self, client):
+    async def test_geosearch_negative(self, client, _s):
         # not specifying member nor longitude and latitude
         with pytest.raises(DataError):
             await client.geosearch("barcelona")
@@ -383,7 +394,7 @@ class TestGeo:
 
     @pytest.mark.min_server_version("6.2.0")
     @pytest.mark.nocluster
-    async def test_geosearchstore(self, client):
+    async def test_geosearchstore(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (
@@ -401,11 +412,11 @@ class TestGeo:
             radius=1000,
             circle_unit=PureToken.M,
         )
-        assert await client.zrange("places_barcelona", 0, -1) == ("place1",)
+        assert await client.zrange("places_barcelona", 0, -1) == (_s("place1"),)
 
     @pytest.mark.min_server_version("6.2.0")
     @pytest.mark.nocluster
-    async def test_geosearchstoredist(self, client):
+    async def test_geosearchstoredist(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (
@@ -428,7 +439,7 @@ class TestGeo:
         # instead of save the geo score, the distance is saved.
         assert await client.zscore("places_barcelona", "place1") == 88.05060698409301
 
-    async def test_georadius(self, client):
+    async def test_georadius(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (
@@ -441,9 +452,9 @@ class TestGeo:
         await client.geoadd("barcelona", values)
         assert await client.georadius(
             "barcelona", 2.191, 41.433, 1000, unit=PureToken.M
-        ) == ("place1",)
+        ) == (_s("place1"),)
 
-    async def test_georadius_no_values(self, client):
+    async def test_georadius_no_values(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (
@@ -456,7 +467,7 @@ class TestGeo:
         await client.geoadd("barcelona", values)
         assert await client.georadius("barcelona", 1, 2, 1000, unit=PureToken.M) == ()
 
-    async def test_georadius_units(self, client):
+    async def test_georadius_units(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (
@@ -469,9 +480,9 @@ class TestGeo:
         await client.geoadd("barcelona", values)
         assert await client.georadius(
             "barcelona", 2.191, 41.433, 1, unit=PureToken.KM
-        ) == ("place1",)
+        ) == (_s("place1"),)
 
-    async def test_georadius_with(self, client):
+    async def test_georadius_with(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (
@@ -496,7 +507,7 @@ class TestGeo:
             withhash=True,
         ) == (
             (
-                "place1",
+                _s("place1"),
                 0.0881,
                 3471609698139488,
                 (2.19093829393386841, 41.43379028184083523),
@@ -511,7 +522,9 @@ class TestGeo:
             unit=PureToken.KM,
             withdist=True,
             withcoord=True,
-        ) == (("place1", 0.0881, None, (2.19093829393386841, 41.43379028184083523)),)
+        ) == (
+            (_s("place1"), 0.0881, None, (2.19093829393386841, 41.43379028184083523)),
+        )
 
         assert await client.georadius(
             "barcelona",
@@ -523,7 +536,7 @@ class TestGeo:
             withcoord=True,
         ) == (
             (
-                "place1",
+                _s("place1"),
                 None,
                 3471609698139488,
                 (2.19093829393386841, 41.43379028184083523),
@@ -560,7 +573,7 @@ class TestGeo:
                 storedist="somehere",
             )
 
-    async def test_georadius_count(self, client):
+    async def test_georadius_count(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (
@@ -573,10 +586,10 @@ class TestGeo:
         await client.geoadd("barcelona", values)
         assert await client.georadius(
             "barcelona", 2.191, 41.433, 3000, count=1, unit=PureToken.M
-        ) == ("place1",)
+        ) == (_s("place1"),)
 
     @pytest.mark.min_server_version("6.2.0")
-    async def test_georadius_count_any(self, client):
+    async def test_georadius_count_any(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (
@@ -589,7 +602,7 @@ class TestGeo:
         await client.geoadd("barcelona", values)
         assert await client.georadius(
             "barcelona", 2.191, 41.433, 3000, count=1, unit=PureToken.M
-        ) == ("place1",)
+        ) == (_s("place1"),)
 
         assert (
             len(
@@ -608,9 +621,9 @@ class TestGeo:
         with pytest.raises(CommandSyntaxError):
             assert await client.georadius(
                 "barcelona", 2.191, 41.433, 3000, any_=True, unit=PureToken.M
-            ) == ("place1",)
+            ) == (_s("place1"),)
 
-    async def test_georadius_sort(self, client):
+    async def test_georadius_sort(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (
@@ -624,18 +637,18 @@ class TestGeo:
         assert await client.georadius(
             "barcelona", 2.191, 41.433, 3000, unit=PureToken.M, order=PureToken.ASC
         ) == (
-            "place1",
-            "place2",
+            _s("place1"),
+            _s("place2"),
         )
         assert await client.georadius(
             "barcelona", 2.191, 41.433, 3000, unit=PureToken.M, order=PureToken.DESC
         ) == (
-            "place2",
-            "place1",
+            _s("place2"),
+            _s("place1"),
         )
 
     @pytest.mark.nocluster
-    async def test_georadius_store(self, client):
+    async def test_georadius_store(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (
@@ -649,10 +662,10 @@ class TestGeo:
         await client.georadius(
             "barcelona", 2.191, 41.433, 1000, store="places_barcelona", unit=PureToken.M
         )
-        assert await client.zrange("places_barcelona", 0, -1) == ("place1",)
+        assert await client.zrange("places_barcelona", 0, -1) == (_s("place1"),)
 
     @pytest.mark.nocluster
-    async def test_georadius_storedist(self, client):
+    async def test_georadius_storedist(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (
@@ -674,7 +687,7 @@ class TestGeo:
         # instead of save the geo score, the distance is saved.
         assert await client.zscore("places_barcelona", "place1") == 88.05060698409301
 
-    async def test_georadiusmember(self, client):
+    async def test_georadiusmember(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (
@@ -688,12 +701,12 @@ class TestGeo:
         assert await client.georadiusbymember(
             "barcelona", "place1", 4000, unit=PureToken.M
         ) == (
-            "place2",
-            "place1",
+            _s("place2"),
+            _s("place1"),
         )
         assert await client.georadiusbymember(
             "barcelona", "place1", 10, unit=PureToken.M
-        ) == ("place1",)
+        ) == (_s("place1"),)
 
         assert await client.georadiusbymember(
             "barcelona",
@@ -705,10 +718,15 @@ class TestGeo:
             unit=PureToken.M,
         ) == (
             (
-                "place2",
+                _s("place2"),
                 3067.4157,
                 3471609625421029,
                 (2.187376320362091, 41.40634178640635),
             ),
-            ("place1", 0.0, 3471609698139488, (2.1909382939338684, 41.433790281840835)),
+            (
+                _s("place1"),
+                0.0,
+                3471609698139488,
+                (2.1909382939338684, 41.433790281840835),
+            ),
         )

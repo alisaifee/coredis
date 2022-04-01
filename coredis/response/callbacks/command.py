@@ -3,7 +3,7 @@ from __future__ import annotations
 from coredis.response.callbacks import ResponseCallback
 from coredis.response.types import Command
 from coredis.typing import Any, AnyStr, Dict, Set
-from coredis.utils import flat_pairs_to_dict, pairs_to_dict
+from coredis.utils import AnyDict, flat_pairs_to_dict, nativestr, pairs_to_dict
 
 
 class CommandCallback(ResponseCallback):
@@ -12,11 +12,11 @@ class CommandCallback(ResponseCallback):
 
         for command in response:
             if command:
-                name = command[0]
+                name = nativestr(command[0])
 
                 if len(command) >= 6:
                     commands[name] = {
-                        "name": name,
+                        "name": command[0],
                         "arity": command[1],
                         "flags": command[2],
                         "first-key": command[3],
@@ -50,7 +50,7 @@ class CommandKeyFlagCallback(ResponseCallback):
 class CommandDocCallback(ResponseCallback):
     def transform(self, response: Any, **options: Any) -> Dict[AnyStr, Any]:
         cmd = response[0]
-        docs = {cmd: flat_pairs_to_dict(response[1])}
+        docs = {cmd: AnyDict(flat_pairs_to_dict(response[1]))}
         docs[cmd]["arguments"] = [
             flat_pairs_to_dict(arg) for arg in docs[cmd]["arguments"]
         ]

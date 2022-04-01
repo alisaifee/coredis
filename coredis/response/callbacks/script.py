@@ -1,32 +1,33 @@
 from __future__ import annotations
 
 from coredis.response.callbacks import ResponseCallback
-from coredis.response.types import FunctionDefinition, LibraryDefinition
+from coredis.response.types import LibraryDefinition
 from coredis.typing import Any, AnyStr, Dict, Union
-from coredis.utils import AnyDict, flat_pairs_to_dict, nativestr
+from coredis.utils import AnyDict, flat_pairs_to_dict
 
 
 class FunctionListCallback(ResponseCallback):
     def transform(self, response: Any, **options: Any) -> Dict[str, LibraryDefinition]:
         libraries = [AnyDict(flat_pairs_to_dict(library)) for library in response]
-        transformed = {}
+        transformed = AnyDict()
         for library in libraries:
             lib_name = library["library_name"]
-            functions = {}
-            for function in AnyDict(library).get("functions", []):
+            functions = AnyDict({})
+            for function in library.get("functions", []):
                 function_definition = AnyDict(flat_pairs_to_dict(function))
-                functions[function_definition["name"]] = FunctionDefinition(
-                    name=function_definition["name"],
-                    description=function_definition["description"],
-                    flags=set(function_definition["flags"]),
+                functions[function_definition["name"]] = function_definition
+                functions[function_definition["name"]]["flags"] = set(
+                    function_definition["flags"]
                 )
             library["functions"] = functions
-            transformed[nativestr(lib_name)] = LibraryDefinition(
-                name=library["name"],
-                engine=library["engine"],
-                description=library["description"],
-                functions=library["functions"],
-                library_code=library["library_code"],
+            transformed[lib_name] = AnyDict(  # type: ignore
+                LibraryDefinition(
+                    name=library["name"],
+                    engine=library["engine"],
+                    description=library["description"],
+                    functions=library["functions"],
+                    library_code=library["library_code"],
+                )
             )
         return transformed
 

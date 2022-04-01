@@ -233,10 +233,37 @@ async def redis_stack(redis_stack_server, request):
 
 
 @pytest.fixture
+async def redis_stack_raw(redis_stack_server, request):
+    client = coredis.Redis("localhost", 9379, verify_version=True)
+    await check_test_constraints(request, client)
+    await client.flushall()
+    await set_default_test_config(client)
+
+    return client
+
+
+@pytest.fixture
 async def redis_stack_resp3(redis_stack_server, request):
     client = coredis.Redis(
         "localhost", 9379, decode_responses=True, verify_version=True
     )
+    await check_test_constraints(request, client, protocol=3)
+    client = coredis.Redis(
+        "localhost",
+        9379,
+        decode_responses=True,
+        protocol_version=3,
+        verify_version=True,
+    )
+    await client.flushall()
+    await set_default_test_config(client)
+
+    return client
+
+
+@pytest.fixture
+async def redis_stack_raw_resp3(redis_stack_server, request):
+    client = coredis.Redis("localhost", 9379, verify_version=True)
     await check_test_constraints(request, client, protocol=3)
     client = coredis.Redis(
         "localhost",
@@ -401,7 +428,8 @@ def docker_compose_files(pytestconfig):
 
 def targets(*targets):
     return pytest.mark.parametrize(
-        "client", [pytest.lazy_fixture(target) for target in targets]
+        "client",
+        [pytest.param(pytest.lazy_fixture(target)) for target in targets],
     )
 
 
@@ -416,3 +444,25 @@ def redis_server_time():
             return await client.time()
 
     return _get_server_time
+
+
+@pytest.fixture
+def _s(client):
+    def str_or_bytes(value):
+        if client.decode_responses:
+            return str(value)
+        else:
+            value = str(value)
+            return value.encode(client.encoding)
+
+    return str_or_bytes
+
+
+def pytest_collection_modifyitems(items):
+    for item in items:
+        if hasattr(item, "callspec") and "client" in item.callspec.params:
+            client_name = item.callspec.params["client"].name
+            if client_name.startswith("redis_"):
+                tokens = client_name.replace("redis_", "").split("_")
+                for token in tokens:
+                    item.add_marker(getattr(pytest.mark, token))

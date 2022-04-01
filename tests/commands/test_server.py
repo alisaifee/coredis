@@ -8,13 +8,13 @@ from pytest import approx
 from tests.conftest import targets
 
 
-@targets("redis_basic", "redis_basic_resp3")
+@targets("redis_basic", "redis_basic_raw", "redis_basic_resp3", "redis_basic_raw_resp3")
 @pytest.mark.asyncio()
 class TestServer:
-    async def slowlog(self, client):
+    async def slowlog(self, client, _s):
         current_config = await client.config_get(["*"])
-        old_slower_than_value = current_config["slowlog-log-slower-than"]
-        old_max_length_value = current_config["slowlog-max-len"]
+        old_slower_than_value = current_config[_s("slowlog-log-slower-than")]
+        old_max_length_value = current_config[_s("slowlog-max-len")]
         await client.config_set({"slowlog-log-slower-than": 0})
         await client.config_set({"slowlog-max-len": 128})
 
@@ -25,49 +25,52 @@ class TestServer:
         await client.config_set({"slowlog-max-len": old_max_legnth_value})
 
     @pytest.mark.min_server_version("6.9.0")
-    async def test_command_docs(self, client):
+    async def test_command_docs(self, client, _s):
         docs = await client.command_docs("geosearch")
-        assert "summary" in docs["geosearch"]
-        assert "arguments" in docs["geosearch"]
+        assert _s("summary") in docs[_s("geosearch")]
+        assert _s("arguments") in docs[_s("geosearch")]
 
     @pytest.mark.noresp3
-    async def test_commands_get(self, client):
+    async def test_commands_get(self, client, _s):
         commands = await client.command()
         assert commands["get"]
         assert commands["set"]
-        assert commands["get"]["name"] == "get"
+        assert commands["get"]["name"] == _s("get")
         assert commands["get"]["arity"] == 2
 
     @pytest.mark.noresp3
-    async def test_command_info(self, client):
+    async def test_command_info(self, client, _s):
         commands = await client.command_info("get")
         assert list(commands.keys()) == ["get"]
-        assert commands["get"]["name"] == "get"
+        assert commands["get"]["name"] == _s("get")
         assert commands["get"]["arity"] == 2
 
     @pytest.mark.min_server_version("6.9.0")
-    async def test_command_list(self, client):
-        assert "get" in await client.command_list()
-        assert "acl|getuser" in await client.command_list(aclcat="admin")
-        assert "zrevrange" in await client.command_list(pattern="zrev*")
+    async def test_command_list(self, client, _s):
+        assert _s("get") in await client.command_list()
+        assert _s("acl|getuser") in await client.command_list(aclcat="admin")
+        assert _s("zrevrange") in await client.command_list(pattern="zrev*")
 
     @pytest.mark.min_server_version("6.9.0")
-    async def test_command_getkeys(self, client):
-        assert await client.command_getkeys("MSET", ["a", 1, "b", 2]) == ("a", "b")
+    async def test_command_getkeys(self, client, _s):
+        assert await client.command_getkeys("MSET", ["a", 1, "b", 2]) == (
+            _s("a"),
+            _s("b"),
+        )
 
     @pytest.mark.min_server_version("6.9.0")
-    async def test_command_getkeysandflags(self, client):
+    async def test_command_getkeysandflags(self, client, _s):
         assert await client.command_getkeysandflags("MSET", ["a", 1, "b", 2]) == {
-            "a": {"OW", "update"},
-            "b": {"OW", "update"},
+            _s("a"): {_s("OW"), _s("update")},
+            _s("b"): {_s("OW"), _s("update")},
         }
 
-    async def test_config_get(self, client):
+    async def test_config_get(self, client, _s):
         data = await client.config_get("*")
-        assert "maxmemory" in data
-        assert data["maxmemory"].isdigit()
+        assert _s("maxmemory") in data
+        assert data[_s("maxmemory")].isdigit()
 
-    async def test_config_resetstat(self, client):
+    async def test_config_resetstat(self, client, _s):
         await client.ping()
         prior_commands_processed = int(
             (await client.info())["total_commands_processed"]
@@ -80,102 +83,104 @@ class TestServer:
         assert reset_commands_processed < prior_commands_processed
 
     @pytest.mark.max_server_version("6.2.0")
-    async def test_config_set(self, client):
+    async def test_config_set(self, client, _s):
         data = await client.config_get(["*"])
-        rdbname = data["dbfilename"]
+        rdbname = data[_s("dbfilename")]
         try:
             assert await client.config_set({"dbfilename": "redis_py_test.rdb"})
-            assert (await client.config_get(["dbfilename"]))[
-                "dbfilename"
-            ] == "redis_py_test.rdb"
+            assert (await client.config_get(["dbfilename"]))[_s("dbfilename")] == _s(
+                "redis_py_test.rdb"
+            )
         finally:
             assert await client.config_set({"dbfilename": rdbname})
 
-    async def test_dbsize(self, client):
+    async def test_dbsize(self, client, _s):
         await client.set("a", "foo")
         await client.set("b", "bar")
         assert await client.dbsize() == 2
 
-    async def test_slowlog_get(self, client):
-        sl_v, length_v = await self.slowlog(client)
+    async def test_slowlog_get(self, client, _s):
+        sl_v, length_v = await self.slowlog(client, _s)
         await client.slowlog_reset()
         unicode_string = "3456abcd3421"
         await client.get(unicode_string)
         slowlog = await client.slowlog_get()
         commands = [log.command for log in slowlog]
 
-        get_command = ["GET", unicode_string]
+        get_command = [_s("GET"), _s(unicode_string)]
         assert get_command in commands
-        assert ["SLOWLOG", "RESET"] in commands
+        assert [_s("SLOWLOG"), _s("RESET")] in commands
         # the order should be ['GET <uni string>', 'SLOWLOG RESET'],
         # but if other clients are executing commands at the same time, there
         # could be commands, before, between, or after, so just check that
         # the two we care about are in the appropriate ordeclient.
-        assert commands.index(get_command) < commands.index(["SLOWLOG", "RESET"])
+        assert commands.index(get_command) < commands.index(
+            [_s("SLOWLOG"), _s("RESET")]
+        )
 
         # make sure other attributes are typed correctly
         assert isinstance(slowlog[0].start_time, int)
         assert isinstance(slowlog[0].duration, int)
         await self.cleanup(client, sl_v, length_v)
 
-    async def test_slowlog_get_limit(self, client):
-        sl_v, length_v = await self.slowlog(client)
+    async def test_slowlog_get_limit(self, client, _s):
+        sl_v, length_v = await self.slowlog(client, _s)
         assert await client.slowlog_reset()
         await client.get("foo")
         await client.get("bar")
         slowlog = await client.slowlog_get(1)
         commands = [log.command for log in slowlog]
-        assert ["GET", "foo"] not in commands
-        assert ["GET", "bar"] in commands
+        assert [_s("GET"), _s("foo")] not in commands
+        assert [_s("GET"), _s("bar")] in commands
         await self.cleanup(client, sl_v, length_v)
 
-    async def test_slowlog_length(self, client, event_loop):
-        sl_v, length_v = await self.slowlog(client)
+    async def test_slowlog_length(self, client, _s):
+        sl_v, length_v = await self.slowlog(client, _s)
         await client.get("foo")
         assert isinstance(await client.slowlog_len(), int)
         await self.cleanup(client, sl_v, length_v)
 
-    async def test_time(self, client):
+    async def test_time(self, client, _s):
         t = await client.time()
         assert isinstance(t, datetime.datetime)
 
-    async def test_info(self, client):
+    async def test_info(self, client, _s):
         await client.set("a", "foo")
         await client.set("b", "bar")
         info = await client.info()
         assert isinstance(info, dict)
         assert info["db0"]["keys"] == 2
 
-    async def test_lastsave(self, client):
+    async def test_lastsave(self, client, _s):
         assert isinstance(await client.lastsave(), datetime.datetime)
 
     @pytest.mark.min_server_version("6.0.0")
-    async def test_lolwut(self, client):
+    async def test_lolwut(self, client, _s):
         lolwut = await client.lolwut(5)
-        assert "Redis ver." in lolwut
+        assert _s("Redis ver.") in lolwut
 
-    async def test_memory_doctor(self, client):
-        assert "Sam" in (await client.memory_doctor())
+    async def test_memory_doctor(self, client, _s):
+        assert _s("Sam") in (await client.memory_doctor())
 
-    async def test_memory_malloc_stats(self, client):
-        assert "jemalloc" in (await client.memory_malloc_stats())
+    async def test_memory_malloc_stats(self, client, _s):
+        assert _s("jemalloc") in (await client.memory_malloc_stats())
 
-    async def test_memory_purge(self, client):
+    async def test_memory_purge(self, client, _s):
         assert await client.memory_purge() is True
 
-    async def test_memory_stats(self, client):
+    async def test_memory_stats(self, client, _s):
         stats = await client.memory_stats()
-        assert stats["keys.count"] == 0
+        assert stats[_s("keys.count")] == 0
 
-    async def test_memory_usage(self, client):
+    async def test_memory_usage(self, client, _s):
         await client.set("key", str(bytearray([0] * 1024)))
-        assert (await client.memory_usage("key")) > 1024
+        assert (await client.memory_usage(_s("key"))) > 1024
 
-    async def test_latency_doctor(self, client):
+    async def test_latency_doctor(self, client, _s):
         assert await client.latency_doctor()
 
     @pytest.mark.max_server_version("6.9.9")
-    async def test_latency_all(self, client):
+    async def test_latency_all(self, client, _s):
         await client.execute_command(b"debug", "sleep", 0.05)
         history = await client.latency_history("command")
         assert len(history) >= 1
@@ -186,26 +191,26 @@ class TestServer:
         assert len(history) == 1
         assert history[0][1] == approx(50, 60)
         latest = await client.latency_latest()
-        assert latest["command"][1] == approx(50, 60)
-        assert latest["command"][2] == approx(50, 60)
+        assert latest[_s("command")][1] == approx(50, 60)
+        assert latest[_s("command")][2] == approx(50, 60)
 
     @pytest.mark.max_server_version("6.9.9")
-    async def test_latency_graph(self, client):
+    async def test_latency_graph(self, client, _s):
         await client.execute_command(b"debug", "sleep", 0.05)
         graph = await client.latency_graph("command")
-        assert "command - high" in graph
+        assert _s("command - high") in graph
 
     @pytest.mark.min_server_version("6.9.0")
-    async def test_latency_histogram(self, client):
+    async def test_latency_histogram(self, client, _s):
         await client.set("a", 1)
         await client.set("a", 1)
         await client.set("a", 1)
         await client.get("a")
         await client.get("a")
         histogram = await client.latency_histogram()
-        assert "set" in histogram
-        assert "get" in histogram
+        assert _s("set") in histogram
+        assert _s("get") in histogram
 
-    async def test_role(self, client):
+    async def test_role(self, client, _s):
         role_info = await client.role()
         assert role_info.role == "master"

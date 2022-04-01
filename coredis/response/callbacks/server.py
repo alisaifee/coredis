@@ -57,9 +57,9 @@ class ClientInfoCallback(ResponseCallback):
         info: ClientInfo = {}  # type: ignore
         for k, v in pairs:
             if k in ClientInfoCallback.INT_FIELDS:
-                info[k.replace("-", "_")] = int(v)  # type: ignore
+                info[k] = int(v)  # type: ignore
             else:
-                info[k.replace("-", "_")] = v  # type: ignore
+                info[k] = v  # type: ignore
         return info
 
 

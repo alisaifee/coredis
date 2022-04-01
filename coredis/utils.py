@@ -3,11 +3,13 @@ from __future__ import annotations
 import datetime
 import enum
 import time
-from collections import UserDict
 from functools import wraps
+
+import wrapt
 
 from coredis.exceptions import ClusterDownError, RedisClusterException
 from coredis.typing import (
+    Any,
     Callable,
     Dict,
     Iterable,
@@ -37,28 +39,52 @@ except Exception:
     pass
 
 
-class AnyDict(UserDict):
-    def __init__(self, dict=None, /, encoding="utf=8", **kwargs):
-        self.encoding = encoding
-        super(AnyDict, self).__init__(dict, **kwargs)
+class AnyDict(wrapt.ObjectProxy):
+    def __init__(self, dict: Optional[Mapping] = None, encoding="utf-8"):
+        d = dict or {}
+        super().__init__(d)
+        self._self_encoding = encoding
 
     def __getitem__(self, item):
         if isinstance(item, str):
-            return self.data.get(item, self.data.get(item.encode(self.encoding)))
-        return self.data[item]
+            return self.__wrapped__.get(
+                item, self.__wrapped__.get(item.encode(self._self_encoding))
+            )
+        elif isinstance(item, bytes):
+            return self.__wrapped__.get(
+                item, self.__wrapped__.get(item.decode(self._self_encoding))
+            )
+        return self.__wrapped__[item]
+
+    def get(self, item, default: Optional[Any] = None) -> Any:
+        return self.__getitem__(item) or default
 
     def __setitem__(self, item, value):
-        if item in self.data:
-            self.data[item] = value
-        elif isinstance(item, str) and item.encode(self.encoding) in self.data:
-            self.data[item.encode(self.encoding)] = value
+        if item in self.__wrapped__:
+            self.__wrapped__[item] = value
+        elif (
+            isinstance(item, str)
+            and item.encode(self._self_encoding) in self.__wrapped__
+        ):
+            self.__wrapped__[item.encode(self._self_encoding)] = value
+        elif (
+            isinstance(item, bytes)
+            and item.decode(self._self_encoding) in self.__wrapped__
+        ):
+            self.__wrapped__[item.decode(self._self_encoding)] = value
         else:
-            self.data[item] = value
+            self.__wrapped__[item] = value
 
     def __contains__(self, key):
         if isinstance(key, str):
-            return key in self.data or key.encode(self.encoding) in self.data
-        return key in self.data
+            return (
+                key in self.__wrapped__ or key.encode(self._self_encoding) in self.__wrapped__
+            )
+        elif isinstance(key, bytes):
+            return (
+                key in self.__wrapped__ or key.decode(self.encoding) in self.__wrapped__
+            )
+        return key in self.__wrapped__
 
 
 def b(x) -> bytes:

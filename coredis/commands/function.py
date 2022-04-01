@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import weakref
+from typing import AnyStr, Generic
 
 from coredis.exceptions import FunctionError
 from coredis.typing import (
@@ -11,20 +12,21 @@ from coredis.typing import (
     KeyT,
     Literal,
     Optional,
+    StringT,
     ValueT,
 )
-from coredis.utils import nativestr
+from coredis.utils import AnyDict, nativestr
 
 if TYPE_CHECKING:
     import coredis.client
 
 
-class Library:
+class Library(Generic[AnyStr]):
     def __init__(
         self,
         client: coredis.client.AbstractRedis,
-        name: str,
-        code: Optional[str] = None,
+        name: StringT,
+        code: Optional[StringT] = None,
         *,
         engine: Literal["LUA"] = "LUA",
     ):
@@ -40,10 +42,10 @@ class Library:
         self._client: weakref.ReferenceType[coredis.client.AbstractRedis] = weakref.ref(
             client
         )
-        self._name = name
+        self._name = nativestr(name)
         self._engine = engine
         self._code = code
-        self._functions: Dict[str, Function] = {}
+        self._functions: AnyDict = AnyDict()
 
     @property
     def client(self) -> coredis.client.AbstractRedis:
@@ -59,7 +61,7 @@ class Library:
         """
         return self._functions
 
-    async def update(self, new_code: str) -> bool:
+    async def update(self, new_code: StringT) -> bool:
         """
         Update the code of a library with :paramref:`new_code`
         """
@@ -83,7 +85,6 @@ class Library:
             raise FunctionError(f"No library found for {self._name}")
 
         for name, function in library["functions"].items():
-            name = nativestr(name)
             self._functions[name] = Function(self.client, self._name, name)
 
     def __await__(self):
@@ -95,7 +96,9 @@ class Library:
 
 
 class Function:
-    def __init__(self, client: coredis.client.AbstractRedis, library: str, name: str):
+    def __init__(
+        self, client: coredis.client.AbstractRedis, library: StringT, name: StringT
+    ):
         """
         Wrapper to call a redis function that has already been loaded
 

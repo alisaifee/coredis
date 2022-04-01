@@ -3828,7 +3828,7 @@ Return the cumulative distribution of latencies of a subset of commands or all.
 
 
 
-- .. versionadded:: 3.1.2
+- .. versionadded:: 3.2.0
 
 
 
@@ -3986,7 +3986,7 @@ List all modules loaded by the server
 
 
 
-- .. versionadded:: 3.1.2
+- .. versionadded:: 3.2.0
 
 
 
@@ -4002,7 +4002,7 @@ Load a module
 
 
 
-- .. versionadded:: 3.1.2
+- .. versionadded:: 3.2.0
 
 
 
@@ -4018,7 +4018,7 @@ Unload a module
 
 
 
-- .. versionadded:: 3.1.2
+- .. versionadded:: 3.2.0
 
 
 
@@ -4332,7 +4332,7 @@ Set client eviction mode for the current connection
 
 
 
-- .. versionadded:: 3.1.2
+- .. versionadded:: 3.2.0
 
 
 
@@ -4952,7 +4952,7 @@ Enables read queries for a connection to a cluster replica node
 
 
 
-- .. versionadded:: 3.1.2
+- .. versionadded:: 3.2.0
 
 
 
@@ -4968,10 +4968,20 @@ Disables read queries for a connection to a cluster replica node
 
 
 
-- .. versionadded:: 3.1.2
+- .. versionadded:: 3.2.0
 
 
 
+
+
+CLUSTER SHARDS [X]
+******************
+
+Get array of cluster slots to node mappings
+
+- Documentation: `CLUSTER SHARDS <https://redis.io/commands/cluster-shards>`_
+
+- Not Implemented
 
 
 
@@ -5505,6 +5515,22 @@ Close the connection
 
 
 
+
+
+
+Cluster
+-------
+
+
+
+CLUSTER SHARDS [X]
+******************
+
+Get array of cluster slots to node mappings
+
+- Documentation: `CLUSTER SHARDS <https://redis.io/commands/cluster-shards>`_
+
+- Not Implemented
 
 
 

@@ -6378,7 +6378,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SERVER,
         response_callback=CommandCallback(),
     )
-    async def command(self) -> Dict[AnyStr, Command]:
+    async def command(self) -> Dict[str, Command]:
         """
         Get Redis command details
 

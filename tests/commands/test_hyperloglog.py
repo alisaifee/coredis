@@ -5,17 +5,23 @@ import pytest
 from tests.conftest import targets
 
 
-@targets("redis_basic", "redis_basic_resp3", "redis_cluster")
+@targets(
+    "redis_basic",
+    "redis_basic_raw",
+    "redis_basic_resp3",
+    "redis_basic_raw_resp3",
+    "redis_cluster",
+)
 @pytest.mark.asyncio()
 class TestHyperLogLog:
-    async def test_pfadd(self, client):
+    async def test_pfadd(self, client, _s):
         members = {"1", "2", "3"}
         assert await client.pfadd("a", *members)
         assert not await client.pfadd("a", *members)
         assert await client.pfcount(["a"]) == len(members)
 
     @pytest.mark.nocluster
-    async def test_pfcount(self, client):
+    async def test_pfcount(self, client, _s):
         members = {"1", "2", "3"}
         await client.pfadd("a", *members)
         assert await client.pfcount(["a"]) == len(members)
@@ -24,7 +30,7 @@ class TestHyperLogLog:
         assert await client.pfcount(["b"]) == len(members_b)
         assert await client.pfcount(["a", "b"]) == len(members_b.union(members))
 
-    async def test_pfmerge(self, client):
+    async def test_pfmerge(self, client, _s):
         mema = {"1", "2", "3"}
         memb = {"2", "3", "4"}
         memc = {"5", "6", "7"}
