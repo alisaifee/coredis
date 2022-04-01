@@ -4,7 +4,6 @@ coredis.commands.constants
 
 Constants relating to redis command names and groups
 """
-
 from __future__ import annotations
 
 import enum
@@ -168,6 +167,7 @@ class CommandName(bytes, enum.Enum):
     CLUSTER_ADDSLOTSRANGE = b"CLUSTER ADDSLOTSRANGE"  # Since redis: 7.0.0
     CLUSTER_DELSLOTSRANGE = b"CLUSTER DELSLOTSRANGE"  # Since redis: 7.0.0
     CLUSTER_LINKS = b"CLUSTER LINKS"  # Since redis: 7.0.0
+    CLUSTER_SHARDS = b"CLUSTER SHARDS"  # Since redis: 7.0.0
     CLUSTER_SLAVES = b"CLUSTER SLAVES"  # Deprecated in redis: 5.0.0
 
     #: Commands for connection
