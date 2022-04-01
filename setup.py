@@ -30,9 +30,9 @@ class BuildStubs(Command):
     user_options = []
 
     def run(self):
-        import scripts.command_coverage
+        import scripts.code_gen
 
-        pipeline_stub = scripts.command_coverage.generate_pipeline_stub(
+        pipeline_stub = scripts.code_gen.generate_pipeline_stub(
             "coredis/commands/pipeline.pyi"
         )
 

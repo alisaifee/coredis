@@ -16,11 +16,11 @@ NEXT_VERSION := 3.2.0
 
 generate-compatibility-docs:
 	rm -rf docs/source/compatibility.rst
-	PYTHONPATH=${CURDIR} python scripts/command_coverage.py --debug=${DEBUG} --next-version=${NEXT_VERSION} coverage-doc
+	PYTHONPATH=${CURDIR} python scripts/code_gen.py --debug=${DEBUG} --next-version=${NEXT_VERSION} coverage-doc
 
 generate-token-enum:
 	rm -rf docs/source/compatibility.rst
-	PYTHONPATH=${CURDIR} python scripts/command_coverage.py --debug=${DEBUG} --next-version=${NEXT_VERSION} token-enum
+	PYTHONPATH=${CURDIR} python scripts/code_gen.py --debug=${DEBUG} --next-version=${NEXT_VERSION} token-enum
 benchmark:
 	./scripts/benchmark.sh
 benchmark-light:
