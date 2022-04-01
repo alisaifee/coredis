@@ -105,11 +105,11 @@ class CommandName(bytes, enum.Enum):
     ACL_WHOAMI = b"ACL WHOAMI"  # Since redis: 6.0.0
     FAILOVER = b"FAILOVER"  # Since redis: 6.2.0
     SLOWLOG_HELP = b"SLOWLOG HELP"  # Since redis: 6.2.0
-    ACL_DRYRUN = b"ACL DRYRUN"  # Since redis: 6.9.0
-    COMMAND_DOCS = b"COMMAND DOCS"  # Since redis: 6.9.0
-    COMMAND_GETKEYSANDFLAGS = b"COMMAND GETKEYSANDFLAGS"  # Since redis: 6.9.0
-    COMMAND_LIST = b"COMMAND LIST"  # Since redis: 6.9.0
-    LATENCY_HISTOGRAM = b"LATENCY HISTOGRAM"  # Since redis: 6.9.0
+    ACL_DRYRUN = b"ACL DRYRUN"  # Since redis: 7.0.0
+    COMMAND_DOCS = b"COMMAND DOCS"  # Since redis: 7.0.0
+    COMMAND_GETKEYSANDFLAGS = b"COMMAND GETKEYSANDFLAGS"  # Since redis: 7.0.0
+    COMMAND_LIST = b"COMMAND LIST"  # Since redis: 7.0.0
+    LATENCY_HISTOGRAM = b"LATENCY HISTOGRAM"  # Since redis: 7.0.0
     SLAVEOF = b"SLAVEOF"  # Deprecated in redis: 5.0.0
 
     #: Commands for string
@@ -132,7 +132,7 @@ class CommandName(bytes, enum.Enum):
     PSETEX = b"PSETEX"  # Since redis: 2.6.0
     GETDEL = b"GETDEL"  # Since redis: 6.2.0
     GETEX = b"GETEX"  # Since redis: 6.2.0
-    LCS = b"LCS"  # Since redis: 6.9.0
+    LCS = b"LCS"  # Since redis: 7.0.0
     GETSET = b"GETSET"  # Deprecated in redis: 6.2.0
     SUBSTR = b"SUBSTR"  # Deprecated in redis: 2.0.0
 
@@ -165,9 +165,9 @@ class CommandName(bytes, enum.Enum):
     READWRITE = b"READWRITE"  # Since redis: 3.0.0
     CLUSTER_HELP = b"CLUSTER HELP"  # Since redis: 5.0.0
     CLUSTER_REPLICAS = b"CLUSTER REPLICAS"  # Since redis: 5.0.0
-    CLUSTER_ADDSLOTSRANGE = b"CLUSTER ADDSLOTSRANGE"  # Since redis: 6.9.0
-    CLUSTER_DELSLOTSRANGE = b"CLUSTER DELSLOTSRANGE"  # Since redis: 6.9.0
-    CLUSTER_LINKS = b"CLUSTER LINKS"  # Since redis: 6.9.0
+    CLUSTER_ADDSLOTSRANGE = b"CLUSTER ADDSLOTSRANGE"  # Since redis: 7.0.0
+    CLUSTER_DELSLOTSRANGE = b"CLUSTER DELSLOTSRANGE"  # Since redis: 7.0.0
+    CLUSTER_LINKS = b"CLUSTER LINKS"  # Since redis: 7.0.0
     CLUSTER_SLAVES = b"CLUSTER SLAVES"  # Deprecated in redis: 5.0.0
 
     #: Commands for connection
@@ -194,7 +194,7 @@ class CommandName(bytes, enum.Enum):
     CLIENT_TRACKINGINFO = b"CLIENT TRACKINGINFO"  # Since redis: 6.2.0
     CLIENT_UNPAUSE = b"CLIENT UNPAUSE"  # Since redis: 6.2.0
     RESET = b"RESET"  # Since redis: 6.2.0
-    CLIENT_NO_EVICT = b"CLIENT NO-EVICT"  # Since redis: 6.9.0
+    CLIENT_NO_EVICT = b"CLIENT NO-EVICT"  # Since redis: 7.0.0
 
     #: Commands for bitmap
     GETBIT = b"GETBIT"  # Since redis: 2.2.0
@@ -224,8 +224,8 @@ class CommandName(bytes, enum.Enum):
     LPOS = b"LPOS"  # Since redis: 6.0.6
     BLMOVE = b"BLMOVE"  # Since redis: 6.2.0
     LMOVE = b"LMOVE"  # Since redis: 6.2.0
-    BLMPOP = b"BLMPOP"  # Since redis: 6.9.0
-    LMPOP = b"LMPOP"  # Since redis: 6.9.0
+    BLMPOP = b"BLMPOP"  # Since redis: 7.0.0
+    LMPOP = b"LMPOP"  # Since redis: 7.0.0
     RPOPLPUSH = b"RPOPLPUSH"  # Deprecated in redis: 6.2.0
     BRPOPLPUSH = b"BRPOPLPUSH"  # Deprecated in redis: 6.2.0
 
@@ -257,9 +257,9 @@ class CommandName(bytes, enum.Enum):
     ZRANDMEMBER = b"ZRANDMEMBER"  # Since redis: 6.2.0
     ZRANGESTORE = b"ZRANGESTORE"  # Since redis: 6.2.0
     ZUNION = b"ZUNION"  # Since redis: 6.2.0
-    BZMPOP = b"BZMPOP"  # Since redis: 6.9.0
-    ZINTERCARD = b"ZINTERCARD"  # Since redis: 6.9.0
-    ZMPOP = b"ZMPOP"  # Since redis: 6.9.0
+    BZMPOP = b"BZMPOP"  # Since redis: 7.0.0
+    ZINTERCARD = b"ZINTERCARD"  # Since redis: 7.0.0
+    ZMPOP = b"ZMPOP"  # Since redis: 7.0.0
     ZRANGEBYSCORE = b"ZRANGEBYSCORE"  # Deprecated in redis: 6.2.0
     ZREVRANGE = b"ZREVRANGE"  # Deprecated in redis: 6.2.0
     ZREVRANGEBYSCORE = b"ZREVRANGEBYSCORE"  # Deprecated in redis: 6.2.0
@@ -297,9 +297,9 @@ class CommandName(bytes, enum.Enum):
     UNLINK = b"UNLINK"  # Since redis: 4.0.0
     COPY = b"COPY"  # Since redis: 6.2.0
     OBJECT_HELP = b"OBJECT HELP"  # Since redis: 6.2.0
-    EXPIRETIME = b"EXPIRETIME"  # Since redis: 6.9.0
-    PEXPIRETIME = b"PEXPIRETIME"  # Since redis: 6.9.0
-    SORT_RO = b"SORT_RO"  # Since redis: 6.9.0
+    EXPIRETIME = b"EXPIRETIME"  # Since redis: 7.0.0
+    PEXPIRETIME = b"PEXPIRETIME"  # Since redis: 7.0.0
+    SORT_RO = b"SORT_RO"  # Since redis: 7.0.0
 
     #: Commands for transactions
     EXEC = b"EXEC"  # Since redis: 1.2.0
@@ -318,20 +318,20 @@ class CommandName(bytes, enum.Enum):
     SCRIPT_LOAD = b"SCRIPT LOAD"  # Since redis: 2.6.0
     SCRIPT_DEBUG = b"SCRIPT DEBUG"  # Since redis: 3.2.0
     SCRIPT_HELP = b"SCRIPT HELP"  # Since redis: 5.0.0
-    EVALSHA_RO = b"EVALSHA_RO"  # Since redis: 6.9.0
-    EVAL_RO = b"EVAL_RO"  # Since redis: 6.9.0
-    FCALL = b"FCALL"  # Since redis: 6.9.0
-    FCALL_RO = b"FCALL_RO"  # Since redis: 6.9.0
-    FUNCTION = b"FUNCTION"  # Since redis: 6.9.0
-    FUNCTION_DELETE = b"FUNCTION DELETE"  # Since redis: 6.9.0
-    FUNCTION_DUMP = b"FUNCTION DUMP"  # Since redis: 6.9.0
-    FUNCTION_FLUSH = b"FUNCTION FLUSH"  # Since redis: 6.9.0
-    FUNCTION_HELP = b"FUNCTION HELP"  # Since redis: 6.9.0
-    FUNCTION_KILL = b"FUNCTION KILL"  # Since redis: 6.9.0
-    FUNCTION_LIST = b"FUNCTION LIST"  # Since redis: 6.9.0
-    FUNCTION_LOAD = b"FUNCTION LOAD"  # Since redis: 6.9.0
-    FUNCTION_RESTORE = b"FUNCTION RESTORE"  # Since redis: 6.9.0
-    FUNCTION_STATS = b"FUNCTION STATS"  # Since redis: 6.9.0
+    EVALSHA_RO = b"EVALSHA_RO"  # Since redis: 7.0.0
+    EVAL_RO = b"EVAL_RO"  # Since redis: 7.0.0
+    FCALL = b"FCALL"  # Since redis: 7.0.0
+    FCALL_RO = b"FCALL_RO"  # Since redis: 7.0.0
+    FUNCTION = b"FUNCTION"  # Since redis: 7.0.0
+    FUNCTION_DELETE = b"FUNCTION DELETE"  # Since redis: 7.0.0
+    FUNCTION_DUMP = b"FUNCTION DUMP"  # Since redis: 7.0.0
+    FUNCTION_FLUSH = b"FUNCTION FLUSH"  # Since redis: 7.0.0
+    FUNCTION_HELP = b"FUNCTION HELP"  # Since redis: 7.0.0
+    FUNCTION_KILL = b"FUNCTION KILL"  # Since redis: 7.0.0
+    FUNCTION_LIST = b"FUNCTION LIST"  # Since redis: 7.0.0
+    FUNCTION_LOAD = b"FUNCTION LOAD"  # Since redis: 7.0.0
+    FUNCTION_RESTORE = b"FUNCTION RESTORE"  # Since redis: 7.0.0
+    FUNCTION_STATS = b"FUNCTION STATS"  # Since redis: 7.0.0
 
     #: Commands for geo
     GEOADD = b"GEOADD"  # Since redis: 3.2.0
@@ -379,11 +379,11 @@ class CommandName(bytes, enum.Enum):
     PUBSUB_NUMPAT = b"PUBSUB NUMPAT"  # Since redis: 2.8.0
     PUBSUB_NUMSUB = b"PUBSUB NUMSUB"  # Since redis: 2.8.0
     PUBSUB_HELP = b"PUBSUB HELP"  # Since redis: 6.2.0
-    PUBSUB_SHARDCHANNELS = b"PUBSUB SHARDCHANNELS"  # Since redis: 6.9.0
-    PUBSUB_SHARDNUMSUB = b"PUBSUB SHARDNUMSUB"  # Since redis: 6.9.0
-    SPUBLISH = b"SPUBLISH"  # Since redis: 6.9.0
-    SSUBSCRIBE = b"SSUBSCRIBE"  # Since redis: 6.9.0
-    SUNSUBSCRIBE = b"SUNSUBSCRIBE"  # Since redis: 6.9.0
+    PUBSUB_SHARDCHANNELS = b"PUBSUB SHARDCHANNELS"  # Since redis: 7.0.0
+    PUBSUB_SHARDNUMSUB = b"PUBSUB SHARDNUMSUB"  # Since redis: 7.0.0
+    SPUBLISH = b"SPUBLISH"  # Since redis: 7.0.0
+    SSUBSCRIBE = b"SSUBSCRIBE"  # Since redis: 7.0.0
+    SUNSUBSCRIBE = b"SUNSUBSCRIBE"  # Since redis: 7.0.0
 
     #: Commands for set
     SADD = b"SADD"  # Since redis: 1.0.0
@@ -402,7 +402,7 @@ class CommandName(bytes, enum.Enum):
     SUNIONSTORE = b"SUNIONSTORE"  # Since redis: 1.0.0
     SSCAN = b"SSCAN"  # Since redis: 2.8.0
     SMISMEMBER = b"SMISMEMBER"  # Since redis: 6.2.0
-    SINTERCARD = b"SINTERCARD"  # Since redis: 6.9.0
+    SINTERCARD = b"SINTERCARD"  # Since redis: 7.0.0
 
     #: Commands for stream
     XACK = b"XACK"  # Since redis: 5.0.0

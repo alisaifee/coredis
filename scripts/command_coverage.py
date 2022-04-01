@@ -398,13 +398,7 @@ def version_added_from_doc(doc):
 @functools.lru_cache
 def get_commands():
     cur_dir = os.path.split(__file__)[0]
-    data = json.loads(open(os.path.join(cur_dir, "commands.json")).read())
-
-    for command, details in data.items():
-        if details.get("since") == "7.0.0":
-            details["since"] = "6.9.0"
-
-    return data
+    return json.loads(open(os.path.join(cur_dir, "commands.json")).read())
 
 
 def sanitize_parameter(p, eval_forward_annotations=True):
