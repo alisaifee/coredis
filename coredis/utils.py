@@ -78,7 +78,8 @@ class AnyDict(wrapt.ObjectProxy):
     def __contains__(self, key):
         if isinstance(key, str):
             return (
-                key in self.__wrapped__ or key.encode(self._self_encoding) in self.__wrapped__
+                key in self.__wrapped__
+                or key.encode(self._self_encoding) in self.__wrapped__
             )
         elif isinstance(key, bytes):
             return (

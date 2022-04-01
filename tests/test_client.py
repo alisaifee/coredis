@@ -12,6 +12,11 @@ from tests.conftest import targets
 @targets("redis_basic", "redis_basic_resp3", "redis_basic_raw", "redis_basic_raw_resp3")
 @pytest.mark.asyncio
 class TestClient:
+    @pytest.fixture(autouse=True)
+    async def configure_client(self, client):
+        client.verify_version = True
+        await client.ping()
+
     @pytest.mark.min_server_version("6.0.0")
     async def test_server_version(self, client):
         assert isinstance(client.server_version, Version)

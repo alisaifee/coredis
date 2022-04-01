@@ -10,16 +10,16 @@ import re
 import shutil
 import typing  # noqa
 from pathlib import Path
-from typing import Literal  # noqa
-from typing import (
+from coredis.typing import (
     Any,
     AnyStr,
     Dict,
     Iterable,
     List,
+    Literal,
     Optional,
-    Sequence,
     Set,
+    Sequence,
     Tuple,
     Union,
 )
@@ -172,7 +172,7 @@ REDIS_RETURN_OVERRIDES = {
     "CLUSTER REPLICAS": List[Dict[AnyStr, AnyStr]],
     "CLUSTER SLAVES": List[Dict[AnyStr, AnyStr]],
     "CLUSTER SLOTS": Dict[Tuple[int, int], Tuple[ClusterNode, ...]],
-    "COMMAND": Dict[AnyStr, Command],
+    "COMMAND": Dict[str, Command],
     "COMMAND INFO": Dict[AnyStr, Command],
     "CONFIG GET": Dict[AnyStr, AnyStr],
     "COPY": bool,
@@ -331,6 +331,7 @@ def sanitized_rendered_type(rendered_type) -> str:
     v = v.replace("~AnyStr", "AnyStr")
     v = re.sub(r"typing\.(.*?)", "\\1", v)
     v = v.replace("Ellipsis", "...")
+    v = v.replace("coredis.response.types.", "")
     return v
 
 
@@ -344,31 +345,34 @@ def render_annotation(annotation):
 
         if not annotation.__name__ == "Ellipsis":
             return None
-
     else:
         if hasattr(annotation, "__name__"):
             if hasattr(annotation, "__args__"):
                 if annotation.__name__ == "Union":
                     args = list(annotation.__args__)
-
+                    none_seen = False
                     for a in annotation.__args__:
                         if getattr(a, "__name__") == "NoneType":
                             args.remove(a)
-
+                            none_seen = True
                         if getattr(a, "__name__") == "Ellipsis":
                             args.remove(a)
 
-                    if len(args) > 1:
-                        return f"Optional[{Union[tuple(args)]}]"
-                    else:
-                        return f"Optiona[{args[0]}]"
+                    if none_seen:
+                        if len(args) > 1:
+                            return sanitized_rendered_type(
+                                f"Optional[{Union[tuple(args)]}]"
+                            )
+                        else:
+                            return sanitized_rendered_type(f"Optiona[{args[0]}]")
+
                 else:
                     sub_annotations = [
                         render_annotation(arg) for arg in annotation.__args__
                     ]
-                    sub = ",".join([k for k in sub_annotations if k])
+                    sub = ", ".join([k for k in sub_annotations if k])
 
-                    return f"{annotation.__name__}[{sub}]"
+                    return sanitized_rendered_type(f"{annotation.__name__}[{sub}]")
 
         return sanitized_rendered_type(str(annotation))
 
@@ -404,6 +408,8 @@ def get_commands():
 
 
 def sanitize_parameter(p, eval_forward_annotations=True):
+    if isinstance(p.annotation, str) and eval_forward_annotations:
+        p = p.replace(annotation=eval(p.annotation))
     v = sanitized_rendered_type(str(p))
     if (
         hasattr(p, "annotation")
@@ -425,9 +431,6 @@ def sanitize_parameter(p, eval_forward_annotations=True):
                 v = re.sub(
                     r"Union\[([\w,\s\[\]\.]+), NoneType\]", "Optional[Union[\\1]]", v
                 )
-    elif hasattr(p, "annotation"):
-        if isinstance(p.annotation, str) and eval_forward_annotations:
-            v = sanitized_rendered_type(str(p.replace(annotation=eval(p.annotation))))
     return v
 
 
@@ -443,10 +446,10 @@ def render_signature(signature, eval_forward_annotations=True):
         return f"({', '.join(params)})"
 
 
-def compare_signatures(s1, s2):
-    return [(p.name, p.default, p.annotation) for p in s1.parameters.values()] == [
-        (p.name, p.default, p.annotation) for p in s2.parameters.values()
-    ]
+def compare_signatures(s1, s2, eval_forward_annotations=True):
+    return render_signature(s1, eval_forward_annotations) == render_signature(
+        s2, eval_forward_annotations
+    )
 
 
 def get_token_mapping():
@@ -1755,10 +1758,12 @@ def generate_compatibility_section(
                     current_signature = [k for k in cur.parameters]
                     method_details["current_signature"] = cur
                     if debug:
-                        if (
-                            compare_signatures(cur, method_details["rec_signature"])
-                            and cur.return_annotation
-                            == method_details["rec_signature"].return_annotation
+                        if compare_signatures(
+                            cur, method_details["rec_signature"]
+                        ) and render_annotation(
+                            cur.return_annotation
+                        ) == render_annotation(
+                            method_details["rec_signature"].return_annotation
                         ):
                             src = inspect.getsource(located)
                             version_introduced_valid = command_details and str(
@@ -1815,9 +1820,7 @@ def generate_compatibility_section(
                                     if not arg_version_valid
                                     else "unknown"
                                 )
-                        elif (
-                            cur.parameters == method_details["rec_signature"].parameters
-                        ):
+                        elif compare_signatures(cur, method_details["rec_signature"]):
                             recommended_return = read_command_docs(
                                 method["name"], method["group"]
                             )

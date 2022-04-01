@@ -48,13 +48,14 @@ class CommandKeyFlagCallback(ResponseCallback):
 
 
 class CommandDocCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> Dict[AnyStr, Any]:
-        cmd = response[0]
-        docs = {cmd: AnyDict(flat_pairs_to_dict(response[1]))}
-        docs[cmd]["arguments"] = [
-            flat_pairs_to_dict(arg) for arg in docs[cmd]["arguments"]
-        ]
-        return docs
+    def transform(self, response: Any, **options: Any) -> Dict[AnyStr, Dict]:
+        cmd_mapping = flat_pairs_to_dict(response)
+        for cmd, doc in cmd_mapping.items():
+            cmd_mapping[cmd] = AnyDict(flat_pairs_to_dict(doc))
+            cmd_mapping[cmd]["arguments"] = [
+                flat_pairs_to_dict(arg) for arg in cmd_mapping[cmd]["arguments"]
+            ]
+        return cmd_mapping
 
     def transform_3(self, response: Any, **options: Any) -> Dict[AnyStr, Dict]:
         return dict(response)

@@ -95,7 +95,6 @@ from coredis.response.types import (
     LibraryDefinition,
     RoleInfo,
     ScoredMember,
-    ScoredMembers,
     SlowLogInfo,
     StreamEntry,
     StreamInfo,
@@ -2449,8 +2448,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :return: sorted elements.
 
-         When the ``store`` option is specified the command returns the number of sorted elements
-         in the destination list.
+         When the :paramref:`store` option is specified the command returns the number of
+         sorted elements in the destination list.
         """
 
         pieces: CommandArgList = [key]
@@ -2842,7 +2841,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         rank: Optional[int] = None,
         count: Optional[int] = None,
         maxlen: Optional[int] = None,
-    ) -> Union[Optional[int], List[int]]:
+    ) -> Optional[Union[int, List[int]]]:
         """
 
         Return the index of matching elements on a list
@@ -3293,7 +3292,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         timeout: Union[int, float],
         where: Literal[PureToken.MIN, PureToken.MAX],
         count: Optional[int] = None,
-    ) -> Optional[Tuple[AnyStr, ScoredMembers]]:
+    ) -> Optional[Tuple[AnyStr, Tuple[ScoredMember, ...]]]:
         """
         Remove and return members with scores in a sorted set or block until one is available
 
@@ -3580,7 +3579,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         keys: Iterable[KeyT],
         where: Literal[PureToken.MIN, PureToken.MAX],
         count: Optional[int] = None,
-    ) -> Optional[Tuple[AnyStr, ScoredMembers]]:
+    ) -> Optional[Tuple[AnyStr, Tuple[ScoredMember, ...]]]:
         """
         Remove and return members with scores in a sorted set
 
@@ -3624,7 +3623,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def zpopmax(
         self, key: KeyT, count: Optional[int] = None
-    ) -> Union[ScoredMember, ScoredMembers]:
+    ) -> Union[ScoredMember, Tuple[ScoredMember, ...]]:
         """
         Remove and return members with the highest scores in a sorted set
 
@@ -3642,7 +3641,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def zpopmin(
         self, key: KeyT, count: Optional[int] = None
-    ) -> Union[ScoredMember, ScoredMembers]:
+    ) -> Union[ScoredMember, Tuple[ScoredMember, ...]]:
         """
         Remove and return members with the lowest scores in a sorted set
 
@@ -3665,7 +3664,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         key: KeyT,
         count: Optional[int] = None,
         withscores: Optional[bool] = None,
-    ) -> Optional[Union[AnyStr, List[AnyStr], ScoredMembers]]:
+    ) -> Optional[Union[AnyStr, List[AnyStr], Tuple[ScoredMember, ...]]]:
         """
         Get one or multiple random elements from a sorted set
 
@@ -4058,7 +4057,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         cursor: Optional[int] = 0,
         match: Optional[StringT] = None,
         count: Optional[int] = None,
-    ) -> Tuple[int, ScoredMembers]:
+    ) -> Tuple[int, Tuple[ScoredMember, ...]]:
         """
         Incrementally iterate sorted sets elements and associated scores
 
@@ -6410,9 +6409,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         response_callback=CommandDocCallback(),
         cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
     )
-    async def command_docs(self, *command_names: StringT) -> Dict[AnyStr, Command]:
+    async def command_docs(self, *command_names: StringT) -> Dict[AnyStr, Dict]:
         """
-        Mapping of commands to their documentation
+        Mapping of commands to a dictionary containing it's documentation
         """
 
         return await self.execute_command(CommandName.COMMAND_DOCS, *command_names)

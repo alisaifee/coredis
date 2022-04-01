@@ -25,10 +25,13 @@ class TestServer:
         await client.config_set({"slowlog-max-len": old_max_legnth_value})
 
     @pytest.mark.min_server_version("6.9.0")
+    @pytest.mark.noresp3
     async def test_command_docs(self, client, _s):
         docs = await client.command_docs("geosearch")
         assert _s("summary") in docs[_s("geosearch")]
         assert _s("arguments") in docs[_s("geosearch")]
+        docs = await client.command_docs("get", "set")
+        assert {_s("get"), _s("set")} & set(docs.keys())
 
     @pytest.mark.noresp3
     async def test_commands_get(self, client, _s):
