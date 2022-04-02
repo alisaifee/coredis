@@ -56,6 +56,8 @@ if ".post0.dev" in coredis.__version__:
 else:
     version = coredis.__version__
 
+release = version
+
 html_title = f"{project} <small><b style='color: var(--color-brand-primary)'>{{{release}}}</b></small>"
 try:
     ahead = int(ahead)
