@@ -2,6 +2,45 @@
 
 Changelog
 =========
+v3.2.0
+------
+Release Date: 2022-04-02
+
+  * Features
+
+    * New APIs:
+      * Server:
+
+        * ``Redis.latency_histogram``
+        * ``Redis.module_list``
+        * ``Redis.module_load``
+        * ``Redis.module_unload``
+
+      * Connection:
+
+          * ``Redis.client_no_evict``
+
+      * Cluster:
+
+          * ``Redis.cluster_shards``
+          * ``Redis.readonly``
+          * ``Redis.readwrite``
+
+  * Micro optimization to use bytestrings for all hardcoded tokens
+  * Add type hints for pipeline classes
+  * Remove hardcoded pipeline blocked commands
+
+  * Bug Fix
+
+    * Disable version checking by default
+    * Fix incorrect key names for server commands
+
+  * Chores
+
+    * Move publishing steps to CI
+    * More typing related cleanups
+    * Refactor parsers into a separate module
+    * Improve test coverage to cover non decoding clients
 
 v3.1.1
 ------
@@ -482,6 +521,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
