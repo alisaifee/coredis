@@ -4,7 +4,7 @@ from coredis.commands import ResponseCallback
 from coredis.response.callbacks import SimpleStringCallback
 from coredis.response.types import LCSMatch, LCSResult
 from coredis.typing import Any, AnyStr, Union
-from coredis.utils import AnyDict
+from coredis.utils import EncodingInsensitiveDict
 
 
 class StringSetCallback(ResponseCallback):
@@ -36,7 +36,7 @@ class LCSCallback(ResponseCallback):
         self, response: Any, **options: Any
     ) -> Union[AnyStr, int, LCSResult]:
         if options.get("idx") is not None:
-            response_proxy = AnyDict(response)
+            response_proxy = EncodingInsensitiveDict(response)
             return LCSResult(
                 tuple(
                     LCSMatch(

@@ -15,7 +15,7 @@ from coredis.typing import (
     StringT,
     ValueT,
 )
-from coredis.utils import AnyDict, nativestr
+from coredis.utils import EncodingInsensitiveDict, nativestr
 
 if TYPE_CHECKING:
     import coredis.client
@@ -45,7 +45,7 @@ class Library(Generic[AnyStr]):
         self._name = nativestr(name)
         self._engine = engine
         self._code = code
-        self._functions: AnyDict = AnyDict()
+        self._functions: EncodingInsensitiveDict = EncodingInsensitiveDict()
 
     @property
     def client(self) -> coredis.client.AbstractRedis:

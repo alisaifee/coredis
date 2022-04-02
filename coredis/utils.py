@@ -39,7 +39,7 @@ except Exception:
     pass
 
 
-class AnyDict(wrapt.ObjectProxy):
+class EncodingInsensitiveDict(wrapt.ObjectProxy):
     def __init__(self, dict: Optional[Mapping] = None, encoding="utf-8"):
         d = dict or {}
         super().__init__(d)

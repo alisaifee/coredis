@@ -4912,6 +4912,24 @@ Bind a hash slot to a specific node
 
 
 
+CLUSTER SHARDS
+**************
+
+Get array of cluster slots to node mappings
+
+- Documentation: `CLUSTER SHARDS <https://redis.io/commands/cluster-shards>`_
+- Implementation: :meth:`~coredis.Redis.cluster_shards`
+
+- New in redis: 7.0.0
+
+
+
+- .. versionadded:: 3.2.0
+
+
+
+
+
 CLUSTER SLAVES
 **************
 
@@ -4972,16 +4990,6 @@ Disables read queries for a connection to a cluster replica node
 
 
 
-
-
-CLUSTER SHARDS [X]
-******************
-
-Get array of cluster slots to node mappings
-
-- Documentation: `CLUSTER SHARDS <https://redis.io/commands/cluster-shards>`_
-
-- Not Implemented
 
 
 
@@ -5515,22 +5523,6 @@ Close the connection
 
 
 
-
-
-
-Cluster
--------
-
-
-
-CLUSTER SHARDS [X]
-******************
-
-Get array of cluster slots to node mappings
-
-- Documentation: `CLUSTER SHARDS <https://redis.io/commands/cluster-shards>`_
-
-- Not Implemented
 
 
 

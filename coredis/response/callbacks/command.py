@@ -3,7 +3,12 @@ from __future__ import annotations
 from coredis.response.callbacks import ResponseCallback
 from coredis.response.types import Command
 from coredis.typing import Any, AnyStr, Dict, Set
-from coredis.utils import AnyDict, flat_pairs_to_dict, nativestr, pairs_to_dict
+from coredis.utils import (
+    EncodingInsensitiveDict,
+    flat_pairs_to_dict,
+    nativestr,
+    pairs_to_dict,
+)
 
 
 class CommandCallback(ResponseCallback):
@@ -51,7 +56,7 @@ class CommandDocCallback(ResponseCallback):
     def transform(self, response: Any, **options: Any) -> Dict[AnyStr, Dict]:
         cmd_mapping = flat_pairs_to_dict(response)
         for cmd, doc in cmd_mapping.items():
-            cmd_mapping[cmd] = AnyDict(flat_pairs_to_dict(doc))
+            cmd_mapping[cmd] = EncodingInsensitiveDict(flat_pairs_to_dict(doc))
             cmd_mapping[cmd]["arguments"] = [
                 flat_pairs_to_dict(arg) for arg in cmd_mapping[cmd]["arguments"]
             ]

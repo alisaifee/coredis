@@ -5,7 +5,7 @@ import datetime
 from coredis.commands import ResponseCallback
 from coredis.response.types import ClientInfo, RoleInfo, SlowLogInfo
 from coredis.typing import Any, AnyStr, Dict, List, Tuple, Union
-from coredis.utils import AnyDict, flat_pairs_to_dict, nativestr
+from coredis.utils import EncodingInsensitiveDict, flat_pairs_to_dict, nativestr
 
 
 class TimeCallback(ResponseCallback):
@@ -168,7 +168,7 @@ class LatencyHistogramCallback(ResponseCallback):
     def transform(self, response: Any, **options: Any) -> Dict[AnyStr, Dict]:
         histogram = flat_pairs_to_dict(response)
         for key, value in histogram.items():
-            histogram[key] = AnyDict(flat_pairs_to_dict(value))
+            histogram[key] = EncodingInsensitiveDict(flat_pairs_to_dict(value))
             histogram[key]["histogram_usec"] = flat_pairs_to_dict(
                 histogram[key]["histogram_usec"]
             )

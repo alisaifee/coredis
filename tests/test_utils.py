@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-from coredis.utils import AnyDict
+from coredis.utils import EncodingInsensitiveDict
 
 
-class TestAnyDict:
+class TestEncodingInsensitiveDict:
     def test_empty_dict(self):
-        assert AnyDict() == {}
+        assert EncodingInsensitiveDict() == {}
 
     def test_regular_access(self):
-        data = AnyDict({"a": 1, b"a": 2, "c": [1, 2, 3], "d": {1, 2, 3}, "e": {"a": 1}})
+        data = EncodingInsensitiveDict(
+            {"a": 1, b"a": 2, "c": [1, 2, 3], "d": {1, 2, 3}, "e": {"a": 1}}
+        )
         assert data["a"] == 1
         assert data[b"a"] == 2
         assert data["c"] == [1, 2, 3]
@@ -19,7 +21,7 @@ class TestAnyDict:
         assert b"a" in data
 
     def test_access_str_for_bytes_key(self):
-        data = AnyDict({b"a": 1, "b": 2})
+        data = EncodingInsensitiveDict({b"a": 1, "b": 2})
         assert "a" in data
         assert data["a"] == 1
         data["a"] = 2

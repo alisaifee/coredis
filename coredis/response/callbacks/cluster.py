@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from coredis.commands import ResponseCallback
 from coredis.typing import Any, Dict, List, Tuple, TypedDict, Union
-from coredis.utils import flat_pairs_to_dict, nativestr
+from coredis.utils import EncodingInsensitiveDict, flat_pairs_to_dict, nativestr
 
 
 class ClusterNode(TypedDict):
@@ -133,3 +133,22 @@ class ClusterNodesCallback(ResponseCallback):
             nodes.append(node)
 
         return nodes
+
+
+class ClusterShardsCallback(ResponseCallback):
+    def transform(self, response: Any, **kwargs: Any) -> List[EncodingInsensitiveDict]:
+        shard_mapping = []
+        for shard in response:
+            transformed = EncodingInsensitiveDict(flat_pairs_to_dict(shard))
+            node_mapping = []
+            for node in transformed["nodes"]:
+                node_mapping.append(flat_pairs_to_dict(node))
+
+            transformed["nodes"] = node_mapping
+            shard_mapping.append(transformed)
+        return shard_mapping
+
+    def transform_3(
+        self, response: Any, **kwargs: Any
+    ) -> List[EncodingInsensitiveDict]:
+        return response

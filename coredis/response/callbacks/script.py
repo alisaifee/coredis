@@ -3,24 +3,28 @@ from __future__ import annotations
 from coredis.response.callbacks import ResponseCallback
 from coredis.response.types import LibraryDefinition
 from coredis.typing import Any, AnyStr, Dict, Union
-from coredis.utils import AnyDict, flat_pairs_to_dict
+from coredis.utils import EncodingInsensitiveDict, flat_pairs_to_dict
 
 
 class FunctionListCallback(ResponseCallback):
     def transform(self, response: Any, **options: Any) -> Dict[str, LibraryDefinition]:
-        libraries = [AnyDict(flat_pairs_to_dict(library)) for library in response]
-        transformed = AnyDict()
+        libraries = [
+            EncodingInsensitiveDict(flat_pairs_to_dict(library)) for library in response
+        ]
+        transformed = EncodingInsensitiveDict()
         for library in libraries:
             lib_name = library["library_name"]
-            functions = AnyDict({})
+            functions = EncodingInsensitiveDict({})
             for function in library.get("functions", []):
-                function_definition = AnyDict(flat_pairs_to_dict(function))
+                function_definition = EncodingInsensitiveDict(
+                    flat_pairs_to_dict(function)
+                )
                 functions[function_definition["name"]] = function_definition
                 functions[function_definition["name"]]["flags"] = set(
                     function_definition["flags"]
                 )
             library["functions"] = functions
-            transformed[lib_name] = AnyDict(  # type: ignore
+            transformed[lib_name] = EncodingInsensitiveDict(  # type: ignore
                 LibraryDefinition(
                     name=library["name"],
                     engine=library["engine"],

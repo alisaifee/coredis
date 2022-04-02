@@ -34,6 +34,7 @@ from coredis.response.callbacks.cluster import (
     ClusterLinksCallback,
     ClusterNode,
     ClusterNodesCallback,
+    ClusterShardsCallback,
     ClusterSlotsCallback,
 )
 from coredis.response.callbacks.command import (
@@ -998,6 +999,20 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return await self.execute_command(CommandName.CLUSTER_REPLICAS, node_id)
+
+    @versionadded(version="3.2.0")
+    @redis_command(
+        CommandName.CLUSTER_SHARDS,
+        version_introduced="6.9.0",
+        group=CommandGroup.CLUSTER,
+        response_callback=ClusterShardsCallback(),
+        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
+    )
+    async def cluster_shards(self) -> List[Dict[AnyStr, Any]]:
+        """
+        Get mapping of cluster slots to nodes
+        """
+        return await self.execute_command(CommandName.CLUSTER_SHARDS)
 
     @redis_command(
         CommandName.CLUSTER_SLAVES,
