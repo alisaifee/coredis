@@ -1,9 +1,11 @@
 *.pyc
 *.pyi
 *.so
+.eggs
 coredis.egg-info
 build/
 dist/
+wheelhouse/
 .idea/
 .benchmarks/
 .tool-versions

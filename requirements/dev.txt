@@ -1,15 +1,13 @@
 -r test.txt
-autoflake8
+-r publishing.txt
+autoflake8==0.3.2
 black==22.3.0
-click
-flake8
-hiredis
-inflect
-isort
+flake8==4.0.1
+hiredis>=2.0.0
+isort==5.10.1
 mypy==0.942
-jinja2
 pyright==1.1.234
-redis
+redis>=4.2.0
 twine
-uvloop
+uvloop>=0.16.0
 wheel

@@ -41,7 +41,7 @@ def get_config():
     # _version.py
     cfg = VersioneerConfig()
     cfg.VCS = "git"
-    cfg.style = "pep440"
+    cfg.style = "pep440-pre"
     cfg.tag_prefix = ""
     cfg.parentdir_prefix = "coredis-"
     cfg.versionfile_source = "coredis/_version.py"

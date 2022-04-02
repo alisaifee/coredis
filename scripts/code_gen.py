@@ -2432,14 +2432,11 @@ class ClusterPipeline(wrapt.ObjectProxy, Generic[AnyStr]):
     response = response.replace("coredis.commands.pipeline.", "")
     with open(path, "w") as file:
         file.write(response)
-    print(Path(path))
-    print(
-        format_file_in_place(
-            Path(path),
-            fast=False,
-            mode=FileMode(),
-            write_back=WriteBack.YES,
-        )
+    format_file_in_place(
+        Path(path),
+        fast=False,
+        mode=FileMode(),
+        write_back=WriteBack.YES,
     )
 
 

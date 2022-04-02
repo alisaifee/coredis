@@ -7,9 +7,11 @@ __author__ = "Ali-Akber Saifee"
 __email__ = "ali@indydevs.org"
 __copyright__ = "Copyright 2022, Ali-Akber Saifee"
 
+from distutils.command.build import build
+
 from setuptools import find_packages, setup
-from distutils.cmd import Command
 from setuptools.command.build_ext import build_ext
+from setuptools.command.sdist import sdist
 from setuptools.extension import Extension
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -19,31 +21,33 @@ def get_requirements(req_file):
     requirements = []
 
     for r in open(os.path.join(THIS_DIR, "requirements", req_file)).read().splitlines():
-        if r.strip():
-            requirements.append(r.strip())
+        req = r.strip()
+
+        if req.startswith("-r"):
+            requirements.extend(get_requirements(req.replace("-r ", "")))
+        elif req:
+            requirements.append(req)
 
     return requirements
 
 
-class BuildStubs(Command):
-    description = "Generate any type stubs needed for distribution"
-    user_options = []
-
+class coredis_build(build):
     def run(self):
         import scripts.code_gen
 
-        pipeline_stub = scripts.code_gen.generate_pipeline_stub(
-            "coredis/commands/pipeline.pyi"
-        )
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
+        scripts.code_gen.generate_pipeline_stub("coredis/commands/pipeline.pyi")
+        build.run(self)
 
 
-class custom_build_ext(build_ext):
+class coredis_sdist(sdist):
+    def run(self):
+        import scripts.code_gen
+
+        scripts.code_gen.generate_pipeline_stub("coredis/commands/pipeline.pyi")
+        sdist.run(self)
+
+
+class coredis_build_ext(build_ext):
     """
     NOTE: This code was originally taken from tornado.
 
@@ -138,14 +142,20 @@ setup(
     keywords=["Redis", "key-value store", "asyncio"],
     license="MIT",
     packages=find_packages(exclude=["tests", "benchmarks"]),
+    include_package_data=True,
     package_data={
         "coredis": ["py.typed"],
     },
     python_requires=">=3.8",
+    setup_requires=get_requirements("publishing.txt"),
     install_requires=get_requirements("main.txt"),
     extras_require={"hiredis": ["hiredis>=2.0.0"]},
     cmdclass=versioneer.get_cmdclass(
-        {"build_ext": custom_build_ext, "build_stubs": BuildStubs}
+        {
+            "build_ext": coredis_build_ext,
+            "build": coredis_build,
+            "sdist": coredis_sdist,
+        }
     ),
     classifiers=[
         "Development Status :: 5 - Production/Stable",

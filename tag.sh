@@ -1,16 +1,4 @@
 #!/bin/bash
-dryrun=0
-while [ "$1" != "" ]; do
-    case $1 in
-        -d | --dryrun )    dryrun=1
-                           ;;
-    esac
-    shift
-done
-
-rm -rf build dist
-# ensure linting passes before proceeding
-make lint-fix
 make lint
 last_tag=$(git tag | sort -nr | head -n 1)
 echo current version:$(python setup.py --version), current tag: $last_tag
@@ -31,8 +19,6 @@ then
     git add HISTORY.rst
     git commit -m "updating changelog for  ${new_version}"
     git tag -s ${new_version} -m "tagging version ${new_version}"
-    python setup.py build build_stubs sdist
-    test $dryrun != 1 && twine upload dist/*
     rm HISTORY.rst.new
 else
     echo changelog has errors. skipping tag.

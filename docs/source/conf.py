@@ -49,15 +49,16 @@ autodoc_default_options = {
     "member-order": "groupwise",
 }
 
+ahead = 0
 
-if "+" in coredis.__version__:
-    version, _ = release, part = coredis.__version__.split("+")
+if ".post0.dev" in coredis.__version__:
+    version, ahead = coredis.__version__.split(".post0.dev")
 else:
     version = coredis.__version__
 
 html_title = f"{project} <small><b style='color: var(--color-brand-primary)'>{{{release}}}</b></small>"
 try:
-    ahead = int(part.rsplit(".")[0])
+    ahead = int(ahead)
 
     if ahead > 0:
         html_theme_options[
