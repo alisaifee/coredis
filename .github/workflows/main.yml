@@ -20,7 +20,6 @@ jobs:
           - REDIS_VERSION=7.0-rc2 REDIS_SSL_VERSION=7.0-rc2 REDIS_STACK_VERSION=7.0.0-edge
         parser: [hiredis, python]
         uvloop: ["False"]
-        stack: ["False"]
         include:
           - python-version: 3.9
             service_version: "REDIS_VERSION=latest REDIS_SSL_VERSION=latest"
@@ -31,18 +30,18 @@ jobs:
             parser: hiredis
             uvloop: "True"
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Cache dependencies
       uses: actions/cache@v1
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('requirements/**') }}
+        key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('requirements/**') }}
         restore-keys: |
-          ${{ runner.os }}-pip-
-    - name: Set up Python
-      uses: actions/setup-python@v1
+          ${{ runner.os }}-${{ matrix.python-version }}-pip-
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
       with:
-        python-version: 3.9
+        python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip setuptools wheel
@@ -56,6 +55,7 @@ jobs:
     - name: Tests
       env:
         COREDIS_UVLOOP: "{{matrix.uvloop}}"
+        HOST_OS: linux
         CI: "True"
       run: |
         eval "export ${{ matrix.service_version }}"

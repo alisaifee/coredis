@@ -1,7 +1,6 @@
 -r main.txt
 beartype
 coverage
-docker-compose
 flaky
 lovely-pytest-docker
 mock
