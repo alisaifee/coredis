@@ -109,7 +109,7 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.4.0
         env:
-          CIBW_SKIP: '*musllinux*'
+          CIBW_SKIP: '*musllinux* pp*'
       - uses: actions/upload-artifact@v2
         with:
           path: ./wheelhouse/*.whl
