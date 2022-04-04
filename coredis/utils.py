@@ -69,6 +69,11 @@ class EncodingInsensitiveDict(wrapt.ObjectProxy):
         if item in self.__wrapped__:
             self.__wrapped__[item] = value
         elif (
+            isinstance(item, str)
+            and item.encode(self._self_encoding) in self.__wrapped__
+        ):
+            self.__wrapped__[item.encode(self._self_encoding)] = value
+        elif (
             isinstance(item, bytes)
             and item.decode(self._self_encoding) in self.__wrapped__
         ):
