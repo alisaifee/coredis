@@ -2499,7 +2499,7 @@ def render_cluster_key_extraction(path):
                 finder += f":{keystep}]"
             elif not last_key == 0:
                 finder += "]"
-            return f"(lambda kwpos: {finder})({kw_expr}) if {token} in args else ()"
+            return f"((lambda kwpos: {finder})({kw_expr}) if {token} in args else ())"
         else:
             raise RuntimeError(
                 f"Don't know how to handle {search_spec} with {find_spec}"
@@ -2553,12 +2553,12 @@ from coredis.typing import Callable, ClassVar, Dict, Tuple, ValueT
 class KeySpec:
     READONLY: ClassVar[Dict[bytes, Callable[[Tuple[ValueT, ...]], Tuple[ValueT, ...]]]] = {{ '{' }}
     {% for command, exprs in readonly.items() %}
-        b"{{command}}": lambda args: {{exprs | join("+")}}, 
+        b"{{command}}": lambda args: ({{exprs | join("+")}}), 
     {% endfor %}
     {{ '}' }}
     ALL: ClassVar[Dict[bytes, Callable[[Tuple[ValueT, ...]], Tuple[ValueT, ...]]]] = {{ '{' }}
     {% for command, exprs in all.items() %}
-        b"{{command}}": lambda args: {{exprs | join("+")}},
+        b"{{command}}": lambda args: ({{exprs | join("+")}}),
     {% endfor %}
     {{ '}' }}
 
