@@ -267,7 +267,7 @@ class NodeManager:
         the node cache dict
         """
         if "name" not in n:
-            n["name"] = "{}:{}".format(nativestr(n["host"]), n["port"])
+            n["name"] = f'{nativestr(n["host"])}:{n["port"]}'
 
     def set_node(self, host, port, server_type=None):
         """Updates data for a node"""
