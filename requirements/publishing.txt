@@ -2,5 +2,5 @@
 black==22.3.0
 click==8.1.2
 inflect==5.4.0
-Jinja2==3.0.3
+Jinja2==3.1.1
 
