@@ -6,6 +6,7 @@ import re
 import shlex
 
 from coredis.typing import (
+    ClassVar,
     Dict,
     Literal,
     NamedTuple,
@@ -310,7 +311,7 @@ class MonitorResult:
     command
     """
 
-    EXPR = re.compile(r"\[(\d+) (.*?)\] (.*)$")
+    EXPR: ClassVar = re.compile(r"\[(\d+) (.*?)\] (.*)$")
 
     #: Time command was received
     time: datetime.datetime
