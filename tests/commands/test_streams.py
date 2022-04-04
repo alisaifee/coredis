@@ -15,7 +15,13 @@ async def get_stream_message(client, stream, message_id):
     return response[0]
 
 
-@targets("redis_basic", "redis_basic_raw", "redis_basic_resp3", "redis_basic_raw_resp3")
+@targets(
+    "redis_basic",
+    "redis_basic_raw",
+    "redis_basic_resp3",
+    "redis_basic_raw_resp3",
+    "redis_cluster",
+)
 @pytest.mark.asyncio()
 class TestStreams:
     async def test_xadd_with_wrong_id(self, client, _s):

@@ -4389,15 +4389,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         if block is not None:
             if not isinstance(block, int) or block < 0:
                 raise RedisError("XREAD block must be a positive integer")
-            pieces.append("BLOCK")
+            pieces.append(PrefixToken.BLOCK)
             pieces.append(str(block))
 
         if count is not None:
             if not isinstance(count, int) or count < 1:
                 raise RedisError("XREAD count must be a positive integer")
-            pieces.append("COUNT")
+            pieces.append(PrefixToken.COUNT)
             pieces.append(str(count))
-        pieces.append("STREAMS")
+        pieces.append(PrefixToken.STREAMS)
         ids = []
 
         for partial_stream in streams.items():
@@ -4423,20 +4423,20 @@ class CoreCommands(CommandMixin[AnyStr]):
         noack: Optional[bool] = None,
     ) -> Dict[AnyStr, Tuple[StreamEntry, ...]]:
         """ """
-        pieces: CommandArgList = ["GROUP", group, consumer]
+        pieces: CommandArgList = [PrefixToken.GROUP, group, consumer]
 
         if block is not None:
             if not isinstance(block, int) or block < 1:
                 raise RedisError("XREAD block must be a positive integer")
-            pieces.append("BLOCK")
+            pieces.append(PrefixToken.BLOCK)
             pieces.append(str(block))
 
         if count is not None:
             if not isinstance(count, int) or count < 1:
                 raise RedisError("XREAD count must be a positive integer")
-            pieces.append("COUNT")
+            pieces.append(PrefixToken.COUNT)
             pieces.append(str(count))
-        pieces.append("STREAMS")
+        pieces.append(PrefixToken.STREAMS)
         ids = []
 
         for partial_stream in streams.items():
