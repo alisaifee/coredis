@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from coredis.typing import Optional, Set
+from coredis.typing import Any, Optional, Set, Tuple
 
 
 class RedisError(Exception):

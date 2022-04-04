@@ -4,6 +4,7 @@ import dataclasses
 import datetime
 import re
 import shlex
+from typing import Pattern
 
 from coredis.typing import (
     ClassVar,
@@ -311,8 +312,6 @@ class MonitorResult:
     command
     """
 
-    EXPR: ClassVar = re.compile(r"\[(\d+) (.*?)\] (.*)$")
-
     #: Time command was received
     time: datetime.datetime
     #: db number
@@ -325,6 +324,8 @@ class MonitorResult:
     command: str
     #: Arguments passed to the command
     args: Optional[Tuple[str, ...]]
+
+    EXPR: ClassVar[Pattern[str]] = re.compile(r"\[(\d+) (.*?)\] (.*)$")
 
     @classmethod
     def parse_response_string(cls, response: str) -> MonitorResult:
