@@ -787,8 +787,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         remove a node via its node ID from the set of known nodes
         of the Redis Cluster node receiving the command
-
-        Sends to all nodes in the cluster
         """
 
         return await self.execute_command(CommandName.CLUSTER_FORGET, node_id)
@@ -798,6 +796,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CLUSTER_GETKEYSINSLOT,
         group=CommandGroup.CLUSTER,
         response_callback=TupleCallback(),
+        cluster=ClusterCommandConfig(flag=NodeFlag.SLOT_ID),
     )
     async def cluster_getkeysinslot(self, slot: int, count: int) -> Tuple[AnyStr, ...]:
         """
@@ -808,7 +807,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         pieces = [slot, count]
 
-        return await self.execute_command(CommandName.CLUSTER_GETKEYSINSLOT, *pieces)
+        return await self.execute_command(
+            CommandName.CLUSTER_GETKEYSINSLOT, *pieces, slot_id=slot
+        )
 
     @redis_command(
         CommandName.CLUSTER_INFO,
@@ -819,8 +820,6 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def cluster_info(self) -> Dict[str, str]:
         """
         Provides info about Redis Cluster node state
-
-        Sends to random node in the cluster
         """
 
         return await self.execute_command(CommandName.CLUSTER_INFO)
@@ -898,8 +897,6 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def cluster_replicate(self, node_id: ValueT) -> bool:
         """
         Reconfigure a node as a replica of the specified master node
-
-        Sends to specified node
         """
 
         return await self.execute_command(CommandName.CLUSTER_REPLICATE, node_id)
@@ -929,12 +926,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CLUSTER_SAVECONFIG,
         group=CommandGroup.CLUSTER,
         response_callback=SimpleStringCallback(),
+        cluster=ClusterCommandConfig(
+            flag=NodeFlag.ALL, combine=lambda res: all(res.values())
+        ),
     )
     async def cluster_saveconfig(self) -> bool:
         """
         Forces the node to save cluster state on disk
-
-        Sends to all nodes in the cluster
         """
 
         return await self.execute_command(CommandName.CLUSTER_SAVECONFIG)
@@ -5096,7 +5094,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         arguments={"sync_type": {"version_introduced": "6.2.0"}},
         response_callback=BoolCallback(),
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.PRIMARIES, combine=lambda res: all(res)
+            flag=NodeFlag.PRIMARIES, combine=lambda res: all(res.values())
         ),
     )
     async def script_flush(
@@ -6608,7 +6606,6 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def cluster_get_keys_in_slot(self, slot_id, count):
         """
         Return local key names in the specified hash slot
-        Sends to specified node
 
         :meta private:
         """
