@@ -6,41 +6,41 @@ v3.2.0
 ------
 Release Date: 2022-04-02
 
-  * Features
+* Features
 
-    * New APIs:
-      * Server:
+  * New APIs:
+    * Server:
 
-        * ``Redis.latency_histogram``
-        * ``Redis.module_list``
-        * ``Redis.module_load``
-        * ``Redis.module_unload``
+      * ``Redis.latency_histogram``
+      * ``Redis.module_list``
+      * ``Redis.module_load``
+      * ``Redis.module_unload``
 
-      * Connection:
+    * Connection:
 
-          * ``Redis.client_no_evict``
+      * ``Redis.client_no_evict``
 
-      * Cluster:
+    * Cluster:
 
-          * ``Redis.cluster_shards``
-          * ``Redis.readonly``
-          * ``Redis.readwrite``
+      * ``Redis.cluster_shards``
+      * ``Redis.readonly``
+      * ``Redis.readwrite``
 
   * Micro optimization to use bytestrings for all hardcoded tokens
   * Add type hints for pipeline classes
   * Remove hardcoded pipeline blocked commands
 
-  * Bug Fix
+* Bug Fix
 
-    * Disable version checking by default
-    * Fix incorrect key names for server commands
+  * Disable version checking by default
+  * Fix incorrect key names for server commands
 
-  * Chores
+* Chores
 
-    * Move publishing steps to CI
-    * More typing related cleanups
-    * Refactor parsers into a separate module
-    * Improve test coverage to cover non decoding clients
+  * Move publishing steps to CI
+  * More typing related cleanups
+  * Refactor parsers into a separate module
+  * Improve test coverage to cover non decoding clients
 
 v3.1.1
 ------
