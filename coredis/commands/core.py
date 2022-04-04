@@ -6208,6 +6208,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="7.0.0",
         group=CommandGroup.SERVER,
         response_callback=SimpleStringCallback(AuthorizationError),
+        cluster=ClusterCommandConfig(
+            flag=NodeFlag.RANDOM,
+        ),
     )
     async def acl_dryrun(
         self, username: StringT, command: StringT, *args: ValueT
@@ -6251,6 +6254,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
         response_callback=DictCallback(transform_function=flat_pairs_to_dict),
+        cluster=ClusterCommandConfig(
+            flag=NodeFlag.RANDOM,
+        ),
     )
     async def acl_getuser(self, username: StringT) -> Dict[AnyStr, List[AnyStr]]:
         """
@@ -6351,6 +6357,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
         response_callback=SimpleStringCallback(),
+        cluster=ClusterCommandConfig(
+            flag=NodeFlag.ALL,
+            combine=ClusterEnsureConsistent(),
+        ),
     )
     async def acl_setuser(
         self,
