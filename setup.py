@@ -7,9 +7,8 @@ __author__ = "Ali-Akber Saifee"
 __email__ = "ali@indydevs.org"
 __copyright__ = "Copyright 2022, Ali-Akber Saifee"
 
-from distutils.command.build import build
-
 from setuptools import find_packages, setup
+from setuptools.command.build_py import build_py
 from setuptools.command.build_ext import build_ext
 from setuptools.command.sdist import sdist
 from setuptools.extension import Extension
@@ -31,12 +30,12 @@ def get_requirements(req_file):
     return requirements
 
 
-class coredis_build(build):
+class coredis_build_py(build_py):
     def run(self):
         import scripts.code_gen
 
         scripts.code_gen.generate_pipeline_stub("coredis/commands/pipeline.pyi")
-        build.run(self)
+        build_py.run(self)
 
 
 class coredis_sdist(sdist):
@@ -153,7 +152,7 @@ setup(
     cmdclass=versioneer.get_cmdclass(
         {
             "build_ext": coredis_build_ext,
-            "build": coredis_build,
+            "build_py": coredis_build_py,
             "sdist": coredis_sdist,
         }
     ),
