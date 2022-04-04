@@ -2476,27 +2476,30 @@ def render_cluster_key_extraction(path):
         startfrom = search_spec["spec"]["startfrom"]
         command_offset = len(command.strip().split(" ")) - 1
         startfrom = startfrom - command_offset
-
+        token = f'b"{kw}"'
+        kw_expr = f"args.index({token}, {startfrom})"
         if find_spec["type"] == "range":
             last_key = find_spec["spec"]["lastkey"]
             limit = find_spec["spec"]["limit"]
             keystep = find_spec["spec"]["keystep"]
-            finder = f"args[1+{startfrom}+args[{startfrom}:].index(PrefixToken.{sanitized(kw).upper()})"
+            finder = f"args[1+kwpos"
             if last_key == -1:
                 if limit > 0:
-                    lim = f":len(args)-((len(args)-(args[{startfrom}:].index(PrefixToken.{sanitized(kw).upper()})+{startfrom}+1))//{limit})"
+                    lim = f":len(args)-(len(args)-(kwpos+1))//{limit}"
                 else:
                     lim = ":len(args)"
                 finder += f"{lim}"
             elif last_key == -2:
                 finder += ":len(args)-1"
+            elif last_key == 0:
+                finder = f"(args[kwpos+1],)"
             else:
-                RuntimeError("Unhandled last_key in keyword search")
+                raise RuntimeError("Unhandled last_key in keyword search")
             if keystep > 1:
                 finder += f":{keystep}]"
-            else:
+            elif not last_key == 0:
                 finder += "]"
-            return finder
+            return f"(lambda kwpos: {finder})({kw_expr}) if {token} in args else ()"
         else:
             raise RuntimeError(
                 f"Don't know how to handle {search_spec} with {find_spec}"
@@ -2534,7 +2537,7 @@ def render_cluster_key_extraction(path):
                     )
 
     readonly = {}
-    all = {}
+    all = {"OBJECT": ["(args[2],)"]}
 
     for mode, commands in lookups.items():
         for command, exprs in commands.items():
@@ -2545,33 +2548,33 @@ def render_cluster_key_extraction(path):
     key_spec_template = """
 from __future__ import annotations
 
-from coredis.commands.constants import CommandName
-from coredis.tokens import PrefixToken
-from coredis.typing import Callable, Dict, Tuple, ValueT
+from coredis.typing import Callable, ClassVar, Dict, Tuple, ValueT
 
-READONLY: Dict[CommandName, Callable[[Tuple[ValueT, ...]], Tuple[ValueT, ...]]] = {{ '{' }}
-{% for command, exprs in readonly.items() %}
-    {{command_enum(command)}}: lambda args: {{exprs | join("+")}}, 
-{% endfor %}
-{{ '}' }}
-ALL = {{ '{' }}
-{% for command, exprs in all.items() %}
-    {{command_enum(command)}}: lambda args: {{exprs | join("+")}},
-{% endfor %}
-{{ '}' }}
+class KeySpec:
+    READONLY: ClassVar[Dict[bytes, Callable[[Tuple[ValueT, ...]], Tuple[ValueT, ...]]]] = {{ '{' }}
+    {% for command, exprs in readonly.items() %}
+        b"{{command}}": lambda args: {{exprs | join("+")}}, 
+    {% endfor %}
+    {{ '}' }}
+    ALL: ClassVar[Dict[bytes, Callable[[Tuple[ValueT, ...]], Tuple[ValueT, ...]]]] = {{ '{' }}
+    {% for command, exprs in all.items() %}
+        b"{{command}}": lambda args: {{exprs | join("+")}},
+    {% endfor %}
+    {{ '}' }}
 
-def extract_keys(arguments: Tuple[ValueT, ...], readonly_command=False) -> Tuple[ValueT, ...]:
-    if len(arguments) <= 1:
-        return ()
-    
-    assert isinstance(arguments[0], CommandName)
-    
-    command=arguments[0]
-    
-    if readonly_command:
-        return READONLY[command](arguments)
-    else:
-        return ALL[command](arguments)
+    @classmethod
+    def extract_keys(cls, arguments: Tuple[ValueT, ...], readonly_command=False) -> Tuple[ValueT, ...]:
+        if len(arguments) <= 1:
+            return ()
+        
+        command=arguments[0]
+        if not isinstance(command, bytes):
+            command = str(command).encode("latin-1") 
+         
+        if readonly_command:
+            return cls.READONLY[command](arguments)
+        else:
+            return cls.ALL[command](arguments)
     """
     cython_key_spec_template = """
 from coredis.commands.constants import CommandName

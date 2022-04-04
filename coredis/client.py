@@ -15,7 +15,7 @@ from packaging.version import Version
 from coredis.commands import CommandGroup, CommandName, redis_command
 from coredis.commands.core import CoreCommands
 from coredis.commands.function import Library
-from coredis.commands.key_spec import extract_keys
+from coredis.commands.key_spec import KeySpec
 from coredis.commands.monitor import Monitor
 from coredis.commands.script import Script
 from coredis.commands.sentinel import SentinelCommands
@@ -1519,7 +1519,7 @@ class RedisCluster(
                 f"No way to dispatch this command:{args} to Redis Cluster. Missing key."
             )
         command: bytes = args[0]
-        keys: Tuple[ValueT, ...] = extract_keys(args)
+        keys: Tuple[ValueT, ...] = KeySpec.extract_keys(args)
 
         if (
             command in {CommandName.EVAL, CommandName.EVALSHA, CommandName.FCALL}

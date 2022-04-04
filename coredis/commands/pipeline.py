@@ -14,7 +14,7 @@ import wrapt
 
 from coredis.client import AbstractRedis, ResponseParser
 from coredis.commands import CommandName
-from coredis.commands.key_spec import extract_keys
+from coredis.commands.key_spec import KeySpec
 from coredis.exceptions import (
     AskError,
     ClusterTransactionError,
@@ -869,7 +869,7 @@ class ClusterPipelineImpl(
         """Figure out what slot based on command and args"""
 
         command = args[0]
-        keys: Tuple[ValueT, ...] = extract_keys(args)
+        keys: Tuple[ValueT, ...] = KeySpec.extract_keys(args)
 
         if not keys:
             raise RedisClusterException(
