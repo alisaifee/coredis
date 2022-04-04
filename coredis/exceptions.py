@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from coredis.typing import Any, Optional, Set, Tuple
+from coredis.typing import Any, Dict, Optional, Set, StringT, Tuple
 
 
 class RedisError(Exception):
@@ -150,7 +150,12 @@ class ClusterTransactionError(ClusterError):
 
 
 class ClusterResponseError(ClusterError):
-    def __init__(self, message, responses):
+    """
+    Raised when application logic to combine multi node
+    cluster responses has errors.
+    """
+
+    def __init__(self, message, responses: Dict[StringT, Any]):
         super().__init__(message)
         self.responses = responses
 
