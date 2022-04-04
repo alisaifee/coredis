@@ -830,7 +830,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.CLUSTER,
         cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
     )
-    async def cluster_keyslot(self, key: ValueT) -> int:
+    async def cluster_keyslot(self, key: KeyT) -> int:
         """
         Returns the hash slot of the specified key
         """
@@ -861,7 +861,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         response_callback=SimpleStringCallback(),
         cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
     )
-    async def cluster_meet(self, ip: ValueT, port: int) -> bool:
+    async def cluster_meet(self, ip: StringT, port: int) -> bool:
         """
         Force a node cluster to handshake with another node.
         """
@@ -1003,7 +1003,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="3.2.0")
     @redis_command(
         CommandName.CLUSTER_SHARDS,
-        version_introduced="6.9.0",
+        version_introduced="7.0.0",
         group=CommandGroup.CLUSTER,
         response_callback=ClusterShardsCallback(),
         cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
