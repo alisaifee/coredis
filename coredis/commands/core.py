@@ -18,6 +18,9 @@ from coredis.exceptions import AuthorizationError, DataError, RedisError
 from coredis.response.callbacks import (
     BoolCallback,
     BoolsCallback,
+    ClusterBoolCombine,
+    ClusterEnsureConsistent,
+    ClusterMergeSets,
     DateTimeCallback,
     DictCallback,
     FloatCallback,
@@ -927,7 +930,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.CLUSTER,
         response_callback=SimpleStringCallback(),
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.ALL, combine=lambda res: all(res.values())
+            flag=NodeFlag.ALL,
+            combine=ClusterBoolCombine(),
         ),
     )
     async def cluster_saveconfig(self) -> bool:
@@ -1090,8 +1094,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.CONNECTION,
         cluster=ClusterCommandConfig(
             flag=NodeFlag.ALL,
-            combine=lambda res: len(set(res.values())) == 1
-            and list(res.values()).pop(),
+            combine=ClusterEnsureConsistent(),
         ),
     )
     async def echo(self, message: StringT) -> AnyStr:
@@ -1138,8 +1141,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.CONNECTION,
         cluster=ClusterCommandConfig(
             flag=NodeFlag.ALL,
-            combine=lambda res: len(set(res.values())) == 1
-            and list(res.values()).pop(),
+            combine=ClusterEnsureConsistent(),
         ),
     )
     async def ping(self, message: Optional[StringT] = None) -> AnyStr:
@@ -2148,7 +2150,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         response_callback=SetCallback(),
         cluster=ClusterCommandConfig(
             flag=NodeFlag.PRIMARIES,
-            combine=lambda r: set(itertools.chain(*r.values())),
+            combine=ClusterMergeSets(),
         ),
     )
     async def keys(self, pattern: StringT = "*") -> Set[AnyStr]:
@@ -3276,7 +3278,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         readonly=True,
         group=CommandGroup.SET,
         response_callback=SScanCallback(),
-        cluster=ClusterCommandConfig(combine=lambda res: list(res.values()).pop()),
+        cluster=ClusterCommandConfig(combine=ClusterEnsureConsistent()),
     )
     async def sscan(
         self,
@@ -5104,7 +5106,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         arguments={"sync_type": {"version_introduced": "6.2.0"}},
         response_callback=BoolCallback(),
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.PRIMARIES, combine=lambda res: all(res.values())
+            flag=NodeFlag.PRIMARIES,
+            combine=ClusterBoolCombine(),
         ),
     )
     async def script_flush(
@@ -5138,7 +5141,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SCRIPTING,
         cluster=ClusterCommandConfig(
             flag=NodeFlag.PRIMARIES,
-            combine=lambda res: res and list(res.values()).pop(),
+            combine=ClusterEnsureConsistent(),
         ),
     )
     async def script_load(self, script: StringT) -> AnyStr:
@@ -5198,7 +5201,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         response_callback=SimpleStringCallback(),
         cluster=ClusterCommandConfig(
             flag=NodeFlag.PRIMARIES,
-            combine=lambda res: res and list(res.values()).pop(),
+            combine=ClusterEnsureConsistent(),
         ),
     )
     async def function_delete(self, library_name: StringT) -> bool:
@@ -5229,7 +5232,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SCRIPTING,
         response_callback=SimpleStringCallback(),
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.PRIMARIES, combine=lambda res: all(res.values())
+            flag=NodeFlag.PRIMARIES,
+            combine=ClusterEnsureConsistent(),
         ),
     )
     async def function_flush(
@@ -5291,7 +5295,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         response_callback=SimpleStringCallback(),
         cluster=ClusterCommandConfig(
             flag=NodeFlag.PRIMARIES,
-            combine=lambda res: res and list(res.values()).pop(),
+            combine=ClusterEnsureConsistent(),
         ),
     )
     async def function_load(
@@ -5325,7 +5329,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         response_callback=SimpleStringCallback(),
         cluster=ClusterCommandConfig(
             flag=NodeFlag.PRIMARIES,
-            combine=lambda res: res and list(res.values()).pop(),
+            combine=ClusterEnsureConsistent(),
         ),
     )
     async def function_restore(
@@ -5779,7 +5783,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         response_callback=SimpleStringCallback(),
         cluster=ClusterCommandConfig(
             flag=NodeFlag.PRIMARIES,
-            combine=lambda res: res and list(res.values()).pop(),
+            combine=ClusterEnsureConsistent(),
         ),
     )
     async def flushall(
@@ -5799,7 +5803,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         response_callback=SimpleStringCallback(),
         cluster=ClusterCommandConfig(
             flag=NodeFlag.PRIMARIES,
-            combine=lambda res: res and list(res.values()).pop(),
+            combine=ClusterEnsureConsistent(),
         ),
     )
     async def flushdb(
@@ -6181,6 +6185,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ACL_DELUSER,
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
+        cluster=ClusterCommandConfig(
+            flag=NodeFlag.ALL,
+            combine=ClusterEnsureConsistent(),
+        ),
     )
     async def acl_deluser(self, usernames: Iterable[StringT]) -> int:
         """
@@ -6547,7 +6555,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SERVER,
         response_callback=SimpleStringCallback(),
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.ALL, combine=lambda res: all(res.values())
+            flag=NodeFlag.ALL,
+            combine=ClusterBoolCombine(),
         ),
     )
     async def config_set(self, parameter_values: Dict[StringT, ValueT]) -> bool:
@@ -6562,7 +6571,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SERVER,
         response_callback=SimpleStringCallback(),
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.ALL, combine=lambda res: all(res.values())
+            flag=NodeFlag.ALL,
+            combine=ClusterBoolCombine(),
         ),
     )
     async def config_resetstat(self) -> bool:
