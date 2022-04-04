@@ -5914,7 +5914,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="3.0.0")
     @redis_command(CommandName.LATENCY_RESET, group=CommandGroup.SERVER)
-    async def latency_reset(self, events: Optional[Iterable[StringT]] = None) -> int:
+    async def latency_reset(self, *events: StringT) -> int:
         """
         Reset latency data for one or more events.
 

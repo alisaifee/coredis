@@ -187,7 +187,7 @@ class TestServer:
         await client.execute_command(b"debug", "sleep", 0.05)
         history = await client.latency_history("command")
         assert len(history) >= 1
-        await client.latency_reset([])
+        await client.latency_reset()
 
         await client.execute_command(b"debug", "sleep", 0.05)
         history = await client.latency_history("command")
