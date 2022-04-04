@@ -9,6 +9,7 @@ Release Date: 2022-04-02
 * Features
 
   * New APIs:
+
     * Server:
 
       * ``Redis.latency_histogram``
