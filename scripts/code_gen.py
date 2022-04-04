@@ -734,14 +734,15 @@ def read_command_docs(command, group):
 
 
 @functools.lru_cache
-def get_official_commands(group=None):
+def get_official_commands(group=None, include_skipped=False):
     response = get_commands()
     by_group = {}
     [
         by_group.setdefault(command["group"], []).append({**command, **{"name": name}})
         for name, command in response.items()
         if version.parse(command["since"]) < MAX_SUPPORTED_VERSION
-        and name not in SKIP_COMMANDS
+        and include_skipped
+        or name not in SKIP_COMMANDS
     ]
 
     return by_group if not group else by_group.get(group)
@@ -1842,9 +1843,7 @@ def generate_compatibility_section(
                 methods["missing"].append(method_details)
         if methods["supported"] or methods["missing"]:
             methods_by_group[group] = methods
-    return section_template.render(
-        groups=groups, methods_by_group=methods_by_group
-    )
+    return section_template.render(groups=groups, methods_by_group=methods_by_group)
 
 
 @click.group()
@@ -1899,13 +1898,20 @@ def token_enum(ctx, path):
         """
 
 import enum
+from functools import cached_property
 
+from coredis.typing import Set, StringT
 
 class PureToken(bytes, enum.Enum):
     \"\"\"
     Enum for using pure-tokens with the redis api.
     \"\"\"
 
+    @cached_property
+    def variants(self) -> Set[StringT]:
+        decoded = str(self)
+        return {self.value.lower(), self.value, decoded.lower(), decoded.upper()}
+    
     def __eq__(self, other):
         \"\"\"
         Since redis tokens are case insensitive allow mixed case
@@ -1916,12 +1922,8 @@ class PureToken(bytes, enum.Enum):
         if other:
             if isinstance(other, PureToken):
                 return self.value == other.value
-            _other = other
-
-            if isinstance(other, str):
-                _other = other.encode("utf-8")
-
-            return _other.upper() == self.value
+            else:
+                return other in self.variants
 
     def __hash__(self):
         return hash(self.value)
@@ -1942,6 +1944,11 @@ class PrefixToken(bytes, enum.Enum):
     Enum for internal use when adding prefixes to arguments
     \"\"\"
 
+    @cached_property
+    def variants(self) -> Set[StringT]:
+        decoded = str(self)
+        return {self.value.lower(), self.value, decoded.lower(), decoded.upper()}
+    
     def __eq__(self, other):
         \"\"\"
         Since redis tokens are case insensitive allow mixed case
@@ -1952,12 +1959,8 @@ class PrefixToken(bytes, enum.Enum):
         if other:
             if isinstance(other, PrefixToken):
                 return self.value == other.value
-            _other = other
-
-            if isinstance(other, str):
-                _other = other.encode("utf-8")
-
-            return _other.upper() == self.value
+            else:
+                return other in self.variants
 
     def __hash__(self):
         return hash(self.value)
@@ -1987,7 +1990,7 @@ class PrefixToken(bytes, enum.Enum):
 @click.option("--path", default="coredis/commands/constants.py")
 @click.pass_context
 def command_constants(ctx, path):
-    commands = get_official_commands()
+    commands = get_official_commands(include_skipped=True)
     sort_fn = lambda command: command.get("since")
     env = Environment()
     env.globals.update(sorted=sorted)
@@ -1998,8 +2001,12 @@ coredis.commands.constants
 
 Constants relating to redis command names and groups
 \"\"\"
-import enum
 
+from __future__ import annotations
+import enum
+from functools import cached_property
+
+from coredis.typing import Set, StringT
 
 @enum.unique
 class CommandName(bytes, enum.Enum):
@@ -2007,6 +2014,11 @@ class CommandName(bytes, enum.Enum):
     Enum for listing all redis commands
     \"\"\"
 
+    @cached_property
+    def variants(self) -> Set[StringT]:
+        decoded = str(self)
+        return {self.value.lower(), self.value, decoded.lower(), decoded.upper()}
+    
     def __eq__(self, other):
         \"\"\"
         Since redis tokens are case insensitive allow mixed case
@@ -2017,12 +2029,8 @@ class CommandName(bytes, enum.Enum):
         if other:
             if isinstance(other, CommandName):
                 return self.value == other.value
-            _other = other
-
-            if isinstance(other, str):
-                _other = other.encode("utf-8")
-
-            return _other.upper() == self.value
+            else:
+                return other in self.variants
 
 
     def __hash__(self):
