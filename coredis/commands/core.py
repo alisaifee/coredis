@@ -2847,8 +2847,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         return await self.execute_command(CommandName.LPOP, key, *pieces)
 
     @redis_command(
-        CommandName.LPOS, version_introduced="6.0.6", group=CommandGroup.LIST,
-        readonly=True
+        CommandName.LPOS,
+        version_introduced="6.0.6",
+        group=CommandGroup.LIST,
+        readonly=True,
     )
     async def lpos(
         self,
@@ -4656,6 +4658,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.XGROUP_SETID,
         group=CommandGroup.STREAM,
+        arguments={"entriesread": {"version_introduced": "7.0.0"}},
         response_callback=SimpleStringCallback(),
     )
     async def xgroup_setid(
@@ -4663,14 +4666,18 @@ class CoreCommands(CommandMixin[AnyStr]):
         key: KeyT,
         groupname: StringT,
         identifier: Optional[ValueT] = None,
+        entriesread: Optional[int] = None,
     ) -> bool:
         """
         Set a consumer group to an arbitrary last delivered ID value.
         """
 
-        return await self.execute_command(
-            CommandName.XGROUP_SETID, key, groupname, identifier or PureToken.NEW_ID
-        )
+        pieces = [key, groupname, identifier or PureToken.NEW_ID]
+
+        if entriesread is not None:
+            pieces.extend([PrefixToken.ENTRIESREAD, entriesread])
+
+        return await self.execute_command(CommandName.XGROUP_SETID, *pieces)
 
     @redis_command(CommandName.XGROUP_DESTROY, group=CommandGroup.STREAM)
     async def xgroup_destroy(self, key: KeyT, groupname: StringT) -> int:
