@@ -6578,7 +6578,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SERVER,
         response_callback=ModuleInfoCallback(),
     )
-    async def module_list(self) -> Tuple[Dict[AnyStr, ValueT], ...]:
+    async def module_list(self) -> Tuple[Dict, ...]:
         """
         List all modules loaded by the server
 
