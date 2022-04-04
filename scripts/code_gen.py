@@ -168,8 +168,10 @@ REDIS_RETURN_OVERRIDES = {
     "CLIENT INFO": ClientInfo,
     "CLIENT TRACKINGINFO": Dict[AnyStr, AnyStr],
     "CLUSTER INFO": Dict[str, str],
+    "CLUSTER LINKS": List[Dict[AnyStr, Any]],
     "CLUSTER NODES": List[Dict[str, str]],
     "CLUSTER REPLICAS": List[Dict[AnyStr, AnyStr]],
+    "CLUSTER SHARDS": List[Dict[AnyStr, Any]],
     "CLUSTER SLAVES": List[Dict[AnyStr, AnyStr]],
     "CLUSTER SLOTS": Dict[Tuple[int, int], Tuple[ClusterNode, ...]],
     "COMMAND": Dict[str, Command],
@@ -1842,9 +1844,7 @@ def generate_compatibility_section(
                 methods["missing"].append(method_details)
         if methods["supported"] or methods["missing"]:
             methods_by_group[group] = methods
-    return section_template.render(
-        groups=groups, methods_by_group=methods_by_group
-    )
+    return section_template.render(groups=groups, methods_by_group=methods_by_group)
 
 
 @click.group()
