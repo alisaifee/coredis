@@ -326,6 +326,10 @@ VERSIONCHANGED_DOC = re.compile(r"(.. versionchanged:: ([\d\.]+))", re.DOTALL)
 inflection_engine = inflect.engine()
 
 
+def command_enum(command_name) -> str:
+    return "CommandName." + command_name.upper().replace(" ", "_").replace("-", "_")
+
+
 def sanitized_rendered_type(rendered_type) -> str:
     v = re.sub("<class '(.*?)'>", "\\1", rendered_type)
     v = re.sub("<PureToken.(.*?): b'(.*?)'>", "PureToken.\\1", v)
@@ -736,14 +740,15 @@ def read_command_docs(command, group):
 
 
 @functools.lru_cache
-def get_official_commands(group=None):
+def get_official_commands(group=None, include_skipped=False):
     response = get_commands()
     by_group = {}
     [
         by_group.setdefault(command["group"], []).append({**command, **{"name": name}})
         for name, command in response.items()
         if version.parse(command["since"]) < MAX_SUPPORTED_VERSION
-        and name not in SKIP_COMMANDS
+        and include_skipped
+        or name not in SKIP_COMMANDS
     ]
 
     return by_group if not group else by_group.get(group)
@@ -1899,13 +1904,20 @@ def token_enum(ctx, path):
         """
 
 import enum
+from functools import cached_property
 
+from coredis.typing import Set, StringT
 
 class PureToken(bytes, enum.Enum):
     \"\"\"
     Enum for using pure-tokens with the redis api.
     \"\"\"
 
+    @cached_property
+    def variants(self) -> Set[StringT]:
+        decoded = str(self)
+        return {self.value.lower(), self.value, decoded.lower(), decoded.upper()}
+    
     def __eq__(self, other):
         \"\"\"
         Since redis tokens are case insensitive allow mixed case
@@ -1916,12 +1928,8 @@ class PureToken(bytes, enum.Enum):
         if other:
             if isinstance(other, PureToken):
                 return self.value == other.value
-            _other = other
-
-            if isinstance(other, str):
-                _other = other.encode("utf-8")
-
-            return _other.upper() == self.value
+            else:
+                return other in self.variants
 
     def __hash__(self):
         return hash(self.value)
@@ -1942,6 +1950,11 @@ class PrefixToken(bytes, enum.Enum):
     Enum for internal use when adding prefixes to arguments
     \"\"\"
 
+    @cached_property
+    def variants(self) -> Set[StringT]:
+        decoded = str(self)
+        return {self.value.lower(), self.value, decoded.lower(), decoded.upper()}
+    
     def __eq__(self, other):
         \"\"\"
         Since redis tokens are case insensitive allow mixed case
@@ -1952,12 +1965,8 @@ class PrefixToken(bytes, enum.Enum):
         if other:
             if isinstance(other, PrefixToken):
                 return self.value == other.value
-            _other = other
-
-            if isinstance(other, str):
-                _other = other.encode("utf-8")
-
-            return _other.upper() == self.value
+            else:
+                return other in self.variants
 
     def __hash__(self):
         return hash(self.value)
@@ -1987,7 +1996,7 @@ class PrefixToken(bytes, enum.Enum):
 @click.option("--path", default="coredis/commands/constants.py")
 @click.pass_context
 def command_constants(ctx, path):
-    commands = get_official_commands()
+    commands = get_official_commands(include_skipped=True)
     sort_fn = lambda command: command.get("since")
     env = Environment()
     env.globals.update(sorted=sorted)
@@ -1998,8 +2007,12 @@ coredis.commands.constants
 
 Constants relating to redis command names and groups
 \"\"\"
-import enum
 
+from __future__ import annotations
+import enum
+from functools import cached_property
+
+from coredis.typing import Set, StringT
 
 @enum.unique
 class CommandName(bytes, enum.Enum):
@@ -2007,6 +2020,11 @@ class CommandName(bytes, enum.Enum):
     Enum for listing all redis commands
     \"\"\"
 
+    @cached_property
+    def variants(self) -> Set[StringT]:
+        decoded = str(self)
+        return {self.value.lower(), self.value, decoded.lower(), decoded.upper()}
+    
     def __eq__(self, other):
         \"\"\"
         Since redis tokens are case insensitive allow mixed case
@@ -2017,12 +2035,8 @@ class CommandName(bytes, enum.Enum):
         if other:
             if isinstance(other, CommandName):
                 return self.value == other.value
-            _other = other
-
-            if isinstance(other, str):
-                _other = other.encode("utf-8")
-
-            return _other.upper() == self.value
+            else:
+                return other in self.variants
 
 
     def __hash__(self):
@@ -2417,6 +2431,191 @@ class ClusterPipeline(wrapt.ObjectProxy, Generic[AnyStr]):
 @code_gen.command()
 def render_pipeline_stub(path):
     return generate_pipeline_stub(path)
+
+
+@click.option("--path", default="coredis/commands/key_spec.py")
+@code_gen.command()
+def render_cluster_key_extraction(path):
+    commands = get_commands()
+    lookups = {}
+
+    def _index_finder(command, search_spec, find_spec):
+        if search_spec["type"] == "index":
+            start_index = search_spec["spec"]["index"]
+            command_offset = len(command.strip().split(" ")) - 1
+            start_index = start_index - command_offset
+            keystep = find_spec["spec"]["keystep"]
+            if find_spec["type"] == "range":
+                last_key = find_spec["spec"]["lastkey"]
+                limit = find_spec["spec"]["limit"]
+                if last_key == -1:
+                    if limit > 0:
+                        finder = f"args[{start_index}:len(args)-((len(args)-({start_index}+1))//{limit})]"
+                    else:
+                        finder = f"args[{start_index}:(len(args))"
+                elif last_key == -2:
+                    finder = f"args[{start_index}:(len(args) - 1)"
+                else:
+                    if start_index == start_index + last_key:
+                        return f"(args[{start_index}],)"
+                    finder = f"args[{start_index}:{start_index+last_key}"
+                if keystep > 1:
+                    finder += f":{keystep}]"
+                else:
+                    finder += "]"
+                return finder
+            elif find_spec["type"] == "keynum":
+                first_key = find_spec["spec"]["firstkey"]
+                keynumidx = find_spec["spec"]["keynumidx"]
+                return f"args[{start_index+first_key}: {start_index+first_key}+int(args[{keynumidx+start_index}])]"
+            else:
+                raise RuntimeError(
+                    f"Don't know how to handle {search_spec} with {find_spec}"
+                )
+
+    def _kw_finder(command, search_spec, find_spec):
+        kw = search_spec["spec"]["keyword"]
+        startfrom = search_spec["spec"]["startfrom"]
+        command_offset = len(command.strip().split(" ")) - 1
+        startfrom = startfrom - command_offset
+        token = f'b"{kw}"'
+        kw_expr = f"args.index({token}, {startfrom})"
+        if find_spec["type"] == "range":
+            last_key = find_spec["spec"]["lastkey"]
+            limit = find_spec["spec"]["limit"]
+            keystep = find_spec["spec"]["keystep"]
+            finder = f"args[1+kwpos"
+            if last_key == -1:
+                if limit > 0:
+                    lim = f":len(args)-(len(args)-(kwpos+1))//{limit}"
+                else:
+                    lim = ":len(args)"
+                finder += f"{lim}"
+            elif last_key == -2:
+                finder += ":len(args)-1"
+            elif last_key == 0:
+                finder = f"(args[kwpos+1],)"
+            else:
+                raise RuntimeError("Unhandled last_key in keyword search")
+            if keystep > 1:
+                finder += f":{keystep}]"
+            elif not last_key == 0:
+                finder += "]"
+            return f"((lambda kwpos: {finder})({kw_expr}) if {token} in args else ())"
+        else:
+            raise RuntimeError(
+                f"Don't know how to handle {search_spec} with {find_spec}"
+            )
+
+    for name, command in commands.items():
+        key_specs = command.get("key_specs", [])
+        for spec in key_specs:
+            mode = (
+                "RO"
+                if spec.get("RO", False)
+                else "OW"
+                if spec.get("OW", False)
+                else "RW"
+                if spec.get("RW", False)
+                else "RM"
+            )
+            begin_search = spec.get("begin_search", {})
+            find_keys = spec.get("find_keys", {})
+            if begin_search and find_keys:
+                search_type = begin_search["type"]
+                if search_type == "index":
+                    lookups.setdefault(mode, {}).setdefault(name, []).append(
+                        _index_finder(name, begin_search, find_keys)
+                    )
+                elif search_type == "keyword":
+                    lookups.setdefault(mode, {}).setdefault(name, []).append(
+                        _kw_finder(name, begin_search, find_keys)
+                    )
+                elif search_type == "unknown":
+                    pass
+                else:
+                    raise RuntimeError(
+                        f"Don't know how to handle {search_type} for {name} ({spec})"
+                    )
+
+    readonly = {}
+    all = {"OBJECT": ["(args[2],)"]}
+
+    for mode, commands in lookups.items():
+        for command, exprs in commands.items():
+            if mode == "RO":
+                readonly[command] = exprs
+            all.setdefault(command, []).extend(exprs)
+
+    all["PUBLISH"] = all["SPUBLISH"]
+
+    key_spec_template = """
+from __future__ import annotations
+
+from coredis.typing import Callable, ClassVar, Dict, Tuple, ValueT
+
+class KeySpec:
+    READONLY: ClassVar[Dict[bytes, Callable[[Tuple[ValueT, ...]], Tuple[ValueT, ...]]]] = {{ '{' }}
+    {% for command, exprs in readonly.items() %}
+        b"{{command}}": lambda args: ({{exprs | join("+")}}), 
+    {% endfor %}
+    {{ '}' }}
+    ALL: ClassVar[Dict[bytes, Callable[[Tuple[ValueT, ...]], Tuple[ValueT, ...]]]] = {{ '{' }}
+    {% for command, exprs in all.items() %}
+        b"{{command}}": lambda args: ({{exprs | join("+")}}),
+    {% endfor %}
+    {{ '}' }}
+
+    @classmethod
+    def extract_keys(cls, arguments: Tuple[ValueT, ...], readonly_command=False) -> Tuple[ValueT, ...]:
+        if len(arguments) <= 1:
+            return ()
+        
+        command=arguments[0]
+        if not isinstance(command, bytes):
+            command = str(command).encode("latin-1") 
+         
+        try:
+            if readonly_command:
+                return cls.READONLY[command](arguments)
+            else:
+                return cls.ALL[command](arguments)
+        except KeyError:
+            return  ()
+    """
+    cython_key_spec_template = """
+from coredis.commands.constants import CommandName
+
+READONLY = {{ '{' }}
+{% for command, exprs in readonly.items() %}
+    {{command_enum(command)}}: lambda args: {{exprs | join("+")}}, 
+{% endfor %}
+{{ '}' }}
+ALL = {{ '{' }}
+{% for command, exprs in all.items() %}
+    {{command_enum(command)}}: lambda args: {{exprs | join("+")}},
+{% endfor %}
+{{ '}' }}
+        """
+    env = Environment()
+    env.globals.update(
+        command_enum=command_enum,
+        sanitized=sanitized,
+    )
+    tmpl = env.from_string(key_spec_template)
+    cython_tmpl = env.from_string(cython_key_spec_template)
+    response = tmpl.render(all=all, readonly=readonly)
+    # cython_response = cython_tmpl.render(all=all, readonly=readonly)
+    with open(path, "w") as file:
+        file.write(response)
+    # with open(path.replace(".py", "_ext.pyx"), "w") as file:
+    #    file.write(cython_response)
+    format_file_in_place(
+        Path(path),
+        fast=False,
+        mode=FileMode(),
+        write_back=WriteBack.YES,
+    )
 
 
 if __name__ == "__main__":

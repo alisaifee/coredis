@@ -19,8 +19,12 @@ generate-compatibility-docs:
 	PYTHONPATH=${CURDIR} python scripts/code_gen.py --debug=${DEBUG} --next-version=${NEXT_VERSION} coverage-doc
 
 generate-token-enum:
-	rm -rf docs/source/compatibility.rst
 	PYTHONPATH=${CURDIR} python scripts/code_gen.py --debug=${DEBUG} --next-version=${NEXT_VERSION} token-enum
+generate-templated-sources:
+	PYTHONPATH=${CURDIR} python scripts/code_gen.py token-enum
+	PYTHONPATH=${CURDIR} python scripts/code_gen.py command-constants
+	PYTHONPATH=${CURDIR} python scripts/code_gen.py render-cluster-key-extraction
+
 benchmark:
 	./scripts/benchmark.sh
 benchmark-light:

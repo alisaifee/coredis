@@ -188,7 +188,7 @@ class TestPipeline:
             async with await client.pipeline() as pipe:
                 await function(pipe, *args, **kwargs)
                 await pipe.execute()
-        exc.match("No way to dispatch this command to Redis Cluster. Missing key")
+        exc.match("No way to dispatch (.*?) to Redis Cluster. Missing key")
 
     @pytest.mark.parametrize(
         "function, args, kwargs",
@@ -207,7 +207,7 @@ class TestPipeline:
     @pytest.mark.parametrize(
         "function, args, kwargs, expectation",
         [
-            (ClusterPipelineImpl.bitop, (["a{fu}"], "not", "b{fu}"), {}, (None,)),
+            (ClusterPipelineImpl.bitop, (["a{fu}"], "not", "b{fu}"), {}, (0,)),
             (ClusterPipelineImpl.brpoplpush, ("a{fu}", "b{fu}", 1.0), {}, (None,)),
         ],
     )
@@ -229,9 +229,9 @@ class TestPipeline:
             res = await pipe.execute()
         assert res == (True, True, True)
 
-    async def test_multi_node_pipeline_partial_success(self, client):
+    async def test_multi_node_pipeline_partially_correct(self, client):
         await client.lpush("list{baz}", [1, 2, 3])
-        with pytest.raises(ClusterCrossSlotError):
+        with pytest.raises(ClusterCrossSlotError) as exc:
             async with await client.pipeline() as pipe:
                 await pipe.set("x{foo}", 1)
                 await pipe.set("x{bar}", 1)
@@ -239,6 +239,7 @@ class TestPipeline:
                 await pipe.set("x{baz}", 1)
                 await pipe.brpoplpush("list{baz}", "list{foo}", 1.0)
                 await pipe.execute()
-        assert await client.get("x{foo}") == "1"
-        assert await client.get("x{bar}") == "1"
-        assert await client.get("x{baz}") == "1"
+        exc.match("Keys in request don't hash to the same slot")
+        assert await client.get("x{foo}") is None
+        assert await client.get("x{bar}") is None
+        assert await client.get("x{baz}") is None

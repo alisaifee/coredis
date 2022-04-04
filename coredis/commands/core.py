@@ -18,6 +18,9 @@ from coredis.exceptions import AuthorizationError, DataError, RedisError
 from coredis.response.callbacks import (
     BoolCallback,
     BoolsCallback,
+    ClusterBoolCombine,
+    ClusterEnsureConsistent,
+    ClusterMergeSets,
     DateTimeCallback,
     DictCallback,
     FloatCallback,
@@ -787,8 +790,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         remove a node via its node ID from the set of known nodes
         of the Redis Cluster node receiving the command
-
-        Sends to all nodes in the cluster
         """
 
         return await self.execute_command(CommandName.CLUSTER_FORGET, node_id)
@@ -798,6 +799,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CLUSTER_GETKEYSINSLOT,
         group=CommandGroup.CLUSTER,
         response_callback=TupleCallback(),
+        cluster=ClusterCommandConfig(flag=NodeFlag.SLOT_ID),
     )
     async def cluster_getkeysinslot(self, slot: int, count: int) -> Tuple[AnyStr, ...]:
         """
@@ -808,7 +810,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         pieces = [slot, count]
 
-        return await self.execute_command(CommandName.CLUSTER_GETKEYSINSLOT, *pieces)
+        return await self.execute_command(
+            CommandName.CLUSTER_GETKEYSINSLOT, *pieces, slot_id=slot
+        )
 
     @redis_command(
         CommandName.CLUSTER_INFO,
@@ -819,8 +823,6 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def cluster_info(self) -> Dict[str, str]:
         """
         Provides info about Redis Cluster node state
-
-        Sends to random node in the cluster
         """
 
         return await self.execute_command(CommandName.CLUSTER_INFO)
@@ -898,8 +900,6 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def cluster_replicate(self, node_id: ValueT) -> bool:
         """
         Reconfigure a node as a replica of the specified master node
-
-        Sends to specified node
         """
 
         return await self.execute_command(CommandName.CLUSTER_REPLICATE, node_id)
@@ -929,12 +929,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CLUSTER_SAVECONFIG,
         group=CommandGroup.CLUSTER,
         response_callback=SimpleStringCallback(),
+        cluster=ClusterCommandConfig(
+            flag=NodeFlag.ALL,
+            combine=ClusterBoolCombine(),
+        ),
     )
     async def cluster_saveconfig(self) -> bool:
         """
         Forces the node to save cluster state on disk
-
-        Sends to all nodes in the cluster
         """
 
         return await self.execute_command(CommandName.CLUSTER_SAVECONFIG)
@@ -1090,6 +1092,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.ECHO,
         group=CommandGroup.CONNECTION,
+        cluster=ClusterCommandConfig(
+            flag=NodeFlag.ALL,
+            combine=ClusterEnsureConsistent(),
+        ),
     )
     async def echo(self, message: StringT) -> AnyStr:
         "Echo the string back from the server"
@@ -1133,6 +1139,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.PING,
         group=CommandGroup.CONNECTION,
+        cluster=ClusterCommandConfig(
+            flag=NodeFlag.ALL,
+            combine=ClusterEnsureConsistent(),
+        ),
     )
     async def ping(self, message: Optional[StringT] = None) -> AnyStr:
         """
@@ -2140,7 +2150,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         response_callback=SetCallback(),
         cluster=ClusterCommandConfig(
             flag=NodeFlag.PRIMARIES,
-            combine=lambda r: set(itertools.chain(*r.values())),
+            combine=ClusterMergeSets(),
         ),
     )
     async def keys(self, pattern: StringT = "*") -> Set[AnyStr]:
@@ -3271,7 +3281,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         readonly=True,
         group=CommandGroup.SET,
         response_callback=SScanCallback(),
-        cluster=ClusterCommandConfig(combine=lambda res: list(res.values()).pop()),
+        cluster=ClusterCommandConfig(combine=ClusterEnsureConsistent()),
     )
     async def sscan(
         self,
@@ -5104,7 +5114,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         arguments={"sync_type": {"version_introduced": "6.2.0"}},
         response_callback=BoolCallback(),
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.PRIMARIES, combine=lambda res: all(res)
+            flag=NodeFlag.PRIMARIES,
+            combine=ClusterBoolCombine(),
         ),
     )
     async def script_flush(
@@ -5138,7 +5149,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SCRIPTING,
         cluster=ClusterCommandConfig(
             flag=NodeFlag.PRIMARIES,
-            combine=lambda res: res and list(res.values()).pop(),
+            combine=ClusterEnsureConsistent(),
         ),
     )
     async def script_load(self, script: StringT) -> AnyStr:
@@ -5198,7 +5209,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         response_callback=SimpleStringCallback(),
         cluster=ClusterCommandConfig(
             flag=NodeFlag.PRIMARIES,
-            combine=lambda res: res and list(res.values()).pop(),
+            combine=ClusterEnsureConsistent(),
         ),
     )
     async def function_delete(self, library_name: StringT) -> bool:
@@ -5229,7 +5240,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SCRIPTING,
         response_callback=SimpleStringCallback(),
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.PRIMARIES, combine=lambda res: all(res)
+            flag=NodeFlag.PRIMARIES,
+            combine=ClusterEnsureConsistent(),
         ),
     )
     async def function_flush(
@@ -5291,7 +5303,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         response_callback=SimpleStringCallback(),
         cluster=ClusterCommandConfig(
             flag=NodeFlag.PRIMARIES,
-            combine=lambda res: res and list(res.values()).pop(),
+            combine=ClusterEnsureConsistent(),
         ),
     )
     async def function_load(
@@ -5325,7 +5337,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         response_callback=SimpleStringCallback(),
         cluster=ClusterCommandConfig(
             flag=NodeFlag.PRIMARIES,
-            combine=lambda res: res and list(res.values()).pop(),
+            combine=ClusterEnsureConsistent(),
         ),
     )
     async def function_restore(
@@ -5779,7 +5791,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         response_callback=SimpleStringCallback(),
         cluster=ClusterCommandConfig(
             flag=NodeFlag.PRIMARIES,
-            combine=lambda res: res and list(res.values()).pop(),
+            combine=ClusterEnsureConsistent(),
         ),
     )
     async def flushall(
@@ -5799,7 +5811,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         response_callback=SimpleStringCallback(),
         cluster=ClusterCommandConfig(
             flag=NodeFlag.PRIMARIES,
-            combine=lambda res: res and list(res.values()).pop(),
+            combine=ClusterEnsureConsistent(),
         ),
     )
     async def flushdb(
@@ -6181,6 +6193,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ACL_DELUSER,
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
+        cluster=ClusterCommandConfig(
+            flag=NodeFlag.ALL,
+            combine=ClusterEnsureConsistent(),
+        ),
     )
     async def acl_deluser(self, usernames: Iterable[StringT]) -> int:
         """
@@ -6200,6 +6216,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="7.0.0",
         group=CommandGroup.SERVER,
         response_callback=SimpleStringCallback(AuthorizationError),
+        cluster=ClusterCommandConfig(
+            flag=NodeFlag.RANDOM,
+        ),
     )
     async def acl_dryrun(
         self, username: StringT, command: StringT, *args: ValueT
@@ -6243,6 +6262,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
         response_callback=DictCallback(transform_function=flat_pairs_to_dict),
+        cluster=ClusterCommandConfig(
+            flag=NodeFlag.RANDOM,
+        ),
     )
     async def acl_getuser(self, username: StringT) -> Dict[AnyStr, List[AnyStr]]:
         """
@@ -6343,6 +6365,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
         response_callback=SimpleStringCallback(),
+        cluster=ClusterCommandConfig(
+            flag=NodeFlag.ALL,
+            combine=ClusterEnsureConsistent(),
+        ),
     )
     async def acl_setuser(
         self,
@@ -6546,6 +6572,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CONFIG_SET,
         group=CommandGroup.SERVER,
         response_callback=SimpleStringCallback(),
+        cluster=ClusterCommandConfig(
+            flag=NodeFlag.ALL,
+            combine=ClusterBoolCombine(),
+        ),
     )
     async def config_set(self, parameter_values: Dict[StringT, ValueT]) -> bool:
         """Sets configuration parameters to the given values"""
@@ -6558,6 +6588,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CONFIG_RESETSTAT,
         group=CommandGroup.SERVER,
         response_callback=SimpleStringCallback(),
+        cluster=ClusterCommandConfig(
+            flag=NodeFlag.ALL,
+            combine=ClusterBoolCombine(),
+        ),
     )
     async def config_resetstat(self) -> bool:
         """Resets runtime statistics"""
@@ -6616,7 +6650,6 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def cluster_get_keys_in_slot(self, slot_id, count):
         """
         Return local key names in the specified hash slot
-        Sends to specified node
 
         :meta private:
         """

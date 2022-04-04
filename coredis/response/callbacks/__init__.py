@@ -5,8 +5,10 @@ coredis.response.callbacks
 from __future__ import annotations
 
 import datetime
+import itertools
 from abc import ABC, abstractmethod
 
+from coredis.exceptions import ClusterResponseError
 from coredis.typing import (
     Any,
     Callable,
@@ -24,6 +26,48 @@ from coredis.typing import (
 
 R = TypeVar("R")
 P = ParamSpec("P")
+
+
+class ClusterMultiNodeCallback(ABC):
+    def __call__(
+        self, responses: Dict[str, Any], version: int = 2, **kwargs: Any
+    ) -> Any:
+        if version == 3:
+            return self.combine_3(responses, **kwargs)
+        return self.combine(responses, **kwargs)
+
+    @abstractmethod
+    def combine(self, responses: Dict[str, Any], **kwargs: Any) -> Any:
+        pass
+
+    def combine_3(self, responses: Dict[str, Any], **kwargs: Any) -> Any:
+        return self.combine(responses, **kwargs)
+
+
+class ClusterBoolCombine(ClusterMultiNodeCallback):
+    def combine(self, responses: Dict[str, Any], **kwargs: Any) -> bool:
+        values = tuple(responses.values())
+        assert (isinstance(value, bool) for value in values)
+        return all(values)
+
+
+class ClusterEnsureConsistent(ClusterMultiNodeCallback):
+    def __init__(self, ensure_consistent=True):
+        self.ensure_consistent = ensure_consistent
+
+    def combine(self, responses: Dict[str, Any], **kwargs: Any) -> Any:
+        values = tuple(responses.values())
+        if self.ensure_consistent and len(set(values)) != 1:
+            raise ClusterResponseError(
+                "Inconsistent response from cluster nodes", responses
+            )
+        else:
+            return values and values[0]
+
+
+class ClusterMergeSets(ClusterMultiNodeCallback):
+    def combine(self, responses: Dict[str, Any], **kwargs: Any) -> Set:
+        return set(itertools.chain(*responses.values()))
 
 
 class ResponseCallback(ABC):

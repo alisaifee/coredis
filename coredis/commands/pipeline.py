@@ -13,9 +13,11 @@ from typing import Generic
 import wrapt
 
 from coredis.client import AbstractRedis, ResponseParser
-from coredis.commands import CommandName, keys_from_command
+from coredis.commands import CommandName
+from coredis.commands.key_spec import KeySpec
 from coredis.exceptions import (
     AskError,
+    ClusterCrossSlotError,
     ClusterTransactionError,
     ConnectionError,
     ExecAbortError,
@@ -868,21 +870,17 @@ class ClusterPipelineImpl(
         """Figure out what slot based on command and args"""
 
         command = args[0]
-        keys: Tuple[ValueT, ...] = keys_from_command(args)
+        keys: Tuple[ValueT, ...] = KeySpec.extract_keys(args)
 
         if not keys:
             raise RedisClusterException(
-                "No way to dispatch this command to Redis Cluster. Missing key."
+                "No way to dispatch {} to Redis Cluster. Missing key".format(command)
             )
 
         slots = {self.connection_pool.nodes.keyslot(key) for key in keys}
 
         if len(slots) != 1:
-            raise RedisClusterException(
-                "{} - all keys must map to the same key slot".format(
-                    command.decode("latin-1")
-                )
-            )
+            raise ClusterCrossSlotError(command=command, keys=keys)
         return slots.pop()
 
     def _fail_on_redirect(self, allow_redirections):

@@ -1,12 +1,20 @@
 from __future__ import annotations
 
 import enum
+from functools import cached_property
+
+from coredis.typing import Set, StringT
 
 
 class PureToken(bytes, enum.Enum):
     """
     Enum for using pure-tokens with the redis api.
     """
+
+    @cached_property
+    def variants(self) -> Set[StringT]:
+        decoded = str(self)
+        return {self.value.lower(), self.value, decoded.lower(), decoded.upper()}
 
     def __eq__(self, other):
         """
@@ -18,12 +26,8 @@ class PureToken(bytes, enum.Enum):
         if other:
             if isinstance(other, PureToken):
                 return self.value == other.value
-            _other = other
-
-            if isinstance(other, str):
-                _other = other.encode("utf-8")
-
-            return _other.upper() == self.value
+            else:
+                return other in self.variants
 
     def __hash__(self):
         return hash(self.value)
@@ -618,6 +622,11 @@ class PrefixToken(bytes, enum.Enum):
     Enum for internal use when adding prefixes to arguments
     """
 
+    @cached_property
+    def variants(self) -> Set[StringT]:
+        decoded = str(self)
+        return {self.value.lower(), self.value, decoded.lower(), decoded.upper()}
+
     def __eq__(self, other):
         """
         Since redis tokens are case insensitive allow mixed case
@@ -628,12 +637,8 @@ class PrefixToken(bytes, enum.Enum):
         if other:
             if isinstance(other, PrefixToken):
                 return self.value == other.value
-            _other = other
-
-            if isinstance(other, str):
-                _other = other.encode("utf-8")
-
-            return _other.upper() == self.value
+            else:
+                return other in self.variants
 
     def __hash__(self):
         return hash(self.value)

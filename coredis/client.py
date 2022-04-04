@@ -12,9 +12,10 @@ from typing import TYPE_CHECKING, Coroutine, Type, overload
 from deprecated.sphinx import deprecated, versionadded
 from packaging.version import Version
 
-from coredis.commands import CommandGroup, CommandName, keys_from_command, redis_command
+from coredis.commands import CommandGroup, CommandName, redis_command
 from coredis.commands.core import CoreCommands
 from coredis.commands.function import Library
+from coredis.commands.key_spec import KeySpec
 from coredis.commands.monitor import Monitor
 from coredis.commands.script import Script
 from coredis.commands.sentinel import SentinelCommands
@@ -1518,7 +1519,7 @@ class RedisCluster(
                 f"No way to dispatch this command:{args} to Redis Cluster. Missing key."
             )
         command: bytes = args[0]
-        keys: Tuple[ValueT, ...] = keys_from_command(args)
+        keys: Tuple[ValueT, ...] = KeySpec.extract_keys(args)
 
         if (
             command in {CommandName.EVAL, CommandName.EVALSHA, CommandName.FCALL}
@@ -1527,6 +1528,10 @@ class RedisCluster(
             return
 
         slots = {self.connection_pool.nodes.keyslot(key) for key in keys}
+        if not slots:
+            raise RedisClusterException(
+                f"No way to dispatch this command: {args} to Redis Cluster."
+            )
 
         if len(slots) != 1:
             raise RedisClusterException(

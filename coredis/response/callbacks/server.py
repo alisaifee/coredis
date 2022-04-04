@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+from typing import ClassVar
 
 from coredis.commands import ResponseCallback
 from coredis.response.types import ClientInfo, RoleInfo, SlowLogInfo
@@ -31,7 +32,7 @@ class SlowlogCallback(ResponseCallback):
 
 
 class ClientInfoCallback(ResponseCallback):
-    INT_FIELDS = {
+    INT_FIELDS: ClassVar = {
         "id",
         "fd",
         "age",
@@ -69,7 +70,7 @@ class ClientListCallback(ResponseCallback):
 
 
 class DebugCallback(ResponseCallback):
-    INT_FIELDS = {"refcount", "serializedlength", "lru", "lru_seconds_idle"}
+    INT_FIELDS: ClassVar = {"refcount", "serializedlength", "lru", "lru_seconds_idle"}
 
     def transform(
         self, response: Any, **options: Any

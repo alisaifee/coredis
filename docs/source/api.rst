@@ -227,6 +227,8 @@ Cluster
    :no-inherited-members:
 .. autoexception:: ClusterError
    :no-inherited-members:
+.. autoexception:: ClusterResponseError
+   :no-inherited-members:
 .. autoexception:: ClusterTransactionError
    :no-inherited-members:
 .. autoexception:: MovedError

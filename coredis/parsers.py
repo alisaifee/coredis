@@ -30,10 +30,12 @@ from coredis.exceptions import (
 from coredis.typing import (
     AbstractSet,
     Callable,
+    ClassVar,
     List,
     Literal,
     Mapping,
     Optional,
+    Set,
     StringT,
     Type,
     Union,
@@ -77,7 +79,7 @@ class SocketBuffer:
         self.bytes_read = 0
 
     @property
-    def length(self):
+    def length(self) -> int:
         return self.bytes_written - self.bytes_read
 
     async def _read_from_socket(self, length=None):
@@ -241,7 +243,7 @@ class PythonParser(BaseParser):
     dependencies.
     """
 
-    ALLOWED_TYPES = {
+    ALLOWED_TYPES: ClassVar[Set[RESPDataType]] = {
         RESPDataType.NONE,
         RESPDataType.SIMPLE_STRING,
         RESPDataType.BULK_STRING,
