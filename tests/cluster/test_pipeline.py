@@ -240,6 +240,6 @@ class TestPipeline:
                 await pipe.brpoplpush("list{baz}", "list{foo}", 1.0)
                 await pipe.execute()
         exc.match("Keys in request don't hash to the same slot")
-        assert await client.get("x{foo}") == None
-        assert await client.get("x{bar}") == None
-        assert await client.get("x{baz}") == None
+        assert await client.get("x{foo}") is None
+        assert await client.get("x{bar}") is None
+        assert await client.get("x{baz}") is None
