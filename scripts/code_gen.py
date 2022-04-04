@@ -324,6 +324,10 @@ VERSIONCHANGED_DOC = re.compile(r"(.. versionchanged:: ([\d\.]+))", re.DOTALL)
 inflection_engine = inflect.engine()
 
 
+def command_enum(command_name) -> str:
+    return "CommandName." + command_name.upper().replace(" ", "_").replace("-", "_")
+
+
 def sanitized_rendered_type(rendered_type) -> str:
     v = re.sub("<class '(.*?)'>", "\\1", rendered_type)
     v = re.sub("<PureToken.(.*?): b'(.*?)'>", "PureToken.\\1", v)
@@ -2425,6 +2429,183 @@ class ClusterPipeline(wrapt.ObjectProxy, Generic[AnyStr]):
 @code_gen.command()
 def render_pipeline_stub(path):
     return generate_pipeline_stub(path)
+
+
+@click.option("--path", default="coredis/commands/key_spec.py")
+@code_gen.command()
+def render_cluster_key_extraction(path):
+    commands = get_commands()
+    lookups = {}
+
+    def _index_finder(command, search_spec, find_spec):
+        if search_spec["type"] == "index":
+            start_index = search_spec["spec"]["index"]
+            command_offset = len(command.strip().split(" ")) - 1
+            start_index = start_index - command_offset
+            keystep = find_spec["spec"]["keystep"]
+            if find_spec["type"] == "range":
+                last_key = find_spec["spec"]["lastkey"]
+                limit = find_spec["spec"]["limit"]
+                if last_key == -1:
+                    if limit > 0:
+                        finder = f"args[{start_index}:len(args)-((len(args)-({start_index}+1))//{limit})]"
+                    else:
+                        finder = f"args[{start_index}:(len(args))"
+                elif last_key == -2:
+                    finder = f"args[{start_index}:(len(args) - 1)"
+                else:
+                    if start_index == start_index + last_key:
+                        return f"(args[{start_index}],)"
+                    finder = f"args[{start_index}:{start_index+last_key}"
+                if keystep > 1:
+                    finder += f":{keystep}]"
+                else:
+                    finder += "]"
+                return finder
+            elif find_spec["type"] == "keynum":
+                first_key = find_spec["spec"]["firstkey"]
+                keynumidx = find_spec["spec"]["keynumidx"]
+                return f"args[{start_index+first_key}: {start_index+first_key}+int(args[{keynumidx+start_index}])]"
+            else:
+                raise RuntimeError(
+                    f"Don't know how to handle {search_spec} with {find_spec}"
+                )
+
+    def _kw_finder(command, search_spec, find_spec):
+        kw = search_spec["spec"]["keyword"]
+        startfrom = search_spec["spec"]["startfrom"]
+        command_offset = len(command.strip().split(" ")) - 1
+        startfrom = startfrom - command_offset
+
+        if find_spec["type"] == "range":
+            last_key = find_spec["spec"]["lastkey"]
+            limit = find_spec["spec"]["limit"]
+            keystep = find_spec["spec"]["keystep"]
+            finder = f"args[1+{startfrom}+args[{startfrom}:].index(PrefixToken.{sanitized(kw).upper()})"
+            if last_key == -1:
+                if limit > 0:
+                    lim = f":len(args)-((len(args)-(args[{startfrom}:].index(PrefixToken.{sanitized(kw).upper()})+{startfrom}+1))//{limit})"
+                else:
+                    lim = ":len(args)"
+                finder += f"{lim}"
+            elif last_key == -2:
+                finder += ":len(args)-1"
+            else:
+                RuntimeError("Unhandled last_key in keyword search")
+            if keystep > 1:
+                finder += f":{keystep}]"
+            else:
+                finder += "]"
+            return finder
+        else:
+            raise RuntimeError(
+                f"Don't know how to handle {search_spec} with {find_spec}"
+            )
+
+    for name, command in commands.items():
+        key_specs = command.get("key_specs", [])
+        for spec in key_specs:
+            mode = (
+                "RO"
+                if spec.get("RO", False)
+                else "OW"
+                if spec.get("OW", False)
+                else "RW"
+                if spec.get("RW", False)
+                else "RM"
+            )
+            begin_search = spec.get("begin_search", {})
+            find_keys = spec.get("find_keys", {})
+            if begin_search and find_keys:
+                search_type = begin_search["type"]
+                if search_type == "index":
+                    lookups.setdefault(mode, {}).setdefault(name, []).append(
+                        _index_finder(name, begin_search, find_keys)
+                    )
+                elif search_type == "keyword":
+                    lookups.setdefault(mode, {}).setdefault(name, []).append(
+                        _kw_finder(name, begin_search, find_keys)
+                    )
+                elif search_type == "unknown":
+                    pass
+                else:
+                    raise RuntimeError(
+                        f"Don't know how to handle {search_type} for {name} ({spec})"
+                    )
+
+    readonly = {}
+    all = {}
+
+    for mode, commands in lookups.items():
+        for command, exprs in commands.items():
+            if mode == "RO":
+                readonly[command] = exprs
+            all.setdefault(command, []).extend(exprs)
+
+    key_spec_template = """
+from __future__ import annotations
+
+from coredis.commands.constants import CommandName
+from coredis.tokens import PrefixToken
+from coredis.typing import Callable, Dict, Tuple, ValueT
+
+READONLY: Dict[CommandName, Callable[[Tuple[ValueT, ...]], Tuple[ValueT, ...]]] = {{ '{' }}
+{% for command, exprs in readonly.items() %}
+    {{command_enum(command)}}: lambda args: {{exprs | join("+")}}, 
+{% endfor %}
+{{ '}' }}
+ALL = {{ '{' }}
+{% for command, exprs in all.items() %}
+    {{command_enum(command)}}: lambda args: {{exprs | join("+")}},
+{% endfor %}
+{{ '}' }}
+
+def extract_keys(arguments: Tuple[ValueT, ...], readonly_command=False) -> Tuple[ValueT, ...]:
+    if len(arguments) <= 1:
+        return ()
+    
+    assert isinstance(arguments[0], CommandName)
+    
+    command=arguments[0]
+    
+    if readonly_command:
+        return READONLY[command](arguments)
+    else:
+        return ALL[command](arguments)
+    """
+    cython_key_spec_template = """
+from coredis.commands.constants import CommandName
+
+READONLY = {{ '{' }}
+{% for command, exprs in readonly.items() %}
+    {{command_enum(command)}}: lambda args: {{exprs | join("+")}}, 
+{% endfor %}
+{{ '}' }}
+ALL = {{ '{' }}
+{% for command, exprs in all.items() %}
+    {{command_enum(command)}}: lambda args: {{exprs | join("+")}},
+{% endfor %}
+{{ '}' }}
+        """
+    env = Environment()
+    env.globals.update(
+        command_enum=command_enum,
+        sanitized=sanitized,
+    )
+    tmpl = env.from_string(key_spec_template)
+    cython_tmpl = env.from_string(cython_key_spec_template)
+    response = tmpl.render(all=all, readonly=readonly)
+    # cython_response = cython_tmpl.render(all=all, readonly=readonly)
+    with open(path, "w") as file:
+        file.write(response)
+    # with open(path.replace(".py", "_ext.pyx"), "w") as file:
+    #    file.write(cython_response)
+    format_file_in_place(
+        Path(path),
+        fast=False,
+        mode=FileMode(),
+        write_back=WriteBack.YES,
+    )
 
 
 if __name__ == "__main__":
