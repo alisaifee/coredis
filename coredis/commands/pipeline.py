@@ -17,6 +17,7 @@ from coredis.commands import CommandName
 from coredis.commands.key_spec import KeySpec
 from coredis.exceptions import (
     AskError,
+    ClusterCrossSlotError,
     ClusterTransactionError,
     ConnectionError,
     ExecAbortError,
@@ -873,17 +874,13 @@ class ClusterPipelineImpl(
 
         if not keys:
             raise RedisClusterException(
-                "No way to dispatch this command to Redis Cluster. Missing key."
+                "No way to dispatch {} to Redis Cluster. Missing key".format(command)
             )
 
         slots = {self.connection_pool.nodes.keyslot(key) for key in keys}
 
         if len(slots) != 1:
-            raise RedisClusterException(
-                "{} - all keys must map to the same key slot".format(
-                    command.decode("latin-1")
-                )
-            )
+            raise ClusterCrossSlotError(command=command, keys=keys)
         return slots.pop()
 
     def _fail_on_redirect(self, allow_redirections):

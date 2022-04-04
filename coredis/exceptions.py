@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import re
-from typing import Set
+
+from coredis.typing import Optional, Set
 
 
 class RedisError(Exception):
@@ -115,7 +116,15 @@ class ClusterError(RedisError):
 class ClusterCrossSlotError(ResponseError):
     """Raised when keys in request don't hash to the same slot"""
 
-    message = "Keys in request don't hash to the same slot"
+    def __init__(
+        self,
+        message=None,
+        command: Optional[bytes] = None,
+        keys: Optional[Tuple[Any]] = None,
+    ):
+        super().__init__(message or "Keys in request don't hash to the same slot")
+        self.command = command
+        self.keys = keys
 
 
 class ClusterDownError(ClusterError, ResponseError):
@@ -138,6 +147,12 @@ class ClusterDownError(ClusterError, ResponseError):
 class ClusterTransactionError(ClusterError):
     def __init__(self, msg):
         self.msg = msg
+
+
+class ClusterResponseError(ClusterError):
+    def __init__(self, message, responses):
+        super().__init__(message)
+        self.responses = responses
 
 
 class AskError(ResponseError):

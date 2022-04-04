@@ -373,6 +373,7 @@ class KeySpec:
         b"SUNSUBSCRIBE": lambda args: (args[1 : (len(args))]),
         b"UNLINK": lambda args: (args[1 : (len(args))]),
         b"WATCH": lambda args: (args[1 : (len(args))]),
+        b"PUBLISH": lambda args: ((args[1],)),
     }
 
     @classmethod
@@ -386,7 +387,10 @@ class KeySpec:
         if not isinstance(command, bytes):
             command = str(command).encode("latin-1")
 
-        if readonly_command:
-            return cls.READONLY[command](arguments)
-        else:
-            return cls.ALL[command](arguments)
+        try:
+            if readonly_command:
+                return cls.READONLY[command](arguments)
+            else:
+                return cls.ALL[command](arguments)
+        except KeyError:
+            return ()

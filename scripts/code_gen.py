@@ -2545,6 +2545,8 @@ def render_cluster_key_extraction(path):
                 readonly[command] = exprs
             all.setdefault(command, []).extend(exprs)
 
+    all["PUBLISH"] = all["SPUBLISH"]
+
     key_spec_template = """
 from __future__ import annotations
 
@@ -2571,10 +2573,13 @@ class KeySpec:
         if not isinstance(command, bytes):
             command = str(command).encode("latin-1") 
          
-        if readonly_command:
-            return cls.READONLY[command](arguments)
-        else:
-            return cls.ALL[command](arguments)
+        try:
+            if readonly_command:
+                return cls.READONLY[command](arguments)
+            else:
+                return cls.ALL[command](arguments)
+        except KeyError:
+            return  ()
     """
     cython_key_spec_template = """
 from coredis.commands.constants import CommandName
