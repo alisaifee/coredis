@@ -8,7 +8,11 @@ from coredis.response.types import (
     StreamPendingExt,
 )
 from coredis.typing import Any, AnyStr, Dict, Optional, Tuple, Union
-from coredis.utils import flat_pairs_to_dict, flat_pairs_to_ordered_dict
+from coredis.utils import (
+    EncodingInsensitiveDict,
+    flat_pairs_to_dict,
+    flat_pairs_to_ordered_dict,
+)
 
 
 class StreamRangeCallback(ResponseCallback):
@@ -101,19 +105,20 @@ class XInfoCallback(ResponseCallback):
 
 class StreamInfoCallback(ResponseCallback):
     def transform(self, response: Any, **options: Any) -> StreamInfo:
-        res = flat_pairs_to_dict(response)
+        res = EncodingInsensitiveDict(flat_pairs_to_dict(response))
         if not options.get("full"):
 
             k1 = "first-entry"
             kn = "last-entry"
             e1, en = None, None
-
-            if res[k1] and len(res[k1]) > 0:
-                e1 = StreamEntry(res[k1][0], flat_pairs_to_ordered_dict(res[k1][1]))
+            if len(res.get(k1, [])) > 0:
+                v = res.get(k1)
+                e1 = StreamEntry(v[0], flat_pairs_to_ordered_dict(v[1]))
                 res.pop(k1)
 
-            if res[kn] and len(res[kn]) > 0:
-                en = StreamEntry(res[kn][0], flat_pairs_to_ordered_dict(res[kn][1]))
+            if len(res.get(kn, [])) > 0:
+                v = res.get(kn)
+                en = StreamEntry(v[0], flat_pairs_to_ordered_dict(v[1]))
                 res.pop(kn)
             res.update({"first-entry": e1, "last-entry": en})
         else:

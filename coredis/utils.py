@@ -59,14 +59,15 @@ class EncodingInsensitiveDict(wrapt.ObjectProxy):
     def get(self, item, default: Optional[Any] = None) -> Any:
         return self.__getitem__(item) or default
 
+    def pop(self, item, default: Optional[Any] = None) -> Any:
+        if item in self.__wrapped__:
+            return self.__wrapped__.pop(item)
+        if isinstance(item, str):
+            return self.__wrapped__.pop(item.encode(self._self_encoding), default)
+
     def __setitem__(self, item, value):
         if item in self.__wrapped__:
             self.__wrapped__[item] = value
-        elif (
-            isinstance(item, str)
-            and item.encode(self._self_encoding) in self.__wrapped__
-        ):
-            self.__wrapped__[item.encode(self._self_encoding)] = value
         elif (
             isinstance(item, bytes)
             and item.decode(self._self_encoding) in self.__wrapped__
