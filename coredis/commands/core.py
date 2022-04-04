@@ -1088,6 +1088,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.ECHO,
         group=CommandGroup.CONNECTION,
+        cluster=ClusterCommandConfig(
+            flag=NodeFlag.ALL,
+            combine=lambda res: len(set(res.values())) == 1
+            and list(res.values()).pop(),
+        ),
     )
     async def echo(self, message: StringT) -> AnyStr:
         "Echo the string back from the server"
@@ -1131,6 +1136,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.PING,
         group=CommandGroup.CONNECTION,
+        cluster=ClusterCommandConfig(
+            flag=NodeFlag.ALL,
+            combine=lambda res: len(set(res.values())) == 1
+            and list(res.values()).pop(),
+        ),
     )
     async def ping(self, message: Optional[StringT] = None) -> AnyStr:
         """
@@ -5219,7 +5229,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SCRIPTING,
         response_callback=SimpleStringCallback(),
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.PRIMARIES, combine=lambda res: all(res)
+            flag=NodeFlag.PRIMARIES, combine=lambda res: all(res.values())
         ),
     )
     async def function_flush(
@@ -6536,6 +6546,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CONFIG_SET,
         group=CommandGroup.SERVER,
         response_callback=SimpleStringCallback(),
+        cluster=ClusterCommandConfig(
+            flag=NodeFlag.ALL, combine=lambda res: all(res.values())
+        ),
     )
     async def config_set(self, parameter_values: Dict[StringT, ValueT]) -> bool:
         """Sets configuration parameters to the given values"""
@@ -6548,6 +6561,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CONFIG_RESETSTAT,
         group=CommandGroup.SERVER,
         response_callback=SimpleStringCallback(),
+        cluster=ClusterCommandConfig(
+            flag=NodeFlag.ALL, combine=lambda res: all(res.values())
+        ),
     )
     async def config_resetstat(self) -> bool:
         """Resets runtime statistics"""
