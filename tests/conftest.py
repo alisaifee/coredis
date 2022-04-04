@@ -27,27 +27,30 @@ def uvloop():
 
 
 async def get_version(client):
-    if client not in REDIS_VERSIONS:
+    if str(client) not in REDIS_VERSIONS:
         if isinstance(client, coredis.RedisCluster):
             await client
             node = list(client.primaries).pop()
-            REDIS_VERSIONS[client] = version.parse((await node.info())["redis_version"])
+            REDIS_VERSIONS[str(client)] = version.parse(
+                (await node.info())["redis_version"]
+            )
         else:
-            REDIS_VERSIONS[client] = version.parse(
+            REDIS_VERSIONS[str(client)] = version.parse(
                 (await client.info())["redis_version"]
             )
-    return REDIS_VERSIONS[client]
+    return REDIS_VERSIONS[str(client)]
 
 
 async def check_test_constraints(request, client, protocol=2):
     await get_version(client)
+    client_version = REDIS_VERSIONS[str(client)]
     for marker in request.node.iter_markers():
         if marker.name == "min_server_version" and marker.args:
-            if REDIS_VERSIONS[client] < version.parse(marker.args[0]):
+            if client_version < version.parse(marker.args[0]):
                 return pytest.skip(f"Skipped for versions < {marker.args[0]}")
 
         if marker.name == "max_server_version" and marker.args:
-            if REDIS_VERSIONS[client] > version.parse(marker.args[0]):
+            if client_version > version.parse(marker.args[0]):
                 return pytest.skip(f"Skipped for versions > {marker.args[0]}")
 
         if marker.name == "nocluster" and isinstance(client, coredis.RedisCluster):
@@ -63,8 +66,8 @@ async def check_test_constraints(request, client, protocol=2):
         ):
             return pytest.skip(f"Skipped for {platform.system()}")
 
-        if protocol == 3 and REDIS_VERSIONS[client] < version.parse("6.0.0"):
-            return pytest.skip(f"Skipped RESP3 for {REDIS_VERSIONS[client]}")
+        if protocol == 3 and client_version < version.parse("6.0.0"):
+            return pytest.skip(f"Skipped RESP3 for {client_version}")
 
         if marker.name == "nohiredis" and coredis.parsers.HIREDIS_AVAILABLE:
             return pytest.skip("Skipped for hiredis")
@@ -77,7 +80,7 @@ async def set_default_test_config(client):
     await get_version(client)
     await client.config_set({"maxmemory-policy": "noeviction"})
     await client.config_set({"latency-monitor-threshold": 10})
-    if REDIS_VERSIONS[client] >= version.parse("6.0.0"):
+    if REDIS_VERSIONS[str(client)] >= version.parse("6.0.0"):
         await client.acl_log(reset=True)
 
 
