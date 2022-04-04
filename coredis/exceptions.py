@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from coredis.typing import Any, Dict, Optional, Set, StringT, Tuple
+from coredis.typing import Any, Dict, Optional, Set, Tuple
 
 
 class RedisError(Exception):
@@ -155,7 +155,7 @@ class ClusterResponseError(ClusterError):
     cluster responses has errors.
     """
 
-    def __init__(self, message, responses: Dict[StringT, Any]):
+    def __init__(self, message, responses: Dict[str, Any]):
         super().__init__(message)
         self.responses = responses
 
