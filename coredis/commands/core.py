@@ -2847,7 +2847,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         return await self.execute_command(CommandName.LPOP, key, *pieces)
 
     @redis_command(
-        CommandName.LPOS, version_introduced="6.0.6", group=CommandGroup.LIST
+        CommandName.LPOS, version_introduced="6.0.6", group=CommandGroup.LIST,
+        readonly=True
     )
     async def lpos(
         self,
