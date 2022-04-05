@@ -2,6 +2,14 @@
 
 Changelog
 =========
+v3.3.0
+------
+Release Date: 2022-04-04
+
+* Features
+
+  * Add explicit key extraction based on key spec for cluster clients
+
 v3.2.0
 ------
 Release Date: 2022-04-02
@@ -522,6 +530,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
