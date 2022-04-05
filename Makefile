@@ -12,7 +12,7 @@ lint-fix:
 	autoflake8 -i -r tests coredis
 
 DEBUG := False
-NEXT_VERSION := 3.2.0
+NEXT_VERSION := 3.4.0
 
 generate-compatibility-docs:
 	rm -rf docs/source/compatibility.rst
