@@ -378,7 +378,8 @@ async def redis_cluster(redis_cluster_server, request):
     await cluster.flushall()
     await cluster.flushdb()
 
-    await set_default_test_config(cluster)
+    for primary in cluster.primaries:
+        await set_default_test_config(primary)
     yield cluster
 
     cluster.connection_pool.disconnect()
@@ -394,7 +395,8 @@ async def redis_cluster_resp3(redis_cluster_server, request):
     await cluster.flushall()
     await cluster.flushdb()
 
-    await set_default_test_config(cluster)
+    for primary in cluster.primaries:
+        await set_default_test_config(primary)
     yield cluster
 
     cluster.connection_pool.disconnect()
