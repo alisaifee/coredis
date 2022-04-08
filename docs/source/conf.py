@@ -74,6 +74,7 @@ except:
 
 add_module_names = False
 autodoc_typehints_format = "short"
+autodoc_preserve_defaults = True
 
 autosectionlabel_maxdepth = 2
 autosectionlabel_prefix_document = True
