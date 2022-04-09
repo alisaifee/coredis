@@ -63,7 +63,7 @@ Single Node client
         await asyncio.sleep(0.1)
         await client.ttl('foo')
         await asyncio.sleep(1)
-        assert not await client.exists('foo')
+        assert not await client.exists(['foo'])
 
     loop = asyncio.new_event_loop()
     loop.run_until_complete(example())
