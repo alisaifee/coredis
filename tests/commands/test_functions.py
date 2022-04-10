@@ -5,7 +5,8 @@ import pytest
 from coredis import PureToken
 from tests.conftest import targets
 
-library_definition = """
+library_definition = """#!lua name=coredis
+
 local function fu(keys, args)
     return keys[1]
 end
@@ -24,7 +25,7 @@ async def setup(client):
 
 @pytest.fixture
 async def simple_library(client):
-    await client.function_load("lua", "coredis", library_definition)
+    await client.function_load(library_definition)
 
 
 @targets(
@@ -41,9 +42,7 @@ class TestFunctions:
         assert await client.function_list() == {}
 
     async def test_load_library(self, client, _s):
-        assert await client.function_load(
-            "lua",
-            "coredis",
+        assert _s("coredis") == await client.function_load(
             library_definition,
         )
         libraries = await client.function_list()
@@ -95,7 +94,8 @@ class TestLibrary:
         library = await client.get_library("coredis")
         assert len(library.functions) == 2
         assert await library.update(
-            """
+            """#!lua name=coredis
+        
         local function baz(keys, args)
             return args[1] + args[2]
         end

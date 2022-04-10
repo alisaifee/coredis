@@ -410,16 +410,14 @@ class AbstractRedis(
         self,
         name: StringT,
         code: StringT,
-        engine: Literal["LUA"] = "LUA",
     ) -> Library:
         """
         Register a new library
 
         :param name: name of the library
-        :param engine: type of engine
         :param code: raw code for the library
         """
-        return await Library[AnyStr](self, name, code=code, engine=engine)
+        return await Library[AnyStr](self, name=name, code=code)
 
     @versionadded(version="3.1.0")
     async def get_library(self, name: StringT) -> Library:

@@ -5284,7 +5284,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, libraryname: Optional[StringT] = None, withcode: Optional[bool] = None
     ) -> Dict[AnyStr, LibraryDefinition]:
         """
-        List information about all the functions
+        List information about the functions registered under
+        :paramref:`libraryname`
         """
         pieces = []
 
@@ -5301,7 +5302,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.FUNCTION_LOAD,
         version_introduced="7.0.0",
         group=CommandGroup.SCRIPTING,
-        response_callback=SimpleStringCallback(),
         cluster=ClusterCommandConfig(
             flag=NodeFlag.PRIMARIES,
             combine=ClusterEnsureConsistent(),
@@ -5309,22 +5309,16 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def function_load(
         self,
-        engine_name: StringT,
-        library_name: StringT,
         function_code: StringT,
         replace: Optional[bool] = None,
-        description: Optional[StringT] = None,
-    ) -> bool:
+    ) -> AnyStr:
         """
-        Create a function with the given arguments (name, code, description)
+        Load a library of functions.
         """
-        pieces: CommandArgList = [engine_name, library_name]
+        pieces: CommandArgList = []
 
         if replace:
             pieces.append(PureToken.REPLACE)
-
-        if description is not None:
-            pieces.extend(["DESCRIPTION", description])
 
         pieces.append(function_code)
 

@@ -10,7 +10,6 @@ from coredis.typing import (
     Dict,
     Iterable,
     KeyT,
-    Literal,
     Optional,
     StringT,
     ValueT,
@@ -27,8 +26,6 @@ class Library(Generic[AnyStr]):
         client: coredis.client.AbstractRedis,
         name: StringT,
         code: Optional[StringT] = None,
-        *,
-        engine: Literal["LUA"] = "LUA",
     ):
         """
         Abstraction over a library of redis functions
@@ -43,7 +40,6 @@ class Library(Generic[AnyStr]):
             client
         )
         self._name = nativestr(name)
-        self._engine = engine
         self._code = code
         self._functions: EncodingInsensitiveDict = EncodingInsensitiveDict()
 
@@ -65,9 +61,7 @@ class Library(Generic[AnyStr]):
         """
         Update the code of a library with :paramref:`new_code`
         """
-        if await self.client.function_load(
-            self._engine, self._name, new_code, replace=True
-        ):
+        if await self.client.function_load(new_code, replace=True):
             await self.__initialize()
             return True
         return False
@@ -78,7 +72,7 @@ class Library(Generic[AnyStr]):
     async def __initialize(self):
         self._functions.clear()
         if self._code:
-            await self.client.function_load(self._engine, self._name, self._code)
+            await self.client.function_load(self._code)
         library = (await self.client.function_list(self._name)).get(self._name)
 
         if not library:

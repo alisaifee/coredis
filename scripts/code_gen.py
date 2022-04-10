@@ -183,6 +183,7 @@ REDIS_RETURN_OVERRIDES = {
     "EXPIREAT": bool,
     "EXPIRETIME": datetime.datetime,
     "FUNCTION DUMP": bytes,
+    "FUNCTION LOAD": AnyStr,
     "FUNCTION STATS": Dict[AnyStr, Union[AnyStr, Dict]],
     "FUNCTION LIST": Dict[AnyStr, LibraryDefinition],
     "GEODIST": Optional[float],
@@ -1863,7 +1864,7 @@ def code_gen(ctx, debug: bool, next_version: str):
         if not os.path.isdir("/var/tmp/redis-doc"):
             os.system("git clone git@github.com:redis/redis-doc /var/tmp/redis-doc")
         else:
-            os.system("cd /var/tmp/redis-doc && git pull && git co new-structure")
+            os.system("cd /var/tmp/redis-doc && git pull")
         shutil.copy("/var/tmp/redis-doc/commands.json", cur_dir)
     ctx.obj["DEBUG"] = debug
     ctx.obj["NEXT_VERSION"] = next_version
@@ -1917,7 +1918,7 @@ class PureToken(bytes, enum.Enum):
     def variants(self) -> Set[StringT]:
         decoded = str(self)
         return {self.value.lower(), self.value, decoded.lower(), decoded.upper()}
-    
+
     def __eq__(self, other):
         \"\"\"
         Since redis tokens are case insensitive allow mixed case
@@ -1954,7 +1955,7 @@ class PrefixToken(bytes, enum.Enum):
     def variants(self) -> Set[StringT]:
         decoded = str(self)
         return {self.value.lower(), self.value, decoded.lower(), decoded.upper()}
-    
+
     def __eq__(self, other):
         \"\"\"
         Since redis tokens are case insensitive allow mixed case
@@ -2024,7 +2025,7 @@ class CommandName(bytes, enum.Enum):
     def variants(self) -> Set[StringT]:
         decoded = str(self)
         return {self.value.lower(), self.value, decoded.lower(), decoded.upper()}
-    
+
     def __eq__(self, other):
         \"\"\"
         Since redis tokens are case insensitive allow mixed case
@@ -2557,7 +2558,7 @@ from coredis.typing import Callable, ClassVar, Dict, Tuple, ValueT
 class KeySpec:
     READONLY: ClassVar[Dict[bytes, Callable[[Tuple[ValueT, ...]], Tuple[ValueT, ...]]]] = {{ '{' }}
     {% for command, exprs in readonly.items() %}
-        b"{{command}}": lambda args: ({{exprs | join("+")}}), 
+        b"{{command}}": lambda args: ({{exprs | join("+")}}),
     {% endfor %}
     {{ '}' }}
     ALL: ClassVar[Dict[bytes, Callable[[Tuple[ValueT, ...]], Tuple[ValueT, ...]]]] = {{ '{' }}
@@ -2570,11 +2571,11 @@ class KeySpec:
     def extract_keys(cls, arguments: Tuple[ValueT, ...], readonly_command=False) -> Tuple[ValueT, ...]:
         if len(arguments) <= 1:
             return ()
-        
+
         command=arguments[0]
         if not isinstance(command, bytes):
-            command = str(command).encode("latin-1") 
-         
+            command = str(command).encode("latin-1")
+
         try:
             if readonly_command:
                 return cls.READONLY[command](arguments)
@@ -2588,7 +2589,7 @@ from coredis.commands.constants import CommandName
 
 READONLY = {{ '{' }}
 {% for command, exprs in readonly.items() %}
-    {{command_enum(command)}}: lambda args: {{exprs | join("+")}}, 
+    {{command_enum(command)}}: lambda args: {{exprs | join("+")}},
 {% endfor %}
 {{ '}' }}
 ALL = {{ '{' }}
