@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from coredis.commands import ResponseCallback
-from coredis.typing import Any, Dict, List, Tuple, TypedDict, Union
-from coredis.utils import EncodingInsensitiveDict, flat_pairs_to_dict, nativestr
+from coredis.response.utils import flat_pairs_to_dict
+from coredis.typing import Any, List, Mapping, MutableMapping, Tuple, TypedDict, Union
+from coredis.utils import EncodingInsensitiveDict, nativestr
 
 
 class ClusterNode(TypedDict):
@@ -13,18 +14,22 @@ class ClusterNode(TypedDict):
 
 
 class ClusterLinksCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> List[Dict[str, Any]]:
+    def transform(
+        self, response: Any, **options: Any
+    ) -> List[MutableMapping[str, Any]]:
         transformed = []
         for item in response:
             transformed.append(flat_pairs_to_dict(item))
         return transformed
 
-    def transform_3(self, response: Any, **options: Any) -> List[Dict[str, Any]]:
+    def transform_3(
+        self, response: Any, **options: Any
+    ) -> List[MutableMapping[str, Any]]:
         return response
 
 
 class ClusterInfoCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> Dict[str, str]:
+    def transform(self, response: Any, **options: Any) -> MutableMapping[str, str]:
         response = nativestr(response)
 
         return dict([line.split(":") for line in response.splitlines() if line])
@@ -33,7 +38,7 @@ class ClusterInfoCallback(ResponseCallback):
 class ClusterSlotsCallback(ResponseCallback):
     def transform(
         self, response: Any, **options: Any
-    ) -> Dict[Tuple[int, int], Tuple[ClusterNode, ...]]:
+    ) -> Mapping[Tuple[int, int], Tuple[ClusterNode, ...]]:
         res = {}
 
         for slot_info in response:
@@ -54,7 +59,9 @@ class ClusterSlotsCallback(ResponseCallback):
 
 
 class ClusterNodesCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> List[Dict[str, str]]:
+    def transform(
+        self, response: Any, **options: Any
+    ) -> List[MutableMapping[str, str]]:
         resp: Union[List[str], str]
         if isinstance(response, list):
             resp = [nativestr(row) for row in response]
@@ -113,7 +120,7 @@ class ClusterNodesCallback(ResponseCallback):
 
             host, port = addr.rsplit(":", 1)
 
-            node: Dict = {
+            node: MutableMapping = {
                 "id": self_id,
                 "host": host or current_host,
                 "port": int(port.split("@")[0]),

@@ -5,7 +5,6 @@ import datetime
 import pytest
 
 from coredis import CommandSyntaxError, PureToken
-from coredis.utils import iteritems
 from tests.conftest import targets
 
 
@@ -155,7 +154,7 @@ class TestString:
         d2 = {"a": "x", "d": "4"}
         assert not await client.msetnx(d2)
 
-        for k, v in iteritems(d):
+        for k, v in d.items():
             assert await client.get(k) == _s(v)
         assert await client.get("d") is None
 

@@ -8,27 +8,7 @@ from functools import wraps
 import wrapt
 
 from coredis.exceptions import ClusterDownError, RedisClusterException
-from coredis.typing import (
-    Any,
-    Callable,
-    Dict,
-    Iterable,
-    Iterator,
-    List,
-    Mapping,
-    Optional,
-    OrderedDict,
-    ParamSpec,
-    Tuple,
-    TypeVar,
-    Union,
-)
-
-P = ParamSpec("P")
-T = TypeVar("T")
-U = TypeVar("U")
-V = TypeVar("V")
-W = TypeVar("W")
+from coredis.typing import Any, List, Mapping, Optional, TypeVar, Union
 
 _C_EXTENSION_SPEEDUP = False
 try:
@@ -137,90 +117,8 @@ def normalized_time_milliseconds(value: Union[int, datetime.datetime]) -> int:
     return value
 
 
-# ++++++++++ response callback helpers ++++++++++++++
-def iteritems(x: Mapping[T, U]) -> Iterator[Tuple[T, U]]:
-    return iter(x.items())
-
-
-def iterkeys(x: Mapping[T, T]) -> Iterator[T]:
-    return iter(x.keys())
-
-
-def itervalues(x: Mapping[T, T]) -> Iterator[T]:
-    return iter(x.values())
-
-
-def string_keys_to_dict(
-    key_string: str, callback: Callable[..., T]
-) -> Dict[str, Callable[..., T]]:
-    return dict.fromkeys(key_string.split(), callback)
-
-
-def list_keys_to_dict(key_list, callback):
-    return dict.fromkeys(key_list, callback)
-
-
-def dict_merge(*dicts):
-    merged = {}
-
-    for d in dicts:
-        merged.update(d)
-
-    return merged
-
-
-def list_or_args(keys, args):
-    # returns a single list combining keys and args
-    try:
-        iter(keys)
-        # a string or bytes instance can be iterated, but indicates
-        # keys wasn't passed as a list
-
-        if isinstance(keys, (str, bytes)):
-            keys = [keys]
-    except TypeError:
-        keys = [keys]
-
-    if args:
-        keys.extend(args)
-
-    return keys
-
-
-def int_or_none(response):
-    if response is None:
-        return None
-
-    return int(response)
-
-
-def flat_pairs_to_dict(response: Union[Mapping[T, T], Tuple[T, ...]]) -> Dict[T, T]:
-    """Creates a dict given a flat list of key/value pairs"""
-    if isinstance(response, dict):
-        return response
-    it = iter(response)
-    return dict(zip(it, it))
-
-
-def flat_pairs_to_ordered_dict(response: Tuple[T, ...]) -> OrderedDict[T, T]:
-    """Creates a dict given a flat list of key/value pairs"""
-    it = iter(response)
-    return OrderedDict(zip(it, it))
-
-
-def pairs_to_dict(
-    response: Union[Mapping[T, T], Tuple[Tuple[T, T], ...]]
-) -> Dict[T, T]:
-    """Creates a dict given an array of tuples"""
-    if isinstance(response, dict):
-        return response
-    return dict(response)
-
-
-def quadruples_to_dict(
-    response: Iterable[Tuple[T, U, V, W]]
-) -> Dict[T, Tuple[U, V, W]]:
-    return {k[0]: (k[1], k[2], k[3]) for k in response}
+T = TypeVar("T")
+U = TypeVar("U")
 
 
 def tuples_to_flat_list(nested_list):
@@ -278,13 +176,6 @@ def first_key(res):
         raise RedisClusterException("More then 1 result from command")
 
     return list(res.values())[0]
-
-
-def blocked_command(self, command):
-    """
-    Raises a `RedisClusterException` mentioning the command is blocked.
-    """
-    raise RedisClusterException(f"Command: {command} is blocked in redis cluster mode")
 
 
 def clusterdown_wrapper(func):

@@ -360,6 +360,7 @@ class PythonParser(BaseParser):
                 for _ in range(length)
             }
         elif marker == RESPDataType.SET:
+
             length = int(chunk)
             if length == -1:
                 return set()

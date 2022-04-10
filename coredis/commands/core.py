@@ -105,6 +105,11 @@ from coredis.response.types import (
     StreamPending,
     StreamPendingExt,
 )
+from coredis.response.utils import (
+    flat_pairs_to_dict,
+    flat_pairs_to_ordered_dict,
+    quadruples_to_dict,
+)
 from coredis.tokens import PrefixToken, PureToken
 from coredis.typing import (
     Any,
@@ -127,14 +132,10 @@ from coredis.utils import (
     NodeFlag,
     defaultvalue,
     dict_to_flat_list,
-    flat_pairs_to_dict,
-    flat_pairs_to_ordered_dict,
-    iteritems,
     normalized_milliseconds,
     normalized_seconds,
     normalized_time_milliseconds,
     normalized_time_seconds,
-    quadruples_to_dict,
     tuples_to_flat_list,
 )
 from coredis.validators import (
@@ -1821,7 +1822,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             raise DataError("'hmset' with 'field_values' of length 0")
         pieces: CommandArgList = []
 
-        for pair in iteritems(field_values):
+        for pair in field_values.items():
             pieces.extend(pair)
 
         return await self.execute_command(CommandName.HMSET, key, *pieces)
@@ -6715,7 +6716,7 @@ class CoreCommands(CommandMixin[AnyStr]):
                 )
             members.extend(args)
 
-        for pair in iteritems(kwargs):
+        for pair in kwargs.items():
             members.append(pair[1])
             members.append(pair[0])
 

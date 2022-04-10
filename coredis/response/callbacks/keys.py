@@ -5,7 +5,6 @@ from datetime import datetime
 from coredis.exceptions import DataError, NoKeyError, RedisError
 from coredis.response.callbacks import DateTimeCallback, ResponseCallback
 from coredis.typing import Any, AnyStr, Tuple, Union
-from coredis.utils import int_or_none
 
 
 class SortCallback(ResponseCallback):
@@ -22,7 +21,7 @@ def parse_object(response, infotype):
     """Parse the results of an OBJECT command"""
 
     if infotype in ("idletime", "refcount"):
-        return int_or_none(response)
+        return int(response) if response else None
 
     return response
 

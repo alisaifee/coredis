@@ -4,12 +4,13 @@ import dataclasses
 import datetime
 import re
 import shlex
-from typing import Pattern
+from typing import AbstractSet, Pattern
 
 from coredis.typing import (
     ClassVar,
     Dict,
     Literal,
+    Mapping,
     NamedTuple,
     Optional,
     OrderedDict,
@@ -181,13 +182,15 @@ Command = TypedDict(
     {
         "name": str,
         "arity": int,
-        "flags": Tuple[str, ...],
-        "first-key": str,
-        "last-key": str,
+        "flags": AbstractSet[str],
+        "first-key": int,
+        "last-key": int,
         "step": int,
-        "acl-categories": Optional[Tuple[str, ...]],
-        "tips": Optional[str],
-        "key-specifications": Optional[Tuple[str, ...]],
+        "acl-categories": Optional[AbstractSet[str]],
+        "tips": Optional[AbstractSet[str]],
+        "key-specifications": Optional[
+            AbstractSet[Mapping[str, Union[int, str, Mapping]]]
+        ],
         "sub-commands": Optional[Tuple[str, ...]],
     },
 )

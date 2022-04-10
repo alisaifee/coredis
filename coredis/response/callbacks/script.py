@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from coredis.response.callbacks import ResponseCallback
 from coredis.response.types import LibraryDefinition
-from coredis.typing import Any, AnyStr, Dict, Union
-from coredis.utils import EncodingInsensitiveDict, flat_pairs_to_dict
+from coredis.response.utils import flat_pairs_to_dict
+from coredis.typing import Any, AnyStr, Mapping, Union
+from coredis.utils import EncodingInsensitiveDict
 
 
 class FunctionListCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> Dict[str, LibraryDefinition]:
+    def transform(
+        self, response: Any, **options: Any
+    ) -> Mapping[str, LibraryDefinition]:
         libraries = [
             EncodingInsensitiveDict(flat_pairs_to_dict(library)) for library in response
         ]
@@ -39,7 +42,7 @@ class FunctionListCallback(ResponseCallback):
 class FunctionStatsCallback(ResponseCallback):
     def transform(
         self, response: Any, **options: Any
-    ) -> Dict[AnyStr, Union[AnyStr, Dict]]:
+    ) -> Mapping[AnyStr, Union[AnyStr, Mapping]]:
         transformed = flat_pairs_to_dict(response)
         key = b"engines" if b"engines" in transformed else "engines"
         engines = flat_pairs_to_dict(transformed.pop(key))

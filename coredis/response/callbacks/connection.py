@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from coredis.response.callbacks import ResponseCallback
+from coredis.response.utils import flat_pairs_to_dict
 from coredis.typing import Any, AnyStr, Dict, List, Set, Union
-from coredis.utils import EncodingInsensitiveDict, flat_pairs_to_dict
+from coredis.utils import EncodingInsensitiveDict
 
 
 class ClientTrackingInfoCallback(ResponseCallback):

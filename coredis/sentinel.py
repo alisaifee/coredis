@@ -19,7 +19,7 @@ from coredis.exceptions import (
 )
 from coredis.pool import ConnectionPool
 from coredis.typing import AnyStr, Generic, Iterable, Literal, StringT, Tuple, Type
-from coredis.utils import iteritems, nativestr
+from coredis.utils import nativestr
 
 
 class SentinelManagedConnection(Connection):
@@ -221,7 +221,9 @@ class Sentinel(Generic[AnyStr]):
         # connection_kwargs
         if sentinel_kwargs is None:
             sentinel_kwargs = {
-                k: v for k, v in iteritems(connection_kwargs) if k.startswith("socket_")
+                k: v
+                for k, v in iter(connection_kwargs.items())
+                if k.startswith("socket_")
             }
 
         self.sentinel_kwargs = sentinel_kwargs

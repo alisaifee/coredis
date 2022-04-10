@@ -45,7 +45,7 @@ from coredis.typing import (
     TypeVar,
     ValueT,
 )
-from coredis.utils import NodeFlag, clusterdown_wrapper, dict_merge
+from coredis.utils import NodeFlag, clusterdown_wrapper
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -608,14 +608,9 @@ class ClusterPipelineImpl(
         self.command_stack = []
         self.refresh_table_asap = False
         self.connection_pool: ClusterConnectionPool = connection_pool
-        self.result_callbacks = (
-            result_callbacks or self.__class__.RESULT_CALLBACKS.copy()
-        )
+        self.result_callbacks = result_callbacks
         self.startup_nodes = startup_nodes if startup_nodes else []
-        self.nodes_flags = self.__class__.NODES_FLAGS.copy()
-        self.response_callbacks = dict_merge(
-            response_callbacks or self.__class__.RESPONSE_CALLBACKS.copy()
-        )
+        self.response_callbacks = response_callbacks or {}
         self._transaction = transaction
         self.watches = watches or None
         self.watching = False

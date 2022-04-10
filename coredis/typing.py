@@ -21,6 +21,7 @@ from typing import (
     List,
     Literal,
     Mapping,
+    MutableMapping,
     NamedTuple,
     Optional,
     Protocol,
@@ -75,6 +76,24 @@ R = TypeVar("R")
 KeyT: TypeAlias = Union[str, bytes]
 ValueT: TypeAlias = Union[str, bytes, int, float]
 StringT: TypeAlias = KeyT
+
+# TODO: mypy can't handle recursive types
+ResponseType = Optional[
+    Union[
+        StringT,
+        int,
+        float,
+        bool,
+        AbstractSet,
+        List,
+        Tuple,
+        Mapping,
+        # AbstractSet["ResponseType"],
+        # List["ResponseType"],
+        # Mapping["ResponseType", "ResponseType"],
+        Exception,
+    ]
+]
 
 
 def add_runtime_checks(func: Callable[P, R]) -> Callable[P, R]:
@@ -157,11 +176,13 @@ __all__ = [
     "List",
     "Literal",
     "Mapping",
+    "MutableMapping",
     "NamedTuple",
     "OrderedDict",
     "Optional",
     "ParamSpec",
     "Protocol",
+    "ResponseType",
     "Sequence",
     "Set",
     "SupportsWatch",

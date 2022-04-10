@@ -5,8 +5,8 @@ from coredis.response.callbacks import (
     ResponseCallback,
     SimpleStringCallback,
 )
+from coredis.response.utils import flat_pairs_to_dict
 from coredis.typing import Any, AnyStr, Dict, Tuple, Union
-from coredis.utils import flat_pairs_to_dict
 
 
 class ACLLogCallback(ResponseCallback):

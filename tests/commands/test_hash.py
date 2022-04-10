@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import pytest
 
-from coredis.utils import iterkeys, itervalues
 from tests.conftest import targets
 
 
@@ -62,7 +61,7 @@ class TestHash:
     async def test_hkeys(self, client, _s):
         h = {"a1": "1", "a2": "2", "a3": "3"}
         await client.hmset("a", h)
-        local_keys = [_s(k) for k in list(iterkeys(h))]
+        local_keys = [_s(k) for k in list(iter(h.keys()))]
         remote_keys = await client.hkeys("a")
         assert sorted(local_keys) == sorted(remote_keys)
 
@@ -89,7 +88,7 @@ class TestHash:
     async def test_hvals(self, client, _s):
         h = {"a1": "1", "a2": "2", "a3": "3"}
         await client.hmset("a", h)
-        local_vals = [_s(v) for v in list(itervalues(h))]
+        local_vals = [_s(v) for v in list(iter(h.values()))]
         remote_vals = await client.hvals("a")
         assert sorted(local_vals) == sorted(remote_vals)
 

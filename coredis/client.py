@@ -60,15 +60,7 @@ from coredis.typing import (
     ValueT,
     add_runtime_checks,
 )
-from coredis.utils import (
-    NodeFlag,
-    b,
-    blocked_command,
-    clusterdown_wrapper,
-    first_key,
-    iteritems,
-    nativestr,
-)
+from coredis.utils import NodeFlag, b, clusterdown_wrapper, first_key, nativestr
 from coredis.validators import mutually_inclusive_parameters
 
 P = ParamSpec("P")
@@ -686,7 +678,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
            **Operation is no longer atomic**
         """
 
-        for pair in iteritems(key_values):
+        for pair in iter(key_values.items()):
             await self.set(pair[0], pair[1])
 
         return True
@@ -1559,7 +1551,9 @@ class RedisCluster(
         node_flag = self.nodes_flags.get(command)
 
         if node_flag == NodeFlag.BLOCKED:
-            return blocked_command(self, command)
+            raise RedisClusterException(
+                f"Command: {command} is blocked in redis cluster mode"
+            )
         elif node_flag == NodeFlag.RANDOM:
             return [self.connection_pool.nodes.random_node()]
         elif node_flag == NodeFlag.PRIMARIES:

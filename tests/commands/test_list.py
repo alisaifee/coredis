@@ -5,7 +5,6 @@ import asyncio
 import pytest
 
 from coredis import PureToken
-from coredis.utils import iteritems, iterkeys
 from tests.conftest import targets
 
 
@@ -18,6 +17,12 @@ from tests.conftest import targets
 )
 @pytest.mark.asyncio()
 class TestList:
+    async def test_large_list(self, client, _s):
+        ints = [int(i) for i in range(10000)]
+        assert await client.lpush("a{foo}", ints)
+        assert len(set(await client.lrange("a{foo}", 0, -1))) == 10000
+        print(set(await client.lrange("a{foo}", 0, -1)))
+
     async def test_blpop(self, client, _s):
         await client.rpush("a{foo}", ["1", "2"])
         await client.rpush("b{foo}", ["3", "4"])
@@ -287,15 +292,15 @@ class TestList:
         }
         # fill in lists
 
-        for key, value in iteritems(mapping):
+        for key, value in mapping.items():
             await client.rpush(key, value)
 
         # check that KEYS returns all the keys as they are
         assert sorted(await client.keys("*")) == [
-            _s(k) for k in sorted(list(iterkeys(mapping)))
+            _s(k) for k in sorted(list(iter(mapping.keys())))
         ]
 
         # check that it is possible to get list content by key name
 
-        for key, value in iteritems(mapping):
+        for key, value in mapping.items():
             assert await client.lrange(key, 0, -1) == [_s(v) for v in value]

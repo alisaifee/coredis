@@ -2,6 +2,7 @@
 coredis.response.callbacks
 --------------------------
 """
+
 from __future__ import annotations
 
 import datetime
@@ -12,11 +13,12 @@ from coredis.exceptions import ClusterResponseError
 from coredis.typing import (
     Any,
     Callable,
-    Dict,
     Generic,
     List,
+    Mapping,
     Optional,
     ParamSpec,
+    ResponseType,
     Set,
     Tuple,
     Type,
@@ -27,25 +29,42 @@ from coredis.typing import (
 R = TypeVar("R")
 P = ParamSpec("P")
 
+_RESP = TypeVar("_RESP", bound=ResponseType)
+_RESP3 = TypeVar("_RESP3", bound=ResponseType)
+
+
+class ResponseCallback(ABC, Generic[_RESP, _RESP3, R]):
+    def __call__(self, response: Any, version: int = 2, **kwargs: Any) -> R:
+        if version == 3:
+            return self.transform_3(response, **kwargs)
+        return self.transform(response, **kwargs)
+
+    @abstractmethod
+    def transform(self, response: Union[_RESP, _RESP3], **kwargs: Any) -> R:
+        pass
+
+    def transform_3(self, response: _RESP3, **kwargs: Any) -> R:
+        return self.transform(response, **kwargs)
+
 
 class ClusterMultiNodeCallback(ABC):
     def __call__(
-        self, responses: Dict[str, Any], version: int = 2, **kwargs: Any
+        self, responses: Mapping[str, Any], version: int = 2, **kwargs: Any
     ) -> Any:
         if version == 3:
             return self.combine_3(responses, **kwargs)
         return self.combine(responses, **kwargs)
 
     @abstractmethod
-    def combine(self, responses: Dict[str, Any], **kwargs: Any) -> Any:
+    def combine(self, responses: Mapping[str, Any], **kwargs: Any) -> Any:
         pass
 
-    def combine_3(self, responses: Dict[str, Any], **kwargs: Any) -> Any:
+    def combine_3(self, responses: Mapping[str, Any], **kwargs: Any) -> Any:
         return self.combine(responses, **kwargs)
 
 
 class ClusterBoolCombine(ClusterMultiNodeCallback):
-    def combine(self, responses: Dict[str, Any], **kwargs: Any) -> bool:
+    def combine(self, responses: Mapping[str, Any], **kwargs: Any) -> bool:
         values = tuple(responses.values())
         assert (isinstance(value, bool) for value in values)
         return all(values)
@@ -55,7 +74,7 @@ class ClusterEnsureConsistent(ClusterMultiNodeCallback):
     def __init__(self, ensure_consistent=True):
         self.ensure_consistent = ensure_consistent
 
-    def combine(self, responses: Dict[str, Any], **kwargs: Any) -> Any:
+    def combine(self, responses: Mapping[str, Any], **kwargs: Any) -> Any:
         values = tuple(responses.values())
         if self.ensure_consistent and len(set(values)) != 1:
             raise ClusterResponseError(
@@ -66,22 +85,8 @@ class ClusterEnsureConsistent(ClusterMultiNodeCallback):
 
 
 class ClusterMergeSets(ClusterMultiNodeCallback):
-    def combine(self, responses: Dict[str, Any], **kwargs: Any) -> Set:
+    def combine(self, responses: Mapping[str, Any], **kwargs: Any) -> Set:
         return set(itertools.chain(*responses.values()))
-
-
-class ResponseCallback(ABC):
-    def __call__(self, response: Any, version: int = 2, **kwargs: Any) -> Any:
-        if version == 3:
-            return self.transform_3(response, **kwargs)
-        return self.transform(response, **kwargs)
-
-    @abstractmethod
-    def transform(self, response: Any, **kwargs: Any) -> Any:
-        pass
-
-    def transform_3(self, response: Any, **kwargs: Any) -> Any:
-        return self.transform(response, **kwargs)
 
 
 class SimpleStringCallback(ResponseCallback):
@@ -141,14 +146,14 @@ class DateTimeCallback(ResponseCallback):
         return datetime.datetime.fromtimestamp(ts)
 
 
-class DictCallback(PrimitiveCallback[Dict]):
+class DictCallback(PrimitiveCallback[Mapping]):
     def __init__(
         self,
-        transform_function: Optional[Callable[[Any], Dict]] = None,
+        transform_function: Optional[Callable[[Any], Mapping]] = None,
     ):
         self.transform_function = transform_function
 
-    def transform(self, response: Any, **options: Any) -> Dict:
+    def transform(self, response: Any, **options: Any) -> Mapping:
         return (
             (response if isinstance(response, dict) else dict(response))
             if not self.transform_function

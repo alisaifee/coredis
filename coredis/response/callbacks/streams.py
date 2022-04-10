@@ -7,12 +7,9 @@ from coredis.response.types import (
     StreamPending,
     StreamPendingExt,
 )
-from coredis.typing import Any, AnyStr, Dict, Optional, Tuple, Union
-from coredis.utils import (
-    EncodingInsensitiveDict,
-    flat_pairs_to_dict,
-    flat_pairs_to_ordered_dict,
-)
+from coredis.response.utils import flat_pairs_to_dict, flat_pairs_to_ordered_dict
+from coredis.typing import Any, AnyStr, Mapping, Optional, Tuple, Union
+from coredis.utils import EncodingInsensitiveDict
 
 
 class StreamRangeCallback(ResponseCallback):
@@ -52,7 +49,7 @@ class AutoClaimCallback(ResponseCallback):
 class MultiStreamRangeCallback(ResponseCallback):
     def transform_3(
         self, response: Any, **options: Any
-    ) -> Optional[Dict[AnyStr, Tuple[StreamEntry, ...]]]:
+    ) -> Optional[Mapping[AnyStr, Tuple[StreamEntry, ...]]]:
         if response:
             mapping = {}
 
@@ -66,7 +63,7 @@ class MultiStreamRangeCallback(ResponseCallback):
 
     def transform(
         self, response: Any, **options: Any
-    ) -> Optional[Dict[AnyStr, Tuple[StreamEntry, ...]]]:
+    ) -> Optional[Mapping[AnyStr, Tuple[StreamEntry, ...]]]:
         if response:
             mapping = {}
 
@@ -99,7 +96,7 @@ class PendingCallback(ResponseCallback):
 class XInfoCallback(ResponseCallback):
     def transform(
         self, response: Any, **options: Any
-    ) -> Tuple[Dict[AnyStr, AnyStr], ...]:
+    ) -> Tuple[Mapping[AnyStr, AnyStr], ...]:
         return tuple(flat_pairs_to_dict(row) for row in response)
 
 

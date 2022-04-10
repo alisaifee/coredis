@@ -8,12 +8,30 @@ from typing import TYPE_CHECKING, Dict, Optional, Union
 
 from coredis.commands import CommandName
 from coredis.exceptions import ConnectionError, PubSubError, TimeoutError
-from coredis.utils import iteritems, iterkeys, list_or_args, nativestr
+from coredis.utils import nativestr
 
 if TYPE_CHECKING:
     import coredis.client
     import coredis.connection
     import coredis.pool
+
+
+def list_or_args(keys, args):
+    # returns a single list combining keys and args
+    try:
+        iter(keys)
+        # a string or bytes instance can be iterated, but indicates
+        # keys wasn't passed as a list
+
+        if isinstance(keys, (str, bytes)):
+            keys = [keys]
+    except TypeError:
+        keys = [keys]
+
+    if args:
+        keys.extend(args)
+
+    return keys
 
 
 class PubSub:
@@ -76,7 +94,7 @@ class PubSub:
         if self.channels:
             channels = {}
 
-            for k, v in iteritems(self.channels):
+            for k, v in self.channels.items():
                 if not self.decode_responses:
                     k = k.decode(self.encoding)
                 channels[k] = v
@@ -85,7 +103,7 @@ class PubSub:
         if self.patterns:
             patterns = {}
 
-            for k, v in iteritems(self.patterns):
+            for k, v in self.patterns.items():
                 if not self.decode_responses:
                     k = k.decode(self.encoding)
                 patterns[k] = v
@@ -185,10 +203,10 @@ class PubSub:
         new_patterns = {}
         new_patterns.update(dict.fromkeys(map(self.encode, args)))
 
-        for pattern, handler in iteritems(kwargs):
+        for pattern, handler in kwargs.items():
             new_patterns[self.encode(pattern)] = handler
         ret_val = await self.execute_command(
-            CommandName.PSUBSCRIBE, *iterkeys(new_patterns)
+            CommandName.PSUBSCRIBE, *new_patterns.keys()
         )
         # update the patterns dict AFTER we send the command. we don't want to
         # subscribe twice to these patterns, once for the command and again
@@ -224,10 +242,10 @@ class PubSub:
         new_channels = {}
         new_channels.update(dict.fromkeys(map(self.encode, args)))
 
-        for channel, handler in iteritems(kwargs):
+        for channel, handler in kwargs.items():
             new_channels[self.encode(channel)] = handler
         ret_val = await self.execute_command(
-            CommandName.SUBSCRIBE, *iterkeys(new_channels)
+            CommandName.SUBSCRIBE, *new_channels.keys()
         )
         # update the channels dict AFTER we send the command. we don't want to
         # subscribe twice to these channels, once for the command and again
@@ -336,11 +354,11 @@ class PubSub:
         To stop listening invoke :meth:`PubSubWorkerThread.stop` on the returned
         instead of :class:`PubSubWorkerThread`.
         """
-        for channel, handler in iteritems(self.channels):
+        for channel, handler in self.channels.items():
             if handler is None:
                 raise PubSubError(f"Channel: '{channel}' has no handler registered")
 
-        for pattern, handler in iteritems(self.patterns):
+        for pattern, handler in self.patterns.items():
             if handler is None:
                 raise PubSubError(f"Pattern: '{pattern}' has no handler registered")
         thread = PubSubWorkerThread(

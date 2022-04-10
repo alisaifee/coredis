@@ -5,8 +5,9 @@ from typing import ClassVar
 
 from coredis.commands import ResponseCallback
 from coredis.response.types import ClientInfo, RoleInfo, SlowLogInfo
-from coredis.typing import Any, AnyStr, Dict, List, Tuple, Union
-from coredis.utils import EncodingInsensitiveDict, flat_pairs_to_dict, nativestr
+from coredis.response.utils import flat_pairs_to_dict
+from coredis.typing import Any, AnyStr, List, Mapping, Tuple, Union
+from coredis.utils import EncodingInsensitiveDict, nativestr
 
 
 class TimeCallback(ResponseCallback):
@@ -74,7 +75,7 @@ class DebugCallback(ResponseCallback):
 
     def transform(
         self, response: Any, **options: Any
-    ) -> Dict[AnyStr, Union[AnyStr, int]]:
+    ) -> Mapping[AnyStr, Union[AnyStr, int]]:
         # The 'type' of the object is the first item in the response, but isn't
         # prefixed with a name
         response = nativestr(response)
@@ -92,7 +93,7 @@ class DebugCallback(ResponseCallback):
 
 
 class InfoCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> Dict[AnyStr, List[AnyStr]]:
+    def transform(self, response: Any, **options: Any) -> Mapping[AnyStr, List[AnyStr]]:
         """Parses the result of Redis's INFO command into a Python dict"""
         info = {}
         response = nativestr(response)
@@ -166,7 +167,7 @@ class RoleCallback(ResponseCallback):
 
 
 class LatencyHistogramCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> Dict[AnyStr, Dict]:
+    def transform(self, response: Any, **options: Any) -> Mapping[AnyStr, Mapping]:
         histogram = flat_pairs_to_dict(response)
         for key, value in histogram.items():
             histogram[key] = EncodingInsensitiveDict(flat_pairs_to_dict(value))

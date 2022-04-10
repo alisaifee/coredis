@@ -2,18 +2,14 @@ from __future__ import annotations
 
 from coredis.response.callbacks import ResponseCallback
 from coredis.response.types import Command
-from coredis.typing import Any, AnyStr, Dict, Set
-from coredis.utils import (
-    EncodingInsensitiveDict,
-    flat_pairs_to_dict,
-    nativestr,
-    pairs_to_dict,
-)
+from coredis.response.utils import flat_pairs_to_dict, pairs_to_dict
+from coredis.typing import AbstractSet, Any, AnyStr, Mapping, MutableMapping
+from coredis.utils import EncodingInsensitiveDict, nativestr
 
 
 class CommandCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> Dict[str, Command]:
-        commands: Dict[str, Command] = {}
+    def transform(self, response: Any, **options: Any) -> Mapping[str, Command]:
+        commands: MutableMapping[str, Command] = {}
 
         for command in response:
             if command:
@@ -45,15 +41,19 @@ class CommandCallback(ResponseCallback):
 
 
 class CommandKeyFlagCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> Dict[AnyStr, Set[AnyStr]]:
+    def transform(
+        self, response: Any, **options: Any
+    ) -> Mapping[AnyStr, AbstractSet[AnyStr]]:
         return {k[0]: set(k[1]) for k in response}
 
-    def transform_3(self, response: Any, **options: Any) -> Dict[AnyStr, Set[AnyStr]]:
+    def transform_3(
+        self, response: Any, **options: Any
+    ) -> Mapping[AnyStr, AbstractSet[AnyStr]]:
         return pairs_to_dict(response)
 
 
 class CommandDocCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> Dict[AnyStr, Dict]:
+    def transform(self, response: Any, **options: Any) -> Mapping[AnyStr, Mapping]:
         cmd_mapping = flat_pairs_to_dict(response)
         for cmd, doc in cmd_mapping.items():
             cmd_mapping[cmd] = EncodingInsensitiveDict(flat_pairs_to_dict(doc))
@@ -62,5 +62,5 @@ class CommandDocCallback(ResponseCallback):
             ]
         return cmd_mapping
 
-    def transform_3(self, response: Any, **options: Any) -> Dict[AnyStr, Dict]:
+    def transform_3(self, response: Any, **options: Any) -> Mapping[AnyStr, Mapping]:
         return dict(response)
