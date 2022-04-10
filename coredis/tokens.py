@@ -791,11 +791,6 @@ class PrefixToken(bytes, enum.Enum):
 
     #: Used by:
     #:
-    #:  - ``FUNCTION LOAD``
-    DESCRIPTION = b"DESCRIPTION"
-
-    #: Used by:
-    #:
     #:  - ``GEORADIUS``
     #:  - ``GEORADIUSBYMEMBER``
     #:  - ``SORT``
@@ -908,6 +903,16 @@ class PrefixToken(bytes, enum.Enum):
     #:
     #:  - ``MIGRATE``
     KEYS = b"KEYS"
+
+    #: Used by:
+    #:
+    #:  - ``MODULE LOADEX``
+    ARGS = b"ARGS"
+
+    #: Used by:
+    #:
+    #:  - ``MODULE LOADEX``
+    CONFIG = b"CONFIG"
 
     #: Used by:
     #:

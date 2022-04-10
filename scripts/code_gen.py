@@ -89,7 +89,7 @@ REDIS_RETURN_ARGUMENT_TYPE_MAPPING = {
         "string": AnyStr,
         "array": Tuple,
         "double": Union[int, float],
-        "unix-time": datetime.datetime,
+        "unix-time": 'datetime.datetime',
         "pure-token": bool,
     },
 }
@@ -109,6 +109,7 @@ REDIS_ARGUMENT_NAME_OVERRIDES = {
 REDIS_ARGUMENT_TYPE_OVERRIDES = {
     "CLIENT KILL": {"skipme": bool},
     "COMMAND GETKEYS": {"arguments": ValueT},
+    "COMMAND GETKEYSANDFLAGS": {"arguments": ValueT},
     "FUNCTION RESTORE": {"serialized_value": bytes},
     "MSET": {"key_values": Dict[KeyT, ValueT]},
     "MSETNX": {"key_values": Dict[KeyT, ValueT]},
@@ -159,14 +160,11 @@ REDIS_RETURN_OVERRIDES = {
     "ACL GETUSER": Dict[AnyStr, List[AnyStr]],
     "ACL LIST": Tuple[AnyStr, ...],
     "ACL LOG": Union[Tuple[Dict[AnyStr, AnyStr], ...], bool],
-    "BGREWRITEAOF": bool,
-    "BGSAVE": bool,
     "BZPOPMAX": Optional[Tuple[AnyStr, AnyStr, float]],
     "BZPOPMIN": Optional[Tuple[AnyStr, AnyStr, float]],
     "BZMPOP": Optional[Tuple[AnyStr, ScoredMembers]],
     "CLIENT LIST": Tuple[ClientInfo, ...],
     "CLIENT INFO": ClientInfo,
-    "CLIENT TRACKINGINFO": Dict[AnyStr, AnyStr],
     "CLUSTER INFO": Dict[str, str],
     "CLUSTER LINKS": List[Dict[AnyStr, Any]],
     "CLUSTER NODES": List[Dict[str, str]],
@@ -175,13 +173,13 @@ REDIS_RETURN_OVERRIDES = {
     "CLUSTER SLAVES": List[Dict[AnyStr, AnyStr]],
     "CLUSTER SLOTS": Dict[Tuple[int, int], Tuple[ClusterNode, ...]],
     "COMMAND": Dict[str, Command],
+    "COMMAND DOCS": Dict[AnyStr, Dict],
+    "COMMAND GETKEYSANDFLAGS": Dict[AnyStr, Set[AnyStr]],
     "COMMAND INFO": Dict[AnyStr, Command],
+    "COMMAND LIST": Set[AnyStr],
     "CONFIG GET": Dict[AnyStr, AnyStr],
-    "COPY": bool,
     "DUMP": bytes,
-    "EXPIRE": bool,
-    "EXPIREAT": bool,
-    "EXPIRETIME": datetime.datetime,
+    "EXPIRETIME": 'datetime.datetime',
     "FUNCTION DUMP": bytes,
     "FUNCTION LOAD": AnyStr,
     "FUNCTION STATS": Dict[AnyStr, Union[AnyStr, Dict]],
@@ -198,7 +196,7 @@ REDIS_RETURN_OVERRIDES = {
     "INCRBYFLOAT": float,
     "INFO": Dict[AnyStr, AnyStr],
     "KEYS": Set[AnyStr],
-    "LASTSAVE": datetime.datetime,
+    "LASTSAVE": 'datetime.datetime',
     "LATENCY LATEST": Dict[AnyStr, Tuple[int, int, int]],
     "LATENCY HISTOGRAM": Dict[AnyStr, Dict[AnyStr, Any]],
     "LCS": Union[AnyStr, int, LCSResult],
@@ -207,23 +205,21 @@ REDIS_RETURN_OVERRIDES = {
     "MGET": Tuple[Optional[AnyStr], ...],
     "MODULE LIST": Tuple[Dict, ...],
     "MONITOR": Monitor,
-    "MSETNX": bool,
+    "PING": AnyStr,
     "PFADD": bool,
-    "PERSIST": bool,
     "PSETEX": bool,
-    "PEXPIRETIME": datetime.datetime,
+    "PEXPIRETIME": 'datetime.datetime',
     "PUBSUB NUMSUB": OrderedDict[AnyStr, int],
     "RPOPLPUSH": Optional[AnyStr],
     "RESET": None,
     "ROLE": RoleInfo,
     "SCAN": Tuple[int, Tuple[AnyStr, ...]],
     "SMISMEMBER": Tuple[bool, ...],
-    "SCRIPT FLUSH": bool,
-    "SCRIPT KILL": bool,
     "SCRIPT EXISTS": Tuple[bool, ...],
     "SLOWLOG GET": Tuple[SlowLogInfo, ...],
     "SSCAN": Tuple[int, Set[AnyStr]],
-    "TIME": datetime.datetime,
+    "TIME": 'datetime.datetime',
+    "TYPE": Optional[AnyStr],
     "XCLAIM": Union[Tuple[AnyStr, ...], Tuple[StreamEntry, ...]],
     "XAUTOCLAIM": Union[
         Tuple[AnyStr, Tuple[AnyStr, ...]],
@@ -550,7 +546,6 @@ def read_command_docs(command, group):
         full_description = [k.strip().lstrip(":") for k in full_description]
         full_description = [k.strip() for k in full_description if k.strip()]
     collection_type = Tuple
-
     if return_description:
         if len(return_description) > 0:
             rtypes = {k[1]: k[2].replace("@examples", "") for k in return_description}
@@ -558,6 +553,7 @@ def read_command_docs(command, group):
             has_bool = False
 
             if "simple-string" in rtypes and (
+                True or
                 rtypes["simple-string"].find("OK") >= 0
                 or rtypes["simple-string"].find("an error") >= 0
                 or not rtypes["simple-string"].strip()
@@ -1407,6 +1403,8 @@ def generate_method_details(kls, method, debug):
         method_details["rec_decorators"] = rec_decorators
         method_details["rec_params"] = rec_params
         try:
+            if REDIS_RETURN_OVERRIDES.get(method["name"], None) == recommended_return[0]:
+                print(f"{method['name']} doesn't need a return override")
             rec_signature = inspect.Signature(
                 [inspect.Parameter("self", inspect.Parameter.POSITIONAL_OR_KEYWORD)]
                 + rec_params,

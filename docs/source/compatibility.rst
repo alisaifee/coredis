@@ -3587,7 +3587,7 @@ Extract keys given a full Redis command
 COMMAND GETKEYSANDFLAGS
 ***********************
 
-Extract keys given a full Redis command
+Extract keys and access flags given a full Redis command
 
 - Documentation: `COMMAND GETKEYSANDFLAGS <https://redis.io/commands/command-getkeysandflags>`_
 - Implementation: :meth:`~coredis.Redis.command_getkeysandflags`
@@ -4178,6 +4178,16 @@ Return the current server time
 
 
 
+
+
+MODULE LOADEX [X]
+*****************
+
+Load a module with extended parameters
+
+- Documentation: `MODULE LOADEX <https://redis.io/commands/module-loadex>`_
+
+- Not Implemented
 
 
 
@@ -4950,6 +4960,8 @@ Get array of Cluster slot to node mappings
 - Documentation: `CLUSTER SLOTS <https://redis.io/commands/cluster-slots>`_
 - Implementation: :meth:`~coredis.Redis.cluster_slots`
 
+
+- Deprecated in redis: 7.0.0. Use :meth:`~coredis.Redis.cluster_shards`
 
 
 

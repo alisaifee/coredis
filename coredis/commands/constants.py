@@ -118,6 +118,7 @@ class CommandName(bytes, enum.Enum):
     COMMAND_GETKEYSANDFLAGS = b"COMMAND GETKEYSANDFLAGS"  # Since redis: 7.0.0
     COMMAND_LIST = b"COMMAND LIST"  # Since redis: 7.0.0
     LATENCY_HISTOGRAM = b"LATENCY HISTOGRAM"  # Since redis: 7.0.0
+    MODULE_LOADEX = b"MODULE LOADEX"  # Since redis: 7.0.0
     SLAVEOF = b"SLAVEOF"  # Deprecated in redis: 5.0.0
 
     #: Commands for string
@@ -168,7 +169,6 @@ class CommandName(bytes, enum.Enum):
     CLUSTER_SAVECONFIG = b"CLUSTER SAVECONFIG"  # Since redis: 3.0.0
     CLUSTER_SET_CONFIG_EPOCH = b"CLUSTER SET-CONFIG-EPOCH"  # Since redis: 3.0.0
     CLUSTER_SETSLOT = b"CLUSTER SETSLOT"  # Since redis: 3.0.0
-    CLUSTER_SLOTS = b"CLUSTER SLOTS"  # Since redis: 3.0.0
     READONLY = b"READONLY"  # Since redis: 3.0.0
     READWRITE = b"READWRITE"  # Since redis: 3.0.0
     CLUSTER_HELP = b"CLUSTER HELP"  # Since redis: 5.0.0
@@ -178,6 +178,7 @@ class CommandName(bytes, enum.Enum):
     CLUSTER_LINKS = b"CLUSTER LINKS"  # Since redis: 7.0.0
     CLUSTER_SHARDS = b"CLUSTER SHARDS"  # Since redis: 7.0.0
     CLUSTER_SLAVES = b"CLUSTER SLAVES"  # Deprecated in redis: 5.0.0
+    CLUSTER_SLOTS = b"CLUSTER SLOTS"  # Deprecated in redis: 7.0.0
 
     #: Commands for connection
     AUTH = b"AUTH"  # Since redis: 1.0.0

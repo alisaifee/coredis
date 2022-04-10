@@ -6490,7 +6490,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def command_getkeysandflags(
         self, command: StringT, arguments: Iterable[ValueT]
-    ) -> Dict[AnyStr, Set[AnyStr, ...]]:
+    ) -> Dict[AnyStr, Set[AnyStr]]:
         """
         Extract keys from a full Redis command and their usage flags.
 
