@@ -302,6 +302,10 @@ REDIS_ARGUMENT_FORCED = {
         {"name": "command", "type": "string"},
         {"name": "arguments", "type": "bulk-string", "multiple": True},
     ],
+    "COMMAND GETKEYSANDFLAGS": [
+        {"name": "command", "type": "string"},
+        {"name": "arguments", "type": "bulk-string", "multiple": True},
+    ],
 }
 READONLY_OVERRIDES = {"TOUCH": False}
 BLOCK_ARGUMENT_FORCED_ORDER = {"ZADD": {"member_scores": ["member", "score"]}}
