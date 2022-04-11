@@ -1037,6 +1037,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.CLUSTER,
         response_callback=ClusterSlotsCallback(),
         cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
+        version_deprecated="7.0.0",
     )
     async def cluster_slots(
         self,
@@ -6014,15 +6015,32 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.SHUTDOWN,
         group=CommandGroup.SERVER,
         response_callback=SimpleStringCallback(),
+        arguments={
+            "now": {"version_introduced": "7.0.0"},
+            "force": {"version_introduced": "7.0.0"},
+            "abort": {"version_introduced": "7.0.0"},
+        },
     )
     async def shutdown(
-        self, nosave_save: Optional[Literal[PureToken.NOSAVE, PureToken.SAVE]] = None
+        self,
+        nosave_save: Optional[Literal[PureToken.NOSAVE, PureToken.SAVE]] = None,
+        now: Optional[bool] = None,
+        force: Optional[bool] = None,
+        abort: Optional[bool] = None,
     ) -> bool:
         """Stops Redis server"""
         pieces: CommandArgList = []
 
         if nosave_save:
             pieces.append(nosave_save)
+
+        if now is not None:
+            pieces.append(PureToken.NOW)
+        if force is not None:
+            pieces.append(PureToken.FORCE)
+        if abort is not None:
+            pieces.append(PureToken.ABORT)
+
         try:
             await self.execute_command(CommandName.SHUTDOWN, *pieces)
         except ConnectionError:
