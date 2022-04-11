@@ -33,7 +33,7 @@ class TestACL:
         await client.acl_setuser("test_user", "+set", "~*")
         assert await client.acl_dryrun("test_user", "set", "foo", "bar")
         with pytest.raises(AuthorizationError):
-            await client.acl_dryrun("test_user", "get", "foo", "bar")
+            await client.acl_dryrun("test_user", "get", "foo")
 
     async def test_acl_list(self, client, _s):
         assert _s("user default") in (await client.acl_list())[0]
