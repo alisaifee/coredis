@@ -55,14 +55,6 @@ class coredis_sdist(sdist):
 
 
 class coredis_build_ext(build_ext):
-    """
-    NOTE: This code was originally taken from tornado.
-
-    Allows C extension building to fail.
-
-    The C extension speeds up crc16, but is not essential.
-    """
-
     warning_message = """
 ********************************************************************
 {target} could not
@@ -70,29 +62,6 @@ be compiled. No C extensions are essential for coredis to run,
 although they do result in significant speed improvements for
 websockets.
 {comment}
-
-Here are some hints for popular operating systems:
-
-If you are seeing this message on Linux you probably need to
-install GCC and/or the Python development package for your
-version of Python.
-
-Debian and Ubuntu users should issue the following command:
-
-    $ sudo apt-get install build-essential python-dev
-
-RedHat and CentOS users should issue the following command:
-
-    $ sudo yum install gcc python-devel
-
-Fedora users should issue the following command:
-
-    $ sudo dnf install gcc python-devel
-
-If you are seeing this message on OSX please read the documentation
-here:
-
-https://api.mongodb.org/python/current/installation.html#osx
 ********************************************************************
 """
 
