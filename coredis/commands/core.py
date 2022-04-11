@@ -898,7 +898,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.CLUSTER,
         response_callback=SimpleStringCallback(),
     )
-    async def cluster_replicate(self, node_id: ValueT) -> bool:
+    async def cluster_replicate(self, node_id: StringT) -> bool:
         """
         Reconfigure a node as a replica of the specified master node
         """
