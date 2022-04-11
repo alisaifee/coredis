@@ -6650,7 +6650,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return await self.execute_command(CommandName.MODULE_LOAD, *pieces)
 
-    @versionadded(version="3.3.0")
+    @versionadded(version="3.4.0")
     @redis_command(
         CommandName.MODULE_LOAD, group=CommandGroup.SERVER, version_introduced="7.0.0"
     )

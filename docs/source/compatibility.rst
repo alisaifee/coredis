@@ -4016,7 +4016,7 @@ Load a module with extended parameters
 
 
 
-- .. versionadded:: 3.3.0
+- .. versionadded:: 3.4.0
 
 
 
