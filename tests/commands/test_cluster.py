@@ -58,13 +58,13 @@ class TestCluster:
         assert set(ids) == set(known_nodes)
 
     @pytest.mark.min_server_version("6.9.0")
-    @pytest.mark.xfail
     async def test_cluster_shards(self, client, _s):
         await client
-        known_nodes = (
+        known_nodes = {
             node["node_id"] for node in client.connection_pool.nodes.all_nodes()
-        )
+        }
         shards = await client.cluster_shards()
+
         nodes = []
         [nodes.extend(shard[_s("nodes")]) for shard in shards]
         assert known_nodes == {node[_s("id")] for node in nodes}

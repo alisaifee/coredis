@@ -143,7 +143,7 @@ class ClusterNodesCallback(ResponseCallback):
 
 
 class ClusterShardsCallback(ResponseCallback):
-    def transform(self, response: Any, **kwargs: Any) -> List[EncodingInsensitiveDict]:
+    def transform(self, response: Any, **kwargs: Any) -> List[Mapping]:
         shard_mapping = []
         for shard in response:
             transformed = EncodingInsensitiveDict(flat_pairs_to_dict(shard))
@@ -152,10 +152,8 @@ class ClusterShardsCallback(ResponseCallback):
                 node_mapping.append(flat_pairs_to_dict(node))
 
             transformed["nodes"] = node_mapping
-            shard_mapping.append(transformed)
+            shard_mapping.append(transformed.__wrapped__)
         return shard_mapping
 
-    def transform_3(
-        self, response: Any, **kwargs: Any
-    ) -> List[EncodingInsensitiveDict]:
+    def transform_3(self, response: Any, **kwargs: Any) -> List[Mapping]:
         return response
