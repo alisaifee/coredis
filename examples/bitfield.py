@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 import asyncio
 from coredis import Redis
 
@@ -14,5 +12,4 @@ async def example_bitfield():
 
 
 if __name__ == "__main__":
-    loop = asyncio.new_event_loop()
-    loop.run_until_complete(example_bitfield())
+    asyncio.run(example_bitfield())

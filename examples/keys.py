@@ -10,14 +10,14 @@ async def example_client():
     await client.flushdb()
     await client.set("foo", 1)
     print(await client.get("foo"))
-    assert await client.exists(["foo"]) is True
+    assert await client.exists(["foo"]) == 1
     await client.incrby("foo", 100)
     assert int(await client.get("foo") or 0) == 101
     await client.expire("foo", 1)
     await asyncio.sleep(0.1)
     await client.ttl("foo")
     await asyncio.sleep(1)
-    assert not await client.exists("foo")
+    assert not await client.exists(["foo"])
 
 
 async def example_cluster():
@@ -32,7 +32,5 @@ async def example_cluster():
 
 
 if __name__ == "__main__":
-    # initial redis client synchronously, which enable client to be intitialized out of function
-    loop = asyncio.new_event_loop()
-    loop.run_until_complete(example_client())
-    # loop.run_until_complete(example_cluster())
+    asyncio.run(example_client())
+    # asyncio.run(example_cluster())

@@ -65,8 +65,7 @@ Single Node client
         await asyncio.sleep(1)
         assert not await client.exists(['foo'])
 
-    loop = asyncio.new_event_loop()
-    loop.run_until_complete(example())
+    asyncio.run(example())
 
 Cluster client
 ^^^^^^^^^^^^^^
@@ -86,8 +85,7 @@ Cluster client
         await client.rpoplpush('a', 'b')
         assert await client.rpop('b') == b'1'
 
-   loop = asyncio.new_event_loop()
-   loop.run_until_complete(example())
+   asyncio.run(example())
    # {(10923, 16383): [{'host': b'172.17.0.2', 'node_id': b'332f41962b33fa44bbc5e88f205e71276a9d64f4', 'server_type': 'master', 'port': 7002},
    # {'host': b'172.17.0.2', 'node_id': b'c02deb8726cdd412d956f0b9464a88812ef34f03', 'server_type': 'slave', 'port': 7005}],
    # (5461, 10922): [{'host': b'172.17.0.2', 'node_id': b'3d1b020fc46bf7cb2ffc36e10e7d7befca7c5533', 'server_type': 'master', 'port': 7001},

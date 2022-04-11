@@ -19,5 +19,4 @@ async def pipeline(client):
 if __name__ == "__main__":
     # default to connect to local redis server at port 6379
     client = Redis()
-    loop = asyncio.new_event_loop()
-    loop.run_until_complete(pipeline(client))
+    asyncio.run(pipeline(client))

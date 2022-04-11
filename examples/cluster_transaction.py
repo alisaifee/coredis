@@ -6,7 +6,7 @@ from coredis import RedisCluster
 
 async def func1(pipe):
     for _ in range(10):
-        await pipe.incr("foobar", 1)
+        await pipe.incr("foobar")
 
 
 async def func2():

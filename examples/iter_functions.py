@@ -39,6 +39,5 @@ async def cluster_example():
 
 
 if __name__ == "__main__":
-    loop = asyncio.new_event_loop()
-    # loop.run_until_complete(example())
-    loop.run_until_complete(cluster_example())
+    asyncio.run(example())
+    # asyncio.run(cluster_example())
