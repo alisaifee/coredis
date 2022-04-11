@@ -32,18 +32,26 @@ def get_requirements(req_file):
 
 class coredis_build_py(build_py):
     def run(self):
-        import scripts.code_gen
+        try:
+            import scripts.code_gen
 
-        scripts.code_gen.generate_pipeline_stub("coredis/commands/pipeline.pyi")
-        build_py.run(self)
+            scripts.code_gen.generate_pipeline_stub("coredis/commands/pipeline.pyi")
+        except ImportError:
+            pass
+        finally:
+            build_py.run(self)
 
 
 class coredis_sdist(sdist):
     def run(self):
-        import scripts.code_gen
+        try:
+            import scripts.code_gen
 
-        scripts.code_gen.generate_pipeline_stub("coredis/commands/pipeline.pyi")
-        sdist.run(self)
+            scripts.code_gen.generate_pipeline_stub("coredis/commands/pipeline.pyi")
+        except ImportError:
+            pass
+        finally:
+            sdist.run(self)
 
 
 class coredis_build_ext(build_ext):
