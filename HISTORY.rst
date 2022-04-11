@@ -2,6 +2,20 @@
 
 Changelog
 =========
+
+v3.4.0
+------
+Release Date: 2022-04-11
+
+* Features
+
+  * Updates for breaking changes with function_load in redis 7.0 rc3
+  * Add module_loadex method
+
+* Bug fix
+
+  * Fix installation error when building from source
+
 v3.3.0
 ------
 Release Date: 2022-04-04
@@ -530,6 +544,8 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
+
 
 
 
