@@ -165,6 +165,7 @@ REDIS_RETURN_OVERRIDES = {
     "BZMPOP": Optional[Tuple[AnyStr, ScoredMembers]],
     "CLIENT LIST": Tuple[ClientInfo, ...],
     "CLIENT INFO": ClientInfo,
+    "CLUSTER BUMPEPOCH": AnyStr,
     "CLUSTER INFO": Dict[str, str],
     "CLUSTER LINKS": List[Dict[AnyStr, Any]],
     "CLUSTER NODES": List[Dict[str, str]],

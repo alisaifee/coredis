@@ -1,46 +1,9 @@
-# python std lib
 from __future__ import annotations
 
-# 3rd party imports
 import pytest
 
-# rediscluster imports
 from coredis.exceptions import ClusterDownError, RedisClusterException
-from coredis.utils import (
-    blocked_command,
-    clusterdown_wrapper,
-    dict_merge,
-    first_key,
-    list_keys_to_dict,
-    merge_result,
-)
-
-
-def test_list_keys_to_dict():
-    def mock_true():
-        return True
-
-    assert list_keys_to_dict(["FOO", "BAR"], mock_true) == {
-        "FOO": mock_true,
-        "BAR": mock_true,
-    }
-
-
-def test_dict_merge():
-    a = {"a": 1}
-    b = {"b": 2}
-    c = {"c": 3}
-    assert dict_merge(a, b, c) == {"a": 1, "b": 2, "c": 3}
-
-
-def test_dict_merge_empty_list():
-    assert dict_merge([]) == {}
-
-
-def test_blocked_command():
-    with pytest.raises(RedisClusterException) as ex:
-        blocked_command(None, "SET")
-    assert str(ex.value) == "Command: SET is blocked in redis cluster mode"
+from coredis.utils import clusterdown_wrapper, first_key, merge_result
 
 
 def test_merge_result():
