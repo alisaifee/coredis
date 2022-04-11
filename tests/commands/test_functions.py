@@ -95,7 +95,7 @@ class TestLibrary:
         assert len(library.functions) == 2
         assert await library.update(
             """#!lua name=coredis
-        
+
         local function baz(keys, args)
             return args[1] + args[2]
         end
