@@ -6056,7 +6056,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SERVER,
     )
     async def slaveof(
-        self, host: Optional[StringT] = None, port: Optional[ValueT] = None
+        self, host: Optional[StringT] = None, port: Optional[int] = None
     ) -> bool:
         """
         Sets the server to be a replicated slave of the instance identified
@@ -6122,7 +6122,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         response_callback=SimpleStringCallback(),
     )
     async def replicaof(
-        self, host: Optional[StringT] = None, port: Optional[ValueT] = None
+        self, host: Optional[StringT] = None, port: Optional[int] = None
     ) -> bool:
         """
         Make the server a replica of another instance, or promote it as master.
