@@ -4004,6 +4004,24 @@ Load a module
 
 
 
+MODULE LOADEX
+*************
+
+Load a module with extended parameters
+
+- Documentation: `MODULE LOADEX <https://redis.io/commands/module-loadex>`_
+- Implementation: :meth:`~coredis.Redis.module_loadex`
+
+- New in redis: 7.0.0
+
+
+
+- .. versionadded:: 3.3.0
+
+
+
+
+
 MODULE UNLOAD
 *************
 
@@ -4178,16 +4196,6 @@ Return the current server time
 
 
 
-
-
-MODULE LOADEX [X]
-*****************
-
-Load a module with extended parameters
-
-- Documentation: `MODULE LOADEX <https://redis.io/commands/module-loadex>`_
-
-- Not Implemented
 
 
 

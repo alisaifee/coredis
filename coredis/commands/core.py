@@ -6650,6 +6650,30 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return await self.execute_command(CommandName.MODULE_LOAD, *pieces)
 
+    @versionadded(version="3.3.0")
+    @redis_command(
+        CommandName.MODULE_LOAD, group=CommandGroup.SERVER, version_introduced="7.0.0"
+    )
+    async def module_loadex(
+        self,
+        path: Union[str, bytes],
+        configs: Optional[Dict[StringT, ValueT]] = None,
+        args: Optional[Iterable[ValueT]] = None,
+    ) -> bool:
+        """
+        Loads a module from a dynamic library at runtime with configuration directives.
+        """
+        pieces: CommandArgList = [path]
+
+        if configs:
+            pieces.append(PrefixToken.CONFIG)
+            for pair in configs.items():
+                pieces.extend(pair)
+        if args:
+            pieces.append(PrefixToken.ARGS)
+            pieces.extend(args)
+        return await self.execute_command(CommandName.MODULE_LOADEX, *pieces)
+
     @versionadded(version="3.2.0")
     @redis_command(CommandName.MODULE_UNLOAD, group=CommandGroup.SERVER)
     async def module_unload(self, name: Union[str, bytes]) -> bool:
