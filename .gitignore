@@ -1,6 +1,7 @@
 *.pyc
 *.so
 .eggs
+python-redis-benchmark
 coredis.egg-info
 build/
 dist/
