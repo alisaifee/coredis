@@ -1,5 +1,4 @@
 *.pyc
-*.pyi
 *.so
 .eggs
 coredis.egg-info
