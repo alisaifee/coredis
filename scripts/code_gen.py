@@ -89,7 +89,7 @@ REDIS_RETURN_ARGUMENT_TYPE_MAPPING = {
         "string": AnyStr,
         "array": Tuple,
         "double": Union[int, float],
-        "unix-time": 'datetime.datetime',
+        "unix-time": "datetime.datetime",
         "pure-token": bool,
     },
 }
@@ -180,7 +180,7 @@ REDIS_RETURN_OVERRIDES = {
     "COMMAND LIST": Set[AnyStr],
     "CONFIG GET": Dict[AnyStr, AnyStr],
     "DUMP": bytes,
-    "EXPIRETIME": 'datetime.datetime',
+    "EXPIRETIME": "datetime.datetime",
     "FUNCTION DUMP": bytes,
     "FUNCTION LOAD": AnyStr,
     "FUNCTION STATS": Dict[AnyStr, Union[AnyStr, Dict]],
@@ -197,7 +197,7 @@ REDIS_RETURN_OVERRIDES = {
     "INCRBYFLOAT": float,
     "INFO": Dict[AnyStr, AnyStr],
     "KEYS": Set[AnyStr],
-    "LASTSAVE": 'datetime.datetime',
+    "LASTSAVE": "datetime.datetime",
     "LATENCY LATEST": Dict[AnyStr, Tuple[int, int, int]],
     "LATENCY HISTOGRAM": Dict[AnyStr, Dict[AnyStr, Any]],
     "LCS": Union[AnyStr, int, LCSResult],
@@ -209,7 +209,7 @@ REDIS_RETURN_OVERRIDES = {
     "PING": AnyStr,
     "PFADD": bool,
     "PSETEX": bool,
-    "PEXPIRETIME": 'datetime.datetime',
+    "PEXPIRETIME": "datetime.datetime",
     "PUBSUB NUMSUB": OrderedDict[AnyStr, int],
     "RPOPLPUSH": Optional[AnyStr],
     "RESET": None,
@@ -219,7 +219,7 @@ REDIS_RETURN_OVERRIDES = {
     "SCRIPT EXISTS": Tuple[bool, ...],
     "SLOWLOG GET": Tuple[SlowLogInfo, ...],
     "SSCAN": Tuple[int, Set[AnyStr]],
-    "TIME": 'datetime.datetime',
+    "TIME": "datetime.datetime",
     "TYPE": Optional[AnyStr],
     "XCLAIM": Union[Tuple[AnyStr, ...], Tuple[StreamEntry, ...]],
     "XAUTOCLAIM": Union[
@@ -554,8 +554,8 @@ def read_command_docs(command, group):
             has_bool = False
 
             if "simple-string" in rtypes and (
-                True or
-                rtypes["simple-string"].find("OK") >= 0
+                True
+                or rtypes["simple-string"].find("OK") >= 0
                 or rtypes["simple-string"].find("an error") >= 0
                 or not rtypes["simple-string"].strip()
             ):
@@ -1404,7 +1404,10 @@ def generate_method_details(kls, method, debug):
         method_details["rec_decorators"] = rec_decorators
         method_details["rec_params"] = rec_params
         try:
-            if REDIS_RETURN_OVERRIDES.get(method["name"], None) == recommended_return[0]:
+            if (
+                REDIS_RETURN_OVERRIDES.get(method["name"], None)
+                == recommended_return[0]
+            ):
                 print(f"{method['name']} doesn't need a return override")
             rec_signature = inspect.Signature(
                 [inspect.Parameter("self", inspect.Parameter.POSITIONAL_OR_KEYWORD)]
@@ -1905,7 +1908,7 @@ def token_enum(ctx, path):
     env = Environment()
     env.globals.update(sorted=sorted)
     t = env.from_string(
-        """
+        """from __future__ import annotations
 
 import enum
 from functools import cached_property
@@ -2108,7 +2111,7 @@ class CommandGroup(enum.Enum):
 
 
 @code_gen.command()
-def generate_changes():
+def changes():
     cur_version = version.parse(coredis.__version__.split("+")[0])
     kls = coredis.Redis
     cluster_kls = coredis.RedisCluster
@@ -2171,7 +2174,7 @@ def generate_changes():
 @click.option("--group", "-g", default=None)
 @click.option("--expr", "-e", default=None)
 @click.pass_context
-def generate_implementation(ctx, command, group, expr):
+def implementation(ctx, command, group, expr):
     cur_version = version.parse(coredis.__version__.split("+")[0])
     kls = coredis.Redis
     commands = []
@@ -2300,7 +2303,9 @@ def generate_implementation(ctx, command, group, expr):
             print(method_template.render(method=method_details))
 
 
-def generate_pipeline_stub(path):
+@click.option("--path", default="coredis/commands/pipeline.pyi")
+@code_gen.command()
+def pipeline_stub(path):
     kls = coredis.client.AbstractRedis
     cluster_kls = coredis.client.AbstractRedisCluster
     commands = {}
@@ -2431,15 +2436,9 @@ class ClusterPipeline(wrapt.ObjectProxy, Generic[AnyStr]):
     )
 
 
-@click.option("--path", default="coredis/commands/pipeline.pyi")
-@code_gen.command()
-def render_pipeline_stub(path):
-    return generate_pipeline_stub(path)
-
-
 @click.option("--path", default="coredis/commands/key_spec.py")
 @code_gen.command()
-def render_cluster_key_extraction(path):
+def cluster_key_extraction(path):
     commands = get_commands()
     lookups = {}
 
@@ -2587,7 +2586,8 @@ class KeySpec:
         except KeyError:
             return  ()
     """
-    cython_key_spec_template = """
+    cython_key_spec_template = """from __future__ import annotations
+    
 from coredis.commands.constants import CommandName
 
 READONLY = {{ '{' }}
