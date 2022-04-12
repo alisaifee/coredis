@@ -1,11 +1,11 @@
 """
 coredis.commands.constants
 --------------------------
-
 Constants relating to redis command names and groups
 """
 
 from __future__ import annotations
+
 import enum
 from functools import cached_property
 
