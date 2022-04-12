@@ -8,9 +8,7 @@ __email__ = "ali@indydevs.org"
 __copyright__ = "Copyright 2022, Ali-Akber Saifee"
 
 from setuptools import find_packages, setup
-from setuptools.command.build_py import build_py
 from setuptools.command.build_ext import build_ext
-from setuptools.command.sdist import sdist
 from setuptools.extension import Extension
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -28,30 +26,6 @@ def get_requirements(req_file):
             requirements.append(req)
 
     return requirements
-
-
-class coredis_build_py(build_py):
-    def run(self):
-        try:
-            import scripts.code_gen
-
-            scripts.code_gen.generate_pipeline_stub("coredis/commands/pipeline.pyi")
-        except ImportError:
-            pass
-        finally:
-            build_py.run(self)
-
-
-class coredis_sdist(sdist):
-    def run(self):
-        try:
-            import scripts.code_gen
-
-            scripts.code_gen.generate_pipeline_stub("coredis/commands/pipeline.pyi")
-        except ImportError:
-            pass
-        finally:
-            sdist.run(self)
 
 
 class coredis_build_ext(build_ext):
@@ -123,14 +97,11 @@ setup(
         "coredis": ["py.typed"],
     },
     python_requires=">=3.8",
-    setup_requires=get_requirements("publishing.txt"),
     install_requires=get_requirements("main.txt"),
     extras_require={"hiredis": ["hiredis>=2.0.0"]},
     cmdclass=versioneer.get_cmdclass(
         {
             "build_ext": coredis_build_ext,
-            "build_py": coredis_build_py,
-            "sdist": coredis_sdist,
         }
     ),
     classifiers=[
