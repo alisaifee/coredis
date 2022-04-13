@@ -179,8 +179,8 @@ can be set to ``3``.
 
     r = coredis.Redis(protocol_version=3)
 
-LUA Scripting
-^^^^^^^^^^^^^
+Scripting
+^^^^^^^^^
 
 coredis supports the ``EVAL``, ``EVALSHA``, and ``SCRIPT`` commands. However, there are
 a number of edge cases that make these commands tedious to use in real world
@@ -387,8 +387,8 @@ which is much easier to read:
     # [True]
 
 
-Publish / Subscribe
-^^^^^^^^^^^^^^^^^^^^
+PubSub
+^^^^^^
 
 coredis includes a :class:`~coredis.commands.pubsub.PubSub` class
 that subscribes to channels and listens for new messages. Creating a :class:`~coredis.commands.pubsub.PubSub` instance

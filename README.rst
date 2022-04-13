@@ -30,7 +30,7 @@ To install coredis:
 
 .. code-block:: bash
 
-    $ pip install coredis[hiredis]
+    $ pip install coredis
 
 or from source:
 
