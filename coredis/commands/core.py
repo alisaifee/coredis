@@ -18,6 +18,7 @@ from coredis.exceptions import AuthorizationError, DataError, RedisError
 from coredis.response.callbacks import (
     BoolCallback,
     BoolsCallback,
+    ClusterAlignedBoolsCombine,
     ClusterBoolCombine,
     ClusterEnsureConsistent,
     ClusterMergeSets,
@@ -5076,17 +5077,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SCRIPTING,
         response_callback=SimpleStringCallback(),
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.PRIMARIES,
-            combine=lambda res: tuple(all(k) for k in zip(*res.values())),
+            flag=NodeFlag.PRIMARIES, combine=ClusterBoolCombine()
         ),
     )
     async def script_debug(
         self,
         mode: Literal[PureToken.YES, PureToken.SYNC, PureToken.NO],
     ) -> bool:
-        """
-        Set the debug mode for executed scripts.
-        """
+        """Set the debug mode for executed scripts"""
 
         return await self.execute_command(CommandName.SCRIPT_DEBUG, mode)
 
@@ -5096,7 +5094,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         response_callback=BoolsCallback(),
         cluster=ClusterCommandConfig(
             flag=NodeFlag.PRIMARIES,
-            combine=lambda res: tuple(all(k) for k in zip(*res.values())),
+            combine=ClusterAlignedBoolsCombine(),
         ),
     )
     async def script_exists(self, sha1s: Iterable[StringT]) -> Tuple[bool, ...]:

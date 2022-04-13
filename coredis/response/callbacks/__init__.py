@@ -70,6 +70,11 @@ class ClusterBoolCombine(ClusterMultiNodeCallback):
         return all(values)
 
 
+class ClusterAlignedBoolsCombine(ClusterMultiNodeCallback):
+    def combine(self, responses: Mapping[str, Any], **kwargs: Any) -> Tuple[bool, ...]:
+        return tuple(all(k) for k in zip(*responses.values()))
+
+
 class ClusterEnsureConsistent(ClusterMultiNodeCallback):
     def __init__(self, ensure_consistent=True):
         self.ensure_consistent = ensure_consistent
