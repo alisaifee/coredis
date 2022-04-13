@@ -599,7 +599,7 @@ Distributed Locking
 There are two kinds of `Lock class` available:
 
 - :class:`~coredis.lock.Lock` [Using :ref:`api_reference:pipelines`]
-- :class:`~coredis.lock.LuaLock` [Using :ref:`api_reference:lua scripting`]
+- :class:`~coredis.lock.LuaLock` [Using :ref:`api_reference:scripting`]
 
 A lock can be acquired using the :meth:`coredis.Redis.lock` or :meth:`coredis.RedisCluster.lock`
 methods.
