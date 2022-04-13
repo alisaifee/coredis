@@ -3,6 +3,16 @@
 Changelog
 =========
 
+v3.4.1
+------
+Release Date: 2022-04-12
+
+* Chores
+
+  * Remove unmaintained examples & benchmarks
+  * Simplify setup/package info with respect to stubs
+  * Cleanup documentation landing page
+
 v3.4.0
 ------
 Release Date: 2022-04-11
@@ -544,6 +554,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
