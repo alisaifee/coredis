@@ -19,8 +19,8 @@ Release Date: 2022-04-11
 
 * Features
 
-  * Updates for breaking changes with function_load in redis 7.0 rc3
-  * Add module_loadex method
+  * Updates for breaking changes with ``function_load`` in redis 7.0 rc3
+  * Add ``module_loadex`` method
 
 * Bug fix
 
@@ -99,11 +99,10 @@ Release Date: 2022-03-23
 * Features
 
   * Added support for functions
-  * Added runtime checks to bail out early if server version
-    doesn't support the command
+  * Added runtime checks to bail out early if server version doesn't support the command
   * Deprecate custom cluster methods
   * Issue warning when a deprecated redis command is used
-  * Add support for RESP3 protocol
+  * Add support for ``RESP3`` protocol
 
 * New APIs:
 
