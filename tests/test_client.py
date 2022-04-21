@@ -52,6 +52,7 @@ class TestClient:
             assert "1" == nativestr(await client.getset("a", 2))
         assert warning[0].message.args[0] == "Use set() with the get argument"
 
+    @pytest.mark.min_server_version("6.2.0")
     @pytest.mark.parametrize("client_arguments", [({"db": 1})])
     async def test_select_database(self, client, client_arguments):
         assert (await client.client_info())["db"] == 1
