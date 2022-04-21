@@ -196,13 +196,13 @@ class BaseConnection:
         if self.db:
             await self.send_command(b"SELECT", self.db)
 
-            if await self.read_response() != b"OK":
+            if await self.read_response(decode=False) != b"OK":
                 raise ConnectionError("Invalid Database")
 
         if self.client_name is not None:
             await self.send_command(b"CLIENT SETNAME", self.client_name)
 
-            if nativestr(await self.read_response()) != "OK":
+            if await self.read_response(decode=False) != b"OK":
                 raise ConnectionError(f"Failed to set client name: {self.client_name}")
 
         self.last_active_at = time.time()
