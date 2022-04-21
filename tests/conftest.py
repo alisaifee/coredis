@@ -84,6 +84,12 @@ async def set_default_test_config(client):
         await client.acl_log(reset=True)
 
 
+def get_client_test_args(request):
+    if "client_arguments" in request.fixturenames:
+        return request.getfixturevalue("client_arguments")
+    return {}
+
+
 def check_redis_cluster_ready(host, port):
     try:
         return redis.Redis(host, port).cluster("info")["cluster_state"] == "ok"
@@ -195,9 +201,7 @@ def redis_stack_server(docker_services):
 @pytest.fixture
 async def redis_basic(redis_basic_server, request):
     client = coredis.Redis(
-        "localhost",
-        6379,
-        decode_responses=True,
+        "localhost", 6379, decode_responses=True, **get_client_test_args(request)
     )
     await check_test_constraints(request, client)
     await client.flushall()
@@ -219,6 +223,7 @@ async def redis_basic_resp3(redis_basic_server, request):
         6379,
         decode_responses=True,
         protocol_version=3,
+        **get_client_test_args(request),
     )
     await client.flushall()
     await set_default_test_config(client)
@@ -229,9 +234,7 @@ async def redis_basic_resp3(redis_basic_server, request):
 @pytest.fixture
 async def redis_stack(redis_stack_server, request):
     client = coredis.Redis(
-        "localhost",
-        9379,
-        decode_responses=True,
+        "localhost", 9379, decode_responses=True, **get_client_test_args(request)
     )
     await check_test_constraints(request, client)
     await client.flushall()
@@ -242,10 +245,7 @@ async def redis_stack(redis_stack_server, request):
 
 @pytest.fixture
 async def redis_stack_raw(redis_stack_server, request):
-    client = coredis.Redis(
-        "localhost",
-        9379,
-    )
+    client = coredis.Redis("localhost", 9379, **get_client_test_args(request))
     await check_test_constraints(request, client)
     await client.flushall()
     await set_default_test_config(client)
@@ -266,6 +266,7 @@ async def redis_stack_resp3(redis_stack_server, request):
         9379,
         decode_responses=True,
         protocol_version=3,
+        **get_client_test_args(request),
     )
     await client.flushall()
     await set_default_test_config(client)
@@ -285,6 +286,7 @@ async def redis_stack_raw_resp3(redis_stack_server, request):
         9379,
         decode_responses=True,
         protocol_version=3,
+        **get_client_test_args(request),
     )
     await client.flushall()
     await set_default_test_config(client)
@@ -301,9 +303,7 @@ async def redis_basic_raw(redis_basic_server, request):
     )
     await check_test_constraints(request, client, protocol=2)
     client = coredis.Redis(
-        "localhost",
-        6379,
-        decode_responses=False,
+        "localhost", 6379, decode_responses=False, **get_client_test_args(request)
     )
     await client.flushall()
     await set_default_test_config(client)
@@ -324,6 +324,7 @@ async def redis_basic_raw_resp3(redis_basic_server, request):
         6379,
         decode_responses=False,
         protocol_version=3,
+        **get_client_test_args(request),
     )
     await client.flushall()
     await set_default_test_config(client)
@@ -339,7 +340,9 @@ async def redis_ssl(redis_ssl_server, request):
         "&ssl_certfile=./tests/tls/client.crt"
         "&ssl_ca_certs=./tests/tls/ca.crt"
     )
-    client = coredis.Redis.from_url(storage_url, decode_responses=True)
+    client = coredis.Redis.from_url(
+        storage_url, decode_responses=True, **get_client_test_args(request)
+    )
     await check_test_constraints(request, client)
     await client.flushall()
     await set_default_test_config(client)
@@ -351,6 +354,7 @@ async def redis_auth(redis_auth_server, request):
     client = coredis.Redis.from_url(
         f"redis://:sekret@{redis_auth_server[0]}:{redis_auth_server[1]}",
         decode_responses=True,
+        **get_client_test_args(request),
     )
     await check_test_constraints(request, client)
     await client.flushall()
@@ -360,7 +364,11 @@ async def redis_auth(redis_auth_server, request):
 
 @pytest.fixture
 async def redis_uds(redis_uds_server, request):
-    client = coredis.Redis.from_url(f"unix://{redis_uds_server}", decode_responses=True)
+    client = coredis.Redis.from_url(
+        f"unix://{redis_uds_server}",
+        decode_responses=True,
+        **get_client_test_args(request),
+    )
     await check_test_constraints(request, client)
     await client.flushall()
     await set_default_test_config(client)
@@ -371,7 +379,11 @@ async def redis_uds(redis_uds_server, request):
 @pytest.fixture
 async def redis_cluster(redis_cluster_server, request):
     cluster = coredis.RedisCluster(
-        "localhost", 7000, stream_timeout=10, decode_responses=True
+        "localhost",
+        7000,
+        stream_timeout=10,
+        decode_responses=True,
+        **get_client_test_args(request),
     )
     await check_test_constraints(request, cluster)
     await cluster
@@ -388,7 +400,12 @@ async def redis_cluster(redis_cluster_server, request):
 @pytest.fixture
 async def redis_cluster_resp3(redis_cluster_server, request):
     cluster = coredis.RedisCluster(
-        "localhost", 7000, stream_timeout=10, decode_responses=True, protocol_version=3
+        "localhost",
+        7000,
+        stream_timeout=10,
+        decode_responses=True,
+        protocol_version=3,
+        **get_client_test_args(request),
     )
     await check_test_constraints(request, cluster, protocol=3)
     await cluster
@@ -408,6 +425,7 @@ async def redis_sentinel(redis_sentinel_server, request):
         [("localhost", 26379)],
         sentinel_kwargs={},
         decode_responses=True,
+        **get_client_test_args(request),
     )
     master = sentinel.master_for("localhost-redis-sentinel")
     await check_test_constraints(request, master)
@@ -423,6 +441,7 @@ async def redis_sentinel_auth(redis_sentinel_auth_server, request):
         sentinel_kwargs={"password": "sekret"},
         password="sekret",
         decode_responses=True,
+        **get_client_test_args(request),
     )
     master = sentinel.master_for("localhost-redis-sentinel")
     await check_test_constraints(request, master)
