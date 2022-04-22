@@ -3,6 +3,14 @@
 Changelog
 =========
 
+v3.4.3
+------
+Release Date: 2022-04-21
+
+* Chore
+
+  * Fix github release workflow
+
 v3.4.2
 ------
 Release Date: 2022-04-21
@@ -562,6 +570,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
