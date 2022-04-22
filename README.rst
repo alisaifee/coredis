@@ -101,5 +101,6 @@ Links
 * `Documentation (Stable) <http://coredis.readthedocs.org/en/stable>`_
 * `Documentation (Latest) <http://coredis.readthedocs.org/en/latest>`_
 * `Changelog <http://coredis.readthedocs.org/en/stable/release_notes.html>`_
+* `Project History <http://coredis.readthedocs.org/en/stable/history.html>`_
 
 .. _Command compatibility: https://coredis.readthedocs.io/en/stable/compatibility.html
