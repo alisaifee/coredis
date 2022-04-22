@@ -178,7 +178,9 @@ class BoolsCallback(ResponseCallback):
         return tuple(BoolCallback()(r) for r in response)
 
 
-class OptionalPrimitiveCallback(ResponseCallback[ResponseType, ResponseType, R]):
+class OptionalPrimitiveCallback(
+    ResponseCallback[ResponseType, ResponseType, Optional[R]]
+):
     def transform(self, response: Any, **options: Any) -> Optional[R]:
         return response
 
