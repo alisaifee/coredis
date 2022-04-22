@@ -21,7 +21,6 @@ class TestList:
         ints = [int(i) for i in range(10000)]
         assert await client.lpush("a{foo}", ints)
         assert len(set(await client.lrange("a{foo}", 0, -1))) == 10000
-        print(set(await client.lrange("a{foo}", 0, -1)))
 
     async def test_blpop(self, client, _s):
         await client.rpush("a{foo}", ["1", "2"])
