@@ -105,7 +105,7 @@ class SimpleStringCallback(ResponseCallback):
         return success
 
 
-class PrimitiveCallback(ResponseCallback, Generic[R]):
+class PrimitiveCallback(ResponseCallback[ResponseType, ResponseType, R]):
     @abstractmethod
     def transform(self, response: Any, **options: Any) -> Any:
         pass
@@ -178,7 +178,7 @@ class BoolsCallback(ResponseCallback):
         return tuple(BoolCallback()(r) for r in response)
 
 
-class OptionalPrimitiveCallback(ResponseCallback, Generic[R]):
+class OptionalPrimitiveCallback(ResponseCallback[ResponseType, ResponseType, R]):
     def transform(self, response: Any, **options: Any) -> Optional[R]:
         return response
 

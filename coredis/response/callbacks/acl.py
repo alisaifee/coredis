@@ -6,13 +6,13 @@ from coredis.response.callbacks import (
     SimpleStringCallback,
 )
 from coredis.response.utils import flat_pairs_to_dict
-from coredis.typing import Any, AnyStr, Dict, Tuple, Union
+from coredis.typing import Any, AnyStr, Mapping, Tuple, Union
 
 
 class ACLLogCallback(ResponseCallback):
     def transform(
         self, response: Any, **options: Any
-    ) -> Union[bool, Tuple[Dict[AnyStr, AnyStr], ...]]:
+    ) -> Union[bool, Tuple[Mapping[AnyStr, AnyStr], ...]]:
         if options.get("reset"):
             return SimpleStringCallback()(response)
         else:
