@@ -93,20 +93,19 @@ The coredis :ref:`api:clients` attempt to mirror the specifications in
 the `Redis command documentation <https://redis.io/commands>`__ by using the following rules:
 
 - Arguments retain naming from redis as much as possible
-- Optional variadic arguments are mapped to ``*args`` or ``**kwargs``
+- **Only** optional variadic arguments are mapped to ``*args`` or ``**kwargs``. When
+  the variable length arguments are not optional the expected argument is an
+  :class:`~typing.Iterable` or :class:`~typing.Mapping`.
 - Pure tokens used as flags are mapped to boolean arguments
-- `One of` arguments accepting pure tokens are collapsed and accept a :class:`~coredis.PureToken`
+- ``One of`` arguments accepting pure tokens are collapsed and accept a :class:`~coredis.PureToken`
 - Responses are mapped as closely from redis <-> python types as possible.
 
 For higher level concepts such as :ref:`api_reference:pipelines`, :ref:`api_reference:scripting` and
 :ref:`api_reference:pubsub` abstractions are provided to simplify interaction requires pre-defined
-sequencing of redis commands (see :ref:`api:command wrappers`).
+sequencing of redis commands (see :ref:`api:command wrappers`). For details see :ref:`api_reference:api reference`
 
-.. warning:: This inherently means that the API will not map exactly to the :pypi:`redis-py`
-   implementation in most cases.
-
-For more details see :ref:`api_reference:api reference`
-
+The redis command API does **NOT** mirror :pypi:`redis`.
+For details about the high level differences refer to :ref:`history:divergence from aredis & redis-py`
 
 Dependencies & supported python versions
 ----------------------------------------
