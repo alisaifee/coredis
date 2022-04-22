@@ -182,10 +182,10 @@ jobs:
           path: dist
       - name: Generate release notes
         id: release_notes
-        run: echo ::set-output name=BODY::$(./scripts/github_release_notes.sh)
+        run: echo "::set-output name=BODY::$(./scripts/github_release_notes.sh)"
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
           artifacts: "dist/*"
-          body: "${{ steps.release_notes.BODY }}"
+          body: ${{ steps.release_notes.outputs.BODY }}
           token: ${{ secrets.GITHUB_TOKEN }}
