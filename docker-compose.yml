@@ -116,3 +116,7 @@ services:
     image: "redis/redis-stack:${REDIS_STACK_VERSION:-latest}"
     ports:
       - '9379:6379'
+  keydb:
+    image: "eqalpha/keydb"
+    ports:
+      - '10379:6379'

@@ -7,7 +7,13 @@ from coredis import PureToken, ResponseError
 from tests.conftest import targets
 
 
-@targets("redis_basic", "redis_basic_raw", "redis_basic_resp3", "redis_basic_raw_resp3")
+@targets(
+    "redis_basic",
+    "redis_basic_raw",
+    "redis_basic_resp3",
+    "redis_basic_raw_resp3",
+    "keydb",
+)
 @pytest.mark.asyncio()
 class TestConnection:
     async def test_ping(self, client, _s):

@@ -923,6 +923,11 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         return None
 
 
+_RedisT = TypeVar("_RedisT", bound="Redis")
+_RedisStringT = TypeVar("_RedisStringT", bound="Redis[str]")
+_RedisBytesT = TypeVar("_RedisBytesT", bound="Redis[bytes]")
+
+
 class Redis(
     AbstractRedis[AnyStr],
     Generic[AnyStr],
@@ -1057,36 +1062,36 @@ class Redis(
     @classmethod
     @overload
     def from_url(
-        cls,
+        cls: Type[_RedisBytesT],
         url: str,
         db: Optional[int] = ...,
         *,
         decode_responses: Literal[False] = ...,
         **kwargs,
-    ) -> Redis[bytes]:
+    ) -> _RedisBytesT:
         ...
 
     @classmethod
     @overload
     def from_url(
-        cls,
+        cls: Type[_RedisStringT],
         url: str,
         db: Optional[int] = ...,
         *,
         decode_responses: Literal[True],
         **kwargs,
-    ) -> Redis[str]:
+    ) -> _RedisStringT:
         ...
 
     @classmethod
     def from_url(
-        cls,
+        cls: Type[_RedisT],
         url: str,
         db: Optional[int] = None,
         *,
         decode_responses: bool = False,
         **kwargs,
-    ):
+    ) -> _RedisT:
         """
         Return a Redis client object configured from the given URL, which must
         use either the `redis:// scheme
@@ -1118,9 +1123,9 @@ class Redis(
         )
 
         if decode_responses:
-            return Redis[str](decode_responses=True, connection_pool=connection_pool)
+            return cls(decode_responses=True, connection_pool=connection_pool)
         else:
-            return Redis[bytes](decode_responses=False, connection_pool=connection_pool)
+            return cls(decode_responses=False, connection_pool=connection_pool)
 
     def set_response_callback(self, command, callback):
         """

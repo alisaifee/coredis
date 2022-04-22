@@ -12,6 +12,7 @@ from packaging import version
 
 import coredis
 import coredis.connection
+import coredis.experimental
 import coredis.parsers
 import coredis.sentinel
 
@@ -74,6 +75,9 @@ async def check_test_constraints(request, client, protocol=2):
 
         if marker.name == "noresp3" and protocol == 3:
             return pytest.skip("Skipped for RESP3")
+
+        if marker.name == "nokeydb" and isinstance(client, coredis.experimental.KeyDB):
+            return pytest.skip("Skipped for KeyDB")
 
 
 async def set_default_test_config(client):
@@ -196,6 +200,13 @@ def redis_stack_server(docker_services):
     docker_services.start("redis-stack")
     docker_services.wait_for_service("redis-stack", 6379, ping_socket)
     yield ["localhost", 9379]
+
+
+@pytest.fixture(scope="session")
+def keydb_server(docker_services):
+    docker_services.start("keydb")
+    docker_services.wait_for_service("redis-basic", 6379, ping_socket)
+    yield ["localhost", 10379]
 
 
 @pytest.fixture
@@ -450,6 +461,39 @@ async def redis_sentinel_auth(redis_sentinel_auth_server, request):
     return sentinel
 
 
+@pytest.fixture
+async def keydb(keydb_server, request):
+    client = coredis.experimental.KeyDB(
+        "localhost", 10379, decode_responses=True, **get_client_test_args(request)
+    )
+    await check_test_constraints(request, client)
+    await client.flushall()
+    await set_default_test_config(client)
+
+    return client
+
+
+@pytest.fixture
+async def keydb_resp3(keydb_server, request):
+    client = coredis.experimental.KeyDB(
+        "localhost",
+        10379,
+        decode_responses=True,
+    )
+    await check_test_constraints(request, client, protocol=3)
+    client = coredis.experimental.KeyDB(
+        "localhost",
+        10379,
+        decode_responses=True,
+        protocol_version=3,
+        **get_client_test_args(request),
+    )
+    await client.flushall()
+    await set_default_test_config(client)
+
+    return client
+
+
 @pytest.fixture(scope="session")
 def docker_services_project_name():
     return "coredis"
@@ -502,5 +546,10 @@ def pytest_collection_modifyitems(items):
             client_name = item.callspec.params["client"].name
             if client_name.startswith("redis_"):
                 tokens = client_name.replace("redis_", "").split("_")
+                for token in tokens:
+                    item.add_marker(getattr(pytest.mark, token))
+            elif client_name.startswith("keydb"):
+                item.add_marker(getattr(pytest.mark, "keydb"))
+                tokens = client_name.replace("keydb_", "").split("_")
                 for token in tokens:
                     item.add_marker(getattr(pytest.mark, token))
