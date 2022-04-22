@@ -187,5 +187,5 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           artifacts: "dist/*"
-          body: ${{ steps.release_notes.BODY }}
+          body: "${{ steps.release_notes.BODY }}"
           token: ${{ secrets.GITHUB_TOKEN }}
