@@ -3,6 +3,21 @@
 Changelog
 =========
 
+v3.4.5
+------
+Release Date: 2022-04-22
+
+* Chore
+
+  * Fix incorrect type annotations for primitive callbacks
+  * Update test matrix in CI with python 3.11 a7
+  * Update documentation to provide a slightly more detailed
+    background around the project diversion
+
+* Experiments
+
+  * Add basic support for KeyDB
+
 v3.4.4
 ------
 Release Date: 2022-04-21
@@ -578,6 +593,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
