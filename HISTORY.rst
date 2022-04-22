@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v3.4.2
+------
+Release Date: 2022-04-21
+
+* Bug fix
+
+  * Fix error selecting database when ``decode_responses`` is ``True``
+    (`Issue 46 <https://github.com/alisaifee/coredis/issues/46>`_)
+
 v3.4.1
 ------
 Release Date: 2022-04-12
@@ -553,6 +562,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
