@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.abspath("./"))
 import coredis
 import coredis.sentinel
 import coredis.commands
+import coredis.experimental
 import coredis.typing
 from numbers import Number
 

@@ -284,3 +284,24 @@ General Exceptions
    :no-inherited-members:
 .. autoexception:: WatchError
    :no-inherited-members:
+
+
+Experimental
+^^^^^^^^^^^^
+
+:mod:`coredis.experimental`
+
+.. code-block:: text
+
+  This is pretty experimental stuff
+  You really shouldn't take this too seriously
+  If you did, how you?
+
+                                         - Ali
+
+.. currentmodule:: coredis.experimental
+
+KeyDB
+-----
+.. autoclass:: KeyDB
+   :no-inherited-members:

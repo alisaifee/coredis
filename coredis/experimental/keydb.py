@@ -128,6 +128,13 @@ KeyDB command documentation: {_keydb_command_link(command_name)}
 
 
 class KeyDB(Redis[AnyStr]):
+    """
+    Client for `KeyDB <https://keydb.dev>`__
+
+    The client is mostly :class:`coredis.Redis` with a couple of extra
+    commands specific to KeyDB.
+    """
+
     @keydb_command(
         CommandName.EXPIREMEMBER, CommandGroup.GENERIC, response_callback=BoolCallback()
     )

@@ -150,7 +150,9 @@ class RedisMeta(ABCMeta):
             if cmd := getattr(method, "__coredis_command", None):
                 if cmd.response_callback:
                     kls.RESPONSE_CALLBACKS[cmd.command] = cmd.response_callback
-                setattr(kls, name, add_runtime_checks(method))
+
+                if (wrapped := add_runtime_checks(method)) != method:
+                    setattr(kls, name, wrapped)
         return kls
 
 
