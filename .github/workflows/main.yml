@@ -93,6 +93,10 @@ jobs:
       if: ${{ matrix.parser == 'hiredis' }}
       run:
         pip install hiredis
+    - name: Install uvloop
+      if: ${{ matrix.uvloop == 'True' }}
+      run:
+        pip install uvloop
     - name: Tests
       env:
         COREDIS_UVLOOP: "{{matrix.uvloop}}"
