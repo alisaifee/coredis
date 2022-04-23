@@ -51,9 +51,9 @@ from coredis.exceptions import (
     UnknownCommandError,
     WatchError,
 )
+from coredis.nodemanager import Node, NodeFlag
 from coredis.pool import BlockingConnectionPool, ClusterConnectionPool, ConnectionPool
 from coredis.tokens import PureToken
-from coredis.utils import NodeFlag
 
 from . import _version
 
@@ -87,6 +87,7 @@ __all__ = [
     "InvalidResponse",
     "LockError",
     "MovedError",
+    "Node",
     "NodeFlag",
     "NoKeyError",
     "NoScriptError",

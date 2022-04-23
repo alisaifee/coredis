@@ -1,24 +1,43 @@
 from __future__ import annotations
 
 import datetime
-from typing import ClassVar
+from typing import Any
 
-from coredis.commands import ResponseCallback
+from coredis.response.callbacks import ResponseCallback
 from coredis.response.types import ClientInfo, RoleInfo, SlowLogInfo
 from coredis.response.utils import flat_pairs_to_dict
-from coredis.typing import Any, AnyStr, List, Mapping, Tuple, Union
+from coredis.typing import (
+    AnyStr,
+    ClassVar,
+    Dict,
+    Optional,
+    ResponsePrimitive,
+    ResponseType,
+    StringT,
+    Tuple,
+    Union,
+    ValueT,
+)
 from coredis.utils import EncodingInsensitiveDict, nativestr
 
 
-class TimeCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> datetime.datetime:
+class TimeCallback(ResponseCallback[ResponseType, ResponseType, datetime.datetime]):
+    def transform(
+        self, response: ResponseType, **options: Optional[ValueT]
+    ) -> datetime.datetime:
+
         return datetime.datetime.fromtimestamp(int(response[0])) + datetime.timedelta(
             microseconds=int(response[1]) / 1000.0
         )
 
 
-class SlowlogCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> Tuple[SlowLogInfo, ...]:
+class SlowlogCallback(
+    ResponseCallback[ResponseType, ResponseType, Tuple[SlowLogInfo, ...]]
+):
+    def transform(
+        self, response: ResponseType, **options: Optional[ValueT]
+    ) -> Tuple[SlowLogInfo, ...]:
+
         return tuple(
             SlowLogInfo(
                 id=item[0],
@@ -32,7 +51,7 @@ class SlowlogCallback(ResponseCallback):
         )
 
 
-class ClientInfoCallback(ResponseCallback):
+class ClientInfoCallback(ResponseCallback[ResponseType, ResponseType, ClientInfo]):
     INT_FIELDS: ClassVar = {
         "id",
         "fd",
@@ -52,7 +71,10 @@ class ClientInfoCallback(ResponseCallback):
         "redir",
     }
 
-    def transform(self, response: Any, **options: Any) -> ClientInfo:
+    def transform(
+        self, response: ResponseType, **options: Optional[ValueT]
+    ) -> ClientInfo:
+
         decoded_response = nativestr(response)
         pairs = [pair.split("=", 1) for pair in decoded_response.strip().split(" ")]
 
@@ -65,40 +87,58 @@ class ClientInfoCallback(ResponseCallback):
         return info
 
 
-class ClientListCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> Tuple[ClientInfo, ...]:
+class ClientListCallback(
+    ResponseCallback[ResponseType, ResponseType, Tuple[ClientInfo, ...]]
+):
+    def transform(
+        self, response: ResponseType, **options: Optional[ValueT]
+    ) -> Tuple[ClientInfo, ...]:
+
         return tuple(ClientInfoCallback()(c) for c in response.splitlines())
 
 
-class DebugCallback(ResponseCallback):
+class DebugCallback(
+    ResponseCallback[ResponseType, ResponseType, Dict[str, Union[str, int]]]
+):
     INT_FIELDS: ClassVar = {"refcount", "serializedlength", "lru", "lru_seconds_idle"}
 
     def transform(
-        self, response: Any, **options: Any
-    ) -> Mapping[AnyStr, Union[AnyStr, int]]:
+        self, response: ResponseType, **options: Optional[ValueT]
+    ) -> Dict[str, Union[str, int]]:
         # The 'type' of the object is the first item in the response, but isn't
         # prefixed with a name
+
         response = nativestr(response)
         response = "type:" + response
-        response = dict([kv.split(":") for kv in response.split()])
+        parsed: Dict[str, Union[str, int]] = {}
+        parsed.update(dict([kv.split(":") for kv in response.split()]))
 
         # parse some expected int values from the string response
         # note: this cmd isn't spec'd so these may not appear in all redis versions
 
         for field in DebugCallback.INT_FIELDS:
-            if field in response:
-                response[field] = int(response[field])
+            if field in parsed:
+                parsed[field] = int(parsed[field])
 
-        return response
+        return parsed
 
 
-class InfoCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> Mapping[AnyStr, List[AnyStr]]:
+class InfoCallback(
+    ResponseCallback[
+        StringT,
+        StringT,
+        Dict[str, ResponseType],
+    ]
+):
+    def transform(
+        self, response: StringT, **options: Optional[ValueT]
+    ) -> Dict[str, ResponseType]:
         """Parses the result of Redis's INFO command into a Python dict"""
-        info = {}
+
+        info: Dict[str, Any] = {}
         response = nativestr(response)
 
-        def get_value(value):
+        def get_value(value: str) -> ResponseType:
             if "," not in value or "=" not in value:
                 try:
                     if "." in value:
@@ -108,7 +148,7 @@ class InfoCallback(ResponseCallback):
                 except ValueError:
                     return value
             else:
-                sub_dict = {}
+                sub_dict: Dict[ResponsePrimitive, ResponseType] = {}
 
                 for item in value.split(","):
                     k, v = item.rsplit("=", 1)
@@ -128,13 +168,16 @@ class InfoCallback(ResponseCallback):
         return info
 
 
-class RoleCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> RoleInfo:
+class RoleCallback(ResponseCallback[ResponseType, ResponseType, RoleInfo]):
+    def transform(
+        self, response: ResponseType, **options: Optional[ValueT]
+    ) -> RoleInfo:
+
         role = nativestr(response[0])
 
-        def _parse_master(response):
+        def _parse_master(response: Any) -> Any:
             offset, slaves = response[1:]
-            res = {"role": role, "offset": offset, "slaves": []}
+            res: Dict[str, Any] = {"role": role, "offset": offset, "slaves": []}
 
             for slave in slaves:
                 host, port, offset = slave
@@ -144,7 +187,7 @@ class RoleCallback(ResponseCallback):
 
             return res
 
-        def _parse_slave(response):
+        def _parse_slave(response: Any) -> Any:
             host, port, status, offset = response[1:]
 
             return dict(
@@ -155,7 +198,7 @@ class RoleCallback(ResponseCallback):
                 offset=offset,
             )
 
-        def _parse_sentinel(response):
+        def _parse_sentinel(response: Any) -> Any:
             return RoleInfo(role=role, masters=response[1:])
 
         parser = {
@@ -166,8 +209,13 @@ class RoleCallback(ResponseCallback):
         return RoleInfo(**parser(response))  # type: ignore
 
 
-class LatencyHistogramCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> Mapping[AnyStr, Mapping]:
+class LatencyHistogramCallback(
+    ResponseCallback[ResponseType, ResponseType, Dict[AnyStr, Dict[AnyStr, ValueT]]]
+):
+    def transform(
+        self, response: ResponseType, **options: Optional[ValueT]
+    ) -> Dict[AnyStr, Dict[AnyStr, ValueT]]:
+
         histogram = flat_pairs_to_dict(response)
         for key, value in histogram.items():
             histogram[key] = EncodingInsensitiveDict(flat_pairs_to_dict(value))
@@ -175,3 +223,13 @@ class LatencyHistogramCallback(ResponseCallback):
                 histogram[key]["histogram_usec"]
             )
         return histogram
+
+
+class LatencyCallback(
+    ResponseCallback[ResponseType, ResponseType, Dict[AnyStr, Tuple[int, int, int]]]
+):
+    def transform(
+        self, response: ResponseType, **options: Optional[ValueT]
+    ) -> Dict[AnyStr, Tuple[int, int, int]]:
+
+        return {k[0]: (k[1], k[2], k[3]) for k in response}

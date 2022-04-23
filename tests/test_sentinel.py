@@ -44,7 +44,7 @@ class SentinelTestCluster:
             "is_master": True,
             "is_sdown": False,
             "is_odown": False,
-            "num_other_sentinels": 0,
+            "num-other-sentinels": 0,
         }
         self.service_name = service_name
         self.replicas = []
@@ -119,7 +119,7 @@ async def test_master_min_other_sentinels(cluster):
     # min_other_sentinels
     with pytest.raises(PrimaryNotFoundError):
         await sentinel.discover_primary("localhost-redis-sentinel")
-    cluster.primary["num_other_sentinels"] = 2
+    cluster.primary["num-other-sentinels"] = 2
     address = await sentinel.discover_primary("localhost-redis-sentinel")
     assert address == ("127.0.0.1", 6379)
 
@@ -184,7 +184,7 @@ async def test_discover_replicas(cluster, sentinel):
 async def test_primary_for(redis_sentinel, host_ip):
     primary = redis_sentinel.primary_for("localhost-redis-sentinel")
     assert await primary.ping()
-    assert primary.connection_pool.master_address == (host_ip, 6380)
+    assert primary.connection_pool.primary_address == (host_ip, 6380)
 
     # Use internal connection check
     primary = redis_sentinel.primary_for(

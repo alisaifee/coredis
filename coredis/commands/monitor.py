@@ -3,8 +3,9 @@ from __future__ import annotations
 import asyncio
 import threading
 import weakref
-from asyncio import CancelledError
+from asyncio import AbstractEventLoop, CancelledError
 from concurrent.futures import Future
+from typing import Any, AnyStr, Generic
 
 from coredis.commands import CommandName
 from coredis.exceptions import RedisError
@@ -16,7 +17,7 @@ if TYPE_CHECKING:
     import coredis.connection
 
 
-class Monitor:
+class Monitor(Generic[AnyStr]):
     """
     Monitor is useful for handling the ``MONITOR`` command to the redis server.
 
@@ -48,7 +49,7 @@ class Monitor:
         assert client
         return client
 
-    def __aiter__(self) -> Monitor:
+    def __aiter__(self) -> Monitor[AnyStr]:
         return self
 
     async def __anext__(self) -> MonitorResult:
@@ -67,9 +68,10 @@ class Monitor:
         response = await self.connection.read_response()
         if isinstance(response, bytes):
             response = response.decode(self.encoding)
+        assert isinstance(response, str)
         return MonitorResult.parse_response_string(response)
 
-    async def stop(self):
+    async def stop(self) -> None:
         """
         Stop monitoring by issuing a ``RESET`` command
         and release the connection.
@@ -77,7 +79,9 @@ class Monitor:
         return await self.__stop_monitoring()
 
     def run_in_thread(
-        self, response_handler=Callable[[MonitorResult], None], loop=None
+        self,
+        response_handler: Callable[[MonitorResult], None],
+        loop: Optional[AbstractEventLoop] = None,
     ) -> MonitorThread:
         """
         Runs the monitor in a :class:`MonitorThread` and invokes :paramref:`response_handler`
@@ -93,11 +97,11 @@ class Monitor:
         monitor_thread.start()
         return monitor_thread
 
-    async def __connect(self):
+    async def __connect(self) -> None:
         if self.connection is None:
             self.connection = await self.client.connection_pool.get_connection()
 
-    async def __start_monitor(self):
+    async def __start_monitor(self) -> None:
         if self.monitoring:
             return
         await self.__connect()
@@ -105,10 +109,10 @@ class Monitor:
         await self.connection.send_command(CommandName.MONITOR)
         response = await self.connection.read_response(decode=False)
         if not response == b"OK":  # noqa
-            raise RedisError(f"Failed to start MONITOR {response}")
+            raise RedisError(f"Failed to start MONITOR {response!r}")
         self.monitoring = True
 
-    async def __stop_monitoring(self):
+    async def __stop_monitoring(self) -> None:
         if self.connection:
             await self.connection.send_command(CommandName.RESET)
             response = await self.connection.read_response(decode=False)
@@ -116,7 +120,7 @@ class Monitor:
                 raise RedisError("Failed to reset connection")
         self.__reset()
 
-    def __reset(self):
+    def __reset(self) -> None:
         if self.connection:
             self.connection.disconnect()
             self.client.connection_pool.release(self.connection)
@@ -131,7 +135,7 @@ class MonitorThread(threading.Thread):
 
     def __init__(
         self,
-        monitor: Monitor,
+        monitor: Monitor[Any],
         loop: asyncio.events.AbstractEventLoop,
         response_handler: Callable[[MonitorResult], None],
     ):
@@ -141,16 +145,16 @@ class MonitorThread(threading.Thread):
         self._future: Optional[Future[None]] = None
         super().__init__()
 
-    def run(self):
+    def run(self) -> None:
         self._future = asyncio.run_coroutine_threadsafe(self._run(), self._loop)
 
-    async def _run(self):
+    async def _run(self) -> None:
         try:
             async for command in self._monitor:
                 self._response_handler(command)
         except CancelledError:
             await self._monitor.stop()
 
-    def stop(self):
+    def stop(self) -> None:
         if self._future:
             self._future.cancel()

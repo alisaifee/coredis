@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import os
 import warnings
-from abc import ABC, abstractmethod
-from numbers import Number
 from typing import (
     TYPE_CHECKING,
     AbstractSet,
@@ -22,6 +20,8 @@ from typing import (
     Literal,
     Mapping,
     MutableMapping,
+    MutableSequence,
+    MutableSet,
     NamedTuple,
     Optional,
     Protocol,
@@ -35,14 +35,17 @@ from typing import (
 
 from typing_extensions import (
     Deque,
+    NotRequired,
     OrderedDict,
     ParamSpec,
+    Required,
+    Self,
     TypeAlias,
     TypedDict,
-    runtime_checkable,
+    TypeGuard,
 )
 
-RUNTIME_TYPECHECKS = False
+_runtime_checks = False
 
 if os.environ.get("COREDIS_RUNTIME_CHECKS", "").lower() in ["1", "true", "t"]:
     try:
@@ -50,12 +53,16 @@ if os.environ.get("COREDIS_RUNTIME_CHECKS", "").lower() in ["1", "true", "t"]:
 
         if not TYPE_CHECKING:
             from beartype.typing import (  # noqa: F811
+                AbstractSet,
                 Deque,
                 Dict,
                 Iterable,
                 Iterator,
                 List,
                 Mapping,
+                MutableMapping,
+                MutableSequence,
+                MutableSet,
                 OrderedDict,
                 Sequence,
                 Set,
@@ -63,103 +70,62 @@ if os.environ.get("COREDIS_RUNTIME_CHECKS", "").lower() in ["1", "true", "t"]:
                 TypedDict,
             )
 
-        RUNTIME_TYPECHECKS = True
+        _runtime_checks = True
     except ImportError:  # noqa
         warnings.warn("Runtime checks were requested but could not import beartype")
 
-CommandArgList = List[Union[str, bytes, float, Number]]
-
+RUNTIME_TYPECHECKS = _runtime_checks
 
 P = ParamSpec("P")
 R = TypeVar("R")
 
-KeyT: TypeAlias = Union[str, bytes]
-ValueT: TypeAlias = Union[str, bytes, int, float]
-StringT: TypeAlias = KeyT
-
-# TODO: mypy can't handle recursive types
-ResponseType = Optional[
-    Union[
-        StringT,
-        int,
-        float,
-        bool,
-        AbstractSet,
-        List,
-        Tuple,
-        Mapping,
-        # AbstractSet["ResponseType"],
-        # List["ResponseType"],
-        # Mapping["ResponseType", "ResponseType"],
-        Exception,
-    ]
-]
-
 
 def add_runtime_checks(func: Callable[P, R]) -> Callable[P, R]:
-    if RUNTIME_TYPECHECKS:
+    if RUNTIME_TYPECHECKS and not TYPE_CHECKING:
         return beartype.beartype(func)
 
     return func
 
 
-@runtime_checkable
-class SupportsWatch(Protocol):  # noqa
-    async def __aenter__(self) -> "SupportsWatch":
-        ...
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        ...
-
-    async def watch(self, *keys: KeyT) -> bool:
-        ...
-
-    async def execute(self, raise_on_error=True) -> Any:
-        ...
+CommandArgList = List[Union[str, bytes, int, float]]
 
 
-@runtime_checkable
-class SupportsScript(Protocol):  # noqa
-    async def evalsha(
-        self,
-        sha1: StringT,
-        keys: Optional[Iterable[KeyT]] = None,
-        args: Optional[Iterable[ValueT]] = None,
-    ) -> Any:
-        ...
+KeyT: TypeAlias = Union[str, bytes]
+ValueT: TypeAlias = Union[str, bytes, int, float]
+StringT: TypeAlias = KeyT
 
-    async def evalsha_ro(
-        self,
-        sha1: StringT,
-        keys: Optional[Iterable[KeyT]] = None,
-        args: Optional[Iterable[ValueT]] = None,
-    ) -> Any:
-        ...
+ResponsePrimitive: TypeAlias = Optional[Union[StringT, int, float, bool]]
 
-    async def script_load(self, script: StringT) -> AnyStr:
-        ...
-
-
-@runtime_checkable
-class SupportsPipeline(Protocol):  # noqa
-    async def pipeline(
-        self,
-        transaction: Optional[bool] = True,
-        watches: Optional[Iterable[StringT]] = None,
-    ) -> SupportsWatch:
-        ...
+# TODO: use a recursive definition of ResponseType
+#
+# Currently unsupported by mypy & beartype.
+#    ResponseType = Union[
+#        ResponsePrimitive,
+#        List["ResponseType"],
+#        List[ResponsePrimitive],
+#        Set[ResponsePrimitive],
+#        #Dict[ResponsePrimitive, ResponsePrimitive],
+#        Dict[ResponsePrimitive, "ResponseType"],
+#        BaseException,
+#    ]
+ResponseType = Union[
+    ResponsePrimitive,
+    List[Any],
+    Set[ResponsePrimitive],
+    Dict[ResponsePrimitive, Any],
+    BaseException,
+]
 
 
-class AbstractExecutor(ABC, Generic[AnyStr]):
-    @abstractmethod
-    async def execute_command(self, command: bytes, *args: Any, **options: Any) -> Any:
-        pass
+class PubSubMessage(TypedDict):
+    type: str
+    pattern: Optional[StringT]
+    channel: StringT
+    data: StringT
 
 
 __all__ = [
-    "AbstractExecutor",
     "AbstractSet",
-    "Any",
     "AnyStr",
     "AsyncGenerator",
     "Awaitable",
@@ -177,20 +143,24 @@ __all__ = [
     "Literal",
     "Mapping",
     "MutableMapping",
+    "MutableSet",
+    "MutableSequence",
     "NamedTuple",
+    "NotRequired",
     "OrderedDict",
     "Optional",
     "ParamSpec",
     "Protocol",
+    "Required",
+    "ResponsePrimitive",
     "ResponseType",
+    "Self",
     "Sequence",
     "Set",
-    "SupportsWatch",
-    "SupportsScript",
-    "SupportsPipeline",
     "StringT",
     "Tuple",
     "Type",
+    "TypeGuard",
     "TypedDict",
     "TypeVar",
     "Union",

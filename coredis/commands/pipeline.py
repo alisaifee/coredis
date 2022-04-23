@@ -8,13 +8,17 @@ from abc import ABCMeta
 from concurrent.futures import CancelledError
 from dataclasses import dataclass, field
 from itertools import chain
-from typing import Generic
+from types import TracebackType
+from typing import Any, cast
 
-import wrapt
+from wrapt import ObjectProxy  # type: ignore
 
-from coredis.client import AbstractRedis, ResponseParser
+from coredis import NodeFlag
+from coredis.client import AbstractRedis
 from coredis.commands import CommandName
 from coredis.commands.key_spec import KeySpec
+from coredis.commands.script import Script
+from coredis.connection import BaseConnection, ClusterConnection
 from coredis.exceptions import (
     AskError,
     ClusterCrossSlotError,
@@ -29,23 +33,35 @@ from coredis.exceptions import (
     TryAgainError,
     WatchError,
 )
-from coredis.pool import ClusterConnectionPool
+from coredis.nodemanager import Node
+from coredis.pool import ClusterConnectionPool, ConnectionPool
+from coredis.response.callbacks import (
+    AnyStrCallback,
+    BoolCallback,
+    BoolsCallback,
+    NoopCallback,
+    SimpleStringCallback,
+)
 from coredis.typing import (
-    Any,
     AnyStr,
-    Awaitable,
     Callable,
+    Coroutine,
     Dict,
+    Generic,
     Iterable,
     KeyT,
     List,
     Optional,
     ParamSpec,
+    ResponseType,
+    Set,
+    StringT,
     Tuple,
+    Type,
     TypeVar,
     ValueT,
 )
-from coredis.utils import NodeFlag, clusterdown_wrapper
+from coredis.utils import clusterdown_wrapper
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -61,10 +77,10 @@ ERRORS_ALLOW_RETRY = (
 
 
 def wrap_pipeline_method(
-    kls: PipelineMeta, func: Callable[P, Awaitable]
-) -> Callable[P, Awaitable]:
+    kls: PipelineMeta, func: Callable[P, Coroutine[Any, Any, R]]
+) -> Callable[P, Coroutine[Any, Any, R]]:
     @functools.wraps(func)
-    async def wrapper(*args: P.args, **kwargs: P.kwargs):
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         return await func(*args, **kwargs)
 
     wrapper.__annotations__ = wrapper.__annotations__.copy()
@@ -85,35 +101,40 @@ and retrieve responses for the commands executed in the pipeline.
 
 @dataclass
 class PipelineCommand:
-    args: Tuple[Any, ...]
-    options: Dict[Any, Any] = field(default_factory=dict)
+    command: bytes
+    args: Tuple[ValueT, ...]
+    callback: Callable[..., Any] = NoopCallback()  # type: ignore
+    options: Dict[str, Optional[ValueT]] = field(default_factory=dict)
 
 
 @dataclass
 class ClusterPipelineCommand(PipelineCommand):
     position: int = 0
-    result: Optional[Any] = None
-    node: Optional[Any] = None
+    result: Optional[Any] = None  # type: ignore
     asking: bool = False
 
 
 class NodeCommands:
     def __init__(
-        self, parse_response, response_callbacks, connection, in_transaction=False
+        self,
+        parse_response: Callable[..., Coroutine[Any, Any, ResponseType]],
+        response_callbacks: Dict[bytes, Callable[..., Any]],
+        connection: ClusterConnection,
+        in_transaction: bool = False,
     ):
         self.parse_response = parse_response
         self.connection = connection
-        self.commands = []
+        self.commands: List[ClusterPipelineCommand] = []
         self.in_transaction = in_transaction
         self.response_callbacks = response_callbacks
 
-    def extend(self, c):
+    def extend(self, c: List[ClusterPipelineCommand]) -> None:
         self.commands.extend(c)
 
-    def append(self, c):
+    def append(self, c: ClusterPipelineCommand) -> None:
         self.commands.append(c)
 
-    async def write(self):
+    async def write(self) -> None:
         """NOTE: Code was borrowed from Redis so it can be fixed"""
         connection = self.connection
         commands = self.commands
@@ -128,13 +149,13 @@ class NodeCommands:
         # send all the commands and catch connection and timeout errors.
         try:
             await connection.send_packed_command(
-                connection.pack_commands([c.args for c in commands])
+                connection.pack_commands([(c.command,) + c.args for c in commands])
             )
         except (ConnectionError, TimeoutError) as e:
             for c in commands:
                 c.result = e
 
-    async def read(self):
+    async def read(self) -> None:
         connection = self.connection
         success = True
 
@@ -156,7 +177,7 @@ class NodeCommands:
                     if self.in_transaction:
                         cmd = "_"
                     else:
-                        cmd = c.args[0]
+                        cmd = c.command
                     c.result = await self.parse_response(connection, cmd, **c.options)
                 except ExecAbortError:
                     raise
@@ -172,30 +193,29 @@ class NodeCommands:
             transaction_result = []
             if success:
                 for c in self.commands:
-                    if c.args[0] == CommandName.EXEC:
-                        transaction_result = c.result
+                    if c.command == CommandName.EXEC:
+                        transaction_result = cast(List[ResponseType], c.result)
             for idx, c in enumerate(
                 [
                     _c
                     for _c in sorted(self.commands, key=lambda x: x.position)
-                    if _c.args[0] not in {CommandName.MULTI, CommandName.EXEC}
+                    if _c.command not in {CommandName.MULTI, CommandName.EXEC}
                 ]
             ):
-                callback = self.response_callbacks.get(c.args[0], None)
-                if callback:
-                    result = callback(transaction_result[idx], **c.options)
-                else:
-                    result = transaction_result[idx]
-                c.result = result
+                callback = self.response_callbacks.get(c.command, c.callback)
+                c.result = callback(
+                    transaction_result[idx],
+                    version=connection.protocol_version,
+                    **c.options,
+                )
 
 
 class PipelineMeta(ABCMeta):
-    RESPONSE_CALLBACKS: Dict[str, Callable]
-    RESULT_CALLBACKS: Dict[str, Callable]
+    RESULT_CALLBACKS: Dict[str, Callable[..., Any]]
     NODES_FLAGS: Dict[str, NodeFlag]
 
-    def __new__(cls, name, bases, dct):
-        kls = super().__new__(cls, name, bases, dct)
+    def __new__(cls, name: str, bases: Tuple[type, ...], namespace: Dict[str, object]):
+        kls = super().__new__(cls, name, bases, namespace)
 
         for name, method in PipelineMeta.get_methods(kls).items():
             if getattr(method, "__coredis_command", None):
@@ -204,19 +224,17 @@ class PipelineMeta(ABCMeta):
         return kls
 
     @staticmethod
-    def get_methods(kls) -> Dict[str, Callable]:
+    def get_methods(kls: PipelineMeta) -> Dict[str, Callable[..., Any]]:
         return dict(k for k in inspect.getmembers(kls) if inspect.isfunction(k[1]))
 
 
 class ClusterPipelineMeta(PipelineMeta):
-    def __new__(cls, name, bases, dct):
-        kls = super().__new__(cls, name, bases, dct)
+    def __new__(cls, name: str, bases: Tuple[type, ...], namespace: Dict[str, object]):
+        kls = super().__new__(cls, name, bases, namespace)
         for name, method in ClusterPipelineMeta.get_methods(kls).items():
             if cmd := getattr(method, "__coredis_command", None):
                 if cmd.cluster.flag:
                     kls.NODES_FLAGS[cmd.command] = cmd.cluster.flag
-                if cmd.response_callback:
-                    kls.RESPONSE_CALLBACKS[cmd.command] = cmd.response_callback
                 if cmd.cluster.multi_node:
                     kls.RESULT_CALLBACKS[cmd.command] = cmd.cluster.combine or (
                         lambda r, **_: r
@@ -252,7 +270,12 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
     command_stack: List[PipelineCommand]
     UNWATCH_COMMANDS = {CommandName.DISCARD, CommandName.EXEC, CommandName.UNWATCH}
 
-    def __init__(self, connection_pool, response_callbacks, transaction):
+    def __init__(
+        self,
+        connection_pool: ConnectionPool,
+        response_callbacks: Dict[bytes, Callable[..., Any]],
+        transaction: Optional[bool],
+    ) -> None:
         self.connection_pool = connection_pool
         self.connection = None
         self.response_callbacks = response_callbacks
@@ -260,25 +283,30 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
         self.watching = False
         self.command_stack = []
 
-    async def __aenter__(self) -> "PipelineImpl":
+    async def __aenter__(self) -> "PipelineImpl[AnyStr]":
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.reset()
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
+        await self.reset_pipeline()
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.command_stack)
 
-    async def reset(self):
+    async def reset_pipeline(self) -> None:
         self.command_stack.clear()
-        self.scripts = set()
+        self.scripts: Set[Script[AnyStr]] = set()
         # make sure to reset the connection state in the event that we were
         # watching something
 
         if self.watching and self.connection:
             try:
                 # call this manually since our unwatch or
-                # immediate_execute_command methods can call reset()
+                # immediate_execute_command methods can call reset_pipeline()
                 await self.connection.send_command(CommandName.UNWATCH)
                 await self.connection.read_response()
             except ConnectionError:
@@ -294,7 +322,7 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
             self.connection_pool.release(self.connection)
             self.connection = None
 
-    def multi(self):
+    def multi(self) -> None:
         """
         Starts a transactional block of the pipeline after WATCH commands
         are issued. End the transactional block with `execute`.
@@ -309,15 +337,31 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
             )
         self.explicit_transaction = True
 
-    async def execute_command(self, *args, **kwargs) -> Any:
+    async def execute_command(
+        self,
+        command: bytes,
+        *args: ValueT,
+        callback: Callable[..., Any] = NoopCallback(),  # type: ignore
+        **options: Optional[ValueT],
+    ) -> PipelineImpl[AnyStr]:  # type: ignore
         if (
-            self.watching or args[0] == CommandName.WATCH
+            self.watching or command == CommandName.WATCH
         ) and not self.explicit_transaction:
-            return await self.immediate_execute_command(*args, **kwargs)
+            return await self.immediate_execute_command(
+                command, *args, callback=callback, **options
+            )  # type: ignore
 
-        return self.pipeline_execute_command(*args, **kwargs)
+        return self.pipeline_execute_command(
+            command, *args, callback=callback, **options
+        )
 
-    async def immediate_execute_command(self, *args, **kwargs):
+    async def immediate_execute_command(
+        self,
+        command: bytes,
+        *args: ValueT,
+        callback: Callable[..., Any] = NoopCallback(),  # type: ignore
+        **kwargs: Optional[ValueT],
+    ) -> Any:  # type: ignore
         """
         Executes a command immediately, but don't auto-retry on a
         ConnectionError if we're already WATCHing a variable. Used when
@@ -326,7 +370,6 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
 
         :meta private:
         """
-        command_name = args[0]
         conn = self.connection
         # if this is the first call, we need a connection
 
@@ -334,9 +377,12 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
             conn = await self.connection_pool.get_connection()
             self.connection = conn
         try:
-            await conn.send_command(*args)
+            await conn.send_command(command, *args)
 
-            return await self.parse_response(conn, command_name, **kwargs)
+            return callback(
+                await self.parse_response(conn, command, **kwargs),
+                version=conn.protocol_version,
+            )
         except (ConnectionError, TimeoutError) as e:
             conn.disconnect()
 
@@ -345,16 +391,25 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
             # if we're not already watching, we can safely retry the command
             try:
                 if not self.watching:
-                    await conn.send_command(*args)
+                    await conn.send_command(command, *args)
 
-                    return await self.parse_response(conn, command_name, **kwargs)
+                    return callback(
+                        await self.parse_response(conn, command, **kwargs),
+                        version=conn.protocol_version,
+                    )
             except ConnectionError:
                 # the retry failed so cleanup.
                 conn.disconnect()
-                await self.reset()
+                await self.reset_pipeline()
                 raise
 
-    def pipeline_execute_command(self, *args, **options):
+    def pipeline_execute_command(
+        self,
+        command: bytes,
+        *args: ValueT,
+        callback: Callable[..., Any],
+        **options: Optional[ValueT],
+    ) -> PipelineImpl[AnyStr]:
         """
         Stages a command to be executed next execute() invocation
 
@@ -368,20 +423,27 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
 
         :meta private:
         """
-        self.command_stack.append(PipelineCommand(args=args, options=options))
+        self.command_stack.append(
+            PipelineCommand(
+                command=command, args=args, options=options, callback=callback
+            )
+        )
 
         return self
 
     async def _execute_transaction(
-        self, connection, commands, raise_on_error
+        self,
+        connection: BaseConnection,
+        commands: List[PipelineCommand],
+        raise_on_error: bool,
     ) -> Tuple[Any, ...]:
 
         cmds = chain(
-            [PipelineCommand(args=(CommandName.MULTI,))],
+            [PipelineCommand(command=CommandName.MULTI, args=())],
             commands,
-            [PipelineCommand(args=(CommandName.EXEC,))],
+            [PipelineCommand(command=CommandName.EXEC, args=())],
         )
-        all_cmds = connection.pack_commands([cmd.args for cmd in cmds])
+        all_cmds = connection.pack_commands([(cmd.command,) + cmd.args for cmd in cmds])
         await connection.send_packed_command(all_cmds)
         errors: List[Tuple[int, Optional[BaseException]]] = []
 
@@ -390,7 +452,7 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
         # so that we read all the additional command messages from
         # the socket
         try:
-            await self.parse_response(connection, "_")
+            await self.parse_response(connection, b"_")
         except ResponseError:
             errors.append((0, sys.exc_info()[1]))
 
@@ -398,18 +460,24 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
 
         for i, cmd in enumerate(commands):
             try:
-                await self.parse_response(connection, "_")
+                await self.parse_response(connection, b"_")
             except ResponseError:
                 ex = sys.exc_info()[1]
-                self.annotate_exception(ex, i + 1, cmd.args)
+                self.annotate_exception(ex, i + 1, cmd.command, cmd.args)
                 errors.append((i, ex))
 
         # parse the EXEC.
+        response: List[ResponseType]
+
         try:
-            response = await self.parse_response(connection, "_")
+            response = cast(
+                List[ResponseType], await self.parse_response(connection, b"_")
+            )
         except ExecAbortError:
             if self.explicit_transaction:
-                await self.immediate_execute_command(CommandName.DISCARD)
+                await self.immediate_execute_command(
+                    CommandName.DISCARD, callback=BoolCallback()
+                )
 
             if errors and errors[0][1]:
                 raise errors[0][1]
@@ -436,33 +504,43 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
             self.raise_first_error(commands, response)
 
         # We have to run response callbacks manually
-        data = []
+        data: List[Any] = []
 
         for r, cmd in zip(response, commands):
             if not isinstance(r, Exception):
-                command_name = cmd.args[0]
 
-                if command_name in self.response_callbacks:
-                    callback = self.response_callbacks[command_name]
-                    r = callback(r, version=connection.protocol_version, **cmd.options)
-                    if inspect.isawaitable(response):
-                        r = await r
+                callback = self.response_callbacks.get(cmd.command, cmd.callback)
+                r = callback(r, version=connection.protocol_version, **cmd.options)
+                if inspect.isawaitable(response):
+                    r = await r
 
             data.append(r)
 
         return tuple(data)
 
-    async def _execute_pipeline(self, connection, commands, raise_on_error):
+    async def _execute_pipeline(
+        self,
+        connection: BaseConnection,
+        commands: List[PipelineCommand],
+        raise_on_error: bool,
+    ) -> Tuple[Any, ...]:
         # build up all commands into a single request to increase network perf
-        all_cmds = connection.pack_commands([cmd.args for cmd in commands])
+        all_cmds = connection.pack_commands(
+            [(cmd.command,) + cmd.args for cmd in commands]
+        )
         await connection.send_packed_command(all_cmds)
 
-        response = []
+        response: List[Any] = []
 
         for cmd in commands:
             try:
                 response.append(
-                    await self.parse_response(connection, cmd.args[0], **cmd.options)
+                    cmd.callback(
+                        await self.parse_response(
+                            connection, cmd.command, **cmd.options
+                        ),
+                        **cmd.options,
+                    )
                 )
             except ResponseError:
                 response.append(sys.exc_info()[1])
@@ -472,33 +550,56 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
 
         return tuple(response)
 
-    def raise_first_error(self, commands, response):
+    def raise_first_error(
+        self, commands: List[PipelineCommand], response: ResponseType
+    ) -> None:
+        assert isinstance(response, list)
         for i, r in enumerate(response):
             if isinstance(r, ResponseError):
-                self.annotate_exception(r, i + 1, commands[i].args)
+                self.annotate_exception(r, i + 1, commands[i].command, commands[i].args)
                 raise r
 
-    def annotate_exception(self, exception, number, command):
-        cmd = command[0].decode("latin-1")
-        args = " ".join(map(str, command[1:]))
-        msg = "Command # {} ({} {}) of pipeline caused error: {}".format(
-            number,
-            cmd,
-            args,
-            str(exception.args[0]),
-        )
-        exception.args = (msg,) + exception.args[1:]
+    def annotate_exception(
+        self,
+        exception: Optional[BaseException],
+        number: int,
+        command: bytes,
+        args: Iterable[ValueT],
+    ) -> None:
+        if exception:
+            cmd = command.decode("latin-1")
+            args = " ".join(map(str, args))
+            msg = "Command # {} ({} {}) of pipeline caused error: {}".format(
+                number,
+                cmd,
+                args,
+                str(exception.args[0]),
+            )
+            exception.args = (msg,) + exception.args[1:]
 
-    async def _parse(self, connection, command_name, **options):
+    async def _parse(
+        self,
+        connection: BaseConnection,
+        command_name: bytes,
+        **options: Optional[ValueT],
+    ) -> ResponseType:
         "Parses a response from the Redis server"
-        response = await connection.read_response()
+        decode = options.get("decode")
+        response = await connection.read_response(
+            decode=decode if decode is None else bool(decode)
+        )
         if command_name in self.response_callbacks:
             callback = self.response_callbacks[command_name]
             response = callback(response, **options)
 
         return response
 
-    async def parse_response(self, connection, command_name, **options):
+    async def parse_response(
+        self,
+        connection: BaseConnection,
+        command_name: bytes,
+        **options: Optional[ValueT],
+    ) -> ResponseType:
         result = await self._parse(connection, command_name, **options)
 
         if command_name in self.UNWATCH_COMMANDS:
@@ -515,14 +616,20 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
         shas = [s.sha for s in scripts]
         # we can't use the normal script_* methods because they would just
         # get buffered in the pipeline.
-        exists = await immediate(CommandName.SCRIPT_EXISTS, *shas)
+        exists = await immediate(
+            CommandName.SCRIPT_EXISTS, *shas, callback=BoolsCallback()
+        )
 
         if not all(exists):
             for s, exist in zip(scripts, exists):
                 if not exist:
-                    s.sha = await immediate(CommandName.SCRIPT_LOAD, s.script)
+                    s.sha = await immediate(
+                        CommandName.SCRIPT_LOAD,
+                        s.script,
+                        callback=AnyStrCallback[AnyStr](),
+                    )
 
-    async def execute(self, raise_on_error=True) -> Tuple[Any, ...]:
+    async def execute(self, raise_on_error: bool = True) -> Tuple[Any, ...]:
         """Executes all the commands in the current pipeline"""
         stack = self.command_stack
 
@@ -541,7 +648,7 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
 
         if not conn:
             conn = await self.connection_pool.get_connection()
-            # assign to self.connection so reset() releases the connection
+            # assign to self.connection so reset_pipeline() releases the connection
             # back to the pool after we're done
             self.connection = conn
 
@@ -567,7 +674,7 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
 
             return await exec(conn, stack, raise_on_error)
         finally:
-            await self.reset()
+            await self.reset_pipeline()
 
     async def watch(self, *keys: KeyT) -> bool:
         """
@@ -577,34 +684,39 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
         if self.explicit_transaction:
             raise RedisError("Cannot issue a WATCH after a MULTI")
 
-        return await self.execute_command(CommandName.WATCH, *keys)
+        return await self.immediate_execute_command(
+            CommandName.WATCH, *keys, callback=SimpleStringCallback()
+        )
 
     async def unwatch(self) -> bool:
         """Unwatches all previously specified keys"""
 
-        return self.watching and await self.execute_command(CommandName.UNWATCH) or True
+        return (
+            await self.immediate_execute_command(
+                CommandName.UNWATCH, callback=SimpleStringCallback()
+            )
+            if self.watching
+            else True
+        )
 
 
-class ClusterPipelineImpl(
-    AbstractRedis[AnyStr], ResponseParser, metaclass=ClusterPipelineMeta
-):
+class ClusterPipelineImpl(AbstractRedis[AnyStr], metaclass=ClusterPipelineMeta):
 
     connection_pool: ClusterConnectionPool
     command_stack: List[ClusterPipelineCommand]
 
-    RESPONSE_CALLBACKS: Dict[str, Callable] = {}
-    RESULT_CALLBACKS: Dict[str, Callable] = {}
+    RESULT_CALLBACKS: Dict[str, Callable[..., Any]] = {}
     NODES_FLAGS: Dict[str, NodeFlag] = {}
 
     def __init__(
         self,
         connection_pool: ClusterConnectionPool,
-        result_callbacks=None,
-        response_callbacks=None,
-        startup_nodes=None,
+        result_callbacks: Optional[Dict[bytes, Callable[..., Any]]] = None,
+        response_callbacks: Optional[Dict[bytes, Callable[..., Any]]] = None,
+        startup_nodes: Optional[List[Node]] = None,
         transaction: Optional[bool] = False,
-        watches=None,
-    ):
+        watches: Optional[Iterable[KeyT]] = None,
+    ) -> None:
         self.command_stack = []
         self.refresh_table_asap = False
         self.connection_pool: ClusterConnectionPool = connection_pool
@@ -612,61 +724,93 @@ class ClusterPipelineImpl(
         self.startup_nodes = startup_nodes if startup_nodes else []
         self.response_callbacks = response_callbacks or {}
         self._transaction = transaction
-        self.watches = watches or None
+        self.watches: Optional[Iterable[KeyT]] = watches or None
         self.watching = False
         self.explicit_transaction = False
 
     async def watch(self, *keys: KeyT) -> bool:
         raise NotImplementedError
 
+    async def unwatch(self) -> bool:
+        raise NotImplementedError
+
     def __repr__(self):
         return f"{type(self).__name__}"
 
     def __del__(self):
-        self.reset()
+        self.reset_pipeline()
 
     def __len__(self):
         return len(self.command_stack)
 
-    async def __aenter__(self) -> "ClusterPipelineImpl":
+    async def __aenter__(self) -> "ClusterPipelineImpl[AnyStr]":
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        self.reset()
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
+        self.reset_pipeline()
 
-    async def execute_command(self, *args, **kwargs):
-        return self.pipeline_execute_command(*args, **kwargs)
+    async def execute_command(
+        self,
+        command: bytes,
+        *args: ValueT,
+        callback: Callable[..., Any] = NoopCallback(),  # type: ignore
+        **options: Optional[ValueT],
+    ) -> ClusterPipelineImpl[AnyStr]:  # type: ignore
+        return self.pipeline_execute_command(
+            command, *args, callback=callback, **options
+        )
 
-    def pipeline_execute_command(self, *args, **options):
+    def pipeline_execute_command(
+        self,
+        command: bytes,
+        *args: ValueT,
+        callback: Callable[..., Any],
+        **options: Optional[ValueT],
+    ) -> ClusterPipelineImpl[AnyStr]:
         self.command_stack.append(
             ClusterPipelineCommand(
-                args=args, options=options, position=len(self.command_stack)
+                command=command,
+                args=args,
+                options=options,
+                callback=callback,
+                position=len(self.command_stack),
             )
         )
 
         return self
 
-    def raise_first_error(self, stack):
-        for c in stack:
+    def raise_first_error(self) -> None:
+        for c in self.command_stack:
             r = c.result
 
-            if isinstance(r, Exception):
-                self.annotate_exception(r, c.position + 1, c.args)
+            if isinstance(r, BaseException):
+                self.annotate_exception(r, c.position + 1, c.command, c.args)
                 raise r
 
-    def annotate_exception(self, exception, number, command):
-        cmd = command[0].decode("latin-1")
-        args = " ".join(str(x) for x in command[1:])
-        msg = "Command # {} ({} {}) of pipeline caused error: {}".format(
-            number, cmd, args, exception.args[0]
-        )
-        exception.args = (msg,) + exception.args[1:]
+    def annotate_exception(
+        self,
+        exception: Optional[BaseException],
+        number: int,
+        command: bytes,
+        args: Iterable[ValueT],
+    ) -> None:
+        if exception:
+            cmd = command.decode("latin-1")
+            args = " ".join(str(x) for x in args)
+            msg = "Command # {} ({} {}) of pipeline caused error: {}".format(
+                number, cmd, args, exception.args[0]
+            )
+            exception.args = (msg,) + exception.args[1:]
 
-    async def execute(self, raise_on_error=True) -> Tuple[Any, ...]:
+    async def execute(self, raise_on_error: bool = True) -> Tuple[object, ...]:
         await self.connection_pool.initialize()
-        stack = self.command_stack
 
-        if not stack:
+        if not self.command_stack:
             return ()
 
         if self._transaction:
@@ -674,15 +818,15 @@ class ClusterPipelineImpl(
         else:
             execute = self.send_cluster_commands
         try:
-            return await execute(stack, raise_on_error)
+            return await execute(raise_on_error)
         finally:
-            self.reset()
+            self.reset_pipeline()
 
-    def reset(self):
+    def reset_pipeline(self):
         """Empties pipeline"""
         self.command_stack = []
 
-        self.scripts = set()
+        self.scripts: Set[Script[AnyStr]] = set()
         self.watches = []
         # clean up the other instance attributes
         self.watching = False
@@ -690,12 +834,12 @@ class ClusterPipelineImpl(
 
     @clusterdown_wrapper
     async def send_cluster_transaction(
-        self, stack, raise_on_error=True
-    ) -> Tuple[Any, ...]:
-        attempt = sorted(stack, key=lambda x: x.position)
-        slots = set()
+        self, raise_on_error: bool = True
+    ) -> Tuple[object, ...]:
+        attempt = sorted(self.command_stack, key=lambda x: x.position)
+        slots: Set[int] = set()
         for c in attempt:
-            slot = self._determine_slot(*c.args)
+            slot = self._determine_slot(c.command, *c.args)
             if slot:
                 slots.add(slot)
 
@@ -711,9 +855,9 @@ class ClusterPipelineImpl(
         node_commands = NodeCommands(
             self.parse_response, self.response_callbacks, conn, in_transaction=True
         )
-        node_commands.append(ClusterPipelineCommand((CommandName.MULTI,)))
+        node_commands.append(ClusterPipelineCommand(CommandName.MULTI, ()))
         node_commands.extend(attempt)
-        node_commands.append(ClusterPipelineCommand((CommandName.EXEC,)))
+        node_commands.append(ClusterPipelineCommand(CommandName.EXEC, ()))
         self.explicit_transaction = True
 
         await node_commands.write()
@@ -736,18 +880,18 @@ class ClusterPipelineImpl(
             await self._unwatch(conn)
 
         if raise_on_error:
-            self.raise_first_error(stack)
+            self.raise_first_error()
 
         return tuple(
             n.result
             for n in node_commands.commands
-            if n.args[0] not in {CommandName.MULTI, CommandName.EXEC}
+            if n.command not in {CommandName.MULTI, CommandName.EXEC}
         )
 
     @clusterdown_wrapper
     async def send_cluster_commands(
-        self, stack, raise_on_error=True, allow_redirections=True
-    ) -> Tuple[Any, ...]:
+        self, raise_on_error: bool = True, allow_redirections: bool = True
+    ) -> Tuple[object, ...]:
         """
         Sends a bunch of cluster commands to the redis cluster.
 
@@ -756,10 +900,10 @@ class ClusterPipelineImpl(
         """
         # the first time sending the commands we send all of the commands that were queued up.
         # if we have to run through it again, we only retry the commands that failed.
-        attempt = sorted(stack, key=lambda x: x.position)
+        attempt = sorted(self.command_stack, key=lambda x: x.position)
 
         # build a list of node objects based on node names we need to
-        nodes = {}
+        nodes: Dict[str, NodeCommands] = {}
 
         # as we move through each command that still needs to be processed,
         # we figure out the slot number that command maps to, then from the slot determine the node.
@@ -767,7 +911,7 @@ class ClusterPipelineImpl(
         for c in attempt:
             # refer to our internal node -> slot table that tells us where a given
             # command should route to.
-            slot = self._determine_slot(*c.args)
+            slot = self._determine_slot(c.command, *c.args)
             node = self.connection_pool.get_node_by_slot(slot)
 
             # little hack to make sure the node name is populated. probably could clean this up.
@@ -848,24 +992,43 @@ class ClusterPipelineImpl(
             for c in attempt:
                 try:
                     # send each command individually like we do in the main client.
-                    c.result = await super().execute_command(*c.args, **c.options)
+                    c.result = await super().execute_command(
+                        c.command, *c.args, callback=c.callback, **c.options
+                    )
                 except RedisError as e:
                     c.result = e
 
         # turn the response back into a simple flat array that corresponds
         # to the sequence of commands issued in the stack in pipeline.execute()
-        response = tuple(c.result for c in sorted(stack, key=lambda x: x.position))
+        response = tuple(
+            c.callback(c.result, **c.options)
+            for c in sorted(self.command_stack, key=lambda x: x.position)
+        )
 
         if raise_on_error:
-            self.raise_first_error(stack)
+            self.raise_first_error()
 
         return response
 
-    def _determine_slot(self, *args):
+    async def parse_response(
+        self,
+        connection: ClusterConnection,
+        command_name: bytes,
+        **options: Any,
+    ) -> ResponseType:
+        """
+        Parses a response from the Redis server
+        :meta private:
+        """
+        decode = options.get("decode")
+        return await connection.read_response(
+            decode=decode if decode is None else bool(decode)
+        )
+
+    def _determine_slot(self, command: bytes, *args: ValueT) -> int:
         """Figure out what slot based on command and args"""
 
-        command = args[0]
-        keys: Tuple[ValueT, ...] = KeySpec.extract_keys(args)
+        keys: Tuple[ValueT, ...] = KeySpec.extract_keys((command,) + args)
 
         if not keys:
             raise RedisClusterException(
@@ -878,16 +1041,22 @@ class ClusterPipelineImpl(
             raise ClusterCrossSlotError(command=command, keys=keys)
         return slots.pop()
 
-    def _fail_on_redirect(self, allow_redirections):
+    def _fail_on_redirect(self, allow_redirections: bool) -> None:
         if not allow_redirections:
             raise RedisClusterException(
                 "ASK & MOVED redirection not allowed in this pipeline"
             )
 
-    def _multi(self):
+    def multi(self) -> None:
         raise RedisClusterException("method multi() is not implemented")
 
-    def immediate_execute_command(self, *args, **options):
+    def immediate_execute_command(
+        self,
+        command: CommandName,
+        *args: ValueT,
+        callback: Callable[..., Any] = NoopCallback(),
+        **kwargs: Optional[ValueT],
+    ) -> Any:
         raise RedisClusterException(
             "method immediate_execute_command() is not implemented"
         )
@@ -895,11 +1064,13 @@ class ClusterPipelineImpl(
     def load_scripts(self):
         raise RedisClusterException("method load_scripts() is not implemented")
 
-    async def _watch(self, node, conn, names):
-        "Watches the values at keys ``names``"
+    async def _watch(
+        self, node: Node, conn: BaseConnection, keys: Iterable[KeyT]
+    ) -> bool:
+        "Watches the values at keys ``keys``"
 
-        for name in names:
-            slot = self._determine_slot(CommandName.WATCH, name)
+        for key in keys:
+            slot = self._determine_slot(CommandName.WATCH, key)
             dist_node = self.connection_pool.get_node_by_slot(slot)
 
             if node.get("name") != dist_node["name"]:
@@ -912,35 +1083,20 @@ class ClusterPipelineImpl(
 
         if self.explicit_transaction:
             raise RedisError("Cannot issue a WATCH after a MULTI")
-        await conn.send_command(CommandName.WATCH, *names)
+        await conn.send_command(CommandName.WATCH, *keys)
 
-        return await conn.read_response()
-
-    async def _unwatch(self, conn):
-        """Unwatches all previously specified keys"""
-        await conn.send_command(CommandName.UNWATCH)
-        res = await conn.read_response()
-
-        return self.watching and res or True
-
-    def script_load_for_pipeline(self, *args, **kwargs):
-        raise RedisClusterException(
-            "method script_load_for_pipeline() is not implemented"
+        return SimpleStringCallback()(
+            cast(StringT, await conn.read_response()), version=conn.protocol_version
         )
 
-    def delete(self, keys: Iterable[KeyT]):
-        """Deletes a key specified by ``names``"""
-
-        _keys = list(keys)
-        if len(_keys) != 1:
-            raise RedisClusterException(
-                "deleting multiple keys is not implemented in pipeline command"
-            )
-
-        return self.execute_command(CommandName.DEL, _keys[0])
+    async def _unwatch(self, conn: BaseConnection) -> bool:
+        """Unwatches all previously specified keys"""
+        await conn.send_command(CommandName.UNWATCH)
+        res = cast(StringT, await conn.read_response())
+        return res in {"OK", b"OK"} if self.watching else True
 
 
-class Pipeline(wrapt.ObjectProxy, Generic[AnyStr]):
+class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     """
     Class returned by :meth:`~coredis.Redis.pipeline`
 
@@ -950,22 +1106,40 @@ class Pipeline(wrapt.ObjectProxy, Generic[AnyStr]):
     can be retrieved by calling :meth:`execute`.
     """
 
-    async def __aenter__(self):
-        return await self.__wrapped__.__aenter__()
+    __wrapped__: PipelineImpl[AnyStr]
 
-    async def __aexit__(self, *args, **kwargs):
-        return await self.__wrapped__.__aexit__(*args, **kwargs)
+    async def __aenter__(self) -> Pipeline[AnyStr]:
+        return cast(Pipeline[AnyStr], await self.__wrapped__.__aenter__())
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
+        await self.__wrapped__.__aexit__(exc_type, exc_value, traceback)
 
     @classmethod
-    def proxy(cls, *args, **kwargs):
-        return cls(PipelineImpl(*args, **kwargs))
+    def proxy(
+        cls,
+        connection_pool: ConnectionPool,
+        response_callbacks: Dict[bytes, Callable[..., Any]],
+        transaction: Optional[bool] = None,
+    ) -> Pipeline[AnyStr]:
+        return cls(
+            PipelineImpl(
+                connection_pool,
+                response_callbacks=response_callbacks,
+                transaction=transaction,
+            )
+        )
 
-    def multi(self):
+    def multi(self) -> None:
         """
         Starts a transactional block of the pipeline after WATCH commands
         are issued. End the transactional block with :meth:`execute`
         """
-        return self.__wrapped__.multi()  # Only here for documentation purposes.
+        self.__wrapped__.multi()  # Only here for documentation purposes.
 
     async def watch(self, *keys: KeyT) -> bool:  # noqa
         """
@@ -975,15 +1149,13 @@ class Pipeline(wrapt.ObjectProxy, Generic[AnyStr]):
             *keys
         )  # Only here for documentation purposes.
 
-    async def unwatch(self, *keys: KeyT) -> bool:  # noqa
+    async def unwatch(self) -> bool:  # noqa
         """
         Unwatches all previously specified keys
         """
-        return await self.__wrapped__.unwatch(
-            *keys
-        )  # Only here for documentation purposes.
+        return await self.__wrapped__.unwatch()  # Only here for documentation purposes.
 
-    async def execute(self, raise_on_error=True) -> Tuple[Any, ...]:
+    async def execute(self, raise_on_error: bool = True) -> Tuple[object, ...]:
         """
         Executes all the commands in the current pipeline
         and return the results of the individual batched commands
@@ -992,8 +1164,11 @@ class Pipeline(wrapt.ObjectProxy, Generic[AnyStr]):
         # Only here for documentation purposes.
         return await self.__wrapped__.execute(raise_on_error=raise_on_error)
 
+    async def reset(self) -> None:
+        await self.__wrapped__.reset_pipeline()
 
-class ClusterPipeline(wrapt.ObjectProxy, Generic[AnyStr]):
+
+class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     """
     Class returned by :meth:`~coredis.RedisCluster.pipeline`
 
@@ -1003,20 +1178,59 @@ class ClusterPipeline(wrapt.ObjectProxy, Generic[AnyStr]):
     can be retrieved by calling :meth:`execute`.
     """
 
-    async def __aenter__(self):
-        return await self.__wrapped__.__aenter__()
+    __wrapped__: ClusterPipelineImpl[AnyStr]
 
-    async def __aexit__(self, *args, **kwargs):
-        return await self.__wrapped__.__aexit__(*args, **kwargs)
+    async def __aenter__(self) -> ClusterPipeline[AnyStr]:
+        return cast(ClusterPipeline[AnyStr], await self.__wrapped__.__aenter__())
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
+        await self.__wrapped__.__aexit__(exc_type, exc_value, traceback)
 
     @classmethod
-    def proxy(cls, *args, **kwargs):
-        return cls(ClusterPipelineImpl(*args, **kwargs))
+    def proxy(
+        cls,
+        connection_pool: ClusterConnectionPool,
+        result_callbacks: Optional[Dict[bytes, Callable[..., Any]]] = None,
+        response_callbacks: Optional[Dict[bytes, Callable[..., Any]]] = None,
+        startup_nodes: Optional[List[Node]] = None,
+        transaction: Optional[bool] = False,
+        watches: Optional[Iterable[KeyT]] = None,
+    ) -> ClusterPipeline[AnyStr]:
+        return cls(
+            ClusterPipelineImpl(
+                connection_pool,
+                result_callbacks=result_callbacks,
+                response_callbacks=response_callbacks,
+                startup_nodes=startup_nodes,
+                transaction=transaction,
+                watches=watches,
+            )
+        )
 
-    async def execute(self, raise_on_error=True) -> Tuple[Any, ...]:
+    async def watch(self, *keys: KeyT) -> bool:  # noqa
+        """
+        Unsupported for Cluster
+        """
+        raise NotImplementedError
+
+    async def unwatch(self) -> bool:  # noqa
+        """
+        Unsupported for Cluster
+        """
+        raise NotImplementedError
+
+    async def execute(self, raise_on_error: bool = True) -> Tuple[object, ...]:
         """
         Executes all the commands in the current pipeline
         and return the results of the individual batched commands
         """
         # Only here for documentation purposes.
         return await self.__wrapped__.execute(raise_on_error=raise_on_error)
+
+    def reset(self) -> None:
+        self.__wrapped__.reset_pipeline()

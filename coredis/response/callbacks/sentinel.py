@@ -1,58 +1,67 @@
 from __future__ import annotations
 
-from typing import Any, AnyStr, Dict, Optional, Tuple
+from typing import cast
 
 from coredis.response.callbacks import ResponseCallback
-from coredis.utils import nativestr
+from coredis.response.callbacks.server import InfoCallback
+from coredis.typing import (
+    AnyStr,
+    Dict,
+    List,
+    Optional,
+    ResponsePrimitive,
+    ResponseType,
+    Tuple,
+    Union,
+    ValueT,
+)
+from coredis.utils import EncodingInsensitiveDict, nativestr
 
-SENTINEL_STATE_TYPES = {
-    "can-failover-its-master": int,
-    "config-epoch": int,
-    "down-after-milliseconds": int,
-    "failover-timeout": int,
-    "info-refresh": int,
-    "last-hello-message": int,
-    "last-ok-ping-reply": int,
-    "last-ping-reply": int,
-    "last-ping-sent": int,
-    "master-link-down-time": int,
-    "master-port": int,
-    "num-other-sentinels": int,
-    "num-slaves": int,
-    "o-down-time": int,
-    "pending-commands": int,
-    "parallel-syncs": int,
-    "port": int,
-    "quorum": int,
-    "role-reported-time": int,
-    "s-down-time": int,
-    "slave-priority": int,
-    "slave-repl-offset": int,
-    "voted-leader-epoch": int,
+SENTINEL_STATE_INT_FIELDS = {
+    "can-failover-its-master",
+    "config-epoch",
+    "down-after-milliseconds",
+    "failover-timeout",
+    "info-refresh",
+    "last-hello-message",
+    "last-ok-ping-reply",
+    "last-ping-reply",
+    "last-ping-sent",
+    "master-link-down-time",
+    "master-port",
+    "num-other-sentinels",
+    "num-slaves",
+    "o-down-time",
+    "pending-commands",
+    "parallel-syncs",
+    "port",
+    "quorum",
+    "role-reported-time",
+    "s-down-time",
+    "slave-priority",
+    "slave-repl-offset",
+    "voted-leader-epoch",
 }
 
 
-def pairs_to_dict_typed(response, type_info):
+def sentinel_state_typed(
+    response: list[str],
+) -> Dict[str, Union[str, int, bool]]:
     it = iter(response)
-    result = {}
+    result: Dict[str, Union[str, int, bool]] = {}
 
     for key, value in zip(it, it):
-        if key in type_info:
-            try:
-                value = type_info[key](value)
-            except Exception:
-                # if for some reason the value can't be coerced, just use
-                # the string value
-                pass
-        result[key.replace("-", "_")] = value
+        if key in SENTINEL_STATE_INT_FIELDS:
+            value = int(value)
+        result[key] = value
 
     return result
 
 
-def parse_sentinel_state(item) -> Dict[str, Any]:
-    result = pairs_to_dict_typed([nativestr(k) for k in item], SENTINEL_STATE_TYPES)
-    flags = set(result["flags"].split(","))
-
+def add_flags(
+    result: Dict[str, Union[int, str, bool]]
+) -> Dict[str, Union[int, str, bool]]:
+    flags = set(nativestr(result["flags"]).split(","))
     for name, flag in (
         ("is_master", "master"),
         ("is_slave", "slave"),
@@ -63,31 +72,119 @@ def parse_sentinel_state(item) -> Dict[str, Any]:
         ("is_master_down", "master_down"),
     ):
         result[name] = flag in flags
-
     return result
 
 
-class PrimaryCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> Dict[str, Any]:
-        return parse_sentinel_state(response)
+def parse_sentinel_state(
+    item: List[ResponsePrimitive],
+) -> Dict[str, Union[int, str, bool]]:
+    result = sentinel_state_typed([nativestr(k) for k in item])
+    result = add_flags(result)
+    return result
 
 
-class PrimariesCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> Dict[str, Dict[str, Any]]:
-        result = {}
+class PrimaryCallback(
+    ResponseCallback[
+        ResponseType,
+        Dict[ResponsePrimitive, ResponsePrimitive],
+        Dict[str, Union[str, int, bool]],
+    ]
+):
+    def transform(
+        self, response: ResponseType, **options: Optional[ValueT]
+    ) -> Dict[str, Union[str, int, bool]]:
+
+        return parse_sentinel_state(cast(List[ResponsePrimitive], response))
+
+    def transform_3(
+        self,
+        response: Dict[ResponsePrimitive, ResponsePrimitive],
+        **options: Optional[ValueT],
+    ) -> Dict[str, Union[str, int, bool]]:
+
+        return add_flags(EncodingInsensitiveDict(response))
+
+
+class PrimariesCallback(
+    ResponseCallback[
+        List[ResponseType],
+        List[ResponseType],
+        Dict[str, Dict[str, Union[str, int, bool]]],
+    ]
+):
+    def transform(
+        self,
+        response: Union[List[ResponseType], Dict[ResponsePrimitive, ResponsePrimitive]],
+        **options: Optional[ValueT],
+    ) -> Dict[str, Dict[str, Union[str, int, bool]]]:
+
+        result: Dict[str, Dict[str, Union[str, int, bool]]] = {}
 
         for item in response:
             state = PrimaryCallback()(item)
-            result[state["name"]] = state
+            result[str(state["name"])] = state
 
         return result
 
+    def transform_3(
+        self, response: List[ResponseType], **options: Optional[ValueT]
+    ) -> Dict[str, Dict[str, Union[str, int, bool]]]:
 
-class SentinelsStateCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> Tuple[Dict[str, Any], ...]:
-        return tuple(parse_sentinel_state(map(nativestr, item)) for item in response)
+        states: Dict[str, Dict[str, Union[str, int, bool]]] = {}
+        for state in response:
+            proxy = add_flags(EncodingInsensitiveDict(state))
+            states[nativestr(proxy["name"])] = proxy
+        return states
 
 
-class GetPrimaryCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> Optional[Tuple[AnyStr, int]]:
-        return response and (response[0], int(response[1]))
+class SentinelsStateCallback(
+    ResponseCallback[
+        List[ResponseType],
+        List[ResponseType],
+        Tuple[Dict[str, Union[str, bool, int]], ...],
+    ]
+):
+    def transform(
+        self, response: List[ResponseType], **options: Optional[ValueT]
+    ) -> Tuple[Dict[str, Union[str, bool, int]], ...]:
+
+        return tuple(
+            parse_sentinel_state([nativestr(i) for i in item]) for item in response
+        )
+
+    def transform_3(
+        self, response: List[ResponseType], **options: Optional[ValueT]
+    ) -> Tuple[Dict[str, Union[str, bool, int]], ...]:
+
+        return tuple(add_flags(EncodingInsensitiveDict(state)) for state in response)
+
+
+class GetPrimaryCallback(
+    ResponseCallback[
+        List[ResponsePrimitive],
+        List[ResponsePrimitive],
+        Optional[Tuple[str, int]],
+    ]
+):
+    def transform(
+        self, response: List[ResponsePrimitive], **options: Optional[ValueT]
+    ) -> Optional[Tuple[str, int]]:
+
+        if response:
+            return nativestr(response[0]), int(response[1])
+        else:
+            return None
+
+
+class SentinelInfoCallback(
+    ResponseCallback[
+        List[ResponseType],
+        List[ResponseType],
+        Dict[AnyStr, Dict[int, Dict[str, ResponseType]]],
+    ]
+):
+    def transform(
+        self, response: List[ResponseType], **options: Optional[ValueT]
+    ) -> Dict[AnyStr, Dict[int, Dict[str, ResponseType]]]:
+
+        return {response[0]: {r[0]: InfoCallback()(r[1]) for r in response[1]}}

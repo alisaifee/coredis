@@ -1,6 +1,22 @@
 {
+    "strict": [
+        "coredis/client.py",
+        "coredis/connection.py",
+        "coredis/constants.py",
+        "coredis/exceptions.py",
+        "coredis/lock.py",
+        "coredis/nodemanager.py",
+        "coredis/parser.py",
+        "coredis/pool.py",
+        "coredis/sentinel.py",
+        "coredis/tokens.py",
+        "coredis/typing.py",
+        "coredis/commands/**/*.py",
+        "coredis/experimental/**/*.py"
+    ],
     "exclude": [
         "coredis/_version.py",
-        "wrapt"
+        "coredis/response/",
+        "coredis/commands/key_spec.py"
     ]
 }

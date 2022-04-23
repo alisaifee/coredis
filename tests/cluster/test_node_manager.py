@@ -330,6 +330,7 @@ def test_set_node():
         "name": "127.0.0.1:7000",
         "port": 7000,
         "server_type": "master",
+        "node_id": None,
     }
 
     n = NodeManager(startup_nodes=[{}])

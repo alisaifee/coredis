@@ -1,35 +1,39 @@
 from __future__ import annotations
 
 import hashlib
+from typing import AnyStr, Generic, cast
 
 from coredis.exceptions import NoScriptError
-from coredis.typing import Iterable, Optional, StringT, SupportsScript
+from coredis.protocols import SupportsScript
+from coredis.typing import Iterable, KeyT, Optional, ResponseType, StringT, ValueT
 from coredis.utils import b
 
 
-class Script:
+class Script(Generic[AnyStr]):
     """
     An executable Lua script object returned by :meth:`coredis.Redis.register_script`
     """
 
+    sha: AnyStr
+
     def __init__(
         self,
-        registered_client: SupportsScript,
+        registered_client: SupportsScript[AnyStr],
         script: StringT,
     ):
         """
         :param script: The lua script that will be used by :meth:`execute`
         """
-        self.registered_client = registered_client
+        self.registered_client: SupportsScript[AnyStr] = registered_client
         self.script = script
-        self.sha = hashlib.sha1(b(script)).hexdigest()
+        self.sha = hashlib.sha1(b(script)).hexdigest()  # type: ignore
 
     async def execute(
         self,
-        keys: Optional[Iterable] = None,
-        args: Optional[Iterable] = None,
-        client: Optional[SupportsScript] = None,
-    ):
+        keys: Optional[Iterable[KeyT]] = None,
+        args: Optional[Iterable[ValueT]] = None,
+        client: Optional[SupportsScript[AnyStr]] = None,
+    ) -> ResponseType:
         """
         Executes the script registered in :paramref:`Script.script`
         """
@@ -40,13 +44,17 @@ class Script:
         # make sure the Redis server knows about the script
         if isinstance(client, Pipeline):
             # make sure this script is good to go on pipeline
-            client.scripts.add(self)
+            cast(Pipeline[AnyStr], client).scripts.add(self)
 
         try:
-            return await client.evalsha(self.sha, keys=keys, args=args)
+            return cast(
+                ResponseType, await client.evalsha(self.sha, keys=keys, args=args)
+            )
         except NoScriptError:
-            # Maybe the client is pointed to a differnet server than the client
+            # Maybe the client is pointed to a different server than the client
             # that created this instance?
             # Overwrite the sha just in case there was a discrepancy.
-            self.sha = await client.script_load(self.script)
-            return await client.evalsha(self.sha, keys=keys, args=args)
+            self.sha = cast(AnyStr, await client.script_load(self.script))
+            return cast(
+                ResponseType, await client.evalsha(self.sha, keys=keys, args=args)
+            )

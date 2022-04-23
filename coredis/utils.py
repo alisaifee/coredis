@@ -1,31 +1,44 @@
 from __future__ import annotations
 
-import datetime
 import enum
-import time
+import functools
 from functools import wraps
+from typing import Any
 
-import wrapt
+from wrapt import ObjectProxy
 
 from coredis.exceptions import ClusterDownError, RedisClusterException
-from coredis.typing import Any, List, Mapping, Optional, TypeVar, Union
+from coredis.typing import (
+    Callable,
+    Coroutine,
+    Dict,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    P,
+    R,
+    ResponseType,
+    Set,
+    StringT,
+    Tuple,
+    TypeVar,
+    Union,
+    ValueT,
+)
 
-_C_EXTENSION_SPEEDUP = False
-try:
-    from coredis.speedups import crc16, hash_slot
 
-    _C_EXTENSION_SPEEDUP = True
-except Exception:
-    pass
-
-
-class EncodingInsensitiveDict(wrapt.ObjectProxy):
-    def __init__(self, dict: Optional[Mapping] = None, encoding="utf-8"):
+class EncodingInsensitiveDict(ObjectProxy):  # type: ignore
+    def __init__(
+        self,
+        dict: Optional[Union[Mapping[Any, Any], ResponseType]] = None,
+        encoding: str = "utf-8",
+    ):
         d = dict or {}
         super().__init__(d)
         self._self_encoding = encoding
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: StringT) -> Any:
         if isinstance(item, str):
             return self.__wrapped__.get(
                 item, self.__wrapped__.get(item.encode(self._self_encoding))
@@ -36,16 +49,22 @@ class EncodingInsensitiveDict(wrapt.ObjectProxy):
             )
         return self.__wrapped__[item]
 
-    def get(self, item, default: Optional[Any] = None) -> Any:
+    def get(self, item: StringT, default: Optional[object] = None) -> Any:
         return self.__getitem__(item) or default
 
-    def pop(self, item, default: Optional[Any] = None) -> Any:
+    def pop(self, item: StringT, default: Optional[object] = None) -> Any:
         if item in self.__wrapped__:
             return self.__wrapped__.pop(item)
         if isinstance(item, str):
             return self.__wrapped__.pop(item.encode(self._self_encoding), default)
 
-    def __setitem__(self, item, value):
+    def clear(self) -> None:
+        self.__wrapped__.clear()
+
+    def update(self, updates: Mapping[Any, Any]) -> None:
+        self.__wrapped__.update(updates)
+
+    def __setitem__(self, item: StringT, value: object) -> None:
         if item in self.__wrapped__:
             self.__wrapped__[item] = value
         elif (
@@ -61,7 +80,7 @@ class EncodingInsensitiveDict(wrapt.ObjectProxy):
         else:
             self.__wrapped__[item] = value
 
-    def __contains__(self, key):
+    def __contains__(self, key: StringT) -> bool:
         if isinstance(key, str):
             return (
                 key in self.__wrapped__
@@ -75,58 +94,39 @@ class EncodingInsensitiveDict(wrapt.ObjectProxy):
         return key in self.__wrapped__
 
 
-def b(x) -> bytes:
-    return x.encode("latin-1") if not isinstance(x, bytes) else x
+def b(x: ValueT) -> bytes:
+    if isinstance(x, bytes):
+        return x
+    if not isinstance(x, str):
+        _v = str(x)
+    else:
+        _v = x
+    return _v.encode("latin-1")
 
 
 def defaultvalue(value: Optional[U], default: T) -> Union[U, T]:
     return default if value is None else value
 
 
-def nativestr(x) -> str:
-    return x if isinstance(x, str) else x.decode("utf-8", "replace")
-
-
-def normalized_seconds(value: Union[int, datetime.timedelta]) -> int:
-    if isinstance(value, datetime.timedelta):
-        value = value.seconds + value.days * 24 * 3600
-
-    return value
-
-
-def normalized_milliseconds(value: Union[int, datetime.timedelta]) -> int:
-    if isinstance(value, datetime.timedelta):
-        ms = int(value.microseconds / 1000)
-        value = (value.seconds + value.days * 24 * 3600) * 1000 + ms
-
-    return value
-
-
-def normalized_time_seconds(value: Union[int, datetime.datetime]) -> int:
-    if isinstance(value, datetime.datetime):
-        s = int(value.microsecond / 1000000)
-        value = int(time.mktime(value.timetuple())) + s
-
-    return value
-
-
-def normalized_time_milliseconds(value: Union[int, datetime.datetime]) -> int:
-    if isinstance(value, datetime.datetime):
-        ms = int(value.microsecond / 1000)
-        value = int(time.mktime(value.timetuple())) * 1000 + ms
-
-    return value
+def nativestr(x: ResponseType) -> str:
+    if isinstance(x, (str, bytes)):
+        return x if isinstance(x, str) else x.decode("utf-8", "replace")
+    elif isinstance(x, (int, float, bool)):
+        return str(x)
+    raise ValueError(f"Unable to cast {x} to string")
 
 
 T = TypeVar("T")
 U = TypeVar("U")
 
 
-def tuples_to_flat_list(nested_list):
+def tuples_to_flat_list(nested_list: Iterable[Tuple[T, ...]]) -> List[T]:
     return [item for sublist in nested_list for item in sublist]
 
 
-def dict_to_flat_list(mapping: Mapping[T, U], reverse=False) -> List[Union[T, U]]:
+def dict_to_flat_list(
+    mapping: Mapping[T, U], reverse: bool = False
+) -> List[Union[T, U]]:
     e1: List[Union[T, U]] = list(mapping.keys())
     e2: List[Union[T, U]] = list(mapping.values())
 
@@ -143,35 +143,14 @@ def dict_to_flat_list(mapping: Mapping[T, U], reverse=False) -> List[Union[T, U]
 
 
 # ++++++++++ result callbacks helpers ++++++++++++++
-def merge_result(res):
-    """
-    Merges all items in `res` into a list.
-
-    This command is used when sending a command to multiple nodes
-    and they result from each node should be merged into a single list.
-    """
-
-    if not isinstance(res, dict):
-        raise ValueError("Value should be of dict type")
-
-    result = set()
-
-    for _, v in res.items():
-        for value in v:
-            result.add(value)
-
-    return list(result)
 
 
-def first_key(res):
+def first_key(res: Dict[str, R]) -> R:
     """
     Returns the first result for the given command.
 
     If more then 1 result is returned then a `RedisClusterException` is raised.
     """
-
-    if not isinstance(res, dict):
-        raise ValueError("Value should be of dict type")
 
     if len(res.keys()) != 1:
         raise RedisClusterException("More then 1 result from command")
@@ -179,7 +158,9 @@ def first_key(res):
     return list(res.values())[0]
 
 
-def clusterdown_wrapper(func):
+def clusterdown_wrapper(
+    func: Callable[P, Coroutine[Any, Any, R]]
+) -> Callable[P, Coroutine[Any, Any, R]]:
     """
     Wrapper for CLUSTERDOWN error handling.
 
@@ -193,7 +174,7 @@ def clusterdown_wrapper(func):
     """
 
     @wraps(func)
-    async def inner(*args, **kwargs):
+    async def inner(*args: P.args, **kwargs: P.kwargs) -> R:
         for _ in range(0, 3):
             try:
                 return await func(*args, **kwargs)
@@ -208,7 +189,9 @@ def clusterdown_wrapper(func):
     return inner
 
 
-if not _C_EXTENSION_SPEEDUP:
+try:
+    from coredis.speedups import crc16, hash_slot
+except ImportError:
     x_mode_m_crc16_lookup = [
         0x0000,
         0x1021,
@@ -468,7 +451,7 @@ if not _C_EXTENSION_SPEEDUP:
         0x1EF0,
     ]
 
-    def _crc16(data):
+    def crc16(data: bytes) -> int:
         crc = 0
 
         for byte in data:
@@ -478,9 +461,7 @@ if not _C_EXTENSION_SPEEDUP:
 
         return crc & 0xFFFF
 
-    crc16 = _crc16  # noqa: F811
-
-    def _hash_slot(key):
+    def hash_slot(key: bytes) -> int:
         start = key.find(b"{")
 
         if start > -1:
@@ -491,13 +472,35 @@ if not _C_EXTENSION_SPEEDUP:
 
         return crc16(key) % 16384
 
-    hash_slot = _hash_slot  # noqa: F811
+
+@enum.unique
+class CaseAndEncodingInsensitiveEnum(bytes, enum.Enum):
+    value: bytes
+
+    @functools.cached_property
+    def variants(self) -> Set[StringT]:
+        decoded = str(self)
+        return {self.value.lower(), self.value, decoded.lower(), decoded.upper()}
+
+    def __eq__(self, other: object) -> bool:
+        """
+        Since redis tokens are case insensitive allow mixed case
+        Additionally allow strings to be passed in instead of
+        bytes.
+        """
+
+        if other:
+            if isinstance(other, self.__class__):
+                return self.value == other.value
+            else:
+                return other in self.variants
+        return False
+
+    def __str__(self) -> str:
+        return self.decode("latin-1")
+
+    def __hash__(self) -> int:
+        return hash(self.value)
 
 
-class NodeFlag(enum.Enum):
-    BLOCKED = "blocked"
-    ALL = "all"
-    PRIMARIES = "primaries"
-    REPLICAS = "replicas"
-    RANDOM = "random"
-    SLOT_ID = "slot-id"
+__all__ = ["hash_slot", "EncodingInsensitiveDict", "CaseAndEncodingInsensitiveEnum"]

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 
-from coredis.typing import Any, Mapping, Optional, Set, Tuple, ValueT
+from coredis.typing import Mapping, Optional, Set, Tuple, ValueT
 
 
 class RedisError(Exception):
@@ -14,7 +15,7 @@ class CommandSyntaxError(RedisError):
     Raised when a redis command is called with an invalid syntax
     """
 
-    def __init__(self, arguments: Set[str], message: str):
+    def __init__(self, arguments: Set[str], message: str) -> None:
         self.arguments: Set[str] = arguments
         super().__init__(message)
 
@@ -24,7 +25,7 @@ class UnknownCommandError(RedisError):
     #: Name of command requested
     command: str
 
-    def __init__(self, message):
+    def __init__(self, message: str) -> None:
         self.command = self.ERROR_REGEX.findall(message).pop()
         super().__init__(self, message)
 
@@ -35,7 +36,7 @@ class CommandNotSupportedError(RedisError):
     version mismatch
     """
 
-    def __init__(self, cmd, current_version):
+    def __init__(self, cmd: str, current_version: str) -> None:
         super().__init__(
             self, f"{cmd} is not supported on server version {current_version}"
         )
@@ -118,10 +119,10 @@ class ClusterCrossSlotError(ResponseError):
 
     def __init__(
         self,
-        message=None,
+        message: Optional[str] = None,
         command: Optional[bytes] = None,
         keys: Optional[Tuple[ValueT, ...]] = None,
-    ):
+    ) -> None:
         super().__init__(message or "Keys in request don't hash to the same slot")
         self.command = command
         self.keys = keys
@@ -139,13 +140,13 @@ class ClusterDownError(ClusterError, ResponseError):
     are covered again.
     """
 
-    def __init__(self, resp):
+    def __init__(self, resp: str) -> None:
         self.args = (resp,)
         self.message = resp
 
 
 class ClusterTransactionError(ClusterError):
-    def __init__(self, msg):
+    def __init__(self, msg: str) -> None:
         self.msg = msg
 
 
@@ -155,7 +156,7 @@ class ClusterResponseError(ClusterError):
     cluster responses has errors.
     """
 
-    def __init__(self, message, responses: Mapping[str, Any]):
+    def __init__(self, message: str, responses: Mapping[str, Any]) -> None:
         super().__init__(message)
         self.responses = responses
 
@@ -177,7 +178,7 @@ class AskError(ResponseError):
         any op will be allowed after asking command
     """
 
-    def __init__(self, resp):
+    def __init__(self, resp: str) -> None:
         self.args = (resp,)
         self.message = resp
         slot_id, new_node = resp.split(" ")

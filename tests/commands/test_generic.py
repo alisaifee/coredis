@@ -220,13 +220,6 @@ class TestGeneric:
         assert True == (await client.copy(_s("a{foo}"), "c{foo}", replace=True))
         assert await client.get("c{foo}") == _s("foo")
 
-    async def test_object(self, client, _s):
-        await client.set("a", "foo")
-        assert isinstance(await client.object("refcount", "a"), int)
-        assert isinstance(await client.object("idletime", "a"), int)
-        assert await client.object("encoding", "a") in (_s("raw"), _s("embstr"))
-        assert await client.object("idletime", "invalid-key") is None
-
     @pytest.mark.max_server_version("6.2.0")
     async def test_object_encoding(self, client, _s):
         await client.set("a", "foo")

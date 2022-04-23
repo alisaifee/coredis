@@ -10,31 +10,25 @@ import re
 import shutil
 import typing  # noqa
 from pathlib import Path
-from coredis.typing import (
-    Any,
-    AnyStr,
-    Dict,
-    Iterable,
-    List,
-    Literal,
-    Optional,
-    Set,
-    Sequence,
-    Tuple,
-    Union,
-)
-from black import format_file_in_place, FileMode, WriteBack
+from typing import Any
+
 import click
+import inflect
+from black import FileMode, WriteBack, format_file_in_place
+from jinja2 import Environment
+from packaging import version
+
 import coredis
 import coredis.client
 import coredis.commands.pipeline
-import inflect
 from coredis import NodeFlag, PureToken  # noqa
-from coredis.pool import ConnectionPool, ClusterConnectionPool  # noqa
+from coredis.commands.constants import CommandName
 from coredis.commands.monitor import Monitor
-from coredis.response.callbacks.cluster import ClusterNode
+from coredis.nodemanager import Node  # noqa
+from coredis.pool import ClusterConnectionPool, ConnectionPool  # noqa
 from coredis.response.types import (
     ClientInfo,
+    ClusterNode,
     Command,
     GeoCoordinates,
     GeoSearchResult,
@@ -50,9 +44,24 @@ from coredis.response.types import (
     StreamPending,
     StreamPendingExt,
 )
-from coredis.typing import KeyT, OrderedDict, StringT, ValueT
-from jinja2 import Environment
-from packaging import version
+from coredis.typing import (
+    AnyStr,
+    Callable,
+    Dict,
+    Iterable,
+    KeyT,
+    List,
+    Literal,
+    Optional,
+    OrderedDict,
+    R,
+    Sequence,
+    Set,
+    StringT,
+    Tuple,
+    Union,
+    ValueT,
+)
 
 MAX_SUPPORTED_VERSION = version.parse("7.999.999")
 MIN_SUPPORTED_VERSION = version.parse("5.0.0")
@@ -340,6 +349,7 @@ def sanitized_rendered_type(rendered_type) -> str:
     v = re.sub(r"typing\.(.*?)", "\\1", v)
     v = v.replace("Ellipsis", "...")
     v = v.replace("coredis.response.types.", "")
+    v = v.replace("coredis.pool.", "")
     return v
 
 
@@ -1011,7 +1021,6 @@ def get_argument(
 
         else:
             plist_d = []
-
             if len(arg["arguments"]) == 1 and not arg.get("multiple"):
                 synthetic_parent = arg.copy()
                 synthetic_parent["type"] = "pure-token"
@@ -1935,36 +1944,12 @@ def token_enum(ctx, path):
     t = env.from_string(
         """from __future__ import annotations
 
-import enum
-from functools import cached_property
+from coredis.utils import CaseAndEncodingInsensitiveEnum
 
-from coredis.typing import Set, StringT
-
-class PureToken(bytes, enum.Enum):
+class PureToken(CaseAndEncodingInsensitiveEnum):
     \"\"\"
     Enum for using pure-tokens with the redis api.
     \"\"\"
-
-    @cached_property
-    def variants(self) -> Set[StringT]:
-        decoded = str(self)
-        return {self.value.lower(), self.value, decoded.lower(), decoded.upper()}
-
-    def __eq__(self, other):
-        \"\"\"
-        Since redis tokens are case insensitive allow mixed case
-        Additionally allow strings to be passed in instead of
-        bytes.
-        \"\"\"
-
-        if other:
-            if isinstance(other, PureToken):
-                return self.value == other.value
-            else:
-                return other in self.variants
-
-    def __hash__(self):
-        return hash(self.value)
 
     {% for token, command_usage in pure_tokens.items() -%}
 
@@ -1977,31 +1962,10 @@ class PureToken(bytes, enum.Enum):
 
     {% endfor %}
 
-class PrefixToken(bytes, enum.Enum):
+class PrefixToken(CaseAndEncodingInsensitiveEnum):
     \"\"\"
     Enum for internal use when adding prefixes to arguments
     \"\"\"
-
-    @cached_property
-    def variants(self) -> Set[StringT]:
-        decoded = str(self)
-        return {self.value.lower(), self.value, decoded.lower(), decoded.upper()}
-
-    def __eq__(self, other):
-        \"\"\"
-        Since redis tokens are case insensitive allow mixed case
-        Additionally allow strings to be passed in instead of
-        bytes.
-        \"\"\"
-
-        if other:
-            if isinstance(other, PrefixToken):
-                return self.value == other.value
-            else:
-                return other in self.variants
-
-    def __hash__(self):
-        return hash(self.value)
 
     {% for token, command_usage in prefix_tokens.items() -%}
 
@@ -2042,41 +2006,13 @@ Constants relating to redis command names and groups
 from __future__ import annotations
 
 import enum
-from functools import cached_property
 
-from coredis.typing import Set, StringT
+from coredis.utils import CaseAndEncodingInsensitiveEnum
 
-@enum.unique
-class CommandName(bytes, enum.Enum):
+class CommandName(CaseAndEncodingInsensitiveEnum):
     \"\"\"
     Enum for listing all redis commands
     \"\"\"
-
-    @cached_property
-    def variants(self) -> Set[StringT]:
-        decoded = str(self)
-        return {self.value.lower(), self.value, decoded.lower(), decoded.upper()}
-
-    def __eq__(self, other):
-        \"\"\"
-        Since redis tokens are case insensitive allow mixed case
-        Additionally allow strings to be passed in instead of
-        bytes.
-        \"\"\"
-
-        if other:
-            if isinstance(other, CommandName):
-                return self.value == other.value
-            else:
-                return other in self.variants
-
-
-    def __hash__(self):
-        return hash(self.value)
-
-
-    def __str__(self):
-        return self.decode("latin-1")
 
     {% for group, commands in commands.items() -%}
     #: Commands for {{group}}
@@ -2351,82 +2287,89 @@ def pipeline_stub(path):
                     "name": name,
                     "command_details": method.__coredis_command,
                     "pipeline": inspect.Signature(
-                        parameters=signature.parameters.values(),
-                        return_annotation="Pipeline",
+                        parameters=[
+                            k.replace(default=Ellipsis)
+                            if k.default is not inspect._empty
+                            else k
+                            for k in signature.parameters.values()
+                        ],
+                        return_annotation="Pipeline[AnyStr]",
                     ),
                     "cluster": inspect.Signature(
-                        parameters=cluster_signature.parameters.values(),
-                        return_annotation="ClusterPipeline",
+                        parameters=[
+                            k.replace(default=Ellipsis)
+                            if k.default is not inspect._empty
+                            else k
+                            for k in cluster_signature.parameters.values()
+                        ],
+                        return_annotation="ClusterPipeline[AnyStr]",
                     ),
                 }
     stub_template_str = """
 from __future__ import annotations
 
 import datetime
+from types import TracebackType
+from typing import Any
 
-import wrapt
+from wrapt import ObjectProxy
 
 from coredis import PureToken
-from coredis.client import AbstractRedis, AbstractRedisCluster, ResponseParser
+from coredis.client import AbstractRedis, AbstractRedisCluster
+from coredis.commands.script import Script
+from coredis.nodemanager import Node
 from coredis.pool import ClusterConnectionPool, ConnectionPool
 from coredis.typing import (
-    Any,
     AnyStr,
+    Callable,
     Dict,
     Generic,
     Iterable,
-    KeyT,
+    List,
     Literal,
     Optional,
     Set,
-    StringT,
     Tuple,
+    Type,
     Union,
-    ValueT,
 )
 
-class PipelineImpl(AbstractRedis[AnyStr]):
-    scripts: Set
-    def __init__{{render_signature(inspect.signature(pipeline_kls.__init__))}}: ...
-    async def watch{{render_signature(inspect.signature(pipeline_kls.watch))}}: ...
-    async def unwatch{{render_signature(inspect.signature(pipeline_kls.unwatch))}}: ...
-    async def execute{{render_signature(inspect.signature(pipeline_kls.execute))}}: ...
-    async def execute_command{{render_signature(inspect.signature(pipeline_kls.execute_command))}}: ...
-    def multi{{render_signature(inspect.signature(pipeline_kls.multi))}}: ...
-    async def __aenter__(self)->"PipelineImpl": ...
-    async def __aexit__(self, exc_type, exc_val, exc_tb): ...
-
-class ClusterPipelineImpl(AbstractRedisCluster[AnyStr], ResponseParser):
-    def __init__{{render_signature(inspect.signature(cluster_kls.__init__), False)}}: ...
-    async def watch{{render_signature(inspect.signature(cluster_kls.watch), False)}}: ...
-    async def unwatch{{render_signature(inspect.signature(cluster_kls.unwatch), False)}}: ...
-    async def execute{{render_signature(inspect.signature(cluster_kls.execute), False)}}: ...
-    async def execute_command{{render_signature(inspect.signature(cluster_kls.execute_command), False)}}: ...
-    def multi{{render_signature(inspect.signature(cluster_kls.multi), False)}}: ...
-    async def __aenter__(self) -> "ClusterPipelineImpl":...
-    async def __aexit__(self, exc_type, exc_val, exc_tb): ...
-
-class Pipeline(wrapt.ObjectProxy, Generic[AnyStr]):
-    scripts: Set
+class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
+    scripts: Set[Script[AnyStr]]
+    @classmethod
+    def proxy{{render_signature(inspect.signature(pipeline_kls.__init__), skip_defaults=True) | replace("self", "cls") | replace("-> None", "-> Pipeline[AnyStr]") }}: ...
     {% for name, signature in commands.items() -%}
-    async def {{signature["name"]}}{{render_signature(signature["pipeline"], False)}}: ...
+    async def {{signature["name"]}}{{render_signature(signature["pipeline"], skip_defaults=True)}}: ...
     {% endfor %}
-    async def watch{{render_signature(inspect.signature(pipeline_kls.watch), False)}}: ...
-    async def unwatch{{render_signature(inspect.signature(pipeline_kls.unwatch), False)}}: ...
-    def multi{{render_signature(inspect.signature(pipeline_kls.multi), False)}}: ...
-    async def execute{{render_signature(inspect.signature(pipeline_kls.execute), False)}}: ...
+    async def watch{{render_signature(inspect.signature(pipeline_kls.watch), skip_defaults=True)}}: ...
+    async def unwatch{{render_signature(inspect.signature(pipeline_kls.unwatch), skip_defaults=True)}}: ...
+    def multi{{render_signature(inspect.signature(pipeline_kls.multi), skip_defaults=True)}}: ...
+    async def execute{{render_signature(inspect.signature(pipeline_kls.execute), skip_defaults=True)}}: ...
     async def __aenter__(self) -> "Pipeline[AnyStr]":...
-    async def __aexit__(self, exc_type, exc_val, exc_tb): ...
-class ClusterPipeline(wrapt.ObjectProxy, Generic[AnyStr]):
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None: ...
+
+class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
+    @classmethod
+    def proxy{{render_signature(inspect.signature(cluster_kls.__init__), skip_defaults=True) | replace("self", "cls") | replace("-> None", "-> ClusterPipeline[AnyStr]") }}: ...
     {% for name, signature in commands.items() -%}
-    async def {{signature["name"]}}{{render_signature(signature["cluster"], False)}}: ...
+    async def {{signature["name"]}}{{render_signature(signature["cluster"], skip_defaults=True)}}: ...
     {% endfor %}
-    async def watch{{render_signature(inspect.signature(cluster_kls.watch), False)}}: ...
-    async def unwatch{{render_signature(inspect.signature(cluster_kls.unwatch), False)}}: ...
-    def multi{{render_signature(inspect.signature(cluster_kls.multi))}}: ...
-    async def execute{{render_signature(inspect.signature(cluster_kls.execute), False)}}: ...
+    async def watch{{render_signature(inspect.signature(cluster_kls.watch), skip_defaults=True)}}: ...
+    async def unwatch{{render_signature(inspect.signature(cluster_kls.unwatch), skip_defaults=True)}}: ...
+    def multi{{render_signature(inspect.signature(cluster_kls.multi), skip_defaults=True)}}: ...
+    async def execute{{render_signature(inspect.signature(cluster_kls.execute), skip_defaults=True)}}: ...
     async def __aenter__(self) -> "ClusterPipeline[AnyStr]":...
-    async def __aexit__(self, exc_type, exc_val, exc_tb): ...
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None: ...
 """
     env = Environment()
     env.globals.update(
@@ -2452,6 +2395,8 @@ class ClusterPipeline(wrapt.ObjectProxy, Generic[AnyStr]):
     stub_template = env.from_string(stub_template_str)
     response = stub_template.render(commands=commands)
     response = response.replace("coredis.commands.pipeline.", "")
+    response = response.replace("coredis.commands.constants.", "")
+    response = response.replace("coredis.nodemanager.", "")
     with open(path, "w") as file:
         file.write(response)
     format_file_in_place(

@@ -8,15 +8,13 @@ import dataclasses
 import functools
 import textwrap
 import warnings
-from abc import ABC
-from types import FunctionType
-from typing import TYPE_CHECKING, cast
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any
 
 from packaging import version
 
 from coredis.exceptions import CommandNotSupportedError
 from coredis.typing import (
-    Any,
     AnyStr,
     Callable,
     Coroutine,
@@ -25,16 +23,16 @@ from coredis.typing import (
     NamedTuple,
     Optional,
     TypeVar,
-    Union,
+    ValueT,
 )
 
 if TYPE_CHECKING:
     import coredis.client
 
 import coredis.pool
-from coredis.response.callbacks import ResponseCallback
-from coredis.typing import AbstractExecutor, ParamSpec
-from coredis.utils import NodeFlag
+from coredis.nodemanager import NodeFlag
+from coredis.response.callbacks import ClusterMultiNodeCallback, NoopCallback
+from coredis.typing import ParamSpec
 
 from .constants import CommandGroup, CommandName
 
@@ -46,10 +44,10 @@ P = ParamSpec("P")
 class ClusterCommandConfig:
     enabled: bool = True
     flag: Optional[NodeFlag] = None
-    combine: Optional[Callable] = None
+    combine: Optional[ClusterMultiNodeCallback] = None  # type: ignore
 
     @property
-    def multi_node(self):
+    def multi_node(self) -> bool:
         return self.flag in [NodeFlag.ALL, NodeFlag.PRIMARIES]
 
 
@@ -61,11 +59,23 @@ class CommandDetails(NamedTuple):
     version_deprecated: Optional[version.Version]
     arguments: Dict[str, Dict[str, str]]
     cluster: ClusterCommandConfig
-    response_callback: Optional[Union[FunctionType, ResponseCallback, ResponseCallback]]
 
 
-class CommandMixin(Generic[AnyStr], AbstractExecutor[AnyStr], ABC):
-    connection_pool: coredis.pool.ConnectionPool
+_RESPT = TypeVar("_RESPT")
+_RESP3T = TypeVar("_RESP3T")
+_CR_co = TypeVar("_CR_co", covariant=True)
+
+
+class CommandMixin(Generic[AnyStr], ABC):
+    @abstractmethod
+    async def execute_command(
+        self,
+        command: bytes,
+        *args: ValueT,
+        callback: Callable[..., R] = NoopCallback(),
+        **options: Optional[ValueT],
+    ) -> R:
+        pass
 
 
 def redis_command(
@@ -76,9 +86,7 @@ def redis_command(
     deprecation_reason: Optional[str] = None,
     arguments: Optional[Dict[str, Dict[str, str]]] = None,
     readonly: bool = False,
-    response_callback: Optional[
-        Union[FunctionType, ResponseCallback, ResponseCallback]
-    ] = None,
+    # response_callback: Optional[Union[FunctionType, ResponseCallback]] = None,
     cluster: ClusterCommandConfig = ClusterCommandConfig(),
 ) -> Callable[
     [Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]
@@ -91,7 +99,6 @@ def redis_command(
         version.Version(version_deprecated) if version_deprecated else None,
         arguments or {},
         cluster or ClusterCommandConfig(),
-        response_callback,
     )
 
     def wrapper(
@@ -99,7 +106,7 @@ def redis_command(
     ) -> Callable[P, Coroutine[Any, Any, R]]:
         @functools.wraps(func)
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
-            _check_version(
+            check_version(
                 args[0],  # type: ignore
                 command_name,
                 func.__name__,
@@ -127,25 +134,25 @@ Introduced in Redis version ``{version_introduced}``
     return wrapper
 
 
-def _check_version(
-    instance: Any,
+def check_version(
+    instance: coredis.client.RedisConnection,
     command: bytes,
     function_name: str,
     min_version: Optional[version.Version],
     deprecated_version: Optional[version.Version],
     deprecation_reason: Optional[str],
-):
+) -> None:
     if not any([min_version, deprecated_version]):
         return
 
-    client = cast("coredis.client.RedisConnection", instance)
-
-    if getattr(client, "verify_version", False):
-        server_version = getattr(client, "server_version", None)
+    if getattr(instance, "verify_version", False):
+        server_version = getattr(instance, "server_version", None)
         if not server_version:
             return
         if min_version and server_version < min_version:
-            raise CommandNotSupportedError(command, client.server_version)
+            raise CommandNotSupportedError(
+                command.decode("latin-1"), str(instance.server_version)
+            )
         if deprecated_version and server_version >= deprecated_version:
             if deprecation_reason:
                 warnings.warn(deprecation_reason.strip())
@@ -155,7 +162,7 @@ def _check_version(
                 )
 
 
-def _redis_command_link(command):
+def _redis_command_link(command: CommandName) -> str:
     return f'`{str(command)} <https://redis.io/commands/{str(command).lower().replace(" ", "-")}>`_'
 
 

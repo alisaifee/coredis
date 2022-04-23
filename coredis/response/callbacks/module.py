@@ -1,13 +1,39 @@
 from __future__ import annotations
 
+from typing import cast
+
 from coredis.response.callbacks import ResponseCallback
 from coredis.response.utils import flat_pairs_to_dict
-from coredis.typing import Any, Mapping, Tuple
+from coredis.typing import (
+    AnyStr,
+    Dict,
+    List,
+    Optional,
+    ResponsePrimitive,
+    ResponseType,
+    Tuple,
+    ValueT,
+)
 
 
-class ModuleInfoCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> Tuple[Mapping, ...]:
-        return tuple(flat_pairs_to_dict(mod) for mod in response)
+class ModuleInfoCallback(
+    ResponseCallback[
+        List[List[ResponseType]],
+        List[Dict[AnyStr, ResponsePrimitive]],
+        Tuple[Dict[AnyStr, ResponsePrimitive], ...],
+    ]
+):
+    def transform(
+        self, response: List[List[ResponseType]], **options: Optional[ValueT]
+    ) -> Tuple[Dict[AnyStr, ResponsePrimitive], ...]:
+        return tuple(
+            cast(Dict[AnyStr, ResponsePrimitive], flat_pairs_to_dict(mod))
+            for mod in response
+        )
 
-    def transform_3(self, response: Any, **options: Any) -> Tuple[Mapping, ...]:
-        return tuple(dict(r) for r in response)
+    def transform_3(
+        self,
+        response: List[Dict[AnyStr, ResponsePrimitive]],
+        **options: Optional[ValueT],
+    ) -> Tuple[Dict[AnyStr, ResponsePrimitive], ...]:
+        return tuple(response)

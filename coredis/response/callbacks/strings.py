@@ -1,51 +1,78 @@
 from __future__ import annotations
 
-from coredis.commands import ResponseCallback
-from coredis.response.callbacks import SimpleStringCallback
+from coredis.response.callbacks import ResponseCallback, SimpleStringCallback
 from coredis.response.types import LCSMatch, LCSResult
-from coredis.typing import Any, AnyStr, Union
+from coredis.typing import (
+    AnyStr,
+    Dict,
+    List,
+    Optional,
+    ResponsePrimitive,
+    ResponseType,
+    Union,
+    ValueT,
+)
 from coredis.utils import EncodingInsensitiveDict
 
 
-class StringSetCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> Union[AnyStr, bool]:
+class StringSetCallback(
+    ResponseCallback[Optional[AnyStr], Optional[AnyStr], Optional[Union[AnyStr, bool]]]
+):
+    def transform(
+        self, response: Optional[AnyStr], **options: Optional[ValueT]
+    ) -> Optional[Union[AnyStr, bool]]:
         if options.get("get"):
             return response
         else:
             return SimpleStringCallback()(response)
 
 
-class LCSCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> Union[AnyStr, int, LCSResult]:
-        if options.get("idx") is not None:
-            return LCSResult(
-                tuple(
-                    LCSMatch(
-                        (int(k[0][0]), int(k[0][1])),
-                        (int(k[1][0]), int(k[1][1])),
-                        k[2] if len(k) > 2 else None,
-                    )
-                    for k in response[1]
-                ),
-                response[-1],
-            )
-
-        return response
+class LCSCallback(
+    ResponseCallback[
+        List[ResponseType],
+        Dict[ResponsePrimitive, ResponseType],
+        Union[AnyStr, int, LCSResult],
+    ]
+):
+    def transform(
+        self,
+        response: Union[
+            List[ResponseType],
+            Dict[ResponsePrimitive, ResponseType],
+        ],
+        **options: Optional[ValueT],
+    ) -> LCSResult:
+        assert (
+            isinstance(response, list)
+            and isinstance(response[-1], int)
+            and isinstance(response[1], list)
+        )
+        return LCSResult(
+            tuple(
+                LCSMatch(
+                    (int(k[0][0]), int(k[0][1])),
+                    (int(k[1][0]), int(k[1][1])),
+                    k[2] if len(k) > 2 else None,
+                )
+                for k in response[1]
+            ),
+            response[-1],
+        )
 
     def transform_3(
-        self, response: Any, **options: Any
-    ) -> Union[AnyStr, int, LCSResult]:
-        if options.get("idx") is not None:
-            response_proxy = EncodingInsensitiveDict(response)
-            return LCSResult(
-                tuple(
-                    LCSMatch(
-                        (int(k[0][0]), int(k[0][1])),
-                        (int(k[1][0]), int(k[1][1])),
-                        k[2] if len(k) > 2 else None,
-                    )
-                    for k in response_proxy["matches"]
-                ),
-                response_proxy["len"],
-            )
-        return response
+        self,
+        response: Dict[ResponsePrimitive, ResponseType],
+        **options: Optional[ValueT],
+    ) -> LCSResult:
+        proxy = EncodingInsensitiveDict(response)
+        return LCSResult(
+            tuple(
+                LCSMatch(
+                    (int(k[0][0]), int(k[0][1])),
+                    (int(k[1][0]), int(k[1][1])),
+                    k[2] if len(k) > 2 else None,
+                )
+                for k in proxy["matches"]
+            ),
+            proxy["len"],
+        )

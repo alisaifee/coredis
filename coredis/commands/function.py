@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 import weakref
-from typing import AnyStr, Generic
+from typing import Any, AnyStr, Generator, Generic, cast
 
 from coredis.exceptions import FunctionError
 from coredis.typing import (
     TYPE_CHECKING,
-    Any,
     Dict,
     Iterable,
     KeyT,
     Optional,
+    ResponseType,
     StringT,
     ValueT,
 )
@@ -23,10 +23,10 @@ if TYPE_CHECKING:
 class Library(Generic[AnyStr]):
     def __init__(
         self,
-        client: coredis.client.AbstractRedis,
+        client: coredis.client.AbstractRedis[AnyStr],
         name: StringT,
         code: Optional[StringT] = None,
-    ):
+    ) -> None:
         """
         Abstraction over a library of redis functions
 
@@ -36,21 +36,21 @@ class Library(Generic[AnyStr]):
             lib = await Library(client, "mylib", library_code)
             assert "1" == await lib["myfunc"]([], [1])
         """
-        self._client: weakref.ReferenceType[coredis.client.AbstractRedis] = weakref.ref(
-            client
-        )
+        self._client: weakref.ReferenceType[
+            coredis.client.AbstractRedis[AnyStr]
+        ] = weakref.ref(client)
         self._name = nativestr(name)
         self._code = code
         self._functions: EncodingInsensitiveDict = EncodingInsensitiveDict()
 
     @property
-    def client(self) -> coredis.client.AbstractRedis:
+    def client(self) -> coredis.client.AbstractRedis[AnyStr]:
         c = self._client()
         assert c
         return c
 
     @property
-    def functions(self) -> Dict[str, Function]:
+    def functions(self) -> Dict[str, Function[AnyStr]]:
         """
         mapping of function names to :class:`~coredis.commands.function.Function`
         instances that can be directly called.
@@ -62,14 +62,14 @@ class Library(Generic[AnyStr]):
         Update the code of a library with :paramref:`new_code`
         """
         if await self.client.function_load(new_code, replace=True):
-            await self.__initialize()
+            await self.initialize()
             return True
         return False
 
-    def __getitem__(self, function: str) -> Optional[Function]:
-        return self._functions.get(function)
+    def __getitem__(self, function: str) -> Optional[Function[AnyStr]]:
+        return cast(Optional[Function[AnyStr]], self._functions.get(function))
 
-    async def __initialize(self):
+    async def initialize(self) -> Library[AnyStr]:
         self._functions.clear()
         if self._code:
             await self.client.function_load(self._code)
@@ -78,20 +78,20 @@ class Library(Generic[AnyStr]):
         if not library:
             raise FunctionError(f"No library found for {self._name}")
 
-        for name, function in library["functions"].items():
-            self._functions[name] = Function(self.client, self._name, name)
+        for name, _ in library["functions"].items():
+            self._functions[name] = Function[AnyStr](self.client, self._name, name)
+        return self
 
-    def __await__(self):
-        async def closure():
-            await self.__initialize()
-            return self
-
-        return closure().__await__()
+    def __await__(self) -> Generator[Any, None, Library[AnyStr]]:
+        return self.initialize().__await__()
 
 
-class Function:
+class Function(Generic[AnyStr]):
     def __init__(
-        self, client: coredis.client.AbstractRedis, library: StringT, name: StringT
+        self,
+        client: coredis.client.AbstractRedis[AnyStr],
+        library: StringT,
+        name: StringT,
     ):
         """
         Wrapper to call a redis function that has already been loaded
@@ -102,30 +102,31 @@ class Function:
             func = await Function(client, "mylib", "myfunc")
             response = await func(keys=["a"], args=[1])
         """
-        self._client: weakref.ReferenceType[coredis.client.AbstractRedis] = weakref.ref(
-            client
-        )
-        self._library = Library(client, library)
+        self._client: weakref.ReferenceType[
+            coredis.client.AbstractRedis[AnyStr]
+        ] = weakref.ref(client)
+        self._library: Library[AnyStr] = Library[AnyStr](client, library)
         self._name = name
 
     @property
-    def client(self) -> coredis.client.AbstractRedis:
+    def client(self) -> coredis.client.AbstractRedis[AnyStr]:
         c = self._client()
         assert c
         return c
 
-    def __await__(self):
-        async def closure():
-            await self._library
+    async def initialize(self) -> Function[AnyStr]:
+        await self._library
+        return self
 
-        return closure().__await__()
+    def __await__(self) -> Generator[Any, None, Function[AnyStr]]:
+        return self.initialize().__await__()
 
     async def __call__(
         self,
         *,
         keys: Optional[Iterable[KeyT]] = None,
         args: Optional[Iterable[ValueT]] = None,
-    ) -> Any:
+    ) -> ResponseType:
         """
         Wrapper to call :meth:`~coredis.Redis.fcall`
 

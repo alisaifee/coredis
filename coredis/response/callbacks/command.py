@@ -3,15 +3,30 @@ from __future__ import annotations
 from coredis.response.callbacks import ResponseCallback
 from coredis.response.types import Command
 from coredis.response.utils import flat_pairs_to_dict, pairs_to_dict
-from coredis.typing import AbstractSet, Any, AnyStr, Mapping, MutableMapping
+from coredis.typing import (
+    AnyStr,
+    Dict,
+    List,
+    Optional,
+    ResponsePrimitive,
+    ResponseType,
+    Set,
+    ValueT,
+)
 from coredis.utils import EncodingInsensitiveDict, nativestr
 
 
-class CommandCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> Mapping[str, Command]:
-        commands: MutableMapping[str, Command] = {}
+class CommandCallback(
+    ResponseCallback[List[ResponseType], List[ResponseType], Dict[str, Command]]
+):
+    def transform(
+        self, response: List[ResponseType], **options: Optional[ValueT]
+    ) -> Dict[str, Command]:
+        commands: Dict[str, Command] = {}
 
         for command in response:
+            assert isinstance(command, list)
+
             if command:
                 name = nativestr(command[0])
 
@@ -40,20 +55,33 @@ class CommandCallback(ResponseCallback):
         return commands
 
 
-class CommandKeyFlagCallback(ResponseCallback):
+class CommandKeyFlagCallback(
+    ResponseCallback[List[ResponseType], List[ResponseType], Dict[AnyStr, Set[AnyStr]]]
+):
     def transform(
-        self, response: Any, **options: Any
-    ) -> Mapping[AnyStr, AbstractSet[AnyStr]]:
+        self, response: List[ResponseType], **options: Optional[ValueT]
+    ) -> Dict[AnyStr, Set[AnyStr]]:
+
         return {k[0]: set(k[1]) for k in response}
 
     def transform_3(
-        self, response: Any, **options: Any
-    ) -> Mapping[AnyStr, AbstractSet[AnyStr]]:
-        return pairs_to_dict(response)
+        self, response: List[ResponseType], **options: Optional[ValueT]
+    ) -> Dict[AnyStr, Set[AnyStr]]:
+
+        return pairs_to_dict(response)  # type: ignore
 
 
-class CommandDocCallback(ResponseCallback):
-    def transform(self, response: Any, **options: Any) -> Mapping[AnyStr, Mapping]:
+class CommandDocCallback(
+    ResponseCallback[
+        List[ResponseType],
+        Dict[ResponsePrimitive, ResponseType],
+        Dict[AnyStr, Dict[AnyStr, ResponseType]],
+    ]
+):
+    def transform(
+        self, response: List[ResponseType], **options: Optional[ValueT]
+    ) -> Dict[AnyStr, Dict[AnyStr, ResponseType]]:
+
         cmd_mapping = flat_pairs_to_dict(response)
         for cmd, doc in cmd_mapping.items():
             cmd_mapping[cmd] = EncodingInsensitiveDict(flat_pairs_to_dict(doc))
@@ -62,5 +90,10 @@ class CommandDocCallback(ResponseCallback):
             ]
         return cmd_mapping
 
-    def transform_3(self, response: Any, **options: Any) -> Mapping[AnyStr, Mapping]:
-        return dict(response)
+    def transform_3(
+        self,
+        response: Dict[ResponsePrimitive, ResponseType],
+        **options: Optional[ValueT],
+    ) -> Dict[AnyStr, Dict[AnyStr, ResponseType]]:
+
+        return response  # noqa

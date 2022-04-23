@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import functools
 import inspect
+from typing import Any
 
 from coredis.exceptions import CommandSyntaxError
 from coredis.typing import (
-    Any,
     Callable,
     Coroutine,
     Iterable,
@@ -54,7 +54,7 @@ def mutually_exclusive_parameters(
 ]:
 
     primary = {k for k in exclusive_params if isinstance(k, str)}
-    secondary = [k for k in set(exclusive_params) - primary if isinstance(k, Iterable)]
+    secondary = [k for k in set(exclusive_params) - primary]
 
     def wrapper(
         func: Callable[P, Coroutine[Any, Any, R]]

@@ -4,11 +4,13 @@ import dataclasses
 import datetime
 import re
 import shlex
-from typing import AbstractSet, Pattern
+from typing import Pattern
 
 from coredis.typing import (
+    AbstractSet,
     ClassVar,
     Dict,
+    List,
     Literal,
     Mapping,
     NamedTuple,
@@ -18,6 +20,7 @@ from coredis.typing import (
     Tuple,
     TypedDict,
     Union,
+    ValueT,
 )
 
 #: Response from `CLIENT INFO <https://redis.io/commands/client-info>`__
@@ -189,7 +192,7 @@ Command = TypedDict(
         "acl-categories": Optional[AbstractSet[str]],
         "tips": Optional[AbstractSet[str]],
         "key-specifications": Optional[
-            AbstractSet[Mapping[str, Union[int, str, Mapping]]]
+            AbstractSet[Mapping[str, Union[int, str, Mapping]]]  # type: ignore
         ],
         "sub-commands": Optional[Tuple[str, ...]],
     },
@@ -232,7 +235,7 @@ StreamInfo = TypedDict(
         "length": int,
         "radix-tree-keys": int,
         "radix-tree-nodes": int,
-        "groups": Union[int, Dict],
+        "groups": Union[int, Dict],  # type: ignore
         "last-generated-id": str,
         "max-deleted-entry-id": str,
         "recorded-first-entry-id": str,
@@ -356,3 +359,23 @@ class MonitorResult:
             command=command[0],
             args=tuple(command[1:]),
         )
+
+
+class ClusterNode(TypedDict):
+    host: str
+    port: int
+    node_id: Optional[str]
+    server_type: Optional[Literal["master", "slave"]]
+
+
+class ClusterNodeDetail(TypedDict):
+    id: str
+    flags: Tuple[str, ...]
+    host: str
+    port: int
+    master: Optional[str]
+    ping_sent: int
+    pong_recv: int
+    link_state: str
+    slots: List[int]
+    migrations: List[Dict[str, ValueT]]

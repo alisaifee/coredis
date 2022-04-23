@@ -8,7 +8,8 @@ import ssl
 import sys
 import time
 import warnings
-from typing import Callable, Dict, List, Literal, Optional, Type, Union
+from asyncio import AbstractEventLoop, StreamReader, StreamWriter
+from typing import Tuple, cast
 
 from coredis.constants import SYM_CRLF, SYM_DOLLAR, SYM_EMPTY, SYM_STAR
 from coredis.exceptions import (
@@ -18,17 +19,30 @@ from coredis.exceptions import (
     TimeoutError,
     UnknownCommandError,
 )
-from coredis.parsers import (  # noqa: For backward compatibility
-    BaseParser,
-    DefaultParser,
-    HiredisParser,
-    PythonParser,
+from coredis.nodemanager import Node
+from coredis.parsers import BaseParser, DefaultParser
+from coredis.typing import (
+    Awaitable,
+    Callable,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    ResponseType,
+    Type,
+    TypeVar,
+    Union,
+    ValueT,
 )
-from coredis.typing import ValueT
 from coredis.utils import b, nativestr
 
+R = TypeVar("R")
 
-async def exec_with_timeout(coroutine, timeout, *, loop=None):
+
+async def exec_with_timeout(
+    coroutine: Awaitable[R],
+    timeout: Optional[float] = None,
+) -> R:
     try:
         return await asyncio.wait_for(coroutine, timeout)
     except asyncio.TimeoutError as exc:
@@ -36,7 +50,15 @@ async def exec_with_timeout(coroutine, timeout, *, loop=None):
 
 
 class RedisSSLContext:
-    def __init__(self, keyfile=None, certfile=None, cert_reqs=None, ca_certs=None):
+    context: Optional[ssl.SSLContext]
+
+    def __init__(
+        self,
+        keyfile: Optional[str],
+        certfile: Optional[str],
+        cert_reqs: Optional[Union[str, ssl.VerifyMode]] = None,
+        ca_certs: Optional[str] = None,
+    ) -> None:
         self.keyfile = keyfile
         self.certfile = certfile
 
@@ -57,20 +79,24 @@ class RedisSSLContext:
         self.ca_certs = ca_certs
         self.context = None
 
-    def get(self):
-        if not self.keyfile:
+    def get(self) -> ssl.SSLContext:
+        if self.keyfile is None:
             self.context = ssl.create_default_context(cafile=self.ca_certs)
         else:
             self.context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
             self.context.verify_mode = self.cert_reqs
-            self.context.load_cert_chain(certfile=self.certfile, keyfile=self.keyfile)
+            self.context.load_cert_chain(
+                certfile=self.certfile, keyfile=self.keyfile  # type: ignore
+            )
             self.context.load_verify_locations(self.ca_certs)
-
+        assert self.context
         return self.context
 
 
 class BaseConnection:
     description = "BaseConnection"
+    _reader: Optional[StreamReader]
+    _writer: Optional[StreamWriter]
 
     def __init__(
         self,
@@ -89,13 +115,18 @@ class BaseConnection:
         self._stream_timeout = stream_timeout
         self._reader = None
         self._writer = None
-        self.username = None
-        self.password = ""
-        self.db = ""
+        self.username: Optional[str] = None
+        self.password: Optional[str] = ""
+        self.db: Optional[int] = None
         self.pid = os.getpid()
         self.retry_on_timeout = retry_on_timeout
-        self._description_args: Dict[str, Union[str, bytes, int, float]] = dict()
-        self._connect_callbacks: List[Callable] = list()
+        self._description_args: Dict[str, Optional[Union[str, int]]] = dict()
+        self._connect_callbacks: List[
+            Union[
+                Callable[[BaseConnection], Awaitable[None]],
+                Callable[[BaseConnection], None],
+            ]
+        ] = list()
         self.encoding = encoding
         self.decode_responses = decode_responses
         self.protocol_version = protocol_version
@@ -106,26 +137,42 @@ class BaseConnection:
         self.awaiting_response = False
         self.last_active_at = time.time()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.description.format(**self._description_args)
 
-    def __del__(self):
+    def __del__(self) -> None:
         try:
             self.disconnect()
         except Exception:
             pass
 
     @property
-    def is_connected(self):
+    def is_connected(self) -> bool:
         return bool(self._reader and self._writer)
 
-    def register_connect_callback(self, callback):
+    @property
+    def reader(self) -> StreamReader:
+        assert self._reader
+        return self._reader
+
+    @property
+    def writer(self) -> StreamWriter:
+        assert self._writer
+        return self._writer
+
+    def register_connect_callback(
+        self,
+        callback: Union[
+            Callable[[BaseConnection], None],
+            Callable[[BaseConnection], Awaitable[None]],
+        ],
+    ) -> None:
         self._connect_callbacks.append(callback)
 
-    def clear_connect_callbacks(self):
+    def clear_connect_callbacks(self) -> None:
         self._connect_callbacks = list()
 
-    async def can_read(self):
+    async def can_read(self) -> bool:
         """Checks for data that can be read"""
         assert self._parser
 
@@ -134,7 +181,7 @@ class BaseConnection:
 
         return self._parser.can_read()
 
-    async def connect(self):
+    async def connect(self) -> None:
         try:
             await self._connect()
         except asyncio.CancelledError:
@@ -151,10 +198,10 @@ class BaseConnection:
             if inspect.isawaitable(task):
                 await task
 
-    async def _connect(self):
+    async def _connect(self) -> None:
         raise NotImplementedError
 
-    async def check_auth_response(self):
+    async def check_auth_response(self) -> None:
         response = await self.read_response()
 
         if nativestr(response) != "OK":
@@ -162,25 +209,28 @@ class BaseConnection:
                 f"Failed to authenticate: username={self.username} & password={self.password}"
             )
 
-    async def on_connect(self):
+    async def on_connect(self) -> None:
         self._parser.on_connect(self)
         hello_command_args: List[Union[int, str, bytes]] = [self.protocol_version]
         auth_attempted = False
         if self.username or self.password:
             hello_command_args.extend(
-                ["AUTH", self.username or b"default", self.password]
+                ["AUTH", self.username or b"default", self.password or b""]
             )
             auth_attempted = True
         await self.send_command(b"HELLO", *hello_command_args)
         try:
-            resp = await self.read_response(decode=False)
             if self.protocol_version == 3:
-                if not resp[b"proto"] == 3:
+                resp3 = cast(
+                    Dict[bytes, ValueT], await self.read_response(decode=False)
+                )
+                if not resp3[b"proto"] == 3:
                     raise ConnectionError(
-                        f"Unexpected response when negotiating protocol: [{resp}]"
+                        f"Unexpected response when negotiating protocol: [{resp3}]"
                     )
-                self.server_version = nativestr(resp[b"version"])
+                self.server_version = nativestr(resp3[b"version"])
             else:
+                resp = cast(List[ValueT], await self.read_response(decode=False))
                 self.server_version = nativestr(resp[3])
         except (UnknownCommandError, AuthenticationRequiredError):
             self.version = None
@@ -207,12 +257,11 @@ class BaseConnection:
 
         self.last_active_at = time.time()
 
-    async def read_response(self, decode: Optional[bool] = None):
+    async def read_response(self, decode: Optional[bool] = None) -> ResponseType:
         try:
             response = await exec_with_timeout(
                 self._parser.read_response(decode=decode),
                 self._stream_timeout,
-                loop=self.loop,
             )
             self.last_active_at = time.time()
         except TimeoutError:
@@ -225,15 +274,13 @@ class BaseConnection:
 
         return response
 
-    async def send_packed_command(self, command):
+    async def send_packed_command(self, command: List[bytes]) -> None:
         """Sends an already packed command to the Redis server"""
 
         if not self._writer:
             await self.connect()
             assert self._writer
         try:
-            if isinstance(command, str):
-                command = [command]
             self._writer.writelines(command)
         except TimeoutError:
             self.disconnect()
@@ -253,14 +300,14 @@ class BaseConnection:
             else:
                 raise
 
-    async def send_command(self, *args: ValueT):
+    async def send_command(self, *args: ValueT) -> None:
         if not self.is_connected:
             await self.connect()
         await self.send_packed_command(self.pack_command(*args))
         self.awaiting_response = True
         self.last_active_at = time.time()
 
-    def encode(self, value):
+    def encode(self, value: ValueT) -> bytes:
         """Returns a bytestring representation of the value"""
         if isinstance(value, bytes):
             return value
@@ -268,14 +315,9 @@ class BaseConnection:
             return b"%d" % value
         elif isinstance(value, float):
             return b"%.15g" % value
-        elif not isinstance(value, str):
-            value = f"{value}"
-        if isinstance(value, str):
-            value = value.encode(self.encoding)
+        return value.encode(self.encoding)
 
-        return value
-
-    def disconnect(self):
+    def disconnect(self) -> None:
         """Disconnects from the Redis server"""
         self._parser.on_disconnect()
         try:
@@ -286,9 +328,9 @@ class BaseConnection:
         self._reader = None
         self._writer = None
 
-    def pack_command(self, *args):
+    def pack_command(self, *args: ValueT) -> List[bytes]:
         "Pack a series of arguments into the Redis protocol"
-        output = []
+        output: List[bytes] = []
         # the client might have included 1 or more literal arguments in
         # the command name, e.g., 'CONFIG GET'. The Redis server expects these
         # arguments to be sent separately, so split the first argument
@@ -318,10 +360,10 @@ class BaseConnection:
         output.append(buff)
         return output
 
-    def pack_commands(self, commands):
+    def pack_commands(self, commands: List[Tuple[ValueT, ...]]) -> List[bytes]:
         "Pack multiple commands into the Redis protocol"
-        output = []
-        pieces = []
+        output: List[bytes] = []
+        pieces: List[bytes] = []
         buffer_length = 0
 
         for cmd in commands:
@@ -345,24 +387,24 @@ class Connection(BaseConnection):
 
     def __init__(
         self,
-        host="127.0.0.1",
-        port=6379,
-        username=None,
-        password=None,
-        db=0,
-        retry_on_timeout=False,
-        stream_timeout=None,
-        connect_timeout=None,
-        ssl_context=None,
-        parser_class=DefaultParser,
-        reader_read_size=65535,
-        encoding="utf-8",
-        decode_responses=False,
-        socket_keepalive=None,
-        socket_keepalive_options=None,
+        host: str = "127.0.0.1",
+        port: int = 6379,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        db: Optional[int] = 0,
+        retry_on_timeout: bool = False,
+        stream_timeout: Optional[float] = None,
+        connect_timeout: Optional[float] = None,
+        ssl_context: Optional[RedisSSLContext] = None,
+        parser_class: Type[BaseParser] = DefaultParser,
+        reader_read_size: int = 65535,
+        encoding: str = "utf-8",
+        decode_responses: bool = False,
+        socket_keepalive: Optional[bool] = None,
+        socket_keepalive_options: Optional[Dict[int, Union[int, bytes]]] = None,
         *,
-        client_name=None,
-        loop=None,
+        client_name: Optional[str] = None,
+        loop: Optional[AbstractEventLoop] = None,
         protocol_version: Literal[2, 3] = 2,
     ):
         super().__init__(
@@ -378,21 +420,28 @@ class Connection(BaseConnection):
         )
         self.host = host
         self.port = port
-        self.username = username
-        self.password = password
-        self.db = db
+        self.username: Optional[str] = username
+        self.password: Optional[str] = password
+        self.db: Optional[int] = db
         self.ssl_context = ssl_context
         self._connect_timeout = connect_timeout
-        self._description_args = {"host": self.host, "port": self.port, "db": self.db}
+        self._description_args: Dict[str, Optional[Union[str, int]]] = {
+            "host": self.host,
+            "port": self.port,
+            "db": self.db,
+        }
         self.socket_keepalive = socket_keepalive
-        self.socket_keepalive_options = socket_keepalive_options or {}
+        self.socket_keepalive_options: Dict[int, Union[int, bytes]] = (
+            socket_keepalive_options or {}
+        )
 
-    async def _connect(self):
+    async def _connect(self) -> None:
         connection = asyncio.open_connection(
             host=self.host, port=self.port, ssl=self.ssl_context
         )
         reader, writer = await exec_with_timeout(
-            connection, self._connect_timeout, loop=self.loop
+            connection,
+            self._connect_timeout,
         )
         self._reader = reader
         self._writer = writer
@@ -421,23 +470,23 @@ class UnixDomainSocketConnection(BaseConnection):
 
     def __init__(
         self,
-        path="",
-        username=None,
-        password=None,
-        db=0,
-        retry_on_timeout=False,
-        stream_timeout=None,
-        connect_timeout=None,
-        ssl_context=None,
-        parser_class=DefaultParser,
-        reader_read_size=65535,
-        encoding="utf-8",
-        decode_responses=False,
+        path: str = "",
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        db: int = 0,
+        retry_on_timeout: bool = False,
+        stream_timeout: Optional[float] = None,
+        connect_timeout: Optional[float] = None,
+        ssl_context: Optional[RedisSSLContext] = None,
+        parser_class: Type[BaseParser] = DefaultParser,
+        reader_read_size: int = 65535,
+        encoding: str = "utf-8",
+        decode_responses: bool = False,
         *,
-        client_name=None,
-        loop=None,
+        client_name: Optional[str] = None,
+        loop: Optional[AbstractEventLoop] = None,
         protocol_version: Literal[2, 3] = 2,
-    ):
+    ) -> None:
         super().__init__(
             retry_on_timeout,
             stream_timeout,
@@ -457,10 +506,11 @@ class UnixDomainSocketConnection(BaseConnection):
         self._connect_timeout = connect_timeout
         self._description_args = {"path": self.path, "db": self.db}
 
-    async def _connect(self):
+    async def _connect(self) -> None:
         connection = asyncio.open_unix_connection(path=self.path, ssl=self.ssl_context)
         reader, writer = await exec_with_timeout(
-            connection, self._connect_timeout, loop=self.loop
+            connection,
+            self._connect_timeout,
         )
         self._reader = reader
         self._writer = writer
@@ -470,13 +520,54 @@ class UnixDomainSocketConnection(BaseConnection):
 class ClusterConnection(Connection):
     "Manages TCP communication to and from a Redis server"
     description = "ClusterConnection<host={host},port={port}>"
-    node: Dict
+    node: Node
 
-    def __init__(self, *args, **kwargs):
-        self.readonly = kwargs.pop("readonly", False)
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self,
+        host: str = "127.0.0.1",
+        port: int = 6379,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        db: Optional[int] = 0,
+        retry_on_timeout: bool = False,
+        stream_timeout: Optional[float] = None,
+        connect_timeout: Optional[float] = None,
+        ssl_context: Optional[RedisSSLContext] = None,
+        parser_class: Type[BaseParser] = DefaultParser,
+        reader_read_size: int = 65535,
+        encoding: str = "utf-8",
+        decode_responses: bool = False,
+        socket_keepalive: Optional[bool] = None,
+        socket_keepalive_options: Optional[Dict[int, Union[int, bytes]]] = None,
+        *,
+        client_name: Optional[str] = None,
+        loop: Optional[AbstractEventLoop] = None,
+        protocol_version: Literal[2, 3] = 2,
+        readonly: bool = False,
+    ) -> None:
+        self.readonly = readonly
+        super().__init__(
+            host=host,
+            port=port,
+            username=username,
+            password=password,
+            db=db,
+            retry_on_timeout=retry_on_timeout,
+            stream_timeout=stream_timeout,
+            connect_timeout=connect_timeout,
+            ssl_context=ssl_context,
+            parser_class=parser_class,
+            reader_read_size=reader_read_size,
+            encoding=encoding,
+            decode_responses=decode_responses,
+            socket_keepalive=socket_keepalive,
+            socket_keepalive_options=socket_keepalive_options,
+            client_name=client_name,
+            loop=loop,
+            protocol_version=protocol_version,
+        )
 
-    async def on_connect(self):
+    async def on_connect(self) -> None:
         """
         Initialize the connection, authenticate and select a database and send READONLY if it is
         set during object initialization.
@@ -486,7 +577,7 @@ class ClusterConnection(Connection):
 
         if self.db:
             warnings.warn("SELECT DB is not allowed in cluster mode")
-            self.db = ""
+            self.db = None
         await super().on_connect()
 
         if self.readonly:

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import functools
 import inspect
 import textwrap
 from abc import ABCMeta
 from ssl import SSLContext
-from typing import TYPE_CHECKING, Coroutine, Type, overload
+from typing import TYPE_CHECKING, Any, AsyncIterator, Generator, cast, overload
 
 from deprecated.sphinx import deprecated, versionadded
 from packaging.version import Version
@@ -17,6 +16,7 @@ from coredis.commands.core import CoreCommands
 from coredis.commands.function import Library
 from coredis.commands.key_spec import KeySpec
 from coredis.commands.monitor import Monitor
+from coredis.commands.pubsub import ClusterPubSub, PubSub
 from coredis.commands.script import Script
 from coredis.commands.sentinel import SentinelCommands
 from coredis.connection import Connection, RedisSSLContext, UnixDomainSocketConnection
@@ -34,15 +34,17 @@ from coredis.exceptions import (
     WatchError,
 )
 from coredis.lock import Lock, LuaLock
+from coredis.nodemanager import Node, NodeFlag
 from coredis.pool import ClusterConnectionPool, ConnectionPool
-from coredis.response.callbacks import SimpleStringCallback
-from coredis.tokens import PrefixToken, PureToken
+from coredis.response.callbacks import IntCallback, NoopCallback
+from coredis.response.types import ScoredMember
+from coredis.tokens import PureToken
 from coredis.typing import (
-    Any,
     AnyStr,
     AsyncGenerator,
+    Awaitable,
     Callable,
-    CommandArgList,
+    Coroutine,
     Dict,
     Generic,
     Iterable,
@@ -52,15 +54,22 @@ from coredis.typing import (
     Literal,
     Optional,
     ParamSpec,
+    ResponseType,
     Set,
     StringT,
     Tuple,
+    Type,
     TypeVar,
     Union,
     ValueT,
     add_runtime_checks,
 )
-from coredis.utils import NodeFlag, b, clusterdown_wrapper, first_key, nativestr
+from coredis.utils import (
+    EncodingInsensitiveDict,
+    clusterdown_wrapper,
+    first_key,
+    nativestr,
+)
 from coredis.validators import mutually_inclusive_parameters
 
 P = ParamSpec("P")
@@ -77,8 +86,7 @@ in :class:`coredis.Redis`
 
 class ClusterMeta(ABCMeta):
     NODES_FLAGS: Dict[str, NodeFlag]
-    RESPONSE_CALLBACKS: Dict[str, Callable]
-    RESULT_CALLBACKS: Dict[str, Callable]
+    RESULT_CALLBACKS: Dict[str, Callable[..., ResponseType]]
     NODE_FLAG_DOC_MAPPING = {
         NodeFlag.PRIMARIES: "all primaries",
         NodeFlag.REPLICAS: "all replicas",
@@ -87,8 +95,10 @@ class ClusterMeta(ABCMeta):
         NodeFlag.SLOT_ID: "a node selected by :paramref:`slot`",
     }
 
-    def __new__(cls, name, bases, dct):
-        kls = super().__new__(cls, name, bases, dct)
+    def __new__(
+        cls, name: str, bases: Tuple[type, ...], namespace: Dict[str, object]
+    ) -> ClusterMeta:
+        kls = super().__new__(cls, name, bases, namespace)
         methods = dict(k for k in inspect.getmembers(kls) if inspect.isfunction(k[1]))
 
         for name, method in methods.items():
@@ -109,8 +119,6 @@ class ClusterMeta(ABCMeta):
 
    The command will be run on **{cls.NODE_FLAG_DOC_MAPPING[cmd.cluster.flag]}** {aggregate_note}
                     """
-                if cmd.response_callback:
-                    kls.RESPONSE_CALLBACKS[cmd.command] = cmd.response_callback
                 if cmd.cluster.multi_node:
                     kls.RESULT_CALLBACKS[cmd.command] = cmd.cluster.combine or (
                         lambda r, **_: r
@@ -121,11 +129,12 @@ class ClusterMeta(ABCMeta):
                     ).pop()
                 if cmd.readonly:
                     ConnectionPool.READONLY_COMMANDS.add(cmd.command)
+                if (wrapped := add_runtime_checks(method)) != method:
+                    setattr(kls, name, wrapped)
+                    method = wrapped
             if doc_addition:
 
-                def __w(
-                    func: Callable[P, Coroutine[Any, Any, R]]
-                ) -> Callable[P, Coroutine[Any, Any, R]]:
+                def __w(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
                     @functools.wraps(func)
                     async def _w(*a: P.args, **k: P.kwargs) -> R:
                         return await func(*a, **k)
@@ -140,47 +149,23 @@ class ClusterMeta(ABCMeta):
 
 
 class RedisMeta(ABCMeta):
-    RESPONSE_CALLBACKS: Dict
-
-    def __new__(cls, name, bases, dct):
-        kls = super().__new__(cls, name, bases, dct)
+    def __new__(
+        cls, name: str, bases: Tuple[type, ...], namespace: Dict[str, object]
+    ) -> RedisMeta:
+        kls = super().__new__(cls, name, bases, namespace)
         methods = dict(k for k in inspect.getmembers(kls) if inspect.isfunction(k[1]))
 
         for name, method in methods.items():
-            if cmd := getattr(method, "__coredis_command", None):
-                if cmd.response_callback:
-                    kls.RESPONSE_CALLBACKS[cmd.command] = cmd.response_callback
-
+            if hasattr(method, "__coredis_command"):
                 if (wrapped := add_runtime_checks(method)) != method:
                     setattr(kls, name, wrapped)
         return kls
 
 
-class NodeProxy:
-    class Capture:
-        def __init__(self, method: str, nodes: List[Redis]):
-            self.method = method
-            self.nodes = nodes
-
-        async def __call__(self, *args, **kwargs):
-            awaitables = []
-            for node in self.nodes:
-                awaitables.append(getattr(node, self.method)(*args, **kwargs))
-            responses = await asyncio.gather(*awaitables)
-            return dict(zip(self.nodes, responses))
-
-    def __init__(self, nodes):
-        self.nodes = nodes
-
-    def __getattribute__(self, name):
-        nodes = object.__getattribute__(self, "nodes")
-        capture = object.__getattribute__(self, "Capture")
-        return capture(name, nodes)
-
-
 class RedisConnection:
     encoding: str
     decode_responses: bool
+    connection_pool: ConnectionPool
 
     def __init__(
         self,
@@ -203,12 +188,12 @@ class RedisConnection:
         ssl_ca_certs: Optional[str] = None,
         max_connections: Optional[int] = None,
         retry_on_timeout: bool = False,
-        max_idle_time: int = 0,
+        max_idle_time: float = 0,
         idle_check_interval: float = 1,
         client_name: Optional[str] = None,
         protocol_version: Literal[2, 3] = 2,
         verify_version: bool = True,
-        **kwargs,
+        **kwargs: Any,
     ):
         if not connection_pool:
             kwargs = {
@@ -254,17 +239,33 @@ class RedisConnection:
         self.server_version: Optional[Version] = None
         self.verify_version = verify_version
 
-    def __await__(self):
-        async def closure():
-            await self.connection_pool.initialize()
-            return self
+    async def parse_response(
+        self,
+        connection: Connection,
+        *,
+        decode: Optional[ValueT] = None,
+        **_: Any,
+    ) -> ResponseType:
+        """
+        Parses a response from the Redis server
 
-        return closure().__await__()
+        :meta private:
+        """
+        return await connection.read_response(
+            decode=decode if decode is None else bool(decode)
+        )
 
-    def __repr__(self):
+    async def initialize(self) -> RedisConnection:
+        await self.connection_pool.initialize()
+        return self
+
+    def __await__(self) -> Generator[Any, None, RedisConnection]:
+        return self.initialize().__await__()
+
+    def __repr__(self) -> str:
         return f"{type(self).__name__}<{repr(self.connection_pool)}>"
 
-    def _ensure_server_version(self, version: Optional[str]):
+    def ensure_server_version(self, version: Optional[str]) -> None:
         if not self.verify_version:
             return
         if not version:
@@ -275,32 +276,6 @@ class RedisConnection:
             raise Exception(
                 f"Server version changed from {self.server_version} to {version}"
             )
-
-
-class ResponseParser:
-    RESPONSE_CALLBACKS: Dict = {}
-
-    def __init__(self, **kwargs):
-        self.response_callbacks: Dict[
-            bytes, Callable
-        ] = self.__class__.RESPONSE_CALLBACKS.copy()
-        super().__init__(**kwargs)
-
-    async def parse_response(
-        self, connection: Connection, command_name: bytes, **options: Any
-    ) -> Any:
-        """
-        Parses a response from the Redis server
-
-        :meta private:
-        """
-        response = await connection.read_response(decode=options.get("decode"))
-        if command_name in self.response_callbacks:
-            callback = self.response_callbacks[command_name]
-            response = callback(
-                response, version=connection.protocol_version, **options
-            )
-        return response
 
 
 class AbstractRedis(
@@ -319,7 +294,7 @@ class AbstractRedis(
         match: Optional[StringT] = None,
         count: Optional[int] = None,
         type_: Optional[StringT] = None,
-    ):
+    ) -> AsyncIterator[AnyStr]:
         """
         Make an iterator using the SCAN command so that the client doesn't
         need to remember the cursor position.
@@ -339,7 +314,7 @@ class AbstractRedis(
         key: KeyT,
         match: Optional[StringT] = None,
         count: Optional[int] = None,
-    ):
+    ) -> AsyncIterator[AnyStr]:
         """
         Make an iterator using the SSCAN command so that the client doesn't
         need to remember the cursor position.
@@ -379,7 +354,7 @@ class AbstractRedis(
         key: KeyT,
         match: Optional[StringT] = None,
         count: Optional[int] = None,
-    ):
+    ) -> AsyncIterator[ScoredMember]:
         """
         Make an iterator using the ZSCAN command so that the client doesn't
         need to remember the cursor position.
@@ -397,7 +372,7 @@ class AbstractRedis(
             for item in data:
                 yield item
 
-    def register_script(self, script: ValueT) -> Script:
+    def register_script(self, script: ValueT) -> Script[AnyStr]:
         """
         Registers a Lua :paramref:`script`
 
@@ -405,14 +380,14 @@ class AbstractRedis(
          callable and hides the complexity of dealing with scripts, keys, and
          shas.
         """
-        return Script(self, script)  # type: ignore
+        return Script[AnyStr](self, script)  # type: ignore
 
     @versionadded(version="3.1.0")
     async def register_library(
         self,
         name: StringT,
         code: StringT,
-    ) -> Library:
+    ) -> Library[AnyStr]:
         """
         Register a new library
 
@@ -422,7 +397,7 @@ class AbstractRedis(
         return await Library[AnyStr](self, name=name, code=code)
 
     @versionadded(version="3.1.0")
-    async def get_library(self, name: StringT) -> Library:
+    async def get_library(self, name: StringT) -> Library[AnyStr]:
         """
         Fetch a pre registered library
 
@@ -436,7 +411,6 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
     @redis_command(
         CommandName.RENAME,
         group=CommandGroup.GENERIC,
-        response_callback=SimpleStringCallback(),
     )
     async def rename(self, key: KeyT, newkey: KeyT) -> bool:
         """
@@ -476,7 +450,9 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         count = 0
 
         for arg in keys:
-            count += await self.execute_command(CommandName.DEL, arg)
+            count += await self.execute_command(
+                CommandName.DEL, arg, callback=IntCallback()
+            )
 
         return count
 
@@ -532,7 +508,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
             elif data_type == "set":
                 data = list(await self.smembers(key))[:]
             elif data_type == "list":
-                data = await self.lrange(key, 0, -1)
+                data = list(await self.lrange(key, 0, -1))
             else:
                 raise RedisClusterException(f"Unable to sort data type : {data_type}")
 
@@ -541,7 +517,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
                 # need need a return value.
                 data = await self._sort_using_by_arg(data, by, alpha)
             elif not alpha:
-                data.sort(key=self._strtod_key_func)
+                data.sort(key=lambda v: float(v))
             else:
                 data.sort()
 
@@ -572,7 +548,9 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         except KeyError:
             return ()
 
-    async def _retrive_data_from_sort(self, data, gets) -> List[AnyStr]:
+    async def _retrive_data_from_sort(
+        self, data: List[AnyStr], gets: Iterable[KeyT]
+    ) -> List[AnyStr]:
         """
         Used by sort()
         """
@@ -589,59 +567,62 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
 
         return data
 
-    async def _get_single_item(self, k, g) -> Optional[AnyStr]:
+    async def _get_single_item(self, k: AnyStr, g: StringT) -> Optional[AnyStr]:
         """
         Used by sort()
         """
+        _g = nativestr(g)
+        _k = nativestr(k)
+        single_item: Optional[AnyStr] = None
+        if "*" in _g:
+            _g = _g.replace("*", _k)
 
-        if "*" in g:
-            g = g.replace("*", k)
-
-            if "->" in g:
-                key, hash_key = g.split("->")
-                single_item = (await self.hgetall(key) or {}).get(hash_key)
+            if "->" in _g:
+                key, hash_key = _g.split("->")
+                single_item = cast(
+                    Optional[AnyStr],
+                    EncodingInsensitiveDict(await self.hgetall(key) or {}).get(
+                        hash_key
+                    ),
+                )
             else:
-                single_item = await self.get(g)
-        elif "#" in g:
+                single_item = await self.get(_g)
+        elif "#" in _g:
             single_item = k
-        else:
-            single_item = None
 
         return single_item
 
-    def _strtod_key_func(self, arg):
+    async def _by_key(
+        self, by: str, arg: str, alpha: Optional[bool]
+    ) -> Optional[Union[AnyStr, float]]:
+        key = by.replace("*", arg)
+        if "->" in by:
+            key, hash_key = key.split("->")
+            v = await self.hget(key, hash_key)
+
+            if v is not None:
+                if alpha:
+                    return v
+                else:
+                    return float(v)
+            return None
+        else:
+            return await self.get(key)
+
+    async def _sort_using_by_arg(
+        self, data: List[AnyStr], by: StringT, alpha: Optional[bool]
+    ) -> List[AnyStr]:
         """
         Used by sort()
         """
+        _by = nativestr(by)
 
-        return float(arg)
-
-    async def _sort_using_by_arg(self, data, by, alpha):
-        """
-        Used by sort()
-        """
-
-        async def _by_key(arg):
-            key = by.replace("*", arg)
-
-            if "->" in by:
-                key, hash_key = key.split("->")
-                v = await self.hget(key, hash_key)
-
-                if v is not None:
-                    if alpha:
-                        return v
-                    else:
-                        return float(v)
-            else:
-                return await self.get(key)
-
-        sorted_data = []
+        sorted_data: List[Tuple[AnyStr, Optional[Union[AnyStr, float]]]] = []
 
         for d in data:
-            sorted_data.append((d, await _by_key(d)))
+            sorted_data.append((d, await self._by_key(_by, nativestr(d), alpha)))
 
-        return [x[0] for x in sorted(sorted_data, key=lambda x: x[1])]
+        return [x[0] for x in sorted(sorted_data, key=lambda x: x[1])]  # type: ignore
 
     @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(CommandName.MGET, readonly=True, group=CommandGroup.STRING)
@@ -655,7 +636,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
            This will go alot slower than a normal mget call in Redis.
            **Operation is no longer atomic**
         """
-        res = list()
+        res: List[Optional[AnyStr]] = list()
 
         for arg in keys:
             res.append(await self.get(arg))
@@ -925,15 +906,17 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         return None
 
 
-_RedisT = TypeVar("_RedisT", bound="Redis")
-_RedisStringT = TypeVar("_RedisStringT", bound="Redis[str]")
-_RedisBytesT = TypeVar("_RedisBytesT", bound="Redis[bytes]")
+RedisT = TypeVar("RedisT", bound="Redis[Any]")
+RedisStringT = TypeVar("RedisStringT", bound="Redis[str]")
+RedisBytesT = TypeVar("RedisBytesT", bound="Redis[bytes]")
+RedisClusterT = TypeVar("RedisClusterT", bound="RedisCluster[Any]")
+RedisClusterStringT = TypeVar("RedisClusterStringT", bound="RedisCluster[str]")
+RedisClusterBytesT = TypeVar("RedisClusterBytesT", bound="RedisCluster[bytes]")
 
 
 class Redis(
     AbstractRedis[AnyStr],
     Generic[AnyStr],
-    ResponseParser,
     RedisConnection,
     metaclass=RedisMeta,
 ):
@@ -963,10 +946,10 @@ class Redis(
         max_idle_time: float = ...,
         idle_check_interval: float = ...,
         client_name: Optional[str] = ...,
-        protocol_version: Literal[2, 3] = 2,
+        protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
-        **_,
-    ):
+        **_: Any,
+    ) -> None:
         ...
 
     @overload
@@ -995,10 +978,10 @@ class Redis(
         max_idle_time: float = ...,
         idle_check_interval: float = ...,
         client_name: Optional[str] = ...,
-        protocol_version: Literal[2, 3] = 2,
+        protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
-        **_,
-    ):
+        **_: Any,
+    ) -> None:
         ...
 
     def __init__(
@@ -1028,8 +1011,8 @@ class Redis(
         client_name: Optional[str] = None,
         protocol_version: Literal[2, 3] = 2,
         verify_version: bool = False,
-        **_,
-    ):
+        **_: Any,
+    ) -> None:
         """
         Initializes a new Redis client
         """
@@ -1060,43 +1043,44 @@ class Redis(
             verify_version=verify_version,
         )
         self._use_lua_lock: Optional[bool] = None
+        self.response_callbacks: Dict[bytes, Callable[..., Any]] = {}
 
     @classmethod
     @overload
     def from_url(
-        cls: Type[_RedisBytesT],
+        cls: Type[RedisBytesT],
         url: str,
         db: Optional[int] = ...,
         *,
         decode_responses: Literal[False] = ...,
         protocol_version: Literal[2, 3] = ...,
-        **kwargs,
-    ) -> _RedisBytesT:
+        **kwargs: Any,
+    ) -> RedisBytesT:
         ...
 
     @classmethod
     @overload
     def from_url(
-        cls: Type[_RedisStringT],
+        cls: Type[RedisStringT],
         url: str,
         db: Optional[int] = ...,
         *,
         decode_responses: Literal[True],
         protocol_version: Literal[2, 3] = ...,
-        **kwargs,
-    ) -> _RedisStringT:
+        **kwargs: Any,
+    ) -> RedisStringT:
         ...
 
     @classmethod
     def from_url(
-        cls: Type[_RedisT],
+        cls: Type[RedisT],
         url: str,
         db: Optional[int] = None,
         *,
         decode_responses: bool = False,
         protocol_version: Literal[2, 3] = 2,
-        **kwargs,
-    ) -> _RedisT:
+        **kwargs: Any,
+    ) -> RedisT:
         """
         Return a Redis client object configured from the given URL, which must
         use either the `redis:// scheme
@@ -1123,47 +1107,59 @@ class Redis(
         passed along to the :class:`ConnectionPool` initializer. In the case
         of conflicting arguments, querystring arguments always win.
         """
-        connection_pool: ConnectionPool = ConnectionPool.from_url(
-            url,
-            db=db,
-            decode_responses=decode_responses,
-            protocol_version=protocol_version,
-            **kwargs,
-        )
-
         if decode_responses:
+
             return cls(
                 decode_responses=True,
                 protocol_version=protocol_version,
-                connection_pool=connection_pool,
+                connection_pool=ConnectionPool.from_url(
+                    url,
+                    db=db,
+                    decode_responses=decode_responses,
+                    protocol_version=protocol_version,
+                    **kwargs,
+                ),
             )
         else:
             return cls(
                 decode_responses=False,
                 protocol_version=protocol_version,
-                connection_pool=connection_pool,
+                connection_pool=ConnectionPool.from_url(
+                    url,
+                    db=db,
+                    decode_responses=decode_responses,
+                    protocol_version=protocol_version,
+                    **kwargs,
+                ),
             )
 
-    def set_response_callback(self, command, callback):
+    def set_response_callback(self, command: str, callback: Callable[..., Any]) -> None:
         """
         Sets a custom Response Callback
 
         :meta private:
         """
-        self.response_callbacks[command] = callback
+        self.response_callbacks[command.encode("latin-1")] = callback
 
     async def execute_command(
-        self, command: StringT, *args: Any, **options: Any
-    ) -> Any:
+        self,
+        command: bytes,
+        *args: ValueT,
+        callback: Callable[..., R] = NoopCallback(),
+        **options: Optional[ValueT],
+    ) -> R:
         """Executes a command and returns a parsed response"""
         pool = self.connection_pool
         connection = await pool.get_connection()
-        self._ensure_server_version(connection.server_version)
+        self.ensure_server_version(connection.server_version)
 
         try:
             await connection.send_command(command, *args)
-
-            return await self.parse_response(connection, b(command), **options)
+            return callback(
+                await self.parse_response(connection, decode=options.get("decode")),
+                version=self.protocol_version,
+                **options,
+            )
         except asyncio.CancelledError:
             # do not retry when coroutine is cancelled
             connection.disconnect()
@@ -1175,18 +1171,22 @@ class Redis(
                 raise
             await connection.send_command(command, *args)
 
-            return await self.parse_response(connection, b(command), **options)
+            return callback(
+                await self.parse_response(connection, decode=options.get("decode")),
+                version=self.protocol_version,
+                **options,
+            )
         finally:
             pool.release(connection)
 
-    def monitor(self) -> Monitor:
+    def monitor(self) -> Monitor[AnyStr]:
         """
         Return an instance of a :class:`~coredis.commands.monitor.Monitor`
 
         The monitor can be used as an async iterator or individual commands
         can be fetched via :meth:`~coredis.commands.monitor.Monitor.get_command`.
         """
-        return Monitor(self)
+        return Monitor[AnyStr](self)
 
     def lock(
         self,
@@ -1194,9 +1194,9 @@ class Redis(
         timeout: Optional[float] = None,
         sleep: float = 0.1,
         blocking_timeout: Optional[bool] = None,
-        lock_class: Optional[Type[Lock]] = None,
+        lock_class: Optional[Type[Lock[AnyStr]]] = None,
         thread_local: bool = True,
-    ) -> Lock:
+    ) -> Lock[AnyStr]:
         """
         Return a new :class:`~coredis.lock.Lock` object using :paramref:`name` that mimics
         the behavior of :class:`threading.Lock`.
@@ -1208,15 +1208,15 @@ class Redis(
         """
 
         if lock_class is None:
-            if self._use_lua_lock is None:  # type: ignore
+            if self._use_lua_lock is None:
                 # the first time .lock() is called, determine if we can use
                 # Lua by attempting to register the necessary scripts
                 try:
-                    LuaLock.register_scripts(self)
+                    LuaLock[AnyStr].register_scripts(self)
                     self._use_lua_lock = True
                 except ResponseError:
                     self._use_lua_lock = False
-            lock_class = self._use_lua_lock and LuaLock or Lock
+            lock_class = self._use_lua_lock and LuaLock[AnyStr] or Lock[AnyStr]
 
         return lock_class(
             self,
@@ -1227,15 +1227,16 @@ class Redis(
             thread_local=thread_local,
         )
 
-    def pubsub(self, ignore_subscribe_messages: bool = False, **kwargs):
+    def pubsub(
+        self, ignore_subscribe_messages: bool = False, **kwargs: Any
+    ) -> PubSub[AnyStr]:
         """
         Return a Publish/Subscribe object. With this object, you can
         subscribe to channels and listen for messages that get published to
         them.
         """
-        from coredis.commands.pubsub import PubSub
 
-        return PubSub(
+        return PubSub[AnyStr](
             self.connection_pool,
             ignore_subscribe_messages=ignore_subscribe_messages,
             **kwargs,
@@ -1244,7 +1245,7 @@ class Redis(
     async def pipeline(
         self,
         transaction: Optional[bool] = True,
-        watches: Optional[Iterable[StringT]] = None,
+        watches: Optional[Iterable[KeyT]] = None,
     ) -> "coredis.commands.pipeline.Pipeline[AnyStr]":
         """
         Returns a new pipeline object that can queue multiple commands for
@@ -1255,13 +1256,20 @@ class Redis(
         """
         from coredis.commands.pipeline import Pipeline
 
-        pipeline: Pipeline[AnyStr] = Pipeline.proxy(
+        pipeline: Pipeline[AnyStr] = Pipeline[AnyStr].proxy(
             self.connection_pool, self.response_callbacks, transaction
         )
         await pipeline.reset()
         return pipeline
 
-    async def transaction(self, func, *watches: StringT, **kwargs):
+    async def transaction(
+        self,
+        func: Callable[
+            ["coredis.commands.pipeline.Pipeline[AnyStr]"], Coroutine[Any, Any, None]
+        ],
+        *watches: KeyT,
+        **kwargs: Any,
+    ) -> Optional[Any]:
         """
         Convenience method for executing the callable :paramref:`func` as a
         transaction while watching all keys specified in :paramref:`watches`.
@@ -1286,13 +1294,14 @@ class Redis(
 
 
 class RedisCluster(
-    AbstractRedisCluster[AnyStr], ResponseParser, RedisConnection, metaclass=ClusterMeta
+    AbstractRedisCluster[AnyStr],
+    RedisConnection,
+    metaclass=ClusterMeta,
 ):
 
     RedisClusterRequestTTL = 16
     NODES_FLAGS: Dict[bytes, NodeFlag] = {}
-    RESPONSE_CALLBACKS: Dict[bytes, Callable] = {}
-    RESULT_CALLBACKS: Dict[bytes, Callable] = {}
+    RESULT_CALLBACKS: Dict[bytes, Callable[..., Any]] = {}
 
     connection_pool: ClusterConnectionPool
 
@@ -1302,7 +1311,7 @@ class RedisCluster(
         host: Optional[str] = ...,
         port: Optional[int] = ...,
         *,
-        startup_nodes: Optional[Iterable[Dict]] = ...,
+        startup_nodes: Optional[Iterable[Node]] = ...,
         max_connections: int = ...,
         max_connections_per_node: bool = ...,
         readonly: bool = ...,
@@ -1311,8 +1320,9 @@ class RedisCluster(
         nodemanager_follow_cluster: bool = ...,
         decode_responses: Literal[False] = ...,
         connection_pool: Optional[ClusterConnectionPool] = ...,
+        protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
-        **kwargs,
+        **kwargs: Any,
     ):
         ...
 
@@ -1322,7 +1332,7 @@ class RedisCluster(
         host: Optional[str] = ...,
         port: Optional[int] = ...,
         *,
-        startup_nodes: Optional[Iterable[Dict]] = ...,
+        startup_nodes: Optional[Iterable[Node]] = ...,
         max_connections: int = ...,
         max_connections_per_node: bool = ...,
         readonly: bool = ...,
@@ -1331,8 +1341,9 @@ class RedisCluster(
         nodemanager_follow_cluster: bool = ...,
         decode_responses: Literal[True],
         connection_pool: Optional[ClusterConnectionPool] = ...,
+        protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
-        **kwargs,
+        **kwargs: Any,
     ):
         ...
 
@@ -1341,7 +1352,7 @@ class RedisCluster(
         host: Optional[str] = None,
         port: Optional[int] = None,
         *,
-        startup_nodes: Optional[Iterable[Dict]] = None,
+        startup_nodes: Optional[Iterable[Node]] = None,
         max_connections: int = 32,
         max_connections_per_node: bool = False,
         readonly: bool = False,
@@ -1350,8 +1361,9 @@ class RedisCluster(
         nodemanager_follow_cluster: bool = False,
         decode_responses: bool = False,
         connection_pool: Optional[ClusterConnectionPool] = None,
+        protocol_version: Literal[2, 3] = 2,
         verify_version: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ):
         """
         :param host: Can be used to point to a startup node
@@ -1381,7 +1393,15 @@ class RedisCluster(
             # Support host/port as argument
 
             if host:
-                startup_nodes.append({"host": host, "port": port if port else 7000})
+                startup_nodes.append(
+                    Node(
+                        host=host,
+                        port=port if port else 7000,
+                        name="",
+                        server_type=None,
+                        node_id=None,
+                    )
+                )
             pool = ClusterConnectionPool(
                 startup_nodes=startup_nodes,
                 max_connections=max_connections,
@@ -1391,6 +1411,7 @@ class RedisCluster(
                 nodemanager_follow_cluster=nodemanager_follow_cluster,
                 readonly=readonly,
                 decode_responses=decode_responses,
+                protocol_version=protocol_version,
                 **kwargs,
             )
 
@@ -1398,57 +1419,56 @@ class RedisCluster(
             connection_pool=pool,
             decode_responses=decode_responses,
             verify_version=verify_version,
+            protocol_version=protocol_version,
             **kwargs,
         )
 
         self.refresh_table_asap: bool = False
         self.nodes_flags: Dict[bytes, NodeFlag] = self.__class__.NODES_FLAGS.copy()
+        self.response_callbacks: Dict[bytes, Callable[..., Any]] = {}
         self.result_callbacks: Dict[
-            bytes, Callable
+            bytes, Callable[..., Any]
         ] = self.__class__.RESULT_CALLBACKS.copy()
-        self.response_callbacks: Dict[
-            bytes, Callable
-        ] = self.__class__.RESPONSE_CALLBACKS.copy()
 
     @classmethod
     @overload
     def from_url(
-        cls,
+        cls: Type[RedisClusterBytesT],
         url: str,
         *,
         db: Optional[int] = ...,
         skip_full_coverage_check: bool = ...,
         decode_responses: Literal[False] = ...,
         protocol_version: Literal[2, 3] = ...,
-        **kwargs,
-    ) -> RedisCluster[bytes]:
+        **kwargs: Any,
+    ) -> RedisClusterBytesT:
         ...
 
     @classmethod
     @overload
     def from_url(
-        cls,
+        cls: Type[RedisClusterStringT],
         url: str,
         *,
         db: Optional[int] = ...,
         skip_full_coverage_check: bool = ...,
         decode_responses: Literal[True],
         protocol_version: Literal[2, 3] = ...,
-        **kwargs,
-    ) -> RedisCluster[str]:
+        **kwargs: Any,
+    ) -> RedisClusterStringT:
         ...
 
     @classmethod
     def from_url(
-        cls,
+        cls: Type[RedisClusterT],
         url: str,
         *,
         db: Optional[int] = None,
         skip_full_coverage_check: bool = False,
         decode_responses: bool = False,
         protocol_version: Literal[2, 3] = 2,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> RedisClusterT:
         """
         Return a Redis client object configured from the given URL, which must
         use either the ``redis://`` scheme
@@ -1473,28 +1493,34 @@ class RedisCluster(
         passed along to the :class:`ConnectionPool` class's initializer. In the case
         of conflicting arguments, querystring arguments always win.
         """
-        connection_pool = ClusterConnectionPool.from_url(
-            url,
-            db=db,
-            skip_full_coverage_check=skip_full_coverage_check,
-            decode_responses=decode_responses,
-            protocol_version=protocol_version,
-            **kwargs,
-        )
         if decode_responses:
-            return RedisCluster[str](
+            return cls(
                 decode_responses=True,
                 protocol_version=protocol_version,
-                connection_pool=connection_pool,
+                connection_pool=ClusterConnectionPool.from_url(
+                    url,
+                    db=db,
+                    skip_full_coverage_check=skip_full_coverage_check,
+                    decode_responses=decode_responses,
+                    protocol_version=protocol_version,
+                    **kwargs,
+                ),
             )
         else:
-            return RedisCluster[bytes](
+            return cls(
                 decode_responses=False,
                 protocol_version=protocol_version,
-                connection_pool=connection_pool,
+                connection_pool=ClusterConnectionPool.from_url(
+                    url,
+                    db=db,
+                    skip_full_coverage_check=skip_full_coverage_check,
+                    decode_responses=decode_responses,
+                    protocol_version=protocol_version,
+                    **kwargs,
+                ),
             )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         servers = list(
             {
                 "{}:{}".format(info["host"], info["port"])
@@ -1506,46 +1532,54 @@ class RedisCluster(
         return "{}<{}>".format(type(self).__name__, ", ".join(servers))
 
     @property
-    def all_nodes(self) -> Iterator[Redis]:
+    def all_nodes(self) -> Iterator[Redis[AnyStr]]:
         """ """
         for node in self.connection_pool.nodes.all_nodes():
-            yield self.connection_pool.nodes.get_redis_link(node["host"], node["port"])
+            yield cast(
+                Redis[AnyStr],
+                self.connection_pool.nodes.get_redis_link(node["host"], node["port"]),
+            )
 
     @property
-    def primaries(self) -> Iterator[Redis]:
+    def primaries(self) -> Iterator[Redis[AnyStr]]:
         """ """
         for master in self.connection_pool.nodes.all_primaries():
-            yield self.connection_pool.nodes.get_redis_link(
-                master["host"], master["port"]
+            yield cast(
+                Redis[AnyStr],
+                self.connection_pool.nodes.get_redis_link(
+                    master["host"], master["port"]
+                ),
             )
 
     @property
-    def replicas(self) -> Iterator[Redis]:
+    def replicas(self) -> Iterator[Redis[AnyStr]]:
         """ """
         for replica in self.connection_pool.nodes.all_replicas():
-            yield self.connection_pool.nodes.get_redis_link(
-                replica["host"], replica["port"]
+            yield cast(
+                Redis[AnyStr],
+                self.connection_pool.nodes.get_redis_link(
+                    replica["host"], replica["port"]
+                ),
             )
 
-    def set_result_callback(self, command, callback):
+    def set_result_callback(self, command: str, callback: Callable[..., Any]) -> None:
         "Sets a custom Result Callback"
-        self.result_callbacks[command] = callback
+        self.result_callbacks[command.encode("latin-1")] = callback
 
-    def _determine_slot(self, *args):
+    def _determine_slot(self, command: bytes, *args: ValueT) -> Optional[int]:
         """Figures out what slot based on command and args"""
 
-        if len(args) <= 1:
+        if len(args) <= 0:
             raise RedisClusterException(
                 f"No way to dispatch this command:{args} to Redis Cluster. Missing key."
             )
-        command: bytes = args[0]
-        keys: Tuple[ValueT, ...] = KeySpec.extract_keys(args)
+        keys: Tuple[ValueT, ...] = KeySpec.extract_keys((command,) + args)
 
         if (
             command in {CommandName.EVAL, CommandName.EVALSHA, CommandName.FCALL}
             and not keys
         ):
-            return
+            return None
 
         slots = {self.connection_pool.nodes.keyslot(key) for key in keys}
         if not slots:
@@ -1559,30 +1593,34 @@ class RedisCluster(
             )
         return slots.pop()
 
-    def _merge_result(self, command, res, **kwargs):
+    def _merge_result(
+        self, command: bytes, res: Dict[str, R], **kwargs: Optional[ValueT]
+    ) -> R:
         """
         `res` is a dict with the following structure Dict(NodeName, CommandResult)
         """
 
         if command in self.result_callbacks:
-            return self.result_callbacks[command](
-                res, version=self.protocol_version, **kwargs
+            # TODO: move cluster combine callbacks inline
+            return cast(
+                R,
+                self.result_callbacks[command](
+                    res, version=self.protocol_version, **kwargs
+                ),
             )
-
-        # Default way to handle result
-
         return first_key(res)
 
-    def determine_node(self, *args, **kwargs):
+    def determine_node(
+        self, command: bytes, **kwargs: Optional[ValueT]
+    ) -> Optional[Iterable[Node]]:
         """
         TODO: document
         """
-        command = args[0]
         node_flag = self.nodes_flags.get(command)
 
         if node_flag == NodeFlag.BLOCKED:
             raise RedisClusterException(
-                f"Command: {command} is blocked in redis cluster mode"
+                f"Command: {command.decode('latin-1')} is blocked in redis cluster mode"
             )
         elif node_flag == NodeFlag.RANDOM:
             return [self.connection_pool.nodes.random_node()]
@@ -1597,15 +1635,25 @@ class RedisCluster(
 
             if not slot:
                 raise RedisClusterException(
-                    f"slot_id is needed to execute command {command}"
+                    f"slot_id is needed to execute command {command.decode('latin-1')}"
                 )
 
-            return [self.connection_pool.nodes.node_from_slot(slot)]
+            node_from_slot = self.connection_pool.nodes.node_from_slot(int(slot))
+            if node_from_slot:
+                return [node_from_slot]
+            else:
+                return None
         else:
             return None
 
     @clusterdown_wrapper
-    async def execute_command(self, command: StringT, *args: Any, **kwargs: Any):
+    async def execute_command(
+        self,
+        command: bytes,
+        *args: ValueT,
+        callback: Callable[..., R] = NoopCallback(),
+        **kwargs: Optional[ValueT],
+    ) -> R:
         """
         Sends a command to a node in the cluster
         """
@@ -1615,10 +1663,12 @@ class RedisCluster(
         if not command:
             raise RedisClusterException("Unable to determine command to use")
 
-        node = self.determine_node(command, *args, **kwargs)
+        nodes = self.determine_node(command, **kwargs)
 
-        if node:
-            return await self.execute_command_on_nodes(node, command, *args, **kwargs)
+        if nodes:
+            return await self.execute_command_on_nodes(
+                nodes, command, *args, callback=callback, **kwargs
+            )
 
         # If set externally we must update it before calling any commands
 
@@ -1641,7 +1691,7 @@ class RedisCluster(
         while ttl > 0:
             ttl -= 1
 
-            if asking:
+            if asking and redirect_addr:
                 node = self.connection_pool.nodes.nodes[redirect_addr]
                 r = self.connection_pool.get_connection_by_node(node)
             elif try_random_node:
@@ -1649,24 +1699,29 @@ class RedisCluster(
                     primary=try_random_type == NodeFlag.PRIMARIES
                 )
                 try_random_node = False
-            else:
+            elif slot is not None:
                 if self.refresh_table_asap:
                     # MOVED
                     node = self.connection_pool.get_master_node_by_slot(slot)
                 else:
                     node = self.connection_pool.get_node_by_slot(slot, command)
                 r = self.connection_pool.get_connection_by_node(node)
-            self._ensure_server_version(r.server_version)
+            else:
+                continue
+
+            self.ensure_server_version(r.server_version)
 
             try:
                 if asking:
                     await r.send_command(CommandName.ASKING)
-                    await self.parse_response(r, CommandName.ASKING, **kwargs)
+                    await self.parse_response(r, decode=kwargs.get("decode"))
                     asking = False
 
                 await r.send_command(command, *args)
 
-                return await self.parse_response(r, b(command), **kwargs)
+                return callback(
+                    await self.parse_response(r, decode=kwargs.get("decode")), **kwargs
+                )
             except (RedisClusterException, BusyLoadingError, asyncio.CancelledError):
                 raise
             except (ConnectionError, TimeoutError):
@@ -1704,19 +1759,25 @@ class RedisCluster(
         raise ClusterError("TTL exhausted.")
 
     async def execute_command_on_nodes(
-        self, nodes: Iterable[Any], *args: Any, **kwargs: Any
-    ) -> Any:
-        command = args[0]
-        res = {}
+        self,
+        nodes: Iterable[Node],
+        command: bytes,
+        *args: ValueT,
+        callback: Callable[..., R],
+        **options: Optional[ValueT],
+    ) -> R:
+        res: Dict[str, R] = {}
 
         for node in nodes:
             connection = self.connection_pool.get_connection_by_node(node)
 
             # copy from redis-py
             try:
-                await connection.send_command(*args)
-                res[node["name"]] = await self.parse_response(
-                    connection, command, **kwargs
+                await connection.send_command(command, *args)
+                res[node["name"]] = callback(
+                    await self.parse_response(connection, decode=options.get("decode")),
+                    version=self.protocol_version,
+                    **options,
                 )
             except asyncio.CancelledError:
                 # do not retry when coroutine is cancelled
@@ -1728,14 +1789,17 @@ class RedisCluster(
                 if not connection.retry_on_timeout and isinstance(e, TimeoutError):
                     raise
 
-                await connection.send_command(*args)
-                res[node["name"]] = await self.parse_response(
-                    connection, command, **kwargs
+                await connection.send_command(command, *args)
+                res[node["name"]] = callback(
+                    await self.parse_response(connection, decode=options.get("decode")),
+                    version=self.protocol_version,
+                    **options,
                 )
+
             finally:
                 self.connection_pool.release(connection)
 
-        return self._merge_result(command, res, **kwargs)
+        return self._merge_result(command, res, **options)
 
     def lock(
         self,
@@ -1743,9 +1807,9 @@ class RedisCluster(
         timeout: Optional[float] = None,
         sleep: float = 0.1,
         blocking_timeout: Optional[bool] = None,
-        lock_class: Optional[Type[Lock]] = None,
+        lock_class: Optional[Type[LuaLock[AnyStr]]] = None,
         thread_local: bool = True,
-    ) -> Lock:
+    ) -> Lock[AnyStr]:
         """
         Return a new :class:`~coredis.lock.Lock` object using :paramref:`name` that mimics
         the behavior of :class:`threading.Lock`.
@@ -1761,11 +1825,11 @@ class RedisCluster(
                 # the first time .lock() is called, determine if we can use
                 # Lua by attempting to register the necessary scripts
                 try:
-                    LuaLock.register_scripts(self)
+                    LuaLock[AnyStr].register_scripts(self)
                     self._use_lua_lock = True
                 except ResponseError:
                     self._use_lua_lock = False
-            lock_class = self._use_lua_lock and LuaLock or Lock
+            lock_class = LuaLock[AnyStr]
 
         return lock_class(
             self,
@@ -1776,10 +1840,11 @@ class RedisCluster(
             thread_local=thread_local,
         )
 
-    def pubsub(self, ignore_subscribe_messages: bool = False, **kwargs):
-        from coredis.commands.pubsub import ClusterPubSub
+    def pubsub(
+        self, ignore_subscribe_messages: bool = False, **kwargs: Any
+    ) -> ClusterPubSub[AnyStr]:
 
-        return ClusterPubSub(
+        return ClusterPubSub[AnyStr](
             self.connection_pool,
             ignore_subscribe_messages=ignore_subscribe_messages,
             **kwargs,
@@ -1789,7 +1854,7 @@ class RedisCluster(
         self,
         transaction: Optional[bool] = None,
         watches: Optional[Iterable[StringT]] = None,
-    ) -> "coredis.commands.pipeline.ClusterPipeline":
+    ) -> "coredis.commands.pipeline.ClusterPipeline[AnyStr]":
         """
         Pipelines in cluster mode only provide a subset of the functionality
         of pipelines in standalone mode.
@@ -1805,7 +1870,7 @@ class RedisCluster(
 
         from coredis.commands.pipeline import ClusterPipeline
 
-        return ClusterPipeline.proxy(
+        return ClusterPipeline[AnyStr].proxy(
             connection_pool=self.connection_pool,
             startup_nodes=self.connection_pool.nodes.startup_nodes,
             result_callbacks=self.result_callbacks,
@@ -1814,7 +1879,15 @@ class RedisCluster(
             watches=watches,
         )
 
-    async def transaction(self, func, *watches: StringT, **kwargs):
+    async def transaction(
+        self,
+        func: Callable[
+            ["coredis.commands.pipeline.ClusterPipeline[AnyStr]"],
+            Coroutine[Any, Any, Any],
+        ],
+        *watches: StringT,
+        **kwargs: Any,
+    ) -> Any:
         """
         Convenience method for executing the callable :paramref:`func` as a
         transaction while watching all keys specified in :paramref:`watches`.
@@ -1843,39 +1916,10 @@ class RedisCluster(
         match: Optional[StringT] = None,
         count: Optional[int] = None,
         type_: Optional[StringT] = None,
-    ):
+    ) -> AsyncIterator[AnyStr]:
         for node in self.primaries:
-            cursor = "0"
-
+            cursor = None
             while cursor != 0:
-                pieces: CommandArgList = [cursor]
-
-                if match is not None:
-                    pieces.extend([PrefixToken.MATCH, match])
-
-                if count is not None:
-                    pieces.extend([PrefixToken.COUNT, count])
-
-                if type_ is not None:
-                    pieces.extend([PrefixToken.TYPE, type_])
-
-                response = await node.execute_command(CommandName.SCAN, *pieces)
-                cursor, data = response
-
+                cursor, data = await node.scan(cursor or 0, match, count, type_)
                 for item in data:
                     yield item
-
-    @contextlib.contextmanager
-    def all(
-        self,
-        flag: Literal[NodeFlag.ALL, NodeFlag.PRIMARIES, NodeFlag.REPLICAS],
-    ):
-
-        if flag == NodeFlag.ALL:
-            nodes = self.all_nodes
-        elif flag == NodeFlag.PRIMARIES:
-            nodes = self.primaries
-        else:
-            nodes = self.replicas
-        proxy = NodeProxy(list(nodes))
-        yield proxy

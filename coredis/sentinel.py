@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import os
 import random
-from typing import overload
+from asyncio import AbstractEventLoop
+from typing import Any, cast, overload
 
 from deprecated.sphinx import deprecated
 
 from coredis import Redis
 from coredis.commands import CommandName
-from coredis.connection import Connection
+from coredis.connection import Connection, RedisSSLContext
 from coredis.exceptions import (
     ConnectionError,
     PrimaryNotFoundError,
@@ -17,17 +18,72 @@ from coredis.exceptions import (
     ResponseError,
     TimeoutError,
 )
+from coredis.parsers import BaseParser, DefaultParser
 from coredis.pool import ConnectionPool
-from coredis.typing import AnyStr, Generic, Iterable, Literal, StringT, Tuple, Type
+from coredis.typing import (
+    AnyStr,
+    Dict,
+    Generic,
+    Iterable,
+    List,
+    Literal,
+    Optional,
+    ResponseType,
+    StringT,
+    Tuple,
+    Type,
+    Union,
+)
 from coredis.utils import nativestr
 
 
-class SentinelManagedConnection(Connection):
-    def __init__(self, connection_pool: SentinelConnectionPool, **kwargs):
-        self.connection_pool = connection_pool
-        super().__init__(**kwargs)
+class SentinelManagedConnection(Connection, Generic[AnyStr]):
+    def __init__(
+        self,
+        connection_pool: SentinelConnectionPool,
+        host: str = "127.0.0.1",
+        port: int = 6379,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        db: int = 0,
+        retry_on_timeout: bool = False,
+        stream_timeout: Optional[float] = None,
+        connect_timeout: Optional[float] = None,
+        ssl_context: Optional[RedisSSLContext] = None,
+        parser_class: Type[BaseParser] = DefaultParser,
+        reader_read_size: int = 65535,
+        encoding: str = "utf-8",
+        decode_responses: bool = False,
+        socket_keepalive: Optional[bool] = None,
+        socket_keepalive_options: Optional[Dict[int, Union[int, bytes]]] = None,
+        *,
+        client_name: Optional[str] = None,
+        loop: Optional[AbstractEventLoop] = None,
+        protocol_version: Literal[2, 3] = 2,
+    ):
+        self.connection_pool: SentinelConnectionPool = connection_pool
+        super().__init__(
+            host=host,
+            port=port,
+            username=username,
+            password=password,
+            db=db,
+            retry_on_timeout=retry_on_timeout,
+            stream_timeout=stream_timeout,
+            connect_timeout=connect_timeout,
+            ssl_context=ssl_context,
+            parser_class=parser_class,
+            reader_read_size=reader_read_size,
+            encoding=encoding,
+            decode_responses=decode_responses,
+            socket_keepalive=socket_keepalive,
+            socket_keepalive_options=socket_keepalive_options,
+            client_name=client_name,
+            loop=loop,
+            protocol_version=protocol_version,
+        )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         pool = self.connection_pool
         if self.host:
             host_info = f",host={self.host},port={self.port}"
@@ -36,19 +92,19 @@ class SentinelManagedConnection(Connection):
         s = f"{type(self).__name__}<service={pool.service_name}{host_info}>"
         return s
 
-    async def connect_to(self, address):
+    async def connect_to(self, address: Tuple[str, int]) -> None:
         self.host, self.port = address
         await super().connect()
         if self.connection_pool.check_connection:
             await self.send_command(CommandName.PING)
-            if await self.read_response() != b"PONG":
+            if await self.read_response(decode=False) != b"PONG":
                 raise ConnectionError("PING failed")
 
-    async def connect(self):
+    async def connect(self) -> None:
         if self._reader and self._writer:
             return  # already connected
-        if self.connection_pool.is_master:
-            await self.connect_to(await self.connection_pool.get_master_address())
+        if self.connection_pool.is_primary:
+            await self.connect_to(await self.connection_pool.get_primary_address())
         else:
             for slave in await self.connection_pool.rotate_replicas():
                 try:
@@ -57,11 +113,11 @@ class SentinelManagedConnection(Connection):
                     continue
             raise ReplicaNotFoundError  # Never be here
 
-    async def read_response(self, decode=False):
+    async def read_response(self, decode: Optional[bool] = None) -> ResponseType:
         try:
             return await super().read_response(decode=decode)
         except ReadOnlyError:
-            if self.connection_pool.is_master:
+            if self.connection_pool.is_primary:
                 # When talking to a master, a ReadOnlyError when likely
                 # indicates that the previous master that we're still connected
                 # to has been demoted to a slave and there's a new master.
@@ -81,72 +137,78 @@ class SentinelConnectionPool(ConnectionPool):
     sends a ``PING`` command right after establishing the connection.
     """
 
+    primary_address: Optional[Tuple[str, int]]
+    replica_counter: Optional[int]
+
     def __init__(
         self,
         service_name: StringT,
-        sentinel_manager: Sentinel,
-        is_master: bool = True,
+        sentinel_manager: Sentinel[Any],
+        is_primary: bool = True,
         check_connection: bool = True,
-        **kwargs,
+        **kwargs: Any,
     ):
-        self.is_master = is_master
+        self.is_primary = is_primary
         self.check_connection = check_connection
-        kwargs["connection_class"] = kwargs.get(
-            "connection_class", SentinelManagedConnection
+        kwargs["connection_class"] = cast(
+            Type[Connection],
+            kwargs.get("connection_class", SentinelManagedConnection[AnyStr]),
         )
         super().__init__(**kwargs)
         self.connection_kwargs["connection_pool"] = self
         self.service_name = nativestr(service_name)
         self.sentinel_manager = sentinel_manager
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{}<service={}({})".format(
             type(self).__name__,
             self.service_name,
-            self.is_master and "master" or "slave",
+            self.is_primary and "master" or "slave",
         )
 
-    def reset(self):
+    def reset(self) -> None:
         super().reset()
-        self.master_address = None
-        self.slave_rr_counter = None
+        self.primary_address = None
+        self.replica_counter = None
 
-    async def get_master_address(self):
-        master_address = await self.sentinel_manager.discover_master(self.service_name)
-        if self.is_master:
-            if self.master_address is None:
-                self.master_address = master_address
-            elif master_address != self.master_address:
+    async def get_primary_address(self) -> Tuple[str, int]:
+        primary_address = await self.sentinel_manager.discover_primary(
+            self.service_name
+        )
+        if self.is_primary:
+            if self.primary_address is None:
+                self.primary_address = primary_address
+            elif primary_address != self.primary_address:
                 # Master address changed, disconnect all clients in this pool
                 self.disconnect()
-        return master_address
+        return primary_address
 
-    async def rotate_replicas(self):
+    async def rotate_replicas(self) -> List[Tuple[str, int]]:
         """Round-robin replicas balancer"""
-        slaves = await self.sentinel_manager.discover_slaves(self.service_name)
-        slave_address = list()
-        if slaves:
-            if self.slave_rr_counter is None:
-                self.slave_rr_counter = random.randint(0, len(slaves) - 1)
-            for _ in range(len(slaves)):
-                self.slave_rr_counter = (self.slave_rr_counter + 1) % len(slaves)
-                slave_address.append(slaves[self.slave_rr_counter])
-            return slave_address
-        # Fallback to the master connection
+        replicas = await self.sentinel_manager.discover_replicas(self.service_name)
+        replica_addresses: List[Tuple[str, int]] = []
+        if replicas:
+            if self.replica_counter is None:
+                self.replica_counter = random.randint(0, len(replicas) - 1)
+            for _ in range(len(replicas)):
+                self.replica_counter = (self.replica_counter + 1) % len(replicas)
+                replica_addresses.append(replicas[self.replica_counter])
+            return replica_addresses
+        # Fallback to primary
         try:
-            return [await self.get_master_address()]
+            return [await self.get_primary_address()]
         except PrimaryNotFoundError:
             pass
         raise ReplicaNotFoundError("No replica found for %r" % (self.service_name))
 
-    def _checkpid(self):
+    def _checkpid(self) -> None:
         if self.pid != os.getpid():
             self.disconnect()
             self.reset()
             SentinelConnectionPool(
                 self.service_name,
                 self.sentinel_manager,
-                is_master=self.is_master,
+                is_primary=self.is_primary,
                 check_connection=self.check_connection,
                 connection_class=self.connection_class,
                 max_connections=self.max_connections,
@@ -175,10 +237,10 @@ class Sentinel(Generic[AnyStr]):
         self: Sentinel[bytes],
         sentinels: Iterable[Tuple[str, int]],
         min_other_sentinels: int = ...,
-        sentinel_kwargs=None,
+        sentinel_kwargs: Optional[Dict[str, Any]] = ...,
         decode_responses: Literal[False] = ...,
         protocol_version: Literal[2, 3] = ...,
-        **connection_kwargs,
+        **connection_kwargs: Any,
     ):
         ...
 
@@ -187,10 +249,10 @@ class Sentinel(Generic[AnyStr]):
         self: Sentinel[str],
         sentinels: Iterable[Tuple[str, int]],
         min_other_sentinels: int = ...,
-        sentinel_kwargs=None,
+        sentinel_kwargs: Optional[Dict[str, Any]] = ...,
         decode_responses: Literal[True] = ...,
         protocol_version: Literal[2, 3] = ...,
-        **connection_kwargs,
+        **connection_kwargs: Any,
     ):
         ...
 
@@ -198,10 +260,10 @@ class Sentinel(Generic[AnyStr]):
         self,
         sentinels: Iterable[Tuple[str, int]],
         min_other_sentinels: int = 0,
-        sentinel_kwargs=None,
+        sentinel_kwargs: Optional[Dict[str, Any]] = None,
         decode_responses: bool = False,
         protocol_version: Literal[2, 3] = 2,
-        **connection_kwargs,
+        **connection_kwargs: Any,
     ):
         """
         :param sentinels: is a list of sentinel nodes. Each node is represented by
@@ -242,8 +304,8 @@ class Sentinel(Generic[AnyStr]):
             for hostname, port in sentinels
         ]
 
-    def __repr__(self):
-        sentinel_addresses = []
+    def __repr__(self) -> str:
+        sentinel_addresses: List[str] = []
         for sentinel in self.sentinels:
             sentinel_addresses.append(
                 "{}:{}".format(
@@ -255,73 +317,102 @@ class Sentinel(Generic[AnyStr]):
             type(self).__name__, ",".join(sentinel_addresses)
         )
 
-    def check_master_state(self, state, service_name):
+    def check_primary_state(
+        self,
+        state: Dict[str, Union[int, bool, str]],
+        service_name: str,
+    ) -> bool:
         if not state["is_master"] or state["is_sdown"] or state["is_odown"]:
             return False
         # Check if our sentinel doesn't see other nodes
-        if state["num_other_sentinels"] < self.min_other_sentinels:
+        if int(state["num-other-sentinels"]) < self.min_other_sentinels:
             return False
         return True
 
-    async def discover_primary(self, service_name):
+    async def discover_primary(self, service_name: str) -> Tuple[str, int]:
         """
-        Asks sentinel servers for the Redis master's address corresponding
+        Asks sentinel servers for the Redis primary's address corresponding
         to the service labeled :paramref:`service_name`.
 
         :return: A pair (address, port) or raises MasterNotFoundError if no
-         master is found.
+         primary is found.
         """
         for sentinel_no, sentinel in enumerate(self.sentinels):
             try:
-                masters = await sentinel.sentinel_masters()
+                primaries = await sentinel.sentinel_masters()
             except (ConnectionError, TimeoutError):
                 continue
-            state = masters.get(service_name)
-            if state and self.check_master_state(state, service_name):
+            state = primaries.get(service_name)
+            if state and self.check_primary_state(state, service_name):
                 # Put this sentinel at the top of the list
                 self.sentinels[0], self.sentinels[sentinel_no] = (
                     sentinel,
                     self.sentinels[0],
                 )
-                return state["ip"], state["port"]
+                return nativestr(state["ip"]), int(state["port"])
         raise PrimaryNotFoundError(f"No primary found for {service_name!r}")
 
-    def filter_replicas(self, replicas):
+    def filter_replicas(
+        self, replicas: Iterable[Dict[str, Union[str, int, bool]]]
+    ) -> List[Tuple[str, int]]:
         """Removes replicas that are in an ODOWN or SDOWN state"""
-        replicas_alive = []
+        replicas_alive: List[Tuple[str, int]] = []
         for replica in replicas:
             if replica["is_odown"] or replica["is_sdown"]:
                 continue
-            replicas_alive.append((replica["ip"], replica["port"]))
+            replicas_alive.append((nativestr(replica["ip"]), int(replica["port"])))
         return replicas_alive
 
-    async def discover_replicas(self, service_name):
+    async def discover_replicas(self, service_name: str) -> List[Tuple[str, int]]:
         """Returns a list of alive slaves for service :paramref:`service_name`"""
         for sentinel in self.sentinels:
             try:
                 replicas = await sentinel.sentinel_replicas(service_name)
             except (ConnectionError, ResponseError, TimeoutError):
                 continue
-            replicas = self.filter_replicas(replicas)
-            if replicas:
-                return replicas
+            filtered_replicas = self.filter_replicas(replicas)
+            if filtered_replicas:
+                return filtered_replicas
         return []
+
+    @overload
+    def primary_for(
+        self: Sentinel[bytes],
+        service_name: str,
+        *,
+        redis_class: Type[Redis[bytes]] = ...,
+        connection_pool_class: Type[SentinelConnectionPool] = ...,
+        **kwargs: Any,
+    ) -> Redis[bytes]:
+        ...
+
+    @overload
+    def primary_for(
+        self: Sentinel[str],
+        service_name: str,
+        *,
+        redis_class: Type[Redis[str]] = ...,
+        connection_pool_class: Type[SentinelConnectionPool] = ...,
+        **kwargs: Any,
+    ) -> Redis[str]:
+        ...
 
     def primary_for(
         self,
         service_name: str,
-        redis_class=Redis,
+        *,
+        redis_class: Type[Redis[Any]] = Redis[Any],
         connection_pool_class: Type[SentinelConnectionPool] = SentinelConnectionPool,
-        **kwargs,
-    ) -> Redis[AnyStr]:
+        **kwargs: Any,
+    ) -> Union[Redis[bytes], Redis[str]]:
         """
         Returns a redis client instance for the :paramref:`service_name` master.
 
         A :class:`coredis.sentinel.SentinelConnectionPool` class is used to
-        retrive the master's address before establishing a new connection.
+        retrive the primary's address before establishing a new connection.
 
-        NOTE: If the master's address has changed, any cached connections to
-        the old master are closed.
+        NOTE: If the primary's address has changed, any cached connections to
+        the old primary are closed.
 
         By default clients will be a :class:`~coredis.Redis` instances.
         Specify a different class to the :paramref:`redis_class` argument if you desire
@@ -334,22 +425,44 @@ class Sentinel(Generic[AnyStr]):
         passed to this class and passed to the connection pool as keyword
         arguments to be used to initialize Redis connections.
         """
-        kwargs["is_master"] = True
+        kwargs["is_primary"] = True
         connection_kwargs = dict(self.connection_kwargs)
         connection_kwargs.update(kwargs)
         return redis_class(
             connection_pool=connection_pool_class(
-                service_name, self, **connection_kwargs
+                service_name,
+                self,
+                **connection_kwargs,
             )
         )
 
+    @overload
+    def replica_for(
+        self: Sentinel[bytes],
+        service_name: str,
+        redis_class: Type[Redis[bytes]] = ...,
+        connection_pool_class: Type[SentinelConnectionPool] = ...,
+        **kwargs: Any,
+    ) -> Redis[bytes]:
+        ...
+
+    @overload
+    def replica_for(
+        self: Sentinel[str],
+        service_name: str,
+        redis_class: Type[Redis[str]] = ...,
+        connection_pool_class: Type[SentinelConnectionPool] = ...,
+        **kwargs: Any,
+    ) -> Redis[str]:
+        ...
+
     def replica_for(
         self,
-        service_name,
-        redis_class=Redis,
-        connection_pool_class=SentinelConnectionPool,
-        **kwargs,
-    ) -> Redis[AnyStr]:
+        service_name: str,
+        redis_class: Type[Redis[Any]] = Redis[Any],
+        connection_pool_class: Type[SentinelConnectionPool] = SentinelConnectionPool,
+        **kwargs: Any,
+    ) -> Union[Redis[bytes], Redis[str]]:
         """
         Returns redis client instance for the :paramref:`service_name` slave(s).
 
@@ -367,27 +480,51 @@ class Sentinel(Generic[AnyStr]):
         passed to this class and passed to the connection pool as keyword
         arguments to be used to initialize Redis connections.
         """
-        kwargs["is_master"] = False
+        kwargs["is_primary"] = False
         connection_kwargs = dict(self.connection_kwargs)
         connection_kwargs.update(kwargs)
         return redis_class(
             connection_pool=connection_pool_class(
-                service_name, self, **connection_kwargs
+                service_name,
+                self,
+                **connection_kwargs,
             )
         )
 
     @deprecated(version="3.1.0", reason="Use :meth:`discover_primaries()` instead")
-    async def discover_master(self, *a, **k):
-        return await self.discover_primary(*a, **k)
+    async def discover_master(self, service_name: str) -> Tuple[str, int]:
+        return await self.discover_primary(service_name)
 
     @deprecated(version="3.1.0", reason="Use :meth:`discover_replicas()` instead")
-    async def discover_slaves(self, *a, **k):
-        return await self.discover_replicas(*a, **k)
+    async def discover_slaves(self, service_name: str) -> List[Tuple[str, int]]:
+        return await self.discover_replicas(service_name)
 
     @deprecated(version="3.1.0", reason="Use :meth:`replica_for()` instead")
-    def slave_for(self, *a, **kw):
-        return self.replica_for(*a, **kw)
+    def slave_for(
+        self,
+        service_name: str,
+        redis_class: Type[Redis[Any]] = Redis[Any],
+        connection_pool_class: Type[SentinelConnectionPool] = SentinelConnectionPool,
+        **kwargs: Any,
+    ) -> Redis[Any]:
+        return self.replica_for(  # pyright: ignore
+            service_name,
+            redis_class=redis_class,
+            connection_pool_class=connection_pool_class,
+            **kwargs,
+        )
 
     @deprecated(version="3.1.0", reason="Use :meth:`primary_for()` instead")
-    def master_for(self, *a, **kw) -> Redis[AnyStr]:
-        return self.primary_for(*a, **kw)
+    def master_for(
+        self,
+        service_name: str,
+        redis_class: Type[Redis[Any]] = Redis[Any],
+        connection_pool_class: Type[SentinelConnectionPool] = SentinelConnectionPool,
+        **kwargs: Any,
+    ) -> Redis[Any]:
+        return self.primary_for(  # pyright: ignore
+            service_name,
+            redis_class=redis_class,
+            connection_pool_class=connection_pool_class,
+            **kwargs,
+        )

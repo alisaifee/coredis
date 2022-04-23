@@ -1,18 +1,35 @@
 from __future__ import annotations
 
+from typing import cast
+
 from coredis.response.callbacks import ResponseCallback
 from coredis.response.types import LibraryDefinition
 from coredis.response.utils import flat_pairs_to_dict
-from coredis.typing import Any, AnyStr, Mapping, Union
+from coredis.typing import (
+    AnyStr,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    ResponsePrimitive,
+    ResponseType,
+    Union,
+    ValueT,
+)
 from coredis.utils import EncodingInsensitiveDict
 
 
-class FunctionListCallback(ResponseCallback):
+class FunctionListCallback(
+    ResponseCallback[
+        List[ResponseType], List[ResponseType], Mapping[str, LibraryDefinition]
+    ]
+):
     def transform(
-        self, response: Any, **options: Any
+        self, response: List[ResponseType], **options: Optional[ValueT]
     ) -> Mapping[str, LibraryDefinition]:
         libraries = [
-            EncodingInsensitiveDict(flat_pairs_to_dict(library)) for library in response
+            EncodingInsensitiveDict(flat_pairs_to_dict(cast(List[ValueT], library)))
+            for library in response
         ]
         transformed = EncodingInsensitiveDict()
         for library in libraries:
@@ -27,7 +44,7 @@ class FunctionListCallback(ResponseCallback):
                     function_definition["flags"]
                 )
             library["functions"] = functions
-            transformed[lib_name] = EncodingInsensitiveDict(  # type: ignore
+            transformed[lib_name] = EncodingInsensitiveDict(
                 LibraryDefinition(
                     name=library["name"],
                     engine=library["engine"],
@@ -39,13 +56,35 @@ class FunctionListCallback(ResponseCallback):
         return transformed
 
 
-class FunctionStatsCallback(ResponseCallback):
+class FunctionStatsCallback(
+    ResponseCallback[
+        List[ResponseType],
+        Dict[AnyStr, Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]],
+        Dict[AnyStr, Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]],
+    ]
+):
     def transform(
-        self, response: Any, **options: Any
-    ) -> Mapping[AnyStr, Union[AnyStr, Mapping]]:
+        self,
+        response: List[ResponseType],
+        **options: Optional[ValueT],
+    ) -> Dict[AnyStr, Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]]:
         transformed = flat_pairs_to_dict(response)
-        key = b"engines" if b"engines" in transformed else "engines"
-        engines = flat_pairs_to_dict(transformed.pop(key))
+        key = cast(AnyStr, b"engines" if b"engines" in transformed else "engines")
+        engines = flat_pairs_to_dict(cast(List[AnyStr], transformed.pop(key)))
+        engines_transformed = {}
         for engine, stats in engines.items():
-            transformed.setdefault(key, {})[engine] = flat_pairs_to_dict(stats)
-        return transformed
+            engines_transformed[engine] = flat_pairs_to_dict(cast(List[AnyStr], stats))
+        transformed[key] = engines_transformed  # type: ignore
+        return cast(
+            Dict[AnyStr, Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]],
+            transformed,
+        )
+
+    def transform_3(
+        self,
+        response: Dict[
+            AnyStr, Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]
+        ],
+        **options: Optional[ValueT],
+    ) -> Dict[AnyStr, Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]]:
+        return response

@@ -1,72 +1,43 @@
 from __future__ import annotations
 
 import datetime
-import enum
 import functools
 import textwrap
-from types import FunctionType
-from typing import AnyStr
 
 from packaging import version
 
 from coredis.client import Redis
-from coredis.commands import ClusterCommandConfig, CommandDetails, _check_version
+from coredis.commands import ClusterCommandConfig, CommandDetails, check_version
 from coredis.commands.constants import CommandGroup
-from coredis.response.callbacks import BoolCallback, ResponseCallback
+from coredis.commands.utils import normalized_time_seconds
+from coredis.response.callbacks import BoolCallback
 from coredis.typing import (
-    Any,
+    AnyStr,
+    Awaitable,
     Callable,
     CommandArgList,
-    Coroutine,
     Dict,
     KeyT,
     Literal,
     Optional,
     P,
     R,
-    Set,
-    StringT,
     Union,
 )
-from coredis.utils import normalized_time_seconds
+from coredis.utils import CaseAndEncodingInsensitiveEnum
 
 
-def _keydb_command_link(command):
+def _keydb_command_link(command: CommandName) -> str:
     canonical_command = str(command).lower().replace(" ", "-")
     return (
         f"`{str(command)} <https://docs.keydb.dev/docs/commands#{canonical_command}>`_"
     )
 
 
-@enum.unique
-class CommandName(bytes, enum.Enum):
+class CommandName(CaseAndEncodingInsensitiveEnum):
     """
     Enum for listing all redis commands
     """
-
-    @functools.cached_property
-    def variants(self) -> Set[StringT]:
-        decoded = str(self)
-        return {self.value.lower(), self.value, decoded.lower(), decoded.upper()}
-
-    def __eq__(self, other):
-        """
-        Since redis tokens are case insensitive allow mixed case
-        Additionally allow strings to be passed in instead of
-        bytes.
-        """
-
-        if other:
-            if isinstance(other, CommandName):
-                return self.value == other.value
-            else:
-                return other in self.variants
-
-    def __hash__(self):
-        return hash(self.value)
-
-    def __str__(self):
-        return self.decode("latin-1")
 
     EXPIREMEMBER = b"EXPIREMEMBER"
     EXPIREMEMBERAT = b"EXPIREMEMBERAT"
@@ -80,13 +51,8 @@ def keydb_command(
     deprecation_reason: Optional[str] = None,
     arguments: Optional[Dict[str, Dict[str, str]]] = None,
     readonly: bool = False,
-    response_callback: Optional[
-        Union[FunctionType, ResponseCallback, ResponseCallback]
-    ] = None,
     cluster: ClusterCommandConfig = ClusterCommandConfig(),
-) -> Callable[
-    [Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]
-]:
+) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
     command_details = CommandDetails(
         command_name,
         group,
@@ -95,15 +61,12 @@ def keydb_command(
         version.Version(version_deprecated) if version_deprecated else None,
         arguments or {},
         cluster or ClusterCommandConfig(),
-        response_callback,
     )
 
-    def wrapper(
-        func: Callable[P, Coroutine[Any, Any, R]]
-    ) -> Callable[P, Coroutine[Any, Any, R]]:
+    def wrapper(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
         @functools.wraps(func)
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
-            _check_version(
+            check_version(
                 args[0],  # type: ignore
                 command_name,
                 func.__name__,
@@ -136,7 +99,8 @@ class KeyDB(Redis[AnyStr]):
     """
 
     @keydb_command(
-        CommandName.EXPIREMEMBER, CommandGroup.GENERIC, response_callback=BoolCallback()
+        CommandName.EXPIREMEMBER,
+        CommandGroup.GENERIC,
     )
     async def expiremember(
         self,
@@ -151,12 +115,13 @@ class KeyDB(Redis[AnyStr]):
         pieces: CommandArgList = [key, subkey, delay]
         if unit:
             pieces.append(unit.lower())
-        return await self.execute_command(CommandName.EXPIREMEMBER, *pieces)
+        return await self.execute_command(
+            CommandName.EXPIREMEMBER, *pieces, callback=BoolCallback()
+        )
 
     @keydb_command(
         CommandName.EXPIREMEMBERAT,
         CommandGroup.GENERIC,
-        response_callback=BoolCallback(),
     )
     async def expirememberat(
         self, key: KeyT, subkey: KeyT, unix_time_seconds: Union[int, datetime.datetime]
@@ -169,4 +134,6 @@ class KeyDB(Redis[AnyStr]):
             subkey,
             normalized_time_seconds(unix_time_seconds),
         ]
-        return await self.execute_command(CommandName.EXPIREMEMBERAT, *pieces)
+        return await self.execute_command(
+            CommandName.EXPIREMEMBERAT, *pieces, callback=BoolCallback()
+        )
