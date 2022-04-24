@@ -6650,7 +6650,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="3.4.0")
     @redis_command(
-        CommandName.MODULE_LOAD, group=CommandGroup.SERVER, version_introduced="7.0.0"
+        CommandName.MODULE_LOADEX, group=CommandGroup.SERVER, version_introduced="7.0.0"
     )
     async def module_loadex(
         self,
