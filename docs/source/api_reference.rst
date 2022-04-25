@@ -335,7 +335,7 @@ could do something like this:
                     next_value = int(current_value) + 1
                     # now we can put the pipeline back into buffered mode with MULTI
                     pipe.multi()
-                    pipe.set('OUR-SEQUENCE-KEY', next_value)
+                    await pipe.set('OUR-SEQUENCE-KEY', next_value)
                     # and finally, execute the pipeline (the set command)
                     await pipe.execute()
                     # if a WatchError wasn't raised during execution, everything
