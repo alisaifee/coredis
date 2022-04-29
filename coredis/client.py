@@ -1069,6 +1069,7 @@ class Redis(
         db: Optional[int] = ...,
         *,
         decode_responses: Literal[False] = ...,
+        protocol_version: Literal[2, 3] = ...,
         **kwargs,
     ) -> _RedisBytesT:
         ...
@@ -1081,6 +1082,7 @@ class Redis(
         db: Optional[int] = ...,
         *,
         decode_responses: Literal[True],
+        protocol_version: Literal[2, 3] = ...,
         **kwargs,
     ) -> _RedisStringT:
         ...
@@ -1092,6 +1094,7 @@ class Redis(
         db: Optional[int] = None,
         *,
         decode_responses: bool = False,
+        protocol_version: Literal[2, 3] = 2,
         **kwargs,
     ) -> _RedisT:
         """
@@ -1121,13 +1124,25 @@ class Redis(
         of conflicting arguments, querystring arguments always win.
         """
         connection_pool: ConnectionPool = ConnectionPool.from_url(
-            url, db=db, decode_responses=decode_responses, **kwargs
+            url,
+            db=db,
+            decode_responses=decode_responses,
+            protocol_version=protocol_version,
+            **kwargs,
         )
 
         if decode_responses:
-            return cls(decode_responses=True, connection_pool=connection_pool)
+            return cls(
+                decode_responses=True,
+                protocol_version=protocol_version,
+                connection_pool=connection_pool,
+            )
         else:
-            return cls(decode_responses=False, connection_pool=connection_pool)
+            return cls(
+                decode_responses=False,
+                protocol_version=protocol_version,
+                connection_pool=connection_pool,
+            )
 
     def set_response_callback(self, command, callback):
         """
@@ -1404,6 +1419,7 @@ class RedisCluster(
         db: Optional[int] = ...,
         skip_full_coverage_check: bool = ...,
         decode_responses: Literal[False] = ...,
+        protocol_version: Literal[2, 3] = ...,
         **kwargs,
     ) -> RedisCluster[bytes]:
         ...
@@ -1417,6 +1433,7 @@ class RedisCluster(
         db: Optional[int] = ...,
         skip_full_coverage_check: bool = ...,
         decode_responses: Literal[True],
+        protocol_version: Literal[2, 3] = ...,
         **kwargs,
     ) -> RedisCluster[str]:
         ...
@@ -1429,6 +1446,7 @@ class RedisCluster(
         db: Optional[int] = None,
         skip_full_coverage_check: bool = False,
         decode_responses: bool = False,
+        protocol_version: Literal[2, 3] = 2,
         **kwargs,
     ):
         """
@@ -1460,15 +1478,20 @@ class RedisCluster(
             db=db,
             skip_full_coverage_check=skip_full_coverage_check,
             decode_responses=decode_responses,
+            protocol_version=protocol_version,
             **kwargs,
         )
         if decode_responses:
             return RedisCluster[str](
-                decode_responses=True, connection_pool=connection_pool
+                decode_responses=True,
+                protocol_version=protocol_version,
+                connection_pool=connection_pool,
             )
         else:
             return RedisCluster[bytes](
-                decode_responses=False, connection_pool=connection_pool
+                decode_responses=False,
+                protocol_version=protocol_version,
+                connection_pool=connection_pool,
             )
 
     def __repr__(self):
