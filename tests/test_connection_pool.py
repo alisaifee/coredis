@@ -514,6 +514,7 @@ class TestConnectionPoolUnixSocketURLParsing:
         assert pool.connection_kwargs == {
             "path": "/socket",
             "db": 0,
+            "protocol_version": 2,
             "username": None,
             "password": None,
             "reader_read_size": 65535,

@@ -399,6 +399,7 @@ class TestConnectionPoolURLParsing:
             "port": 6379,
             "db": 0,
             "decode_responses": False,
+            "protocol_version": 2,
             "username": None,
             "password": None,
         }
