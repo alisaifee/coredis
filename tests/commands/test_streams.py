@@ -314,10 +314,24 @@ class TestStreams:
         )
         assert await client.xgroup_setid("test_stream", "test_group", "0") is True
         await client.xreadgroup(
-            "test_group", "consumer1", count=5, streams=dict(test_stream=">")
+            "test_group", "consumer1", count=3, streams=dict(test_stream=">")
+        )
+        await client.xreadgroup(
+            "test_group", "consumer2", count=2, streams=dict(test_stream=">")
         )
         group_info = await client.xinfo_groups("test_stream")
         assert group_info[0][_s("pending")] == 5
+        assert (
+            len(
+                (
+                    await client.xpending(
+                        "test_stream",
+                        "test_group",
+                    )
+                ).consumers
+            )
+            == 2
+        )
         assert (
             len(
                 await client.xpending(
@@ -329,7 +343,7 @@ class TestStreams:
                     consumer="consumer1",
                 )
             )
-            == 5
+            == 3
         )
         xpending_entries_in_range = await client.xpending(
             "test_stream",

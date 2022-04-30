@@ -7,7 +7,11 @@ from coredis.response.types import (
     StreamPending,
     StreamPendingExt,
 )
-from coredis.response.utils import flat_pairs_to_dict, flat_pairs_to_ordered_dict
+from coredis.response.utils import (
+    flat_pairs_to_dict,
+    flat_pairs_to_ordered_dict,
+    pairs_to_ordered_dict,
+)
 from coredis.typing import Any, AnyStr, Mapping, Optional, Tuple, Union
 from coredis.utils import EncodingInsensitiveDict
 
@@ -85,7 +89,7 @@ class PendingCallback(ResponseCallback):
                 response[0],
                 response[1],
                 response[2],
-                flat_pairs_to_ordered_dict(response[3:]),
+                pairs_to_ordered_dict(response[3:][0]),
             )
         else:
             return tuple(

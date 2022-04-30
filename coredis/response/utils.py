@@ -42,6 +42,11 @@ def pairs_to_dict(
     return dict(response)
 
 
+def pairs_to_ordered_dict(response: Tuple[Tuple[T, T]]) -> OrderedDict[T, T]:
+    """Creates a dict given a flat list of key/value pairs"""
+    return OrderedDict(response)
+
+
 def quadruples_to_dict(
     response: Iterable[Tuple[T, U, V, W]]
 ) -> MutableMapping[T, Tuple[U, V, W]]:
