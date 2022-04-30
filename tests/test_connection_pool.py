@@ -395,6 +395,7 @@ class TestConnectionPoolURLParsing:
             "host": "localhost",
             "port": 6379,
             "db": 0,
+            "protocol_version": 2,
             "username": None,
             "password": None,
             "reader_read_size": 65535,
@@ -421,6 +422,7 @@ class TestConnectionPoolURLParsing:
             "port": 6379,
             "db": 0,
             "decode_responses": False,
+            "protocol_version": 2,
             "username": None,
             "password": None,
         }
