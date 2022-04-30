@@ -395,7 +395,6 @@ class TestConnectionPoolURLParsing:
             "host": "localhost",
             "port": 6379,
             "db": 0,
-            "protocol_version": 2,
             "username": None,
             "password": None,
             "reader_read_size": 65535,
@@ -514,7 +513,6 @@ class TestConnectionPoolUnixSocketURLParsing:
         assert pool.connection_kwargs == {
             "path": "/socket",
             "db": 0,
-            "protocol_version": 2,
             "username": None,
             "password": None,
             "reader_read_size": 65535,
