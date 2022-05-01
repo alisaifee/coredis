@@ -3,6 +3,16 @@
 Changelog
 =========
 
+v3.4.6
+------
+Release Date: 2022-04-30
+
+* Bug Fixes
+
+  * Ensure protocol_version is captured for constructions with from_url
+  * Fix command name for module_loadex method
+
+
 v3.4.5
 ------
 Release Date: 2022-04-22
@@ -593,6 +603,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
