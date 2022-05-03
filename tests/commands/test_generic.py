@@ -164,16 +164,15 @@ class TestGeneric:
         freq_now = await client.object_freq("a")
         assert freq + 1 == freq_now
 
-    @pytest.mark.flaky
     async def test_dump_and_restore_with_idle_time(self, client, _s):
         await client.set("a", "foo")
-        await asyncio.sleep(1)
         idle = await client.object_idletime("a")
+        assert idle <= 1
         dumped = await client.dump("a")
-        await client.delete("a")
-        await client.restore("a", 0, dumped, idletime=idle)
+        assert await client.delete("a") == 1
+        assert await client.restore("a", 0, dumped, idletime=2)
         new_idle = await client.object_idletime("a")
-        assert idle == new_idle
+        assert new_idle >= 1
 
     async def test_dump_and_restore_and_replace(self, client, _s):
         await client.set("a", "bar")
