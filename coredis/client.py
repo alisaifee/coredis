@@ -1565,7 +1565,9 @@ class RedisCluster(
         """
 
         if command in self.result_callbacks:
-            return self.result_callbacks[command](res, **kwargs)
+            return self.result_callbacks[command](
+                res, version=self.protocol_version, **kwargs
+            )
 
         # Default way to handle result
 

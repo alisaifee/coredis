@@ -69,7 +69,8 @@ class EncodingInsensitiveDict(wrapt.ObjectProxy):
             )
         elif isinstance(key, bytes):
             return (
-                key in self.__wrapped__ or key.decode(self.encoding) in self.__wrapped__
+                key in self.__wrapped__
+                or key.decode(self._self_encoding) in self.__wrapped__
             )
         return key in self.__wrapped__
 

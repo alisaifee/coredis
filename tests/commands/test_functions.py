@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from coredis import PureToken
+from coredis import PureToken, ResponseError
 from tests.conftest import targets
 
 library_definition = """#!lua name=coredis
@@ -55,6 +55,13 @@ class TestFunctions:
     async def test_fcall(self, client, simple_library, _s):
         assert await client.fcall("fu", ["a"], []) == _s("a")
         assert await client.fcall("bar", ["a"], [2]) == 2.0
+
+    async def test_function_delete(self, client, simple_library, _s):
+        assert _s("coredis") in await client.function_list()
+        assert await client.function_delete("coredis")
+        assert _s("coredis") not in await client.function_list()
+        with pytest.raises(ResponseError):
+            await client.function_delete("coredis")
 
     async def test_dump_restore(self, client, simple_library, _s):
         dump = await client.function_dump()
