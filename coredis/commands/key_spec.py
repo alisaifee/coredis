@@ -83,9 +83,9 @@ class KeySpec:
         b"XREAD": lambda args: (
             (
                 (
-                    lambda kwpos: args[
-                        1 + kwpos : len(args) - (len(args) - (kwpos + 1)) // 2
-                    ]
+                    lambda kwpos: tuple(
+                        args[1 + kwpos : len(args) - (len(args) - (kwpos + 1)) // 2]
+                    )
                 )(args.index(b"STREAMS", 1))
                 if b"STREAMS" in args
                 else ()
@@ -94,9 +94,9 @@ class KeySpec:
         b"XREADGROUP": lambda args: (
             (
                 (
-                    lambda kwpos: args[
-                        1 + kwpos : len(args) - (len(args) - (kwpos + 1)) // 2
-                    ]
+                    lambda kwpos: tuple(
+                        args[1 + kwpos : len(args) - (len(args) - (kwpos + 1)) // 2]
+                    )
                 )(args.index(b"STREAMS", 4))
                 if b"STREAMS" in args
                 else ()
@@ -171,7 +171,9 @@ class KeySpec:
         b"MIGRATE": lambda args: (
             (args[3],)
             + (
-                (lambda kwpos: args[1 + kwpos : len(args)])(args.index(b"KEYS", -2))
+                (lambda kwpos: tuple(args[1 + kwpos : len(args)]))(
+                    len(args) - list(reversed(args)).index(b"KEYS", 1) - 1
+                )
                 if b"KEYS" in args
                 else ()
             )
@@ -236,12 +238,12 @@ class KeySpec:
         b"GEORADIUS": lambda args: (
             (args[1],)
             + (
-                (lambda kwpos: (args[kwpos + 1],))(args.index(b"STORE", 6))
+                (lambda kwpos: tuple((args[kwpos + 1],)))(args.index(b"STORE", 6))
                 if b"STORE" in args
                 else ()
             )
             + (
-                (lambda kwpos: (args[kwpos + 1],))(args.index(b"STOREDIST", 6))
+                (lambda kwpos: tuple((args[kwpos + 1],)))(args.index(b"STOREDIST", 6))
                 if b"STOREDIST" in args
                 else ()
             )
@@ -249,12 +251,12 @@ class KeySpec:
         b"GEORADIUSBYMEMBER": lambda args: (
             (args[1],)
             + (
-                (lambda kwpos: (args[kwpos + 1],))(args.index(b"STORE", 5))
+                (lambda kwpos: tuple((args[kwpos + 1],)))(args.index(b"STORE", 5))
                 if b"STORE" in args
                 else ()
             )
             + (
-                (lambda kwpos: (args[kwpos + 1],))(args.index(b"STOREDIST", 5))
+                (lambda kwpos: tuple((args[kwpos + 1],)))(args.index(b"STOREDIST", 5))
                 if b"STOREDIST" in args
                 else ()
             )
@@ -317,9 +319,9 @@ class KeySpec:
         b"XREAD": lambda args: (
             (
                 (
-                    lambda kwpos: args[
-                        1 + kwpos : len(args) - (len(args) - (kwpos + 1)) // 2
-                    ]
+                    lambda kwpos: tuple(
+                        args[1 + kwpos : len(args) - (len(args) - (kwpos + 1)) // 2]
+                    )
                 )(args.index(b"STREAMS", 1))
                 if b"STREAMS" in args
                 else ()
@@ -328,9 +330,9 @@ class KeySpec:
         b"XREADGROUP": lambda args: (
             (
                 (
-                    lambda kwpos: args[
-                        1 + kwpos : len(args) - (len(args) - (kwpos + 1)) // 2
-                    ]
+                    lambda kwpos: tuple(
+                        args[1 + kwpos : len(args) - (len(args) - (kwpos + 1)) // 2]
+                    )
                 )(args.index(b"STREAMS", 4))
                 if b"STREAMS" in args
                 else ()
@@ -378,7 +380,7 @@ class KeySpec:
 
     @classmethod
     def extract_keys(
-        cls, arguments: Tuple[ValueT, ...], readonly_command=False
+        cls, arguments: Tuple[ValueT, ...], readonly_command: bool = False
     ) -> Tuple[ValueT, ...]:
         if len(arguments) <= 1:
             return ()

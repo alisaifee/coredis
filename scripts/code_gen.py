@@ -436,9 +436,11 @@ def sanitize_parameter(p, eval_forward_annotations=True):
     return v
 
 
-def render_signature(signature, eval_forward_annotations=True):
+def render_signature(signature, eval_forward_annotations=True, skip_defaults=False):
     params = []
     for n, p in signature.parameters.items():
+        if skip_defaults and p.default is not inspect._empty:
+            p = p.replace(default=Ellipsis)
         params.append(sanitize_parameter(p, eval_forward_annotations))
     if signature.return_annotation != inspect._empty:
         return (
@@ -915,9 +917,13 @@ def get_type_annotation(arg, command, parent=None, default=None):
         k["type"] == "pure-token" for k in arg["arguments"]
     ):
         tokens = ["PureToken.%s" % s["name"].upper() for s in arg["arguments"]]
-        literal_type = eval(f"Literal[{','.join(tokens)}]")
+        literal_type = eval(f"Literal[{','.join(sorted(tokens))}]")
 
-        if arg.get("optional") and default is None or parent and parent.get("optional"):
+        if (
+            arg.get("optional")
+            and default is None
+            or (parent and (parent.get("optional") or parent.get("partof") == "oneof"))
+        ):
             return Optional[literal_type]
 
         return literal_type
@@ -987,7 +993,11 @@ def get_argument(
 
             extra = {}
 
-            if arg.get("optional") or (parent and parent.get("optional")):
+            if (
+                arg.get("optional")
+                or (parent and parent.get("optional"))
+                or (parent and parent.get("partof") == "oneof")
+            ):
                 extra["default"] = ARGUMENT_DEFAULTS.get(command["name"], {}).get(name)
 
                 if extra.get("default") is None:
@@ -1011,7 +1021,8 @@ def get_argument(
                 )
                 param_list.extend(plist_p)
                 meta_mapping.update(vmap)
-
+            if parent and parent.get("type") == "oneof":
+                arg["partof"] = "oneof"
             for child in sorted(
                 arg["arguments"], key=lambda v: int(v.get("optional") == True)
             ):
@@ -1042,7 +1053,13 @@ def get_argument(
             else:
                 syn_name = sanitized(f"{arg.get('token', arg.get('name'))}", command)
 
-            if arg.get("optional") or parent and parent.get("optional"):
+            if (
+                arg.get("optional")
+                or parent
+                and parent.get("optional")
+                or parent
+                and parent.get("partof") == "oneof"
+            ):
                 extra_params["default"] = ARGUMENT_DEFAULTS.get(
                     command["name"], {}
                 ).get(syn_name)
@@ -1092,11 +1109,15 @@ def get_argument(
         )
         extra_params = {}
 
-        if parent and (parent.get("optional") or parent.get("type") == "oneof"):
+        if parent and (
+            parent.get("optional")
+            or parent.get("type") == "oneof"
+            or parent.get("partof") == "oneof"
+        ):
             type_annotation = Optional[type_annotation]
             extra_params = {"default": None}
 
-        if is_arg_optional(arg, command) and not arg.get("multiple"):
+        if is_arg_optional(arg, command, parent) and not arg.get("multiple"):
             type_annotation = Optional[type_annotation]
             extra_params = {"default": None}
         else:
@@ -1126,7 +1147,7 @@ def get_argument(
                     type_annotation = Iterable[type_annotation]
                     extra_params["default"] = default
                 elif (
-                    is_arg_optional(arg, command)
+                    is_arg_optional(arg, command, parent)
                     and extra_params.get("default") is None
                 ):
                     type_annotation = Optional[Iterable[type_annotation]]
@@ -1168,7 +1189,7 @@ def get_argument(
     return [param_list, decorators, meta_mapping]
 
 
-def is_arg_optional(arg, command):
+def is_arg_optional(arg, command, parent=None):
     command_optionality = ARGUMENT_OPTIONALITY.get(command["name"], {})
     override = command_optionality.get(
         sanitized(arg.get("name", ""), command)
@@ -1177,7 +1198,11 @@ def is_arg_optional(arg, command):
     if override is not None:
         return override
 
-    return arg.get("optional")
+    return (
+        arg.get("optional")
+        or (parent and parent.get("optional"))
+        or (parent and parent.get("partof") == "oneof")
+    )
 
 
 def get_command_spec(command):
@@ -2076,7 +2101,8 @@ class CommandName(bytes, enum.Enum):
 
     #: Sentinel commands
     SENTINEL_CKQUORUM = b"SENTINEL CKQUORUM"
-    SENTINEL_CONFIG = b"SENTINEL CONFIG"
+    SENTINEL_CONFIG_GET = b"SENTINEL CONFIG GET"
+    SENTINEL_CONFIG_SET = b"SENTINEL CONFIG SET"
     SENTINEL_GET_MASTER_ADDR_BY_NAME = b"SENTINEL GET-MASTER-ADDR-BY-NAME"
     SENTINEL_FAILOVER = b"SENTINEL FAILOVER"
     SENTINEL_FLUSHCONFIG = b"SENTINEL FLUSHCONFIG"
@@ -2482,7 +2508,12 @@ def cluster_key_extraction(path):
         command_offset = len(command.strip().split(" ")) - 1
         startfrom = startfrom - command_offset
         token = f'b"{kw}"'
-        kw_expr = f"args.index({token}, {startfrom})"
+        if startfrom >= 0:
+            kw_expr = f"args.index({token}, {startfrom})"
+        else:
+            kw_expr = (
+                f"len(args)-list(reversed(args)).index({token}, {abs(startfrom+1)})-1"
+            )
         if find_spec["type"] == "range":
             last_key = find_spec["spec"]["lastkey"]
             limit = find_spec["spec"]["limit"]
@@ -2504,7 +2535,9 @@ def cluster_key_extraction(path):
                 finder += f":{keystep}]"
             elif not last_key == 0:
                 finder += "]"
-            return f"((lambda kwpos: {finder})({kw_expr}) if {token} in args else ())"
+
+            lamb = f"((lambda kwpos: tuple({finder}))({kw_expr}) if {token} in args else ())"
+            return lamb
         else:
             raise RuntimeError(
                 f"Don't know how to handle {search_spec} with {find_spec}"
@@ -2557,6 +2590,7 @@ from __future__ import annotations
 
 from coredis.typing import Callable, ClassVar, Dict, Tuple, ValueT
 
+
 class KeySpec:
     READONLY: ClassVar[Dict[bytes, Callable[[Tuple[ValueT, ...]], Tuple[ValueT, ...]]]] = {{ '{' }}
     {% for command, exprs in readonly.items() %}
@@ -2565,12 +2599,12 @@ class KeySpec:
     {{ '}' }}
     ALL: ClassVar[Dict[bytes, Callable[[Tuple[ValueT, ...]], Tuple[ValueT, ...]]]] = {{ '{' }}
     {% for command, exprs in all.items() %}
-        b"{{command}}": lambda args: ({{exprs | join("+")}}),
+        b"{{command}}": lambda args: ({{exprs | join("+")}}) ,
     {% endfor %}
     {{ '}' }}
 
     @classmethod
-    def extract_keys(cls, arguments: Tuple[ValueT, ...], readonly_command=False) -> Tuple[ValueT, ...]:
+    def extract_keys(cls, arguments: Tuple[ValueT, ...], readonly_command: bool = False) -> Tuple[ValueT, ...]:
         if len(arguments) <= 1:
             return ()
 
@@ -2587,7 +2621,7 @@ class KeySpec:
             return  ()
     """
     cython_key_spec_template = """from __future__ import annotations
-    
+
 from coredis.commands.constants import CommandName
 
 READONLY = {{ '{' }}

@@ -2023,7 +2023,7 @@ Return a range of members in a sorted set, by lexicographical range
 - Implementation: :meth:`~coredis.Redis.zrangebylex`
 
 
-- Deprecated in redis: 6.2.0. Use :meth:`~coredis.Redis.zrange` with the ``byscore`` argument
+- Deprecated in redis: 6.2.0. Use :meth:`~coredis.Redis.zrange` with the ``bylex`` argument
 
 
 
