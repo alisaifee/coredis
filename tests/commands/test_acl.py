@@ -28,7 +28,7 @@ class TestACL:
         assert {_s("keyspace")} & set(await client.acl_cat())
         assert {_s("keys")} & set(await client.acl_cat("keyspace"))
 
-    @pytest.mark.min_server_version("6.9.0")
+    @pytest.mark.min_server_version("7.0.0")
     async def test_acl_dryrun(self, client, _s):
 
         await client.acl_setuser("test_user", "+set", "~*")

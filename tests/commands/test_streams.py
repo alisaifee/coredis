@@ -383,7 +383,7 @@ class TestStreams:
             {_s("k1"): _s("v2"), _s("k2"): _s("2")},
         )
 
-    @pytest.mark.min_server_version("6.9.0")
+    @pytest.mark.min_server_version("7.0.0")
     async def test_xinfo_stream_full(self, client, _s):
         await client.xadd(
             "test_stream", field_values={"k1": "v1", "k2": "1"}, identifier="1"

@@ -30,7 +30,7 @@ class TestServer:
         await client.config_set({"slowlog-log-slower-than": old_slower_than_value})
         await client.config_set({"slowlog-max-len": old_max_legnth_value})
 
-    @pytest.mark.min_server_version("6.9.0")
+    @pytest.mark.min_server_version("7.0.0")
     @pytest.mark.noresp3
     async def test_command_docs(self, client, _s):
         docs = await client.command_docs("geosearch")
@@ -54,20 +54,20 @@ class TestServer:
         assert commands["get"]["name"] == _s("get")
         assert commands["get"]["arity"] == 2
 
-    @pytest.mark.min_server_version("6.9.0")
+    @pytest.mark.min_server_version("7.0.0")
     async def test_command_list(self, client, _s):
         assert _s("get") in await client.command_list()
         assert _s("acl|getuser") in await client.command_list(aclcat="admin")
         assert _s("zrevrange") in await client.command_list(pattern="zrev*")
 
-    @pytest.mark.min_server_version("6.9.0")
+    @pytest.mark.min_server_version("7.0.0")
     async def test_command_getkeys(self, client, _s):
         assert await client.command_getkeys("MSET", ["a", 1, "b", 2]) == (
             _s("a"),
             _s("b"),
         )
 
-    @pytest.mark.min_server_version("6.9.0")
+    @pytest.mark.min_server_version("7.0.0")
     async def test_command_getkeysandflags(self, client, _s):
         assert await client.command_getkeysandflags("MSET", ["a", 1, "b", 2]) == {
             _s("a"): {_s("OW"), _s("update")},
@@ -189,7 +189,7 @@ class TestServer:
     async def test_latency_doctor(self, client, _s):
         assert await client.latency_doctor()
 
-    @pytest.mark.max_server_version("6.9.9")
+    @pytest.mark.max_server_version("6.2.9")
     async def test_latency_all(self, client, _s):
         await client.execute_command(b"debug", "sleep", 0.05)
         history = await client.latency_history("command")
@@ -204,13 +204,13 @@ class TestServer:
         assert latest[_s("command")][1] == approx(50, 60)
         assert latest[_s("command")][2] == approx(50, 60)
 
-    @pytest.mark.max_server_version("6.9.9")
+    @pytest.mark.max_server_version("6.2.9")
     async def test_latency_graph(self, client, _s):
         await client.execute_command(b"debug", "sleep", 0.05)
         graph = await client.latency_graph("command")
         assert _s("command - high") in graph
 
-    @pytest.mark.min_server_version("6.9.0")
+    @pytest.mark.min_server_version("7.0.0")
     async def test_latency_histogram(self, client, _s):
         await client.set("a", 1)
         await client.set("a", 1)

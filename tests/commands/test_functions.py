@@ -37,7 +37,7 @@ async def simple_library(client):
     "keydb",
 )
 @pytest.mark.asyncio
-@pytest.mark.min_server_version("6.9.0")
+@pytest.mark.min_server_version("7.0.0")
 class TestFunctions:
     async def test_empty_library(self, client, _s):
         assert await client.function_list() == {}
@@ -83,7 +83,7 @@ class TestFunctions:
     "redis_cluster",
 )
 @pytest.mark.asyncio
-@pytest.mark.min_server_version("6.9.0")
+@pytest.mark.min_server_version("7.0.0")
 class TestLibrary:
     async def test_register_library(self, client, _s):
         library = await client.register_library("coredis", library_definition)

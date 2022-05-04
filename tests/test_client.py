@@ -37,14 +37,14 @@ class TestClient:
             await client.getex("test")
 
     @pytest.mark.min_server_version("6.2.0")
-    @pytest.mark.max_server_version("6.9.0")
+    @pytest.mark.max_server_version("7.0.0")
     async def test_unsupported_command_6_2_x(self, client):
         await client.ping()
         with pytest.raises(CommandNotSupportedError):
             await client.function_list()
 
     @pytest.mark.min_server_version("6.2.0")
-    @pytest.mark.max_server_version("6.9.0")
+    @pytest.mark.max_server_version("7.0.0")
     async def test_deprecated_command(self, client, caplog):
         await client.ping()
         assert await client.set("a", 1)

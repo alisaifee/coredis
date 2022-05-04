@@ -234,7 +234,7 @@ class TestGeneric:
         assert await client.object_encoding("a") == _s("embstr")
         assert await client.object_encoding("b") == _s("ziplist")
 
-    @pytest.mark.min_server_version("6.9.0")
+    @pytest.mark.min_server_version("7.0.0")
     async def test_object_encoding_listpack(self, client, _s):
         await client.set("a", "foo")
         await client.hset("b", {"foo": "1"})
@@ -291,7 +291,7 @@ class TestGeneric:
         assert await client.expireat("a", expire_at_seconds)
         assert 0 < await client.ttl("a") <= 61
 
-    @pytest.mark.min_server_version("6.9.0")
+    @pytest.mark.min_server_version("7.0.0")
     async def test_expiretime(self, client, _s):
         now = datetime.datetime.utcnow()
         await client.set("a", "foo")
@@ -343,7 +343,7 @@ class TestGeneric:
         assert await client.pexpireat("a", expire_at_seconds)
         assert 0 < await client.pttl("a") <= 61000
 
-    @pytest.mark.min_server_version("6.9.0")
+    @pytest.mark.min_server_version("7.0.0")
     async def test_pexpiretime(self, client, _s):
         now = datetime.datetime.utcnow()
         await client.set("a", "foo")

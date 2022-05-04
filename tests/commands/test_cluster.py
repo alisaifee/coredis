@@ -35,7 +35,7 @@ class TestCluster:
         )
         assert len(replicas) == 1
 
-    @pytest.mark.min_server_version("6.9.0")
+    @pytest.mark.min_server_version("7.0.0")
     async def test_cluster_links(self, client, _s):
         links = []
         for node in client.primaries:
@@ -44,7 +44,7 @@ class TestCluster:
             links.append(await node.cluster_links())
         assert len(links) == 6
 
-    @pytest.mark.min_server_version("6.9.0")
+    @pytest.mark.min_server_version("7.0.0")
     async def test_cluster_my_id(self, client, _s):
         ids = []
         for node in client.primaries:
@@ -57,7 +57,7 @@ class TestCluster:
         )
         assert set(ids) == set(known_nodes)
 
-    @pytest.mark.min_server_version("6.9.0")
+    @pytest.mark.min_server_version("7.0.0")
     async def test_cluster_shards(self, client, _s):
         await client
         known_nodes = {

@@ -46,7 +46,7 @@ class TestList:
         await client.rpush("c{foo}", ["1"])
         assert await client.blpop(["c{foo}"], timeout=1) == [_s("c{foo}"), _s("1")]
 
-    @pytest.mark.min_server_version("6.9.0")
+    @pytest.mark.min_server_version("7.0.0")
     async def test_lmpop(self, client, _s):
         await client.rpush("a{foo}", [1, 2, 3])
         await client.rpush("b{foo}", [4, 5, 6])
@@ -250,7 +250,7 @@ class TestList:
         assert await client.lmove("a{foo}", "b{foo}", PureToken.LEFT, PureToken.RIGHT)
         assert await client.lmove("a{foo}", "b{foo}", PureToken.RIGHT, PureToken.LEFT)
 
-    @pytest.mark.min_server_version("6.9.0")
+    @pytest.mark.min_server_version("7.0.0")
     @pytest.mark.nocluster
     async def test_blmpop(self, client, _s):
         await client.rpush("a{foo}", [1, 2, 3])

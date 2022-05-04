@@ -233,7 +233,7 @@ class TestSortedSet:
             (_s("a1"), 23),
         )
 
-    @pytest.mark.min_server_version("6.9.0")
+    @pytest.mark.min_server_version("7.0.0")
     async def test_zintercard(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=1, a3=1))
         await client.zadd("b{foo}", dict(a3=2, a4=2, a5=2))
@@ -688,7 +688,7 @@ class TestSortedSet:
             (_s("a1"), 23),
         )
 
-    @pytest.mark.min_server_version("6.9.0")
+    @pytest.mark.min_server_version("7.0.0")
     async def test_zmpop(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3))
         await client.zadd("b{foo}", dict(a1=4, a2=5, a3=6))
@@ -702,7 +702,7 @@ class TestSortedSet:
         assert result[0] == _s("b{foo}")
         assert result[1] == ((_s("a3"), 6.0),)
 
-    @pytest.mark.min_server_version("6.9.0")
+    @pytest.mark.min_server_version("7.0.0")
     @pytest.mark.nocluster
     async def test_bzmpop(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3))
