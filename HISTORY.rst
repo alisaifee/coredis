@@ -3,6 +3,19 @@
 Changelog
 =========
 
+v3.4.7
+------
+Release Date: 2022-05-04
+
+* Chores
+
+  * Update CI to use official 7.0 release for redis
+  * Update CI to use 7.0.0-RC4 image for redis-stack
+
+* Bug Fix
+
+  * Fix key spec extraction for commands using kw search
+
 v3.4.6
 ------
 Release Date: 2022-04-30
@@ -603,6 +616,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
