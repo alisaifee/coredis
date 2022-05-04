@@ -46,6 +46,7 @@ jobs:
         if [ ! -z "$(git diff coredis)" ];
         then
           echo "Auto-generated source are not up to date"
+          git diff
           exit 1
         fi;
   test:
