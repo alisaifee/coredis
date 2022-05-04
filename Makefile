@@ -1,8 +1,8 @@
 lint:
 	black --check coredis tests
+	flake8 coredis tests
 	pyright coredis
 	mypy coredis
-	flake8 coredis tests
 
 lint-fix:
 	black coredis tests
