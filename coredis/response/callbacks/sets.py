@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import Iterable, cast
 
 from coredis.response.callbacks import ResponseCallback
 from coredis.typing import (
@@ -17,14 +17,15 @@ from coredis.typing import (
 
 
 class SScanCallback(
-    ResponseCallback[ResponseType, ResponseType, Tuple[int, Set[AnyStr]]]
+    ResponseCallback[List[ResponseType], List[ResponseType], Tuple[int, Set[AnyStr]]]
 ):
     def transform(
-        self, response: ResponseType, **options: Optional[ValueT]
+        self, response: List[ResponseType], **options: Optional[ValueT]
     ) -> Tuple[int, Set[AnyStr]]:
 
         cursor, r = response
-        return int(cursor), set(r)
+        assert isinstance(cursor, (bytes, str)) and isinstance(r, Iterable)
+        return int(cursor), set(cast(Iterable[AnyStr], r))
 
 
 class ItemOrSetCallback(
