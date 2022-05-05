@@ -146,14 +146,22 @@ class ClusterMergeSets(ClusterMultiNodeCallback[Set[R]]):
 class SimpleStringCallback(
     ResponseCallback[Optional[StringT], Optional[StringT], bool]
 ):
-    def __init__(self, raise_on_error: Optional[Type[Exception]] = None):
+    def __init__(
+        self,
+        raise_on_error: Optional[Type[Exception]] = None,
+        prefix_match: bool = False,
+    ):
         self.raise_on_error = raise_on_error
+        self.prefix_match = prefix_match
 
     def transform(
         self, response: Optional[StringT], **options: Optional[ValueT]
     ) -> bool:
         if response:
-            success = response in {"OK", b"OK"}
+            if not self.prefix_match:
+                success = response in {"OK", b"OK"}
+            else:
+                success = response[:2] in {"OK", b"OK"}
         else:
             success = False
         if not success and self.raise_on_error:

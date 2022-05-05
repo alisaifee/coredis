@@ -11,6 +11,8 @@ from coredis.exceptions import (
 )
 from coredis.sentinel import Sentinel, SentinelConnectionPool
 
+pytest.marks = ("asyncio",)
+
 
 class SentinelTestClient:
     def __init__(self, cluster, id):
@@ -81,19 +83,16 @@ def sentinel(request, cluster, event_loop):
     return Sentinel([("foo", 26379), ("bar", 26379)], loop=event_loop)
 
 
-@pytest.mark.asyncio()
 async def test_discover_primary(sentinel):
     address = await sentinel.discover_primary("localhost-redis-sentinel")
     assert address == ("127.0.0.1", 6379)
 
 
-@pytest.mark.asyncio()
 async def test_discover_primary_error(sentinel):
     with pytest.raises(PrimaryNotFoundError):
         await sentinel.discover_primary("xxx")
 
 
-@pytest.mark.asyncio()
 async def test_discover_primary_sentinel_down(cluster, sentinel):
     # Put first sentinel 'foo' down
     cluster.nodes_down.add(("foo", 26379))
@@ -103,7 +102,6 @@ async def test_discover_primary_sentinel_down(cluster, sentinel):
     assert sentinel.sentinels[0].id == ("bar", 26379)
 
 
-@pytest.mark.asyncio()
 async def test_discover_primary_sentinel_timeout(cluster, sentinel):
     # Put first sentinel 'foo' down
     cluster.nodes_timeout.add(("foo", 26379))
@@ -113,7 +111,6 @@ async def test_discover_primary_sentinel_timeout(cluster, sentinel):
     assert sentinel.sentinels[0].id == ("bar", 26379)
 
 
-@pytest.mark.asyncio()
 async def test_master_min_other_sentinels(cluster):
     sentinel = Sentinel([("foo", 26379)], min_other_sentinels=1)
     # min_other_sentinels
@@ -124,21 +121,18 @@ async def test_master_min_other_sentinels(cluster):
     assert address == ("127.0.0.1", 6379)
 
 
-@pytest.mark.asyncio()
 async def test_master_odown(cluster, sentinel):
     cluster.primary["is_odown"] = True
     with pytest.raises(PrimaryNotFoundError):
         await sentinel.discover_primary("localhost-redis-sentinel")
 
 
-@pytest.mark.asyncio()
 async def test_master_sdown(cluster, sentinel):
     cluster.primary["is_sdown"] = True
     with pytest.raises(PrimaryNotFoundError):
         await sentinel.discover_primary("localhost-redis-sentinel")
 
 
-@pytest.mark.asyncio()
 async def test_discover_replicas(cluster, sentinel):
     assert await sentinel.discover_replicas("localhost-redis-sentinel") == []
 
@@ -180,7 +174,6 @@ async def test_discover_replicas(cluster, sentinel):
     ]
 
 
-@pytest.mark.asyncio()
 async def test_primary_for(redis_sentinel, host_ip):
     primary = redis_sentinel.primary_for("localhost-redis-sentinel")
     assert await primary.ping()
@@ -193,13 +186,11 @@ async def test_primary_for(redis_sentinel, host_ip):
     assert await primary.ping()
 
 
-@pytest.mark.asyncio()
 async def test_replica_for(redis_sentinel):
     replica = redis_sentinel.replica_for("localhost-redis-sentinel")
     assert await replica.ping()
 
 
-@pytest.mark.asyncio()
 async def test_replica_for_slave_not_found_error(cluster, sentinel):
     cluster.primary["is_odown"] = True
     replica = sentinel.replica_for("localhost-redis-sentinel", db=9)
@@ -207,7 +198,6 @@ async def test_replica_for_slave_not_found_error(cluster, sentinel):
         await replica.ping()
 
 
-@pytest.mark.asyncio()
 async def test_replica_round_robin(cluster, sentinel):
     cluster.replicas = [
         {"ip": "replica0", "port": 6379, "is_odown": False, "is_sdown": False},
@@ -218,7 +208,6 @@ async def test_replica_round_robin(cluster, sentinel):
     assert set(rotator) == {("replica0", 6379), ("replica1", 6379)}
 
 
-@pytest.mark.asyncio()
 async def test_protocol_version(redis_sentinel_server):
     sentinel = Sentinel(sentinels=[redis_sentinel_server], protocol_version=3)
     assert sentinel.sentinels[0].protocol_version == 3
@@ -226,7 +215,6 @@ async def test_protocol_version(redis_sentinel_server):
     assert sentinel.replica_for("localhost-redis-sentinel").protocol_version == 3
 
 
-@pytest.mark.asyncio()
 async def test_autodecode(redis_sentinel_server):
     sentinel = Sentinel(sentinels=[redis_sentinel_server], decode_responses=True)
     assert await sentinel.primary_for("localhost-redis-sentinel").ping() == "PONG"
@@ -235,4 +223,10 @@ async def test_autodecode(redis_sentinel_server):
             "localhost-redis-sentinel", decode_responses=False
         ).ping()
         == b"PONG"
+    )
+
+
+async def test_ckquorum(redis_sentinel):
+    assert await redis_sentinel.sentinels[0].sentinel_ckquorum(
+        "localhost-redis-sentinel"
     )

@@ -27,7 +27,9 @@ class SentinelCommands(CommandMixin[AnyStr]):
     )
     async def sentinel_ckquorum(self, service_name: StringT) -> bool:
         return await self.execute_command(
-            CommandName.SENTINEL_CKQUORUM, service_name, callback=SimpleStringCallback()
+            CommandName.SENTINEL_CKQUORUM,
+            service_name,
+            callback=SimpleStringCallback(prefix_match=True),
         )
 
     @redis_command(CommandName.SENTINEL_CONFIG_GET, version_introduced="6.2.0")
