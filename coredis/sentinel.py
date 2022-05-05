@@ -340,7 +340,7 @@ class Sentinel(Generic[AnyStr]):
             replicas_alive.append((nativestr(replica["ip"]), int(replica["port"])))
         return replicas_alive
 
-    @versionadded(version="3.1.0")
+    @versionadded("Replaces deprecated ``discover_master``", version="3.1.0")
     async def discover_primary(self, service_name: str) -> Tuple[str, int]:
         """
         Asks sentinel servers for the Redis primary's address corresponding
@@ -364,7 +364,7 @@ class Sentinel(Generic[AnyStr]):
                 return nativestr(state["ip"]), int(state["port"])
         raise PrimaryNotFoundError(f"No primary found for {service_name!r}")
 
-    @versionadded(version="3.1.0")
+    @versionadded("Replaces deprecated ``discover_slaves``", version="3.1.0")
     async def discover_replicas(self, service_name: str) -> List[Tuple[str, int]]:
         """Returns a list of alive slaves for service :paramref:`service_name`"""
         for sentinel in self.sentinels:
@@ -399,7 +399,7 @@ class Sentinel(Generic[AnyStr]):
     ) -> Redis[str]:
         ...
 
-    @versionadded(version="3.1.0")
+    @versionadded("Replaces deprecated ``master_for``", version="3.1.0")
     def primary_for(
         self,
         service_name: str,
@@ -459,7 +459,7 @@ class Sentinel(Generic[AnyStr]):
     ) -> Redis[str]:
         ...
 
-    @versionadded(version="3.1.0")
+    @versionadded("Replaces deprecated ``slave_for``", version="3.1.0")
     def replica_for(
         self,
         service_name: str,
