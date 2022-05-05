@@ -234,12 +234,13 @@ class RedisConnection:
             connection_pool = ConnectionPool(**kwargs)
 
         self.connection_pool = connection_pool
-        self.encoding = connection_pool.connection_kwargs.get("encoding")
-        self.decode_responses = connection_pool.connection_kwargs.get(
-            "decode_responses"
+        self.encoding = str(connection_pool.connection_kwargs.get("encoding", encoding))
+        self.decode_responses = bool(
+            connection_pool.connection_kwargs.get("decode_responses", decode_responses)
         )
-        self.protocol_version = connection_pool.connection_kwargs.get(
-            "protocol_version"
+        self.protocol_version = int(
+            connection_pool.connection_kwargs.get("protocol_version")
+            or protocol_version
         )
         self.server_version: Optional[Version] = None
         self.verify_version = verify_version
@@ -1048,10 +1049,12 @@ class Redis(
         :param idle_check_interval: Periodicity of idle checks to release idle connections.
         :param client_name: The client name to identifiy with the redis server
         :param protocol_version: Whether to use the RESP (``2``) or RESP3 (``3``)
-         protocol for parsing responses from the server (Default ``2``). (See :ref:`api_reference:parsers`)
+         protocol for parsing responses from the server (Default ``2``).
+         (See :ref:`api_reference:parsers`)
         :param verify_version: Validate redis server version against the documented
-         version introduced before executing a command and raises a :exc:`CommandNotSupportedError`
-         error if the required version is higher than the reported server version
+         version introduced before executing a command and raises a
+         :exc:`CommandNotSupportedError` error if the required version is higher than
+         the reported server version
         """
         super().__init__(
             host=host,
@@ -1425,10 +1428,12 @@ class RedisCluster(
         :param connection_pool: The connection pool instance to use. If not provided
          a new pool will be assigned to this client.
         :param protocol_version: Whether to use the RESP (``2``) or RESP3 (``3``)
-         protocol for parsing responses from the server (Default ``2``). (See :ref:`api_reference:parsers`)
+         protocol for parsing responses from the server (Default ``2``).
+         (See :ref:`api_reference:parsers`)
         :param verify_version: Validate redis server version against the documented
-         version introduced before executing a command and raises a :exc:`CommandNotSupportedError`
-         error if the required version is higher than the reported server version
+         version introduced before executing a command and raises a
+         :exc:`CommandNotSupportedError` error if the required version is higher than
+         the reported server version
         """
 
         if "db" in kwargs:
