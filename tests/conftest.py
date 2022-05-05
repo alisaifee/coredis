@@ -438,10 +438,10 @@ async def redis_sentinel(redis_sentinel_server, request):
         decode_responses=True,
         **get_client_test_args(request),
     )
-    master = sentinel.master_for("localhost-redis-sentinel")
+    master = sentinel.primary_for("coredis")
     await check_test_constraints(request, master)
     await master.flushall()
-
+    await sentinel.sentinels[0].sentinel_config_set("resolve-hostnames", "yes")
     return sentinel
 
 
@@ -454,10 +454,11 @@ async def redis_sentinel_auth(redis_sentinel_auth_server, request):
         decode_responses=True,
         **get_client_test_args(request),
     )
-    master = sentinel.master_for("localhost-redis-sentinel")
+    master = sentinel.primary_for("coredis")
     await check_test_constraints(request, master)
     await master.flushall()
-
+    await sentinel.sentinels[0].sentinel_config_set("resolve-hostnames", "yes")
+    await asyncio.sleep(0.1)
     return sentinel
 
 
