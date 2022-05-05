@@ -5,7 +5,7 @@ import random
 from asyncio import AbstractEventLoop
 from typing import Any, cast, overload
 
-from deprecated.sphinx import deprecated
+from deprecated.sphinx import deprecated, versionadded
 
 from coredis import Redis
 from coredis.commands import CommandName
@@ -239,7 +239,6 @@ class Sentinel(Generic[AnyStr]):
         min_other_sentinels: int = ...,
         sentinel_kwargs: Optional[Dict[str, Any]] = ...,
         decode_responses: Literal[False] = ...,
-        protocol_version: Literal[2, 3] = ...,
         **connection_kwargs: Any,
     ):
         ...
@@ -251,7 +250,6 @@ class Sentinel(Generic[AnyStr]):
         min_other_sentinels: int = ...,
         sentinel_kwargs: Optional[Dict[str, Any]] = ...,
         decode_responses: Literal[True] = ...,
-        protocol_version: Literal[2, 3] = ...,
         **connection_kwargs: Any,
     ):
         ...
@@ -262,7 +260,6 @@ class Sentinel(Generic[AnyStr]):
         min_other_sentinels: int = 0,
         sentinel_kwargs: Optional[Dict[str, Any]] = None,
         decode_responses: bool = False,
-        protocol_version: Literal[2, 3] = 2,
         **connection_kwargs: Any,
     ):
         """
@@ -274,10 +271,12 @@ class Sentinel(Generic[AnyStr]):
         :param sentinel_kwargs: is a dictionary of connection arguments used when
          connecting to sentinel instances. Any argument that can be passed to
          a normal Redis connection can be specified here. If :paramref:`sentinel_kwargs` is
-         not specified, any ``stream_timeout`` and ``socket_keepalive`` options specified
-         in :paramref:`connection_kwargs` will be used.
+         not specified, ``stream_timeout``, ``socket_keepalive``, ``decode_responses``
+         and ``protocol_version`` options specified in :paramref:`connection_kwargs` will be used.
+        :param decode_responses:
         :param connection_kwargs: are keyword arguments that will be used when
-         establishing a connection to a Redis server.
+         establishing a connection to a Redis server (i.e. are passed on to the
+         constructor of :class:`Redis` for all primary and replicas).
         """
         # if sentinel_kwargs isn't defined, use the socket_* options from
         # connection_kwargs
@@ -285,7 +284,13 @@ class Sentinel(Generic[AnyStr]):
             sentinel_kwargs = {
                 k: v
                 for k, v in iter(connection_kwargs.items())
-                if k.startswith("socket_")
+                if k
+                in {
+                    "socket_timeout",
+                    "socket_keepalive",
+                    "encoding",
+                    "protocol_version",
+                }
             }
 
         self.sentinel_kwargs = sentinel_kwargs
@@ -295,9 +300,6 @@ class Sentinel(Generic[AnyStr]):
         self.connection_kwargs["decode_responses"] = self.sentinel_kwargs[
             "decode_responses"
         ] = decode_responses
-        self.connection_kwargs["protocol_version"] = self.sentinel_kwargs[
-            "protocol_version"
-        ] = protocol_version
 
         self.sentinels = [
             Redis(hostname, port, **self.sentinel_kwargs)
@@ -317,18 +319,28 @@ class Sentinel(Generic[AnyStr]):
             type(self).__name__, ",".join(sentinel_addresses)
         )
 
-    def check_primary_state(
+    def __check_primary_state(
         self,
         state: Dict[str, Union[int, bool, str]],
-        service_name: str,
     ) -> bool:
         if not state["is_master"] or state["is_sdown"] or state["is_odown"]:
             return False
-        # Check if our sentinel doesn't see other nodes
         if int(state["num-other-sentinels"]) < self.min_other_sentinels:
             return False
         return True
 
+    def __filter_replicas(
+        self, replicas: Iterable[Dict[str, Union[str, int, bool]]]
+    ) -> List[Tuple[str, int]]:
+        """Removes replicas that are in an ODOWN or SDOWN state"""
+        replicas_alive: List[Tuple[str, int]] = []
+        for replica in replicas:
+            if replica["is_odown"] or replica["is_sdown"]:
+                continue
+            replicas_alive.append((nativestr(replica["ip"]), int(replica["port"])))
+        return replicas_alive
+
+    @versionadded(version="3.1.0")
     async def discover_primary(self, service_name: str) -> Tuple[str, int]:
         """
         Asks sentinel servers for the Redis primary's address corresponding
@@ -343,7 +355,7 @@ class Sentinel(Generic[AnyStr]):
             except (ConnectionError, TimeoutError):
                 continue
             state = primaries.get(service_name)
-            if state and self.check_primary_state(state, service_name):
+            if state and self.__check_primary_state(state):
                 # Put this sentinel at the top of the list
                 self.sentinels[0], self.sentinels[sentinel_no] = (
                     sentinel,
@@ -352,17 +364,7 @@ class Sentinel(Generic[AnyStr]):
                 return nativestr(state["ip"]), int(state["port"])
         raise PrimaryNotFoundError(f"No primary found for {service_name!r}")
 
-    def filter_replicas(
-        self, replicas: Iterable[Dict[str, Union[str, int, bool]]]
-    ) -> List[Tuple[str, int]]:
-        """Removes replicas that are in an ODOWN or SDOWN state"""
-        replicas_alive: List[Tuple[str, int]] = []
-        for replica in replicas:
-            if replica["is_odown"] or replica["is_sdown"]:
-                continue
-            replicas_alive.append((nativestr(replica["ip"]), int(replica["port"])))
-        return replicas_alive
-
+    @versionadded(version="3.1.0")
     async def discover_replicas(self, service_name: str) -> List[Tuple[str, int]]:
         """Returns a list of alive slaves for service :paramref:`service_name`"""
         for sentinel in self.sentinels:
@@ -370,7 +372,7 @@ class Sentinel(Generic[AnyStr]):
                 replicas = await sentinel.sentinel_replicas(service_name)
             except (ConnectionError, ResponseError, TimeoutError):
                 continue
-            filtered_replicas = self.filter_replicas(replicas)
+            filtered_replicas = self.__filter_replicas(replicas)
             if filtered_replicas:
                 return filtered_replicas
         return []
@@ -397,6 +399,7 @@ class Sentinel(Generic[AnyStr]):
     ) -> Redis[str]:
         ...
 
+    @versionadded(version="3.1.0")
     def primary_for(
         self,
         service_name: str,
@@ -456,6 +459,7 @@ class Sentinel(Generic[AnyStr]):
     ) -> Redis[str]:
         ...
 
+    @versionadded(version="3.1.0")
     def replica_for(
         self,
         service_name: str,

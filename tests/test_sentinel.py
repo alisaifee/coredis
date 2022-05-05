@@ -216,3 +216,23 @@ async def test_replica_round_robin(cluster, sentinel):
     pool = SentinelConnectionPool("localhost-redis-sentinel", sentinel)
     rotator = await pool.rotate_replicas()
     assert set(rotator) == {("replica0", 6379), ("replica1", 6379)}
+
+
+@pytest.mark.asyncio()
+async def test_protocol_version(redis_sentinel_server):
+    sentinel = Sentinel(sentinels=[redis_sentinel_server], protocol_version=3)
+    assert sentinel.sentinels[0].protocol_version == 3
+    assert sentinel.primary_for("localhost-redis-sentinel").protocol_version == 3
+    assert sentinel.replica_for("localhost-redis-sentinel").protocol_version == 3
+
+
+@pytest.mark.asyncio()
+async def test_autodecode(redis_sentinel_server):
+    sentinel = Sentinel(sentinels=[redis_sentinel_server], decode_responses=True)
+    assert await sentinel.primary_for("localhost-redis-sentinel").ping() == "PONG"
+    assert (
+        await sentinel.primary_for(
+            "localhost-redis-sentinel", decode_responses=False
+        ).ping()
+        == b"PONG"
+    )
