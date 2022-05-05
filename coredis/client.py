@@ -232,10 +232,15 @@ class RedisConnection:
                     ).get()
                     kwargs["ssl_context"] = ssl_context
             connection_pool = ConnectionPool(**kwargs)
+
         self.connection_pool = connection_pool
-        self.encoding = encoding
-        self.decode_responses = decode_responses
-        self.protocol_version = protocol_version
+        self.encoding = connection_pool.connection_kwargs.get("encoding")
+        self.decode_responses = connection_pool.connection_kwargs.get(
+            "decode_responses"
+        )
+        self.protocol_version = connection_pool.connection_kwargs.get(
+            "protocol_version"
+        )
         self.server_version: Optional[Version] = None
         self.verify_version = verify_version
 
