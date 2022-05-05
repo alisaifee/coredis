@@ -925,6 +925,10 @@ class Redis(
     RedisConnection,
     metaclass=RedisMeta,
 ):
+    """
+    Redis client
+    """
+
     @overload
     def __init__(
         self: Redis[bytes],
@@ -1019,7 +1023,35 @@ class Redis(
         **_: Any,
     ) -> None:
         """
-        Initializes a new Redis client
+        :param host: The hostname of the redis server
+        :param port: The port at which th redis server is listening on
+        :param db: database number to switch to upon connection
+        :param username: Username for authenticating with the redis server
+        :param password: Password for authenticating with the redis server
+        :param stream_timeout: Timeout when reading responses from the server
+        :param connect_timeout: Timeout for establishing a connection to the server
+        :param connection_pool: The connection pool instance to use. If not provided
+         a new pool will be assigned to this client.
+        :param unix_socket_path: Path to the UDS which the redis server
+         is listening at
+        :param encoding: The codec to use to encode strings transmitted to redis
+         and decode responses with. (See :ref:`api_reference:encoding/decoding`)
+        :param decode_responses: If ``True`` string responses from the server
+         will be decoded using :paramref:`encoding` before being returned.
+         (See :ref:`api_reference:encoding/decoding`)
+        :param max_connections: Maximum capacity of the connection pool (Ignored if
+         :paramref:`connection_pool` is not ``None``.
+        :param retry_on_timeout: Whether to retry a commmand once if a :exc:`TimeoutError`
+         is encountered
+        :param max_idle_time: Maximum number of a seconds an unused connection is cached
+         before it is disconnected.
+        :param idle_check_interval: Periodicity of idle checks to release idle connections.
+        :param client_name: The client name to identifiy with the redis server
+        :param protocol_version: Whether to use the RESP (``2``) or RESP3 (``3``)
+         protocol for parsing responses from the server (Default ``2``). (See :ref:`api_reference:parsers`)
+        :param verify_version: Validate redis server version against the documented
+         version introduced before executing a command and raises a :exc:`CommandNotSupportedError`
+         error if the required version is higher than the reported server version
         """
         super().__init__(
             host=host,
@@ -1303,6 +1335,9 @@ class RedisCluster(
     RedisConnection,
     metaclass=ClusterMeta,
 ):
+    """
+    Redis cluster client
+    """
 
     RedisClusterRequestTTL = 16
     NODES_FLAGS: Dict[bytes, NodeFlag] = {}
@@ -1376,13 +1411,24 @@ class RedisCluster(
         :param startup_nodes: List of nodes that initial bootstrapping can be done
          from
         :param max_connections: Maximum number of connections that should be kept open at one time
+        :param max_connections_per_node:
         :param readonly: enable READONLY mode. You can read possibly stale data from slave.
+        :param reinitialize_steps:
         :param skip_full_coverage_check: Skips the check of cluster-require-full-coverage config,
          useful for clusters without the CONFIG command (like aws)
         :param nodemanager_follow_cluster: The node manager will during initialization try the
          last set of nodes that it was operating on. This will allow the client to drift along
          side the cluster if the cluster nodes move around alot.
-        :param verify_version: Ensure requested methods are supported on the target server
+        :param decode_responses: If ``True`` string responses from the server
+         will be decoded using :paramref:`encoding` before being returned.
+         (See :ref:`api_reference:encoding/decoding`)
+        :param connection_pool: The connection pool instance to use. If not provided
+         a new pool will be assigned to this client.
+        :param protocol_version: Whether to use the RESP (``2``) or RESP3 (``3``)
+         protocol for parsing responses from the server (Default ``2``). (See :ref:`api_reference:parsers`)
+        :param verify_version: Validate redis server version against the documented
+         version introduced before executing a command and raises a :exc:`CommandNotSupportedError`
+         error if the required version is higher than the reported server version
         """
 
         if "db" in kwargs:
