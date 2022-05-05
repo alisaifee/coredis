@@ -491,12 +491,18 @@ class Sentinel(Generic[AnyStr]):
             )
         )
 
-    @deprecated(version="3.1.0", reason="Use :meth:`discover_primaries()` instead")
+    @deprecated(version="3.1.0", reason="Use :meth:`discover_primary()` instead")
     async def discover_master(self, service_name: str) -> Tuple[str, int]:
+        """
+        :meta private:
+        """
         return await self.discover_primary(service_name)
 
     @deprecated(version="3.1.0", reason="Use :meth:`discover_replicas()` instead")
     async def discover_slaves(self, service_name: str) -> List[Tuple[str, int]]:
+        """
+        :meta private:
+        """
         return await self.discover_replicas(service_name)
 
     @deprecated(version="3.1.0", reason="Use :meth:`replica_for()` instead")
@@ -507,6 +513,9 @@ class Sentinel(Generic[AnyStr]):
         connection_pool_class: Type[SentinelConnectionPool] = SentinelConnectionPool,
         **kwargs: Any,
     ) -> Redis[Any]:
+        """
+        :meta private:
+        """
         return self.replica_for(  # pyright: ignore
             service_name,
             redis_class=redis_class,
@@ -522,6 +531,9 @@ class Sentinel(Generic[AnyStr]):
         connection_pool_class: Type[SentinelConnectionPool] = SentinelConnectionPool,
         **kwargs: Any,
     ) -> Redis[Any]:
+        """
+        :meta private:
+        """
         return self.primary_for(  # pyright: ignore
             service_name,
             redis_class=redis_class,
