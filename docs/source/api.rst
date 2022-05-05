@@ -4,6 +4,13 @@ API Documentation
 
 Clients
 ^^^^^^^
+
+.. autosummary::
+
+   Redis
+   RedisCluster
+   sentinel.Sentinel
+
 Redis
 -----
 .. autoclass:: Redis
@@ -32,6 +39,17 @@ accomplished by calling the pass through APIs and require some state
 management. The following wrappers provide an abstraction layer to
 simplify operations.
 
+.. autosummary::
+
+   ~coredis.commands.bitfield.BitFieldOperation
+   ~coredis.commands.pubsub.PubSub
+   ~coredis.commands.pubsub.ClusterPubSub
+   ~coredis.commands.script.Script
+   ~coredis.commands.function.Library
+   ~coredis.commands.function.Function
+   ~coredis.commands.pipeline.Pipeline
+   ~coredis.commands.pipeline.ClusterPipeline
+   ~coredis.commands.monitor.Monitor
 
 BitField Operations
 -------------------
@@ -43,6 +61,10 @@ BitField Operations
 PubSub
 ------
 .. autoclass:: coredis.commands.pubsub.PubSub
+   :no-inherited-members:
+   :class-doc-from: both
+
+.. autoclass:: coredis.commands.pubsub.ClusterPubSub
    :no-inherited-members:
    :class-doc-from: both
 
@@ -164,9 +186,13 @@ Parsers
 
 Response Types
 ^^^^^^^^^^^^^^
-In most cases the command API returns native python types as they are described
-in the redis specification. In certain cases these are "lightly" typed using
-:class:`~typing.NamedTuple` or :class:`~typing.TypedDict` for ease of documentation.
+In most cases the API returns native python types mapped as closely as possible
+to the response from redis. The responses are normalized across RESP versions ``2`` and ``3``
+to maintain a consistent signature (Most notable example of this is dictionary
+
+In certain cases these are "lightly" typed using :class:`~typing.NamedTuple`
+or :class:`~typing.TypedDict` for ease of documentation and in the case of "tuples"
+returned by redis - to avoid errors in indexing.
 
 .. automodule:: coredis.response.types
    :no-inherited-members:
