@@ -61,11 +61,3 @@ class TestClient:
     @pytest.mark.parametrize("client_arguments", [({"client_name": "coredis"})])
     async def test_set_client_name(self, client, client_arguments):
         assert (await client.client_info())["name"] == "coredis"
-
-
-@pytest.mark.asyncio
-@pytest.mark.min_server_version("6.0.0")
-async def test_invalid_protocol_version(redis_basic):
-    r = Redis(protocol_version=4)
-    with pytest.raises(ProtocolError):
-        await r.ping()
