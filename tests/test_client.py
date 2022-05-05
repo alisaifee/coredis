@@ -3,8 +3,7 @@ from __future__ import annotations
 import pytest
 from packaging.version import Version
 
-from coredis import Redis
-from coredis.exceptions import CommandNotSupportedError, ProtocolError
+from coredis.exceptions import CommandNotSupportedError
 from coredis.utils import nativestr
 from tests.conftest import targets
 
