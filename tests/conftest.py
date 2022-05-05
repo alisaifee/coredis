@@ -180,7 +180,7 @@ def redis_sentinel_server(docker_services):
     docker_services.start("redis-sentinel")
     docker_services.wait_for_service("redis-sentinel", 26379, ping_socket)
 
-    yield
+    yield ["localhost", 26379]
 
 
 @pytest.fixture(scope="session")
@@ -189,7 +189,7 @@ def redis_sentinel_auth_server(docker_services):
     docker_services.wait_for_service(
         "redis-sentinel-auth", 26379, check_sentinel_auth_ready
     )
-    yield
+    yield ["localhost", 36379]
 
 
 @pytest.fixture(scope="session")
@@ -433,7 +433,7 @@ async def redis_cluster_resp3(redis_cluster_server, request):
 @pytest.fixture
 async def redis_sentinel(redis_sentinel_server, request):
     sentinel = coredis.sentinel.Sentinel(
-        [("localhost", 26379)],
+        [redis_sentinel_server],
         sentinel_kwargs={},
         decode_responses=True,
         **get_client_test_args(request),
@@ -448,7 +448,7 @@ async def redis_sentinel(redis_sentinel_server, request):
 @pytest.fixture
 async def redis_sentinel_auth(redis_sentinel_auth_server, request):
     sentinel = coredis.sentinel.Sentinel(
-        [("localhost", 36379)],
+        [redis_sentinel_auth_server],
         sentinel_kwargs={"password": "sekret"},
         password="sekret",
         decode_responses=True,
