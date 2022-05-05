@@ -131,8 +131,6 @@ from coredis.typing import (
     KeyT,
     List,
     Literal,
-    MutableSequence,
-    MutableSet,
     Optional,
     OrderedDict,
     ResponsePrimitive,
@@ -2402,7 +2400,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             combine=ClusterMergeSets(),
         ),
     )
-    async def keys(self, pattern: StringT = "*") -> MutableSet[AnyStr]:
+    async def keys(self, pattern: StringT = "*") -> Set[AnyStr]:
         """
         Find all keys matching the given pattern
 
@@ -2965,7 +2963,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         timeout: Union[int, float],
         where: Literal[PureToken.LEFT, PureToken.RIGHT],
         count: Optional[int] = None,
-    ) -> Optional[MutableSequence[AnyStr]]:
+    ) -> Optional[List[AnyStr]]:
         """
         Pop elements from the first non empty list, or block until one is available
 
@@ -2989,7 +2987,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.BLPOP, group=CommandGroup.LIST)
     async def blpop(
         self, keys: Iterable[KeyT], timeout: Union[int, float]
-    ) -> Optional[MutableSequence[AnyStr]]:
+    ) -> Optional[List[AnyStr]]:
         """
         Remove and get the first element in a list, or block until one is available
 
@@ -3008,7 +3006,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.BRPOP, group=CommandGroup.LIST)
     async def brpop(
         self, keys: Iterable[KeyT], timeout: Union[int, float]
-    ) -> Optional[MutableSequence[AnyStr]]:
+    ) -> Optional[List[AnyStr]]:
         """
         Remove and get the last element in a list, or block until one is available
 
@@ -3120,7 +3118,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         keys: Iterable[Union[str, bytes]],
         where: Literal[PureToken.LEFT, PureToken.RIGHT],
         count: Optional[int] = None,
-    ) -> Optional[MutableSequence[AnyStr]]:
+    ) -> Optional[List[AnyStr]]:
         """
         Pop elements from the first non empty list
 
@@ -3147,7 +3145,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def lpop(
         self, key: KeyT, count: Optional[int] = None
-    ) -> Optional[Union[AnyStr, MutableSequence[AnyStr]]]:
+    ) -> Optional[Union[AnyStr, List[AnyStr]]]:
         """
         Remove and get the first :paramref:`count` elements in a list
 
@@ -3181,7 +3179,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         rank: Optional[int] = None,
         count: Optional[int] = None,
         maxlen: Optional[int] = None,
-    ) -> Optional[Union[int, MutableSequence[int]]]:
+    ) -> Optional[Union[int, List[int]]]:
         """
 
         Return the index of matching elements on a list
@@ -3237,7 +3235,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(CommandName.LRANGE, readonly=True, group=CommandGroup.LIST)
-    async def lrange(self, key: KeyT, start: int, stop: int) -> MutableSequence[AnyStr]:
+    async def lrange(self, key: KeyT, start: int, stop: int) -> List[AnyStr]:
         """
         Get a range of elements from a list
 
@@ -3309,7 +3307,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def rpop(
         self, key: KeyT, count: Optional[int] = None
-    ) -> Optional[Union[AnyStr, MutableSequence[AnyStr]]]:
+    ) -> Optional[Union[AnyStr, List[AnyStr]]]:
         """
         Remove and get the last elements in a list
 
@@ -3411,7 +3409,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         readonly=True,
         group=CommandGroup.SET,
     )
-    async def sdiff(self, keys: Iterable[KeyT]) -> MutableSet[AnyStr]:
+    async def sdiff(self, keys: Iterable[KeyT]) -> Set[AnyStr]:
         """
         Subtract multiple sets
 
@@ -3438,7 +3436,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         readonly=True,
         group=CommandGroup.SET,
     )
-    async def sinter(self, keys: Iterable[KeyT]) -> MutableSet[AnyStr]:
+    async def sinter(self, keys: Iterable[KeyT]) -> Set[AnyStr]:
         """
         Intersect multiple sets
 
@@ -3556,7 +3554,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def spop(
         self, key: KeyT, count: Optional[int] = None
-    ) -> Optional[Union[AnyStr, MutableSet[AnyStr]]]:
+    ) -> Optional[Union[AnyStr, Set[AnyStr]]]:
         """
         Remove and return one or multiple random members from a set
 
@@ -3631,7 +3629,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         readonly=True,
         group=CommandGroup.SET,
     )
-    async def sunion(self, keys: Iterable[KeyT]) -> MutableSet[AnyStr]:
+    async def sunion(self, keys: Iterable[KeyT]) -> Set[AnyStr]:
         """
         Add multiple sets
 
@@ -7247,7 +7245,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         module: Optional[StringT] = None,
         aclcat: Optional[StringT] = None,
         pattern: Optional[StringT] = None,
-    ) -> MutableSet[AnyStr]:
+    ) -> Set[AnyStr]:
         """
         Get an array of Redis command names
         """
