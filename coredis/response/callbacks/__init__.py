@@ -78,7 +78,7 @@ class ResponseCallback(ABC, Generic[RESP, RESP3, R], metaclass=ResponseCallbackM
         return self.transform(cast(RESP, response), **options)
 
     def handle_exception(self, exc: BaseException) -> Optional[R]:
-        raise exc
+        return exc # type: ignore
 
 
 class NoopCallback(ResponseCallback[R, R, R]):
