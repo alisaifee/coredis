@@ -97,6 +97,7 @@ class BaseConnection:
     description = "BaseConnection"
     _reader: Optional[StreamReader]
     _writer: Optional[StreamWriter]
+    protocol_version: Literal[2, 3]
 
     def __init__(
         self,

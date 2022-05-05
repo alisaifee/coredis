@@ -166,6 +166,7 @@ class RedisConnection:
     encoding: str
     decode_responses: bool
     connection_pool: ConnectionPool
+    protocol_version: Literal[2, 3]
 
     def __init__(
         self,
@@ -238,10 +239,15 @@ class RedisConnection:
         self.decode_responses = bool(
             connection_pool.connection_kwargs.get("decode_responses", decode_responses)
         )
-        self.protocol_version = int(
+        connection_protocol_version = (
             connection_pool.connection_kwargs.get("protocol_version")
             or protocol_version
         )
+        assert connection_protocol_version in {
+            2,
+            3,
+        }, "Protocol version can only be one of {2,3}"
+        self.protocol_version = connection_protocol_version
         self.server_version: Optional[Version] = None
         self.verify_version = verify_version
 
