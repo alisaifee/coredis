@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Sequence
-
 from coredis.response.callbacks import DictCallback, ResponseCallback
 from coredis.typing import (
     AnyStr,
@@ -9,6 +7,7 @@ from coredis.typing import (
     List,
     Optional,
     ResponsePrimitive,
+    Sequence,
     Tuple,
     ValueT,
 )

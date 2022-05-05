@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import Dict, cast
+from typing import cast
 
 from coredis.typing import (
+    Dict,
     List,
     Mapping,
     MutableMapping,

@@ -5,12 +5,12 @@ import threading
 import weakref
 from asyncio import AbstractEventLoop, CancelledError
 from concurrent.futures import Future
-from typing import Any, AnyStr, Generic
+from typing import TYPE_CHECKING, Any
 
 from coredis.commands import CommandName
 from coredis.exceptions import RedisError
 from coredis.response.types import MonitorResult
-from coredis.typing import TYPE_CHECKING, Callable, Optional
+from coredis.typing import AnyStr, Callable, Generic, Optional
 
 if TYPE_CHECKING:
     import coredis.client

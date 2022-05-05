@@ -5,7 +5,7 @@ import sys
 from abc import ABC, abstractmethod
 from asyncio import StreamReader
 from io import BytesIO
-from typing import TYPE_CHECKING, Dict, cast
+from typing import TYPE_CHECKING, cast
 
 from coredis.constants import SYM_CRLF, RESPDataType
 from coredis.exceptions import (
@@ -30,6 +30,7 @@ from coredis.exceptions import (
 )
 from coredis.typing import (
     ClassVar,
+    Dict,
     Literal,
     Optional,
     ResponsePrimitive,

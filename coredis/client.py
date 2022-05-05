@@ -6,7 +6,7 @@ import inspect
 import textwrap
 from abc import ABCMeta
 from ssl import SSLContext
-from typing import TYPE_CHECKING, Any, AsyncIterator, Generator, cast, overload
+from typing import TYPE_CHECKING, Any, cast, overload
 
 from deprecated.sphinx import deprecated, versionadded
 from packaging.version import Version
@@ -42,10 +42,12 @@ from coredis.tokens import PureToken
 from coredis.typing import (
     AnyStr,
     AsyncGenerator,
+    AsyncIterator,
     Awaitable,
     Callable,
     Coroutine,
     Dict,
+    Generator,
     Generic,
     Iterable,
     Iterator,

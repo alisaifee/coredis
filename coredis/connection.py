@@ -9,7 +9,7 @@ import sys
 import time
 import warnings
 from asyncio import AbstractEventLoop, StreamReader, StreamWriter
-from typing import Tuple, cast
+from typing import cast
 
 from coredis.constants import SYM_CRLF, SYM_DOLLAR, SYM_EMPTY, SYM_STAR
 from coredis.exceptions import (
@@ -29,6 +29,7 @@ from coredis.typing import (
     Literal,
     Optional,
     ResponseType,
+    Tuple,
     Type,
     TypeVar,
     Union,

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import time
-from typing import Union
+from coredis.typing import Union
 
 
 def normalized_seconds(value: Union[int, datetime.timedelta]) -> int:

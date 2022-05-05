@@ -9,7 +9,7 @@ from __future__ import annotations
 import datetime
 import itertools
 from abc import ABC, ABCMeta, abstractmethod
-from typing import Sequence, SupportsFloat, SupportsInt, cast
+from typing import SupportsFloat, SupportsInt, cast
 
 from coredis.exceptions import ClusterResponseError
 from coredis.typing import (
@@ -24,6 +24,7 @@ from coredis.typing import (
     ParamSpec,
     ResponsePrimitive,
     ResponseType,
+    Sequence,
     Set,
     StringT,
     Tuple,
@@ -78,7 +79,7 @@ class ResponseCallback(ABC, Generic[RESP, RESP3, R], metaclass=ResponseCallbackM
         return self.transform(cast(RESP, response), **options)
 
     def handle_exception(self, exc: BaseException) -> Optional[R]:
-        return exc # type: ignore
+        return exc  # type: ignore
 
 
 class NoopCallback(ResponseCallback[R, R, R]):

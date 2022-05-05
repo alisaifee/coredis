@@ -4,7 +4,7 @@ import asyncio
 import threading
 from asyncio import CancelledError
 from concurrent.futures import Future
-from typing import TYPE_CHECKING, Any, List, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from coredis.commands import CommandName
 from coredis.connection import BaseConnection
@@ -14,6 +14,7 @@ from coredis.typing import (
     Awaitable,
     Callable,
     Generic,
+    List,
     MutableMapping,
     Optional,
     PubSubMessage,

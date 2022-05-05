@@ -1,11 +1,20 @@
 from __future__ import annotations
 
 import hashlib
-from typing import AnyStr, Generic, cast
+from typing import cast
 
 from coredis.exceptions import NoScriptError
 from coredis.protocols import SupportsScript
-from coredis.typing import Iterable, KeyT, Optional, ResponseType, StringT, ValueT
+from coredis.typing import (
+    AnyStr,
+    Generic,
+    Iterable,
+    KeyT,
+    Optional,
+    ResponseType,
+    StringT,
+    ValueT,
+)
 from coredis.utils import b
 
 

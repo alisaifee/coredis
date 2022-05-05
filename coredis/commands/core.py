@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import itertools
-from typing import Mapping, overload
+from typing import overload
 
 from deprecated.sphinx import versionadded
 
@@ -131,6 +131,7 @@ from coredis.typing import (
     KeyT,
     List,
     Literal,
+    Mapping,
     Optional,
     OrderedDict,
     ResponsePrimitive,
@@ -5530,7 +5531,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Get the count of subscribers for channels
 
-        :return: Mapping of channels to number of subscribers per channel
+        :return: Ordered mapping of channels to number of subscribers per channel
         """
         pieces: CommandArgList = []
 
