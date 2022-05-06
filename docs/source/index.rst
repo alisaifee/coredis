@@ -109,9 +109,8 @@ For details about the high level differences refer to :ref:`history:divergence f
 
 Dependencies & supported python versions
 ----------------------------------------
-coredis is tested against redis versions ``5.0.x``, ``6.0.x`` & ``6.2.x``.
-
-Support for redis version ``7.0`` is available but experimental.
+coredis is tested against redis versions ``5.0.x``, ``6.0.x``, ``6.2.x`` & ``7.0.x``. The
+test matrix can status can be seen at `github <https://github.com/alisaifee/coredis/actions/workflows/main.yml>`__
 
 coredis is additionally tested against:
 
