@@ -18,6 +18,7 @@ from typing import (
     Generic,
     Iterable,
     Iterator,
+    KeysView,
     List,
     Literal,
     Mapping,
@@ -33,6 +34,7 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    ValuesView,
 )
 
 from typing_extensions import (
@@ -74,6 +76,8 @@ if os.environ.get("COREDIS_RUNTIME_CHECKS", "").lower() in ["1", "true", "t"]:
         warnings.warn("Runtime checks were requested but could not import beartype")
 
 RUNTIME_TYPECHECKS = _runtime_checks
+if TYPE_CHECKING:
+    import coredis.exceptions
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -89,39 +93,70 @@ def add_runtime_checks(func: Callable[P, R]) -> Callable[P, R]:
 CommandArgList = List[Union[str, bytes, int, float]]
 
 
-KeyT: TypeAlias = Union[str, bytes]
-ValueT: TypeAlias = Union[str, bytes, int, float]
-StringT: TypeAlias = KeyT
+#: Represents the acceptable types of a redis key
+KeyT = Union[str, bytes]
 
+#: Represents the different collections accepted by the api for
+#: commands that accept multiple keys. This is used instead of the
+#: standard library :class:`typing.Iterable` due to :class:`str` and
+#: :class:`bytes` also being iterables and thus not providing the
+#  expected safety required for parameters that should only be collections
+#  of keys.
+KeysT = Union[
+    KeysView[KeyT],
+    List[KeyT],
+    Tuple[KeyT],
+    Set[KeyT],
+    ValuesView[KeyT],
+]
+
+#: Represents the different python primitives that are accepted
+#: as input parameters for commands that can be used with loosely
+#: defined types. These are encoded using the configured encoding
+#: before being transmitted.
+ValueT = Union[str, bytes, int, float]
+
+#: Represents the different collections accepted by the api for
+#: commands that accept multiple values
+ValuesT = Union[
+    List[ValueT],
+    Tuple[ValueT],
+    Set[ValueT],
+    KeysView[ValueT],
+    ValuesView[ValueT],
+]
+
+#: The canonical type used for input parameters that represent "strings"
+#: that are transmitted to redis.
+StringT = Union[str, bytes]
+
+#: Mapping of primitives returned by redis
 ResponsePrimitive: TypeAlias = Optional[Union[StringT, int, float, bool]]
 
-# TODO: use a recursive definition of ResponseType
-#
-# Currently unsupported by mypy & beartype.
-#    ResponseType = Union[
-#        ResponsePrimitive,
-#        List["ResponseType"],
-#        List[ResponsePrimitive],
-#        Set[ResponsePrimitive],
-#        #Dict[ResponsePrimitive, ResponsePrimitive],
-#        Dict[ResponsePrimitive, "ResponseType"],
-#        BaseException,
-#    ]
+#: Represents the total structure of any response for a redis
+#: command.
+#:
+#: This should preferably be represented by a recursive definition to allow for
+#: nested collections, however limitations in both static and runtime
+#: type checkers (mypy & beartype) requires loosening the definition with the use of
+#: :class:`typing.Any` for now.
+#:
+#: Ideally the representation should be::
+#:
+#:    ResponseType = Union[
+#:          ResponsePrimitive,
+#:          List["ResponseType"],
+#:          Set[ResponsePrimitive],
+#:          Dict[ResponsePrimitive, "ResponseType"],
+#:          "coredis.exceptions.RedisError", # response errors get mapped to exceptions.
+#:      ]
 ResponseType = Union[
     ResponsePrimitive,
     List[Any],
     Set[ResponsePrimitive],
     Dict[ResponsePrimitive, Any],
-    BaseException,
+    "coredis.exceptions.RedisError",
 ]
-
-
-class PubSubMessage(TypedDict):
-    type: str
-    pattern: Optional[StringT]
-    channel: StringT
-    data: StringT
-
 
 __all__ = [
     "AbstractSet",
@@ -137,9 +172,10 @@ __all__ = [
     "Dict",
     "Generic",
     "Generator",
-    "KeyT",
     "Iterable",
     "Iterator",
+    "KeyT",
+    "KeysT",
     "List",
     "Literal",
     "Mapping",
@@ -163,6 +199,7 @@ __all__ = [
     "TypeVar",
     "Union",
     "ValueT",
+    "ValuesT",
     "TYPE_CHECKING",
     "RUNTIME_TYPECHECKS",
 ]

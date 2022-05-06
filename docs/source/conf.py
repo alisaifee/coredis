@@ -1,20 +1,12 @@
 #!/usr/bin/env python3
-
 import os
 import sys
 from typing import List, Tuple
-
 
 sys.path.insert(0, os.path.abspath("../../"))
 sys.path.insert(0, os.path.abspath("./"))
 
 import coredis
-import coredis.sentinel
-import coredis.commands
-import coredis.experimental
-import coredis.typing
-from numbers import Number
-
 from theme_config import *
 
 master_doc = "index"
@@ -76,7 +68,15 @@ except:
 add_module_names = False
 autodoc_typehints_format = "short"
 autodoc_preserve_defaults = True
-
+autodoc_type_aliases = {
+    "KeyT": "~coredis.typing.KeyT",
+    "KeysT": "~coredis.typing.KeysT",
+    "ValueT": "~coredis.typing.ValueT",
+    "ValuesT": "~coredis.typing.ValuesT",
+    "StringT": "~coredis.typing.StringT",
+    "ResponsePrimitive": "~coredis.typing.ResponsePrimitive",
+    "ResponseType": "~coredis.typing.ResponseType",
+}
 autosectionlabel_maxdepth = 2
 autosectionlabel_prefix_document = True
 
@@ -111,6 +111,16 @@ intersphinx_mapping = {
 }
 
 from sphinx.ext.autodoc import ClassDocumenter, Documenter, _
+
+# Workaround for https://github.com/sphinx-doc/sphinx/issues/9560
+from sphinx.domains.python import PythonDomain
+assert PythonDomain.object_types["data"].roles == ("data", "obj")
+PythonDomain.object_types["data"].roles = ("data", "class", "obj")
+
+# Workaround for https://github.com/sphinx-doc/sphinx/issues/10333
+from sphinx.util import inspect
+inspect.TypeAliasForwardRef.__repr__ = lambda self: self.name
+inspect.TypeAliasForwardRef.__hash__ = lambda self: hash(self.name)
 
 original_sort_members = Documenter.sort_members
 preferred_redis_command_group_order = [

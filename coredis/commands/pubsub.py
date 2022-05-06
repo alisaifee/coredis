@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, cast
 from coredis.commands import CommandName
 from coredis.connection import BaseConnection
 from coredis.exceptions import ConnectionError, PubSubError, TimeoutError
+from coredis.response.types import PubSubMessage
 from coredis.typing import (
     AnyStr,
     Awaitable,
@@ -17,7 +18,6 @@ from coredis.typing import (
     List,
     MutableMapping,
     Optional,
-    PubSubMessage,
     ResponsePrimitive,
     ResponseType,
     StringT,

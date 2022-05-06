@@ -11,7 +11,7 @@ import itertools
 from abc import ABC, ABCMeta, abstractmethod
 from typing import SupportsFloat, SupportsInt, cast
 
-from coredis.exceptions import ClusterResponseError
+from coredis.exceptions import ClusterResponseError, ResponseError
 from coredis.typing import (
     AnyStr,
     Dict,
@@ -59,12 +59,12 @@ class ResponseCallback(ABC, Generic[RESP, RESP3, R], metaclass=ResponseCallbackM
 
     def __call__(
         self,
-        response: Union[RESP, RESP3, BaseException],
+        response: Union[RESP, RESP3, ResponseError],
         version: Literal[2, 3] = 2,
         **options: Optional[ValueT],
     ) -> R:
         self.version = version
-        if isinstance(response, BaseException):
+        if isinstance(response, ResponseError):
             if exc_to_response := self.handle_exception(response):
                 return exc_to_response
         if version == 3:

@@ -7,7 +7,10 @@ from coredis.typing import Mapping, Optional, Set, Tuple, ValueT
 
 
 class RedisError(Exception):
-    pass
+    """
+    Base exception from which all other exceptions in coredis
+    derive from.
+    """
 
 
 class CommandSyntaxError(RedisError):
@@ -18,16 +21,6 @@ class CommandSyntaxError(RedisError):
     def __init__(self, arguments: Set[str], message: str) -> None:
         self.arguments: Set[str] = arguments
         super().__init__(message)
-
-
-class UnknownCommandError(RedisError):
-    ERROR_REGEX = re.compile("unknown command `(.*?)`")
-    #: Name of command requested
-    command: str
-
-    def __init__(self, message: str) -> None:
-        self.command = self.ERROR_REGEX.findall(message).pop()
-        super().__init__(self, message)
 
 
 class CommandNotSupportedError(RedisError):
@@ -251,3 +244,18 @@ class ReplicaNotFoundError(SentinelConnectionError):
     Raised when a replica cannot be located in a
     sentinel managed redis
     """
+
+
+class UnknownCommandError(ResponseError):
+    """
+    Raised when the server returns an error response relating
+    to an unknown command.
+    """
+
+    ERROR_REGEX = re.compile("unknown command `(.*?)`")
+    #: Name of command requested
+    command: str
+
+    def __init__(self, message: str) -> None:
+        self.command = self.ERROR_REGEX.findall(message).pop()
+        super().__init__(self, message)

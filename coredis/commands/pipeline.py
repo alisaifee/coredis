@@ -445,7 +445,7 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
         )
         all_cmds = connection.pack_commands([(cmd.command,) + cmd.args for cmd in cmds])
         await connection.send_packed_command(all_cmds)
-        errors: List[Tuple[int, Optional[BaseException]]] = []
+        errors: List[Tuple[int, Optional[RedisError]]] = []
 
         # parse off the response for MULTI
         # NOTE: we need to handle ResponseErrors here and continue
@@ -453,16 +453,16 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
         # the socket
         try:
             await self.parse_response(connection, b"_")
-        except ResponseError:
-            errors.append((0, sys.exc_info()[1]))
+        except RedisError:
+            errors.append((0, cast(RedisError, sys.exc_info()[1])))
 
         # and all the other commands
 
         for i, cmd in enumerate(commands):
             try:
                 await self.parse_response(connection, b"_")
-            except ResponseError:
-                ex = sys.exc_info()[1]
+            except RedisError:
+                ex = cast(RedisError, sys.exc_info()[1])
                 self.annotate_exception(ex, i + 1, cmd.command, cmd.args)
                 errors.append((i, ex))
 
@@ -561,7 +561,7 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
 
     def annotate_exception(
         self,
-        exception: Optional[BaseException],
+        exception: Optional[RedisError],
         number: int,
         command: bytes,
         args: Iterable[ValueT],
@@ -788,13 +788,13 @@ class ClusterPipelineImpl(AbstractRedis[AnyStr], metaclass=ClusterPipelineMeta):
         for c in self.command_stack:
             r = c.result
 
-            if isinstance(r, BaseException):
+            if isinstance(r, RedisError):
                 self.annotate_exception(r, c.position + 1, c.command, c.args)
                 raise r
 
     def annotate_exception(
         self,
-        exception: Optional[BaseException],
+        exception: Optional[RedisError],
         number: int,
         command: bytes,
         args: Iterable[ValueT],

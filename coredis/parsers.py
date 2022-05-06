@@ -166,7 +166,9 @@ class SocketBuffer:
 class BaseParser(ABC):
     """Base class for parsers"""
 
-    EXCEPTION_CLASSES: Dict[str, Union[Type[Exception], Dict[str, Type[Exception]]]] = {
+    EXCEPTION_CLASSES: Dict[
+        str, Union[Type[RedisError], Dict[str, Type[RedisError]]]
+    ] = {
         "ERR": {
             "max number of clients reached": ConnectionError,
             "unknown command": UnknownCommandError,
@@ -189,7 +191,7 @@ class BaseParser(ABC):
     def __init__(self, read_size: int) -> None:
         self._read_size = read_size
 
-    def parse_error(self, response: str) -> Exception:
+    def parse_error(self, response: str) -> RedisError:
         """Parse an error response"""
         error_code = response.split(" ")[0]
         if error_code in self.EXCEPTION_CLASSES:

@@ -1,33 +1,31 @@
 API Documentation
 =================
-.. currentmodule:: coredis
 
 Clients
 ^^^^^^^
 
 .. autosummary::
 
-   Redis
-   RedisCluster
-   sentinel.Sentinel
+   coredis.Redis
+   coredis.RedisCluster
+   coredis.sentinel.Sentinel
 
 Redis
 -----
-.. autoclass:: Redis
+.. autoclass:: coredis.Redis
    :class-doc-from: both
    :inherited-members:
 
 Cluster
 -------
-.. autoclass:: RedisCluster
+.. autoclass:: coredis.RedisCluster
    :class-doc-from: both
    :inherited-members:
 
 
 Sentinel
 --------
-.. currentmodule:: coredis.sentinel
-.. autoclass:: Sentinel
+.. autoclass:: coredis.sentinel.Sentinel
    :class-doc-from: both
    :inherited-members:
 
@@ -98,72 +96,68 @@ Monitor
 
 Connection Classes
 ^^^^^^^^^^^^^^^^^^
-.. currentmodule:: coredis
 
 All connection classes derive from the same base-class:
 
-.. autoclass:: BaseConnection
+.. autoclass:: coredis.connection.BaseConnection
    :class-doc-from: both
 
 TCP Connection
 --------------
 
-.. autoclass:: Connection
+.. autoclass:: coredis.connection.Connection
    :class-doc-from: both
    :show-inheritance:
    :inherited-members:
 
 Unix Domain Socket Connection
 -----------------------------
-.. autoclass:: UnixDomainSocketConnection
+.. autoclass:: coredis.connection.UnixDomainSocketConnection
    :class-doc-from: both
    :show-inheritance:
    :inherited-members:
 
 Cluster TCP Connection
 ----------------------
-.. autoclass:: ClusterConnection
+.. autoclass:: coredis.connection.ClusterConnection
    :class-doc-from: both
    :show-inheritance:
    :inherited-members:
 
 Sentinel Connection
 -------------------
-.. currentmodule:: coredis.sentinel
 
-.. autoclass:: SentinelManagedConnection
+.. autoclass:: coredis.sentinel.SentinelManagedConnection
    :class-doc-from: both
    :show-inheritance:
    :inherited-members:
 
-.. currentmodule:: coredis
 
 Connection Pools
 ^^^^^^^^^^^^^^^^
 Connection Pool
 ---------------
-.. autoclass:: ConnectionPool
+.. autoclass:: coredis.pool.ConnectionPool
    :class-doc-from: both
 
 Blocking Connection Pool
 ------------------------
-.. autoclass:: BlockingConnectionPool
+.. autoclass:: coredis.pool.BlockingConnectionPool
    :class-doc-from: both
    :show-inheritance:
    :inherited-members:
 
 Cluster Connection Pool
 -----------------------
-.. autoclass:: ClusterConnectionPool
+.. autoclass:: coredis.pool.ClusterConnectionPool
    :class-doc-from: both
    :show-inheritance:
    :inherited-members:
 
 Sentinel Connection Pool
 ------------------------
-.. currentmodule:: coredis.sentinel
 
-.. autoclass:: SentinelConnectionPool
+.. autoclass:: coredis.sentinel.SentinelConnectionPool
    :class-doc-from: both
    :show-inheritance:
    :inherited-members:
@@ -172,16 +166,47 @@ Sentinel Connection Pool
 Parsers
 ^^^^^^^
 
-.. currentmodule:: coredis.parsers
-.. autoclass:: PythonParser
+.. autoclass:: coredis.parsers.PythonParser
    :class-doc-from: both
    :show-inheritance:
    :inherited-members:
-.. autoclass:: HiredisParser
+.. autoclass:: coredis.parsers.HiredisParser
    :class-doc-from: both
    :show-inheritance:
    :inherited-members:
 
+
+Type Aliases
+^^^^^^^^^^^^
+Input types
+-----------
+The API uses the following type aliases to describe the unions of acceptable types
+for parameters to redis command wrappers.
+
+.. autodata:: coredis.typing.KeyT
+.. autodata:: coredis.typing.ValueT
+.. autodata:: coredis.typing.StringT
+
+For commands that expect multiple keys or values (for example :meth:`coredis.Redis.delete`,
+:meth:`coredis.Redis.exists` etc... the keys and values parameters accept the following
+aliases unions of collections from :mod:`collections.abc`.
+
+.. autodata:: coredis.typing.KeysT
+.. autodata:: coredis.typing.ValuesT
+
+
+Redis Response (RESP) descriptions
+----------------------------------
+
+The follow two types describe the total representation of parsed responses from the redis
+serialization protocol(s) (RESP & RESP3) (See :ref:`api_reference:parsers` for more details).
+
+In most cases these are not exposed through the client API and are only meant
+for internal pre-validation before the parsed response is transformed or narrowed
+to the returns documented in the client API at :ref:`api:clients`.
+
+.. autodata:: coredis.typing.ResponsePrimitive
+.. autodata:: coredis.typing.ResponseType
 
 
 Response Types
@@ -198,15 +223,12 @@ returned by redis - to avoid errors in indexing.
    :no-inherited-members:
    :show-inheritance:
 
-
 Utility Classes
 ^^^^^^^^^^^^^^^
 
-.. currentmodule:: coredis
-
 Enums
 -----
-.. autoclass:: PureToken
+.. autoclass:: coredis.tokens.PureToken
    :no-inherited-members:
    :show-inheritance:
 
@@ -231,84 +253,82 @@ Locks
 Exceptions
 ^^^^^^^^^^
 
-.. currentmodule:: coredis
-
 Authentication & Authorization
 ------------------------------
 
-.. autoexception:: AuthenticationFailureError
+.. autoexception:: coredis.exceptions.AuthenticationFailureError
    :no-inherited-members:
-.. autoexception:: AuthenticationRequiredError
+.. autoexception:: coredis.exceptions.AuthenticationRequiredError
    :no-inherited-members:
-.. autoexception:: AuthorizationError
+.. autoexception:: coredis.exceptions.AuthorizationError
    :no-inherited-members:
 
 Cluster
 -------
-.. autoexception:: AskError
+.. autoexception:: coredis.exceptions.AskError
    :no-inherited-members:
-.. autoexception:: ClusterCrossSlotError
+.. autoexception:: coredis.exceptions.ClusterCrossSlotError
    :no-inherited-members:
-.. autoexception:: ClusterDownError
+.. autoexception:: coredis.exceptions.ClusterDownError
    :no-inherited-members:
-.. autoexception:: ClusterError
+.. autoexception:: coredis.exceptions.ClusterError
    :no-inherited-members:
-.. autoexception:: ClusterResponseError
+.. autoexception:: coredis.exceptions.ClusterResponseError
    :no-inherited-members:
-.. autoexception:: ClusterTransactionError
+.. autoexception:: coredis.exceptions.ClusterTransactionError
    :no-inherited-members:
-.. autoexception:: MovedError
+.. autoexception:: coredis.exceptions.MovedError
    :no-inherited-members:
-.. autoexception:: RedisClusterException
+.. autoexception:: coredis.exceptions.RedisClusterException
    :no-inherited-members:
 
 Sentinel
 --------
-.. autoexception:: PrimaryNotFoundError
+.. autoexception:: coredis.exceptions.PrimaryNotFoundError
    :no-inherited-members:
-.. autoexception:: ReplicaNotFoundError
+.. autoexception:: coredis.exceptions.ReplicaNotFoundError
    :no-inherited-members:
 
 Scripting Errors
 ----------------
-.. autoexception:: NoScriptError
+.. autoexception:: coredis.exceptions.NoScriptError
    :no-inherited-members:
-.. autoexception:: FunctionError
+.. autoexception:: coredis.exceptions.FunctionError
    :no-inherited-members:
 
 General Exceptions
 -------------------
-.. autoexception:: BusyLoadingError
+.. autoexception:: coredis.exceptions.BusyLoadingError
    :no-inherited-members:
-.. autoexception:: CommandSyntaxError
+.. autoexception:: coredis.exceptions.CommandSyntaxError
    :no-inherited-members:
-.. autoexception:: CommandNotSupportedError
+.. autoexception:: coredis.exceptions.CommandNotSupportedError
    :no-inherited-members:
-.. autoexception:: ConnectionError
+.. autoexception:: coredis.exceptions.ConnectionError
    :no-inherited-members:
-.. autoexception:: DataError
+.. autoexception:: coredis.exceptions.DataError
    :no-inherited-members:
-.. autoexception:: ExecAbortError
+.. autoexception:: coredis.exceptions.ExecAbortError
    :no-inherited-members:
-.. autoexception:: InvalidResponse
+.. autoexception:: coredis.exceptions.InvalidResponse
    :no-inherited-members:
-.. autoexception:: LockError
+.. autoexception:: coredis.exceptions.LockError
    :no-inherited-members:
-.. autoexception:: NoKeyError
+.. autoexception:: coredis.exceptions.NoKeyError
    :no-inherited-members:
-.. autoexception:: PubSubError
+.. autoexception:: coredis.exceptions.PubSubError
    :no-inherited-members:
-.. autoexception:: ReadOnlyError
+.. autoexception:: coredis.exceptions.ReadOnlyError
    :no-inherited-members:
-.. autoexception:: RedisError
+.. autoexception:: coredis.exceptions.RedisError
    :no-inherited-members:
-.. autoexception:: ResponseError
+.. autoexception:: coredis.exceptions.ResponseError
    :no-inherited-members:
-.. autoexception:: TimeoutError
+.. autoexception:: coredis.exceptions.TimeoutError
    :no-inherited-members:
-.. autoexception:: TryAgainError
+.. autoexception:: coredis.exceptions.TryAgainError
    :no-inherited-members:
-.. autoexception:: WatchError
+.. autoexception:: coredis.exceptions.WatchError
    :no-inherited-members:
 
 
@@ -325,9 +345,7 @@ Experimental
 
                                          - Ali
 
-.. currentmodule:: coredis.experimental
-
 KeyDB
 -----
-.. autoclass:: KeyDB
+.. autoclass:: coredis.experimental.keydb.KeyDB
    :no-inherited-members:

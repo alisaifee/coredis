@@ -17,6 +17,7 @@ from coredis.typing import (
     Optional,
     OrderedDict,
     Set,
+    StringT,
     Tuple,
     TypedDict,
     Union,
@@ -379,3 +380,10 @@ class ClusterNodeDetail(TypedDict):
     link_state: str
     slots: List[int]
     migrations: List[Dict[str, ValueT]]
+
+
+class PubSubMessage(TypedDict):
+    type: str
+    pattern: Optional[StringT]
+    channel: StringT
+    data: StringT
