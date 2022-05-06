@@ -8,7 +8,7 @@ from coredis.exceptions import LockError, ResponseError
 from coredis.lock import Lock, LuaLock
 from tests.conftest import targets
 
-pytest.marks = ("flaky",)
+pytestmark = pytest.mark.flaky
 
 
 @pytest.mark.asyncio()

@@ -11,7 +11,7 @@ from coredis.exceptions import (
 )
 from coredis.sentinel import Sentinel, SentinelConnectionPool
 
-pytest.marks = ("asyncio",)
+pytestmarks = pytest.mark.asyncio
 
 
 class SentinelTestClient:

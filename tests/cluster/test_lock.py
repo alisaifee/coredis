@@ -7,7 +7,7 @@ import pytest
 from coredis.exceptions import LockError
 from coredis.lock import ClusterLock, LuaLock
 
-pytest.marks = ("flaky",)
+pytestmark = pytest.mark.flaky
 
 
 class TestLock:
