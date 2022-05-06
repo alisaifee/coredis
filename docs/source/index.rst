@@ -139,4 +139,4 @@ Supported python versions
     release_notes
     testing
     history
-
+    glossary

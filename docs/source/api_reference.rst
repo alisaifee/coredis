@@ -165,12 +165,11 @@ RESP3
 .. versionadded:: 3.1.0
 
 As of redis `6.0.0` clients can use the
-`RESP3 <https://github.com/antirez/RESP3/blob/master/spec.md>`__ protocol which
-provides support for a much larger set of types (which reduces the need for clients
+:term:`RESP3` protocol which provides support for a much larger set of types (which reduces the need for clients
 to "guess" what the type of a command's response should be). Hiredis versions `>=2.0.0`
 supports ``RESP3`` and **coredis** provides the option to use it both with hiredis
 and the pure python parser.  The structure of responses of from coredis is consistent
-between ``RESP`` (``protocol_version=2``) and ``RESP3`` (``protocol_version=3``) protocols.
+between :term:`RESP` (``protocol_version=2``) and :term:`RESP3` (``protocol_version=3``) protocols.
 
 To opt in the :paramref:`~coredis.Redis.protocol_version` constructor parameter
 can be set to ``3``.
