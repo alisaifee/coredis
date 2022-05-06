@@ -187,13 +187,6 @@ for parameters to redis command wrappers.
 .. autodata:: coredis.typing.ValueT
 .. autodata:: coredis.typing.StringT
 
-For commands that expect multiple keys or values (for example :meth:`coredis.Redis.delete`,
-:meth:`coredis.Redis.exists` etc... the keys and values parameters accept the following
-aliases unions of collections from :mod:`collections.abc`.
-
-.. autodata:: coredis.typing.KeysT
-.. autodata:: coredis.typing.ValuesT
-
 
 Redis Response (RESP) descriptions
 ----------------------------------
