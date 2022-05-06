@@ -74,6 +74,7 @@ autodoc_type_aliases = {
     "StringT": "~coredis.typing.StringT",
     "ResponsePrimitive": "~coredis.typing.ResponsePrimitive",
     "ResponseType": "~coredis.typing.ResponseType",
+    "Parameters": "~coredis.typing.Parameters",
 }
 autosectionlabel_maxdepth = 2
 autosectionlabel_prefix_document = True

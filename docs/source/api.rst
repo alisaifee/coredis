@@ -187,6 +187,15 @@ for parameters to redis command wrappers.
 .. autodata:: coredis.typing.ValueT
 .. autodata:: coredis.typing.StringT
 
+For methods that accept non optional variable number of keys or values, coredis does **NOT**
+use **positional** or **keyword varargs** and expects a "container" to be passed in for the argument.
+Common examples of such APIs are :meth:`~coredis.Redis.delete` and :meth:`~coredis.Redis.exists`.
+
+Instead of accepting :class:`~collections.abc.Iterable`, a union of select containers from the standard
+library are accepted via :data:`~coredis.typing.Parameters`.
+
+.. autodata:: coredis.typing.Parameters
+
 
 Redis Response (RESP) descriptions
 ----------------------------------

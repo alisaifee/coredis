@@ -7,9 +7,9 @@ from typing_extensions import runtime_checkable
 from coredis.typing import (
     Awaitable,
     Callable,
-    Iterable,
     KeyT,
     Optional,
+    Parameters,
     Protocol,
     R,
     ResponseType,
@@ -39,7 +39,7 @@ class SupportsPipeline(Protocol):  # noqa
     async def pipeline(
         self,
         transaction: Optional[bool] = True,
-        watches: Optional[Iterable[StringT]] = None,
+        watches: Optional[Parameters[StringT]] = None,
     ) -> SupportsWatch:
         ...
 
@@ -49,16 +49,16 @@ class SupportsScript(Protocol[T_co]):  # noqa
     async def evalsha(
         self,
         sha1: StringT,
-        keys: Optional[Iterable[KeyT]] = ...,
-        args: Optional[Iterable[ValueT]] = ...,
+        keys: Optional[Parameters[KeyT]] = ...,
+        args: Optional[Parameters[ValueT]] = ...,
     ) -> ResponseType:
         ...
 
     async def evalsha_ro(
         self,
         sha1: StringT,
-        keys: Optional[Iterable[KeyT]] = ...,
-        args: Optional[Iterable[ValueT]] = ...,
+        keys: Optional[Parameters[KeyT]] = ...,
+        args: Optional[Parameters[ValueT]] = ...,
     ) -> ResponseType:
         ...
 

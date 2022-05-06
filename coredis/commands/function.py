@@ -7,9 +7,9 @@ from coredis.exceptions import FunctionError
 from coredis.typing import (
     TYPE_CHECKING,
     Dict,
-    Iterable,
     KeyT,
     Optional,
+    Parameters,
     ResponseType,
     StringT,
     ValueT,
@@ -124,8 +124,8 @@ class Function(Generic[AnyStr]):
     async def __call__(
         self,
         *,
-        keys: Optional[Iterable[KeyT]] = None,
-        args: Optional[Iterable[ValueT]] = None,
+        keys: Optional[Parameters[KeyT]] = None,
+        args: Optional[Parameters[ValueT]] = None,
     ) -> ResponseType:
         """
         Wrapper to call :meth:`~coredis.Redis.fcall`

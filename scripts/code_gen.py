@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import collections
-import datetime
+import datetime  # noqa
 import functools
 import inspect
 import json
 import os
-import re
+import re  # noqa
 import shutil
 import typing  # noqa
 from pathlib import Path
@@ -22,46 +22,12 @@ import coredis
 import coredis.client
 import coredis.commands.pipeline
 from coredis import NodeFlag, PureToken  # noqa
-from coredis.commands.constants import CommandName
+from coredis.commands.constants import * # noqa
 from coredis.commands.monitor import Monitor
 from coredis.nodemanager import Node  # noqa
 from coredis.pool import ClusterConnectionPool, ConnectionPool  # noqa
-from coredis.response.types import (
-    ClientInfo,
-    ClusterNode,
-    Command,
-    GeoCoordinates,
-    GeoSearchResult,
-    LCSMatch,
-    LCSResult,
-    LibraryDefinition,
-    RoleInfo,
-    ScoredMember,
-    ScoredMembers,
-    SlowLogInfo,
-    StreamEntry,
-    StreamInfo,
-    StreamPending,
-    StreamPendingExt,
-)
-from coredis.typing import (
-    AnyStr,
-    Callable,
-    Dict,
-    Iterable,
-    KeyT,
-    List,
-    Literal,
-    Optional,
-    OrderedDict,
-    R,
-    Sequence,
-    Set,
-    StringT,
-    Tuple,
-    Union,
-    ValueT,
-)
+from coredis.response.types import *  # noqa
+from coredis.typing import *  # noqa
 
 MAX_SUPPORTED_VERSION = version.parse("7.999.999")
 MIN_SUPPORTED_VERSION = version.parse("5.0.0")
@@ -446,7 +412,7 @@ def sanitize_parameter(p, eval_forward_annotations=True):
     return v
 
 
-def render_signature(signature, eval_forward_annotations=True, skip_defaults=False):
+def render_signature(signature, eval_forward_annotations=False, skip_defaults=False):
     params = []
     for n, p in signature.parameters.items():
         if skip_defaults and p.default is not inspect._empty:
@@ -989,7 +955,7 @@ def get_argument(
                 annotation = arg_type_override
             else:
                 if len(child_types) == 1:
-                    annotation = Iterable[child_types[0]]
+                    annotation = Parameters[child_types[0]]
                 elif len(child_types) == 2 and child_types[0] in [StringT, ValueT]:
                     annotation = Dict[child_types[0], child_types[1]]
                 else:
@@ -999,7 +965,7 @@ def get_argument(
                             for k in child_types
                         ]
                     )
-                    annotation = Iterable[eval(f"Tuple[{child_types_repr}]")]
+                    annotation = Parameters[eval(f"Tuple[{child_types_repr}]")]
 
             extra = {}
 
@@ -1153,16 +1119,16 @@ def get_argument(
                 if (
                     default := ARGUMENT_DEFAULTS.get(command["name"], {}).get(name)
                 ) is not None:
-                    type_annotation = Iterable[type_annotation]
+                    type_annotation = Parameters[type_annotation]
                     extra_params["default"] = default
                 elif (
                     is_arg_optional(arg, command, parent)
                     and extra_params.get("default") is None
                 ):
-                    type_annotation = Optional[Iterable[type_annotation]]
+                    type_annotation = Optional[Parameters[type_annotation]]
                     extra_params["default"] = None
                 else:
-                    type_annotation = Iterable[type_annotation]
+                    type_annotation = Parameters[type_annotation]
             else:
                 arg_type = inspect.Parameter.VAR_POSITIONAL
 
@@ -1326,7 +1292,7 @@ def get_command_spec(command):
                         k.name,
                         inspect.Parameter.KEYWORD_ONLY,
                         default=k.default,
-                        annotation=Iterable[k.annotation],
+                        annotation=Parameters[k.annotation],
                     )
                     new_recommended_signature.remove(k)
                     new_recommended_signature.insert(idx, n)
@@ -2315,7 +2281,6 @@ from typing import Any
 from wrapt import ObjectProxy
 
 from coredis import PureToken
-from coredis.client import AbstractRedis, AbstractRedisCluster
 from coredis.commands.script import Script
 from coredis.nodemanager import Node
 from coredis.pool import ClusterConnectionPool, ConnectionPool
@@ -2325,13 +2290,17 @@ from coredis.typing import (
     Dict,
     Generic,
     Iterable,
+    KeyT,
     List,
     Literal,
     Optional,
+    Parameters,
     Set,
+    StringT,
     Tuple,
     Type,
     Union,
+    ValueT,
 )
 
 class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore

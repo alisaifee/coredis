@@ -134,6 +134,7 @@ from coredis.typing import (
     Mapping,
     Optional,
     OrderedDict,
+    Parameters,
     ResponsePrimitive,
     ResponseType,
     Set,
@@ -444,7 +445,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         readonly=True,
         group=CommandGroup.STRING,
     )
-    async def mget(self, keys: Iterable[KeyT]) -> Tuple[Optional[AnyStr], ...]:
+    async def mget(self, keys: Parameters[KeyT]) -> Tuple[Optional[AnyStr], ...]:
         """
         Returns values ordered identically to ``keys``
         """
@@ -1397,7 +1398,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         readonly=True,
         group=CommandGroup.GEO,
     )
-    async def geohash(self, key: KeyT, members: Iterable[ValueT]) -> Tuple[AnyStr, ...]:
+    async def geohash(
+        self, key: KeyT, members: Parameters[ValueT]
+    ) -> Tuple[AnyStr, ...]:
         """
         Returns members of a geospatial index as standard geohash strings
         """
@@ -1412,7 +1415,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.GEO,
     )
     async def geopos(
-        self, key: KeyT, members: Iterable[ValueT]
+        self, key: KeyT, members: Parameters[ValueT]
     ) -> Tuple[Optional[GeoCoordinates], ...]:
         """
         Returns longitude and latitude of members of a geospatial index
@@ -1920,7 +1923,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             )
 
     @redis_command(CommandName.HDEL, group=CommandGroup.HASH)
-    async def hdel(self, key: KeyT, fields: Iterable[StringT]) -> int:
+    async def hdel(self, key: KeyT, fields: Parameters[StringT]) -> int:
         """Deletes ``fields`` from hash :paramref:`key`"""
 
         return await self.execute_command(
@@ -2060,7 +2063,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         readonly=True,
         group=CommandGroup.HASH,
     )
-    async def hmget(self, key: KeyT, fields: Iterable[StringT]) -> Tuple[AnyStr, ...]:
+    async def hmget(self, key: KeyT, fields: Parameters[StringT]) -> Tuple[AnyStr, ...]:
         """Returns values ordered identically to ``fields``"""
 
         return await self.execute_command(
@@ -2215,7 +2218,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         readonly=True,
         group=CommandGroup.HYPERLOGLOG,
     )
-    async def pfcount(self, keys: Iterable[KeyT]) -> int:
+    async def pfcount(self, keys: Parameters[KeyT]) -> int:
         """
         Return the approximated cardinality of the set(s) observed by the HyperLogLog at key(s).
 
@@ -2230,7 +2233,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.PFMERGE,
         group=CommandGroup.HYPERLOGLOG,
     )
-    async def pfmerge(self, destkey: KeyT, sourcekeys: Iterable[KeyT]) -> bool:
+    async def pfmerge(self, destkey: KeyT, sourcekeys: Parameters[KeyT]) -> bool:
         """
         Merge N different HyperLogLogs into a single one
         """
@@ -2268,7 +2271,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(CommandName.DEL, group=CommandGroup.GENERIC)
-    async def delete(self, keys: Iterable[KeyT]) -> int:
+    async def delete(self, keys: Parameters[KeyT]) -> int:
         """
         Delete one or more keys specified by ``keys``
 
@@ -2296,7 +2299,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         readonly=True,
         group=CommandGroup.GENERIC,
     )
-    async def exists(self, keys: Iterable[KeyT]) -> int:
+    async def exists(self, keys: Parameters[KeyT]) -> int:
         """
         Determine if a key exists
 
@@ -2734,7 +2737,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def sort(
         self,
         key: KeyT,
-        gets: Optional[Iterable[KeyT]] = None,
+        gets: Optional[Parameters[KeyT]] = None,
         by: Optional[StringT] = None,
         offset: Optional[int] = None,
         count: Optional[int] = None,
@@ -2794,7 +2797,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def sort_ro(
         self,
         key: KeyT,
-        gets: Optional[Iterable[KeyT]] = None,
+        gets: Optional[Parameters[KeyT]] = None,
         by: Optional[StringT] = None,
         offset: Optional[int] = None,
         count: Optional[int] = None,
@@ -2830,7 +2833,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(CommandName.TOUCH, group=CommandGroup.GENERIC)
-    async def touch(self, keys: Iterable[KeyT]) -> int:
+    async def touch(self, keys: Parameters[KeyT]) -> int:
         """
         Alters the last access time of a key(s).
         Returns the number of existing keys specified.
@@ -2865,7 +2868,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(CommandName.UNLINK, group=CommandGroup.GENERIC)
-    async def unlink(self, keys: Iterable[KeyT]) -> int:
+    async def unlink(self, keys: Parameters[KeyT]) -> int:
         """
         Delete a key asynchronously in another thread.
         Otherwise it is just as :meth:`delete`, but non blocking.
@@ -2960,7 +2963,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def blmpop(
         self,
-        keys: Iterable[KeyT],
+        keys: Parameters[KeyT],
         timeout: Union[int, float],
         where: Literal[PureToken.LEFT, PureToken.RIGHT],
         count: Optional[int] = None,
@@ -2987,7 +2990,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(CommandName.BLPOP, group=CommandGroup.LIST)
     async def blpop(
-        self, keys: Iterable[KeyT], timeout: Union[int, float]
+        self, keys: Parameters[KeyT], timeout: Union[int, float]
     ) -> Optional[List[AnyStr]]:
         """
         Remove and get the first element in a list, or block until one is available
@@ -3006,7 +3009,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(CommandName.BRPOP, group=CommandGroup.LIST)
     async def brpop(
-        self, keys: Iterable[KeyT], timeout: Union[int, float]
+        self, keys: Parameters[KeyT], timeout: Union[int, float]
     ) -> Optional[List[AnyStr]]:
         """
         Remove and get the last element in a list, or block until one is available
@@ -3212,7 +3215,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(CommandName.LPUSH, group=CommandGroup.LIST)
-    async def lpush(self, key: KeyT, elements: Iterable[ValueT]) -> int:
+    async def lpush(self, key: KeyT, elements: Parameters[ValueT]) -> int:
         """
         Prepend one or multiple elements to a list
 
@@ -3224,7 +3227,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(CommandName.LPUSHX, group=CommandGroup.LIST)
-    async def lpushx(self, key: KeyT, elements: Iterable[ValueT]) -> int:
+    async def lpushx(self, key: KeyT, elements: Parameters[ValueT]) -> int:
         """
         Prepend an element to a list, only if the list exists
 
@@ -3356,7 +3359,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(CommandName.RPUSH, group=CommandGroup.LIST)
-    async def rpush(self, key: KeyT, elements: Iterable[ValueT]) -> int:
+    async def rpush(self, key: KeyT, elements: Parameters[ValueT]) -> int:
         """
         Append an element(s) to a list
 
@@ -3368,7 +3371,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(CommandName.RPUSHX, group=CommandGroup.LIST)
-    async def rpushx(self, key: KeyT, elements: Iterable[ValueT]) -> int:
+    async def rpushx(self, key: KeyT, elements: Parameters[ValueT]) -> int:
         """
         Append a element(s) to a list, only if the list exists
 
@@ -3380,7 +3383,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(CommandName.SADD, group=CommandGroup.SET)
-    async def sadd(self, key: KeyT, members: Iterable[ValueT]) -> int:
+    async def sadd(self, key: KeyT, members: Parameters[ValueT]) -> int:
         """
         Add one or more members to a set
 
@@ -3410,7 +3413,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         readonly=True,
         group=CommandGroup.SET,
     )
-    async def sdiff(self, keys: Iterable[KeyT]) -> Set[AnyStr]:
+    async def sdiff(self, keys: Parameters[KeyT]) -> Set[AnyStr]:
         """
         Subtract multiple sets
 
@@ -3422,7 +3425,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(CommandName.SDIFFSTORE, group=CommandGroup.SET)
-    async def sdiffstore(self, keys: Iterable[KeyT], destination: KeyT) -> int:
+    async def sdiffstore(self, keys: Parameters[KeyT], destination: KeyT) -> int:
         """
         Subtract multiple sets and store the resulting set in a key
 
@@ -3437,7 +3440,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         readonly=True,
         group=CommandGroup.SET,
     )
-    async def sinter(self, keys: Iterable[KeyT]) -> Set[AnyStr]:
+    async def sinter(self, keys: Parameters[KeyT]) -> Set[AnyStr]:
         """
         Intersect multiple sets
 
@@ -3449,7 +3452,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(CommandName.SINTERSTORE, group=CommandGroup.SET)
-    async def sinterstore(self, keys: Iterable[KeyT], destination: KeyT) -> int:
+    async def sinterstore(self, keys: Parameters[KeyT], destination: KeyT) -> int:
         """
         Intersect multiple sets and store the resulting set in a key
 
@@ -3523,7 +3526,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SET,
     )
     async def smismember(
-        self, key: KeyT, members: Iterable[ValueT]
+        self, key: KeyT, members: Parameters[ValueT]
     ) -> Tuple[bool, ...]:
         """
         Returns the membership associated with the given elements for a set
@@ -3612,7 +3615,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(CommandName.SREM, group=CommandGroup.SET)
-    async def srem(self, key: KeyT, members: Iterable[ValueT]) -> int:
+    async def srem(self, key: KeyT, members: Parameters[ValueT]) -> int:
         """
         Remove one or more members from a set
 
@@ -3630,7 +3633,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         readonly=True,
         group=CommandGroup.SET,
     )
-    async def sunion(self, keys: Iterable[KeyT]) -> Set[AnyStr]:
+    async def sunion(self, keys: Parameters[KeyT]) -> Set[AnyStr]:
         """
         Add multiple sets
 
@@ -3642,7 +3645,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(CommandName.SUNIONSTORE, group=CommandGroup.SET)
-    async def sunionstore(self, keys: Iterable[KeyT], destination: KeyT) -> int:
+    async def sunionstore(self, keys: Parameters[KeyT], destination: KeyT) -> int:
         """
         Add multiple sets and store the resulting set in a key
 
@@ -3694,7 +3697,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def bzmpop(
         self,
-        keys: Iterable[KeyT],
+        keys: Parameters[KeyT],
         timeout: Union[int, float],
         where: Literal[PureToken.MIN, PureToken.MAX],
         count: Optional[int] = None,
@@ -3722,7 +3725,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SORTED_SET,
     )
     async def bzpopmax(
-        self, keys: Iterable[KeyT], timeout: Union[int, float]
+        self, keys: Parameters[KeyT], timeout: Union[int, float]
     ) -> Optional[Tuple[AnyStr, AnyStr, float]]:
         """
         Remove and return the member with the highest score from one or more sorted sets,
@@ -3745,7 +3748,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SORTED_SET,
     )
     async def bzpopmin(
-        self, keys: Iterable[KeyT], timeout: Union[int, float]
+        self, keys: Parameters[KeyT], timeout: Union[int, float]
     ) -> Optional[Tuple[AnyStr, AnyStr, float]]:
         """
         Remove and return the member with the lowest score from one or more sorted sets,
@@ -3851,7 +3854,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SORTED_SET,
     )
     async def zdiff(
-        self, keys: Iterable[KeyT], withscores: Optional[bool] = None
+        self, keys: Parameters[KeyT], withscores: Optional[bool] = None
     ) -> Tuple[Union[AnyStr, ScoredMember], ...]:
         """
         Subtract multiple sorted sets
@@ -3876,7 +3879,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="6.2.0",
         group=CommandGroup.SORTED_SET,
     )
-    async def zdiffstore(self, keys: Iterable[KeyT], destination: KeyT) -> int:
+    async def zdiffstore(self, keys: Parameters[KeyT], destination: KeyT) -> int:
         """
         Subtract multiple sorted sets and store the resulting sorted set in a new key
 
@@ -3915,7 +3918,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def zinter(
         self,
-        keys: Iterable[KeyT],
+        keys: Parameters[KeyT],
         weights: Optional[Iterable[int]] = None,
         aggregate: Optional[
             Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX]
@@ -3943,7 +3946,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.ZINTERSTORE, group=CommandGroup.SORTED_SET)
     async def zinterstore(
         self,
-        keys: Iterable[KeyT],
+        keys: Parameters[KeyT],
         destination: KeyT,
         weights: Optional[Iterable[int]] = None,
         aggregate: Optional[
@@ -3968,7 +3971,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         readonly=True,
     )
     async def zintercard(
-        self, keys: Iterable[KeyT], limit: Optional[int] = None
+        self, keys: Parameters[KeyT], limit: Optional[int] = None
     ) -> int:
         """
         Intersect multiple sorted sets and return the cardinality of the result
@@ -4006,7 +4009,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def zmpop(
         self,
-        keys: Iterable[KeyT],
+        keys: Parameters[KeyT],
         where: Literal[PureToken.MIN, PureToken.MAX],
         count: Optional[int] = None,
     ) -> Optional[Tuple[AnyStr, Tuple[ScoredMember, ...]]]:
@@ -4032,7 +4035,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SORTED_SET,
     )
     async def zmscore(
-        self, key: KeyT, members: Iterable[ValueT]
+        self, key: KeyT, members: Parameters[ValueT]
     ) -> Tuple[Optional[float], ...]:
         """
         Get the score associated with the given members in a sorted set
@@ -4339,7 +4342,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ZREM,
         group=CommandGroup.SORTED_SET,
     )
-    async def zrem(self, key: KeyT, members: Iterable[ValueT]) -> int:
+    async def zrem(self, key: KeyT, members: Parameters[ValueT]) -> int:
         """
         Remove one or more members from a sorted set
 
@@ -4565,7 +4568,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def zunion(
         self,
-        keys: Iterable[KeyT],
+        keys: Parameters[KeyT],
         weights: Optional[Iterable[int]] = None,
         aggregate: Optional[
             Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX]
@@ -4592,7 +4595,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.ZUNIONSTORE, group=CommandGroup.SORTED_SET)
     async def zunionstore(
         self,
-        keys: Iterable[KeyT],
+        keys: Parameters[KeyT],
         destination: KeyT,
         weights: Optional[Iterable[int]] = None,
         aggregate: Optional[
@@ -4693,8 +4696,8 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def _zaggregate(
         self,
         command: Literal[CommandName.ZUNIONSTORE, CommandName.ZINTERSTORE],
-        keys: Iterable[ValueT],
-        destination: Optional[ValueT] = ...,
+        keys: Parameters[KeyT],
+        destination: Optional[KeyT] = ...,
         weights: Optional[Iterable[int]] = ...,
         aggregate: Optional[PureToken] = ...,
         withscores: Optional[bool] = ...,
@@ -4705,8 +4708,8 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def _zaggregate(
         self,
         command: Literal[CommandName.ZUNION, CommandName.ZINTER],
-        keys: Iterable[ValueT],
-        destination: Optional[ValueT] = ...,
+        keys: Parameters[KeyT],
+        destination: Optional[KeyT] = ...,
         weights: Optional[Iterable[int]] = ...,
         aggregate: Optional[PureToken] = ...,
         withscores: Optional[bool] = ...,
@@ -4721,8 +4724,8 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.ZINTER,
             CommandName.ZINTERSTORE,
         ],
-        keys: Iterable[ValueT],
-        destination: Optional[ValueT] = None,
+        keys: Parameters[KeyT],
+        destination: Optional[KeyT] = None,
         weights: Optional[Iterable[int]] = None,
         aggregate: Optional[PureToken] = None,
         withscores: Optional[bool] = None,
@@ -4758,7 +4761,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(CommandName.XACK, group=CommandGroup.STREAM)
     async def xack(
-        self, key: KeyT, group: StringT, identifiers: Iterable[ValueT]
+        self, key: KeyT, group: StringT, identifiers: Parameters[ValueT]
     ) -> int:
         """
         Marks a pending message as correctly processed,
@@ -5046,7 +5049,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(CommandName.XDEL, group=CommandGroup.STREAM)
-    async def xdel(self, key: KeyT, identifiers: Iterable[ValueT]) -> int:
+    async def xdel(self, key: KeyT, identifiers: Parameters[ValueT]) -> int:
         """ """
 
         return await self.execute_command(
@@ -5129,7 +5132,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group: StringT,
         consumer: StringT,
         min_idle_time: Union[int, datetime.timedelta],
-        identifiers: Iterable[ValueT],
+        identifiers: Parameters[ValueT],
         idle: Optional[int] = None,
         time: Optional[Union[int, datetime.datetime]] = None,
         retrycount: Optional[int] = None,
@@ -5381,7 +5384,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.BITMAP,
     )
     async def bitop(
-        self, keys: Iterable[KeyT], operation: StringT, destkey: KeyT
+        self, keys: Parameters[KeyT], operation: StringT, destkey: KeyT
     ) -> int:
         """
         Perform a bitwise operation using :paramref:`operation` between
@@ -5548,8 +5551,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         self,
         command: Literal[CommandName.EVAL, CommandName.EVAL_RO],
         script: ValueT,
-        keys: Optional[Iterable[KeyT]] = None,
-        args: Optional[Iterable[ValueT]] = None,
+        keys: Optional[Parameters[KeyT]] = None,
+        args: Optional[Parameters[ValueT]] = None,
     ) -> ResponseType:
         _keys: List[KeyT] = list(keys) if keys else []
         pieces: CommandArgList = [script, len(_keys), *_keys]
@@ -5568,8 +5571,8 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def eval(
         self,
         script: StringT,
-        keys: Optional[Iterable[KeyT]] = None,
-        args: Optional[Iterable[ValueT]] = None,
+        keys: Optional[Parameters[KeyT]] = None,
+        args: Optional[Parameters[ValueT]] = None,
     ) -> ResponseType:
         """
         Execute the Lua :paramref:`script` with the key names and argument values
@@ -5587,8 +5590,8 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def eval_ro(
         self,
         script: StringT,
-        keys: Optional[Iterable[KeyT]] = None,
-        args: Optional[Iterable[ValueT]] = None,
+        keys: Optional[Parameters[KeyT]] = None,
+        args: Optional[Parameters[ValueT]] = None,
     ) -> ResponseType:
         """
         Read-only variant of :meth:`~Redis.eval` that cannot execute commands
@@ -5603,8 +5606,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         self,
         command: Literal[CommandName.EVALSHA, CommandName.EVALSHA_RO],
         sha1: StringT,
-        keys: Optional[Iterable[KeyT]] = None,
-        args: Optional[Iterable[ValueT]] = None,
+        keys: Optional[Parameters[KeyT]] = None,
+        args: Optional[Parameters[ValueT]] = None,
     ) -> ResponseType:
         _keys: List[KeyT] = list(keys) if keys else []
         pieces: CommandArgList = [sha1, len(_keys), *_keys]
@@ -5620,8 +5623,8 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def evalsha(
         self,
         sha1: StringT,
-        keys: Optional[Iterable[KeyT]] = None,
-        args: Optional[Iterable[ValueT]] = None,
+        keys: Optional[Parameters[KeyT]] = None,
+        args: Optional[Parameters[ValueT]] = None,
     ) -> ResponseType:
         """
         Execute the Lua script cached by it's :paramref:`sha` ref with the
@@ -5640,8 +5643,8 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def evalsha_ro(
         self,
         sha1: StringT,
-        keys: Optional[Iterable[KeyT]] = None,
-        args: Optional[Iterable[ValueT]] = None,
+        keys: Optional[Parameters[KeyT]] = None,
+        args: Optional[Parameters[ValueT]] = None,
     ) -> ResponseType:
         """
         Read-only variant of :meth:`~Redis.evalsha` that cannot execute commands
@@ -5678,7 +5681,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             combine=ClusterAlignedBoolsCombine(),
         ),
     )
-    async def script_exists(self, sha1s: Iterable[StringT]) -> Tuple[bool, ...]:
+    async def script_exists(self, sha1s: Parameters[StringT]) -> Tuple[bool, ...]:
         """
         Check if a script exists in the script cache by specifying the SHAs of
         each script as :paramref:`sha1s`.
@@ -5757,8 +5760,8 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def fcall(
         self,
         function: StringT,
-        keys: Optional[Iterable[KeyT]] = None,
-        args: Optional[Iterable[ValueT]] = None,
+        keys: Optional[Parameters[KeyT]] = None,
+        args: Optional[Parameters[ValueT]] = None,
     ) -> ResponseType:
         """
         Invoke a function
@@ -5779,8 +5782,8 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def fcall_ro(
         self,
         function: StringT,
-        keys: Optional[Iterable[KeyT]] = None,
-        args: Optional[Iterable[ValueT]] = None,
+        keys: Optional[Parameters[KeyT]] = None,
+        args: Optional[Parameters[ValueT]] = None,
     ) -> ResponseType:
         """
         Read-only variant of :meth:`~coredis.Redis.fcall`
@@ -6875,7 +6878,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             combine=ClusterEnsureConsistent(),
         ),
     )
-    async def acl_deluser(self, usernames: Iterable[StringT]) -> int:
+    async def acl_deluser(self, usernames: Parameters[StringT]) -> int:
         """
         Remove the specified ACL users and the associated rules
 
@@ -7180,7 +7183,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
     )
     async def command_getkeys(
-        self, command: StringT, arguments: Iterable[ValueT]
+        self, command: StringT, arguments: Parameters[ValueT]
     ) -> Tuple[AnyStr, ...]:
         """
         Extract keys given a full Redis command
@@ -7203,7 +7206,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
     )
     async def command_getkeysandflags(
-        self, command: StringT, arguments: Iterable[ValueT]
+        self, command: StringT, arguments: Parameters[ValueT]
     ) -> Dict[AnyStr, Set[AnyStr]]:
         """
         Extract keys from a full Redis command and their usage flags.
@@ -7272,7 +7275,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CONFIG_GET,
         group=CommandGroup.SERVER,
     )
-    async def config_get(self, parameters: Iterable[StringT]) -> Dict[AnyStr, AnyStr]:
+    async def config_get(self, parameters: Parameters[StringT]) -> Dict[AnyStr, AnyStr]:
         """
         Get the values of configuration parameters
         """
@@ -7367,7 +7370,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         self,
         path: Union[str, bytes],
         configs: Optional[Dict[StringT, ValueT]] = None,
-        args: Optional[Iterable[ValueT]] = None,
+        args: Optional[Parameters[ValueT]] = None,
     ) -> bool:
         """
         Loads a module from a dynamic library at runtime with configuration directives.

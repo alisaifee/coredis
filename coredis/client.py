@@ -55,6 +55,7 @@ from coredis.typing import (
     List,
     Literal,
     Optional,
+    Parameters,
     ParamSpec,
     ResponseType,
     Set,
@@ -457,7 +458,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
 
     @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(CommandName.DEL, group=CommandGroup.GENERIC)
-    async def delete(self, keys: Iterable[KeyT]) -> int:
+    async def delete(self, keys: Parameters[KeyT]) -> int:
         """
         "Delete one or more keys specified by :paramref:`keys`"
         """
@@ -497,7 +498,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
     async def sort(
         self,
         key: KeyT,
-        gets: Optional[Iterable[KeyT]] = None,
+        gets: Optional[Parameters[KeyT]] = None,
         by: Optional[StringT] = None,
         offset: Optional[int] = None,
         count: Optional[int] = None,
@@ -547,10 +548,10 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
             if store is not None:
                 if data_type == "set":
                     await self.delete([store])
-                    await self.rpush(store, data)
+                    await self.rpush(store, cast(List[ValueT], data))
                 elif data_type == "list":
                     await self.delete([store])
-                    await self.rpush(store, data)
+                    await self.rpush(store, cast(List[ValueT], data))
                 else:
                     raise RedisClusterException(
                         f"Unable to store sorted data for data type : {data_type}"
@@ -563,7 +564,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
             return ()
 
     async def _retrive_data_from_sort(
-        self, data: List[AnyStr], gets: Iterable[KeyT]
+        self, data: List[AnyStr], gets: Parameters[KeyT]
     ) -> List[AnyStr]:
         """
         Used by sort()
@@ -640,7 +641,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
 
     @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
     @redis_command(CommandName.MGET, readonly=True, group=CommandGroup.STRING)
-    async def mget(self, keys: Iterable[KeyT]) -> Tuple[Optional[AnyStr], ...]:
+    async def mget(self, keys: Parameters[KeyT]) -> Tuple[Optional[AnyStr], ...]:
         """
         Returns values ordered identically to :paramref:`keys`
 
@@ -708,7 +709,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         readonly=True,
         group=CommandGroup.SET,
     )
-    async def sdiff(self, keys: Iterable[KeyT]) -> Set[AnyStr]:
+    async def sdiff(self, keys: Parameters[KeyT]) -> Set[AnyStr]:
         """
         Returns the difference of sets specified by :paramref:`keys`
 
@@ -729,7 +730,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         CommandName.SDIFFSTORE,
         group=CommandGroup.SET,
     )
-    async def sdiffstore(self, keys: Iterable[KeyT], destination: KeyT) -> int:
+    async def sdiffstore(self, keys: Parameters[KeyT], destination: KeyT) -> int:
         """
         Stores the difference of sets specified by :paramref:`keys` into a new
         set named :paramref:`destination`.  Returns the number of keys in the new set.
@@ -753,7 +754,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         readonly=True,
         group=CommandGroup.SET,
     )
-    async def sinter(self, keys: Iterable[KeyT]) -> Set[AnyStr]:
+    async def sinter(self, keys: Parameters[KeyT]) -> Set[AnyStr]:
         """
         Returns the intersection of sets specified by :paramref:`keys`
 
@@ -774,7 +775,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         CommandName.SINTERSTORE,
         group=CommandGroup.SET,
     )
-    async def sinterstore(self, keys: Iterable[KeyT], destination: KeyT) -> int:
+    async def sinterstore(self, keys: Parameters[KeyT], destination: KeyT) -> int:
         """
         Stores the intersection of sets specified by :paramref:`keys` into a new
         set named :paramref:`destination`.  Returns the number of keys in the new set.
@@ -822,7 +823,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         readonly=True,
         group=CommandGroup.SET,
     )
-    async def sunion(self, keys: Iterable[KeyT]) -> Set[AnyStr]:
+    async def sunion(self, keys: Parameters[KeyT]) -> Set[AnyStr]:
         """
         Returns the union of sets specified by :paramref:`keys`
 
@@ -845,7 +846,7 @@ class AbstractRedisCluster(AbstractRedis[AnyStr]):
         CommandName.SUNIONSTORE,
         group=CommandGroup.SET,
     )
-    async def sunionstore(self, keys: Iterable[KeyT], destination: KeyT) -> int:
+    async def sunionstore(self, keys: Parameters[KeyT], destination: KeyT) -> int:
         """
         Stores the union of sets specified by :paramref:`keys` into a new
         set named :paramref:`destination`.  Returns the number of keys in the new set.
@@ -1293,7 +1294,7 @@ class Redis(
     async def pipeline(
         self,
         transaction: Optional[bool] = True,
-        watches: Optional[Iterable[KeyT]] = None,
+        watches: Optional[Parameters[KeyT]] = None,
     ) -> "coredis.commands.pipeline.Pipeline[AnyStr]":
         """
         Returns a new pipeline object that can queue multiple commands for
@@ -1917,7 +1918,7 @@ class RedisCluster(
     async def pipeline(
         self,
         transaction: Optional[bool] = None,
-        watches: Optional[Iterable[StringT]] = None,
+        watches: Optional[Parameters[StringT]] = None,
     ) -> "coredis.commands.pipeline.ClusterPipeline[AnyStr]":
         """
         Pipelines in cluster mode only provide a subset of the functionality

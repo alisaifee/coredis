@@ -33,6 +33,7 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    ValuesView,
 )
 
 from typing_extensions import (
@@ -78,6 +79,7 @@ if TYPE_CHECKING:
     import coredis.exceptions
 
 P = ParamSpec("P")
+T_co = TypeVar("T_co", covariant=True)
 R = TypeVar("R")
 
 
@@ -104,6 +106,30 @@ ValueT = Union[str, bytes, int, float]
 #: that are transmitted to redis.
 StringT = Union[str, bytes]
 
+#: Restricted union of container types accepted as arguments to apis
+#: that accept a variable number values for an argument (such as keys, values).
+#: This is used instead of :class:`typing.Iterable` as the latter allows
+#: :class:`str` to be passed in as valid values for :class:`Iterable[str]` or :class:`bytes`
+#: to be passed in as a valid value for :class:`Iterable[bytes]` which is never the actual
+#: expectation in the scope of coredis.
+#: For example::
+#:
+#:     def length(values: Parameters[ValueT]) -> int:
+#:         return len(list(values))
+#:
+#:     length(["1", 2, 3, 4])      # valid
+#:     length({"1", 2, 3, 4})      # valid
+#:     length(("1", 2, 3, 4))      # valid
+#:     length({"1": 2}.keys())     # valid
+#:     length({"1": 2}.values())   # valid
+#:     length(map(str, range(10))) # valid
+#:     length({"1": 2})            # invalid
+#:     length("123")               # invalid
+#:     length(b"123")              # invalid
+Parameters = Union[
+    List[T_co], AbstractSet[T_co], Tuple[T_co, ...], ValuesView[T_co], Iterator[T_co]
+]
+
 #: Mapping of primitives returned by redis
 ResponsePrimitive: TypeAlias = Optional[Union[StringT, int, float, bool]]
 
@@ -111,7 +137,7 @@ ResponsePrimitive: TypeAlias = Optional[Union[StringT, int, float, bool]]
 #: command.
 #:
 #: This should preferably be represented by a recursive definition to allow for
-#: nested collections, however limitations in both static and runtime
+#: nested containers, however limitations in both static and runtime
 #: type checkers (mypy & beartype) requires loosening the definition with the use of
 #: :class:`typing.Any` for now.
 #:
@@ -158,6 +184,7 @@ __all__ = [
     "NamedTuple",
     "OrderedDict",
     "Optional",
+    "Parameters",
     "ParamSpec",
     "Protocol",
     "ResponsePrimitive",
@@ -172,6 +199,7 @@ __all__ = [
     "TypeVar",
     "Union",
     "ValueT",
+    "ValuesView",
     "TYPE_CHECKING",
     "RUNTIME_TYPECHECKS",
 ]

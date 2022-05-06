@@ -52,6 +52,7 @@ from coredis.typing import (
     KeyT,
     List,
     Optional,
+    Parameters,
     ParamSpec,
     ResponseType,
     Set,
@@ -715,7 +716,7 @@ class ClusterPipelineImpl(AbstractRedis[AnyStr], metaclass=ClusterPipelineMeta):
         response_callbacks: Optional[Dict[bytes, Callable[..., Any]]] = None,
         startup_nodes: Optional[List[Node]] = None,
         transaction: Optional[bool] = False,
-        watches: Optional[Iterable[KeyT]] = None,
+        watches: Optional[Parameters[KeyT]] = None,
     ) -> None:
         self.command_stack = []
         self.refresh_table_asap = False
@@ -724,7 +725,7 @@ class ClusterPipelineImpl(AbstractRedis[AnyStr], metaclass=ClusterPipelineMeta):
         self.startup_nodes = startup_nodes if startup_nodes else []
         self.response_callbacks = response_callbacks or {}
         self._transaction = transaction
-        self.watches: Optional[Iterable[KeyT]] = watches or None
+        self.watches: Optional[Parameters[KeyT]] = watches or None
         self.watching = False
         self.explicit_transaction = False
 
@@ -1065,7 +1066,7 @@ class ClusterPipelineImpl(AbstractRedis[AnyStr], metaclass=ClusterPipelineMeta):
         raise RedisClusterException("method load_scripts() is not implemented")
 
     async def _watch(
-        self, node: Node, conn: BaseConnection, keys: Iterable[KeyT]
+        self, node: Node, conn: BaseConnection, keys: Parameters[KeyT]
     ) -> bool:
         "Watches the values at keys ``keys``"
 
@@ -1199,7 +1200,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         response_callbacks: Optional[Dict[bytes, Callable[..., Any]]] = None,
         startup_nodes: Optional[List[Node]] = None,
         transaction: Optional[bool] = False,
-        watches: Optional[Iterable[KeyT]] = None,
+        watches: Optional[Parameters[KeyT]] = None,
     ) -> ClusterPipeline[AnyStr]:
         return cls(
             ClusterPipelineImpl(

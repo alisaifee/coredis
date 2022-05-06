@@ -8,9 +8,9 @@ from coredis.protocols import SupportsScript
 from coredis.typing import (
     AnyStr,
     Generic,
-    Iterable,
     KeyT,
     Optional,
+    Parameters,
     ResponseType,
     StringT,
     ValueT,
@@ -39,8 +39,8 @@ class Script(Generic[AnyStr]):
 
     async def execute(
         self,
-        keys: Optional[Iterable[KeyT]] = None,
-        args: Optional[Iterable[ValueT]] = None,
+        keys: Optional[Parameters[KeyT]] = None,
+        args: Optional[Parameters[ValueT]] = None,
         client: Optional[SupportsScript[AnyStr]] = None,
     ) -> ResponseType:
         """
