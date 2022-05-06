@@ -35,6 +35,10 @@ async def get_version(client):
             REDIS_VERSIONS[str(client)] = version.parse(
                 (await node.info())["redis_version"]
             )
+        elif isinstance(client, coredis.sentinel.Sentinel):
+            REDIS_VERSIONS[str(client)] = version.parse(
+                (await client.sentinels[0].info())["redis_version"]
+            )
         else:
             REDIS_VERSIONS[str(client)] = version.parse(
                 (await client.info())["redis_version"]
@@ -82,10 +86,14 @@ async def check_test_constraints(request, client, protocol=2):
 
 async def set_default_test_config(client):
     await get_version(client)
-    await client.config_set({"maxmemory-policy": "noeviction"})
-    await client.config_set({"latency-monitor-threshold": 10})
-    if REDIS_VERSIONS[str(client)] >= version.parse("6.0.0"):
-        await client.acl_log(reset=True)
+    if isinstance(client, coredis.sentinel.Sentinel):
+        if REDIS_VERSIONS[str(client)] >= version.parse("6.2.0"):
+            await client.sentinels[0].sentinel_config_set("resolve-hostnames", "yes")
+    else:
+        await client.config_set({"maxmemory-policy": "noeviction"})
+        await client.config_set({"latency-monitor-threshold": 10})
+        if REDIS_VERSIONS[str(client)] >= version.parse("6.0.0"):
+            await client.acl_log(reset=True)
 
 
 def get_client_test_args(request):
@@ -440,8 +448,8 @@ async def redis_sentinel(redis_sentinel_server, request):
     )
     master = sentinel.primary_for("coredis")
     await check_test_constraints(request, master)
+    await set_default_test_config(sentinel)
     await master.flushall()
-    await sentinel.sentinels[0].sentinel_config_set("resolve-hostnames", "yes")
     return sentinel
 
 
@@ -456,8 +464,8 @@ async def redis_sentinel_auth(redis_sentinel_auth_server, request):
     )
     master = sentinel.primary_for("coredis")
     await check_test_constraints(request, master)
+    await set_default_test_config(sentinel)
     await master.flushall()
-    await sentinel.sentinels[0].sentinel_config_set("resolve-hostnames", "yes")
     await asyncio.sleep(0.1)
     return sentinel
 

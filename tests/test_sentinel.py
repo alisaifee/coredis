@@ -221,11 +221,13 @@ async def test_ckquorum(redis_sentinel):
     assert await redis_sentinel.sentinels[0].sentinel_ckquorum("coredis")
 
 
+@pytest.mark.min_server_version("6.2.0")
 async def test_sentinel_config_get(redis_sentinel):
     configs = await redis_sentinel.sentinels[0].sentinel_config_get("*")
     assert configs["resolve-hostnames"] == "yes"
 
 
+@pytest.mark.min_server_version("6.2.0")
 async def test_sentinel_config_set(redis_sentinel):
     await redis_sentinel.sentinels[0].sentinel_config_set("resolve-hostnames", "no")
     configs = await redis_sentinel.sentinels[0].sentinel_config_get("*")
