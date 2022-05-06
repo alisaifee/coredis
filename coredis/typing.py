@@ -18,7 +18,6 @@ from typing import (
     Generic,
     Iterable,
     Iterator,
-    KeysView,
     List,
     Literal,
     Mapping,
@@ -34,7 +33,6 @@ from typing import (
     Type,
     TypeVar,
     Union,
-    ValuesView,
 )
 
 from typing_extensions import (
@@ -96,35 +94,11 @@ CommandArgList = List[Union[str, bytes, int, float]]
 #: Represents the acceptable types of a redis key
 KeyT = Union[str, bytes]
 
-#: Represents the different collections accepted by the api for
-#: commands that accept multiple keys. This is used instead of the
-#: standard library :class:`typing.Iterable` due to :class:`str` and
-#: :class:`bytes` also being iterables and thus not providing the
-#  expected safety required for parameters that should only be collections
-#  of keys.
-KeysT = Union[
-    KeysView[KeyT],
-    List[KeyT],
-    Tuple[KeyT],
-    Set[KeyT],
-    ValuesView[KeyT],
-]
-
 #: Represents the different python primitives that are accepted
 #: as input parameters for commands that can be used with loosely
 #: defined types. These are encoded using the configured encoding
 #: before being transmitted.
 ValueT = Union[str, bytes, int, float]
-
-#: Represents the different collections accepted by the api for
-#: commands that accept multiple values
-ValuesT = Union[
-    List[ValueT],
-    Tuple[ValueT],
-    Set[ValueT],
-    KeysView[ValueT],
-    ValuesView[ValueT],
-]
 
 #: The canonical type used for input parameters that represent "strings"
 #: that are transmitted to redis.
@@ -175,7 +149,6 @@ __all__ = [
     "Iterable",
     "Iterator",
     "KeyT",
-    "KeysT",
     "List",
     "Literal",
     "Mapping",
@@ -199,7 +172,6 @@ __all__ = [
     "TypeVar",
     "Union",
     "ValueT",
-    "ValuesT",
     "TYPE_CHECKING",
     "RUNTIME_TYPECHECKS",
 ]
