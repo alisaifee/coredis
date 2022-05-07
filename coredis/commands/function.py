@@ -32,7 +32,10 @@ class Library(Generic[AnyStr]):
 
         Example::
 
-            library_code = "redis.register_function('myfunc', function(k, a) return a[1] end)"
+            library_code = \"\"\"
+            #!lua name=coredis
+            redis.register_function('myfunc', function(k, a) return a[1] end)
+            \"\"\"
             lib = await Library(client, "mylib", library_code)
             assert "1" == await lib["myfunc"]([], [1])
         """
