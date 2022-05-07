@@ -354,7 +354,7 @@ async def redis_basic_raw_resp3(redis_basic_server, request):
 @pytest.fixture
 async def redis_ssl(redis_ssl_server, request):
     storage_url = (
-        "rediss://localhost:8379/0?ssl_cert_reqs=required"
+        "rediss://localhost:8379/?ssl_cert_reqs=required"
         "&ssl_keyfile=./tests/tls/client.key"
         "&ssl_certfile=./tests/tls/client.crt"
         "&ssl_ca_certs=./tests/tls/ca.crt"
@@ -363,6 +363,29 @@ async def redis_ssl(redis_ssl_server, request):
         storage_url, decode_responses=True, **get_client_test_args(request)
     )
     await check_test_constraints(request, client)
+    await client.flushall()
+    await set_default_test_config(client)
+    return client
+
+
+@pytest.fixture
+async def redis_ssl_resp3(redis_ssl_server, request):
+    storage_url = (
+        "rediss://localhost:8379/?ssl_cert_reqs=required"
+        "&ssl_keyfile=./tests/tls/client.key"
+        "&ssl_certfile=./tests/tls/client.crt"
+        "&ssl_ca_certs=./tests/tls/ca.crt"
+    )
+    client = coredis.Redis.from_url(
+        storage_url, decode_responses=True, **get_client_test_args(request)
+    )
+    await check_test_constraints(request, client, protocol=3)
+    client = coredis.Redis.from_url(
+        storage_url,
+        decode_responses=True,
+        protocol_version=3,
+        **get_client_test_args(request),
+    )
     await client.flushall()
     await set_default_test_config(client)
     return client

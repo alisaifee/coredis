@@ -8,7 +8,14 @@ from coredis.exceptions import CommandNotSupportedError
 from tests.conftest import targets
 
 
-@targets("redis_basic", "redis_basic_resp3", "redis_basic_raw", "redis_basic_raw_resp3")
+@targets(
+    "redis_basic",
+    "redis_basic_resp3",
+    "redis_basic_raw",
+    "redis_basic_raw_resp3",
+    "redis_ssl",
+    "redis_ssl_resp3",
+)
 @pytest.mark.asyncio
 class TestClient:
     @pytest.fixture(autouse=True)
