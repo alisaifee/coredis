@@ -62,15 +62,22 @@ jobs:
           - REDIS_VERSION=7.0.0 REDIS_SSL_VERSION=7.0.0 REDIS_STACK_VERSION=7.0.0-RC4
         parser: [hiredis, python]
         uvloop: ["False"]
+        runtime_type_checks: ["True"]
         include:
           - python-version: 3.9
             service_version: "REDIS_VERSION=latest REDIS_SSL_VERSION=latest"
             parser: hiredis
             uvloop: "True"
+            runtime_type_checks: "True"
           - python-version: "3.10"
             service_version: "REDIS_VERSION=latest REDIS_SSL_VERSION=latest"
             parser: hiredis
             uvloop: "True"
+            runtime_type_checks: "True"
+          - python-version: "3.10"
+            service_version: "REDIS_VERSION=latest REDIS_SSL_VERSION=latest"
+            parser: hiredis
+            runtime_type_checks: "False"
     steps:
     - uses: actions/checkout@v3
     - name: Cache dependencies
@@ -103,6 +110,7 @@ jobs:
         COREDIS_UVLOOP: "{{matrix.uvloop}}"
         HOST_OS: linux
         CI: "True"
+        COREDIS_RUNTIME_CHECKS: "{{matrix.runtime_type_checks}"
       run: |
         eval "export ${{ matrix.service_version }}"
         pytest --cov-report=xml --cov-branch
