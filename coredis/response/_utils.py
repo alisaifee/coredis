@@ -14,12 +14,7 @@ from coredis.typing import (
     Union,
 )
 
-T = TypeVar("T")
-U = TypeVar("U")
-V = TypeVar("V")
-W = TypeVar("W")
 T_co = TypeVar("T_co")
-U_co = TypeVar("U_co")
 
 
 def flat_pairs_to_dict(
