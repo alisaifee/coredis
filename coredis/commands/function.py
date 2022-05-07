@@ -99,6 +99,8 @@ class Function(Generic[AnyStr]):
         """
         Wrapper to call a redis function that has already been loaded
 
+        :param library: Name of the library under which the function is registered
+        :param name: Name of the function this instance represents
 
         Example::
 
@@ -131,9 +133,11 @@ class Function(Generic[AnyStr]):
         args: Optional[Parameters[ValueT]] = None,
     ) -> ResponseType:
         """
-        Wrapper to call :meth:`~coredis.Redis.fcall`
+        Wrapper to call :meth:`~coredis.Redis.fcall` with the
+        function named :paramref:`Function.name` registered under
+        the library at :paramref:`Function.library`
 
-        :param args:
-        :param keys:
+        :param keys: The keys this function will reference
+        :param args: The arguments expected by the function
         """
         return await self.client.fcall(self._name, keys or [], args or [])

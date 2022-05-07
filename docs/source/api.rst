@@ -71,6 +71,8 @@ Scripting
 .. autoclass:: coredis.commands.script.Script
    :no-inherited-members:
    :class-doc-from: both
+   :special-members: __call__
+
 
 Functions
 ---------
@@ -79,6 +81,8 @@ Functions
 
 .. autoclass:: coredis.commands.function.Function
    :class-doc-from: both
+   :special-members: __call__
+
 
 Pipelines
 ---------

@@ -51,6 +51,9 @@ class Script(Generic[AnyStr]):
     ) -> ResponseType:
         """
         Executes the script registered in :paramref:`Script.script`
+
+        :param keys: The keys this script will reference
+        :param args: The arguments expected by the script
         """
         from coredis.commands.pipeline import Pipeline
 
