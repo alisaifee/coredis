@@ -16,7 +16,7 @@
     ],
     "exclude": [
         "coredis/_version.py",
-        "coredis/response/",
-        "coredis/commands/key_spec.py"
+        "coredis/response/_callbacks",
+        "coredis/commands/_key_spec.py"
     ]
 }

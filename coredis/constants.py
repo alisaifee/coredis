@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 
-from coredis.utils import b
+from coredis._utils import b
 
 SYM_STAR = b("*")
 SYM_DOLLAR = b("$")

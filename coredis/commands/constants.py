@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import enum
 
-from coredis.utils import CaseAndEncodingInsensitiveEnum
+from coredis._utils import CaseAndEncodingInsensitiveEnum
 
 
 class CommandName(CaseAndEncodingInsensitiveEnum):

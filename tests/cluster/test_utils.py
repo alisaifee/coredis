@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
+from coredis._utils import clusterdown_wrapper, first_key
 from coredis.exceptions import ClusterDownError, RedisClusterException
-from coredis.utils import clusterdown_wrapper, first_key
 
 
 def test_first_key():

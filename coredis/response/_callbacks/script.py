@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import cast
 
-from coredis.response.callbacks import ResponseCallback
+from coredis._utils import EncodingInsensitiveDict
+from coredis.response._callbacks import ResponseCallback
+from coredis.response._utils import flat_pairs_to_dict
 from coredis.response.types import LibraryDefinition
-from coredis.response.utils import flat_pairs_to_dict
 from coredis.typing import (
     AnyStr,
     Dict,
@@ -16,7 +17,6 @@ from coredis.typing import (
     Union,
     ValueT,
 )
-from coredis.utils import EncodingInsensitiveDict
 
 
 class FunctionListCallback(

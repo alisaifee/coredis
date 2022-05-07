@@ -6,6 +6,7 @@ from asyncio import CancelledError
 from concurrent.futures import Future
 from typing import TYPE_CHECKING, Any, cast
 
+from coredis._utils import nativestr
 from coredis.commands import CommandName
 from coredis.connection import BaseConnection
 from coredis.exceptions import ConnectionError, PubSubError, TimeoutError
@@ -25,7 +26,6 @@ from coredis.typing import (
     Union,
     ValueT,
 )
-from coredis.utils import nativestr
 
 if TYPE_CHECKING:
     import coredis.client

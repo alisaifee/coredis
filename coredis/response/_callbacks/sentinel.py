@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import cast
 
-from coredis.response.callbacks import ResponseCallback
-from coredis.response.callbacks.server import InfoCallback
+from coredis._utils import EncodingInsensitiveDict, nativestr
+from coredis.response._callbacks import ResponseCallback
+from coredis.response._callbacks.server import InfoCallback
 from coredis.typing import (
     AnyStr,
     Dict,
@@ -15,7 +16,6 @@ from coredis.typing import (
     Union,
     ValueT,
 )
-from coredis.utils import EncodingInsensitiveDict, nativestr
 
 SENTINEL_STATE_INT_FIELDS = {
     "can-failover-its-master",

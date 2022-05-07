@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from typing import Optional
 
-from coredis.response.callbacks import (
+from coredis.response._callbacks import (
     AnyStrCallback,
     DictCallback,
     IntCallback,
     SimpleStringCallback,
 )
-from coredis.response.callbacks.sentinel import (
+from coredis.response._callbacks.sentinel import (
     GetPrimaryCallback,
     PrimariesCallback,
     PrimaryCallback,

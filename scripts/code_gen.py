@@ -1910,7 +1910,7 @@ def token_enum(ctx, path):
     t = env.from_string(
         """from __future__ import annotations
 
-from coredis.utils import CaseAndEncodingInsensitiveEnum
+from coredis._utils import CaseAndEncodingInsensitiveEnum
 
 class PureToken(CaseAndEncodingInsensitiveEnum):
     \"\"\"
@@ -1973,7 +1973,7 @@ from __future__ import annotations
 
 import enum
 
-from coredis.utils import CaseAndEncodingInsensitiveEnum
+from coredis._utils import CaseAndEncodingInsensitiveEnum
 
 class CommandName(CaseAndEncodingInsensitiveEnum):
     \"\"\"
@@ -2376,7 +2376,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     )
 
 
-@click.option("--path", default="coredis/commands/key_spec.py")
+@click.option("--path", default="coredis/commands/_key_spec.py")
 @code_gen.command()
 def cluster_key_extraction(path):
     commands = get_commands()

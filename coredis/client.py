@@ -11,10 +11,17 @@ from typing import TYPE_CHECKING, Any, cast, overload
 from deprecated.sphinx import deprecated, versionadded
 from packaging.version import Version
 
+from coredis._utils import (
+    EncodingInsensitiveDict,
+    clusterdown_wrapper,
+    first_key,
+    nativestr,
+)
 from coredis.commands import CommandGroup, CommandName, redis_command
+from coredis.commands._key_spec import KeySpec
+from coredis.commands._validators import mutually_inclusive_parameters
 from coredis.commands.core import CoreCommands
 from coredis.commands.function import Library
-from coredis.commands.key_spec import KeySpec
 from coredis.commands.monitor import Monitor
 from coredis.commands.pubsub import ClusterPubSub, PubSub
 from coredis.commands.script import Script
@@ -36,7 +43,7 @@ from coredis.exceptions import (
 from coredis.lock import Lock, LuaLock
 from coredis.nodemanager import Node, NodeFlag
 from coredis.pool import ClusterConnectionPool, ConnectionPool
-from coredis.response.callbacks import IntCallback, NoopCallback
+from coredis.response._callbacks import IntCallback, NoopCallback
 from coredis.response.types import ScoredMember
 from coredis.tokens import PureToken
 from coredis.typing import (
@@ -67,13 +74,6 @@ from coredis.typing import (
     ValueT,
     add_runtime_checks,
 )
-from coredis.utils import (
-    EncodingInsensitiveDict,
-    clusterdown_wrapper,
-    first_key,
-    nativestr,
-)
-from coredis.validators import mutually_inclusive_parameters
 
 P = ParamSpec("P")
 R = TypeVar("R")

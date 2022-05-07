@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 import coredis.pool
 from coredis.nodemanager import NodeFlag
-from coredis.response.callbacks import ClusterMultiNodeCallback, NoopCallback
+from coredis.response._callbacks import ClusterMultiNodeCallback, NoopCallback
 from coredis.typing import ParamSpec
 
 from .constants import CommandGroup, CommandName

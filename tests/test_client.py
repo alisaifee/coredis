@@ -3,8 +3,8 @@ from __future__ import annotations
 import pytest
 from packaging.version import Version
 
+from coredis._utils import nativestr
 from coredis.exceptions import CommandNotSupportedError
-from coredis.utils import nativestr
 from tests.conftest import targets
 
 

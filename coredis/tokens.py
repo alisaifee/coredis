@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from coredis.utils import CaseAndEncodingInsensitiveEnum
+from coredis._utils import CaseAndEncodingInsensitiveEnum
 
 
 class PureToken(CaseAndEncodingInsensitiveEnum):

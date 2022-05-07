@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from coredis.response.callbacks import ResponseCallback
+from coredis.response._callbacks import ResponseCallback
 from coredis.response.types import GeoCoordinates, GeoSearchResult
 from coredis.typing import AnyStr, List, Optional, ResponseType, Tuple, Union, ValueT
 

@@ -14,9 +14,10 @@ from typing import Any, cast
 from wrapt import ObjectProxy  # type: ignore
 
 from coredis import NodeFlag
+from coredis._utils import clusterdown_wrapper
 from coredis.client import AbstractRedis
 from coredis.commands import CommandName
-from coredis.commands.key_spec import KeySpec
+from coredis.commands._key_spec import KeySpec
 from coredis.commands.script import Script
 from coredis.connection import BaseConnection, ClusterConnection
 from coredis.exceptions import (
@@ -35,7 +36,7 @@ from coredis.exceptions import (
 )
 from coredis.nodemanager import Node
 from coredis.pool import ClusterConnectionPool, ConnectionPool
-from coredis.response.callbacks import (
+from coredis.response._callbacks import (
     AnyStrCallback,
     BoolCallback,
     BoolsCallback,
@@ -62,7 +63,6 @@ from coredis.typing import (
     TypeVar,
     ValueT,
 )
-from coredis.utils import clusterdown_wrapper
 
 P = ParamSpec("P")
 R = TypeVar("R")

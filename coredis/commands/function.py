@@ -3,6 +3,7 @@ from __future__ import annotations
 import weakref
 from typing import Any, AnyStr, Generator, Generic, cast
 
+from coredis._utils import EncodingInsensitiveDict, nativestr
 from coredis.exceptions import FunctionError
 from coredis.typing import (
     TYPE_CHECKING,
@@ -14,7 +15,6 @@ from coredis.typing import (
     StringT,
     ValueT,
 )
-from coredis.utils import EncodingInsensitiveDict, nativestr
 
 if TYPE_CHECKING:
     import coredis.client

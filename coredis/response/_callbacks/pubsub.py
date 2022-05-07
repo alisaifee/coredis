@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from coredis.response.callbacks import ResponseCallback
+from coredis.response._callbacks import ResponseCallback
 from coredis.typing import AnyStr, Dict, Optional, ResponseType, ValueT
 
 

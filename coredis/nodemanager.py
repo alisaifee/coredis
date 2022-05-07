@@ -4,6 +4,7 @@ import enum
 import random
 from typing import TYPE_CHECKING, Any, cast
 
+from coredis._utils import hash_slot, nativestr
 from coredis.exceptions import ConnectionError, RedisClusterException
 from coredis.typing import (
     Dict,
@@ -16,7 +17,6 @@ from coredis.typing import (
     TypedDict,
     ValueT,
 )
-from coredis.utils import hash_slot, nativestr
 
 HASH_SLOTS = 16384
 HASH_SLOTS_SET = set(range(HASH_SLOTS))

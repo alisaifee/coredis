@@ -11,6 +11,7 @@ import warnings
 from asyncio import AbstractEventLoop, StreamReader, StreamWriter
 from typing import cast
 
+from coredis._utils import b, nativestr
 from coredis.constants import SYM_CRLF, SYM_DOLLAR, SYM_EMPTY, SYM_STAR
 from coredis.exceptions import (
     AuthenticationRequiredError,
@@ -35,7 +36,6 @@ from coredis.typing import (
     Union,
     ValueT,
 )
-from coredis.utils import b, nativestr
 
 R = TypeVar("R")
 

@@ -9,6 +9,7 @@ import warnings
 from types import SimpleNamespace, TracebackType
 from typing import TYPE_CHECKING, Any, cast
 
+from coredis._utils import nativestr
 from coredis.commands import CommandName
 from coredis.commands.script import Script
 from coredis.connection import ClusterConnection
@@ -16,7 +17,6 @@ from coredis.exceptions import LockError, WatchError
 from coredis.pool import ClusterConnectionPool
 from coredis.tokens import PureToken
 from coredis.typing import AnyStr, Generic, Optional, StringT, Type, Union
-from coredis.utils import nativestr
 
 if TYPE_CHECKING:
     import coredis.client

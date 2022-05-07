@@ -2,17 +2,18 @@ from __future__ import annotations
 
 from typing import Any
 
-from coredis.response.callbacks import ResponseCallback
+from coredis._utils import EncodingInsensitiveDict
+from coredis.response._callbacks import ResponseCallback
+from coredis.response._utils import (
+    flat_pairs_to_dict,
+    flat_pairs_to_ordered_dict,
+    pairs_to_ordered_dict,
+)
 from coredis.response.types import (
     StreamEntry,
     StreamInfo,
     StreamPending,
     StreamPendingExt,
-)
-from coredis.response.utils import (
-    flat_pairs_to_dict,
-    flat_pairs_to_ordered_dict,
-    pairs_to_ordered_dict,
 )
 from coredis.typing import (
     AnyStr,
@@ -24,7 +25,6 @@ from coredis.typing import (
     Union,
     ValueT,
 )
-from coredis.utils import EncodingInsensitiveDict
 
 
 class StreamRangeCallback(

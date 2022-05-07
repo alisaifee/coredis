@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 from typing import cast
 
+from coredis._utils import b
 from coredis.exceptions import NoScriptError
 from coredis.protocols import SupportsScript
 from coredis.typing import (
@@ -15,7 +16,6 @@ from coredis.typing import (
     StringT,
     ValueT,
 )
-from coredis.utils import b
 
 
 class Script(Generic[AnyStr]):

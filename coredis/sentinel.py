@@ -8,6 +8,7 @@ from typing import Any, cast, overload
 from deprecated.sphinx import deprecated, versionadded
 
 from coredis import Redis
+from coredis._utils import nativestr
 from coredis.commands import CommandName
 from coredis.connection import Connection, RedisSSLContext
 from coredis.exceptions import (
@@ -34,7 +35,6 @@ from coredis.typing import (
     Type,
     Union,
 )
-from coredis.utils import nativestr
 
 
 class SentinelManagedConnection(Connection, Generic[AnyStr]):

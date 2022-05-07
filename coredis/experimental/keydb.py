@@ -6,11 +6,12 @@ import textwrap
 
 from packaging import version
 
+from coredis._utils import CaseAndEncodingInsensitiveEnum
 from coredis.client import Redis
 from coredis.commands import ClusterCommandConfig, CommandDetails, check_version
+from coredis.commands._utils import normalized_time_seconds
 from coredis.commands.constants import CommandGroup
-from coredis.commands.utils import normalized_time_seconds
-from coredis.response.callbacks import BoolCallback
+from coredis.response._callbacks import BoolCallback
 from coredis.typing import (
     AnyStr,
     Awaitable,
@@ -24,7 +25,6 @@ from coredis.typing import (
     R,
     Union,
 )
-from coredis.utils import CaseAndEncodingInsensitiveEnum
 
 
 def _keydb_command_link(command: CommandName) -> str:
