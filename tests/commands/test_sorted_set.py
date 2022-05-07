@@ -502,7 +502,7 @@ class TestSortedSet:
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3))
         assert await client.zrem("a{foo}", ["a2"]) == 1
         assert await client.zrange("a{foo}", 0, -1) == (_s("a1"), _s("a3"))
-        assert await client.zrem("a{foo}", "junk") == 0
+        assert await client.zrem("a{foo}", ["junk"]) == 0
         assert await client.zrange("a{foo}", 0, -1) == (_s("a1"), _s("a3"))
 
     async def test_zrem_multiple_keys(self, client, _s):

@@ -141,9 +141,9 @@ class TestGeneric:
         ]
 
     async def test_delete(self, client, _s):
-        assert await client.delete("a") == 0
+        assert await client.delete(["a"]) == 0
         await client.set("a", "foo")
-        assert await client.delete("a") == 1
+        assert await client.delete(["a"]) == 1
 
     async def test_delete_with_multiple_keys(self, client, _s):
         await client.set("a", "foo")
@@ -157,7 +157,7 @@ class TestGeneric:
         await client.set("a", "foo")
         freq = await client.object_freq("a")
         dumped = await client.dump("a")
-        await client.delete("a")
+        await client.delete(["a"])
         await client.restore("a", 0, dumped, freq=freq)
         assert await client.get("a") == _s("foo")
         freq_now = await client.object_freq("a")
@@ -168,7 +168,7 @@ class TestGeneric:
         idle = await client.object_idletime("a")
         assert idle <= 1
         dumped = await client.dump("a")
-        assert await client.delete("a") == 1
+        assert await client.delete(["a"]) == 1
         assert await client.restore("a", 0, dumped, idletime=2)
         new_idle = await client.object_idletime("a")
         assert new_idle >= 1
@@ -375,13 +375,13 @@ class TestGeneric:
         assert await client.type("a") == _s("none")
         await client.set("a", "1")
         assert await client.type("a") == _s("string")
-        await client.delete("a")
-        await client.lpush("a", "1")
+        await client.delete(["a"])
+        await client.lpush("a", ["1"])
         assert await client.type("a") == _s("list")
-        await client.delete("a")
-        await client.sadd("a", "1")
+        await client.delete(["a"])
+        await client.sadd("a", ["1"])
         assert await client.type("a") == _s("set")
-        await client.delete("a")
+        await client.delete(["a"])
         await client.zadd("a", {"1": "1"})
         assert await client.type("a") == _s("zset")
 

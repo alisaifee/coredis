@@ -75,7 +75,7 @@ class TestServer:
         }
 
     async def test_config_get(self, client, _s):
-        data = await client.config_get("*")
+        data = await client.config_get(["*"])
         assert _s("maxmemory") in data
         assert data[_s("maxmemory")].isdigit()
 

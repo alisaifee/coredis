@@ -133,7 +133,7 @@ class TestBitmap:
         await client.bitfield(key).incrby("u2", 10, 1).exc()
         assert await client.get(key) == _s("\x00\x10")
         # overflow
-        await client.delete(key)
+        await client.delete([key])
         assert [-128] == await client.bitfield(key).incrby("i8", 0, 128).exc()
 
     async def test_bitfield_overflow(self, client, _s):

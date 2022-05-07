@@ -12,8 +12,8 @@ Generic
 
 
 
-COPY
-****
+COPY [✓]
+********
 
 Copy a key
 
