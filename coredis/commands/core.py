@@ -1240,7 +1240,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         username: Optional[StringT] = None,
         password: Optional[StringT] = None,
         setname: Optional[StringT] = None,
-    ) -> Mapping[AnyStr, AnyStr]:
+    ) -> Dict[AnyStr, AnyStr]:
         """
         Handshake with Redis
 
@@ -2162,7 +2162,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         *,
         count: Optional[int] = None,
         withvalues: Optional[bool] = None,
-    ) -> Optional[Union[AnyStr, Tuple[AnyStr, ...], Mapping[AnyStr, AnyStr]]]:
+    ) -> Optional[Union[AnyStr, Tuple[AnyStr, ...], Dict[AnyStr, AnyStr]]]:
         """
         Return a random field from the hash value stored at key.
 
@@ -4901,7 +4901,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         streams: Dict[ValueT, ValueT],
         count: Optional[int] = None,
         block: Optional[Union[int, datetime.timedelta]] = None,
-    ) -> Optional[Mapping[AnyStr, Tuple[StreamEntry, ...]]]:
+    ) -> Optional[Dict[AnyStr, Tuple[StreamEntry, ...]]]:
         """
         Return never seen elements in multiple streams, with IDs greater than
         the ones reported by the caller for each stream. Can block.
@@ -4950,7 +4950,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: Optional[int] = None,
         block: Optional[Union[int, datetime.timedelta]] = None,
         noack: Optional[bool] = None,
-    ) -> Optional[Mapping[AnyStr, Tuple[StreamEntry, ...]]]:
+    ) -> Optional[Dict[AnyStr, Tuple[StreamEntry, ...]]]:
         """ """
         pieces: CommandArgList = [PrefixToken.GROUP, group, consumer]
 
@@ -6548,7 +6548,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.LATENCY_LATEST,
         group=CommandGroup.SERVER,
     )
-    async def latency_latest(self) -> Mapping[AnyStr, Tuple[int, int, int]]:
+    async def latency_latest(self) -> Dict[AnyStr, Tuple[int, int, int]]:
         """
         Return the latest latency samples for all events.
 
@@ -6616,7 +6616,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.MEMORY_STATS,
         group=CommandGroup.SERVER,
     )
-    async def memory_stats(self) -> Mapping[AnyStr, ValueT]:
+    async def memory_stats(self) -> Dict[AnyStr, ValueT]:
         """
         Show memory usage details
         :return: mapping of memory usage metrics and their values
@@ -6952,7 +6952,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             flag=NodeFlag.RANDOM,
         ),
     )
-    async def acl_getuser(self, username: StringT) -> Mapping[AnyStr, List[AnyStr]]:
+    async def acl_getuser(self, username: StringT) -> Dict[AnyStr, List[AnyStr]]:
         """
         Get the rules for a specific ACL user
         """
