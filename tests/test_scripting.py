@@ -87,13 +87,13 @@ class TestScripting:
         assert precalculated_sha
         assert await client.script_exists([multiply.sha]) == (False,)
         # Test second evalsha block (after NoScriptError)
-        assert await multiply.execute(keys=["a"], args=[3]) == 6
+        assert await multiply(keys=["a"], args=[3]) == 6
         # At this point, the script should be loaded
         assert await client.script_exists([multiply.sha]) == (True,)
         # Test that the precalculated sha matches the one from redis
         assert multiply.sha == precalculated_sha
         # Test first evalsha block
-        assert await multiply.execute(keys=["a"], args=[3]) == 6
+        assert await multiply(keys=["a"], args=[3]) == 6
 
     @pytest.mark.nocluster
     async def test_script_object_in_pipeline(self, client):
@@ -104,7 +104,7 @@ class TestScripting:
         pipe = await client.pipeline()
         await pipe.set("a", "2")
         await pipe.get("a")
-        await multiply.execute(keys=["a"], args=[3], client=pipe)
+        await multiply(keys=["a"], args=[3], client=pipe)
         assert await client.script_exists([multiply.sha]) == (False,)
         # [SET worked, GET 'a', result of multiple script]
         assert await pipe.execute() == (True, "2", 6)
@@ -119,7 +119,7 @@ class TestScripting:
         pipe = await client.pipeline()
         await pipe.set("a", "2")
         await pipe.get("a")
-        await multiply.execute(keys=["a"], args=[3], client=pipe)
+        await multiply(keys=["a"], args=[3], client=pipe)
         assert await client.script_exists([multiply.sha]) == (False,)
         # [SET worked, GET 'a', result of multiple script]
         assert await pipe.execute() == (
@@ -140,7 +140,7 @@ class TestScripting:
         # msgpack.dumps({"name": "joe"})
         msgpack_message_1 = b"\x81\xa4name\xa3Joe"
 
-        await msgpack_hello.execute(args=[msgpack_message_1], client=pipe)
+        await msgpack_hello(args=[msgpack_message_1], client=pipe)
 
         assert await client.script_exists([msgpack_hello.sha]) == (False,)
         assert (await pipe.execute())[0] == "hello Joe"
@@ -148,7 +148,7 @@ class TestScripting:
 
         msgpack_hello_broken = client.register_script(msgpack_hello_script_broken)
 
-        await msgpack_hello_broken.execute(args=[msgpack_message_1], client=pipe)
+        await msgpack_hello_broken(args=[msgpack_message_1], client=pipe)
         with pytest.raises(ResponseError) as excinfo:
             await pipe.execute()
         assert excinfo.type == ResponseError

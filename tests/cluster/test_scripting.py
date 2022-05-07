@@ -95,11 +95,11 @@ class TestScripting:
         multiply = redis_cluster.register_script(multiply_script)
         assert multiply.sha == "29cdf3e36c89fa05d7e6d6b9734b342ab15c9ea7"
         # test evalsha fail -> script load + retry
-        assert await multiply.execute(keys=["a"], args=[3]) == 6
+        assert await multiply(keys=["a"], args=[3]) == 6
         assert multiply.sha
         assert await redis_cluster.script_exists([multiply.sha]) == (True,)
         # test first evalsha
-        assert await multiply.execute(keys=["a"], args=[3]) == 6
+        assert await multiply(keys=["a"], args=[3]) == 6
 
     @pytest.mark.asyncio()
     @pytest.mark.xfail(reason="Not Yet Implemented")
@@ -115,7 +115,7 @@ class TestScripting:
         assert multiply.sha
         assert await redis_cluster.script_exists(multiply.sha) == (True,)
         # [SET worked, GET 'a', result of multiple script]
-        assert await pipe.execute() == [True, "2", 6]
+        assert await pipe() == [True, "2", 6]
 
         # purge the script from redis's cache and re-run the pipeline
         # the multiply script object knows it's sha, so it shouldn't get

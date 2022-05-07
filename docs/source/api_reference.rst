@@ -219,7 +219,7 @@ Continuing the example from above:
 .. code-block:: python
 
     await r.set('foo', 2)
-    await multiply.execute(keys=['foo'], args=[5])
+    await multiply(keys=['foo'], args=[5])
     # 10
 
 The value of key 'foo' is set to 2. When multiply is invoked, the 'foo' key is
@@ -233,7 +233,7 @@ that points to a completely different Redis server.
 
     r2 = coredis.Redis('redis2.example.com')
     await r2.set('foo', 3)
-    multiply.execute(keys=['foo'], args=[5], client=r2)
+    multiply(keys=['foo'], args=[5], client=r2)
     # 15
 
 The Script object ensures that the LUA script is loaded into Redis's script

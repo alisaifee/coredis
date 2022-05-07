@@ -21,6 +21,12 @@ from coredis.typing import (
 class Script(Generic[AnyStr]):
     """
     An executable Lua script object returned by :meth:`coredis.Redis.register_script`
+    Instances of the class are callable and can be called as follows::
+
+        client = coredis.Redis()
+        await client.set("test", "co")
+        concat = client.register_script("return redis.call('GET', KEYS[1]) + ARGV[1]")
+        assert await concat(['test'], ['redis']) == "coredis"
     """
 
     sha: AnyStr
@@ -31,13 +37,13 @@ class Script(Generic[AnyStr]):
         script: StringT,
     ):
         """
-        :param script: The lua script that will be used by :meth:`execute`
+        :param script: The lua script that will be used by :meth:`__call__`
         """
         self.registered_client: SupportsScript[AnyStr] = registered_client
         self.script = script
         self.sha = hashlib.sha1(b(script)).hexdigest()  # type: ignore
 
-    async def execute(
+    async def __call__(
         self,
         keys: Optional[Parameters[KeyT]] = None,
         args: Optional[Parameters[ValueT]] = None,
@@ -67,3 +73,14 @@ class Script(Generic[AnyStr]):
             return cast(
                 ResponseType, await client.evalsha(self.sha, keys=keys, args=args)
             )
+
+    async def execute(
+        self,
+        keys: Optional[Parameters[KeyT]] = None,
+        args: Optional[Parameters[ValueT]] = None,
+        client: Optional[SupportsScript[AnyStr]] = None,
+    ) -> ResponseType:
+        """
+        Executes the script registered in :paramref:`Script.script`
+        """
+        return await self(keys, args, client)
