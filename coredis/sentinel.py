@@ -201,7 +201,7 @@ class SentinelConnectionPool(ConnectionPool):
             pass
         raise ReplicaNotFoundError("No replica found for %r" % (self.service_name))
 
-    def _checkpid(self) -> None:
+    def checkpid(self) -> None:
         if self.pid != os.getpid():
             self.disconnect()
             self.reset()
