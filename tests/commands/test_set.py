@@ -25,32 +25,42 @@ class TestSet:
         assert await client.scard("a") == 3
 
     async def test_sdiff(self, client, _s):
-        await client.sadd("a", ["1", "2", "3"])
-        assert await client.sdiff(["a", "b"]) == {_s("1"), _s("2"), _s("3")}
-        await client.sadd("b", ["2", "3"])
-        assert await client.sdiff(["a", "b"]) == {_s("1")}
+        await client.sadd("a{foo}", ["1", "2", "3"])
+        assert await client.sdiff(["a{foo}", "b{foo}"]) == {_s("1"), _s("2"), _s("3")}
+        await client.sadd("b{foo}", ["2", "3"])
+        assert await client.sdiff(["a{foo}", "b{foo}"]) == {_s("1")}
 
     async def test_sdiffstore(self, client, _s):
-        await client.sadd("a", ["1", "2", "3"])
-        assert await client.sdiffstore(["a", "b"], destination=_s("c")) == 3
-        assert await client.smembers("c") == {_s("1"), _s("2"), _s("3")}
-        await client.sadd("b", ["2", "3"])
-        assert await client.sdiffstore(["a", "b"], destination=_s("c")) == 1
-        assert await client.smembers("c") == {_s("1")}
+        await client.sadd("a{foo}", ["1", "2", "3"])
+        assert (
+            await client.sdiffstore(["a{foo}", "b{foo}"], destination=_s("c{foo}")) == 3
+        )
+        assert await client.smembers("c{foo}") == {_s("1"), _s("2"), _s("3")}
+        await client.sadd("b{foo}", ["2", "3"])
+        assert (
+            await client.sdiffstore(["a{foo}", "b{foo}"], destination=_s("c{foo}")) == 1
+        )
+        assert await client.smembers("c{foo}") == {_s("1")}
 
     async def test_sinter(self, client, _s):
-        await client.sadd("a", ["1", "2", "3"])
-        assert await client.sinter(["a", "b"]) == set()
-        await client.sadd("b", ["2", "3"])
-        assert await client.sinter(["a", "b"]) == {_s("2"), _s("3")}
+        await client.sadd("a{foo}", ["1", "2", "3"])
+        assert await client.sinter(["a{foo}", "b{foo}"]) == set()
+        await client.sadd("b{foo}", ["2", "3"])
+        assert await client.sinter(["a{foo}", "b{foo}"]) == {_s("2"), _s("3")}
 
     async def test_sinterstore(self, client, _s):
-        await client.sadd("a", ["1", "2", "3"])
-        assert await client.sinterstore(["a", "b"], destination=_s("c")) == 0
-        assert await client.smembers("c") == set()
-        await client.sadd("b", ["2", "3"])
-        assert await client.sinterstore(["a", "b"], destination=_s("c")) == 2
-        assert await client.smembers("c") == {_s("2"), _s("3")}
+        await client.sadd("a{foo}", ["1", "2", "3"])
+        assert (
+            await client.sinterstore(["a{foo}", "b{foo}"], destination=_s("c{foo}"))
+            == 0
+        )
+        assert await client.smembers("c{foo}") == set()
+        await client.sadd("b{foo}", ["2", "3"])
+        assert (
+            await client.sinterstore(["a{foo}", "b{foo}"], destination=_s("c{foo}"))
+            == 2
+        )
+        assert await client.smembers("c{foo}") == {_s("2"), _s("3")}
 
     @pytest.mark.min_server_version("7.0.0")
     async def test_sintercard(self, client, _s):
@@ -79,11 +89,11 @@ class TestSet:
         assert (await client.smismember("a", ["1", "4", "2", "3"])) == result_list
 
     async def test_smove(self, client, _s):
-        await client.sadd("a", ["a1", "a2"])
-        await client.sadd("b", ["b1", "b2"])
-        assert await client.smove("a", "b", "a1")
-        assert await client.smembers("a") == {_s("a2")}
-        assert await client.smembers("b") == {_s("b1"), _s("b2"), _s("a1")}
+        await client.sadd("a{foo}", ["a1", "a2"])
+        await client.sadd("b{foo}", ["b1", "b2"])
+        assert await client.smove("a{foo}", "b{foo}", "a1")
+        assert await client.smembers("a{foo}") == {_s("a2")}
+        assert await client.smembers("b{foo}") == {_s("b1"), _s("b2"), _s("a1")}
 
     async def test_spop(self, client, _s):
         s = ["1", "2", "3"]
@@ -116,15 +126,18 @@ class TestSet:
         assert await client.smembers("a") == {_s("1"), _s("3")}
 
     async def test_sunion(self, client, _s):
-        await client.sadd("a", ["1", "2"])
-        await client.sadd("b", ["2", "3"])
-        assert await client.sunion(["a", "b"]) == {_s("1"), _s("2"), _s("3")}
+        await client.sadd("a{foo}", ["1", "2"])
+        await client.sadd("b{foo}", ["2", "3"])
+        assert await client.sunion(["a{foo}", "b{foo}"]) == {_s("1"), _s("2"), _s("3")}
 
     async def test_sunionstore(self, client, _s):
-        await client.sadd("a", ["1", "2"])
-        await client.sadd("b", ["2", "3"])
-        assert await client.sunionstore(["a", "b"], destination=_s("c")) == 3
-        assert await client.smembers("c") == {_s("1"), _s("2"), _s("3")}
+        await client.sadd("a{foo}", ["1", "2"])
+        await client.sadd("b{foo}", ["2", "3"])
+        assert (
+            await client.sunionstore(["a{foo}", "b{foo}"], destination=_s("c{foo}"))
+            == 3
+        )
+        assert await client.smembers("c{foo}") == {_s("1"), _s("2"), _s("3")}
 
     async def test_sscan(self, client, _s):
         await client.sadd("a", ["1", "2", "3"])

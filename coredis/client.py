@@ -8,18 +8,12 @@ from abc import ABCMeta
 from ssl import SSLContext
 from typing import TYPE_CHECKING, Any, cast, overload
 
-from deprecated.sphinx import deprecated, versionadded
+from deprecated.sphinx import versionadded
 from packaging.version import Version
 
-from coredis._utils import (
-    EncodingInsensitiveDict,
-    clusterdown_wrapper,
-    first_key,
-    nativestr,
-)
-from coredis.commands import CommandGroup, CommandName, redis_command
+from coredis._utils import clusterdown_wrapper, first_key, nativestr
+from coredis.commands import CommandName
 from coredis.commands._key_spec import KeySpec
-from coredis.commands._validators import mutually_inclusive_parameters
 from coredis.commands.core import CoreCommands
 from coredis.commands.function import Library
 from coredis.commands.monitor import Monitor
@@ -43,9 +37,8 @@ from coredis.exceptions import (
 from coredis.lock import Lock, LuaLock
 from coredis.nodemanager import Node, NodeFlag
 from coredis.pool import ClusterConnectionPool, ConnectionPool
-from coredis.response._callbacks import IntCallback, NoopCallback
+from coredis.response._callbacks import NoopCallback
 from coredis.response.types import ScoredMember
-from coredis.tokens import PureToken
 from coredis.typing import (
     AnyStr,
     AsyncGenerator,
@@ -59,18 +52,15 @@ from coredis.typing import (
     Iterable,
     Iterator,
     KeyT,
-    List,
     Literal,
     Optional,
     Parameters,
     ParamSpec,
     ResponseType,
-    Set,
     StringT,
     Tuple,
     Type,
     TypeVar,
-    Union,
     ValueT,
     add_runtime_checks,
 )
@@ -80,11 +70,6 @@ R = TypeVar("R")
 
 if TYPE_CHECKING:
     import coredis.commands.pipeline
-
-CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE = """Custom implementations for redis
-cluster will be removed in version 3.5.0 and will be replaced with the implementations
-in :class:`coredis.Redis`
-"""
 
 
 class ClusterMeta(ABCMeta):
@@ -422,503 +407,7 @@ class AbstractRedis(
 
 
 class AbstractRedisCluster(AbstractRedis[AnyStr]):
-    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
-    @redis_command(
-        CommandName.RENAME,
-        group=CommandGroup.GENERIC,
-    )
-    async def rename(self, key: KeyT, newkey: KeyT) -> bool:
-        """
-        Rename key :paramref:`key` to :paramref:`newkey`
-
-        .. admonition:: Cluster note
-
-           This operation is no longer atomic because each key must be queried
-           then set in separate calls because they maybe will change cluster node
-        """
-
-        if key == newkey:
-            raise ResponseError("source and destination objects are the same")
-
-        data = await self.dump(key)
-
-        if data is None:
-            raise ResponseError("no such key")
-
-        ttl = await self.pttl(key)
-
-        if ttl is None or ttl < 1:
-            ttl = 0
-
-        await self.delete([newkey])
-        await self.restore(newkey, ttl, data)
-        await self.delete([key])
-
-        return True
-
-    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
-    @redis_command(CommandName.DEL, group=CommandGroup.GENERIC)
-    async def delete(self, keys: Parameters[KeyT]) -> int:
-        """
-        "Delete one or more keys specified by :paramref:`keys`"
-        """
-        count = 0
-
-        for arg in keys:
-            count += await self.execute_command(
-                CommandName.DEL, arg, callback=IntCallback()
-            )
-
-        return count
-
-    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
-    @redis_command(
-        CommandName.RENAMENX,
-        group=CommandGroup.GENERIC,
-    )
-    async def renamenx(self, key: KeyT, newkey: KeyT) -> bool:
-        """
-        Rekeys key paramref:`key` to :paramref:`newkey` if
-        :paramref:`newkey` doesn't already exist
-
-        :return: False when :paramref:`newkey` already exists.
-        """
-
-        if not await self.exists([newkey]) == 1:
-            return await self.rename(key, newkey)
-
-        return False
-
-    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
-    @mutually_inclusive_parameters("offset", "count")
-    @redis_command(
-        CommandName.SORT,
-        group=CommandGroup.GENERIC,
-    )
-    async def sort(
-        self,
-        key: KeyT,
-        gets: Optional[Parameters[KeyT]] = None,
-        by: Optional[StringT] = None,
-        offset: Optional[int] = None,
-        count: Optional[int] = None,
-        order: Optional[Literal[PureToken.ASC, PureToken.DESC]] = None,
-        alpha: Optional[bool] = None,
-        store: Optional[KeyT] = None,
-    ) -> Union[Tuple[AnyStr, ...], int]:
-        """
-        Sort the elements in a list, set or sorted set
-
-        :return: sorted elements.
-
-         When the :paramref:`store` option is specified the command returns
-         the number of sorted elements in the destination list.
-        """
-
-        try:
-            data_type = nativestr(await self.type(key))
-
-            if data_type == "none":
-                return ()
-            elif data_type == "set":
-                data = list(await self.smembers(key))[:]
-            elif data_type == "list":
-                data = list(await self.lrange(key, 0, -1))
-            else:
-                raise RedisClusterException(f"Unable to sort data type : {data_type}")
-
-            if by is not None:
-                # _sort_using_by_arg mutates data so we don't
-                # need need a return value.
-                data = await self._sort_using_by_arg(data, by, alpha)
-            elif not alpha:
-                data.sort(key=lambda v: float(v))
-            else:
-                data.sort()
-
-            if order == PureToken.DESC:
-                data = data[::-1]
-
-            if not (offset is None or count is None):
-                data = data[offset : offset + count]
-
-            if gets:
-                data = await self._retrive_data_from_sort(data, gets)
-
-            if store is not None:
-                if data_type == "set":
-                    await self.delete([store])
-                    await self.rpush(store, cast(List[ValueT], data))
-                elif data_type == "list":
-                    await self.delete([store])
-                    await self.rpush(store, cast(List[ValueT], data))
-                else:
-                    raise RedisClusterException(
-                        f"Unable to store sorted data for data type : {data_type}"
-                    )
-
-                return len(data)
-
-            return tuple(data)
-        except KeyError:
-            return ()
-
-    async def _retrive_data_from_sort(
-        self, data: List[AnyStr], gets: Parameters[KeyT]
-    ) -> List[AnyStr]:
-        """
-        Used by sort()
-        """
-
-        if gets:
-            new_data: List[AnyStr] = []
-
-            for k in data:
-                for g in gets:
-                    single_item = await self._get_single_item(k, g)
-                    if single_item:
-                        new_data.append(single_item)
-            data = new_data
-
-        return data
-
-    async def _get_single_item(self, k: AnyStr, g: StringT) -> Optional[AnyStr]:
-        """
-        Used by sort()
-        """
-        _g = nativestr(g)
-        _k = nativestr(k)
-        single_item: Optional[AnyStr] = None
-        if "*" in _g:
-            _g = _g.replace("*", _k)
-
-            if "->" in _g:
-                key, hash_key = _g.split("->")
-                single_item = cast(
-                    Optional[AnyStr],
-                    EncodingInsensitiveDict(await self.hgetall(key) or {}).get(
-                        hash_key
-                    ),
-                )
-            else:
-                single_item = await self.get(_g)
-        elif "#" in _g:
-            single_item = k
-
-        return single_item
-
-    async def _by_key(
-        self, by: str, arg: str, alpha: Optional[bool]
-    ) -> Optional[Union[AnyStr, float]]:
-        key = by.replace("*", arg)
-        if "->" in by:
-            key, hash_key = key.split("->")
-            v = await self.hget(key, hash_key)
-
-            if v is not None:
-                if alpha:
-                    return v
-                else:
-                    return float(v)
-            return None
-        else:
-            return await self.get(key)
-
-    async def _sort_using_by_arg(
-        self, data: List[AnyStr], by: StringT, alpha: Optional[bool]
-    ) -> List[AnyStr]:
-        """
-        Used by sort()
-        """
-        _by = nativestr(by)
-
-        sorted_data: List[Tuple[AnyStr, Optional[Union[AnyStr, float]]]] = []
-
-        for d in data:
-            sorted_data.append((d, await self._by_key(_by, nativestr(d), alpha)))
-
-        return [x[0] for x in sorted(sorted_data, key=lambda x: x[1])]  # type: ignore
-
-    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
-    @redis_command(CommandName.MGET, readonly=True, group=CommandGroup.STRING)
-    async def mget(self, keys: Parameters[KeyT]) -> Tuple[Optional[AnyStr], ...]:
-        """
-        Returns values ordered identically to :paramref:`keys`
-
-        .. admonition:: Cluster note
-
-           Iterate all keys and send GET for each key.
-           This will go alot slower than a normal mget call in Redis.
-           **Operation is no longer atomic**
-        """
-        res: List[Optional[AnyStr]] = list()
-
-        for arg in keys:
-            res.append(await self.get(arg))
-
-        return tuple(res)
-
-    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
-    @redis_command(
-        CommandName.MSET,
-        group=CommandGroup.STRING,
-    )
-    async def mset(self, key_values: Dict[KeyT, ValueT]) -> bool:
-        """
-        Sets key/values based on a mapping. Mapping can be supplied as a single
-        dictionary argument or as kwargs.
-
-        .. admonition:: Cluster note
-
-           Iterate over all items and do SET on each (k,v) pair.
-           **Operation is no longer atomic**
-        """
-
-        for pair in iter(key_values.items()):
-            await self.set(pair[0], pair[1])
-
-        return True
-
-    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
-    @redis_command(
-        CommandName.MSETNX,
-        group=CommandGroup.STRING,
-    )
-    async def msetnx(self, key_values: Dict[KeyT, ValueT]) -> bool:
-        """
-        Sets key/values based on a mapping if none of the keys are already set.
-        Mapping can be supplied as a single dictionary argument or as kwargs.
-        Returns a boolean indicating if the operation was successful.
-
-        .. admonition:: Cluster note
-
-            Iterate over all items and do GET to determine if all keys do not exists.
-            If true then call mset() on all keysu.
-            **Operation is no longer atomic**
-        """
-
-        for k, _ in key_values.items():
-            if await self.get(k):
-                return False
-
-        return await self.mset(key_values)
-
-    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
-    @redis_command(
-        CommandName.SDIFF,
-        readonly=True,
-        group=CommandGroup.SET,
-    )
-    async def sdiff(self, keys: Parameters[KeyT]) -> Set[AnyStr]:
-        """
-        Returns the difference of sets specified by :paramref:`keys`
-
-        .. admonition:: Cluster note
-
-           Query all keys and diff all sets in memory and return the result
-        """
-        _keys = list(keys)
-        res = await self.smembers(_keys[0])
-
-        for arg in _keys[1:]:
-            res -= await self.smembers(arg)
-
-        return res
-
-    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
-    @redis_command(
-        CommandName.SDIFFSTORE,
-        group=CommandGroup.SET,
-    )
-    async def sdiffstore(self, keys: Parameters[KeyT], destination: KeyT) -> int:
-        """
-        Stores the difference of sets specified by :paramref:`keys` into a new
-        set named :paramref:`destination`.  Returns the number of keys in the new set.
-        Overwrites dest key if it exists.
-
-        .. admonition:: Cluster note
-
-           Use sdiff() --> Delete dest key --> store result in dest key
-        """
-        res = await self.sdiff(keys)
-        await self.delete([destination])
-
-        if not res:
-            return 0
-
-        return await self.sadd(destination, res)
-
-    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
-    @redis_command(
-        CommandName.SINTER,
-        readonly=True,
-        group=CommandGroup.SET,
-    )
-    async def sinter(self, keys: Parameters[KeyT]) -> Set[AnyStr]:
-        """
-        Returns the intersection of sets specified by :paramref:`keys`
-
-        .. admonition:: Cluster note
-
-           Query all keys, perform intersection in memory and return the result
-        """
-        _keys = list(keys)
-        res = await self.smembers(_keys[0])
-
-        for arg in _keys[1:]:
-            res &= await self.smembers(arg)
-
-        return res
-
-    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
-    @redis_command(
-        CommandName.SINTERSTORE,
-        group=CommandGroup.SET,
-    )
-    async def sinterstore(self, keys: Parameters[KeyT], destination: KeyT) -> int:
-        """
-        Stores the intersection of sets specified by :paramref:`keys` into a new
-        set named :paramref:`destination`.  Returns the number of keys in the new set.
-
-        .. admonition:: Cluster note
-
-           Uses sinter() --> Delete dest key --> store result in dest key
-        """
-        res = await self.sinter(keys)
-        await self.delete([destination])
-
-        if res:
-            await self.sadd(destination, res)
-
-            return len(res)
-        else:
-            return 0
-
-    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
-    @redis_command(
-        CommandName.SMOVE,
-        group=CommandGroup.SET,
-    )
-    async def smove(self, source: KeyT, destination: KeyT, member: ValueT) -> bool:
-        """
-        Moves :paramref:`member` from set :paramref:`source` to set :paramref:`destination`
-
-        .. admonition:: Cluster note
-
-           Uses smembers() --> srem() --> sadd.
-           **Function is no longer atomic**
-        """
-        res = await self.srem(source, [member])
-
-        # Only add the element if existed in src set
-
-        if res == 1:
-            await self.sadd(destination, [member])
-
-        return bool(res)
-
-    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
-    @redis_command(
-        CommandName.SUNION,
-        readonly=True,
-        group=CommandGroup.SET,
-    )
-    async def sunion(self, keys: Parameters[KeyT]) -> Set[AnyStr]:
-        """
-        Returns the union of sets specified by :paramref:`keys`
-
-        .. admonition:: Cluster note
-
-           Query all keys, perform union in memory and return result
-
-           **Operation is no longer atomic**
-        """
-        _keys = list(keys)
-        res = await self.smembers(_keys[0])
-
-        for arg in _keys[1:]:
-            res |= await self.smembers(arg)
-
-        return res
-
-    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
-    @redis_command(
-        CommandName.SUNIONSTORE,
-        group=CommandGroup.SET,
-    )
-    async def sunionstore(self, keys: Parameters[KeyT], destination: KeyT) -> int:
-        """
-        Stores the union of sets specified by :paramref:`keys` into a new
-        set named :paramref:`destination`.  Returns the number of keys in the new set.
-
-        .. admonition:: Cluster note
-
-           Use sunion() --> delete() dest key --> store result in dest key
-
-           **Operation is no longer atomic**
-        """
-        res = await self.sunion(keys)
-        await self.delete([destination])
-
-        return await self.sadd(destination, res)
-
-    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
-    @redis_command(
-        CommandName.BRPOPLPUSH,
-        version_deprecated="6.2.0",
-        group=CommandGroup.LIST,
-    )
-    async def brpoplpush(
-        self, source: KeyT, destination: KeyT, timeout: Union[int, float]
-    ) -> Optional[AnyStr]:
-        """
-        Pops a value off the tail of :paramref:`source`, push it on the head
-        of :paramref:`destination` and then return it.
-
-        This command blocks until a value is in :paramref:`source` or until
-        :paramref:`timeout` seconds elapse, whichever is first. A :paramref:`timeout`
-        value of 0 blocks forever.
-
-        .. admonition:: Cluster note
-
-           Calls brpop() then sends the result into lpush()
-
-           **Operation is no longer atomic**
-        """
-        try:
-            values = await self.brpop([source], timeout=timeout)
-
-            if not values:
-                return None
-        except TimeoutError:
-            return None
-        await self.lpush(destination, [values[1]])
-
-        return values[1]
-
-    @deprecated(version="3.1.0", reason=CLUSTER_CUSTOM_IMPL_DEPRECATION_NOTICE)
-    @redis_command(
-        CommandName.RPOPLPUSH,
-        version_deprecated="6.2.0",
-        group=CommandGroup.LIST,
-    )
-    async def rpoplpush(self, source: KeyT, destination: KeyT) -> Optional[AnyStr]:
-        """
-        RPOP a value off of the :paramref:`source` list and atomically LPUSH it
-        on to the :paramref:`destination` list.  Returns the value.
-
-        .. admonition:: Cluster note
-
-           Calls :meth:`rpop` then send the result into :meth:`lpush`
-
-           **Operation is no longer atomic**
-        """
-        value = await self.rpop(source)
-
-        if value:
-            await self.lpush(destination, [value])
-            return value
-        return None
+    pass
 
 
 RedisT = TypeVar("RedisT", bound="Redis[Any]")
@@ -1639,7 +1128,6 @@ class RedisCluster(
                 f"No way to dispatch this command:{args} to Redis Cluster. Missing key."
             )
         keys: Tuple[ValueT, ...] = KeySpec.extract_keys((command,) + args)
-
         if (
             command in {CommandName.EVAL, CommandName.EVALSHA, CommandName.FCALL}
             and not keys

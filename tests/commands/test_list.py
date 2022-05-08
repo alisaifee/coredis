@@ -84,17 +84,22 @@ class TestList:
         assert await client.brpop(["c{foo}"], timeout=1) == [_s("c{foo}"), _s("1")]
 
     async def test_brpoplpush(self, client, _s):
-        await client.rpush("a", ["1", "2"])
-        await client.rpush("b", ["3", "4"])
-        assert await client.brpoplpush("a", "b", timeout=1) == _s("2")
-        assert await client.brpoplpush("a", "b", timeout=1) == _s("1")
-        assert await client.brpoplpush("a", "b", timeout=1) is None
-        assert await client.lrange("a", 0, -1) == []
-        assert await client.lrange("b", 0, -1) == [_s("1"), _s("2"), _s("3"), _s("4")]
+        await client.rpush("a{foo}", ["1", "2"])
+        await client.rpush("b{foo}", ["3", "4"])
+        assert await client.brpoplpush("a{foo}", "b{foo}", timeout=1) == _s("2")
+        assert await client.brpoplpush("a{foo}", "b{foo}", timeout=1) == _s("1")
+        assert await client.brpoplpush("a{foo}", "b{foo}", timeout=1) is None
+        assert await client.lrange("a{foo}", 0, -1) == []
+        assert await client.lrange("b{foo}", 0, -1) == [
+            _s("1"),
+            _s("2"),
+            _s("3"),
+            _s("4"),
+        ]
 
     async def test_brpoplpush_empty_string(self, client, _s):
-        await client.rpush("a", [""])
-        assert await client.brpoplpush("a", "b", timeout=1) == _s("")
+        await client.rpush("a{foo}", [""])
+        assert await client.brpoplpush("a{foo}", "b{foo}", timeout=1) == _s("")
 
     async def test_lindex(self, client, _s):
         await client.rpush("a", ["1", "2", "3"])
@@ -188,11 +193,11 @@ class TestList:
         assert await client.rpop("a", 3) == [_s("3"), _s("2"), _s("1")]
 
     async def test_rpoplpush(self, client, _s):
-        await client.rpush("a", ["a1", "a2", "a3"])
-        await client.rpush("b", ["b1", "b2", "b3"])
-        assert await client.rpoplpush("a", "b") == _s("a3")
-        assert await client.lrange("a", 0, -1) == [_s("a1"), _s("a2")]
-        assert await client.lrange("b", 0, -1) == [
+        await client.rpush("a{foo}", ["a1", "a2", "a3"])
+        await client.rpush("b{foo}", ["b1", "b2", "b3"])
+        assert await client.rpoplpush("a{foo}", "b{foo}") == _s("a3")
+        assert await client.lrange("a{foo}", 0, -1) == [_s("a1"), _s("a2")]
+        assert await client.lrange("b{foo}", 0, -1) == [
             _s("a3"),
             _s("b1"),
             _s("b2"),

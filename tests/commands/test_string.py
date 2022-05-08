@@ -131,11 +131,11 @@ class TestString:
         assert match.length == 6
 
     async def test_mget(self, client, _s):
-        assert await client.mget(["a", "b"]) == (None, None)
-        await client.set("a", "1")
-        await client.set("b", "2")
-        await client.set("c", "3")
-        assert await client.mget(["a", "other", "b", "c"]) == (
+        assert await client.mget(["a{foo}", "b{foo}"]) == (None, None)
+        await client.set("a{foo}", "1")
+        await client.set("b{foo}", "2")
+        await client.set("c{foo}", "3")
+        assert await client.mget(["a{foo}", "other{foo}", "b{foo}", "c{foo}"]) == (
             _s("1"),
             None,
             _s("2"),
@@ -143,17 +143,17 @@ class TestString:
         )
 
     async def test_mset(self, client, _s):
-        d = {"a": "1", "b": "2", "c": "3"}
+        d = {"a{foo}": "1", "b{foo}": "2", "c{foo}": "3"}
         assert await client.mset(d)
 
-        assert await client.get("a") == _s("1")
-        assert await client.get("b") == _s("2")
-        assert await client.get("c") == _s("3")
+        assert await client.get("a{foo}") == _s("1")
+        assert await client.get("b{foo}") == _s("2")
+        assert await client.get("c{foo}") == _s("3")
 
     async def test_msetnx(self, client, _s):
-        d = {"a": "1", "b": "2", "c": "3"}
+        d = {"a{foo}": "1", "b{foo}": "2", "c{foo}": "3"}
         assert await client.msetnx(d)
-        d2 = {"a": "x", "d": "4"}
+        d2 = {"a{foo}": "x", "d{foo}": "4"}
         assert not await client.msetnx(d2)
 
         for k, v in d.items():

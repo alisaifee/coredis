@@ -27,6 +27,7 @@ class TestGeneric:
         await client.rpush("a", ["3", "2", "1", "4"])
         assert await client.sort("a", offset=1, count=2) == (_s("2"), _s("3"))
 
+    @pytest.mark.nocluster
     async def test_sort_by(self, client, _s):
         await client.set("score:1", "8")
         await client.set("score:2", "3")
@@ -34,6 +35,7 @@ class TestGeneric:
         await client.rpush("a", ["3", "2", "1"])
         assert await client.sort("a", by="score:*") == (_s("2"), _s("3"), _s("1"))
 
+    @pytest.mark.nocluster
     async def test_sort_get(self, client, _s):
         await client.set("user:1", "u1")
         await client.set("user:2", "u2")
@@ -41,6 +43,7 @@ class TestGeneric:
         await client.rpush("a", ["2", "3", "1"])
         assert await client.sort("a", ["user:*"]) == (_s("u1"), _s("u2"), _s("u3"))
 
+    @pytest.mark.nocluster
     async def test_sort_get_multi(self, client, _s):
         await client.set("user:1", "u1")
         await client.set("user:2", "u2")
@@ -55,6 +58,7 @@ class TestGeneric:
             _s("3"),
         )
 
+    @pytest.mark.nocluster
     async def test_sort_three_gets(self, client, _s):
         await client.set("user:1", "u1")
         await client.set("user:2", "u2")
@@ -94,14 +98,15 @@ class TestGeneric:
         )
 
     async def test_sort_store(self, client, _s):
-        await client.rpush("a", ["2", "3", "1"])
-        assert await client.sort("a", store=_s("sorted_values")) == 3
-        assert await client.lrange("sorted_values", 0, -1) == [
+        await client.rpush("a{foo}", ["2", "3", "1"])
+        assert await client.sort("a{foo}", store="sorted_values{foo}") == 3
+        assert await client.lrange("sorted_values{foo}", 0, -1) == [
             _s("1"),
             _s("2"),
             _s("3"),
         ]
 
+    @pytest.mark.nocluster
     async def test_sort_all_options(self, client, _s):
         await client.set("user:1:username", "zeus")
         await client.set("user:2:username", "titan")
@@ -146,11 +151,11 @@ class TestGeneric:
         assert await client.delete(["a"]) == 1
 
     async def test_delete_with_multiple_keys(self, client, _s):
-        await client.set("a", "foo")
-        await client.set("b", "bar")
-        assert await client.delete(["a", "b"]) == 2
-        assert await client.get("a") is None
-        assert await client.get("b") is None
+        await client.set("a{foo}", "foo")
+        await client.set("b{foo}", "bar")
+        assert await client.delete(["a{foo}", "b{foo}"]) == 2
+        assert await client.get("a{foo}") is None
+        assert await client.get("b{foo}") is None
 
     async def test_dump_and_restore_with_freq(self, client, _s):
         await client.config_set({"maxmemory-policy": "allkeys-lfu"})
@@ -359,17 +364,17 @@ class TestGeneric:
         assert await client.randomkey() in (_s("a"), _s("b"), _s("c"))
 
     async def test_rename(self, client, _s):
-        await client.set("a", "1")
-        assert await client.rename("a", "b")
-        assert await client.get("a") is None
-        assert await client.get("b") == _s("1")
+        await client.set("a{foo}", "1")
+        assert await client.rename("a{foo}", "b{foo}")
+        assert await client.get("a{foo}") is None
+        assert await client.get("b{foo}") == _s("1")
 
     async def test_renamenx(self, client, _s):
-        await client.set("a", "1")
-        await client.set("b", "2")
-        assert not await client.renamenx("a", "b")
-        assert await client.get("a") == _s("1")
-        assert await client.get("b") == _s("2")
+        await client.set("a{foo}", "1")
+        await client.set("b{foo}", "2")
+        assert not await client.renamenx("a{foo}", "b{foo}")
+        assert await client.get("a{foo}") == _s("1")
+        assert await client.get("b{foo}") == _s("2")
 
     async def test_type(self, client, _s):
         assert await client.type("a") == _s("none")
