@@ -268,8 +268,8 @@ Authentication & Authorization
 .. autoexception:: coredis.exceptions.AuthorizationError
    :no-inherited-members:
 
-Cluster
--------
+Cluster Errors
+--------------
 .. autoexception:: coredis.exceptions.AskError
    :no-inherited-members:
 .. autoexception:: coredis.exceptions.ClusterCrossSlotError
@@ -287,8 +287,8 @@ Cluster
 .. autoexception:: coredis.exceptions.RedisClusterException
    :no-inherited-members:
 
-Sentinel
---------
+Sentinel Errors
+---------------
 .. autoexception:: coredis.exceptions.PrimaryNotFoundError
    :no-inherited-members:
 .. autoexception:: coredis.exceptions.ReplicaNotFoundError

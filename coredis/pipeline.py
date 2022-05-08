@@ -297,6 +297,9 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
     def __len__(self) -> int:
         return len(self.command_stack)
 
+    def __bool__(self) -> bool:
+        return True
+
     async def reset_pipeline(self) -> None:
         self.command_stack.clear()
         self.scripts: Set[Script[AnyStr]] = set()
@@ -742,6 +745,9 @@ class ClusterPipelineImpl(AbstractRedis[AnyStr], metaclass=ClusterPipelineMeta):
 
     def __len__(self):
         return len(self.command_stack)
+
+    def __bool__(self) -> bool:
+        return True
 
     async def __aenter__(self) -> "ClusterPipelineImpl[AnyStr]":
         return self

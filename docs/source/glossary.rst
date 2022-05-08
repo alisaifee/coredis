@@ -6,6 +6,7 @@ Glossary
      A technique for improving performance by issuing multiple commands at once
      without waiting for the response for each individual command. For more details
      see the `Redis manual entry on pipelining <https://redis.io/docs/manual/pipelining/>`_.
+
    Redis
     `Redis <https://redis.io/docs/about/>`__ is an open source, in-memory data
     structure store used as a database, cache, message broker, and streaming engine.

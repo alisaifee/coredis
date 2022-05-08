@@ -93,6 +93,9 @@ class EncodingInsensitiveDict(ObjectProxy):  # type: ignore
             )
         return key in self.__wrapped__
 
+    def __repr__(self) -> str:
+        return repr(self.__wrapped__)
+
 
 def b(x: ValueT) -> bytes:
     if isinstance(x, bytes):

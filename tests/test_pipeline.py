@@ -30,7 +30,7 @@ class TestPipeline:
         async with await client.pipeline() as pipe:
             # Initially empty.
             assert len(pipe) == 0
-            assert not pipe
+            assert pipe
 
             # Fill 'er up!
             await pipe.set("a", "a1")
@@ -42,7 +42,7 @@ class TestPipeline:
             # Execute calls reset(), so empty once again.
             await pipe.execute()
             assert len(pipe) == 0
-            assert not pipe
+            assert pipe
 
     async def test_pipeline_no_transaction(self, client):
         async with await client.pipeline(transaction=False) as pipe:

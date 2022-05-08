@@ -40,41 +40,56 @@ from typing_extensions import (
     Deque,
     OrderedDict,
     ParamSpec,
+    Self,
     TypeAlias,
     TypedDict,
     TypeGuard,
 )
 
 _runtime_checks = False
+_beartype_found = False
 
-if os.environ.get("COREDIS_RUNTIME_CHECKS", "").lower() in ["1", "true", "t"]:
-    try:
-        import beartype
+try:
+    import beartype  # pyright: reportUnusedImport=false
 
-        if not TYPE_CHECKING:
-            from beartype.typing import (  # noqa: F811
-                AbstractSet,
-                Deque,
-                Dict,
-                Iterable,
-                Iterator,
-                List,
-                Mapping,
-                MutableMapping,
-                MutableSequence,
-                MutableSet,
-                OrderedDict,
-                Sequence,
-                Set,
-                Tuple,
-                TypedDict,
-            )
+    if not TYPE_CHECKING:
+        from beartype.typing import (  # noqa: F811
+            AbstractSet,
+            Deque,
+            Dict,
+            Iterable,
+            Iterator,
+            List,
+            Mapping,
+            MutableMapping,
+            MutableSequence,
+            MutableSet,
+            OrderedDict,
+            Sequence,
+            Set,
+            Tuple,
+            TypedDict,
+            ValuesView,
+        )
 
+    _beartype_found = True
+except ImportError:
+    pass
+
+if (
+    os.environ.get("COREDIS_RUNTIME_CHECKS", "").lower() in ["1", "true", "t"]
+    and not TYPE_CHECKING
+):
+    if _beartype_found:
         _runtime_checks = True
-    except ImportError:  # noqa
-        warnings.warn("Runtime checks were requested but could not import beartype")
+    else:
+        warnings.warn(
+            "Runtime checks were enabled via environment variable COREDIS_RUNTIME_CHECKS"
+            " but could not import beartype"
+        )
 
 RUNTIME_TYPECHECKS = _runtime_checks
+
 if TYPE_CHECKING:
     import coredis.exceptions
 
@@ -83,10 +98,15 @@ T_co = TypeVar("T_co", covariant=True)
 R = TypeVar("R")
 
 
+def safe_beartype(func: Callable[P, R]) -> Callable[P, R]:
+    if TYPE_CHECKING:
+        return func
+    return beartype.beartype(func) if _beartype_found else func
+
+
 def add_runtime_checks(func: Callable[P, R]) -> Callable[P, R]:
     if RUNTIME_TYPECHECKS and not TYPE_CHECKING:
-        return beartype.beartype(func)
-
+        return safe_beartype(func)
     return func
 
 
@@ -190,6 +210,7 @@ __all__ = [
     "ResponsePrimitive",
     "ResponseType",
     "Sequence",
+    "Self",
     "Set",
     "StringT",
     "Tuple",

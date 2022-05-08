@@ -384,17 +384,18 @@ class AbstractRedis(
 
     @versionadded(version="3.1.0")
     async def register_library(
-        self,
-        name: StringT,
-        code: StringT,
+        self, name: StringT, code: StringT, replace: bool = False
     ) -> Library[AnyStr]:
         """
         Register a new library
 
         :param name: name of the library
         :param code: raw code for the library
+        :param replace: Whether to replace the library when intializing. If ``False``
+         an exception will be raised if the library was already loaded in the target
+         redis instance.
         """
-        return await Library[AnyStr](self, name=name, code=code)
+        return await Library[AnyStr](self, name=name, code=code, replace=replace)
 
     @versionadded(version="3.1.0")
     async def get_library(self, name: StringT) -> Library[AnyStr]:

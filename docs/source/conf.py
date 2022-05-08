@@ -32,6 +32,7 @@ extensions = [
     "sphinx_copybutton",
     "sphinx_issues",
     "sphinx_paramlinks",
+    "sphinxcontrib.programoutput",
     "sphinxext.opengraph",
 ]
 
@@ -76,10 +77,13 @@ autodoc_type_aliases = {
     "ResponseType": "~coredis.typing.ResponseType",
     "Parameters": "~coredis.typing.Parameters",
 }
-autosectionlabel_maxdepth = 2
+autosectionlabel_maxdepth = 3
 autosectionlabel_prefix_document = True
 
-extlinks = {"pypi": ("https://pypi.org/project/%s", "%s")}
+extlinks = {
+    "pypi": ("https://pypi.org/project/%s", "%s"),
+    "redis-version": ("https://raw.githubusercontent.com/redis/redis/%s/00-RELEASENOTES", "Redis version: %s")
+}
 
 
 issues_github_path = "alisaifee/coredis"

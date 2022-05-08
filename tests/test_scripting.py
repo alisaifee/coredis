@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+from typing import AnyStr, Optional
+
 import pytest
+from beartype.roar import BeartypeCallHintParamViolation
 
 from coredis import PureToken
+from coredis.client import AbstractRedis
+from coredis.commands import Script
 from coredis.exceptions import NoScriptError, ResponseError
+from coredis.typing import KeyT, List, ValueT
 from tests.conftest import targets
 
 multiply_script = """
@@ -43,6 +49,11 @@ return cycles
 """
 
 
+@pytest.fixture(autouse=True)
+async def flush_scripts(client):
+    await client.script_flush()
+
+
 @pytest.mark.asyncio()
 @targets("redis_basic", "redis_basic_resp3")
 class TestScripting:
@@ -80,7 +91,6 @@ class TestScripting:
         assert await client.script_exists([sha]) == (False,)
 
     async def test_script_object(self, client):
-        await client.script_flush()
         await client.set("a", "2")
         multiply = client.register_script(multiply_script)
         precalculated_sha = multiply.sha
@@ -95,9 +105,7 @@ class TestScripting:
         # Test first evalsha block
         assert await multiply(keys=["a"], args=[3]) == 6
 
-    @pytest.mark.nocluster
     async def test_script_object_in_pipeline(self, client):
-        await client.script_flush()
         multiply = client.register_script(multiply_script)
         precalculated_sha = multiply.sha
         assert precalculated_sha
@@ -129,9 +137,7 @@ class TestScripting:
         )
         assert await client.script_exists([multiply.sha]) == (True,)
 
-    @pytest.mark.nocluster
     async def testscript_flush_eval_msgpack_pipeline_error_in_lua(self, client):
-        await client.script_flush()
         msgpack_hello = client.register_script(msgpack_hello_script)
         assert msgpack_hello.sha
 
@@ -153,7 +159,75 @@ class TestScripting:
             await pipe.execute()
         assert excinfo.type == ResponseError
 
-    @pytest.mark.nocluster
     async def test_script_kill_no_scripts(self, client):
         with pytest.raises(ResponseError):
             await client.script_kill()
+
+    async def test_wraps_function_no_keys(self, client):
+        no_key_script = client.register_script(
+            "return {tonumber(ARGV[1]), tonumber(ARGV[2]), tonumber(ARGV[3])}"
+        )
+
+        @no_key_script.wraps()
+        def synth_no_key(*args: int) -> List[int]:
+            ...
+
+        assert await synth_no_key(1, 2, 3) == [1, 2, 3]
+
+    async def test_wraps_function_key_only(self, client):
+        no_key_script = client.register_script("return redis.call('GET', KEYS[1])")
+        await client.set("co", "redis")
+
+        @no_key_script.wraps()
+        async def synth_key_only(key: KeyT) -> str:
+            ...
+
+        assert await synth_key_only(key="co") == "redis"
+
+    async def test_wraps_function_key_value(self, client):
+        script = client.register_script("return redis.call('GET', KEYS[1]) or ARGV[1]")
+
+        @script.wraps()
+        async def default_get(key: KeyT, default: ValueT) -> ValueT:
+            ...
+
+        await client.set("key", "redis")
+        await default_get("key", "coredis") == "redis"
+        await client.delete(["key"])
+        await default_get("key", "coredis") == "coredis"
+
+    async def test_wraps_function_key_value_type_checking(self, client):
+        script = client.register_script("return redis.call('GET', KEYS[1]) or ARGV[1]")
+
+        @script.wraps(runtime_checks=True)
+        async def default_get(key: KeyT, default: str) -> str:
+            ...
+
+        await client.set("key", "redis")
+        await default_get("key", "coredis") == "redis"
+        await client.delete(["key"])
+        await default_get("key", "coredis") == "coredis"
+        with pytest.raises(BeartypeCallHintParamViolation):
+            await default_get("key", 1) == "coredis"
+
+    async def test_wraps_class_method(self, client):
+        scrpt = Script(None, "return redis.call('GET', KEYS[1]) or ARGV[1]")
+
+        class Wrapper:
+            @classmethod
+            @scrpt.wraps(key_spec=["key"], client_arg="client", runtime_checks=True)
+            async def default_get(
+                cls,
+                client: Optional[AbstractRedis[AnyStr]],
+                key: str,
+                default: str = "coredis",
+            ) -> str:
+                ...
+
+        await client.set("key", "redis")
+        await Wrapper.default_get(client, "key", "coredis") == "redis"
+        await client.delete(["key"])
+        await Wrapper.default_get(client, "key", "coredis") == "coredis"
+        await Wrapper.default_get(client, "key") == "coredis"
+        with pytest.raises(BeartypeCallHintParamViolation):
+            await Wrapper.default_get(client, "key", 1) == "coredis"
