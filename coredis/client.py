@@ -1683,11 +1683,7 @@ class RedisCluster(
         """
         node_flag = self.nodes_flags.get(command)
 
-        if node_flag == NodeFlag.BLOCKED:
-            raise RedisClusterException(
-                f"Command: {command.decode('latin-1')} is blocked in redis cluster mode"
-            )
-        elif node_flag == NodeFlag.RANDOM:
+        if node_flag == NodeFlag.RANDOM:
             return [self.connection_pool.nodes.random_node()]
         elif node_flag == NodeFlag.PRIMARIES:
             return self.connection_pool.nodes.all_primaries()

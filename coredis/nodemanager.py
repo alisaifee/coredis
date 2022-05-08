@@ -34,7 +34,6 @@ class Node(TypedDict):
 
 
 class NodeFlag(enum.Enum):
-    BLOCKED = "blocked"
     ALL = "all"
     PRIMARIES = "primaries"
     REPLICAS = "replicas"
