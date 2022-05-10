@@ -86,7 +86,6 @@ def redis_command(
     deprecation_reason: Optional[str] = None,
     arguments: Optional[Dict[str, Dict[str, str]]] = None,
     readonly: bool = False,
-    # response_callback: Optional[Union[FunctionType, ResponseCallback]] = None,
     cluster: ClusterCommandConfig = ClusterCommandConfig(),
 ) -> Callable[
     [Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]
