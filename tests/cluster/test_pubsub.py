@@ -11,7 +11,7 @@ import pytest
 from coredis import Redis, RedisCluster
 
 
-async def wait_for_message(pubsub, timeout=0.5, ignore_subscribe_messages=False):
+async def wait_for_message(pubsub, timeout=1, ignore_subscribe_messages=False):
     now = time.time()
     timeout = now + timeout
 
