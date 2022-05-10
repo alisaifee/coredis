@@ -55,7 +55,7 @@ class Script(Generic[AnyStr]):
         :param keys: The keys this script will reference
         :param args: The arguments expected by the script
         """
-        from coredis.commands.pipeline import Pipeline
+        from coredis.pipeline import Pipeline
 
         if client is None:
             client = self.registered_client

@@ -17,7 +17,8 @@ from coredis.response._callbacks.sentinel import (
 )
 from coredis.typing import AnyStr, Dict, ResponseType, StringT, Tuple, Union, ValueT
 
-from . import CommandMixin, redis_command
+from . import CommandMixin
+from ._wrappers import redis_command
 from .constants import CommandName
 
 

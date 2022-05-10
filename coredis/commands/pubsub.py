@@ -7,7 +7,7 @@ from concurrent.futures import Future
 from typing import TYPE_CHECKING, Any, cast
 
 from coredis._utils import nativestr
-from coredis.commands import CommandName
+from coredis.commands.constants import CommandName
 from coredis.connection import BaseConnection
 from coredis.exceptions import ConnectionError, PubSubError, TimeoutError
 from coredis.response.types import PubSubMessage

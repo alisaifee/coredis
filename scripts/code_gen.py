@@ -20,7 +20,7 @@ from packaging import version
 
 import coredis
 import coredis.client
-import coredis.commands.pipeline
+import coredis.pipeline
 from coredis import NodeFlag, PureToken  # noqa
 from coredis.commands.constants import * # noqa
 from coredis.commands.monitor import Monitor
@@ -2231,7 +2231,7 @@ def implementation(ctx, command, group, expr):
             print(method_template.render(method=method_details))
 
 
-@click.option("--path", default="coredis/commands/pipeline.pyi")
+@click.option("--path", default="coredis/pipeline.pyi")
 @code_gen.command()
 def pipeline_stub(path):
     kls = coredis.client.AbstractRedis
@@ -2358,12 +2358,12 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         kls=kls,
         render_signature=render_signature,
         debug=True,
-        pipeline_kls=coredis.commands.pipeline.PipelineImpl,
-        cluster_kls=coredis.commands.pipeline.ClusterPipelineImpl,
+        pipeline_kls=coredis.pipeline.PipelineImpl,
+        cluster_kls=coredis.pipeline.ClusterPipelineImpl,
     )
     stub_template = env.from_string(stub_template_str)
     response = stub_template.render(commands=commands)
-    response = response.replace("coredis.commands.pipeline.", "")
+    response = response.replace("coredis.pipeline.", "")
     response = response.replace("coredis.commands.constants.", "")
     response = response.replace("coredis.nodemanager.", "")
     with open(path, "w") as file:

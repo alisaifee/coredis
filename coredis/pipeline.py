@@ -13,11 +13,10 @@ from typing import Any, cast
 
 from wrapt import ObjectProxy  # type: ignore
 
-from coredis import NodeFlag
 from coredis._utils import clusterdown_wrapper
 from coredis.client import AbstractRedis
-from coredis.commands import CommandName
 from coredis.commands._key_spec import KeySpec
+from coredis.commands.constants import CommandName
 from coredis.commands.script import Script
 from coredis.connection import BaseConnection, ClusterConnection
 from coredis.exceptions import (
@@ -34,7 +33,7 @@ from coredis.exceptions import (
     TryAgainError,
     WatchError,
 )
-from coredis.nodemanager import Node
+from coredis.nodemanager import Node, NodeFlag
 from coredis.pool import ClusterConnectionPool, ConnectionPool
 from coredis.response._callbacks import (
     AnyStrCallback,
@@ -1099,7 +1098,7 @@ class ClusterPipelineImpl(AbstractRedis[AnyStr], metaclass=ClusterPipelineMeta):
 
 class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     """
-    Class returned by :meth:`~coredis.Redis.pipeline`
+    Class returned by :meth:`coredis.Redis.pipeline`
 
     The class exposes the redis command methods available in
     :class:`~coredis.Redis`, however each of those methods returns
@@ -1171,7 +1170,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
 
 class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     """
-    Class returned by :meth:`~coredis.RedisCluster.pipeline`
+    Class returned by :meth:`coredis.RedisCluster.pipeline`
 
     The class exposes the redis command methods available in
     :class:`~coredis.Redis`, however each of those methods returns

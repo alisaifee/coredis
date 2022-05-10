@@ -183,12 +183,12 @@ Scripting
 
 coredis supports the ``EVAL``, ``EVALSHA``, and ``SCRIPT`` commands. However, there are
 a number of edge cases that make these commands tedious to use in real world
-scenarios. Therefore, coredis exposes a :class:`~coredis.commands.script.Script`
+scenarios. Therefore, coredis exposes a :class:`~coredis.commands.Script`
 class that makes scripting much easier to use.
 
 To create a Script instance, use the :meth:`~coredis.Redis.register_script` function on a client
 instance passing the LUA code as the first argument. :meth:`coredis.Redis.register_script` returns
-a :class:`~coredis.commands.script.Script` instance that you can use throughout your code.
+a :class:`~coredis.commands.Script` instance that you can use throughout your code.
 
 The following trivial LUA script accepts two parameters: the name of a key and
 a multiplier value. The script fetches the value stored in the key, multiplies
@@ -203,7 +203,7 @@ it with the multiplier value and returns the result.
     return value * ARGV[1]"""
     multiply = r.register_script(lua)
 
-`multiply` is now a :class:`~coredis.commands.script.Script` instance that is
+`multiply` is now a :class:`~coredis.commands.Script` instance that is
 invoked by calling it like a function. Script instances accept the following optional arguments:
 
 * **keys**: A list of key names that the script will access. This becomes the
@@ -260,7 +260,7 @@ Pipelines expose an API "similar" to :class:`~coredis.Redis` with the exception
 that calling any redis command returns the pipeline instance itself.
 
 To retrieve the actual results of each command queued in the pipeline you must call
-:meth:`~coredis.commands.pipeline.Pipeline.execute`
+:meth:`~coredis.pipeline.Pipeline.execute`
 
 For example:
 
@@ -389,8 +389,8 @@ which is much easier to read:
 PubSub
 ^^^^^^
 
-coredis includes a :class:`~coredis.commands.pubsub.PubSub` class
-that subscribes to channels and listens for new messages. Creating a :class:`~coredis.commands.pubsub.PubSub` instance
+coredis includes a :class:`~coredis.commands.PubSub` class
+that subscribes to channels and listens for new messages. Creating a :class:`~coredis.commands.PubSub` instance
 can be done through the :meth:`~coredis.Redis.pubsub` or :meth:`~coredis.RedisCluster.pubsub` methods.
 
 .. code-block:: python
@@ -398,7 +398,7 @@ can be done through the :meth:`~coredis.Redis.pubsub` or :meth:`~coredis.RedisCl
     r = coredis.Redis(...)
     p = r.pubsub()
 
-Once a :class:`~coredis.commands.pubsub.PubSub` instance is created,
+Once a :class:`~coredis.commands.PubSub` instance is created,
 channels and patterns can be subscribed to.
 
 .. code-block:: python
@@ -406,8 +406,8 @@ channels and patterns can be subscribed to.
     await p.subscribe('my-first-channel', 'my-second-channel', ...)
     await p.psubscribe('my-*', ...)
 
-The :class:`~coredis.commands.pubsub.PubSub` instance is now subscribed to those channels/patterns. The
-subscription confirmations can be seen by reading messages from the :class:`~coredis.commands.pubsub.PubSub`
+The :class:`~coredis.commands.PubSub` instance is now subscribed to those channels/patterns. The
+subscription confirmations can be seen by reading messages from the :class:`~coredis.commands.PubSub`
 instance.
 
 .. code-block:: python
@@ -419,7 +419,7 @@ instance.
     await p.get_message()
     # {'pattern': None, 'type': 'psubscribe', 'channel': 'my-*', 'data': 3L}
 
-Every message read from a :class:`~coredis.commands.pubsub.PubSub` instance
+Every message read from a :class:`~coredis.commands.PubSub` instance
 will be a dictionary with the following keys.
 
 type

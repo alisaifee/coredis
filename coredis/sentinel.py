@@ -9,7 +9,7 @@ from deprecated.sphinx import deprecated, versionadded
 
 from coredis import Redis
 from coredis._utils import nativestr
-from coredis.commands import CommandName
+from coredis.commands.constants import CommandName
 from coredis.connection import Connection, RedisSSLContext
 from coredis.exceptions import (
     ConnectionError,

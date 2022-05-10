@@ -12,8 +12,8 @@ from deprecated.sphinx import versionadded
 from packaging.version import Version
 
 from coredis._utils import clusterdown_wrapper, first_key, nativestr
-from coredis.commands import CommandName
 from coredis.commands._key_spec import KeySpec
+from coredis.commands.constants import CommandName
 from coredis.commands.core import CoreCommands
 from coredis.commands.function import Library
 from coredis.commands.monitor import Monitor
@@ -69,7 +69,7 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 if TYPE_CHECKING:
-    import coredis.commands.pipeline
+    import coredis.pipeline
 
 
 class ClusterMeta(ABCMeta):
@@ -784,7 +784,7 @@ class Redis(
         self,
         transaction: Optional[bool] = True,
         watches: Optional[Parameters[KeyT]] = None,
-    ) -> "coredis.commands.pipeline.Pipeline[AnyStr]":
+    ) -> "coredis.pipeline.Pipeline[AnyStr]":
         """
         Returns a new pipeline object that can queue multiple commands for
         later execution. :paramref:`transaction` indicates whether all commands
@@ -792,7 +792,7 @@ class Redis(
         atomic, pipelines are useful for reducing the back-and-forth overhead
         between the client and server.
         """
-        from coredis.commands.pipeline import Pipeline
+        from coredis.pipeline import Pipeline
 
         pipeline: Pipeline[AnyStr] = Pipeline[AnyStr].proxy(
             self.connection_pool, self.response_callbacks, transaction
@@ -803,7 +803,7 @@ class Redis(
     async def transaction(
         self,
         func: Callable[
-            ["coredis.commands.pipeline.Pipeline[AnyStr]"], Coroutine[Any, Any, None]
+            ["coredis.pipeline.Pipeline[AnyStr]"], Coroutine[Any, Any, None]
         ],
         *watches: KeyT,
         **kwargs: Any,
@@ -812,7 +812,7 @@ class Redis(
         Convenience method for executing the callable :paramref:`func` as a
         transaction while watching all keys specified in :paramref:`watches`.
         The :paramref:`func` callable should expect a single argument which is a
-        :class:`coredis.commands.pipeline.Pipeline` object retrieved by calling
+        :class:`coredis.pipeline.Pipeline` object retrieved by calling
         :meth:`~coredis.Redis.pipeline`.
         """
         value_from_callable = kwargs.pop("value_from_callable", False)
@@ -1403,7 +1403,7 @@ class RedisCluster(
         self,
         transaction: Optional[bool] = None,
         watches: Optional[Parameters[StringT]] = None,
-    ) -> "coredis.commands.pipeline.ClusterPipeline[AnyStr]":
+    ) -> "coredis.pipeline.ClusterPipeline[AnyStr]":
         """
         Pipelines in cluster mode only provide a subset of the functionality
         of pipelines in standalone mode.
@@ -1417,7 +1417,7 @@ class RedisCluster(
         """
         await self.connection_pool.initialize()
 
-        from coredis.commands.pipeline import ClusterPipeline
+        from coredis.pipeline import ClusterPipeline
 
         return ClusterPipeline[AnyStr].proxy(
             connection_pool=self.connection_pool,
@@ -1431,7 +1431,7 @@ class RedisCluster(
     async def transaction(
         self,
         func: Callable[
-            ["coredis.commands.pipeline.ClusterPipeline[AnyStr]"],
+            ["coredis.pipeline.ClusterPipeline[AnyStr]"],
             Coroutine[Any, Any, Any],
         ],
         *watches: StringT,
@@ -1441,7 +1441,7 @@ class RedisCluster(
         Convenience method for executing the callable :paramref:`func` as a
         transaction while watching all keys specified in :paramref:`watches`.
         The :paramref:`func` callable should expect a single argument which is a
-        :class:`~coredis.commands.pipeline.ClusterPipeline` instance retrieved
+        :class:`~coredis.pipeline.ClusterPipeline` instance retrieved
         by calling :meth:`~coredis.RedisCluster.pipeline`
 
         .. warning:: Cluster transactions can only be run with commands that

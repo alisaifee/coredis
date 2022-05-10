@@ -2,6 +2,10 @@ Glossary
 ========
 .. glossary::
 
+   Pipelining
+     A technique for improving performance by issuing multiple commands at once
+     without waiting for the response for each individual command. For more details
+     see the `Redis manual entry on pipelining <https://redis.io/docs/manual/pipelining/>`_.
    Redis
     `Redis <https://redis.io/docs/about/>`__ is an open source, in-memory data
     structure store used as a database, cache, message broker, and streaming engine.
@@ -16,3 +20,8 @@ Glossary
      RESP3 extends :term:`RESP` to include support for primitives such as double & boolean
      and for container structures such as maps & sets. For more details see the
      `RESP3 Specification <https://github.com/antirez/RESP3/blob/master/spec.md>`__
+
+   Transactions
+     Redis Transactions allow the execution of multiple commands as a single
+     isolated operation. For more details refer to the
+     `Redis manual entry on transactions <https://redis.io/docs/manual/transactions/>`_.

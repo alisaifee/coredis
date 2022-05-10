@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import pytest
 
-from coredis.commands.pipeline import ClusterPipelineImpl
 from coredis.exceptions import (
     ClusterCrossSlotError,
     ClusterTransactionError,
     RedisClusterException,
     ResponseError,
 )
+from coredis.pipeline import ClusterPipelineImpl
 from tests.conftest import targets
 
 

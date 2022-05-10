@@ -29,6 +29,18 @@ Sentinel
    :class-doc-from: both
    :inherited-members:
 
+Pipeline Support
+^^^^^^^^^^^^^^^^
+:term:`Pipelining` and :term:`Transactions` are exposed by the following classes
+that are returned by :meth:`coredis.Redis.pipeline` and :meth:`coredis.RedisCluster.pipeline`.
+For examples refer to :ref:`api_reference:pipelines`.
+
+.. autoclass:: coredis.pipeline.Pipeline
+   :class-doc-from: both
+
+.. autoclass:: coredis.pipeline.ClusterPipeline
+   :class-doc-from: both
+
 Command Wrappers
 ^^^^^^^^^^^^^^^^
 
@@ -39,36 +51,34 @@ simplify operations.
 
 .. autosummary::
 
-   ~coredis.commands.bitfield.BitFieldOperation
-   ~coredis.commands.pubsub.PubSub
-   ~coredis.commands.pubsub.ClusterPubSub
-   ~coredis.commands.script.Script
-   ~coredis.commands.function.Library
-   ~coredis.commands.function.Function
-   ~coredis.commands.pipeline.Pipeline
-   ~coredis.commands.pipeline.ClusterPipeline
-   ~coredis.commands.monitor.Monitor
+   ~coredis.commands.BitFieldOperation
+   ~coredis.commands.PubSub
+   ~coredis.commands.ClusterPubSub
+   ~coredis.commands.Script
+   ~coredis.commands.Library
+   ~coredis.commands.Function
+   ~coredis.commands.Monitor
 
 BitField Operations
 -------------------
 
-.. autoclass:: coredis.commands.bitfield.BitFieldOperation
+.. autoclass:: coredis.commands.BitFieldOperation
    :no-inherited-members:
    :class-doc-from: both
 
 PubSub
 ------
-.. autoclass:: coredis.commands.pubsub.PubSub
+.. autoclass:: coredis.commands.PubSub
    :no-inherited-members:
    :class-doc-from: both
 
-.. autoclass:: coredis.commands.pubsub.ClusterPubSub
+.. autoclass:: coredis.commands.ClusterPubSub
    :no-inherited-members:
    :class-doc-from: both
 
 Scripting
 ---------
-.. autoclass:: coredis.commands.script.Script
+.. autoclass:: coredis.commands.Script
    :no-inherited-members:
    :class-doc-from: both
    :special-members: __call__
@@ -76,27 +86,16 @@ Scripting
 
 Functions
 ---------
-.. autoclass:: coredis.commands.function.Library
+.. autoclass:: coredis.commands.Library
    :class-doc-from: both
 
-.. autoclass:: coredis.commands.function.Function
+.. autoclass:: coredis.commands.Function
    :class-doc-from: both
    :special-members: __call__
 
-
-Pipelines
----------
-
-.. autoclass:: coredis.commands.pipeline.Pipeline
-   :class-doc-from: both
-
-.. autoclass:: coredis.commands.pipeline.ClusterPipeline
-   :class-doc-from: both
-
-
 Monitor
 -------
-.. autoclass:: coredis.commands.monitor.Monitor
+.. autoclass:: coredis.commands.Monitor
 
 Connection Classes
 ^^^^^^^^^^^^^^^^^^

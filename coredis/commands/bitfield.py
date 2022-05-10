@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 from typing import Union
 
-from coredis.commands import CommandName
+from coredis.commands.constants import CommandName
 from coredis.exceptions import ReadOnlyError
 from coredis.protocols import AbstractExecutor
 from coredis.tokens import PrefixToken, PureToken

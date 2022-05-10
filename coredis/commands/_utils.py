@@ -2,8 +2,17 @@ from __future__ import annotations
 
 import datetime
 import time
+import warnings
+from typing import TYPE_CHECKING, Optional
 
+from packaging import version
+
+from coredis.commands.constants import CommandName
+from coredis.exceptions import CommandNotSupportedError
 from coredis.typing import Union
+
+if TYPE_CHECKING:
+    import coredis.client
 
 
 def normalized_seconds(value: Union[int, datetime.timedelta]) -> int:
@@ -35,3 +44,35 @@ def normalized_time_milliseconds(value: Union[int, datetime.datetime]) -> int:
         value = int(time.mktime(value.timetuple())) * 1000 + ms
 
     return value
+
+
+def check_version(
+    instance: coredis.client.RedisConnection,
+    command: bytes,
+    function_name: str,
+    min_version: Optional[version.Version],
+    deprecated_version: Optional[version.Version],
+    deprecation_reason: Optional[str],
+) -> None:
+    if not any([min_version, deprecated_version]):
+        return
+
+    if getattr(instance, "verify_version", False):
+        server_version = getattr(instance, "server_version", None)
+        if not server_version:
+            return
+        if min_version and server_version < min_version:
+            raise CommandNotSupportedError(
+                command.decode("latin-1"), str(instance.server_version)
+            )
+        if deprecated_version and server_version >= deprecated_version:
+            if deprecation_reason:
+                warnings.warn(deprecation_reason.strip())
+            else:
+                warnings.warn(
+                    f"{function_name}() is deprecated since redis version {deprecated_version}. "
+                )
+
+
+def redis_command_link(command: CommandName) -> str:
+    return f'`{str(command)} <https://redis.io/commands/{str(command).lower().replace(" ", "-")}>`_'

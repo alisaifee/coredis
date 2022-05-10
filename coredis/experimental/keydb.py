@@ -8,8 +8,8 @@ from packaging import version
 
 from coredis._utils import CaseAndEncodingInsensitiveEnum
 from coredis.client import Redis
-from coredis.commands import ClusterCommandConfig, CommandDetails, check_version
-from coredis.commands._utils import normalized_time_seconds
+from coredis.commands._utils import check_version, normalized_time_seconds
+from coredis.commands._wrappers import ClusterCommandConfig, CommandDetails
 from coredis.commands.constants import CommandGroup
 from coredis.response._callbacks import BoolCallback
 from coredis.typing import (

@@ -7,13 +7,7 @@ from typing import overload
 from deprecated.sphinx import versionadded
 
 from coredis._utils import defaultvalue, dict_to_flat_list, tuples_to_flat_list
-from coredis.commands import (
-    ClusterCommandConfig,
-    CommandGroup,
-    CommandMixin,
-    CommandName,
-    redis_command,
-)
+from coredis.commands import CommandMixin
 from coredis.commands._utils import (
     normalized_milliseconds,
     normalized_seconds,
@@ -24,7 +18,9 @@ from coredis.commands._validators import (
     mutually_exclusive_parameters,
     mutually_inclusive_parameters,
 )
+from coredis.commands._wrappers import ClusterCommandConfig, redis_command
 from coredis.commands.bitfield import BitFieldOperation
+from coredis.commands.constants import CommandGroup, CommandName
 from coredis.exceptions import AuthorizationError, DataError, RedisError
 from coredis.nodemanager import NodeFlag
 from coredis.response._callbacks import (

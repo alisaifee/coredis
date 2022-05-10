@@ -10,8 +10,8 @@ from types import SimpleNamespace, TracebackType
 from typing import TYPE_CHECKING, Any, cast
 
 from coredis._utils import nativestr
-from coredis.commands import CommandName
-from coredis.commands.script import Script
+from coredis.commands import Script
+from coredis.commands.constants import CommandName
 from coredis.connection import ClusterConnection
 from coredis.exceptions import LockError, WatchError
 from coredis.pool import ClusterConnectionPool
@@ -20,7 +20,7 @@ from coredis.typing import AnyStr, Generic, Optional, StringT, Type, Union
 
 if TYPE_CHECKING:
     import coredis.client
-    import coredis.commands.pipeline
+    import coredis.pipeline
 
 
 class Lock(Generic[AnyStr]):
@@ -185,7 +185,7 @@ class Lock(Generic[AnyStr]):
         await self.do_release(expected_token)
 
     async def execute_release(
-        self, token: StringT, pipe: coredis.commands.pipeline.Pipeline[AnyStr]
+        self, token: StringT, pipe: coredis.pipeline.Pipeline[AnyStr]
     ) -> None:
         lock_value = await pipe.get(self.name)
         if nativestr(lock_value) != nativestr(token):
