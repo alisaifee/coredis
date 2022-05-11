@@ -67,10 +67,11 @@ def check_version(
             )
         if deprecated_version and server_version >= deprecated_version:
             if deprecation_reason:
-                warnings.warn(deprecation_reason.strip())
+                warnings.warn(deprecation_reason.strip(), stacklevel=3)
             else:
                 warnings.warn(
-                    f"{function_name}() is deprecated since redis version {deprecated_version}. "
+                    f"{function_name}() is deprecated since redis version {deprecated_version}. ",
+                    stacklevel=3
                 )
 
 
