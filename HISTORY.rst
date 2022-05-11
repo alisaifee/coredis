@@ -6,6 +6,7 @@ Changelog
 v3.5.0
 ------
 Release Date: 2022-05-10
+
 * Features
 
   * Added ``Library.wraps`` and ``Script.wraps`` decorators
