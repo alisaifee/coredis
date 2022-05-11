@@ -73,7 +73,8 @@ if TYPE_CHECKING:
 
 
 class ClusterMeta(ABCMeta):
-    NODES_FLAGS: Dict[str, NodeFlag]
+    ROUTING_FLAGS: Dict[bytes, NodeFlag]
+    SPLIT_FLAGS: Dict[bytes, NodeFlag]
     RESULT_CALLBACKS: Dict[str, Callable[..., ResponseType]]
     NODE_FLAG_DOC_MAPPING = {
         NodeFlag.PRIMARIES: "all primaries",
@@ -92,8 +93,8 @@ class ClusterMeta(ABCMeta):
         for name, method in methods.items():
             doc_addition = ""
             if cmd := getattr(method, "__coredis_command", None):
-                if cmd.cluster.flag:
-                    kls.NODES_FLAGS[cmd.command] = cmd.cluster.flag
+                if cmd.cluster.route:
+                    kls.ROUTING_FLAGS[cmd.command] = cmd.cluster.route
                     aggregate_note = ""
                     if cmd.cluster.multi_node:
                         if cmd.cluster.combine:
@@ -105,8 +106,17 @@ class ClusterMeta(ABCMeta):
                     doc_addition = f"""
 .. admonition:: Cluster note
 
-   The command will be run on **{cls.NODE_FLAG_DOC_MAPPING[cmd.cluster.flag]}** {aggregate_note}
+   The command will be run on **{cls.NODE_FLAG_DOC_MAPPING[cmd.cluster.route]}** {aggregate_note}
                     """
+                elif cmd.cluster.split and cmd.cluster.combine:
+                    kls.SPLIT_FLAGS[cmd.command] = cmd.cluster.split
+                    doc_addition = f"""
+.. admonition:: Cluster note
+
+   If :paramref:`RedisCluster.non_atomic_cross_slot` is set the
+   command will be run on **{cls.NODE_FLAG_DOC_MAPPING[cmd.cluster.split]}**
+   by distributing the keys to the appropriate nodes and the results aggregated
+                """
                 if cmd.cluster.multi_node:
                     kls.RESULT_CALLBACKS[cmd.command] = cmd.cluster.combine or (
                         lambda r, **_: r
@@ -849,7 +859,8 @@ class RedisCluster(
     """
 
     RedisClusterRequestTTL = 16
-    NODES_FLAGS: Dict[bytes, NodeFlag] = {}
+    ROUTING_FLAGS: Dict[bytes, NodeFlag] = {}
+    SPLIT_FLAGS: Dict[bytes, NodeFlag] = {}
     RESULT_CALLBACKS: Dict[bytes, Callable[..., Any]] = {}
 
     connection_pool: ClusterConnectionPool
@@ -871,6 +882,7 @@ class RedisCluster(
         connection_pool: Optional[ClusterConnectionPool] = ...,
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
+        non_atomic_cross_slot: bool = ...,
         **kwargs: Any,
     ):
         ...
@@ -892,6 +904,7 @@ class RedisCluster(
         connection_pool: Optional[ClusterConnectionPool] = ...,
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
+        non_atomic_cross_slot: bool = ...,
         **kwargs: Any,
     ):
         ...
@@ -912,10 +925,13 @@ class RedisCluster(
         connection_pool: Optional[ClusterConnectionPool] = None,
         protocol_version: Literal[2, 3] = 2,
         verify_version: bool = True,
+        non_atomic_cross_slot: bool = False,
         **kwargs: Any,
     ):
         """
 
+        .. versionadded:: 3.6.0
+           The :paramref:`non_atomic_cross_slot` parameter was added
         .. versionchanged:: 3.5.0
            The :paramref:`verify_version` parameter now defaults to ``True``
 
@@ -948,6 +964,10 @@ class RedisCluster(
          version introduced before executing a command and raises a
          :exc:`CommandNotSupportedError` error if the required version is higher than
          the reported server version
+        :param non_atomic_cross_slot: If ``True`` certain commands that can operate
+         on multiple keys (cross slot) will be split across the relevant nodes by
+         mapping the keys to the appropriate slot and the result merged before being
+         returned.
         """
 
         if "db" in kwargs:
@@ -994,11 +1014,13 @@ class RedisCluster(
         )
 
         self.refresh_table_asap: bool = False
-        self.nodes_flags: Dict[bytes, NodeFlag] = self.__class__.NODES_FLAGS.copy()
+        self.route_flags: Dict[bytes, NodeFlag] = self.__class__.ROUTING_FLAGS.copy()
+        self.split_flags: Dict[bytes, NodeFlag] = self.__class__.SPLIT_FLAGS.copy()
         self.response_callbacks: Dict[bytes, Callable[..., Any]] = {}
         self.result_callbacks: Dict[
             bytes, Callable[..., Any]
         ] = self.__class__.RESULT_CALLBACKS.copy()
+        self.non_atomic_cross_slot = non_atomic_cross_slot
 
     @classmethod
     @overload
@@ -1163,7 +1185,10 @@ class RedisCluster(
         return slots.pop()
 
     def _merge_result(
-        self, command: bytes, res: Dict[str, R], **kwargs: Optional[ValueT]
+        self,
+        command: bytes,
+        res: Dict[str, R],
+        **kwargs: Optional[ValueT],
     ) -> R:
         """
         `res` is a dict with the following structure Dict(NodeName, CommandResult)
@@ -1185,7 +1210,10 @@ class RedisCluster(
         """
         TODO: document
         """
-        node_flag = self.nodes_flags.get(command)
+        node_flag = self.route_flags.get(command)
+
+        if command in self.split_flags and self.non_atomic_cross_slot:
+            node_flag = self.split_flags[command]
 
         if node_flag == NodeFlag.RANDOM:
             return [self.connection_pool.nodes.random_node()]
@@ -1330,13 +1358,36 @@ class RedisCluster(
         **options: Optional[ValueT],
     ) -> R:
         res: Dict[str, R] = {}
-
+        node_arg_mapping: Dict[str, Tuple[ValueT, ...]] = {}
+        if command in self.split_flags and self.non_atomic_cross_slot:
+            keys = KeySpec.extract_keys((command,) + args)
+            if keys:
+                key_start: int = args.index(keys[0])
+                key_end: int = args.index(keys[-1])
+                if not args[key_start : 1 + key_end] == keys:
+                    raise RuntimeError(
+                        f"Unable to map {command.decode('latin-1')} by keys {keys}"
+                    )
+                for node_name, node_keys in self.connection_pool.nodes.keys_to_nodes(
+                    *keys
+                ).items():
+                    node_arg_mapping[node_name] = (
+                        *args[:key_start],
+                        *node_keys,  # type: ignore
+                        *args[1 + key_end :],
+                    )
         for node in nodes:
             connection = self.connection_pool.get_connection_by_node(node)
 
             # copy from redis-py
             try:
-                await connection.send_command(command, *args)
+                if node["name"] in node_arg_mapping:
+                    await connection.send_command(
+                        command, *node_arg_mapping[node["name"]]
+                    )
+                else:
+                    node_arg_mapping[node["name"]] = args
+                    await connection.send_command(command, *args)
                 res[node["name"]] = callback(
                     await self.parse_response(connection, decode=options.get("decode")),
                     version=self.protocol_version,

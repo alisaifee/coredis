@@ -32,6 +32,7 @@ from coredis.response._callbacks import (
     ClusterBoolCombine,
     ClusterEnsureConsistent,
     ClusterMergeSets,
+    ClusterSum,
     DateTimeCallback,
     DictCallback,
     FloatCallback,
@@ -785,7 +786,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.CLUSTER_COUNTKEYSINSLOT,
         group=CommandGroup.CLUSTER,
-        cluster=ClusterCommandConfig(flag=NodeFlag.SLOT_ID),
+        cluster=ClusterCommandConfig(route=NodeFlag.SLOT_ID),
     )
     async def cluster_countkeysinslot(self, slot: int) -> int:
         """
@@ -899,7 +900,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.CLUSTER_GETKEYSINSLOT,
         group=CommandGroup.CLUSTER,
-        cluster=ClusterCommandConfig(flag=NodeFlag.SLOT_ID),
+        cluster=ClusterCommandConfig(route=NodeFlag.SLOT_ID),
     )
     async def cluster_getkeysinslot(self, slot: int, count: int) -> Tuple[AnyStr, ...]:
         """
@@ -920,7 +921,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.CLUSTER_INFO,
         group=CommandGroup.CLUSTER,
-        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def cluster_info(self) -> Dict[str, str]:
         """
@@ -934,7 +935,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.CLUSTER_KEYSLOT,
         group=CommandGroup.CLUSTER,
-        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def cluster_keyslot(self, key: KeyT) -> int:
         """
@@ -967,7 +968,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.CLUSTER_MEET,
         group=CommandGroup.CLUSTER,
-        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def cluster_meet(self, ip: StringT, port: int) -> bool:
         """
@@ -992,7 +993,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.CLUSTER_NODES,
         group=CommandGroup.CLUSTER,
-        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def cluster_nodes(self) -> List[ClusterNodeDetail]:
         """
@@ -1042,7 +1043,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CLUSTER_SAVECONFIG,
         group=CommandGroup.CLUSTER,
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.ALL,
+            route=NodeFlag.ALL,
             combine=ClusterBoolCombine(),
         ),
     )
@@ -1108,7 +1109,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.CLUSTER_REPLICAS,
         group=CommandGroup.CLUSTER,
-        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def cluster_replicas(self, node_id: StringT) -> List[ClusterNodeDetail]:
         """
@@ -1124,7 +1125,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CLUSTER_SHARDS,
         version_introduced="7.0.0",
         group=CommandGroup.CLUSTER,
-        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def cluster_shards(
         self,
@@ -1141,7 +1142,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_deprecated="5.0.0",
         deprecation_reason="Use :meth:`cluster_replicas`",
         group=CommandGroup.CLUSTER,
-        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def cluster_slaves(self, node_id: StringT) -> List[ClusterNodeDetail]:
         """
@@ -1155,7 +1156,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.CLUSTER_SLOTS,
         group=CommandGroup.CLUSTER,
-        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
         version_deprecated="7.0.0",
         deprecation_reason="Use :meth:`cluster_shards`",
     )
@@ -1220,7 +1221,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ECHO,
         group=CommandGroup.CONNECTION,
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.ALL,
+            route=NodeFlag.ALL,
             combine=ClusterEnsureConsistent(),
         ),
     )
@@ -1272,7 +1273,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.PING,
         group=CommandGroup.CONNECTION,
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.ALL,
+            route=NodeFlag.ALL,
             combine=ClusterEnsureConsistent(),
         ),
     )
@@ -2277,7 +2278,11 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.COPY, source, destination, *pieces, callback=BoolCallback()
         )
 
-    @redis_command(CommandName.DEL, group=CommandGroup.GENERIC)
+    @redis_command(
+        CommandName.DEL,
+        group=CommandGroup.GENERIC,
+        cluster=ClusterCommandConfig(split=NodeFlag.PRIMARIES, combine=ClusterSum()),
+    )
     async def delete(self, keys: Parameters[KeyT]) -> int:
         """
         Delete one or more keys specified by ``keys``
@@ -2305,6 +2310,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.EXISTS,
         readonly=True,
         group=CommandGroup.GENERIC,
+        cluster=ClusterCommandConfig(split=NodeFlag.PRIMARIES, combine=ClusterSum()),
     )
     async def exists(self, keys: Parameters[KeyT]) -> int:
         """
@@ -2407,7 +2413,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         readonly=True,
         group=CommandGroup.GENERIC,
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.PRIMARIES,
+            route=NodeFlag.PRIMARIES,
             combine=ClusterMergeSets(),
         ),
     )
@@ -2660,7 +2666,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.RANDOMKEY,
         readonly=True,
         group=CommandGroup.GENERIC,
-        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def randomkey(self) -> Optional[AnyStr]:
         """
@@ -2839,7 +2845,11 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.SORT_RO, *pieces, callback=TupleCallback[AnyStr]()
         )
 
-    @redis_command(CommandName.TOUCH, group=CommandGroup.GENERIC)
+    @redis_command(
+        CommandName.TOUCH,
+        group=CommandGroup.GENERIC,
+        cluster=ClusterCommandConfig(split=NodeFlag.PRIMARIES, combine=ClusterSum()),
+    )
     async def touch(self, keys: Parameters[KeyT]) -> int:
         """
         Alters the last access time of a key(s).
@@ -2874,7 +2884,11 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.TYPE, key, callback=OptionalAnyStrCallback[AnyStr]()
         )
 
-    @redis_command(CommandName.UNLINK, group=CommandGroup.GENERIC)
+    @redis_command(
+        CommandName.UNLINK,
+        group=CommandGroup.GENERIC,
+        cluster=ClusterCommandConfig(split=NodeFlag.PRIMARIES, combine=ClusterSum()),
+    )
     async def unlink(self, keys: Parameters[KeyT]) -> int:
         """
         Delete a key asynchronously in another thread.
@@ -2906,7 +2920,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         readonly=True,
         group=CommandGroup.GENERIC,
         arguments={"type_": {"version_introduced": "6.0.0"}},
-        cluster=ClusterCommandConfig(flag=NodeFlag.PRIMARIES),
+        cluster=ClusterCommandConfig(route=NodeFlag.PRIMARIES),
     )
     async def scan(
         self,
@@ -5667,7 +5681,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.SCRIPT_DEBUG,
         group=CommandGroup.SCRIPTING,
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.PRIMARIES, combine=ClusterBoolCombine()
+            route=NodeFlag.PRIMARIES, combine=ClusterBoolCombine()
         ),
     )
     async def script_debug(
@@ -5684,7 +5698,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.SCRIPT_EXISTS,
         group=CommandGroup.SCRIPTING,
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.PRIMARIES,
+            route=NodeFlag.PRIMARIES,
             combine=ClusterAlignedBoolsCombine(),
         ),
     )
@@ -5706,7 +5720,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SCRIPTING,
         arguments={"sync_type": {"version_introduced": "6.2.0"}},
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.PRIMARIES,
+            route=NodeFlag.PRIMARIES,
             combine=ClusterBoolCombine(),
         ),
     )
@@ -5743,7 +5757,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.SCRIPT_LOAD,
         group=CommandGroup.SCRIPTING,
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.PRIMARIES,
+            route=NodeFlag.PRIMARIES,
             combine=ClusterEnsureConsistent(),
         ),
     )
@@ -5808,7 +5822,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="7.0.0",
         group=CommandGroup.SCRIPTING,
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.PRIMARIES,
+            route=NodeFlag.PRIMARIES,
             combine=ClusterEnsureConsistent(),
         ),
     )
@@ -5826,7 +5840,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.FUNCTION_DUMP,
         version_introduced="7.0.0",
         group=CommandGroup.SCRIPTING,
-        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def function_dump(self) -> bytes:
         """
@@ -5843,7 +5857,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="7.0.0",
         group=CommandGroup.SCRIPTING,
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.PRIMARIES,
+            route=NodeFlag.PRIMARIES,
             combine=ClusterEnsureConsistent(),
         ),
     )
@@ -5882,7 +5896,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.FUNCTION_LIST,
         version_introduced="7.0.0",
         group=CommandGroup.SCRIPTING,
-        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def function_list(
         self, libraryname: Optional[StringT] = None, withcode: Optional[bool] = None
@@ -5909,7 +5923,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="7.0.0",
         group=CommandGroup.SCRIPTING,
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.PRIMARIES,
+            route=NodeFlag.PRIMARIES,
             combine=ClusterEnsureConsistent(),
         ),
     )
@@ -5938,7 +5952,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="7.0.0",
         group=CommandGroup.SCRIPTING,
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.PRIMARIES,
+            route=NodeFlag.PRIMARIES,
             combine=ClusterEnsureConsistent(),
         ),
     )
@@ -5967,7 +5981,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="7.0.0",
         group=CommandGroup.SCRIPTING,
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.RANDOM,
+            route=NodeFlag.RANDOM,
         ),
     )
     async def function_stats(
@@ -6420,7 +6434,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.FLUSHALL,
         group=CommandGroup.SERVER,
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.PRIMARIES,
+            route=NodeFlag.PRIMARIES,
             combine=ClusterEnsureConsistent(),
         ),
     )
@@ -6441,7 +6455,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.FLUSHDB,
         group=CommandGroup.SERVER,
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.PRIMARIES,
+            route=NodeFlag.PRIMARIES,
             combine=ClusterEnsureConsistent(),
         ),
     )
@@ -6852,7 +6866,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ACL_CAT,
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def acl_cat(
         self, categoryname: Optional[StringT] = None
@@ -6881,7 +6895,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.ALL,
+            route=NodeFlag.ALL,
             combine=ClusterEnsureConsistent(),
         ),
     )
@@ -6905,7 +6919,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="7.0.0",
         group=CommandGroup.SERVER,
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.RANDOM,
+            route=NodeFlag.RANDOM,
         ),
     )
     async def acl_dryrun(
@@ -6930,7 +6944,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ACL_GENPASS,
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def acl_genpass(self, bits: Optional[int] = None) -> AnyStr:
         """
@@ -6956,7 +6970,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.RANDOM,
+            route=NodeFlag.RANDOM,
         ),
     )
     async def acl_getuser(self, username: StringT) -> Dict[AnyStr, List[AnyStr]]:
@@ -6975,7 +6989,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ACL_LIST,
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def acl_list(self) -> Tuple[AnyStr, ...]:
         """
@@ -7071,7 +7085,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.ALL,
+            route=NodeFlag.ALL,
             combine=ClusterEnsureConsistent(),
         ),
     )
@@ -7100,7 +7114,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ACL_USERS,
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def acl_users(self) -> Tuple[AnyStr, ...]:
         """
@@ -7116,7 +7130,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ACL_WHOAMI,
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def acl_whoami(self) -> AnyStr:
         """
@@ -7168,7 +7182,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.COMMAND_DOCS,
         version_introduced="7.0.0",
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def command_docs(
         self, *command_names: StringT
@@ -7187,7 +7201,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.COMMAND_GETKEYS,
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def command_getkeys(
         self, command: StringT, arguments: Parameters[ValueT]
@@ -7210,7 +7224,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.COMMAND_GETKEYSANDFLAGS,
         version_introduced="7.0.0",
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def command_getkeysandflags(
         self, command: StringT, arguments: Parameters[ValueT]
@@ -7297,7 +7311,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CONFIG_SET,
         group=CommandGroup.SERVER,
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.ALL,
+            route=NodeFlag.ALL,
             combine=ClusterBoolCombine(),
         ),
     )
@@ -7314,7 +7328,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CONFIG_RESETSTAT,
         group=CommandGroup.SERVER,
         cluster=ClusterCommandConfig(
-            flag=NodeFlag.ALL,
+            route=NodeFlag.ALL,
             combine=ClusterBoolCombine(),
         ),
     )

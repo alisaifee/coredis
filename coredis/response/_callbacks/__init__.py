@@ -136,11 +136,23 @@ class ClusterEnsureConsistent(ClusterMultiNodeCallback[Optional[R]]):
         return None
 
 
+class ClusterConcatTuples(ClusterMultiNodeCallback[Tuple[R, ...]]):
+    def combine(
+        self, responses: Mapping[str, Tuple[R, ...]], **kwargs: Optional[ValueT]
+    ) -> Set[R]:
+        return tuple(itertools.chain(*responses.values()))
+
+
 class ClusterMergeSets(ClusterMultiNodeCallback[Set[R]]):
     def combine(
         self, responses: Mapping[str, Set[R]], **kwargs: Optional[ValueT]
     ) -> Set[R]:
         return set(itertools.chain(*responses.values()))
+
+
+class ClusterSum(ClusterMultiNodeCallback[int]):
+    def combine(self, responses: Mapping[str, int], **kwargs: Optional[ValueT]) -> bool:
+        return sum(responses.values())
 
 
 class SimpleStringCallback(

@@ -27,12 +27,17 @@ class CommandDetails(NamedTuple):
 @dataclasses.dataclass
 class ClusterCommandConfig:
     enabled: bool = True
-    flag: Optional[NodeFlag] = None
     combine: Optional[ClusterMultiNodeCallback] = None  # type: ignore
+    route: Optional[NodeFlag] = None
+    split: Optional[NodeFlag] = None
 
     @property
     def multi_node(self) -> bool:
-        return self.flag in [NodeFlag.ALL, NodeFlag.PRIMARIES]
+        return (self.route or self.split) in [
+            NodeFlag.ALL,
+            NodeFlag.PRIMARIES,
+            NodeFlag.REPLICAS,
+        ]
 
 
 def redis_command(

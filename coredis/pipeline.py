@@ -233,8 +233,8 @@ class ClusterPipelineMeta(PipelineMeta):
         kls = super().__new__(cls, name, bases, namespace)
         for name, method in ClusterPipelineMeta.get_methods(kls).items():
             if cmd := getattr(method, "__coredis_command", None):
-                if cmd.cluster.flag:
-                    kls.NODES_FLAGS[cmd.command] = cmd.cluster.flag
+                if cmd.cluster.route:
+                    kls.NODES_FLAGS[cmd.command] = cmd.cluster.route
                 if cmd.cluster.multi_node:
                     kls.RESULT_CALLBACKS[cmd.command] = cmd.cluster.combine or (
                         lambda r, **_: r

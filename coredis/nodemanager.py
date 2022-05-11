@@ -97,6 +97,13 @@ class NodeManager:
         key = self.encode(key)
         return hash_slot(key)
 
+    def keys_to_nodes(self, *keys: ValueT) -> Dict[str, List[ValueT]]:
+        mapping: Dict[str, List[ValueT]] = {}
+        for k in keys:
+            if node := self.node_from_slot(self.keyslot(k)):
+                mapping.setdefault(node["name"], []).append(k)
+        return mapping
+
     def node_from_slot(self, slot: int) -> Optional[Node]:
         for node in self.slots[slot]:
             if node["server_type"] == "master":
