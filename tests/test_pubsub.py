@@ -30,12 +30,20 @@ async def wait_for_message(pubsub, timeout=0.5, ignore_subscribe_messages=False)
 
 
 def make_message(type, channel, data, pattern=None):
-    return {
-        "type": type,
-        "pattern": pattern,
-        "channel": channel,
-        "data": data,
-    }
+    if type in ["subscribe", "psubscribe", "unsubscribe", "punsubscribe"]:
+        return {
+            "type": type,
+            "pattern": channel if type[0] == "p" else pattern,
+            "channel": channel,
+            "data": data,
+        }
+    else:
+        return {
+            "type": type,
+            "pattern": pattern,
+            "channel": channel,
+            "data": data,
+        }
 
 
 def make_subscribe_test_data(pubsub, type):

@@ -44,8 +44,17 @@ class PubSub(Generic[AnyStr]):
     will be returned and it's safe to start listening again.
     """
 
-    PUBLISH_MESSAGE_TYPES = ("message", "pmessage")
-    UNSUBSCRIBE_MESSAGE_TYPES = ("unsubscribe", "punsubscribe")
+    PUBLISH_MESSAGE_TYPES = {"message", "pmessage"}
+    SUBUNSUB_MESSAGE_TYPES = {
+        "subscribe",
+        "psubscribe",
+        "unsubscribe",
+        "punsubscribe",
+    }
+    UNSUBSCRIBE_MESSAGE_TYPES = {
+        "unsubscribe",
+        "punsubscribe",
+    }
     channels: MutableMapping[StringT, Optional[Callable[[PubSubMessage], None]]]
     patterns: MutableMapping[StringT, Optional[Callable[[PubSubMessage], None]]]
 
@@ -312,22 +321,35 @@ class PubSub(Generic[AnyStr]):
         """
         r = cast(List[ResponsePrimitive], response)
         message_type = nativestr(r[0])
+        message: PubSubMessage
 
-        if message_type == "pmessage":
+        if message_type in self.SUBUNSUB_MESSAGE_TYPES:
             message = PubSubMessage(
                 type=message_type,
-                pattern=cast(StringT, r[1]),
-                channel=cast(StringT, r[2]),
-                data=cast(StringT, r[3]),
-            )
-        else:
-            message = PubSubMessage(
-                type=message_type,
-                pattern=None,
+                pattern=cast(StringT, r[1]) if message_type[0] == "p" else None,
+                # This field is populated in all cases for backward compatibility
+                # as older versions were incorrectly populating the channel
+                # with the pattern on psubscribe/punsubscribe responses.
                 channel=cast(StringT, r[1]),
-                data=cast(StringT, r[2]),
+                data=cast(int, r[2]),
             )
-
+        elif message_type in self.PUBLISH_MESSAGE_TYPES:
+            if message_type == "pmessage":
+                message = PubSubMessage(
+                    type="pmessage",
+                    pattern=cast(StringT, r[1]),
+                    channel=cast(StringT, r[2]),
+                    data=cast(StringT, r[3]),
+                )
+            else:
+                message = PubSubMessage(
+                    type="message",
+                    pattern=None,
+                    channel=cast(StringT, r[1]),
+                    data=cast(StringT, r[2]),
+                )
+        else:
+            raise RuntimeError(f"Unknown message type {message_type}")
         # if this is an unsubscribe message, remove it from memory
         if message_type in self.UNSUBSCRIBE_MESSAGE_TYPES:
             if message_type == "punsubscribe":
