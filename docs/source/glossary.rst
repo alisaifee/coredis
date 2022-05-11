@@ -7,6 +7,12 @@ Glossary
      without waiting for the response for each individual command. For more details
      see the `Redis manual entry on pipelining <https://redis.io/docs/manual/pipelining/>`_.
 
+   PubSub
+     Publish/Subscribe messaging paradigm where message senders (publishers) send messages
+     to a channel without knowledge of the recipients of the message. Receipients subscribe
+     to channels and asynchronously consume messages that they are interested in.
+     For more details refer to the `Redis manual entry on Pub/Sub <https://redis.io/docs/manual/pubsub/>`__
+
    Redis
     `Redis <https://redis.io/docs/about/>`__ is an open source, in-memory data
     structure store used as a database, cache, message broker, and streaming engine.
