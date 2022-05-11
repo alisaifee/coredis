@@ -71,7 +71,7 @@ def check_version(
             else:
                 warnings.warn(
                     f"{function_name}() is deprecated since redis version {deprecated_version}. ",
-                    stacklevel=3
+                    stacklevel=3,
                 )
 
 

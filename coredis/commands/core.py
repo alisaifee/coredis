@@ -672,7 +672,13 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.STRLEN, key, callback=IntCallback()
         )
 
-    @redis_command(CommandName.SUBSTR, readonly=True, group=CommandGroup.STRING)
+    @redis_command(
+        CommandName.SUBSTR,
+        readonly=True,
+        group=CommandGroup.STRING,
+        version_deprecated="2.0.0",
+        deprecation_reason="Use :meth:`getrange`",
+    )
     async def substr(self, key: KeyT, start: int, end: int) -> AnyStr:
         """
         Get a substring of the string stored at a key
@@ -2039,6 +2045,8 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.HMSET,
         group=CommandGroup.HASH,
+        version_deprecated="4.0.0",
+        deprecation_reason="Use :meth:`hset` with multiple field-value pairs",
     )
     async def hmset(self, key: KeyT, field_values: Dict[StringT, ValueT]) -> bool:
         """

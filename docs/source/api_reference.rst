@@ -403,8 +403,8 @@ This can now be used as you would expect::
     # b"pong"
     await lib.echo("hello world")
     # b"hello world"
-    await client.hmset("k1", {"a": 10, "b": 20})
-    await client.hmset("k2", {"c": 30, "d": 40})
+    await client.hset("k1", {"a": 10, "b": 20})
+    await client.hset("k2", {"c": 30, "d": 40})
 
     await lib.hmmget("k1", "k2", a=1, b=2, c=3, d=4, e=5, f=6)
     # [b"10", b"20", b"30", b"40", b"5", b"6"]

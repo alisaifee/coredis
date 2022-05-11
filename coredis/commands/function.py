@@ -241,8 +241,8 @@ class Library(Generic[AnyStr]):
             # b"pong"
             await lib.get("hello")
             # b"hello"
-            await client.hmset("k1", {"c": 3, "d": 4})
-            await client.hmset("k2", {"a": 1, "b": 2})
+            await client.hset("k1", {"c": 3, "d": 4})
+            await client.hset("k2", {"a": 1, "b": 2})
             await lib.hmmget("k1", "k2", a=-1, b=-2, c=-3, d=-4, e=-5)
             # [b"1", b"2", b"3", b"4", b"-5"]
 
