@@ -3,6 +3,48 @@
 Changelog
 =========
 
+v3.5.0
+------
+Release Date: 2022-05-10
+* Features
+
+  * Added ``Library.wraps`` and ``Script.wraps`` decorators
+    for creating strict signature wrappers for lua scripts and
+    functions.
+  * Add ``__call__`` method to ``Script`` so it can be called
+    directly without having to go through ``execute``
+  * Improve type safety with regards to command methods accepting
+    multiple keys or values. These were previously annotated as
+    accepting either ``Iterable[KeyT]`` or ``Iterable[ValueT]`` which
+    would allow strings or bytes to be passed. These are now changed to
+    ``Parameters[KeyT]`` or ``Parameter[ValueT]`` respectively which only
+    allow a restricted set of collections and reject strings and bytes.
+
+* Breaking Changes
+
+  * Removed custom client side implementations for cross slot cluster methods.
+    These methods will now use the regular cluster implementation and raise
+    and error if the keys don't map to the same shard.
+  * ``verify_version`` on both Redis & RedisCluster constructors will
+    default to ``True`` resulting in warnings being emitted for using
+    deprecated methods and preemptive exceptions being raised when calling
+    methods against server versions that do not support them.
+  * Dropped support for redis server versions less than 6.0
+  * A large chunk of utility / private code has been moved into
+    private namespaces
+
+* Chores
+
+  * Refactor response transformation to use inlined callbacks
+    to improve type safety.
+
+* Bug Fixes
+
+  * Ensure protocol_version, decoding arguments are consistent
+    across different construction methods.
+  * Synchronize parameters for replacing library code between Library
+    constructor and Redis.register_library
+
 v3.4.7
 ------
 Release Date: 2022-05-04
@@ -616,6 +658,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
