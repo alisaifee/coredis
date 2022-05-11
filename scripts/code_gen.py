@@ -30,7 +30,7 @@ from coredis.response.types import *  # noqa
 from coredis.typing import *  # noqa
 
 MAX_SUPPORTED_VERSION = version.parse("7.999.999")
-MIN_SUPPORTED_VERSION = version.parse("5.0.0")
+MIN_SUPPORTED_VERSION = version.parse("6.0.0")
 
 MAPPING = {"DEL": "delete"}
 SKIP_SPEC = ["BITFIELD", "BITFIELD_RO"]
@@ -781,7 +781,6 @@ def skip_command(command):
 def is_deprecated(command, kls):
     if (
         command.get("deprecated_since")
-        and version.parse(command["deprecated_since"]) >= MIN_SUPPORTED_VERSION
     ):
         replacement = command.get("replaced_by", "")
         replacement = re.sub("`(.*?)`", "``\\1``", replacement)
@@ -1461,7 +1460,7 @@ def generate_compatibility_section(
 {% if method["redis_version_introduced"] and method["redis_version_introduced"] > MIN_SUPPORTED_VERSION %}
 - New in redis: {{method["redis_version_introduced"]}}
 {% endif %}
-{% if method["deprecation_info"][0] and method["deprecation_info"][0] >= MIN_SUPPORTED_VERSION %}
+{% if method["deprecation_info"][0] %}
 - Deprecated in redis: {{method["deprecation_info"][0] }}. Use {{method["deprecation_info"][1]}}
 {% endif %}
 {% if method["version_added"] %}
