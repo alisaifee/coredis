@@ -386,4 +386,4 @@ class PubSubMessage(TypedDict):
     type: str
     pattern: Optional[StringT]
     channel: StringT
-    data: StringT
+    data: Union[int, StringT]
