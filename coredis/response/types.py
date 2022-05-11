@@ -383,7 +383,33 @@ class ClusterNodeDetail(TypedDict):
 
 
 class PubSubMessage(TypedDict):
+    #: One of the following:
+    #:
+    #: subscribe
+    #:   Server response when a client subscribes to a channel(s)
+    #: unsubscribe
+    #:   Server response when a client unsubscribes from a channel(s)
+    #: psubscribe
+    #:   Server response when a client subscribes to a pattern(s)
+    #: punsubscribe
+    #:   Server response when a client unsubscribes from a pattern(s)
+    #: ssubscribe
+    #:   Server response when a client subscribes to a shard channel(s)
+    #: sunsubscribe
+    #:   Server response when a client unsubscribes from a shard channel(s)
+    #: message
+    #:   A message received from subscribing to a channel
+    #: pmessage
+    #:   A message received from subscribing to a pattern
     type: str
-    pattern: Optional[StringT]
+    #: The channel subscribed to or unsubscribed from or the channel a message was published to
     channel: StringT
+    #: The pattern that was subscribed to or unsubscribed from or to which a received message was
+    #: routed to
+    pattern: Optional[StringT]
+    #: - If ``type`` is one of ``{message, pmessage}`` this is the actual published message
+    #: - If ``type`` is one of
+    #:    ``{subscribe, psubscribe, ssubscribe, unsubscribe, punsubscribe, sunsubscribe}``
+    #:   this will be an :class:`int` corresponding to the  number of channels and patterns that the
+    #:   connection is currently subscribed to.
     data: Union[int, StringT]

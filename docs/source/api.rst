@@ -54,6 +54,7 @@ simplify operations.
    ~coredis.commands.BitFieldOperation
    ~coredis.commands.PubSub
    ~coredis.commands.ClusterPubSub
+   ~coredis.commands.ShardedPubSub
    ~coredis.commands.Script
    ~coredis.commands.Library
    ~coredis.commands.Function
@@ -68,13 +69,25 @@ BitField Operations
 
 PubSub
 ------
+.. autosummary::
+
+   ~coredis.commands.PubSub
+   ~coredis.commands.ClusterPubSub
+   ~coredis.commands.ShardedPubSub
+   ~coredis.commands.pubsub.PubSubWorkerThread
+
 .. autoclass:: coredis.commands.PubSub
-   :no-inherited-members:
    :class-doc-from: both
 
 .. autoclass:: coredis.commands.ClusterPubSub
-   :no-inherited-members:
    :class-doc-from: both
+
+.. autoclass:: coredis.commands.ShardedPubSub
+   :class-doc-from: both
+
+.. autoclass:: coredis.commands.pubsub.PubSubWorkerThread
+   :no-inherited-members:
+   :show-inheritance:
 
 Scripting
 ---------
@@ -96,6 +109,9 @@ Functions
 Monitor
 -------
 .. autoclass:: coredis.commands.Monitor
+.. autoclass:: coredis.commands.monitor.MonitorThread
+   :no-inherited-members:
+   :show-inheritance:
 
 Connection Classes
 ^^^^^^^^^^^^^^^^^^
@@ -234,15 +250,6 @@ Utility Classes
 Enums
 -----
 .. autoclass:: coredis.tokens.PureToken
-   :no-inherited-members:
-   :show-inheritance:
-
-Threaded Workers
-----------------
-.. autoclass:: coredis.commands.pubsub.PubSubWorkerThread
-   :no-inherited-members:
-   :show-inheritance:
-.. autoclass:: coredis.commands.monitor.MonitorThread
    :no-inherited-members:
    :show-inheritance:
 

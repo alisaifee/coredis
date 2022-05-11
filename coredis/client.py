@@ -17,7 +17,7 @@ from coredis.commands.constants import CommandName
 from coredis.commands.core import CoreCommands
 from coredis.commands.function import Library
 from coredis.commands.monitor import Monitor
-from coredis.commands.pubsub import ClusterPubSub, PubSub
+from coredis.commands.pubsub import ClusterPubSub, PubSub, ShardedPubSub
 from coredis.commands.script import Script
 from coredis.commands.sentinel import SentinelCommands
 from coredis.connection import Connection, RedisSSLContext, UnixDomainSocketConnection
@@ -787,9 +787,11 @@ class Redis(
         self, ignore_subscribe_messages: bool = False, **kwargs: Any
     ) -> PubSub[AnyStr]:
         """
-        Return a Publish/Subscribe object. With this object, you can
-        subscribe to channels and listen for messages that get published to
-        them.
+        Return a Pub/Sub instance that can be used to subscribe to channels
+        and patterns and receive messages that get published to them.
+
+        :param ignore_subscribe_messages: Whether to skip subscription
+         acknowledgement messages
         """
 
         return PubSub[AnyStr](
@@ -1458,10 +1460,47 @@ class RedisCluster(
     def pubsub(
         self, ignore_subscribe_messages: bool = False, **kwargs: Any
     ) -> ClusterPubSub[AnyStr]:
+        """
+        Return a Pub/Sub instance that can be used to subscribe to channels or
+        patterns in a redis cluster and receive messages that get published to them.
 
+        :param ignore_subscribe_messages: Whether to skip subscription
+         acknowledgement messages
+        """
         return ClusterPubSub[AnyStr](
             self.connection_pool,
             ignore_subscribe_messages=ignore_subscribe_messages,
+            **kwargs,
+        )
+
+    @versionadded(version="3.6.0")
+    def sharded_pubsub(
+        self,
+        ignore_subscribe_messages: bool = False,
+        read_from_replicas: bool = False,
+        **kwargs: Any,
+    ) -> ShardedPubSub[AnyStr]:
+        """
+        Return a Pub/Sub instance that can be used to subscribe to channels
+        in a redis cluster and receive messages that get published to them. The
+        implementation returned differs from that returned by :meth:`pubsub`
+        as it uses the Sharded Pub/Sub implementation which routes messages
+        to cluster nodes using the same algorithm used to assign keys to slots.
+        This effectively restricts the propagation of messages to be within the
+        shard of a cluster hence affording horizontally scaling the use of Pub/Sub
+        with the cluster itself.
+
+        :param ignore_subscribe_messages: Whether to skip subscription
+         acknowledgement messages
+        :param read_from_replicas: Whether to read messages from replica nodes
+
+        New in :redis-version:`7.0.0`
+        """
+
+        return ShardedPubSub[AnyStr](
+            self.connection_pool,
+            ignore_subscribe_messages=ignore_subscribe_messages,
+            read_from_replicas=read_from_replicas,
             **kwargs,
         )
 

@@ -40,7 +40,7 @@ autodoc_default_options = {
     "members": True,
     "inherited-members": True,
     "inherit-docstrings": True,
-    "member-order": "groupwise",
+    "member-order": "bysource",
 }
 
 ahead = 0

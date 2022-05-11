@@ -7,7 +7,7 @@ Glossary
      without waiting for the response for each individual command. For more details
      see the `Redis manual entry on pipelining <https://redis.io/docs/manual/pipelining/>`_.
 
-   PubSub
+   Pub/Sub
      Publish/Subscribe messaging paradigm where message senders (publishers) send messages
      to a channel without knowledge of the recipients of the message. Receipients subscribe
      to channels and asynchronously consume messages that they are interested in.
@@ -27,6 +27,12 @@ Glossary
      RESP3 extends :term:`RESP` to include support for primitives such as double & boolean
      and for container structures such as maps & sets. For more details see the
      `RESP3 Specification <https://github.com/antirez/RESP3/blob/master/spec.md>`__
+
+   Sharded Pub/Sub
+     Support for Sharded Pub/Sub is available as of :redis-version:`7.0.0` and refers
+     to routing messages to cluster nodes by applying the same alogrithm used to distribute
+     keys to distribute channels. For more details see the `Redis manual entry on
+     Sharded Pub/Sub <https://redis.io/docs/manual/pubsub/#sharded-pubsub>`__
 
    Transactions
      Redis Transactions allow the execution of multiple commands as a single

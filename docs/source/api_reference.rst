@@ -178,9 +178,9 @@ can be set to ``3``.
 
     r = coredis.Redis(protocol_version=3)
 
+
 Scripting
 ^^^^^^^^^
-
 ====================
 Isolated LUA Scripts
 ====================
@@ -576,25 +576,13 @@ instance.
     # {'pattern': None, 'type': 'psubscribe', 'channel': 'my-*', 'data': 3L}
 
 Every message read from a :class:`~coredis.commands.PubSub` instance
-will be a dictionary with the following keys.
+will be a typed dictionary defined as:
 
-type
-   One of the following: ``subscribe``, ``unsubscribe``, ``psubscribe``,
-   ``punsubscribe``, ``message``, ``pmessage``
+.. autoclass:: coredis.response.types.PubSubMessage
+   :noindex:
+   :no-inherited-members:
+   :show-inheritance:
 
-channel
-   The channel [un]subscribed to or the channel a message was
-   published to
-
-pattern
-   The pattern that matched a published message's channel. Will be
-   ``None`` in all cases except for 'pmessage' types.
-
-data
-   The message data. With [un]subscribe messages, this value will be
-   the number of channels and patterns the connection is currently subscribed
-   to. With [p]message messages, this value will be the actual published
-   message.
 
 Let's send a message now.
 
@@ -633,8 +621,8 @@ with its value being the callback function.
 
 When a message is read on a channel or pattern with a message handler, the
 message dictionary is created and passed to the message handler. In this case,
-a ``None`` value is returned from get_message() since the message was already
-handled.
+a ``None`` value is returned from :meth:`~coredis.commands.PubSub.get_message`
+since the message was already handled.
 
 .. code-block:: python
 
@@ -658,11 +646,10 @@ handled.
     print(message)
     # None
 
-If your application is not interested in the (sometimes noisy)
-subscribe/unsubscribe confirmation messages, you can ignore them by passing
-`ignore_subscribe_messages=True` to `r.pubsub()`. This will cause all
-subscribe/unsubscribe messages to be read, but they won't bubble up to your
-application.
+If your application is not interested in the subscribe/unsubscribe confirmation messages,
+you can ignore them by setting :paramref:`~coredis.Redis.pubsub.ignore_subscribe_messages`
+to ``True``. This will cause all subscribe/unsubscribe messages to be read, but they won't
+bubble up to your application.
 
 .. code-block:: python
 
@@ -674,14 +661,12 @@ application.
     await p.get_message()
     # {'channel': 'my-channel', 'data': 'my data', 'pattern': None, 'type': 'message'}
 
-There are three different strategies for reading messages.
+There are two main strategies for reading messages.
 
-The examples above have been using `pubsub.get_message()`.
-If there's data available to be read, `get_message()` will
-read it, format the message and return it or pass it to a message handler. If
-there's no data to be read, `get_message()` will return None after the configured `timeout`
-(`timeout` should set to value larger than 0 or it will be ignore).
-This makes it trivial to integrate into an existing event loop inside your application.
+The examples above have been using :meth:`~coredis.commands.PubSub.get_message`.
+If there's data available to be read, the method will read it, format the message
+and return it or pass it to a message handler. If there's no data to be read, it
+will return ``None`` after the configured :paramref:`~coredis.commands.PubSub.get_message.timeout`
 
 .. code-block:: python
 
@@ -691,27 +676,21 @@ This makes it trivial to integrate into an existing event loop inside your appli
             # do something with the message
         await asyncio.sleep(0.001)  # be nice to the system :)
 
-Older versions of coredis only read messages with `pubsub.listen()`. listen()
-is a generator that blocks until a message is available. If your application
-doesn't need to do anything else but receive and act on messages received from
-redis, listen() is an easy way to get up an running.
-
-.. code-block:: python
-
-    for message in await p.listen():
-        # do something with the message
-
-The third option runs an event loop in a separate thread.
-`pubsub.run_in_thread()` creates a new thread and use the event loop in main thread.
-The thread object is returned to the caller of `run_in_thread()`. The caller can
-use the `thread.stop()` method to shut down the event loop and thread. Behind
-the scenes, this is simply a wrapper around `get_message()` that runs in a
-separate thread, and use `asyncio.run_coroutine_threadsafe()` to run coroutines.
+The second option runs an event loop in a separate thread.
+:meth:`~coredis.commands.PubSub.run_in_thread` creates a new thread and uses
+the event loop in the main thread. The thread instance of
+:class:`~coredis.commands.pubsub.PubSubWorkerThread` is returned to the caller
+of :meth:`~coredis.commands.PubSub.run_in_thread()`. The caller can use the
+:meth:`~coredis.commands.pubsub.PubSubWorkerThread.stop` method on the thread
+instance to shut down the event loop and thread. Behind the scenes, this is
+simply a wrapper around :meth:`~coredis.commands.PubSub.get_message`
+that runs in a separate thread, and use :func:`asyncio.run_coroutine_threadsafe`
+to run coroutines.
 
 Note: Since we're running in a separate thread, there's no way to handle
 messages that aren't automatically handled with registered message handlers.
-Therefore, coredis prevents you from calling `run_in_thread()` if you're
-subscribed to patterns or channels that don't have message handlers attached.
+Therefore, coredis prevents you from calling :meth:`~coredis.commands.PubSub.run_in_thread`
+if you're subscribed to patterns or channels that don't have message handlers attached.
 
 .. code-block:: python
 
@@ -721,12 +700,12 @@ subscribed to patterns or channels that don't have message handlers attached.
     # when it's time to shut it down...
     thread.stop()
 
-PubSub objects remember what channels and patterns they are subscribed to. In
+PubSub instances remember what channels and patterns they are subscribed to. In
 the event of a disconnection such as a network error or timeout, the
-PubSub object will re-subscribe to all prior channels and patterns when
+PubSub instance will re-subscribe to all prior channels and patterns when
 reconnecting. Messages that were published while the client was disconnected
-cannot be delivered. When you're finished with a PubSub object, call its
-`.close()` method to shutdown the connection.
+cannot be delivered. When you're finished with a PubSub object, call the
+:meth:`~coredis.commands.PubSub.close` method to shutdown the connection.
 
 .. code-block:: python
 
@@ -734,7 +713,7 @@ cannot be delivered. When you're finished with a PubSub object, call its
     ...
     p.close()
 
-The PUBSUB set of subcommands CHANNELS, NUMSUB and NUMPAT are also
+The Pub/Sub support commands ``CHANNELS``, ``NUMSUB`` and ``NUMPAT`` are also
 supported:
 
 .. code-block:: python
@@ -747,6 +726,31 @@ supported:
     # [('baz', 0)]
     await r.pubsub_numpat()
     # 1204
+
+===============
+Cluster Pub/Sub
+===============
+
+The :class:`coredis.RedisCluster` client exposes two ways of building a :term:`Pub/Sub`
+application.
+
+1. :meth:`~coredis.RedisCluster.pubsub` returns an instance of :class:`coredis.commands.ClusterPubSub`
+which exposes identical functionality to the non clustered client. This is possible
+without worrying about sharding as the ``PSUBLISH`` command in clustered redis results
+in messages being broadcasted to every node in the cluster. This ofcourse inherently limits the
+potential for horizontal scaling.
+
+2. As of :redis-version:`7.0.0` support for :term:`Sharded Pub/Sub` has been added
+through the ``SSUBSCRIBE``, ``SUNSUBSCRIBE`` and ``SPUBLISH`` commands which restricts publishing
+of messages to individual shards based on the same algorithm used to route keys to shards.
+Note that there is no corresponding support for pattern based subscriptions
+(as you might have guessed, it wouldn't be possible to shard those).
+
+Access to Sharded Pub/Sub is available through the :meth:`coredis.RedisCluster.sharded_pubsub`
+method which exposes the same api and functionality (except for pattern support) as the other previously mentioned `PubSub` classes.
+
+To publish a messages that is meant to be consumed by a Sharded Pub/Sub consumer use
+:meth:`coredis.Redis.spublish` instead of :meth:`coredis.Redis.publish`
 
 Distributed Locking
 ^^^^^^^^^^^^^^^^^^^

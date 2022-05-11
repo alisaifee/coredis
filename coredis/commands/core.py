@@ -31,6 +31,7 @@ from coredis.response._callbacks import (
     ClusterAlignedBoolsCombine,
     ClusterBoolCombine,
     ClusterEnsureConsistent,
+    ClusterMergeMapping,
     ClusterMergeSets,
     ClusterSum,
     DateTimeCallback,
@@ -5515,13 +5516,34 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.PUBLISH, channel, message, callback=IntCallback()
         )
 
+    @versionadded(version="3.6.0")
+    @redis_command(
+        CommandName.SPUBLISH, group=CommandGroup.PUBSUB, version_introduced="7.0.0"
+    )
+    async def spublish(self, channel: StringT, message: StringT) -> int:
+        """
+        Publish :paramref:`message` on shard :paramref:`channel`.
+
+        :return: the number of shard subscribers the message was delivered to.
+
+        .. note:: The number only represents subscribers listening to the exact
+           node the message was published to, which means that if a subscriber
+           is listening on a replica node, it will not be included in the count.
+        """
+
+        return await self.execute_command(
+            CommandName.SPUBLISH, channel, message, callback=IntCallback()
+        )
+
     @redis_command(
         CommandName.PUBSUB_CHANNELS,
         group=CommandGroup.PUBSUB,
+        cluster=ClusterCommandConfig(
+            route=NodeFlag.ALL,
+            combine=ClusterMergeSets(),
+        ),
     )
-    async def pubsub_channels(
-        self, *, pattern: Optional[StringT] = None
-    ) -> Tuple[AnyStr, ...]:
+    async def pubsub_channels(self, pattern: Optional[StringT] = None) -> Set[AnyStr]:
         """
         Return channels that have at least one subscriber
         """
@@ -5529,7 +5551,30 @@ class CoreCommands(CommandMixin[AnyStr]):
         return await self.execute_command(
             CommandName.PUBSUB_CHANNELS,
             pattern or b"*",
-            callback=TupleCallback[AnyStr](),
+            callback=SetCallback[AnyStr](),
+        )
+
+    @versionadded(version="3.6.0")
+    @redis_command(
+        CommandName.PUBSUB_SHARDCHANNELS,
+        group=CommandGroup.PUBSUB,
+        version_introduced="7.0.0",
+        cluster=ClusterCommandConfig(
+            route=NodeFlag.ALL,
+            combine=ClusterMergeSets(),
+        ),
+    )
+    async def pubsub_shardchannels(
+        self, pattern: Optional[StringT] = None
+    ) -> Set[AnyStr]:
+        """
+        Return shard channels that have at least one subscriber
+        """
+
+        return await self.execute_command(
+            CommandName.PUBSUB_SHARDCHANNELS,
+            pattern or b"*",
+            callback=SetCallback[AnyStr](),
         )
 
     @redis_command(
@@ -5550,6 +5595,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.PUBSUB_NUMSUB,
         group=CommandGroup.PUBSUB,
+        cluster=ClusterCommandConfig(
+            route=NodeFlag.ALL,
+            combine=ClusterMergeMapping[AnyStr, int](value_combine=sum),
+        ),
     )
     async def pubsub_numsub(self, *channels: StringT) -> OrderedDict[AnyStr, int]:
         """
@@ -5564,6 +5613,31 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return await self.execute_command(
             CommandName.PUBSUB_NUMSUB,
+            *pieces,
+            callback=OrderedDictCallback[AnyStr, int](),
+        )
+
+    @redis_command(
+        CommandName.PUBSUB_SHARDNUMSUB,
+        group=CommandGroup.PUBSUB,
+        cluster=ClusterCommandConfig(
+            route=NodeFlag.ALL,
+            combine=ClusterMergeMapping[AnyStr, int](value_combine=sum),
+        ),
+    )
+    async def pubsub_shardnumsub(self, *channels: StringT) -> OrderedDict[AnyStr, int]:
+        """
+        Get the count of subscribers for shard channels
+
+        :return: Ordered mapping of shard channels to number of subscribers per channel
+        """
+        pieces: CommandArgList = []
+
+        if channels:
+            pieces.extend(channels)
+
+        return await self.execute_command(
+            CommandName.PUBSUB_SHARDNUMSUB,
             *pieces,
             callback=OrderedDictCallback[AnyStr, int](),
         )

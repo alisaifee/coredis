@@ -14,8 +14,10 @@ from typing import SupportsFloat, SupportsInt, cast
 from coredis.exceptions import ClusterResponseError, ResponseError
 from coredis.typing import (
     AnyStr,
+    Callable,
     Dict,
     Generic,
+    Iterable,
     List,
     Literal,
     Mapping,
@@ -153,6 +155,19 @@ class ClusterMergeSets(ClusterMultiNodeCallback[Set[R]]):
 class ClusterSum(ClusterMultiNodeCallback[int]):
     def combine(self, responses: Mapping[str, int], **kwargs: Optional[ValueT]) -> bool:
         return sum(responses.values())
+
+
+class ClusterMergeMapping(ClusterMultiNodeCallback[Dict[CK_co, CR_co]]):
+    def __init__(self, value_combine: Callable[[Iterable[CR_co]], CR_co]) -> None:
+        self.value_combine = value_combine
+
+    def combine(
+        self, responses: Mapping[str, Dict[CK_co, CR_co]], **kwargs: Optional[ValueT]
+    ) -> Dict[CK_co, CR_co]:
+        response: Dict[CK_co, CR_co] = {}
+        for key in set(itertools.chain(*responses.values())):
+            response[key] = self.value_combine(responses[n].get(key) for n in responses)
+        return response
 
 
 class SimpleStringCallback(

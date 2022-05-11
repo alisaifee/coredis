@@ -631,13 +631,16 @@ class ClusterConnectionPool(ConnectionPool):
             )
 
         channel = options.pop("channel", None)
+        node_type = options.pop("node_type", "master")
 
         if not channel:
             return self.get_random_connection()
 
         slot = self.nodes.keyslot(channel)
-        node = self.get_master_node_by_slot(slot)
-
+        if node_type == "replica":
+            node = self.get_replica_node_by_slot(slot)
+        else:
+            node = self.get_master_node_by_slot(slot)
         self.checkpid()
 
         try:
@@ -797,8 +800,10 @@ class ClusterConnectionPool(ConnectionPool):
     def get_master_node_by_slot(self, slot: int) -> Node:
         return self.nodes.slots[slot][0]
 
+    def get_replica_node_by_slot(self, slot: int) -> Node:
+        return random.choice(self.nodes.slots[slot])
+
     def get_node_by_slot(self, slot: int, command: Optional[bytes] = None) -> Node:
         if self.readonly and command in self.READONLY_COMMANDS:
-            return random.choice(self.nodes.slots[slot])
-
+            return self.get_replica_node_by_slot(slot)
         return self.get_master_node_by_slot(slot)

@@ -1,7 +1,8 @@
 """
 coredis.commands
 ----------------
-Implementation of core redis commands
+Implementation of core redis commands and abstractions over high level
+core concepts such as pubsub, scripting and functions.
 """
 from __future__ import annotations
 
@@ -14,7 +15,7 @@ from coredis.typing import AnyStr, Callable, Generic, Optional, R, ValueT
 from .bitfield import BitFieldOperation
 from .function import Function, Library
 from .monitor import Monitor
-from .pubsub import ClusterPubSub, PubSub
+from .pubsub import ClusterPubSub, PubSub, ShardedPubSub
 from .script import Script
 
 
@@ -38,4 +39,5 @@ __all__ = [
     "Monitor",
     "PubSub",
     "Script",
+    "ShardedPubSub",
 ]
