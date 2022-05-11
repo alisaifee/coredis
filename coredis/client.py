@@ -523,6 +523,13 @@ class Redis(
         **_: Any,
     ) -> None:
         """
+        .. versionchanged:: 3.5.0
+           The :paramref:`verify_version` parameter now defaults to ``True``
+
+        .. versionadded:: 3.1.0
+           The :paramref:`protocol_version` and :paramref:`verify_version`
+           parameters were added
+
         :param host: The hostname of the redis server
         :param port: The port at which th redis server is listening on
         :param db: database number to switch to upon connection
@@ -908,6 +915,14 @@ class RedisCluster(
         **kwargs: Any,
     ):
         """
+
+        .. versionchanged:: 3.5.0
+           The :paramref:`verify_version` parameter now defaults to ``True``
+
+        .. versionadded:: 3.1.0
+           The :paramref:`protocol_version` and :paramref:`verify_version`
+           parameters were added
+
         :param host: Can be used to point to a startup node
         :param port: Can be used to point to a startup node
         :param startup_nodes: List of nodes that initial bootstrapping can be done
