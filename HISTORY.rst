@@ -9,11 +9,11 @@ Release Date: 2022-05-10
 
 * Features
 
-  * Added ``Library.wraps`` and ``Script.wraps`` decorators
+  * Added :meth:`coredis.commands.Library.wraps` and :meth:`coredis.commands.Script.wraps` decorators
     for creating strict signature wrappers for lua scripts and
     functions.
-  * Add ``__call__`` method to ``Script`` so it can be called
-    directly without having to go through ``execute``
+  * Add :meth:`~coredis.commands.Script.__call__` method to :class:`coredis.commands.Script` so it can be called
+    directly without having to go through :meth:`coredis.commands.Script.execute`
   * Improve type safety with regards to command methods accepting
     multiple keys or values. These were previously annotated as
     accepting either ``Iterable[KeyT]`` or ``Iterable[ValueT]`` which
@@ -26,7 +26,8 @@ Release Date: 2022-05-10
   * Removed custom client side implementations for cross slot cluster methods.
     These methods will now use the regular cluster implementation and raise
     and error if the keys don't map to the same shard.
-  * ``verify_version`` on both Redis & RedisCluster constructors will
+  * :paramref:`coredis.Redis.verify_version` on both :class:`~coredis.Redis` &
+    :class:`~coredis.RedisCluster` constructors will
     default to ``True`` resulting in warnings being emitted for using
     deprecated methods and preemptive exceptions being raised when calling
     methods against server versions that do not support them.
