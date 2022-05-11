@@ -81,8 +81,17 @@ Redis command documentation: {redis_command_link(command_name)}
 """
         if version_introduced:
             wrapped.__doc__ += f"""
-Introduced in Redis version ``{version_introduced}``
+New in :redis-version:`{version_introduced}`
 """
+        if version_deprecated and deprecation_reason:
+            wrapped.__doc__ += f"""
+Deprecated in :redis-version:`{version_deprecated}`
+  {deprecation_reason.strip()}
+        """
+        elif version_deprecated:
+            wrapped.__doc__ += f"""
+Deprecated in :redis-version:`{version_deprecated}`
+            """
 
         setattr(wrapped, "__coredis_command", command_details)
         return wrapped

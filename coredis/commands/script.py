@@ -6,6 +6,8 @@ import inspect
 import itertools
 from typing import TYPE_CHECKING, Any, cast
 
+from deprecated.sphinx import versionadded
+
 from coredis._utils import b
 from coredis.exceptions import NoScriptError
 from coredis.protocols import SupportsScript
@@ -171,6 +173,7 @@ class Script(Generic[AnyStr]):
 
             k, v = await echo_key_value("co", "redis")
             # (b"co", b"redis")
+
         Alternatively, the following example builds a class method that requires
         the ``client`` to be passed in explicitly::
 

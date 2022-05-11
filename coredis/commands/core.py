@@ -290,7 +290,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.GETSET,
         version_deprecated="6.2.0",
-        deprecation_reason="Use set() with the get argument",
+        deprecation_reason="Use :meth:`set` with the get argument",
         group=CommandGroup.STRING,
     )
     async def getset(self, key: KeyT, value: ValueT) -> Optional[AnyStr]:
@@ -1133,7 +1133,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.CLUSTER_SLAVES,
         version_deprecated="5.0.0",
-        deprecation_reason="Use cluster_replicas()",
+        deprecation_reason="Use :meth:`cluster_replicas`",
         group=CommandGroup.CLUSTER,
         cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
     )
@@ -1151,6 +1151,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.CLUSTER,
         cluster=ClusterCommandConfig(flag=NodeFlag.RANDOM),
         version_deprecated="7.0.0",
+        deprecation_reason="Use :meth:`cluster_shards`",
     )
     async def cluster_slots(
         self,
@@ -1516,7 +1517,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.GEORADIUS,
         version_deprecated="6.2.0",
-        deprecation_reason="Use geosearch() and geosearchstore() with the radius argument",
+        deprecation_reason="""
+        Use :meth:`geosearch` and :meth:`geosearchstore` with the radius argument
+        """,
         group=CommandGroup.GEO,
         arguments={"any_": {"version_introduced": "6.2.0"}},
     )
@@ -1578,7 +1581,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.GEORADIUSBYMEMBER,
         version_deprecated="6.2.0",
         deprecation_reason="""
-        Use geosearch() and geosearchstore() with the radius and member arguments
+        Use :meth:`geosearch` and :meth:`geosearchstore` with the radius and member arguments
         """,
         group=CommandGroup.GEO,
     )
@@ -3025,7 +3028,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.BRPOPLPUSH,
         version_deprecated="6.2.0",
-        deprecation_reason="Use blmove() with the `wherefrom` and `whereto` arguments",
+        deprecation_reason="Use :meth:`blmove` with the `wherefrom` and `whereto` arguments",
         group=CommandGroup.LIST,
     )
     async def brpoplpush(
@@ -3337,7 +3340,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.RPOPLPUSH,
         version_deprecated="6.2.0",
-        deprecation_reason="Use lmove() with the wherefrom and whereto arguments",
+        deprecation_reason="Use :meth:`lmove` with the wherefrom and whereto arguments",
         group=CommandGroup.LIST,
     )
     async def rpoplpush(self, source: KeyT, destination: KeyT) -> Optional[AnyStr]:
@@ -4215,7 +4218,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ZRANGEBYLEX,
         readonly=True,
         version_deprecated="6.2.0",
-        deprecation_reason=" Use zrange() with the sortby=BYLEX argument",
+        deprecation_reason=" Use :meth:`zrange` with the sortby=BYLEX argument",
         group=CommandGroup.SORTED_SET,
     )
     async def zrangebylex(
@@ -4247,7 +4250,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ZRANGEBYSCORE,
         readonly=True,
         version_deprecated="6.2.0",
-        deprecation_reason=" Use zrange() with the sortby=BYSCORE argument",
+        deprecation_reason=" Use :meth:`zrange` with the sortby=BYSCORE argument",
         group=CommandGroup.SORTED_SET,
     )
     async def zrangebyscore(
@@ -4392,7 +4395,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ZREVRANGE,
         readonly=True,
         version_deprecated="6.2.0",
-        deprecation_reason="Use zrange() with the rev argument",
+        deprecation_reason="Use :meth:`zrange` with the rev argument",
         group=CommandGroup.SORTED_SET,
     )
     async def zrevrange(
@@ -4427,7 +4430,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ZREVRANGEBYLEX,
         readonly=True,
         version_deprecated="6.2.0",
-        deprecation_reason="Use zrange() with the rev and sort=BYLEX arguments",
+        deprecation_reason="Use :meth:`zrange` with the rev and sort=BYLEX arguments",
         group=CommandGroup.SORTED_SET,
     )
     async def zrevrangebylex(
@@ -4460,7 +4463,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ZREVRANGEBYSCORE,
         readonly=True,
         version_deprecated="6.2.0",
-        deprecation_reason="Use zrange() with the rev and sort=BYSCORE arguments",
+        deprecation_reason="Use :meth:`zrange` with the rev and sort=BYSCORE arguments",
         group=CommandGroup.SORTED_SET,
     )
     async def zrevrangebyscore(
@@ -6701,7 +6704,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SLAVEOF,
         version_deprecated="5.0.0",
-        deprecation_reason="Use replicaof()",
+        deprecation_reason="Use :meth:`replicaof`",
         group=CommandGroup.SERVER,
     )
     async def slaveof(
