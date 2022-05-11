@@ -519,7 +519,7 @@ class Redis(
         idle_check_interval: float = 1,
         client_name: Optional[str] = None,
         protocol_version: Literal[2, 3] = 2,
-        verify_version: bool = False,
+        verify_version: bool = True,
         **_: Any,
     ) -> None:
         """
@@ -690,7 +690,6 @@ class Redis(
         """Executes a command and returns a parsed response"""
         pool = self.connection_pool
         connection = await pool.get_connection()
-        self.ensure_server_version(connection.server_version)
 
         try:
             await connection.send_command(command, *args)
@@ -716,6 +715,7 @@ class Redis(
                 **options,
             )
         finally:
+            self.ensure_server_version(connection.server_version)
             pool.release(connection)
 
     def monitor(self) -> Monitor[AnyStr]:
@@ -904,7 +904,7 @@ class RedisCluster(
         decode_responses: bool = False,
         connection_pool: Optional[ClusterConnectionPool] = None,
         protocol_version: Literal[2, 3] = 2,
-        verify_version: bool = False,
+        verify_version: bool = True,
         **kwargs: Any,
     ):
         """
@@ -1259,8 +1259,6 @@ class RedisCluster(
             else:
                 continue
 
-            self.ensure_server_version(r.server_version)
-
             try:
                 if asking:
                     await r.send_command(CommandName.ASKING)
@@ -1303,7 +1301,7 @@ class RedisCluster(
             except AskError as e:
                 redirect_addr, asking = f"{e.host}:{e.port}", True
             finally:
-
+                self.ensure_server_version(r.server_version)
                 self.connection_pool.release(r)
 
         raise ClusterError("TTL exhausted.")
@@ -1347,6 +1345,7 @@ class RedisCluster(
                 )
 
             finally:
+                self.ensure_server_version(connection.server_version)
                 self.connection_pool.release(connection)
 
         return self._merge_result(command, res, **options)
