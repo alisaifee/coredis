@@ -6,6 +6,8 @@ import itertools
 import weakref
 from typing import Any, ClassVar, cast
 
+from deprecated.sphinx import versionadded
+
 from coredis._utils import EncodingInsensitiveDict, nativestr
 from coredis.exceptions import FunctionError
 from coredis.typing import (
@@ -132,6 +134,7 @@ class Library(Generic[AnyStr]):
         return cast(Optional[Function[AnyStr]], self._functions.get(function))
 
     @classmethod
+    @versionadded(version="3.5.0")
     def wraps(
         cls,
         function_name: str,

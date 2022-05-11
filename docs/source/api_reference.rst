@@ -350,6 +350,8 @@ And then invoke them (this internally calls the :meth:`~coredis.Redis.fcall` met
 Binding a library to python class
 ---------------------------------
 
+.. versionadded:: 3.5.0
+
 Using the simple API as shown above gets the job done, but suffers from having an
 error prone interface to the underlying lua functions and would normally require
 mapping and validation before passing the ``keys`` and ``args`` to the function.

@@ -126,6 +126,7 @@ class Script(Generic[AnyStr]):
         """
         return await self(keys, args, client)
 
+    @versionadded(version="3.5.0")
     def wraps(
         self,
         key_spec: Optional[List[str]] = None,
