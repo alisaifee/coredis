@@ -10,7 +10,7 @@ lint-fix:
 	autoflake8 -i -r tests coredis
 
 DEBUG := False
-NEXT_VERSION := 3.5.0
+NEXT_VERSION := 3.6.0
 
 coverage-docs:
 	rm -rf docs/source/compatibility.rst
