@@ -14,8 +14,6 @@ from tests.conftest import targets
     "redis_basic_resp3",
     "redis_basic_raw_resp3",
     "redis_cluster",
-    "keydb",
-    "keydb_resp3",
 )
 @pytest.mark.asyncio()
 class TestString:
