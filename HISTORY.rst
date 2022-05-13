@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v3.5.1
+------
+Release Date: 2022-05-12
+
+* Bug Fix
+
+  * Fix type annotation for PubSubMessage.data to include int
+    for server responses to subscribe/unsubscribe/psubscribe/punsubscribe
+
 v3.5.0
 ------
 Release Date: 2022-05-10
@@ -660,6 +669,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
