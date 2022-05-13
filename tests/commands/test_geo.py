@@ -12,7 +12,6 @@ from tests.conftest import targets
     "redis_basic_resp3",
     "redis_basic_raw_resp3",
     "redis_cluster",
-    "keydb",
 )
 @pytest.mark.asyncio()
 class TestGeo:
