@@ -3122,6 +3122,58 @@ Get the count of subscribers for channels
 
 
 
+PUBSUB SHARDCHANNELS
+********************
+
+List active shard channels
+
+- Documentation: `PUBSUB SHARDCHANNELS <https://redis.io/commands/pubsub-shardchannels>`_
+- Implementation: :meth:`~coredis.Redis.pubsub_shardchannels`
+
+- New in redis: 7.0.0
+
+
+
+- .. versionadded:: 3.6.0
+
+
+
+
+
+PUBSUB SHARDNUMSUB
+******************
+
+Get the count of subscribers for shard channels
+
+- Documentation: `PUBSUB SHARDNUMSUB <https://redis.io/commands/pubsub-shardnumsub>`_
+- Implementation: :meth:`~coredis.Redis.pubsub_shardnumsub`
+
+- New in redis: 7.0.0
+
+
+
+
+
+
+
+SPUBLISH
+********
+
+Post a message to a shard channel
+
+- Documentation: `SPUBLISH <https://redis.io/commands/spublish>`_
+- Implementation: :meth:`~coredis.Redis.spublish`
+
+- New in redis: 7.0.0
+
+
+
+- .. versionadded:: 3.6.0
+
+
+
+
+
 PSUBSCRIBE [X]
 **************
 
@@ -3132,42 +3184,12 @@ Listen for messages published to channels matching the given patterns
 - Not Implemented
 
 
-PUBSUB SHARDCHANNELS [X]
-************************
-
-List active shard channels
-
-- Documentation: `PUBSUB SHARDCHANNELS <https://redis.io/commands/pubsub-shardchannels>`_
-
-- Not Implemented
-
-
-PUBSUB SHARDNUMSUB [X]
-**********************
-
-Get the count of subscribers for shard channels
-
-- Documentation: `PUBSUB SHARDNUMSUB <https://redis.io/commands/pubsub-shardnumsub>`_
-
-- Not Implemented
-
-
 PUNSUBSCRIBE [X]
 ****************
 
 Stop listening for messages posted to channels matching the given patterns
 
 - Documentation: `PUNSUBSCRIBE <https://redis.io/commands/punsubscribe>`_
-
-- Not Implemented
-
-
-SPUBLISH [X]
-************
-
-Post a message to a shard channel
-
-- Documentation: `SPUBLISH <https://redis.io/commands/spublish>`_
 
 - Not Implemented
 
