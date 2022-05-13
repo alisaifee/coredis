@@ -64,14 +64,17 @@ class TestConnection:
         refetch = await client.client_list(identifiers=ids)
         assert sorted(k["addr"] for k in refetch) == sorted(k["addr"] for k in clients)
 
+    @pytest.mark.nouvloop
     async def test_client_kill_fail(self, client, _s):
         with pytest.raises(ResponseError):
             await client.client_kill(ip_port="1.1.1.1:9999")
 
+    @pytest.mark.nouvloop
     async def test_client_kill_filter(self, client, _s):
         resp = await client.client_kill(type_=PureToken.NORMAL)
         assert resp > 0
 
+    @pytest.mark.nouvloop
     async def test_client_kill_filter_skip_me(self, client, _s):
         resp = await client.client_kill(type_=PureToken.NORMAL, skipme=True)
         assert resp > 0

@@ -106,12 +106,15 @@ jobs:
         pip install uvloop
     - name: Tests
       env:
-        COREDIS_UVLOOP: "{{matrix.uvloop}}"
+        COREDIS_UVLOOP: ${{ matrix.uvloop }}
         HOST_OS: linux
         CI: "True"
-        COREDIS_RUNTIME_CHECKS: "{{matrix.runtime_type_checks}"
+        COREDIS_RUNTIME_CHECKS: ${{matrix.runtime_type_checks}}
       run: |
         eval "export ${{ matrix.service_version }}"
+        echo "Runtime checks: $COREDIS_RUNTIME_CHECKS"
+        echo "UVLoop: $COREDIS_UVLOOP"
+        echo "CI: $CI"
         pytest --cov-report=xml --cov-branch
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2
