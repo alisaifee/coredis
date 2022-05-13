@@ -13,7 +13,6 @@ from tests.conftest import targets
     "keydb_resp3",
 )
 @pytest.mark.asyncio()
-@pytest.mark.xfail
 class TestKeyDBCommands:
     async def test_expiremember_hash(self, client, _s):
         await client.hset("a", {"b": "1"})

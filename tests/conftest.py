@@ -216,7 +216,9 @@ def redis_stack_server(docker_services):
 @pytest.fixture(scope="session")
 def keydb_server(docker_services):
     docker_services.start("keydb")
-    docker_services.wait_for_service("redis-basic", 6379, ping_socket)
+    docker_services.wait_for_service("keydb", 6379, ping_socket)
+    if os.environ.get("CI") == "True":
+        time.sleep(5)
     yield ["localhost", 10379]
 
 
