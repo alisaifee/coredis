@@ -1192,10 +1192,6 @@ class RedisCluster(
         res: Dict[str, R],
         **kwargs: Optional[ValueT],
     ) -> R:
-        """
-        `res` is a dict with the following structure Dict(NodeName, CommandResult)
-        """
-
         if command in self.result_callbacks:
             # TODO: move cluster combine callbacks inline
             return cast(
@@ -1209,9 +1205,6 @@ class RedisCluster(
     def determine_node(
         self, command: bytes, **kwargs: Optional[ValueT]
     ) -> Optional[Iterable[Node]]:
-        """
-        TODO: document
-        """
         node_flag = self.route_flags.get(command)
 
         if command in self.split_flags and self.non_atomic_cross_slot:
