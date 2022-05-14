@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import pathlib
 
@@ -80,6 +82,7 @@ setup(
     version=versioneer.get_version(),
     description="Python async client for Redis key-value store",
     long_description=long_description,
+    long_description_content_type="text/markdown",
     url="https://github.com/alisaifee/coredis",
     project_urls={
         "Source": "https://github.com/alisaifee/coredis",
