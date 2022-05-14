@@ -72,7 +72,7 @@ websockets.
 
 _ROOT_DIR = pathlib.Path(__file__).parent
 
-with open(str(_ROOT_DIR / "README.rst")) as f:
+with open(str(_ROOT_DIR / "README.md")) as f:
     long_description = f.read()
 
 setup(
