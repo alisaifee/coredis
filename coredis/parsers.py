@@ -155,7 +155,9 @@ class SocketBuffer:
 
 
 class BaseParser(ABC):
-    """Base class for parsers"""
+    """
+    Base class for parsers
+    """
 
     EXCEPTION_CLASSES: Dict[
         str, Union[Type[RedisError], Dict[str, Type[RedisError]]]
@@ -183,7 +185,11 @@ class BaseParser(ABC):
         self._read_size = read_size
 
     def parse_error(self, response: str) -> RedisError:
-        """Parse an error response"""
+        """
+        Parse an error response
+
+        :meta private:
+        """
         error_code = response.split(" ")[0]
         if error_code in self.EXCEPTION_CLASSES:
             response = response[len(error_code) + 1 :]
@@ -222,6 +228,7 @@ class PythonParser(BaseParser):
     dependencies.
     """
 
+    #: Supported response data types
     ALLOWED_TYPES: ClassVar[Set[RESPDataType]] = {
         RESPDataType.NONE,
         RESPDataType.SIMPLE_STRING,
@@ -269,6 +276,13 @@ class PythonParser(BaseParser):
         return bool(self._buffer.length) if self._buffer else False
 
     async def read_response(self, decode: Optional[bool] = None) -> ResponseType:
+        """
+        Parse a response if available on the wire
+
+        :param decode: Only valuable if set to False to override any decode
+         configuration set on the parent connection
+        :return: a parsed response structure from the server
+        """
         if not self._buffer:
             raise ConnectionError("Socket closed on remote end")
         chunk = memoryview(await self._buffer.readline())
@@ -417,6 +431,13 @@ class HiredisParser(BaseParser):
         self._next_response = HIREDIS_SENTINEL
 
     async def read_response(self, decode: Optional[bool] = None) -> ResponseType:
+        """
+        Parse a response if available on the wire
+
+        :param decode: Only valuable if set to False to override any decode
+         configuration set on the parent connection
+        :return: a parsed response structure from the server
+        """
         if not self._stream:
             raise ConnectionError("Socket closed on remote end")
 
