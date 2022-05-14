@@ -7,18 +7,18 @@ import pytest
 from tests.conftest import targets
 
 
-@targets("redis_cluster", "redis_cluster_resp3")
+@targets("redis_cluster", "redis_cluster_raw", "redis_cluster_resp3")
 @pytest.mark.asyncio()
 class TestCluster:
     async def test_cluster_info(self, client, _s):
         info = await client.cluster_info()
-        assert info["cluster_state"] == _s("ok")
+        assert info["cluster_state"] == "ok"
 
         info = await list(client.replicas)[0].cluster_info()
-        assert info["cluster_state"] == _s("ok")
+        assert info["cluster_state"] == "ok"
 
         info = await list(client.primaries)[0].cluster_info()
-        assert info["cluster_state"] == _s("ok")
+        assert info["cluster_state"] == "ok"
 
     async def test_cluster_keyslot(self, client, _s):
         slot = await client.cluster_keyslot("a")
@@ -53,7 +53,7 @@ class TestCluster:
             ids.append(node.cluster_myid())
         ids = await asyncio.gather(*ids)
         known_nodes = (
-            node["node_id"] for node in client.connection_pool.nodes.all_nodes()
+            _s(node["node_id"]) for node in client.connection_pool.nodes.all_nodes()
         )
         assert set(ids) == set(known_nodes)
 
@@ -61,7 +61,7 @@ class TestCluster:
     async def test_cluster_shards(self, client, _s):
         await client
         known_nodes = {
-            node["node_id"] for node in client.connection_pool.nodes.all_nodes()
+            _s(node["node_id"]) for node in client.connection_pool.nodes.all_nodes()
         }
         shards = await client.cluster_shards()
 

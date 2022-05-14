@@ -44,7 +44,6 @@ from coredis.response._callbacks import (
     OptionalFloatCallback,
     OptionalIntCallback,
     OptionalListCallback,
-    OrderedDictCallback,
     SetCallback,
     SimpleStringCallback,
     SimpleStringOrIntCallback,
@@ -136,7 +135,6 @@ from coredis.typing import (
     Literal,
     Mapping,
     Optional,
-    OrderedDict,
     Parameters,
     ResponsePrimitive,
     ResponseType,
@@ -694,26 +692,6 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.SUBSTR, key, start, end, callback=AnyStrCallback[AnyStr]()
         )
 
-    @staticmethod
-    def nodes_slots_to_slots_nodes(mapping: List[ClusterNodeDetail]) -> Dict[str, str]:
-        """
-        Converts a mapping of
-        {id: <node>, slots: (slot1, slot2)}
-        to
-        {slot1: <node>, slot2: <node>}
-
-        Operation is expensive so use with caution
-
-        :meta private:
-        """
-        out: Dict[str, str] = {}
-
-        for node in mapping:
-            for slot in node["slots"]:
-                out[str(slot)] = node["id"]
-
-        return out
-
     @redis_command(
         CommandName.CLUSTER_ADDSLOTS,
         group=CommandGroup.CLUSTER,
@@ -770,7 +748,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(
-        CommandName.CLUSTER_COUNT_FAILURE_REPORTS, group=CommandGroup.CLUSTER
+        CommandName.CLUSTER_COUNT_FAILURE_REPORTS,
+        group=CommandGroup.CLUSTER,
     )
     async def cluster_count_failure_reports(self, node_id: StringT) -> int:
         """
@@ -804,29 +783,23 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.CLUSTER_DELSLOTS,
         group=CommandGroup.CLUSTER,
+        cluster=ClusterCommandConfig(route=NodeFlag.SLOT_ID),
     )
     async def cluster_delslots(self, slots: Iterable[int]) -> bool:
         """
         Set hash slots as unbound in the cluster.
         It determines by it self what node the slot is in and sends it there
         """
-        cluster_nodes = CoreCommands.nodes_slots_to_slots_nodes(
-            await self.cluster_nodes()
-        )
-
-        return (
-            len(
-                [
-                    await self.execute_command(
-                        CommandName.CLUSTER_DELSLOTS,
-                        slot,
-                        node_id=cluster_nodes[str(slot)],
-                        callback=SimpleStringCallback(),
-                    )
-                    for slot in slots
-                ]
-            )
-            > 0
+        return all(
+            [
+                await self.execute_command(
+                    CommandName.CLUSTER_DELSLOTS,
+                    slot,
+                    slot_id=slot,
+                    callback=SimpleStringCallback(),
+                )
+                for slot in slots
+            ]
         )
 
     @versionadded(version="3.1.1")
@@ -834,18 +807,24 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CLUSTER_DELSLOTSRANGE,
         version_introduced="7.0.0",
         group=CommandGroup.CLUSTER,
+        cluster=ClusterCommandConfig(route=NodeFlag.SLOT_ID),
     )
     async def cluster_delslotsrange(self, slots: Iterable[Tuple[int, int]]) -> bool:
         """
         Set hash slots as unbound in receiving node
         """
-        pieces: CommandArgList = []
 
-        for slot in slots:
-            pieces.extend(slot)
-
-        return await self.execute_command(
-            CommandName.CLUSTER_DELSLOTSRANGE, *pieces, callback=SimpleStringCallback()
+        return all(
+            [
+                await self.execute_command(
+                    CommandName.CLUSTER_DELSLOTSRANGE,
+                    slot_range[0],
+                    slot_range[1],
+                    slot_id=slot_range[0],
+                    callback=SimpleStringCallback(),
+                )
+                for slot_range in slots
+            ]
         )
 
     @redis_command(
@@ -5600,7 +5579,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             combine=ClusterMergeMapping[AnyStr, int](value_combine=sum),
         ),
     )
-    async def pubsub_numsub(self, *channels: StringT) -> OrderedDict[AnyStr, int]:
+    async def pubsub_numsub(self, *channels: StringT) -> Dict[AnyStr, int]:
         """
         Get the count of subscribers for channels
 
@@ -5614,7 +5593,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return await self.execute_command(
             CommandName.PUBSUB_NUMSUB,
             *pieces,
-            callback=OrderedDictCallback[AnyStr, int](),
+            callback=DictCallback[AnyStr, int](),
         )
 
     @redis_command(
@@ -5625,7 +5604,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             combine=ClusterMergeMapping[AnyStr, int](value_combine=sum),
         ),
     )
-    async def pubsub_shardnumsub(self, *channels: StringT) -> OrderedDict[AnyStr, int]:
+    async def pubsub_shardnumsub(self, *channels: StringT) -> Dict[AnyStr, int]:
         """
         Get the count of subscribers for shard channels
 
@@ -5639,7 +5618,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return await self.execute_command(
             CommandName.PUBSUB_SHARDNUMSUB,
             *pieces,
-            callback=OrderedDictCallback[AnyStr, int](),
+            callback=DictCallback[AnyStr, int](),
         )
 
     async def _eval(

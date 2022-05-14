@@ -15,6 +15,7 @@ from tests.conftest import targets
     "redis_basic_resp3",
     "redis_basic_raw_resp3",
     "redis_cluster",
+    "redis_cluster_raw",
     "keydb",
 )
 @pytest.mark.asyncio()
@@ -356,6 +357,7 @@ class TestGeneric:
         expire_time = await client.pexpiretime("a")
         assert set_time == expire_time
 
+    @pytest.mark.flaky
     async def test_randomkey(self, client, _s):
         assert await client.randomkey() is None
 

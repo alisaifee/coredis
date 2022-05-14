@@ -21,6 +21,7 @@ async def get_stream_message(client, stream, message_id):
     "redis_basic_resp3",
     "redis_basic_raw_resp3",
     "redis_cluster",
+    "redis_cluster_raw",
     "keydb",
 )
 @pytest.mark.asyncio()

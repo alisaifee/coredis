@@ -2233,8 +2233,7 @@ def implementation(ctx, command, group, expr):
 @click.option("--path", default="coredis/pipeline.pyi")
 @code_gen.command()
 def pipeline_stub(path):
-    kls = coredis.client.AbstractRedis
-    cluster_kls = coredis.client.AbstractRedisCluster
+    kls = cluster_kls = coredis.client.AbstractRedis
     commands = {}
 
     for group in STD_GROUPS + ["server", "connection", "cluster"]:

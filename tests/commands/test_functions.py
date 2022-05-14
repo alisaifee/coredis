@@ -65,6 +65,7 @@ async def simple_library(client):
     "redis_basic_resp3",
     "redis_basic_raw_resp3",
     "redis_cluster",
+    "redis_cluster_raw",
     "keydb",
 )
 @pytest.mark.asyncio

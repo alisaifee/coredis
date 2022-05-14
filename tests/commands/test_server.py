@@ -5,6 +5,7 @@ import datetime
 import pytest
 from pytest import approx
 
+from coredis import ResponseError
 from tests.conftest import targets
 
 
@@ -90,6 +91,13 @@ class TestServer:
             (await client.info())["total_commands_processed"]
         )
         assert reset_commands_processed < prior_commands_processed
+
+    @pytest.mark.nokeydb
+    async def test_config_rewrite(self, client):
+        with pytest.raises(
+            ResponseError, match="The server is running without a config file"
+        ):
+            await client.config_rewrite()
 
     @pytest.mark.max_server_version("6.2.0")
     async def test_config_set(self, client, _s):

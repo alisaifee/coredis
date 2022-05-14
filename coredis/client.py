@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, cast, overload
 from deprecated.sphinx import versionadded
 from packaging.version import Version
 
-from coredis._utils import clusterdown_wrapper, first_key, nativestr
+from coredis._utils import b, clusterdown_wrapper, first_key, nativestr
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName
 from coredis.commands.core import CoreCommands
@@ -118,13 +118,7 @@ class ClusterMeta(ABCMeta):
    by distributing the keys to the appropriate nodes and the results aggregated
                 """
                 if cmd.cluster.multi_node:
-                    kls.RESULT_CALLBACKS[cmd.command] = cmd.cluster.combine or (
-                        lambda r, **_: r
-                    )
-                else:
-                    kls.RESULT_CALLBACKS[cmd.command] = lambda response, **_: list(
-                        response.values()
-                    ).pop()
+                    kls.RESULT_CALLBACKS[cmd.command] = cmd.cluster.combine
                 if cmd.readonly:
                     ConnectionPool.READONLY_COMMANDS.add(cmd.command)
                 if (wrapped := add_runtime_checks(method)) != method:
@@ -417,10 +411,6 @@ class AbstractRedis(
         return await Library[AnyStr](self, name)
 
 
-class AbstractRedisCluster(AbstractRedis[AnyStr]):
-    pass
-
-
 RedisT = TypeVar("RedisT", bound="Redis[Any]")
 RedisStringT = TypeVar("RedisStringT", bound="Redis[str]")
 RedisBytesT = TypeVar("RedisBytesT", bound="Redis[bytes]")
@@ -689,13 +679,15 @@ class Redis(
                 ),
             )
 
-    def set_response_callback(self, command: str, callback: Callable[..., Any]) -> None:
+    def set_response_callback(
+        self, command: StringT, callback: Callable[..., Any]
+    ) -> None:
         """
         Sets a custom Response Callback
 
         :meta private:
         """
-        self.response_callbacks[command.encode("latin-1")] = callback
+        self.response_callbacks[b(command)] = callback
 
     async def execute_command(
         self,
@@ -710,6 +702,13 @@ class Redis(
 
         try:
             await connection.send_command(command, *args)
+            if custom_callback := self.response_callbacks.get(command):
+                return custom_callback(  # type: ignore
+                    await self.parse_response(connection, decode=options.get("decode")),
+                    version=self.protocol_version,
+                    **options,
+                )
+
             return callback(
                 await self.parse_response(connection, decode=options.get("decode")),
                 version=self.protocol_version,
@@ -852,7 +851,7 @@ class Redis(
 
 
 class RedisCluster(
-    AbstractRedisCluster[AnyStr],
+    AbstractRedis[AnyStr],
     RedisConnection,
     metaclass=ClusterMeta,
 ):
@@ -972,7 +971,7 @@ class RedisCluster(
          returned.
         """
 
-        if "db" in kwargs:
+        if "db" in kwargs:  # noqa
             raise RedisClusterException(
                 "Argument 'db' is not possible to use in cluster mode"
             )
@@ -1217,22 +1216,13 @@ class RedisCluster(
         elif node_flag == NodeFlag.ALL:
             return self.connection_pool.nodes.all_nodes()
         elif node_flag == NodeFlag.SLOT_ID:
-            # if node flag of command is SLOT_ID
-            # `slot_id` should is assumed in kwargs
-            slot = kwargs.get("slot_id")
-
-            if not slot:
+            if (slot := kwargs.get("slot_id")) is None:
                 raise RedisClusterException(
-                    f"slot_id is needed to execute command {command.decode('latin-1')}"
+                    f"slot_id is needed to execute command {command.decode('latin-1')} {kwargs}"
                 )
-
-            node_from_slot = self.connection_pool.nodes.node_from_slot(int(slot))
-            if node_from_slot:
+            if node_from_slot := self.connection_pool.nodes.node_from_slot(int(slot)):
                 return [node_from_slot]
-            else:
-                return None
-        else:
-            return None
+        return None
 
     @clusterdown_wrapper
     async def execute_command(

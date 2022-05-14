@@ -31,7 +31,6 @@ from coredis.exceptions import (
 from coredis.typing import (
     ClassVar,
     Dict,
-    Literal,
     Optional,
     ResponsePrimitive,
     ResponseType,
@@ -90,7 +89,7 @@ class SocketBuffer:
                     continue
 
                 break
-        except OSError:
+        except OSError:  # noqa
             e = sys.exc_info()[1]
             if e:
                 raise ConnectionError(f"Error while reading from socket: {e.args}")
@@ -148,17 +147,9 @@ class SocketBuffer:
         self.bytes_read = 0
 
     def close(self) -> None:
-        try:
-            self.purge()
-            if self._buffer:
-                self._buffer.close()
-        except Exception:
-            # redis-py issue #633 suggests the purge/close somehow raised a
-            # BadFileDescriptor error. Perhaps the client ran out of
-            # memory or something else? It's probably OK to ignore
-            # any error being raised from purge/close since we're
-            # removing the reference to the instance below.
-            pass
+        self.purge()
+        if self._buffer:
+            self._buffer.close()
         self._buffer = None
         self._sock = None
 
@@ -253,10 +244,7 @@ class PythonParser(BaseParser):
         super().__init__(read_size)
 
     def __del__(self) -> None:
-        try:
-            self.on_disconnect()
-        except Exception:
-            pass
+        self.on_disconnect()
 
     def on_connect(self, connection: coredis.connection.BaseConnection) -> None:
         """Called when the stream connects"""
@@ -278,21 +266,16 @@ class PythonParser(BaseParser):
         self.encoding = None
 
     def can_read(self) -> bool:
-        if self._buffer:
-            return bool(self._buffer.length)
-        return False
+        return bool(self._buffer.length) if self._buffer else False
 
     async def read_response(self, decode: Optional[bool] = None) -> ResponseType:
         if not self._buffer:
             raise ConnectionError("Socket closed on remote end")
         chunk = memoryview(await self._buffer.readline())
 
-        if not chunk:
-            raise ConnectionError("Socket closed on remote end")
-
         marker, chunk = chunk[0], chunk[1:]
-        if marker not in PythonParser.ALLOWED_TYPES:
-            raise InvalidResponse(f"Protocol Error: {chr(marker)}, {str(chunk)}")
+        if marker not in PythonParser.ALLOWED_TYPES:  # noqa
+            raise InvalidResponse(f"Protocol Error: {chr(marker)}, {bytes(chunk)!r}")
 
         # server returned an error
         if marker == RESPDataType.ERROR:
@@ -325,12 +308,14 @@ class PythonParser(BaseParser):
                 return None
             response = await self._buffer.read(length)
             if response[:3] != b"txt":
-                raise RedisError("unexpected verbatim string")
+                raise InvalidResponse(
+                    f"Unexpected verbatim string of type {response[:3]!r}"
+                )
             response = response[4:]
         elif marker == RESPDataType.PUSH:
             length = int(chunk)
             if length == -1:
-                return []
+                return None
             return [await self.read_response(decode=decode) for _ in range(length)]
         elif marker == RESPDataType.ARRAY:
             length = int(chunk)
@@ -342,7 +327,7 @@ class PythonParser(BaseParser):
         elif marker == RESPDataType.MAP:
             length = int(chunk)
             if length == -1:
-                return {}
+                return None
             return {
                 # We can assume that redis will only be sending back
                 # primitives as keys. If anything else comes along, it will
@@ -356,14 +341,14 @@ class PythonParser(BaseParser):
 
             length = int(chunk)
             if length == -1:
-                return cast(Set[ResponsePrimitive], set())
+                return None
             # We can assume this as anything other than a primitive
             # would not be hashable and thus would cause a runtime error
             return cast(
                 Set[ResponsePrimitive],
                 {await self.read_response(decode=decode) for _ in range(length)},
             )
-        else:
+        else:  # noqa
             raise ProtocolError(f"Unexpected marker {chr(marker)}")
 
         need_decode = self.encoding is not None
@@ -374,78 +359,85 @@ class PythonParser(BaseParser):
         return response
 
 
+HIREDIS_SENTINEL = False
+
+
 class HiredisParser(BaseParser):
     """
     Parser class for connections using Hiredis
     """
 
     def __init__(self, read_size: int) -> None:
-        if not HIREDIS_AVAILABLE:
+        if not HIREDIS_AVAILABLE:  # noqa
             raise RedisError("Hiredis is not installed")
         self._stream: Optional[StreamReader] = None
         self._reader: Optional[hiredis.Reader] = None
         self._raw_reader: Optional[hiredis.Reader] = None
-        self._next_response: Union[str, bytes, Literal[False]] = False
+        self._next_response: Optional[
+            Union[
+                str,
+                bytes,
+                bool,  # to allow for HIREDIS_SENTINEL
+            ]
+        ] = HIREDIS_SENTINEL
         super().__init__(read_size)
 
     def __del__(self) -> None:
-        try:
-            self.on_disconnect()
-        except Exception:
-            pass
+        self.on_disconnect()
 
     def can_read(self) -> bool:
-        if not self._reader:
+        if not self._reader:  # noqa
             raise ConnectionError("Socket closed on remote end")
 
-        if self._next_response is False:
+        if self._next_response is not HIREDIS_SENTINEL:
             self._next_response = self._reader.gets()
 
-        return self._next_response is not False
+        return self._next_response is not HIREDIS_SENTINEL
 
     def on_connect(self, connection: coredis.connection.BaseConnection) -> None:
         self._stream = connection.reader
         kwargs: Dict[str, Union[Type[Exception], str]] = {
             "protocolError": InvalidResponse,
             "replyError": ResponseError,
+            # TODO: uncomment this and change HIREDIS_SENTINEL to something else
+            #  so that bool responses with RESP3 can be handled.
+            # "notEnoughData": HIREDIS_SENTINEL,
         }
 
         self._raw_reader = hiredis.Reader(**kwargs)  # type: ignore
         if connection.decode_responses:
             kwargs["encoding"] = connection.encoding
         self._reader = hiredis.Reader(**kwargs)  # type: ignore
-        self._next_response = False
+        self._next_response = HIREDIS_SENTINEL
 
     def on_disconnect(self) -> None:
         if self._stream is not None:
             self._stream = None
         self._reader = None
-        self._next_response = False
+        self._next_response = HIREDIS_SENTINEL
 
     async def read_response(self, decode: Optional[bool] = None) -> ResponseType:
         if not self._stream:
             raise ConnectionError("Socket closed on remote end")
 
         # _next_response might be cached from a can_read() call
-
-        if self._next_response is not False:
+        if self._next_response is not HIREDIS_SENTINEL:
             response = self._next_response
-            self._next_response = False
-
+            self._next_response = HIREDIS_SENTINEL
             return response
+
         cur_reader = self._reader if decode is not False else self._raw_reader
         assert cur_reader
 
         response = cur_reader.gets()
-
-        while response is False:  # type: ignore
+        while response is HIREDIS_SENTINEL:
             try:
                 buffer = await self._stream.read(self._read_size)
             # CancelledError will be caught by client so that command won't be retried again
             # For more detailed discussion please see https://github.com/alisaifee/coredis/issues/56
             except asyncio.CancelledError:
                 raise
-            except Exception:
+            except Exception:  # noqa
                 e = sys.exc_info()[1]
                 if e:
                     raise ConnectionError(

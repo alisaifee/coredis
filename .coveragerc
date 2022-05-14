@@ -9,6 +9,7 @@ exclude_lines =
     noqa
     raise NotImplementedError
     @overload
-    @abstractmethod
     if TYPE_CHECKING
     if typing.TYPE_CHECKING
+    class .*\bProtocol\):
+    @(abc\.)?abstractmethod

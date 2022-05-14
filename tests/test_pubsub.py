@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import pickle
 import time
-from collections import OrderedDict
 
 import pytest
 
@@ -379,16 +378,16 @@ class TestPubSubRedisDown:
 
 
 @pytest.mark.asyncio()
-@targets("redis_basic")
+@targets("redis_basic", "redis_basic_raw", "redis_basic_resp3", "redis_basic_raw_resp3")
 class TestPubSubPubSubSubcommands:
-    async def test_pubsub_channels(self, client):
+    async def test_pubsub_channels(self, client, _s):
         p = client.pubsub(ignore_subscribe_messages=True)
         await p.subscribe("foo", "bar", "baz", "quux")
         channels = sorted(await client.pubsub_channels())
-        assert channels == ["bar", "baz", "foo", "quux"]
+        assert channels == [_s("bar"), _s("baz"), _s("foo"), _s("quux")]
         await p.unsubscribe()
 
-    async def test_pubsub_numsub(self, client):
+    async def test_pubsub_numsub(self, client, _s):
         p1 = client.pubsub(ignore_subscribe_messages=True)
         await p1.subscribe("foo", "bar", "baz")
         p2 = client.pubsub(ignore_subscribe_messages=True)
@@ -396,7 +395,7 @@ class TestPubSubPubSubSubcommands:
         p3 = client.pubsub(ignore_subscribe_messages=True)
         await p3.subscribe("baz")
 
-        channels = OrderedDict({"foo": 1, "bar": 2, "baz": 3})
+        channels = {_s("foo"): 1, _s("bar"): 2, _s("baz"): 3}
         assert channels == await client.pubsub_numsub("foo", "bar", "baz")
         await p1.unsubscribe()
         await p2.unsubscribe()
@@ -407,3 +406,4 @@ class TestPubSubPubSubSubcommands:
         p = client.pubsub(ignore_subscribe_messages=True)
         await p.psubscribe("*oo", "*ar", "b*z")
         assert await client.pubsub_numpat() == 3 + pubsub_count
+        await p.unsubscribe()

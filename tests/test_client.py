@@ -23,6 +23,10 @@ class TestClient:
         client.verify_version = True
         await client.ping()
 
+    async def test_custom_response_callback(self, client, _s):
+        client.set_response_callback(_s("PING"), lambda r, **_: _s("BING"))
+        assert await client.ping() == _s("BING")
+
     @pytest.mark.min_server_version("6.0.0")
     async def test_server_version(self, client):
         assert isinstance(client.server_version, Version)

@@ -231,7 +231,9 @@ async def redis_basic(redis_basic_server, request):
     await client.flushall()
     await set_default_test_config(client)
 
-    return client
+    yield client
+
+    client.connection_pool.disconnect()
 
 
 @pytest.fixture
@@ -252,7 +254,9 @@ async def redis_basic_resp3(redis_basic_server, request):
     await client.flushall()
     await set_default_test_config(client)
 
-    return client
+    yield client
+
+    client.connection_pool.disconnect()
 
 
 @pytest.fixture
@@ -264,7 +268,9 @@ async def redis_stack(redis_stack_server, request):
     await client.flushall()
     await set_default_test_config(client)
 
-    return client
+    yield client
+
+    client.connection_pool.disconnect()
 
 
 @pytest.fixture
@@ -274,7 +280,9 @@ async def redis_stack_raw(redis_stack_server, request):
     await client.flushall()
     await set_default_test_config(client)
 
-    return client
+    yield client
+
+    client.connection_pool.disconnect()
 
 
 @pytest.fixture
@@ -295,7 +303,9 @@ async def redis_stack_resp3(redis_stack_server, request):
     await client.flushall()
     await set_default_test_config(client)
 
-    return client
+    yield client
+
+    client.connection_pool.disconnect()
 
 
 @pytest.fixture
@@ -315,7 +325,9 @@ async def redis_stack_raw_resp3(redis_stack_server, request):
     await client.flushall()
     await set_default_test_config(client)
 
-    return client
+    yield client
+
+    client.connection_pool.disconnect()
 
 
 @pytest.fixture
@@ -332,7 +344,9 @@ async def redis_basic_raw(redis_basic_server, request):
     await client.flushall()
     await set_default_test_config(client)
 
-    return client
+    yield client
+
+    client.connection_pool.disconnect()
 
 
 @pytest.fixture
@@ -353,7 +367,9 @@ async def redis_basic_raw_resp3(redis_basic_server, request):
     await client.flushall()
     await set_default_test_config(client)
 
-    return client
+    yield client
+
+    client.connection_pool.disconnect()
 
 
 @pytest.fixture
@@ -370,7 +386,10 @@ async def redis_ssl(redis_ssl_server, request):
     await check_test_constraints(request, client)
     await client.flushall()
     await set_default_test_config(client)
-    return client
+
+    yield client
+
+    client.connection_pool.disconnect()
 
 
 @pytest.fixture
@@ -393,7 +412,10 @@ async def redis_ssl_resp3(redis_ssl_server, request):
     )
     await client.flushall()
     await set_default_test_config(client)
-    return client
+
+    yield client
+
+    client.connection_pool.disconnect()
 
 
 @pytest.fixture
@@ -406,7 +428,10 @@ async def redis_auth(redis_auth_server, request):
     await check_test_constraints(request, client)
     await client.flushall()
     await set_default_test_config(client)
-    return client
+
+    yield client
+
+    client.connection_pool.disconnect()
 
 
 @pytest.fixture
@@ -420,7 +445,9 @@ async def redis_uds(redis_uds_server, request):
     await client.flushall()
     await set_default_test_config(client)
 
-    return client
+    yield client
+
+    client.connection_pool.disconnect()
 
 
 @pytest.fixture
@@ -430,6 +457,26 @@ async def redis_cluster(redis_cluster_server, request):
         7000,
         stream_timeout=10,
         decode_responses=True,
+        **get_client_test_args(request),
+    )
+    await check_test_constraints(request, cluster)
+    await cluster
+    await cluster.flushall()
+    await cluster.flushdb()
+
+    for primary in cluster.primaries:
+        await set_default_test_config(primary)
+    yield cluster
+
+    cluster.connection_pool.disconnect()
+
+
+@pytest.fixture
+async def redis_cluster_raw(redis_cluster_server, request):
+    cluster = coredis.RedisCluster(
+        "localhost",
+        7000,
+        stream_timeout=10,
         **get_client_test_args(request),
     )
     await check_test_constraints(request, cluster)
@@ -507,7 +554,9 @@ async def keydb(keydb_server, request):
     await client.flushall()
     await set_default_test_config(client)
 
-    return client
+    yield client
+
+    client.connection_pool.disconnect()
 
 
 @pytest.fixture
@@ -528,7 +577,9 @@ async def keydb_resp3(keydb_server, request):
     await client.flushall()
     await set_default_test_config(client)
 
-    return client
+    yield client
+
+    client.connection_pool.disconnect()
 
 
 @pytest.fixture(scope="session")

@@ -41,7 +41,7 @@ class ConnectionError(RedisError):
 
 class ProtocolError(ConnectionError):
     """
-    Raised on errors related to protocol version
+    Raised on errors related to ser/deser protocol parsing
     """
 
 

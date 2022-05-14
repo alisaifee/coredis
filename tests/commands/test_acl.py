@@ -19,6 +19,7 @@ async def teardown(client):
     "redis_basic_raw_resp3",
     "redis_auth",
     "redis_cluster",
+    "redis_cluster_raw",
     "keydb",
 )
 @pytest.mark.min_server_version("6.0.0")

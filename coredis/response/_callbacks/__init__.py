@@ -22,7 +22,6 @@ from coredis.typing import (
     Literal,
     Mapping,
     Optional,
-    OrderedDict,
     ParamSpec,
     ResponsePrimitive,
     ResponseType,
@@ -283,7 +282,7 @@ class DateTimeCallback(
 class DictCallback(
     ResponseCallback[
         Union[Sequence[ResponseType], Dict[ResponsePrimitive, ResponseType]],
-        Dict[ResponsePrimitive, ResponseType],
+        Union[Sequence[ResponseType], Dict[ResponsePrimitive, ResponseType]],
         Dict[CK_co, CR_co],
     ]
 ):
@@ -299,38 +298,13 @@ class DictCallback(
 
     def transform_3(
         self,
-        response: Dict[ResponsePrimitive, ResponseType],
+        response: Union[Sequence[ResponseType], Dict[ResponsePrimitive, ResponseType]],
         **options: Optional[ValueT],
     ) -> Dict[CK_co, CR_co]:
 
-        return cast(Dict[CK_co, CR_co], response)
-
-
-class OrderedDictCallback(
-    ResponseCallback[
-        Union[List[ResponseType], Dict[ResponsePrimitive, ResponseType]],
-        Union[List[ResponseType], Dict[ResponsePrimitive, ResponseType]],
-        OrderedDict[CK_co, CR_co],
-    ]
-):
-    def transform(
-        self,
-        response: Union[List[ResponseType], Dict[ResponsePrimitive, ResponseType]],
-        **options: Optional[ValueT],
-    ) -> OrderedDict[CK_co, CR_co]:
-        if isinstance(response, list):
-            it = iter(response)
-            return cast(OrderedDict[CK_co, CR_co], OrderedDict(zip(it, it)))
-        raise ValueError(f"Unable to map {response!r} to ordered mapping")
-
-    def transform_3(
-        self,
-        response: Union[List[ResponseType], Dict[ResponsePrimitive, ResponseType]],
-        **options: Optional[ValueT],
-    ) -> OrderedDict[CK_co, CR_co]:
-        if isinstance(response, Mapping):
-            return cast(OrderedDict[CK_co, CR_co], OrderedDict(response.items()))
-        raise ValueError(f"Unable to map {response!r} to ordered mapping")
+        if isinstance(response, Dict):
+            return cast(Dict[CK_co, CR_co], response)
+        return self.transform(response, **options)
 
 
 class SetCallback(
