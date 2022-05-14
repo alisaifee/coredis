@@ -620,7 +620,11 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         return result
 
     async def on_connect(self, connection: BaseConnection) -> None:
-        """Re-subscribe to any channels previously subscribed to"""
+        """
+        Re-subscribe to any channels previously subscribed to
+
+        :meta private:
+        """
         for channel, handler in self.channels.items():
             if self.channel_connection_mapping[channel] == connection:
                 await self.subscribe(
