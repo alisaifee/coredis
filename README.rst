@@ -95,6 +95,29 @@ Cluster client
 
 To see a full list of supported redis commands refer to the `Command compatibility`_  documentation
 
+
+Compatibility
+-------------
+
+coredis is tested against redis versions ``6.0.x``, ``6.2.x`` & ``7.0.x``. The
+test matrix status can be reviewed `here <https://github.com/alisaifee/coredis/actions/workflows/main.yml>`__
+
+coredis is additionally tested against:
+
+- ``hiredis`` >= ``2.0.0``
+- ``uvloop` >= `0.15.0``
+
+``hiredis`` if available will be used by default as the RESP parser as it provides
+significant performance gains in response parsing. For more details see :ref:`api_reference:parsers`.
+
+Supported python versions
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- 3.8
+- 3.9
+- 3.10
+
+
 Links
 -----
 
