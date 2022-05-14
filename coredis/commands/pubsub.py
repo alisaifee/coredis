@@ -410,14 +410,12 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         """
         for channel, handler in self.channels.items():
             if handler is None:
-                raise PubSubError(f"Channel: '{channel!r}' has no handler registered")
+                raise PubSubError(f"Channel: {channel!r} has no handler registered")
 
         for pattern, handler in self.patterns.items():
             if handler is None:
-                raise PubSubError(f"Pattern: '{pattern!r}' has no handler registered")
-        thread = PubSubWorkerThread(
-            self, poll_timeout=poll_timeout, loop=asyncio.get_running_loop()
-        )
+                raise PubSubError(f"Pattern: {pattern!r} has no handler registered")
+        thread = PubSubWorkerThread(self, poll_timeout=poll_timeout)
         thread.start()
 
         return thread
@@ -650,14 +648,13 @@ class PubSubWorkerThread(threading.Thread):
     def __init__(
         self,
         pubsub: BasePubSub[Any, Any],
-        loop: asyncio.events.AbstractEventLoop,
         poll_timeout: float = 1.0,
     ):
         super().__init__()
         self._pubsub = pubsub
         self._poll_timeout = poll_timeout
         self._running = False
-        self._loop = loop or asyncio.get_running_loop()
+        self._loop = asyncio.get_running_loop()
         self._future: Optional[Future[None]] = None
 
     async def _run(self) -> None:

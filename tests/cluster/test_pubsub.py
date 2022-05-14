@@ -454,6 +454,50 @@ class TestPubSubMessages:
             "pmessage", channel, "test message", pattern=pattern
         )
 
+    async def test_pubsub_worker_thread_subscribe_channel(self, redis_cluster):
+        p = redis_cluster.pubsub()
+        messages = []
+
+        def handler(message):
+            messages.append(message)
+
+        await p.subscribe(fubar=handler)
+        th = p.run_in_thread()
+        [await redis_cluster.publish("fubar", str(i)) for i in range(10)]
+        await asyncio.sleep(0.5)
+        th.stop()
+        assert [m["data"] for m in messages] == [str(i) for i in range(10)]
+
+    async def test_pubsub_worker_thread_subscribe_pattern(self, redis_cluster):
+        p = redis_cluster.pubsub()
+        messages = []
+
+        def handler(message):
+            messages.append(message)
+
+        await p.psubscribe(**{"fu*": handler})
+        th = p.run_in_thread()
+        [await redis_cluster.publish("fubar", str(i)) for i in range(10)]
+        [await redis_cluster.publish("fubaz", str(i)) for i in range(10, 20)]
+        await asyncio.sleep(0.5)
+        th.stop()
+        assert [m["data"] for m in messages] == [str(i) for i in range(20)]
+
+    @pytest.mark.min_server_version("7.0")
+    async def test_pubsub_worker_thread_subscribe_sharded_channel(self, redis_cluster):
+        p = redis_cluster.sharded_pubsub()
+        messages = []
+
+        def handler(message):
+            messages.append(message)
+
+        await p.subscribe(fubar=handler)
+        th = p.run_in_thread()
+        [await redis_cluster.spublish("fubar", str(i)) for i in range(10)]
+        await asyncio.sleep(0.5)
+        th.stop()
+        assert [m["data"] for m in messages] == [str(i) for i in range(10)]
+
 
 @pytest.mark.asyncio()
 @targets("redis_cluster", "redis_cluster_raw")
