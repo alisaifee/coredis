@@ -1221,6 +1221,8 @@ class RedisCluster(
             return [self.connection_pool.nodes.random_node()]
         elif node_flag == NodeFlag.PRIMARIES:
             return self.connection_pool.nodes.all_primaries()
+        elif node_flag == NodeFlag.REPLICAS:
+            return self.connection_pool.nodes.all_replicas()
         elif node_flag == NodeFlag.ALL:
             return self.connection_pool.nodes.all_nodes()
         elif node_flag == NodeFlag.SLOT_ID:

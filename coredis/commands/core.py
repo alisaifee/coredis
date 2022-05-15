@@ -1155,6 +1155,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.READONLY,
         group=CommandGroup.CLUSTER,
+        cluster=ClusterCommandConfig(
+            route=NodeFlag.REPLICAS, combine=ClusterEnsureConsistent()
+        ),
     )
     async def readonly(self) -> bool:
         """
@@ -1168,6 +1171,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.READWRITE,
         group=CommandGroup.CLUSTER,
+        cluster=ClusterCommandConfig(
+            route=NodeFlag.REPLICAS, combine=ClusterEnsureConsistent()
+        ),
     )
     async def readwrite(self) -> bool:
         """
