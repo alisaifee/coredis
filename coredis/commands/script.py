@@ -57,6 +57,7 @@ class Script(Generic[AnyStr]):
         self,
         registered_client: Optional[SupportsScript[AnyStr]] = None,
         script: Optional[StringT] = None,
+        readonly: bool = False,
     ):
         """
         :param client: The client to use for executing the lua script. If
@@ -64,6 +65,8 @@ class Script(Generic[AnyStr]):
          the script using :meth:`__call__` with the :paramref:`__call__.client`
          parameter.
         :param script: The lua script that will be used by :meth:`__call__`
+        :param readonly: If ``True`` the script will be called with
+         :meth:`coredis.Redis.evalsha_ro` instead of :meth:`coredis.Redis.evalsha`
         """
         self.registered_client: Optional[SupportsScript[AnyStr]] = registered_client
         self.script: StringT
@@ -71,12 +74,14 @@ class Script(Generic[AnyStr]):
             raise RuntimeError("No script provided")
         self.script = script
         self.sha = hashlib.sha1(b(script)).hexdigest()  # type: ignore
+        self.readonly = readonly
 
     async def __call__(
         self,
         keys: Optional[Parameters[KeyT]] = None,
         args: Optional[Parameters[ValueT]] = None,
         client: Optional[SupportsScript[AnyStr]] = None,
+        readonly: Optional[bool] = None,
     ) -> ResponseType:
         """
         Executes the script registered in :paramref:`Script.script` using
@@ -87,6 +92,8 @@ class Script(Generic[AnyStr]):
         :param keys: The keys this script will reference
         :param args: The arguments expected by the script
         :param client: The redis client to use instead of :paramref:`Script.client`
+        :param readonly: If ``True`` forces the script to be called with
+         :meth:`coredis.Redis.evalsha_ro`
         """
         from coredis.pipeline import Pipeline
 
@@ -97,36 +104,37 @@ class Script(Generic[AnyStr]):
                 "This instance is not bound to a redis client."
                 "Please provide a valid instance to execute the script with"
             )
+        if readonly is None:
+            readonly = self.readonly
+
         # make sure the Redis server knows about the script
         if isinstance(client, Pipeline):
             # make sure this script is good to go on pipeline
             cast(Pipeline[AnyStr], client).scripts.add(self)
 
+        method = client.evalsha_ro if readonly else client.evalsha
         try:
-            return cast(
-                ResponseType, await client.evalsha(self.sha, keys=keys, args=args)
-            )
+            return cast(ResponseType, await method(self.sha, keys=keys, args=args))
         except NoScriptError:
             # Maybe the client is pointed to a different server than the client
             # that created this instance?
             # Overwrite the sha just in case there was a discrepancy.
             self.sha = cast(AnyStr, await client.script_load(self.script))
-            return cast(
-                ResponseType, await client.evalsha(self.sha, keys=keys, args=args)
-            )
+            return cast(ResponseType, await method(self.sha, keys=keys, args=args))
 
     async def execute(
         self,
         keys: Optional[Parameters[KeyT]] = None,
         args: Optional[Parameters[ValueT]] = None,
         client: Optional[SupportsScript[AnyStr]] = None,
+        readonly: Optional[bool] = None,
     ) -> ResponseType:
         """
         Executes the script registered in :paramref:`Script.script`
 
         :meta private:
         """
-        return await self(keys, args, client)
+        return await self(keys, args, client, readonly)
 
     @versionadded(version="3.5.0")
     def wraps(
@@ -137,6 +145,7 @@ class Script(Generic[AnyStr]):
         ),
         client_arg: Optional[str] = None,
         runtime_checks: bool = False,
+        readonly: Optional[bool] = None,
     ) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
         """
         Decorator for wrapping a regular python function, method or classmethod
@@ -215,6 +224,8 @@ class Script(Generic[AnyStr]):
          and return values. (requires :pypi:`beartype`). If :data:`False` the function will
          still get runtime type checking if the environment configuration ``COREDIS_RUNTIME_CHECKS``
          is set - for details see :ref:`api_reference:runtime type checking`.
+        :param readonly: If ``True`` forces this script to be called with
+         :meth:`coredis.Redis.evalsha_ro`
 
         :return: A function that has a signature mirroring the decorated function.
         """
@@ -283,7 +294,7 @@ class Script(Generic[AnyStr]):
                 keys, arguments, client = split_args(sig.bind(*args, **kwargs))
                 # TODO: atleast lie with a cast.
                 #  mypy doesn't like the cast. pyright is ok with it
-                return await script_instance(keys, arguments, client)  # type: ignore
+                return await script_instance(keys, arguments, client, readonly)  # type: ignore
 
             return __inner
 

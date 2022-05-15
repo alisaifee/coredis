@@ -123,8 +123,13 @@ class Library(Generic[AnyStr]):
         if not library:
             raise FunctionError(f"No library found for {self.name}")
 
-        for name, _ in library["functions"].items():
-            self._functions[name] = Function[AnyStr](self.client, self.name, name)
+        for name, details in library["functions"].items():
+            self._functions[name] = Function[AnyStr](
+                self.client,
+                self.name,
+                name,
+                bool({b"no-writes", "no-writes"} & details["flags"]),
+            )
         return self
 
     def __await__(self: LibraryT) -> Generator[Any, None, LibraryT]:
@@ -143,6 +148,7 @@ class Library(Generic[AnyStr]):
             p.annotation in {"KeyT", KeyT}
         ),
         runtime_checks: bool = False,
+        readonly: Optional[bool] = None,
     ) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
         """
         Decorator for wrapping methods of subclasses of :class:`Library`
@@ -260,6 +266,7 @@ class Library(Generic[AnyStr]):
          and return values. (requires :pypi:`beartype`). If :data:`False` the function will
          still get runtime type checking if the environment configuration ``COREDIS_RUNTIME_CHECKS``
          is set - for details see :ref:`api_reference:runtime type checking`.
+        :param readonly: If ``True`` forces this function to use :meth:`coredis.Redis.fcall_ro`
 
         :return: A function that has a signature mirroring the decorated function.
         """
@@ -327,7 +334,7 @@ class Library(Generic[AnyStr]):
                     )
                 # TODO: atleast lie with a cast.
                 #  mypy doesn't like the cast. pyright is ok with it
-                return await func(keys, arguments)  # type: ignore
+                return await func(keys, arguments, readonly=readonly)  # type: ignore
 
             return _inner
 
@@ -340,12 +347,15 @@ class Function(Generic[AnyStr]):
         client: coredis.client.AbstractRedis[AnyStr],
         library_name: StringT,
         name: StringT,
+        readonly: bool = False,
     ):
         """
         Wrapper to call a redis function that has already been loaded
 
         :param library_name: Name of the library under which the function is registered
         :param name: Name of the function this instance represents
+        :param readonly: If ``True`` the function will be called with
+         :meth:`coredis.Redis.fcall_ro` instead of :meth:`coredis.Redis.fcall`
 
         Example::
 
@@ -357,6 +367,7 @@ class Function(Generic[AnyStr]):
         ] = weakref.ref(client)
         self.library: Library[AnyStr] = Library[AnyStr](client, library_name)
         self.name = name
+        self.readonly = readonly
 
     @property
     def client(self) -> coredis.client.AbstractRedis[AnyStr]:
@@ -377,6 +388,7 @@ class Function(Generic[AnyStr]):
         args: Optional[Parameters[ValueT]] = None,
         *,
         client: Optional[coredis.client.AbstractRedis[AnyStr]] = None,
+        readonly: Optional[bool] = None,
     ) -> ResponseType:
         """
         Wrapper to call :meth:`~coredis.Redis.fcall` with the
@@ -385,7 +397,14 @@ class Function(Generic[AnyStr]):
 
         :param keys: The keys this function will reference
         :param args: The arguments expected by the function
+        :param readonly: If ``True`` forces the function to use :meth:`coredis.Redis.fcall_ro`
         """
         if client is None:
             client = self.client
-        return await client.fcall(self.name, keys or [], args or [])
+        if readonly is None:
+            readonly = self.readonly
+
+        if readonly:
+            return await client.fcall_ro(self.name, keys or [], args or [])
+        else:
+            return await client.fcall(self.name, keys or [], args or [])

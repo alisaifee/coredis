@@ -86,6 +86,17 @@ class TestFunctions:
         assert await client.fcall("echo_key", ["a"], []) == _s("a")
         assert await client.fcall("return_arg", ["a"], [2]) == 20
 
+    @pytest.mark.clusteronly
+    @pytest.mark.parametrize("client_arguments", [({"readonly": True})])
+    async def test_fcall_ro(self, client, simple_library, _s, client_arguments, mocker):
+        get_master_node_by_slot = mocker.spy(
+            client.connection_pool, "get_master_node_by_slot"
+        )
+        await client.fcall_ro("echo_key", ["a"], []) == _s("a")
+        with pytest.raises(ResponseError):
+            await client.fcall_ro("return_arg", ["a"], [2])
+        get_master_node_by_slot.assert_not_called()
+
     async def test_function_delete(self, client, simple_library, _s):
         assert _s("coredis") in await client.function_list()
         assert await client.function_delete("coredis")
@@ -111,6 +122,7 @@ class TestFunctions:
     "redis_basic_resp3",
     "redis_basic_raw_resp3",
     "redis_cluster",
+    "redis_cluster_raw",
 )
 @pytest.mark.asyncio
 @pytest.mark.min_server_version("7.0.0")
@@ -127,6 +139,16 @@ class TestLibrary:
         library = await client.get_library("coredis")
         assert await library["echo_key"](args=(1, 2, 3), keys=["A"]) == _s("A")
         assert await library["return_arg"](args=(1.0, 2.0, 3.0), keys=["A"]) == 10
+
+    @pytest.mark.parametrize("client_arguments", [({"readonly": True})])
+    @pytest.mark.clusteronly
+    async def test_call_library_function_ro(
+        self, client, simple_library, _s, client_arguments, mocker
+    ):
+        fcall = mocker.spy(client, "fcall")
+        library = await client.get_library("coredis")
+        assert await library["echo_key"](args=(1, 2, 3), keys=["A"]) == _s("A")
+        fcall.assert_not_called()
 
     async def test_call_library_update(self, client, simple_library):
         library = await client.get_library("coredis")
@@ -183,3 +205,68 @@ class TestLibrary:
             _s("fu"),
             _s("fubar"),
         ]
+
+    @pytest.mark.parametrize("client_arguments", [({"readonly": True})])
+    @pytest.mark.clusteronly
+    async def test_subclass_wrap_ro_defaults(
+        selfself, client, simple_library, _s, client_arguments, mocker
+    ):
+        class Coredis(Library):
+            def __init__(self, client):
+                super().__init__(client, "coredis")
+
+            @Library.wraps("echo_key")
+            async def echo_key(self, key: KeyT) -> StringT:
+                ...
+
+            @Library.wraps("return_arg")
+            async def return_arg(self, value: ValueT) -> ValueT:
+                ...
+                ...
+
+        fcall = mocker.spy(client, "fcall")
+        fcall_ro = mocker.spy(client, "fcall_ro")
+
+        lib = await Coredis(client)
+        assert await lib.echo_key("bar") == _s("bar")
+        assert await lib.return_arg(1) == 10
+
+        assert fcall.call_count == 1
+        assert fcall_ro.call_count == 1
+
+    @pytest.mark.parametrize("client_arguments", [({"readonly": True})])
+    @pytest.mark.clusteronly
+    async def test_subclass_wrap_ro_forced(
+        selfself, client, simple_library, _s, client_arguments, mocker
+    ):
+        class Coredis(Library):
+            def __init__(self, client):
+                super().__init__(client, "coredis")
+
+            @Library.wraps("echo_key", readonly=False)
+            async def echo_key(self, key: KeyT) -> StringT:
+                ...
+
+            @Library.wraps("echo_key", readonly=True)
+            async def echo_key_ro(self, key: KeyT) -> StringT:
+                ...
+
+            @Library.wraps("return_arg", readonly=False)
+            async def return_arg(self, value: ValueT) -> ValueT:
+                ...
+
+            @Library.wraps("return_arg", readonly=True)
+            async def return_arg_ro(self, value: ValueT) -> ValueT:
+                ...
+
+        fcall = mocker.spy(client, "fcall")
+        fcall_ro = mocker.spy(client, "fcall_ro")
+        lib = await Coredis(client)
+        assert await lib.echo_key("bar") == _s("bar")
+        assert await lib.echo_key_ro("bar") == _s("bar")
+        assert await lib.return_arg(1) == 10
+        with pytest.raises(ResponseError):
+            await lib.return_arg_ro(1) == 10
+
+        assert fcall.call_count == 2
+        assert fcall_ro.call_count == 2

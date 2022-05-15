@@ -71,6 +71,19 @@ class TestScripting:
         assert await redis_cluster.evalsha(sha, ["a"], [3]) == 6
 
     @pytest.mark.asyncio()
+    @pytest.mark.parametrize("client_arguments", [({"readonly": True})])
+    @pytest.mark.min_server_version("7.0")
+    async def test_evalsha_ro(self, redis_cluster, client_arguments, mocker):
+        await redis_cluster.set("a", 2)
+        sha = await redis_cluster.script_load(multiply_script)
+        # 2 * 3 == 6
+        get_master_node_by_slot = mocker.spy(
+            redis_cluster.connection_pool, "get_master_node_by_slot"
+        )
+        assert await redis_cluster.evalsha_ro(sha, ["a"], [3]) == 6
+        get_master_node_by_slot.assert_not_called()
+
+    @pytest.mark.asyncio()
     async def test_evalsha_script_not_loaded(self, redis_cluster):
         await redis_cluster.set("a", 2)
         sha = await redis_cluster.script_load(multiply_script)
