@@ -12,6 +12,11 @@ coredis is an async redis client with support for redis server, cluster
 <!-- TOC depthFrom:2 depthTo:6 withLinks:1 updateOnSave:1 orderedList:0 -->
 
 - [Installation](#installation)
+- [Feature Summary](#feature-summary)
+	- [Deployment architecture](#deployment-architecture)
+	- [Application patterns](#application-patterns)
+	- [Server side scripting](#server-side-scripting)
+	- [Miscelleneous](#miscelleneous)
 - [Quickstart](#quickstart)
 	- [Single Node client](#single-node-client)
 	- [Cluster client](#cluster-client)
@@ -27,6 +32,26 @@ To install coredis:
 ```bash
 $ pip install coredis
 ```
+
+## Feature Summary
+
+### Deployment architecture  
+- [Redis Cluster](https://coredis.readthedocs.org/en/latest/api.html#cluster)
+- [Sentinel](https://coredis.readthedocs.org/en/latest/api.html#sentinel)
+
+### Application patterns
+- [PubSub](https://coredis.readthedocs.org/en/latest/api_reference.html#pubsub)
+- [Sharded PubSub](https://coredis.readthedocs.org/en/latest/api_reference.html#cluster-pub-sub) [`>= Redis 7.0`]
+- [Pipelining](https://coredis.readthedocs.org/en/latest/api_reference.html#pipelines)
+
+### Server side scripting
+- [LUA Scripting](https://coredis.readthedocs.org/en/latest/api_reference.html#scripting)
+- [Redis Libraries and functions](https://coredis.readthedocs.org/en/latest/api_reference.html#library-functions) [`>= Redis 7.0`]
+
+### Miscelleneous
+- [RESP3](https://coredis.readthedocs.org/en/latest/api_reference.html#resp3) Protocol Support
+- Public API annotated with type annotations
+- Optional [Runtime Type Validation](https://coredis.readthedocs.org/en/latest/api_reference.html#runtime-type-checking) (via [beartype](https://github.com/beartype/beartype))
 
 ## Quickstart
 
