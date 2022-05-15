@@ -20,8 +20,9 @@ coredis is an async redis client with support for redis server, cluster
 - [Quickstart](#quickstart)
 	- [Single Node client](#single-node-client)
 	- [Cluster client](#cluster-client)
-- [Supported python versions](#supported-python-versions)
-- [Links](#links)
+- [Compatibility](#compatibility)
+	- [Supported python versions](#supported-python-versions)
+- [References](#references)
 
 <!-- /TOC -->
 
@@ -108,8 +109,7 @@ To see a full list of supported redis commands refer to the [Command
 compatibility](https://coredis.readthedocs.io/en/stable/compatibility.html)
 documentation
 
-Compatibility
--------------
+## Compatibility
 
 coredis is tested against redis versions `6.0.x`, `6.2.x` & `7.0.x`. The
 test matrix status can be reviewed
@@ -124,13 +124,13 @@ coredis is additionally tested against:
 as it provides significant performance gains in response parsing. For more
 details refer to the [the doumentation section on Parsers](https://coredis.readthedocs.org/en/stable/api_reference.html#parsers)
 
-## Supported python versions
+### Supported python versions
 
 -   3.8
 -   3.9
 -   3.10
 
-## Links
+## References
 
 - [Documentation (Stable)](http://coredis.readthedocs.org/en/stable)
 - [Documentation (Latest)](http://coredis.readthedocs.org/en/latest)
