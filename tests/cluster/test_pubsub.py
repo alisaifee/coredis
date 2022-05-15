@@ -123,6 +123,7 @@ class TestPubSubSubscribeUnsubscribe:
 
     @pytest.mark.asyncio
     @pytest.mark.min_server_version("7.0")
+    @pytest.mark.flaky
     async def test_sharded_channel_subscribe_unsubscribe(self, redis_cluster):
         kwargs = make_subscribe_test_data(
             redis_cluster.sharded_pubsub(), "channel", sharded=True
@@ -199,6 +200,7 @@ class TestPubSubSubscribeUnsubscribe:
 
     @pytest.mark.asyncio
     @pytest.mark.min_server_version("7.0")
+    @pytest.mark.flaky
     async def test_sharded_resubscribe_to_channels_on_reconnection(self, redis_cluster):
         kwargs = make_subscribe_test_data(
             redis_cluster.sharded_pubsub(), "channel", sharded=True
