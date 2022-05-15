@@ -81,8 +81,6 @@ With decoding:
 Runtime Type checking
 =====================
 
-.. danger:: Experimental feature
-
 **coredis** optionally wraps all command methods with :pypi:`beartype` decorators to help
 detect errors during testing (or if you are b(ea)rave enough, always).
 
