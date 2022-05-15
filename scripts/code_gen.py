@@ -17,17 +17,17 @@ import inflect
 from black import FileMode, WriteBack, format_file_in_place
 from jinja2 import Environment
 from packaging import version
-
 import coredis
 import coredis.client
 import coredis.pipeline
 from coredis import NodeFlag, PureToken  # noqa
-from coredis.commands.constants import * # noqa
+from coredis.commands.constants import *  # noqa
 from coredis.commands.monitor import Monitor
 from coredis.nodemanager import Node  # noqa
 from coredis.pool import ClusterConnectionPool, ConnectionPool  # noqa
 from coredis.response.types import *  # noqa
 from coredis.typing import *  # noqa
+from typing import *  # noqa
 
 MAX_SUPPORTED_VERSION = version.parse("7.999.999")
 MIN_SUPPORTED_VERSION = version.parse("6.0.0")
