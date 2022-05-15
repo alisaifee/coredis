@@ -2525,7 +2525,7 @@ class KeySpec:
             command = str(command).encode("latin-1")
 
         try:
-            if readonly_command:
+            if readonly_command and command in cls.READONLY:
                 return cls.READONLY[command](arguments)
             else:
                 return cls.ALL[command](arguments)

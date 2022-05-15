@@ -1167,7 +1167,9 @@ class RedisCluster(
                 f"No way to dispatch command:{command!r} with args:{args}"
                 " to Redis Cluster. Missing key."
             )
-        keys: Tuple[ValueT, ...] = KeySpec.extract_keys((command,) + args)
+        keys: Tuple[ValueT, ...] = KeySpec.extract_keys(
+            (command,) + args, self.connection_pool.readonly
+        )
         if (
             command
             in {
