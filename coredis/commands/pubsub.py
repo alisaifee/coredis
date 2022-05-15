@@ -591,10 +591,12 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         # Check any stashed results first.
         if self.pending_tasks:
             for node_id, task in list(self.pending_tasks.items()):
+                self.pending_tasks.pop(node_id)
                 if task.done():
                     result = task.result()
-                    self.pending_tasks.pop(node_id)
-        # If none have returned check any remaining shards that are not pending
+                else:
+                    task.cancel()
+        # If there were no pending results check the shards
         if not result:
             tasks: Dict[str, asyncio.Task[ResponseType]]
             if tasks := {
