@@ -77,6 +77,23 @@ _ROOT_DIR = pathlib.Path(__file__).parent
 with open(str(_ROOT_DIR / "README.md")) as f:
     long_description = f.read()
 
+extensions = [
+    Extension(
+        name="coredis.speedups",
+        sources=["coredis/speedups.c"],
+    )
+]
+
+# TODO: figure out uninitialized variables errors
+# try:
+#     from mypyc.build import mypycify
+#     extensions += mypycify(
+#         ["coredis/parsers.py"]
+#     )
+# except ImportError:
+#     pass
+
+
 setup(
     name="coredis",
     version=versioneer.get_version(),
@@ -117,7 +134,5 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
     ],
-    ext_modules=[
-        Extension(name="coredis.speedups", sources=["coredis/speedups.c"]),
-    ],
+    ext_modules=extensions,
 )

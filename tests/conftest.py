@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 import platform
 import socket
@@ -626,6 +627,15 @@ def _s(client):
             return value.encode(client.encoding)
 
     return str_or_bytes
+
+
+@contextlib.contextmanager
+def server_deprecation_warning(message: str, client, since: str = "1.0"):
+    if version.parse(since) <= REDIS_VERSIONS[str(client)]:
+        with pytest.warns(DeprecationWarning, match=message):
+            yield
+    else:
+        yield
 
 
 def pytest_collection_modifyitems(items):

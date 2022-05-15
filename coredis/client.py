@@ -1387,7 +1387,6 @@ class RedisCluster(
 
                 if not connection.retry_on_timeout and isinstance(e, TimeoutError):
                     raise
-
                 await connection.send_command(command, *args)
                 res[node["name"]] = callback(
                     await self.parse_response(connection, decode=options.get("decode")),

@@ -1497,10 +1497,6 @@ class CoreCommands(CommandMixin[AnyStr]):
     ) -> int:
         ...
 
-    @mutually_exclusive_parameters("store", "storedist")
-    @mutually_exclusive_parameters("store", ("withdist", "withhash", "withcoord"))
-    @mutually_exclusive_parameters("storedist", ("withdist", "withhash", "withcoord"))
-    @mutually_inclusive_parameters("any_", leaders=("count",))
     @redis_command(
         CommandName.GEORADIUS,
         version_deprecated="6.2.0",
@@ -1510,6 +1506,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.GEO,
         arguments={"any_": {"version_introduced": "6.2.0"}},
     )
+    @mutually_exclusive_parameters("store", "storedist")
+    @mutually_exclusive_parameters("store", ("withdist", "withhash", "withcoord"))
+    @mutually_exclusive_parameters("storedist", ("withdist", "withhash", "withcoord"))
+    @mutually_inclusive_parameters("any_", leaders=("count",))
     async def georadius(
         self,
         key: KeyT,
@@ -1560,10 +1560,6 @@ class CoreCommands(CommandMixin[AnyStr]):
             any_=any_,
         )
 
-    @mutually_exclusive_parameters("store", "storedist")
-    @mutually_exclusive_parameters("store", ("withdist", "withhash", "withcoord"))
-    @mutually_exclusive_parameters("storedist", ("withdist", "withhash", "withcoord"))
-    @mutually_inclusive_parameters("any_", leaders=("count",))
     @redis_command(
         CommandName.GEORADIUSBYMEMBER,
         version_deprecated="6.2.0",
@@ -1572,6 +1568,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         """,
         group=CommandGroup.GEO,
     )
+    @mutually_exclusive_parameters("store", "storedist")
+    @mutually_exclusive_parameters("store", ("withdist", "withhash", "withcoord"))
+    @mutually_exclusive_parameters("storedist", ("withdist", "withhash", "withcoord"))
+    @mutually_inclusive_parameters("any_", leaders=("count",))
     async def georadiusbymember(
         self,
         key: KeyT,
@@ -4215,7 +4215,6 @@ class CoreCommands(CommandMixin[AnyStr]):
             count,
         )
 
-    @mutually_inclusive_parameters("offset", "count")
     @redis_command(
         CommandName.ZRANGEBYLEX,
         readonly=True,
@@ -4223,6 +4222,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         deprecation_reason=" Use :meth:`zrange` with the sortby=BYLEX argument",
         group=CommandGroup.SORTED_SET,
     )
+    @mutually_inclusive_parameters("offset", "count")
     async def zrangebylex(
         self,
         key: KeyT,
@@ -4247,7 +4247,6 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.ZRANGEBYLEX, *pieces, callback=TupleCallback[AnyStr]()
         )
 
-    @mutually_inclusive_parameters("offset", "count")
     @redis_command(
         CommandName.ZRANGEBYSCORE,
         readonly=True,
@@ -4255,6 +4254,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         deprecation_reason=" Use :meth:`zrange` with the sortby=BYSCORE argument",
         group=CommandGroup.SORTED_SET,
     )
+    @mutually_inclusive_parameters("offset", "count")
     async def zrangebyscore(
         self,
         key: KeyT,
@@ -4427,7 +4427,6 @@ class CoreCommands(CommandMixin[AnyStr]):
             **options,
         )
 
-    @mutually_inclusive_parameters("offset", "count")
     @redis_command(
         CommandName.ZREVRANGEBYLEX,
         readonly=True,
@@ -4435,6 +4434,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         deprecation_reason="Use :meth:`zrange` with the rev and sort=BYLEX arguments",
         group=CommandGroup.SORTED_SET,
     )
+    @mutually_inclusive_parameters("offset", "count")
     async def zrevrangebylex(
         self,
         key: KeyT,
@@ -4460,7 +4460,6 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.ZREVRANGEBYLEX, *pieces, callback=TupleCallback[AnyStr]()
         )
 
-    @mutually_inclusive_parameters("offset", "count")
     @redis_command(
         CommandName.ZREVRANGEBYSCORE,
         readonly=True,
@@ -4468,6 +4467,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         deprecation_reason="Use :meth:`zrange` with the rev and sort=BYSCORE arguments",
         group=CommandGroup.SORTED_SET,
     )
+    @mutually_inclusive_parameters("offset", "count")
     async def zrevrangebyscore(
         self,
         key: KeyT,

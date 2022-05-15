@@ -5,7 +5,7 @@ import datetime
 import pytest
 
 from coredis import CommandSyntaxError, PureToken
-from tests.conftest import targets
+from tests.conftest import server_deprecation_warning, targets
 
 
 @targets(
@@ -62,9 +62,10 @@ class TestString:
         assert await client.getrange("a", 3, 4) == _s("")
 
     async def test_getset(self, client, _s):
-        assert await client.getset("a", "foo") is None
-        assert await client.getset("a", "bar") == _s("foo")
-        assert await client.get("a") == _s("bar")
+        with server_deprecation_warning("Use :meth:`set`", client, "6.2"):
+            assert await client.getset("a", "foo") is None
+            assert await client.getset("a", "bar") == _s("foo")
+            assert await client.get("a") == _s("bar")
 
     async def test_get_and_set(self, client, _s):
         # get and set can't be tested independently of each other
@@ -269,10 +270,11 @@ class TestString:
 
     async def test_substr(self, client, _s):
         await client.set("a", "0123456789")
-        assert await client.substr("a", 0, -1) == _s("0123456789")
-        assert await client.substr("a", 2, -1) == _s("23456789")
-        assert await client.substr("a", 3, 5) == _s("345")
-        assert await client.substr("a", 3, -2) == _s("345678")
+        with server_deprecation_warning("Use :meth:`getrange`", client):
+            assert await client.substr("a", 0, -1) == _s("0123456789")
+            assert await client.substr("a", 2, -1) == _s("23456789")
+            assert await client.substr("a", 3, 5) == _s("345")
+            assert await client.substr("a", 3, -2) == _s("345678")
 
     async def test_binary_get_set(self, client, _s):
         assert await client.set(" foo bar ", "123")

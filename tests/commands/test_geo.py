@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from coredis import CommandSyntaxError, DataError, PureToken
-from tests.conftest import targets
+from tests.conftest import server_deprecation_warning, targets
 
 
 @targets(
@@ -452,9 +452,11 @@ class TestGeo:
         ]
 
         await client.geoadd("barcelona", values)
-        assert await client.georadius(
-            "barcelona", 2.191, 41.433, 1000, unit=PureToken.M
-        ) == (_s("place1"),)
+
+        with server_deprecation_warning("Use :meth:`geosearch`", client, "6.2"):
+            assert await client.georadius(
+                "barcelona", 2.191, 41.433, 1000, unit=PureToken.M
+            ) == (_s("place1"),)
 
     async def test_georadius_no_values(self, client, _s):
         values = [
@@ -467,7 +469,10 @@ class TestGeo:
         ]
 
         await client.geoadd("barcelona", values)
-        assert await client.georadius("barcelona", 1, 2, 1000, unit=PureToken.M) == ()
+        with server_deprecation_warning("Use :meth:`geosearch`", client, "6.2"):
+            assert (
+                await client.georadius("barcelona", 1, 2, 1000, unit=PureToken.M) == ()
+            )
 
     async def test_georadius_units(self, client, _s):
         values = [
@@ -480,9 +485,10 @@ class TestGeo:
         ]
 
         await client.geoadd("barcelona", values)
-        assert await client.georadius(
-            "barcelona", 2.191, 41.433, 1, unit=PureToken.KM
-        ) == (_s("place1"),)
+        with server_deprecation_warning("Use :meth:`geosearch`", client, "6.2"):
+            assert await client.georadius(
+                "barcelona", 2.191, 41.433, 1, unit=PureToken.KM
+            ) == (_s("place1"),)
 
     async def test_georadius_with(self, client, _s):
         values = [
@@ -496,84 +502,96 @@ class TestGeo:
 
         await client.geoadd("barcelona", values)
 
-        # test a bunch of combinations to test the parse response
-        # function.
-        assert await client.georadius(
-            "barcelona",
-            2.191,
-            41.433,
-            1,
-            unit=PureToken.KM,
-            withdist=True,
-            withcoord=True,
-            withhash=True,
-        ) == (
-            (
-                _s("place1"),
-                0.0881,
-                3471609698139488,
-                (2.19093829393386841, 41.43379028184083523),
-            ),
-        )
-
-        assert await client.georadius(
-            "barcelona",
-            2.191,
-            41.433,
-            1,
-            unit=PureToken.KM,
-            withdist=True,
-            withcoord=True,
-        ) == (
-            (_s("place1"), 0.0881, None, (2.19093829393386841, 41.43379028184083523)),
-        )
-
-        assert await client.georadius(
-            "barcelona",
-            2.191,
-            41.433,
-            1,
-            unit=PureToken.KM,
-            withhash=True,
-            withcoord=True,
-        ) == (
-            (
-                _s("place1"),
-                None,
-                3471609698139488,
-                (2.19093829393386841, 41.43379028184083523),
-            ),
-        )
-
-        # test no values.
-        assert (
-            await client.georadius(
+        with server_deprecation_warning("Use :meth:`geosearch`", client, "6.2"):
+            # test a bunch of combinations to test the parse response
+            # function.
+            assert await client.georadius(
                 "barcelona",
-                2,
-                1,
+                2.191,
+                41.433,
                 1,
                 unit=PureToken.KM,
                 withdist=True,
                 withcoord=True,
                 withhash=True,
+            ) == (
+                (
+                    _s("place1"),
+                    0.0881,
+                    3471609698139488,
+                    (2.19093829393386841, 41.43379028184083523),
+                ),
             )
-            == ()
-        )
 
-        with pytest.raises(CommandSyntaxError):
-            await client.georadius(
-                "barcelona", 2, 1, 1, unit=PureToken.KM, withdist=True, store="somehere"
-            )
-        with pytest.raises(CommandSyntaxError):
-            await client.georadius(
+            assert await client.georadius(
                 "barcelona",
-                2,
-                1,
+                2.191,
+                41.433,
                 1,
                 unit=PureToken.KM,
                 withdist=True,
-                storedist="somehere",
+                withcoord=True,
+            ) == (
+                (
+                    _s("place1"),
+                    0.0881,
+                    None,
+                    (2.19093829393386841, 41.43379028184083523),
+                ),
             )
+
+            assert await client.georadius(
+                "barcelona",
+                2.191,
+                41.433,
+                1,
+                unit=PureToken.KM,
+                withhash=True,
+                withcoord=True,
+            ) == (
+                (
+                    _s("place1"),
+                    None,
+                    3471609698139488,
+                    (2.19093829393386841, 41.43379028184083523),
+                ),
+            )
+
+            # test no values.
+            assert (
+                await client.georadius(
+                    "barcelona",
+                    2,
+                    1,
+                    1,
+                    unit=PureToken.KM,
+                    withdist=True,
+                    withcoord=True,
+                    withhash=True,
+                )
+                == ()
+            )
+
+            with pytest.raises(CommandSyntaxError):
+                await client.georadius(
+                    "barcelona",
+                    2,
+                    1,
+                    1,
+                    unit=PureToken.KM,
+                    withdist=True,
+                    store="somehere",
+                )
+            with pytest.raises(CommandSyntaxError):
+                await client.georadius(
+                    "barcelona",
+                    2,
+                    1,
+                    1,
+                    unit=PureToken.KM,
+                    withdist=True,
+                    storedist="somehere",
+                )
 
     async def test_georadius_count(self, client, _s):
         values = [
@@ -586,9 +604,10 @@ class TestGeo:
         ]
 
         await client.geoadd("barcelona", values)
-        assert await client.georadius(
-            "barcelona", 2.191, 41.433, 3000, count=1, unit=PureToken.M
-        ) == (_s("place1"),)
+        with server_deprecation_warning("Use :meth:`geosearch`", client, "6.2"):
+            assert await client.georadius(
+                "barcelona", 2.191, 41.433, 3000, count=1, unit=PureToken.M
+            ) == (_s("place1"),)
 
     @pytest.mark.min_server_version("6.2.0")
     async def test_georadius_count_any(self, client, _s):
@@ -602,28 +621,29 @@ class TestGeo:
         ]
 
         await client.geoadd("barcelona", values)
-        assert await client.georadius(
-            "barcelona", 2.191, 41.433, 3000, count=1, unit=PureToken.M
-        ) == (_s("place1"),)
-
-        assert (
-            len(
-                await client.georadius(
-                    "barcelona",
-                    2.191,
-                    41.433,
-                    3000,
-                    count=1,
-                    any_=True,
-                    unit=PureToken.M,
-                )
-            )
-            == 1
-        )
-        with pytest.raises(CommandSyntaxError):
+        with server_deprecation_warning("Use :meth:`geosearch`", client, "6.2"):
             assert await client.georadius(
-                "barcelona", 2.191, 41.433, 3000, any_=True, unit=PureToken.M
+                "barcelona", 2.191, 41.433, 3000, count=1, unit=PureToken.M
             ) == (_s("place1"),)
+
+            assert (
+                len(
+                    await client.georadius(
+                        "barcelona",
+                        2.191,
+                        41.433,
+                        3000,
+                        count=1,
+                        any_=True,
+                        unit=PureToken.M,
+                    )
+                )
+                == 1
+            )
+            with pytest.raises(CommandSyntaxError):
+                assert await client.georadius(
+                    "barcelona", 2.191, 41.433, 3000, any_=True, unit=PureToken.M
+                ) == (_s("place1"),)
 
     async def test_georadius_sort(self, client, _s):
         values = [
@@ -636,18 +656,19 @@ class TestGeo:
         ]
 
         await client.geoadd("barcelona", values)
-        assert await client.georadius(
-            "barcelona", 2.191, 41.433, 3000, unit=PureToken.M, order=PureToken.ASC
-        ) == (
-            _s("place1"),
-            _s("place2"),
-        )
-        assert await client.georadius(
-            "barcelona", 2.191, 41.433, 3000, unit=PureToken.M, order=PureToken.DESC
-        ) == (
-            _s("place2"),
-            _s("place1"),
-        )
+        with server_deprecation_warning("Use :meth:`geosearch`", client, "6.2"):
+            assert await client.georadius(
+                "barcelona", 2.191, 41.433, 3000, unit=PureToken.M, order=PureToken.ASC
+            ) == (
+                _s("place1"),
+                _s("place2"),
+            )
+            assert await client.georadius(
+                "barcelona", 2.191, 41.433, 3000, unit=PureToken.M, order=PureToken.DESC
+            ) == (
+                _s("place2"),
+                _s("place1"),
+            )
 
     @pytest.mark.nocluster
     async def test_georadius_store(self, client, _s):
@@ -661,9 +682,15 @@ class TestGeo:
         ]
 
         await client.geoadd("barcelona", values)
-        await client.georadius(
-            "barcelona", 2.191, 41.433, 1000, store="places_barcelona", unit=PureToken.M
-        )
+        with server_deprecation_warning("Use :meth:`geosearch`", client, "6.2"):
+            await client.georadius(
+                "barcelona",
+                2.191,
+                41.433,
+                1000,
+                store="places_barcelona",
+                unit=PureToken.M,
+            )
         assert await client.zrange("places_barcelona", 0, -1) == (_s("place1"),)
 
     @pytest.mark.nocluster
@@ -678,14 +705,15 @@ class TestGeo:
         ]
 
         await client.geoadd("barcelona", values)
-        await client.georadius(
-            "barcelona",
-            2.191,
-            41.433,
-            1000,
-            storedist="places_barcelona",
-            unit=PureToken.M,
-        )
+        with server_deprecation_warning("Use :meth:`geosearch`", client, "6.2"):
+            await client.georadius(
+                "barcelona",
+                2.191,
+                41.433,
+                1000,
+                storedist="places_barcelona",
+                unit=PureToken.M,
+            )
         # instead of save the geo score, the distance is saved.
         assert await client.zscore("places_barcelona", "place1") == 88.05060698409301
 
@@ -700,35 +728,36 @@ class TestGeo:
         ]
 
         await client.geoadd("barcelona", values)
-        assert await client.georadiusbymember(
-            "barcelona", "place1", 4000, unit=PureToken.M
-        ) == (
-            _s("place2"),
-            _s("place1"),
-        )
-        assert await client.georadiusbymember(
-            "barcelona", "place1", 10, unit=PureToken.M
-        ) == (_s("place1"),)
-
-        assert await client.georadiusbymember(
-            "barcelona",
-            "place1",
-            4000,
-            withdist=True,
-            withcoord=True,
-            withhash=True,
-            unit=PureToken.M,
-        ) == (
-            (
+        with server_deprecation_warning("Use :meth:`geosearch`", client, "6.2"):
+            assert await client.georadiusbymember(
+                "barcelona", "place1", 4000, unit=PureToken.M
+            ) == (
                 _s("place2"),
-                3067.4157,
-                3471609625421029,
-                (2.187376320362091, 41.40634178640635),
-            ),
-            (
                 _s("place1"),
-                0.0,
-                3471609698139488,
-                (2.1909382939338684, 41.433790281840835),
-            ),
-        )
+            )
+            assert await client.georadiusbymember(
+                "barcelona", "place1", 10, unit=PureToken.M
+            ) == (_s("place1"),)
+
+            assert await client.georadiusbymember(
+                "barcelona",
+                "place1",
+                4000,
+                withdist=True,
+                withcoord=True,
+                withhash=True,
+                unit=PureToken.M,
+            ) == (
+                (
+                    _s("place2"),
+                    3067.4157,
+                    3471609625421029,
+                    (2.187376320362091, 41.40634178640635),
+                ),
+                (
+                    _s("place1"),
+                    0.0,
+                    3471609698139488,
+                    (2.1909382939338684, 41.433790281840835),
+                ),
+            )

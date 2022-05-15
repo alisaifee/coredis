@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from typing import List
-
 import pytest
 
 from coredis import PureToken, ResponseError
 from coredis.commands.function import Library
-from coredis.typing import KeyT, StringT, ValueT
+from coredis.typing import KeyT, List, StringT, ValueT
 from tests.conftest import targets
 
 library_definition = """#!lua name=coredis
@@ -179,7 +177,7 @@ class TestLibrary:
         )
         assert await client.set("bar", "fubar")
         assert await lib.default_get_variadic("bar", "fu", "bar", "baz") == _s("fubar")
-        await client.hmset("hbar", {"fu": "whut?"})
+        await client.hset("hbar", {"fu": "whut?"})
         assert await lib.hmmerge("hbar", fu="bar", bar="fu", baz="fubar") == [
             _s("whut?"),
             _s("fu"),

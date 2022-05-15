@@ -3,7 +3,6 @@ from __future__ import annotations
 import pytest
 from packaging.version import Version
 
-from coredis._utils import nativestr
 from coredis.exceptions import CommandNotSupportedError
 from tests.conftest import targets
 
@@ -52,15 +51,6 @@ class TestClient:
         await client.ping()
         with pytest.raises(CommandNotSupportedError):
             await client.function_list()
-
-    @pytest.mark.min_server_version("6.2.0")
-    @pytest.mark.max_server_version("7.0.0")
-    async def test_deprecated_command(self, client, caplog):
-        await client.ping()
-        assert await client.set("a", 1)
-        with pytest.warns(UserWarning) as warning:
-            assert "1" == nativestr(await client.getset("a", 2))
-        assert warning[0].message.args[0] == "Use :meth:`set` with the get argument"
 
     @pytest.mark.min_server_version("6.2.0")
     @pytest.mark.parametrize("client_arguments", [({"db": 1})])

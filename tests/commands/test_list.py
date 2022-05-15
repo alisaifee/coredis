@@ -5,7 +5,7 @@ import asyncio
 import pytest
 
 from coredis import PureToken
-from tests.conftest import targets
+from tests.conftest import server_deprecation_warning, targets
 
 
 @targets(
@@ -87,9 +87,10 @@ class TestList:
     async def test_brpoplpush(self, client, _s):
         await client.rpush("a{foo}", ["1", "2"])
         await client.rpush("b{foo}", ["3", "4"])
-        assert await client.brpoplpush("a{foo}", "b{foo}", timeout=1) == _s("2")
-        assert await client.brpoplpush("a{foo}", "b{foo}", timeout=1) == _s("1")
-        assert await client.brpoplpush("a{foo}", "b{foo}", timeout=1) is None
+        with server_deprecation_warning("Use :meth:`blmove`", client, "6.2"):
+            assert await client.brpoplpush("a{foo}", "b{foo}", timeout=1) == _s("2")
+            assert await client.brpoplpush("a{foo}", "b{foo}", timeout=1) == _s("1")
+            assert await client.brpoplpush("a{foo}", "b{foo}", timeout=1) is None
         assert await client.lrange("a{foo}", 0, -1) == []
         assert await client.lrange("b{foo}", 0, -1) == [
             _s("1"),
@@ -100,7 +101,8 @@ class TestList:
 
     async def test_brpoplpush_empty_string(self, client, _s):
         await client.rpush("a{foo}", [""])
-        assert await client.brpoplpush("a{foo}", "b{foo}", timeout=1) == _s("")
+        with server_deprecation_warning("Use :meth:`blmove`", client, "6.2"):
+            assert await client.brpoplpush("a{foo}", "b{foo}", timeout=1) == _s("")
 
     async def test_lindex(self, client, _s):
         await client.rpush("a", ["1", "2", "3"])
@@ -196,7 +198,8 @@ class TestList:
     async def test_rpoplpush(self, client, _s):
         await client.rpush("a{foo}", ["a1", "a2", "a3"])
         await client.rpush("b{foo}", ["b1", "b2", "b3"])
-        assert await client.rpoplpush("a{foo}", "b{foo}") == _s("a3")
+        with server_deprecation_warning("Use :meth:`lmove`", client, "6.2"):
+            assert await client.rpoplpush("a{foo}", "b{foo}") == _s("a3")
         assert await client.lrange("a{foo}", 0, -1) == [_s("a1"), _s("a2")]
         assert await client.lrange("b{foo}", 0, -1) == [
             _s("a3"),

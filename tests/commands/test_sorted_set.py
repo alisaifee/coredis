@@ -5,7 +5,7 @@ import asyncio
 import pytest
 
 from coredis import CommandSyntaxError, DataError, PureToken
-from tests.conftest import targets
+from tests.conftest import server_deprecation_warning, targets
 
 
 @targets(
@@ -424,74 +424,85 @@ class TestSortedSet:
 
     async def test_zrangebylex(self, client, _s):
         await client.zadd("a{foo}", dict(a=0, b=0, c=0, d=0, e=0, f=0, g=0))
-        assert await client.zrangebylex("a{foo}", "-", "[c") == (
-            _s("a"),
-            _s("b"),
-            _s("c"),
-        )
-        assert await client.zrangebylex("a{foo}", "-", "(c") == (_s("a"), _s("b"))
-        assert await client.zrangebylex("a{foo}", "[aaa", "(g") == (
-            _s("b"),
-            _s("c"),
-            _s("d"),
-            _s("e"),
-            _s("f"),
-        )
-        assert await client.zrangebylex("a{foo}", "[f", "+") == (_s("f"), _s("g"))
-        assert await client.zrangebylex("a{foo}", "-", "+", offset=3, count=2) == (
-            _s("d"),
-            _s("e"),
-        )
+        with server_deprecation_warning("Use :meth:`zrange`", client, "6.2"):
+            assert await client.zrangebylex("a{foo}", "-", "[c") == (
+                _s("a"),
+                _s("b"),
+                _s("c"),
+            )
+            assert await client.zrangebylex("a{foo}", "-", "(c") == (_s("a"), _s("b"))
+            assert await client.zrangebylex("a{foo}", "[aaa", "(g") == (
+                _s("b"),
+                _s("c"),
+                _s("d"),
+                _s("e"),
+                _s("f"),
+            )
+            assert await client.zrangebylex("a{foo}", "[f", "+") == (_s("f"), _s("g"))
+            assert await client.zrangebylex("a{foo}", "-", "+", offset=3, count=2) == (
+                _s("d"),
+                _s("e"),
+            )
 
     async def test_zrevrangebylex(self, client, _s):
         await client.zadd("a{foo}", dict(a=0, b=0, c=0, d=0, e=0, f=0, g=0))
-        assert await client.zrevrangebylex("a{foo}", "[c", "-") == (
-            _s("c"),
-            _s("b"),
-            _s("a"),
-        )
-        assert await client.zrevrangebylex("a{foo}", "(c", "-") == (_s("b"), _s("a"))
-        assert await client.zrevrangebylex("a{foo}", "(g", "[aaa") == (
-            _s("f"),
-            _s("e"),
-            _s("d"),
-            _s("c"),
-            _s("b"),
-        )
-        assert await client.zrevrangebylex("a{foo}", "+", "[f") == (_s("g"), _s("f"))
-        assert await client.zrevrangebylex("a{foo}", "+", "-", offset=3, count=2) == (
-            _s("d"),
-            _s("c"),
-        )
+        with server_deprecation_warning("Use :meth:`zrange`", client, "6.2"):
+            assert await client.zrevrangebylex("a{foo}", "[c", "-") == (
+                _s("c"),
+                _s("b"),
+                _s("a"),
+            )
+            assert await client.zrevrangebylex("a{foo}", "(c", "-") == (
+                _s("b"),
+                _s("a"),
+            )
+            assert await client.zrevrangebylex("a{foo}", "(g", "[aaa") == (
+                _s("f"),
+                _s("e"),
+                _s("d"),
+                _s("c"),
+                _s("b"),
+            )
+            assert await client.zrevrangebylex("a{foo}", "+", "[f") == (
+                _s("g"),
+                _s("f"),
+            )
+            assert await client.zrevrangebylex(
+                "a{foo}", "+", "-", offset=3, count=2
+            ) == (
+                _s("d"),
+                _s("c"),
+            )
 
     async def test_zrangebyscore(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3, a4=4, a5=5))
-        assert await client.zrangebyscore("a{foo}", 2, 4) == (
-            _s("a2"),
-            _s("a3"),
-            _s("a4"),
-        )
+        with server_deprecation_warning("Use :meth:`zrange`", client, "6.2"):
+            assert await client.zrangebyscore("a{foo}", 2, 4) == (
+                _s("a2"),
+                _s("a3"),
+                _s("a4"),
+            )
 
-        # slicing with start/num
-        assert await client.zrangebyscore("a{foo}", 2, 4, offset=1, count=2) == (
-            _s("a3"),
-            _s("a4"),
-        )
+            # slicing with start/num
+            assert await client.zrangebyscore("a{foo}", 2, 4, offset=1, count=2) == (
+                _s("a3"),
+                _s("a4"),
+            )
 
-        # withscores
-        assert await client.zrangebyscore("a{foo}", 2, 4, withscores=True) == (
-            (_s("a2"), 2.0),
-            (_s("a3"), 3.0),
-            (_s("a4"), 4.0),
-        )
+            # withscores
+            assert await client.zrangebyscore("a{foo}", 2, 4, withscores=True) == (
+                (_s("a2"), 2.0),
+                (_s("a3"), 3.0),
+                (_s("a4"), 4.0),
+            )
 
-        # custom score function
-        assert await client.zrangebyscore(
-            "a{foo}",
-            2,
-            4,
-            withscores=True,
-        ) == ((_s("a2"), 2), (_s("a3"), 3), (_s("a4"), 4))
+            # custom score function
+            assert await client.zrangebyscore(
+                "a{foo}",
+                2,
+                4,
+                withscores=True,
+            ) == ((_s("a2"), 2), (_s("a3"), 3), (_s("a4"), 4))
 
     async def test_zrank(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3, a4=4, a5=5))
@@ -539,53 +550,55 @@ class TestSortedSet:
 
     async def test_zrevrange(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3))
-        assert await client.zrevrange("a{foo}", 0, 1) == (_s("a3"), _s("a2"))
-        assert await client.zrevrange("a{foo}", 1, 2) == (_s("a2"), _s("a1"))
+        with server_deprecation_warning("Use :meth:`zrange`", client, "6.2"):
+            assert await client.zrevrange("a{foo}", 0, 1) == (_s("a3"), _s("a2"))
+            assert await client.zrevrange("a{foo}", 1, 2) == (_s("a2"), _s("a1"))
 
-        # withscores
-        assert await client.zrevrange("a{foo}", 0, 1, withscores=True) == (
-            (_s("a3"), 3.0),
-            (_s("a2"), 2.0),
-        )
-        assert await client.zrevrange("a{foo}", 1, 2, withscores=True) == (
-            (_s("a2"), 2.0),
-            (_s("a1"), 1.0),
-        )
+            # withscores
+            assert await client.zrevrange("a{foo}", 0, 1, withscores=True) == (
+                (_s("a3"), 3.0),
+                (_s("a2"), 2.0),
+            )
+            assert await client.zrevrange("a{foo}", 1, 2, withscores=True) == (
+                (_s("a2"), 2.0),
+                (_s("a1"), 1.0),
+            )
 
-        # custom score function
-        assert await client.zrevrange("a{foo}", 0, 1, withscores=True,) == (
-            (_s("a3"), 3.0),
-            (_s("a2"), 2.0),
-        )
+            # custom score function
+            assert await client.zrevrange("a{foo}", 0, 1, withscores=True,) == (
+                (_s("a3"), 3.0),
+                (_s("a2"), 2.0),
+            )
 
     async def test_zrevrangebyscore(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3, a4=4, a5=5))
-        assert await client.zrevrangebyscore("a{foo}", 4, 2) == (
-            _s("a4"),
-            _s("a3"),
-            _s("a2"),
-        )
+        with server_deprecation_warning("Use :meth:`zrange`", client, "6.2"):
+            assert await client.zrevrangebyscore("a{foo}", 4, 2) == (
+                _s("a4"),
+                _s("a3"),
+                _s("a2"),
+            )
 
-        # slicing with start/num
-        assert await client.zrevrangebyscore("a{foo}", 4, 2, offset=1, count=2) == (
-            _s("a3"),
-            _s("a2"),
-        )
+            # slicing with start/num
+            assert await client.zrevrangebyscore("a{foo}", 4, 2, offset=1, count=2) == (
+                _s("a3"),
+                _s("a2"),
+            )
 
-        # withscores
-        assert await client.zrevrangebyscore("a{foo}", 4, 2, withscores=True) == (
-            (_s("a4"), 4.0),
-            (_s("a3"), 3.0),
-            (_s("a2"), 2.0),
-        )
+            # withscores
+            assert await client.zrevrangebyscore("a{foo}", 4, 2, withscores=True) == (
+                (_s("a4"), 4.0),
+                (_s("a3"), 3.0),
+                (_s("a2"), 2.0),
+            )
 
-        # custom score function
-        assert await client.zrevrangebyscore(
-            "a{foo}",
-            4,
-            2,
-            withscores=True,
-        ) == ((_s("a4"), 4), (_s("a3"), 3), (_s("a2"), 2))
+            # custom score function
+            assert await client.zrevrangebyscore(
+                "a{foo}",
+                4,
+                2,
+                withscores=True,
+            ) == ((_s("a4"), 4), (_s("a3"), 3), (_s("a2"), 2))
 
     async def test_zrevrank(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3, a4=4, a5=5))
