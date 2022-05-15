@@ -162,7 +162,7 @@ class ClusterMergeSets(ClusterMultiNodeCallback[Set[R]]):
 
 
 class ClusterSum(ClusterMultiNodeCallback[int]):
-    def combine(self, responses: Mapping[str, int], **kwargs: Optional[ValueT]) -> bool:
+    def combine(self, responses: Mapping[str, int], **kwargs: Optional[ValueT]) -> int:
         return sum(responses.values())
 
 
