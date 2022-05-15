@@ -55,6 +55,16 @@ class ResponseCallbackMeta(ABCMeta):
         return kls
 
 
+class ClusterCallbackMeta(ABCMeta):
+    def __new__(
+        cls, name: str, bases: Tuple[type, ...], namespace: Dict[str, str]
+    ) -> ClusterCallbackMeta:
+        kls = super().__new__(cls, name, bases, namespace)
+        setattr(kls, "combine", add_runtime_checks(getattr(kls, "combine")))
+        setattr(kls, "combine_3", add_runtime_checks(getattr(kls, "combine_3")))
+        return kls
+
+
 class ResponseCallback(ABC, Generic[RESP, RESP3, R], metaclass=ResponseCallbackMeta):
     version: Literal[2, 3]
 
@@ -88,7 +98,7 @@ class NoopCallback(ResponseCallback[R, R, R]):
         return response
 
 
-class ClusterMultiNodeCallback(ABC, Generic[R]):
+class ClusterMultiNodeCallback(ABC, Generic[R], metaclass=ClusterCallbackMeta):
     def __call__(
         self, responses: Mapping[str, R], version: int = 2, **kwargs: Optional[ValueT]
     ) -> R:

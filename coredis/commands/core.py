@@ -6890,7 +6890,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.SWAPDB,
         group=CommandGroup.SERVER,
     )
-    async def swapdb(self, *, index1: int, index2: int) -> bool:
+    async def swapdb(self, index1: int, index2: int) -> bool:
         """
         Swaps two Redis databases
         """
@@ -7058,6 +7058,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ACL_LOAD,
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
+        cluster=ClusterCommandConfig(
+            route=NodeFlag.ALL, combine=ClusterEnsureConsistent()
+        ),
     )
     async def acl_load(self) -> bool:
         """

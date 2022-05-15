@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from coredis import AuthenticationError, AuthorizationError
+from coredis import AuthenticationError, AuthorizationError, ResponseError
 from tests.conftest import targets
 
 
@@ -36,6 +36,8 @@ class TestACL:
         assert await client.acl_dryrun("test_user", "set", "foo", "bar")
         with pytest.raises(AuthorizationError):
             await client.acl_dryrun("test_user", "get", "foo")
+        with pytest.raises(AuthorizationError):
+            await client.acl_dryrun("test_user", "ping")
 
     async def test_acl_list(self, client, _s):
         assert _s("user default") in (await client.acl_list())[0]
@@ -46,6 +48,12 @@ class TestACL:
     async def test_gen_pass(self, client, _s):
         assert len(await client.acl_genpass()) == 64
         assert len(await client.acl_genpass(4)) == 1
+
+    async def test_acl_load(self, client):
+        with pytest.raises(
+            ResponseError, match="instance is not configured to use an ACL file"
+        ):
+            await client.acl_load()
 
     @pytest.mark.min_server_version("6.0.0")
     @pytest.mark.nocluster

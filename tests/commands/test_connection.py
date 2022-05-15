@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 import coredis
@@ -41,6 +43,23 @@ class TestConnection:
         assert await client.client_reply(PureToken.ON)
 
     @pytest.mark.min_server_version("6.2.0")
+    async def test_client_getredir(self, client, _s, cloner):
+        assert await client.client_getredir() == -1
+        clone = await cloner(client)
+        clone_id = (await clone.client_info())["id"]
+        assert await client.client_tracking(PureToken.ON, redirect=clone_id)
+        assert await client.client_getredir() == clone_id
+
+    @pytest.mark.min_server_version("6.2.0")
+    async def test_client_pause_unpause(self, client, _s, cloner):
+        clone = await cloner(client)
+        assert await clone.client_pause(1000)
+        with pytest.raises(asyncio.TimeoutError):
+            await asyncio.wait_for(clone.ping(), timeout=0.01)
+        assert await client.client_unpause()
+        assert await asyncio.wait_for(clone.ping(), timeout=0.01) == _s("PONG")
+
+    @pytest.mark.min_server_version("6.2.0")
     async def test_client_trackinginfo_no_tracking(self, client, _s):
         info = await client.client_trackinginfo()
         assert info[_s("flags")] == {_s("off")}
@@ -69,13 +88,24 @@ class TestConnection:
         with pytest.raises(ResponseError):
             await client.client_kill(ip_port="1.1.1.1:9999")
 
-    async def test_client_kill_filter(self, client, _s):
-        resp = await client.client_kill(type_=PureToken.NORMAL)
-        assert resp >= 0
+    @pytest.mark.min_server_version("6.2.0")
+    async def test_client_kill_filter(self, client, cloner, _s):
+        clone = await cloner(client)
+        clone_id = (await clone.client_info())["id"]
+        resp = await client.client_kill(identifier=clone_id)
+        assert resp > 0
 
-    async def test_client_kill_filter_skip_me(self, client, _s):
-        resp = await client.client_kill(type_=PureToken.NORMAL, skipme=True)
-        assert resp >= 0
+    @pytest.mark.min_server_version("6.2.0")
+    async def test_client_kill_filter_skip_me(self, client, cloner, _s):
+        clone = await cloner(client)
+        my_id = (await client.client_info())["id"]
+        clone_id = (await clone.client_info())["id"]
+        laddr = (await client.client_info())["laddr"]
+        resp = await client.client_kill(laddr=laddr, skipme=True)
+        assert resp > 0
+        await clone.ping()
+        assert clone_id != (await clone.client_info())["id"]
+        assert my_id == (await client.client_info())["id"]
 
     async def test_client_list_after_client_setname(self, client, _s):
         await client.client_setname("cl=i=ent")

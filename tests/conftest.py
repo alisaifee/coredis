@@ -629,6 +629,33 @@ def _s(client):
     return str_or_bytes
 
 
+@pytest.fixture
+def cloner():
+    async def _cloner(client):
+        if isinstance(client, coredis.client.Redis):
+            c_kwargs = client.connection_pool.connection_kwargs
+            c = client.__class__(
+                decode_responses=client.decode_responses,
+                protocol_version=client.protocol_version,
+                encoding=client.encoding,
+                connection_pool=client.connection_pool.__class__(**c_kwargs),
+            )
+        else:
+            c_kwargs = client.connection_pool.connection_kwargs
+            c = client.__class__(
+                client.startup_nodes[0]["host"],
+                client.startup_nodes[0]["port"],
+                decode_responses=client.decode_responses,
+                protocol_version=client.protocol_version,
+                encoding=client.encoding,
+                connection_pool=client.connection_pool.__class__(**c_kwargs),
+            )
+        await c.ping()
+        return c
+
+    return _cloner
+
+
 @contextlib.contextmanager
 def server_deprecation_warning(message: str, client, since: str = "1.0"):
     if version.parse(since) <= REDIS_VERSIONS[str(client)]:

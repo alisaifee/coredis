@@ -5,7 +5,7 @@ import datetime
 import pytest
 from pytest import approx
 
-from coredis import ResponseError
+from coredis import PureToken, ResponseError
 from tests.conftest import targets
 
 
@@ -116,6 +116,47 @@ class TestServer:
         await client.set("b", "bar")
         assert await client.dbsize() == 2
 
+    @pytest.mark.min_server_version("6.2.0")
+    @pytest.mark.parametrize(
+        "mode",
+        [
+            None,
+            PureToken.SYNC,
+            PureToken.ASYNC,
+        ],
+    )
+    async def test_flushall(self, client, _s, mode):
+        await client.set("a", "foo")
+        await client.set("b", "bar")
+        await client.select(1)
+        await client.set("a", "foo")
+        await client.set("b", "bar")
+        await client.select(0)
+        assert len(await client.keys()) == 2
+        await client.select(1)
+        assert len(await client.keys()) == 2
+        assert await client.flushall(mode)
+        await client.select(0)
+        assert len(await client.keys()) == 0
+        await client.select(1)
+        assert len(await client.keys()) == 0
+
+    @pytest.mark.min_server_version("6.2.0")
+    @pytest.mark.parametrize(
+        "mode",
+        [
+            None,
+            PureToken.SYNC,
+            PureToken.ASYNC,
+        ],
+    )
+    async def test_flushdb(self, client, _s, mode):
+        await client.set("a", "foo")
+        await client.set("b", "bar")
+        assert len(await client.keys()) == 2
+        assert await client.flushdb(mode)
+        assert len(await client.keys()) == 0
+
     async def test_slowlog_get(self, client, _s):
         sl_v, length_v = await self.slowlog(client, _s)
         await client.slowlog_reset()
@@ -167,6 +208,8 @@ class TestServer:
         info = await client.info()
         assert isinstance(info, dict)
         assert info["db0"]["keys"] == 2
+        keyspace = await client.info("keyspace")
+        assert {"db0"} == keyspace.keys()
 
     async def test_lastsave(self, client, _s):
         assert isinstance(await client.lastsave(), datetime.datetime)
@@ -232,3 +275,13 @@ class TestServer:
     async def test_role(self, client, _s):
         role_info = await client.role()
         assert role_info.role == "master"
+
+    @pytest.mark.nokeydb
+    async def test_swapdb(self, client, _s):
+        await client.set("fubar", 1)
+        await client.select(1)
+        await client.set("fubar", 2)
+        await client.select(0)
+        assert await client.get("fubar") == _s(1)
+        assert await client.swapdb(0, 1)
+        assert await client.get("fubar") == _s(2)
