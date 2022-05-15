@@ -1164,11 +1164,18 @@ class RedisCluster(
 
         if len(args) <= 0:
             raise RedisClusterException(
-                f"No way to dispatch this command:{args} to Redis Cluster. Missing key."
+                f"No way to dispatch command:{command!r} with args:{args}"
+                " to Redis Cluster. Missing key."
             )
         keys: Tuple[ValueT, ...] = KeySpec.extract_keys((command,) + args)
         if (
-            command in {CommandName.EVAL, CommandName.EVALSHA, CommandName.FCALL}
+            command
+            in {
+                CommandName.EVAL,
+                CommandName.EVALSHA,
+                CommandName.FCALL,
+                CommandName.FCALL_RO,
+            }
             and not keys
         ):
             return None
@@ -1176,12 +1183,13 @@ class RedisCluster(
         slots = {self.connection_pool.nodes.keyslot(key) for key in keys}
         if not slots:
             raise RedisClusterException(
-                f"No way to dispatch this command: {args} to Redis Cluster."
+                f"No way to dispatch command:{command!r} with args:{args}"
+                " to Redis Cluster. Missing key."
             )
 
         if len(slots) != 1:
             raise RedisClusterException(
-                f"{str(command)} - all keys must map to the same key slot"
+                f"{command!r} - all keys must map to the same key slot"
             )
         return slots.pop()
 

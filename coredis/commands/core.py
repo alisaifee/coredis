@@ -5659,7 +5659,10 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="3.0.0")
     @redis_command(
-        CommandName.EVAL_RO, version_introduced="7.0.0", group=CommandGroup.SCRIPTING
+        CommandName.EVAL_RO,
+        version_introduced="7.0.0",
+        group=CommandGroup.SCRIPTING,
+        readonly=True,
     )
     async def eval_ro(
         self,
@@ -5712,7 +5715,10 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="3.0.0")
     @redis_command(
-        CommandName.EVALSHA_RO, version_introduced="7.0.0", group=CommandGroup.SCRIPTING
+        CommandName.EVALSHA_RO,
+        version_introduced="7.0.0",
+        group=CommandGroup.SCRIPTING,
+        readonly=True,
     )
     async def evalsha_ro(
         self,
@@ -5810,7 +5816,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.SCRIPT_LOAD,
         group=CommandGroup.SCRIPTING,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.PRIMARIES,
+            route=NodeFlag.ALL,
             combine=ClusterEnsureConsistent(),
         ),
     )
@@ -5852,6 +5858,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.FCALL_RO,
         version_introduced="7.0.0",
         group=CommandGroup.SCRIPTING,
+        readonly=True,
     )
     async def fcall_ro(
         self,
