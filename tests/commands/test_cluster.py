@@ -4,12 +4,28 @@ import asyncio
 
 import pytest
 
+from coredis import MovedError
 from tests.conftest import targets
 
 
 @targets("redis_cluster", "redis_cluster_raw", "redis_cluster_resp3")
 @pytest.mark.asyncio()
 class TestCluster:
+    async def test_readonly_explicit(self, client, _s):
+        await client.set("fubar", 1)
+        slot = client.connection_pool.nodes.keyslot("fubar")
+        node = client.connection_pool.get_replica_node_by_slot(slot, replica_only=True)
+        node_client = client.connection_pool.nodes.get_redis_link(
+            node["host"], node["port"]
+        )
+        with pytest.raises(MovedError):
+            await node_client.get("fubar")
+        await node_client.readonly()
+        await node_client.get("fubar") == _s(1)
+        await node_client.readwrite()
+        with pytest.raises(MovedError):
+            await node_client.get("fubar")
+
     async def test_cluster_info(self, client, _s):
         info = await client.cluster_info()
         assert info["cluster_state"] == "ok"

@@ -800,8 +800,17 @@ class ClusterConnectionPool(ConnectionPool):
     def get_master_node_by_slot(self, slot: int) -> Node:
         return self.nodes.slots[slot][0]
 
-    def get_replica_node_by_slot(self, slot: int) -> Node:
-        return random.choice(self.nodes.slots[slot])
+    def get_replica_node_by_slot(self, slot: int, replica_only: bool = False) -> Node:
+        if replica_only:
+            return random.choice(
+                [
+                    node
+                    for node in self.nodes.slots[slot]
+                    if node["server_type"] != "master"
+                ]
+            )
+        else:
+            return random.choice(self.nodes.slots[slot])
 
     def get_node_by_slot(self, slot: int, command: Optional[bytes] = None) -> Node:
         if self.readonly and command in self.READONLY_COMMANDS:
