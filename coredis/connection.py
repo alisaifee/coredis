@@ -220,19 +220,19 @@ class BaseConnection:
                 ["AUTH", self.username or b"default", self.password or b""]
             )
             auth_attempted = True
-        await self.send_command(b"HELLO", *hello_command_args)
         try:
+            await self.send_command(b"HELLO", *hello_command_args)
+            hello_resp = await self.read_response(decode=False)
+
             if self.protocol_version == 3:
-                resp3 = cast(
-                    Dict[bytes, ValueT], await self.read_response(decode=False)
-                )
+                resp3 = cast(Dict[bytes, ValueT], hello_resp)
                 if not resp3[b"proto"] == 3:
                     raise ConnectionError(
                         f"Unexpected response when negotiating protocol: [{resp3}]"
                     )
                 self.server_version = nativestr(resp3[b"version"])
             else:
-                resp = cast(List[ValueT], await self.read_response(decode=False))
+                resp = cast(List[ValueT], hello_resp)
                 self.server_version = nativestr(resp[3])
         except (UnknownCommandError, AuthenticationRequiredError):
             self.version = None
