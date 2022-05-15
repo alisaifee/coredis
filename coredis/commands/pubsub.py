@@ -594,6 +594,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                 self.pending_tasks.pop(node_id)
                 if task.done():
                     result = task.result()
+                    break
                 else:
                     task.cancel()
         # If there were no pending results check the shards
