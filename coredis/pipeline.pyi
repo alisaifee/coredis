@@ -296,7 +296,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def linsert(
         self,
         key: "KeyT",
-        where: "Literal[PureToken.BEFORE, PureToken.AFTER]",
+        where: "Literal[PureToken.AFTER, PureToken.BEFORE]",
         pivot: "ValueT",
         element: "ValueT",
     ) -> Pipeline[AnyStr]: ...
@@ -1384,7 +1384,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def linsert(
         self,
         key: "KeyT",
-        where: "Literal[PureToken.BEFORE, PureToken.AFTER]",
+        where: "Literal[PureToken.AFTER, PureToken.BEFORE]",
         pivot: "ValueT",
         element: "ValueT",
     ) -> ClusterPipeline[AnyStr]: ...

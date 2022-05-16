@@ -543,7 +543,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         arguments={
             "exat": {"version_introduced": "6.2.0"},
             "pxat": {"version_introduced": "6.2.0"},
-            "keepttl": {"version_introduced": "6.0.0"},
             "get": {"version_introduced": "6.2.0"},
         },
     )
@@ -2410,14 +2409,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="3.0.0")
     @mutually_inclusive_parameters("username", "password")
-    @redis_command(
-        CommandName.MIGRATE,
-        group=CommandGroup.GENERIC,
-        arguments={
-            "username": {"version_introduced": "6.0.0"},
-            "password": {"version_introduced": "6.0.0"},
-        },
-    )
+    @redis_command(CommandName.MIGRATE, group=CommandGroup.GENERIC)
     async def migrate(
         self,
         host: StringT,
@@ -2899,7 +2891,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.SCAN,
         readonly=True,
         group=CommandGroup.GENERIC,
-        arguments={"type_": {"version_introduced": "6.0.0"}},
         cluster=ClusterCommandConfig(route=NodeFlag.PRIMARIES),
     )
     async def scan(
@@ -3069,7 +3060,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def linsert(
         self,
         key: KeyT,
-        where: Literal[PureToken.BEFORE, PureToken.AFTER],
+        where: Literal[PureToken.AFTER, PureToken.BEFORE],
         pivot: ValueT,
         element: ValueT,
     ) -> int:
