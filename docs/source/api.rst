@@ -268,79 +268,79 @@ Exceptions
 Authentication & Authorization
 ------------------------------
 
-.. autoexception:: coredis.exceptions.AuthenticationFailureError
+.. autoexception:: coredis.AuthenticationFailureError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.AuthenticationRequiredError
+.. autoexception:: coredis.AuthenticationRequiredError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.AuthorizationError
+.. autoexception:: coredis.AuthorizationError
    :no-inherited-members:
 
 Cluster Errors
 --------------
-.. autoexception:: coredis.exceptions.AskError
+.. autoexception:: coredis.AskError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.ClusterCrossSlotError
+.. autoexception:: coredis.ClusterCrossSlotError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.ClusterDownError
+.. autoexception:: coredis.ClusterDownError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.ClusterError
+.. autoexception:: coredis.ClusterError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.ClusterResponseError
+.. autoexception:: coredis.ClusterResponseError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.ClusterTransactionError
+.. autoexception:: coredis.ClusterTransactionError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.MovedError
+.. autoexception:: coredis.MovedError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.RedisClusterException
+.. autoexception:: coredis.RedisClusterException
    :no-inherited-members:
 
 Sentinel Errors
 ---------------
-.. autoexception:: coredis.exceptions.PrimaryNotFoundError
+.. autoexception:: coredis.PrimaryNotFoundError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.ReplicaNotFoundError
+.. autoexception:: coredis.ReplicaNotFoundError
    :no-inherited-members:
 
 Scripting Errors
 ----------------
-.. autoexception:: coredis.exceptions.NoScriptError
+.. autoexception:: coredis.NoScriptError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.FunctionError
+.. autoexception:: coredis.FunctionError
    :no-inherited-members:
 
 General Exceptions
 -------------------
-.. autoexception:: coredis.exceptions.BusyLoadingError
+.. autoexception:: coredis.BusyLoadingError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.CommandSyntaxError
+.. autoexception:: coredis.CommandSyntaxError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.CommandNotSupportedError
+.. autoexception:: coredis.CommandNotSupportedError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.ConnectionError
+.. autoexception:: coredis.ConnectionError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.DataError
+.. autoexception:: coredis.DataError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.ExecAbortError
+.. autoexception:: coredis.ExecAbortError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.InvalidResponse
+.. autoexception:: coredis.InvalidResponse
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.LockError
+.. autoexception:: coredis.LockError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.NoKeyError
+.. autoexception:: coredis.NoKeyError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.PubSubError
+.. autoexception:: coredis.PubSubError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.ReadOnlyError
+.. autoexception:: coredis.ReadOnlyError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.RedisError
+.. autoexception:: coredis.RedisError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.ResponseError
+.. autoexception:: coredis.ResponseError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.TimeoutError
+.. autoexception:: coredis.TimeoutError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.TryAgainError
+.. autoexception:: coredis.TryAgainError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.WatchError
+.. autoexception:: coredis.WatchError
    :no-inherited-members:
 
 

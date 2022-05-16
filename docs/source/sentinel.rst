@@ -10,9 +10,9 @@ Sentinel connection to discover the primary and replicas network addresses:
 
 .. code-block:: python
 
-    from redis.sentinel import Sentinel
+    from coredis.sentinel import Sentinel
     sentinel = Sentinel([('localhost', 26379)], stream_timeout=0.1)
-    await sentinel.discover_primaries('myredis')
+    await sentinel.discover_primary('myredis')
     # ('127.0.0.1', 6379)
     await sentinel.discover_replicas('myredis')
     # [('127.0.0.1', 6380)]
@@ -21,7 +21,7 @@ You can also create Redis client connections from a Sentinel instance. You can
 connect to either the primary (for write operations) or a replica (for read-only
 operations).
 
-.. code-block:: pycon
+.. code-block:: python
 
     primary = sentinel.primary_for('myredis', stream_timeout=0.1)
     replica = sentinel.replica_for('myredis', stream_timeout=0.1)
