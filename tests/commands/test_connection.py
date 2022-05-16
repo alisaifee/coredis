@@ -57,7 +57,7 @@ class TestConnection:
         with pytest.raises(asyncio.TimeoutError):
             await asyncio.wait_for(clone.ping(), timeout=0.01)
         assert await client.client_unpause()
-        assert await asyncio.wait_for(clone.ping(), timeout=0.01) == _s("PONG")
+        assert await clone.ping() == _s("PONG")
 
     @pytest.mark.min_server_version("6.2.0")
     async def test_client_trackinginfo_no_tracking(self, client, _s):
