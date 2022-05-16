@@ -25,6 +25,37 @@ coredis
 
 coredis is an async redis client with support for redis server, cluster & sentinel.
 
+Feature Summary
+===============
+
+* Clients for different deployments
+
+  * :class:`~coredis.Redis`
+  * :class:`~coredis.RedisCluster`
+  * :class:`~coredis.sentinel.Sentinel`
+
+* Application patterns
+
+  * :ref:`api_reference:pubsub`
+  * :ref:`api_reference:cluster pub/sub`
+  * :ref:`api_reference:pipelines`
+
+* Server side scripting
+
+  * :ref:`api_reference:scripting`
+  * :ref:`api_reference:library functions`
+
+* Miscelleneous
+
+  * :ref:`api_reference:resp3` Support
+  * "Pretty complete" type annotations for public API
+
+    .. command-output:: PYTHONPATH=$(pwd) pyright --verifytypes=coredis 2>&1 | grep completeness
+       :shell:
+       :cwd: ../../
+
+  * :ref:`api_reference:runtime type checking`
+
 Installation
 ------------
 
