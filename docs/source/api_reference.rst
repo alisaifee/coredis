@@ -4,13 +4,14 @@ API Reference
 Encoding/Decoding
 ^^^^^^^^^^^^^^^^^
 
-Param :paramref:`~coredis.Redis.encoding` and :paramref:`~coredis.Redis.decode_responses`
-are used to support response encoding.
+Constructor parameters :paramref:`~coredis.Redis.encoding` and :paramref:`~coredis.Redis.decode_responses`
+are used to control response decoding.
 
 ``encoding`` is used for specifying with which encoding you want responses to be decoded.
 ``decode_responses`` is used for tell the client whether responses should be decoded.
 
-If ``decode_responses`` is set to ``True`` and no encoding is specified, client will use ``utf-8`` by default.
+If ``decode_responses`` is set to ``True`` and no encoding is specified, the client
+will use ``utf-8`` by default.
 
 Typing
 ^^^^^^
@@ -211,7 +212,7 @@ invoked by calling it like a function. Script instances accept the following opt
   KEYS list in LUA.
 * **args**: A list of argument values. This becomes the ARGV list in LUA.
 * **client**: A coredis Client or Pipeline instance that will invoke the
-  script. If client isn't specified, the client that intiially
+  script. If client isn't specified, the client that initially
   created the Script instance (the one that `register_script` was
   invoked from) will be used.
 
@@ -388,7 +389,7 @@ Using the same example ``mylib`` lua library, this could be mapped to a python c
             """
 
 The above example uses default arguments with :meth:`~coredis.commands.Library.wraps` to show
-what is possible by simply using the :data:`coredis.typing.KeyT` annotation to map arugments
+what is possible by simply using the :data:`coredis.typing.KeyT` annotation to map arguments
 of the decorated methods to ``keys`` and the remaining arguments as ``args``. Refer to the
 API documentation of :meth:`coredis.commands.Library.wraps` for details on how to customize
 the key/argument mapping behavior.
@@ -789,7 +790,7 @@ Cluster Lock
 :class:`~coredis.lock.ClusterLock` is supposed to solve distributed lock problem
 in redis cluster. Since high availability is provided by redis cluster using primary-replica model,
 the kind of lock aims to solve the fail-over problem referred in distributed lock
-post given by redis official. This implementation isGjjk
+post given by redis official.
 
 Quoting the documentation from the original author of :pypi:`aredis`:
 

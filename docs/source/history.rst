@@ -13,7 +13,7 @@ The initial intention of the fork was add python 3.10 compatibility and
 Divergence from aredis & redis-py
 ---------------------------------
 
-Versions :ref:`release_notes:v3.0.0` and above no longer maintain compatiblity with **aredis**. Since **aredis** mostly mirrored the :pypi:`redis`
+Versions :ref:`release_notes:v3.0.0` and above no longer maintain compatibility with **aredis**. Since **aredis** mostly mirrored the :pypi:`redis`
 client, this inherently means that **coredis** diverges from both, most notable (at the time of writing) in the following general categories:
 
 - API signatures for redis commands that take variable length arguments are only variadic if they are optional, for example :meth:`coredis.Redis.delete`

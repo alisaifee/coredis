@@ -45,7 +45,7 @@ Feature Summary
   * :ref:`api_reference:scripting`
   * :ref:`api_reference:library functions`
 
-* Miscelleneous
+* Miscellaneous
 
   * :ref:`api_reference:resp3` Support
   * "Pretty complete" type annotations for public API
