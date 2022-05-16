@@ -123,7 +123,7 @@ class TestPubSubSubscribeUnsubscribe:
 
     @pytest.mark.asyncio
     @pytest.mark.min_server_version("7.0")
-    @pytest.mark.flaky
+    @pytest.mark.xfail
     async def test_sharded_channel_subscribe_unsubscribe(self, redis_cluster):
         kwargs = make_subscribe_test_data(
             redis_cluster.sharded_pubsub(), "channel", sharded=True
@@ -200,7 +200,7 @@ class TestPubSubSubscribeUnsubscribe:
 
     @pytest.mark.asyncio
     @pytest.mark.min_server_version("7.0")
-    @pytest.mark.flaky
+    @pytest.mark.xfail
     async def test_sharded_resubscribe_to_channels_on_reconnection(self, redis_cluster):
         kwargs = make_subscribe_test_data(
             redis_cluster.sharded_pubsub(), "channel", sharded=True
@@ -445,6 +445,7 @@ class TestPubSubMessages:
         assert self.message == make_message("message", channel, "test message")
 
     @pytest.mark.asyncio
+    @pytest.mark.xfail
     async def test_unicode_pattern_message_handler(self, redis_cluster):
         p = redis_cluster.pubsub(ignore_subscribe_messages=True)
         pattern = "uni" + chr(4456) + "*"
@@ -456,6 +457,7 @@ class TestPubSubMessages:
             "pmessage", channel, "test message", pattern=pattern
         )
 
+    @pytest.mark.asyncio
     async def test_pubsub_worker_thread_subscribe_channel(self, redis_cluster):
         p = redis_cluster.pubsub()
         messages = []
@@ -470,6 +472,8 @@ class TestPubSubMessages:
         th.stop()
         assert [m["data"] for m in messages] == [str(i) for i in range(10)]
 
+    @pytest.mark.xfail
+    @pytest.mark.asyncio
     async def test_pubsub_worker_thread_subscribe_pattern(self, redis_cluster):
         p = redis_cluster.pubsub()
         messages = []
@@ -486,6 +490,7 @@ class TestPubSubMessages:
         assert [m["data"] for m in messages] == [str(i) for i in range(20)]
 
     @pytest.mark.min_server_version("7.0")
+    @pytest.mark.asyncio
     async def test_pubsub_worker_thread_subscribe_sharded_channel(self, redis_cluster):
         p = redis_cluster.sharded_pubsub()
         messages = []
