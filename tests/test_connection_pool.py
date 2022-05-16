@@ -95,6 +95,7 @@ class TestConnectionPool:
         assert repr(pool) == expected
 
     @pytest.mark.asyncio()
+    @pytest.mark.flaky
     async def test_connection_idle_check(self, event_loop):
         rs = coredis.Redis(
             host="127.0.0.1",
@@ -196,6 +197,7 @@ class TestBlockingConnectionPool:
         assert repr(pool) == expected
 
     @pytest.mark.asyncio()
+    @pytest.mark.flaky
     async def test_connection_idle_check(self, event_loop):
         rs = coredis.Redis(
             host="127.0.0.1",
