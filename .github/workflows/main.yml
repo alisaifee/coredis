@@ -61,22 +61,12 @@ jobs:
           - REDIS_VERSION=6.2.6 REDIS_SSL_VERSION=6.2.6 REDIS_SENTINEL_VERSION=6.2.6 REDIS_STACK_VERSION=6.2.0-edge
           - REDIS_VERSION=7.0.0 REDIS_SSL_VERSION=7.0.0 REDIS_STACK_VERSION=7.0.0-RC4
         parser: [hiredis, python]
-        uvloop: ["False"]
+        uvloop: ["True", "False"]
         runtime_type_checks: ["True"]
         include:
-          - python-version: 3.9
-            service_version: "REDIS_VERSION=latest REDIS_SSL_VERSION=latest"
-            parser: hiredis
-            uvloop: "True"
-            runtime_type_checks: "True"
           - python-version: "3.10"
             service_version: "REDIS_VERSION=latest REDIS_SSL_VERSION=latest"
-            parser: hiredis
-            uvloop: "True"
-            runtime_type_checks: "True"
-          - python-version: "3.10"
-            service_version: "REDIS_VERSION=latest REDIS_SSL_VERSION=latest"
-            parser: hiredis
+            parser: python
             runtime_type_checks: "False"
     steps:
     - uses: actions/checkout@v3
