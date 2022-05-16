@@ -3,6 +3,27 @@
 Changelog
 =========
 
+v3.6.0
+------
+Release Date: 2022-05-15
+
+* Features
+
+  * Add option to enable non atomic splitting of commands in cluster
+    mode when the commands only deal with keys (delete, exists, touch, unlink)
+  * Add support for sharded pub sub in cluster mode
+  * Add support for readonly execution of LUA scripts and redis functions
+
+* Bug Fix
+
+  * Ensure ``script_load`` is routed to all nodes in cluster mode
+  * Ensure ``evalsha_ro``, ``eval_ro``, ``fcall_ro`` are included in readonly commands
+  * Change version related warnings to use DeprecationWarning
+
+* Chores
+
+  * General improvements in reliability and correctness of unit tests
+
 v3.5.1
 ------
 Release Date: 2022-05-12
@@ -669,6 +690,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
