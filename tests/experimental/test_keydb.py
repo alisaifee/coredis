@@ -14,6 +14,7 @@ from tests.conftest import targets
     "keydb_resp3",
 )
 @pytest.mark.asyncio()
+@pytest.mark.flaky
 class TestKeyDBCommands:
     async def test_bitop_lshift(self, client, _s):
         await client.bitfield("a").set("u16", 0, 42).exc()
@@ -172,6 +173,7 @@ class TestKeyDBCommands:
             True,
         )
 
+    @pytest.mark.xfail
     async def test_object_lastmodified(self, client, _s):
         await client.set("a", 1)
         lm = await client.object_lastmodified("a")
