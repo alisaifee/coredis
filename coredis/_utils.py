@@ -478,8 +478,6 @@ except ImportError:
 
 @enum.unique
 class CaseAndEncodingInsensitiveEnum(bytes, enum.Enum):
-    value: bytes
-
     @functools.cached_property
     def variants(self) -> Set[StringT]:
         decoded = str(self)
@@ -494,7 +492,7 @@ class CaseAndEncodingInsensitiveEnum(bytes, enum.Enum):
 
         if other:
             if isinstance(other, self.__class__):
-                return self.value == other.value
+                return bool(self.value == other.value)
             else:
                 return other in self.variants
         return False
