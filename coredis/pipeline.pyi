@@ -19,6 +19,7 @@ from coredis.typing import (
     KeyT,
     List,
     Literal,
+    Mapping,
     Optional,
     Parameters,
     Set,
@@ -751,7 +752,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> Pipeline[AnyStr]: ...
     async def xread(
         self,
-        streams: "Dict[ValueT, ValueT]",
+        streams: "Mapping[ValueT, ValueT]",
         count: "Optional[int]" = ...,
         block: "Optional[Union[int, datetime.timedelta]]" = ...,
     ) -> Pipeline[AnyStr]: ...
@@ -759,7 +760,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self,
         group: "StringT",
         consumer: "StringT",
-        streams: "Dict[ValueT, ValueT]",
+        streams: "Mapping[ValueT, ValueT]",
         count: "Optional[int]" = ...,
         block: "Optional[Union[int, datetime.timedelta]]" = ...,
         noack: "Optional[bool]" = ...,
@@ -1847,7 +1848,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> ClusterPipeline[AnyStr]: ...
     async def xread(
         self,
-        streams: "Dict[ValueT, ValueT]",
+        streams: "Mapping[ValueT, ValueT]",
         count: "Optional[int]" = ...,
         block: "Optional[Union[int, datetime.timedelta]]" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
@@ -1855,7 +1856,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self,
         group: "StringT",
         consumer: "StringT",
-        streams: "Dict[ValueT, ValueT]",
+        streams: "Mapping[ValueT, ValueT]",
         count: "Optional[int]" = ...,
         block: "Optional[Union[int, datetime.timedelta]]" = ...,
         noack: "Optional[bool]" = ...,

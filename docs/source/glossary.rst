@@ -2,6 +2,11 @@ Glossary
 ========
 .. glossary::
 
+   PEL
+     Pending Entries List is an internal list maintained by redis for each stream
+     and consumer group combination. The list is used to surface stream entries
+     to consumers groups interested in revisiting entries that were not acknowledged.
+
    Pipelining
      A technique for improving performance by issuing multiple commands at once
      without waiting for the response for each individual command. For more details
@@ -33,6 +38,12 @@ Glossary
      to routing messages to cluster nodes by applying the same alogrithm used to distribute
      keys to distribute channels. For more details see the `Redis manual entry on
      Sharded Pub/Sub <https://redis.io/docs/manual/pubsub/#sharded-pubsub>`__
+
+   Streams
+     Streams are essentially an abstract append-only in-memory log datastructure
+     which can be used for various use cases such as timeseries,
+     as queue for a Pub/Sub application architecture. For more details see the
+     `Redis manual entry on streams <https://redis.io/docs/manual/data-types/streams/>`__
 
    Transactions
      Redis Transactions allow the execution of multiple commands as a single

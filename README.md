@@ -43,6 +43,7 @@ $ pip install coredis
 ### Application patterns
 - [PubSub](https://coredis.readthedocs.org/en/latest/api_reference.html#pubsub)
 - [Sharded PubSub](https://coredis.readthedocs.org/en/latest/api_reference.html#cluster-pub-sub) [`>= Redis 7.0`]
+- [Stream Consumers](https://coredis.readthedocs.org/en/latest/api_reference.html#streams)
 - [Pipelining](https://coredis.readthedocs.org/en/latest/api_reference.html#pipelines)
 
 ### Server side scripting

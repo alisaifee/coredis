@@ -641,14 +641,12 @@ def cloner():
                 connection_pool=client.connection_pool.__class__(**c_kwargs),
             )
         else:
-            c_kwargs = client.connection_pool.connection_kwargs
             c = client.__class__(
-                client.startup_nodes[0]["host"],
-                client.startup_nodes[0]["port"],
+                client.connection_pool.nodes.startup_nodes[0]["host"],
+                client.connection_pool.nodes.startup_nodes[0]["port"],
                 decode_responses=client.decode_responses,
                 protocol_version=client.protocol_version,
                 encoding=client.encoding,
-                connection_pool=client.connection_pool.__class__(**c_kwargs),
             )
         await c.ping()
         return c

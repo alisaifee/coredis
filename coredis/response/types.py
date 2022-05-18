@@ -102,9 +102,9 @@ class FunctionDefinition(TypedDict):
     """
 
     #: the name of the function
-    name: Union[str, bytes]
+    name: StringT
     #: the description of the function
-    description: Union[str, bytes]
+    description: StringT
     #: function flags
     flags: Set[ScriptFlag]
 
@@ -115,15 +115,15 @@ class LibraryDefinition(TypedDict):
     """
 
     #: the name of the library
-    name: Union[str, bytes]
+    name: StringT
     #: the engine used by the library
     engine: Literal["LUA"]
     #: the library's description
-    description: Union[str, bytes]
+    description: StringT
     #: Mapping of function names to functions in the library
-    functions: Dict[Union[str, bytes], FunctionDefinition]
+    functions: Dict[StringT, FunctionDefinition]
     #: The library's source code
-    library_code: Optional[Union[str, bytes]]
+    library_code: Optional[StringT]
 
 
 class ScoredMember(NamedTuple):
@@ -132,7 +132,7 @@ class ScoredMember(NamedTuple):
     """
 
     #: The sorted set member name
-    member: Union[str, bytes]
+    member: StringT
     #: Score of the member
     score: float
 
@@ -157,7 +157,7 @@ class GeoSearchResult(NamedTuple):
     """
 
     #: Place name
-    name: Union[str, bytes]
+    name: StringT
     #: Distance
     distance: Optional[float]
     #: GeoHash
@@ -222,8 +222,8 @@ class StreamEntry(NamedTuple):
     Structure representing an entry in a redis stream
     """
 
-    identifier: Union[bytes, str]
-    field_values: OrderedDict[Union[bytes, str], Union[bytes, str]]
+    identifier: StringT
+    field_values: OrderedDict[StringT, StringT]
 
 
 #: Details of a stream
@@ -254,9 +254,9 @@ class StreamPending(NamedTuple):
     """
 
     pending: int
-    minimum_identifier: Union[bytes, str]
-    maximum_identifier: Union[bytes, str]
-    consumers: OrderedDict[Union[bytes, str, int], Union[bytes, str, int]]
+    minimum_identifier: StringT
+    maximum_identifier: StringT
+    consumers: OrderedDict[StringT, int]
 
 
 class StreamPendingExt(NamedTuple):
@@ -265,8 +265,8 @@ class StreamPendingExt(NamedTuple):
     `XPENDING <https://redis.io/commands/xpending#extended-form-of-xpending>`__
     """
 
-    identifier: Union[bytes, str]
-    consumer: Union[bytes, str]
+    identifier: StringT
+    consumer: StringT
     idle: int
     delivered: int
 
@@ -280,9 +280,9 @@ class SlowLogInfo(NamedTuple):
     #: The amount of time needed for its execution, in microseconds.
     duration: int
     #: The array composing the arguments of the command.
-    command: Tuple[Union[bytes, str], ...]
+    command: Tuple[StringT, ...]
     #: Client IP address and port
-    client_addr: Tuple[Union[bytes, str], int]
+    client_addr: Tuple[StringT, int]
     #: Client name
     client_name: str
 

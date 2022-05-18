@@ -4,11 +4,7 @@ from typing import Any
 
 from coredis._utils import EncodingInsensitiveDict
 from coredis.response._callbacks import ResponseCallback
-from coredis.response._utils import (
-    flat_pairs_to_dict,
-    flat_pairs_to_ordered_dict,
-    pairs_to_ordered_dict,
-)
+from coredis.response._utils import flat_pairs_to_dict, flat_pairs_to_ordered_dict
 from coredis.response.types import (
     StreamEntry,
     StreamInfo,
@@ -19,6 +15,7 @@ from coredis.typing import (
     AnyStr,
     Dict,
     Optional,
+    OrderedDict,
     ResponseType,
     StringT,
     Tuple,
@@ -131,7 +128,7 @@ class PendingCallback(
                 response[0],
                 response[1],
                 response[2],
-                pairs_to_ordered_dict(response[3:][0]),  # type: ignore
+                OrderedDict((r[0], int(r[1])) for r in response[3] or []),
             )
         else:
             return tuple(

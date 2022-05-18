@@ -259,3 +259,11 @@ class UnknownCommandError(ResponseError):
     def __init__(self, message: str) -> None:
         self.command = self.ERROR_REGEX.findall(message).pop()
         super().__init__(self, message)
+
+
+class StreamConsumerError(RedisError):
+    pass
+
+
+class StreamConsumerInitializationError(StreamConsumerError):
+    pass

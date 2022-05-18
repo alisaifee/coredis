@@ -38,6 +38,7 @@ Feature Summary
 
   * :ref:`api_reference:pubsub`
   * :ref:`api_reference:cluster pub/sub`
+  * :ref:`api_reference:streams`
   * :ref:`api_reference:pipelines`
 
 * Server side scripting

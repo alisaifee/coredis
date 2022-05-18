@@ -2291,6 +2291,7 @@ from coredis.typing import (
     KeyT,
     List,
     Literal,
+    Mapping,
     Optional,
     Parameters,
     Set,
