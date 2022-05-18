@@ -39,11 +39,11 @@ class EncodingInsensitiveDict(ObjectProxy):  # type: ignore
         self._self_encoding = encoding
 
     def __getitem__(self, item: StringT) -> Any:
-        if isinstance(item, str):
+        if isinstance(item, str) and item not in self.__wrapped__:
             return self.__wrapped__.get(
                 item, self.__wrapped__.get(item.encode(self._self_encoding))
             )
-        elif isinstance(item, bytes):
+        elif isinstance(item, bytes) and item not in self.__wrapped__:
             return self.__wrapped__.get(
                 item, self.__wrapped__.get(item.decode(self._self_encoding))
             )
