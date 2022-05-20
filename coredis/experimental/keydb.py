@@ -263,7 +263,7 @@ class KeyDBCommands(CommandMixin[AnyStr]):
     ) -> bool:
         """
         Rename a field :paramref:`source_field` to :paramref:`destination_field`
-        in hash :param:`key`
+        in hash :paramref:`key`
         """
 
         return await self.execute_command(
