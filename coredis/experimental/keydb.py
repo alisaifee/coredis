@@ -8,7 +8,8 @@ from typing import Any, Tuple
 from packaging import version
 
 from coredis._utils import CaseAndEncodingInsensitiveEnum
-from coredis.client import Redis
+from coredis.client import Redis, RedisCluster
+from coredis.commands import CommandMixin
 from coredis.commands._utils import (
     check_version,
     normalized_milliseconds,
@@ -117,14 +118,7 @@ KeyDB command documentation: {_keydb_command_link(command_name)}
     return wrapper
 
 
-class KeyDB(Redis[AnyStr]):
-    """
-    Client for `KeyDB <https://keydb.dev>`__
-
-    The client is mostly :class:`coredis.Redis` with a couple of extra
-    commands specific to KeyDB.
-    """
-
+class KeyDBCommands(CommandMixin[AnyStr]):
     @keydb_command(
         CommandName.BITOP,
         CommandGroup.BITMAP,
@@ -336,3 +330,21 @@ class KeyDB(Redis[AnyStr]):
         return await self.execute_command(
             CommandName.TTL, *pieces, callback=IntCallback()
         )
+
+
+class KeyDB(KeyDBCommands[AnyStr], Redis[AnyStr]):
+    """
+    Client for `KeyDB <https://keydb.dev>`__
+
+    The client is mostly :class:`coredis.Redis` with a couple of extra
+    commands specific to KeyDB.
+    """
+
+
+class KeyDBCluster(KeyDBCommands[AnyStr], RedisCluster[AnyStr]):
+    """
+    Cluster client for `KeyDB <https://keydb.dev>`__
+
+    The client is mostly :class:`coredis.RedisCluster` with a couple of extra
+    commands specific to KeyDB.
+    """

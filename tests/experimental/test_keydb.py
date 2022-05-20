@@ -12,35 +12,40 @@ from tests.conftest import targets
 @targets(
     "keydb",
     "keydb_resp3",
+    "keydb_cluster",
 )
 @pytest.mark.asyncio()
 @pytest.mark.flaky
 class TestKeyDBCommands:
+    @pytest.mark.nocluster
     async def test_bitop_lshift(self, client, _s):
-        await client.bitfield("a").set("u16", 0, 42).exc()
-        assert 42 == (await client.bitfield("a").get("u16", 0).exc())[0]
-        await client.bitop(["a"], "lshift", "a", 1)
-        assert 84 == (await client.bitfield("a").get("u16", 0).exc())[0]
+        await client.bitfield("a{foo}").set("u16", 0, 42).exc()
+        assert 42 == (await client.bitfield("a{foo}").get("u16", 0).exc())[0]
+        await client.bitop(["a{foo}"], "lshift", "a{foo}", 1)
+        assert 84 == (await client.bitfield("a{foo}").get("u16", 0).exc())[0]
 
+    @pytest.mark.nocluster
     async def test_bitop_rshift(self, client, _s):
-        await client.bitfield("a").set("u16", 0, 42).exc()
-        assert 42 == (await client.bitfield("a").get("u16", 0).exc())[0]
-        await client.bitop(["a"], "rshift", "a", 1)
-        assert 21 == (await client.bitfield("a").get("u16", 0).exc())[0]
+        await client.bitfield("a{foo}").set("u16", 0, 42).exc()
+        assert 42 == (await client.bitfield("a{foo}").get("u16", 0).exc())[0]
+        await client.bitop(["a{foo}"], "rshift", "a{foo}", 1)
+        assert 21 == (await client.bitfield("a{foo}").get("u16", 0).exc())[0]
 
+    @pytest.mark.nocluster
     async def test_cron_single(self, client, _s):
         scrpt = """
         local value = tonumber(redis.call("LPOP", KEYS[1]))
         redis.call("LPUSH", KEYS[1], value + tonumber(ARGV[1]))
         """
-        await client.lpush("cs", [1])
+        await client.lpush("cs{fu}", [1])
         assert await client.cron(
-            "single", False, delay=10, script=scrpt, keys=["cs"], args=[1]
+            "single{fu}", False, delay=10, script=scrpt, keys=["cs{fu}"], args=[1]
         )
-        assert await client.lrange("cs", 0, -1) == [_s("1")]
+        assert await client.lrange("cs{fu}", 0, -1) == [_s("1")]
         await asyncio.sleep(0.2)
-        assert await client.lrange("cs", 0, -1) == [_s("2")]
+        assert await client.lrange("cs{fu}", 0, -1) == [_s("2")]
 
+    @pytest.mark.nocluster
     async def test_cron_single_start_at(self, client, _s):
         scrpt = """
         local value = tonumber(redis.call("LPOP", KEYS[1]))
@@ -60,6 +65,7 @@ class TestKeyDBCommands:
         await asyncio.sleep(0.2)
         assert await client.lrange("css", 0, -1) == [_s("2")]
 
+    @pytest.mark.nocluster
     async def test_cron_repeat(self, client, _s):
         scrpt = """
         local value = tonumber(redis.call("LPOP", KEYS[1]))
@@ -163,8 +169,8 @@ class TestKeyDBCommands:
             await client.hrename("a", "b", "f")
 
     async def test_mexists(self, client, _s):
-        await client.mset({"a": 1, "b": 2, "c": 3, "e": 5})
-        await client.mexists(["a", "b", "c", "d", "e"]) == (
+        await client.mset({"a{fu}": 1, "b{fu}": 2, "c{fu}": 3, "e{fu}": 5})
+        await client.mexists(["a{fu}", "b{fu}", "c{fu}", "d{fu}", "e{fu}"]) == (
             True,
             True,
             True,

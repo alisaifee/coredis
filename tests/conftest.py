@@ -223,6 +223,15 @@ def keydb_server(docker_services):
     yield ["localhost", 10379]
 
 
+@pytest.fixture(scope="session")
+def keydb_cluster_server(docker_services):
+    docker_services.start("keydb-cluster-init")
+    docker_services.wait_for_service("keydb-cluster-6", 8005, check_redis_cluster_ready)
+    if os.environ.get("CI") == "True":
+        time.sleep(10)
+    yield
+
+
 @pytest.fixture
 async def redis_basic(redis_basic_server, request):
     client = coredis.Redis(
@@ -581,6 +590,27 @@ async def keydb_resp3(keydb_server, request):
     yield client
 
     client.connection_pool.disconnect()
+
+
+@pytest.fixture
+async def keydb_cluster(keydb_cluster_server, request):
+    cluster = coredis.experimental.KeyDBCluster(
+        "localhost",
+        8000,
+        stream_timeout=10,
+        decode_responses=True,
+        **get_client_test_args(request),
+    )
+    await check_test_constraints(request, cluster)
+    await cluster
+    await cluster.flushall()
+    await cluster.flushdb()
+
+    for primary in cluster.primaries:
+        await set_default_test_config(primary)
+    yield cluster
+
+    cluster.connection_pool.disconnect()
 
 
 @pytest.fixture(scope="session")

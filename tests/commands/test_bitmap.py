@@ -37,11 +37,10 @@ class TestBitmap:
         with pytest.raises(CommandSyntaxError):
             await client.bitcount("a", 1)
 
-    @pytest.mark.nocluster
     async def test_bitop_not_empty_string(self, client, _s):
-        await client.set("a", "")
-        await client.bitop(["a"], operation="not", destkey="r")
-        assert await client.get("r") is None
+        await client.set("a{foo}", "")
+        await client.bitop(["a{foo}"], operation="not", destkey="r{foo}")
+        assert await client.get("r{foo}") is None
 
     @pytest.mark.nocluster
     async def test_bitop_not(self, client, _s):

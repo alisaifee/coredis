@@ -376,6 +376,12 @@ class KeySpec:
         b"UNLINK": lambda args: (args[1 : (len(args))]),
         b"WATCH": lambda args: (args[1 : (len(args))]),
         b"PUBLISH": lambda args: ((args[1],)),
+        b"EXPIREMEMBER": lambda args: ((args[1],)),
+        b"EXPIREMEMBERAT": lambda args: ((args[1],)),
+        b"PEXPIREMEMBERAT": lambda args: ((args[1],)),
+        b"KEYDB.HRENAME": lambda args: ((args[1],)),
+        b"KEYDB.MEXISTS": lambda args: (args[1:]),
+        b"OBJECT LASTMODIFIED": lambda args: ((args[1],)),
     }
 
     @classmethod

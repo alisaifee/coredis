@@ -2497,6 +2497,14 @@ def cluster_key_extraction(path):
 
     all["PUBLISH"] = all["SPUBLISH"]
 
+    # KeyDB custom commands
+    all["EXPIREMEMBER"] = all["EXPIRE"]
+    all["EXPIREMEMBERAT"] = all["EXPIREAT"]
+    all["PEXPIREMEMBERAT"] = all["PEXPIREAT"]
+    all["KEYDB.HRENAME"] = ["(args[1],)"]
+    all["KEYDB.MEXISTS"] = ["args[1:]"]
+    all["OBJECT LASTMODIFIED"] = ["(args[1],)"]
+
     key_spec_template = """
 from __future__ import annotations
 
