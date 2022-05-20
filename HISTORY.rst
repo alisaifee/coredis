@@ -3,6 +3,19 @@
 Changelog
 =========
 
+v3.757 ("Puffles")
+------------------
+Release Date: 2022-05-19
+
+* Features
+
+  * Stream consumer clients
+
+* Experiments
+
+  * Updated KeyDB command coverage
+  * KeyDBCluster client
+
 v3.6.0
 ------
 Release Date: 2022-05-15
@@ -690,6 +703,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
