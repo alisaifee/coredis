@@ -223,7 +223,7 @@ class Script(Generic[AnyStr]):
         :param runtime_checks: Whether to enable runtime type checking of input arguments
          and return values. (requires :pypi:`beartype`). If :data:`False` the function will
          still get runtime type checking if the environment configuration ``COREDIS_RUNTIME_CHECKS``
-         is set - for details see :ref:`api_reference:runtime type checking`.
+         is set - for details see :ref:`handbook/typing:runtime type checking`.
         :param readonly: If ``True`` forces this script to be called with
          :meth:`coredis.Redis.evalsha_ro`
 

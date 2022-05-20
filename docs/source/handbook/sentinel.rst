@@ -1,5 +1,5 @@
 Sentinel support
-================
+----------------
 
 coredis can be used together with `Redis Sentinel <http://redis.io/topics/sentinel>`_
 to discover Redis nodes. You need to have at least one Sentinel daemon running
@@ -41,5 +41,7 @@ iterate over the list of replicas until it finds one that can be connected to.
 If no replicas can be connected to, a connection will be established with the
 primary.
 
+Further Reading
+^^^^^^^^^^^^^^^
 See `Guidelines for Redis clients with support for Redis Sentinel
 <http://redis.io/topics/sentinel-clients>`_ to learn more about Redis Sentinel.

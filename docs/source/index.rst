@@ -36,26 +36,26 @@ Feature Summary
 
 * Application patterns
 
-  * :ref:`api_reference:pubsub`
-  * :ref:`api_reference:cluster pub/sub`
-  * :ref:`api_reference:streams`
-  * :ref:`api_reference:pipelines`
+  * :ref:`handbook/pubsub:pubsub`
+  * :ref:`handbook/pubsub:cluster pub/sub`
+  * :ref:`handbook/streams:streams`
+  * :ref:`handbook/pipelines:pipelines`
 
 * Server side scripting
 
-  * :ref:`api_reference:scripting`
-  * :ref:`api_reference:library functions`
+  * :ref:`handbook/scripting:lua scripts`
+  * :ref:`handbook/scripting:library functions`
 
 * Miscellaneous
 
-  * :ref:`api_reference:resp3` Support
-  * "Pretty complete" type annotations for public API
+  * :ref:`handbook/response:resp3` Support
+  * "Pretty complete" :ref:`handbook/typing:type annotations` for public API
 
     .. command-output:: PYTHONPATH=$(pwd) pyright --verifytypes=coredis 2>&1 | grep completeness
        :shell:
        :cwd: ../../
 
-  * :ref:`api_reference:runtime type checking`
+  * :ref:`handbook/typing:runtime type checking`
 
 Installation
 ------------
@@ -132,9 +132,9 @@ the `Redis command documentation <https://redis.io/commands>`__ by using the fol
 - ``One of`` arguments accepting pure tokens are collapsed and accept a :class:`~coredis.PureToken`
 - Responses are mapped as closely from redis <-> python types as possible.
 
-For higher level concepts such as :ref:`api_reference:pipelines`, :ref:`api_reference:scripting` and
-:ref:`api_reference:pubsub` abstractions are provided to simplify interaction requires pre-defined
-sequencing of redis commands (see :ref:`api:command wrappers`). For details see :ref:`api_reference:api reference`
+For higher level concepts such as :ref:`handbook/pipelines:pipelines`, :ref:`handbook/scripting:lua scripts`,
+:ref:`handbook/pubsub:pubsub` abstractions are provided to simplify interaction requires pre-defined
+sequencing of redis commands (see :ref:`api:command wrappers`) and the :ref:`handbook/index:handbook`.
 
 The redis command API does **NOT** mirror :pypi:`redis`.
 For details about the high level differences refer to :ref:`history:divergence from aredis & redis-py`
@@ -150,7 +150,7 @@ coredis is additionally tested against:
 - :pypi:`uvloop` >= `0.15.0`.
 
 :pypi:`hiredis` if available will be used by default as the RESP parser as it provides
-significant performance gains in response parsing. For more details see :ref:`api_reference:parsers`.
+significant performance gains in response parsing. For more details see :ref:`handbook/response:parsers`.
 
 Supported python versions
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -164,11 +164,9 @@ Supported python versions
     :maxdepth: 2
     :hidden:
 
-    api_reference
-    api
+    handbook/index
     compatibility
-    sentinel
+    api
     release_notes
-    testing
     history
     glossary

@@ -1,5 +1,8 @@
+Development
+-----------
+
 Testing
-=======
+^^^^^^^
 
 Since the tests require various configurations and versions of redis,
 a docker-compose file is provided to make running tests easier.

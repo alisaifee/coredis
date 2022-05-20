@@ -33,7 +33,7 @@ Pipeline Support
 ^^^^^^^^^^^^^^^^
 :term:`Pipelining` and :term:`Transactions` are exposed by the following classes
 that are returned by :meth:`coredis.Redis.pipeline` and :meth:`coredis.RedisCluster.pipeline`.
-For examples refer to :ref:`api_reference:pipelines`.
+For examples refer to :ref:`handbook/pipelines:pipelines`.
 
 .. autoclass:: coredis.pipeline.Pipeline
    :class-doc-from: both
@@ -238,7 +238,7 @@ Redis Response (RESP) descriptions
 ----------------------------------
 
 The follow two types describe the total representation of parsed responses from the redis
-serialization protocol(s) (RESP & RESP3) (See :ref:`api_reference:parsers` for more details).
+serialization protocol(s) (RESP & RESP3) (See :ref:`handbook/response:parsers` for more details).
 
 In most cases these are not exposed through the client API and are only meant
 for internal pre-validation before the parsed response is transformed or narrowed

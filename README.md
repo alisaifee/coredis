@@ -37,23 +37,23 @@ $ pip install coredis
 ## Feature Summary
 
 ### Deployment architecture
-- [Redis Cluster](https://coredis.readthedocs.org/en/latest/api.html#cluster)
+- [Redis Cluster](https://coredis.readthedocs.org/en/latest/handbook/cluster.html#redis-cluster)
 - [Sentinel](https://coredis.readthedocs.org/en/latest/api.html#sentinel)
 
 ### Application patterns
-- [PubSub](https://coredis.readthedocs.org/en/latest/api_reference.html#pubsub)
-- [Sharded PubSub](https://coredis.readthedocs.org/en/latest/api_reference.html#cluster-pub-sub) [`>= Redis 7.0`]
-- [Stream Consumers](https://coredis.readthedocs.org/en/latest/api_reference.html#streams)
-- [Pipelining](https://coredis.readthedocs.org/en/latest/api_reference.html#pipelines)
+- [PubSub](https://coredis.readthedocs.org/en/latest/handbook/pubsub.html)
+- [Sharded PubSub](https://coredis.readthedocs.org/en/latest/handbook/pubsub.html#cluster-pub-sub) [`>= Redis 7.0`]
+- [Stream Consumers](https://coredis.readthedocs.org/en/latest/handbook/streams.html)
+- [Pipelining](https://coredis.readthedocs.org/en/latest/handbook/pipelines.html)
 
 ### Server side scripting
-- [LUA Scripting](https://coredis.readthedocs.org/en/latest/api_reference.html#scripting)
-- [Redis Libraries and functions](https://coredis.readthedocs.org/en/latest/api_reference.html#library-functions) [`>= Redis 7.0`]
+- [LUA Scripting](https://coredis.readthedocs.org/en/latest/handbook/scripting.html#lua_scripting)
+- [Redis Libraries and functions](https://coredis.readthedocs.org/en/latest/handbook/scripting.html#library-functions) [`>= Redis 7.0`]
 
 ### Miscellaneous
-- [RESP3](https://coredis.readthedocs.org/en/latest/api_reference.html#resp3) Protocol Support
+- [RESP3](https://coredis.readthedocs.org/en/latest/handbook/response.html#resp3) Protocol Support
 - Public API annotated with type annotations
-- Optional [Runtime Type Validation](https://coredis.readthedocs.org/en/latest/api_reference.html#runtime-type-checking) (via [beartype](https://github.com/beartype/beartype))
+- Optional [Runtime Type Validation](https://coredis.readthedocs.org/en/latest/handbook/typing.html#runtime-type-checking) (via [beartype](https://github.com/beartype/beartype))
 
 ## Quick start
 
@@ -123,7 +123,7 @@ coredis is additionally tested against:
 
 `hiredis` if available will be used by default as the RESP (or RESP3) parser
 as it provides significant performance gains in response parsing. For more
-details refer to the [the documentation section on Parsers](https://coredis.readthedocs.org/en/stable/api_reference.html#parsers)
+details refer to the [the documentation section on Parsers](https://coredis.readthedocs.org/en/stable/handbook/response.html#parsers)
 
 ### Supported python versions
 

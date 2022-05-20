@@ -24,6 +24,10 @@ Glossary
     Redis provides data structures such as strings, hashes, lists, sets, sorted
     sets with range queries, bitmaps hyperloglogs, geospatial indexes, and streams.
 
+   Redis Cluster
+     Redis scales horizontally with a deployment topology called Redis Cluster.
+     To learn more please read `Redis Cluster 101 <https://redis.io/docs/manual/scaling/#redis-cluster-101>`__
+
    RESP
      Redis clients use Redis serialization protocol (RESP) specification to communicate
      with the Redis server. For more detials see `RESP protocol spec <https://redis.io/docs/reference/protocol-spec/>`__
