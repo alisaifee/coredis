@@ -41,6 +41,23 @@ For examples refer to :ref:`api_reference:pipelines`.
 .. autoclass:: coredis.pipeline.ClusterPipeline
    :class-doc-from: both
 
+Stream Consumers
+^^^^^^^^^^^^^^^^
+
+.. autoclass:: coredis.stream.Consumer
+   :class-doc-from: both
+   :show-inheritance:
+   :special-members: __aiter__, __anext__
+
+.. autoclass:: coredis.stream.GroupConsumer
+   :class-doc-from: both
+   :show-inheritance:
+   :special-members: __aiter__, __anext__
+
+.. autoclass:: coredis.stream.StreamParameters
+   :show-inheritance:
+   :no-inherited-members:
+
 Command Wrappers
 ^^^^^^^^^^^^^^^^
 
@@ -88,6 +105,7 @@ PubSub
 .. autoclass:: coredis.commands.pubsub.PubSubWorkerThread
    :no-inherited-members:
    :show-inheritance:
+
 
 Scripting
 ---------

@@ -4890,7 +4890,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def xread(
         self,
-        streams: Dict[ValueT, ValueT],
+        streams: Mapping[ValueT, ValueT],
         count: Optional[int] = None,
         block: Optional[Union[int, datetime.timedelta]] = None,
     ) -> Optional[Dict[AnyStr, Tuple[StreamEntry, ...]]]:
@@ -4938,7 +4938,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         self,
         group: StringT,
         consumer: StringT,
-        streams: Dict[ValueT, ValueT],
+        streams: Mapping[ValueT, ValueT],
         count: Optional[int] = None,
         block: Optional[Union[int, datetime.timedelta]] = None,
         noack: Optional[bool] = None,
@@ -4968,7 +4968,6 @@ class CoreCommands(CommandMixin[AnyStr]):
             pieces.append(partial_stream[0])
             ids.append(partial_stream[1])
         pieces.extend(ids)
-
         return await self.execute_command(
             CommandName.XREADGROUP, *pieces, callback=MultiStreamRangeCallback[AnyStr]()
         )
