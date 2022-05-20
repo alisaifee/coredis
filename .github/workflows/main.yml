@@ -61,12 +61,19 @@ jobs:
           - REDIS_VERSION=6.2.6 REDIS_SSL_VERSION=6.2.6 REDIS_SENTINEL_VERSION=6.2.6 REDIS_STACK_VERSION=6.2.0-edge
           - REDIS_VERSION=7.0.0 REDIS_SSL_VERSION=7.0.0 REDIS_STACK_VERSION=7.0.0-RC4
         parser: [hiredis, python]
+        test_params: ["-m '(not keydb)'"]
         uvloop: ["True", "False"]
         runtime_type_checks: ["True"]
         include:
           - python-version: "3.10"
             service_version: "REDIS_VERSION=latest REDIS_SSL_VERSION=latest"
             parser: python
+            test_params: "-m '(not keydb)'"
+            runtime_type_checks: "False"
+          - python-version: "3.10"
+            service_version: "REDIS_VERSION=latest REDIS_SSL_VERSION=latest"
+            parser: python
+            test_params: "-m keydb"
             runtime_type_checks: "False"
     steps:
     - uses: actions/checkout@v3
@@ -106,7 +113,7 @@ jobs:
         echo "Runtime checks: $COREDIS_RUNTIME_CHECKS"
         echo "UVLoop: $COREDIS_UVLOOP"
         echo "CI: $CI"
-        pytest --cov-report=xml --cov-branch
+        pytest --cov-report=xml --cov-branch ${{ matrix.test_params }}
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2
   build_wheels:
