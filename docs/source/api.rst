@@ -283,6 +283,8 @@ Utility Classes
 
 Enums
 -----
+:mod:`coredis.tokens`
+
 .. autoclass:: coredis.tokens.PureToken
    :no-inherited-members:
    :show-inheritance:

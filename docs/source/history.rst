@@ -17,12 +17,12 @@ Versions :ref:`release_notes:v3.0.0` and above no longer maintain compatibility 
 client, this inherently means that **coredis** diverges from both, most notable (at the time of writing) in the following general categories:
 
 - API signatures for redis commands that take variable length arguments are only variadic if they are optional, for example :meth:`coredis.Redis.delete`
+  takes a variable number of keys however, they are not optional thus the signature expects a collection of keys as the only positional argument
 
   .. automethod:: coredis.Redis.delete
      :noindex:
-- Redis commands that accept tokens for controlling behavior now use :class:`coredis.PureToken` and the coredis methods mirroring the commands
-  use :class:`Literal` to document the acceptable values. An example of this is :meth:`coredis.Redis.expire`.
+- Redis commands that accept tokens for controlling behavior now use :class:`~coredis.tokens.PureToken` and the coredis methods mirroring the commands
+  use :class:`~typing.Literal` to document the acceptable values. An example of this is :meth:`coredis.Redis.expire`.
 
   .. automethod:: coredis.Redis.expire
      :noindex:
-
