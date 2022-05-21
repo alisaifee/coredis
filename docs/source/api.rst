@@ -25,12 +25,16 @@ Cluster
 
 Sentinel
 --------
+:mod:`coredis.sentinel`
+
 .. autoclass:: coredis.sentinel.Sentinel
    :class-doc-from: both
    :inherited-members:
 
 Pipeline Support
 ^^^^^^^^^^^^^^^^
+:mod:`coredis.pipeline`
+
 :term:`Pipelining` and :term:`Transactions` are exposed by the following classes
 that are returned by :meth:`coredis.Redis.pipeline` and :meth:`coredis.RedisCluster.pipeline`.
 For examples refer to :ref:`handbook/pipelines:pipelines`.
@@ -43,6 +47,7 @@ For examples refer to :ref:`handbook/pipelines:pipelines`.
 
 Stream Consumers
 ^^^^^^^^^^^^^^^^
+:mod:`coredis.streams`
 
 .. autoclass:: coredis.stream.Consumer
    :class-doc-from: both
@@ -60,6 +65,8 @@ Stream Consumers
 
 Command Wrappers
 ^^^^^^^^^^^^^^^^
+
+:mod:`coredis.commands`
 
 Certain commands and/or concepts in redis cannot be simply
 accomplished by calling the pass through APIs and require some state
@@ -133,6 +140,7 @@ Monitor
 
 Connection Classes
 ^^^^^^^^^^^^^^^^^^
+:mod:`coredis`
 
 All connection classes derive from the same base-class:
 
@@ -172,6 +180,8 @@ Sentinel Connection
 
 Connection Pools
 ^^^^^^^^^^^^^^^^
+:mod:`coredis`
+
 Connection Pool
 ---------------
 .. autoclass:: coredis.pool.ConnectionPool
@@ -202,6 +212,7 @@ Sentinel Connection Pool
 
 Parsers
 ^^^^^^^
+:mod:`coredis.parsers`
 
 .. autoclass:: coredis.parsers.PythonParser
    :class-doc-from: both
@@ -215,6 +226,9 @@ Parsers
 
 Type Aliases
 ^^^^^^^^^^^^
+
+:mod:`coredis.typing`
+
 Input types
 -----------
 The API uses the following type aliases to describe the unions of acceptable types
@@ -258,6 +272,8 @@ In certain cases these are "lightly" typed using :class:`~typing.NamedTuple`
 or :class:`~typing.TypedDict` for ease of documentation and in the case of "tuples"
 returned by redis - to avoid errors in indexing.
 
+:mod:`coredis.response.types`
+
 .. automodule:: coredis.response.types
    :no-inherited-members:
    :show-inheritance:
@@ -273,6 +289,9 @@ Enums
 
 Locks
 -----
+
+:mod:`coredis.lock`
+
 .. autoclass:: coredis.lock.Lock
    :show-inheritance:
 .. autoclass:: coredis.lock.LuaLock
@@ -282,6 +301,8 @@ Locks
 
 Exceptions
 ^^^^^^^^^^
+
+:mod:`coredis.exceptions`
 
 Authentication & Authorization
 ------------------------------
