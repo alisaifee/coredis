@@ -3,6 +3,20 @@
 Changelog
 =========
 
+v3.8.0
+------
+Release Date: 2022-05-21
+
+* Chores
+
+  * Documentation reorg
+  * Improved RESP error <-> exception mapping
+
+* Bug fix
+
+  * Ignore duplicate consumer group error due to groupconsumer
+    initialization race condition
+
 v3.757 ("Puffles")
 ------------------
 Release Date: 2022-05-19
@@ -703,6 +717,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
