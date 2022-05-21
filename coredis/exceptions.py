@@ -66,7 +66,16 @@ class DataError(RedisError):
 
 
 class NoKeyError(RedisError):
-    pass
+    """
+    Raised when a key provided in the command is missing
+    """
+
+
+class WrongTypeError(RedisError):
+    """
+    Raised when an operation is performed on a key
+    containing a datatype that doesn't support the operation
+    """
 
 
 class PubSubError(RedisError):
@@ -119,6 +128,10 @@ class ClusterCrossSlotError(ResponseError):
         super().__init__(message or "Keys in request don't hash to the same slot")
         self.command = command
         self.keys = keys
+
+
+class ClusterRoutingError(RedisClusterException):
+    """Raised when keys in request can't be routed to destination nodes"""
 
 
 class ClusterDownError(ClusterError, ResponseError):
@@ -263,6 +276,20 @@ class UnknownCommandError(ResponseError):
 
 class StreamConsumerError(RedisError):
     pass
+
+
+class StreamConsumerGroupError(StreamConsumerError):
+    """
+    Raised when and attempt to create a stream consumer
+    group fails because it already exists
+    """
+
+
+class StreamDuplicateConsumerGroupError(StreamConsumerGroupError):
+    """
+    Raised when and attempt to create a stream consumer
+    group fails because it already exists
+    """
 
 
 class StreamConsumerInitializationError(StreamConsumerError):

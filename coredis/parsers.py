@@ -20,13 +20,17 @@ from coredis.exceptions import (
     ExecAbortError,
     InvalidResponse,
     MovedError,
+    NoKeyError,
     NoScriptError,
     ProtocolError,
     ReadOnlyError,
     RedisError,
     ResponseError,
+    StreamConsumerGroupError,
+    StreamDuplicateConsumerGroupError,
     TryAgainError,
     UnknownCommandError,
+    WrongTypeError,
 )
 from coredis.typing import (
     ClassVar,
@@ -162,6 +166,10 @@ class BaseParser(ABC):
     EXCEPTION_CLASSES: Dict[
         str, Union[Type[RedisError], Dict[str, Type[RedisError]]]
     ] = {
+        "ASK": AskError,
+        "BUSYGROUP": StreamDuplicateConsumerGroupError,
+        "CLUSTERDOWN": ClusterDownError,
+        "CROSSSLOT": ClusterCrossSlotError,
         "ERR": {
             "max number of clients reached": ConnectionError,
             "unknown command": UnknownCommandError,
@@ -169,16 +177,16 @@ class BaseParser(ABC):
         "EXECABORT": ExecAbortError,
         "LOADING": BusyLoadingError,
         "NOSCRIPT": NoScriptError,
-        "READONLY": ReadOnlyError,
-        "ASK": AskError,
-        "TRYAGAIN": TryAgainError,
         "MOVED": MovedError,
-        "CLUSTERDOWN": ClusterDownError,
-        "CROSSSLOT": ClusterCrossSlotError,
-        "WRONGPASS": AuthenticationFailureError,
         "NOAUTH": AuthenticationRequiredError,
+        "NOGROUP": StreamConsumerGroupError,
+        "NOKEY": NoKeyError,
         "NOPERM": AuthorizationError,
         "NOPROTO": ProtocolError,
+        "READONLY": ReadOnlyError,
+        "TRYAGAIN": TryAgainError,
+        "WRONGPASS": AuthenticationFailureError,
+        "WRONGTYPE": WrongTypeError,
     }
 
     def __init__(self, read_size: int) -> None:

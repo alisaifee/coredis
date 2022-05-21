@@ -26,6 +26,7 @@ from coredis.exceptions import (
     BusyLoadingError,
     ClusterDownError,
     ClusterError,
+    ClusterRoutingError,
     ConnectionError,
     MovedError,
     RedisClusterException,
@@ -1362,7 +1363,7 @@ class RedisCluster(
                 key_start: int = args.index(keys[0])
                 key_end: int = args.index(keys[-1])
                 if not args[key_start : 1 + key_end] == keys:
-                    raise RuntimeError(
+                    raise ClusterRoutingError(
                         f"Unable to map {command.decode('latin-1')} by keys {keys}"
                     )
                 for node_name, node_keys in self.connection_pool.nodes.keys_to_nodes(

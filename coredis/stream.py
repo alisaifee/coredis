@@ -4,7 +4,11 @@ from typing import Any
 
 from coredis._utils import EncodingInsensitiveDict, nativestr
 from coredis.client import AbstractRedis
-from coredis.exceptions import ResponseError, StreamConsumerInitializationError
+from coredis.exceptions import (
+    ResponseError,
+    StreamConsumerInitializationError,
+    StreamDuplicateConsumerGroupError,
+)
 from coredis.response.types import StreamEntry
 from coredis.tokens import PureToken
 from coredis.typing import (
@@ -261,15 +265,17 @@ class GroupConsumer(Consumer[AnyStr]):
             raise StreamConsumerInitializationError(
                 f"Consumer group: {self.group!r} does not exist for streams: {missing_streams}"
             )
-
         for stream in self.streams:
             if self.auto_create and not group_presence.get(stream):
-                if not await self.client.xgroup_create(
-                    stream, self.group, PureToken.NEW_ID, mkstream=True
-                ):
-                    raise StreamConsumerInitializationError(
-                        f"Unable to create group {self.group!r} for stream {stream!r}"
-                    )
+                try:
+                    if not await self.client.xgroup_create(
+                        stream, self.group, PureToken.NEW_ID, mkstream=True
+                    ):
+                        raise StreamConsumerInitializationError(
+                            f"Unable to create group {self.group!r} for stream {stream!r}"
+                        )
+                except StreamDuplicateConsumerGroupError:
+                    pass
             self.state[stream].setdefault("identifier", ">")
 
         self._initialized = True
@@ -295,7 +301,6 @@ class GroupConsumer(Consumer[AnyStr]):
 
         cur = None
         cur_stream = None
-
         for stream, buffer_entries in list(self.buffer.items()):
             if buffer_entries:
                 cur_stream, cur = stream, self.buffer[stream].pop(0)
