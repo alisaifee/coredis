@@ -3,7 +3,12 @@ from __future__ import annotations
 import pytest
 
 from coredis import PureToken
-from coredis.exceptions import CommandSyntaxError, RedisError, ResponseError
+from coredis.exceptions import (
+    CommandSyntaxError,
+    RedisError,
+    ResponseError,
+    StreamConsumerGroupError,
+)
 from tests.conftest import targets
 
 
@@ -216,7 +221,7 @@ class TestStreams:
                 "test_stream", field_values={"k1": "v1", "k2": "1"}, identifier=str(idx)
             )
         # read from group does not exist
-        with pytest.raises(ResponseError):
+        with pytest.raises(StreamConsumerGroupError):
             await client.xreadgroup(
                 "wrong_group",
                 "lalala",

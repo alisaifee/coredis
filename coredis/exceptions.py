@@ -71,7 +71,7 @@ class NoKeyError(RedisError):
     """
 
 
-class WrongTypeError(RedisError):
+class WrongTypeError(ResponseError):
     """
     Raised when an operation is performed on a key
     containing a datatype that doesn't support the operation
