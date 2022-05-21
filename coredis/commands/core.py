@@ -5196,7 +5196,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.STREAM,
     )
     async def xgroup_createconsumer(
-        self, key: KeyT, *, groupname: StringT, consumername: StringT
+        self, key: KeyT, groupname: StringT, consumername: StringT
     ) -> int:
         """
         Create a consumer in a consumer group.
