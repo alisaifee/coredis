@@ -28,7 +28,7 @@ coredis is an async redis client with support for redis server, cluster & sentin
 Feature Summary
 ===============
 
-* Clients for different deployments
+* Clients for different topologies
 
   * :class:`~coredis.Redis`
   * :class:`~coredis.RedisCluster`

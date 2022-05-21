@@ -13,11 +13,11 @@ coredis is an async redis client with support for redis server, cluster
 
 - [Installation](#installation)
 - [Feature Summary](#feature-summary)
-	- [Deployment architecture](#deployment-architecture)
+	- [Deployment topologies](#deployment-topologies)
 	- [Application patterns](#application-patterns)
 	- [Server side scripting](#server-side-scripting)
-	- [Miscellaneous](#miscelleneous)
-- [Quick start](#quickstart)
+	- [Miscellaneous](#miscellaneous)
+- [Quick start](#quick-start)
 	- [Single Node client](#single-node-client)
 	- [Cluster client](#cluster-client)
 - [Compatibility](#compatibility)
@@ -36,7 +36,7 @@ $ pip install coredis
 
 ## Feature Summary
 
-### Deployment architecture
+### Deployment topologies
 - [Redis Cluster](https://coredis.readthedocs.org/en/latest/handbook/cluster.html#redis-cluster)
 - [Sentinel](https://coredis.readthedocs.org/en/latest/api.html#sentinel)
 
