@@ -275,13 +275,14 @@ class UnknownCommandError(ResponseError):
 
 
 class StreamConsumerError(RedisError):
-    pass
+    """
+    Base exception for stream consumer related errors
+    """
 
 
 class StreamConsumerGroupError(StreamConsumerError):
     """
-    Raised when and attempt to create a stream consumer
-    group fails because it already exists
+    Base exception for consumer group related errors
     """
 
 
@@ -293,4 +294,7 @@ class StreamDuplicateConsumerGroupError(StreamConsumerGroupError):
 
 
 class StreamConsumerInitializationError(StreamConsumerError):
-    pass
+    """
+    Raised when a stream consumer could not be initialized
+    based on the configuration provided
+    """
