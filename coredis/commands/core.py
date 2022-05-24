@@ -6525,6 +6525,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.INFO,
         group=CommandGroup.SERVER,
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def info(self, *sections: StringT) -> Dict[str, ResponseType]:
         """
@@ -6672,6 +6673,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.MEMORY_PURGE,
         group=CommandGroup.SERVER,
+        cluster=ClusterCommandConfig(route=NodeFlag.ALL, combine=ClusterBoolCombine()),
     )
     async def memory_purge(self) -> bool:
         """
@@ -7201,6 +7203,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.COMMAND,
         group=CommandGroup.SERVER,
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def command(self) -> Dict[str, Command]:
         """
@@ -7218,6 +7221,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.COMMAND_COUNT,
         group=CommandGroup.SERVER,
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def command_count(self) -> int:
         """
@@ -7299,6 +7303,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.COMMAND_INFO,
         group=CommandGroup.SERVER,
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def command_info(self, *command_names: StringT) -> Dict[str, Command]:
         """
@@ -7317,6 +7322,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.COMMAND_LIST,
         version_introduced="7.0.0",
         group=CommandGroup.SERVER,
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def command_list(
         self,

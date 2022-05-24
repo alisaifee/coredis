@@ -14,6 +14,7 @@ from tests.conftest import targets
     "redis_basic_raw",
     "redis_basic_resp3",
     "redis_basic_raw_resp3",
+    "redis_cluster",
 )
 @pytest.mark.asyncio()
 class TestServer:
@@ -74,6 +75,7 @@ class TestServer:
             _s("b"): {_s("OW"), _s("update")},
         }
 
+    @pytest.mark.nocluster
     async def test_config_get(self, client, _s):
         data = await client.config_get(["*"])
         assert _s("maxmemory") in data
@@ -92,6 +94,7 @@ class TestServer:
         assert reset_commands_processed < prior_commands_processed
 
     @pytest.mark.nokeydb
+    @pytest.mark.nocluster
     async def test_config_rewrite(self, client):
         with pytest.raises(
             ResponseError, match="The server is running without a config file"
@@ -99,6 +102,7 @@ class TestServer:
             await client.config_rewrite()
 
     @pytest.mark.max_server_version("6.2.0")
+    @pytest.mark.nocluster
     async def test_config_set(self, client, _s):
         data = await client.config_get(["*"])
         rdbname = data[_s("dbfilename")]
@@ -110,6 +114,7 @@ class TestServer:
         finally:
             assert await client.config_set({"dbfilename": rdbname})
 
+    @pytest.mark.nocluster
     async def test_dbsize(self, client, _s):
         await client.set("a", "foo")
         await client.set("b", "bar")
@@ -124,6 +129,7 @@ class TestServer:
             PureToken.ASYNC,
         ],
     )
+    @pytest.mark.nocluster
     async def test_flushall(self, client, _s, mode):
         await client.set("a", "foo")
         await client.set("b", "bar")
@@ -156,6 +162,7 @@ class TestServer:
         assert await client.flushdb(mode)
         assert len(await client.keys()) == 0
 
+    @pytest.mark.nocluster
     async def test_slowlog_get(self, client, _s):
         sl_v, length_v = await self.slowlog(client, _s)
         await client.slowlog_reset()
@@ -180,6 +187,7 @@ class TestServer:
         assert isinstance(slowlog[0].duration, int)
         await self.cleanup(client, sl_v, length_v)
 
+    @pytest.mark.nocluster
     async def test_slowlog_get_limit(self, client, _s):
         sl_v, length_v = await self.slowlog(client, _s)
         assert await client.slowlog_reset()
@@ -191,16 +199,19 @@ class TestServer:
         assert [_s("GET"), _s("bar")] in commands
         await self.cleanup(client, sl_v, length_v)
 
+    @pytest.mark.nocluster
     async def test_slowlog_length(self, client, _s):
         sl_v, length_v = await self.slowlog(client, _s)
         await client.get("foo")
         assert isinstance(await client.slowlog_len(), int)
         await self.cleanup(client, sl_v, length_v)
 
+    @pytest.mark.nocluster
     async def test_time(self, client, _s):
         t = await client.time()
         assert isinstance(t, datetime.datetime)
 
+    @pytest.mark.nocluster
     async def test_info(self, client, _s):
         await client.set("a", "foo")
         await client.set("b", "bar")
@@ -210,23 +221,36 @@ class TestServer:
         keyspace = await client.info("keyspace")
         assert {"db0"} == keyspace.keys()
 
+    @pytest.mark.clusteronly
+    async def test_info_cluster(self, client, _s):
+        await client.set("a", "foo")
+        await client.set("b", "bar")
+        info = await client.info()
+        assert isinstance(info, dict)
+        assert info[_s("redis_mode")] == _s("cluster")
+
+    @pytest.mark.nocluster
     async def test_lastsave(self, client, _s):
         assert isinstance(await client.lastsave(), datetime.datetime)
 
     @pytest.mark.min_server_version("6.0.0")
+    @pytest.mark.nocluster
     async def test_lolwut(self, client, _s):
         lolwut = await client.lolwut(5)
         assert _s("Redis ver.") in lolwut
 
+    @pytest.mark.nocluster
     async def test_memory_doctor(self, client, _s):
         assert _s("Sam") in (await client.memory_doctor())
 
+    @pytest.mark.nocluster
     async def test_memory_malloc_stats(self, client, _s):
         assert _s("jemalloc") in (await client.memory_malloc_stats())
 
     async def test_memory_purge(self, client, _s):
         assert await client.memory_purge() is True
 
+    @pytest.mark.nocluster
     async def test_memory_stats(self, client, _s):
         stats = await client.memory_stats()
         assert stats[_s("keys.count")] == 0
@@ -235,10 +259,12 @@ class TestServer:
         await client.set("key", str(bytearray([0] * 1024)))
         assert (await client.memory_usage(_s("key"))) > 1024
 
+    @pytest.mark.nocluster
     async def test_latency_doctor(self, client, _s):
         assert await client.latency_doctor()
 
     @pytest.mark.max_server_version("6.2.9")
+    @pytest.mark.nocluster
     async def test_latency_all(self, client, _s):
         await client.execute_command(b"debug", "sleep", 0.05)
         history = await client.latency_history("command")
@@ -254,12 +280,14 @@ class TestServer:
         assert latest[_s("command")][2] == approx(50, 60)
 
     @pytest.mark.max_server_version("6.2.9")
+    @pytest.mark.nocluster
     async def test_latency_graph(self, client, _s):
         await client.execute_command(b"debug", "sleep", 0.05)
         graph = await client.latency_graph("command")
         assert _s("command - high") in graph
 
     @pytest.mark.min_server_version("7.0.0")
+    @pytest.mark.nocluster
     async def test_latency_histogram(self, client, _s):
         await client.set("a", 1)
         await client.set("a", 1)
@@ -270,11 +298,13 @@ class TestServer:
         assert _s("set") in histogram
         assert _s("get") in histogram
 
+    @pytest.mark.nocluster
     async def test_role(self, client, _s):
         role_info = await client.role()
         assert role_info.role == "master"
 
     @pytest.mark.nokeydb
+    @pytest.mark.nocluster
     async def test_swapdb(self, client, _s):
         await client.set("fubar", 1)
         await client.select(1)
