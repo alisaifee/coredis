@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import platform
 
 import versioneer
 
@@ -14,7 +15,7 @@ from setuptools.command.build_ext import build_ext
 from setuptools.extension import Extension
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
-
+PY_IMPLEMENTATION = platform.python_implementation()
 
 def get_requirements(req_file):
     requirements = []
@@ -77,26 +78,29 @@ _ROOT_DIR = pathlib.Path(__file__).parent
 with open(str(_ROOT_DIR / "README.md")) as f:
     long_description = f.read()
 
-extensions = [
-    Extension(
-        name="coredis.speedups",
-        sources=["coredis/speedups.c"],
-    )
-]
+if PY_IMPLEMENTATION == "CPython":
+    extensions = [
+        Extension(
+            name="coredis.speedups",
+            sources=["coredis/speedups.c"],
+        )
+    ]
 
-try:
-    from mypyc.build import mypycify
+    try:
+        from mypyc.build import mypycify
 
-    extensions += mypycify(
-        [
-            "coredis/_packer.py",
-            # Disabled due to segfault when coroutines are cancelled
-            # https://github.com/python/mypy/issues/12867
-            # "coredis/parsers.py"
-        ]
-    )
-except ImportError:
-    pass
+        extensions += mypycify(
+            [
+                "coredis/_packer.py",
+                # Disabled due to segfault when coroutines are cancelled
+                # https://github.com/python/mypy/issues/12867
+                # "coredis/parsers.py"
+            ]
+        )
+    except ImportError:
+        pass
+else:
+    extensions = []
 
 
 setup(
