@@ -23,6 +23,7 @@ from coredis.exceptions import ConnectionError, RedisClusterException
 from coredis.nodemanager import Node, NodeManager
 from coredis.typing import (
     Callable,
+    ClassVar,
     Dict,
     Iterable,
     List,
@@ -66,7 +67,7 @@ _CPT = TypeVar("_CPT", bound="ConnectionPool")
 class ConnectionPool:
     """Generic connection pool"""
 
-    READONLY_COMMANDS: Set[bytes] = set()
+    READONLY_COMMANDS: ClassVar[Set[bytes]] = set()
 
     @classmethod
     def from_url(
@@ -485,7 +486,6 @@ class ClusterConnectionPool(ConnectionPool):
     Custom connection pool for :class:`~coredis.RedisCluster` client
     """
 
-    RedisClusterDefaultTimeout = None
     nodes: NodeManager
     connection_class: Type[ClusterConnection]
 
@@ -557,9 +557,7 @@ class ClusterConnectionPool(ConnectionPool):
         self.reset()
 
         if "stream_timeout" not in self.connection_kwargs:
-            self.connection_kwargs[
-                "stream_timeout"
-            ] = ClusterConnectionPool.RedisClusterDefaultTimeout
+            self.connection_kwargs["stream_timeout"] = None
 
     def __repr__(self) -> str:
         """
