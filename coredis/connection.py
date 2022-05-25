@@ -25,6 +25,7 @@ from coredis.parsers import BaseParser, DefaultParser
 from coredis.typing import (
     Awaitable,
     Callable,
+    ClassVar,
     Dict,
     List,
     Literal,
@@ -95,7 +96,7 @@ class RedisSSLContext:
 
 
 class BaseConnection:
-    description = "BaseConnection"
+    description: ClassVar[str] = "BaseConnection"
     _reader: Optional[StreamReader]
     _writer: Optional[StreamWriter]
     protocol_version: Literal[2, 3]
@@ -385,7 +386,7 @@ class BaseConnection:
 
 
 class Connection(BaseConnection):
-    description = "Connection<host={host},port={port},db={db}>"
+    description: ClassVar[str] = "Connection<host={host},port={port},db={db}>"
 
     def __init__(
         self,
@@ -468,7 +469,7 @@ class Connection(BaseConnection):
 
 
 class UnixDomainSocketConnection(BaseConnection):
-    description = "UnixDomainSocketConnection<path={path},db={db}>"
+    description: ClassVar[str] = "UnixDomainSocketConnection<path={path},db={db}>"
 
     def __init__(
         self,
@@ -521,7 +522,7 @@ class UnixDomainSocketConnection(BaseConnection):
 
 class ClusterConnection(Connection):
     "Manages TCP communication to and from a Redis server"
-    description = "ClusterConnection<host={host},port={port}>"
+    description: ClassVar[str] = "ClusterConnection<host={host},port={port}>"
     node: Node
 
     def __init__(
