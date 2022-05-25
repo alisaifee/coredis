@@ -64,7 +64,7 @@ jobs:
         test_params: ["-m '(not keydb)'"]
         uvloop: ["True", "False"]
         runtime_type_checks: ["True"]
-        extensions: ["True", "False"]
+        extensions: ["True"]
         include:
           - python-version: "3.10"
             service_version: "REDIS_VERSION=latest REDIS_SSL_VERSION=latest"
@@ -76,6 +76,12 @@ jobs:
             parser: python
             test_params: "-m keydb"
             runtime_type_checks: "False"
+          - python-version: "3.10"
+            service_version: "REDIS_VERSION=latest REDIS_SSL_VERSION=latest"
+            parser: python
+            test_params: "-m keydb"
+            runtime_type_checks: "False"
+            extensions: "False"
     steps:
     - uses: actions/checkout@v3
     - name: Cache dependencies
