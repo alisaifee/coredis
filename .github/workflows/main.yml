@@ -97,7 +97,7 @@ jobs:
     - name: Compile extensions
       if: ${{ matrix.extensions != 'True' }}
       run: python setup.py build_ext --inplace
-    - name: Install Hiredis
+    - name: Uninstall Hiredis
       if: ${{ matrix.parser != 'hiredis' }}
       run:
         pip uninstall -y hiredis
