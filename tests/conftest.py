@@ -208,7 +208,8 @@ def redis_sentinel_auth_server(docker_services):
 def redis_stack_server(docker_services):
     if os.environ.get("CI") == "True" and not os.environ.get("REDIS_STACK_VERSION"):
         pytest.skip("Redis stack tests skipped")
-
+    if os.environ.get("CI") == "True":
+        time.sleep(5)
     docker_services.start("redis-stack")
     docker_services.wait_for_service("redis-stack", 6379, ping_socket)
     yield ["localhost", 9379]
