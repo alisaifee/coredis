@@ -17,7 +17,7 @@ Release Date: 2022-05-21
   * Ignore duplicate consumer group error due to groupconsumer
     initialization race condition
 
-v3.757 ("Puffles")
+v3.7.57 ("Puffles")
 ------------------
 Release Date: 2022-05-19
 
