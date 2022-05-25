@@ -11,8 +11,8 @@ import warnings
 from asyncio import AbstractEventLoop, StreamReader, StreamWriter
 from typing import cast
 
-from coredis._utils import b, nativestr
-from coredis.constants import SYM_CRLF, SYM_DOLLAR, SYM_EMPTY, SYM_STAR
+from coredis._packer import Packer
+from coredis._utils import nativestr
 from coredis.exceptions import (
     AuthenticationRequiredError,
     ConnectionError,
@@ -31,7 +31,6 @@ from coredis.typing import (
     Literal,
     Optional,
     ResponseType,
-    Tuple,
     Type,
     TypeVar,
     Union,
@@ -139,6 +138,7 @@ class BaseConnection:
         # flag to show if a connection is waiting for response
         self.awaiting_response = False
         self.last_active_at = time.time()
+        self.packer = Packer(self.encoding)
 
     def __repr__(self) -> str:
         return self.description.format(**self._description_args)
@@ -303,22 +303,12 @@ class BaseConnection:
             else:
                 raise
 
-    async def send_command(self, *args: ValueT) -> None:
+    async def send_command(self, command: bytes, *args: ValueT) -> None:
         if not self.is_connected:
             await self.connect()
-        await self.send_packed_command(self.pack_command(*args))
+        await self.send_packed_command(self.packer.pack_command(command, *args))
         self.awaiting_response = True
         self.last_active_at = time.time()
-
-    def encode(self, value: ValueT) -> bytes:
-        """Returns a bytestring representation of the value"""
-        if isinstance(value, bytes):
-            return value
-        elif isinstance(value, int):
-            return b"%d" % value
-        elif isinstance(value, float):
-            return b"%.15g" % value
-        return value.encode(self.encoding)
 
     def disconnect(self) -> None:
         """Disconnects from the Redis server"""
@@ -330,59 +320,6 @@ class BaseConnection:
             pass
         self._reader = None
         self._writer = None
-
-    def pack_command(self, *args: ValueT) -> List[bytes]:
-        "Pack a series of arguments into the Redis protocol"
-        output: List[bytes] = []
-        # the client might have included 1 or more literal arguments in
-        # the command name, e.g., 'CONFIG GET'. The Redis server expects these
-        # arguments to be sent separately, so split the first argument
-        # manually. All of these arguements get wrapped in the Token class
-        # to prevent them from being encoded.
-        command = b(args[0])
-        if b" " in command:
-            args = tuple(s for s in command.split()) + args[1:]
-        else:
-            args = (command,) + args[1:]
-
-        buff = SYM_EMPTY.join((SYM_STAR, b"%d" % len(args), SYM_CRLF))
-
-        for arg in map(self.encode, args):
-            # to avoid large string mallocs, chunk the command into the
-            # output list if we're sending large values
-
-            if len(buff) > 6000 or len(arg) > 6000:
-                buff = SYM_EMPTY.join((buff, SYM_DOLLAR, b"%d" % len(arg), SYM_CRLF))
-                output.append(buff)
-                output.append(arg)
-                buff = SYM_CRLF
-            else:
-                buff = SYM_EMPTY.join(
-                    (buff, SYM_DOLLAR, b"%d" % len(arg), SYM_CRLF, arg, SYM_CRLF)
-                )
-        output.append(buff)
-        return output
-
-    def pack_commands(self, commands: List[Tuple[ValueT, ...]]) -> List[bytes]:
-        "Pack multiple commands into the Redis protocol"
-        output: List[bytes] = []
-        pieces: List[bytes] = []
-        buffer_length = 0
-
-        for cmd in commands:
-            for chunk in self.pack_command(*cmd):
-                pieces.append(chunk)
-                buffer_length += len(chunk)
-
-            if buffer_length > 6000:
-                output.append(SYM_EMPTY.join(pieces))
-                buffer_length = 0
-                pieces = []
-
-        if pieces:
-            output.append(SYM_EMPTY.join(pieces))
-
-        return output
 
 
 class Connection(BaseConnection):

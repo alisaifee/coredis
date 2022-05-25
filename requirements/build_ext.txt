@@ -1,0 +1,5 @@
+beartype
+hiredis>=2.0.0
+mypy==0.950
+packaging>=21,<22
+types-deprecated

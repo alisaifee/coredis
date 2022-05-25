@@ -149,7 +149,9 @@ class NodeCommands:
         # send all the commands and catch connection and timeout errors.
         try:
             await connection.send_packed_command(
-                connection.pack_commands([(c.command,) + c.args for c in commands])
+                connection.packer.pack_commands(
+                    [(c.command,) + c.args for c in commands]
+                )
             )
         except (ConnectionError, TimeoutError) as e:
             for c in commands:
@@ -446,7 +448,9 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
             commands,
             [PipelineCommand(command=CommandName.EXEC, args=())],
         )
-        all_cmds = connection.pack_commands([(cmd.command,) + cmd.args for cmd in cmds])
+        all_cmds = connection.packer.pack_commands(
+            [(cmd.command,) + cmd.args for cmd in cmds]
+        )
         await connection.send_packed_command(all_cmds)
         errors: List[Tuple[int, Optional[RedisError]]] = []
 
@@ -528,7 +532,7 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
         raise_on_error: bool,
     ) -> Tuple[Any, ...]:
         # build up all commands into a single request to increase network perf
-        all_cmds = connection.pack_commands(
+        all_cmds = connection.packer.pack_commands(
             [(cmd.command,) + cmd.args for cmd in commands]
         )
         await connection.send_packed_command(all_cmds)

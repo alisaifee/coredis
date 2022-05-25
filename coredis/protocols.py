@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from asyncio import StreamReader, StreamWriter
 from types import TracebackType
 
 from typing_extensions import runtime_checkable
@@ -83,4 +84,18 @@ class SupportsWatch(Protocol):  # noqa
         ...
 
     async def execute(self, raise_on_error: bool = True) -> Tuple[object, ...]:
+        ...
+
+
+@runtime_checkable
+class ConnectionP(Protocol):
+    decode_responses: bool
+    encoding: str
+
+    @property
+    def reader(self) -> StreamReader:
+        ...
+
+    @property
+    def writer(self) -> StreamWriter:
         ...

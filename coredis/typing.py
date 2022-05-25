@@ -173,7 +173,7 @@ ResponsePrimitive: TypeAlias = Optional[Union[StringT, int, float, bool]]
 ResponseType = Union[
     ResponsePrimitive,
     List[Any],
-    Set[ResponsePrimitive],
+    MutableSet[Union[ResponsePrimitive, Tuple[ResponsePrimitive, ...]]],
     Dict[ResponsePrimitive, Any],
     "coredis.exceptions.RedisError",
 ]

@@ -5,7 +5,6 @@ import sys
 from abc import ABC, abstractmethod
 from asyncio import StreamReader
 from io import BytesIO
-from typing import TYPE_CHECKING, cast
 
 from coredis.constants import SYM_CRLF, RESPDataType
 from coredis.exceptions import (
@@ -32,18 +31,22 @@ from coredis.exceptions import (
     UnknownCommandError,
     WrongTypeError,
 )
+from coredis.protocols import ConnectionP
 from coredis.typing import (
     ClassVar,
     Dict,
+    List,
+    MutableSet,
     Optional,
     ResponsePrimitive,
     ResponseType,
     Set,
+    Tuple,
     Type,
     Union,
 )
 
-try:  # noqa
+try:
     import hiredis
 
     _hiredis_available = True
@@ -52,8 +55,27 @@ except ImportError:
 
 HIREDIS_AVAILABLE = _hiredis_available
 
-if TYPE_CHECKING:
-    import coredis.connection
+
+class RESPNode:
+    __slots__ = ("container", "depth", "key")
+
+    def __init__(
+        self,
+        container: Union[
+            List[ResponseType],
+            MutableSet[Union[ResponsePrimitive, Tuple[ResponsePrimitive, ...]]],
+            Dict[ResponsePrimitive, ResponseType],
+        ],
+        depth: int,
+        key: ResponsePrimitive,
+    ):
+        self.container = container
+        self.depth = depth
+        self.key = key
+
+
+class NotEnoughDataError(Exception):
+    pass
 
 
 class SocketBuffer:
@@ -71,7 +93,7 @@ class SocketBuffer:
     def length(self) -> int:
         return self.bytes_written - self.bytes_read
 
-    async def _read_from_socket(self, length: Optional[int] = None) -> None:
+    async def read_from_socket(self, length: Optional[int] = None) -> None:
         buf = self._buffer
         assert buf
         buf.seek(self.bytes_written)
@@ -100,14 +122,14 @@ class SocketBuffer:
             else:
                 raise
 
-    async def read(self, length: int) -> bytes:
+    def get(self, length: int) -> bytes:
         assert self._buffer
 
         length = length + 2  # make sure to read the \r\n terminator
         # make sure we've read enough data from the socket
 
         if length > self.length:
-            await self._read_from_socket(length - self.length)
+            raise NotEnoughDataError()
 
         self._buffer.seek(self.bytes_read)
         data = self._buffer.read(length)
@@ -121,23 +143,40 @@ class SocketBuffer:
 
         return data[:-2]
 
-    async def readline(self) -> bytes:
-        buf = self._buffer
-        assert buf
-        buf.seek(self.bytes_read)
-        data = buf.readline()
+    async def read(self, length: int) -> bytes:
+        assert self._buffer
 
-        while not data.endswith(SYM_CRLF):
-            # there's more data in the socket that we need
-            await self._read_from_socket()
-            buf.seek(self.bytes_read)
-            data = buf.readline()
+        length = length + 2  # make sure to read the \r\n terminator
+        # make sure we've read enough data from the socket
 
+        if length > self.length:
+            await self.read_from_socket(length - self.length)
+
+        self._buffer.seek(self.bytes_read)
+        data = self._buffer.read(length)
         self.bytes_read += len(data)
 
         # purge the buffer when we've consumed it all so it doesn't
         # grow forever
 
+        if self.bytes_read == self.bytes_written:
+            self.purge()
+
+        return data[:-2]
+
+    def readline(self) -> bytes:
+        buf = self._buffer
+        assert buf
+        buf.seek(self.bytes_read)
+        data = buf.readline()
+
+        if not data.endswith(SYM_CRLF):
+            buf.seek(self.bytes_read)
+            raise NotEnoughDataError()
+
+        self.bytes_read += len(data)
+        # purge the buffer when we've consumed it all so it doesn't
+        # grow forever
         if self.bytes_read == self.bytes_written:
             self.purge()
 
@@ -222,7 +261,7 @@ class BaseParser(ABC):
         pass
 
     @abstractmethod
-    def on_connect(self, connection: coredis.connection.BaseConnection) -> None:
+    def on_connect(self, connection: ConnectionP) -> None:
         """Called when the stream connects"""
 
     @abstractmethod
@@ -237,7 +276,7 @@ class PythonParser(BaseParser):
     """
 
     #: Supported response data types
-    ALLOWED_TYPES: ClassVar[Set[RESPDataType]] = {
+    ALLOWED_TYPES: ClassVar[Set[int]] = {
         RESPDataType.NONE,
         RESPDataType.SIMPLE_STRING,
         RESPDataType.BULK_STRING,
@@ -261,7 +300,7 @@ class PythonParser(BaseParser):
     def __del__(self) -> None:
         self.on_disconnect()
 
-    def on_connect(self, connection: coredis.connection.BaseConnection) -> None:
+    def on_connect(self, connection: ConnectionP) -> None:
         """Called when the stream connects"""
         self._stream = connection.reader
         self._buffer = SocketBuffer(self._stream, self._read_size)
@@ -284,101 +323,143 @@ class PythonParser(BaseParser):
         return bool(self._buffer.length) if self._buffer else False
 
     async def read_response(self, decode: Optional[bool] = None) -> ResponseType:
-        """
-        Parse a response if available on the wire
-
-        :param decode: Only valuable if set to False to override any decode
-         configuration set on the parent connection
-        :return: a parsed response structure from the server
-        """
         if not self._buffer:
             raise ConnectionError("Socket closed on remote end")
-        chunk = memoryview(await self._buffer.readline())
-
-        marker, chunk = chunk[0], chunk[1:]
-        if marker not in PythonParser.ALLOWED_TYPES:  # noqa
-            raise InvalidResponse(f"Protocol Error: {chr(marker)}, {bytes(chunk)!r}")
-
-        # server returned an error
-        if marker == RESPDataType.ERROR:
-            error = self.parse_error(bytes(chunk).decode())
-            # if the error is a ConnectionError, raise immediately so the user
-            # is notified
-
-            if isinstance(error, ConnectionError):
-                raise error
-            # otherwise, let the caller deal with the error without raising it
-            return error
-        elif marker == RESPDataType.SIMPLE_STRING:
-            response = bytes(chunk)
-        elif marker == RESPDataType.INT:
-            return int(chunk)
-        elif marker == RESPDataType.DOUBLE:
-            return float(chunk)
-        elif marker == RESPDataType.NONE:
-            return None
-        elif marker == RESPDataType.BOOLEAN:
-            return chunk[0] == ord(b"t")
-        elif marker == RESPDataType.BULK_STRING:
-            length = int(chunk)
-            if length == -1:
-                return None
-            response = await self._buffer.read(length)
-        elif marker == RESPDataType.VERBATIM:
-            length = int(chunk)
-            if length == -1:
-                return None
-            response = await self._buffer.read(length)
-            if response[:3] != b"txt":
-                raise InvalidResponse(
-                    f"Unexpected verbatim string of type {response[:3]!r}"
-                )
-            response = response[4:]
-        elif marker == RESPDataType.PUSH:
-            length = int(chunk)
-            if length == -1:
-                return None
-            return [await self.read_response(decode=decode) for _ in range(length)]
-        elif marker == RESPDataType.ARRAY:
-            length = int(chunk)
-
-            if length == -1:
-                return None
-            return [await self.read_response(decode=decode) for _ in range(length)]
-
-        elif marker == RESPDataType.MAP:
-            length = int(chunk)
-            if length == -1:
-                return None
-            return {
-                # We can assume that redis will only be sending back
-                # primitives as keys. If anything else comes along, it will
-                # be a runtime error anyways.
-                cast(
-                    ResponsePrimitive, await self.read_response(decode=decode)
-                ): await self.read_response(decode=decode)
-                for _ in range(length)
-            }
-        elif marker == RESPDataType.SET:
-
-            length = int(chunk)
-            if length == -1:
-                return None
-            # We can assume this as anything other than a primitive
-            # would not be hashable and thus would cause a runtime error
-            return cast(
-                Set[ResponsePrimitive],
-                {await self.read_response(decode=decode) for _ in range(length)},
-            )
-        else:  # noqa
-            raise ProtocolError(f"Unexpected marker {chr(marker)}")
 
         need_decode = self.encoding is not None
+        decode_bytes = False
         if decode is not None:
             need_decode = decode
         if need_decode and self.encoding:
-            return response.decode(self.encoding)
-        return response
+            decode_bytes = True
+
+        nodes: List[RESPNode] = []
+
+        while True:
+            try:
+                chunk = self._buffer.readline()
+            except NotEnoughDataError:
+                await self._buffer.read_from_socket()
+                continue
+
+            marker, chunk = chunk[0], chunk[1:]
+            response: ResponsePrimitive | RedisError = None
+            if marker not in PythonParser.ALLOWED_TYPES:  # noqa
+                raise InvalidResponse(
+                    f"Protocol Error: {chr(marker)}, {bytes(chunk)!r}"
+                )
+            if marker == RESPDataType.ERROR:
+                error = self.parse_error(bytes(chunk).decode())
+                if isinstance(error, ConnectionError):
+                    raise error
+                response = error
+            elif marker == RESPDataType.SIMPLE_STRING:
+                response = bytes(chunk)
+            elif marker == RESPDataType.INT:
+                response = int(chunk)
+            elif marker == RESPDataType.DOUBLE:
+                response = float(chunk)
+            elif marker == RESPDataType.NONE:
+                response = None
+            elif marker == RESPDataType.BOOLEAN:
+                response = chunk[0] == ord(b"t")
+            elif marker == RESPDataType.BULK_STRING:
+                length = int(chunk)
+                if length == -1:
+                    response = None
+                else:
+                    if self._buffer.length > length + 2:
+                        response = self._buffer.get(length)
+                    else:
+                        response = await self._buffer.read(length)
+            elif marker == RESPDataType.VERBATIM:
+                length = int(chunk)
+                if length == -1:
+                    response = None
+                else:
+                    if self._buffer.length > length + 2:
+                        response = self._buffer.get(length)
+                    else:
+                        response = await self._buffer.read(length)
+                    if response[:3] != b"txt":
+                        raise InvalidResponse(
+                            f"Unexpected verbatim string of type {response[:3]!r}"
+                        )
+                    response = response[4:]
+            elif marker in {
+                RESPDataType.ARRAY,
+                RESPDataType.PUSH,
+                RESPDataType.MAP,
+                RESPDataType.SET,
+            }:
+                if marker in {RESPDataType.ARRAY, RESPDataType.PUSH}:
+                    length = int(chunk)
+                    if length >= 0:
+                        nodes.append(
+                            RESPNode(
+                                [],
+                                length,
+                                None,
+                            )
+                        )
+                elif marker == RESPDataType.MAP:
+                    length = 2 * int(chunk)
+                    if length >= 0:
+                        nodes.append(RESPNode({}, length, None))
+                else:
+                    length = int(chunk)
+                    if length >= 0:
+                        nodes.append(RESPNode(set(), length, None))
+                if length > 0:
+                    continue
+            if decode_bytes and self.encoding and isinstance(response, bytes):
+                response = response.decode(self.encoding)
+            if nodes:
+                if nodes[-1].depth > 0:
+                    nodes[-1].depth -= 1
+                    if isinstance(nodes[-1].container, list):
+                        nodes[-1].container.append(response)
+                    elif isinstance(nodes[-1].container, dict):
+                        if nodes[-1].key is not None:
+                            nodes[-1].container[nodes[-1].key] = response
+                            nodes[-1].key = None
+                        else:
+                            if isinstance(response, (bool, int, float, bytes, str)):
+                                nodes[-1].key = response
+                            else:
+                                raise TypeError(
+                                    f"unhashable type {response} as dictionary key"
+                                )
+                    else:
+                        if isinstance(response, (bool, int, float, bytes, str)):
+                            nodes[-1].container.add(response)
+                        else:
+                            raise TypeError(f"unhashable type {response} as set member")
+
+                if len(nodes) > 1:
+                    while len(nodes) > 1 and nodes[-1].depth == 0:
+                        nodes[-2].depth -= 1
+                        if isinstance(nodes[-2].container, list):
+                            nodes[-2].container.append(nodes[-1].container)
+                        elif isinstance(nodes[-2].container, dict):
+                            if nodes[-2].key is not None:
+                                nodes[-2].container[nodes[-2].key] = nodes[-1].container
+                                nodes[-2].key = None
+                            else:
+                                raise TypeError(
+                                    f"unhashable type {nodes[-1].container} as dictionary key"
+                                )
+                        else:
+                            raise TypeError(
+                                f"unhashable type {nodes[-1].container} as set member"
+                            )
+                        nodes.pop()
+
+            if len(nodes) == 1 and nodes[-1].depth == 0:
+                return nodes.pop().container
+            if not nodes:
+                return response
+        return None
 
 
 HIREDIS_SENTINEL = False
@@ -390,8 +471,8 @@ class HiredisParser(BaseParser):
     """
 
     def __init__(self, read_size: int) -> None:
-        if not HIREDIS_AVAILABLE:  # noqa
-            raise RedisError("Hiredis is not installed")
+        if not HIREDIS_AVAILABLE:
+            raise RuntimeError()
         self._stream: Optional[StreamReader] = None
         self._reader: Optional[hiredis.Reader] = None
         self._raw_reader: Optional[hiredis.Reader] = None
@@ -416,7 +497,7 @@ class HiredisParser(BaseParser):
 
         return self._next_response is not HIREDIS_SENTINEL
 
-    def on_connect(self, connection: coredis.connection.BaseConnection) -> None:
+    def on_connect(self, connection: ConnectionP) -> None:
         self._stream = connection.reader
         kwargs: Dict[str, Union[Type[Exception], str]] = {
             "protocolError": InvalidResponse,
@@ -446,6 +527,7 @@ class HiredisParser(BaseParser):
          configuration set on the parent connection
         :return: a parsed response structure from the server
         """
+        response: ResponseType
         if not self._stream:
             raise ConnectionError("Socket closed on remote end")
 
@@ -481,10 +563,11 @@ class HiredisParser(BaseParser):
 
         if isinstance(response, ResponseError):
             return self.parse_error(response.args[0])
-        return cast(ResponseType, response)
+        return response
 
 
 DefaultParser: Type[BaseParser]
+
 if HIREDIS_AVAILABLE:
     DefaultParser = HiredisParser
 else:
