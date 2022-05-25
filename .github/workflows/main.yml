@@ -101,7 +101,7 @@ jobs:
         pip install -r requirements/dev.txt
         python setup.py build
     - name: Compile extensions
-      if: ${{ matrix.extensions != 'True' }}
+      if: ${{ matrix.extensions == 'True' }}
       run: python setup.py build_ext --inplace
     - name: Uninstall Hiredis
       if: ${{ matrix.parser != 'hiredis' }}
