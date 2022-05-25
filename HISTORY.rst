@@ -3,6 +3,17 @@
 Changelog
 =========
 
+v3.8.5
+------
+Release Date: 2022-05-25
+
+* Features
+
+  * Refactor python parser to remove recursion
+  * Reduce number of async calls during response parsing
+  * Extract command packer and use mypyc to compile it to native code
+
+
 v3.8.0
 ------
 Release Date: 2022-05-21
@@ -717,6 +728,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
