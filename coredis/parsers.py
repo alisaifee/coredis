@@ -82,33 +82,19 @@ class SocketBuffer:
     def __init__(self, stream_reader: StreamReader, read_size: int) -> None:
         self._stream = stream_reader
         self.read_size = read_size
-        self._buffer: Optional[BytesIO] = BytesIO()
         self._sock = None
-        # number of bytes written to the buffer from the socket
-        self.bytes_written = 0
-        # number of bytes read from the buffer
-        self.bytes_read = 0
 
-    @property
-    def length(self) -> int:
-        return self.bytes_written - self.bytes_read
-
-    async def read_from_socket(self, length: Optional[int] = None) -> None:
-        buf = self._buffer
-        assert buf
-        buf.seek(self.bytes_written)
+    async def read_from_socket(self, buf: BytesIO, length: Optional[int] = None) -> int:
         marker = 0
 
         try:
             while True:
                 data = await self._stream.read(self.read_size)
                 # an empty string indicates the server shutdown the socket
-
                 if len(data) == 0:
                     raise ConnectionError("Socket closed on remote end")
                 buf.write(data)
                 data_length = len(data)
-                self.bytes_written += data_length
                 marker += data_length
 
                 if length is not None and length > marker:
@@ -121,79 +107,9 @@ class SocketBuffer:
                 raise ConnectionError(f"Error while reading from socket: {e.args}")
             else:
                 raise
-
-    def get(self, length: int) -> bytes:
-        assert self._buffer
-
-        length = length + 2  # make sure to read the \r\n terminator
-        # make sure we've read enough data from the socket
-
-        if length > self.length:
-            raise NotEnoughDataError()
-
-        self._buffer.seek(self.bytes_read)
-        data = self._buffer.read(length)
-        self.bytes_read += len(data)
-
-        # purge the buffer when we've consumed it all so it doesn't
-        # grow forever
-
-        if self.bytes_read == self.bytes_written:
-            self.purge()
-
-        return data[:-2]
-
-    async def read(self, length: int) -> bytes:
-        assert self._buffer
-
-        length = length + 2  # make sure to read the \r\n terminator
-        # make sure we've read enough data from the socket
-
-        if length > self.length:
-            await self.read_from_socket(length - self.length)
-
-        self._buffer.seek(self.bytes_read)
-        data = self._buffer.read(length)
-        self.bytes_read += len(data)
-
-        # purge the buffer when we've consumed it all so it doesn't
-        # grow forever
-
-        if self.bytes_read == self.bytes_written:
-            self.purge()
-
-        return data[:-2]
-
-    def readline(self) -> bytes:
-        buf = self._buffer
-        assert buf
-        buf.seek(self.bytes_read)
-        data = buf.readline()
-
-        if not data.endswith(SYM_CRLF):
-            buf.seek(self.bytes_read)
-            raise NotEnoughDataError()
-
-        self.bytes_read += len(data)
-        # purge the buffer when we've consumed it all so it doesn't
-        # grow forever
-        if self.bytes_read == self.bytes_written:
-            self.purge()
-
-        return data[:-2]
-
-    def purge(self) -> None:
-        assert self._buffer
-        self._buffer.seek(0)
-        self._buffer.truncate()
-        self.bytes_written = 0
-        self.bytes_read = 0
+        return marker
 
     def close(self) -> None:
-        self.purge()
-        if self._buffer:
-            self._buffer.close()
-        self._buffer = None
         self._sock = None
 
 
@@ -294,6 +210,9 @@ class PythonParser(BaseParser):
     def __init__(self, read_size: int) -> None:
         self._stream: Optional[StreamReader] = None
         self._buffer: Optional[SocketBuffer] = None
+        self._localbuffer: Optional[BytesIO] = None
+        self._bytes_read = 0
+        self._bytes_written = 0
         self.encoding: Optional[str] = None
         super().__init__(read_size)
 
@@ -304,7 +223,7 @@ class PythonParser(BaseParser):
         """Called when the stream connects"""
         self._stream = connection.reader
         self._buffer = SocketBuffer(self._stream, self._read_size)
-
+        self._localbuffer = BytesIO()
         if connection.decode_responses:
             self.encoding = connection.encoding
 
@@ -317,10 +236,18 @@ class PythonParser(BaseParser):
         if self._buffer is not None:
             self._buffer.close()
             self._buffer = None
+
+        if self._localbuffer is not None:
+            self._localbuffer = None
+            self._bytes_read = 0
+            self._bytes_written = 0
+
         self.encoding = None
 
     def can_read(self) -> bool:
-        return bool(self._buffer.length) if self._buffer else False
+        return (
+            (self._bytes_written - self._bytes_read) > 0 if self._localbuffer else False
+        )
 
     async def read_response(self, decode: Optional[bool] = None) -> ResponseType:
         if not self._buffer:
@@ -333,14 +260,23 @@ class PythonParser(BaseParser):
         if need_decode and self.encoding:
             decode_bytes = True
 
+        parsed: ResponseType = None
         nodes: List[RESPNode] = []
 
+        assert self._localbuffer
+        buffer = self._localbuffer
+        bytes_written, bytes_read = self._bytes_written, self._bytes_read
+
         while True:
-            try:
-                chunk = self._buffer.readline()
-            except NotEnoughDataError:
-                await self._buffer.read_from_socket()
+            data = buffer.readline()
+            if not data[-2::] == SYM_CRLF:
+                buffer.seek(bytes_written)
+                num_written = await self._buffer.read_from_socket(buffer)
+                bytes_written += num_written
+                buffer.seek(bytes_read)
                 continue
+            bytes_read += len(data)
+            chunk = data[:-2]
 
             marker, chunk = chunk[0], chunk[1:]
             response: ResponsePrimitive | RedisError = None
@@ -355,6 +291,8 @@ class PythonParser(BaseParser):
                 response = error
             elif marker == RESPDataType.SIMPLE_STRING:
                 response = bytes(chunk)
+                if decode_bytes and self.encoding:
+                    response = response.decode(self.encoding)
             elif marker == RESPDataType.INT:
                 response = int(chunk)
             elif marker == RESPDataType.DOUBLE:
@@ -363,29 +301,29 @@ class PythonParser(BaseParser):
                 response = None
             elif marker == RESPDataType.BOOLEAN:
                 response = chunk[0] == ord(b"t")
-            elif marker == RESPDataType.BULK_STRING:
+            elif marker in {RESPDataType.BULK_STRING, RESPDataType.VERBATIM}:
                 length = int(chunk)
                 if length == -1:
                     response = None
                 else:
-                    if self._buffer.length > length + 2:
-                        response = self._buffer.get(length)
-                    else:
-                        response = await self._buffer.read(length)
-            elif marker == RESPDataType.VERBATIM:
-                length = int(chunk)
-                if length == -1:
-                    response = None
-                else:
-                    if self._buffer.length > length + 2:
-                        response = self._buffer.get(length)
-                    else:
-                        response = await self._buffer.read(length)
-                    if response[:3] != b"txt":
-                        raise InvalidResponse(
-                            f"Unexpected verbatim string of type {response[:3]!r}"
+                    if (available := bytes_written - bytes_read) < length + 2:
+                        buffer.seek(bytes_written)
+                        num_written = await self._buffer.read_from_socket(
+                            buffer, length + 2 - available
                         )
-                    response = response[4:]
+                        bytes_written += num_written
+                        buffer.seek(bytes_read)
+                    data = buffer.read(length + 2)
+                    bytes_read += len(data)
+                    response = data[:-2]
+                    if marker == RESPDataType.VERBATIM:
+                        if response[:3] != b"txt":
+                            raise InvalidResponse(
+                                f"Unexpected verbatim string of type {response[:3]!r}"
+                            )
+                        response = response[4:]
+                    if decode_bytes and self.encoding:
+                        response = response.decode(self.encoding)
             elif marker in {
                 RESPDataType.ARRAY,
                 RESPDataType.PUSH,
@@ -412,8 +350,6 @@ class PythonParser(BaseParser):
                         nodes.append(RESPNode(set(), length, None))
                 if length > 0:
                     continue
-            if decode_bytes and self.encoding and isinstance(response, bytes):
-                response = response.decode(self.encoding)
             if nodes:
                 if nodes[-1].depth > 0:
                     nodes[-1].depth -= 1
@@ -456,10 +392,21 @@ class PythonParser(BaseParser):
                         nodes.pop()
 
             if len(nodes) == 1 and nodes[-1].depth == 0:
-                return nodes.pop().container
+                parsed = nodes.pop().container
+                break
             if not nodes:
-                return response
-        return None
+                parsed = response
+                break
+
+        if bytes_read == bytes_written:
+            self._localbuffer.seek(0)
+            self._localbuffer.truncate()
+            self._bytes_read = self._bytes_written = 0
+        else:
+            self._bytes_read = bytes_read
+            self._bytes_written = bytes_written
+
+        return parsed
 
 
 HIREDIS_SENTINEL = False
