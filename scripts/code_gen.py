@@ -2541,34 +2541,15 @@ class KeySpec:
         except KeyError:
             return  ()
     """
-    cython_key_spec_template = """from __future__ import annotations
-
-from coredis.commands.constants import CommandName
-
-READONLY = {{ '{' }}
-{% for command, exprs in readonly.items() %}
-    {{command_enum(command)}}: lambda args: {{exprs | join("+")}},
-{% endfor %}
-{{ '}' }}
-ALL = {{ '{' }}
-{% for command, exprs in all.items() %}
-    {{command_enum(command)}}: lambda args: {{exprs | join("+")}},
-{% endfor %}
-{{ '}' }}
-        """
     env = Environment()
     env.globals.update(
         command_enum=command_enum,
         sanitized=sanitized,
     )
     tmpl = env.from_string(key_spec_template)
-    cython_tmpl = env.from_string(cython_key_spec_template)
     response = tmpl.render(all=all, readonly=readonly)
-    # cython_response = cython_tmpl.render(all=all, readonly=readonly)
     with open(path, "w") as file:
         file.write(response)
-    # with open(path.replace(".py", "_ext.pyx"), "w") as file:
-    #    file.write(cython_response)
     format_file_in_place(
         Path(path),
         fast=False,
