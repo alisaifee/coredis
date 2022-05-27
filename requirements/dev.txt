@@ -6,7 +6,7 @@ flake8==4.0.1
 hiredis>=2.0.0
 isort==5.10.1
 mypy==0.960
-pyright==1.1.243
+pyright==1.1.249
 redis>=4.2.0
 twine
 types-deprecated
