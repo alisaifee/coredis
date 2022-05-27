@@ -4929,7 +4929,6 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.XREAD, *pieces, callback=MultiStreamRangeCallback[AnyStr]()
         )
 
-    @mutually_inclusive_parameters("group", "consumer")
     @redis_command(
         CommandName.XREADGROUP,
         group=CommandGroup.STREAM,
