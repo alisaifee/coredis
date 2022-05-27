@@ -74,10 +74,6 @@ class RESPNode:
         self.key = key
 
 
-class NotEnoughDataError(Exception):
-    pass
-
-
 class SocketBuffer:
     def __init__(self, stream_reader: StreamReader, read_size: int) -> None:
         self._stream = stream_reader
