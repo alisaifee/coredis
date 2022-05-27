@@ -3,6 +3,14 @@
 Changelog
 =========
 
+v3.8.6
+------
+Release Date: 2022-05-26
+
+* Performance
+
+  * Inline buffering of responses in python parser
+
 v3.8.5
 ------
 Release Date: 2022-05-25
@@ -728,6 +736,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
