@@ -92,9 +92,7 @@ if PY_IMPLEMENTATION == "CPython":
         extensions += mypycify(
             [
                 "coredis/_packer.py",
-                # Disabled due to segfault when coroutines are cancelled
-                # https://github.com/python/mypy/issues/12867
-                # "coredis/parsers.py"
+                "coredis/_unpacker.py",
             ]
         )
     except ImportError:

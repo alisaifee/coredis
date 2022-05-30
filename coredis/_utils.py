@@ -24,7 +24,6 @@ from coredis.typing import (
     Tuple,
     TypeVar,
     Union,
-    ValueT,
 )
 
 
@@ -97,7 +96,7 @@ class EncodingInsensitiveDict(ObjectProxy):  # type: ignore
         return repr(self.__wrapped__)
 
 
-def b(x: ValueT) -> bytes:
+def b(x: ResponseType) -> bytes:
     if isinstance(x, bytes):
         return x
     if not isinstance(x, str):
@@ -504,4 +503,8 @@ class CaseAndEncodingInsensitiveEnum(bytes, enum.Enum):
         return hash(self.value)
 
 
-__all__ = ["hash_slot", "EncodingInsensitiveDict", "CaseAndEncodingInsensitiveEnum"]
+__all__ = [
+    "hash_slot",
+    "EncodingInsensitiveDict",
+    "CaseAndEncodingInsensitiveEnum",
+]

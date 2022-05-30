@@ -31,6 +31,7 @@ from coredis.typing import (
     Literal,
     Optional,
     ResponseType,
+    Set,
     Type,
     TypeVar,
     Union,
@@ -95,10 +96,12 @@ class RedisSSLContext:
 
 
 class BaseConnection:
+    client_id: Optional[str]
     description: ClassVar[str] = "BaseConnection"
     _reader: Optional[StreamReader]
     _writer: Optional[StreamWriter]
     protocol_version: Literal[2, 3]
+    push_messages: asyncio.Queue[ResponseType]
 
     def __init__(
         self,
@@ -135,10 +138,12 @@ class BaseConnection:
         self.server_version: Optional[str] = None
         self.loop = loop
         self.client_name = client_name
+        self.client_id = None
         # flag to show if a connection is waiting for response
         self.awaiting_response = False
         self.last_active_at = time.time()
         self.packer = Packer(self.encoding)
+        self.push_messages: asyncio.Queue[ResponseType] = asyncio.Queue()
 
     def __repr__(self) -> str:
         return self.description.format(**self._description_args)
@@ -216,6 +221,7 @@ class BaseConnection:
         self._parser.on_connect(self)
         hello_command_args: List[Union[int, str, bytes]] = [self.protocol_version]
         auth_attempted = False
+
         if self.username or self.password:
             hello_command_args.extend(
                 ["AUTH", self.username or b"default", self.password or b""]
@@ -232,9 +238,11 @@ class BaseConnection:
                         f"Unexpected response when negotiating protocol: [{resp3}]"
                     )
                 self.server_version = nativestr(resp3[b"version"])
+                self.client_id = nativestr(resp3[b"id"])
             else:
                 resp = cast(List[ValueT], hello_resp)
                 self.server_version = nativestr(resp[3])
+                self.client_id = nativestr(resp[7])
         except (UnknownCommandError, AuthenticationRequiredError):
             self.version = None
             auth_attempted = False
@@ -260,10 +268,16 @@ class BaseConnection:
 
         self.last_active_at = time.time()
 
-    async def read_response(self, decode: Optional[bool] = None) -> ResponseType:
+    async def read_response(
+        self,
+        decode: Optional[bool] = None,
+        push_message_types: Optional[Set[bytes]] = None,
+    ) -> ResponseType:
         try:
             response = await exec_with_timeout(
-                self._parser.read_response(decode=decode),
+                self._parser.read_response(
+                    decode=decode, push_message_types=push_message_types
+                ),
                 self._stream_timeout,
             )
             self.last_active_at = time.time()
@@ -399,7 +413,7 @@ class Connection(BaseConnection):
                         sock.setsockopt(socket.SOL_TCP, k, v)
             except (OSError, TypeError):
                 # `socket_keepalive_options` might contain invalid options
-                # causing an error. Do not leave the connection open.
+                # causing an error. Do not leavo999e the connection open.
                 writer.close()
                 raise
         await self.on_connect()
