@@ -168,17 +168,22 @@ class TestPyParser:
             1,
         ]
 
-    async def test_nil_push(self, connection, parser, decode):
-        connection._reader.feed_data(b">-1\r\n")
-        assert await parser.read_response() is None
-
-    async def test_empty_push_array(self, connection, parser, decode):
-        connection._reader.feed_data(b">0\r\n")
-        assert await parser.read_response() == []
-
     async def test_simple_push_array(self, connection, parser, decode):
-        connection._reader.feed_data(b">2\r\n:1\r\n:2\r\n")
-        assert await parser.read_response() == [1, 2]
+        connection._reader.feed_data(b">2\r\n$2\r\nco\r\n$5\r\nredis\r\n")
+        assert await parser.read_response(push_message_types=[b"co"]) == [
+            self.encoded_value(decode, b"co"),
+            self.encoded_value(decode, b"redis"),
+        ]
+
+    async def test_interleaved_simple_push_array(self, connection, parser, decode):
+        if isinstance(parser, HiredisParser):
+            return pytest.skip(
+                "Hiredis 2.0.0 doesn't differentiate push responses from arrays"
+            )
+        connection._reader.feed_data(b":3\r\n>2\r\n:1\r\n:2\r\n:4\r\n")
+        assert await parser.read_response() == 3
+        assert await parser.read_response() == 4
+        assert connection.push_messages.get_nowait() == [1, 2]
 
     async def test_nil_map(self, connection, parser, decode):
         connection._reader.feed_data(b"%-1\r\n")

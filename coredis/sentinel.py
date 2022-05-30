@@ -30,6 +30,7 @@ from coredis.typing import (
     Literal,
     Optional,
     ResponseType,
+    Set,
     StringT,
     Tuple,
     Type,
@@ -113,9 +114,15 @@ class SentinelManagedConnection(Connection, Generic[AnyStr]):
                     continue
             raise ReplicaNotFoundError  # Never be here
 
-    async def read_response(self, decode: Optional[bool] = None) -> ResponseType:
+    async def read_response(
+        self,
+        decode: Optional[bool] = None,
+        push_message_types: Optional[Set[bytes]] = None,
+    ) -> ResponseType:
         try:
-            return await super().read_response(decode=decode)
+            return await super().read_response(
+                decode=decode, push_message_types=push_message_types
+            )
         except ReadOnlyError:
             if self.connection_pool.is_primary:
                 # When talking to a master, a ReadOnlyError when likely

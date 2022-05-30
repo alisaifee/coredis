@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from asyncio import StreamReader, StreamWriter
 from types import TracebackType
 
@@ -91,6 +92,7 @@ class SupportsWatch(Protocol):  # noqa
 class ConnectionP(Protocol):
     decode_responses: bool
     encoding: str
+    push_messages: asyncio.Queue[ResponseType]
 
     @property
     def reader(self) -> StreamReader:
