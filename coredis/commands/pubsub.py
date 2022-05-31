@@ -539,11 +539,21 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         *patterns: StringT,
         **pattern_handlers: Optional[Callable[[PubSubMessage], None]],
     ) -> None:
+        """
+        Not available in sharded pubsub
+
+        :meta private:
+        """
         raise NotImplementedError(
             "Sharded PubSub does not support subscription by pattern"
         )
 
     async def punsubscribe(self, *patterns: StringT) -> None:
+        """
+        Not available in sharded pubsub
+
+        :meta private:
+        """
         raise NotImplementedError(
             "Sharded PubSub does not support subscription by pattern"
         )
