@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from coredis.response._callbacks import (
     AnyStrCallback,
     DictCallback,
@@ -15,7 +13,16 @@ from coredis.response._callbacks.sentinel import (
     SentinelInfoCallback,
     SentinelsStateCallback,
 )
-from coredis.typing import AnyStr, Dict, ResponseType, StringT, Tuple, Union, ValueT
+from coredis.typing import (
+    AnyStr,
+    Dict,
+    Optional,
+    ResponseType,
+    StringT,
+    Tuple,
+    Union,
+    ValueT,
+)
 
 from . import CommandMixin
 from ._wrappers import redis_command

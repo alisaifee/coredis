@@ -1,13 +1,20 @@
 from __future__ import annotations
 
 import enum
-from typing import Union
 
 from coredis.commands.constants import CommandName
 from coredis.exceptions import ReadOnlyError
 from coredis.protocols import AbstractExecutor
 from coredis.tokens import PrefixToken, PureToken
-from coredis.typing import AnyStr, CommandArgList, Generic, KeyT, Literal, ResponseType
+from coredis.typing import (
+    AnyStr,
+    CommandArgList,
+    Generic,
+    KeyT,
+    Literal,
+    ResponseType,
+    Union,
+)
 
 
 class BitFieldSubCommand(bytes, enum.Enum):

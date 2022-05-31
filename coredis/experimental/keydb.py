@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import functools
 import textwrap
-from typing import Any, Tuple
+from typing import Any
 
 from packaging import version
 
@@ -38,6 +38,7 @@ from coredis.typing import (
     Parameters,
     R,
     StringT,
+    Tuple,
     Union,
     ValueT,
 )
