@@ -132,7 +132,7 @@ class ClusterMeta(ABCMeta):
                     async def _w(*a: P.args, **k: P.kwargs) -> R:
                         return await func(*a, **k)
 
-                    _w.__doc__ = f"""{textwrap.dedent(method.__doc__)}
+                    _w.__doc__ = f"""{textwrap.dedent(method.__doc__ or "")}
 {doc_addition}
                 """
                     return _w
