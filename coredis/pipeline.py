@@ -1042,7 +1042,7 @@ class ClusterPipelineImpl(AbstractRedis[AnyStr], metaclass=ClusterPipelineMeta):
 
         if not keys:
             raise RedisClusterException(
-                "No way to dispatch {} to Redis Cluster. Missing key".format(command)
+                f"No way to dispatch {command} to Redis Cluster. Missing key"
             )
 
         slots = {self.connection_pool.nodes.keyslot(key) for key in keys}

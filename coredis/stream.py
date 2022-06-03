@@ -118,7 +118,7 @@ class Consumer(Generic[AnyStr]):
         self._initialized = True
         return self
 
-    def __await__(self) -> Generator[Any, None, "Consumer[AnyStr]"]:
+    def __await__(self) -> Generator[Any, None, Consumer[AnyStr]]:
         return self.initialize().__await__()
 
     def __aiter__(self) -> Consumer[AnyStr]:
@@ -281,10 +281,10 @@ class GroupConsumer(Consumer[AnyStr]):
         self._initialized = True
         return self
 
-    def __await__(self) -> Generator[Any, None, "GroupConsumer[AnyStr]"]:
+    def __await__(self) -> Generator[Any, None, GroupConsumer[AnyStr]]:
         return self.initialize().__await__()
 
-    def __aiter__(self) -> "GroupConsumer[AnyStr]":
+    def __aiter__(self) -> GroupConsumer[AnyStr]:
         """
         Returns the instance of the consumer itself which can be iterated over
         """

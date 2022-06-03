@@ -257,7 +257,7 @@ async def test_flush_config(redis_sentinel, mocker):
 async def test_infocache(redis_sentinel):
     assert await redis_sentinel.sentinels[0].sentinel_flushconfig()
     info_cache = await redis_sentinel.sentinels[0].sentinel_infocache()
-    roles = set([info["role"] for info in list(info_cache["coredis"].values())])
+    roles = {info["role"] for info in list(info_cache["coredis"].values())}
     assert {"master", "slave"} & roles
 
 

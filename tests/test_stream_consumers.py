@@ -187,13 +187,11 @@ class TestStreamConsumers:
         await client.xadd("a", {"id": "a1"})
         await client.xadd("b", {"id": "b1"})
 
-        assert {_s("a1"), _s("b1")} == set(
-            [
-                k[1].field_values[_s("id")]
-                for _ in range(2)
-                if (k := await consumer.get_entry())
-            ]
-        )
+        assert {_s("a1"), _s("b1")} == {
+            k[1].field_values[_s("id")]
+            for _ in range(2)
+            if (k := await consumer.get_entry())
+        }
 
     async def test_single_consumer_buffered(self, client, _s):
         consumer = await Consumer(client, ["a"], buffer_size=10)
