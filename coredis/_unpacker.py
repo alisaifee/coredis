@@ -91,7 +91,7 @@ class Unpacker:
     def parse(
         self,
         decode_bytes: bool,
-    ) -> Optional[UnpackedResponse] | NotEnoughData:
+    ) -> Union[Optional[UnpackedResponse], NotEnoughData]:
         parsed: Optional[UnpackedResponse] = None
 
         assert self.localbuffer
