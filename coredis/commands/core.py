@@ -1252,7 +1252,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.PING,
         group=CommandGroup.CONNECTION,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.ALL,
+            route=NodeFlag.PRIMARIES,
             combine=ClusterEnsureConsistent(),
         ),
     )
