@@ -1248,18 +1248,22 @@ class RedisCluster(
         """
         if not self.connection_pool.initialized:
             await self.connection_pool.initialize()
+            self.refresh_table_asap = False
 
         if not command:
             raise RedisClusterException("Unable to determine command to use")
 
         nodes = self.determine_node(command, **kwargs)
-
         if nodes:
-            return await self.execute_command_on_nodes(
-                nodes, command, *args, callback=callback, **kwargs
-            )
-
-        # If set externally we must update it before calling any commands
+            try:
+                return await self.execute_command_on_nodes(
+                    nodes, command, *args, callback=callback, **kwargs
+                )
+            except ClusterDownError:
+                self.connection_pool.disconnect()
+                self.connection_pool.reset()
+                self.refresh_table_asap = True
+                raise
 
         if self.refresh_table_asap:
             await self.connection_pool.nodes.initialize()
@@ -1374,7 +1378,6 @@ class RedisCluster(
                     )
         for node in nodes:
             connection = self.connection_pool.get_connection_by_node(node)
-
             # copy from redis-py
             try:
                 if node["name"] in node_arg_mapping:
@@ -1398,7 +1401,11 @@ class RedisCluster(
 
                 if not connection.retry_on_timeout and isinstance(e, TimeoutError):
                     raise
-                await connection.send_command(command, *args)
+                try:
+                    await connection.send_command(command, *args)
+                except ConnectionError as err:
+                    # if a retry attempt results in a connection error assume cluster error
+                    raise ClusterDownError(str(err))
                 res[node["name"]] = callback(
                     await self.parse_response(connection, decode=options.get("decode")),
                     version=self.protocol_version,
