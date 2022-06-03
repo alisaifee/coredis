@@ -822,9 +822,7 @@ class Redis(
 
     async def transaction(
         self,
-        func: Callable[
-            ["coredis.pipeline.Pipeline[AnyStr]"], Coroutine[Any, Any, None]
-        ],
+        func: Callable[["coredis.pipeline.Pipeline[AnyStr]"], Coroutine[Any, Any, Any]],
         *watches: KeyT,
         **kwargs: Any,
     ) -> Optional[Any]:
