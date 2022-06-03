@@ -193,27 +193,28 @@ class Unpacker:
                             self.nodes[-1].container.add(response)
                         else:
                             raise TypeError(f"unhashable type {response} as set member")
+                    if self.nodes[-1].depth > 1:
+                        continue
 
-                if len(self.nodes) > 1:
-                    while len(self.nodes) > 1 and self.nodes[-1].depth == 0:
-                        self.nodes[-2].depth -= 1
-                        if isinstance(self.nodes[-2].container, list):
-                            self.nodes[-2].container.append(self.nodes[-1].container)
-                        elif isinstance(self.nodes[-2].container, dict):
-                            if self.nodes[-2].key is not None:
-                                self.nodes[-2].container[
-                                    self.nodes[-2].key
-                                ] = self.nodes[-1].container
-                                self.nodes[-2].key = None
-                            else:
-                                raise TypeError(
-                                    f"unhashable type {self.nodes[-1].container} as dictionary key"
-                                )
+                while len(self.nodes) > 1 and self.nodes[-1].depth == 0:
+                    self.nodes[-2].depth -= 1
+                    if isinstance(self.nodes[-2].container, list):
+                        self.nodes[-2].container.append(self.nodes[-1].container)
+                    elif isinstance(self.nodes[-2].container, dict):
+                        if self.nodes[-2].key is not None:
+                            self.nodes[-2].container[self.nodes[-2].key] = self.nodes[
+                                -1
+                            ].container
+                            self.nodes[-2].key = None
                         else:
                             raise TypeError(
-                                f"unhashable type {self.nodes[-1].container} as set member"
+                                f"unhashable type {self.nodes[-1].container} as dictionary key"
                             )
-                        self.nodes.pop()
+                    else:
+                        raise TypeError(
+                            f"unhashable type {self.nodes[-1].container} as set member"
+                        )
+                    self.nodes.pop()
 
             if len(self.nodes) == 1 and self.nodes[-1].depth == 0:
                 node = self.nodes.pop()
@@ -222,6 +223,7 @@ class Unpacker:
             if not self.nodes:
                 parsed = UnpackedResponse(marker, response)
                 break
+
         if self.bytes_read == self.bytes_written:
             self.localbuffer.seek(0)
             self.localbuffer.truncate()
