@@ -37,7 +37,7 @@ class coredis_build_ext(build_ext):
 {target} could not
 be compiled. No C extensions are essential for coredis to run,
 although they do result in significant speed improvements for
-websockets.
+response parsing if hiredis is not available.
 {comment}
 ********************************************************************
 """
