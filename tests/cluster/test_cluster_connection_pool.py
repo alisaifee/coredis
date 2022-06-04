@@ -103,7 +103,7 @@ class TestConnectionPool:
         assert c1 == c2
 
     @pytest.mark.asyncio()
-    async def test_repr_contains_db_info_tcp(self):
+    async def test_repr_contains_db_info_tcp(self, host_ip):
         """
         Note: init_slot_cache muts be set to false otherwise it will try to
               query the test server for data and then it can't be predicted reliably
@@ -112,8 +112,8 @@ class TestConnectionPool:
         pool = await self.get_pool(
             connection_kwargs=connection_kwargs, connection_class=ClusterConnection
         )
-        expected = "ClusterConnectionPool<ClusterConnection<host=127.0.0.1,port=7000>>"
-        assert repr(pool) == expected
+        expected = f"ClusterConnection<host={host_ip},port=7000>"
+        assert expected in repr(pool)
 
     @pytest.mark.asyncio()
     async def test_get_connection_by_key(self):
@@ -239,7 +239,7 @@ class TestReadOnlyConnectionPool:
         return pool
 
     @pytest.mark.asyncio()
-    async def test_repr_contains_db_info_readonly(self):
+    async def test_repr_contains_db_info_readonly(self, host_ip):
         """
         Note: init_slot_cache must be set to false otherwise it will try to
               query the test server for data and then it can't be predicted reliably
@@ -250,8 +250,8 @@ class TestReadOnlyConnectionPool:
                 {"host": "127.0.0.2", "port": 7001},
             ],
         )
-        assert "ClusterConnection<host=127.0.0.2,port=7001>" in repr(pool)
-        assert "ClusterConnection<host=127.0.0.1,port=7000>" in repr(pool)
+        assert f"ClusterConnection<host={host_ip},port=7001>" in repr(pool)
+        assert f"ClusterConnection<host={host_ip},port=7000>" in repr(pool)
 
     @pytest.mark.asyncio()
     async def test_max_connections(self):

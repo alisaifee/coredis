@@ -241,7 +241,6 @@ class NodeManager:
                                     f" {', '.join(disagreements)}"
                                 )
 
-                self.populate_startup_nodes()
                 self.refresh_table_asap = False
 
             if self._skip_full_coverage_check:
@@ -275,6 +274,7 @@ class NodeManager:
         self.slots = tmp_slots
         self.nodes = nodes_cache
         self.reinitialize_counter = 0
+        self.populate_startup_nodes()
 
     async def increment_reinitialize_counter(self, ct: int = 1) -> None:
         for _ in range(1, ct):
@@ -297,8 +297,11 @@ class NodeManager:
 
         # at least one node should have cluster-require-full-coverage yes
         for node in nodes.values():
-            if await self.node_require_full_coverage(node):
-                return True
+            try:
+                if await self.node_require_full_coverage(node):
+                    return True
+            except ConnectionError:
+                continue
         return False
 
     def set_node_name(self, node: Node) -> None:
@@ -333,17 +336,9 @@ class NodeManager:
         """
         Do something with all startup nodes and filters out any duplicates
         """
-        for item in self.startup_nodes:
-            self.set_node_name(item)
-
+        self.startup_nodes.clear()
         for n in self.nodes.values():
-            if n not in self.startup_nodes:
-                self.startup_nodes.append(n)
-
-        # freeze it so we can set() it
-        uniq = {frozenset(node.items()) for node in self.startup_nodes}
-        # then thaw it back out into a list of dicts
-        self.startup_nodes = [dict(node) for node in uniq]  # type: ignore
+            self.startup_nodes.append(n)
 
     async def reset(self) -> None:
         """Drops all node data and start over from startup_nodes"""
