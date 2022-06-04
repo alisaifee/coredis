@@ -51,7 +51,7 @@ class UnpackedResponse(NamedTuple):
     response: ResponseType
 
 
-NOT_ENOUGH_DATA: Final = NotEnoughData()
+NOT_ENOUGH_DATA: Final[NotEnoughData] = NotEnoughData()
 
 
 class Unpacker:
