@@ -54,7 +54,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        #python-version: [3.8, 3.9, "3.10", "3.11.0-beta.1"]
         python-version: [3.8, 3.9, "3.10"]
         service_version:
           - REDIS_VERSION=6.0.16 REDIS_SENTINEL_VERSION=6.0.16 REDIS_SSL_VERSION=6.0.16
@@ -82,6 +81,13 @@ jobs:
             test_params: "-m keydb"
             runtime_type_checks: "False"
             extensions: "False"
+          - python-version: "3.11.0-beta.3"
+            service_version: "REDIS_VERSION=latest REDIS_SSL_VERSION=latest"
+            parser: python
+            test_params: ""
+            runtime_type_checks: "True"
+            uvloop: "False"
+            extensions: "True"
     steps:
     - uses: actions/checkout@v3
     - name: Cache dependencies
@@ -137,10 +143,11 @@ jobs:
         with:
           fetch-depth: 0
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.4.0
+        uses: pypa/cibuildwheel@v2.6.0
         env:
           CIBW_SKIP: '*musllinux* pp*'
           CIBW_BEFORE_BUILD: 'pip install -r requirements/build_ext.txt'
+          CIBW_PRERELEASE_PYTHONS: True
       - uses: actions/upload-artifact@v2
         with:
           path: ./wheelhouse/*.whl
