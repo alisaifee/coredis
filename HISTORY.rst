@@ -3,6 +3,28 @@
 Changelog
 =========
 
+v3.8.7
+------
+Release Date: 2022-06-04
+
+* Features
+
+  * Add support for python 3.11 (b3) builds
+
+* Performance
+
+  * Extract python parser and optionally compile it to native
+    code using mypyc
+
+* Bug Fixes
+
+  * Only route PING commands to primaries in cluster mode
+  * Ensure connection errors for commands routed to multiple nodes
+    are retried in case of cluster reconfiguration
+  * Ensure re population of startup nodes is based off latest response
+    from cluster
+
+
 v3.8.6
 ------
 Release Date: 2022-05-26
@@ -736,6 +758,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
