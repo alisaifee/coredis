@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from coredis._utils import b
-from coredis.typing import ClassVar
+from coredis.typing import Final
 
-SYM_STAR = b("*")
-SYM_DOLLAR = b("$")
-SYM_CRLF = b("\r\n")
-SYM_LF = b("\n")
-SYM_EMPTY = b("")
+SYM_STAR: Final = b("*")
+SYM_DOLLAR: Final = b("$")
+SYM_CRLF: Final = b("\r\n")
+SYM_LF: Final = b("\n")
+SYM_EMPTY: Final = b("")
 
 
 class RESPDataType:
@@ -21,17 +21,17 @@ class RESPDataType:
     - `RESP3 specification <https://github.com/antirez/RESP3/blob/master/spec.md>`__
     """
 
-    NONE: ClassVar[int] = ord(b"_")
-    SIMPLE_STRING: ClassVar[int] = ord(b"+")
-    BULK_STRING: ClassVar[int] = ord(b"$")
-    VERBATIM: ClassVar[int] = ord(b"=")
-    BOOLEAN: ClassVar[int] = ord(b"#")
-    INT: ClassVar[int] = ord(b":")
-    DOUBLE: ClassVar[int] = ord(b",")
-    BIGNUMBER: ClassVar[int] = ord(b"(")
-    ARRAY: ClassVar[int] = ord(b"*")
-    PUSH: ClassVar[int] = ord(b">")
-    MAP: ClassVar[int] = ord(b"%")
-    SET: ClassVar[int] = ord(b"~")
-    ERROR: ClassVar[int] = ord(b"-")
-    ATTRIBUTE: ClassVar[int] = ord(b"|")
+    NONE: Final[int] = ord(b"_")
+    SIMPLE_STRING: Final[int] = ord(b"+")
+    BULK_STRING: Final[int] = ord(b"$")
+    VERBATIM: Final[int] = ord(b"=")
+    BOOLEAN: Final[int] = ord(b"#")
+    INT: Final[int] = ord(b":")
+    DOUBLE: Final[int] = ord(b",")
+    BIGNUMBER: Final[int] = ord(b"(")
+    ARRAY: Final[int] = ord(b"*")
+    PUSH: Final[int] = ord(b">")
+    MAP: Final[int] = ord(b"%")
+    SET: Final[int] = ord(b"~")
+    ERROR: Final[int] = ord(b"-")
+    ATTRIBUTE: Final[int] = ord(b"|")

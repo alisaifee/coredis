@@ -7,8 +7,8 @@ from coredis.constants import SYM_CRLF, RESPDataType
 from coredis.exceptions import ConnectionError, InvalidResponse, RedisError
 from coredis.typing import (
     Callable,
-    ClassVar,
     Dict,
+    Final,
     List,
     MutableSet,
     ResponsePrimitive,
@@ -51,11 +51,11 @@ class UnpackedResponse(NamedTuple):
     response: ResponseType
 
 
-NOT_ENOUGH_DATA = NotEnoughData()
+NOT_ENOUGH_DATA: Final = NotEnoughData()
 
 
 class Unpacker:
-    ALLOWED_TYPES: ClassVar[Set[int]] = {
+    ALLOWED_TYPES: Final[Set[int]] = {
         RESPDataType.NONE,
         RESPDataType.SIMPLE_STRING,
         RESPDataType.BULK_STRING,
