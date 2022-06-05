@@ -60,7 +60,7 @@ jobs:
           - REDIS_VERSION=6.2.6 REDIS_SSL_VERSION=6.2.6 REDIS_SENTINEL_VERSION=6.2.6 REDIS_STACK_VERSION=6.2.0-edge
           - REDIS_VERSION=7.0.0 REDIS_SSL_VERSION=7.0.0 REDIS_STACK_VERSION=7.0.0-RC4
         parser: [hiredis, python]
-        test_params: ["-m '(not keydb)'"]
+        test_params: ["-m '(not (keydb or dragonfly))'"]
         uvloop: ["True", "False"]
         runtime_type_checks: ["True"]
         extensions: ["True"]
@@ -68,7 +68,7 @@ jobs:
           - python-version: "3.10"
             service_version: "REDIS_VERSION=latest REDIS_SSL_VERSION=latest"
             parser: python
-            test_params: "-m '(not keydb)'"
+            test_params: "-m '(not (keydb or dragonfly))'"
             runtime_type_checks: "False"
           - python-version: "3.10"
             service_version: "REDIS_VERSION=latest REDIS_SSL_VERSION=latest"
@@ -78,13 +78,13 @@ jobs:
           - python-version: "3.10"
             service_version: "REDIS_VERSION=latest REDIS_SSL_VERSION=latest"
             parser: python
-            test_params: "-m keydb"
+            test_params: "-m dragonfly"
             runtime_type_checks: "False"
             extensions: "False"
           - python-version: "3.11.0-beta.3"
             service_version: "REDIS_VERSION=latest REDIS_SSL_VERSION=latest"
             parser: python
-            test_params: ""
+            test_params: "-m '(not (keydb or dragonfly))'"
             runtime_type_checks: "True"
             uvloop: "False"
             extensions: "True"
