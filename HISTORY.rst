@@ -3,6 +3,19 @@
 Changelog
 =========
 
+v3.8.9
+------
+Release Date: 2022-06-05
+
+* Bug Fix
+
+  * Fix type annotation for hmget
+
+* Experiments
+
+  * Add CI coverage for dragonflydb
+
+
 v3.8.7
 ------
 Release Date: 2022-06-04
@@ -758,6 +771,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
