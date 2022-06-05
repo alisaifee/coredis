@@ -2056,7 +2056,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """Returns values ordered identically to ``fields``"""
 
         return await self.execute_command(
-            CommandName.HMGET, key, *fields, callback=TupleCallback[AnyStr]()
+            CommandName.HMGET, key, *fields, callback=TupleCallback[Optional[AnyStr]]()
         )
 
     @redis_command(
