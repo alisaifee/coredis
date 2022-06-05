@@ -13,6 +13,7 @@ from tests.conftest import targets
     "redis_cluster",
     "redis_cluster_raw",
     "keydb",
+    "dragonfly",
 )
 @pytest.mark.asyncio()
 class TestSet:
@@ -108,11 +109,13 @@ class TestSet:
         values = await client.spop("a", 2)
         assert await client.smembers("a") == {_s(m) for m in s} - values
 
+    @pytest.mark.nodragonfly
     async def test_srandmember(self, client, _s):
         s = ["1", "2", "3"]
         await client.sadd("a", s)
         assert await client.srandmember("a") in {_s(m) for m in s}
 
+    @pytest.mark.nodragonfly
     async def test_srandmember_multi_value(self, client, _s):
         s = ["1", "2", "3"]
         await client.sadd("a", s)
@@ -140,6 +143,7 @@ class TestSet:
         )
         assert await client.smembers("c{foo}") == {_s("1"), _s("2"), _s("3")}
 
+    @pytest.mark.nodragonfly
     async def test_sscan(self, client, _s):
         await client.sadd("a", ["1", "2", "3"])
         cursor, members = await client.sscan("a")
@@ -148,6 +152,7 @@ class TestSet:
         _, members = await client.sscan("a", match="1")
         assert set(members) == {_s("1")}
 
+    @pytest.mark.nodragonfly
     async def test_sscan_iter(self, client, _s):
         await client.sadd("a", ["1", "2", "3"])
         members = set()

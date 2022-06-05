@@ -165,3 +165,9 @@ services:
     image: "eqalpha/keydb"
     command: bash -c "echo yes | keydb-cli --cluster create --cluster-replicas 1 ${HOST_IP}:8000 ${HOST_IP}:8001 ${HOST_IP}:8002 ${HOST_IP}:8003 ${HOST_IP}:8004 ${HOST_IP}:8005"
     depends_on: [keydb-cluster-1, keydb-cluster-2, keydb-cluster-3, keydb-cluster-4, keydb-cluster-5, keydb-cluster-6]
+  dragonfly:
+    image: "docker.dragonflydb.io/dragonflydb/dragonfly:latest"
+    ports:
+      - '11379:6379'
+    ulimits:
+      memlock: -1

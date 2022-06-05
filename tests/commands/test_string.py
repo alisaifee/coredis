@@ -17,6 +17,7 @@ from tests.conftest import server_deprecation_warning, targets
     "redis_cluster_raw",
     "keydb",
     "keydb_resp3",
+    "dragonfly",
 )
 @pytest.mark.asyncio()
 class TestString:
@@ -251,6 +252,7 @@ class TestString:
         assert await client.get("a") == _s("1")
         assert 0 < await client.ttl("a") <= 60
 
+    @pytest.mark.nodragonfly
     async def test_setnx(self, client, _s):
         assert await client.setnx("a", "1")
         assert await client.get("a") == _s("1")

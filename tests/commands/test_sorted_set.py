@@ -16,6 +16,7 @@ from tests.conftest import server_deprecation_warning, targets
     "redis_cluster",
     "redis_cluster_raw",
     "keydb",
+    "dragonfly",
 )
 @pytest.mark.asyncio()
 class TestSortedSet:
@@ -422,6 +423,7 @@ class TestSortedSet:
         )
         assert await client.zrange("b{foo}", 0, -1) == (_s("a2"),)
 
+    @pytest.mark.nodragonfly
     async def test_zrangebylex(self, client, _s):
         await client.zadd("a{foo}", dict(a=0, b=0, c=0, d=0, e=0, f=0, g=0))
         with server_deprecation_warning("Use :meth:`zrange`", client, "6.2"):
@@ -444,6 +446,7 @@ class TestSortedSet:
                 _s("e"),
             )
 
+    @pytest.mark.nodragonfly
     async def test_zrevrangebylex(self, client, _s):
         await client.zadd("a{foo}", dict(a=0, b=0, c=0, d=0, e=0, f=0, g=0))
         with server_deprecation_warning("Use :meth:`zrange`", client, "6.2"):
@@ -548,6 +551,7 @@ class TestSortedSet:
         assert await client.zremrangebyscore("a{foo}", 2, 4) == 0
         assert await client.zrange("a{foo}", 0, -1) == (_s("a1"), _s("a5"))
 
+    @pytest.mark.nodragonfly
     async def test_zrevrange(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3))
         with server_deprecation_warning("Use :meth:`zrange`", client, "6.2"):
@@ -756,6 +760,7 @@ class TestSortedSet:
             None,
         )
 
+    @pytest.mark.nodragonfly
     async def test_zscan(self, client, _s):
         await client.zadd("a", dict(a=1, b=2, c=3))
         cursor, pairs = await client.zscan("a")
@@ -764,6 +769,7 @@ class TestSortedSet:
         _, pairs = await client.zscan("a", match="a")
         assert set(pairs) == {(_s("a"), 1)}
 
+    @pytest.mark.nodragonfly
     async def test_zscan_iter(self, client, _s):
         await client.zadd("a", dict(a=1, b=2, c=3))
         pairs = set()
