@@ -32,7 +32,7 @@ jobs:
         flake8 coredis tests --count --exit-zero --max-complexity=10
     - name: Lint with black
       run: |
-        black coredis tests
+        black --check coredis tests
     - name: Check imports
       run: |
         isort -c --profile=black coredis tests
