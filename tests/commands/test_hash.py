@@ -13,6 +13,7 @@ from tests.conftest import server_deprecation_warning, targets
     "redis_cluster",
     "redis_cluster_raw",
     "keydb",
+    "dragonfly",
 )
 @pytest.mark.asyncio()
 class TestHash:
@@ -119,6 +120,7 @@ class TestHash:
         assert len(await client.hrandfield("key", count=-10)) == 10
         assert await client.hrandfield("key-not-exist") is None
 
+    @pytest.mark.nodragonfly
     async def test_hscan(self, client, _s):
         await client.hset("a", {"a": 1, "b": 2, "c": 3})
         cursor, dic = await client.hscan("a")
@@ -127,6 +129,7 @@ class TestHash:
         _, dic = await client.hscan("a", match="a")
         assert dic == {_s("a"): _s("1")}
 
+    @pytest.mark.nodragonfly
     async def test_hscan_iter(self, client, _s):
         await client.hset("a", {"a": 1, "b": 2, "c": 3})
         dic = dict()

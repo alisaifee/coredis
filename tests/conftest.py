@@ -84,6 +84,9 @@ async def check_test_constraints(request, client, protocol=2):
         if marker.name == "nokeydb" and isinstance(client, coredis.experimental.KeyDB):
             return pytest.skip("Skipped for KeyDB")
 
+        if marker.name == "nodragonfly" and str(client_version).startswith("df"):
+            return pytest.skip("Skipped for Dragonfly")
+
         if marker.name == "nouvloop" and os.environ.get("COREDIS_UVLOOP") == "True":
             return pytest.skip("Skipped for uvloop")
 
@@ -222,6 +225,15 @@ def keydb_server(docker_services):
     if os.environ.get("CI") == "True":
         time.sleep(5)
     yield ["localhost", 10379]
+
+
+@pytest.fixture(scope="session")
+def dragonfly_server(docker_services):
+    docker_services.start("dragonfly")
+    docker_services.wait_for_service("dragonfly", 6379, ping_socket)
+    if os.environ.get("CI") == "True":
+        time.sleep(5)
+    yield ["localhost", 11379]
 
 
 @pytest.fixture(scope="session")
@@ -614,6 +626,20 @@ async def keydb_cluster(keydb_cluster_server, request):
     cluster.connection_pool.disconnect()
 
 
+@pytest.fixture
+async def dragonfly(dragonfly_server, request):
+    client = coredis.Redis(
+        "localhost", 11379, decode_responses=True, **get_client_test_args(request)
+    )
+    await check_test_constraints(request, client)
+    await client.flushall()
+    await set_default_test_config(client)
+
+    yield client
+
+    client.connection_pool.disconnect()
+
+
 @pytest.fixture(scope="session")
 def docker_services_project_name():
     return "coredis"
@@ -705,5 +731,10 @@ def pytest_collection_modifyitems(items):
             elif client_name.startswith("keydb"):
                 item.add_marker(getattr(pytest.mark, "keydb"))
                 tokens = client_name.replace("keydb_", "").split("_")
+                for token in tokens:
+                    item.add_marker(getattr(pytest.mark, token))
+            elif client_name.startswith("dragonfly"):
+                item.add_marker(getattr(pytest.mark, "dragonfly"))
+                tokens = client_name.replace("dragonfly_", "").split("_")
                 for token in tokens:
                     item.add_marker(getattr(pytest.mark, token))
