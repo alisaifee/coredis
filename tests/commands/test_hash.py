@@ -73,7 +73,12 @@ class TestHash:
 
     async def test_hmget(self, client, _s):
         assert await client.hset("a", {"a": 1, "b": 2, "c": 3})
-        assert await client.hmget("a", ["a", "b", "c", "d"]) == (_s("1"), _s("2"), _s("3"), None)
+        assert await client.hmget("a", ["a", "b", "c", "d"]) == (
+            _s("1"),
+            _s("2"),
+            _s("3"),
+            None,
+        )
 
     async def test_hmset(self, client, _s):
         h = {_s("a"): _s("1"), _s("b"): _s("2"), _s("c"): _s("3")}
