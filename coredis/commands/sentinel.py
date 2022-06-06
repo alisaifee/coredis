@@ -103,13 +103,15 @@ class SentinelCommands(CommandMixin[AnyStr]):
 
     @redis_command(CommandName.SENTINEL_INFO_CACHE)
     async def sentinel_infocache(
-        self,
+        self, *nodenames: StringT
     ) -> Dict[AnyStr, Dict[int, Dict[str, ResponseType]]]:
         """
         Return cached INFO output from masters and replicas.
         """
         return await self.execute_command(
-            CommandName.SENTINEL_INFO_CACHE, callback=SentinelInfoCallback[AnyStr]()
+            CommandName.SENTINEL_INFO_CACHE,
+            *nodenames,
+            callback=SentinelInfoCallback[AnyStr](),
         )
 
     @redis_command(

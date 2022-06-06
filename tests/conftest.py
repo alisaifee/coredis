@@ -544,7 +544,7 @@ async def redis_sentinel(redis_sentinel_server, request):
         decode_responses=True,
         **get_client_test_args(request),
     )
-    master = sentinel.primary_for("coredis")
+    master = sentinel.primary_for("mymaster")
     await check_test_constraints(request, master)
     await set_default_test_config(sentinel)
     await master.flushall()
@@ -560,7 +560,7 @@ async def redis_sentinel_auth(redis_sentinel_auth_server, request):
         decode_responses=True,
         **get_client_test_args(request),
     )
-    master = sentinel.primary_for("coredis")
+    master = sentinel.primary_for("mymaster")
     await check_test_constraints(request, master)
     await set_default_test_config(sentinel)
     await master.flushall()
