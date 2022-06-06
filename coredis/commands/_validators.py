@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import functools
 import inspect
-import os
 from typing import Any
 
 from coredis.exceptions import CommandSyntaxError
@@ -19,10 +18,6 @@ from coredis.typing import (
 
 R = TypeVar("R")
 P = ParamSpec("P")
-
-
-def runtime_checks_enabled() -> bool:
-    return os.environ.get("COREDIS_RUNTIME_CHECKS", "").lower() in ["1", "true", "t"]
 
 
 class MutuallyExclusiveParametersError(CommandSyntaxError):
@@ -68,27 +63,26 @@ def mutually_exclusive_parameters(
 
         @functools.wraps(func)
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
-            if runtime_checks_enabled():
-                call_args = sig.bind(*args, **kwargs)
-                params = {
-                    k
-                    for k in primary
-                    if not call_args.arguments.get(k)
-                    == getattr(sig.parameters.get(k), "default")
-                }
+            call_args = sig.bind(*args, **kwargs)
+            params = {
+                k
+                for k in primary
+                if not call_args.arguments.get(k)
+                == getattr(sig.parameters.get(k), "default")
+            }
 
-                if params:
-                    for group in secondary:
-                        for k in group:
-                            if not call_args.arguments.get(k) == getattr(
-                                sig.parameters.get(k), "default"
-                            ):
-                                params.add(k)
+            if params:
+                for group in secondary:
+                    for k in group:
+                        if not call_args.arguments.get(k) == getattr(
+                            sig.parameters.get(k), "default"
+                        ):
+                            params.add(k)
 
-                                break
+                            break
 
-                if len(params) > 1:
-                    raise MutuallyExclusiveParametersError(params, details)
+            if len(params) > 1:
+                raise MutuallyExclusiveParametersError(params, details)
 
             return await func(*args, **kwargs)
 
@@ -114,22 +108,21 @@ def mutually_inclusive_parameters(
 
         @functools.wraps(func)
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
-            if runtime_checks_enabled():
-                call_args = sig.bind(*args, **kwargs)
-                params = {
-                    k
-                    for k in _inclusive_params | _leaders
-                    if not call_args.arguments.get(k)
-                    == getattr(sig.parameters.get(k), "default")
-                }
-                if _leaders and _leaders & params != _leaders and len(params) > 0:
-                    raise MutuallyInclusiveParametersMissing(
-                        _inclusive_params, _leaders, details
-                    )
-                elif not _leaders and params and len(params) != len(_inclusive_params):
-                    raise MutuallyInclusiveParametersMissing(
-                        _inclusive_params, _leaders, details
-                    )
+            call_args = sig.bind(*args, **kwargs)
+            params = {
+                k
+                for k in _inclusive_params | _leaders
+                if not call_args.arguments.get(k)
+                == getattr(sig.parameters.get(k), "default")
+            }
+            if _leaders and _leaders & params != _leaders and len(params) > 0:
+                raise MutuallyInclusiveParametersMissing(
+                    _inclusive_params, _leaders, details
+                )
+            elif not _leaders and params and len(params) != len(_inclusive_params):
+                raise MutuallyInclusiveParametersMissing(
+                    _inclusive_params, _leaders, details
+                )
             return await func(*args, **kwargs)
 
         return wrapped
