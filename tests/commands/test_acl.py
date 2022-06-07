@@ -62,8 +62,17 @@ class TestACL:
             await client.auth("wrong", "wrong")
         log = await client.acl_log()
         assert len(log) == 1
+        log = await client.acl_log(count=0)
+        assert len(log) == 0
         await client.acl_log(reset=True)
         assert len(await client.acl_log()) == 0
+
+    async def test_acl_save(self, client, _s):
+        with pytest.raises(
+            ResponseError,
+            match="instance is not configured to use an ACL file",
+        ):
+            await client.acl_save()
 
     async def test_setuser(self, client, _s):
         assert await client.acl_setuser("default")

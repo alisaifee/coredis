@@ -7120,6 +7120,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ACL_SAVE,
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
+        cluster=ClusterCommandConfig(
+            route=NodeFlag.ALL,
+            combine=ClusterEnsureConsistent(),
+        ),
     )
     async def acl_save(self) -> bool:
         """
