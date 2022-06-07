@@ -31,6 +31,9 @@ class TestServer:
         await client.config_set({"slowlog-log-slower-than": old_slower_than_value})
         await client.config_set({"slowlog-max-len": old_max_legnth_value})
 
+    async def test_command_count(self, client, _s):
+        assert await client.command_count() > 100  # :D
+
     @pytest.mark.min_server_version("7.0.0")
     @pytest.mark.noresp3
     async def test_command_docs(self, client, _s):
@@ -60,6 +63,7 @@ class TestServer:
         assert _s("get") in await client.command_list()
         assert _s("acl|getuser") in await client.command_list(aclcat="admin")
         assert _s("zrevrange") in await client.command_list(pattern="zrev*")
+        assert set() == await client.command_list(module="doesnotexist")
 
     @pytest.mark.min_server_version("7.0.0")
     async def test_command_getkeys(self, client, _s):
