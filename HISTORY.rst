@@ -3,6 +3,18 @@
 Changelog
 =========
 
+v3.8.10
+-------
+Release Date: 2022-06-07
+
+* Features
+
+  * New ``nodenames`` parameter added to sentinel_info_cache
+
+* Chores
+
+  * Added redis 7.0 to sentinel test coverage matrix
+
 v3.8.9
 ------
 Release Date: 2022-06-05
@@ -771,6 +783,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
