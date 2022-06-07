@@ -5,7 +5,7 @@ import datetime
 import pytest
 from pytest import approx
 
-from coredis import PureToken, ResponseError
+from coredis import PureToken, ReadOnlyError, ResponseError
 from tests.conftest import targets
 
 
@@ -306,6 +306,28 @@ class TestServer:
     async def test_role(self, client, _s):
         role_info = await client.role()
         assert role_info.role == "master"
+
+    @pytest.mark.nocluster
+    async def test_replicaof(self, client, _s):
+        assert await client.replicaof()
+        try:
+            await client.replicaof("nowhere", 6666)
+            with pytest.raises(ReadOnlyError):
+                await client.set("fubar", 1)
+        finally:
+            # reset to replica of self
+            await client.replicaof()
+
+    @pytest.mark.nocluster
+    async def test_slaveof(self, client, _s):
+        assert await client.slaveof()
+        try:
+            await client.slaveof("nowhere", 6666)
+            with pytest.raises(ReadOnlyError):
+                await client.set("fubar", 1)
+        finally:
+            # reset to replica of self
+            await client.slaveof()
 
     @pytest.mark.nokeydb
     @pytest.mark.nocluster
