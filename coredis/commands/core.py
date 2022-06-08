@@ -1240,6 +1240,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             pieces.append(password)
 
         if setname is not None:
+            pieces.append(PrefixToken.SETNAME)
             pieces.append(setname)
 
         return await self.execute_command(

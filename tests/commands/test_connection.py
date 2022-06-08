@@ -5,7 +5,7 @@ import asyncio
 import pytest
 
 import coredis
-from coredis import PureToken, ResponseError
+from coredis import AuthenticationFailureError, PureToken, ResponseError
 from tests.conftest import targets
 
 
@@ -20,6 +20,19 @@ class TestConnection:
     async def test_ping(self, client, _s):
         resp = await client.ping()
         assert resp == _s("PONG")
+
+    @pytest.mark.min_server_version("6.2.0")
+    async def test_hello_no_args(self, client, _s):
+        resp = await client.hello()
+        assert resp[_s("server")] == _s("redis")
+
+    async def test_hello_extended(self, client, _s):
+        resp = await client.hello(client.protocol_version)
+        assert resp[_s("proto")] == client.protocol_version
+        await client.hello(client.protocol_version, setname="coredis")
+        assert await client.client_getname() == _s("coredis")
+        with pytest.raises(AuthenticationFailureError):
+            await client.hello(client.protocol_version, username="no", password="body")
 
     async def test_ping_custom_message(self, client, _s):
         resp = await client.ping(message="PANG")
