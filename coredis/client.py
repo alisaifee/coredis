@@ -601,6 +601,7 @@ class Redis(
         *,
         decode_responses: Literal[False] = ...,
         protocol_version: Literal[2, 3] = ...,
+        verify_version: bool = ...,
         **kwargs: Any,
     ) -> RedisBytesT:
         ...
@@ -614,6 +615,7 @@ class Redis(
         *,
         decode_responses: Literal[True],
         protocol_version: Literal[2, 3] = ...,
+        verify_version: bool = ...,
         **kwargs: Any,
     ) -> RedisStringT:
         ...
@@ -626,6 +628,7 @@ class Redis(
         *,
         decode_responses: bool = False,
         protocol_version: Literal[2, 3] = 2,
+        verify_version: bool = True,
         **kwargs: Any,
     ) -> RedisT:
         """
@@ -659,6 +662,7 @@ class Redis(
             return cls(
                 decode_responses=True,
                 protocol_version=protocol_version,
+                verify_version=verify_version,
                 connection_pool=ConnectionPool.from_url(
                     url,
                     db=db,
@@ -671,6 +675,7 @@ class Redis(
             return cls(
                 decode_responses=False,
                 protocol_version=protocol_version,
+                verify_version=verify_version,
                 connection_pool=ConnectionPool.from_url(
                     url,
                     db=db,
@@ -1032,6 +1037,7 @@ class RedisCluster(
         skip_full_coverage_check: bool = ...,
         decode_responses: Literal[False] = ...,
         protocol_version: Literal[2, 3] = ...,
+        verify_version: bool = ...,
         **kwargs: Any,
     ) -> RedisClusterBytesT:
         ...
@@ -1046,6 +1052,7 @@ class RedisCluster(
         skip_full_coverage_check: bool = ...,
         decode_responses: Literal[True],
         protocol_version: Literal[2, 3] = ...,
+        verify_version: bool = ...,
         **kwargs: Any,
     ) -> RedisClusterStringT:
         ...
@@ -1059,6 +1066,7 @@ class RedisCluster(
         skip_full_coverage_check: bool = False,
         decode_responses: bool = False,
         protocol_version: Literal[2, 3] = 2,
+        verify_version: bool = True,
         **kwargs: Any,
     ) -> RedisClusterT:
         """
@@ -1089,6 +1097,7 @@ class RedisCluster(
             return cls(
                 decode_responses=True,
                 protocol_version=protocol_version,
+                verify_version=verify_version,
                 connection_pool=ClusterConnectionPool.from_url(
                     url,
                     db=db,
@@ -1102,6 +1111,7 @@ class RedisCluster(
             return cls(
                 decode_responses=False,
                 protocol_version=protocol_version,
+                verify_version=verify_version,
                 connection_pool=ClusterConnectionPool.from_url(
                     url,
                     db=db,
