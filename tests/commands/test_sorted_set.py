@@ -243,6 +243,7 @@ class TestSortedSet:
         assert await client.zintercard(["a{foo}"]) == 3
         assert await client.zintercard(["a{foo}", "b{foo}"]) == 1
 
+    @pytest.mark.nodragonfly
     async def test_zpopmax(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3))
         assert (await client.zpopmax("a{foo}")) == (_s("a3"), 3)
@@ -252,6 +253,7 @@ class TestSortedSet:
             (_s("a1"), 1),
         )
 
+    @pytest.mark.nodragonfly
     async def test_zpopmin(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3))
         assert (await client.zpopmin("a{foo}")) == (_s("a1"), 1)
@@ -273,6 +275,7 @@ class TestSortedSet:
         # with duplications
         assert len(await client.zrandmember("a{foo}", -10)) == 10
 
+    @pytest.mark.nodragonfly
     async def test_bzpopmax(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2))
         await client.zadd("b{foo}", dict(b1=10, b2=20))
@@ -304,6 +307,7 @@ class TestSortedSet:
             100,
         )
 
+    @pytest.mark.nodragonfly
     async def test_bzpopmin(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2))
         await client.zadd("b{foo}", dict(b1=10, b2=20))
