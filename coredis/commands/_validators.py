@@ -63,7 +63,7 @@ def mutually_exclusive_parameters(
 
         @functools.wraps(func)
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
-            call_args = sig.bind(*args, **kwargs)
+            call_args = sig.bind_partial(*args, **kwargs)
             params = {
                 k
                 for k in primary
@@ -108,7 +108,8 @@ def mutually_inclusive_parameters(
 
         @functools.wraps(func)
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
-            call_args = sig.bind(*args, **kwargs)
+            call_args = sig.bind_partial(*args, **kwargs)
+            print(call_args)
             params = {
                 k
                 for k in _inclusive_params | _leaders
