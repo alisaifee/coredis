@@ -211,7 +211,7 @@ def redis_stack_server(docker_services):
     if os.environ.get("CI") == "True" and not os.environ.get("REDIS_STACK_VERSION"):
         pytest.skip("Redis stack tests skipped")
     if os.environ.get("CI") == "True":
-        time.sleep(5)
+        time.sleep(10)
     docker_services.start("redis-stack")
     docker_services.wait_for_service("redis-stack", 6379, ping_socket)
     yield ["localhost", 9379]
@@ -222,7 +222,7 @@ def keydb_server(docker_services):
     docker_services.start("keydb")
     docker_services.wait_for_service("keydb", 6379, ping_socket)
     if os.environ.get("CI") == "True":
-        time.sleep(5)
+        time.sleep(10)
     yield ["localhost", 10379]
 
 
@@ -230,8 +230,6 @@ def keydb_server(docker_services):
 def dragonfly_server(docker_services):
     docker_services.start("dragonfly")
     docker_services.wait_for_service("dragonfly", 6379, ping_socket)
-    if os.environ.get("CI") == "True":
-        time.sleep(5)
     yield ["localhost", 11379]
 
 
