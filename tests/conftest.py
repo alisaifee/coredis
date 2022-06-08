@@ -41,9 +41,8 @@ async def get_version(client):
                 (await client.sentinels[0].info())["redis_version"]
             )
         else:
-            REDIS_VERSIONS[str(client)] = version.parse(
-                (await client.info())["redis_version"]
-            )
+            version_string = (await client.info())["redis_version"]
+            REDIS_VERSIONS[str(client)] = version.parse(version_string)
     return REDIS_VERSIONS[str(client)]
 
 
@@ -629,7 +628,11 @@ async def keydb_cluster(keydb_cluster_server, request):
 @pytest.fixture
 async def dragonfly(dragonfly_server, request):
     client = coredis.Redis(
-        "localhost", 11379, decode_responses=True, **get_client_test_args(request)
+        "localhost",
+        11379,
+        decode_responses=True,
+        verify_version=False,
+        **get_client_test_args(request),
     )
     await check_test_constraints(request, client)
     await client.flushall()

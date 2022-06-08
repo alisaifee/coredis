@@ -70,7 +70,14 @@ def make_subscribe_test_data(pubsub, encoder, type):
 
 
 @pytest.mark.asyncio()
-@targets("redis_basic", "redis_basic_raw", "redis_basic_resp3", "redis_basic_raw_resp3")
+@targets(
+    "redis_basic",
+    "redis_basic_raw",
+    "redis_basic_resp3",
+    "redis_basic_raw_resp3",
+    "keydb",
+    "dragonfly",
+)
 class TestPubSubSubscribeUnsubscribe:
     async def _test_subscribe_unsubscribe(
         self,
