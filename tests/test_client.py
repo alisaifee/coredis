@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from ssl import SSLContext
+
 import pytest
 from packaging.version import Version
 
+import coredis
 from coredis.exceptions import CommandNotSupportedError
 from tests.conftest import targets
 
@@ -61,3 +64,26 @@ class TestClient:
     @pytest.mark.parametrize("client_arguments", [({"client_name": "coredis"})])
     async def test_set_client_name(self, client, client_arguments):
         assert (await client.client_info())["name"] == "coredis"
+
+
+class TestSSL:
+    async def test_explicit_ssl_parameters(self, redis_ssl_server):
+        client = coredis.Redis(
+            port=8379,
+            ssl=True,
+            ssl_keyfile="./tests/tls/client.key",
+            ssl_certfile="./tests/tls/client.crt",
+            ssl_ca_certs="./tests/tls/ca.crt",
+        )
+        assert await client.ping() == b"PONG"
+
+    async def test_explicit_ssl_context(self, redis_ssl_server):
+        context = SSLContext()
+        context.load_cert_chain(
+            certfile="./tests/tls/client.crt", keyfile="./tests/tls/client.key"
+        )
+        client = coredis.Redis(
+            port=8379,
+            ssl_context=context,
+        )
+        assert await client.ping() == b"PONG"
