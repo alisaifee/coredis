@@ -3,6 +3,18 @@
 Changelog
 =========
 
+v3.8.11
+-------
+Release Date: 2022-06-07
+* Bug Fixes
+
+  * Fix support for HELLO SETNAME
+  * Fix routing of ACL SAVE in cluster mode
+
+* Chores
+
+  * Improved test coverage for server commands
+
 v3.8.10
 -------
 Release Date: 2022-06-07
@@ -783,6 +795,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
