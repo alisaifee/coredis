@@ -96,12 +96,14 @@ class RedisSSLContext:
 
 
 class BaseConnection:
-    client_id: Optional[str]
+    client_id: Optional[int]
     description: ClassVar[str] = "BaseConnection"
+    locator: ClassVar[str] = ""
     _reader: Optional[StreamReader]
     _writer: Optional[StreamWriter]
     protocol_version: Literal[2, 3]
     push_messages: asyncio.Queue[ResponseType]
+    tracking_client_id: Optional[int]
 
     def __init__(
         self,
@@ -144,9 +146,14 @@ class BaseConnection:
         self.last_active_at = time.time()
         self.packer = Packer(self.encoding)
         self.push_messages: asyncio.Queue[ResponseType] = asyncio.Queue()
+        self.tracking_client_id = None
 
     def __repr__(self) -> str:
         return self.description.format(**self._description_args)
+
+    @property
+    def location(self) -> str:
+        return self.locator.format(**self._description_args)
 
     def __del__(self) -> None:
         try:
@@ -217,6 +224,17 @@ class BaseConnection:
                 f"Failed to authenticate: username={self.username} & password={self.password}"
             )
 
+    async def update_tracking_client(
+        self, enabled: bool, client_id: Optional[int] = None
+    ) -> None:
+        if enabled and client_id is not None:
+            await self.send_command(b"CLIENT TRACKING", b"ON", b"REDIRECT", client_id)
+        else:
+            await self.send_command(b"CLIENT TRACKING", b"OFF")
+        if await self.read_response(decode=False) != b"OK":
+            raise ConnectionError("Unable to toggle client tracking")
+        self.tracking_client_id = client_id
+
     async def on_connect(self) -> None:
         self._parser.on_connect(self)
         hello_command_args: List[Union[int, str, bytes]] = [self.protocol_version]
@@ -238,11 +256,11 @@ class BaseConnection:
                             f"Unexpected response when negotiating protocol: [{resp3}]"
                         )
                     self.server_version = nativestr(resp3[b"version"])
-                    self.client_id = nativestr(resp3[b"id"])
+                    self.client_id = int(resp3[b"id"])
                 else:
                     resp = cast(List[ValueT], hello_resp)
                     self.server_version = nativestr(resp[3])
-                    self.client_id = nativestr(resp[7])
+                    self.client_id = int(resp[7])
             else:
                 warnings.warn(
                     (
@@ -279,7 +297,6 @@ class BaseConnection:
 
         if self.client_name is not None:
             await self.send_command(b"CLIENT SETNAME", self.client_name)
-
             if await self.read_response(decode=False) != b"OK":
                 raise ConnectionError(f"Failed to set client name: {self.client_name}")
 
@@ -355,6 +372,7 @@ class BaseConnection:
 
 class Connection(BaseConnection):
     description: ClassVar[str] = "Connection<host={host},port={port},db={db}>"
+    locator: ClassVar[str] = "host={host},port={port}"
 
     def __init__(
         self,
@@ -438,6 +456,7 @@ class Connection(BaseConnection):
 
 class UnixDomainSocketConnection(BaseConnection):
     description: ClassVar[str] = "UnixDomainSocketConnection<path={path},db={db}>"
+    locator: ClassVar[str] = "path={path}"
 
     def __init__(
         self,
@@ -491,6 +510,7 @@ class UnixDomainSocketConnection(BaseConnection):
 class ClusterConnection(Connection):
     "Manages TCP communication to and from a Redis server"
     description: ClassVar[str] = "ClusterConnection<host={host},port={port}>"
+    locator: ClassVar[str] = "host={host},port={port}"
     node: Node
 
     def __init__(

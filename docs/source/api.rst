@@ -223,6 +223,17 @@ Parsers
    :show-inheritance:
    :inherited-members:
 
+Caching
+^^^^^^^
+:mod:`coredis.cache`
+
+.. autoclass:: coredis.cache.InvalidatingCache
+   :class-doc-from: both
+
+.. autoclass:: coredis.cache.ClusterInvalidatingCache
+   :class-doc-from: both
+
+.. autoclass:: coredis.cache.AbstractCache
 
 Type Aliases
 ^^^^^^^^^^^^
@@ -434,3 +445,5 @@ KeyDB
    .. automethod:: ttl
    .. automethod:: pttl
    .. automethod:: object_lastmodified
+
+

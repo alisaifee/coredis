@@ -12,6 +12,7 @@ from deprecated.sphinx import versionadded
 from packaging.version import Version
 
 from coredis._utils import b, clusterdown_wrapper, first_key, nativestr
+from coredis.cache import AbstractCache
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName
 from coredis.commands.core import CoreCommands
@@ -157,6 +158,9 @@ class RedisMeta(ABCMeta):
         return kls
 
 
+RedisConnectionT = TypeVar("RedisConnectionT", bound="RedisConnection")
+
+
 class RedisConnection:
     encoding: str
     decode_responses: bool
@@ -262,7 +266,7 @@ class RedisConnection:
             decode=decode if decode is None else bool(decode)
         )
 
-    async def initialize(self) -> RedisConnection:
+    async def initialize(self: RedisConnectionT) -> RedisConnectionT:
         await self.connection_pool.initialize()
         return self
 
@@ -295,6 +299,8 @@ class AbstractRedis(
     """
 
     server_version: Optional[Version]
+    protocol_version: Literal[2, 3]
+    cache: Optional[AbstractCache]
 
     async def scan_iter(
         self,
@@ -460,6 +466,7 @@ class Redis(
         client_name: Optional[str] = ...,
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
+        cache: Optional[AbstractCache] = ...,
         **_: Any,
     ) -> None:
         ...
@@ -492,6 +499,7 @@ class Redis(
         client_name: Optional[str] = ...,
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
+        cache: Optional[AbstractCache] = ...,
         **_: Any,
     ) -> None:
         ...
@@ -523,9 +531,15 @@ class Redis(
         client_name: Optional[str] = None,
         protocol_version: Literal[2, 3] = 2,
         verify_version: bool = True,
+        cache: Optional[AbstractCache] = None,
         **_: Any,
     ) -> None:
         """
+        .. versionadded:: 3.9.0
+           If :paramref:`cache` is provided the client will check & populate
+           the cache for read only commands and invalidate it for commands
+           that could change the key(s) in the request.
+
         .. versionchanged:: 3.5.0
            The :paramref:`verify_version` parameter now defaults to ``True``
 
@@ -564,6 +578,10 @@ class Redis(
          version introduced before executing a command and raises a
          :exc:`CommandNotSupportedError` error if the required version is higher than
          the reported server version
+        :param cache: If provided the cache will be used to avoid requests for read only
+         commands if the client has already requested the data and it hasn't been invalidated.
+         The cache is responsible for any mutations to the keys that happen outside of this client
+
         """
         super().__init__(
             host=host,
@@ -593,6 +611,7 @@ class Redis(
         )
         self._use_lua_lock: Optional[bool] = None
         self.response_callbacks: Dict[bytes, Callable[..., Any]] = {}
+        self.cache = cache
 
     @classmethod
     @overload
@@ -687,6 +706,12 @@ class Redis(
                 ),
             )
 
+    async def initialize(self) -> Redis[AnyStr]:
+        await super().initialize()
+        if self.cache:
+            await self.cache.initialize(self)
+        return self
+
     def set_response_callback(
         self, command: StringT, callback: Callable[..., Any]
     ) -> None:
@@ -705,10 +730,16 @@ class Redis(
         **options: Optional[ValueT],
     ) -> R:
         """Executes a command and returns a parsed response"""
-        pool = self.connection_pool
-        connection = await pool.get_connection()
+        await self
 
+        pool = self.connection_pool
+        connection = await pool.get_connection(command, *args)
+        if self.cache and connection.tracking_client_id != self.cache.client_id:
+            self.cache.reset()
+            await connection.update_tracking_client(True, self.cache.client_id)
         try:
+            if self.cache and command not in self.connection_pool.READONLY_COMMANDS:
+                self.cache.reset(*KeySpec.extract_keys((command,) + args))
             await connection.send_command(command, *args)
             if custom_callback := self.response_callbacks.get(command):
                 return custom_callback(  # type: ignore
@@ -933,6 +964,7 @@ class RedisCluster(
         protocol_version: Literal[2, 3] = 2,
         verify_version: bool = True,
         non_atomic_cross_slot: bool = False,
+        cache: Optional[AbstractCache] = None,
         **kwargs: Any,
     ):
         """
@@ -1028,6 +1060,7 @@ class RedisCluster(
             bytes, Callable[..., Any]
         ] = self.__class__.RESULT_CALLBACKS.copy()
         self.non_atomic_cross_slot = non_atomic_cross_slot
+        self.cache = cache
 
     @classmethod
     @overload
@@ -1123,6 +1156,13 @@ class RedisCluster(
                     **kwargs,
                 ),
             )
+
+    async def initialize(self) -> RedisCluster[AnyStr]:
+        await super().initialize()
+        if self.cache:
+            await self.cache.initialize(self)
+        self.refresh_table_asap = False
+        return self
 
     def __repr__(self) -> str:
         servers = list(
@@ -1259,8 +1299,7 @@ class RedisCluster(
         Sends a command to a node in the cluster
         """
         if not self.connection_pool.initialized:
-            await self.connection_pool.initialize()
-            self.refresh_table_asap = False
+            await self
 
         if not command:
             raise RedisClusterException("Unable to determine command to use")
@@ -1320,6 +1359,11 @@ class RedisCluster(
                     await self.parse_response(r, decode=kwargs.get("decode"))
                     asking = False
 
+                if self.cache and r.tracking_client_id != self.cache.get_client_id(r):
+                    self.cache.reset()
+                    await r.update_tracking_client(True, self.cache.get_client_id(r))
+                if self.cache and command not in self.connection_pool.READONLY_COMMANDS:
+                    self.cache.reset(*KeySpec.extract_keys((command,) + args))
                 await r.send_command(command, *args)
 
                 return callback(
@@ -1388,8 +1432,19 @@ class RedisCluster(
                         *node_keys,  # type: ignore
                         *args[1 + key_end :],
                     )
+            if self.cache and command not in self.connection_pool.READONLY_COMMANDS:
+                self.cache.reset(*keys)
         for node in nodes:
             connection = self.connection_pool.get_connection_by_node(node)
+            if (
+                self.cache
+                and connection.tracking_client_id
+                != self.cache.get_client_id(connection)
+            ):
+                self.cache.reset()
+                await connection.update_tracking_client(
+                    True, self.cache.get_client_id(connection)
+                )
             # copy from redis-py
             try:
                 if node["name"] in node_arg_mapping:

@@ -18,7 +18,7 @@ from coredis.commands._validators import (
     mutually_exclusive_parameters,
     mutually_inclusive_parameters,
 )
-from coredis.commands._wrappers import ClusterCommandConfig, redis_command
+from coredis.commands._wrappers import CacheConfig, ClusterCommandConfig, redis_command
 from coredis.commands.bitfield import BitFieldOperation
 from coredis.commands.constants import CommandGroup, CommandName
 from coredis.exceptions import AuthorizationError, DataError, RedisError
@@ -185,6 +185,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.GET,
         readonly=True,
         group=CommandGroup.STRING,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def get(self, key: KeyT) -> Optional[AnyStr]:
         """
@@ -274,7 +275,12 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.GETEX, key, *pieces, callback=OptionalAnyStrCallback[AnyStr]()
         )
 
-    @redis_command(CommandName.GETRANGE, readonly=True, group=CommandGroup.STRING)
+    @redis_command(
+        CommandName.GETRANGE,
+        readonly=True,
+        group=CommandGroup.STRING,
+        cache_config=CacheConfig(lambda *a, **k: a[0]),
+    )
     async def getrange(self, key: KeyT, start: int, end: int) -> AnyStr:
         """
         Get a substring of the string stored at a key
@@ -659,7 +665,12 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.SETRANGE, key, offset, value, callback=IntCallback()
         )
 
-    @redis_command(CommandName.STRLEN, readonly=True, group=CommandGroup.STRING)
+    @redis_command(
+        CommandName.STRLEN,
+        readonly=True,
+        group=CommandGroup.STRING,
+        cache_config=CacheConfig(lambda *a: a[0]),
+    )
     async def strlen(self, key: KeyT) -> int:
         """
         Get the length of the value stored in a key
@@ -677,6 +688,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.STRING,
         version_deprecated="2.0.0",
         deprecation_reason="Use :meth:`getrange`",
+        cache_config=CacheConfig(lambda *a: a[0]),
     )
     async def substr(self, key: KeyT, start: int, end: int) -> AnyStr:
         """
@@ -1920,6 +1932,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.HEXISTS,
         readonly=True,
         group=CommandGroup.HASH,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def hexists(self, key: KeyT, field: StringT) -> bool:
         """
@@ -1942,6 +1955,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.HGETALL,
         readonly=True,
         group=CommandGroup.HASH,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def hgetall(self, key: KeyT) -> Dict[AnyStr, AnyStr]:
         """Returns a Python dict of the hash's name/value pairs"""
@@ -1978,6 +1992,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.HKEYS,
         readonly=True,
         group=CommandGroup.HASH,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def hkeys(self, key: KeyT) -> Tuple[AnyStr, ...]:
         """Returns the list of keys within hash :paramref:`key`"""
@@ -1986,7 +2001,12 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.HKEYS, key, callback=TupleCallback[AnyStr]()
         )
 
-    @redis_command(CommandName.HLEN, readonly=True, group=CommandGroup.HASH)
+    @redis_command(
+        CommandName.HLEN,
+        readonly=True,
+        group=CommandGroup.HASH,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
+    )
     async def hlen(self, key: KeyT) -> int:
         """Returns the number of elements in hash :paramref:`key`"""
 
@@ -2050,6 +2070,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.HMGET,
         readonly=True,
         group=CommandGroup.HASH,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def hmget(
         self, key: KeyT, fields: Parameters[StringT]
@@ -2064,6 +2085,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.HVALS,
         readonly=True,
         group=CommandGroup.HASH,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def hvals(self, key: KeyT) -> Tuple[AnyStr, ...]:
         """
@@ -2108,7 +2130,12 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.HSCAN, *pieces, callback=HScanCallback[AnyStr]()
         )
 
-    @redis_command(CommandName.HSTRLEN, readonly=True, group=CommandGroup.HASH)
+    @redis_command(
+        CommandName.HSTRLEN,
+        readonly=True,
+        group=CommandGroup.HASH,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
+    )
     async def hstrlen(self, key: KeyT, field: StringT) -> int:
         """
         Get the length of the value of a hash field
@@ -3046,7 +3073,12 @@ class CoreCommands(CommandMixin[AnyStr]):
             callback=OptionalAnyStrCallback[AnyStr](),
         )
 
-    @redis_command(CommandName.LINDEX, readonly=True, group=CommandGroup.LIST)
+    @redis_command(
+        CommandName.LINDEX,
+        readonly=True,
+        group=CommandGroup.LIST,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
+    )
     async def lindex(self, key: KeyT, index: int) -> Optional[AnyStr]:
         """
 
@@ -3079,7 +3111,12 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.LINSERT, key, where, pivot, element, callback=IntCallback()
         )
 
-    @redis_command(CommandName.LLEN, readonly=True, group=CommandGroup.LIST)
+    @redis_command(
+        CommandName.LLEN,
+        readonly=True,
+        group=CommandGroup.LIST,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
+    )
     async def llen(self, key: KeyT) -> int:
         """
         :return: the length of the list at :paramref:`key`.
@@ -3170,6 +3207,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="6.0.6",
         group=CommandGroup.LIST,
         readonly=True,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def lpos(
         self,
@@ -4321,6 +4359,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ZRANK,
         readonly=True,
         group=CommandGroup.SORTED_SET,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def zrank(self, key: KeyT, member: ValueT) -> Optional[int]:
         """
@@ -4393,6 +4432,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_deprecated="6.2.0",
         deprecation_reason="Use :meth:`zrange` with the rev argument",
         group=CommandGroup.SORTED_SET,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def zrevrange(
         self,
@@ -4460,6 +4500,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_deprecated="6.2.0",
         deprecation_reason="Use :meth:`zrange` with the rev and sort=BYSCORE arguments",
         group=CommandGroup.SORTED_SET,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     @mutually_inclusive_parameters("offset", "count")
     async def zrevrangebyscore(
@@ -4498,6 +4539,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ZREVRANK,
         readonly=True,
         group=CommandGroup.SORTED_SET,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def zrevrank(self, key: KeyT, member: ValueT) -> Optional[int]:
         """
@@ -4542,6 +4584,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ZSCORE,
         readonly=True,
         group=CommandGroup.SORTED_SET,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def zscore(self, key: KeyT, member: ValueT) -> Optional[float]:
         """
