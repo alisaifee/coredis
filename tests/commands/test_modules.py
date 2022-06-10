@@ -4,6 +4,8 @@ import pytest
 
 from tests.conftest import targets
 
+pytestmark = pytest.mark.flaky
+
 
 @pytest.mark.asyncio
 @targets(
