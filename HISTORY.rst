@@ -3,6 +3,19 @@
 Changelog
 =========
 
+v3.8.12
+-------
+Release Date: 2022-06-10
+
+* Features
+
+  * Add support for sharded pubsub for redis 7.0.1
+  * Expose verify_version parameter to from_url factory function
+
+* Experiments
+
+  * Extend CI coverage for keydb & dragonfly
+
 v3.8.11
 -------
 Release Date: 2022-06-07
@@ -795,6 +808,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
