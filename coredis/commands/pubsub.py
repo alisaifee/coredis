@@ -491,6 +491,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
        **NOT** support pattern based subscriptions.
     """
 
+    PUBLISH_MESSAGE_TYPES = {b"message", b"smessage"}
     SUBUNSUB_MESSAGE_TYPES = {b"ssubscribe", b"sunsubscribe"}
     UNSUBSCRIBE_MESSAGE_TYPES = {b"unsubscribe"}
 
