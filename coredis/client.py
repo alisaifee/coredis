@@ -125,7 +125,7 @@ class ClusterMeta(ABCMeta):
                 if (wrapped := add_runtime_checks(method)) != method:
                     setattr(kls, name, wrapped)
                     method = wrapped
-            if doc_addition:
+            if doc_addition and not hasattr(method, "__cluster_docs"):
 
                 def __w(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
                     @functools.wraps(func)
@@ -137,7 +137,9 @@ class ClusterMeta(ABCMeta):
                 """
                     return _w
 
-                setattr(kls, name, __w(method))
+                wrapped = __w(method)
+                setattr(wrapped, "__cluster_docs", doc_addition)
+                setattr(kls, name, wrapped)
         return kls
 
 
