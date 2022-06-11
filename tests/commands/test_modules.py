@@ -8,6 +8,7 @@ pytestmark = pytest.mark.flaky
 
 
 @pytest.mark.asyncio
+@pytest.mark.xfail
 @targets(
     "redis_stack",
     "redis_stack_raw",
