@@ -66,7 +66,7 @@ jobs:
         extensions: ["True"]
         include:
           - python-version: "3.10"
-            service_version: "REDIS_VERSION=LATEST REDIS_SSL_VERSION=LATEST"
+            service_version: "REDIS_VERSION=latest REDIS_SSL_VERSION=latest"
             parser: python
             test_params: "-m '(not (keydb or dragonfly))'"
             runtime_type_checks: "True"
