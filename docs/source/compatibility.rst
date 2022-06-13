@@ -526,6 +526,8 @@ Get the value of a key
 
 
 
+- Supports client caching: yes
+
 
 
 GETDEL
@@ -571,6 +573,8 @@ Get a substring of the string stored at a key
 
 
 
+
+- Supports client caching: yes
 
 
 
@@ -774,6 +778,8 @@ Get the length of the value stored in a key
 
 
 
+- Supports client caching: yes
+
 
 
 SUBSTR
@@ -789,6 +795,8 @@ Get a substring of the string stored at a key
 
 
 
+
+- Supports client caching: yes
 
 
 
@@ -934,6 +942,8 @@ Determine if a hash field exists
 
 
 
+- Supports client caching: yes
+
 
 
 HGET
@@ -948,6 +958,8 @@ Get the value of a hash field
 
 
 
+- Supports client caching: yes
+
 
 
 HGETALL
@@ -961,6 +973,8 @@ Get all the fields and values in a hash
 
 
 
+
+- Supports client caching: yes
 
 
 
@@ -1004,6 +1018,8 @@ Get all the fields in a hash
 
 
 
+- Supports client caching: yes
+
 
 
 HLEN
@@ -1018,6 +1034,8 @@ Get the number of fields in a hash
 
 
 
+- Supports client caching: yes
+
 
 
 HMGET
@@ -1031,6 +1049,8 @@ Get the values of all the given hash fields
 
 
 
+
+- Supports client caching: yes
 
 
 
@@ -1120,6 +1140,8 @@ Get the length of the value of a hash field
 
 
 
+- Supports client caching: yes
+
 
 
 HVALS
@@ -1133,6 +1155,8 @@ Get all the values in a hash
 
 
 
+
+- Supports client caching: yes
 
 
 
@@ -1234,6 +1258,8 @@ Get an element from a list by its index
 
 
 
+- Supports client caching: yes
+
 
 
 LINSERT
@@ -1261,6 +1287,8 @@ Get the length of a list
 
 
 
+
+- Supports client caching: yes
 
 
 
@@ -1326,6 +1354,8 @@ Return the index of matching elements on a list
 
 
 
+- Supports client caching: yes
+
 
 
 LPUSH
@@ -1367,6 +1397,8 @@ Get a range of elements from a list
 
 
 
+
+- Supports client caching: yes
 
 
 
@@ -1504,6 +1536,8 @@ Get the number of members in a set
 
 
 
+- Supports client caching: yes
+
 
 
 SDIFF
@@ -1592,6 +1626,8 @@ Determine if a given value is a member of a set
 
 
 
+- Supports client caching: yes
+
 
 
 SMEMBERS
@@ -1605,6 +1641,8 @@ Get all the members in a set
 
 
 
+
+- Supports client caching: yes
 
 
 
@@ -1621,6 +1659,8 @@ Returns the membership associated with the given elements for a set
 
 
 
+
+- Supports client caching: yes
 
 
 
@@ -1924,6 +1964,8 @@ Count the number of members in a sorted set between a given lexicographical rang
 
 
 
+- Supports client caching: yes
+
 
 
 ZMPOP
@@ -1957,6 +1999,8 @@ Get the score associated with the given members in a sorted set
 
 
 
+
+- Supports client caching: yes
 
 
 
@@ -2016,6 +2060,8 @@ Return a range of members in a sorted set
 
 
 
+- Supports client caching: yes
+
 
 
 ZRANGEBYLEX
@@ -2032,6 +2078,8 @@ Return a range of members in a sorted set, by lexicographical range
 
 
 
+- Supports client caching: yes
+
 
 
 ZRANGEBYSCORE
@@ -2047,6 +2095,8 @@ Return a range of members in a sorted set, by score
 
 
 
+
+- Supports client caching: yes
 
 
 
@@ -2077,6 +2127,8 @@ Determine the index of a member in a sorted set
 
 
 
+
+- Supports client caching: yes
 
 
 
@@ -2150,6 +2202,8 @@ Return a range of members in a sorted set, by index, with scores ordered from hi
 
 
 
+- Supports client caching: yes
+
 
 
 ZREVRANGEBYLEX
@@ -2165,6 +2219,8 @@ Return a range of members in a sorted set, by lexicographical range, ordered fro
 
 
 
+
+- Supports client caching: yes
 
 
 
@@ -2182,6 +2238,8 @@ Return a range of members in a sorted set, by score, with scores ordered from hi
 
 
 
+- Supports client caching: yes
+
 
 
 ZREVRANK
@@ -2195,6 +2253,8 @@ Determine the index of a member in a sorted set, with scores ordered from high t
 
 
 
+
+- Supports client caching: yes
 
 
 
@@ -2223,6 +2283,8 @@ Get the score associated with the given member in a sorted set
 
 
 
+
+- Supports client caching: yes
 
 
 

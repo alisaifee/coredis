@@ -1469,6 +1469,9 @@ def generate_compatibility_section(
 {% if method["version_changed"] %}
 - {{method["version_changed"]}}
 {% endif %}
+{% if method["located"] and getattr(method["located"], "__coredis_command", None) and method["located"].__coredis_command.cache_config %}
+- Supports client caching: yes
+{% endif -%}
 {% if debug %}
 - Current Signature {% if method.get("full_match") %} (Full Match) {% else %} ({{method["mismatch_reason"]}}) {% endif %}
 
@@ -1716,6 +1719,7 @@ def generate_compatibility_section(
         next_version=next_version,
         debug=debug,
         sanitized=sanitized,
+        getattr=getattr,
     )
     section_template = env.from_string(section_template_str)
     methods_by_group = {}
