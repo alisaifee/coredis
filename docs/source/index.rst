@@ -40,6 +40,7 @@ Feature Summary
   * :ref:`handbook/pubsub:cluster pub/sub`
   * :ref:`handbook/streams:streams`
   * :ref:`handbook/pipelines:pipelines`
+  * :ref:`handbook/caching:caching`
 
 * Server side scripting
 

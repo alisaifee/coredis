@@ -46,6 +46,7 @@ $ pip install coredis
 - [Sharded PubSub](https://coredis.readthedocs.org/en/latest/handbook/pubsub.html#cluster-pub-sub) [`>= Redis 7.0`]
 - [Stream Consumers](https://coredis.readthedocs.org/en/latest/handbook/streams.html)
 - [Pipelining](https://coredis.readthedocs.org/en/latest/handbook/pipelines.html)
+- [Client side caching](https://coredis.readthedocs.org/en/latest/handbook/caching.html)
 
 ### Server side scripting
 - [LUA Scripting](https://coredis.readthedocs.org/en/latest/handbook/scripting.html#lua_scripting)
