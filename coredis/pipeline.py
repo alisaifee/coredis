@@ -284,6 +284,7 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
         self._transaction = transaction
         self.watching = False
         self.command_stack = []
+        self.cache = None  # not implemented.
 
     async def __aenter__(self) -> "PipelineImpl[AnyStr]":
         return self
@@ -734,6 +735,7 @@ class ClusterPipelineImpl(AbstractRedis[AnyStr], metaclass=ClusterPipelineMeta):
         self.watches: Optional[Parameters[KeyT]] = watches or None
         self.watching = False
         self.explicit_transaction = False
+        self.cache = None  # not implemented.
 
     async def watch(self, *keys: KeyT) -> bool:
         raise NotImplementedError

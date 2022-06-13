@@ -223,6 +223,23 @@ Parsers
    :show-inheritance:
    :inherited-members:
 
+Caching
+^^^^^^^
+:mod:`coredis.cache`
+
+.. autoclass:: coredis.cache.TrackingCache
+   :class-doc-from: both
+
+.. autoclass:: coredis.cache.NodeTrackingCache
+   :class-doc-from: both
+
+.. autoclass:: coredis.cache.ClusterTrackingCache
+   :class-doc-from: both
+
+All caches accepted by :class:`coredis.Redis` or :class:`coredis.RedisCluster`
+must implement the follow abstract base class.
+
+.. autoclass:: coredis.cache.AbstractCache
 
 Type Aliases
 ^^^^^^^^^^^^
@@ -434,3 +451,5 @@ KeyDB
    .. automethod:: ttl
    .. automethod:: pttl
    .. automethod:: object_lastmodified
+
+

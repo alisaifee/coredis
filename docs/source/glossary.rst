@@ -43,6 +43,14 @@ Glossary
      keys to distribute channels. For more details see the `Redis manual entry on
      Sharded Pub/Sub <https://redis.io/docs/manual/pubsub/#sharded-pubsub>`__
 
+   Server assisted client side caching
+     Client side caching is a technique to increase performance by eliminating unnecessary
+     round trips to database servers by caching responses from the server within the application's
+     memory. This invariably requires some kind of invalidation technique to remove stale entries
+     from the application's memory. Server assisted client side caching uses subscriptions to the
+     notifications from the redis server whenever a key is mutated to invalidate local cached entries.
+     For more details see the `Redis manual entry on client side caching <https://redis.io/docs/manual/client-side-caching/>`__
+
    Streams
      Streams are essentially an abstract append-only in-memory log datastructure
      which can be used for various use cases such as timeseries,

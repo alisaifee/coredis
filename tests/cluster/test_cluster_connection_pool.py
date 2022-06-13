@@ -52,7 +52,7 @@ class TestConnectionPool:
         """
         pool = await self.get_pool()
         pool._in_use_connections = {}
-        await pool.get_connection("pubsub", channel="foobar")
+        await pool.get_connection(b"pubsub", channel="foobar")
 
     @pytest.mark.asyncio()
     async def test_connection_creation(self, redis_cluster):

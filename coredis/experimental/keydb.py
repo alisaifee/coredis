@@ -88,6 +88,7 @@ def keydb_command(
         version.Version(version_deprecated) if version_deprecated else None,
         arguments or {},
         cluster or ClusterCommandConfig(),
+        None,
     )
 
     def wrapper(

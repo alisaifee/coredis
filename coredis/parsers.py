@@ -142,7 +142,8 @@ class PythonParser(BaseParser):
     def on_connect(self, connection: ConnectionP) -> None:
         """Called when the stream connects"""
         self._stream = connection.reader
-        self.unpacker = Unpacker(connection.encoding, self.parse_error)
+        if not self.unpacker:
+            self.unpacker = Unpacker(connection.encoding, self.parse_error)
         self.push_messages = connection.push_messages
         if connection.decode_responses:
             self.encoding = connection.encoding
@@ -153,9 +154,6 @@ class PythonParser(BaseParser):
         if self._stream is not None:
             self._stream = None
 
-        if self.unpacker is not None:
-            self.unpacker = None
-        self.push_messages = None
         self.encoding = None
 
     def can_read(self) -> bool:
@@ -180,14 +178,18 @@ class PythonParser(BaseParser):
         if need_decode and self.encoding:
             decode_bytes = True
 
-        assert self.unpacker
-
         while True:
+            assert self.unpacker
             response = self.unpacker.parse(decode_bytes)
             if isinstance(response, NotEnoughData):
                 try:
                     buffer = await self._stream.read(self._read_size)
+                    if not buffer:
+                        raise ConnectionError("Socket closed on remote end")
+                    self.unpacker.feed(buffer)
                 except asyncio.CancelledError:
+                    raise
+                except ConnectionError:
                     raise
                 except Exception:  # noqa
                     e = sys.exc_info()[1]
@@ -196,9 +198,6 @@ class PythonParser(BaseParser):
                             f"Error {type(e)} while reading from stream: {e.args}"
                         )
                     raise
-                if not buffer:
-                    raise ConnectionError("Socket closed on remote end")
-                self.unpacker.feed(buffer)
             else:
                 if response and response.response_type == RESPDataType.PUSH:
                     assert isinstance(response.response, list)

@@ -1,17 +1,37 @@
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import functools
 import textwrap
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 from packaging import version
 
+from coredis.cache import AbstractCache
 from coredis.commands._utils import check_version, redis_command_link
 from coredis.commands.constants import CommandGroup, CommandName
 from coredis.nodemanager import NodeFlag
 from coredis.response._callbacks import ClusterMultiNodeCallback
-from coredis.typing import Callable, Coroutine, Dict, NamedTuple, Optional, P, R
+from coredis.typing import (
+    AsyncIterator,
+    Callable,
+    Coroutine,
+    Dict,
+    NamedTuple,
+    Optional,
+    P,
+    R,
+    ResponseType,
+)
+
+if TYPE_CHECKING:
+    pass
+
+
+@dataclasses.dataclass
+class CacheConfig:
+    key_func: Callable[..., bytes]
 
 
 class CommandDetails(NamedTuple):
@@ -22,6 +42,7 @@ class CommandDetails(NamedTuple):
     version_deprecated: Optional[version.Version]
     arguments: Dict[str, Dict[str, str]]
     cluster: ClusterCommandConfig
+    cache_config: Optional[CacheConfig]
 
 
 @dataclasses.dataclass
@@ -40,6 +61,47 @@ class ClusterCommandConfig:
         ]
 
 
+@dataclasses.dataclass
+class CommandCache:
+    command: bytes
+    cache_config: Optional[CacheConfig]
+
+    @contextlib.asynccontextmanager  # type: ignore
+    async def __call__(
+        self,
+        func: Callable[P, Coroutine[Any, Any, R]],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> AsyncIterator[R]:
+        client = args[0]
+        cache = getattr(client, "cache")
+        if not (self.cache_config and cache):
+            yield await func(*args, **kwargs)
+        else:
+            assert isinstance(cache, AbstractCache)
+            if not cache.healthy:
+                yield await func(*args, **kwargs)
+            else:
+                key = self.cache_config.key_func(*args[1:], **kwargs)
+                try:
+                    yield cast(
+                        R,
+                        cache.get(
+                            self.command, key, *args[1:], *kwargs.items()  # type: ignore
+                        ),
+                    )
+                except KeyError:
+                    response = await func(*args, **kwargs)
+                    cache.put(
+                        self.command,
+                        key,
+                        *args[1:],  # type: ignore
+                        *kwargs.items(),  # type: ignore
+                        value=cast(ResponseType, response),
+                    )
+                    yield response
+
+
 def redis_command(
     command_name: CommandName,
     group: Optional[CommandGroup] = None,
@@ -49,6 +111,7 @@ def redis_command(
     arguments: Optional[Dict[str, Dict[str, str]]] = None,
     readonly: bool = False,
     cluster: ClusterCommandConfig = ClusterCommandConfig(),
+    cache_config: Optional[CacheConfig] = None,
 ) -> Callable[
     [Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]
 ]:
@@ -60,11 +123,14 @@ def redis_command(
         version.Version(version_deprecated) if version_deprecated else None,
         arguments or {},
         cluster or ClusterCommandConfig(),
+        cache_config,
     )
 
     def wrapper(
         func: Callable[P, Coroutine[Any, Any, R]]
     ) -> Callable[P, Coroutine[Any, Any, R]]:
+        command_cache = CommandCache(command_name, cache_config)
+
         @functools.wraps(func)
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
             check_version(
@@ -75,7 +141,8 @@ def redis_command(
                 command_details.version_deprecated,
                 deprecation_reason,
             )
-            return await func(*args, **kwargs)
+            async with command_cache(func, *args, **kwargs) as response:
+                return response
 
         wrapped.__doc__ = textwrap.dedent(wrapped.__doc__ or "")
         if group:
@@ -97,7 +164,10 @@ Deprecated in :redis-version:`{version_deprecated}`
             wrapped.__doc__ += f"""
 Deprecated in :redis-version:`{version_deprecated}`
             """
-
+        if cache_config:
+            wrapped.__doc__ += """
+Supports client side caching
+            """
         setattr(wrapped, "__coredis_command", command_details)
         return wrapped
 

@@ -16,6 +16,7 @@ import coredis.connection
 import coredis.experimental
 import coredis.parsers
 import coredis.sentinel
+from coredis.cache import TrackingCache
 
 REDIS_VERSIONS = {}
 
@@ -471,6 +472,50 @@ async def redis_uds(redis_uds_server, request):
 
 
 @pytest.fixture
+async def redis_cached(redis_basic_server, request):
+    cache = TrackingCache()
+    client = coredis.Redis(
+        "localhost",
+        6379,
+        decode_responses=True,
+        cache=cache,
+        **get_client_test_args(request),
+    )
+    await check_test_constraints(request, client)
+    await client.flushall()
+    await set_default_test_config(client)
+
+    yield client
+
+    client.connection_pool.disconnect()
+
+
+@pytest.fixture
+async def redis_cached_resp3(redis_basic_server, request):
+    cache = TrackingCache()
+    client = coredis.Redis(
+        "localhost",
+        6379,
+        decode_responses=True,
+    )
+    await check_test_constraints(request, client, protocol=3)
+    client = coredis.Redis(
+        "localhost",
+        6379,
+        decode_responses=True,
+        protocol_version=3,
+        cache=cache,
+        **get_client_test_args(request),
+    )
+    await client.flushall()
+    await set_default_test_config(client)
+
+    yield client
+
+    client.connection_pool.disconnect()
+
+
+@pytest.fixture
 async def redis_cluster(redis_cluster_server, request):
     cluster = coredis.RedisCluster(
         "localhost",
@@ -492,6 +537,30 @@ async def redis_cluster(redis_cluster_server, request):
 
 
 @pytest.fixture
+async def redis_cluster_cached(redis_cluster_server, request):
+    cache = TrackingCache()
+    cluster = coredis.RedisCluster(
+        "localhost",
+        7000,
+        stream_timeout=10,
+        decode_responses=True,
+        cache=cache,
+        **get_client_test_args(request),
+    )
+    await check_test_constraints(request, cluster)
+    await cluster
+    await cluster.flushall()
+    await cluster.flushdb()
+
+    for primary in cluster.primaries:
+        await set_default_test_config(primary)
+    yield cluster
+
+    cluster.connection_pool.disconnect()
+    cache.shutdown()
+
+
+@pytest.fixture
 async def redis_cluster_raw(redis_cluster_server, request):
     cluster = coredis.RedisCluster(
         "localhost",
@@ -500,6 +569,28 @@ async def redis_cluster_raw(redis_cluster_server, request):
         **get_client_test_args(request),
     )
     await check_test_constraints(request, cluster)
+    await cluster
+    await cluster.flushall()
+    await cluster.flushdb()
+
+    for primary in cluster.primaries:
+        await set_default_test_config(primary)
+    yield cluster
+
+    cluster.connection_pool.disconnect()
+
+
+@pytest.fixture
+async def redis_cluster_raw_resp3(redis_cluster_server, request):
+    cluster = coredis.RedisCluster(
+        "localhost",
+        7000,
+        stream_timeout=10,
+        decode_responses=False,
+        protocol_version=3,
+        **get_client_test_args(request),
+    )
+    await check_test_constraints(request, cluster, protocol=3)
     await cluster
     await cluster.flushall()
     await cluster.flushdb()
@@ -689,7 +780,7 @@ def _s(client):
 
 @pytest.fixture
 def cloner():
-    async def _cloner(client):
+    async def _cloner(client, **kwargs):
         if isinstance(client, coredis.client.Redis):
             c_kwargs = client.connection_pool.connection_kwargs
             c = client.__class__(
@@ -697,6 +788,7 @@ def cloner():
                 protocol_version=client.protocol_version,
                 encoding=client.encoding,
                 connection_pool=client.connection_pool.__class__(**c_kwargs),
+                **kwargs,
             )
         else:
             c = client.__class__(
@@ -705,6 +797,7 @@ def cloner():
                 decode_responses=client.decode_responses,
                 protocol_version=client.protocol_version,
                 encoding=client.encoding,
+                **kwargs,
             )
         await c.ping()
         return c

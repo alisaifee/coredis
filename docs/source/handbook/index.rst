@@ -15,6 +15,7 @@ Handbook
     pipelines
     scripting
     locks
+    caching
     development
     typing
 
@@ -40,6 +41,7 @@ Server side scripting
 
 "Stuff"
 -------
+- :ref:`handbook/caching:caching`
 - :ref:`handbook/connections:connections`
 - :ref:`handbook/pipelines:pipelines`
 - :ref:`handbook/response:parsers`

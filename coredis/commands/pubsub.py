@@ -71,7 +71,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         if hasattr(self, "encoding"):
             return
 
-        conn = await self.connection_pool.get_connection("pubsub")
+        conn = await self.connection_pool.get_connection(b"pubsub")
         try:
             self.encoding = conn.encoding
             self.decode_responses = conn.decode_responses
@@ -463,7 +463,7 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
         if self.connection is None:
             self.connection = await self.connection_pool.get_connection(
-                "pubsub",
+                b"pubsub",
                 channel=str(args[0]),
             )
             # register a callback that re-subscribes to any channels we
@@ -581,7 +581,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
             key = node["node_id"]
             if self.shard_connections.get(key) is None:
                 self.shard_connections[key] = await self.connection_pool.get_connection(
-                    "pubsub",
+                    b"pubsub",
                     channel=channel,
                     node_type="replica" if self.read_from_replicas else "master",
                 )

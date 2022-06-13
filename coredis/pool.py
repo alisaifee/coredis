@@ -282,7 +282,10 @@ class ConnectionPool:
                 self.reset()
 
     async def get_connection(
-        self, command_name: Optional[str] = None, *args: str, **kwargs: str
+        self,
+        command_name: Optional[bytes] = None,
+        *args: ValueT,
+        **kwargs: Optional[ValueT],
     ) -> Connection:
         """Gets a connection from the pool"""
         self.checkpid()
@@ -291,7 +294,7 @@ class ConnectionPool:
         except IndexError:
             if self._created_connections >= self.max_connections:
                 raise ConnectionError("Too many connections")
-            connection = self._make_connection()
+            connection = self._make_connection(**kwargs)  # type: ignore
         self._in_use_connections.add(connection)
 
         return connection
@@ -321,13 +324,17 @@ class ConnectionPool:
             connection.disconnect()
             self._created_connections -= 1
 
-    def _make_connection(self, node: Optional[Node] = None) -> Connection:
+    def _make_connection(
+        self, node: Optional[Node] = None, **options: Optional[ValueT]
+    ) -> Connection:
         """
         Creates a new connection
         """
 
         self._created_connections += 1
-        connection = self.connection_class(**self.connection_kwargs)  # type: ignore
+        connection = self.connection_class(
+            **self.connection_kwargs,  # type: ignore
+        )
 
         if self.max_idle_time > self.idle_check_interval > 0:
             # do not await the future
@@ -417,7 +424,10 @@ class BlockingConnectionPool(ConnectionPool):
         super().reset()
 
     async def get_connection(
-        self, command_name: Optional[str] = None, *args: str, **kwargs: str
+        self,
+        command_name: Optional[bytes] = None,
+        *args: ValueT,
+        **kwargs: Optional[ValueT],
     ) -> Connection:
         """Gets a connection from the pool"""
         self.checkpid()
@@ -619,22 +629,25 @@ class ClusterConnectionPool(ConnectionPool):
                 self.reset()
 
     async def get_connection(
-        self, command_name: Optional[str] = None, *keys: str, **options: str
+        self,
+        command_name: Optional[bytes] = None,
+        *keys: ValueT,
+        **options: Optional[ValueT],
     ) -> Connection:
         # Only pubsub command/connection should be allowed here
 
-        if command_name != "pubsub":
+        if command_name != b"pubsub":
             raise RedisClusterException(
                 "Only 'pubsub' commands can use get_connection()"
             )
 
-        channel = options.pop("channel", None)
+        routing_key = options.pop("channel", None)
         node_type = options.pop("node_type", "master")
 
-        if not channel:
+        if not routing_key:
             return self.get_random_connection()
 
-        slot = self.nodes.keyslot(channel)
+        slot = self.nodes.keyslot(routing_key)
         if node_type == "replica":
             node = self.get_replica_node_by_slot(slot)
         else:
@@ -653,7 +666,9 @@ class ClusterConnectionPool(ConnectionPool):
 
         return connection
 
-    def _make_connection(self, node: Optional[Node] = None) -> Connection:
+    def _make_connection(
+        self, node: Optional[Node] = None, **options: Optional[ValueT]
+    ) -> Connection:
         """Creates a new connection"""
 
         assert node
