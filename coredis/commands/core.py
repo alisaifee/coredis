@@ -2879,7 +2879,12 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return await self.execute_command(CommandName.TTL, key, callback=IntCallback())
 
-    @redis_command(CommandName.TYPE, readonly=True, group=CommandGroup.GENERIC)
+    @redis_command(
+        CommandName.TYPE,
+        readonly=True,
+        group=CommandGroup.GENERIC,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
+    )
     async def type(self, key: KeyT) -> Optional[AnyStr]:
         """
         Determine the type stored at key
