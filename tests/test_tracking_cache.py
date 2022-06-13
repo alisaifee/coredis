@@ -61,11 +61,11 @@ class TestInvalidatingCache:
         await client.set("fubar", bytes(bytearray(10000)))
         [await cached.getrange("fubar", i, i + 1000) for i in range(10)]
         execute_command = mocker.spy(cached, "execute_command")
-        [await cached.getrange("fubar", i, i + 1000) for i in range(10)]
+        await cached.getrange("fubar", 0, 1000)
         assert execute_command.call_count == 0
         await asyncio.sleep(1)
-        [await cached.getrange("fubar", i, i + 1000) for i in range(10)]
-        assert execute_command.call_count > 0
+        await cached.getrange("fubar", 0, 1000)
+        assert execute_command.call_count == 1
 
     async def test_shared_cache(self, client, cloner, mocker, _s):
         cache = TrackingCache()
@@ -140,8 +140,8 @@ class TestClusterInvalidatingCache:
         await client.set("fubar", bytes(bytearray(10000)))
         [await cached.getrange("fubar", i, i + 1000) for i in range(10)]
         execute_command = mocker.spy(cached, "execute_command")
-        [await cached.getrange("fubar", i, i + 1000) for i in range(10)]
+        await cached.getrange("fubar", 0, 1000)
         assert execute_command.call_count == 0
         await asyncio.sleep(1)
-        [await cached.getrange("fubar", i, i + 1000) for i in range(10)]
-        assert execute_command.call_count > 0
+        await cached.getrange("fubar", 0, 1000)
+        assert execute_command.call_count == 1
