@@ -53,19 +53,6 @@ class TestInvalidatingCache:
         await asyncio.sleep(0.2)
         assert await cached.get("fubar") == _s("2")
 
-    async def test_cache_size_bytes(self, client, cloner, mocker, _s):
-        cache = TrackingCache(max_size_bytes=5000, max_idle_seconds=1)
-        cached = await cloner(client, cache=cache)
-        assert not await cached.get("fubar")
-        await client.set("fubar", bytes(bytearray(10000)))
-        [await cached.getrange("fubar", i, i + 1000) for i in range(10)]
-        execute_command = mocker.spy(cached, "execute_command")
-        await cached.getrange("fubar", 0, 1000)
-        assert execute_command.call_count == 0
-        cache.instance._NodeTrackingCache__cache.shrink()
-        await cached.getrange("fubar", 0, 1000)
-        assert execute_command.call_count == 1
-
     async def test_shared_cache(self, client, cloner, mocker, _s):
         cache = TrackingCache()
         cached = await cloner(client, cache=cache)
@@ -130,16 +117,3 @@ class TestClusterInvalidatingCache:
         ]
         await asyncio.sleep(0.2)
         assert await cached.get("fubar") == _s("2")
-
-    async def test_cache_size_bytes(self, client, cloner, mocker, _s):
-        cache = TrackingCache(max_size_bytes=5000, max_idle_seconds=1)
-        cached = await cloner(client, cache=cache)
-        assert not await cached.get("fubar")
-        await client.set("fubar", bytes(bytearray(10000)))
-        [await cached.getrange("fubar", i, i + 1000) for i in range(10)]
-        execute_command = mocker.spy(cached, "execute_command")
-        await cached.getrange("fubar", 0, 1000)
-        assert execute_command.call_count == 0
-        cache.instance._ClusterTrackingCache__cache.shrink()
-        await cached.getrange("fubar", 0, 1000)
-        assert execute_command.call_count == 1

@@ -122,6 +122,8 @@ class LRUCache(Generic[ET]):
         self.max_items = max_items
         self.max_bytes = max_bytes
         self.__cache: OrderedDict[Hashable, ET] = OrderedDict()
+        if self.max_bytes > 0:
+            self.max_bytes += asizeof.asizeof(self.__cache)
 
     def get(self, key: Hashable) -> ET:
         if key not in self.__cache:
@@ -175,7 +177,7 @@ class LRUCache(Generic[ET]):
         there is nothing left to remove.
         """
         if self.max_bytes > 0:
-            while asizeof.asizeof(self) > self.max_bytes:
+            while asizeof.asizeof(self.__cache) > self.max_bytes:
                 if not self.popitem():
                     # nothing left to remove
                     return
