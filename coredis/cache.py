@@ -515,6 +515,9 @@ class TrackingCache(AbstractCache):
 
     def share(self) -> TrackingCache:
         """
+        Create a copy of this cache that can be used to share
+        memory with another client.
+
         In the example below ``c1`` and ``c2`` have their own
         instances of :class:`~coredis.cache.TrackingCache` but
         share the same in-memory local cached responses::
