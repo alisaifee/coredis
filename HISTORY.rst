@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v3.9.1
+------
+Release Date: 2022-06-13
+
+* Features
+
+  * Extend coverage of cachable commands
+  * Expose option to share TrackingCache between client
+
 v3.9
 ----
 Release Date: 2022-06-12
@@ -816,6 +825,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
