@@ -3271,7 +3271,12 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.LPUSHX, key, *elements, callback=IntCallback()
         )
 
-    @redis_command(CommandName.LRANGE, readonly=True, group=CommandGroup.LIST)
+    @redis_command(
+        CommandName.LRANGE,
+        readonly=True,
+        group=CommandGroup.LIST,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
+    )
     async def lrange(self, key: KeyT, start: int, stop: int) -> List[AnyStr]:
         """
         Get a range of elements from a list
