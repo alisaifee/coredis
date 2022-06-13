@@ -50,6 +50,16 @@ class AbstractCache(ABC):
         """
         ...
 
+    @property
+    @abstractmethod
+    def confidence(self) -> float:
+        """
+        Confidence in cached values between 0 - 100. Lower values
+        will result in the client discarding and / or validating the
+        cached responses
+        """
+        ...
+
     @abstractmethod
     def get_client_id(self, connection: BaseConnection) -> Optional[int]:
         """
@@ -72,6 +82,14 @@ class AbstractCache(ABC):
     ) -> None:
         """
         Cache the response for command/key/args combination
+        """
+        ...
+
+    @abstractmethod
+    def feedback(self, command: bytes, key: bytes, *args: ValueT, match: bool) -> None:
+        """
+        Provide feedback about a key as having either a match or drift from the actual
+        server side value
         """
         ...
 
@@ -208,6 +226,8 @@ class NodeTrackingCache(AbstractCache, Sidecar):
         max_size_bytes: int = 64 * 1024 * 1024,
         max_idle_seconds: int = 5,
         cache: Optional[LRUCache[LRUCache[LRUCache[ResponseType]]]] = None,
+        confidence: float = 100,
+        dynamic_confidence: bool = False,
     ) -> None:
         """
         :param max_keys: maximum keys to cache. A negative value represents
@@ -217,6 +237,12 @@ class NodeTrackingCache(AbstractCache, Sidecar):
         :param max_idle_seconds: maximum duration to tolerate no updates
          from the server. When the duration is exceeded the connection
          and cache will be reset.
+        :param confidence: 0 - 100. Lower values will result in the client
+         discarding and / or validating the cached responses
+        :param dynamic_confidence: Whether to adjust the confidence based on
+         sampled validations. Tainted values drop the confidence by 0.1% and
+         confirmations of correct cached values will increase the confidence by 0.01%
+         upto the original confidence.
         """
         self.__protocol_version: Optional[Literal[2, 3]] = None
         self.__invalidation_task: Optional[asyncio.Task[None]] = None
@@ -225,6 +251,8 @@ class NodeTrackingCache(AbstractCache, Sidecar):
             max_keys, max_size_bytes
         )
         self.__max_idle_seconds = max_idle_seconds
+        self.__confidence = self.__original_confidence = confidence
+        self.__dynamic_confidence = dynamic_confidence
         super().__init__({b"invalidate"}, max(1, max_idle_seconds - 1))
 
     @property
@@ -233,6 +261,10 @@ class NodeTrackingCache(AbstractCache, Sidecar):
             self.connection
             and time.monotonic() - self.last_checkin < self.__max_idle_seconds
         )
+
+    @property
+    def confidence(self) -> float:
+        return self.__confidence
 
     def get(self, command: bytes, key: bytes, *args: ValueT) -> ResponseType:
         return self.__cache.get(b(key)).get(command).get(self.hashable_args(*args))
@@ -243,6 +275,14 @@ class NodeTrackingCache(AbstractCache, Sidecar):
         self.__cache.setdefault(b(key), LRUCache()).setdefault(
             command, LRUCache()
         ).insert(self.hashable_args(*args), value)
+
+    def feedback(self, command: bytes, key: bytes, *args: ValueT, match: bool) -> None:
+        if not match:
+            self.reset(key)
+        if self.__dynamic_confidence:
+            self.__confidence = self.__confidence * (1.0001 if match else 0.999)
+            if self.__confidence > self.__original_confidence:
+                self.__confidence = self.__original_confidence
 
     def reset(self, *keys: ValueT) -> None:
         if keys is not None:
@@ -295,7 +335,12 @@ class NodeTrackingCache(AbstractCache, Sidecar):
             pass
 
     def share(self) -> NodeTrackingCache:
-        return self.__class__(cache=self.__cache)
+        return self.__class__(
+            cache=self.__cache,
+            max_idle_seconds=self.__max_idle_seconds,
+            confidence=self.__confidence,
+            dynamic_confidence=self.__dynamic_confidence,
+        )
 
     def get_client_id(self, client: BaseConnection) -> Optional[int]:
         if self.connection and self.connection.is_connected:
@@ -343,6 +388,8 @@ class ClusterTrackingCache(AbstractCache):
         max_size_bytes: int = 64 * 1024 * 1024,
         max_idle_seconds: int = 5,
         cache: Optional[LRUCache[LRUCache[LRUCache[ResponseType]]]] = None,
+        confidence: float = 100,
+        dynamic_confidence: bool = False,
     ) -> None:
         """
         :param max_keys: maximum keys to cache. A negative value represents
@@ -352,6 +399,12 @@ class ClusterTrackingCache(AbstractCache):
         :param max_idle_seconds: maximum duration to tolerate no updates
          from the server. When the duration is exceeded the connection
          and cache will be reset.
+        :param confidence: 0 - 100. Lower values will result in the client
+         discarding and / or validating the cached responses
+        :param dynamic_confidence: Whether to adjust the confidence based on
+         sampled validations. Tainted values drop the confidence by 0.1% and
+         confirmations of correct cached values will increase the confidence by 0.01%
+         upto the original confidence.
         """
         self.__protocol_version: Optional[Literal[2, 3]] = None
         self.__cache: LRUCache[LRUCache[LRUCache[ResponseType]]] = cache or LRUCache(
@@ -360,6 +413,8 @@ class ClusterTrackingCache(AbstractCache):
         self.node_caches: Dict[str, NodeTrackingCache] = {}
         self.__nodes: List["coredis.client.RedisConnection"] = []
         self.__max_idle_seconds = max_idle_seconds
+        self.__confidence = self.__original_confidence = confidence
+        self.__dynamic_confidence = dynamic_confidence
 
     async def initialize(
         self, client: "coredis.client.RedisConnection"
@@ -376,7 +431,10 @@ class ClusterTrackingCache(AbstractCache):
 
         for node in self.__nodes:
             node_cache = NodeTrackingCache(
-                cache=self.__cache, max_idle_seconds=self.__max_idle_seconds
+                cache=self.__cache,
+                max_idle_seconds=self.__max_idle_seconds,
+                confidence=self.__confidence,
+                dynamic_confidence=self.__dynamic_confidence,
             )
             await node_cache.initialize(node)
             assert node_cache.connection
@@ -389,6 +447,10 @@ class ClusterTrackingCache(AbstractCache):
             self.node_caches
             and all(cache.healthy for cache in self.node_caches.values())
         )
+
+    @property
+    def confidence(self) -> float:
+        return self.__confidence
 
     def get_client_id(self, connection: BaseConnection) -> Optional[int]:
         try:
@@ -406,6 +468,14 @@ class ClusterTrackingCache(AbstractCache):
             command, LRUCache()
         ).insert(self.hashable_args(*args), value)
 
+    def feedback(self, command: bytes, key: bytes, *args: ValueT, match: bool) -> None:
+        if not match:
+            self.reset(key)
+        if self.__dynamic_confidence:
+            self.__confidence = self.__confidence * (1.0001 if match else 0.999)
+            if self.__confidence > self.__original_confidence:
+                self.__confidence = self.__original_confidence
+
     def reset(self, *keys: ValueT) -> None:
         if keys is not None:
             for k in keys:
@@ -421,7 +491,12 @@ class ClusterTrackingCache(AbstractCache):
             self.__nodes.clear()
 
     def share(self) -> ClusterTrackingCache:
-        return self.__class__(cache=self.__cache)
+        return self.__class__(
+            cache=self.__cache,
+            max_idle_seconds=self.__max_idle_seconds,
+            confidence=self.__confidence,
+            dynamic_confidence=self.__dynamic_confidence,
+        )
 
     def __del__(self) -> None:
         self.shutdown()
@@ -442,6 +517,8 @@ class TrackingCache(AbstractCache):
         max_keys: int = 2**12,
         max_size_bytes: int = 64 * 1024 * 1024,
         max_idle_seconds: int = 5,
+        confidence: float = 100.0,
+        dynamic_confidence: bool = False,
     ) -> None:
         """
         :param max_keys: maximum keys to cache. A negative value represents
@@ -451,12 +528,20 @@ class TrackingCache(AbstractCache):
         :param max_idle_seconds: maximum duration to tolerate no updates
          from the server. When the duration is exceeded the connection
          and cache will be reset.
+        :param confidence: 0 - 100. Lower values will result in the client
+         discarding and / or validating the cached responses
+        :param dynamic_confidence: Whether to adjust the confidence based on
+         sampled validations. Tainted values drop the confidence by 0.1% and
+         confirmations of correct cached values will increase the confidence by 0.01%
+         upto the original confidence.
         """
-        self.max_keys = max_keys
-        self.max_size_bytes = max_size_bytes
-        self.max_idle_seconds = max_idle_seconds
         self.instance: Optional[AbstractCache] = None
-        self._client: Optional[
+        self.__max_keys = max_keys
+        self.__max_size_bytes = max_size_bytes
+        self.__max_idle_seconds = max_idle_seconds
+        self.__confidence = confidence
+        self.__dynamic_confidence = dynamic_confidence
+        self.__client: Optional[
             weakref.ReferenceType["coredis.client.RedisConnection"]
         ] = None
 
@@ -465,22 +550,30 @@ class TrackingCache(AbstractCache):
     ) -> TrackingCache:
         import coredis.client
 
-        if self._client and self._client() != client:
+        if self.__client and self.__client() != client:
             raise RuntimeError(
                 "Instances of this cache are not meant to be shared between"
                 " multiple clients. Use `cache.share()` to create a new instance that"
                 " shares the same in-memory cache"
             )
-        self._client = weakref.ref(client)
+        self.__client = weakref.ref(client)
 
         if not self.instance:
             if isinstance(client, coredis.client.RedisCluster):
                 self.instance = ClusterTrackingCache(
-                    self.max_keys, self.max_size_bytes, self.max_idle_seconds
+                    self.__max_keys,
+                    self.__max_size_bytes,
+                    self.__max_idle_seconds,
+                    confidence=self.__confidence,
+                    dynamic_confidence=self.__dynamic_confidence,
                 )
             else:
                 self.instance = NodeTrackingCache(
-                    self.max_keys, self.max_size_bytes, self.max_idle_seconds
+                    self.__max_keys,
+                    self.__max_size_bytes,
+                    self.__max_idle_seconds,
+                    confidence=self.__confidence,
+                    dynamic_confidence=self.__dynamic_confidence,
                 )
         await self.instance.initialize(client)
         return self
@@ -488,6 +581,11 @@ class TrackingCache(AbstractCache):
     @property
     def healthy(self) -> bool:
         return bool(self.instance and self.instance.healthy)
+
+    @property
+    def confidence(self) -> float:
+        assert self.instance
+        return self.instance.confidence
 
     def get_client_id(self, connection: BaseConnection) -> Optional[int]:
         if self.instance:
@@ -504,6 +602,10 @@ class TrackingCache(AbstractCache):
         if self.instance:
             self.instance.put(command, key, *args, value=value)
 
+    def feedback(self, command: bytes, key: bytes, *args: ValueT, match: bool) -> None:
+        assert self.instance
+        self.instance.feedback(command, key, *args, match=match)
+
     def reset(self, *keys: ValueT) -> None:
         if self.instance:
             self.instance.reset(*keys)
@@ -511,7 +613,7 @@ class TrackingCache(AbstractCache):
     def shutdown(self) -> None:
         if self.instance:
             self.instance.shutdown()
-        self._client = None
+        self.__client = None
 
     def share(self) -> TrackingCache:
         """

@@ -73,6 +73,11 @@ the cache. Specifically the following constructor arguments might be of interest
     notifications have been received and if the threshold is breached the in memory cache
     will be reset and the cache marked unhealthy.
 
+:paramref:`~coredis.cache.TrackingCache.confidence`
+    Confidence % in the cache. The client will sample cached values based on the confidence
+    and if the cached value is not the same as the actual response from the server
+    the actual value will be returned and the tainted key invalidated.
+
 
 .. warning:: Instances of :class:`~coredis.cache.TrackingCache` are not meant to be shared
    between clients directly and if an instance of the class is reused it will raise an error.

@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import dataclasses
 import functools
+import random
 import textwrap
 from typing import TYPE_CHECKING, Any, cast
 
@@ -84,12 +85,24 @@ class CommandCache:
             else:
                 key = self.cache_config.key_func(*args[1:], **kwargs)
                 try:
-                    yield cast(
+                    cached = cast(
                         R,
                         cache.get(
                             self.command, key, *args[1:], *kwargs.items()  # type: ignore
                         ),
                     )
+                    if not random.random() * 100.0 < min(100.0, cache.confidence):
+                        actual = await func(*args, **kwargs)
+                        cache.feedback(
+                            self.command,
+                            key,
+                            *args[1:],  # type: ignore
+                            *kwargs.items(),  # type: ignore
+                            match=(actual == cached),
+                        )
+                        yield actual
+                    else:
+                        yield cached
                 except KeyError:
                     response = await func(*args, **kwargs)
                     cache.put(
