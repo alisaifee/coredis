@@ -62,7 +62,7 @@ class TestInvalidatingCache:
         execute_command = mocker.spy(cached, "execute_command")
         [await cached.getrange("fubar", i, i + 1000) for i in range(10)]
         assert execute_command.call_count == 0
-        await asyncio.sleep(1)
+        await asyncio.sleep(1.5)
         [await cached.getrange("fubar", i, i + 1000) for i in range(10)]
         assert execute_command.call_count > 0
 
@@ -129,6 +129,6 @@ class TestClusterInvalidatingCache:
         execute_command = mocker.spy(cached, "execute_command")
         [await cached.getrange("fubar", i, i + 1000) for i in range(10)]
         assert execute_command.call_count == 0
-        await asyncio.sleep(1)
+        await asyncio.sleep(1.5)
         [await cached.getrange("fubar", i, i + 1000) for i in range(10)]
         assert execute_command.call_count > 0
