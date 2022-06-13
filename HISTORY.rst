@@ -3,6 +3,14 @@
 Changelog
 =========
 
+v3.9
+----
+Release Date: 2022-06-12
+
+* Features
+
+  * Add support for client side caching
+
 v3.8.12
 -------
 Release Date: 2022-06-10
@@ -808,6 +816,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
