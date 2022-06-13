@@ -1943,7 +1943,12 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.HEXISTS, key, field, callback=BoolCallback()
         )
 
-    @redis_command(CommandName.HGET, readonly=True, group=CommandGroup.HASH)
+    @redis_command(
+        CommandName.HGET,
+        readonly=True,
+        group=CommandGroup.HASH,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
+    )
     async def hget(self, key: KeyT, field: StringT) -> Optional[AnyStr]:
         """Returns the value of ``field`` within the hash :paramref:`key`"""
 
@@ -4035,7 +4040,12 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.ZINTERCARD, *pieces, callback=IntCallback()
         )
 
-    @redis_command(CommandName.ZLEXCOUNT, readonly=True, group=CommandGroup.SORTED_SET)
+    @redis_command(
+        CommandName.ZLEXCOUNT,
+        readonly=True,
+        group=CommandGroup.SORTED_SET,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
+    )
     async def zlexcount(self, key: KeyT, min_: ValueT, max_: ValueT) -> int:
         """
         Count the number of members in a sorted set between a given lexicographical range
@@ -4079,6 +4089,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         readonly=True,
         version_introduced="6.2.0",
         group=CommandGroup.SORTED_SET,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def zmscore(
         self, key: KeyT, members: Parameters[ValueT]
@@ -4227,6 +4238,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             "offset": {"version_introduced": "6.2.0"},
             "count": {"version_introduced": "6.2.0"},
         },
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def zrange(
         self,
@@ -4266,6 +4278,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_deprecated="6.2.0",
         deprecation_reason=" Use :meth:`zrange` with the sortby=BYLEX argument",
         group=CommandGroup.SORTED_SET,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     @mutually_inclusive_parameters("offset", "count")
     async def zrangebylex(
@@ -4298,6 +4311,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_deprecated="6.2.0",
         deprecation_reason=" Use :meth:`zrange` with the sortby=BYSCORE argument",
         group=CommandGroup.SORTED_SET,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     @mutually_inclusive_parameters("offset", "count")
     async def zrangebyscore(
@@ -4480,6 +4494,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_deprecated="6.2.0",
         deprecation_reason="Use :meth:`zrange` with the rev and sort=BYLEX arguments",
         group=CommandGroup.SORTED_SET,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     @mutually_inclusive_parameters("offset", "count")
     async def zrevrangebylex(
