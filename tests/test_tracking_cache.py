@@ -53,6 +53,7 @@ class TestInvalidatingCache:
         await asyncio.sleep(0.2)
         assert await cached.get("fubar") == _s("2")
 
+    @pytest.mark.flaky
     async def test_cache_size_bytes(self, client, cloner, mocker, _s):
         cache = TrackingCache(max_size_bytes=5000, max_idle_seconds=1)
         cached = await cloner(client, cache=cache)
@@ -62,7 +63,7 @@ class TestInvalidatingCache:
         execute_command = mocker.spy(cached, "execute_command")
         [await cached.getrange("fubar", i, i + 1000) for i in range(10)]
         assert execute_command.call_count == 0
-        await asyncio.sleep(1.5)
+        await asyncio.sleep(1)
         [await cached.getrange("fubar", i, i + 1000) for i in range(10)]
         assert execute_command.call_count > 0
 
@@ -131,6 +132,7 @@ class TestClusterInvalidatingCache:
         await asyncio.sleep(0.2)
         assert await cached.get("fubar") == _s("2")
 
+    @pytest.mark.flaky
     async def test_cache_size_bytes(self, client, cloner, mocker, _s):
         cache = TrackingCache(max_size_bytes=5000, max_idle_seconds=1)
         cached = await cloner(client, cache=cache)
@@ -140,6 +142,6 @@ class TestClusterInvalidatingCache:
         execute_command = mocker.spy(cached, "execute_command")
         [await cached.getrange("fubar", i, i + 1000) for i in range(10)]
         assert execute_command.call_count == 0
-        await asyncio.sleep(1.5)
+        await asyncio.sleep(1)
         [await cached.getrange("fubar", i, i + 1000) for i in range(10)]
         assert execute_command.call_count > 0
