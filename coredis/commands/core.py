@@ -3433,7 +3433,12 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.SADD, key, *members, callback=IntCallback()
         )
 
-    @redis_command(CommandName.SCARD, readonly=True, group=CommandGroup.SET)
+    @redis_command(
+        CommandName.SCARD,
+        readonly=True,
+        group=CommandGroup.SET,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
+    )
     async def scard(self, key: KeyT) -> int:
         """
         Returns the number of members in the set
@@ -3533,6 +3538,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.SISMEMBER,
         readonly=True,
         group=CommandGroup.SET,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def sismember(self, key: KeyT, member: ValueT) -> bool:
         """
@@ -3549,6 +3555,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.SMEMBERS,
         readonly=True,
         group=CommandGroup.SET,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def smembers(self, key: KeyT) -> Set[AnyStr]:
         """Returns all members of the set"""
@@ -3562,6 +3569,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         readonly=True,
         version_introduced="6.2.0",
         group=CommandGroup.SET,
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def smismember(
         self, key: KeyT, members: Parameters[ValueT]
