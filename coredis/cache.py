@@ -103,6 +103,16 @@ class AbstractCache(ABC):
             )
         )
 
+    @abstractmethod
+    def share(self) -> AbstractCache:
+        """
+        Returns a new instance of this cache which shares
+        the backing storage for use with another client
+        pointing to the same redis instance.
+
+        """
+        ...
+
 
 ET = TypeVar("ET")
 
@@ -143,7 +153,7 @@ class LRUCache(Generic[ET]):
         """
         Recursively remove the oldest entry. If
         the oldest entry is another LRUCache trigger
-        the removal of it's oldest entry and if that
+        the removal of its oldest entry and if that
         turns out to be an empty LRUCache, remove that.
         """
         try:
@@ -281,8 +291,13 @@ class NodeTrackingCache(AbstractCache, Sidecar):
         except RuntimeError:
             pass
 
+    def share(self) -> NodeTrackingCache:
+        return self.__class__(cache=self.__cache)
+
     def get_client_id(self, client: BaseConnection) -> Optional[int]:
-        return self.client_id
+        if self.connection and self.connection.is_connected:
+            return self.client_id
+        return None
 
     async def __watchdog(self) -> None:
         while True:
@@ -324,6 +339,7 @@ class ClusterTrackingCache(AbstractCache):
         max_keys: int = 2**12,
         max_size_bytes: int = 64 * 1024 * 1024,
         max_idle_seconds: int = 5,
+        cache: Optional[LRUCache[LRUCache[LRUCache[ResponseType]]]] = None,
     ) -> None:
         """
         :param max_keys: maximum keys to cache. A negative value represents
@@ -335,7 +351,7 @@ class ClusterTrackingCache(AbstractCache):
          and cache will be reset.
         """
         self.__protocol_version: Optional[Literal[2, 3]] = None
-        self.__cache: LRUCache[LRUCache[LRUCache[ResponseType]]] = LRUCache(
+        self.__cache: LRUCache[LRUCache[LRUCache[ResponseType]]] = cache or LRUCache(
             max_keys, max_size_bytes
         )
         self.node_caches: Dict[str, NodeTrackingCache] = {}
@@ -372,7 +388,10 @@ class ClusterTrackingCache(AbstractCache):
         )
 
     def get_client_id(self, connection: BaseConnection) -> Optional[int]:
-        return self.node_caches[connection.location].client_id
+        try:
+            return self.node_caches[connection.location].get_client_id(connection)
+        except KeyError:
+            return None
 
     def get(self, command: bytes, key: bytes, *args: ValueT) -> ResponseType:
         return self.__cache.get(b(key)).get(command).get(self.hashable_args(*args))
@@ -397,6 +416,9 @@ class ClusterTrackingCache(AbstractCache):
                 sidecar.shutdown()
             self.node_caches.clear()
             self.__nodes.clear()
+
+    def share(self) -> ClusterTrackingCache:
+        return self.__class__(cache=self.__cache)
 
     def __del__(self) -> None:
         self.shutdown()
@@ -475,6 +497,20 @@ class TrackingCache(AbstractCache):
     def shutdown(self) -> None:
         if self.instance:
             self.instance.shutdown()
+
+    def share(self) -> TrackingCache:
+        """
+        In the example below ``c1`` and ``c2`` have their own
+        instances of :class:`~coredis.cache.TrackingCache` but
+        share the same in-memory local cached responses::
+
+            c1 = await coredis.Redis(cache=TrackingCache())
+            c2 = await coredis.Redis(cache=c1.cache.share())
+        """
+        assert self.instance
+        copy = self.__class__()
+        copy.instance = self.instance.share()
+        return copy
 
     def __del__(self) -> None:
         self.shutdown()
