@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+import weakref
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
@@ -455,11 +456,22 @@ class TrackingCache(AbstractCache):
         self.max_size_bytes = max_size_bytes
         self.max_idle_seconds = max_idle_seconds
         self.instance: Optional[AbstractCache] = None
+        self._client: Optional[
+            weakref.ReferenceType["coredis.client.RedisConnection"]
+        ] = None
 
     async def initialize(
         self, client: "coredis.client.RedisConnection"
     ) -> TrackingCache:
         import coredis.client
+
+        if self._client and self._client() != client:
+            raise RuntimeError(
+                "Instances of this cache are not meant to be shared between"
+                " multiple clients. Use `cache.share()` to create a new instance that"
+                " shares the same in-memory cache"
+            )
+        self._client = weakref.ref(client)
 
         if not self.instance:
             if isinstance(client, coredis.client.RedisCluster):
@@ -499,6 +511,7 @@ class TrackingCache(AbstractCache):
     def shutdown(self) -> None:
         if self.instance:
             self.instance.shutdown()
+        self._client = None
 
     def share(self) -> TrackingCache:
         """

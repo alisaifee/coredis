@@ -72,3 +72,10 @@ the cache. Specifically the following constructor arguments might be of interest
     use the ``PING`` command to verify if the server is responsive even if no invalidation
     notifications have been received and if the threshold is breached the in memory cache
     will be reset and the cache marked unhealthy.
+
+
+.. warning:: Instances of :class:`~coredis.cache.TrackingCache` are not meant to be shared
+   between clients directly and if an instance of the class is reused it will raise an error.
+   If you are confident that multiple clients can use the same in-memory cache
+   the :meth:`coredis.cache.TrackingCache.share` method can be used to create a clone that can be
+   safely passed to another client.

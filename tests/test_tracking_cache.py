@@ -56,6 +56,9 @@ class TestInvalidatingCache:
     async def test_shared_cache(self, client, cloner, mocker, _s):
         cache = TrackingCache()
         cached = await cloner(client, cache=cache)
+        with pytest.raises(RuntimeError):
+            await cloner(client, cache=cache)
+
         clones = [await cloner(client, cache=cache.share()) for _ in range(5)]
 
         await client.set("fubar", "test")
@@ -117,3 +120,17 @@ class TestClusterInvalidatingCache:
         ]
         await asyncio.sleep(0.2)
         assert await cached.get("fubar") == _s("2")
+
+    async def test_shared_cache(self, client, cloner, mocker, _s):
+        cache = TrackingCache()
+        cached = await cloner(client, cache=cache)
+        with pytest.raises(RuntimeError):
+            await cloner(client, cache=cache)
+
+        clones = [await cloner(client, cache=cache.share()) for _ in range(5)]
+
+        await client.set("fubar", "test")
+        await cached.get("fubar")
+        spies = [mocker.spy(clone, "execute_command") for clone in clones]
+        assert set([await clone.get("fubar") for clone in clones]) == set([_s("test")])
+        assert all(spy.call_count == 0 for spy in spies)
