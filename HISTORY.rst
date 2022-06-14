@@ -3,6 +3,14 @@
 Changelog
 =========
 
+v3.9.2
+------
+Release Date: 2022-06-14
+
+* Features
+
+  * Add option to define confidence in cached entries
+
 v3.9.1
 ------
 Release Date: 2022-06-13
@@ -825,6 +833,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
