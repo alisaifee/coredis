@@ -204,8 +204,9 @@ class LRUCache(Generic[ET]):
     def __repr__(self) -> str:
         return (
             f"LruCache<max_items={self.max_items}, "
+            f"current_items={len(self.__cache)}, "
             f"max_bytes={self.max_bytes}, "
-            f"current_size={asizeof.asizeof(self)}>"
+            f"current_size_bytes={asizeof.asizeof(self)}>"
         )
 
     def __check_capacity(self) -> None:
