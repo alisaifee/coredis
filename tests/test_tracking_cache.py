@@ -56,9 +56,8 @@ class CommonExamples:
         execute_command = mocker.spy(cached, "execute_command")
         [await cached.get(f"fubar{i}") for i in range(100)]
         assert execute_command.call_count == 100
-        execute_command = mocker.spy(cached, "execute_command")
         [await cached.get(f"fubar{i}") for i in range(100)]
-        assert execute_command.call_count < expectation
+        assert execute_command.call_count < 100 + expectation
 
     async def test_feedback(self, client, cloner, mocker, _s):
         cache = TrackingCache(confidence=0)
