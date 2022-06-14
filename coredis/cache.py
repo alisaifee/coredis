@@ -281,9 +281,10 @@ class NodeTrackingCache(AbstractCache, Sidecar):
         if not match:
             self.reset(key)
         if self.__dynamic_confidence:
-            self.__confidence = self.__confidence * (1.0001 if match else 0.999)
-            if self.__confidence > self.__original_confidence:
-                self.__confidence = self.__original_confidence
+            self.__confidence = min(
+                self.__original_confidence,
+                self.__confidence * (1.0001 if match else 0.999),
+            )
 
     def reset(self, *keys: ValueT) -> None:
         if keys is not None:
@@ -473,9 +474,10 @@ class ClusterTrackingCache(AbstractCache):
         if not match:
             self.reset(key)
         if self.__dynamic_confidence:
-            self.__confidence = self.__confidence * (1.0001 if match else 0.999)
-            if self.__confidence > self.__original_confidence:
-                self.__confidence = self.__original_confidence
+            self.__confidence = min(
+                self.__original_confidence,
+                self.__confidence * (1.0001 if match else 0.999),
+            )
 
     def reset(self, *keys: ValueT) -> None:
         if keys is not None:
