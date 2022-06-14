@@ -585,7 +585,8 @@ class TrackingCache(AbstractCache):
 
     @property
     def confidence(self) -> float:
-        assert self.instance
+        if not self.instance:
+            return 0
         return self.instance.confidence
 
     def get_client_id(self, connection: BaseConnection) -> Optional[int]:
@@ -604,8 +605,8 @@ class TrackingCache(AbstractCache):
             self.instance.put(command, key, *args, value=value)
 
     def feedback(self, command: bytes, key: bytes, *args: ValueT, match: bool) -> None:
-        assert self.instance
-        self.instance.feedback(command, key, *args, match=match)
+        if self.instance:
+            self.instance.feedback(command, key, *args, match=match)
 
     def reset(self, *keys: ValueT) -> None:
         if self.instance:
