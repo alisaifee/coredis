@@ -89,14 +89,14 @@ jobs:
           - python-version: "3.11.0-beta.3"
             service_version: "REDIS_VERSION=7.0.0 REDIS_SSL_VERSION=7.0.0"
             parser: python
-            test_params: "-m '(not (keydb or dragonfly))'"
+            test_params: "-m basic"
             runtime_type_checks: "True"
             uvloop: "False"
             extensions: "True"
           - python-version: "3.11.0-beta.3"
             service_version: "REDIS_VERSION=7.0.0 REDIS_SSL_VERSION=7.0.0"
             parser: python
-            test_params: "-m '(not (keydb or dragonfly))'"
+            test_params: "-m basic"
             runtime_type_checks: "True"
             uvloop: "False"
             extensions: "False"
