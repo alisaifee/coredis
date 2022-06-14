@@ -925,6 +925,7 @@ class RedisCluster(
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         non_atomic_cross_slot: bool = ...,
+        cache: Optional[AbstractCache] = ...,
         **kwargs: Any,
     ):
         ...
@@ -947,6 +948,7 @@ class RedisCluster(
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         non_atomic_cross_slot: bool = ...,
+        cache: Optional[AbstractCache] = ...,
         **kwargs: Any,
     ):
         ...
@@ -973,6 +975,10 @@ class RedisCluster(
     ):
         """
 
+        .. versionadded:: 3.9.0
+           If :paramref:`cache` is provided the client will check & populate
+           the cache for read only commands and invalidate it for commands
+           that could change the key(s) in the request.
         .. versionadded:: 3.6.0
            The :paramref:`non_atomic_cross_slot` parameter was added
         .. versionchanged:: 3.5.0
@@ -1011,6 +1017,9 @@ class RedisCluster(
          on multiple keys (cross slot) will be split across the relevant nodes by
          mapping the keys to the appropriate slot and the result merged before being
          returned.
+        :param cache: If provided the cache will be used to avoid requests for read only
+         commands if the client has already requested the data and it hasn't been invalidated.
+         The cache is responsible for any mutations to the keys that happen outside of this client
         """
 
         if "db" in kwargs:  # noqa
