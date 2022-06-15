@@ -127,7 +127,9 @@ class BaseConnection:
         self.db: Optional[int] = None
         self.pid = os.getpid()
         self.retry_on_timeout = retry_on_timeout
-        self._description_args: Dict[str, Optional[Union[str, int]]] = dict()
+        self._description_args: Callable[
+            ..., Dict[str, Optional[Union[str, int]]]
+        ] = lambda: dict()
         self._connect_callbacks: List[
             Union[
                 Callable[[BaseConnection], Awaitable[None]],
@@ -149,11 +151,11 @@ class BaseConnection:
         self.tracking_client_id = None
 
     def __repr__(self) -> str:
-        return self.description.format(**self._description_args)
+        return self.description.format(**self._description_args())
 
     @property
     def location(self) -> str:
-        return self.locator.format(**self._description_args)
+        return self.locator.format(**self._description_args())
 
     def __del__(self) -> None:
         try:
@@ -414,7 +416,9 @@ class Connection(BaseConnection):
         self.db: Optional[int] = db
         self.ssl_context = ssl_context
         self._connect_timeout = connect_timeout
-        self._description_args: Dict[str, Optional[Union[str, int]]] = {
+        self._description_args: Callable[
+            ..., Dict[str, Optional[Union[str, int]]]
+        ] = lambda: {
             "host": self.host,
             "port": self.port,
             "db": self.db,
@@ -494,7 +498,7 @@ class UnixDomainSocketConnection(BaseConnection):
         self.password = password
         self.ssl_context = ssl_context
         self._connect_timeout = connect_timeout
-        self._description_args = {"path": self.path, "db": self.db}
+        self._description_args = lambda: {"path": self.path, "db": self.db}
 
     async def _connect(self) -> None:
         connection = asyncio.open_unix_connection(path=self.path, ssl=self.ssl_context)
