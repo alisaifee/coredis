@@ -709,7 +709,7 @@ class Redis(
     async def initialize(self) -> Redis[AnyStr]:
         await super().initialize()
         if self.cache:
-            await self.cache.initialize(self)
+            self.cache = await self.cache.initialize(self)
         return self
 
     def set_response_callback(
@@ -1173,7 +1173,7 @@ class RedisCluster(
     async def initialize(self) -> RedisCluster[AnyStr]:
         await super().initialize()
         if self.cache:
-            await self.cache.initialize(self)
+            self.cache = await self.cache.initialize(self)
         self.refresh_table_asap = False
         return self
 

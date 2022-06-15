@@ -97,10 +97,8 @@ class CommonExamples:
     async def test_shared_cache(self, client, cloner, mocker, _s):
         cache = TrackingCache()
         cached = await cloner(client, cache=cache)
-        with pytest.raises(RuntimeError):
-            await cloner(client, cache=cache)
 
-        clones = [await cloner(client, cache=cache.share()) for _ in range(5)]
+        clones = [await cloner(client, cache=cache) for _ in range(5)]
 
         await client.set("fubar", "test")
         await cached.get("fubar")

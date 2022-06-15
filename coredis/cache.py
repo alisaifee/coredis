@@ -520,6 +520,7 @@ class TrackingCache(AbstractCache):
         max_keys: int = 2**12,
         max_size_bytes: int = 64 * 1024 * 1024,
         max_idle_seconds: int = 5,
+        cache: Optional[LRUCache[LRUCache[LRUCache[ResponseType]]]] = None,
         confidence: float = 100.0,
         dynamic_confidence: bool = False,
     ) -> None:
@@ -544,6 +545,9 @@ class TrackingCache(AbstractCache):
         self.__max_idle_seconds = max_idle_seconds
         self.__confidence = confidence
         self.__dynamic_confidence = dynamic_confidence
+        self.__cache: LRUCache[LRUCache[LRUCache[ResponseType]]] = cache or LRUCache(
+            max_keys, max_size_bytes
+        )
         self.__client: Optional[
             weakref.ReferenceType["coredis.client.RedisConnection"]
         ] = None
@@ -554,11 +558,9 @@ class TrackingCache(AbstractCache):
         import coredis.client
 
         if self.__client and self.__client() != client:
-            raise RuntimeError(
-                "Instances of this cache are not meant to be shared between"
-                " multiple clients. Use `cache.share()` to create a new instance that"
-                " shares the same in-memory cache"
-            )
+            copy = self.share()
+            return await copy.initialize(client)
+
         self.__client = weakref.ref(client)
 
         if not self.instance:
@@ -567,6 +569,7 @@ class TrackingCache(AbstractCache):
                     self.__max_keys,
                     self.__max_size_bytes,
                     self.__max_idle_seconds,
+                    cache=self.__cache,
                     confidence=self.__confidence,
                     dynamic_confidence=self.__dynamic_confidence,
                 )
@@ -575,6 +578,7 @@ class TrackingCache(AbstractCache):
                     self.__max_keys,
                     self.__max_size_bytes,
                     self.__max_idle_seconds,
+                    cache=self.__cache,
                     confidence=self.__confidence,
                     dynamic_confidence=self.__dynamic_confidence,
                 )
@@ -631,9 +635,14 @@ class TrackingCache(AbstractCache):
             c1 = await coredis.Redis(cache=TrackingCache())
             c2 = await coredis.Redis(cache=c1.cache.share())
         """
-        assert self.instance
-        copy = self.__class__()
-        copy.instance = self.instance.share()
+        copy = self.__class__(
+            self.__max_keys,
+            self.__max_size_bytes,
+            self.__max_idle_seconds,
+            self.__cache,
+            self.__confidence,
+            self.__dynamic_confidence,
+        )
         return copy
 
     def __del__(self) -> None:

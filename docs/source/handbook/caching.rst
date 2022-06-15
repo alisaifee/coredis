@@ -82,10 +82,3 @@ the cache. Specifically the following constructor arguments might be of interest
     Confidence % in the cache. The client will sample cached values based on the confidence
     and if the cached value is not the same as the actual response from the server
     the actual value will be returned and the tainted key invalidated.
-
-
-.. warning:: Instances of :class:`~coredis.cache.TrackingCache` are not meant to be shared
-   between clients directly and if an instance of the class is reused it will raise an error.
-   If you are confident that multiple clients can use the same in-memory cache
-   the :meth:`coredis.cache.TrackingCache.share` method can be used to create a clone that can be
-   safely passed to another client.

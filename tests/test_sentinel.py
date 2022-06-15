@@ -278,3 +278,33 @@ async def test_sentinel_replicas(redis_sentinel):
             for k in (await redis_sentinel.sentinels[0].sentinel_replicas("mymaster"))
         ]
     )
+
+
+@pytest.mark.parametrize(
+    "client_arguments", [({"cache": coredis.cache.TrackingCache()})]
+)
+async def test_sentinel_cache(redis_sentinel, client_arguments, mocker):
+    await redis_sentinel.primary_for("mymaster").set("fubar", 1)
+
+    assert await redis_sentinel.primary_for("mymaster").get("fubar") == "1"
+
+    new_primary = redis_sentinel.primary_for("mymaster")
+    new_replica = redis_sentinel.replica_for("mymaster")
+
+    assert new_primary.cache
+    assert new_replica.cache
+
+    await new_primary.ping()
+    await new_replica.ping()
+
+    primary_spy = mocker.spy(new_primary, "execute_command")
+    replica_spy = mocker.spy(new_replica, "execute_command")
+
+    assert new_primary.cache.healthy
+    assert new_replica.cache.healthy
+
+    assert await new_primary.get("fubar") == "1"
+    assert await new_replica.get("fubar") == "1"
+
+    assert primary_spy.call_count == 1
+    assert replica_spy.call_count == 0

@@ -9,7 +9,7 @@ from deprecated.sphinx import deprecated, versionadded
 
 from coredis import Redis
 from coredis._utils import nativestr
-from coredis.commands.constants import CommandName
+from coredis.cache import AbstractCache
 from coredis.connection import Connection, RedisSSLContext
 from coredis.exceptions import (
     ConnectionError,
@@ -96,10 +96,6 @@ class SentinelManagedConnection(Connection, Generic[AnyStr]):
     async def connect_to(self, address: Tuple[str, int]) -> None:
         self.host, self.port = address
         await super().connect()
-        if self.connection_pool.check_connection:
-            await self.send_command(CommandName.PING)
-            if await self.read_response(decode=False) != b"PONG":
-                raise ConnectionError("PING failed")
 
     async def connect(self) -> None:
         if self._reader and self._writer:
@@ -138,10 +134,6 @@ class SentinelManagedConnection(Connection, Generic[AnyStr]):
 class SentinelConnectionPool(ConnectionPool):
     """
     Sentinel backed connection pool.
-
-    If :paramref:`check_connection` is ``True``,
-    :class:`~coredis.sentinel.SentinelManagedConnection`
-    sends a ``PING`` command right after establishing the connection.
     """
 
     primary_address: Optional[Tuple[str, int]]
@@ -156,7 +148,6 @@ class SentinelConnectionPool(ConnectionPool):
         **kwargs: Any,
     ):
         self.is_primary = is_primary
-        self.check_connection = check_connection
         kwargs["connection_class"] = cast(
             Type[Connection],
             kwargs.get("connection_class", SentinelManagedConnection[AnyStr]),
@@ -165,6 +156,7 @@ class SentinelConnectionPool(ConnectionPool):
         self.connection_kwargs["connection_pool"] = self
         self.service_name = nativestr(service_name)
         self.sentinel_manager = sentinel_manager
+        self.check_connection = check_connection
 
     def __repr__(self) -> str:
         return "{}<service={}({})".format(
@@ -216,9 +208,9 @@ class SentinelConnectionPool(ConnectionPool):
                 self.service_name,
                 self.sentinel_manager,
                 is_primary=self.is_primary,
-                check_connection=self.check_connection,
                 connection_class=self.connection_class,
                 max_connections=self.max_connections,
+                check_connection=self.check_connection,
                 **self.connection_kwargs,
             )
 
@@ -246,6 +238,7 @@ class Sentinel(Generic[AnyStr]):
         min_other_sentinels: int = ...,
         sentinel_kwargs: Optional[Dict[str, Any]] = ...,
         decode_responses: Literal[False] = ...,
+        cache: Optional[AbstractCache] = None,
         **connection_kwargs: Any,
     ):
         ...
@@ -257,6 +250,7 @@ class Sentinel(Generic[AnyStr]):
         min_other_sentinels: int = ...,
         sentinel_kwargs: Optional[Dict[str, Any]] = ...,
         decode_responses: Literal[True] = ...,
+        cache: Optional[AbstractCache] = None,
         **connection_kwargs: Any,
     ):
         ...
@@ -267,6 +261,7 @@ class Sentinel(Generic[AnyStr]):
         min_other_sentinels: int = 0,
         sentinel_kwargs: Optional[Dict[str, Any]] = None,
         decode_responses: bool = False,
+        cache: Optional[AbstractCache] = None,
         **connection_kwargs: Any,
     ):
         """
@@ -280,7 +275,8 @@ class Sentinel(Generic[AnyStr]):
          a normal Redis connection can be specified here. If :paramref:`sentinel_kwargs` is
          not specified, ``stream_timeout``, ``socket_keepalive``, ``decode_responses``
          and ``protocol_version`` options specified in :paramref:`connection_kwargs` will be used.
-        :param decode_responses:
+        :param cache: If provided the cache will be shared between both primaries and replicas
+         returned by this sentinel.
         :param connection_kwargs: are keyword arguments that will be used when
          establishing a connection to a Redis server (i.e. are passed on to the
          constructor of :class:`Redis` for all primary and replicas).
@@ -303,7 +299,7 @@ class Sentinel(Generic[AnyStr]):
         self.sentinel_kwargs = sentinel_kwargs
         self.min_other_sentinels = min_other_sentinels
         self.connection_kwargs = connection_kwargs
-
+        self.__cache = cache
         self.connection_kwargs["decode_responses"] = self.sentinel_kwargs[
             "decode_responses"
         ] = decode_responses
@@ -443,7 +439,8 @@ class Sentinel(Generic[AnyStr]):
                 service_name,
                 self,
                 **connection_kwargs,
-            )
+            ),
+            cache=self.__cache,
         )
 
     @overload
@@ -499,7 +496,8 @@ class Sentinel(Generic[AnyStr]):
                 service_name,
                 self,
                 **connection_kwargs,
-            )
+            ),
+            cache=self.__cache,
         )
 
     @deprecated(version="3.1.0", reason="Use :meth:`discover_primary()` instead")
