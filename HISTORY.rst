@@ -3,6 +3,18 @@
 Changelog
 =========
 
+v3.9.3
+------
+Release Date: 2022-06-15
+
+* Features
+
+  * Expose cache parameter to Sentinel managed clients
+
+* Bug Fix
+
+  * Handle error parsing command not found exception
+
 v3.9.2
 ------
 Release Date: 2022-06-14
@@ -833,6 +845,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
