@@ -265,12 +265,14 @@ class UnknownCommandError(ResponseError):
     to an unknown command.
     """
 
-    ERROR_REGEX = re.compile("unknown command `(.*?)`")
+    ERROR_REGEX = re.compile("unknown command (.*?)")
     #: Name of command requested
     command: str
 
     def __init__(self, message: str) -> None:
-        self.command = self.ERROR_REGEX.findall(message).pop()
+        command_match = self.ERROR_REGEX.findall(message)
+        if command_match:
+            self.command = command_match.pop()
         super().__init__(self, message)
 
 
