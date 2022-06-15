@@ -36,7 +36,7 @@ For example:
 Cluster Lock
 ^^^^^^^^^^^^
 
-eclass:`~coredis.lock.ClusterLock` is supposed to solve distributed lock problem
+:class:`~coredis.lock.ClusterLock` is supposed to solve distributed lock problem
 in redis cluster. Since high availability is provided by redis cluster using primary-replica model,
 the kind of lock aims to solve the fail-over problem referred in distributed lock
 post given by redis official.
