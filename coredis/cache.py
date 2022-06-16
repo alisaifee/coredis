@@ -243,7 +243,7 @@ class NodeTrackingCache(AbstractCache, Sidecar):
         :param dynamic_confidence: Whether to adjust the confidence based on
          sampled validations. Tainted values drop the confidence by 0.1% and
          confirmations of correct cached values will increase the confidence by 0.01%
-         upto the original confidence.
+         upto 100.
         """
         self.__protocol_version: Optional[Literal[2, 3]] = None
         self.__invalidation_task: Optional[asyncio.Task[None]] = None
@@ -282,8 +282,8 @@ class NodeTrackingCache(AbstractCache, Sidecar):
             self.reset(key)
         if self.__dynamic_confidence:
             self.__confidence = min(
-                self.__original_confidence,
-                self.__confidence * (1.0001 if match else 0.999),
+                100.0,
+                max(0.0, self.__confidence * (1.0001 if match else 0.999)),
             )
 
     def reset(self, *keys: ValueT) -> None:
@@ -406,7 +406,7 @@ class ClusterTrackingCache(AbstractCache):
         :param dynamic_confidence: Whether to adjust the confidence based on
          sampled validations. Tainted values drop the confidence by 0.1% and
          confirmations of correct cached values will increase the confidence by 0.01%
-         upto the original confidence.
+         upto 100.
         """
         self.__protocol_version: Optional[Literal[2, 3]] = None
         self.__cache: LRUCache[LRUCache[LRUCache[ResponseType]]] = cache or LRUCache(
@@ -475,8 +475,8 @@ class ClusterTrackingCache(AbstractCache):
             self.reset(key)
         if self.__dynamic_confidence:
             self.__confidence = min(
-                self.__original_confidence,
-                self.__confidence * (1.0001 if match else 0.999),
+                100.0,
+                max(0.0, self.__confidence * (1.0001 if match else 0.999)),
             )
 
     def reset(self, *keys: ValueT) -> None:
@@ -537,7 +537,7 @@ class TrackingCache(AbstractCache):
         :param dynamic_confidence: Whether to adjust the confidence based on
          sampled validations. Tainted values drop the confidence by 0.1% and
          confirmations of correct cached values will increase the confidence by 0.01%
-         upto the original confidence.
+         upto 100.
         """
         self.instance: Optional[AbstractCache] = None
         self.__max_keys = max_keys
