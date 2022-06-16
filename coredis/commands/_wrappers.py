@@ -128,8 +128,10 @@ def redis_command(
 ) -> Callable[
     [Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]
 ]:
-    if not readonly and cache_config:
-        raise RuntimeError()
+    if not readonly and cache_config:  # noqa
+        raise RuntimeError(
+            f"Can't decorate readonly command {command_name} with cache config"
+        )
 
     command_details = CommandDetails(
         command_name,
