@@ -105,27 +105,10 @@ class Unpacker:
 
             marker, chunk = chunk[0], chunk[1:]
             response: ResponsePrimitive | RedisError = None
-            if marker not in Unpacker.ALLOWED_TYPES:  # noqa
-                raise InvalidResponse(
-                    f"Protocol Error: {chr(marker)}, {bytes(chunk)!r}"
-                )
-            if marker == RESPDataType.ERROR:
-                error = self.parse_error(bytes(chunk).decode())
-                if isinstance(error, ConnectionError):
-                    raise error
-                response = error
-            elif marker == RESPDataType.SIMPLE_STRING:
+            if marker == RESPDataType.SIMPLE_STRING:
                 response = bytes(chunk)
                 if decode_bytes and self.encoding:
                     response = response.decode(self.encoding)
-            elif marker == RESPDataType.INT:
-                response = int(chunk)
-            elif marker == RESPDataType.DOUBLE:
-                response = float(chunk)
-            elif marker == RESPDataType.NONE:
-                response = None
-            elif marker == RESPDataType.BOOLEAN:
-                response = chunk[0] == ord(b"t")
             elif marker in {RESPDataType.BULK_STRING, RESPDataType.VERBATIM}:
                 length = int(chunk)
                 if length == -1:
@@ -145,6 +128,14 @@ class Unpacker:
                         response = response[4:]
                     if decode_bytes and self.encoding:
                         response = response.decode(self.encoding)
+            elif marker == RESPDataType.INT:
+                response = int(chunk)
+            elif marker == RESPDataType.DOUBLE:
+                response = float(chunk)
+            elif marker == RESPDataType.NONE:
+                response = None
+            elif marker == RESPDataType.BOOLEAN:
+                response = chunk[0] == ord(b"t")
             elif marker in {
                 RESPDataType.ARRAY,
                 RESPDataType.PUSH,
@@ -172,6 +163,16 @@ class Unpacker:
                         self.nodes.append(RESPNode(set(), length, marker, None))
                 if length > 0:
                     continue
+            elif marker == RESPDataType.ERROR:
+                error = self.parse_error(bytes(chunk).decode())
+                if isinstance(error, ConnectionError):
+                    raise error
+                response = error
+            elif marker not in Unpacker.ALLOWED_TYPES:  # noqa
+                raise InvalidResponse(
+                    f"Protocol Error: {chr(marker)}, {bytes(chunk)!r}"
+                )
+
             if self.nodes:
                 if self.nodes[-1].depth > 0:
                     self.nodes[-1].depth -= 1
