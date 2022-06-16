@@ -292,6 +292,7 @@ class NodeTrackingCache(AbstractCache, Sidecar):
                 self.__cache.remove(b(k))
         else:
             self.__cache.clear()
+            self.__confidence = self.__original_confidence
 
     def process_message(self, message: ResponseType) -> Tuple[ResponseType, ...]:
         assert isinstance(message, list)
@@ -485,6 +486,7 @@ class ClusterTrackingCache(AbstractCache):
                 self.__cache.remove(b(k))
         else:
             self.__cache.clear()
+            self.__confidence = self.__original_confidence
 
     def shutdown(self) -> None:
         if self.node_caches:
