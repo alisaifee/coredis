@@ -340,7 +340,7 @@ class NodeTrackingCache(AbstractCache, Sidecar):
         return self.__class__(
             cache=self.__cache,
             max_idle_seconds=self.__max_idle_seconds,
-            confidence=self.__confidence,
+            confidence=self.__original_confidence,
             dynamic_confidence=self.__dynamic_confidence,
         )
 
@@ -497,7 +497,7 @@ class ClusterTrackingCache(AbstractCache):
         return self.__class__(
             cache=self.__cache,
             max_idle_seconds=self.__max_idle_seconds,
-            confidence=self.__confidence,
+            confidence=self.__original_confidence,
             dynamic_confidence=self.__dynamic_confidence,
         )
 
