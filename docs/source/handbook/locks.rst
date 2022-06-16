@@ -20,7 +20,7 @@ For example:
        client = coredis.Redis()
        await client.flushall()
        lock = client.lock('lalala')
-       print(await lock.icquire())
+       print(await lock.acquire())
        # True
        print(await lock.acquire(blocking=False))
        # False
@@ -66,7 +66,7 @@ Quoting the documentation from the original author of :pypi:`aredis`:
     using READONLY mode, if N/2+1 is synced successfully then break the check and return True,
     time used to check is also accounted into expire time
 
-    3.Use lua script described in redlock algorithm to release lock
+    3.Use lua scriipt described in redlock algorithm to release lock
     with the client which has the randomly generated token,
     if the client crashes, then wait until the lock key expired.
 
