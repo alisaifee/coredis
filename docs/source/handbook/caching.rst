@@ -14,10 +14,11 @@ implementing the :class:`~coredis.cache.AbstractCache` interface and will:
 2. Return cached responses when they are found if the cache is returning healthy via
    the :data:`~coredis.cache.AbstractCache.healthy` property
 3. Invalidate the entire cache for a key if a non readonly command is called
-4. If the cache returns a :data:`~coredis.cache.AbstractCache.confidence` value lower than ``100``
+4. If the cache implements: class:`~coredis.cache.SupportsSampling` and returns a
+   :data:`~coredis.cache.SupportsSampling.confidence` value lower than ``100``
    the client will distrust the cached response ``(100-$confidence)%`` of the time and validate
    the cached response against the actual response from the server. The result of the comparison
-   will be provided to the cache through a call to :meth:`~coredis.cache.AbstractCache.feedback` and
+   will be provided to the cache through a call to :meth:`~coredis.cache.SupportsSampling.feedback` and
    it is up to the cache implementation to decide what to do with this feedback.
 
 Tracking Cache
