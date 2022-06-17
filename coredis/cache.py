@@ -133,6 +133,7 @@ class AbstractCache(ABC):
         ...
 
     @property
+    @abstractmethod
     def stats(self) -> CacheStats:
         """
         Returns the current stats for the cache
