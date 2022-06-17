@@ -82,3 +82,7 @@ the cache. Specifically the following constructor arguments might be of interest
     Confidence % in the cache. The client will sample cached values based on the confidence
     and if the cached value is not the same as the actual response from the server
     the actual value will be returned and the tainted key invalidated.
+
+:paramref:`~coredis.cache.TrackingCache.dynamic_confidence`
+    If set to ``True`` the cache will adjust it's confidence based on sampled (sampling depends
+    on the initial confidence value itself) validations.
