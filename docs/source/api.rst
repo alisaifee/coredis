@@ -241,6 +241,8 @@ must implement the follow abstract base class.
 
 .. autoclass:: coredis.cache.AbstractCache
 
+.. autoclass:: coredis.cache.CacheStats
+
 Type Aliases
 ^^^^^^^^^^^^
 
