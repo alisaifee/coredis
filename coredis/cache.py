@@ -6,7 +6,7 @@ import time
 import weakref
 from abc import ABC, abstractmethod
 from collections import Counter
-from typing import TYPE_CHECKING, Any, runtime_checkable
+from typing import TYPE_CHECKING, Any
 
 from pympler import asizeof
 
@@ -22,7 +22,6 @@ from coredis.typing import (
     Literal,
     Optional,
     OrderedDict,
-    Protocol,
     ResponseType,
     Tuple,
     TypeVar,
@@ -170,10 +169,9 @@ class AbstractCache(ABC):
         )
 
 
-@runtime_checkable
-class Shareable(Protocol):
+class Shareable(ABC):
     """
-    Protocol of a cache that can be shared between multiple
+    Shareable cache that can be passed between multiple
     client instances
     """
 
@@ -188,8 +186,7 @@ class Shareable(Protocol):
         ...
 
 
-@runtime_checkable
-class SupportsStats(Protocol):
+class SupportsStats(ABC):
     """
     Protocol of a cache that provides cache statistics
     """
@@ -203,8 +200,7 @@ class SupportsStats(Protocol):
         ...
 
 
-@runtime_checkable
-class SupportsSampling(Protocol):
+class SupportsSampling(ABC):
     """
     If a cache implements :class:`SupportsSampling`, methods that support
     caching will sample the response from the cache and test it against an uncached
@@ -232,8 +228,7 @@ class SupportsSampling(Protocol):
         ...
 
 
-@runtime_checkable
-class SupportsClientTracking(Protocol):
+class SupportsClientTracking(ABC):
     """
     If a cache implements :class:`SupportsClientTracking`, the :class:`~coredis.Redis`
     and :class:`~coredis.RedisCluster` clients will ensure that the client
@@ -381,6 +376,7 @@ class NodeTrackingCache(
         self.__confidence = self.__original_confidence = confidence
         self.__dynamic_confidence = dynamic_confidence
         self.__stats = stats or CacheStats()
+
         super().__init__({b"invalidate"}, max(1, max_idle_seconds - 1))
 
     @property
