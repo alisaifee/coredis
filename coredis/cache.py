@@ -36,8 +36,9 @@ if TYPE_CHECKING:
 class CacheStats:
     """
     Summary of statics to be used by instances of :class:`coredis.cache.AbstractCache`
-    The individual counters exposed are not guaranteed to reatain fine grained per key
-    metrics but the totals will be maintained.
+    The individual counters exposed are not guaranteed to retain fine grained per key
+    metrics but the totals (returned by :attr:`coredis.cache.CacheStats.summary`) will be maintained
+    aggregated.
     """
 
     #: summary of hits by key (for all commands)
@@ -58,6 +59,8 @@ class CacheStats:
     def compact(self) -> None:
         """
         Collapse totals into a single key to avoid unbounded growth of stats
+
+        :meta private:
         """
         for counter in [self.hits, self.misses, self.invalidations, self.dirty]:
             total = sum(counter.values())
@@ -78,6 +81,10 @@ class CacheStats:
 
     @property
     def summary(self) -> Dict[str, int]:
+        """
+        Aggregated totals of ``hits``, ``misses``, ``dirty_hits``
+        and ``invalidations``
+        """
         return {
             "hits": sum(self.hits.values()),
             "misses": sum(self.misses.values()),
