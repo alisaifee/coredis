@@ -6,7 +6,7 @@ import time
 import weakref
 from abc import ABC, abstractmethod
 from collections import Counter
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, runtime_checkable
 
 from pympler import asizeof
 
@@ -22,9 +22,11 @@ from coredis.typing import (
     Literal,
     Optional,
     OrderedDict,
+    Protocol,
     ResponseType,
     Tuple,
     TypeVar,
+    Union,
     ValueT,
 )
 
@@ -122,33 +124,6 @@ class AbstractCache(ABC):
         """
         ...
 
-    @property
-    @abstractmethod
-    def confidence(self) -> float:
-        """
-        Confidence in cached values between 0 - 100. Lower values
-        will result in the client discarding and / or validating the
-        cached responses
-        """
-        ...
-
-    @property
-    @abstractmethod
-    def stats(self) -> CacheStats:
-        """
-        Returns the current stats for the cache
-        """
-        ...
-
-    @abstractmethod
-    def get_client_id(self, connection: BaseConnection) -> Optional[int]:
-        """
-        If the cache supports receiving invalidation events from the server
-        return the ``client_id`` that the :paramref:`connection` should send
-        redirects to.
-        """
-        ...
-
     @abstractmethod
     def get(self, command: bytes, key: bytes, *args: ValueT) -> ResponseType:
         """
@@ -162,14 +137,6 @@ class AbstractCache(ABC):
     ) -> None:
         """
         Cache the response for command/key/args combination
-        """
-        ...
-
-    @abstractmethod
-    def feedback(self, command: bytes, key: bytes, *args: ValueT, match: bool) -> None:
-        """
-        Provide feedback about a key as having either a match or drift from the actual
-        server side value
         """
         ...
 
@@ -202,13 +169,84 @@ class AbstractCache(ABC):
             )
         )
 
+
+@runtime_checkable
+class Shareable(Protocol):
+    """
+    Protocol of a cache that can be shared between multiple
+    client instances
+    """
+
     @abstractmethod
-    def share(self) -> AbstractCache:
+    def share(self) -> Shareable:
         """
         Returns a new instance of this cache which shares
         the backing storage for use with another client
         pointing to the same redis instance.
 
+        """
+        ...
+
+
+@runtime_checkable
+class SupportsStats(Protocol):
+    """
+    Protocol of a cache that provides cache statistics
+    """
+
+    @property
+    @abstractmethod
+    def stats(self) -> CacheStats:
+        """
+        Returns the current stats for the cache
+        """
+        ...
+
+
+@runtime_checkable
+class SupportsSampling(Protocol):
+    """
+    If a cache implements :class:`SupportsSampling`, methods that support
+    caching will sample the response from the cache and test it against an uncached
+    response from the server based on the confidence returned by :attr:`confidence`.
+    The outcome of the validation will be fed back to the cache using :meth:`feedback`
+    and in the case that there was no match, the uncached response will be returned.
+    """
+
+    @property
+    @abstractmethod
+    def confidence(self) -> float:
+        """
+        Confidence in cached values between 0 - 100. Lower values
+        will result in the client discarding and / or validating the
+        cached responses
+        """
+        ...
+
+    @abstractmethod
+    def feedback(self, command: bytes, key: bytes, *args: ValueT, match: bool) -> None:
+        """
+        Provide feedback about a key as having either a match or drift from the actual
+        server side value
+        """
+        ...
+
+
+@runtime_checkable
+class SupportsClientTracking(Protocol):
+    """
+    If a cache implements :class:`SupportsClientTracking`, the :class:`~coredis.Redis`
+    and :class:`~coredis.RedisCluster` clients will ensure that the client
+    returned by :meth:`get_client_id` is set using the :meth:`~coredis.Redis.client_tracking`
+    command on any connection returned by the clients.
+    """
+
+    @abstractmethod
+    def get_client_id(self, connection: BaseConnection) -> Optional[int]:
+        """
+        If the cache supports receiving invalidation events from the server
+        return the ``client_id`` that the :paramref:`connection` should send
+        redirects to.
         """
         ...
 
@@ -294,7 +332,14 @@ class LRUCache(Generic[ET]):
             self.__cache.popitem(last=False)
 
 
-class NodeTrackingCache(AbstractCache, Sidecar):
+class NodeTrackingCache(
+    AbstractCache,
+    Shareable,
+    SupportsStats,
+    SupportsSampling,
+    SupportsClientTracking,
+    Sidecar,
+):
     """
     An LRU cache that uses server assisted client caching
     to ensure local cache entries are invalidated if any
@@ -475,7 +520,9 @@ class NodeTrackingCache(AbstractCache, Sidecar):
                 break
 
 
-class ClusterTrackingCache(AbstractCache):
+class ClusterTrackingCache(
+    AbstractCache, Shareable, SupportsStats, SupportsSampling, SupportsClientTracking
+):
     """
     An LRU cache for redis cluster that uses server assisted client caching
     to ensure local cache entries are invalidated if any operations are performed
@@ -625,7 +672,9 @@ class ClusterTrackingCache(AbstractCache):
         self.shutdown()
 
 
-class TrackingCache(AbstractCache):
+class TrackingCache(
+    AbstractCache, Shareable, SupportsStats, SupportsSampling, SupportsClientTracking
+):
     """
     An LRU cache that uses server assisted client caching to ensure local cache entries
     are invalidated if any operations are performed on the keys by another client.
@@ -660,7 +709,7 @@ class TrackingCache(AbstractCache):
          confirmations of correct cached values will increase the confidence by 0.01%
          upto 100.
         """
-        self.instance: Optional[AbstractCache] = None
+        self.instance: Optional[Union[ClusterTrackingCache, NodeTrackingCache]] = None
         self.__max_keys = max_keys
         self.__max_size_bytes = max_size_bytes
         self.__max_idle_seconds = max_idle_seconds

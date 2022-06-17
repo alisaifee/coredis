@@ -12,7 +12,7 @@ from deprecated.sphinx import versionadded
 from packaging.version import Version
 
 from coredis._utils import b, clusterdown_wrapper, first_key, nativestr
-from coredis.cache import AbstractCache
+from coredis.cache import AbstractCache, SupportsClientTracking
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName
 from coredis.commands.core import CoreCommands
@@ -734,8 +734,10 @@ class Redis(
 
         pool = self.connection_pool
         connection = await pool.get_connection(command, *args)
-        if self.cache and connection.tracking_client_id != self.cache.get_client_id(
-            connection
+        if (
+            self.cache
+            and isinstance(self.cache, SupportsClientTracking)
+            and connection.tracking_client_id != self.cache.get_client_id(connection)
         ):
             self.cache.reset()
             await connection.update_tracking_client(
@@ -743,7 +745,9 @@ class Redis(
             )
         try:
             if self.cache and command not in self.connection_pool.READONLY_COMMANDS:
-                self.cache.reset(*KeySpec.extract_keys((command,) + args))
+                keys = KeySpec.extract_keys((command,) + args)
+                if keys:
+                    self.cache.reset(*keys)
             await connection.send_command(command, *args)
             if custom_callback := self.response_callbacks.get(command):
                 return custom_callback(  # type: ignore
@@ -1372,11 +1376,17 @@ class RedisCluster(
                     await self.parse_response(r, decode=kwargs.get("decode"))
                     asking = False
 
-                if self.cache and r.tracking_client_id != self.cache.get_client_id(r):
+                if (
+                    self.cache
+                    and isinstance(self.cache, SupportsClientTracking)
+                    and r.tracking_client_id != self.cache.get_client_id(r)
+                ):
                     self.cache.reset()
                     await r.update_tracking_client(True, self.cache.get_client_id(r))
                 if self.cache and command not in self.connection_pool.READONLY_COMMANDS:
-                    self.cache.reset(*KeySpec.extract_keys((command,) + args))
+                    keys = KeySpec.extract_keys((command,) + args)
+                    if keys:
+                        self.cache.reset(*keys)
                 await r.send_command(command, *args)
 
                 return callback(
@@ -1451,6 +1461,7 @@ class RedisCluster(
             connection = self.connection_pool.get_connection_by_node(node)
             if (
                 self.cache
+                and isinstance(self.cache, SupportsClientTracking)
                 and connection.tracking_client_id
                 != self.cache.get_client_id(connection)
             ):

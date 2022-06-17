@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from packaging import version
 
-from coredis.cache import AbstractCache
+from coredis.cache import AbstractCache, SupportsSampling
 from coredis.commands._utils import check_version, redis_command_link
 from coredis.commands.constants import CommandGroup, CommandName
 from coredis.nodemanager import NodeFlag
@@ -76,6 +76,7 @@ class CommandCache:
     ) -> AsyncIterator[R]:
         client = args[0]
         cache = getattr(client, "cache")
+
         if not (self.cache_config and cache):
             yield await func(*args, **kwargs)
         else:
@@ -91,7 +92,9 @@ class CommandCache:
                             self.command, key, *args[1:], *kwargs.items()  # type: ignore
                         ),
                     )
-                    if not random.random() * 100.0 < min(100.0, cache.confidence):
+                    if isinstance(
+                        cache, SupportsSampling
+                    ) and not random.random() * 100.0 < min(100.0, cache.confidence):
                         actual = await func(*args, **kwargs)
                         cache.feedback(
                             self.command,
