@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import time
 import weakref
 from abc import ABC, abstractmethod
+from collections import Counter
 from typing import TYPE_CHECKING, Any
 
 from pympler import asizeof
@@ -28,6 +30,69 @@ from coredis.typing import (
 
 if TYPE_CHECKING:
     import coredis.client
+
+
+@dataclasses.dataclass
+class CacheStats:
+    """
+    Summary of statics to be used by instances of :class:`coredis.cache.AbstractCache`
+    The individual counters exposed are not guaranteed to reatain fine grained per key
+    metrics but the totals will be maintained.
+    """
+
+    #: summary of hits by key (for all commands)
+    hits: Counter[bytes] = dataclasses.field(default_factory=Counter)
+    #: summary of misses by key (for all commands)
+    misses: Counter[bytes] = dataclasses.field(default_factory=Counter)
+    #: number of invalidations including server side and local invalidations
+    invalidations: Counter[bytes] = dataclasses.field(default_factory=Counter)
+    #: counter of keys which returned dirty results based on confidence testing
+    dirty: Counter[bytes] = dataclasses.field(default_factory=Counter)
+
+    def clear(self) -> None:
+        self.hits.clear()
+        self.misses.clear()
+        self.invalidations.clear()
+        self.dirty.clear()
+
+    def compact(self) -> None:
+        """
+        Collapse totals into a single key to avoid unbounded growth of stats
+        """
+        for counter in [self.hits, self.misses, self.invalidations, self.dirty]:
+            total = sum(counter.values())
+            counter.clear()
+            counter[b"__coredis__internal__stats__total"] = total
+
+    def hit(self, key: ValueT) -> None:
+        self.hits[b(key)] += 1
+
+    def miss(self, key: ValueT) -> None:
+        self.misses[b(key)] += 1
+
+    def invalidate(self, key: ValueT) -> None:
+        self.invalidations[b(key)] += 1
+
+    def mark_dirty(self, key: ValueT) -> None:
+        self.dirty[b(key)] += 1
+
+    @property
+    def summary(self) -> Dict[str, int]:
+        return {
+            "hits": sum(self.hits.values()),
+            "misses": sum(self.misses.values()),
+            "dirty_hits": sum(self.dirty.values()),
+            "invalidations": sum(self.invalidations.values()),
+        }
+
+    def __repr__(self) -> str:
+        summary = self.summary
+        return (
+            f"CacheStats<hits={summary['hits']}, "
+            f"misses={summary['misses']}, "
+            f"dirty_hits={summary['dirty_hits']}, "
+            f"invalidations={summary['invalidations']}>"
+        )
 
 
 class AbstractCache(ABC):
@@ -57,6 +122,13 @@ class AbstractCache(ABC):
         Confidence in cached values between 0 - 100. Lower values
         will result in the client discarding and / or validating the
         cached responses
+        """
+        ...
+
+    @property
+    def stats(self) -> CacheStats:
+        """
+        Returns the current stats for the cache
         """
         ...
 
@@ -226,9 +298,10 @@ class NodeTrackingCache(AbstractCache, Sidecar):
         max_keys: int = 2**12,
         max_size_bytes: int = 64 * 1024 * 1024,
         max_idle_seconds: int = 5,
-        cache: Optional[LRUCache[LRUCache[LRUCache[ResponseType]]]] = None,
         confidence: float = 100,
         dynamic_confidence: bool = False,
+        cache: Optional[LRUCache[LRUCache[LRUCache[ResponseType]]]] = None,
+        stats: Optional[CacheStats] = None,
     ) -> None:
         """
         :param max_keys: maximum keys to cache. A negative value represents
@@ -254,6 +327,7 @@ class NodeTrackingCache(AbstractCache, Sidecar):
         self.__max_idle_seconds = max_idle_seconds
         self.__confidence = self.__original_confidence = confidence
         self.__dynamic_confidence = dynamic_confidence
+        self.__stats = stats or CacheStats()
         super().__init__({b"invalidate"}, max(1, max_idle_seconds - 1))
 
     @property
@@ -267,8 +341,20 @@ class NodeTrackingCache(AbstractCache, Sidecar):
     def confidence(self) -> float:
         return self.__confidence
 
+    @property
+    def stats(self) -> CacheStats:
+        return self.__stats
+
     def get(self, command: bytes, key: bytes, *args: ValueT) -> ResponseType:
-        return self.__cache.get(b(key)).get(command).get(self.hashable_args(*args))
+        try:
+            cached = (
+                self.__cache.get(b(key)).get(command).get(self.hashable_args(*args))
+            )
+            self.__stats.hit(key)
+            return cached
+        except KeyError:
+            self.__stats.miss(key)
+            raise
 
     def put(
         self, command: bytes, key: bytes, *args: ValueT, value: ResponseType
@@ -279,6 +365,7 @@ class NodeTrackingCache(AbstractCache, Sidecar):
 
     def feedback(self, command: bytes, key: bytes, *args: ValueT, match: bool) -> None:
         if not match:
+            self.__stats.mark_dirty(key)
             self.reset(key)
         if self.__dynamic_confidence:
             self.__confidence = min(
@@ -289,9 +376,11 @@ class NodeTrackingCache(AbstractCache, Sidecar):
     def reset(self, *keys: ValueT) -> None:
         if keys is not None:
             for k in keys:
+                self.__stats.invalidate(k)
                 self.__cache.remove(b(k))
         else:
             self.__cache.clear()
+            self.__stats.compact()
             self.__confidence = self.__original_confidence
 
     def process_message(self, message: ResponseType) -> Tuple[ResponseType, ...]:
@@ -339,10 +428,11 @@ class NodeTrackingCache(AbstractCache, Sidecar):
 
     def share(self) -> NodeTrackingCache:
         return self.__class__(
-            cache=self.__cache,
             max_idle_seconds=self.__max_idle_seconds,
             confidence=self.__original_confidence,
             dynamic_confidence=self.__dynamic_confidence,
+            cache=self.__cache,
+            stats=self.__stats,
         )
 
     def get_client_id(self, client: BaseConnection) -> Optional[int]:
@@ -359,6 +449,7 @@ class NodeTrackingCache(AbstractCache, Sidecar):
                     self.__cache.clear()
                 else:
                     self.__cache.shrink()
+                self.__stats.compact()
                 await asyncio.sleep(max(1, self.__max_idle_seconds - 1))
             except asyncio.CancelledError:
                 break
@@ -368,6 +459,7 @@ class NodeTrackingCache(AbstractCache, Sidecar):
             try:
                 key = b(await self.messages.get())
                 self.__cache.remove(key)
+                self.__stats.invalidate(key)
                 self.messages.task_done()
             except asyncio.CancelledError:
                 break
@@ -390,9 +482,10 @@ class ClusterTrackingCache(AbstractCache):
         max_keys: int = 2**12,
         max_size_bytes: int = 64 * 1024 * 1024,
         max_idle_seconds: int = 5,
-        cache: Optional[LRUCache[LRUCache[LRUCache[ResponseType]]]] = None,
         confidence: float = 100,
         dynamic_confidence: bool = False,
+        cache: Optional[LRUCache[LRUCache[LRUCache[ResponseType]]]] = None,
+        stats: Optional[CacheStats] = None,
     ) -> None:
         """
         :param max_keys: maximum keys to cache. A negative value represents
@@ -418,6 +511,7 @@ class ClusterTrackingCache(AbstractCache):
         self.__max_idle_seconds = max_idle_seconds
         self.__confidence = self.__original_confidence = confidence
         self.__dynamic_confidence = dynamic_confidence
+        self.__stats = stats or CacheStats()
 
     async def initialize(
         self, client: "coredis.client.RedisConnection"
@@ -434,10 +528,11 @@ class ClusterTrackingCache(AbstractCache):
 
         for node in self.__nodes:
             node_cache = NodeTrackingCache(
-                cache=self.__cache,
                 max_idle_seconds=self.__max_idle_seconds,
                 confidence=self.__confidence,
                 dynamic_confidence=self.__dynamic_confidence,
+                cache=self.__cache,
+                stats=self.__stats,
             )
             await node_cache.initialize(node)
             assert node_cache.connection
@@ -455,6 +550,10 @@ class ClusterTrackingCache(AbstractCache):
     def confidence(self) -> float:
         return self.__confidence
 
+    @property
+    def stats(self) -> CacheStats:
+        return self.__stats
+
     def get_client_id(self, connection: BaseConnection) -> Optional[int]:
         try:
             return self.node_caches[connection.location].get_client_id(connection)
@@ -462,7 +561,15 @@ class ClusterTrackingCache(AbstractCache):
             return None
 
     def get(self, command: bytes, key: bytes, *args: ValueT) -> ResponseType:
-        return self.__cache.get(b(key)).get(command).get(self.hashable_args(*args))
+        try:
+            cached = (
+                self.__cache.get(b(key)).get(command).get(self.hashable_args(*args))
+            )
+            self.__stats.hit(key)
+            return cached
+        except KeyError:
+            self.__stats.miss(key)
+            raise
 
     def put(
         self, command: bytes, key: bytes, *args: ValueT, value: ResponseType
@@ -473,6 +580,7 @@ class ClusterTrackingCache(AbstractCache):
 
     def feedback(self, command: bytes, key: bytes, *args: ValueT, match: bool) -> None:
         if not match:
+            self.__stats.mark_dirty(key)
             self.reset(key)
         if self.__dynamic_confidence:
             self.__confidence = min(
@@ -483,6 +591,7 @@ class ClusterTrackingCache(AbstractCache):
     def reset(self, *keys: ValueT) -> None:
         if keys is not None:
             for k in keys:
+                self.__stats.invalidate(k)
                 self.__cache.remove(b(k))
         else:
             self.__cache.clear()
@@ -497,10 +606,11 @@ class ClusterTrackingCache(AbstractCache):
 
     def share(self) -> ClusterTrackingCache:
         return self.__class__(
-            cache=self.__cache,
             max_idle_seconds=self.__max_idle_seconds,
             confidence=self.__original_confidence,
             dynamic_confidence=self.__dynamic_confidence,
+            cache=self.__cache,
+            stats=self.__stats,
         )
 
     def __del__(self) -> None:
@@ -522,9 +632,10 @@ class TrackingCache(AbstractCache):
         max_keys: int = 2**12,
         max_size_bytes: int = 64 * 1024 * 1024,
         max_idle_seconds: int = 5,
-        cache: Optional[LRUCache[LRUCache[LRUCache[ResponseType]]]] = None,
         confidence: float = 100.0,
         dynamic_confidence: bool = False,
+        cache: Optional[LRUCache[LRUCache[LRUCache[ResponseType]]]] = None,
+        stats: Optional[CacheStats] = None,
     ) -> None:
         """
         :param max_keys: maximum keys to cache. A negative value represents
@@ -553,6 +664,7 @@ class TrackingCache(AbstractCache):
         self.__client: Optional[
             weakref.ReferenceType["coredis.client.RedisConnection"]
         ] = None
+        self.__stats = stats or CacheStats()
 
     async def initialize(
         self, client: "coredis.client.RedisConnection"
@@ -571,18 +683,20 @@ class TrackingCache(AbstractCache):
                     self.__max_keys,
                     self.__max_size_bytes,
                     self.__max_idle_seconds,
-                    cache=self.__cache,
                     confidence=self.__confidence,
                     dynamic_confidence=self.__dynamic_confidence,
+                    cache=self.__cache,
+                    stats=self.__stats,
                 )
             else:
                 self.instance = NodeTrackingCache(
                     self.__max_keys,
                     self.__max_size_bytes,
                     self.__max_idle_seconds,
-                    cache=self.__cache,
                     confidence=self.__confidence,
                     dynamic_confidence=self.__dynamic_confidence,
+                    cache=self.__cache,
+                    stats=self.__stats,
                 )
         await self.instance.initialize(client)
         return self
@@ -596,6 +710,10 @@ class TrackingCache(AbstractCache):
         if not self.instance:
             return 0
         return self.instance.confidence
+
+    @property
+    def stats(self) -> CacheStats:
+        return self.__stats
 
     def get_client_id(self, connection: BaseConnection) -> Optional[int]:
         if self.instance:
@@ -641,9 +759,10 @@ class TrackingCache(AbstractCache):
             self.__max_keys,
             self.__max_size_bytes,
             self.__max_idle_seconds,
-            self.__cache,
             self.__confidence,
             self.__dynamic_confidence,
+            self.__cache,
+            self.__stats,
         )
         return copy
 

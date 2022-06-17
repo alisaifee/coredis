@@ -106,6 +106,48 @@ class CommonExamples:
         assert set([await clone.get("fubar") for clone in clones]) == set([_s("test")])
         assert all(spy.call_count == 0 for spy in spies)
 
+    async def test_stats(self, client, cloner, mocker, _s):
+        cache = TrackingCache(confidence=0)
+        cached = await cloner(client, cache=cache)
+        await client.set("barbar", "test")
+        await cached.get("fubar")
+        await cached.get("fubar")
+        await client.set("fubar", "test")
+        await asyncio.sleep(0.01)
+        await cached.get("fubar")
+        await cached.get("fubar")
+        await cached.get("barbar")
+        await cached.get("barbar")
+
+        get = mocker.patch.object(cache, "get")
+        get.side_effect = lambda *_: _s("dirty")
+
+        await cached.get("barbar")
+
+        assert sum(cache.stats.hits.values()) == 3
+        assert sum(cache.stats.misses.values()) == 3
+        assert sum(cache.stats.invalidations.values()) == 2
+        assert sum(cache.stats.dirty.values()) == 1
+
+        assert cache.stats.hits[b"fubar"] == 2
+        assert cache.stats.hits[b"barbar"] == 1
+
+        cache.stats.compact()
+
+        assert sum(cache.stats.hits.values()) == 3
+        assert sum(cache.stats.misses.values()) == 3
+        assert sum(cache.stats.invalidations.values()) == 2
+
+        assert b"fubar" not in cache.stats.hits
+        assert b"barbar" not in cache.stats.hits
+
+        assert cache.stats.summary == {
+            "hits": 3,
+            "misses": 3,
+            "invalidations": 2,
+            "dirty_hits": 1,
+        }
+
 
 @pytest.mark.asyncio
 @targets("redis_basic", "redis_basic_raw", "redis_basic_resp3", "redis_basic_raw_resp3")
