@@ -60,12 +60,13 @@ class RedisSSLContext:
         certfile: Optional[str],
         cert_reqs: Optional[Union[str, ssl.VerifyMode]] = None,
         ca_certs: Optional[str] = None,
+        check_hostname: Optional[bool] = None,
     ) -> None:
         self.keyfile = keyfile
         self.certfile = certfile
-
+        self.check_hostname = check_hostname if check_hostname is not None else False
         if cert_reqs is None:
-            self.cert_reqs = ssl.CERT_NONE
+            self.cert_reqs = ssl.CERT_OPTIONAL
         elif isinstance(cert_reqs, str):
             CERT_REQS = {
                 "none": ssl.CERT_NONE,
@@ -85,8 +86,9 @@ class RedisSSLContext:
         if self.keyfile is None:
             self.context = ssl.create_default_context(cafile=self.ca_certs)
         else:
-            self.context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+            self.context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             self.context.verify_mode = self.cert_reqs
+            self.context.check_hostname = self.check_hostname
             self.context.load_cert_chain(
                 certfile=self.certfile, keyfile=self.keyfile  # type: ignore
             )

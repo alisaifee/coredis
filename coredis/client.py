@@ -186,6 +186,7 @@ class RedisConnection:
         ssl_keyfile: Optional[str] = None,
         ssl_certfile: Optional[str] = None,
         ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = None,
+        ssl_check_hostname: Optional[bool] = None,
         ssl_ca_certs: Optional[str] = None,
         max_connections: Optional[int] = None,
         retry_on_timeout: bool = False,
@@ -229,7 +230,11 @@ class RedisConnection:
                     kwargs["ssl_context"] = ssl_context
                 elif ssl:
                     ssl_context = RedisSSLContext(
-                        ssl_keyfile, ssl_certfile, ssl_cert_reqs, ssl_ca_certs
+                        ssl_keyfile,
+                        ssl_certfile,
+                        ssl_cert_reqs,
+                        ssl_ca_certs,
+                        ssl_check_hostname,
                     ).get()
                     kwargs["ssl_context"] = ssl_context
             connection_pool = connection_pool_cls(**kwargs)
@@ -459,6 +464,7 @@ class Redis(
         ssl_keyfile: Optional[str] = ...,
         ssl_certfile: Optional[str] = ...,
         ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = ...,
+        ssl_check_hostname: Optional[bool] = ...,
         ssl_ca_certs: Optional[str] = ...,
         max_connections: Optional[int] = ...,
         retry_on_timeout: bool = ...,
@@ -492,6 +498,7 @@ class Redis(
         ssl_keyfile: Optional[str] = ...,
         ssl_certfile: Optional[str] = ...,
         ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = ...,
+        ssl_check_hostname: Optional[bool] = ...,
         ssl_ca_certs: Optional[str] = ...,
         max_connections: Optional[int] = ...,
         retry_on_timeout: bool = ...,
@@ -524,6 +531,7 @@ class Redis(
         ssl_keyfile: Optional[str] = None,
         ssl_certfile: Optional[str] = None,
         ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = None,
+        ssl_check_hostname: Optional[bool] = None,
         ssl_ca_certs: Optional[str] = None,
         max_connections: Optional[int] = None,
         retry_on_timeout: bool = False,
@@ -571,6 +579,8 @@ class Redis(
         :param ssl_certfile: Path to the certificate corresponding to :paramref:`ssl_keyfile`
         :param ssl_cert_reqs: Whether to try to verify the server's certificates and
          how to behave if verification fails (See :attr:`ssl.SSLContext.verify_mode`).
+        :param ssl_check_hostname: Whether to enabled hostname checking when establishing
+         an ssl connection.
         :param ssl_ca_certs: Path to a concatenated certificate authority file or a directory
          containing several CA certifcates to use  for validating the server's certificates
          when :paramref:`ssl_cert_reqs` is not ``"none"``
@@ -613,6 +623,7 @@ class Redis(
             ssl_keyfile=ssl_keyfile,
             ssl_certfile=ssl_certfile,
             ssl_cert_reqs=ssl_cert_reqs,
+            ssh_check_hostname=ssl_check_hostname,
             ssl_ca_certs=ssl_ca_certs,
             max_connections=max_connections,
             retry_on_timeout=retry_on_timeout,
@@ -937,6 +948,7 @@ class RedisCluster(
         ssl_keyfile: Optional[str] = ...,
         ssl_certfile: Optional[str] = ...,
         ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = ...,
+        ssl_check_hostname: Optional[bool] = ...,
         ssl_ca_certs: Optional[str] = ...,
         max_connections: int = ...,
         max_connections_per_node: bool = ...,
@@ -966,6 +978,7 @@ class RedisCluster(
         ssl_keyfile: Optional[str] = ...,
         ssl_certfile: Optional[str] = ...,
         ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = ...,
+        ssl_check_hostname: Optional[bool] = ...,
         ssl_ca_certs: Optional[str] = ...,
         max_connections: int = ...,
         max_connections_per_node: bool = ...,
@@ -994,6 +1007,7 @@ class RedisCluster(
         ssl_keyfile: Optional[str] = None,
         ssl_certfile: Optional[str] = None,
         ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = None,
+        ssl_check_hostname: Optional[bool] = None,
         ssl_ca_certs: Optional[str] = None,
         max_connections: int = 32,
         max_connections_per_node: bool = False,
@@ -1037,6 +1051,8 @@ class RedisCluster(
         :param ssl_certfile: Path to the certificate corresponding to :paramref:`ssl_keyfile`
         :param ssl_cert_reqs: Whether to try to verify the server's certificates and
          how to behave if verification fails (See :attr:`ssl.SSLContext.verify_mode`).
+        :param ssl_check_hostname: Whether to enabled hostname checking when establishing
+         an ssl connection.
         :param ssl_ca_certs: Path to a concatenated certificate authority file or a directory
          containing several CA certifcates to use  for validating the server's certificates
          when :paramref:`ssl_cert_reqs` is not ``"none"``
@@ -1097,7 +1113,11 @@ class RedisCluster(
                 kwargs["ssl_context"] = ssl_context
             elif ssl:
                 ssl_context = RedisSSLContext(
-                    ssl_keyfile, ssl_certfile, ssl_cert_reqs, ssl_ca_certs
+                    ssl_keyfile,
+                    ssl_certfile,
+                    ssl_cert_reqs,
+                    ssl_ca_certs,
+                    ssl_check_hostname,
                 ).get()
                 kwargs["ssl_context"] = ssl_context
             pool = ClusterConnectionPool(

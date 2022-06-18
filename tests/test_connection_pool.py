@@ -551,10 +551,10 @@ class TestSSLConnectionURLParsing:
 
         with pytest.raises(TypeError) as e:
             pool = coredis.ConnectionPool.from_url(
-                "rediss://?ssl_cert_reqs=none&ssl_keyfile=test"
+                "rediss://?ssl_cert_reqs=optional&ssl_keyfile=test"
             )
             assert e.message == "certfile should be a valid filesystem path"
-            assert pool.get_connection().ssl_context.verify_mode == ssl.CERT_NONE
+            assert pool.get_connection().ssl_context.verify_mode == ssl.CERT_OPTIONAL
 
         with pytest.raises(TypeError) as e:
             pool = coredis.ConnectionPool.from_url(

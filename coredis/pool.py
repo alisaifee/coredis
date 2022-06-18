@@ -186,13 +186,16 @@ class ConnectionPool:
             if parsed_url.scheme == "rediss":
                 keyfile = cast(Optional[str], url_options.pop("ssl_keyfile", None))
                 certfile = cast(Optional[str], url_options.pop("ssl_certfile", None))
+                check_hostname = cast(
+                    Optional[bool], url_options.pop("ssl_check_hostname", None)
+                )
                 cert_reqs = cast(
                     Optional[Union[str, VerifyMode]],
                     url_options.pop("ssl_cert_reqs", None),
                 )
                 ca_certs = cast(Optional[str], url_options.pop("ssl_ca_certs", None))
                 url_options["ssl_context"] = RedisSSLContext(
-                    keyfile, certfile, cert_reqs, ca_certs
+                    keyfile, certfile, cert_reqs, ca_certs, check_hostname
                 ).get()
 
         # last shot at the db value
