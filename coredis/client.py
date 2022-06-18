@@ -579,7 +579,7 @@ class Redis(
         :param ssl_certfile: Path to the certificate corresponding to :paramref:`ssl_keyfile`
         :param ssl_cert_reqs: Whether to try to verify the server's certificates and
          how to behave if verification fails (See :attr:`ssl.SSLContext.verify_mode`).
-        :param ssl_check_hostname: Whether to enabled hostname checking when establishing
+        :param ssl_check_hostname: Whether to enable hostname checking when establishing
          an ssl connection.
         :param ssl_ca_certs: Path to a concatenated certificate authority file or a directory
          containing several CA certifcates to use  for validating the server's certificates
@@ -1051,7 +1051,7 @@ class RedisCluster(
         :param ssl_certfile: Path to the certificate corresponding to :paramref:`ssl_keyfile`
         :param ssl_cert_reqs: Whether to try to verify the server's certificates and
          how to behave if verification fails (See :attr:`ssl.SSLContext.verify_mode`).
-        :param ssl_check_hostname: Whether to enabled hostname checking when establishing
+        :param ssl_check_hostname: Whether to enable hostname checking when establishing
          an ssl connection.
         :param ssl_ca_certs: Path to a concatenated certificate authority file or a directory
          containing several CA certifcates to use  for validating the server's certificates
