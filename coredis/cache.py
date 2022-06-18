@@ -333,12 +333,12 @@ class LRUCache(Generic[ET]):
 
 
 class NodeTrackingCache(
+    Sidecar,
     AbstractCache,
     Shareable,
     SupportsStats,
     SupportsSampling,
     SupportsClientTracking,
-    Sidecar,
 ):
     """
     An LRU cache that uses server assisted client caching
