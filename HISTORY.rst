@@ -3,6 +3,27 @@
 Changelog
 =========
 
+v3.10.0
+-------
+Release Date: 2022-06-18
+
+* Features
+
+  * Expose ssl parameters in RedisCluster constructor
+  * Expose ssl_check_hostname parameter in Redis/RedisCluster constructors
+  * Separate opt-in cache behaviors into protocols leaving AbstractCache
+    as the minimal implementation required
+  * Expose cache stats
+  * Allow TrackingCache.dynamic_confidence to increase confidence up to 100% instead
+    of capping it at the original confidence value provided
+
+* Chores
+
+  * Improve documentation for caching
+  * Improve test coverage for ssl connections
+  * Add test coverage for cluster ssl clients
+
+
 v3.9.3
 ------
 Release Date: 2022-06-15
@@ -845,6 +866,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
