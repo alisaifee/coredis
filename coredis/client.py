@@ -574,7 +574,9 @@ class Redis(
          (See :ref:`handbook/encoding:encoding/decoding`)
         :param ssl: Whether to use an SSL connection
         :param ssl_context: If provided the :class:`ssl.SSLContext` will be used when
-         establishing the connection
+         establishing the connection. Otherwise either the default context (if no other
+         ssl related parameters are provided) or a custom context based on the other
+         ``ssl_*`` parameters will be used.
         :param ssl_keyfile: Path of the private key to use
         :param ssl_certfile: Path to the certificate corresponding to :paramref:`ssl_keyfile`
         :param ssl_cert_reqs: Whether to try to verify the server's certificates and
@@ -1046,7 +1048,9 @@ class RedisCluster(
          from
         :param ssl: Whether to use an SSL connection
         :param ssl_context: If provided the :class:`ssl.SSLContext` will be used when
-         establishing the connection
+         establishing the connection. Otherwise either the default context (if no other
+         ssl related parameters are provided) or a custom context based on the other
+         ``ssl_*`` parameters will be used.
         :param ssl_keyfile: Path of the private key to use
         :param ssl_certfile: Path to the certificate corresponding to :paramref:`ssl_keyfile`
         :param ssl_cert_reqs: Whether to try to verify the server's certificates and
