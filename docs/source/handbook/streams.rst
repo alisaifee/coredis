@@ -35,7 +35,7 @@ Given either a regular client or a cluster client::
 
 #. Entries can be fetched explicitly by calling :meth:`~coredis.stream.Consumer.get_entry()`::
 
-    stream, entry = consumer.get_entry()
+    stream, entry = await consumer.get_entry()
 
 #. or, by using the consumer as an asynchronous iterator::
 
@@ -49,7 +49,7 @@ Given either a regular client or a cluster client::
    The above example can be converted into an infinite iterator over the configured streams::
 
       while True:
-        for stream, entry in consumer:
+        async for stream, entry in consumer:
             # do something with the entry
 
 =============
