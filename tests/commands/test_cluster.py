@@ -8,7 +8,9 @@ from coredis import MovedError
 from tests.conftest import targets
 
 
-@targets("redis_cluster", "redis_cluster_raw", "redis_cluster_resp3")
+@targets(
+    "redis_cluster", "redis_cluster_raw", "redis_cluster_resp3", "redis_cluster_ssl"
+)
 @pytest.mark.asyncio()
 class TestCluster:
     async def test_readonly_explicit(self, client, _s):

@@ -191,6 +191,17 @@ def redis_cluster_server(docker_services):
 
 
 @pytest.fixture(scope="session")
+def redis_ssl_cluster_server(docker_services):
+    docker_services.start("redis-ssl-cluster-init")
+    docker_services.wait_for_service(
+        "redis-ssl-cluster-6", 8306, lambda h, p: ping_socket("localhost", 8306)
+    )
+    if os.environ.get("CI") == "True":
+        time.sleep(10)
+    yield
+
+
+@pytest.fixture(scope="session")
 def redis_sentinel_server(docker_services):
     docker_services.start("redis-sentinel")
     docker_services.wait_for_service("redis-sentinel", 26379, ping_socket)
@@ -525,6 +536,28 @@ async def redis_cluster(redis_cluster_server, request):
         **get_client_test_args(request),
     )
     await check_test_constraints(request, cluster)
+    await cluster
+    await cluster.flushall()
+    await cluster.flushdb()
+
+    for primary in cluster.primaries:
+        await set_default_test_config(primary)
+    yield cluster
+
+    cluster.connection_pool.disconnect()
+
+
+@pytest.fixture
+async def redis_cluster_ssl(redis_ssl_cluster_server, request):
+    storage_url = (
+        "rediss://localhost:8301/?ssl_cert_reqs=required"
+        "&ssl_keyfile=./tests/tls/client.key"
+        "&ssl_certfile=./tests/tls/client.crt"
+        "&ssl_ca_certs=./tests/tls/ca.crt"
+    )
+    cluster = coredis.RedisCluster.from_url(
+        storage_url, decode_responses=True, **get_client_test_args(request)
+    )
     await cluster
     await cluster.flushall()
     await cluster.flushdb()
