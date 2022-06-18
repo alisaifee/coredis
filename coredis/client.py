@@ -177,6 +177,7 @@ class RedisConnection:
         stream_timeout: Optional[int] = None,
         connect_timeout: Optional[int] = None,
         connection_pool: Optional[ConnectionPool] = None,
+        connection_pool_cls: Type[ConnectionPool] = ConnectionPool,
         unix_socket_path: Optional[str] = None,
         encoding: str = "utf-8",
         decode_responses: bool = False,
@@ -231,7 +232,7 @@ class RedisConnection:
                         ssl_keyfile, ssl_certfile, ssl_cert_reqs, ssl_ca_certs
                     ).get()
                     kwargs["ssl_context"] = ssl_context
-            connection_pool = ConnectionPool(**kwargs)
+            connection_pool = connection_pool_cls(**kwargs)
 
         self.connection_pool = connection_pool
         self.encoding = str(connection_pool.connection_kwargs.get("encoding", encoding))
@@ -592,6 +593,7 @@ class Redis(
             stream_timeout=stream_timeout,
             connect_timeout=connect_timeout,
             connection_pool=connection_pool,
+            connection_pool_cls=ConnectionPool,
             unix_socket_path=unix_socket_path,
             encoding=encoding,
             decode_responses=decode_responses,
@@ -661,6 +663,7 @@ class Redis(
         For example:
 
         - ``redis://[:password]@localhost:6379/0``
+        - ``rediss://[:password]@localhost:6379/0``
         - ``unix://[:password]@/path/to/socket.sock?db=0``
 
         There are several ways to specify a database number. The parse function
@@ -1090,6 +1093,7 @@ class RedisCluster(
 
         super().__init__(
             connection_pool=pool,
+            connection_pool_cls=ClusterConnectionPool,
             decode_responses=decode_responses,
             verify_version=verify_version,
             protocol_version=protocol_version,
@@ -1149,28 +1153,18 @@ class RedisCluster(
         **kwargs: Any,
     ) -> RedisClusterT:
         """
-        Return a Redis client object configured from the given URL, which must
-        use either the ``redis://`` scheme
-        `<http://www.iana.org/assignments/uri-schemes/prov/redis>`_ for RESP
-        connections or the ``unix://`` scheme for Unix domain sockets.
+        Return a Cluster client object configured from the startup node in URL,
+        which must use either the ``redis://`` scheme
+        `<http://www.iana.org/assignments/uri-schemes/prov/redis>`_
+
         For example:
 
-            - ``redis://[:password]@localhost:6379/0``
-            - ``unix://[:password]@/path/to/socket.sock?db=0``
-
-        There are several ways to specify a database number. The parse function
-        will return the first specified option:
-
-            #. A ``db`` querystring option, e.g. ``redis://localhost?db=0``
-            #. If using the ``redis://`` scheme, the path argument of the url, e.g.
-               ``redis://localhost/0``
-            #. The ``db`` argument to this function.
-
-        If none of these options are specified, db=0 is used.
+            - ``redis://[:password]@localhost:6379``
+            - ``rediss://[:password]@localhost:6379``
 
         Any additional querystring arguments and keyword arguments will be
-        passed along to the :class:`ConnectionPool` class's initializer. In the case
-        of conflicting arguments, querystring arguments always win.
+        passed along to the :class:`ClusterConnectionPool` class's initializer.
+        In the case of conflicting arguments, querystring arguments always win.
         """
         if decode_responses:
             return cls(
