@@ -90,7 +90,14 @@ class RedisSSLContext:
             self.context.load_cert_chain(
                 certfile=self.certfile, keyfile=self.keyfile  # type: ignore
             )
-            self.context.load_verify_locations(self.ca_certs)
+            if self.ca_certs:
+                self.context.load_verify_locations(
+                    **{
+                        "capath"
+                        if os.path.isdir(self.ca_certs)
+                        else "cafile": self.ca_certs
+                    }
+                )
         assert self.context
         return self.context
 

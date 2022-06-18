@@ -185,7 +185,7 @@ class RedisConnection:
         ssl_context: Optional[SSLContext] = None,
         ssl_keyfile: Optional[str] = None,
         ssl_certfile: Optional[str] = None,
-        ssl_cert_reqs: Optional[str] = None,
+        ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = None,
         ssl_ca_certs: Optional[str] = None,
         max_connections: Optional[int] = None,
         retry_on_timeout: bool = False,
@@ -458,7 +458,7 @@ class Redis(
         ssl_context: Optional[SSLContext] = ...,
         ssl_keyfile: Optional[str] = ...,
         ssl_certfile: Optional[str] = ...,
-        ssl_cert_reqs: Optional[str] = ...,
+        ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = ...,
         ssl_ca_certs: Optional[str] = ...,
         max_connections: Optional[int] = ...,
         retry_on_timeout: bool = ...,
@@ -491,7 +491,7 @@ class Redis(
         ssl_context: Optional[SSLContext] = ...,
         ssl_keyfile: Optional[str] = ...,
         ssl_certfile: Optional[str] = ...,
-        ssl_cert_reqs: Optional[str] = ...,
+        ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = ...,
         ssl_ca_certs: Optional[str] = ...,
         max_connections: Optional[int] = ...,
         retry_on_timeout: bool = ...,
@@ -523,7 +523,7 @@ class Redis(
         ssl_context: Optional[SSLContext] = None,
         ssl_keyfile: Optional[str] = None,
         ssl_certfile: Optional[str] = None,
-        ssl_cert_reqs: Optional[str] = None,
+        ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = None,
         ssl_ca_certs: Optional[str] = None,
         max_connections: Optional[int] = None,
         retry_on_timeout: bool = False,
@@ -564,6 +564,17 @@ class Redis(
         :param decode_responses: If ``True`` string responses from the server
          will be decoded using :paramref:`encoding` before being returned.
          (See :ref:`handbook/encoding:encoding/decoding`)
+        :param ssl: Whether to use an SSL connection
+        :param ssl_context: If provided the :class:`ssl.SSLContext` will be used when
+         establishing the connection
+        :param ssl_keyfile: Path of the private key to use
+        :param ssl_certfile: Path to the certificate corresponding to :paramref:`ssl_keyfile`
+        :param ssl_cert_reqs: Whether to try to verify the server's certificates and
+         how to behave if verification fails (See :attr:`ssl.SSLContext.verify_mode`).
+        :param ssl_ca_certs: Path to a concatenated certificate authority file or a directory
+         containing several CA certifcates to use  for validating the server's certificates
+         when :paramref:`ssl_cert_reqs` is not ``"none"``
+         (See :meth:`ssl.SSLContext.load_verify_locations`).
         :param max_connections: Maximum capacity of the connection pool (Ignored if
          :paramref:`connection_pool` is not ``None``.
         :param retry_on_timeout: Whether to retry a commmand once if a :exc:`TimeoutError`
@@ -925,7 +936,7 @@ class RedisCluster(
         ssl_context: Optional[SSLContext] = ...,
         ssl_keyfile: Optional[str] = ...,
         ssl_certfile: Optional[str] = ...,
-        ssl_cert_reqs: Optional[str] = ...,
+        ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = ...,
         ssl_ca_certs: Optional[str] = ...,
         max_connections: int = ...,
         max_connections_per_node: bool = ...,
@@ -954,7 +965,7 @@ class RedisCluster(
         ssl_context: Optional[SSLContext] = ...,
         ssl_keyfile: Optional[str] = ...,
         ssl_certfile: Optional[str] = ...,
-        ssl_cert_reqs: Optional[str] = ...,
+        ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = ...,
         ssl_ca_certs: Optional[str] = ...,
         max_connections: int = ...,
         max_connections_per_node: bool = ...,
@@ -982,7 +993,7 @@ class RedisCluster(
         ssl_context: Optional[SSLContext] = None,
         ssl_keyfile: Optional[str] = None,
         ssl_certfile: Optional[str] = None,
-        ssl_cert_reqs: Optional[str] = None,
+        ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = None,
         ssl_ca_certs: Optional[str] = None,
         max_connections: int = 32,
         max_connections_per_node: bool = False,
@@ -1019,6 +1030,17 @@ class RedisCluster(
         :param port: Can be used to point to a startup node
         :param startup_nodes: List of nodes that initial bootstrapping can be done
          from
+        :param ssl: Whether to use an SSL connection
+        :param ssl_context: If provided the :class:`ssl.SSLContext` will be used when
+         establishing the connection
+        :param ssl_keyfile: Path of the private key to use
+        :param ssl_certfile: Path to the certificate corresponding to :paramref:`ssl_keyfile`
+        :param ssl_cert_reqs: Whether to try to verify the server's certificates and
+         how to behave if verification fails (See :attr:`ssl.SSLContext.verify_mode`).
+        :param ssl_ca_certs: Path to a concatenated certificate authority file or a directory
+         containing several CA certifcates to use  for validating the server's certificates
+         when :paramref:`ssl_cert_reqs` is not ``"none"``
+         (See :meth:`ssl.SSLContext.load_verify_locations`).
         :param max_connections: Maximum number of connections that should be kept open at one time
         :param max_connections_per_node:
         :param readonly: enable READONLY mode. You can read possibly stale data from slave.
