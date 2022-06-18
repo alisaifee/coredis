@@ -217,8 +217,6 @@ class SentinelConnectionPool(ConnectionPool):
 
 class Sentinel(Generic[AnyStr]):
     """
-    Redis Sentinel client
-
     Example use::
 
         from coredis.sentinel import Sentinel
@@ -265,6 +263,11 @@ class Sentinel(Generic[AnyStr]):
         **connection_kwargs: Any,
     ):
         """
+        Changes
+          - .. versionadded:: 3.10.0
+               Accept :paramref:`cache` parameter to be used with primaries
+               and replicas returned from the sentinel instance.
+
         :param sentinels: is a list of sentinel nodes. Each node is represented by
          a pair (hostname, port).
         :param min_other_sentinels: defined a minimum number of peers for a sentinel.

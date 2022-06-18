@@ -300,10 +300,6 @@ class AbstractRedis(
     CoreCommands[AnyStr],
     SentinelCommands[AnyStr],
 ):
-    """
-    Async Redis client
-    """
-
     server_version: Optional[Version]
     protocol_version: Literal[2, 3]
     cache: Optional[AbstractCache]
@@ -440,10 +436,6 @@ class Redis(
     RedisConnection,
     metaclass=RedisMeta,
 ):
-    """
-    Redis client
-    """
-
     @overload
     def __init__(
         self: Redis[bytes],
@@ -544,17 +536,18 @@ class Redis(
         **_: Any,
     ) -> None:
         """
-        .. versionadded:: 3.9.0
-           If :paramref:`cache` is provided the client will check & populate
-           the cache for read only commands and invalidate it for commands
-           that could change the key(s) in the request.
+        Changes
+          - .. versionadded:: 3.9.0
+             If :paramref:`cache` is provided the client will check & populate
+             the cache for read only commands and invalidate it for commands
+             that could change the key(s) in the request.
 
-        .. versionchanged:: 3.5.0
-           The :paramref:`verify_version` parameter now defaults to ``True``
+          - .. versionchanged:: 3.5.0
+             The :paramref:`verify_version` parameter now defaults to ``True``
 
-        .. versionadded:: 3.1.0
-           The :paramref:`protocol_version` and :paramref:`verify_version`
-           parameters were added
+          - .. versionadded:: 3.1.0
+             The :paramref:`protocol_version` and :paramref:`verify_version`
+             parameters were added
 
         :param host: The hostname of the redis server
         :param port: The port at which th redis server is listening on
@@ -927,10 +920,6 @@ class RedisCluster(
     RedisConnection,
     metaclass=ClusterMeta,
 ):
-    """
-    Redis cluster client
-    """
-
     RedisClusterRequestTTL = 16
     ROUTING_FLAGS: Dict[bytes, NodeFlag] = {}
     SPLIT_FLAGS: Dict[bytes, NodeFlag] = {}
@@ -1027,20 +1016,21 @@ class RedisCluster(
     ):
         """
 
-        .. versionadded:: 3.10.0
-           Synchronized ssl constructor parameters with :class:`coredis.Redis`
-        .. versionadded:: 3.9.0
-           If :paramref:`cache` is provided the client will check & populate
-           the cache for read only commands and invalidate it for commands
-           that could change the key(s) in the request.
-        .. versionadded:: 3.6.0
-           The :paramref:`non_atomic_cross_slot` parameter was added
-        .. versionchanged:: 3.5.0
-           The :paramref:`verify_version` parameter now defaults to ``True``
+        Changes
+          - .. versionadded:: 3.10.0
+             Synchronized ssl constructor parameters with :class:`coredis.Redis`
+          - .. versionadded:: 3.9.0
+             If :paramref:`cache` is provided the client will check & populate
+             the cache for read only commands and invalidate it for commands
+             that could change the key(s) in the request.
+          - .. versionadded:: 3.6.0
+             The :paramref:`non_atomic_cross_slot` parameter was added
+          - .. versionchanged:: 3.5.0
+             The :paramref:`verify_version` parameter now defaults to ``True``
 
-        .. versionadded:: 3.1.0
-           The :paramref:`protocol_version` and :paramref:`verify_version`
-           parameters were added
+          - .. versionadded:: 3.1.0
+             The :paramref:`protocol_version` and :paramref:`verify_version`
+             parameters were added
 
         :param host: Can be used to point to a startup node
         :param port: Can be used to point to a startup node
