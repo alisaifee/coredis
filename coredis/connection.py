@@ -228,14 +228,20 @@ class BaseConnection:
 
     async def update_tracking_client(
         self, enabled: bool, client_id: Optional[int] = None
-    ) -> None:
-        if enabled and client_id is not None:
-            await self.send_command(b"CLIENT TRACKING", b"ON", b"REDIRECT", client_id)
-        else:
-            await self.send_command(b"CLIENT TRACKING", b"OFF")
-        if await self.read_response(decode=False) != b"OK":
-            raise ConnectionError("Unable to toggle client tracking")
-        self.tracking_client_id = client_id
+    ) -> bool:
+        try:
+            if enabled and client_id is not None:
+                await self.send_command(
+                    b"CLIENT TRACKING", b"ON", b"REDIRECT", client_id
+                )
+            else:
+                await self.send_command(b"CLIENT TRACKING", b"OFF")
+            if await self.read_response(decode=False) != b"OK":
+                raise ConnectionError("Unable to toggle client tracking")
+            self.tracking_client_id = client_id
+            return True
+        except Exception:
+            return False
 
     async def on_connect(self) -> None:
         self._parser.on_connect(self)
