@@ -558,6 +558,8 @@ async def redis_cluster_ssl(redis_ssl_cluster_server, request):
     cluster = coredis.RedisCluster.from_url(
         storage_url, decode_responses=True, **get_client_test_args(request)
     )
+
+    await check_test_constraints(request, cluster)
     await cluster
     await cluster.flushall()
     await cluster.flushdb()
