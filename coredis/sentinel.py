@@ -352,8 +352,8 @@ class Sentinel(Generic[AnyStr]):
         Asks sentinel servers for the Redis primary's address corresponding
         to the service labeled :paramref:`service_name`.
 
-        :return: A pair (address, port) or raises MasterNotFoundError if no
-         primary is found.
+        :return: A pair (address, port) or raises :exc:`~coredis.exceptions.PrimaryNotFoundError`
+         if no primary is found.
         """
         for sentinel_no, sentinel in enumerate(self.sentinels):
             try:
