@@ -918,6 +918,12 @@ class RedisCluster(
         port: Optional[int] = ...,
         *,
         startup_nodes: Optional[Iterable[Node]] = ...,
+        ssl: bool = ...,
+        ssl_context: Optional[SSLContext] = ...,
+        ssl_keyfile: Optional[str] = ...,
+        ssl_certfile: Optional[str] = ...,
+        ssl_cert_reqs: Optional[str] = ...,
+        ssl_ca_certs: Optional[str] = ...,
         max_connections: int = ...,
         max_connections_per_node: bool = ...,
         readonly: bool = ...,
@@ -941,6 +947,12 @@ class RedisCluster(
         port: Optional[int] = ...,
         *,
         startup_nodes: Optional[Iterable[Node]] = ...,
+        ssl: bool = ...,
+        ssl_context: Optional[SSLContext] = ...,
+        ssl_keyfile: Optional[str] = ...,
+        ssl_certfile: Optional[str] = ...,
+        ssl_cert_reqs: Optional[str] = ...,
+        ssl_ca_certs: Optional[str] = ...,
         max_connections: int = ...,
         max_connections_per_node: bool = ...,
         readonly: bool = ...,
@@ -963,6 +975,12 @@ class RedisCluster(
         port: Optional[int] = None,
         *,
         startup_nodes: Optional[Iterable[Node]] = None,
+        ssl: bool = False,
+        ssl_context: Optional[SSLContext] = None,
+        ssl_keyfile: Optional[str] = None,
+        ssl_certfile: Optional[str] = None,
+        ssl_cert_reqs: Optional[str] = None,
+        ssl_ca_certs: Optional[str] = None,
         max_connections: int = 32,
         max_connections_per_node: bool = False,
         readonly: bool = False,
@@ -979,6 +997,8 @@ class RedisCluster(
     ):
         """
 
+        .. versionadded:: 3.10.0
+           Synchronized ssl constructor parameters with :class:`coredis.Redis`
         .. versionadded:: 3.9.0
            If :paramref:`cache` is provided the client will check & populate
            the cache for read only commands and invalidate it for commands
@@ -1048,6 +1068,13 @@ class RedisCluster(
                         node_id=None,
                     )
                 )
+            if ssl_context is not None:
+                kwargs["ssl_context"] = ssl_context
+            elif ssl:
+                ssl_context = RedisSSLContext(
+                    ssl_keyfile, ssl_certfile, ssl_cert_reqs, ssl_ca_certs
+                ).get()
+                kwargs["ssl_context"] = ssl_context
             pool = ClusterConnectionPool(
                 startup_nodes=startup_nodes,
                 max_connections=max_connections,

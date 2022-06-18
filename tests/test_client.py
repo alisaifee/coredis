@@ -88,6 +88,29 @@ class TestSSL:
         )
         assert await client.ping() == b"PONG"
 
+    async def test_cluster_explicit_ssl_parameters(self, redis_ssl_cluster_server):
+        client = coredis.RedisCluster(
+            "localhost",
+            port=8301,
+            ssl=True,
+            ssl_keyfile="./tests/tls/client.key",
+            ssl_certfile="./tests/tls/client.crt",
+            ssl_ca_certs="./tests/tls/ca.crt",
+        )
+        assert await client.ping() == b"PONG"
+
+    async def test_cluster_explicit_ssl_context(self, redis_ssl_cluster_server):
+        context = SSLContext()
+        context.load_cert_chain(
+            certfile="./tests/tls/client.crt", keyfile="./tests/tls/client.key"
+        )
+        client = coredis.RedisCluster(
+            "localhost",
+            8301,
+            ssl_context=context,
+        )
+        assert await client.ping() == b"PONG"
+
     async def test_invalid_ssl_parameters(self, redis_ssl_server):
         context = SSLContext()
         context.load_cert_chain(
