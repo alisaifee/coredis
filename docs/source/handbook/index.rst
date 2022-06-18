@@ -39,11 +39,14 @@ Server side scripting
 - :ref:`handbook/scripting:lua scripts`
 - :ref:`handbook/scripting:library functions`
 
-"Stuff"
--------
+Performance
+-----------
 - :ref:`handbook/caching:caching`
-- :ref:`handbook/connections:connections`
 - :ref:`handbook/pipelines:pipelines`
+
+Implementation Details
+----------------------
+- :ref:`handbook/connections:connections`
 - :ref:`handbook/response:parsers`
 - :ref:`handbook/development:development`
 - :ref:`handbook/typing:typing`
