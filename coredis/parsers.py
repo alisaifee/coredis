@@ -195,8 +195,8 @@ class PythonParser(BaseParser):
                     e = sys.exc_info()[1]
                     if e:
                         raise ConnectionError(
-                            f"Error {type(e)} while reading from stream: {e.args}"
-                        )
+                            f"Error while reading from stream: {e}"
+                        ) from e
                     raise
             else:
                 if response and response.response_type == RESPDataType.PUSH:
@@ -306,8 +306,8 @@ class HiredisParser(BaseParser):
                 e = sys.exc_info()[1]
                 if e:
                     raise ConnectionError(
-                        f"Error {type(e)} while reading from stream: {e.args}"
-                    )
+                        f"Error while reading from stream: {e}"
+                    ) from e
                 raise
 
             if not buffer:

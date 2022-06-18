@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from ssl import SSLContext
+from ssl import SSLContext, SSLError
 
 import pytest
 from packaging.version import Version
 
 import coredis
-from coredis.exceptions import CommandNotSupportedError
+from coredis.exceptions import CommandNotSupportedError, ConnectionError
 from tests.conftest import targets
 
 
@@ -87,3 +87,17 @@ class TestSSL:
             ssl_context=context,
         )
         assert await client.ping() == b"PONG"
+
+    async def test_invalid_ssl_parameters(self, redis_ssl_server):
+        context = SSLContext()
+        context.load_cert_chain(
+            certfile="./tests/tls/invalid-client.crt",
+            keyfile="./tests/tls/invalid-client.key",
+        )
+        client = coredis.Redis(
+            port=8379,
+            ssl_context=context,
+        )
+        with pytest.raises(ConnectionError, match="decrypt error") as exc_info:
+            await client.ping() == b"PONG"
+        assert isinstance(exc_info.value.__cause__, SSLError)

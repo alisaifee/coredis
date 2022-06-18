@@ -205,8 +205,8 @@ class BaseConnection:
             raise
         except RedisError:
             raise
-        except Exception:
-            raise ConnectionError()
+        except Exception as err:
+            raise ConnectionError() from err
         # run any user callbacks. right now the only internal callback
         # is for pubsub channel/pattern resubscription
 
@@ -349,7 +349,7 @@ class BaseConnection:
                     errmsg = e.args[1]
                 raise ConnectionError(
                     f"Error {errno} while writing to socket. {errmsg}."
-                )
+                ) from e
             else:
                 raise
 
