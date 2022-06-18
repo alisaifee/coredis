@@ -112,8 +112,12 @@ class AbstractCache(ABC):
 
     @abstractmethod
     async def initialize(
-        self, client: "coredis.client.RedisConnection"
+        self,
+        client: Union["coredis.client.Redis[Any]", "coredis.client.RedisCluster[Any]"],
     ) -> AbstractCache:
+        """
+        Associate and initialize this cache with the provided client
+        """
         ...
 
     @property
@@ -452,7 +456,8 @@ class NodeTrackingCache(
         return ()
 
     async def initialize(
-        self, client: "coredis.client.RedisConnection"
+        self,
+        client: Union["coredis.client.Redis[Any]", "coredis.client.RedisCluster[Any]"],
     ) -> NodeTrackingCache:
         self.__protocol_version = client.protocol_version
         await super().start(client)
@@ -562,14 +567,15 @@ class ClusterTrackingCache(
             max_keys, max_size_bytes
         )
         self.node_caches: Dict[str, NodeTrackingCache] = {}
-        self.__nodes: List["coredis.client.RedisConnection"] = []
+        self.__nodes: List["coredis.client.Redis[Any]"] = []
         self.__max_idle_seconds = max_idle_seconds
         self.__confidence = self.__original_confidence = confidence
         self.__dynamic_confidence = dynamic_confidence
         self.__stats = stats or CacheStats()
 
     async def initialize(
-        self, client: "coredis.client.RedisConnection"
+        self,
+        client: Union["coredis.client.Redis[Any]", "coredis.client.RedisCluster[Any]"],
     ) -> ClusterTrackingCache:
         import coredis.client
 
@@ -724,7 +730,8 @@ class TrackingCache(
         self.__stats = stats or CacheStats()
 
     async def initialize(
-        self, client: "coredis.client.RedisConnection"
+        self,
+        client: Union["coredis.client.Redis[Any]", "coredis.client.RedisCluster[Any]"],
     ) -> TrackingCache:
         import coredis.client
 
