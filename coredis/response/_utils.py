@@ -45,10 +45,3 @@ def pairs_to_dict(
     if isinstance(response, dict):
         return response
     return dict(response)
-
-
-def pairs_to_ordered_dict(
-    response: Tuple[Tuple[StringT, T_co], ...]
-) -> OrderedDict[StringT, T_co]:
-    """Creates a dict given an array of tuples"""
-    return OrderedDict(response)
