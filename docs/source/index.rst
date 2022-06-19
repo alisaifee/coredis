@@ -130,7 +130,7 @@ the `Redis command documentation <https://redis.io/commands>`__ by using the fol
   the variable length arguments are not optional the expected argument is an
   :class:`~typing.Iterable` or :class:`~typing.Mapping`.
 - Pure tokens used as flags are mapped to boolean arguments
-- ``One of`` arguments accepting pure tokens are collapsed and accept a :class:`~coredis.PureToken`
+- ``One of`` arguments accepting pure tokens are collapsed and accept a :class:`~coredis.tokens.PureToken`
 - Responses are mapped as closely from redis <-> python types as possible.
 
 For higher level concepts such as :ref:`handbook/pipelines:pipelines`, :ref:`handbook/scripting:lua scripts`,
