@@ -20,6 +20,8 @@ class CommonExamples:
         await client.incr("fubar")
         await asyncio.sleep(0.2)
         assert await cached.get("fubar") == _s("2")
+        cache.reset()
+        assert await cached.get("fubar") == _s("2")
 
     async def test_eviction(self, client, cloner, _s):
         cache = TrackingCache(max_keys=1)
@@ -93,6 +95,8 @@ class CommonExamples:
 
         [await cached.get(f"fubar{i}") for i in range(100)]
         assert cache.confidence > dropped
+        cache.reset()
+        assert cache.confidence == 90
 
     async def test_shared_cache(self, client, cloner, mocker, _s):
         cache = TrackingCache()
@@ -146,6 +150,14 @@ class CommonExamples:
             "misses": 3,
             "invalidations": 2,
             "dirty_hits": 1,
+        }
+
+        cache.stats.clear()
+        assert cache.stats.summary == {
+            "hits": 0,
+            "misses": 0,
+            "invalidations": 0,
+            "dirty_hits": 0,
         }
 
 

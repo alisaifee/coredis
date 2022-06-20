@@ -431,7 +431,7 @@ class NodeTrackingCache(
             )
 
     def reset(self, *keys: ValueT) -> None:
-        if keys is not None:
+        if keys:
             for k in keys:
                 self.__stats.invalidate(k)
                 self.__cache.remove(b(k))
@@ -521,7 +521,7 @@ class NodeTrackingCache(
                 self.messages.task_done()
             except asyncio.CancelledError:
                 break
-            except RuntimeError:
+            except RuntimeError:  # noqa
                 break
 
 
@@ -650,12 +650,13 @@ class ClusterTrackingCache(
             )
 
     def reset(self, *keys: ValueT) -> None:
-        if keys is not None:
+        if keys:
             for k in keys:
                 self.__stats.invalidate(k)
                 self.__cache.remove(b(k))
         else:
             self.__cache.clear()
+            self.__stats.compact()
             self.__confidence = self.__original_confidence
 
     def shutdown(self) -> None:
