@@ -13,3 +13,5 @@ exclude_lines =
     if typing.TYPE_CHECKING
     class .*\bProtocol\):
     @(abc\.)?abstractmethod
+    __repr__
+
