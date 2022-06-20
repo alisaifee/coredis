@@ -150,7 +150,7 @@ class ClusterEnsureConsistent(ClusterMultiNodeCallback[Optional[R]]):
 class ClusterConcatTuples(ClusterMultiNodeCallback[Tuple[R, ...]]):
     def combine(
         self, responses: Mapping[str, Tuple[R, ...]], **kwargs: Optional[ValueT]
-    ) -> Set[R]:
+    ) -> Tuple[R, ...]:
         return tuple(itertools.chain(*responses.values()))
 
 
@@ -175,7 +175,9 @@ class ClusterMergeMapping(ClusterMultiNodeCallback[Dict[CK_co, CR_co]]):
     ) -> Dict[CK_co, CR_co]:
         response: Dict[CK_co, CR_co] = {}
         for key in set(itertools.chain(*responses.values())):
-            response[key] = self.value_combine(responses[n].get(key) for n in responses)
+            response[key] = self.value_combine(
+                responses[n][key] for n in responses if key in responses[n]
+            )
         return response
 
 

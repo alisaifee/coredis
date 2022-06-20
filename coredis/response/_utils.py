@@ -4,9 +4,8 @@ from typing import cast
 
 from coredis.typing import (
     Dict,
+    Iterable,
     List,
-    Mapping,
-    MutableMapping,
     OrderedDict,
     StringT,
     Tuple,
@@ -27,21 +26,7 @@ def flat_pairs_to_dict(
     return dict(zip(it, it))
 
 
-def flat_pairs_to_ordered_dict(
-    response: Tuple[T_co, ...]
-) -> OrderedDict[StringT, T_co]:
+def flat_pairs_to_ordered_dict(response: Iterable[T_co]) -> OrderedDict[StringT, T_co]:
     """Creates a dict given a flat list of key/value pairs"""
     it = iter(response)
     return cast(OrderedDict[StringT, T_co], OrderedDict(zip(it, it)))
-
-
-def pairs_to_dict(
-    response: Union[
-        Mapping[StringT, T_co],
-        Tuple[Tuple[StringT, T_co], ...],
-    ]
-) -> MutableMapping[StringT, T_co]:
-    """Creates a dict given an array of tuples"""
-    if isinstance(response, dict):
-        return response
-    return dict(response)

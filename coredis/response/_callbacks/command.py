@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from coredis._utils import EncodingInsensitiveDict, nativestr
 from coredis.response._callbacks import ResponseCallback
-from coredis.response._utils import flat_pairs_to_dict, pairs_to_dict
+from coredis.response._utils import flat_pairs_to_dict
 from coredis.response.types import Command
 from coredis.typing import (
     AnyStr,
@@ -63,12 +63,6 @@ class CommandKeyFlagCallback(
     ) -> Dict[AnyStr, Set[AnyStr]]:
 
         return {k[0]: set(k[1]) for k in response}
-
-    def transform_3(
-        self, response: List[ResponseType], **options: Optional[ValueT]
-    ) -> Dict[AnyStr, Set[AnyStr]]:
-
-        return pairs_to_dict(response)  # type: ignore
 
 
 class CommandDocCallback(
