@@ -289,10 +289,6 @@ class RedisConnection:
             return
         if not self.server_version and version:
             self.server_version = Version(nativestr(version))
-        elif str(self.server_version) != nativestr(version):
-            raise Exception(
-                f"Server version changed from {self.server_version} to {version}"
-            )
 
 
 class AbstractRedis(
