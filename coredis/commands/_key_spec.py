@@ -129,6 +129,7 @@ class KeySpec:
     }
     ALL: ClassVar[Dict[bytes, Callable[[Tuple[ValueT, ...]], Tuple[ValueT, ...]]]] = {
         b"OBJECT": lambda args: ((args[2],)),
+        b"DEBUG OBJECT": lambda args: ((args[1],)),
         b"APPEND": lambda args: ((args[1],)),
         b"BITFIELD": lambda args: ((args[1],)),
         b"BLMOVE": lambda args: ((args[1],) + (args[2],)),

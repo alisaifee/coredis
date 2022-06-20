@@ -124,6 +124,12 @@ class TestServer:
         await client.set("b", "bar")
         assert await client.dbsize() == 2
 
+    async def test_debug_object(self, client):
+        await client.set("fubar", 1)
+        object_info = await client.debug_object("fubar")
+        assert object_info["type"] == "Value"
+        assert object_info["encoding"] == "int"
+
     @pytest.mark.min_server_version("6.2.0")
     @pytest.mark.parametrize(
         "mode",
@@ -267,7 +273,6 @@ class TestServer:
     async def test_latency_doctor(self, client, _s):
         assert await client.latency_doctor()
 
-    @pytest.mark.max_server_version("6.2.9")
     @pytest.mark.nocluster
     async def test_latency_all(self, client, _s):
         await client.execute_command(b"debug", "sleep", 0.05)
@@ -283,7 +288,6 @@ class TestServer:
         assert latest[_s("command")][1] == approx(50, 60)
         assert latest[_s("command")][2] == approx(50, 60)
 
-    @pytest.mark.max_server_version("6.2.9")
     @pytest.mark.nocluster
     async def test_latency_graph(self, client, _s):
         await client.execute_command(b"debug", "sleep", 0.05)

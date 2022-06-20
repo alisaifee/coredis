@@ -2492,7 +2492,10 @@ def cluster_key_extraction(path):
                     )
 
     readonly = {}
-    all = {"OBJECT": ["(args[2],)"]}
+    all = {
+        "OBJECT": ["(args[2],)"],
+        "DEBUG OBJECT": ["(args[1],)"]
+    }
 
     for mode, commands in lookups.items():
         for command, exprs in commands.items():
