@@ -9,6 +9,7 @@ import pytest
 from coredis import Redis
 from coredis.connection import ClusterConnection, Connection, UnixDomainSocketConnection
 from coredis.exceptions import RedisClusterException
+from coredis.parsers import PythonParser
 from coredis.pool import ClusterConnectionPool, ConnectionPool
 
 
@@ -22,6 +23,7 @@ class DummyConnection(ClusterConnection):
         self.port = port
         self.socket_timeout = socket_timeout
         self.awaiting_response = False
+        self._parser = PythonParser(-1)
 
 
 class TestConnectionPool:
@@ -93,6 +95,18 @@ class TestConnectionPool:
     async def test_max_connections_default_setting(self):
         pool = await self.get_pool(max_connections=None)
         assert pool.max_connections == 2**31
+
+    @pytest.mark.asyncio()
+    async def test_pool_disconnect(self):
+        pool = await self.get_pool()
+        c1 = pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+        c2 = pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
+        c3 = pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+        pool.release(c3)
+        pool.disconnect()
+        assert not c1.is_connected
+        assert not c2.is_connected
+        assert not c3.is_connected
 
     @pytest.mark.asyncio()
     async def test_reuse_previously_released_connection(self):

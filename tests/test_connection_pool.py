@@ -23,6 +23,13 @@ class DummyConnection:
         self.kwargs = kwargs
         self.pid = os.getpid()
         self.awaiting_response = False
+        self.is_connected = False
+
+    def connect(self):
+        self.is_connected = True
+
+    def disconnect(self):
+        self.is_connected = False
 
 
 @pytest.fixture(autouse=True)
@@ -68,6 +75,18 @@ class TestConnectionPool:
         await pool.get_connection()
         with pytest.raises(ConnectionError):
             await pool.get_connection()
+
+    @pytest.mark.asyncio()
+    async def test_pool_disconnect(self):
+        pool = self.get_pool(max_connections=3)
+        c1 = await pool.get_connection()
+        c2 = await pool.get_connection()
+        c3 = await pool.get_connection()
+        pool.release(c3)
+        pool.disconnect()
+        assert not c1.is_connected
+        assert not c2.is_connected
+        assert not c3.is_connected
 
     @pytest.mark.asyncio()
     async def test_reuse_previously_released_connection(self):
@@ -178,6 +197,18 @@ class TestBlockingConnectionPool:
         pool.release(c1)
         c2 = await pool.get_connection()
         assert c1 == c2
+
+    @pytest.mark.asyncio()
+    async def test_pool_disconnect(self):
+        pool = self.get_pool()
+        c1 = await pool.get_connection()
+        c2 = await pool.get_connection()
+        c3 = await pool.get_connection()
+        pool.release(c3)
+        pool.disconnect()
+        assert not c1.is_connected
+        assert not c2.is_connected
+        assert not c3.is_connected
 
     def test_repr_contains_db_info_tcp(self):
         connection_kwargs = {"host": "localhost", "port": 6379, "db": 1}

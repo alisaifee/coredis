@@ -727,7 +727,6 @@ class Redis(
             )
 
     async def initialize(self) -> Redis[AnyStr]:
-        await super().initialize()
         if self.cache:
             self.cache = await self.cache.initialize(self)
         return self
