@@ -5,8 +5,6 @@ import random
 from asyncio import AbstractEventLoop
 from typing import Any, cast, overload
 
-from deprecated.sphinx import deprecated, versionadded
-
 from coredis import Redis
 from coredis._utils import nativestr
 from coredis.cache import AbstractCache
@@ -346,7 +344,6 @@ class Sentinel(Generic[AnyStr]):
             replicas_alive.append((nativestr(replica["ip"]), int(replica["port"])))
         return replicas_alive
 
-    @versionadded("Replaces deprecated :meth:`discover_master`", version="3.1.0")
     async def discover_primary(self, service_name: str) -> Tuple[str, int]:
         """
         Asks sentinel servers for the Redis primary's address corresponding
@@ -370,7 +367,6 @@ class Sentinel(Generic[AnyStr]):
                 return nativestr(state["ip"]), int(state["port"])
         raise PrimaryNotFoundError(f"No primary found for {service_name!r}")
 
-    @versionadded("Replaces deprecated :meth:`discover_slaves`", version="3.1.0")
     async def discover_replicas(self, service_name: str) -> List[Tuple[str, int]]:
         """Returns a list of alive slaves for service :paramref:`service_name`"""
         for sentinel in self.sentinels:
@@ -405,7 +401,6 @@ class Sentinel(Generic[AnyStr]):
     ) -> Redis[str]:
         ...
 
-    @versionadded("Replaces deprecated :meth:`master_for`", version="3.1.0")
     def primary_for(
         self,
         service_name: str,
@@ -466,7 +461,6 @@ class Sentinel(Generic[AnyStr]):
     ) -> Redis[str]:
         ...
 
-    @versionadded("Replaces deprecated :meth:`slave_for`", version="3.1.0")
     def replica_for(
         self,
         service_name: str,
@@ -501,54 +495,4 @@ class Sentinel(Generic[AnyStr]):
                 **connection_kwargs,
             ),
             cache=self.__cache,
-        )
-
-    @deprecated(version="3.1.0", reason="Use :meth:`discover_primary()` instead")
-    async def discover_master(self, service_name: str) -> Tuple[str, int]:  # noqa
-        """
-        :meta private:
-        """
-        return await self.discover_primary(service_name)
-
-    @deprecated(version="3.1.0", reason="Use :meth:`discover_replicas()` instead")
-    async def discover_slaves(self, service_name: str) -> List[Tuple[str, int]]:  # noqa
-        """
-        :meta private:
-        """
-        return await self.discover_replicas(service_name)
-
-    @deprecated(version="3.1.0", reason="Use :meth:`replica_for()` instead")
-    def slave_for(
-        self,
-        service_name: str,
-        redis_class: Type[Redis[Any]] = Redis[Any],
-        connection_pool_class: Type[SentinelConnectionPool] = SentinelConnectionPool,
-        **kwargs: Any,
-    ) -> Redis[Any]:  # noqa
-        """
-        :meta private:
-        """
-        return self.replica_for(  # pyright: ignore
-            service_name,
-            redis_class=redis_class,
-            connection_pool_class=connection_pool_class,
-            **kwargs,
-        )
-
-    @deprecated(version="3.1.0", reason="Use :meth:`primary_for()` instead")
-    def master_for(
-        self,
-        service_name: str,
-        redis_class: Type[Redis[Any]] = Redis[Any],
-        connection_pool_class: Type[SentinelConnectionPool] = SentinelConnectionPool,
-        **kwargs: Any,
-    ) -> Redis[Any]:  # noqa
-        """
-        :meta private:
-        """
-        return self.primary_for(  # pyright: ignore
-            service_name,
-            redis_class=redis_class,
-            connection_pool_class=connection_pool_class,
-            **kwargs,
         )
