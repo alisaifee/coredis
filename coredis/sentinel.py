@@ -504,14 +504,14 @@ class Sentinel(Generic[AnyStr]):
         )
 
     @deprecated(version="3.1.0", reason="Use :meth:`discover_primary()` instead")
-    async def discover_master(self, service_name: str) -> Tuple[str, int]:
+    async def discover_master(self, service_name: str) -> Tuple[str, int]:  # noqa
         """
         :meta private:
         """
         return await self.discover_primary(service_name)
 
     @deprecated(version="3.1.0", reason="Use :meth:`discover_replicas()` instead")
-    async def discover_slaves(self, service_name: str) -> List[Tuple[str, int]]:
+    async def discover_slaves(self, service_name: str) -> List[Tuple[str, int]]:  # noqa
         """
         :meta private:
         """
@@ -524,7 +524,7 @@ class Sentinel(Generic[AnyStr]):
         redis_class: Type[Redis[Any]] = Redis[Any],
         connection_pool_class: Type[SentinelConnectionPool] = SentinelConnectionPool,
         **kwargs: Any,
-    ) -> Redis[Any]:
+    ) -> Redis[Any]:  # noqa
         """
         :meta private:
         """
@@ -542,7 +542,7 @@ class Sentinel(Generic[AnyStr]):
         redis_class: Type[Redis[Any]] = Redis[Any],
         connection_pool_class: Type[SentinelConnectionPool] = SentinelConnectionPool,
         **kwargs: Any,
-    ) -> Redis[Any]:
+    ) -> Redis[Any]:  # noqa
         """
         :meta private:
         """

@@ -6,6 +6,7 @@ import coredis
 from coredis.exceptions import (
     ConnectionError,
     PrimaryNotFoundError,
+    ReadOnlyError,
     ReplicaNotFoundError,
     TimeoutError,
 )
@@ -278,6 +279,21 @@ async def test_sentinel_replicas(redis_sentinel):
             for k in (await redis_sentinel.sentinels[0].sentinel_replicas("mymaster"))
         ]
     )
+
+
+async def test_no_replicas(redis_sentinel, mocker):
+    p = await redis_sentinel.replica_for("mymaster")
+    replica_rotate = mocker.patch.object(p.connection_pool, "rotate_replicas")
+    replica_rotate.return_value = []
+    with pytest.raises(ReplicaNotFoundError):
+        await p.ping()
+
+
+async def test_write_to_replica(redis_sentinel):
+    p = await redis_sentinel.replica_for("mymaster")
+    await p.ping()
+    with pytest.raises(ReadOnlyError):
+        await p.set("fubar", 1)
 
 
 @pytest.mark.parametrize(
