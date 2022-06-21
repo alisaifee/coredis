@@ -454,9 +454,7 @@ class Connection(BaseConnection):
         self._reader = reader
         self._writer = writer
         sock = writer.transport.get_extra_info("socket")
-
         if sock is not None:
-            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             try:
                 # TCP_KEEPALIVE
 
