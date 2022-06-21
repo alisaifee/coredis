@@ -5,7 +5,6 @@ import inspect
 import os
 import socket
 import ssl
-import sys
 import time
 import warnings
 from asyncio import AbstractEventLoop, StreamReader, StreamWriter
@@ -350,23 +349,12 @@ class BaseConnection:
             assert self._writer
         try:
             self._writer.writelines(command)
-        except TimeoutError:
+            await self._writer.drain()
+        except asyncio.TimeoutError:
             self.disconnect()
             raise TimeoutError("Timeout writing to socket")
-        except Exception:
-            e = sys.exc_info()[1]
-            self.disconnect()
-            if e:
-                if len(e.args) == 1:
-                    errno, errmsg = "UNKNOWN", e.args[0]
-                else:
-                    errno = e.args[0]
-                    errmsg = e.args[1]
-                raise ConnectionError(
-                    f"Error {errno} while writing to socket. {errmsg}."
-                ) from e
-            else:
-                raise
+        except Exception as e:
+            raise ConnectionError("Error while writing to socket") from e
 
     async def send_command(self, command: bytes, *args: ValueT) -> None:
         if not self.is_connected:
@@ -467,6 +455,7 @@ class Connection(BaseConnection):
                 # `socket_keepalive_options` might contain invalid options
                 # causing an error. Do not leavo999e the connection open.
                 writer.close()
+                await writer.wait_closed()
                 raise
         await self.on_connect()
 
