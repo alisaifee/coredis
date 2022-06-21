@@ -554,7 +554,6 @@ class TestSortedSet:
         assert await client.zremrangebyscore("a{foo}", 2, 4) == 0
         assert await client.zrange("a{foo}", 0, -1) == (_s("a1"), _s("a5"))
 
-    @pytest.mark.nodragonfly
     async def test_zrevrange(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3))
         with server_deprecation_warning("Use :meth:`zrange`", client, "6.2"):
