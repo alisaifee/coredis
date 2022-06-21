@@ -6,11 +6,10 @@ fi;
 python -m venv .benchmarks
 source .benchmarks/bin/activate
 pip install -r python-redis-benchmark/requirements.txt
-pip install beartype
 pip install -r requirements/dev.txt
 pip uninstall coredis -y
 python setup.py install
 cd python-redis-benchmark
-COREDIS_RUNTIME_CHECKS=1 pytest $@
+pytest $@
 deactivate
 cd ../
