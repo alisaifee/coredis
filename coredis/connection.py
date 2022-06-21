@@ -366,11 +366,8 @@ class BaseConnection:
     def disconnect(self) -> None:
         """Disconnects from the Redis server"""
         self._parser.on_disconnect()
-        try:
-            if self._writer:
-                self._writer.close()
-        except Exception:
-            pass
+        if self._writer:
+            self._writer.close()
         self._reader = None
         self._writer = None
 
@@ -445,7 +442,6 @@ class Connection(BaseConnection):
         if sock is not None:
             try:
                 # TCP_KEEPALIVE
-
                 if self.socket_keepalive:
                     sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
 
@@ -453,7 +449,7 @@ class Connection(BaseConnection):
                         sock.setsockopt(socket.SOL_TCP, k, v)
             except (OSError, TypeError):
                 # `socket_keepalive_options` might contain invalid options
-                # causing an error. Do not leavo999e the connection open.
+                # causing an error
                 writer.close()
                 await writer.wait_closed()
                 raise
