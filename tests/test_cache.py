@@ -29,8 +29,12 @@ class DummyCache(AbstractCache):
     ) -> None:
         self.dummy[key] = value
 
-    def reset(self, *keys: ValueT) -> None:
+    def reset(self) -> None:
         self.dummy.clear()
+
+    def invalidate(self, *keys: ValueT) -> None:
+        for key in keys:
+            self.dummy.pop(key)
 
     def shutdown(self) -> None:
         self.reset()
