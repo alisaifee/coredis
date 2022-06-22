@@ -124,7 +124,7 @@ class BaseConnection:
         *,
         client_name: Optional[str] = None,
         loop: Optional[asyncio.events.AbstractEventLoop] = None,
-        protocol_version: Literal[2, 3] = 2,
+        protocol_version: Literal[2, 3] = 3,
         noreply: bool = False,
     ):
         self._parser: BaseParser = parser_class(reader_read_size)
@@ -404,7 +404,7 @@ class Connection(BaseConnection):
         *,
         client_name: Optional[str] = None,
         loop: Optional[AbstractEventLoop] = None,
-        protocol_version: Literal[2, 3] = 2,
+        protocol_version: Literal[2, 3] = 3,
         noreply: bool = False,
     ):
         super().__init__(
