@@ -578,6 +578,9 @@ class ClusterTrackingCache(
         self.__confidence = self.__original_confidence = confidence
         self.__dynamic_confidence = dynamic_confidence
         self.__stats = stats or CacheStats()
+        self.__client: Optional[
+            weakref.ReferenceType["coredis.client.RedisCluster[Any]"]
+        ] = None
 
     async def initialize(
         self,
@@ -587,6 +590,7 @@ class ClusterTrackingCache(
 
         assert isinstance(client, coredis.client.RedisCluster)
 
+        self.__client = weakref.ref(client)
         self.__cache.clear()
         for sidecar in self.node_caches.values():
             sidecar.shutdown()
@@ -607,9 +611,17 @@ class ClusterTrackingCache(
         return self
 
     @property
+    def client(self) -> Optional["coredis.client.RedisCluster[Any]"]:
+        if self.__client:
+            return self.__client()
+        return None
+
+    @property
     def healthy(self) -> bool:
         return bool(
-            self.node_caches
+            self.client
+            and self.client.connection_pool.initialized
+            and self.node_caches
             and all(cache.healthy for cache in self.node_caches.values())
         )
 

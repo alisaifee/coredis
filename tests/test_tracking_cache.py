@@ -199,3 +199,16 @@ class TestClusterInvalidatingCache(CommonExamples):
         ]
         await asyncio.sleep(0.2)
         assert await cached.get("fubar") == _s("2")
+
+    async def test_reinitialize_cluster(self, client, cloner, _s):
+        await client.set("fubar", 1)
+        cache = TrackingCache(max_keys=1, max_idle_seconds=1)
+        cached = await cloner(client, cache=cache)
+        pre = dict(cached.cache.instance.node_caches)
+        assert await cached.get("fubar") == _s("1")
+        cached.connection_pool.disconnect()
+        cached.connection_pool.reset()
+        await asyncio.sleep(0.1)
+        assert await cached.get("fubar") == _s("1")
+        post = cached.cache.instance.node_caches
+        assert pre != post
