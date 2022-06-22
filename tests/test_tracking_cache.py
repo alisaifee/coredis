@@ -4,14 +4,18 @@ import asyncio
 
 import pytest
 
-from coredis.cache import TrackingCache
+from coredis.cache import ClusterTrackingCache, NodeTrackingCache, TrackingCache
 from tests.conftest import targets
 
 
 class CommonExamples:
+    @property
+    def cache(self):
+        return TrackingCache
+
     async def test_single_entry_cache(self, client, cloner, _s):
         await client.flushall()
-        cache = TrackingCache(max_keys=1)
+        cache = self.cache(max_keys=1)
         cached = await cloner(client, cache=cache)
         assert not await cached.get("fubar")
         await client.set("fubar", 1)
@@ -24,7 +28,7 @@ class CommonExamples:
         assert await cached.get("fubar") == _s("2")
 
     async def test_eviction(self, client, cloner, _s):
-        cache = TrackingCache(max_keys=1)
+        cache = self.cache(max_keys=1)
         cached = await cloner(client, cache=cache)
         assert not await cached.get("fubar")
         assert not await cached.get("barbar")
@@ -52,7 +56,7 @@ class CommonExamples:
     async def test_confidence(
         self, client, cloner, mocker, _s, confidence, expectation
     ):
-        cache = TrackingCache(confidence=confidence)
+        cache = self.cache(confidence=confidence)
         cached = await cloner(client, cache=cache)
         [await client.set(f"fubar{i}", i) for i in range(100)]
         execute_command = mocker.spy(cached, "execute_command")
@@ -62,7 +66,7 @@ class CommonExamples:
         assert execute_command.call_count < 100 + expectation
 
     async def test_feedback(self, client, cloner, mocker, _s):
-        cache = TrackingCache(confidence=0)
+        cache = self.cache(confidence=0)
         cached = await cloner(client, cache=cache)
 
         [await client.set(f"fubar{i}", i) for i in range(10)]
@@ -75,7 +79,7 @@ class CommonExamples:
         assert feedback.call_count == 10
 
     async def test_feedback_adjust(self, client, cloner, mocker, _s):
-        cache = TrackingCache(confidence=90, dynamic_confidence=True)
+        cache = self.cache(confidence=90, dynamic_confidence=True)
         cached = await cloner(client, cache=cache)
 
         [await client.set(f"fubar{i}", i) for i in range(100)]
@@ -99,7 +103,7 @@ class CommonExamples:
         assert cache.confidence == 90
 
     async def test_shared_cache(self, client, cloner, mocker, _s):
-        cache = TrackingCache()
+        cache = self.cache()
         cached = await cloner(client, cache=cache)
 
         clones = [await cloner(client, cache=cache) for _ in range(5)]
@@ -111,7 +115,7 @@ class CommonExamples:
         assert all(spy.call_count == 0 for spy in spies)
 
     async def test_stats(self, client, cloner, mocker, _s):
-        cache = TrackingCache(confidence=0)
+        cache = self.cache(confidence=0)
         cached = await cloner(client, cache=cache)
         await client.set("barbar", "test")
         await cached.get("fubar")
@@ -163,9 +167,16 @@ class CommonExamples:
 
 @pytest.mark.asyncio
 @targets("redis_basic", "redis_basic_raw", "redis_basic_resp3", "redis_basic_raw_resp3")
-class TestInvalidatingCache(CommonExamples):
+class TestProxyInvalidatingCache(CommonExamples):
+    async def test_uninitialized_cache(self, client, cloner, _s):
+        cache = self.cache(max_keys=1, max_idle_seconds=1)
+        assert not cache.get_client_id(await client.connection_pool.get_connection())
+        assert cache.confidence == 100
+        _ = await cloner(client, cache=cache)
+        assert cache.get_client_id(await client.connection_pool.get_connection()) > 0
+
     async def test_single_entry_cache_tracker_disconnected(self, client, cloner, _s):
-        cache = TrackingCache(max_keys=1)
+        cache = self.cache(max_keys=1)
         cached = await cloner(client, cache=cache)
         assert not await client.get("fubar")
         await client.set("fubar", 1)
@@ -184,9 +195,16 @@ class TestInvalidatingCache(CommonExamples):
     "redis_cluster_resp3",
     "redis_cluster_raw_resp3",
 )
-class TestClusterInvalidatingCache(CommonExamples):
+class TestClusterProxyInvalidatingCache(CommonExamples):
+    async def test_uninitialized_cache(self, client, cloner, _s):
+        cache = self.cache(max_keys=1)
+        assert not cache.get_client_id(client.connection_pool.get_random_connection())
+        assert cache.confidence == 100
+        _ = await cloner(client, cache=cache)
+        assert cache.get_client_id(client.connection_pool.get_random_connection()) > 0
+
     async def test_single_entry_cache_tracker_disconnected(self, client, cloner, _s):
-        cache = TrackingCache(max_keys=1)
+        cache = self.cache(max_keys=1)
         cached = await cloner(client, cache=cache)
         assert not await client.get("fubar")
         await client.set("fubar", 1)
@@ -202,7 +220,7 @@ class TestClusterInvalidatingCache(CommonExamples):
 
     async def test_reinitialize_cluster(self, client, cloner, _s):
         await client.set("fubar", 1)
-        cache = TrackingCache(max_keys=1, max_idle_seconds=1)
+        cache = self.cache(max_keys=1, max_idle_seconds=1)
         cached = await cloner(client, cache=cache)
         pre = dict(cached.cache.instance.node_caches)
         assert await cached.get("fubar") == _s("1")
@@ -211,4 +229,76 @@ class TestClusterInvalidatingCache(CommonExamples):
         await asyncio.sleep(0.1)
         assert await cached.get("fubar") == _s("1")
         post = cached.cache.instance.node_caches
+        assert pre != post
+
+
+@pytest.mark.asyncio
+@targets("redis_basic", "redis_basic_raw", "redis_basic_resp3", "redis_basic_raw_resp3")
+class TestNodeInvalidatingCache(CommonExamples):
+    @property
+    def cache(self):
+        return NodeTrackingCache
+
+    async def test_uninitialized_cache(self, client, cloner, _s):
+        cache = self.cache(max_keys=1, max_idle_seconds=1)
+        assert not cache.get_client_id(await client.connection_pool.get_connection())
+        assert cache.confidence == 100
+        _ = await cloner(client, cache=cache)
+        assert cache.get_client_id(await client.connection_pool.get_connection()) > 0
+
+    async def test_single_entry_cache_tracker_disconnected(self, client, cloner, _s):
+        cache = self.cache(max_keys=1)
+        cached = await cloner(client, cache=cache)
+        assert not await client.get("fubar")
+        await client.set("fubar", 1)
+        await asyncio.sleep(0.2)
+        assert await cached.get("fubar") == _s("1")
+        await client.incr("fubar")
+        cache.connection.disconnect()
+        await asyncio.sleep(0.2)
+        assert await cached.get("fubar") == _s("2")
+
+
+@pytest.mark.asyncio
+@targets(
+    "redis_cluster",
+    "redis_cluster_raw",
+    "redis_cluster_resp3",
+    "redis_cluster_raw_resp3",
+)
+class TestClusterInvalidatingCache(CommonExamples):
+    @property
+    def cache(self):
+        return ClusterTrackingCache
+
+    async def test_uninitialized_cache(self, client, cloner, _s):
+        cache = self.cache(max_keys=1)
+        assert not cache.get_client_id(client.connection_pool.get_random_connection())
+        assert cache.confidence == 100
+        _ = await cloner(client, cache=cache)
+        assert cache.get_client_id(client.connection_pool.get_random_connection()) > 0
+
+    async def test_single_entry_cache_tracker_disconnected(self, client, cloner, _s):
+        cache = self.cache(max_keys=1)
+        cached = await cloner(client, cache=cache)
+        assert not await client.get("fubar")
+        await client.set("fubar", 1)
+        await asyncio.sleep(0.2)
+        assert await cached.get("fubar") == _s("1")
+        await client.incr("fubar")
+        [ncache.connection.disconnect() for ncache in cache.node_caches.values()]
+        await asyncio.sleep(0.2)
+        assert await cached.get("fubar") == _s("2")
+
+    async def test_reinitialize_cluster(self, client, cloner, _s):
+        await client.set("fubar", 1)
+        cache = self.cache(max_keys=1, max_idle_seconds=1)
+        cached = await cloner(client, cache=cache)
+        pre = dict(cached.cache.node_caches)
+        assert await cached.get("fubar") == _s("1")
+        cached.connection_pool.disconnect()
+        cached.connection_pool.reset()
+        await asyncio.sleep(0.1)
+        assert await cached.get("fubar") == _s("1")
+        post = cached.cache.node_caches
         assert pre != post

@@ -367,7 +367,10 @@ class BaseConnection:
         """Disconnects from the Redis server"""
         self._parser.on_disconnect()
         if self.writer:
-            self.writer.close()
+            try:
+                self.writer.close()
+            except RuntimeError:
+                pass
         self._reader = None
         self._writer = None
 

@@ -365,7 +365,7 @@ class NodeTrackingCache(
         """
         self.__protocol_version: Optional[Literal[2, 3]] = None
         self.__invalidation_task: Optional[asyncio.Task[None]] = None
-        self.__watchdog_task: Optional[asyncio.Task[None]] = None
+        self.__compact_task: Optional[asyncio.Task[None]] = None
         self.__cache: LRUCache[LRUCache[LRUCache[ResponseType]]] = cache or LRUCache(
             max_keys, max_size_bytes
         )
@@ -379,6 +379,7 @@ class NodeTrackingCache(
     def healthy(self) -> bool:
         return bool(
             self.connection
+            and self.connection.is_connected
             and time.monotonic() - self.last_checkin < self.__max_idle_seconds
         )
 
@@ -441,7 +442,7 @@ class NodeTrackingCache(
         elif message[1] is not None:
             assert isinstance(message[1], list)
             return tuple(k for k in message[1])
-        return ()
+        return ()  # noqa
 
     async def initialize(
         self,
@@ -451,8 +452,8 @@ class NodeTrackingCache(
         await super().start(client)
         if not self.__invalidation_task or self.__invalidation_task.done():
             self.__invalidation_task = asyncio.create_task(self.__invalidate())
-        if not self.__watchdog_task or self.__watchdog_task.done():
-            self.__watchdog_task = asyncio.create_task(self.__watchdog())
+        if not self.__compact_task or self.__compact_task.done():
+            self.__compact_task = asyncio.create_task(self.__compact())
         return self
 
     async def on_reconnect(self, connection: BaseConnection) -> None:
@@ -466,8 +467,8 @@ class NodeTrackingCache(
             asyncio.get_running_loop()
             if self.__invalidation_task:
                 self.__invalidation_task.cancel()
-            if self.__watchdog_task:
-                self.__watchdog_task.cancel()
+            if self.__compact_task:
+                self.__compact_task.cancel()
             super().stop()
         except RuntimeError:
             pass
@@ -477,15 +478,10 @@ class NodeTrackingCache(
             return self.client_id
         return None
 
-    async def __watchdog(self) -> None:
+    async def __compact(self) -> None:
         while True:
             try:
-                if not self.healthy:
-                    if self.connection:
-                        self.connection.disconnect()
-                    self.__cache.clear()
-                else:
-                    self.__cache.shrink()
+                self.__cache.shrink()
                 self.__stats.compact()
                 await asyncio.sleep(max(1, self.__max_idle_seconds - 1))
             except asyncio.CancelledError:
@@ -586,7 +582,7 @@ class ClusterTrackingCache(
     def client(self) -> Optional["coredis.client.RedisCluster[Any]"]:
         if self.__client:
             return self.__client()
-        return None
+        return None  # noqa
 
     @property
     def healthy(self) -> bool:
@@ -754,7 +750,7 @@ class TrackingCache(
     @property
     def confidence(self) -> float:
         if not self.instance:
-            return 0
+            return self.__confidence
         return self.instance.confidence
 
     @property
