@@ -100,11 +100,10 @@ class Sidecar:
                     decode=False, push_message_types=self.push_message_types
                 )
                 self.last_checkin = time.monotonic()
-                if response:
-                    if response == b"PONG" or b"pong" in response:  # type: ignore
-                        continue
-                    for m in self.process_message(response):
-                        self.messages.put_nowait(m)
+                if response == b"PONG" or b"pong" in response:  # type: ignore
+                    continue
+                for m in self.process_message(response):
+                    self.messages.put_nowait(m)
             except asyncio.CancelledError:
                 break
             except ConnectionError:

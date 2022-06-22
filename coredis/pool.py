@@ -435,8 +435,6 @@ class BlockingConnectionPool(ConnectionPool):
         """Gets a connection from the pool"""
         self.checkpid()
 
-        connection = None
-
         try:
             connection = await asyncio.wait_for(self._pool.get(), self.timeout)
         except asyncio.TimeoutError:

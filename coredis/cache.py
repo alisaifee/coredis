@@ -145,9 +145,16 @@ class AbstractCache(ABC):
         ...
 
     @abstractmethod
-    def reset(self, *keys: ValueT) -> None:
+    def invalidate(self, *keys: bytes) -> None:
         """
-        Clear the cache (optionally, only for the keys provided as arguments)
+        Invalidate any cached entries for the provided keys
+        """
+        ...
+
+    @abstractmethod
+    def reset(self) -> None:
+        """
+        Reset the cache
         """
         ...
 
@@ -420,25 +427,25 @@ class NodeTrackingCache(
             command, LRUCache()
         ).insert(self.hashable_args(*args), value)
 
+    def invalidate(self, *keys: bytes) -> None:
+        for key in keys:
+            self.__stats.invalidate(key)
+            self.__cache.remove(b(key))
+
     def feedback(self, command: bytes, key: bytes, *args: ValueT, match: bool) -> None:
         if not match:
             self.__stats.mark_dirty(key)
-            self.reset(key)
+            self.invalidate(key)
         if self.__dynamic_confidence:
             self.__confidence = min(
                 100.0,
                 max(0.0, self.__confidence * (1.0001 if match else 0.999)),
             )
 
-    def reset(self, *keys: ValueT) -> None:
-        if keys:
-            for k in keys:
-                self.__stats.invalidate(k)
-                self.__cache.remove(b(k))
-        else:
-            self.__cache.clear()
-            self.__stats.compact()
-            self.__confidence = self.__original_confidence
+    def reset(self) -> None:
+        self.__cache.clear()
+        self.__stats.compact()
+        self.__confidence = self.__original_confidence
 
     def process_message(self, message: ResponseType) -> Tuple[ResponseType, ...]:
         assert isinstance(message, list)
@@ -516,8 +523,7 @@ class NodeTrackingCache(
         while True:
             try:
                 key = b(await self.messages.get())
-                self.__cache.remove(key)
-                self.__stats.invalidate(key)
+                self.invalidate(key)
                 self.messages.task_done()
             except asyncio.CancelledError:
                 break
@@ -639,25 +645,25 @@ class ClusterTrackingCache(
             command, LRUCache()
         ).insert(self.hashable_args(*args), value)
 
+    def invalidate(self, *keys: bytes) -> None:
+        for key in keys:
+            self.__stats.invalidate(key)
+            self.__cache.remove(b(key))
+
     def feedback(self, command: bytes, key: bytes, *args: ValueT, match: bool) -> None:
         if not match:
             self.__stats.mark_dirty(key)
-            self.reset(key)
+            self.invalidate(key)
         if self.__dynamic_confidence:
             self.__confidence = min(
                 100.0,
                 max(0.0, self.__confidence * (1.0001 if match else 0.999)),
             )
 
-    def reset(self, *keys: ValueT) -> None:
-        if keys:
-            for k in keys:
-                self.__stats.invalidate(k)
-                self.__cache.remove(b(k))
-        else:
-            self.__cache.clear()
-            self.__stats.compact()
-            self.__confidence = self.__original_confidence
+    def reset(self) -> None:
+        self.__cache.clear()
+        self.__stats.compact()
+        self.__confidence = self.__original_confidence
 
     def shutdown(self) -> None:
         if self.node_caches:
@@ -795,13 +801,17 @@ class TrackingCache(
         if self.instance:
             self.instance.put(command, key, *args, value=value)
 
+    def invalidate(self, *keys: bytes) -> None:
+        if self.instance:
+            self.instance.invalidate(*keys)
+
     def feedback(self, command: bytes, key: bytes, *args: ValueT, match: bool) -> None:
         if self.instance:
             self.instance.feedback(command, key, *args, match=match)
 
-    def reset(self, *keys: ValueT) -> None:
+    def reset(self) -> None:
         if self.instance:
-            self.instance.reset(*keys)
+            self.instance.reset()
 
     def shutdown(self) -> None:
         if self.instance:

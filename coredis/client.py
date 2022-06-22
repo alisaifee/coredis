@@ -760,9 +760,7 @@ class Redis(
             )
         try:
             if self.cache and command not in self.connection_pool.READONLY_COMMANDS:
-                keys = KeySpec.extract_keys((command,) + args)
-                if keys:
-                    self.cache.reset(*keys)
+                self.cache.invalidate(*KeySpec.extract_keys((command,) + args))
             await connection.send_command(command, *args)
             if custom_callback := self.response_callbacks.get(command):
                 return custom_callback(  # type: ignore
@@ -1436,9 +1434,7 @@ class RedisCluster(
                     self.cache.reset()
                     await r.update_tracking_client(True, self.cache.get_client_id(r))
                 if self.cache and command not in self.connection_pool.READONLY_COMMANDS:
-                    keys = KeySpec.extract_keys((command,) + args)
-                    if keys:
-                        self.cache.reset(*keys)
+                    self.cache.invalidate(*KeySpec.extract_keys((command,) + args))
                 await r.send_command(command, *args)
 
                 return callback(
@@ -1508,7 +1504,7 @@ class RedisCluster(
                         *args[1 + key_end :],
                     )
             if self.cache and command not in self.connection_pool.READONLY_COMMANDS:
-                self.cache.reset(*keys)
+                self.cache.invalidate(*keys)
         for node in nodes:
             connection = self.connection_pool.get_connection_by_node(node)
             if (
