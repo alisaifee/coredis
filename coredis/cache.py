@@ -182,24 +182,6 @@ class AbstractCache(ABC):
 
 
 @runtime_checkable
-class Shareable(Protocol):
-    """
-    Protocol of a cache that can be shared between multiple
-    client instances
-    """
-
-    @abstractmethod
-    def share(self) -> Shareable:
-        """
-        Returns a new instance of this cache which shares
-        the backing storage for use with another client
-        pointing to the same redis instance.
-
-        """
-        ...
-
-
-@runtime_checkable
 class SupportsStats(Protocol):
     """
     Protocol of a cache that provides cache statistics
@@ -346,7 +328,6 @@ class LRUCache(Generic[ET]):
 class NodeTrackingCache(
     Sidecar,
     AbstractCache,
-    Shareable,
     SupportsStats,
     SupportsSampling,
     SupportsClientTracking,
@@ -491,15 +472,6 @@ class NodeTrackingCache(
         except RuntimeError:
             pass
 
-    def share(self) -> NodeTrackingCache:
-        return self.__class__(
-            max_idle_seconds=self.__max_idle_seconds,
-            confidence=self.__original_confidence,
-            dynamic_confidence=self.__dynamic_confidence,
-            cache=self.__cache,
-            stats=self.__stats,
-        )
-
     def get_client_id(self, client: BaseConnection) -> Optional[int]:
         if self.connection and self.connection.is_connected:
             return self.client_id
@@ -532,7 +504,7 @@ class NodeTrackingCache(
 
 
 class ClusterTrackingCache(
-    AbstractCache, Shareable, SupportsStats, SupportsSampling, SupportsClientTracking
+    AbstractCache, SupportsStats, SupportsSampling, SupportsClientTracking
 ):
     """
     An LRU cache for redis cluster that uses server assisted client caching
@@ -684,21 +656,12 @@ class ClusterTrackingCache(
             self.node_caches.clear()
             self.__nodes.clear()
 
-    def share(self) -> ClusterTrackingCache:
-        return self.__class__(
-            max_idle_seconds=self.__max_idle_seconds,
-            confidence=self.__original_confidence,
-            dynamic_confidence=self.__dynamic_confidence,
-            cache=self.__cache,
-            stats=self.__stats,
-        )
-
     def __del__(self) -> None:
         self.shutdown()
 
 
 class TrackingCache(
-    AbstractCache, Shareable, SupportsStats, SupportsSampling, SupportsClientTracking
+    AbstractCache, SupportsStats, SupportsSampling, SupportsClientTracking
 ):
     """
     An LRU cache that uses server assisted client caching to ensure local cache entries
