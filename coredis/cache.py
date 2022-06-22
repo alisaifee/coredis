@@ -145,7 +145,7 @@ class AbstractCache(ABC):
         ...
 
     @abstractmethod
-    def invalidate(self, *keys: bytes) -> None:
+    def invalidate(self, *keys: ValueT) -> None:
         """
         Invalidate any cached entries for the provided keys
         """
@@ -427,7 +427,7 @@ class NodeTrackingCache(
             command, LRUCache()
         ).insert(self.hashable_args(*args), value)
 
-    def invalidate(self, *keys: bytes) -> None:
+    def invalidate(self, *keys: ValueT) -> None:
         for key in keys:
             self.__stats.invalidate(key)
             self.__cache.remove(b(key))
@@ -645,7 +645,7 @@ class ClusterTrackingCache(
             command, LRUCache()
         ).insert(self.hashable_args(*args), value)
 
-    def invalidate(self, *keys: bytes) -> None:
+    def invalidate(self, *keys: ValueT) -> None:
         for key in keys:
             self.__stats.invalidate(key)
             self.__cache.remove(b(key))
@@ -801,7 +801,7 @@ class TrackingCache(
         if self.instance:
             self.instance.put(command, key, *args, value=value)
 
-    def invalidate(self, *keys: bytes) -> None:
+    def invalidate(self, *keys: ValueT) -> None:
         if self.instance:
             self.instance.invalidate(*keys)
 
