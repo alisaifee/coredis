@@ -157,6 +157,8 @@ class BaseConnection:
         self.packer = Packer(self.encoding)
         self.push_messages: asyncio.Queue[ResponseType] = asyncio.Queue()
         self.tracking_client_id = None
+        self._writer = None
+        self._reader = None
 
     def __repr__(self) -> str:
         return self.description.format(**self._description_args())
@@ -176,13 +178,11 @@ class BaseConnection:
         return bool(self._reader and self._writer)
 
     @property
-    def reader(self) -> StreamReader:
-        assert self._reader
+    def reader(self) -> Optional[StreamReader]:
         return self._reader
 
     @property
-    def writer(self) -> StreamWriter:
-        assert self._writer
+    def writer(self) -> Optional[StreamWriter]:
         return self._writer
 
     def register_connect_callback(
@@ -366,8 +366,8 @@ class BaseConnection:
     def disconnect(self) -> None:
         """Disconnects from the Redis server"""
         self._parser.on_disconnect()
-        if self._writer:
-            self._writer.close()
+        if self.writer:
+            self.writer.close()
         self._reader = None
         self._writer = None
 

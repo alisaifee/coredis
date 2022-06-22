@@ -24,6 +24,8 @@ class DummyConnection(ClusterConnection):
         self.socket_timeout = socket_timeout
         self.awaiting_response = False
         self._parser = PythonParser(-1)
+        self._writer = None
+        self._reader = None
 
 
 class TestConnectionPool:

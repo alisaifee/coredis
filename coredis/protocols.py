@@ -95,9 +95,9 @@ class ConnectionP(Protocol):
     push_messages: asyncio.Queue[ResponseType]
 
     @property
-    def reader(self) -> StreamReader:
+    def reader(self) -> Optional[StreamReader]:
         ...
 
     @property
-    def writer(self) -> StreamWriter:
+    def writer(self) -> Optional[StreamWriter]:
         ...
