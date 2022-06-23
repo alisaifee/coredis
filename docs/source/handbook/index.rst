@@ -13,6 +13,7 @@ Handbook
     pubsub
     streams
     pipelines
+    noreply
     scripting
     locks
     caching
@@ -43,6 +44,7 @@ Performance
 -----------
 - :ref:`handbook/caching:caching`
 - :ref:`handbook/pipelines:pipelines`
+- :ref:`handbook/noreply:no reply mode`
 
 Implementation Details
 ----------------------
