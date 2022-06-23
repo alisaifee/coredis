@@ -7,7 +7,7 @@ from tests.conftest import targets
 
 
 @pytest.mark.asyncio()
-@targets("redis_basic", "redis_basic_resp3", "keydb")
+@targets("redis_basic", "redis_basic_resp3", "keydb", "dragonfly")
 class TestPipeline:
     async def test_pipeline(self, client):
         async with await client.pipeline() as pipe:
@@ -54,6 +54,7 @@ class TestPipeline:
             assert await client.get("b") == "b1"
             assert await client.get("c") == "c1"
 
+    @pytest.mark.nodragonfly
     async def test_pipeline_no_transaction_watch(self, client):
         await client.set("a", "0")
 
@@ -65,6 +66,7 @@ class TestPipeline:
             await pipe.set("a", str(int(a) + 1))
             assert await pipe.execute() == (True,)
 
+    @pytest.mark.nodragonfly
     async def test_pipeline_no_transaction_watch_failure(self, client):
         await client.set("a", "0")
 
@@ -144,6 +146,7 @@ class TestPipeline:
             assert await pipe.execute() == (True,)
             assert await client.get("z") == "zzz"
 
+    @pytest.mark.nodragonfly
     async def test_watch_succeed(self, client):
         await client.set("a", "1")
         await client.set("b", "2")
@@ -161,6 +164,7 @@ class TestPipeline:
             assert await pipe.execute() == (True,)
             assert not pipe.watching
 
+    @pytest.mark.nodragonfly
     async def test_watch_failure(self, client):
         await client.set("a", "1")
         await client.set("b", "2")
@@ -175,6 +179,7 @@ class TestPipeline:
 
             assert not pipe.watching
 
+    @pytest.mark.nodragonfly
     async def test_unwatch(self, client):
         await client.set("a", "1")
         await client.set("b", "2")
@@ -187,6 +192,7 @@ class TestPipeline:
             await pipe.get("a")
             assert await pipe.execute() == ("1",)
 
+    @pytest.mark.nodragonfly
     async def test_transaction_callable(self, client):
         await client.set("a", "1")
         await client.set("b", "2")
@@ -212,6 +218,7 @@ class TestPipeline:
         assert result == (True,)
         assert await client.get("c") == "4"
 
+    @pytest.mark.nodragonfly
     async def test_exec_error_in_no_transaction_pipeline(self, client):
         await client.set("a", "1")
         async with await client.pipeline(transaction=False) as pipe:
@@ -223,6 +230,7 @@ class TestPipeline:
 
         assert await client.get("a") == "1"
 
+    @pytest.mark.nodragonfly
     async def test_exec_error_in_no_transaction_pipeline_unicode_command(self, client):
         key = chr(11) + "abcd" + chr(23)
         await client.set(key, "1")
