@@ -48,7 +48,7 @@ async def get_version(client):
     return REDIS_VERSIONS[str(client)]
 
 
-async def check_test_constraints(request, client, protocol=2):
+async def check_test_constraints(request, client, protocol=3):
     await get_version(client)
     client_version = REDIS_VERSIONS[str(client)]
     for marker in request.node.iter_markers():
@@ -278,7 +278,7 @@ async def redis_basic_resp2(redis_basic_server, request):
         6379,
         decode_responses=True,
     )
-    await check_test_constraints(request, client, protocol=3)
+    await check_test_constraints(request, client, protocol=2)
     client = coredis.Redis(
         "localhost",
         6379,
@@ -327,7 +327,7 @@ async def redis_stack_resp2(redis_stack_server, request):
         9379,
         decode_responses=True,
     )
-    await check_test_constraints(request, client, protocol=3)
+    await check_test_constraints(request, client, protocol=2)
     client = coredis.Redis(
         "localhost",
         9379,
@@ -349,7 +349,7 @@ async def redis_stack_raw_resp2(redis_stack_server, request):
         "localhost",
         9379,
     )
-    await check_test_constraints(request, client, protocol=3)
+    await check_test_constraints(request, client, protocol=2)
     client = coredis.Redis(
         "localhost",
         9379,
@@ -372,7 +372,7 @@ async def redis_basic_raw(redis_basic_server, request):
         6379,
         decode_responses=False,
     )
-    await check_test_constraints(request, client, protocol=2)
+    await check_test_constraints(request, client)
     client = coredis.Redis(
         "localhost", 6379, decode_responses=False, **get_client_test_args(request)
     )
@@ -391,7 +391,7 @@ async def redis_basic_raw_resp2(redis_basic_server, request):
         6379,
         decode_responses=False,
     )
-    await check_test_constraints(request, client, protocol=3)
+    await check_test_constraints(request, client, protocol=2)
     client = coredis.Redis(
         "localhost",
         6379,
@@ -438,7 +438,7 @@ async def redis_ssl_resp2(redis_ssl_server, request):
     client = coredis.Redis.from_url(
         storage_url, decode_responses=True, **get_client_test_args(request)
     )
-    await check_test_constraints(request, client, protocol=3)
+    await check_test_constraints(request, client, protocol=2)
     client = coredis.Redis.from_url(
         storage_url,
         decode_responses=True,
@@ -512,7 +512,7 @@ async def redis_cached_resp2(redis_basic_server, request):
         6379,
         decode_responses=True,
     )
-    await check_test_constraints(request, client, protocol=3)
+    await check_test_constraints(request, client, protocol=2)
     client = coredis.Redis(
         "localhost",
         6379,
@@ -628,7 +628,7 @@ async def redis_cluster_raw_resp2(redis_cluster_server, request):
         protocol_version=2,
         **get_client_test_args(request),
     )
-    await check_test_constraints(request, cluster, protocol=3)
+    await check_test_constraints(request, cluster, protocol=2)
     await cluster
     await cluster.flushall()
     await cluster.flushdb()
@@ -650,7 +650,7 @@ async def redis_cluster_resp2(redis_cluster_server, request):
         protocol_version=2,
         **get_client_test_args(request),
     )
-    await check_test_constraints(request, cluster, protocol=3)
+    await check_test_constraints(request, cluster, protocol=2)
     await cluster
     await cluster.flushall()
     await cluster.flushdb()
@@ -715,7 +715,7 @@ async def keydb_resp2(keydb_server, request):
         10379,
         decode_responses=True,
     )
-    await check_test_constraints(request, client, protocol=3)
+    await check_test_constraints(request, client, protocol=2)
     client = coredis.experimental.KeyDB(
         "localhost",
         10379,
@@ -762,7 +762,7 @@ async def dragonfly(dragonfly_server, request):
         verify_version=False,
         **get_client_test_args(request),
     )
-    await check_test_constraints(request, client)
+    await check_test_constraints(request, client, protocol=2)
     await client.flushall()
     await set_default_test_config(client)
 
