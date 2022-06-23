@@ -914,12 +914,11 @@ class ClusterPipelineImpl(AbstractRedis[AnyStr], metaclass=ClusterPipelineMeta):
         # if we have to run through it again, we only retry the commands that failed.
         attempt = sorted(self.command_stack, key=lambda x: x.position)
 
+        protocol_version: int = 3
         # build a list of node objects based on node names we need to
         nodes: Dict[str, NodeCommands] = {}
-
         # as we move through each command that still needs to be processed,
         # we figure out the slot number that command maps to, then from the slot determine the node.
-
         for c in attempt:
             # refer to our internal node -> slot table that tells us where a given
             # command should route to.
@@ -967,8 +966,8 @@ class ClusterPipelineImpl(AbstractRedis[AnyStr], metaclass=ClusterPipelineMeta):
         # next time we read from it we pass the buffered result back from a previous
         # command and every single request after to that connection will always get
         # a mismatched result. (not just theoretical, I saw this happen on production x.x).
-
         for n in nodes.values():
+            protocol_version = n.connection.protocol_version
             self.connection_pool.release(n.connection)
 
         # if the response isn't an exception it is a valid response from the node
@@ -1013,7 +1012,7 @@ class ClusterPipelineImpl(AbstractRedis[AnyStr], metaclass=ClusterPipelineMeta):
         # turn the response back into a simple flat array that corresponds
         # to the sequence of commands issued in the stack in pipeline.execute()
         response = tuple(
-            c.callback(c.result, **c.options)
+            c.callback(c.result, version=protocol_version, **c.options)
             for c in sorted(self.command_stack, key=lambda x: x.position)
         )
 
