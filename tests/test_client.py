@@ -79,7 +79,7 @@ class TestClient:
 
 @targets(
     "redis_cluster",
-    "redis_cluster_resp3",
+    "redis_cluster_resp2",
 )
 @pytest.mark.asyncio
 class TestClusterClient:
