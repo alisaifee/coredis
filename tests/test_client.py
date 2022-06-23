@@ -13,11 +13,11 @@ from tests.conftest import targets
 
 @targets(
     "redis_basic",
-    "redis_basic_resp3",
+    "redis_basic_resp2",
     "redis_basic_raw",
-    "redis_basic_raw_resp3",
+    "redis_basic_raw_resp2",
     "redis_ssl",
-    "redis_ssl_resp3",
+    "redis_ssl_resp2",
 )
 @pytest.mark.asyncio
 class TestClient:

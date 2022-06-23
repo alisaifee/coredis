@@ -73,8 +73,8 @@ def make_subscribe_test_data(pubsub, encoder, type):
 @targets(
     "redis_basic",
     "redis_basic_raw",
-    "redis_basic_resp3",
-    "redis_basic_raw_resp3",
+    "redis_basic_resp2",
+    "redis_basic_raw_resp2",
     "keydb",
     "dragonfly",
 )
@@ -268,7 +268,7 @@ class TestPubSubSubscribeUnsubscribe:
 
 
 @pytest.mark.asyncio()
-@targets("redis_basic", "redis_basic_raw", "redis_basic_resp3", "redis_basic_raw_resp3")
+@targets("redis_basic", "redis_basic_raw", "redis_basic_resp2", "redis_basic_raw_resp2")
 class TestPubSubMessages:
     def setup_method(self, method):
         self.message = None
@@ -441,7 +441,7 @@ class TestPubSubRedisDown:
 
 
 @pytest.mark.asyncio()
-@targets("redis_basic", "redis_basic_raw", "redis_basic_resp3", "redis_basic_raw_resp3")
+@targets("redis_basic", "redis_basic_raw", "redis_basic_resp2", "redis_basic_raw_resp2")
 class TestPubSubPubSubSubcommands:
     async def test_pubsub_channels(self, client, _s):
         p = client.pubsub(ignore_subscribe_messages=True)

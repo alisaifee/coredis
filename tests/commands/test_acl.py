@@ -15,8 +15,8 @@ async def teardown(client):
 @targets(
     "redis_basic",
     "redis_basic_raw",
-    "redis_basic_resp3",
-    "redis_basic_raw_resp3",
+    "redis_basic_resp2",
+    "redis_basic_raw_resp2",
     "redis_auth",
     "redis_cluster",
     "redis_cluster_raw",

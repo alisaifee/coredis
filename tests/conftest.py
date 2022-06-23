@@ -272,7 +272,7 @@ async def redis_basic(redis_basic_server, request):
 
 
 @pytest.fixture
-async def redis_basic_resp3(redis_basic_server, request):
+async def redis_basic_resp2(redis_basic_server, request):
     client = coredis.Redis(
         "localhost",
         6379,
@@ -283,7 +283,7 @@ async def redis_basic_resp3(redis_basic_server, request):
         "localhost",
         6379,
         decode_responses=True,
-        protocol_version=3,
+        protocol_version=2,
         **get_client_test_args(request),
     )
     await client.flushall()
@@ -321,7 +321,7 @@ async def redis_stack_raw(redis_stack_server, request):
 
 
 @pytest.fixture
-async def redis_stack_resp3(redis_stack_server, request):
+async def redis_stack_resp2(redis_stack_server, request):
     client = coredis.Redis(
         "localhost",
         9379,
@@ -332,7 +332,7 @@ async def redis_stack_resp3(redis_stack_server, request):
         "localhost",
         9379,
         decode_responses=True,
-        protocol_version=3,
+        protocol_version=2,
         **get_client_test_args(request),
     )
     await client.flushall()
@@ -344,7 +344,7 @@ async def redis_stack_resp3(redis_stack_server, request):
 
 
 @pytest.fixture
-async def redis_stack_raw_resp3(redis_stack_server, request):
+async def redis_stack_raw_resp2(redis_stack_server, request):
     client = coredis.Redis(
         "localhost",
         9379,
@@ -354,7 +354,7 @@ async def redis_stack_raw_resp3(redis_stack_server, request):
         "localhost",
         9379,
         decode_responses=True,
-        protocol_version=3,
+        protocol_version=2,
         **get_client_test_args(request),
     )
     await client.flushall()
@@ -385,7 +385,7 @@ async def redis_basic_raw(redis_basic_server, request):
 
 
 @pytest.fixture
-async def redis_basic_raw_resp3(redis_basic_server, request):
+async def redis_basic_raw_resp2(redis_basic_server, request):
     client = coredis.Redis(
         "localhost",
         6379,
@@ -396,7 +396,7 @@ async def redis_basic_raw_resp3(redis_basic_server, request):
         "localhost",
         6379,
         decode_responses=False,
-        protocol_version=3,
+        protocol_version=2,
         **get_client_test_args(request),
     )
     await client.flushall()
@@ -428,7 +428,7 @@ async def redis_ssl(redis_ssl_server, request):
 
 
 @pytest.fixture
-async def redis_ssl_resp3(redis_ssl_server, request):
+async def redis_ssl_resp2(redis_ssl_server, request):
     storage_url = (
         "rediss://localhost:8379/?ssl_cert_reqs=required"
         "&ssl_keyfile=./tests/tls/client.key"
@@ -442,7 +442,7 @@ async def redis_ssl_resp3(redis_ssl_server, request):
     client = coredis.Redis.from_url(
         storage_url,
         decode_responses=True,
-        protocol_version=3,
+        protocol_version=2,
         **get_client_test_args(request),
     )
     await client.flushall()
@@ -505,7 +505,7 @@ async def redis_cached(redis_basic_server, request):
 
 
 @pytest.fixture
-async def redis_cached_resp3(redis_basic_server, request):
+async def redis_cached_resp2(redis_basic_server, request):
     cache = TrackingCache()
     client = coredis.Redis(
         "localhost",
@@ -517,7 +517,7 @@ async def redis_cached_resp3(redis_basic_server, request):
         "localhost",
         6379,
         decode_responses=True,
-        protocol_version=3,
+        protocol_version=2,
         cache=cache,
         **get_client_test_args(request),
     )
@@ -619,13 +619,13 @@ async def redis_cluster_raw(redis_cluster_server, request):
 
 
 @pytest.fixture
-async def redis_cluster_raw_resp3(redis_cluster_server, request):
+async def redis_cluster_raw_resp2(redis_cluster_server, request):
     cluster = coredis.RedisCluster(
         "localhost",
         7000,
         stream_timeout=10,
         decode_responses=False,
-        protocol_version=3,
+        protocol_version=2,
         **get_client_test_args(request),
     )
     await check_test_constraints(request, cluster, protocol=3)
@@ -641,13 +641,13 @@ async def redis_cluster_raw_resp3(redis_cluster_server, request):
 
 
 @pytest.fixture
-async def redis_cluster_resp3(redis_cluster_server, request):
+async def redis_cluster_resp2(redis_cluster_server, request):
     cluster = coredis.RedisCluster(
         "localhost",
         7000,
         stream_timeout=10,
         decode_responses=True,
-        protocol_version=3,
+        protocol_version=2,
         **get_client_test_args(request),
     )
     await check_test_constraints(request, cluster, protocol=3)
@@ -709,7 +709,7 @@ async def keydb(keydb_server, request):
 
 
 @pytest.fixture
-async def keydb_resp3(keydb_server, request):
+async def keydb_resp2(keydb_server, request):
     client = coredis.experimental.KeyDB(
         "localhost",
         10379,
@@ -720,7 +720,7 @@ async def keydb_resp3(keydb_server, request):
         "localhost",
         10379,
         decode_responses=True,
-        protocol_version=3,
+        protocol_version=2,
         **get_client_test_args(request),
     )
     await client.flushall()

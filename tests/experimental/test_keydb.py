@@ -11,7 +11,7 @@ from tests.conftest import targets
 
 @targets(
     "keydb",
-    "keydb_resp3",
+    "keydb_resp2",
     "keydb_cluster",
 )
 @pytest.mark.asyncio()

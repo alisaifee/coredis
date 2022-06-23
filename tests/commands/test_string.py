@@ -11,15 +11,15 @@ from tests.conftest import server_deprecation_warning, targets
 @targets(
     "redis_basic",
     "redis_basic_raw",
-    "redis_basic_resp3",
-    "redis_basic_raw_resp3",
+    "redis_basic_resp2",
+    "redis_basic_raw_resp2",
     "redis_cluster",
     "redis_cluster_raw",
     "redis_cached",
-    "redis_cached_resp3",
+    "redis_cached_resp2",
     "redis_cluster_cached",
     "keydb",
-    "keydb_resp3",
+    "keydb_resp2",
     "dragonfly",
 )
 @pytest.mark.asyncio()

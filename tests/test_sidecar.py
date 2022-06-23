@@ -10,7 +10,7 @@ from tests.conftest import targets
 pytestmark = pytest.mark.asyncio
 
 
-@targets("redis_basic", "redis_basic_resp3", "redis_basic_raw")
+@targets("redis_basic", "redis_basic_resp2", "redis_basic_raw")
 class TestSidecar:
     async def test_noop_sidecar(self, client):
         sidecar = Sidecar(set(), health_check_interval_seconds=1)

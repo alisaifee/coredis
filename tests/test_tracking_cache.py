@@ -166,7 +166,7 @@ class CommonExamples:
 
 
 @pytest.mark.asyncio
-@targets("redis_basic", "redis_basic_raw", "redis_basic_resp3", "redis_basic_raw_resp3")
+@targets("redis_basic", "redis_basic_raw", "redis_basic_resp2", "redis_basic_raw_resp2")
 class TestProxyInvalidatingCache(CommonExamples):
     async def test_uninitialized_cache(self, client, cloner, _s):
         cache = self.cache(max_keys=1, max_idle_seconds=1)
@@ -192,8 +192,8 @@ class TestProxyInvalidatingCache(CommonExamples):
 @targets(
     "redis_cluster",
     "redis_cluster_raw",
-    "redis_cluster_resp3",
-    "redis_cluster_raw_resp3",
+    "redis_cluster_resp2",
+    "redis_cluster_raw_resp2",
 )
 class TestClusterProxyInvalidatingCache(CommonExamples):
     async def test_uninitialized_cache(self, client, cloner, _s):
@@ -233,7 +233,7 @@ class TestClusterProxyInvalidatingCache(CommonExamples):
 
 
 @pytest.mark.asyncio
-@targets("redis_basic", "redis_basic_raw", "redis_basic_resp3", "redis_basic_raw_resp3")
+@targets("redis_basic", "redis_basic_raw", "redis_basic_resp2", "redis_basic_raw_resp2")
 class TestNodeInvalidatingCache(CommonExamples):
     @property
     def cache(self):
@@ -263,8 +263,8 @@ class TestNodeInvalidatingCache(CommonExamples):
 @targets(
     "redis_cluster",
     "redis_cluster_raw",
-    "redis_cluster_resp3",
-    "redis_cluster_raw_resp3",
+    "redis_cluster_resp2",
+    "redis_cluster_raw_resp2",
 )
 class TestClusterInvalidatingCache(CommonExamples):
     @property

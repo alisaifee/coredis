@@ -12,7 +12,7 @@ pytestmark = pytest.mark.flaky
 
 
 @pytest.mark.asyncio()
-@targets("redis_basic", "redis_basic_resp3")
+@targets("redis_basic", "redis_basic_resp2")
 @pytest.mark.parametrize("thread_local", ((True,), (False,)))
 class TestLock:
     lock_class = LuaLock
