@@ -21,7 +21,7 @@ from coredis.commands.monitor import Monitor
 from coredis.commands.pubsub import ClusterPubSub, PubSub, ShardedPubSub
 from coredis.commands.script import Script
 from coredis.commands.sentinel import SentinelCommands
-from coredis.connection import Connection, RedisSSLContext, UnixDomainSocketConnection
+from coredis.connection import RedisSSLContext, UnixDomainSocketConnection
 from coredis.exceptions import (
     AskError,
     BusyLoadingError,
@@ -195,6 +195,7 @@ class RedisConnection:
         client_name: Optional[str] = None,
         protocol_version: Literal[2, 3] = 2,
         verify_version: bool = True,
+        noreply: bool = False,
         **kwargs: Any,
     ):
         if not connection_pool:
@@ -212,6 +213,7 @@ class RedisConnection:
                 "idle_check_interval": idle_check_interval,
                 "client_name": client_name,
                 "protocol_version": protocol_version,
+                "noreply": noreply,
             }
             # based on input, setup appropriate connection args
 
@@ -255,22 +257,17 @@ class RedisConnection:
         self.protocol_version = connection_protocol_version
         self.server_version: Optional[Version] = None
         self.verify_version = verify_version
+        self.__noreply = noreply
 
-    async def parse_response(
-        self,
-        connection: Connection,
-        *,
-        decode: Optional[ValueT] = None,
-        **_: Any,
-    ) -> ResponseType:
-        """
-        Parses a response from the Redis server
+    @property
+    def noreply(self) -> bool:
+        return self.__noreply
 
-        :meta private:
-        """
-        return await connection.read_response(
-            decode=decode if decode is None else bool(decode)
-        )
+    @noreply.setter
+    def noreply(self, value: bool) -> None:
+        if value != self.__noreply:
+            self.__noreply = value
+            self.connection_pool.disconnect()
 
     async def initialize(self: RedisConnectionT) -> RedisConnectionT:
         await self.connection_pool.initialize()
@@ -462,6 +459,7 @@ class Redis(
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         cache: Optional[AbstractCache] = ...,
+        noreply: bool = ...,
         **_: Any,
     ) -> None:
         ...
@@ -496,6 +494,7 @@ class Redis(
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         cache: Optional[AbstractCache] = ...,
+        noreply: bool = ...,
         **_: Any,
     ) -> None:
         ...
@@ -529,10 +528,13 @@ class Redis(
         protocol_version: Literal[2, 3] = 2,
         verify_version: bool = True,
         cache: Optional[AbstractCache] = None,
+        noreply: bool = False,
         **_: Any,
     ) -> None:
         """
         Changes
+          - .. versionadded:: 3.11.0
+             Added :paramref:`noreply`
           - .. versionadded:: 3.9.0
              If :paramref:`cache` is provided the client will check & populate
              the cache for read only commands and invalidate it for commands
@@ -594,6 +596,8 @@ class Redis(
         :param cache: If provided the cache will be used to avoid requests for read only
          commands if the client has already requested the data and it hasn't been invalidated.
          The cache is responsible for any mutations to the keys that happen outside of this client
+        :param noreply: If ``True`` the client will not request a response for any
+         commands sent to the server.
 
         """
         super().__init__(
@@ -623,6 +627,7 @@ class Redis(
             client_name=client_name,
             protocol_version=protocol_version,
             verify_version=verify_version,
+            noreply=noreply,
         )
         self._use_lua_lock: Optional[bool] = None
         self.response_callbacks: Dict[bytes, Callable[..., Any]] = {}
@@ -638,6 +643,7 @@ class Redis(
         decode_responses: Literal[False] = ...,
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
+        noreply: bool = ...,
         **kwargs: Any,
     ) -> RedisBytesT:
         ...
@@ -652,6 +658,7 @@ class Redis(
         decode_responses: Literal[True],
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
+        noreply: bool = ...,
         **kwargs: Any,
     ) -> RedisStringT:
         ...
@@ -665,6 +672,7 @@ class Redis(
         decode_responses: bool = False,
         protocol_version: Literal[2, 3] = 2,
         verify_version: bool = True,
+        noreply: bool = False,
         **kwargs: Any,
     ) -> RedisT:
         """
@@ -700,6 +708,7 @@ class Redis(
                 decode_responses=True,
                 protocol_version=protocol_version,
                 verify_version=verify_version,
+                noreply=noreply,
                 connection_pool=ConnectionPool.from_url(
                     url,
                     db=db,
@@ -713,6 +722,7 @@ class Redis(
                 decode_responses=False,
                 protocol_version=protocol_version,
                 verify_version=verify_version,
+                noreply=noreply,
                 connection_pool=ConnectionPool.from_url(
                     url,
                     db=db,
@@ -762,15 +772,17 @@ class Redis(
             if self.cache and command not in self.connection_pool.READONLY_COMMANDS:
                 self.cache.invalidate(*KeySpec.extract_keys((command,) + args))
             await connection.send_command(command, *args)
+            if self.noreply:
+                return None  # type: ignore
             if custom_callback := self.response_callbacks.get(command):
                 return custom_callback(  # type: ignore
-                    await self.parse_response(connection, decode=options.get("decode")),
+                    await connection.read_response(decode=options.get("decode")),
                     version=self.protocol_version,
                     **options,
                 )
 
             return callback(
-                await self.parse_response(connection, decode=options.get("decode")),
+                await connection.read_response(decode=options.get("decode")),
                 version=self.protocol_version,
                 **options,
             )
@@ -785,8 +797,11 @@ class Redis(
                 raise
             await connection.send_command(command, *args)
 
+            if self.noreply:
+                return None  # type: ignore
+
             return callback(
-                await self.parse_response(connection, decode=options.get("decode")),
+                await connection.read_response(decode=options.get("decode")),
                 version=self.protocol_version,
                 **options,
             )
@@ -946,6 +961,7 @@ class RedisCluster(
         verify_version: bool = ...,
         non_atomic_cross_slot: bool = ...,
         cache: Optional[AbstractCache] = ...,
+        noreply: bool = ...,
         **kwargs: Any,
     ):
         ...
@@ -976,6 +992,7 @@ class RedisCluster(
         verify_version: bool = ...,
         non_atomic_cross_slot: bool = ...,
         cache: Optional[AbstractCache] = ...,
+        noreply: bool = ...,
         **kwargs: Any,
     ):
         ...
@@ -1005,11 +1022,14 @@ class RedisCluster(
         verify_version: bool = True,
         non_atomic_cross_slot: bool = False,
         cache: Optional[AbstractCache] = None,
+        noreply: bool = False,
         **kwargs: Any,
     ):
         """
 
         Changes
+          - .. versionadded:: 3.11.0
+             Added :paramref:`noreply`
           - .. versionadded:: 3.10.0
              Synchronized ssl constructor parameters with :class:`coredis.Redis`
           - .. versionadded:: 3.9.0
@@ -1072,6 +1092,8 @@ class RedisCluster(
         :param cache: If provided the cache will be used to avoid requests for read only
          commands if the client has already requested the data and it hasn't been invalidated.
          The cache is responsible for any mutations to the keys that happen outside of this client
+        :param noreply: If ``True`` the client will not request a response for any
+         commands sent to the server.
         """
 
         if "db" in kwargs:  # noqa
@@ -1107,6 +1129,7 @@ class RedisCluster(
                     ssl_check_hostname,
                 ).get()
                 kwargs["ssl_context"] = ssl_context
+
             pool = ClusterConnectionPool(
                 startup_nodes=startup_nodes,
                 max_connections=max_connections,
@@ -1117,6 +1140,7 @@ class RedisCluster(
                 readonly=readonly,
                 decode_responses=decode_responses,
                 protocol_version=protocol_version,
+                noreply=noreply,
                 **kwargs,
             )
 
@@ -1126,6 +1150,7 @@ class RedisCluster(
             decode_responses=decode_responses,
             verify_version=verify_version,
             protocol_version=protocol_version,
+            noreply=noreply,
             **kwargs,
         )
 
@@ -1150,6 +1175,7 @@ class RedisCluster(
         decode_responses: Literal[False] = ...,
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
+        noreply: bool = ...,
         **kwargs: Any,
     ) -> RedisClusterBytesT:
         ...
@@ -1165,6 +1191,7 @@ class RedisCluster(
         decode_responses: Literal[True],
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
+        noreply: bool = ...,
         **kwargs: Any,
     ) -> RedisClusterStringT:
         ...
@@ -1179,6 +1206,7 @@ class RedisCluster(
         decode_responses: bool = False,
         protocol_version: Literal[2, 3] = 2,
         verify_version: bool = True,
+        noreply: bool = False,
         **kwargs: Any,
     ) -> RedisClusterT:
         """
@@ -1206,6 +1234,7 @@ class RedisCluster(
                     skip_full_coverage_check=skip_full_coverage_check,
                     decode_responses=decode_responses,
                     protocol_version=protocol_version,
+                    noreply=noreply,
                     **kwargs,
                 ),
             )
@@ -1220,6 +1249,7 @@ class RedisCluster(
                     skip_full_coverage_check=skip_full_coverage_check,
                     decode_responses=decode_responses,
                     protocol_version=protocol_version,
+                    noreply=noreply,
                     **kwargs,
                 ),
             )
@@ -1427,7 +1457,8 @@ class RedisCluster(
             try:
                 if asking:
                     await r.send_command(CommandName.ASKING)
-                    await self.parse_response(r, decode=kwargs.get("decode"))
+                    if not self.noreply:
+                        await r.read_response(decode=kwargs.get("decode"))
                     asking = False
 
                 if (
@@ -1441,8 +1472,10 @@ class RedisCluster(
                     self.cache.invalidate(*KeySpec.extract_keys((command,) + args))
                 await r.send_command(command, *args)
 
+                if self.noreply:
+                    return None  # type: ignore
                 return callback(
-                    await self.parse_response(r, decode=kwargs.get("decode")),
+                    await r.read_response(decode=kwargs.get("decode")),
                     version=self.protocol_version,
                     **kwargs,
                 )
@@ -1532,11 +1565,12 @@ class RedisCluster(
                 else:
                     node_arg_mapping[node["name"]] = args
                     await connection.send_command(command, *args)
-                res[node["name"]] = callback(
-                    await self.parse_response(connection, decode=options.get("decode")),
-                    version=self.protocol_version,
-                    **options,
-                )
+                if not self.noreply:
+                    res[node["name"]] = callback(
+                        await connection.read_response(decode=options.get("decode")),
+                        version=self.protocol_version,
+                        **options,
+                    )
             except asyncio.CancelledError:
                 # do not retry when coroutine is cancelled
                 connection.disconnect()
@@ -1551,16 +1585,19 @@ class RedisCluster(
                 except ConnectionError as err:
                     # if a retry attempt results in a connection error assume cluster error
                     raise ClusterDownError(str(err))
-                res[node["name"]] = callback(
-                    await self.parse_response(connection, decode=options.get("decode")),
-                    version=self.protocol_version,
-                    **options,
-                )
+                if not self.noreply:
+                    res[node["name"]] = callback(
+                        await connection.read_response(decode=options.get("decode")),
+                        version=self.protocol_version,
+                        **options,
+                    )
 
             finally:
                 self.ensure_server_version(connection.server_version)
                 self.connection_pool.release(connection)
 
+        if self.noreply:
+            return None  # type: ignore
         return self._merge_result(command, res, **options)
 
     def lock(

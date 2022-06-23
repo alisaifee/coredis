@@ -125,6 +125,7 @@ class BaseConnection:
         client_name: Optional[str] = None,
         loop: Optional[asyncio.events.AbstractEventLoop] = None,
         protocol_version: Literal[2, 3] = 2,
+        noreply: bool = False,
     ):
         self._parser: BaseParser = parser_class(reader_read_size)
         self._stream_timeout = stream_timeout
@@ -157,6 +158,7 @@ class BaseConnection:
         self.packer = Packer(self.encoding)
         self.push_messages: asyncio.Queue[ResponseType] = asyncio.Queue()
         self.tracking_client_id = None
+        self.noreply = noreply
         self._writer = None
         self._reader = None
 
@@ -315,18 +317,21 @@ class BaseConnection:
             await self.send_command(b"CLIENT SETNAME", self.client_name)
             if await self.read_response(decode=False) != b"OK":
                 raise ConnectionError(f"Failed to set client name: {self.client_name}")
+        if self.noreply:
+            await self.send_command(b"CLIENT REPLY", b"OFF")
 
         self.last_active_at = time.time()
 
     async def read_response(
         self,
-        decode: Optional[bool] = None,
+        decode: Optional[ValueT] = None,
         push_message_types: Optional[Set[bytes]] = None,
     ) -> ResponseType:
         try:
             response = await exec_with_timeout(
                 self._parser.read_response(
-                    decode=decode, push_message_types=push_message_types
+                    decode=bool(decode) if decode is not None else None,
+                    push_message_types=push_message_types,
                 ),
                 self._stream_timeout,
             )
@@ -360,7 +365,7 @@ class BaseConnection:
         if not self.is_connected:
             await self.connect()
         await self.send_packed_command(self.packer.pack_command(command, *args))
-        self.awaiting_response = True
+        self.awaiting_response = not self.noreply
         self.last_active_at = time.time()
 
     def disconnect(self) -> None:
@@ -400,6 +405,7 @@ class Connection(BaseConnection):
         client_name: Optional[str] = None,
         loop: Optional[AbstractEventLoop] = None,
         protocol_version: Literal[2, 3] = 2,
+        noreply: bool = False,
     ):
         super().__init__(
             retry_on_timeout,
@@ -411,6 +417,7 @@ class Connection(BaseConnection):
             client_name=client_name,
             loop=loop,
             protocol_version=protocol_version,
+            noreply=noreply,
         )
         self.host = host
         self.port = port
@@ -540,6 +547,7 @@ class ClusterConnection(Connection):
         loop: Optional[AbstractEventLoop] = None,
         protocol_version: Literal[2, 3] = 2,
         readonly: bool = False,
+        noreply: bool = False,
     ) -> None:
         self.readonly = readonly
         super().__init__(
@@ -561,6 +569,7 @@ class ClusterConnection(Connection):
             client_name=client_name,
             loop=loop,
             protocol_version=protocol_version,
+            noreply=noreply,
         )
 
     async def on_connect(self) -> None:

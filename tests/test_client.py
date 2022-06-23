@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from ssl import SSLContext, SSLError
 
 import pytest
@@ -64,6 +65,35 @@ class TestClient:
     @pytest.mark.parametrize("client_arguments", [({"client_name": "coredis"})])
     async def test_set_client_name(self, client, client_arguments):
         assert (await client.client_info())["name"] == "coredis"
+
+    @pytest.mark.noruntimechecks
+    async def test_noreply_client(self, client, cloner, _s):
+        noreply = await cloner(client)
+        noreply.noreply = True
+        assert not await noreply.set("fubar", 1)
+        await asyncio.sleep(0.01)
+        assert await client.get("fubar") == _s("1")
+        assert not await noreply.delete(["fubar"])
+        await asyncio.sleep(0.01)
+        assert not await client.get("fubar")
+
+
+@targets(
+    "redis_cluster",
+    "redis_cluster_resp3",
+)
+@pytest.mark.asyncio
+class TestClusterClient:
+    @pytest.mark.noruntimechecks
+    async def test_noreply_client(self, client, cloner, _s):
+        noreply = await cloner(client)
+        noreply.noreply = True
+        assert not await noreply.set("fubar", 1)
+        await asyncio.sleep(0.01)
+        assert await client.get("fubar") == _s("1")
+        assert not await noreply.delete(["fubar"])
+        await asyncio.sleep(0.01)
+        assert not await client.get("fubar")
 
 
 class TestSSL:

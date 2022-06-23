@@ -33,6 +33,7 @@ from coredis.typing import (
     Tuple,
     Type,
     Union,
+    ValueT,
 )
 
 
@@ -110,7 +111,7 @@ class SentinelManagedConnection(Connection, Generic[AnyStr]):
 
     async def read_response(
         self,
-        decode: Optional[bool] = None,
+        decode: Optional[ValueT] = None,
         push_message_types: Optional[Set[bytes]] = None,
     ) -> ResponseType:
         try:

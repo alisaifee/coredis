@@ -17,6 +17,7 @@ import coredis.experimental
 import coredis.parsers
 import coredis.sentinel
 from coredis.cache import TrackingCache
+from coredis.typing import RUNTIME_TYPECHECKS
 
 REDIS_VERSIONS = {}
 
@@ -62,6 +63,8 @@ async def check_test_constraints(request, client, protocol=2):
         if marker.name == "nocluster" and isinstance(client, coredis.RedisCluster):
             return pytest.skip("Skipped for redis cluster")
 
+        if marker.name == "noruntimechecks" and RUNTIME_TYPECHECKS:
+            return pytest.skip("Skipped with runtime checks enabled")
         if marker.name == "clusteronly" and not isinstance(
             client, coredis.RedisCluster
         ):
