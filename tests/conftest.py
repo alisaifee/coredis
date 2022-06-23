@@ -757,6 +757,7 @@ async def dragonfly(dragonfly_server, request):
     client = coredis.Redis(
         "localhost",
         11379,
+        protocol_version=2,
         decode_responses=True,
         verify_version=False,
         **get_client_test_args(request),
