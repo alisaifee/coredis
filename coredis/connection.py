@@ -17,7 +17,6 @@ from coredis.exceptions import (
     ConnectionError,
     RedisError,
     TimeoutError,
-    UnknownCommandError,
 )
 from coredis.nodemanager import Node
 from coredis.parsers import BaseParser, DefaultParser
@@ -294,7 +293,9 @@ class BaseConnection:
                     raise ConnectionError("Unable to set RESP3 protocol version")
         except AuthenticationRequiredError:
             if self.protocol_version == 3:
-                raise ConnectionError("Unable to set RESP3 protocol version")
+                raise ConnectionError(
+                    "Unable to set RESP3 protocol version due to authentication failure"
+                )
             self.server_version = None
             self.client_id = None
             auth_attempted = False
