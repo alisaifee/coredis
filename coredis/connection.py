@@ -292,7 +292,7 @@ class BaseConnection:
                 self.client_id = None
                 if self.protocol_version == 3:
                     raise ConnectionError("Unable to set RESP3 protocol version")
-        except (UnknownCommandError, AuthenticationRequiredError):
+        except AuthenticationRequiredError:
             if self.protocol_version == 3:
                 raise ConnectionError("Unable to set RESP3 protocol version")
             self.server_version = None
