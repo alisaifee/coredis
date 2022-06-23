@@ -1375,7 +1375,11 @@ class RedisCluster(
         if nodes:
             try:
                 return await self.execute_command_on_nodes(
-                    nodes, command, *args, callback=callback, **kwargs
+                    nodes,
+                    command,
+                    *args,
+                    callback=callback,
+                    **kwargs,
                 )
             except ClusterDownError:
                 self.connection_pool.disconnect()
@@ -1438,7 +1442,9 @@ class RedisCluster(
                 await r.send_command(command, *args)
 
                 return callback(
-                    await self.parse_response(r, decode=kwargs.get("decode")), **kwargs
+                    await self.parse_response(r, decode=kwargs.get("decode")),
+                    version=self.protocol_version,
+                    **kwargs,
                 )
             except (RedisClusterException, BusyLoadingError, asyncio.CancelledError):
                 raise
