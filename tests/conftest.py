@@ -862,11 +862,13 @@ def pytest_collection_modifyitems(items):
                     item.add_marker(getattr(pytest.mark, token))
             elif client_name.startswith("keydb"):
                 item.add_marker(getattr(pytest.mark, "keydb"))
+                item.add_marker(getattr(pytest.mark, "xfail"))
                 tokens = client_name.replace("keydb_", "").split("_")
                 for token in tokens:
                     item.add_marker(getattr(pytest.mark, token))
             elif client_name.startswith("dragonfly"):
                 item.add_marker(getattr(pytest.mark, "dragonfly"))
+                item.add_marker(getattr(pytest.mark, "xfail"))
                 tokens = client_name.replace("dragonfly_", "").split("_")
                 for token in tokens:
                     item.add_marker(getattr(pytest.mark, token))
