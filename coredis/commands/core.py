@@ -18,7 +18,12 @@ from coredis.commands._validators import (
     mutually_exclusive_parameters,
     mutually_inclusive_parameters,
 )
-from coredis.commands._wrappers import CacheConfig, ClusterCommandConfig, redis_command
+from coredis.commands._wrappers import (
+    CacheConfig,
+    ClusterCommandConfig,
+    RedirectUsage,
+    redis_command,
+)
 from coredis.commands.bitfield import BitFieldOperation
 from coredis.commands.constants import CommandGroup, CommandName
 from coredis.exceptions import AuthorizationError, DataError, RedisError
@@ -1193,6 +1198,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.AUTH,
         group=CommandGroup.CONNECTION,
         arguments={"username": {"version_introduced": "6.0.0"}},
+        redirect_usage=RedirectUsage(
+            (
+                "Use the :paramref:`Redis.username` and :paramref:`Redis.password` "
+                "arguments when initializing the client to ensure that all connections "
+                "originating from this client are authenticated before being made available."
+            ),
+            True,
+        ),
     )
     async def auth(self, password: StringT, username: Optional[StringT] = None) -> bool:
         """
@@ -6278,6 +6291,14 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.CLIENT_SETNAME,
         group=CommandGroup.CONNECTION,
+        redirect_usage=RedirectUsage(
+            (
+                "Use the :paramref:`Redis.client_name` argument when initializing the client "
+                "to ensure the client name is consistent across all connections originating "
+                "from the client"
+            ),
+            True,
+        ),
     )
     async def client_setname(self, connection_name: StringT) -> bool:
         """
@@ -6402,6 +6423,14 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.CLIENT_REPLY,
         group=CommandGroup.CONNECTION,
+        redirect_usage=RedirectUsage(
+            (
+                "Use the :paramref:`Redis.noreply` argument when initializing the client "
+                "to ensure that all connections originating from this client disable "
+                "or enable replies."
+            ),
+            True,
+        ),
     )
     async def client_reply(
         self, mode: Literal[PureToken.ON, PureToken.OFF, PureToken.SKIP]

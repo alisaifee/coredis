@@ -5,6 +5,7 @@ import dataclasses
 import functools
 import random
 import textwrap
+import warnings
 from typing import TYPE_CHECKING, Any, cast
 
 from packaging import version
@@ -34,6 +35,11 @@ if TYPE_CHECKING:
 @dataclasses.dataclass
 class CacheConfig:
     key_func: Callable[..., bytes]
+
+
+class RedirectUsage(NamedTuple):
+    reason: str
+    warn: bool
 
 
 class CommandDetails(NamedTuple):
@@ -125,6 +131,7 @@ def redis_command(
     version_introduced: Optional[str] = None,
     version_deprecated: Optional[str] = None,
     deprecation_reason: Optional[str] = None,
+    redirect_usage: Optional[RedirectUsage] = None,
     arguments: Optional[Dict[str, Dict[str, str]]] = None,
     readonly: bool = False,
     cluster: ClusterCommandConfig = ClusterCommandConfig(),
@@ -156,6 +163,12 @@ def redis_command(
 
         @functools.wraps(func)
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
+            if redirect_usage:
+                if redirect_usage.warn:
+                    warnings.warn(redirect_usage.reason, UserWarning)
+                else:
+                    raise NotImplementedError(redirect_usage.reason)
+
             from coredis.client import Redis, RedisCluster
 
             client = args[0]
@@ -198,6 +211,17 @@ Deprecated in :redis-version:`{version_deprecated}`
             wrapped.__doc__ += """
 Supports client side caching
             """
+        if redirect_usage:
+            if redirect_usage.warn:
+                preamble = f".. warning:: Using ``{func.__name__}`` directly is not recommended."
+            else:
+                preamble = (
+                    f".. danger:: Using ``{func.__name__}`` directly is not supported."
+                )
+            wrapped.__doc__ += f"""
+{preamble} {redirect_usage.reason}
+"""
+
         setattr(wrapped, "__coredis_command", command_details)
         return wrapped
 
