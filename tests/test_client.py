@@ -66,7 +66,6 @@ class TestClient:
     async def test_set_client_name(self, client, client_arguments):
         assert (await client.client_info())["name"] == "coredis"
 
-    @pytest.mark.noruntimechecks
     async def test_noreply_client(self, client, cloner, _s):
         noreply = await cloner(client)
         noreply.noreply = True
@@ -84,7 +83,6 @@ class TestClient:
 )
 @pytest.mark.asyncio
 class TestClusterClient:
-    @pytest.mark.noruntimechecks
     async def test_noreply_client(self, client, cloner, _s):
         noreply = await cloner(client)
         noreply.noreply = True

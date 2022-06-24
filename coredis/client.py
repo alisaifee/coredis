@@ -64,7 +64,6 @@ from coredis.typing import (
     Type,
     TypeVar,
     ValueT,
-    add_runtime_checks,
 )
 
 P = ParamSpec("P")
@@ -123,9 +122,6 @@ class ClusterMeta(ABCMeta):
                     kls.RESULT_CALLBACKS[cmd.command] = cmd.cluster.combine
                 if cmd.readonly:
                     ConnectionPool.READONLY_COMMANDS.add(cmd.command)
-                if (wrapped := add_runtime_checks(method)) != method:
-                    setattr(kls, name, wrapped)
-                    method = wrapped
             if doc_addition and not hasattr(method, "__cluster_docs"):
 
                 def __w(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
@@ -141,20 +137,6 @@ class ClusterMeta(ABCMeta):
                 wrapped = __w(method)
                 setattr(wrapped, "__cluster_docs", doc_addition)
                 setattr(kls, name, wrapped)
-        return kls
-
-
-class RedisMeta(ABCMeta):
-    def __new__(
-        cls, name: str, bases: Tuple[type, ...], namespace: Dict[str, object]
-    ) -> RedisMeta:
-        kls = super().__new__(cls, name, bases, namespace)
-        methods = dict(k for k in inspect.getmembers(kls) if inspect.isfunction(k[1]))
-
-        for name, method in methods.items():
-            if hasattr(method, "__coredis_command"):
-                if (wrapped := add_runtime_checks(method)) != method:
-                    setattr(kls, name, wrapped)
         return kls
 
 
@@ -427,7 +409,6 @@ class Redis(
     AbstractRedis[AnyStr],
     Generic[AnyStr],
     RedisConnection,
-    metaclass=RedisMeta,
 ):
     @overload
     def __init__(

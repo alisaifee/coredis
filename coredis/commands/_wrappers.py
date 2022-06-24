@@ -24,6 +24,7 @@ from coredis.typing import (
     P,
     R,
     ResponseType,
+    add_runtime_checks,
 )
 
 if TYPE_CHECKING:
@@ -151,18 +152,26 @@ def redis_command(
         func: Callable[P, Coroutine[Any, Any, R]]
     ) -> Callable[P, Coroutine[Any, Any, R]]:
         command_cache = CommandCache(command_name, cache_config)
+        runtime_checkable = add_runtime_checks(func)
 
         @functools.wraps(func)
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
+            from coredis.client import Redis, RedisCluster
+
+            client = args[0]
+            runtime_checking = not getattr(client, "noreply", None) and isinstance(
+                client, (Redis, RedisCluster)
+            )
+            callable = runtime_checkable if runtime_checking else func
             check_version(
-                args[0],  # type: ignore
+                client,  # type: ignore
                 command_name,
                 func.__name__,
                 command_details.version_introduced,
                 command_details.version_deprecated,
                 deprecation_reason,
             )
-            async with command_cache(func, *args, **kwargs) as response:
+            async with command_cache(callable, *args, **kwargs) as response:
                 return response
 
         wrapped.__doc__ = textwrap.dedent(wrapped.__doc__ or "")
