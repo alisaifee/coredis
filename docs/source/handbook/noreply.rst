@@ -41,4 +41,4 @@ The ``noreply`` flag can also be set temporarily::
    to the socket.
 
 .. warning:: Using the ``noreply`` option effectively ignores return annotations
-   and will therefore fail any type checkers (static or runtime).
+   and will (**probably**) therefore fail any type checkers (static or runtime).
