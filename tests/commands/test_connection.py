@@ -52,7 +52,8 @@ class TestConnection:
         assert "addr" in info
 
     async def test_client_reply(self, client, _s):
-        assert await client.client_reply(PureToken.ON)
+        with pytest.raises(NotImplementedError):
+            await client.client_reply(PureToken.ON)
 
     @pytest.mark.min_server_version("6.2.0")
     async def test_client_getredir(self, client, _s, cloner):
@@ -120,7 +121,8 @@ class TestConnection:
         assert my_id == (await client.client_info())["id"]
 
     async def test_client_list_after_client_setname(self, client, _s):
-        await client.client_setname("cl=i=ent")
+        with pytest.warns(UserWarning):
+            await client.client_setname("cl=i=ent")
         clients = await client.client_list()
         assert "cl=i=ent" in [c["name"] for c in clients]
 
@@ -128,8 +130,9 @@ class TestConnection:
         assert await client.client_getname() is None
 
     async def test_client_setname(self, client, _s):
-        assert await client.client_setname("redis_py_test")
-        assert await client.client_getname() == _s("redis_py_test")
+        with pytest.warns(UserWarning):
+            assert await client.client_setname("redis_py_test")
+            assert await client.client_getname() == _s("redis_py_test")
 
     async def test_client_pause(self, client, event_loop):
         key = "key_should_expire"

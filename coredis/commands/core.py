@@ -6429,7 +6429,7 @@ class CoreCommands(CommandMixin[AnyStr]):
                 "to ensure that all connections originating from this client disable "
                 "or enable replies."
             ),
-            True,
+            False,
         ),
     )
     async def client_reply(
@@ -6438,10 +6438,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Instruct the server whether to reply to commands
         """
-
-        return await self.execute_command(
-            CommandName.CLIENT_REPLY, mode, callback=SimpleStringCallback()
-        )
+        ...
 
     @versionadded(version="3.0.0")
     @redis_command(
