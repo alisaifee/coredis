@@ -84,8 +84,7 @@ class Unpacker:
 
     def feed(self, data: bytes) -> None:
         self.localbuffer.seek(self.bytes_written)
-        self.localbuffer.write(data)
-        self.bytes_written += len(data)
+        self.bytes_written += self.localbuffer.write(data)
         self.localbuffer.seek(self.bytes_read)
 
     def parse(
@@ -100,13 +99,14 @@ class Unpacker:
             data = self.localbuffer.readline()
             if not data[-2::] == SYM_CRLF:
                 return NOT_ENOUGH_DATA
-            self.bytes_read += len(data)
+            data_len = len(data)
+            self.bytes_read += data_len
             chunk = data[:-2]
 
             marker, chunk = chunk[0], chunk[1:]
             response: ResponsePrimitive | RedisError = None
             if marker == RESPDataType.SIMPLE_STRING:
-                response = bytes(chunk)
+                response = chunk
                 if decode_bytes and self.encoding:
                     response = response.decode(self.encoding)
             elif marker in {RESPDataType.BULK_STRING, RESPDataType.VERBATIM}:
@@ -115,10 +115,10 @@ class Unpacker:
                     response = None
                 else:
                     if (self.bytes_written - self.bytes_read) < length + 2:
-                        self.bytes_read -= len(data)
+                        self.bytes_read -= data_len
                         return NOT_ENOUGH_DATA
                     data = self.localbuffer.read(length + 2)
-                    self.bytes_read += len(data)
+                    self.bytes_read += length + 2
                     response = data[:-2]
                     if marker == RESPDataType.VERBATIM:
                         if response[:3] != b"txt":
