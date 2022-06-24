@@ -145,6 +145,7 @@ jobs:
         env:
           CIBW_SKIP: '*musllinux* pp*'
           CIBW_BEFORE_BUILD: 'pip install -r requirements/build_ext.txt'
+          CIBW_ARCHS: all
           CIBW_PRERELEASE_PYTHONS: True
       - uses: actions/upload-artifact@v2
         with:
