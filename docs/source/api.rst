@@ -4,12 +4,6 @@ API Documentation
 Clients
 ^^^^^^^
 
-.. autosummary::
-
-   coredis.Redis
-   coredis.RedisCluster
-   coredis.sentinel.Sentinel
-
 Redis
 -----
 .. autoclass:: coredis.Redis
