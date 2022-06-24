@@ -171,12 +171,7 @@ class PythonParser(BaseParser):
         if not self._stream:
             raise ConnectionError("Socket closed on remote end")
 
-        need_decode = self.encoding is not None
-        decode_bytes = False
-        if decode is not None:
-            need_decode = decode
-        if need_decode and self.encoding:
-            decode_bytes = True
+        decode_bytes = (decode is None or decode) if self.encoding else False
 
         while True:
             assert self.unpacker
