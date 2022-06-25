@@ -87,9 +87,6 @@ async def check_test_constraints(request, client, protocol=3):
         if marker.name == "nodragonfly" and str(client_version).startswith("df"):
             return pytest.skip("Skipped for Dragonfly")
 
-        if marker.name == "nouvloop" and os.environ.get("COREDIS_UVLOOP") == "True":
-            return pytest.skip("Skipped for uvloop")
-
 
 async def set_default_test_config(client):
     await get_version(client)

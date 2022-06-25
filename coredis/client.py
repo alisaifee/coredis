@@ -31,7 +31,6 @@ from coredis.exceptions import (
     ConnectionError,
     MovedError,
     RedisClusterException,
-    ResponseError,
     TimeoutError,
     TryAgainError,
     WatchError,
