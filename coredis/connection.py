@@ -483,7 +483,7 @@ class UnixDomainSocketConnection(BaseConnection):
         *,
         client_name: Optional[str] = None,
         loop: Optional[AbstractEventLoop] = None,
-        protocol_version: Literal[2, 3] = 2,
+        protocol_version: Literal[2, 3] = 3,
     ) -> None:
         super().__init__(
             retry_on_timeout,
@@ -539,7 +539,7 @@ class ClusterConnection(Connection):
         *,
         client_name: Optional[str] = None,
         loop: Optional[AbstractEventLoop] = None,
-        protocol_version: Literal[2, 3] = 2,
+        protocol_version: Literal[2, 3] = 3,
         readonly: bool = False,
         noreply: bool = False,
     ) -> None:
