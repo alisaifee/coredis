@@ -204,19 +204,6 @@ Sentinel Connection Pool
    :inherited-members:
 
 
-Parsers
-^^^^^^^
-:mod:`coredis.parsers`
-
-.. autoclass:: coredis.parsers.PythonParser
-   :class-doc-from: both
-   :show-inheritance:
-   :inherited-members:
-.. autoclass:: coredis.parsers.HiredisParser
-   :class-doc-from: both
-   :show-inheritance:
-   :inherited-members:
-
 Caching
 ^^^^^^^
 :mod:`coredis.cache`
