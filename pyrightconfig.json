@@ -4,7 +4,6 @@
         "coredis/connection.py",
         "coredis/constants.py",
         "coredis/exceptions.py",
-        "coredis/lock.py",
         "coredis/nodemanager.py",
         "coredis/parser.py",
         "coredis/pool.py",

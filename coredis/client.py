@@ -36,7 +36,6 @@ from coredis.exceptions import (
     TryAgainError,
     WatchError,
 )
-from coredis.lock import Lock, LuaLock
 from coredis.nodemanager import Node, NodeFlag
 from coredis.pool import ClusterConnectionPool, ConnectionPool
 from coredis.response._callbacks import NoopCallback
@@ -610,7 +609,6 @@ class Redis(
             verify_version=verify_version,
             noreply=noreply,
         )
-        self._use_lua_lock: Optional[bool] = None
         self.response_callbacks: Dict[bytes, Callable[..., Any]] = {}
         self.cache = cache
 
@@ -798,45 +796,6 @@ class Redis(
         can be fetched via :meth:`~coredis.commands.monitor.Monitor.get_command`.
         """
         return Monitor[AnyStr](self)
-
-    def lock(
-        self,
-        name: StringT,
-        timeout: Optional[float] = None,
-        sleep: float = 0.1,
-        blocking_timeout: Optional[bool] = None,
-        lock_class: Optional[Type[Lock[AnyStr]]] = None,
-        thread_local: bool = True,
-    ) -> Lock[AnyStr]:
-        """
-        Return a new :class:`~coredis.lock.Lock` object using :paramref:`name` that mimics
-        the behavior of :class:`threading.Lock`.
-
-        See: :class:`~coredis.lock.LuaLock` (the default :paramref:`lock_class`)
-        for more details.
-
-        :raises: :exc:`~coredis.LockError`
-        """
-
-        if lock_class is None:
-            if self._use_lua_lock is None:
-                # the first time .lock() is called, determine if we can use
-                # Lua by attempting to register the necessary scripts
-                try:
-                    LuaLock[AnyStr].register_scripts(self)
-                    self._use_lua_lock = True
-                except ResponseError:
-                    self._use_lua_lock = False
-            lock_class = self._use_lua_lock and LuaLock[AnyStr] or Lock[AnyStr]
-
-        return lock_class(
-            self,
-            name,
-            timeout=timeout,
-            sleep=sleep,
-            blocking_timeout=blocking_timeout,
-            thread_local=thread_local,
-        )
 
     def pubsub(
         self, ignore_subscribe_messages: bool = False, **kwargs: Any
@@ -1580,45 +1539,6 @@ class RedisCluster(
         if self.noreply:
             return None  # type: ignore
         return self._merge_result(command, res, **options)
-
-    def lock(
-        self,
-        name: StringT,
-        timeout: Optional[float] = None,
-        sleep: float = 0.1,
-        blocking_timeout: Optional[bool] = None,
-        lock_class: Optional[Type[LuaLock[AnyStr]]] = None,
-        thread_local: bool = True,
-    ) -> Lock[AnyStr]:
-        """
-        Return a new :class:`~coredis.lock.Lock` object using :paramref:`name` that mimics
-        the behavior of :class:`threading.Lock`.
-
-        See: :class:`~coredis.lock.LuaLock` (the default :paramref:`lock_class`)
-         for more details.
-
-        :raises: :exc:`~coredis.LockError`
-        """
-
-        if lock_class is None:
-            if self._use_lua_lock is None:  # type: ignore
-                # the first time .lock() is called, determine if we can use
-                # Lua by attempting to register the necessary scripts
-                try:
-                    LuaLock[AnyStr].register_scripts(self)
-                    self._use_lua_lock = True
-                except ResponseError:
-                    self._use_lua_lock = False
-            lock_class = LuaLock[AnyStr]
-
-        return lock_class(
-            self,
-            name,
-            timeout=timeout,
-            sleep=sleep,
-            blocking_timeout=blocking_timeout,
-            thread_local=thread_local,
-        )
 
     def pubsub(
         self, ignore_subscribe_messages: bool = False, **kwargs: Any

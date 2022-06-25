@@ -15,7 +15,6 @@ Handbook
     pipelines
     noreply
     scripting
-    locks
     caching
     development
     typing

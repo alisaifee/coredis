@@ -314,18 +314,6 @@ Enums
    :no-inherited-members:
    :show-inheritance:
 
-Locks
------
-
-:mod:`coredis.lock`
-
-.. autoclass:: coredis.lock.Lock
-   :show-inheritance:
-.. autoclass:: coredis.lock.LuaLock
-   :show-inheritance:
-.. autoclass:: coredis.lock.ClusterLock
-   :show-inheritance:
-
 Exceptions
 ^^^^^^^^^^
 
