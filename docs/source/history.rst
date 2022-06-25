@@ -26,3 +26,20 @@ client, this inherently means that **coredis** diverges from both, most notable 
 
   .. automethod:: coredis.Redis.expire
      :noindex:
+
+Default RESP3
+-------------
+
+**coredis** version ``3.x`` supported selecting the protocol version to use when parsing responses
+from the redis server and defaulted to the legacy ``RESP`` protocol. Since **coredis** has dropped
+support for redis server versions below ``6.0`` the default protocol version is now :term:`RESP3`.
+
+
+Parsers
+-------
+**coredis** versions ``2.x`` and ``3.x`` would default to a :pypi:`hiredis` based parser if the
+dependency was available. This behavior was inherited from **aredis** which inherited it from
+:pypi:`redis`. Though :pypi:`hiredis` does provide a significant speedup when parsing responses
+for large nested bulk responses, **coredis** has made sufficient improvements in performance
+including using :pypi:`mypyc` to provide a native speedup when possible and therefore
+no longer supports multiple parser implementations and always uses :class:`coredis.parsers.Parser`.
