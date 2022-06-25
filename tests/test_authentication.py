@@ -34,5 +34,7 @@ async def test_valid_authentication(redis_auth):
 @pytest.mark.asyncio
 async def test_valid_authentication_delayed(redis_auth):
     client = coredis.Redis("localhost", 6389)
+    assert client.server_version is None
     await client.auth(password="sekret")
     assert await client.ping()
+    assert client.server_version is not None

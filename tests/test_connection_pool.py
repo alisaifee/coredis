@@ -24,12 +24,16 @@ class DummyConnection:
         self.pid = os.getpid()
         self.awaiting_response = False
         self.is_connected = False
+        self.needs_handshake = True
 
     def connect(self):
         self.is_connected = True
 
     def disconnect(self):
         self.is_connected = False
+
+    async def perform_handshake(self) -> None:
+        self.needs_handshake = False
 
 
 @pytest.fixture(autouse=True)
@@ -454,7 +458,7 @@ class TestConnectionPoolURLParsing:
             "port": 6379,
             "db": 0,
             "decode_responses": False,
-            "protocol_version": 2,
+            "protocol_version": 3,
             "username": None,
             "password": None,
         }

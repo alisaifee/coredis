@@ -294,6 +294,8 @@ class ConnectionPool:
         self.checkpid()
         try:
             connection = self._available_connections.pop()
+            if connection.needs_handshake:
+                await connection.perform_handshake()
         except IndexError:
             if self._created_connections >= self.max_connections:
                 raise ConnectionError("Too many connections")
@@ -437,6 +439,8 @@ class BlockingConnectionPool(ConnectionPool):
 
         try:
             connection = await asyncio.wait_for(self._pool.get(), self.timeout)
+            if connection and connection.needs_handshake:
+                await connection.perform_handshake()
         except asyncio.TimeoutError:
             raise ConnectionError("No connection available.")
 
@@ -657,6 +661,8 @@ class ClusterConnectionPool(ConnectionPool):
 
         try:
             connection = self._cluster_available_connections.get(node["name"], []).pop()
+            if connection.needs_handshake:
+                await connection.perform_handshake()
         except IndexError:
             connection = self._make_connection(node)
 

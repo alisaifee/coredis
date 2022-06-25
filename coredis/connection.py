@@ -156,6 +156,7 @@ class BaseConnection:
         self.push_messages: asyncio.Queue[ResponseType] = asyncio.Queue()
         self.tracking_client_id = None
         self.noreply = noreply
+        self.needs_handshake = True
         self._writer = None
         self._reader = None
 
@@ -225,14 +226,6 @@ class BaseConnection:
     async def _connect(self) -> None:
         raise NotImplementedError
 
-    async def check_auth_response(self) -> None:
-        response = await self.read_response()
-
-        if nativestr(response) != "OK":
-            raise ConnectionError(
-                f"Failed to authenticate: username={self.username} & password={self.password}"
-            )
-
     async def update_tracking_client(
         self, enabled: bool, client_id: Optional[int] = None
     ) -> bool:
@@ -250,16 +243,15 @@ class BaseConnection:
         except Exception:
             return False
 
-    async def on_connect(self) -> None:
-        self._parser.on_connect(self)
-        hello_command_args: List[Union[int, str, bytes]] = [self.protocol_version]
-        auth_attempted = False
+    async def perform_handshake(self) -> None:
+        if not self.needs_handshake:
+            return
 
+        hello_command_args: List[Union[int, str, bytes]] = [self.protocol_version]
         if self.username or self.password:
             hello_command_args.extend(
                 ["AUTH", self.username or b"default", self.password or b""]
             )
-            auth_attempted = True
         try:
             await self.send_command(b"HELLO", *hello_command_args)
             hello_resp = await self.read_response(decode=False)
@@ -276,6 +268,7 @@ class BaseConnection:
                     resp = cast(List[ValueT], hello_resp)
                     self.server_version = nativestr(resp[3])
                     self.client_id = int(resp[7])
+                self.needs_handshake = False
             else:
                 warnings.warn(
                     (
@@ -290,22 +283,12 @@ class BaseConnection:
                 if self.protocol_version == 3:
                     raise ConnectionError("Unable to set RESP3 protocol version")
         except AuthenticationRequiredError:
-            if self.protocol_version == 3:
-                raise ConnectionError(
-                    "Unable to set RESP3 protocol version due to authentication failure"
-                )
             self.server_version = None
             self.client_id = None
-            auth_attempted = False
 
-        if not auth_attempted and (self.username or self.password):
-            if self.username and self.password:
-                await self.send_command(b"AUTH", self.username, self.password)
-                await self.check_auth_response()
-            elif self.password:
-                await self.send_command(b"AUTH", self.password)
-                await self.check_auth_response()
-
+    async def on_connect(self) -> None:
+        self._parser.on_connect(self)
+        await self.perform_handshake()
         if self.db:
             await self.send_command(b"SELECT", self.db)
 
@@ -351,6 +334,7 @@ class BaseConnection:
         if not self._writer:
             await self.connect()
             assert self._writer
+
         try:
             self._writer.writelines(command)
             await self._writer.drain()
@@ -369,6 +353,7 @@ class BaseConnection:
 
     def disconnect(self) -> None:
         """Disconnects from the Redis server"""
+        self.needs_handshake = True
         self._parser.on_disconnect()
         if self.writer:
             try:
