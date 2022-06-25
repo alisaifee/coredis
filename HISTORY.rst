@@ -5,7 +5,7 @@ Changelog
 
 v3.11.0
 -------
-Release Date: 2022-06-24
+Release Date: 2022-06-25
 
 * Features
 
