@@ -53,7 +53,6 @@ $ pip install coredis
 - [Redis Libraries and functions](https://coredis.readthedocs.org/en/latest/handbook/scripting.html#library-functions) [`>= Redis 7.0`]
 
 ### Miscellaneous
-- [RESP3](https://coredis.readthedocs.org/en/latest/handbook/response.html#resp3) Protocol Support
 - Public API annotated with type annotations
 - Optional [Runtime Type Validation](https://coredis.readthedocs.org/en/latest/handbook/typing.html#runtime-type-checking) (via [beartype](https://github.com/beartype/beartype))
 
