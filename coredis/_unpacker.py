@@ -4,9 +4,31 @@ from io import BytesIO
 from typing import NamedTuple, Optional
 
 from coredis.constants import SYM_CRLF, RESPDataType
-from coredis.exceptions import ConnectionError, InvalidResponse, RedisError
+from coredis.exceptions import (
+    AskError,
+    AuthenticationFailureError,
+    AuthenticationRequiredError,
+    AuthorizationError,
+    BusyLoadingError,
+    ClusterCrossSlotError,
+    ClusterDownError,
+    ConnectionError,
+    ExecAbortError,
+    InvalidResponse,
+    MovedError,
+    NoKeyError,
+    NoScriptError,
+    ProtocolError,
+    ReadOnlyError,
+    RedisError,
+    ResponseError,
+    StreamConsumerGroupError,
+    StreamDuplicateConsumerGroupError,
+    TryAgainError,
+    UnknownCommandError,
+    WrongTypeError,
+)
 from coredis.typing import (
-    Callable,
     Dict,
     Final,
     List,
@@ -15,6 +37,7 @@ from coredis.typing import (
     ResponseType,
     Set,
     Tuple,
+    Type,
     Union,
 )
 
@@ -70,16 +93,61 @@ class Unpacker:
         RESPDataType.ERROR,
     }
 
+    EXCEPTION_CLASSES: Dict[
+        str, Union[Type[RedisError], Dict[str, Type[RedisError]]]
+    ] = {
+        "ASK": AskError,
+        "BUSYGROUP": StreamDuplicateConsumerGroupError,
+        "CLUSTERDOWN": ClusterDownError,
+        "CROSSSLOT": ClusterCrossSlotError,
+        "ERR": {
+            "max number of clients reached": ConnectionError,
+            "unknown command": UnknownCommandError,
+        },
+        "EXECABORT": ExecAbortError,
+        "LOADING": BusyLoadingError,
+        "NOSCRIPT": NoScriptError,
+        "MOVED": MovedError,
+        "NOAUTH": AuthenticationRequiredError,
+        "NOGROUP": StreamConsumerGroupError,
+        "NOKEY": NoKeyError,
+        "NOPERM": AuthorizationError,
+        "NOPROTO": ProtocolError,
+        "READONLY": ReadOnlyError,
+        "TRYAGAIN": TryAgainError,
+        "WRONGPASS": AuthenticationFailureError,
+        "WRONGTYPE": WrongTypeError,
+    }
+
+    def parse_error(self, response: str) -> RedisError:
+        """
+        Parse an error response
+
+        :meta private:
+        """
+        error_code = response.split(" ")[0]
+        if error_code in self.EXCEPTION_CLASSES:
+            response = response[len(error_code) + 1 :]
+            exception_class = self.EXCEPTION_CLASSES[error_code]
+
+            if isinstance(exception_class, dict):
+                options = exception_class.items()
+                exception_class = ResponseError
+                for err, exc in options:
+                    if response.startswith(err):
+                        exception_class = exc
+                        break
+            return exception_class(response)
+        return ResponseError(response)
+
     def __init__(
         self,
         encoding: str,
-        parse_error: Callable[[str], RedisError],
     ):
         self.encoding = encoding
         self.localbuffer = BytesIO(b"")
         self.bytes_read = 0
         self.bytes_written = 0
-        self.parse_error = parse_error
         self.nodes: List[RESPNode] = []
 
     def feed(self, data: bytes) -> None:

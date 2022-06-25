@@ -120,12 +120,8 @@ test matrix status can be reviewed
 
 coredis is additionally tested against:
 
--   `hiredis >= 2.0.0`
 -   ` uvloop >= 0.15.0`
 
-`hiredis` if available will be used by default as the RESP (or RESP3) parser
-as it provides significant performance gains in response parsing. For more
-details refer to the [the documentation section on Parsers](https://coredis.readthedocs.org/en/stable/handbook/response.html#parsers)
 
 ### Supported python versions
 

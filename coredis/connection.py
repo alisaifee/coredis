@@ -19,7 +19,7 @@ from coredis.exceptions import (
     TimeoutError,
 )
 from coredis.nodemanager import Node
-from coredis.parsers import BaseParser, DefaultParser
+from coredis.parser import Parser
 from coredis.typing import (
     Awaitable,
     Callable,
@@ -30,7 +30,6 @@ from coredis.typing import (
     Optional,
     ResponseType,
     Set,
-    Type,
     TypeVar,
     Union,
     ValueT,
@@ -116,7 +115,6 @@ class BaseConnection:
         self,
         retry_on_timeout: bool = False,
         stream_timeout: Optional[float] = None,
-        parser_class: Type[BaseParser] = DefaultParser,
         reader_read_size: int = 65535,
         encoding: str = "utf-8",
         decode_responses: bool = False,
@@ -126,7 +124,7 @@ class BaseConnection:
         protocol_version: Literal[2, 3] = 3,
         noreply: bool = False,
     ):
-        self._parser: BaseParser = parser_class(reader_read_size)
+        self._parser = Parser(reader_read_size)
         self._stream_timeout = stream_timeout
         self._reader = None
         self._writer = None
@@ -396,7 +394,6 @@ class Connection(BaseConnection):
         stream_timeout: Optional[float] = None,
         connect_timeout: Optional[float] = None,
         ssl_context: Optional[RedisSSLContext] = None,
-        parser_class: Type[BaseParser] = DefaultParser,
         reader_read_size: int = 65535,
         encoding: str = "utf-8",
         decode_responses: bool = False,
@@ -411,7 +408,6 @@ class Connection(BaseConnection):
         super().__init__(
             retry_on_timeout,
             stream_timeout,
-            parser_class,
             reader_read_size,
             encoding,
             decode_responses,
@@ -481,7 +477,6 @@ class UnixDomainSocketConnection(BaseConnection):
         stream_timeout: Optional[float] = None,
         connect_timeout: Optional[float] = None,
         ssl_context: Optional[RedisSSLContext] = None,
-        parser_class: Type[BaseParser] = DefaultParser,
         reader_read_size: int = 65535,
         encoding: str = "utf-8",
         decode_responses: bool = False,
@@ -493,7 +488,6 @@ class UnixDomainSocketConnection(BaseConnection):
         super().__init__(
             retry_on_timeout,
             stream_timeout,
-            parser_class,
             reader_read_size,
             encoding,
             decode_responses,
@@ -537,7 +531,6 @@ class ClusterConnection(Connection):
         stream_timeout: Optional[float] = None,
         connect_timeout: Optional[float] = None,
         ssl_context: Optional[RedisSSLContext] = None,
-        parser_class: Type[BaseParser] = DefaultParser,
         reader_read_size: int = 65535,
         encoding: str = "utf-8",
         decode_responses: bool = False,
@@ -561,7 +554,6 @@ class ClusterConnection(Connection):
             stream_timeout=stream_timeout,
             connect_timeout=connect_timeout,
             ssl_context=ssl_context,
-            parser_class=parser_class,
             reader_read_size=reader_read_size,
             encoding=encoding,
             decode_responses=decode_responses,

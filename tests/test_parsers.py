@@ -6,7 +6,7 @@ import pytest
 
 from coredis import BaseConnection
 from coredis.exceptions import InvalidResponse
-from coredis.parsers import HiredisParser, PythonParser
+from coredis.parser import Parser
 
 
 class DummyConnection(BaseConnection):
@@ -27,31 +27,13 @@ def connection(request):
 
 
 @pytest.fixture
-def python_parser(connection):
-    parser = PythonParser(1024)
-    parser.on_connect(connection)
-    return parser
-
-
-@pytest.fixture
-def hiredis_parser(connection):
-    try:
-        import hiredis  # noqa
-    except ImportError:
-        return pytest.skip("Skipped as hiredis not available")
-    parser = HiredisParser(1024)
+def parser(connection):
+    parser = Parser(1024)
     parser.on_connect(connection)
     return parser
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "parser",
-    [
-        pytest.param(pytest.lazy_fixture("python_parser")),
-        pytest.param(pytest.lazy_fixture("hiredis_parser")),
-    ],
-)
 @pytest.mark.parametrize(
     "decode",
     [
@@ -94,11 +76,6 @@ class TestPyParser:
         assert await parser.read_response() == self.encoded_value(decode, b"hello")
 
     async def test_unknown_verbatim_text_type(self, connection, parser, decode):
-        if isinstance(parser, HiredisParser):
-            return pytest.skip(
-                "Hiredis response always returns the verbatim string as long"
-                " as there is 'a' content type."
-            )
         connection._reader.feed_data(b"=9\r\nrst:hello\r\n")
         with pytest.raises(
             InvalidResponse, match="Unexpected verbatim string of type b'rst'"
@@ -106,11 +83,6 @@ class TestPyParser:
             await parser.read_response()
 
     async def test_bool(self, connection, parser, decode):
-        if isinstance(parser, HiredisParser):
-            return pytest.skip(
-                "Hiredis 2.0.0 can't handle boolean False."
-                "Needs https://github.com/redis/hiredis-py/commit/0b1ac03eb25df4523097ce1b9149050004251d80"  # noqa
-            )
         connection._reader.feed_data(b"#f\r\n")
         assert await parser.read_response() is False
         connection._reader.feed_data(b"#t\r\n")
@@ -176,10 +148,6 @@ class TestPyParser:
         ]
 
     async def test_interleaved_simple_push_array(self, connection, parser, decode):
-        if isinstance(parser, HiredisParser):
-            return pytest.skip(
-                "Hiredis 2.0.0 doesn't differentiate push responses from arrays"
-            )
         connection._reader.feed_data(b":3\r\n>2\r\n:1\r\n:2\r\n:4\r\n")
         assert await parser.read_response() == 3
         assert await parser.read_response() == 4
@@ -223,8 +191,6 @@ class TestPyParser:
         # set containing a dict
         # This specifically represents a minimal example of the response from
         # ``COMMANDS INFO with RESP 3``
-        if isinstance(parser, HiredisParser):
-            return pytest.skip("Hiredis segfault")
         connection._reader.feed_data(b"~1\r\n%1\r\n:1\r\n:2\r\n")
         with pytest.raises(TypeError, match="unhashable type"):
             await parser.read_response()

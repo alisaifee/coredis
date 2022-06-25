@@ -37,7 +37,7 @@ class coredis_build_ext(build_ext):
 {target} could not
 be compiled. No C extensions are essential for coredis to run,
 although they do result in significant speed improvements for
-response parsing if hiredis is not available.
+response parsing.
 {comment}
 ********************************************************************
 """
@@ -92,6 +92,7 @@ if PY_IMPLEMENTATION == "CPython":
         extensions += mypycify(
             [
                 "coredis/constants.py",
+                "coredis/parser.py",
                 "coredis/_packer.py",
                 "coredis/_unpacker.py",
             ]
@@ -126,7 +127,6 @@ setup(
     },
     python_requires=">=3.8",
     install_requires=get_requirements("main.txt"),
-    extras_require={"hiredis": ["hiredis>=2.0.0"]},
     cmdclass=versioneer.get_cmdclass(
         {
             "build_ext": coredis_build_ext,

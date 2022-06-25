@@ -9,7 +9,7 @@ import pytest
 from coredis import Redis
 from coredis.connection import ClusterConnection, Connection, UnixDomainSocketConnection
 from coredis.exceptions import RedisClusterException
-from coredis.parsers import PythonParser
+from coredis.parser import Parser
 from coredis.pool import ClusterConnectionPool, ConnectionPool
 
 
@@ -23,7 +23,7 @@ class DummyConnection(ClusterConnection):
         self.port = port
         self.socket_timeout = socket_timeout
         self.awaiting_response = False
-        self._parser = PythonParser(-1)
+        self._parser = Parser(-1)
         self._writer = None
         self._reader = None
 

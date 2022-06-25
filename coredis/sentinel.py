@@ -17,7 +17,6 @@ from coredis.exceptions import (
     ResponseError,
     TimeoutError,
 )
-from coredis.parsers import BaseParser, DefaultParser
 from coredis.pool import ConnectionPool
 from coredis.typing import (
     AnyStr,
@@ -50,7 +49,6 @@ class SentinelManagedConnection(Connection, Generic[AnyStr]):
         stream_timeout: Optional[float] = None,
         connect_timeout: Optional[float] = None,
         ssl_context: Optional[RedisSSLContext] = None,
-        parser_class: Type[BaseParser] = DefaultParser,
         reader_read_size: int = 65535,
         encoding: str = "utf-8",
         decode_responses: bool = False,
@@ -72,7 +70,6 @@ class SentinelManagedConnection(Connection, Generic[AnyStr]):
             stream_timeout=stream_timeout,
             connect_timeout=connect_timeout,
             ssl_context=ssl_context,
-            parser_class=parser_class,
             reader_read_size=reader_read_size,
             encoding=encoding,
             decode_responses=decode_responses,

@@ -14,7 +14,7 @@ from packaging import version
 import coredis
 import coredis.connection
 import coredis.experimental
-import coredis.parsers
+import coredis.parser
 import coredis.sentinel
 from coredis.cache import TrackingCache
 from coredis.typing import RUNTIME_TYPECHECKS
@@ -77,9 +77,6 @@ async def check_test_constraints(request, client, protocol=3):
 
         if protocol == 3 and client_version < version.parse("6.0.0"):
             return pytest.skip(f"Skipped RESP3 for {client_version}")
-
-        if marker.name == "nohiredis" and coredis.parsers.HIREDIS_AVAILABLE:
-            return pytest.skip("Skipped for hiredis")
 
         if marker.name == "noresp3" and protocol == 3:
             return pytest.skip("Skipped for RESP3")

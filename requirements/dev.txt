@@ -3,7 +3,6 @@
 autoflake8==0.3.2
 black==22.3.0
 flake8==4.0.1
-hiredis>=2.0.0
 isort==5.10.1
 git+https://github.com/python/mypy.git@master#egg=mypy
 pyright==1.1.249

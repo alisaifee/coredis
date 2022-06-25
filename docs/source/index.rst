@@ -147,11 +147,7 @@ test matrix status can be reviewed `here <https://github.com/alisaifee/coredis/a
 
 coredis is additionally tested against:
 
-- :pypi:`hiredis` >= `2.0.0`.
 - :pypi:`uvloop` >= `0.15.0`.
-
-:pypi:`hiredis` if available will be used by default as the RESP parser as it provides
-significant performance gains in response parsing. For more details see :ref:`handbook/response:parsers`.
 
 Supported python versions
 ^^^^^^^^^^^^^^^^^^^^^^^^^
