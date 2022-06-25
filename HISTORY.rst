@@ -3,6 +3,28 @@
 Changelog
 =========
 
+v3.11.0
+-------
+Release Date: 2022-06-24
+
+* Features
+
+  * Added ``noreply`` option to Redis & RedisCluster constructors
+    to allow using the client without waiting for response from the
+    server
+  * Build wheels for all architectures supported by cibuildwheel
+
+
+* Deprecations / Removals
+
+  * Remove deprecated sentinel methods
+  * Add warnings for ``client_setname``, ``client_reply`` and ``auth``
+    commands
+
+* Bug Fixes
+
+  * Fix missing ``protocol_version`` in cluster pipeline code paths
+
 v3.10.1
 -------
 Release Date: 2022-06-18
@@ -874,6 +896,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
