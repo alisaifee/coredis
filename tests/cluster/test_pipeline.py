@@ -70,11 +70,13 @@ class TestPipeline:
             while True:
                 try:
                     await client.set("a{fu}", i)
-                    await asyncio.sleep(0)
                 except asyncio.CancelledError:
                     break
+                except Exception:
+                    break
 
-        [await pipe.set("a{fu}", -1 * i) for i in range(100)]
+        [await pipe.set("a{fu}", -1 * i) for i in range(1000)]
+
         task = asyncio.create_task(overwrite())
         try:
             await asyncio.sleep(0.1)
@@ -82,7 +84,6 @@ class TestPipeline:
                 await pipe.execute()
         finally:
             task.cancel()
-            await task
 
     async def test_pipeline_transaction_with_watch_not_implemented(self, client):
         async with await client.pipeline(transaction=True) as pipe:

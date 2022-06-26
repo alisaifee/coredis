@@ -191,11 +191,13 @@ class TestPipeline:
             while True:
                 try:
                     await client.set("a{fu}", i)
-                    await asyncio.sleep(0)
                 except asyncio.CancelledError:
                     break
+                except Exception:
+                    break
 
-        [await pipe.set("a{fu}", -1 * i) for i in range(100)]
+        [await pipe.set("a{fu}", -1 * i) for i in range(1000)]
+
         task = asyncio.create_task(overwrite())
         try:
             await asyncio.sleep(0.1)
@@ -203,7 +205,6 @@ class TestPipeline:
                 await pipe.execute()
         finally:
             task.cancel()
-            await task
 
     @pytest.mark.nodragonfly
     async def test_unwatch(self, client):
