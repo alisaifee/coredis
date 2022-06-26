@@ -166,7 +166,7 @@ class BaseConnection:
     def __del__(self) -> None:
         try:
             self.disconnect()
-        except Exception:
+        except Exception:  # noqa
             pass
 
     @property
