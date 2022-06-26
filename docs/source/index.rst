@@ -49,7 +49,6 @@ Feature Summary
 
 * Miscellaneous
 
-  * :ref:`handbook/response:resp3` Support
   * "Pretty complete" :ref:`handbook/typing:type annotations` for public API
 
     .. command-output:: PYTHONPATH=$(pwd) pyright --verifytypes=coredis 2>&1 | grep completeness
