@@ -204,15 +204,13 @@ class BaseConnection:
     async def connect(self) -> None:
         try:
             await self._connect()
-        except asyncio.CancelledError:
-            raise
-        except RedisError:
+        except (asyncio.CancelledError, RedisError):
             raise
         except Exception as err:
             raise ConnectionError() from err
+
         # run any user callbacks. right now the only internal callback
         # is for pubsub channel/pattern resubscription
-
         for callback in self._connect_callbacks:
             task = callback(self)
             if inspect.isawaitable(task):
