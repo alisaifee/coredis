@@ -73,7 +73,7 @@ class TestPipeline:
                 except asyncio.CancelledError:
                     break
 
-        await pipe.set("a{fu}", -1)
+        [await pipe.set("a{fu}", -1*i) for i in range(100)]
         task = asyncio.create_task(overwrite())
         await asyncio.sleep(0.1)
         with pytest.raises(WatchError):
