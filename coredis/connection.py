@@ -541,11 +541,7 @@ class ClusterConnection(Connection):
         :meta private:
         """
 
-        if self.db:
-            warnings.warn("SELECT DB is not allowed in cluster mode")
-            self.db = None
         await super().on_connect()
-
         if self.readonly:
             await self.send_command(b"READONLY")
 
