@@ -317,14 +317,8 @@ class BaseConnection:
             await self.connect()
             assert self._writer
 
-        try:
-            self._writer.writelines(command)
-            await self._writer.drain()
-        except asyncio.TimeoutError:
-            self.disconnect()
-            raise TimeoutError("Timeout writing to socket")
-        except Exception as e:
-            raise ConnectionError("Error while writing to socket") from e
+        self._writer.writelines(command)
+        await self._writer.drain()
 
     async def send_command(self, command: bytes, *args: ValueT) -> None:
         if not self.is_connected:
