@@ -275,12 +275,12 @@ class BaseConnection:
         if self.db:
             await self.send_command(b"SELECT", self.db)
 
-            if await self.read_response(decode=False) != b"OK":
-                raise ConnectionError("Invalid Database")
+            if await self.read_response(decode=False) != b"OK":  # noqa
+                raise ConnectionError(f"Invalid Database {self.db}")
 
         if self.client_name is not None:
             await self.send_command(b"CLIENT SETNAME", self.client_name)
-            if await self.read_response(decode=False) != b"OK":
+            if await self.read_response(decode=False) != b"OK":  # noqa
                 raise ConnectionError(f"Failed to set client name: {self.client_name}")
         if self.noreply:
             await self.send_command(b"CLIENT REPLY", b"OFF")
