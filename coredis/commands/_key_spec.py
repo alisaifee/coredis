@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from coredis._utils import b
 from coredis.typing import Callable, ClassVar, Dict, Tuple, ValueT
 
 
@@ -392,9 +393,7 @@ class KeySpec:
         if len(arguments) <= 1:
             return ()
 
-        command = arguments[0]
-        if not isinstance(command, bytes):
-            command = str(command).encode("latin-1")
+        command = b(arguments[0])
 
         try:
             if readonly_command and command in cls.READONLY:
