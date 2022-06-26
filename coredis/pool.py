@@ -257,12 +257,9 @@ class ConnectionPool:
                 and not connection.awaiting_response
             ):
                 connection.disconnect()
-                try:
+                if connection in self._available_connections:
                     self._available_connections.remove(connection)
-                except ValueError:
-                    pass
                 self._created_connections -= 1
-
                 break
             await asyncio.sleep(self.idle_check_interval)
 
