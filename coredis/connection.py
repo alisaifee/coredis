@@ -223,11 +223,12 @@ class BaseConnection:
         self, enabled: bool, client_id: Optional[int] = None
     ) -> bool:
         try:
-            params = (
+            params: List[ValueT] = (
                 [b"ON", b"REDIRECT", client_id]
-                if enabled and client_id is not None
+                if (enabled and client_id is not None)
                 else [b"OFF"]
             )
+
             await self.send_command(b"CLIENT TRACKING", *params)
             if await self.read_response(decode=False) != b"OK":  # noqa
                 raise ConnectionError("Unable to toggle client tracking")
