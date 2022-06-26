@@ -227,14 +227,9 @@ class ConnectionPool:
         Any additional keyword arguments are passed to the constructor of
         connection_class.
         """
-        max_connections = max_connections or 2**31
-
-        if not isinstance(max_connections, int) or max_connections < 0:
-            raise ValueError('"max_connections" must be a positive integer')
-
         self.connection_class = connection_class or Connection
         self.connection_kwargs = connection_kwargs
-        self.max_connections = max_connections
+        self.max_connections = max_connections or 2**31
         self.max_idle_time = max_idle_time
         self.idle_check_interval = idle_check_interval
         self.loop = self.connection_kwargs.get("loop")
