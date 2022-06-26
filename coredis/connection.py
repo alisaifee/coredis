@@ -231,11 +231,11 @@ class BaseConnection:
                 )
             else:
                 await self.send_command(b"CLIENT TRACKING", b"OFF")
-            if await self.read_response(decode=False) != b"OK":
+            if await self.read_response(decode=False) != b"OK":  # noqa
                 raise ConnectionError("Unable to toggle client tracking")
             self.tracking_client_id = client_id
             return True
-        except Exception:
+        except Exception:  # noqa
             return False
 
     async def perform_handshake(self) -> None:
