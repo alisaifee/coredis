@@ -251,33 +251,20 @@ class BaseConnection:
         try:
             await self.send_command(b"HELLO", *hello_command_args)
             hello_resp = await self.read_response(decode=False)
-            if isinstance(hello_resp, (list, dict)):
-                if self.protocol_version == 3:
-                    resp3 = cast(Dict[bytes, ValueT], hello_resp)
-                    if not resp3[b"proto"] == 3:
-                        raise ConnectionError(
-                            f"Unexpected response when negotiating protocol: [{resp3}]"
-                        )
-                    self.server_version = nativestr(resp3[b"version"])
-                    self.client_id = int(resp3[b"id"])
-                else:
-                    resp = cast(List[ValueT], hello_resp)
-                    self.server_version = nativestr(resp[3])
-                    self.client_id = int(resp[7])
-                self.needs_handshake = False
+            assert isinstance(hello_resp, (list, dict))
+            if self.protocol_version == 3:
+                resp3 = cast(Dict[bytes, ValueT], hello_resp)
+                if not resp3[b"proto"] == 3:
+                    raise ConnectionError(
+                        f"Unexpected response when negotiating protocol: [{resp3}]"
+                    )
+                self.server_version = nativestr(resp3[b"version"])
+                self.client_id = int(resp3[b"id"])
             else:
-                warnings.warn(
-                    (
-                        f"Unexpected response for `HELLO` command: {hello_resp!r}."
-                        " Unable to determine server version and set protocol version."
-                        " Assuming RESP v2"
-                    ),
-                    category=UserWarning,
-                )
-                self.server_version = None
-                self.client_id = None
-                if self.protocol_version == 3:
-                    raise ConnectionError("Unable to set RESP3 protocol version")
+                resp = cast(List[ValueT], hello_resp)
+                self.server_version = nativestr(resp[3])
+                self.client_id = int(resp[7])
+            self.needs_handshake = False
         except AuthenticationRequiredError:
             self.server_version = None
             self.client_id = None
