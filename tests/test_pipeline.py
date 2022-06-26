@@ -196,7 +196,7 @@ class TestPipeline:
 
         await pipe.set("a{fu}", -1)
         task = asyncio.create_task(overwrite())
-        await asyncio.sleep(0.01)
+        await asyncio.sleep(0.1)
         with pytest.raises(WatchError):
             await pipe.execute()
         task.cancel()
