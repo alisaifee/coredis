@@ -6,7 +6,6 @@ import os
 import socket
 import ssl
 import time
-import warnings
 from asyncio import AbstractEventLoop, StreamReader, StreamWriter
 from typing import cast
 
@@ -545,5 +544,5 @@ class ClusterConnection(Connection):
         if self.readonly:
             await self.send_command(b"READONLY")
 
-            if await self.read_response(decode=False) != b"OK":
+            if await self.read_response(decode=False) != b"OK":  # noqa
                 raise ConnectionError("READONLY command failed")
