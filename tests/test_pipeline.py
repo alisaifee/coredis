@@ -197,11 +197,13 @@ class TestPipeline:
 
         [await pipe.set("a{fu}", -1 * i) for i in range(100)]
         task = asyncio.create_task(overwrite())
-        await asyncio.sleep(0.1)
-        with pytest.raises(WatchError):
-            await pipe.execute()
-        task.cancel()
-        await task
+        try:
+            await asyncio.sleep(0.1)
+            with pytest.raises(WatchError):
+                await pipe.execute()
+        finally:
+            task.cancel()
+            await task
 
     @pytest.mark.nodragonfly
     async def test_unwatch(self, client):
