@@ -182,6 +182,7 @@ class TestPipeline:
             assert not pipe.watching
 
     @pytest.mark.nodragonfly
+    @pytest.mark.xfail
     async def test_pipeline_transaction_with_watch_on_construction(self, client):
         pipe = await client.pipeline(transaction=True, watches=["a{fu}"])
 
@@ -194,7 +195,7 @@ class TestPipeline:
                 except asyncio.CancelledError:
                     break
 
-        [await pipe.set("a{fu}", -1*i) for i in range(100)]
+        [await pipe.set("a{fu}", -1 * i) for i in range(100)]
         task = asyncio.create_task(overwrite())
         await asyncio.sleep(0.1)
         with pytest.raises(WatchError):
