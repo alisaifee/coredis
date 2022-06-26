@@ -67,14 +67,16 @@ class TestClient:
         assert (await client.client_info())["name"] == "coredis"
 
     async def test_noreply_client(self, client, cloner, _s):
-        noreply = await cloner(client)
-        noreply.noreply = True
+        noreply = await cloner(client, noreply=True)
         assert not await noreply.set("fubar", 1)
         await asyncio.sleep(0.01)
         assert await client.get("fubar") == _s("1")
         assert not await noreply.delete(["fubar"])
         await asyncio.sleep(0.01)
         assert not await client.get("fubar")
+        assert not await noreply.ping()
+        noreply.noreply = False
+        assert _s("PONG") == await noreply.ping()
 
 
 @targets(
@@ -84,8 +86,7 @@ class TestClient:
 @pytest.mark.asyncio
 class TestClusterClient:
     async def test_noreply_client(self, client, cloner, _s):
-        noreply = await cloner(client)
-        noreply.noreply = True
+        noreply = await cloner(client, noreply=True)
         assert not await noreply.set("fubar", 1)
         await asyncio.sleep(0.01)
         assert await client.get("fubar") == _s("1")
