@@ -71,10 +71,6 @@ class RedisSSLContext:
                 "required": ssl.CERT_REQUIRED,
             }
 
-            if cert_reqs not in CERT_REQS:
-                raise RedisError(
-                    "Invalid SSL Certificate Requirements Flag: %s" % cert_reqs
-                )
             self.cert_reqs = CERT_REQS[cert_reqs]
         self.ca_certs = ca_certs
         self.context = None
