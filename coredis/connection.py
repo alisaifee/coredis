@@ -252,10 +252,7 @@ class BaseConnection:
             assert isinstance(hello_resp, (list, dict))
             if self.protocol_version == 3:
                 resp3 = cast(Dict[bytes, ValueT], hello_resp)
-                if not resp3[b"proto"] == 3:
-                    raise ConnectionError(
-                        f"Unexpected response when negotiating protocol: [{resp3}]"
-                    )
+                assert resp3[b"proto"] == 3
                 self.server_version = nativestr(resp3[b"version"])
                 self.client_id = int(resp3[b"id"])
             else:
