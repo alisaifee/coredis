@@ -187,29 +187,33 @@ class NodeCommands:
                     success = False
                     for c in self.commands:
                         c.result = e
+                    break
                 except RedisError:
                     success = False
                     c.result = sys.exc_info()[1]
-
+                    break
         if self.in_transaction:
             transaction_result = []
             if success:
                 for c in self.commands:
                     if c.command == CommandName.EXEC:
-                        transaction_result = cast(List[ResponseType], c.result)
-            for idx, c in enumerate(
-                [
-                    _c
-                    for _c in sorted(self.commands, key=lambda x: x.position)
-                    if _c.command not in {CommandName.MULTI, CommandName.EXEC}
-                ]
-            ):
-                callback = self.response_callbacks.get(c.command, c.callback)
-                c.result = callback(
-                    transaction_result[idx],
-                    version=connection.protocol_version,
-                    **c.options,
-                )
+                        if c.result:
+                            transaction_result = cast(List[ResponseType], c.result)
+                        else:
+                            raise WatchError()
+                for idx, c in enumerate(
+                    [
+                        _c
+                        for _c in sorted(self.commands, key=lambda x: x.position)
+                        if _c.command not in {CommandName.MULTI, CommandName.EXEC}
+                    ]
+                ):
+                    callback = self.response_callbacks.get(c.command, c.callback)
+                    c.result = callback(
+                        transaction_result[idx],
+                        version=connection.protocol_version,
+                        **c.options,
+                    )
 
 
 class PipelineMeta(ABCMeta):
@@ -277,14 +281,18 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
         connection_pool: ConnectionPool,
         response_callbacks: Dict[bytes, Callable[..., Any]],
         transaction: Optional[bool],
+        watches: Optional[Parameters[KeyT]] = None,
     ) -> None:
         self.connection_pool = connection_pool
         self.connection = None
         self.response_callbacks = response_callbacks
         self._transaction = transaction
         self.watching = False
+        self.watches: Optional[Parameters[KeyT]] = watches or None
         self.command_stack = []
         self.cache = None  # not implemented.
+        self.explicit_transaction = False
+        self.scripts: Set[Script[AnyStr]] = set()
 
     async def __aenter__(self) -> "PipelineImpl[AnyStr]":
         return self
@@ -320,6 +328,7 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
                 self.connection.disconnect()
         # clean up the other instance attributes
         self.watching = False
+        self.watches = []
         self.explicit_transaction = False
         # we can safely return the connection to the pool here since we're
         # sure we're no longer WATCHing anything
@@ -452,6 +461,8 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
         all_cmds = connection.packer.pack_commands(
             [(cmd.command,) + cmd.args for cmd in cmds]
         )
+        if self.watches:
+            await self.watch(*self.watches)
         await connection.send_packed_command(all_cmds)
         errors: List[Tuple[int, Optional[RedisError]]] = []
 
@@ -675,7 +686,7 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
 
             if self.watching:
                 raise WatchError(
-                    "A ConnectionError occured on while watching " "one or more keys"
+                    "A ConnectionError occured on while watching one or more keys"
                 )
             # otherwise, it's safe to retry since the transaction isn't
             # predicated on any state
@@ -839,7 +850,6 @@ class ClusterPipelineImpl(AbstractRedis[AnyStr], metaclass=ClusterPipelineMeta):
         self.command_stack = []
 
         self.scripts: Set[Script[AnyStr]] = set()
-        self.watches = []
         # clean up the other instance attributes
         self.watching = False
         self.explicit_transaction = False
@@ -1136,12 +1146,14 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         connection_pool: ConnectionPool,
         response_callbacks: Dict[bytes, Callable[..., Any]],
         transaction: Optional[bool] = None,
+        watches: Optional[Parameters[KeyT]] = None,
     ) -> Pipeline[AnyStr]:
         return cls(
             PipelineImpl(
                 connection_pool,
                 response_callbacks=response_callbacks,
                 transaction=transaction,
+                watches=watches,
             )
         )
 

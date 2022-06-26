@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 from coredis.exceptions import ResponseError, WatchError
@@ -178,6 +180,27 @@ class TestPipeline:
                 await pipe.execute()
 
             assert not pipe.watching
+
+    @pytest.mark.nodragonfly
+    async def test_pipeline_transaction_with_watch_on_construction(self, client):
+        pipe = await client.pipeline(transaction=True, watches=["a{fu}"])
+
+        async def overwrite():
+            i = 0
+            while True:
+                try:
+                    await client.set("a{fu}", i)
+                    await asyncio.sleep(0)
+                except asyncio.CancelledError:
+                    break
+
+        await pipe.set("a{fu}", -1)
+        task = asyncio.create_task(overwrite())
+        await asyncio.sleep(0.01)
+        with pytest.raises(WatchError):
+            await pipe.execute()
+        task.cancel()
+        await task
 
     @pytest.mark.nodragonfly
     async def test_unwatch(self, client):

@@ -827,11 +827,9 @@ class Redis(
         """
         from coredis.pipeline import Pipeline
 
-        pipeline: Pipeline[AnyStr] = Pipeline[AnyStr].proxy(
-            self.connection_pool, self.response_callbacks, transaction
+        return Pipeline[AnyStr].proxy(
+            self.connection_pool, self.response_callbacks, transaction, watches
         )
-        await pipeline.reset()
-        return pipeline
 
     async def transaction(
         self,

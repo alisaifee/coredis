@@ -38,6 +38,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         connection_pool: "ConnectionPool",
         response_callbacks: "Dict[bytes, Callable[..., Any]]",
         transaction: "Optional[bool]",
+        watches: "Optional[Parameters[KeyT]]" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def copy(
         self,
