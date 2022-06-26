@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import re
-from typing import Any
 
-from coredis.typing import Mapping, Optional, Set, Tuple, ValueT
+from coredis.typing import Optional, Set, Tuple, ValueT
 
 
 class RedisError(Exception):
@@ -161,10 +160,6 @@ class ClusterResponseError(ClusterError):
     Raised when application logic to combine multi node
     cluster responses has errors.
     """
-
-    def __init__(self, message: str, responses: Mapping[str, Any]) -> None:
-        super().__init__(message)
-        self.responses = responses
 
 
 class AskError(ResponseError):

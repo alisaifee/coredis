@@ -139,9 +139,7 @@ class ClusterEnsureConsistent(ClusterMultiNodeCallback[Optional[R]]):
     ) -> Optional[R]:
         values = tuple(responses.values())
         if self.ensure_consistent and len(set(values)) != 1:
-            raise ClusterResponseError(
-                "Inconsistent response from cluster nodes", responses
-            )
+            raise ClusterResponseError("Inconsistent response from cluster nodes")
         elif values:
             return values[0]
         return None
