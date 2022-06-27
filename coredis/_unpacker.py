@@ -178,7 +178,7 @@ class Unpacker:
                 response = chunk
                 if decode_bytes and self.encoding:
                     response = response.decode(self.encoding)
-            elif marker in {RESPDataType.BULK_STRING, RESPDataType.VERBATIM}:
+            elif marker == RESPDataType.BULK_STRING or marker == RESPDataType.VERBATIM:
                 length = int(chunk)
                 if length == -1:
                     response = None
@@ -205,12 +205,12 @@ class Unpacker:
                 response = None
             elif marker == RESPDataType.BOOLEAN:
                 response = chunk[0] == ord(b"t")
-            elif marker in {
-                RESPDataType.ARRAY,
-                RESPDataType.PUSH,
-                RESPDataType.MAP,
-                RESPDataType.SET,
-            }:
+            elif (
+                marker == RESPDataType.ARRAY
+                or marker == RESPDataType.PUSH
+                or marker == RESPDataType.MAP
+                or marker == RESPDataType.SET
+            ):
                 if marker in {RESPDataType.ARRAY, RESPDataType.PUSH}:
                     length = int(chunk)
                     if length >= 0:
