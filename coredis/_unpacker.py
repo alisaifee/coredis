@@ -168,9 +168,7 @@ class Unpacker:
                 return NOT_ENOUGH_DATA
             data_len = len(data)
             self.bytes_read += data_len
-            chunk = data[:-2]
-
-            marker, chunk = chunk[0], chunk[1:]
+            marker, chunk = data[0], data[1:-2]
             response: ResponsePrimitive | RedisError = None
             if marker == RESPDataType.SIMPLE_STRING:
                 response = chunk
