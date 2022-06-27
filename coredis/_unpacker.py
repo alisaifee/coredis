@@ -79,21 +79,6 @@ NOT_ENOUGH_DATA: Final[NotEnoughData] = NotEnoughData()
 
 
 class Unpacker:
-    ALLOWED_TYPES: Final[Set[int]] = {
-        RESPDataType.NONE,
-        RESPDataType.SIMPLE_STRING,
-        RESPDataType.BULK_STRING,
-        RESPDataType.VERBATIM,
-        RESPDataType.BOOLEAN,
-        RESPDataType.INT,
-        RESPDataType.DOUBLE,
-        RESPDataType.ARRAY,
-        RESPDataType.PUSH,
-        RESPDataType.MAP,
-        RESPDataType.SET,
-        RESPDataType.ERROR,
-    }
-
     EXCEPTION_CLASSES: Dict[
         str, Union[Type[RedisError], Dict[str, Type[RedisError]]]
     ] = {
@@ -233,7 +218,7 @@ class Unpacker:
                 if isinstance(error, ConnectionError):
                     raise error
                 response = error
-            elif marker not in Unpacker.ALLOWED_TYPES:  # noqa
+            else:
                 raise InvalidResponse(
                     f"Protocol Error: {chr(marker)}, {bytes(chunk)!r}"
                 )
