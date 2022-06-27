@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from io import BytesIO
-from typing import NamedTuple, Optional
+from typing import Optional, cast
 
 from coredis.constants import SYM_CRLF, RESPDataType
 from coredis.exceptions import (
@@ -33,6 +33,7 @@ from coredis.typing import (
     Final,
     List,
     MutableSet,
+    NamedTuple,
     ResponsePrimitive,
     ResponseType,
     Set,
@@ -251,17 +252,9 @@ class Unpacker:
                             self.nodes[-1].container[self.nodes[-1].key] = response
                             self.nodes[-1].key = None
                         else:
-                            if isinstance(response, (bool, int, float, bytes, str)):
-                                self.nodes[-1].key = response
-                            else:
-                                raise TypeError(
-                                    f"unhashable type {response} as dictionary key"
-                                )
+                            self.nodes[-1].key = cast(ResponsePrimitive, response)
                     else:
-                        if isinstance(response, (bool, int, float, bytes, str)):
-                            self.nodes[-1].container.add(response)
-                        else:
-                            raise TypeError(f"unhashable type {response} as set member")
+                        self.nodes[-1].container.add(cast(ResponsePrimitive, response))
                     if self.nodes[-1].depth > 1:
                         continue
 
