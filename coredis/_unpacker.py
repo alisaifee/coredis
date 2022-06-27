@@ -36,7 +36,6 @@ from coredis.typing import (
     NamedTuple,
     ResponsePrimitive,
     ResponseType,
-    Set,
     Tuple,
     Type,
     Union,
@@ -192,9 +191,9 @@ class Unpacker:
                 or marker == RESPDataType.MAP
                 or marker == RESPDataType.SET
             ):
-                if marker in {RESPDataType.ARRAY, RESPDataType.PUSH}:
-                    length = int(chunk)
-                    if length >= 0:
+                length = int(chunk)
+                if length >= 0:
+                    if marker in {RESPDataType.ARRAY, RESPDataType.PUSH}:
                         self.nodes.append(
                             RESPNode(
                                 [],
@@ -203,16 +202,12 @@ class Unpacker:
                                 None,
                             )
                         )
-                elif marker == RESPDataType.MAP:
-                    length = 2 * int(chunk)
-                    if length >= 0:
-                        self.nodes.append(RESPNode({}, length, marker, None))
-                else:
-                    length = int(chunk)
-                    if length >= 0:
+                    elif marker == RESPDataType.MAP:
+                        self.nodes.append(RESPNode({}, length * 2, marker, None))
+                    else:
                         self.nodes.append(RESPNode(set(), length, marker, None))
-                if length > 0:
-                    continue
+                    if length > 0:
+                        continue
             elif marker == RESPDataType.ERROR:
                 error = self.parse_error(bytes(chunk).decode())
                 if isinstance(error, ConnectionError):
