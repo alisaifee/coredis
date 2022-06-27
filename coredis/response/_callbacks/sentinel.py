@@ -169,11 +169,7 @@ class GetPrimaryCallback(
     def transform(
         self, response: List[ResponsePrimitive], **options: Optional[ValueT]
     ) -> Optional[Tuple[str, int]]:
-
-        if response:
-            return nativestr(response[0]), int(response[1])
-        else:
-            return None
+        return nativestr(response[0]), int(response[1]) if response else None
 
 
 class SentinelInfoCallback(

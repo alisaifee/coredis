@@ -11,6 +11,7 @@ from coredis.exceptions import (
     TimeoutError,
 )
 from coredis.sentinel import Sentinel, SentinelConnectionPool
+from tests.conftest import targets
 
 pytestmarks = pytest.mark.asyncio
 
@@ -171,18 +172,20 @@ async def test_discover_replicas(cluster, sentinel):
     ]
 
 
-async def test_primary_for(redis_sentinel, host_ip):
-    primary = redis_sentinel.primary_for("mymaster")
+@targets("redis_sentinel", "redis_sentinel_resp2")
+async def test_primary_for(client, host_ip):
+    primary = client.primary_for("mymaster")
     assert await primary.ping()
     assert primary.connection_pool.primary_address == (host_ip, 6380)
 
     # Use internal connection check
-    primary = redis_sentinel.primary_for("mymaster", check_connection=True)
+    primary = client.primary_for("mymaster", check_connection=True)
     assert await primary.ping()
 
 
-async def test_replica_for(redis_sentinel):
-    replica = redis_sentinel.replica_for("mymaster")
+@targets("redis_sentinel", "redis_sentinel_resp2")
+async def test_replica_for(client):
+    replica = client.replica_for("mymaster")
     assert await replica.ping()
 
 
@@ -203,13 +206,6 @@ async def test_replica_round_robin(cluster, sentinel):
     assert set(rotator) == {("replica0", 6379), ("replica1", 6379)}
 
 
-async def test_protocol_version(redis_sentinel_server):
-    sentinel = Sentinel(sentinels=[redis_sentinel_server], protocol_version=3)
-    assert sentinel.sentinels[0].protocol_version == 3
-    assert sentinel.primary_for("mymaster").protocol_version == 3
-    assert sentinel.replica_for("mymaster").protocol_version == 3
-
-
 async def test_autodecode(redis_sentinel_server):
     sentinel = Sentinel(sentinels=[redis_sentinel_server], decode_responses=True)
     assert await sentinel.primary_for("mymaster").ping() == "PONG"
@@ -218,94 +214,105 @@ async def test_autodecode(redis_sentinel_server):
     )
 
 
-async def test_ckquorum(redis_sentinel):
-    assert await redis_sentinel.sentinels[0].sentinel_ckquorum("mymaster")
+@targets("redis_sentinel", "redis_sentinel_resp2")
+async def test_ckquorum(client):
+    assert await client.sentinels[0].sentinel_ckquorum("mymaster")
 
 
 @pytest.mark.min_server_version("6.2.0")
-async def test_sentinel_config_get(redis_sentinel):
-    configs = await redis_sentinel.sentinels[0].sentinel_config_get("*")
+@targets("redis_sentinel", "redis_sentinel_resp2")
+async def test_sentinel_config_get(client):
+    configs = await client.sentinels[0].sentinel_config_get("*")
     assert configs["resolve-hostnames"] == "yes"
 
 
 @pytest.mark.min_server_version("6.2.0")
-async def test_sentinel_config_set(redis_sentinel):
-    await redis_sentinel.sentinels[0].sentinel_config_set("resolve-hostnames", "no")
-    configs = await redis_sentinel.sentinels[0].sentinel_config_get("*")
+@targets("redis_sentinel", "redis_sentinel_resp2")
+async def test_sentinel_config_set(client):
+    await client.sentinels[0].sentinel_config_set("resolve-hostnames", "no")
+    configs = await client.sentinels[0].sentinel_config_get("*")
     assert configs["resolve-hostnames"] == "no"
 
 
-async def test_master_address_by_name(redis_sentinel):
-    master_address = await redis_sentinel.sentinels[0].sentinel_get_master_addr_by_name(
+@targets("redis_sentinel", "redis_sentinel_resp2")
+async def test_master_address_by_name(client):
+    master_address = await client.sentinels[0].sentinel_get_master_addr_by_name(
         "mymaster"
     )
-    assert master_address == await redis_sentinel.discover_primary("mymaster")
+    assert master_address == await client.discover_primary("mymaster")
 
 
-async def test_failover(redis_sentinel, mocker):
+@targets("redis_sentinel", "redis_sentinel_resp2")
+async def test_failover(client, mocker):
     mock_exec = mocker.patch.object(
-        redis_sentinel.sentinels[0], "execute_command", autospec=True
+        client.sentinels[0], "execute_command", autospec=True
     )
     mock_exec.return_value = True
-    assert await redis_sentinel.sentinels[0].sentinel_failover("mymaster")
+    assert await client.sentinels[0].sentinel_failover("mymaster")
     assert mock_exec.call_args[0][1] == "mymaster"
 
 
-async def test_flush_config(redis_sentinel, mocker):
-    assert await redis_sentinel.sentinels[0].sentinel_flushconfig()
+@targets("redis_sentinel", "redis_sentinel_resp2")
+async def test_flush_config(client):
+    assert await client.sentinels[0].sentinel_flushconfig()
 
 
-async def test_infocache(redis_sentinel):
-    assert await redis_sentinel.sentinels[0].sentinel_flushconfig()
-    info_cache = await redis_sentinel.sentinels[0].sentinel_infocache("mymaster")
+@targets("redis_sentinel", "redis_sentinel_resp2")
+async def test_infocache(client):
+    assert await client.sentinels[0].sentinel_flushconfig()
+    info_cache = await client.sentinels[0].sentinel_infocache("mymaster")
     roles = {info["role"] for info in list(info_cache["mymaster"].values())}
     assert {"master", "slave"} & roles
 
 
-async def test_sentinel_master(redis_sentinel):
-    assert (await redis_sentinel.sentinels[0].sentinel_master("mymaster"))["is_master"]
+@targets("redis_sentinel", "redis_sentinel_resp2")
+async def test_sentinel_master(client):
+    assert (await client.sentinels[0].sentinel_master("mymaster"))["is_master"]
 
 
-async def test_sentinel_masters(redis_sentinel):
-    assert (await redis_sentinel.sentinels[0].sentinel_masters())["mymaster"][
-        "is_master"
-    ]
+@targets("redis_sentinel", "redis_sentinel_resp2")
+async def test_sentinel_masters(client):
+    assert (await client.sentinels[0].sentinel_masters())["mymaster"]["is_master"]
 
 
-async def test_sentinel_replicas(redis_sentinel):
+@targets("redis_sentinel", "redis_sentinel_resp2")
+async def test_sentinel_replicas(client):
     assert not any(
         [
             k["is_master"]
-            for k in (await redis_sentinel.sentinels[0].sentinel_replicas("mymaster"))
+            for k in (await client.sentinels[0].sentinel_replicas("mymaster"))
         ]
     )
 
 
-async def test_no_replicas(redis_sentinel, mocker):
-    p = await redis_sentinel.replica_for("mymaster")
+@targets("redis_sentinel", "redis_sentinel_resp2")
+async def test_no_replicas(client, mocker):
+    p = await client.replica_for("mymaster")
     replica_rotate = mocker.patch.object(p.connection_pool, "rotate_replicas")
     replica_rotate.return_value = []
     with pytest.raises(ReplicaNotFoundError):
         await p.ping()
 
 
-async def test_write_to_replica(redis_sentinel):
-    p = await redis_sentinel.replica_for("mymaster")
+@targets("redis_sentinel", "redis_sentinel_resp2")
+async def test_write_to_replica(client):
+    p = await client.replica_for("mymaster")
     await p.ping()
     with pytest.raises(ReadOnlyError):
         await p.set("fubar", 1)
 
 
+@targets("redis_sentinel", "redis_sentinel_resp2")
 @pytest.mark.parametrize(
     "client_arguments", [({"cache": coredis.cache.TrackingCache()})]
 )
-async def test_sentinel_cache(redis_sentinel, client_arguments, mocker):
-    await redis_sentinel.primary_for("mymaster").set("fubar", 1)
+async def test_sentinel_cache(client, client_arguments, mocker):
+    await client.primary_for("mymaster").set("fubar", 1)
 
-    assert await redis_sentinel.primary_for("mymaster").get("fubar") == "1"
+    assert await client.primary_for("mymaster").get("fubar") == "1"
 
-    new_primary = redis_sentinel.primary_for("mymaster")
-    new_replica = redis_sentinel.replica_for("mymaster")
+    new_primary = client.primary_for("mymaster")
+    new_replica = client.replica_for("mymaster")
 
     assert new_primary.cache
     assert new_replica.cache

@@ -268,7 +268,7 @@ class Sentinel(Generic[AnyStr]):
         """
         # if sentinel_kwargs isn't defined, use the socket_* options from
         # connection_kwargs
-        if sentinel_kwargs is None:
+        if not sentinel_kwargs:
             sentinel_kwargs = {
                 k: v
                 for k, v in iter(connection_kwargs.items())
