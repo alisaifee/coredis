@@ -66,18 +66,13 @@ def check_version(
                 command.decode("latin-1"), str(instance.server_version)
             )
         if deprecated_version and server_version >= deprecated_version:
-            if deprecation_reason:
-                warnings.warn(
-                    deprecation_reason.strip(),
-                    category=DeprecationWarning,
-                    stacklevel=3,
-                )
-            else:
-                warnings.warn(
-                    f"{function_name}() is deprecated since redis version {deprecated_version}. ",
-                    category=DeprecationWarning,
-                    stacklevel=3,
-                )
+            warnings.warn(
+                deprecation_reason.strip()
+                if deprecation_reason
+                else f"{function_name}() is deprecated since redis version {deprecated_version}.",
+                category=DeprecationWarning,
+                stacklevel=3,
+            )
 
 
 def redis_command_link(command: CommandName) -> str:
