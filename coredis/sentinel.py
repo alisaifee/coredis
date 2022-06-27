@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import os
 import random
+import weakref
 from asyncio import AbstractEventLoop
 from typing import Any, cast, overload
 
@@ -59,7 +59,7 @@ class SentinelManagedConnection(Connection, Generic[AnyStr]):
         loop: Optional[AbstractEventLoop] = None,
         protocol_version: Literal[2, 3] = 2,
     ):
-        self.connection_pool: SentinelConnectionPool = connection_pool
+        self.connection_pool: SentinelConnectionPool = weakref.proxy(connection_pool)
         super().__init__(
             host=host,
             port=port,
@@ -94,17 +94,17 @@ class SentinelManagedConnection(Connection, Generic[AnyStr]):
         await super().connect()
 
     async def connect(self) -> None:
-        if self._reader and self._writer:
-            return  # already connected
-        if self.connection_pool.is_primary:
-            await self.connect_to(await self.connection_pool.get_primary_address())
-        else:
-            for slave in await self.connection_pool.rotate_replicas():
-                try:
-                    return await self.connect_to(slave)
-                except ConnectionError:
-                    continue
-            raise ReplicaNotFoundError  # Never be here
+        if not self.is_connected:
+            if self.connection_pool.is_primary:
+                await self.connect_to(await self.connection_pool.get_primary_address())
+            else:
+                for replica in await self.connection_pool.rotate_replicas():
+                    try:
+                        return await self.connect_to(replica)
+                    except ConnectionError:
+                        continue
+                raise ReplicaNotFoundError  # Never be here
+        return None
 
     async def read_response(
         self,
@@ -117,13 +117,13 @@ class SentinelManagedConnection(Connection, Generic[AnyStr]):
             )
         except ReadOnlyError:
             if self.connection_pool.is_primary:
-                # When talking to a master, a ReadOnlyError when likely
-                # indicates that the previous master that we're still connected
-                # to has been demoted to a slave and there's a new master.
+                # When talking to a primary, a ReadOnlyError when likely
+                # indicates that the previous primary that we're still connected
+                # to has been demoted to a replica and there's a new primary.
                 # calling disconnect will force the connection to re-query
                 # sentinel during the next connect() attempt.
                 self.disconnect()
-                raise ConnectionError("The previous master is now a replica")
+                raise ConnectionError("The previous primary is now a replica")
             raise
 
 
@@ -155,10 +155,10 @@ class SentinelConnectionPool(ConnectionPool):
         self.check_connection = check_connection
 
     def __repr__(self) -> str:
-        return "{}<service={}({})".format(
-            type(self).__name__,
-            self.service_name,
-            self.is_primary and "master" or "slave",
+        return (
+            f"{type(self).__name__}"
+            f"<service={self.service_name}"
+            f"({'primary' if self.is_primary else 'replica'})"
         )
 
     def reset(self) -> None:
@@ -174,7 +174,7 @@ class SentinelConnectionPool(ConnectionPool):
             if self.primary_address is None:
                 self.primary_address = primary_address
             elif primary_address != self.primary_address:
-                # Master address changed, disconnect all clients in this pool
+                # Primary address changed, disconnect all clients in this pool
                 self.disconnect()
         return primary_address
 
@@ -195,20 +195,6 @@ class SentinelConnectionPool(ConnectionPool):
         except PrimaryNotFoundError:
             pass
         raise ReplicaNotFoundError("No replica found for %r" % (self.service_name))
-
-    def checkpid(self) -> None:
-        if self.pid != os.getpid():
-            self.disconnect()
-            self.reset()
-            SentinelConnectionPool(
-                self.service_name,
-                self.sentinel_manager,
-                is_primary=self.is_primary,
-                connection_class=self.connection_class,
-                max_connections=self.max_connections,
-                check_connection=self.check_connection,
-                **self.connection_kwargs,
-            )
 
 
 class Sentinel(Generic[AnyStr]):
@@ -366,7 +352,7 @@ class Sentinel(Generic[AnyStr]):
         raise PrimaryNotFoundError(f"No primary found for {service_name!r}")
 
     async def discover_replicas(self, service_name: str) -> List[Tuple[str, int]]:
-        """Returns a list of alive slaves for service :paramref:`service_name`"""
+        """Returns a list of alive replicas for service :paramref:`service_name`"""
         for sentinel in self.sentinels:
             try:
                 replicas = await sentinel.sentinel_replicas(service_name)
@@ -408,7 +394,7 @@ class Sentinel(Generic[AnyStr]):
         **kwargs: Any,
     ) -> Union[Redis[bytes], Redis[str]]:
         """
-        Returns a redis client instance for the :paramref:`service_name` master.
+        Returns a redis client instance for the :paramref:`service_name` primary.
 
         A :class:`coredis.sentinel.SentinelConnectionPool` class is used to
         retrive the primary's address before establishing a new connection.
@@ -467,9 +453,9 @@ class Sentinel(Generic[AnyStr]):
         **kwargs: Any,
     ) -> Union[Redis[bytes], Redis[str]]:
         """
-        Returns redis client instance for the :paramref:`service_name` slave(s).
+        Returns redis client instance for the :paramref:`service_name` replica(s).
 
-        A SentinelConnectionPool class is used to retrive the slave's
+        A SentinelConnectionPool class is used to retrieve the replica's
         address before establishing a new connection.
 
         By default clients will be a redis.Redis instance. Specify a
