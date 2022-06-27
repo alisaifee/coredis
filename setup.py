@@ -94,7 +94,9 @@ if PY_IMPLEMENTATION == "CPython":
                 "coredis/constants.py",
                 "coredis/_packer.py",
                 "coredis/_unpacker.py",
-            ]
+            ],
+            debug_level="0",
+            strip_asserts=True,
         )
     except ImportError:
         pass
