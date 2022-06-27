@@ -162,8 +162,6 @@ class Unpacker:
     ) -> Union[Optional[UnpackedResponse], NotEnoughData]:
         parsed: Optional[UnpackedResponse] = None
 
-        assert self.localbuffer
-
         while True:
             data = self.localbuffer.readline()
             if not data[-2::] == SYM_CRLF:
