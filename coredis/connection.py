@@ -452,7 +452,6 @@ class UnixDomainSocketConnection(BaseConnection):
         retry_on_timeout: bool = False,
         stream_timeout: Optional[float] = None,
         connect_timeout: Optional[float] = None,
-        ssl_context: Optional[ssl.SSLContext] = None,
         reader_read_size: int = 65535,
         encoding: str = "utf-8",
         decode_responses: bool = False,
@@ -460,6 +459,7 @@ class UnixDomainSocketConnection(BaseConnection):
         client_name: Optional[str] = None,
         loop: Optional[AbstractEventLoop] = None,
         protocol_version: Literal[2, 3] = 3,
+        **_: ValueT,
     ) -> None:
         super().__init__(
             retry_on_timeout,
@@ -475,19 +475,13 @@ class UnixDomainSocketConnection(BaseConnection):
         self.db = db
         self.username = username
         self.password = password
-        self.ssl_context = ssl_context
         self._connect_timeout = connect_timeout
         self._description_args = lambda: {"path": self.path, "db": self.db}
 
     async def _connect(self) -> None:
-        if self.ssl_context:
-            connection = asyncio.get_running_loop().create_unix_connection(
-                lambda: self, path=self.path, ssl=self.ssl_context
-            )
-        else:
-            connection = asyncio.get_running_loop().create_unix_connection(
-                lambda: self, path=self.path
-            )
+        connection = asyncio.get_running_loop().create_unix_connection(
+            lambda: self, path=self.path
+        )
 
         await exec_with_timeout(
             connection,
