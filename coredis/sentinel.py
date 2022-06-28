@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+import ssl
 import weakref
 from asyncio import AbstractEventLoop
 from typing import Any, cast, overload
@@ -8,7 +9,7 @@ from typing import Any, cast, overload
 from coredis import Redis
 from coredis._utils import nativestr
 from coredis.cache import AbstractCache
-from coredis.connection import Connection, RedisSSLContext
+from coredis.connection import Connection
 from coredis.exceptions import (
     ConnectionError,
     PrimaryNotFoundError,
@@ -48,7 +49,7 @@ class SentinelManagedConnection(Connection, Generic[AnyStr]):
         retry_on_timeout: bool = False,
         stream_timeout: Optional[float] = None,
         connect_timeout: Optional[float] = None,
-        ssl_context: Optional[RedisSSLContext] = None,
+        ssl_context: Optional[ssl.SSLContext] = None,
         reader_read_size: int = 65535,
         encoding: str = "utf-8",
         decode_responses: bool = False,

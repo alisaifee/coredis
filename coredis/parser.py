@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import sys
-from asyncio import StreamReader
 
 from coredis._unpacker import NotEnoughData, Unpacker
 from coredis._utils import b
@@ -17,31 +15,30 @@ class Parser:
     Interface between a connection and Unpacker
     """
 
-    def __init__(self, read_size: int) -> None:
-        self._stream: Optional[StreamReader] = None
+    def __init__(self) -> None:
         self.encoding: Optional[str] = None
         self.unpacker: Optional[Unpacker] = None
         self.push_messages: Optional[asyncio.Queue[ResponseType]] = None
-        self._read_size = read_size
+        self.connected = asyncio.Event()
+        self._last_error: Optional[BaseException] = None
 
     def __del__(self) -> None:
-        self.on_disconnect()
+        self.on_disconnect(None)
 
     def on_connect(self, connection: ConnectionP) -> None:
         """Called when the stream connects"""
-        self._stream = connection.reader
+        self.connected.set()
+        self._last_error = None
         if not self.unpacker:
             self.unpacker = Unpacker(connection.encoding)
         self.push_messages = connection.push_messages
         if connection.decode_responses:
             self.encoding = connection.encoding
 
-    def on_disconnect(self) -> None:
+    def on_disconnect(self, exc: Optional[BaseException]) -> None:
         """Called when the stream disconnects"""
-
-        if self._stream is not None:
-            self._stream = None
-
+        self._last_error = exc
+        self.connected.clear()
         self.encoding = None
 
     def can_read(self) -> bool:
@@ -56,30 +53,19 @@ class Parser:
         decode: Optional[bool] = None,
         push_message_types: Optional[Set[bytes]] = None,
     ) -> ResponseType:
-        if not self._stream:
-            raise ConnectionError("Socket closed on remote end")
-
         decode_bytes = (decode is None or decode) if self.encoding else False
-
         while True:
             assert self.unpacker
+            if not self.connected.is_set():
+                if self._last_error:
+                    raise self._last_error
+                else:
+                    raise ConnectionError("Socket closed")
             response = self.unpacker.parse(decode_bytes)
             if isinstance(response, NotEnoughData):
                 try:
-                    buffer = await self._stream.read(self._read_size)
-                    if not buffer:
-                        raise ConnectionError("Socket closed on remote end")
-                    self.unpacker.feed(buffer)
+                    await asyncio.sleep(0)
                 except asyncio.CancelledError:
-                    raise
-                except ConnectionError:
-                    raise
-                except Exception:  # noqa
-                    e = sys.exc_info()[1]
-                    if e:
-                        raise ConnectionError(
-                            f"Error while reading from stream: {e}"
-                        ) from e
                     raise
             else:
                 if response and response.response_type == RESPDataType.PUSH:

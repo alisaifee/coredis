@@ -136,7 +136,7 @@ class TestConnectionPool:
         assert len(rs.connection_pool._available_connections) == 0
         assert len(rs.connection_pool._in_use_connections) == 0
         assert last_active_at == conn.last_active_at
-        assert conn._writer is None and conn._reader is None
+        assert conn._transport is None
 
 
 class TestBlockingConnectionPool:
@@ -249,7 +249,7 @@ class TestBlockingConnectionPool:
         await asyncio.sleep(0.3)
         assert len(rs.connection_pool._in_use_connections) == 0
         assert last_active_at == conn.last_active_at
-        assert conn._writer is None and conn._reader is None
+        assert conn._transport is None
         new_conn = await rs.connection_pool.get_connection()
         assert conn != new_conn
 
@@ -666,8 +666,7 @@ class TestConnection:
         pool = client.connection_pool
         assert not pipe.connection
         assert len(pool._available_connections) == 1
-        assert pool._available_connections[0]._writer
-        assert pool._available_connections[0]._reader
+        assert pool._available_connections[0]._transport
 
     @pytest.mark.asyncio()
     @pytest.mark.max_server_version("6.2.0")

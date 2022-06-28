@@ -23,9 +23,9 @@ class DummyConnection(ClusterConnection):
         self.port = port
         self.socket_timeout = socket_timeout
         self.awaiting_response = False
-        self._parser = Parser(-1)
-        self._writer = None
-        self._reader = None
+        self._parser = Parser()
+        self._last_error = None
+        self._transport = None
 
 
 class TestConnectionPool:
@@ -235,7 +235,7 @@ class TestConnectionPool:
         assert len(pool._cluster_available_connections[name]) == 0
         last_active_at = conn.last_active_at
         assert last_active_at == conn.last_active_at
-        assert conn._writer is None and conn._reader is None
+        assert conn._transport is None
 
 
 class TestReadOnlyConnectionPool:

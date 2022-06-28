@@ -18,9 +18,9 @@ async def test_connect_tcp(event_loop, redis_basic):
     await conn.send_command(b"PING")
     res = await conn.read_response()
     assert res == b"PONG"
-    assert (conn._reader is not None) and (conn._writer is not None)
+    assert conn._transport is not None
     conn.disconnect()
-    assert (conn._reader is None) and (conn._writer is None)
+    assert conn._transport is None
 
 
 @pytest.mark.os("linux")
@@ -35,7 +35,7 @@ async def test_connect_tcp_keepalive_options(event_loop, redis_basic):
         },
     )
     await conn._connect()
-    sock = conn._writer.transport.get_extra_info("socket")
+    sock = conn._transport.get_extra_info("socket")
     assert sock.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE) == 1
     for k, v in (
         (socket.TCP_KEEPIDLE, 1),
@@ -54,7 +54,7 @@ async def test_connect_tcp_wrong_socket_opt_raises(event_loop, option, redis_bas
     with pytest.raises((socket.error, TypeError)):
         await conn._connect()
     # verify that the connection isn't left open
-    assert conn._writer.transport.is_closing()
+    assert conn._transport.is_closing()
 
 
 # only test during dev
@@ -67,9 +67,9 @@ async def test_connect_unix_socket(redis_uds):
     await conn.send_command(b"PING")
     res = await conn.read_response()
     assert res == b"PONG"
-    assert (conn._reader is not None) and (conn._writer is not None)
+    assert conn._transport is not None
     conn.disconnect()
-    assert (conn._reader is None) and (conn._writer is None)
+    assert conn._transport is None
 
 
 async def test_stream_timeout(redis_basic):

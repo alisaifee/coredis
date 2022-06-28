@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from asyncio import StreamReader, StreamWriter
 from types import TracebackType
 
 from typing_extensions import runtime_checkable
@@ -93,11 +92,3 @@ class ConnectionP(Protocol):
     decode_responses: bool
     encoding: str
     push_messages: asyncio.Queue[ResponseType]
-
-    @property
-    def reader(self) -> Optional[StreamReader]:
-        ...
-
-    @property
-    def writer(self) -> Optional[StreamWriter]:
-        ...

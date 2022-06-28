@@ -96,7 +96,7 @@ class RedisSSLContext:
         return self.context
 
 
-class BaseConnection:
+class BaseConnection(asyncio.BaseProtocol):
     client_id: Optional[int]
     description: ClassVar[str] = "BaseConnection"
     locator: ClassVar[str] = ""
@@ -119,7 +119,7 @@ class BaseConnection:
         protocol_version: Literal[2, 3] = 3,
         noreply: bool = False,
     ):
-        self._parser = Parser(reader_read_size)
+        self._parser = Parser()
         self._stream_timeout = stream_timeout
         self._reader = None
         self._writer = None
@@ -152,8 +152,10 @@ class BaseConnection:
         self.tracking_client_id = None
         self.noreply = noreply
         self.needs_handshake = True
-        self._writer = None
-        self._reader = None
+        self._transport: Optional[asyncio.Transport] = None
+        self._write_flag = asyncio.Event()
+        self._connect_event = asyncio.Event()
+        self._last_error: Optional[BaseException] = None
 
     def __repr__(self) -> str:
         return self.description.format(**self._description_args())
@@ -170,15 +172,7 @@ class BaseConnection:
 
     @property
     def is_connected(self) -> bool:
-        return bool(self._reader and self._writer)
-
-    @property
-    def reader(self) -> Optional[StreamReader]:
-        return self._reader
-
-    @property
-    def writer(self) -> Optional[StreamWriter]:
-        return self._writer
+        return self._transport is not None
 
     def register_connect_callback(
         self,
@@ -207,7 +201,7 @@ class BaseConnection:
         except (asyncio.CancelledError, RedisError):
             raise
         except Exception as err:
-            raise ConnectionError() from err
+            raise ConnectionError(str(err)) from err
 
         # run any user callbacks. right now the only internal callback
         # is for pubsub channel/pattern resubscription
@@ -215,6 +209,28 @@ class BaseConnection:
             task = callback(self)
             if inspect.isawaitable(task):
                 await task
+
+    def connection_made(self, transport: asyncio.BaseTransport) -> None:
+        self._transport = cast(asyncio.Transport, transport)
+        self._write_flag.set()
+
+    def connection_lost(self, exc: Optional[BaseException]) -> None:
+        if exc:
+            self._last_error = exc
+        self.disconnect()
+
+    def pause_writing(self) -> None:
+        self._write_flag.clear()
+
+    def resume_writing(self) -> None:
+        self._write_flag.set()
+
+    def data_received(self, data: bytes) -> None:
+        if self._parser.unpacker:
+            self._parser.unpacker.feed(data)
+
+    def eof_received(self) -> None:
+        self.disconnect()
 
     async def _connect(self) -> None:
         raise NotImplementedError
@@ -309,12 +325,11 @@ class BaseConnection:
     async def send_packed_command(self, command: List[bytes]) -> None:
         """Sends an already packed command to the Redis server"""
 
-        if not self._writer:
+        if not self._transport:
             await self.connect()
-            assert self._writer
-
-        self._writer.writelines(command)
-        await self._writer.drain()
+            assert self._transport
+        await self._write_flag.wait()
+        self._transport.writelines(command)
 
     async def send_command(self, command: bytes, *args: ValueT) -> None:
         if not self.is_connected:
@@ -326,14 +341,13 @@ class BaseConnection:
     def disconnect(self) -> None:
         """Disconnects from the Redis server"""
         self.needs_handshake = True
-        self._parser.on_disconnect()
-        if self.writer:
+        self._parser.on_disconnect(self._last_error)
+        if self._transport:
             try:
-                self.writer.close()
+                self._transport.close()
             except RuntimeError:
                 pass
-        self._reader = None
-        self._writer = None
+        self._transport = None
 
 
 class Connection(BaseConnection):
@@ -350,7 +364,7 @@ class Connection(BaseConnection):
         retry_on_timeout: bool = False,
         stream_timeout: Optional[float] = None,
         connect_timeout: Optional[float] = None,
-        ssl_context: Optional[RedisSSLContext] = None,
+        ssl_context: Optional[ssl.SSLContext] = None,
         reader_read_size: int = 65535,
         encoding: str = "utf-8",
         decode_responses: bool = False,
@@ -393,16 +407,22 @@ class Connection(BaseConnection):
         )
 
     async def _connect(self) -> None:
-        connection = asyncio.open_connection(
-            host=self.host, port=self.port, ssl=self.ssl_context
-        )
-        reader, writer = await exec_with_timeout(
+        if self.ssl_context:
+            connection = asyncio.get_running_loop().create_connection(
+                lambda: self, host=self.host, port=self.port, ssl=self.ssl_context
+            )
+        else:
+            connection = asyncio.get_running_loop().create_connection(
+                lambda: self, host=self.host, port=self.port
+            )
+
+        transport, _ = await exec_with_timeout(
             connection,
             self._connect_timeout,
         )
-        self._reader = reader
-        self._writer = writer
-        sock = writer.transport.get_extra_info("socket")
+        if self._last_error:
+            raise self._last_error
+        sock = transport.get_extra_info("socket")
         if sock is not None:
             try:
                 # TCP_KEEPALIVE
@@ -414,8 +434,7 @@ class Connection(BaseConnection):
             except (OSError, TypeError):
                 # `socket_keepalive_options` might contain invalid options
                 # causing an error
-                writer.close()
-                await writer.wait_closed()
+                transport.close()
                 raise
         await self.on_connect()
 
@@ -433,7 +452,7 @@ class UnixDomainSocketConnection(BaseConnection):
         retry_on_timeout: bool = False,
         stream_timeout: Optional[float] = None,
         connect_timeout: Optional[float] = None,
-        ssl_context: Optional[RedisSSLContext] = None,
+        ssl_context: Optional[ssl.SSLContext] = None,
         reader_read_size: int = 65535,
         encoding: str = "utf-8",
         decode_responses: bool = False,
@@ -461,13 +480,19 @@ class UnixDomainSocketConnection(BaseConnection):
         self._description_args = lambda: {"path": self.path, "db": self.db}
 
     async def _connect(self) -> None:
-        connection = asyncio.open_unix_connection(path=self.path, ssl=self.ssl_context)
-        reader, writer = await exec_with_timeout(
+        if self.ssl_context:
+            connection = asyncio.get_running_loop().create_unix_connection(
+                lambda: self, path=self.path, ssl=self.ssl_context
+            )
+        else:
+            connection = asyncio.get_running_loop().create_unix_connection(
+                lambda: self, path=self.path
+            )
+
+        await exec_with_timeout(
             connection,
             self._connect_timeout,
         )
-        self._reader = reader
-        self._writer = writer
         await self.on_connect()
 
 
@@ -487,7 +512,7 @@ class ClusterConnection(Connection):
         retry_on_timeout: bool = False,
         stream_timeout: Optional[float] = None,
         connect_timeout: Optional[float] = None,
-        ssl_context: Optional[RedisSSLContext] = None,
+        ssl_context: Optional[ssl.SSLContext] = None,
         reader_read_size: int = 65535,
         encoding: str = "utf-8",
         decode_responses: bool = False,
