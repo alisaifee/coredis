@@ -6,7 +6,7 @@ import os
 import socket
 import ssl
 import time
-from asyncio import AbstractEventLoop, StreamReader, StreamWriter
+from asyncio import StreamReader, StreamWriter
 from typing import cast
 
 from coredis._packer import Packer
@@ -114,7 +114,6 @@ class BaseConnection(asyncio.BaseProtocol):
         decode_responses: bool = False,
         *,
         client_name: Optional[str] = None,
-        loop: Optional[asyncio.events.AbstractEventLoop] = None,
         protocol_version: Literal[2, 3] = 3,
         noreply: bool = False,
     ):
@@ -140,7 +139,6 @@ class BaseConnection(asyncio.BaseProtocol):
         self.decode_responses = decode_responses
         self.protocol_version = protocol_version
         self.server_version: Optional[str] = None
-        self.loop = loop
         self.client_name = client_name
         self.client_id = None
         # flag to show if a connection is waiting for response
@@ -370,7 +368,6 @@ class Connection(BaseConnection):
         socket_keepalive_options: Optional[Dict[int, Union[int, bytes]]] = None,
         *,
         client_name: Optional[str] = None,
-        loop: Optional[AbstractEventLoop] = None,
         protocol_version: Literal[2, 3] = 3,
         noreply: bool = False,
     ):
@@ -380,7 +377,6 @@ class Connection(BaseConnection):
             encoding,
             decode_responses,
             client_name=client_name,
-            loop=loop,
             protocol_version=protocol_version,
             noreply=noreply,
         )
@@ -453,7 +449,6 @@ class UnixDomainSocketConnection(BaseConnection):
         decode_responses: bool = False,
         *,
         client_name: Optional[str] = None,
-        loop: Optional[AbstractEventLoop] = None,
         protocol_version: Literal[2, 3] = 3,
         **_: ValueT,
     ) -> None:
@@ -463,7 +458,6 @@ class UnixDomainSocketConnection(BaseConnection):
             encoding,
             decode_responses,
             client_name=client_name,
-            loop=loop,
             protocol_version=protocol_version,
         )
         self.path = path
@@ -508,7 +502,6 @@ class ClusterConnection(Connection):
         socket_keepalive_options: Optional[Dict[int, Union[int, bytes]]] = None,
         *,
         client_name: Optional[str] = None,
-        loop: Optional[AbstractEventLoop] = None,
         protocol_version: Literal[2, 3] = 3,
         readonly: bool = False,
         noreply: bool = False,
@@ -529,7 +522,6 @@ class ClusterConnection(Connection):
             socket_keepalive=socket_keepalive,
             socket_keepalive_options=socket_keepalive_options,
             client_name=client_name,
-            loop=loop,
             protocol_version=protocol_version,
             noreply=noreply,
         )

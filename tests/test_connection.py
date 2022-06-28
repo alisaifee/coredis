@@ -10,8 +10,8 @@ from coredis.exceptions import TimeoutError
 pytest_marks = pytest.mark.asyncio
 
 
-async def test_connect_tcp(event_loop, redis_basic):
-    conn = Connection(loop=event_loop)
+async def test_connect_tcp(redis_basic):
+    conn = Connection()
     assert conn.host == "127.0.0.1"
     assert conn.port == 6379
     assert str(conn) == "Connection<host=127.0.0.1,port=6379,db=0>"
@@ -24,9 +24,8 @@ async def test_connect_tcp(event_loop, redis_basic):
 
 
 @pytest.mark.os("linux")
-async def test_connect_tcp_keepalive_options(event_loop, redis_basic):
+async def test_connect_tcp_keepalive_options(redis_basic):
     conn = Connection(
-        loop=event_loop,
         socket_keepalive=True,
         socket_keepalive_options={
             socket.TCP_KEEPIDLE: 1,
@@ -48,9 +47,7 @@ async def test_connect_tcp_keepalive_options(event_loop, redis_basic):
 
 @pytest.mark.parametrize("option", ["UNKNOWN", 999])
 async def test_connect_tcp_wrong_socket_opt_raises(event_loop, option, redis_basic):
-    conn = Connection(
-        loop=event_loop, socket_keepalive=True, socket_keepalive_options={option: 1}
-    )
+    conn = Connection(socket_keepalive=True, socket_keepalive_options={option: 1})
     with pytest.raises((socket.error, TypeError)):
         await conn._connect()
     # verify that the connection isn't left open

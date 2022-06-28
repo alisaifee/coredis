@@ -3,7 +3,6 @@ from __future__ import annotations
 import random
 import ssl
 import weakref
-from asyncio import AbstractEventLoop
 from typing import Any, cast, overload
 
 from coredis import Redis
@@ -50,14 +49,12 @@ class SentinelManagedConnection(Connection, Generic[AnyStr]):
         stream_timeout: Optional[float] = None,
         connect_timeout: Optional[float] = None,
         ssl_context: Optional[ssl.SSLContext] = None,
-        reader_read_size: int = 65535,
         encoding: str = "utf-8",
         decode_responses: bool = False,
         socket_keepalive: Optional[bool] = None,
         socket_keepalive_options: Optional[Dict[int, Union[int, bytes]]] = None,
         *,
         client_name: Optional[str] = None,
-        loop: Optional[AbstractEventLoop] = None,
         protocol_version: Literal[2, 3] = 2,
     ):
         self.connection_pool: SentinelConnectionPool = weakref.proxy(connection_pool)
@@ -71,13 +68,11 @@ class SentinelManagedConnection(Connection, Generic[AnyStr]):
             stream_timeout=stream_timeout,
             connect_timeout=connect_timeout,
             ssl_context=ssl_context,
-            reader_read_size=reader_read_size,
             encoding=encoding,
             decode_responses=decode_responses,
             socket_keepalive=socket_keepalive,
             socket_keepalive_options=socket_keepalive_options,
             client_name=client_name,
-            loop=loop,
             protocol_version=protocol_version,
         )
 

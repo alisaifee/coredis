@@ -79,8 +79,8 @@ def cluster(request):
 
 
 @pytest.fixture()
-def sentinel(request, cluster, event_loop):
-    return Sentinel([("foo", 26379), ("bar", 26379)], loop=event_loop)
+def sentinel(request, cluster):
+    return Sentinel([("foo", 26379), ("bar", 26379)])
 
 
 async def test_discover_primary(sentinel):
