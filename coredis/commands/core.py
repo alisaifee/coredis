@@ -5664,7 +5664,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Get the count of subscribers for channels
 
-        :return: Ordered mapping of channels to number of subscribers per channel
+        :return: Mapping of channels to number of subscribers per channel
         """
         pieces: CommandArgList = []
 
