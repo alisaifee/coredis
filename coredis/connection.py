@@ -213,8 +213,7 @@ class BaseConnection(asyncio.BaseProtocol):
         self._write_flag.set()
 
     def connection_lost(self, exc: Optional[BaseException]) -> None:
-        if exc:
-            self._last_error = exc
+        self._last_error = exc
         self.disconnect()
 
     def pause_writing(self) -> None:
