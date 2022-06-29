@@ -7,7 +7,7 @@ from coredis._utils import b
 from coredis.constants import RESPDataType
 from coredis.exceptions import ConnectionError
 from coredis.protocols import ConnectionP
-from coredis.typing import Optional, ResponseType, Set
+from coredis.typing import Optional, ResponseType, Set, Union
 
 
 class Parser:
@@ -48,25 +48,22 @@ class Parser:
             else False
         )
 
-    async def read_response(
+    def get_response(
         self,
         decode: Optional[bool] = None,
         push_message_types: Optional[Set[bytes]] = None,
-    ) -> ResponseType:
+    ) -> Union[NotEnoughData, ResponseType]:
         decode_bytes = (decode is None or decode) if self.encoding else False
+        assert self.unpacker
+        if not self.connected.is_set():
+            if self._last_error:
+                raise self._last_error
+            else:
+                raise ConnectionError("Socket closed")
         while True:
-            assert self.unpacker
-            if not self.connected.is_set():
-                if self._last_error:
-                    raise self._last_error
-                else:
-                    raise ConnectionError("Socket closed")
             response = self.unpacker.parse(decode_bytes)
             if isinstance(response, NotEnoughData):
-                try:
-                    await asyncio.sleep(0)
-                except asyncio.CancelledError:
-                    raise
+                return response
             else:
                 if response and response.response_type == RESPDataType.PUSH:
                     assert isinstance(response.response, list)
@@ -77,5 +74,8 @@ class Parser:
                     ):
                         self.push_messages.put_nowait(response.response)
                         continue
-                break
+                    else:
+                        break
+                else:
+                    break
         return response.response if response else None

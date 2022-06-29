@@ -10,6 +10,7 @@ from asyncio import StreamReader, StreamWriter
 from typing import cast
 
 from coredis._packer import Packer
+from coredis._unpacker import NotEnoughData
 from coredis._utils import nativestr
 from coredis.exceptions import (
     AuthenticationRequiredError,
@@ -117,7 +118,6 @@ class BaseConnection(asyncio.BaseProtocol):
         protocol_version: Literal[2, 3] = 3,
         noreply: bool = False,
     ):
-        self._parser = Parser()
         self._stream_timeout = stream_timeout
         self._reader = None
         self._writer = None
@@ -153,6 +153,7 @@ class BaseConnection(asyncio.BaseProtocol):
         self._write_flag = asyncio.Event()
         self._connect_event = asyncio.Event()
         self._last_error: Optional[BaseException] = None
+        self._parser = Parser()
 
     def __repr__(self) -> str:
         return self.description.format(**self._description_args())
@@ -295,6 +296,18 @@ class BaseConnection(asyncio.BaseProtocol):
 
         self.last_active_at = time.time()
 
+    async def _wait_for_response(
+        self,
+        decode: Optional[bool] = None,
+        push_message_types: Optional[Set[bytes]] = None,
+    ) -> ResponseType:
+        while isinstance(
+            (response := self._parser.get_response(decode, push_message_types)),
+            NotEnoughData,
+        ):
+            await asyncio.sleep(0)
+        return response
+
     async def read_response(
         self,
         decode: Optional[ValueT] = None,
@@ -302,7 +315,7 @@ class BaseConnection(asyncio.BaseProtocol):
     ) -> ResponseType:
         try:
             response = await exec_with_timeout(
-                self._parser.read_response(
+                self._wait_for_response(
                     decode=bool(decode) if decode is not None else None,
                     push_message_types=push_message_types,
                 ),
