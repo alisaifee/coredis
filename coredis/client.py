@@ -1543,8 +1543,9 @@ class RedisCluster(
                     await connection.send_command(
                         command, *node_arg_mapping[node["name"]]
                     )
+                elif node_arg_mapping:
+                    continue
                 else:
-                    node_arg_mapping[node["name"]] = args
                     await connection.send_command(command, *args)
                 if not self.noreply:
                     res[node["name"]] = callback(
