@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v3.11.1
+-------
+Release Date: 2022-06-29
+
+* Bug Fix
+
+  * Fix incorrect handling of non_atomic_cross_slot commands
+    when not all nodes are required for a command
+
 v3.11.0
 -------
 Release Date: 2022-06-25
@@ -896,6 +905,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
