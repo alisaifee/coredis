@@ -12,6 +12,7 @@ coredis is an async redis client with support for redis server, cluster
 <!-- TOC depthFrom:2 depthTo:6 withLinks:1 updateOnSave:1 orderedList:0 -->
 
 - [Installation](#installation)
+- [Why?](#why)
 - [Feature Summary](#feature-summary)
 	- [Deployment topologies](#deployment-topologies)
 	- [Application patterns](#application-patterns)
@@ -34,6 +35,31 @@ To install coredis:
 ```bash
 $ pip install coredis
 ```
+## Why?
+
+Why does **coredis** exist when there are already various implementations of 
+async redis clients for python such as:
+
+- [redis-py] *(Async support as of version 4.2)* 
+- [aioredis](https://github.com/aiolibs/aioredis) *(Absorbed by redis-py)*
+- [aredis] *(Unmaintained)*
+- [asyncio-redis](https://github.com/jonathanslenders/asyncio-redis) *(Unmaintained)*
+
+
+**coredis** was forked from **aredis** when it went unmaintained and [redis-py] did not
+have async support. 
+
+It was (re)born out of need for a python 3.10+ compliant async 
+client that supported redis, sentinel & cluster which was not sufficiently available in 
+any single client at the time.
+
+Since then **coredis** has significantly diverged in terms of the API & design,
+and is no longer a drop in async replacement for [redis-py] or [aredis].
+
+For more details about how the client differs from the above [see project history](https://coredis.readthedocs.org/en/latest/history.html)
+and the [API documentation](https://coredis.readthedocs.org/en/latest/api_documentation.html).
+
+
 
 ## Feature Summary
 
@@ -142,3 +168,7 @@ coredis is additionally tested against:
 - [Documentation (Latest)](http://coredis.readthedocs.org/en/latest)
 - [Changelog](http://coredis.readthedocs.org/en/stable/release_notes.html)
 - [Project History](http://coredis.readthedocs.org/en/stable/history.html)
+
+
+[redis-py]: https://github.com/redis/redis-py "Official redis python client"
+[aredis]: https://github.com/NoneGG/aredis "aredis"
