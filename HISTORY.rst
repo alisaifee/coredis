@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v3.11.2
+-------
+Release Date: 2022-06-30
+
+* Bug Fix
+
+  * Ignore case when comparing error strings to map to
+    exceptions
+
 v3.11.1
 -------
 Release Date: 2022-06-29
@@ -905,6 +914,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
