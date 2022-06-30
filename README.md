@@ -1,5 +1,17 @@
 # coredis
 
+---
+
+### WARNING
+
+You are viewing the development version of **coredis** that is not stable and is currently
+undergoing backward incompatible changes. 
+
+If you are
+looking for the stable version refer to the [3.x](https://github.com/alisaifee/coredis/tree/3.x) branch.
+
+---
+
 [![docs](https://readthedocs.org/projects/coredis/badge/?version=stable)](https://coredis.readthedocs.org)
 [![codecov](https://codecov.io/gh/alisaifee/coredis/branch/master/graph/badge.svg)](https://codecov.io/gh/alisaifee/coredis)
 [![Latest Version in PyPI](https://img.shields.io/pypi/v/coredis.svg)](https://pypi.python.org/pypi/coredis/)
