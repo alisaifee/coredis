@@ -53,7 +53,7 @@ Why does **coredis** exist when there are already various implementations of
 async redis clients for python such as:
 
 - [redis-py] *(Async support as of version 4.2)* 
-- [aioredis](https://github.com/aiolibs/aioredis) *(Absorbed by redis-py)*
+- [aioredis](https://github.com/aio-libs/aioredis-py) *(Absorbed by redis-py)*
 - [aredis] *(Unmaintained)*
 - [asyncio-redis](https://github.com/jonathanslenders/asyncio-redis) *(Unmaintained)*
 
