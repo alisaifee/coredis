@@ -42,4 +42,4 @@ dependency was available. This behavior was inherited from **aredis** which inhe
 :pypi:`redis`. Though :pypi:`hiredis` does provide a significant speedup when parsing responses
 for large nested bulk responses, **coredis** has made sufficient improvements in performance
 including using :pypi:`mypyc` to provide a native speedup when possible and therefore
-no longer supports multiple parser implementations and always uses :class:`coredis.parsers.Parser`.
+no longer supports multiple parser implementations and always uses :class:`coredis.parser.Parser`.

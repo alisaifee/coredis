@@ -53,6 +53,17 @@ class Parser:
         decode: Optional[bool] = None,
         push_message_types: Optional[Set[bytes]] = None,
     ) -> Union[NotEnoughData, ResponseType]:
+        """
+
+        :param decode: Whether to decode simple or bulk strings
+        :param push_message_types: the push message types to return if they
+         arrive. If a message arrives that does not match the filter, it will
+         be put on the :data:`~coredis.connection.BaseConnection.push_messages`
+         queue
+        :return: The next available parsed response read from the connection.
+         If there is not enough data on the wire a ``NotEnoughData`` instance
+         will be returned.
+        """
         decode_bytes = (decode is None or decode) if self.encoding else False
         assert self.unpacker
         if not self.connected.is_set():

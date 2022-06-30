@@ -171,6 +171,10 @@ Sentinel Connection
    :show-inheritance:
    :inherited-members:
 
+Parser
+------
+
+.. autoclass:: coredis.parser.Parser
 
 Connection Pools
 ^^^^^^^^^^^^^^^^

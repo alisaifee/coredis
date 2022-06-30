@@ -103,7 +103,9 @@ class BaseConnection(asyncio.BaseProtocol):
     description: ClassVar[str] = "BaseConnection"
     locator: ClassVar[str] = ""
     protocol_version: Literal[2, 3]
+    #: Queue that collects and unread push message types
     push_messages: asyncio.Queue[ResponseType]
+    #: client id that the redis server sends any redirected notifications to
     tracking_client_id: Optional[int]
 
     def __init__(
