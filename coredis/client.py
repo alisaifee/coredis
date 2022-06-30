@@ -512,6 +512,9 @@ class Redis(
     ) -> None:
         """
         Changes
+          - .. versionchanged:: 4.0.0
+            :paramref:`non_atomic_cross_slot` defaults to ``True``
+            :paramref:`protocol_version`` defaults to ``3``
           - .. versionadded:: 3.11.0
              Added :paramref:`noreply`
           - .. versionadded:: 3.9.0
@@ -958,7 +961,7 @@ class RedisCluster(
         connection_pool: Optional[ClusterConnectionPool] = None,
         protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
-        non_atomic_cross_slot: bool = False,
+        non_atomic_cross_slot: bool = True,
         cache: Optional[AbstractCache] = None,
         noreply: bool = False,
         **kwargs: Any,
@@ -966,6 +969,9 @@ class RedisCluster(
         """
 
         Changes
+          - .. versionchanged:: 4.0.0
+            :paramref:`non_atomic_cross_slot` defaults to ``True``
+            :paramref:`protocol_version`` defaults to ``3``
           - .. versionadded:: 3.11.0
              Added :paramref:`noreply`
           - .. versionadded:: 3.10.0

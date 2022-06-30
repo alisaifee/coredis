@@ -20,23 +20,22 @@ async def cross_slot_keys(client):
     return keys
 
 
-@pytest.mark.parametrize("client_arguments", [({"non_atomic_cross_slot": True})])
 @targets(
     "redis_cluster",
     "redis_cluster_cached",
 )
 class TestCommandSplit:
-    async def test_delete(self, client, cross_slot_keys, client_arguments):
+    async def test_delete(self, client, cross_slot_keys):
         assert await client.delete(cross_slot_keys) == 9
         assert not await client.keys("*")
 
-    async def test_exists(self, client, cross_slot_keys, client_arguments):
+    async def test_exists(self, client, cross_slot_keys):
         assert await client.exists(cross_slot_keys) == 9
 
-    async def test_touch(self, client, cross_slot_keys, client_arguments):
+    async def test_touch(self, client, cross_slot_keys):
         assert await client.touch(cross_slot_keys) == 9
 
-    async def test_unlink(self, client, cross_slot_keys, client_arguments):
+    async def test_unlink(self, client, cross_slot_keys):
         assert await client.unlink(cross_slot_keys) == 9
         assert not await client.keys("*")
 
