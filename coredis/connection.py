@@ -6,6 +6,7 @@ import os
 import socket
 import ssl
 import time
+import warnings
 from typing import cast
 
 from coredis._packer import Packer
@@ -16,6 +17,7 @@ from coredis.exceptions import (
     ConnectionError,
     RedisError,
     TimeoutError,
+    UnknownCommandError,
 )
 from coredis.nodemanager import Node
 from coredis.parser import Parser
@@ -245,6 +247,15 @@ class BaseConnection(asyncio.BaseProtocol):
         except Exception:  # noqa
             return False
 
+    async def try_legacy_auth(self) -> None:
+        if not self.password:
+            return
+        params = [self.password]
+        if self.username:
+            params.insert(0, self.username)
+        await self.send_command(b"AUTH", *params)
+        await self.read_response(decode=False)
+
     async def perform_handshake(self) -> None:
         if not self.needs_handshake:
             return
@@ -269,12 +280,30 @@ class BaseConnection(asyncio.BaseProtocol):
                 self.client_id = int(resp[7])
             self.needs_handshake = False
         except AuthenticationRequiredError:
+            await self.try_legacy_auth()
             self.server_version = None
             self.client_id = None
+        except UnknownCommandError:  # noqa
+            # This should only happen for redis servers < 6 or forks of redis
+            # that are not > 6 compliant.
+            warning = (
+                "The server responded with no support for the `HELLO` command"
+                " and therefore a handshake could not be performed"
+            )
+            if self.protocol_version == 3:
+                raise ConnectionError(
+                    "Unable to use RESP3 due to missing `HELLO` implementation "
+                    "the server. Use `protocol_version=2` when constructing the client."
+                )
+            else:
+                warnings.warn(warning, category=UserWarning)
+                await self.try_legacy_auth()
+            self.needs_handshake = False
 
     async def on_connect(self) -> None:
         self._parser.on_connect(self)
         await self.perform_handshake()
+
         if self.db:
             await self.send_command(b"SELECT", self.db)
 
