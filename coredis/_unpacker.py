@@ -119,7 +119,7 @@ class Unpacker:
                 options = exception_class.items()
                 exception_class = ResponseError
                 for err, exc in options:
-                    if response.startswith(err):
+                    if response.lower().startswith(err):
                         exception_class = exc
                         break
             return exception_class(response)
