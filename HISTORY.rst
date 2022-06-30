@@ -18,8 +18,8 @@ Release Date: 2022-06-29
 
 * Bug Fix
 
-  * Fix incorrect handling of non_atomic_cross_slot commands
-    when not all nodes are required for a command
+  * Fix incorrect handling of :paramref:`~coredis.RedisCluster.non_atomic_cross_slot`
+    commands when not all nodes are required for a command
 
 v3.11.0
 -------
@@ -27,8 +27,8 @@ Release Date: 2022-06-25
 
 * Features
 
-  * Added ``noreply`` option to Redis & RedisCluster constructors
-    to allow using the client without waiting for response from the
+  * Added :paramref:`coredis.Redis.noreply` and :paramref:`coredis.RedisCluster.noreply` option
+    to Redis & RedisCluster constructors to allow using the client without waiting for response from the
     server
   * Build wheels for all architectures supported by cibuildwheel
 
@@ -36,12 +36,12 @@ Release Date: 2022-06-25
 * Deprecations / Removals
 
   * Remove deprecated sentinel methods
-  * Add warnings for ``client_setname``, ``client_reply`` and ``auth``
-    commands
+  * Add warnings for :meth:`~coredis.Redis.client_setname`, :meth:`~coredis.Redis.client_reply`
+    and :meth:`~coredis.Redis.auth` commands
 
 * Bug Fixes
 
-  * Fix missing ``protocol_version`` in cluster pipeline code paths
+  * Fix missing :data:`protocol_version` in cluster pipeline code paths
 
 v3.10.1
 -------
@@ -57,13 +57,14 @@ Release Date: 2022-06-18
 
 * Features
 
-  * Expose ssl parameters in RedisCluster constructor
-  * Expose ssl_check_hostname parameter in Redis/RedisCluster constructors
-  * Separate opt-in cache behaviors into protocols leaving AbstractCache
+  * Expose ssl parameters in :class:`coredis.RedisCluster` constructor
+  * Expose :paramref:`~coredis.Redis.ssl_check_hostname` parameter in Redis/RedisCluster constructors
+  * Separate opt-in cache behaviors into protocols leaving :class:`~coredis.cache.AbstractCache`
     as the minimal implementation required
-  * Expose cache stats
-  * Allow TrackingCache.dynamic_confidence to increase confidence up to 100% instead
-    of capping it at the original confidence value provided
+  * Expose cache stats through the :data:`~coredis.cache.TrackingCache.stats` property, returning
+    a :class:`~coredis.cache.CacheStats` dataclass.
+  * Allow :paramref:`~coredis.cache.TrackingCache.dynamic_confidence` to increase cache confidence up to
+    100% instead of capping it at the original :paramref:`~coredis.cache.TrackingCache.confidence` value provided
 
 * Chores
 
@@ -78,7 +79,7 @@ Release Date: 2022-06-15
 
 * Features
 
-  * Expose cache parameter to Sentinel managed clients
+  * Expose :paramref:`~coredis.sentinel.Sentinel.cache` parameter to Sentinel managed clients
 
 * Bug Fix
 
@@ -107,7 +108,7 @@ Release Date: 2022-06-12
 
 * Features
 
-  * Add support for client side caching
+  * Add support for client side caching (:ref:`handbook/caching:caching`)
 
 v3.8.12
 -------
@@ -115,8 +116,9 @@ Release Date: 2022-06-10
 
 * Features
 
-  * Add support for sharded pubsub for redis 7.0.1
-  * Expose verify_version parameter to from_url factory function
+  * Add support for sharded pubsub for redis 7.0.1 (:ref:`handbook/pubsub:cluster pub/sub`)
+  * Expose :paramref:`~coredis.Redis.from_url.verify_version` parameter to :meth:`coredis.Redis.from_url`
+    factory function
 
 * Experiments
 
@@ -125,6 +127,7 @@ Release Date: 2022-06-10
 v3.8.11
 -------
 Release Date: 2022-06-07
+
 * Bug Fixes
 
   * Fix support for HELLO SETNAME
@@ -220,12 +223,12 @@ Release Date: 2022-05-19
 
 * Features
 
-  * Stream consumer clients
+  * Stream consumer clients (:ref:`handbook/streams:simple consumer` and :ref:`handbook/streams:group consumer`)
 
 * Experiments
 
-  * Updated KeyDB command coverage
-  * KeyDBCluster client
+  * Updated :class:`~coredis.experimental.KeyDB` command coverage
+  * :class:`~coredis.experimental.KeyDBCluster` client
 
 v3.6.0
 ------
@@ -235,14 +238,16 @@ Release Date: 2022-05-15
 
   * Add option to enable non atomic splitting of commands in cluster
     mode when the commands only deal with keys (delete, exists, touch, unlink)
-  * Add support for sharded pub sub in cluster mode
+    (:paramref:`~coredis.RedisCluster.non_atomic_crossslot`)
+  * Add support for sharded pub sub in cluster mode (:meth:`~coredis.RedisCluster.sharded_pubsub`)
   * Add support for readonly execution of LUA scripts and redis functions
 
 * Bug Fix
 
-  * Ensure ``script_load`` is routed to all nodes in cluster mode
-  * Ensure ``evalsha_ro``, ``eval_ro``, ``fcall_ro`` are included in readonly commands
-  * Change version related warnings to use DeprecationWarning
+  * Ensure :meth:`~coredis.RedisCluster.script_load` is routed to all nodes in cluster mode
+  * Ensure :meth:`~coredis.RedisCluster.evalsha_ro`, :meth:`~coredis.RedisCluster.eval_ro`, :meth:`~coredis.RedisCluster.fcall_ro`
+    are included in readonly commands for cluster readonly mode.
+  * Change version related warnings to use :exc:`DeprecationWarning`
 
 * Chores
 
@@ -254,7 +259,7 @@ Release Date: 2022-05-12
 
 * Bug Fix
 
-  * Fix type annotation for PubSubMessage.data to include int
+  * Fix type annotation for :attr:`coredis.response.types.PubSubMessage.data` to include int
     for server responses to subscribe/unsubscribe/psubscribe/punsubscribe
 
 v3.5.0
@@ -298,8 +303,8 @@ Release Date: 2022-05-10
 
   * Ensure protocol_version, decoding arguments are consistent
     across different construction methods.
-  * Synchronize parameters for replacing library code between Library
-    constructor and Redis.register_library
+  * Synchronize parameters for replacing library code between :class:`coredis.commands.Library`
+    constructor and :meth:`coredis.Redis.register_library`
 
 v3.4.7
 ------
