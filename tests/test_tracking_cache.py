@@ -79,7 +79,7 @@ class CommonExamples:
         assert feedback.call_count == 10
 
     async def test_feedback_adjust(self, client, cloner, mocker, _s):
-        cache = self.cache(confidence=90, dynamic_confidence=True)
+        cache = self.cache(confidence=50, dynamic_confidence=True)
         cached = await cloner(client, cache=cache)
 
         [await client.set(f"fubar{i}", i) for i in range(100)]
@@ -92,7 +92,7 @@ class CommonExamples:
 
         [await cached.get(f"fubar{i}") for i in range(100)]
         assert feedback.call_count > 0
-        assert cache.confidence < 90
+        assert cache.confidence < 50
         dropped = float(cache.confidence)
         mocker.resetall()
         get.side_effect = original_get
@@ -100,7 +100,7 @@ class CommonExamples:
         [await cached.get(f"fubar{i}") for i in range(100)]
         assert cache.confidence > dropped
         cache.reset()
-        assert cache.confidence == 90
+        assert cache.confidence == 50
 
     async def test_shared_cache(self, client, cloner, mocker, _s):
         cache = self.cache()
