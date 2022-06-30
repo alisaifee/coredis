@@ -6,7 +6,6 @@ import os
 import socket
 import ssl
 import time
-from asyncio import StreamReader, StreamWriter
 from typing import cast
 
 from coredis._packer import Packer
@@ -101,8 +100,6 @@ class BaseConnection(asyncio.BaseProtocol):
     client_id: Optional[int]
     description: ClassVar[str] = "BaseConnection"
     locator: ClassVar[str] = ""
-    _reader: Optional[StreamReader]
-    _writer: Optional[StreamWriter]
     protocol_version: Literal[2, 3]
     push_messages: asyncio.Queue[ResponseType]
     tracking_client_id: Optional[int]
@@ -119,8 +116,6 @@ class BaseConnection(asyncio.BaseProtocol):
         noreply: bool = False,
     ):
         self._stream_timeout = stream_timeout
-        self._reader = None
-        self._writer = None
         self.username: Optional[str] = None
         self.password: Optional[str] = ""
         self.db: Optional[int] = None
