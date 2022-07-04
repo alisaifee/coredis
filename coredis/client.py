@@ -138,14 +138,26 @@ class ClusterMeta(ABCMeta):
         return kls
 
 
-RedisConnectionT = TypeVar("RedisConnectionT", bound="RedisConnection")
+ClientT = TypeVar("ClientT", bound="Client[Any]")
+RedisT = TypeVar("RedisT", bound="Redis[Any]")
+RedisStringT = TypeVar("RedisStringT", bound="Redis[str]")
+RedisBytesT = TypeVar("RedisBytesT", bound="Redis[bytes]")
+RedisClusterT = TypeVar("RedisClusterT", bound="RedisCluster[Any]")
+RedisClusterStringT = TypeVar("RedisClusterStringT", bound="RedisCluster[str]")
+RedisClusterBytesT = TypeVar("RedisClusterBytesT", bound="RedisCluster[bytes]")
 
 
-class RedisConnection:
-    encoding: str
-    decode_responses: bool
+class Client(
+    Generic[AnyStr],
+    CoreCommands[AnyStr],
+    SentinelCommands[AnyStr],
+):
+    cache: Optional[AbstractCache]
     connection_pool: ConnectionPool
+    decode_responses: bool
+    encoding: str
     protocol_version: Literal[2, 3]
+    server_version: Optional[Version]
 
     def __init__(
         self,
@@ -249,11 +261,11 @@ class RedisConnection:
             self.__noreply = value
             self.connection_pool.disconnect()
 
-    async def initialize(self: RedisConnectionT) -> RedisConnectionT:
+    async def initialize(self: ClientT) -> ClientT:
         await self.connection_pool.initialize()
         return self
 
-    def __await__(self) -> Generator[Any, None, RedisConnection]:
+    def __await__(self: ClientT) -> Generator[Any, None, ClientT]:
         return self.initialize().__await__()
 
     def __repr__(self) -> str:
@@ -266,16 +278,6 @@ class RedisConnection:
             return
         if not self.server_version and version:
             self.server_version = Version(nativestr(version))
-
-
-class AbstractRedis(
-    Generic[AnyStr],
-    CoreCommands[AnyStr],
-    SentinelCommands[AnyStr],
-):
-    server_version: Optional[Version]
-    protocol_version: Literal[2, 3]
-    cache: Optional[AbstractCache]
 
     async def scan_iter(
         self,
@@ -395,18 +397,9 @@ class AbstractRedis(
         return await Library[AnyStr](self, name)
 
 
-RedisT = TypeVar("RedisT", bound="Redis[Any]")
-RedisStringT = TypeVar("RedisStringT", bound="Redis[str]")
-RedisBytesT = TypeVar("RedisBytesT", bound="Redis[bytes]")
-RedisClusterT = TypeVar("RedisClusterT", bound="RedisCluster[Any]")
-RedisClusterStringT = TypeVar("RedisClusterStringT", bound="RedisCluster[str]")
-RedisClusterBytesT = TypeVar("RedisClusterBytesT", bound="RedisCluster[bytes]")
-
-
 class Redis(
-    AbstractRedis[AnyStr],
+    Client[AnyStr],
     Generic[AnyStr],
-    RedisConnection,
 ):
     @overload
     def __init__(
@@ -865,8 +858,7 @@ class Redis(
 
 
 class RedisCluster(
-    AbstractRedis[AnyStr],
-    RedisConnection,
+    Client[AnyStr],
     metaclass=ClusterMeta,
 ):
     RedisClusterRequestTTL = 16

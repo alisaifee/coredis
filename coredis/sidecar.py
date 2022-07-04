@@ -3,11 +3,11 @@ from __future__ import annotations
 import asyncio
 import time
 import weakref
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, Any
 
 from coredis.connection import BaseConnection, Connection
 from coredis.exceptions import ConnectionError
-from coredis.typing import Optional, ResponseType, Set, TypeVar
+from coredis.typing import Optional, ResponseType, Set, Tuple, TypeVar
 
 if TYPE_CHECKING:
     import coredis.client
@@ -25,7 +25,7 @@ class Sidecar:
         self, push_message_types: Set[bytes], health_check_interval_seconds: int = 5
     ) -> None:
         self._client: Optional[
-            weakref.ReferenceType["coredis.client.RedisConnection"]
+            weakref.ReferenceType["coredis.client.Client[Any]"]
         ] = None
         self.messages: asyncio.Queue[ResponseType] = asyncio.Queue()
         self.connection: Optional[Connection] = None
@@ -37,14 +37,12 @@ class Sidecar:
         self.last_checkin: float = 0
 
     @property
-    def client(self) -> "Optional[coredis.client.RedisConnection]":
+    def client(self) -> "Optional[coredis.client.Client[Any]]":
         if self._client:
             return self._client()
         return None  # noqa
 
-    async def start(
-        self: SidecarT, client: "coredis.client.RedisConnection"
-    ) -> SidecarT:
+    async def start(self: SidecarT, client: "coredis.client.Client[Any]") -> SidecarT:
         self._client = weakref.ref(client, lambda *_: self.stop())
         if not self.connection and self.client:
             self.connection = await self.client.connection_pool.get_connection()

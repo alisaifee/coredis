@@ -14,7 +14,7 @@ from typing import Any, cast
 from wrapt import ObjectProxy  # type: ignore
 
 from coredis._utils import clusterdown_wrapper
-from coredis.client import AbstractRedis
+from coredis.client import Client
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName
 from coredis.commands.script import Script
@@ -252,7 +252,7 @@ class ClusterPipelineMeta(PipelineMeta):
         return kls
 
 
-class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
+class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
     """Pipeline for the Redis class"""
 
     """
@@ -719,7 +719,7 @@ class PipelineImpl(AbstractRedis[AnyStr], metaclass=PipelineMeta):
         )
 
 
-class ClusterPipelineImpl(AbstractRedis[AnyStr], metaclass=ClusterPipelineMeta):
+class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
     connection_pool: ClusterConnectionPool
     command_stack: List[ClusterPipelineCommand]

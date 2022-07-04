@@ -265,7 +265,7 @@ class Script(Generic[AnyStr]):
             ) -> Tuple[
                 Parameters[KeyT],
                 Parameters[ValueT],
-                Optional[coredis.client.AbstractRedis[AnyStr]],
+                Optional[coredis.client.Client[AnyStr]],
             ]:
                 bound_arguments.apply_defaults()
                 arguments = bound_arguments.arguments

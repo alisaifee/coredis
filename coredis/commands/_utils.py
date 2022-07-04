@@ -3,13 +3,13 @@ from __future__ import annotations
 import datetime
 import time
 import warnings
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any
 
 from packaging import version
 
 from coredis.commands.constants import CommandName
 from coredis.exceptions import CommandNotSupportedError
-from coredis.typing import Union
+from coredis.typing import Optional, Union
 
 if TYPE_CHECKING:
     import coredis.client
@@ -47,7 +47,7 @@ def normalized_time_milliseconds(value: Union[int, datetime.datetime]) -> int:
 
 
 def check_version(
-    instance: coredis.client.RedisConnection,
+    instance: coredis.client.Client[Any],
     command: bytes,
     function_name: str,
     min_version: Optional[version.Version],

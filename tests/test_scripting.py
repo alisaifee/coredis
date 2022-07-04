@@ -6,7 +6,7 @@ import pytest
 from beartype.roar import BeartypeCallHintParamViolation
 
 from coredis import PureToken
-from coredis.client import AbstractRedis
+from coredis.client import Client
 from coredis.commands import Script
 from coredis.exceptions import NoScriptError, ResponseError
 from coredis.typing import KeyT, List, ValueT
@@ -218,7 +218,7 @@ class TestScripting:
             @scrpt.wraps(key_spec=["key"], client_arg="client", runtime_checks=True)
             async def default_get(
                 cls,
-                client: Optional[AbstractRedis[AnyStr]],
+                client: Optional[Client[AnyStr]],
                 key: str,
                 default: str = "coredis",
             ) -> str:

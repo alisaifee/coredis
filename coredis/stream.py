@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from coredis._utils import EncodingInsensitiveDict, nativestr
-from coredis.client import AbstractRedis
+from coredis.client import Client
 from coredis.exceptions import (
     ResponseError,
     StreamConsumerInitializationError,
@@ -46,7 +46,7 @@ class Consumer(Generic[AnyStr]):
 
     def __init__(
         self,
-        client: AbstractRedis[AnyStr],
+        client: Client[AnyStr],
         streams: Parameters[KeyT],
         buffer_size: int = 0,
         timeout: Optional[int] = 0,
@@ -72,7 +72,7 @@ class Consumer(Generic[AnyStr]):
         :param stream_parameters: Mapping of optional parameters to use
          by stream for the streams provided in :paramref:`streams`.
         """
-        self.client: AbstractRedis[AnyStr] = client
+        self.client: Client[AnyStr] = client
         self.streams: Set[KeyT] = set(streams)
         self.state: Dict[StringT, State] = EncodingInsensitiveDict(
             {stream: stream_parameters.get(nativestr(stream), {}) for stream in streams}
@@ -185,7 +185,7 @@ class GroupConsumer(Consumer[AnyStr]):
 
     def __init__(
         self,
-        client: AbstractRedis[AnyStr],
+        client: Client[AnyStr],
         streams: Parameters[KeyT],
         group: StringT,
         consumer: StringT,

@@ -49,7 +49,7 @@ class Library(Generic[AnyStr]):
 
     def __init__(
         self,
-        client: coredis.client.AbstractRedis[AnyStr],
+        client: coredis.client.Client[AnyStr],
         name: Optional[StringT] = None,
         code: Optional[StringT] = None,
         replace: bool = False,
@@ -80,7 +80,7 @@ class Library(Generic[AnyStr]):
          redis instance.
         """
         self._client: weakref.ReferenceType[
-            coredis.client.AbstractRedis[AnyStr]
+            coredis.client.Client[AnyStr]
         ] = weakref.ref(client)
         self.name = nativestr(name or self.NAME)
         self.code = (code or self.CODE or "").lstrip()
@@ -92,7 +92,7 @@ class Library(Generic[AnyStr]):
             )
 
     @property
-    def client(self) -> coredis.client.AbstractRedis[AnyStr]:
+    def client(self) -> coredis.client.Client[AnyStr]:
         c = self._client()
         assert c
         return c
@@ -344,7 +344,7 @@ class Library(Generic[AnyStr]):
 class Function(Generic[AnyStr]):
     def __init__(
         self,
-        client: coredis.client.AbstractRedis[AnyStr],
+        client: coredis.client.Client[AnyStr],
         library_name: StringT,
         name: StringT,
         readonly: bool = False,
@@ -363,14 +363,14 @@ class Function(Generic[AnyStr]):
             response = await func(keys=["a"], args=[1])
         """
         self._client: weakref.ReferenceType[
-            coredis.client.AbstractRedis[AnyStr]
+            coredis.client.Client[AnyStr]
         ] = weakref.ref(client)
         self.library: Library[AnyStr] = Library[AnyStr](client, library_name)
         self.name = name
         self.readonly = readonly
 
     @property
-    def client(self) -> coredis.client.AbstractRedis[AnyStr]:
+    def client(self) -> coredis.client.Client[AnyStr]:
         c = self._client()
         assert c
         return c
@@ -387,7 +387,7 @@ class Function(Generic[AnyStr]):
         keys: Optional[Parameters[KeyT]] = None,
         args: Optional[Parameters[ValueT]] = None,
         *,
-        client: Optional[coredis.client.AbstractRedis[AnyStr]] = None,
+        client: Optional[coredis.client.Client[AnyStr]] = None,
         readonly: Optional[bool] = None,
     ) -> ResponseType:
         """

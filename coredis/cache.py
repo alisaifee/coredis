@@ -703,7 +703,7 @@ class TrackingCache(
             max_keys, max_size_bytes
         )
         self.__client: Optional[
-            weakref.ReferenceType["coredis.client.RedisConnection"]
+            weakref.ReferenceType["coredis.client.Client[Any]"]
         ] = None
         self.__stats = stats or CacheStats()
 

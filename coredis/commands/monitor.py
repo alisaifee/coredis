@@ -35,16 +35,16 @@ class Monitor(Generic[AnyStr]):
 
     """
 
-    def __init__(self, client: coredis.client.RedisConnection):
+    def __init__(self, client: coredis.client.Client[AnyStr]):
         self._client: weakref.ReferenceType[
-            coredis.client.RedisConnection
+            coredis.client.Client[AnyStr]
         ] = weakref.ref(client)
         self.encoding = client.encoding
         self.connection: Optional[coredis.connection.Connection] = None
         self.monitoring = False
 
     @property
-    def client(self) -> coredis.client.RedisConnection:
+    def client(self) -> coredis.client.Client[AnyStr]:
         client = self._client()
         assert client
         return client
