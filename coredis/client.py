@@ -397,10 +397,9 @@ class Client(
         return await Library[AnyStr](self, name)
 
 
-class Redis(
-    Client[AnyStr],
-    Generic[AnyStr],
-):
+class Redis(Client[AnyStr]):
+    connection_pool: ConnectionPool
+
     @overload
     def __init__(
         self: Redis[bytes],

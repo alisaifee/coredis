@@ -2,6 +2,7 @@
 import os
 import sys
 from typing import List, Tuple
+import types
 
 sys.path.insert(0, os.path.abspath("../../"))
 sys.path.insert(0, os.path.abspath("./"))
@@ -82,7 +83,10 @@ autosectionlabel_prefix_document = True
 
 extlinks = {
     "pypi": ("https://pypi.org/project/%s", "%s"),
-    "redis-version": ("https://raw.githubusercontent.com/redis/redis/%s/00-RELEASENOTES", "Redis version: %s")
+    "redis-version": (
+        "https://raw.githubusercontent.com/redis/redis/%s/00-RELEASENOTES",
+        "Redis version: %s",
+    ),
 }
 
 
@@ -117,16 +121,18 @@ from sphinx.ext.autodoc import ClassDocumenter, Documenter, _
 
 # Workaround for https://github.com/sphinx-doc/sphinx/issues/9560
 from sphinx.domains.python import PythonDomain
+
 assert PythonDomain.object_types["data"].roles == ("data", "obj")
 PythonDomain.object_types["data"].roles = ("data", "class", "obj")
 
 # Workaround for https://github.com/sphinx-doc/sphinx/issues/10333
 from sphinx.util import inspect
+
 inspect.TypeAliasForwardRef.__repr__ = lambda self: self.name
 inspect.TypeAliasForwardRef.__hash__ = lambda self: hash(self.name)
 
 original_sort_members = Documenter.sort_members
-preferred_redis_command_group_order = [
+cmd_group_order = [
     coredis.commands.constants.CommandGroup.STRING,
     coredis.commands.constants.CommandGroup.BITMAP,
     coredis.commands.constants.CommandGroup.GENERIC,
@@ -144,20 +150,31 @@ preferred_redis_command_group_order = [
     coredis.commands.constants.CommandGroup.CLUSTER,
     coredis.commands.constants.CommandGroup.CONNECTION,
 ]
+preferred_order = {
+    "object": 80,
+    "method": 90,
+    "function": 70,
+}
+
 
 def custom_client_sort(documenter):
     documenter[0].parse_name()
     documenter[0].import_object()
-
     obj = documenter[0].object
+    group_idx = 0
     if hasattr(obj, "__coredis_command"):
         cmd_details = obj.__coredis_command
-        if cmd_details.group:
-            return (preferred_redis_command_group_order.index(cmd_details.group), documenter[0].fullname)
-        else:
-            return (9999, documenter[0].fullname)
-    else:
-        return (-1.0/(1+documenter[0].member_order), documenter[0].fullname)
+        group_idx = (
+            1 + cmd_group_order.index(cmd_details.group)
+            if cmd_details.group in cmd_group_order
+            else len(cmd_group_order) + 1
+        )
+    return (
+        -1 * preferred_order.get(type(obj).__name__, documenter[0].member_order),
+        group_idx,
+        documenter[0].fullname,
+    )
+
 
 def sort_members(
     self, documenters: List[Tuple["Documenter", bool]], order: str
