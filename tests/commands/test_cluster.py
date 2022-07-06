@@ -4,7 +4,8 @@ import asyncio
 
 import pytest
 
-from coredis import MovedError, ResponseError
+from coredis import MovedError, PureToken, ResponseError
+from coredis.tokens import PrefixToken
 from tests.conftest import targets
 
 
@@ -91,7 +92,11 @@ class TestCluster:
         replicas = await client.cluster_replicas(
             [n["id"] for n in nodes if "master" in n["flags"]].pop()
         )
-        assert len(replicas) == 1
+        with pytest.warns(DeprecationWarning):
+            replicas_depr = await client.cluster_slaves(
+                [n["id"] for n in nodes if "master" in n["flags"]].pop()
+            )
+        assert len(replicas) == len(replicas_depr) == 1
 
     @pytest.mark.min_server_version("7.0.0")
     async def test_cluster_links(self, client, _s):
@@ -102,7 +107,13 @@ class TestCluster:
             links.append(await node.cluster_links())
         assert len(links) == 6
 
-    @pytest.mark.min_server_version("7.0.0")
+    async def test_cluster_meet(self, client, _s):
+        node = list(client.primaries)[0]
+        other = list(client.primaries)[1].connection_pool.connection_kwargs
+        assert await node.cluster_meet(other["host"], other["port"])
+        with pytest.raises(ResponseError, match="Invalid node address"):
+            await node.cluster_meet("bogus", 6666)
+
     async def test_cluster_my_id(self, client, _s):
         ids = []
         for node in client.primaries:
@@ -126,3 +137,78 @@ class TestCluster:
         nodes = []
         [nodes.extend(shard[_s("nodes")]) for shard in shards]
         assert known_nodes == {node[_s("id")] for node in nodes}
+
+
+async def test_cluster_bumpepoch(fake_redis):
+    fake_redis.responses[b"CLUSTER BUMPEPOCH"] = {
+        (): b"OK",
+    }
+    assert await fake_redis.cluster_bumpepoch()
+
+
+async def test_cluster_failover(fake_redis):
+    fake_redis.responses[b"CLUSTER FAILOVER"] = {
+        (): b"OK",
+        (PureToken.FORCE,): b"OK",
+        (PureToken.TAKEOVER,): b"OK",
+    }
+    assert await fake_redis.cluster_failover()
+    assert await fake_redis.cluster_failover(PureToken.FORCE)
+    assert await fake_redis.cluster_failover(PureToken.TAKEOVER)
+
+
+async def test_cluster_flushslots(fake_redis):
+    fake_redis.responses[b"CLUSTER FLUSHSLOTS"] = {(): "OK"}
+    assert await fake_redis.cluster_flushslots()
+
+
+async def test_cluster_forget(fake_redis):
+    fake_redis.responses[b"CLUSTER FORGET"] = {(b"abcdefg",): "OK"}
+    assert await fake_redis.cluster_forget(b"abcdefg")
+
+
+async def test_cluster_replicate(fake_redis):
+    fake_redis.responses[b"CLUSTER REPLICATE"] = {
+        (b"abcdefg",): "OK",
+    }
+    assert await fake_redis.cluster_replicate(b"abcdefg")
+
+
+async def test_cluster_reset(fake_redis):
+    fake_redis.responses[b"CLUSTER RESET"] = {
+        (): "OK",
+        (PureToken.HARD,): "OK",
+        (PureToken.SOFT,): "OK",
+    }
+    assert await fake_redis.cluster_reset()
+    assert await fake_redis.cluster_reset(PureToken.HARD)
+    assert await fake_redis.cluster_reset(PureToken.SOFT)
+
+
+async def test_cluster_saveconfig(fake_redis):
+    fake_redis.responses[b"CLUSTER SAVECONFIG"] = {
+        (): "OK",
+    }
+    assert await fake_redis.cluster_saveconfig()
+
+
+async def test_cluster_set_config_epoch(fake_redis):
+    fake_redis.responses[b"CLUSTER SET-CONFIG-EPOCH"] = {
+        (1,): "OK",
+    }
+    assert await fake_redis.cluster_set_config_epoch(1)
+
+
+async def test_cluster_setslot(fake_redis):
+    fake_redis.responses[b"CLUSTER SETSLOT"] = {
+        (1,): "OK",
+        (1, PrefixToken.IMPORTING, "abcdefg"): "OK",
+        (1, PrefixToken.MIGRATING, "hijkl"): "OK",
+        (1, PureToken.STABLE): "OK",
+        (1, PrefixToken.NODE, "abcdefg"): "OK",
+    }
+    assert await fake_redis.cluster_setslot(1)
+    assert await fake_redis.cluster_setslot(1, importing="abcdefg")
+    assert await fake_redis.cluster_setslot(1, migrating="hijkl")
+    assert await fake_redis.cluster_setslot(1, stable=True)
+    assert await fake_redis.cluster_setslot(1, node="abcdefg")

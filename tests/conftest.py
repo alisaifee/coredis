@@ -17,7 +17,8 @@ import coredis.experimental
 import coredis.parser
 import coredis.sentinel
 from coredis.cache import TrackingCache
-from coredis.typing import RUNTIME_TYPECHECKS
+from coredis.response._callbacks import NoopCallback
+from coredis.typing import RUNTIME_TYPECHECKS, Callable, Optional, R, ValueT
 
 REDIS_VERSIONS = {}
 
@@ -760,6 +761,52 @@ async def keydb_cluster(keydb_cluster_server, request):
     yield cluster
 
     cluster.connection_pool.disconnect()
+
+
+@pytest.fixture
+def fake_redis():
+    class _(coredis.client.Redis):
+        responses = {}
+
+        def __init__(self):
+            self.cache = None
+
+        async def initialize(self):
+            pass
+
+        async def execute_command(
+            self,
+            command: bytes,
+            *args: ValueT,
+            callback: Callable[..., R] = NoopCallback(),
+            **options: Optional[ValueT],
+        ) -> R:
+            return callback(self.responses.get(command, {}).get(args))
+
+    return _()
+
+
+@pytest.fixture
+def fake_redis_cluster():
+    class _(coredis.client.RedisCluster):
+        responses = {}
+
+        def __init__(self):
+            self.cache = None
+
+        async def initialize(self):
+            pass
+
+        async def execute_command(
+            self,
+            command: bytes,
+            *args: ValueT,
+            callback: Callable[..., R] = NoopCallback(),
+            **options: Optional[ValueT],
+        ) -> R:
+            return callback(self.responses.get(command, {}).get(args))
+
+    return _()
 
 
 @pytest.fixture

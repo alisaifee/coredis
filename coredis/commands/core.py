@@ -26,7 +26,12 @@ from coredis.commands._wrappers import (
 )
 from coredis.commands.bitfield import BitFieldOperation
 from coredis.commands.constants import CommandGroup, CommandName
-from coredis.exceptions import AuthorizationError, DataError, RedisError
+from coredis.exceptions import (
+    AuthorizationError,
+    ConnectionError,
+    DataError,
+    RedisError,
+)
 from coredis.nodemanager import NodeFlag
 from coredis.response._callbacks import (
     AnyStrCallback,
@@ -1020,7 +1025,6 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def cluster_reset(
         self,
-        *,
         hard_soft: Optional[Literal[PureToken.HARD, PureToken.SOFT]] = None,
     ) -> bool:
         """
@@ -1076,6 +1080,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def cluster_setslot(
         self,
         slot: int,
+        *,
         importing: Optional[StringT] = None,
         migrating: Optional[StringT] = None,
         node: Optional[StringT] = None,
@@ -1088,13 +1093,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         pieces: CommandArgList = []
 
         if importing is not None:
-            pieces.extend(["IMPORTING", importing])
+            pieces.extend([PrefixToken.IMPORTING, importing])
 
         if migrating is not None:
-            pieces.extend(["MIGRATING", migrating])
+            pieces.extend([PrefixToken.MIGRATING, migrating])
 
         if node is not None:
-            pieces.extend(["NODE", node])
+            pieces.extend([PrefixToken.NODE, node])
 
         if stable is not None:
             pieces.append(PureToken.STABLE)
