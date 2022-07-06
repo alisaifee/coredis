@@ -89,13 +89,13 @@ class TestFunctions:
     @pytest.mark.clusteronly
     @pytest.mark.parametrize("client_arguments", [({"readonly": True})])
     async def test_fcall_ro(self, client, simple_library, _s, client_arguments, mocker):
-        get_master_node_by_slot = mocker.spy(
-            client.connection_pool, "get_master_node_by_slot"
+        get_primary_node_by_slot = mocker.spy(
+            client.connection_pool, "get_primary_node_by_slot"
         )
         await client.fcall_ro("echo_key", ["a"], []) == _s("a")
         with pytest.raises(ResponseError):
             await client.fcall_ro("return_arg", ["a"], [2])
-        get_master_node_by_slot.assert_not_called()
+        get_primary_node_by_slot.assert_not_called()
 
     async def test_function_delete(self, client, simple_library, _s):
         assert _s("coredis") in await client.function_list()

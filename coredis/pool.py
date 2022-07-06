@@ -648,7 +648,7 @@ class ClusterConnectionPool(ConnectionPool):
         if node_type == "replica":
             node = self.get_replica_node_by_slot(slot)
         else:
-            node = self.get_master_node_by_slot(slot)
+            node = self.get_primary_node_by_slot(slot)
         self.checkpid()
 
         try:
@@ -809,7 +809,7 @@ class ClusterConnectionPool(ConnectionPool):
 
         return cast(ClusterConnection, connection)
 
-    def get_master_node_by_slot(self, slot: int) -> Node:
+    def get_primary_node_by_slot(self, slot: int) -> Node:
         return self.nodes.slots[slot][0]
 
     def get_replica_node_by_slot(self, slot: int, replica_only: bool = False) -> Node:
@@ -827,4 +827,4 @@ class ClusterConnectionPool(ConnectionPool):
     def get_node_by_slot(self, slot: int, command: Optional[bytes] = None) -> Node:
         if self.readonly and command in self.READONLY_COMMANDS:
             return self.get_replica_node_by_slot(slot)
-        return self.get_master_node_by_slot(slot)
+        return self.get_primary_node_by_slot(slot)

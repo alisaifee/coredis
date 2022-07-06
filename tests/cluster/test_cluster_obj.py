@@ -81,7 +81,7 @@ async def assert_moved_redirection_on_slave(sr, connection_pool_cls, cluster_obj
             "server_type": "master",
         }
         with patch.object(
-            connection_pool_cls, "get_master_node_by_slot"
+            connection_pool_cls, "get_primary_node_by_slot"
         ) as return_master_mock:
             return_master_mock.return_value = master_value
             assert await cluster_obj.get("foo16706") == "foo"
@@ -145,7 +145,7 @@ async def test_access_correct_slave_with_readonly_mode_client(sr):
             "server_type": "master",
         }
         with patch.object(
-            ClusterConnectionPool, "get_master_node_by_slot", return_value=master_value
+            ClusterConnectionPool, "get_primary_node_by_slot", return_value=master_value
         ):
             readonly_client = RedisCluster(
                 host="127.0.0.1", port=7000, readonly=True, decode_responses=True

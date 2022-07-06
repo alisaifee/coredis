@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from coredis import MovedError
+from coredis import MovedError, ResponseError
 from tests.conftest import targets
 
 
@@ -13,6 +13,46 @@ from tests.conftest import targets
 )
 @pytest.mark.asyncio()
 class TestCluster:
+    async def test_addslots(self, client, _s):
+        node = client.connection_pool.get_primary_node_by_slot(1)
+        client = client.connection_pool.nodes.get_redis_link(node["host"], node["port"])
+        with pytest.raises(ResponseError, match="Slot 1 is already busy"):
+            await client.cluster_addslots([1])
+
+    @pytest.mark.min_server_version("7.0.0")
+    async def test_addslots_range(self, client, _s):
+        node = client.connection_pool.get_primary_node_by_slot(1)
+        client = client.connection_pool.nodes.get_redis_link(node["host"], node["port"])
+        with pytest.raises(ResponseError, match="Slot 1 is already busy"):
+            await client.cluster_addslotsrange([(1, 2)])
+
+    async def test_asking(self, client, _s):
+        node = client.connection_pool.get_primary_node_by_slot(1)
+        assert await client.connection_pool.nodes.get_redis_link(
+            node["host"], node["port"]
+        ).asking()
+
+    async def test_count_failure_reports(self, client, _s):
+        node = client.connection_pool.get_primary_node_by_slot(1)
+        assert 0 == await client.cluster_count_failure_reports(node["node_id"])
+        with pytest.raises(ResponseError, match="Unknown node"):
+            await client.cluster_count_failure_reports("bogus")
+
+    async def test_cluster_delslots(self, client, _s):
+        node = client.connection_pool.get_primary_node_by_slot(1)
+        assert await client.cluster_delslots([1])
+        assert await client.connection_pool.nodes.get_redis_link(
+            node["host"], node["port"]
+        ).cluster_addslots([1])
+
+    @pytest.mark.min_server_version("7.0.0")
+    async def test_cluster_delslots_range(self, client, _s):
+        node = client.connection_pool.get_primary_node_by_slot(1)
+        assert await client.cluster_delslotsrange([(1, 2)])
+        assert await client.connection_pool.nodes.get_redis_link(
+            node["host"], node["port"]
+        ).cluster_addslots([1, 2])
+
     async def test_readonly_explicit(self, client, _s):
         await client.set("fubar", 1)
         slot = client.connection_pool.nodes.keyslot("fubar")

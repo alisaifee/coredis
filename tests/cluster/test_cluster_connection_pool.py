@@ -203,9 +203,9 @@ class TestConnectionPool:
     @pytest.mark.asyncio()
     async def test_master_node_by_slot(self):
         pool = await self.get_pool(connection_kwargs={})
-        node = pool.get_master_node_by_slot(0)
+        node = pool.get_primary_node_by_slot(0)
         node["port"] = 7000
-        node = pool.get_master_node_by_slot(12182)
+        node = pool.get_primary_node_by_slot(12182)
         node["port"] = 7002
 
     @pytest.mark.asyncio()

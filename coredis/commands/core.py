@@ -766,6 +766,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.CLUSTER_COUNT_FAILURE_REPORTS,
         group=CommandGroup.CLUSTER,
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def cluster_count_failure_reports(self, node_id: StringT) -> int:
         """
@@ -775,7 +776,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return await self.execute_command(
             CommandName.CLUSTER_COUNT_FAILURE_REPORTS,
-            node_id=node_id,
+            node_id,
             callback=IntCallback(),
         )
 
