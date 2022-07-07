@@ -885,6 +885,7 @@ def cloner():
     async def _cloner(client, **kwargs):
         if isinstance(client, coredis.client.Redis):
             c_kwargs = client.connection_pool.connection_kwargs
+            c_kwargs.update({k: kwargs.pop(k) for k in c_kwargs.keys() & kwargs.keys()})
             c = client.__class__(
                 decode_responses=client.decode_responses,
                 protocol_version=client.protocol_version,

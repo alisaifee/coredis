@@ -229,6 +229,15 @@ class TestGeneric:
         assert True == (await client.copy(_s("a{foo}"), "c{foo}", replace=True))
         assert await client.get("c{foo}") == _s("foo")
 
+    @pytest.mark.min_server_version("6.2.0")
+    @pytest.mark.nocluster
+    async def test_copy_different_db(self, client, cloner, _s):
+        clone = await cloner(client, db=1)
+        await client.set("foo", 1)
+        assert await client.copy("foo", "bar", db=1)
+        assert not await client.get("bar")
+        assert await clone.get("bar") == _s(1)
+
     @pytest.mark.max_server_version("6.2.0")
     async def test_object_encoding(self, client, _s):
         await client.set("a", "foo")

@@ -2292,7 +2292,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         pieces: CommandArgList = []
 
         if db is not None:
-            pieces.extend(["DB", db])
+            pieces.extend([PrefixToken.DB, db])
 
         if replace:
             pieces.append(PureToken.REPLACE)
