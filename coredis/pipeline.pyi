@@ -103,7 +103,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def restore(
         self,
         key: "KeyT",
-        ttl: "int",
+        ttl: "Union[int, datetime.timedelta, datetime.datetime]",
         serialized_value: "bytes",
         replace: "Optional[bool]" = ...,
         absttl: "Optional[bool]" = ...,
@@ -1177,7 +1177,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def restore(
         self,
         key: "KeyT",
-        ttl: "int",
+        ttl: "Union[int, datetime.timedelta, datetime.datetime]",
         serialized_value: "bytes",
         replace: "Optional[bool]" = ...,
         absttl: "Optional[bool]" = ...,

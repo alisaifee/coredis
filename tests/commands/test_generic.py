@@ -161,6 +161,25 @@ class TestGeneric:
         assert await client.get("a{foo}") is None
         assert await client.get("b{foo}") is None
 
+    async def test_dump_and_restore_with_ttl(self, client, _s):
+        await client.set("a", "foo")
+        dumped = await client.dump("a")
+        await client.delete(["a"])
+        assert await client.restore("a", datetime.timedelta(milliseconds=500), dumped)
+        assert await client.pttl("a") < 1000
+        await client.delete(["a"])
+        assert await client.restore("a", datetime.timedelta(milliseconds=1500), dumped)
+        assert await client.pttl("a") > 1000
+        await client.delete(["a"])
+        assert await client.restore(
+            "a",
+            datetime.datetime.utcnow()
+            + datetime.timedelta(minutes=1, milliseconds=1000),
+            dumped,
+            absttl=True,
+        )
+        assert await client.pttl("a") > 60 * 1000
+
     async def test_dump_and_restore_with_freq(self, client, _s):
         await client.config_set({"maxmemory-policy": "allkeys-lfu"})
         await client.set("a", "foo")
