@@ -882,10 +882,10 @@ def _s(client):
 
 @pytest.fixture
 def cloner():
-    async def _cloner(client, **kwargs):
+    async def _cloner(client, connection_kwargs={}, **kwargs):
         if isinstance(client, coredis.client.Redis):
             c_kwargs = client.connection_pool.connection_kwargs
-            c_kwargs.update({k: kwargs.pop(k) for k in c_kwargs.keys() & kwargs.keys()})
+            c_kwargs.update(connection_kwargs)
             c = client.__class__(
                 decode_responses=client.decode_responses,
                 protocol_version=client.protocol_version,
