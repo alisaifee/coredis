@@ -6,6 +6,7 @@ import pytest
 from pytest import approx
 
 from coredis import PureToken, ReadOnlyError, ResponseError
+from coredis.exceptions import ConnectionError, RedisError
 from tests.conftest import targets
 
 
@@ -344,3 +345,25 @@ class TestServer:
         assert await client.get("fubar") == _s(1)
         assert await client.swapdb(0, 1)
         assert await client.get("fubar") == _s(2)
+
+
+async def test_shutdown(fake_redis):
+    fake_redis.responses = {
+        b"SHUTDOWN": {
+            (): ConnectionError(),
+            (PureToken.NOSAVE,): ConnectionError(),
+            (PureToken.SAVE,): ConnectionError(),
+            (PureToken.NOW,): ConnectionError(),
+            (PureToken.FORCE,): ConnectionError(),
+            (PureToken.ABORT,): b"OK",
+        }
+    }
+    assert await fake_redis.shutdown()
+    assert await fake_redis.shutdown(PureToken.NOSAVE)
+    assert await fake_redis.shutdown(PureToken.SAVE)
+    assert await fake_redis.shutdown(now=True)
+    assert await fake_redis.shutdown(force=True)
+    assert await fake_redis.shutdown(abort=True)
+    with pytest.raises(RedisError, match="Unexpected error"):
+        fake_redis.responses[b"SHUTDOWN"][()] = b"OK"
+        await fake_redis.shutdown()

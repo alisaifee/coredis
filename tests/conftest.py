@@ -781,7 +781,10 @@ def fake_redis():
             callback: Callable[..., R] = NoopCallback(),
             **options: Optional[ValueT],
         ) -> R:
-            return callback(self.responses.get(command, {}).get(args))
+            resp = self.responses.get(command, {}).get(args)
+            if isinstance(resp, Exception):
+                raise resp
+            return callback(resp, **options)
 
     return _()
 
@@ -804,7 +807,10 @@ def fake_redis_cluster():
             callback: Callable[..., R] = NoopCallback(),
             **options: Optional[ValueT],
         ) -> R:
-            return callback(self.responses.get(command, {}).get(args))
+            resp = self.responses.get(command, {}).get(args)
+            if isinstance(resp, Exception):
+                raise resp
+            return callback(resp, **options)
 
     return _()
 
