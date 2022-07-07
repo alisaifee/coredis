@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import datetime
 
 import pytest
@@ -345,6 +346,12 @@ class TestServer:
         assert await client.get("fubar") == _s(1)
         assert await client.swapdb(0, 1)
         assert await client.get("fubar") == _s(2)
+
+    @pytest.mark.nocluster
+    async def test_quit(self, client):
+        assert await client.quit()
+        await asyncio.sleep(0.1)
+        assert not client.connection_pool._available_connections[0].is_connected
 
 
 async def test_shutdown(fake_redis):
