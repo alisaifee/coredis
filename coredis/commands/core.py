@@ -6858,6 +6858,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def shutdown(
         self,
         nosave_save: Optional[Literal[PureToken.NOSAVE, PureToken.SAVE]] = None,
+        *,
         now: Optional[bool] = None,
         force: Optional[bool] = None,
         abort: Optional[bool] = None,
@@ -6876,14 +6877,17 @@ class CoreCommands(CommandMixin[AnyStr]):
             pieces.append(PureToken.ABORT)
 
         try:
-            await self.execute_command(
+            response = await self.execute_command(
                 CommandName.SHUTDOWN, *pieces, callback=SimpleStringCallback()
             )
+            if abort is not None:
+                return response
         except ConnectionError:
             # a ConnectionError here is expected
-
             return True
-        raise RedisError("SHUTDOWN seems to have failed.")
+
+        if abort is None:
+            raise RedisError("Unexpected error performing shutdown")
 
     @redis_command(
         CommandName.SLAVEOF,
