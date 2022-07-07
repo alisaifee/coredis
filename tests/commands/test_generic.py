@@ -28,6 +28,7 @@ class TestGeneric:
         assert await client.sort("a") == (_s("1"), _s("2"), _s("3"), _s("4"))
 
     @pytest.mark.clusteronly
+    @pytest.mark.min_server_version("7.0.0")
     async def test_sort_ro(self, client, cloner, _s):
         clone = await cloner(client, connection_kwargs={"readonly": True})
         await client.rpush("a{fu}", ["3", "2", "1", "4"])
