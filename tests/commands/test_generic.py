@@ -323,6 +323,14 @@ class TestGeneric:
         assert await redis_auth.get("a") == "1"
         assert await redis_auth.get("c") == "2"
 
+    @pytest.mark.nocluster
+    async def test_move(self, client, cloner, _s):
+        clone = await cloner(client, connection_kwargs={"db": 1})
+        await client.set("foo", 1)
+        assert await client.move("foo", 1)
+        assert not await client.get("foo")
+        assert await clone.get("foo") == _s(1)
+
     @pytest.mark.min_server_version("6.2.0")
     async def test_copy(self, client, _s):
         await client.set("a{foo}", "foo")
