@@ -2734,7 +2734,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def restore(
         self,
         key: KeyT,
-        ttl: int,
+        ttl: Union[int, datetime.timedelta, datetime.datetime],
         serialized_value: bytes,
         replace: Optional[bool] = None,
         absttl: Optional[bool] = None,
@@ -2744,7 +2744,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Create a key using the provided serialized value, previously obtained using DUMP.
         """
-        params = [key, ttl, serialized_value]
+        params: CommandArgList = [
+            key,
+            normalized_milliseconds(ttl)  # type: ignore
+            if not absttl
+            else normalized_time_milliseconds(ttl),  # type: ignore
+            serialized_value,
+        ]
 
         if replace:
             params.append(PureToken.REPLACE)
