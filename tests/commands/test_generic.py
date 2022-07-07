@@ -337,7 +337,7 @@ class TestGeneric:
     @pytest.mark.min_server_version("6.2.0")
     @pytest.mark.nocluster
     async def test_copy_different_db(self, client, cloner, _s):
-        clone = await cloner(client, db=1)
+        clone = await cloner(client, connection_kwargs={"db": 1})
         await client.set("foo", 1)
         assert await client.copy("foo", "bar", db=1)
         assert not await client.get("bar")
