@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v3.11.3
+-------
+Release Date: 2022-07-07
+
+* Bug Fix
+
+  * Correct implementation of restore command when
+    absttl argument is True.
+
 v3.11.2
 -------
 Release Date: 2022-06-30
@@ -919,6 +928,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
