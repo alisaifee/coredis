@@ -1894,14 +1894,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         if unit is None:
             raise DataError("GEOSEARCH must have unit")
 
-        if unit not in {
-            PureToken.M,
-            PureToken.KM,
-            PureToken.MI,
-            PureToken.FT,
-        }:
-            raise DataError("GEOSEARCH invalid unit")
-
         if radius is not None:
             pieces.extend([PrefixToken.BYRADIUS, radius, unit.lower()])
 
@@ -2079,8 +2071,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         key and value from the ``field_items`` dict.
         """
 
-        if not field_values:
-            raise DataError("'hmset' with 'field_values' of length 0")
         pieces: CommandArgList = []
 
         for pair in field_values.items():
