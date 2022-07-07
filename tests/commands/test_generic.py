@@ -192,18 +192,83 @@ class TestGeneric:
         assert await client.get("a") == _s("bar")
 
     @pytest.mark.nocluster
-    async def test_migrate_single_key(self, client, redis_auth, _s):
+    async def test_migrate_single_key_with_auth(self, client, redis_auth, _s):
         auth_connection = await redis_auth.connection_pool.get_connection()
-        await redis_auth.flushall()
         await client.set("a", "1")
+
+        with pytest.raises(DataError):
+            await client.migrate("172.17.0.1", auth_connection.port, 0, 100)
+
         assert not await client.migrate("172.17.0.1", auth_connection.port, 0, 100, "b")
         assert await client.migrate(
             "172.17.0.1", auth_connection.port, 0, 100, "a", auth="sekret"
         )
         assert await redis_auth.get("a") == "1"
+        await client.set("b", "2")
+        assert await client.migrate(
+            "172.17.0.1",
+            auth_connection.port,
+            0,
+            100,
+            "b",
+            username="default",
+            password="sekret",
+        )
+        assert await redis_auth.get("b") == "2"
+        assert not await client.get("a")
+        assert not await client.get("b")
+
+        await client.set("c", "3")
+        assert await client.migrate(
+            "172.17.0.1",
+            auth_connection.port,
+            0,
+            100,
+            "c",
+            username="default",
+            password="sekret",
+            copy=True,
+        )
+        assert await client.get("c") == _s(3)
+        assert await redis_auth.get("c") == "3"
+        await client.set("c", 4)
+        assert await client.migrate(
+            "172.17.0.1",
+            auth_connection.port,
+            0,
+            100,
+            "c",
+            username="default",
+            password="sekret",
+            copy=True,
+            replace=True,
+        )
+        assert await redis_auth.get("c") == "4"
+
+        with pytest.raises(ResponseError, match="BUSYKEY"):
+            await client.migrate(
+                "172.17.0.1",
+                auth_connection.port,
+                0,
+                100,
+                "c",
+                username="default",
+                password="sekret",
+                copy=True,
+            )
+        await redis_auth.flushall()
+        with pytest.raises(ResponseError, match="WRONGPASS"):
+            await client.migrate(
+                "172.17.0.1",
+                auth_connection.port,
+                0,
+                100,
+                "c",
+                auth="Sekrets",
+            )
 
     @pytest.mark.nocluster
-    async def test_migrate_multiple_keys(self, client, redis_auth, _s):
+    async def test_migrate_multiple_keys_with_auth(self, client, redis_auth, _s):
         auth_connection = await redis_auth.connection_pool.get_connection()
         await client.set("a", "1")
         await client.set("c", "2")
