@@ -78,6 +78,12 @@ class TestClient:
         noreply.noreply = False
         assert _s("PONG") == await noreply.ping()
 
+    async def test_noreply_context(self, client, _s):
+        with client.ignore_reply():
+            assert not await client.set("fubar", 1)
+            assert not await client.get("fubar")
+        assert await client.get("fubar") == _s(1)
+
 
 @targets(
     "redis_cluster",
@@ -93,6 +99,16 @@ class TestClusterClient:
         assert not await noreply.delete(["fubar"])
         await asyncio.sleep(0.01)
         assert not await client.get("fubar")
+
+    async def test_noreply_context(self, client, _s):
+        with client.ignore_reply():
+            assert not await client.set("fubar", 1)
+            assert not await client.get("fubar")
+        assert await client.get("fubar") == _s(1)
+
+    async def test_ensure_replication(self, client, _s):
+        with client.ensure_replication(1):
+            assert await client.set("fubar", 1)
 
 
 class TestSSL:

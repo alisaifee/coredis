@@ -2928,7 +2928,17 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.UNLINK, *keys, callback=IntCallback()
         )
 
-    @redis_command(CommandName.WAIT, group=CommandGroup.GENERIC)
+    @redis_command(
+        CommandName.WAIT,
+        group=CommandGroup.GENERIC,
+        redirect_usage=RedirectUsage(
+            (
+                "Use the :meth:`Redis.ensure_replication`  or :meth:`RedisCluster.ensure_replication`"
+                "context managers to ensure a command is replicated to the number of replicas"
+            ),
+            True,
+        ),
+    )
     async def wait(self, numreplicas: int, timeout: int) -> int:
         """
         Wait for the synchronous replication of all the write commands sent in the context of
@@ -6429,7 +6439,8 @@ class CoreCommands(CommandMixin[AnyStr]):
             (
                 "Use the :paramref:`Redis.noreply` argument when initializing the client "
                 "to ensure that all connections originating from this client disable "
-                "or enable replies."
+                "or enable replies. You can also use the :meth:`Redis.ignore_reply` context manager "
+                "to selectively execute certain commands without waiting for a reply"
             ),
             False,
         ),

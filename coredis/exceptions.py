@@ -70,6 +70,17 @@ class NoKeyError(RedisError):
     """
 
 
+class ReplicationError(RedisError):
+    """
+    Raised when then replication requirements were not met
+    """
+
+    def __init__(self, command: bytes, replicas: int, timeout: int):
+        super().__init__(
+            f"Command {str(command)} did not replicate to {replicas} replicas within {timeout} ms."
+        )
+
+
 class WrongTypeError(ResponseError):
     """
     Raised when an operation is performed on a key

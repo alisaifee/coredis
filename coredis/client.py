@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import contextvars
 import functools
 import inspect
 import textwrap
@@ -21,7 +23,11 @@ from coredis.commands.monitor import Monitor
 from coredis.commands.pubsub import ClusterPubSub, PubSub, ShardedPubSub
 from coredis.commands.script import Script
 from coredis.commands.sentinel import SentinelCommands
-from coredis.connection import RedisSSLContext, UnixDomainSocketConnection
+from coredis.connection import (
+    BaseConnection,
+    RedisSSLContext,
+    UnixDomainSocketConnection,
+)
 from coredis.exceptions import (
     AskError,
     BusyLoadingError,
@@ -31,6 +37,7 @@ from coredis.exceptions import (
     ConnectionError,
     MovedError,
     RedisClusterException,
+    ReplicationError,
     TimeoutError,
     TryAgainError,
     WatchError,
@@ -250,9 +257,17 @@ class Client(
         self.server_version: Optional[Version] = None
         self.verify_version = verify_version
         self.__noreply = noreply
+        self._noreplycontext: contextvars.ContextVar[
+            Optional[bool]
+        ] = contextvars.ContextVar("noreply", default=None)
+        self._waitcontext: contextvars.ContextVar[
+            Optional[Tuple[int, int]]
+        ] = contextvars.ContextVar("wait", default=None)
 
     @property
     def noreply(self) -> bool:
+        if ctx := self._noreplycontext.get() is not None:
+            return ctx
         return self.__noreply
 
     @noreply.setter
@@ -260,6 +275,20 @@ class Client(
         if value != self.__noreply:
             self.__noreply = value
             self.connection_pool.disconnect()
+
+    def _ensure_server_version(self, version: Optional[str]) -> None:
+        if not self.verify_version:
+            return
+        if not version:
+            return
+        if not self.server_version and version:
+            self.server_version = Version(nativestr(version))
+
+    async def _ensure_wait(self, command: bytes, connection: BaseConnection) -> None:
+        if wait := self._waitcontext.get():
+            await connection.send_command(b"WAIT", *wait)
+            if not await connection.read_response(decode=False) == wait[0]:
+                raise ReplicationError(command, wait[0], wait[1])
 
     async def initialize(self: ClientT) -> ClientT:
         await self.connection_pool.initialize()
@@ -270,14 +299,6 @@ class Client(
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{repr(self.connection_pool)}>"
-
-    def ensure_server_version(self, version: Optional[str]) -> None:
-        if not self.verify_version:
-            return
-        if not version:
-            return
-        if not self.server_version and version:
-            self.server_version = Version(nativestr(version))
 
     async def scan_iter(
         self,
@@ -395,6 +416,46 @@ class Client(
         :param name: name of the library
         """
         return await Library[AnyStr](self, name)
+
+    @contextlib.contextmanager
+    def ignore_reply(self: ClientT) -> Iterator[ClientT]:
+        """
+        Context manager to run commands without waiting for a reply.
+
+        Example::
+
+            client = coredis.Redis()
+            with client.ignore_reply():
+                assert None == await client.set("fubar", 1), "noreply"
+            assert True == await client.set("fubar", 1), "reply"
+        """
+        self._noreplycontext.set(True)
+        yield self
+        self._noreplycontext.set(None)
+
+    @contextlib.contextmanager
+    def ensure_replication(
+        self: ClientT, replicas: int = 1, timeout: int = 100
+    ) -> Iterator[ClientT]:
+        """
+        Context manager to ensure that commands executed within the context
+        are replicated to :paramref:`replicas` within :paramref:`timeout` milliseconds.
+
+        Internally this uses the `WAIT <https://redis.io/commands/wait>`_ after
+        each command executed within the context
+
+        :raises: ReplicationError
+
+        Example::
+
+            client = coredis.RedisCluster(["localhost", 7000])
+            with client.ensure_replication(1, 20):
+                await client.set("fubar", 1)
+
+        """
+        self._waitcontext.set((replicas, timeout))
+        yield self
+        self._waitcontext.set(None)
 
 
 class Redis(Client[AnyStr]):
@@ -780,7 +841,8 @@ class Redis(Client[AnyStr]):
                 **options,
             )
         finally:
-            self.ensure_server_version(connection.server_version)
+            await self._ensure_wait(command, connection)
+            self._ensure_server_version(connection.server_version)
             pool.release(connection)
 
     def monitor(self) -> Monitor[AnyStr]:
@@ -1445,7 +1507,8 @@ class RedisCluster(
             except AskError as e:
                 redirect_addr, asking = f"{e.host}:{e.port}", True
             finally:
-                self.ensure_server_version(r.server_version)
+                await self._ensure_wait(command, r)
+                self._ensure_server_version(r.server_version)
                 self.connection_pool.release(r)
 
         raise ClusterError("TTL exhausted.")
@@ -1529,7 +1592,8 @@ class RedisCluster(
                     )
 
             finally:
-                self.ensure_server_version(connection.server_version)
+                await self._ensure_wait(command, connection)
+                self._ensure_server_version(connection.server_version)
                 self.connection_pool.release(connection)
 
         if self.noreply:
