@@ -7585,8 +7585,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         pieces: CommandArgList = [path]
 
         if configs:
-            pieces.append(PrefixToken.CONFIG)
             for pair in configs.items():
+                pieces.append(PrefixToken.CONFIG)
                 pieces.extend(pair)
         if args:
             pieces.append(PrefixToken.ARGS)
