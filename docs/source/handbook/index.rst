@@ -48,6 +48,5 @@ Performance
 Implementation Details
 ----------------------
 - :ref:`handbook/connections:connections`
-- :ref:`handbook/response:parsers`
 - :ref:`handbook/development:development`
 - :ref:`handbook/typing:typing`
