@@ -131,11 +131,14 @@ class TestHash:
     @pytest.mark.nodragonfly
     async def test_hscan(self, client, _s):
         await client.hset("a", {"a": 1, "b": 2, "c": 3})
+        await client.hset("b", {i: i for i in range(1000)})
         cursor, dic = await client.hscan("a")
         assert cursor == 0
         assert dic == {_s("a"): _s("1"), _s("b"): _s("2"), _s("c"): _s("3")}
         _, dic = await client.hscan("a", match="a")
         assert dic == {_s("a"): _s("1")}
+        _, dic = await client.hscan("b", count=100)
+        assert len(dic) < 1000
 
     @pytest.mark.nodragonfly
     async def test_hscan_iter(self, client, _s):
