@@ -6453,7 +6453,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Instruct the server whether to reply to commands
         """
-        ...
+        raise NotImplementedError()
 
     @versionadded(version="3.0.0")
     @redis_command(
