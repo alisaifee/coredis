@@ -418,14 +418,14 @@ class Client(
         return await Library[AnyStr](self, name)
 
     @contextlib.contextmanager
-    def ignore_reply(self: ClientT) -> Iterator[ClientT]:
+    def ignore_replies(self: ClientT) -> Iterator[ClientT]:
         """
         Context manager to run commands without waiting for a reply.
 
         Example::
 
             client = coredis.Redis()
-            with client.ignore_reply():
+            with client.ignore_replies():
                 assert None == await client.set("fubar", 1), "noreply"
             assert True == await client.set("fubar", 1), "reply"
         """

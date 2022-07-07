@@ -21,7 +21,7 @@ For example::
     assert await other_client.hgetall("hash_fubar") == {b"a": b"1", b"b": b"2"}
 
 
-The ``noreply`` flag can also be set temporarily::
+The mode can also be enabled temporarily using the :attr:`~coredis.Redis.noreply` attribute::
 
     import coredis
 
@@ -34,7 +34,7 @@ The ``noreply`` flag can also be set temporarily::
     assert await client.get("fubar") == b"1"
     assert await client.hgetall("hash_fubar") == {b"a": b"1", b"b": b"2"}
 
-Or used through a context manager::
+Or used through the :meth:`~coredis.Redis.ignore_replies` context manager::
 
     import coredis
 
@@ -43,7 +43,7 @@ Or used through a context manager::
     with client.ignore_replies():
         assert await client.set("fubar", 1) is None
     assert await client.get("fubar") == b"1"
-    
+
 
 .. danger:: When the client is used with the the ``noreply`` option there are no guarantees
    if the command was successfully performed by the redis server. The only validation performed

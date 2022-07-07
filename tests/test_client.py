@@ -79,7 +79,7 @@ class TestClient:
         assert _s("PONG") == await noreply.ping()
 
     async def test_noreply_context(self, client, _s):
-        with client.ignore_reply():
+        with client.ignore_replies():
             assert not await client.set("fubar", 1)
             assert not await client.get("fubar")
         assert await client.get("fubar") == _s(1)
@@ -101,7 +101,7 @@ class TestClusterClient:
         assert not await client.get("fubar")
 
     async def test_noreply_context(self, client, _s):
-        with client.ignore_reply():
+        with client.ignore_replies():
             assert not await client.set("fubar", 1)
             assert not await client.get("fubar")
         assert await client.get("fubar") == _s(1)
