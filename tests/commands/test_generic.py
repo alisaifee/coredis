@@ -276,6 +276,15 @@ class TestGeneric:
         assert await client.persist("a")
         assert await client.ttl("a") == -1
 
+    @pytest.mark.min_server_version("7.0.0")
+    async def test_expire_conditional(self, client, _s):
+        await client.set("a", "foo")
+        assert await client.expire("a", 10, PureToken.NX)
+        assert not await client.expire("a", 10, PureToken.NX)
+        assert await client.expire("a", 20, PureToken.XX)
+        assert not await client.expire("a", 19, PureToken.GT)
+        assert await client.expire("a", 19, PureToken.LT)
+
     async def test_expireat_datetime(self, client, redis_server_time):
         expire_at = await redis_server_time(client) + datetime.timedelta(minutes=1)
         await client.set("a", "foo")
@@ -292,6 +301,26 @@ class TestGeneric:
         expire_at_seconds = int(time.mktime(expire_at.timetuple()))
         assert await client.expireat("a", expire_at_seconds)
         assert 0 < await client.ttl("a") <= 61
+
+    @pytest.mark.min_server_version("7.0.0")
+    async def test_expireat_conditional(self, client, _s):
+        at = datetime.datetime.utcnow()
+        await client.set("a", "foo")
+        assert await client.pexpireat(
+            "a", at + datetime.timedelta(seconds=10), PureToken.NX
+        )
+        assert not await client.pexpireat(
+            "a", at + datetime.timedelta(seconds=10), PureToken.NX
+        )
+        assert await client.pexpireat(
+            "a", at + datetime.timedelta(seconds=20), PureToken.XX
+        )
+        assert not await client.pexpireat(
+            "a", at + datetime.timedelta(seconds=19), PureToken.GT
+        )
+        assert await client.pexpireat(
+            "a", at + datetime.timedelta(seconds=19), PureToken.LT
+        )
 
     @pytest.mark.min_server_version("7.0.0")
     async def test_expiretime(self, client, _s):
@@ -328,6 +357,15 @@ class TestGeneric:
         assert await client.persist("a")
         assert await client.pttl("a") < 0
 
+    @pytest.mark.min_server_version("7.0.0")
+    async def test_pexpire_conditional(self, client, _s):
+        await client.set("a", "foo")
+        assert await client.pexpire("a", 10000, PureToken.NX)
+        assert not await client.pexpire("a", 100000, PureToken.NX)
+        assert await client.pexpire("a", 20000, PureToken.XX)
+        assert not await client.pexpire("a", 19000, PureToken.GT)
+        assert await client.pexpire("a", 19000, PureToken.LT)
+
     async def test_pexpireat_datetime(self, client, redis_server_time):
         expire_at = await redis_server_time(client) + datetime.timedelta(minutes=1)
         await client.set("a", "foo")
@@ -344,6 +382,26 @@ class TestGeneric:
         expire_at_seconds = int(time.mktime(expire_at.timetuple())) * 1000
         assert await client.pexpireat("a", expire_at_seconds)
         assert 0 < await client.pttl("a") <= 61000
+
+    @pytest.mark.min_server_version("7.0.0")
+    async def test_pexpireat_conditional(self, client, _s):
+        at = datetime.datetime.utcnow()
+        await client.set("a", "foo")
+        assert await client.pexpireat(
+            "a", at + datetime.timedelta(seconds=10), PureToken.NX
+        )
+        assert not await client.pexpireat(
+            "a", at + datetime.timedelta(seconds=10), PureToken.NX
+        )
+        assert await client.pexpireat(
+            "a", at + datetime.timedelta(seconds=20), PureToken.XX
+        )
+        assert not await client.pexpireat(
+            "a", at + datetime.timedelta(seconds=19), PureToken.GT
+        )
+        assert await client.pexpireat(
+            "a", at + datetime.timedelta(seconds=19), PureToken.LT
+        )
 
     @pytest.mark.min_server_version("7.0.0")
     async def test_pexpiretime(self, client, _s):
