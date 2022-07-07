@@ -315,19 +315,19 @@ class TestGeneric:
     async def test_expireat_conditional(self, client, _s):
         at = datetime.datetime.utcnow()
         await client.set("a", "foo")
-        assert await client.pexpireat(
+        assert await client.expireat(
             "a", at + datetime.timedelta(seconds=10), PureToken.NX
         )
-        assert not await client.pexpireat(
+        assert not await client.expireat(
             "a", at + datetime.timedelta(seconds=10), PureToken.NX
         )
-        assert await client.pexpireat(
+        assert await client.expireat(
             "a", at + datetime.timedelta(seconds=20), PureToken.XX
         )
-        assert not await client.pexpireat(
+        assert not await client.expireat(
             "a", at + datetime.timedelta(seconds=19), PureToken.GT
         )
-        assert await client.pexpireat(
+        assert await client.expireat(
             "a", at + datetime.timedelta(seconds=19), PureToken.LT
         )
 
