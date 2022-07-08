@@ -2,13 +2,19 @@ from __future__ import annotations
 
 import pytest
 
-from coredis.exceptions import NoScriptError, RedisClusterException
+from coredis.exceptions import NoScriptError, RedisClusterException, ResponseError
 from tests.conftest import targets
 
 multiply_script = """
 local value = redis.call('GET', KEYS[1])
 value = tonumber(value)
 return value * ARGV[1]"""
+
+multiply_and_set_script = """
+local value = redis.call('GET', KEYS[1])
+value = tonumber(value) * ARGV[1]
+redis.call("SET", KEYS[1], value)
+"""
 
 msgpack_hello_script = """
 local message = cmsgpack.unpack(ARGV[1])
@@ -28,10 +34,20 @@ class TestScripting:
     async def reset_scripts(self, client):
         await client.script_flush()
 
-    async def test_eval(self, client):
+    async def test_eval(self, client, _s):
         await client.set("a", 2)
         # 2 * 3 == 6
         assert await client.eval(multiply_script, ["a"], [3]) == 6
+        await client.eval(multiply_and_set_script, ["a"], [3])
+        assert await client.get("a") == _s(6)
+
+    async def test_eval_ro(self, cloner, client, _s):
+        clone = await cloner(client, readonly=True)
+        await client.set("a", 2)
+        # 2 * 3 == 6
+        assert await clone.eval_ro(multiply_script, ["a"], [3]) == 6
+        with pytest.raises(ResponseError, match="Write commands are not allowed"):
+            await clone.eval_ro(multiply_and_set_script, ["a"], [3])
 
     async def test_eval_same_slot(self, client):
         await client.set("A{foo}", 2)
