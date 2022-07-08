@@ -224,7 +224,7 @@ class TestStreams:
         )
 
     async def test_xreadgroup(self, client, _s):
-        for idx in range(1, 10):
+        for idx in range(1, 11):
             await client.xadd(
                 "test_stream", field_values={"k1": "v1", "k2": "1"}, identifier=str(idx)
             )
@@ -239,9 +239,40 @@ class TestStreams:
             )
         assert await client.xgroup_create("test_stream", "test_group", "0") is True
         entries = await client.xreadgroup(
-            "test_group", "consumer1", count=5, streams=dict(test_stream=">")
+            "test_group",
+            "consumer1",
+            count=5,
+            streams=dict(test_stream=">"),
         )
         assert len(entries[_s("test_stream")]) == 5
+        no_ack_entries = await client.xreadgroup(
+            "test_group",
+            "consumer1",
+            count=5,
+            streams=dict(test_stream=">"),
+            noack=True,
+        )
+        assert len(no_ack_entries[_s("test_stream")]) == 5
+
+        pending = await client.xpending(
+            "test_stream",
+            "test_group",
+        )
+
+        assert pending.pending == 5
+
+        await client.xack(
+            "test_stream",
+            "test_group",
+            [e.identifier for e in entries[_s("test_stream")]],
+        )
+
+        pending = await client.xpending(
+            "test_stream",
+            "test_group",
+        )
+
+        assert pending.pending == 0
 
     async def test_xgroup_create(self, client, _s):
         for idx in range(1, 10):
