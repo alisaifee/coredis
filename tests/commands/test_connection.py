@@ -18,6 +18,15 @@ from tests.conftest import targets
 )
 @pytest.mark.asyncio()
 class TestConnection:
+    @pytest.mark.flaky
+    async def test_bgsave(self, client):
+        await asyncio.sleep(0.5)
+        assert await client.bgsave()
+        with pytest.raises(ResponseError, match="already in progress"):
+            await client.bgsave()
+        await asyncio.sleep(0.5)
+        assert await client.bgsave(schedule=True)
+
     async def test_ping(self, client, _s):
         resp = await client.ping()
         assert resp == _s("PONG")

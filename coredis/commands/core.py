@@ -6171,11 +6171,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         pieces: CommandArgList = []
 
-        if schedule is not None:
+        if schedule:
             pieces.append(PureToken.SCHEDULE)
 
         return await self.execute_command(
-            CommandName.BGSAVE, *pieces, callback=SimpleStringCallback()
+            CommandName.BGSAVE,
+            *pieces,
+            callback=SimpleStringCallback(
+                ok_values={"Background saving started", "Background saving scheduled"}
+            ),
         )
 
     @versionadded(version="3.0.0")

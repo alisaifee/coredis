@@ -11,6 +11,7 @@ import itertools
 from abc import ABC, ABCMeta, abstractmethod
 from typing import SupportsFloat, SupportsInt, cast
 
+from coredis._utils import b
 from coredis.exceptions import ClusterResponseError, ResponseError
 from coredis.typing import (
     AnyStr,
@@ -186,18 +187,20 @@ class SimpleStringCallback(
         self,
         raise_on_error: Optional[Type[Exception]] = None,
         prefix_match: bool = False,
+        ok_values: Set[str] = {"OK"},
     ):
         self.raise_on_error = raise_on_error
         self.prefix_match = prefix_match
+        self.ok_values = ok_values | {b(v) for v in ok_values}
 
     def transform(
         self, response: Optional[StringT], **options: Optional[ValueT]
     ) -> bool:
         if response:
             if not self.prefix_match:
-                success = response in {"OK", b"OK"}
+                success = response in self.ok_values
             else:
-                success = response[:2] in {"OK", b"OK"}
+                success = response[:2] in self.ok_values
         else:
             success = False
         if not success and self.raise_on_error:
