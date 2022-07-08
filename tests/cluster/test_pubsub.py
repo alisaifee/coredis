@@ -517,6 +517,14 @@ class TestPubSubPubSubSubcommands:
         await p.unsubscribe()
 
     @pytest.mark.min_server_version("7.0.0")
+    async def test_pubsub_shardchannels(self, client, _s):
+        p = client.sharded_pubsub(ignore_subscribe_messages=True)
+        await p.subscribe("foo", "bar", "baz", "quux")
+        channels = sorted(await client.pubsub_shardchannels())
+        assert channels == [_s("bar"), _s("baz"), _s("foo"), _s("quux")]
+        await p.unsubscribe()
+
+    @pytest.mark.min_server_version("7.0.0")
     async def test_pubsub_shardnumsub(self, client, _s):
         p1 = client.sharded_pubsub(ignore_subscribe_messages=True)
         await p1.subscribe("foo", "bar", "baz")
