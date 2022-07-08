@@ -1,11 +1,11 @@
 Connections
 ^^^^^^^^^^^
 
-ConnectionPools manage a set of Connection instances. coredis ships with three
-types of connections.
+coredis ships with three types of connections.
 
 - The default, :class:`coredis.connection.Connection`, is a normal TCP socket based connection.
-- The :class:`~coredis.connection.UnixDomainSocketConnection` allows
+
+- :class:`~coredis.connection.UnixDomainSocketConnection` allows
   for clients running on the same device as the server to connect via a unix domain socket.
   To use a :class:`~coredis.connection.UnixDomainSocketConnection` connection,
   simply pass the :paramref:`~coredis.Redis.unix_socket_path` argument,
@@ -17,6 +17,11 @@ types of connections.
   .. code-block:: python
 
       r = coredis.Redis(unix_socket_path='/tmp/redis.sock')
+
+- :class:`~coredis.connection.ClusterConnection` connection which is essentially
+  just :class:`~coredis.connection.Connection` with the exception of ensuring appropriate
+  ``READONLY`` handling is set if configured (:paramref:`coredis.RedisCluster.readonly`)
+
 
 Custom connection classes
 -------------------------
