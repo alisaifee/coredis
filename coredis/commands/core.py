@@ -4751,13 +4751,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         offset: Optional[int] = None,
         count: Optional[int] = None,
     ) -> Union[int, Tuple[Union[AnyStr, ScoredMember], ...]]:
-        if (offset is not None and count is None) or (
-            count is not None and offset is None
-        ):
-            raise DataError("offset and count must both be specified.")
-
-        if sortby == PureToken.BYLEX and withscores:
-            raise DataError("withscores not supported in combination with bylex.")
         pieces: CommandArgList = []
 
         if dest:
@@ -4924,7 +4917,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             pieces.extend(list(kv))
 
         return await self.execute_command(
-            CommandName.XADD, key, *pieces, callback=AnyStrCallback[AnyStr]()
+            CommandName.XADD, key, *pieces, callback=OptionalAnyStrCallback[AnyStr]()
         )
 
     @redis_command(CommandName.XLEN, readonly=True, group=CommandGroup.STREAM)

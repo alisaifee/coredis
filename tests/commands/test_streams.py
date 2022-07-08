@@ -42,6 +42,13 @@ class TestStreams:
                 threshold=10,
             )
 
+    async def test_xadd_nomkstream(self, client, _s):
+        assert not await client.xadd(
+            "test_stream",
+            field_values={"k1": "v1", "k2": "1"},
+            nomkstream=True,
+        )
+
     async def test_xadd_without_given_id(self, client, _s):
         identifier = await client.xadd(
             "test_stream", field_values={"k1": "v1", "k2": "1"}
@@ -80,6 +87,7 @@ class TestStreams:
                 trim_strategy=PureToken.MAXLEN,
                 trim_operator=PureToken.APPROXIMATELY,
                 threshold=2,
+                limit=2,
             )
         length = await client.xlen("test_stream")
         assert length == 10
