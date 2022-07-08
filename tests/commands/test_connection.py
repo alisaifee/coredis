@@ -65,6 +65,7 @@ class TestConnection:
         with pytest.raises(NotImplementedError):
             await client.client_reply(PureToken.ON)
 
+    @pytest.mark.min_server_version("7.0.0")
     async def test_client_no_evict(self, client, _s):
         assert await client.client_no_evict(PureToken.ON)
         assert await client.client_no_evict(PureToken.OFF)
