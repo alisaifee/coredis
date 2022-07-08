@@ -6593,6 +6593,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             pieces.append(PureToken.ABORT)
 
         if timeout is not None:
+            pieces.append(PrefixToken.TIMEOUT)
             pieces.append(normalized_milliseconds(timeout))
 
         return await self.execute_command(

@@ -8,6 +8,7 @@ from pytest import approx
 
 from coredis import PureToken, ReadOnlyError, ResponseError
 from coredis.exceptions import ConnectionError, RedisError
+from coredis.tokens import PrefixToken
 from tests.conftest import targets
 
 
@@ -382,3 +383,23 @@ async def test_shutdown(fake_redis):
     with pytest.raises(RedisError, match="Unexpected error"):
         fake_redis.responses[b"SHUTDOWN"][()] = b"OK"
         await fake_redis.shutdown()
+
+
+async def test_failover(fake_redis):
+    fake_redis.responses[b"FAILOVER"] = {
+        (PrefixToken.TO, "target", 6379): b"OK",
+        (
+            PrefixToken.TO,
+            "target",
+            6379,
+            PureToken.FORCE,
+        ): b"OK",
+        (PureToken.ABORT,): b"OK",
+        (PrefixToken.TO, "target", 6379, PrefixToken.TIMEOUT, 1000): b"OK",
+    }
+    assert await fake_redis.failover("target", 6379)
+    assert await fake_redis.failover("target", 6379, force=True)
+    assert await fake_redis.failover(abort=True)
+    assert await fake_redis.failover(
+        "target", 6379, timeout=datetime.timedelta(seconds=1)
+    )
