@@ -529,9 +529,10 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
         for channel, handler in channel_handlers.items():
             new_channels[self.encode(channel)] = handler
-        await self.execute_command(
-            CommandName.SSUBSCRIBE, *new_channels.keys(), sharded=True
-        )
+        for new_channel in new_channels.keys():
+            await self.execute_command(
+                CommandName.SSUBSCRIBE, new_channel, sharded=True
+            )
         self.channels.update(new_channels)
 
     async def unsubscribe(self, *channels: StringT) -> None:
@@ -542,7 +543,8 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         """
 
         await self._ensure_encoding()
-        await self.execute_command(CommandName.SUNSUBSCRIBE, *channels, sharded=True)
+        for channel in channels:
+            await self.execute_command(CommandName.SUNSUBSCRIBE, channel, sharded=True)
 
     async def psubscribe(
         self,

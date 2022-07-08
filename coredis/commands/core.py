@@ -5571,7 +5571,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.PUBLISH,
         group=CommandGroup.PUBSUB,
     )
-    async def publish(self, channel: StringT, message: StringT) -> int:
+    async def publish(self, channel: StringT, message: ValueT) -> int:
         """
         Publish :paramref:`message` on :paramref:`channel`.
 
@@ -5586,7 +5586,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SPUBLISH, group=CommandGroup.PUBSUB, version_introduced="7.0.0"
     )
-    async def spublish(self, channel: StringT, message: StringT) -> int:
+    async def spublish(self, channel: StringT, message: ValueT) -> int:
         """
         Publish :paramref:`message` on shard :paramref:`channel`.
 
