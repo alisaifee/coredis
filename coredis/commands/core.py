@@ -5833,19 +5833,18 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SCRIPT_DEBUG,
         group=CommandGroup.SCRIPTING,
-        cluster=ClusterCommandConfig(
-            route=NodeFlag.PRIMARIES, combine=ClusterBoolCombine()
-        ),
     )
     async def script_debug(
         self,
         mode: Literal[PureToken.YES, PureToken.SYNC, PureToken.NO],
     ) -> bool:
-        """Set the debug mode for executed scripts"""
+        """
+        Set the debug mode for executed scripts
 
-        return await self.execute_command(
-            CommandName.SCRIPT_DEBUG, mode, callback=SimpleStringCallback()
-        )
+        :raises: NotImplementedError
+        """
+
+        raise NotImplementedError()
 
     @redis_command(
         CommandName.SCRIPT_EXISTS,
