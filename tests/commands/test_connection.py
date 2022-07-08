@@ -170,6 +170,8 @@ class TestConnection:
         clients = await client.client_list()
         assert isinstance(clients[0], dict)
         assert "addr" in clients[0]
+        clients = await client.client_list(type_=PureToken.NORMAL)
+        assert isinstance(clients[0], dict)
 
     @pytest.mark.min_server_version("6.2.0")
     async def test_client_list_with_specific_ids(self, client, _s):
