@@ -2937,7 +2937,7 @@ class CoreCommands(CommandMixin[AnyStr]):
                 ":meth:`RedisCluster.ensure_replication` context managers to ensure "
                 "a command is replicated to the number of replicas"
             ),
-            True,
+            False,
         ),
     )
     async def wait(self, numreplicas: int, timeout: int) -> int:
@@ -2945,13 +2945,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         Wait for the synchronous replication of all the write commands sent in the context of
         the current connection
 
-        :return: The command returns the number of replicas reached by all the writes performed
-         in the context of the current connection.
+        :raises: UnImplementedError
         """
 
-        return await self.execute_command(
-            CommandName.WAIT, numreplicas, timeout, callback=IntCallback()
-        )
+        raise NotImplementedError()
 
     @redis_command(
         CommandName.SCAN,
