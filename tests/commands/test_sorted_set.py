@@ -765,7 +765,7 @@ class TestSortedSet:
     @pytest.mark.nodragonfly
     async def test_zscan(self, client, _s):
         await client.zadd("a", dict(a=1, b=2, c=3))
-        cursor, pairs = await client.zscan("a")
+        cursor, pairs = await client.zscan("a", count=10)
         assert cursor == 0
         assert set(pairs) == {(_s("a"), 1), (_s("b"), 2), (_s("c"), 3)}
         _, pairs = await client.zscan("a", match="a")

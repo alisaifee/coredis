@@ -598,11 +598,16 @@ class TestGeneric:
         await client.set("a", "1")
         await client.set("b", "2")
         await client.set("c", "3")
+        await client.hset("d", {"a": "1"})
         cursor, keys = await client.scan()
         assert cursor == 0
-        assert set(keys) == {_s("a"), _s("b"), _s("c")}
+        assert set(keys) == {_s("a"), _s("b"), _s("c"), _s("d")}
         _, keys = await client.scan(match="a")
         assert set(keys) == {_s("a")}
+        _, keys = await client.scan(count=1)
+        assert len(keys) < 4
+        _, keys = await client.scan(type_="hash")
+        assert set(keys) == {_s("d")}
 
     async def test_scan_iter(self, client, _s):
         await client.set("a", "1")

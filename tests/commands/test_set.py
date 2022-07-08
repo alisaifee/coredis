@@ -149,7 +149,7 @@ class TestSet:
     @pytest.mark.nodragonfly
     async def test_sscan(self, client, _s):
         await client.sadd("a", ["1", "2", "3"])
-        cursor, members = await client.sscan("a")
+        cursor, members = await client.sscan("a", count=10)
         assert cursor == 0
         assert set(members) == {_s("1"), _s("2"), _s("3")}
         _, members = await client.sscan("a", match="1")
