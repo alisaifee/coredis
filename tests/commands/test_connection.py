@@ -163,8 +163,13 @@ class TestConnection:
     async def test_client_kill_filter(self, client, cloner, _s):
         clone = await cloner(client)
         clone_id = (await clone.client_info())["id"]
-        resp = await client.client_kill(identifier=clone_id)
-        assert resp > 0
+        assert await client.client_kill(identifier=clone_id) > 0
+        with pytest.raises(ResponseError, match="No such user"):
+            await client.client_kill(user="noexist") == 0
+
+        clone_addr = (await clone.client_info())["addr"]
+        assert await client.client_kill(type_=PureToken.PUBSUB) == 0
+        assert await client.client_kill(addr=clone_addr) == 1
 
     @pytest.mark.min_server_version("6.2.0")
     async def test_client_kill_filter_skip_me(self, client, cloner, _s):
