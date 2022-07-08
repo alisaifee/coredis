@@ -315,6 +315,13 @@ class TestServer:
         assert role_info.role == "master"
 
     @pytest.mark.nocluster
+    async def test_save(self, client):
+        assert await client.save()
+        assert (
+            await client.lastsave() - datetime.datetime.utcnow()
+        ) < datetime.timedelta(minutes=1)
+
+    @pytest.mark.nocluster
     async def test_replicaof(self, client, _s):
         assert await client.replicaof()
         try:

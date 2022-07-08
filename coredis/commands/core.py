@@ -6844,6 +6844,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SAVE,
         group=CommandGroup.SERVER,
+        cluster=ClusterCommandConfig(
+            route=NodeFlag.ALL, combine=ClusterEnsureConsistent()
+        ),
     )
     async def save(self) -> bool:
         """
