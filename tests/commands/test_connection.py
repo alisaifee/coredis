@@ -79,12 +79,23 @@ class TestConnection:
                 PureToken.ON, "fu", "fuu", bcast=True, redirect=clone_id
             )
         assert await client.client_tracking(PureToken.ON, optin=True, redirect=clone_id)
+        with pytest.raises(ResponseError, match="in OPTOUT mode"):
+            await client.client_caching(PureToken.NO)
+        assert await client.client_tracking(PureToken.ON, optin=True, redirect=clone_id)
+        assert await client.client_caching(PureToken.YES)
+
         with pytest.raises(ResponseError, match="You can't switch"):
             await client.client_tracking(PureToken.ON, optout=True, redirect=clone_id)
         assert await client.client_tracking(PureToken.OFF)
         assert await client.client_tracking(
             PureToken.ON, optout=True, redirect=clone_id
         )
+        with pytest.raises(ResponseError, match="in OPTIN mode"):
+            await client.client_caching(PureToken.YES)
+        assert await client.client_tracking(
+            PureToken.ON, optout=True, redirect=clone_id
+        )
+        assert await client.client_caching(PureToken.NO)
 
     @pytest.mark.min_server_version("6.2.0")
     async def test_client_getredir(self, client, _s, cloner):
