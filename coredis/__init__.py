@@ -45,9 +45,11 @@ from coredis.exceptions import (
     RedisClusterException,
     RedisError,
     ReplicaNotFoundError,
+    ReplicationError,
     ResponseError,
     TimeoutError,
     TryAgainError,
+    UnblockedError,
     UnknownCommandError,
     WatchError,
 )
@@ -100,8 +102,10 @@ __all__ = [
     "RedisError",
     "ReplicaNotFoundError",
     "ResponseError",
+    "ReplicationError",
     "TimeoutError",
     "TryAgainError",
+    "UnblockedError",
     "UnknownCommandError",
     "WatchError",
 ]
