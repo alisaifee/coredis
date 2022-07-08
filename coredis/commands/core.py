@@ -6835,7 +6835,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         pieces.append(key)
 
         if samples is not None:
-            pieces.append(samples)
+            pieces.extend([PrefixToken.SAMPLES, samples])
 
         return await self.execute_command(
             CommandName.MEMORY_USAGE, *pieces, callback=OptionalIntCallback()

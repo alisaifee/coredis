@@ -271,6 +271,7 @@ class TestServer:
     async def test_memory_usage(self, client, _s):
         await client.set("key", str(bytearray([0] * 1024)))
         assert (await client.memory_usage(_s("key"))) > 1024
+        assert (await client.memory_usage(_s("key"), samples=1)) > 1024
 
     @pytest.mark.nocluster
     async def test_latency_doctor(self, client, _s):
