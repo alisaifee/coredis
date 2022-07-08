@@ -245,6 +245,7 @@ class TestSortedSet:
         assert await client.zintercard(["a{foo}", "c{foo}"]) == 0
         assert await client.zintercard(["a{foo}"]) == 3
         assert await client.zintercard(["a{foo}", "b{foo}"]) == 1
+        assert await client.zintercard(["a{foo}"], limit=1) == 1
 
     @pytest.mark.nodragonfly
     async def test_zpopmax(self, client, _s):
