@@ -81,6 +81,12 @@ class ReplicationError(RedisError):
         )
 
 
+class UnblockedError(ResponseError):
+    """
+    Raised if a blocked client is unblocked forcefully
+    """
+
+
 class WrongTypeError(ResponseError):
     """
     Raised when an operation is performed on a key

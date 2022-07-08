@@ -6,6 +6,7 @@ import pytest
 
 import coredis
 from coredis import AuthenticationFailureError, PureToken, ResponseError
+from coredis.exceptions import UnblockedError
 from tests.conftest import targets
 
 
@@ -101,6 +102,27 @@ class TestConnection:
             await asyncio.wait_for(clone.ping(), timeout=0.01)
         assert await client.client_unpause()
         assert await clone.ping() == _s("PONG")
+
+    async def test_client_unblock(self, client, cloner, event_loop):
+        clone = await cloner(client)
+        client_id = await clone.client_id()
+
+        async def unblock():
+            await asyncio.sleep(0.1)
+            return await client.client_unblock(client_id, PureToken.ERROR)
+
+        sleeper = asyncio.create_task(clone.brpop(["notexist"], 1000))
+        unblocker = asyncio.create_task(unblock())
+        await asyncio.wait(
+            [
+                sleeper,
+                unblocker,
+            ],
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+        assert isinstance(sleeper.exception(), UnblockedError)
+        assert unblocker.result()
+        assert not await client.client_unblock(client_id, PureToken.ERROR)
 
     @pytest.mark.min_server_version("6.2.0")
     async def test_client_trackinginfo_no_tracking(self, client, _s):

@@ -6383,7 +6383,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             pieces.append(timeout_error)
 
         return await self.execute_command(
-            CommandName.CLIENT_UNBLOCK, *pieces, callback=SimpleStringCallback()
+            CommandName.CLIENT_UNBLOCK, *pieces, callback=BoolCallback()
         )
 
     @versionadded(version="3.0.0")

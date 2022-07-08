@@ -25,6 +25,7 @@ from coredis.exceptions import (
     StreamConsumerGroupError,
     StreamDuplicateConsumerGroupError,
     TryAgainError,
+    UnblockedError,
     UnknownCommandError,
     WrongTypeError,
 )
@@ -100,6 +101,7 @@ class Unpacker:
         "NOPROTO": ProtocolError,
         "READONLY": ReadOnlyError,
         "TRYAGAIN": TryAgainError,
+        "UNBLOCKED": UnblockedError,
         "WRONGPASS": AuthenticationFailureError,
         "WRONGTYPE": WrongTypeError,
     }
