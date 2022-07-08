@@ -56,6 +56,36 @@ class TestConnection:
             await client.client_reply(PureToken.ON)
 
     @pytest.mark.min_server_version("6.2.0")
+    async def test_client_tracking(self, client, _s, cloner):
+        clone = await (await cloner(client)).connection_pool.get_connection("tracking")
+        clone_id = clone.client_id
+        assert await client.client_tracking(
+            PureToken.ON, redirect=clone_id, noloop=True
+        )
+        assert clone_id == await client.client_getredir()
+        assert await client.client_tracking(PureToken.OFF)
+        assert -1 == await client.client_getredir()
+        with pytest.raises(ResponseError, match="does not exist"):
+            await client.client_tracking(PureToken.ON, redirect=1234)
+        assert await client.client_tracking(PureToken.ON, bcast=True, redirect=clone_id)
+        assert await client.client_tracking(PureToken.OFF)
+        assert await client.client_tracking(
+            PureToken.ON, "fu:", "bar:", bcast=True, redirect=clone_id
+        )
+        assert await client.client_tracking(PureToken.OFF)
+        with pytest.raises(ResponseError, match="'fu' overlaps"):
+            assert await client.client_tracking(
+                PureToken.ON, "fu", "fuu", bcast=True, redirect=clone_id
+            )
+        assert await client.client_tracking(PureToken.ON, optin=True, redirect=clone_id)
+        with pytest.raises(ResponseError, match="You can't switch"):
+            await client.client_tracking(PureToken.ON, optout=True, redirect=clone_id)
+        assert await client.client_tracking(PureToken.OFF)
+        assert await client.client_tracking(
+            PureToken.ON, optout=True, redirect=clone_id
+        )
+
+    @pytest.mark.min_server_version("6.2.0")
     async def test_client_getredir(self, client, _s, cloner):
         assert await client.client_getredir() == -1
         clone = await cloner(client)

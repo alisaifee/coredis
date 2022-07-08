@@ -6482,10 +6482,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         pieces: CommandArgList = [status]
 
         if prefixes:
-            pieces.extend(prefixes)
-
+            pieces.extend(
+                itertools.chain(*zip([PrefixToken.PREFIX] * len(prefixes), prefixes))
+            )
         if redirect is not None:
-            pieces.extend(["REDIRECT", redirect])
+            pieces.extend([PrefixToken.REDIRECT, redirect])
 
         if bcast is not None:
             pieces.append(PureToken.BCAST)
