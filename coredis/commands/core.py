@@ -6654,12 +6654,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         of information
         """
 
-        if sections is None:
-            return await self.execute_command(CommandName.INFO, callback=InfoCallback())
-        else:
-            return await self.execute_command(
-                CommandName.INFO, *sections, callback=InfoCallback()
-            )
+        return await self.execute_command(
+            CommandName.INFO, *sections, callback=InfoCallback()
+        )
 
     @redis_command(
         CommandName.LASTSAVE,
