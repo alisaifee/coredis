@@ -102,6 +102,12 @@ class TestConnection:
             await asyncio.wait_for(clone.ping(), timeout=0.01)
         assert await client.client_unpause()
         assert await clone.ping() == _s("PONG")
+        assert await clone.client_pause(1000, PureToken.WRITE)
+        assert not await clone.get("fubar")
+        with pytest.raises(asyncio.TimeoutError):
+            await asyncio.wait_for(clone.set("fubar", 1), timeout=0.01)
+        assert await client.client_unpause()
+        assert await clone.set("fubar", 1)
 
     async def test_client_unblock(self, client, cloner, event_loop):
         clone = await cloner(client)
