@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from coredis import PureToken, ResponseError
+from coredis import NotBusyError, PureToken, ResponseError
 from coredis.commands.function import Library
 from coredis.typing import KeyT, List, StringT, ValueT
 from tests.conftest import targets
@@ -76,9 +76,10 @@ class TestFunctions:
         assert _s("coredis") == await client.function_load(
             library_definition,
         )
-        libraries = await client.function_list()
+        libraries = await client.function_list(withcode=True)
         assert libraries["coredis"]
         assert len(libraries["coredis"]["functions"]) == 4
+        assert libraries["coredis"]["library_code"] == _s(library_definition)
         stats = await client.function_stats()
         assert stats[_s("running_script")] is None
 
@@ -104,9 +105,14 @@ class TestFunctions:
         with pytest.raises(ResponseError):
             await client.function_delete("coredis")
 
+    @pytest.mark.nocluster
+    async def test_function_kill(self, client, simple_library, _s):
+        with pytest.raises(NotBusyError):
+            await client.function_kill()
+
     async def test_dump_restore(self, client, simple_library, _s):
         dump = await client.function_dump()
-        assert await client.function_flush()
+        assert await client.function_flush(async_=PureToken.SYNC)
         assert await client.function_list() == {}
         assert await client.function_restore(dump, policy=PureToken.FLUSH)
         function_list = await client.function_list()

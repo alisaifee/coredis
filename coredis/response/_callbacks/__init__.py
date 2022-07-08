@@ -116,12 +116,15 @@ class ClusterMultiNodeCallback(ABC, Generic[R], metaclass=ClusterCallbackMeta):
 
 
 class ClusterBoolCombine(ClusterMultiNodeCallback[bool]):
+    def __init__(self, any: bool = False):
+        self.any = any
+
     def combine(
         self, responses: Mapping[str, bool], **kwargs: Optional[ValueT]
     ) -> bool:
         values = tuple(responses.values())
         assert (isinstance(value, bool) for value in values)
-        return all(values)
+        return any(values) if self.any else all(values)
 
 
 class ClusterAlignedBoolsCombine(ClusterMultiNodeCallback[Tuple[bool, ...]]):

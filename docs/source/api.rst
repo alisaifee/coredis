@@ -354,6 +354,9 @@ Scripting Errors
    :no-inherited-members:
 .. autoexception:: coredis.exceptions.FunctionError
    :no-inherited-members:
+.. autoexception:: coredis.exceptions.NotBusyError
+   :no-inherited-members:
+
 
 Stream Consumer Errors
 ----------------------

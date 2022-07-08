@@ -81,6 +81,12 @@ class ReplicationError(RedisError):
         )
 
 
+class NotBusyError(ResponseError):
+    """
+    Raised when script kill or function kill have nothing to terminate
+    """
+
+
 class UnblockedError(ResponseError):
     """
     Raised if a blocked client is unblocked forcefully
