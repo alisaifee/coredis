@@ -41,6 +41,7 @@ class TestScripting:
         await client.eval(multiply_and_set_script, ["a"], [3])
         assert await client.get("a") == _s(6)
 
+    @pytest.mark.min_server_version("7.0")
     async def test_eval_ro(self, cloner, client, _s):
         clone = await cloner(client, readonly=True)
         await client.set("a", 2)
