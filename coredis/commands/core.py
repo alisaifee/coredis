@@ -5002,16 +5002,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         pieces: CommandArgList = []
 
         if block is not None:
-            if not isinstance(block, int) or block < 0:
-                raise RedisError("XREAD block must be a positive integer")
             pieces.append(PrefixToken.BLOCK)
-            pieces.append(str(block))
+            pieces.append(normalized_milliseconds(block))
 
         if count is not None:
-            if count < 1:
-                raise RedisError("XREAD count must be a positive integer")
             pieces.append(PrefixToken.COUNT)
-            pieces.append(str(count))
+            pieces.append(count)
         pieces.append(PrefixToken.STREAMS)
         ids: CommandArgList = []
 
@@ -5041,16 +5037,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         pieces: CommandArgList = [PrefixToken.GROUP, group, consumer]
 
         if block is not None:
-            if not isinstance(block, int) or block < 1:
-                raise RedisError("XREAD block must be a positive integer")
             pieces.append(PrefixToken.BLOCK)
-            pieces.append(str(block))
+            pieces.append(normalized_milliseconds(block))
 
         if count is not None:
-            if count < 1:
-                raise RedisError("XREAD count must be a positive integer")
             pieces.append(PrefixToken.COUNT)
-            pieces.append(str(count))
+            pieces.append(count)
 
         if noack:
             pieces.append(PureToken.NOACK)
@@ -5090,7 +5082,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         pieces: CommandArgList = [key, group]
 
         if idle is not None:
-            pieces.extend(["IDLE", idle])
+            pieces.extend([PrefixToken.IDLE, idle])
 
         if count is not None and end is not None and start is not None:
             pieces.extend([start, end, count])
