@@ -65,6 +65,10 @@ class TestConnection:
         with pytest.raises(NotImplementedError):
             await client.client_reply(PureToken.ON)
 
+    async def test_client_no_evict(self, client, _s):
+        assert await client.client_no_evict(PureToken.ON)
+        assert await client.client_no_evict(PureToken.OFF)
+
     @pytest.mark.min_server_version("6.2.0")
     async def test_client_tracking(self, client, _s, cloner):
         clone = await (await cloner(client)).connection_pool.get_connection("tracking")
