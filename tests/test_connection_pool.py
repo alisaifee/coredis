@@ -238,8 +238,9 @@ class TestBlockingConnectionPool:
             host="127.0.0.1",
             port=6379,
             db=0,
-            max_idle_time=0.2,
-            idle_check_interval=0.1,
+            connection_pool=coredis.BlockingConnectionPool(
+                max_idle_time=0.2, idle_check_interval=0.1, host="127.0.01", port=6379
+            ),
         )
         await rs.info()
         assert len(rs.connection_pool._in_use_connections) == 0
@@ -251,7 +252,7 @@ class TestBlockingConnectionPool:
         assert last_active_at == conn.last_active_at
         assert conn._transport is None
         new_conn = await rs.connection_pool.get_connection()
-        assert conn != new_conn
+        assert conn == new_conn
 
 
 class TestConnectionPoolURLParsing:
