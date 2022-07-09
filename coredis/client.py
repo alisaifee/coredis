@@ -33,7 +33,6 @@ from coredis.exceptions import (
     BusyLoadingError,
     ClusterDownError,
     ClusterError,
-    ClusterRoutingError,
     ConnectionError,
     MovedError,
     RedisClusterException,
@@ -1286,15 +1285,7 @@ class RedisCluster(
 
     def _determine_slot(self, command: bytes, *args: ValueT) -> Optional[int]:
         """Figures out what slot based on command and args"""
-
-        if len(args) <= 0:
-            raise RedisClusterException(
-                f"No way to dispatch command:{str(command)} with args: {args}"
-                " to Redis Cluster. Missing key."
-            )
-        keys: Tuple[ValueT, ...] = KeySpec.extract_keys(
-            (command,) + args, self.connection_pool.readonly
-        )
+        keys = KeySpec.extract_keys((command,) + args, self.connection_pool.readonly)
         if (
             command
             in {
@@ -1348,16 +1339,15 @@ class RedisCluster(
             return [self.connection_pool.nodes.random_node()]
         elif node_flag == NodeFlag.PRIMARIES:
             return self.connection_pool.nodes.all_primaries()
-        elif node_flag == NodeFlag.REPLICAS:
-            return self.connection_pool.nodes.all_replicas()
         elif node_flag == NodeFlag.ALL:
             return self.connection_pool.nodes.all_nodes()
         elif node_flag == NodeFlag.SLOT_ID:
-            if (slot := kwargs.get("slot_id")) is None:
-                raise RedisClusterException(
-                    f"slot_id is needed to execute command {command.decode('latin-1')} {kwargs}"
-                )
-            if node_from_slot := self.connection_pool.nodes.node_from_slot(int(slot)):
+            slot_id: Optional[ValueT] = kwargs.get("slot_id")
+            if node_from_slot := (
+                self.connection_pool.nodes.node_from_slot(int(slot_id))
+                if slot_id is not None
+                else None
+            ):
                 return [node_from_slot]
         return None
 
@@ -1374,10 +1364,6 @@ class RedisCluster(
         """
         if not self.connection_pool.initialized:
             await self
-
-        if not command:
-            raise RedisClusterException("Unable to determine command to use")
-
         nodes = self.determine_node(command, **kwargs)
         if nodes:
             try:
@@ -1508,10 +1494,10 @@ class RedisCluster(
             if keys:
                 key_start: int = args.index(keys[0])
                 key_end: int = args.index(keys[-1])
-                if not args[key_start : 1 + key_end] == keys:
-                    raise ClusterRoutingError(
-                        f"Unable to map {command.decode('latin-1')} by keys {keys}"
-                    )
+                assert (
+                    args[key_start : 1 + key_end] == keys
+                ), f"Unable to map {command.decode('latin-1')} by keys {keys}"
+
                 for node_name, node_keys in self.connection_pool.nodes.keys_to_nodes(
                     *keys
                 ).items():
