@@ -216,6 +216,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``FUNCTION RESTORE``
     #:  - ``MIGRATE``
     #:  - ``RESTORE``
+    #:  - ``RESTORE-ASKING``
     REPLACE = b"REPLACE"
 
     #: Used by:
@@ -460,6 +461,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``RESTORE``
+    #:  - ``RESTORE-ASKING``
     ABSTTL = b"ABSTTL"
 
     #: Used by:
@@ -872,11 +874,13 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``RESTORE``
+    #:  - ``RESTORE-ASKING``
     FREQ = b"FREQ"
 
     #: Used by:
     #:
     #:  - ``RESTORE``
+    #:  - ``RESTORE-ASKING``
     IDLETIME = b"IDLETIME"
 
     #: Used by:
