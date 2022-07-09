@@ -265,7 +265,7 @@ class ConnectionPool:
         self._in_use_connections: Set[Connection] = set()
         self._check_lock = threading.Lock()
 
-    def checkpid(self) -> None:
+    def checkpid(self) -> None:  # noqa
         if self.pid != os.getpid():
             with self._check_lock:
                 if self.pid == os.getpid():
@@ -614,7 +614,7 @@ class ClusterConnectionPool(ConnectionPool):
         self._check_lock = threading.Lock()
         self.initialized = False
 
-    def checkpid(self) -> None:
+    def checkpid(self) -> None:  # noqa
         if self.pid != os.getpid():
             with self._check_lock:
                 if self.pid == os.getpid():
