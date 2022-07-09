@@ -19,7 +19,7 @@ from tests.conftest import targets
     "redis_cluster_raw",
     "keydb",
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 class TestStreamConsumers:
     async def test_single_consumer(self, client, _s):
         consumer = await Consumer(client, ["a", "b"])
