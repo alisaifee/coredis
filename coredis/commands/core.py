@@ -2945,7 +2945,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         Wait for the synchronous replication of all the write commands sent in the context of
         the current connection
 
-        :raises: UnImplementedError
+        :raises: :exc:`NotImplementedError`
         """
 
         raise NotImplementedError()
@@ -5820,7 +5820,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Set the debug mode for executed scripts
 
-        :raises: NotImplementedError
+        :raises: :exc:`NotImplementedError`
         """
 
         raise NotImplementedError()

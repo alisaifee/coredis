@@ -435,16 +435,16 @@ class Client(
 
     @contextlib.contextmanager
     def ensure_replication(
-        self: ClientT, replicas: int = 1, timeout: int = 100
+        self: ClientT, replicas: int = 1, timeout_ms: int = 100
     ) -> Iterator[ClientT]:
         """
         Context manager to ensure that commands executed within the context
-        are replicated to :paramref:`replicas` within :paramref:`timeout` milliseconds.
+        are replicated to :paramref:`replicas` within :paramref:`timeout_ms` milliseconds.
 
-        Internally this uses the `WAIT <https://redis.io/commands/wait>`_ after
+        Internally this uses `WAIT <https://redis.io/commands/wait>`_ after
         each command executed within the context
 
-        :raises: ReplicationError
+        :raises: :exc:`coredis.exceptions.ReplicationError`
 
         Example::
 
@@ -453,7 +453,7 @@ class Client(
                 await client.set("fubar", 1)
 
         """
-        self._waitcontext.set((replicas, timeout))
+        self._waitcontext.set((replicas, timeout_ms))
         yield self
         self._waitcontext.set(None)
 
