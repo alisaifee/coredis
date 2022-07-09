@@ -79,13 +79,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
             self.connection_pool.release(conn)
 
     def __del__(self) -> None:
-        try:
-            # if this object went out of scope prior to shutting down
-            # subscriptions, close the connection manually before
-            # returning it to the connection pool
-            self.reset()
-        except Exception:
-            pass
+        self.reset()
 
     def reset(self) -> None:
         """
@@ -135,9 +129,9 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         """
 
         if self.decode_responses and isinstance(value, bytes):
-            value = value.decode(self.encoding)
+            value = nativestr(value, self.encoding)
         elif not self.decode_responses and isinstance(value, str):
-            value = value.encode(self.encoding)
+            value = b(value, self.encoding)
 
         return value
 
@@ -182,17 +176,12 @@ class BasePubSub(Generic[AnyStr, PoolT]):
             return await command(*args)
         except asyncio.CancelledError:
             # do not retry if coroutine is cancelled
-
-            if await connection.can_read():
-                # disconnect if buffer is not empty in case of error
-                # when connection is reused
+            if await connection.can_read():  # noqa
                 connection.disconnect()
-
             raise
         except (ConnectionError, TimeoutError) as e:
             connection.disconnect()
-
-            if not connection.retry_on_timeout and isinstance(e, TimeoutError):
+            if not connection.retry_on_timeout and isinstance(e, TimeoutError):  # noqa
                 raise
             # Connect manually here. If the Redis server is down, this will
             # fail and raise a ConnectionError as desired.
@@ -200,7 +189,6 @@ class BasePubSub(Generic[AnyStr, PoolT]):
             # the ``on_connect`` callback should haven been called by the
             # connection to resubscribe us to any channels and patterns we were
             # previously listening to
-
             return await command(*args)
 
     async def parse_response(

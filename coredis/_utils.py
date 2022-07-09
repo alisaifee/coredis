@@ -96,23 +96,23 @@ class EncodingInsensitiveDict(ObjectProxy):  # type: ignore
         return repr(self.__wrapped__)
 
 
-def b(x: ResponseType) -> bytes:
+def b(x: ResponseType, encoding: str = "latin-1") -> bytes:
     if isinstance(x, bytes):
         return x
     if not isinstance(x, str):
         _v = str(x)
     else:
         _v = x
-    return _v.encode("latin-1")
+    return _v.encode(encoding)
 
 
 def defaultvalue(value: Optional[U], default: T) -> Union[U, T]:
     return default if value is None else value
 
 
-def nativestr(x: ResponseType) -> str:
+def nativestr(x: ResponseType, encoding: str = "utf-8") -> str:
     if isinstance(x, (str, bytes)):
-        return x if isinstance(x, str) else x.decode("utf-8", "replace")
+        return x if isinstance(x, str) else x.decode(encoding, "replace")
     elif isinstance(x, (int, float, bool)):
         return str(x)
     raise ValueError(f"Unable to cast {x} to string")
