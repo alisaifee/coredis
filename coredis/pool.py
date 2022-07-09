@@ -268,10 +268,8 @@ class ConnectionPool:
     def checkpid(self) -> None:  # noqa
         if self.pid != os.getpid():
             with self._check_lock:
+                # Double check
                 if self.pid == os.getpid():
-                    # another thread already did the work while we waited
-                    # on the lock.
-
                     return
                 self.disconnect()
                 self.reset()
