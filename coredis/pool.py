@@ -302,16 +302,13 @@ class ConnectionPool:
         """
         self.checkpid()
 
-        if connection.pid != self.pid:
-            return
-        self._in_use_connections.remove(connection)
-        # discard connection with unread response
-
-        if connection.awaiting_response:
-            connection.disconnect()
-            self._created_connections -= 1
-        else:
-            self._available_connections.append(connection)
+        if connection.pid == self.pid:
+            self._in_use_connections.remove(connection)
+            if connection.awaiting_response:
+                connection.disconnect()
+                self._created_connections -= 1
+            else:
+                self._available_connections.append(connection)
 
     def disconnect(self) -> None:
         """Closes all connections in the pool"""
@@ -449,21 +446,18 @@ class BlockingConnectionPool(ConnectionPool):
 
         self.checkpid()
 
-        if _connection and _connection.pid != self.pid:
-            return
-
-        if _connection:
+        if _connection and _connection.pid == self.pid:
             self._in_use_connections.remove(_connection)
             # discard connection with unread response
             if connection.awaiting_response:
                 _connection.disconnect()
                 _connection = None
 
-        try:
-            self._pool.put_nowait(_connection)
-        except asyncio.QueueFull:
-            # perhaps the pool have been reset() ?
-            pass
+            try:
+                self._pool.put_nowait(_connection)
+            except asyncio.QueueFull:
+                # perhaps the pool have been reset() ?
+                pass
 
     def disconnect(self) -> None:
         """Closes all connections in the pool"""
