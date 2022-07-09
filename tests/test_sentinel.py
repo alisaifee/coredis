@@ -337,7 +337,7 @@ async def test_sentinel_cache(client, client_arguments, mocker):
 
 @targets("redis_sentinel", "redis_sentinel_resp2")
 async def test_replication(client):
-    with client.primary_for("mymaster").ensure_replication(1) as primary:
+    with client.primary_for("mymaster").ensure_replication(1, 500) as primary:
         await primary.set("fubar", 1)
 
     with pytest.raises(ReplicationError):
