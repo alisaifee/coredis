@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from coredis import CommandSyntaxError, ReadOnlyError, RedisError
+from coredis import CommandSyntaxError, PureToken, ReadOnlyError, RedisError
 from tests.conftest import targets
 
 
@@ -36,6 +36,12 @@ class TestBitmap:
         assert await client.bitcount("a", 1, 1) == 1
         with pytest.raises(CommandSyntaxError):
             await client.bitcount("a", 1)
+
+    @pytest.mark.min_server_version("7.0")
+    async def test_bitcount_index_unit(self, client, _s):
+        await client.setbit("a", 5, True)
+        assert await client.bitcount("a", 0, -1, index_unit=PureToken.BIT) == 1
+        assert await client.bitcount("a", 0, -1, index_unit=PureToken.BYTE) == 1
 
     async def test_bitop_not_empty_string(self, client, _s):
         await client.set("a{foo}", "")
@@ -91,6 +97,13 @@ class TestBitmap:
         assert await client.bitpos(key, 1, 1) == 8
         await client.set(key, b"\x00\x00\x00")
         assert await client.bitpos(key, 1) == -1
+
+    @pytest.mark.min_server_version("7.0")
+    async def test_bitpos_unit(self, client, _s):
+        key = "key:bitpos"
+        await client.set(key, b"\xff\xf0\x00")
+        assert await client.bitpos(key, 0, 0, 24, end_index_unit=PureToken.BIT) == 12
+        assert await client.bitpos(key, 0, 0, 3, end_index_unit=PureToken.BYTE) == 12
 
     async def test_bitpos_wrong_arguments(self, client, _s):
         key = "key:bitpos:wrong:args"
