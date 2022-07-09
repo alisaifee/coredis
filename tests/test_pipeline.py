@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from coredis.exceptions import ResponseError, WatchError
+from coredis.exceptions import RedisError, ResponseError, WatchError
 from tests.conftest import targets
 
 
@@ -55,6 +55,23 @@ class TestPipeline:
             assert await client.get("a") == "a1"
             assert await client.get("b") == "b1"
             assert await client.get("c") == "c1"
+
+    @pytest.mark.nodragonfly
+    async def test_pipeline_invalid_flow(self, client):
+        async with await client.pipeline(transaction=False) as pipe:
+            pipe.multi()
+            with pytest.raises(RedisError):
+                pipe.multi()
+
+        async with await client.pipeline(transaction=False) as pipe:
+            pipe.multi()
+            with pytest.raises(RedisError):
+                await pipe.watch("test")
+
+        async with await client.pipeline(transaction=False) as pipe:
+            await pipe.set("fubar", 1)
+            with pytest.raises(RedisError):
+                pipe.multi()
 
     @pytest.mark.nodragonfly
     async def test_pipeline_no_transaction_watch(self, client):
@@ -119,6 +136,40 @@ class TestPipeline:
             assert await pipe.execute() == (True,)
             assert await client.get("z") == "zzz"
 
+    async def test_exec_error_in_response_explicit_transaction(self, client):
+        """
+        an invalid pipeline command at exec time adds the exception instance
+        to the list of returned values
+        """
+        await client.set("c", "a")
+        async with await client.pipeline(transaction=False) as pipe:
+            pipe.multi()
+            await pipe.set("a", "1")
+            await pipe.set("b", "2")
+            await pipe.lpush("c", "3")
+            await pipe.set("d", "4")
+            result = await pipe.execute(raise_on_error=False)
+
+            assert result[0]
+            assert await client.get("a") == "1"
+            assert result[1]
+            assert await client.get("b") == "2"
+
+            # we can't lpush to a key that's a string value, so this should
+            # be a ResponseError exception
+            assert isinstance(result[2], ResponseError)
+            assert await client.get("c") == "a"
+
+            # since this isn't a transaction, the other commands after the
+            # error are still executed
+            assert result[3]
+            assert await client.get("d") == "4"
+
+            # make sure the pipe was restored to a working state
+            await pipe.set("z", "zzz")
+            assert await pipe.execute() == (True,)
+            assert await client.get("z") == "zzz"
+
     async def test_exec_error_raised(self, client):
         await client.set("c", "a")
         async with await client.pipeline() as pipe:
@@ -134,8 +185,39 @@ class TestPipeline:
             assert await pipe.execute() == (True,)
             assert await client.get("z") == "zzz"
 
+    async def test_exec_error_raised_explicit_transaction(self, client):
+        await client.set("c", "a")
+        async with await client.pipeline(transaction=False) as pipe:
+            pipe.multi()
+            await pipe.set("a", "1")
+            await pipe.set("b", "2")
+            await pipe.lpush("c", "3")
+            await pipe.set("d", "4")
+            with pytest.raises(ResponseError):
+                await pipe.execute()
+
+            # make sure the pipe was restored to a working state
+            await pipe.set("z", "zzz")
+            assert await pipe.execute() == (True,)
+            assert await client.get("z") == "zzz"
+
     async def test_parse_error_raised(self, client):
         async with await client.pipeline() as pipe:
+            # the zrem is invalid because we don't pass any keys to it
+            await pipe.set("a", "1")
+            await pipe.zrem("b", [])
+            await pipe.set("b", "2")
+            with pytest.raises(ResponseError):
+                await pipe.execute()
+
+            # make sure the pipe was restored to a working state
+            await pipe.set("z", "zzz")
+            assert await pipe.execute() == (True,)
+            assert await client.get("z") == "zzz"
+
+    async def test_parse_error_raised_explicit_transaction(self, client):
+        async with await client.pipeline(transaction=False) as pipe:
+            pipe.multi()
             # the zrem is invalid because we don't pass any keys to it
             await pipe.set("a", "1")
             await pipe.zrem("b", [])

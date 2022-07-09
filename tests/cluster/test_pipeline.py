@@ -61,6 +61,11 @@ class TestPipeline:
             assert await client.get("b") == "b1"
             assert await client.get("c") == "c1"
 
+    async def test_pipeline_invalid_flow(self, client):
+        async with await client.pipeline(transaction=False) as pipe:
+            with pytest.raises(RedisClusterException):
+                pipe.multi()
+
     @pytest.mark.xfail
     async def test_pipeline_transaction_with_watch_on_construction(self, client):
         pipe = await client.pipeline(transaction=True, watches=["a{fu}"])
