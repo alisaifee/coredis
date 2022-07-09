@@ -1554,7 +1554,6 @@ class RedisCluster(
                 await connection.update_tracking_client(
                     True, self.cache.get_client_id(connection)
                 )
-            # copy from redis-py
             try:
                 if node["name"] in node_arg_mapping:
                     await connection.send_command(
