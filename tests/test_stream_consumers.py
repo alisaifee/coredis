@@ -282,3 +282,25 @@ class TestStreamConsumers:
         th.join()
         assert len(consumed[_s("a")]) == 1
         assert _s(1) == consumed[_s("a")][0].field_values[_s("id")]
+
+    async def test_group_blocking_iterator(self, client, _s):
+        consumer = await GroupConsumer(
+            client, ["a"], "group-a", "consumer-a", auto_create=True, timeout=1000
+        )
+
+        async def _inner():
+            await asyncio.sleep(0.2)
+            await client.xadd("a", {"id": 1})
+
+        th = threading.Thread(
+            target=asyncio.run_coroutine_threadsafe,
+            args=(_inner(), asyncio.get_running_loop()),
+        )
+        th.start()
+        consumed = {}
+
+        async for stream, entry in consumer:
+            consumed.setdefault(stream, []).append(entry)
+        th.join()
+        assert len(consumed[_s("a")]) == 1
+        assert _s(1) == consumed[_s("a")][0].field_values[_s("id")]
