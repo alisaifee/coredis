@@ -466,8 +466,8 @@ async def redis_auth(redis_auth_server, request):
 
 @pytest.fixture
 async def redis_uds(redis_uds_server, request):
-    client = coredis.Redis.from_url(
-        f"unix://{redis_uds_server}",
+    client = coredis.Redis(
+        unix_socket_path=redis_uds_server,
         decode_responses=True,
         **get_client_test_args(request),
     )

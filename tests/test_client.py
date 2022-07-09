@@ -188,6 +188,14 @@ class TestFromUrl:
         )
         assert "PONG" == await client.ping()
 
+    async def test_uds_client(self, redis_uds_server):
+        client = coredis.Redis.from_url(f"redis://{redis_uds_server}")
+        assert b"PONG" == await client.ping()
+        client = coredis.Redis.from_url(
+            f"redis://{redis_uds_server}", decode_responses=True
+        )
+        assert "PONG" == await client.ping()
+
     async def test_ssl_client(self, redis_ssl_server):
         storage_url = (
             f"rediss://{redis_ssl_server[0]}:{redis_ssl_server[1]}/?ssl_cert_reqs=required"
