@@ -244,6 +244,20 @@ class TestStreams:
             {_s("k1"): _s("v1"), _s("k2"): _s("1")},
         )
 
+    @pytest.mark.min_server_version("6.2.0")
+    async def test_xgroup_createconsumer(self, client, _s):
+        with pytest.raises(ResponseError):
+            await client.xgroup_createconsumer("test_stream", "test_group", "consumer1")
+        await client.xadd(
+            "test_stream",
+            field_values={"k1": "v1", "k2": "1"},
+        )
+        await client.xgroup_create("test_stream", "test_group", "0")
+        assert (
+            await client.xgroup_createconsumer("test_stream", "test_group", "consumer1")
+            is True
+        )
+
     async def test_xreadgroup(self, client, _s):
         for idx in range(1, 11):
             await client.xadd(
@@ -308,6 +322,19 @@ class TestStreams:
         assert len(group_info) == 1
         assert group_info[0][_s("name")] == _s("test_group")
 
+    @pytest.mark.min_server_version("7.0")
+    async def test_xgroup_create_entries_read(self, client, _s):
+        with pytest.raises(ResponseError):
+            await client.xgroup_create("test_stream", "test_group", "0", entriesread=0)
+        await client.xadd(
+            "test_stream",
+            field_values={"k1": "v1", "k2": "1"},
+        )
+        assert (
+            await client.xgroup_create("test_stream", "test_group", "0", entriesread=0)
+            is True
+        )
+
     async def test_xgroup_setid(self, client, _s):
         for idx in range(1, 10):
             await client.xadd(
@@ -321,6 +348,29 @@ class TestStreams:
         group_info = await client.xinfo_groups("test_stream")
         assert group_info[0][_s("pending")] == 0
         assert await client.xgroup_setid("test_stream", "test_group", "0") is True
+        await client.xreadgroup(
+            "test_group", "consumer1", count=5, streams=dict(test_stream=">")
+        )
+        group_info = await client.xinfo_groups("test_stream")
+        assert group_info[0][_s("pending")] == 5
+
+    @pytest.mark.min_server_version("7.0")
+    async def test_xgroup_setid_entriesread(self, client, _s):
+        for idx in range(1, 10):
+            await client.xadd(
+                "test_stream", field_values={"k1": "v1", "k2": "1"}, identifier=str(idx)
+            )
+        assert await client.xgroup_create("test_stream", "test_group", "$") is True
+        entries = await client.xreadgroup(
+            "test_group", "consumer1", count=5, streams=dict(test_stream="1")
+        )
+        assert len(entries[_s("test_stream")]) == 0
+        group_info = await client.xinfo_groups("test_stream")
+        assert group_info[0][_s("pending")] == 0
+        assert (
+            await client.xgroup_setid("test_stream", "test_group", "0", entriesread=0)
+            is True
+        )
         await client.xreadgroup(
             "test_group", "consumer1", count=5, streams=dict(test_stream=">")
         )

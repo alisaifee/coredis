@@ -5283,16 +5283,16 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def xgroup_createconsumer(
         self, key: KeyT, groupname: StringT, consumername: StringT
-    ) -> int:
+    ) -> bool:
         """
         Create a consumer in a consumer group.
 
-        :return: the number of created consumers (0 or 1)
+        :return: whether the consumer was created
         """
         pieces: CommandArgList = [key, groupname, consumername]
 
         return await self.execute_command(
-            CommandName.XGROUP_CREATECONSUMER, *pieces, callback=IntCallback()
+            CommandName.XGROUP_CREATECONSUMER, *pieces, callback=BoolCallback()
         )
 
     @versionadded(version="3.0.0")
