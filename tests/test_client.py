@@ -7,7 +7,11 @@ import pytest
 from packaging.version import Version
 
 import coredis
-from coredis.exceptions import CommandNotSupportedError, ConnectionError
+from coredis.exceptions import (
+    CommandNotSupportedError,
+    ConnectionError,
+    ReplicationError,
+)
 from tests.conftest import targets
 
 
@@ -109,6 +113,10 @@ class TestClusterClient:
     async def test_ensure_replication(self, client, _s):
         with client.ensure_replication(1):
             assert await client.set("fubar", 1)
+
+        with pytest.raises(ReplicationError):
+            with client.ensure_replication(2):
+                assert await client.set("fubar", 1)
 
 
 class TestSSL:

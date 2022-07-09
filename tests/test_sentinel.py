@@ -8,6 +8,8 @@ from coredis.exceptions import (
     PrimaryNotFoundError,
     ReadOnlyError,
     ReplicaNotFoundError,
+    ReplicationError,
+    ResponseError,
     TimeoutError,
 )
 from coredis.sentinel import Sentinel, SentinelConnectionPool
@@ -331,3 +333,19 @@ async def test_sentinel_cache(client, client_arguments, mocker):
 
     assert primary_spy.call_count == 1
     assert replica_spy.call_count == 0
+
+
+@targets("redis_sentinel", "redis_sentinel_resp2")
+async def test_replication(client):
+    with client.primary_for("mymaster").ensure_replication(1) as primary:
+        await primary.set("fubar", 1)
+
+    with pytest.raises(ReplicationError):
+        with client.primary_for("mymaster").ensure_replication(2) as primary:
+            await primary.set("fubar", 1)
+
+    with pytest.raises(
+        ResponseError, match="WAIT cannot be used with replica instances"
+    ):
+        with client.replica_for("mymaster").ensure_replication(2) as replica:
+            await replica.set("fubar", 1)
