@@ -118,7 +118,6 @@ class NodeCommands:
     def __init__(
         self,
         parse_response: Callable[..., Coroutine[Any, Any, ResponseType]],
-        response_callbacks: Dict[bytes, Callable[..., Any]],
         connection: ClusterConnection,
         in_transaction: bool = False,
     ):
@@ -126,7 +125,6 @@ class NodeCommands:
         self.connection = connection
         self.commands: List[ClusterPipelineCommand] = []
         self.in_transaction = in_transaction
-        self.response_callbacks = response_callbacks
 
     def extend(self, c: List[ClusterPipelineCommand]) -> None:
         self.commands.extend(c)
@@ -196,8 +194,7 @@ class NodeCommands:
                         if _c.command not in {CommandName.MULTI, CommandName.EXEC}
                     ]
                 ):
-                    callback = self.response_callbacks.get(c.command, c.callback)
-                    c.result = callback(
+                    c.result = c.callback(
                         transaction_result[idx],
                         version=connection.protocol_version,
                         **c.options,
@@ -267,13 +264,11 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
     def __init__(
         self,
         connection_pool: ConnectionPool,
-        response_callbacks: Dict[bytes, Callable[..., Any]],
         transaction: Optional[bool],
         watches: Optional[Parameters[KeyT]] = None,
     ) -> None:
         self.connection_pool = connection_pool
         self.connection = None
-        self.response_callbacks = response_callbacks
         self._transaction = transaction
         self.watching = False
         self.watches: Optional[Parameters[KeyT]] = watches or None
@@ -512,17 +507,10 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
 
         # We have to run response callbacks manually
         data: List[Any] = []
-
         for r, cmd in zip(response, commands):
             if not isinstance(r, Exception):
-
-                callback = self.response_callbacks.get(cmd.command, cmd.callback)
-                r = callback(r, version=connection.protocol_version, **cmd.options)
-                if inspect.isawaitable(response):
-                    r = await r
-
+                r = cmd.callback(r, version=connection.protocol_version, **cmd.options)
             data.append(r)
-
         return tuple(data)
 
     async def _execute_pipeline(
@@ -592,14 +580,9 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
     ) -> ResponseType:
         "Parses a response from the Redis server"
         decode = options.get("decode")
-        response = await connection.read_response(
+        return await connection.read_response(
             decode=decode if decode is None else bool(decode)
         )
-        if command_name in self.response_callbacks:
-            callback = self.response_callbacks[command_name]
-            response = callback(response, **options)
-
-        return response
 
     async def parse_response(
         self,
@@ -719,7 +702,6 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         self,
         connection_pool: ClusterConnectionPool,
         result_callbacks: Optional[Dict[bytes, Callable[..., Any]]] = None,
-        response_callbacks: Optional[Dict[bytes, Callable[..., Any]]] = None,
         startup_nodes: Optional[List[Node]] = None,
         transaction: Optional[bool] = False,
         watches: Optional[Parameters[KeyT]] = None,
@@ -729,7 +711,6 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         self.connection_pool: ClusterConnectionPool = connection_pool
         self.result_callbacks = result_callbacks
         self.startup_nodes = startup_nodes if startup_nodes else []
-        self.response_callbacks = response_callbacks or {}
         self._transaction = transaction
         self.watches: Optional[Parameters[KeyT]] = watches or None
         self.watching = False
@@ -862,9 +843,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
         if self.watches:
             await self._watch(node, conn, self.watches)
-        node_commands = NodeCommands(
-            self.parse_response, self.response_callbacks, conn, in_transaction=True
-        )
+        node_commands = NodeCommands(self.parse_response, conn, in_transaction=True)
         node_commands.append(ClusterPipelineCommand(CommandName.MULTI, ()))
         node_commands.extend(attempt)
         node_commands.append(ClusterPipelineCommand(CommandName.EXEC, ()))
@@ -933,7 +912,6 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
             if node_name not in nodes:
                 nodes[node_name] = NodeCommands(
                     self.parse_response,
-                    self.response_callbacks,
                     self.connection_pool.get_connection_by_node(node),
                 )
 
@@ -1132,14 +1110,12 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     def proxy(
         cls,
         connection_pool: ConnectionPool,
-        response_callbacks: Dict[bytes, Callable[..., Any]],
         transaction: Optional[bool] = None,
         watches: Optional[Parameters[KeyT]] = None,
     ) -> Pipeline[AnyStr]:
         return cls(
             PipelineImpl(
                 connection_pool,
-                response_callbacks=response_callbacks,
                 transaction=transaction,
                 watches=watches,
             )
@@ -1207,7 +1183,6 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         cls,
         connection_pool: ClusterConnectionPool,
         result_callbacks: Optional[Dict[bytes, Callable[..., Any]]] = None,
-        response_callbacks: Optional[Dict[bytes, Callable[..., Any]]] = None,
         startup_nodes: Optional[List[Node]] = None,
         transaction: Optional[bool] = False,
         watches: Optional[Parameters[KeyT]] = None,
@@ -1216,7 +1191,6 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
             ClusterPipelineImpl(
                 connection_pool,
                 result_callbacks=result_callbacks,
-                response_callbacks=response_callbacks,
                 startup_nodes=startup_nodes,
                 transaction=transaction,
                 watches=watches,

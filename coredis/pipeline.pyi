@@ -36,7 +36,6 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     def proxy(
         cls,
         connection_pool: "ConnectionPool",
-        response_callbacks: "Dict[bytes, Callable[..., Any]]",
         transaction: "Optional[bool]",
         watches: "Optional[Parameters[KeyT]]" = ...,
     ) -> Pipeline[AnyStr]: ...
@@ -1105,7 +1104,6 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         cls,
         connection_pool: "ClusterConnectionPool",
         result_callbacks: "Optional[Dict[bytes, Callable[..., Any]]]" = ...,
-        response_callbacks: "Optional[Dict[bytes, Callable[..., Any]]]" = ...,
         startup_nodes: "Optional[List[Node]]" = ...,
         transaction: "Optional[bool]" = ...,
         watches: "Optional[Parameters[KeyT]]" = ...,

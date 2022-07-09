@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, cast, overload
 from deprecated.sphinx import versionadded
 from packaging.version import Version
 
-from coredis._utils import b, clusterdown_wrapper, first_key, nativestr
+from coredis._utils import clusterdown_wrapper, first_key, nativestr
 from coredis.cache import AbstractCache, SupportsClientTracking
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName
@@ -664,7 +664,6 @@ class Redis(Client[AnyStr]):
             verify_version=verify_version,
             noreply=noreply,
         )
-        self.response_callbacks: Dict[bytes, Callable[..., Any]] = {}
         self.cache = cache
 
     @classmethod
@@ -772,16 +771,6 @@ class Redis(Client[AnyStr]):
             self.cache = await self.cache.initialize(self)
         return self
 
-    def set_response_callback(
-        self, command: StringT, callback: Callable[..., Any]
-    ) -> None:
-        """
-        Sets a custom Response Callback
-
-        :meta private:
-        """
-        self.response_callbacks[b(command)] = callback
-
     async def execute_command(
         self,
         command: bytes,
@@ -809,12 +798,6 @@ class Redis(Client[AnyStr]):
             await connection.send_command(command, *args)
             if self.noreply:
                 return None  # type: ignore
-            if custom_callback := self.response_callbacks.get(command):
-                return custom_callback(  # type: ignore
-                    await connection.read_response(decode=options.get("decode")),
-                    version=self.protocol_version,
-                    **options,
-                )
 
             return callback(
                 await connection.read_response(decode=options.get("decode")),
@@ -885,9 +868,7 @@ class Redis(Client[AnyStr]):
         """
         from coredis.pipeline import Pipeline
 
-        return Pipeline[AnyStr].proxy(
-            self.connection_pool, self.response_callbacks, transaction, watches
-        )
+        return Pipeline[AnyStr].proxy(self.connection_pool, transaction, watches)
 
     async def transaction(
         self,
@@ -1154,7 +1135,6 @@ class RedisCluster(
         self.refresh_table_asap: bool = False
         self.route_flags: Dict[bytes, NodeFlag] = self.__class__.ROUTING_FLAGS.copy()
         self.split_flags: Dict[bytes, NodeFlag] = self.__class__.SPLIT_FLAGS.copy()
-        self.response_callbacks: Dict[bytes, Callable[..., Any]] = {}
         self.result_callbacks: Dict[
             bytes, Callable[..., Any]
         ] = self.__class__.RESULT_CALLBACKS.copy()
@@ -1670,7 +1650,6 @@ class RedisCluster(
             connection_pool=self.connection_pool,
             startup_nodes=self.connection_pool.nodes.startup_nodes,
             result_callbacks=self.result_callbacks,
-            response_callbacks=self.response_callbacks,
             transaction=transaction,
             watches=watches,
         )
