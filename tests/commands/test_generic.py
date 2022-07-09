@@ -605,7 +605,7 @@ class TestGeneric:
         _, keys = await client.scan(match="a")
         assert set(keys) == {_s("a")}
         _, keys = await client.scan(count=1)
-        assert len(keys) < 4
+        assert len(keys) <= 4
         _, keys = await client.scan(type_="hash")
         assert set(keys) == {_s("d")}
 
