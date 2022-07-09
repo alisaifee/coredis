@@ -434,6 +434,8 @@ Determine the type stored at key
 
 
 
+- Supports client caching: yes
+
 
 
 UNLINK
