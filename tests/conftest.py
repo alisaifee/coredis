@@ -176,7 +176,7 @@ def redis_auth_server(docker_services):
 @pytest.fixture(scope="session")
 def redis_ssl_server(docker_services):
     docker_services.start("redis-ssl")
-    yield
+    yield ["localhost", 8379]
 
 
 @pytest.fixture(scope="session")
@@ -185,7 +185,7 @@ def redis_cluster_server(docker_services):
     docker_services.wait_for_service("redis-cluster-6", 7005, check_redis_cluster_ready)
     if os.environ.get("CI") == "True":
         time.sleep(10)
-    yield
+    yield ["localhost", 7000]
 
 
 @pytest.fixture(scope="session")
@@ -196,7 +196,7 @@ def redis_ssl_cluster_server(docker_services):
     )
     if os.environ.get("CI") == "True":
         time.sleep(10)
-    yield
+    yield ["localhost", 8301]
 
 
 @pytest.fixture(scope="session")

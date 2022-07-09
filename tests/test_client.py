@@ -177,3 +177,52 @@ class TestSSL:
         with pytest.raises(ConnectionError, match="decrypt error") as exc_info:
             await client.ping() == b"PONG"
         assert isinstance(exc_info.value.__cause__, SSLError)
+
+
+@pytest.mark.asyncio
+class TestFromUrl:
+    async def test_basic_client(self, redis_basic_server):
+        client = coredis.Redis.from_url(
+            f"redis://{redis_basic_server[0]}:{redis_basic_server[1]}"
+        )
+        assert b"PONG" == await client.ping()
+        client = coredis.Redis.from_url(
+            f"redis://{redis_basic_server[0]}:{redis_basic_server[1]}",
+            decode_responses=True,
+        )
+        assert "PONG" == await client.ping()
+
+    async def test_ssl_client(self, redis_ssl_server):
+        storage_url = (
+            f"rediss://{redis_ssl_server[0]}:{redis_ssl_server[1]}/?ssl_cert_reqs=required"
+            "&ssl_keyfile=./tests/tls/client.key"
+            "&ssl_certfile=./tests/tls/client.crt"
+            "&ssl_ca_certs=./tests/tls/ca.crt"
+        )
+        client = coredis.Redis.from_url(storage_url)
+        assert b"PONG" == await client.ping()
+        client = coredis.Redis.from_url(storage_url, decode_responses=True)
+        assert "PONG" == await client.ping()
+
+    async def test_cluster_client(self, redis_cluster_server):
+        client = coredis.RedisCluster.from_url(
+            f"redis://{redis_cluster_server[0]}:{redis_cluster_server[1]}"
+        )
+        assert b"PONG" == await client.ping()
+        client = coredis.RedisCluster.from_url(
+            f"redis://{redis_cluster_server[0]}:{redis_cluster_server[1]}",
+            decode_responses=True,
+        )
+        assert "PONG" == await client.ping()
+
+    async def test_cluster_ssl_client(self, redis_ssl_cluster_server):
+        storage_url = (
+            f"rediss://{redis_ssl_cluster_server[0]}:{redis_ssl_cluster_server[1]}/?ssl_cert_reqs=required"
+            "&ssl_keyfile=./tests/tls/client.key"
+            "&ssl_certfile=./tests/tls/client.crt"
+            "&ssl_ca_certs=./tests/tls/ca.crt"
+        )
+        client = coredis.RedisCluster.from_url(storage_url)
+        assert b"PONG" == await client.ping()
+        client = coredis.RedisCluster.from_url(storage_url, decode_responses=True)
+        assert "PONG" == await client.ping()
