@@ -447,3 +447,29 @@ class TestStreams:
             await client.xinfo_stream("test_stream", count=10)
         xinfo_full = await client.xinfo_stream("test_stream", full=True, count=2)
         assert len(xinfo_full["entries"]) == 2
+
+    async def test_xtrim(self, client, _s):
+        for i in range(10):
+            await client.xadd(
+                "test_stream",
+                field_values={"k1": "v1", "k2": "1"},
+            )
+
+        assert 0 == await client.xtrim(
+            "test_stream",
+            PureToken.MAXLEN,
+            trim_operator=PureToken.APPROXIMATELY,
+            threshold=5,
+            limit=1,
+        )
+
+        assert 5 == await client.xtrim("test_stream", PureToken.MAXLEN, threshold=5)
+
+    async def test_xdel(self, client, _s):
+        entry = await client.xadd(
+            "test_stream",
+            field_values={"k1": "v1", "k2": "1"},
+        )
+
+        assert 1 == await client.xdel("test_stream", [entry])
+        assert 0 == await client.xdel("test_stream", [entry])
