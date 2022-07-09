@@ -14,4 +14,5 @@ exclude_lines =
     class .*\bProtocol\):
     @(abc\.)?abstractmethod
     __repr__
-
+    except ConnectionError
+    except \(ConnectionError
