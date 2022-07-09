@@ -223,7 +223,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         bit: "int",
         start: "Optional[int]" = ...,
         end: "Optional[int]" = ...,
-        end_index_unit: "Optional[Literal[PureToken.BIT, PureToken.BYTE]]" = ...,
+        index_unit: "Optional[Literal[PureToken.BIT, PureToken.BYTE]]" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def getbit(self, key: "KeyT", offset: "int") -> Pipeline[AnyStr]: ...
     async def setbit(
@@ -1307,7 +1307,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         bit: "int",
         start: "Optional[int]" = ...,
         end: "Optional[int]" = ...,
-        end_index_unit: "Optional[Literal[PureToken.BIT, PureToken.BYTE]]" = ...,
+        index_unit: "Optional[Literal[PureToken.BIT, PureToken.BYTE]]" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def getbit(self, key: "KeyT", offset: "int") -> ClusterPipeline[AnyStr]: ...
     async def setbit(

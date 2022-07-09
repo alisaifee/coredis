@@ -69,7 +69,7 @@ REDIS_RETURN_ARGUMENT_TYPE_MAPPING = {
     },
 }
 REDIS_ARGUMENT_NAME_OVERRIDES = {
-    "BITPOS": {"end_index_index_unit": "end_index_unit"},
+    "BITPOS": {"end_index_index_unit": "index_unit"},
     "BITCOUNT": {"index_index_unit": "index_unit"},
     "CLUSTER ADDSLOTSRANGE": {"start_slot_end_slot": "slots"},
     "CLUSTER DELSLOTSRANGE": {"start_slot_end_slot": "slots"},

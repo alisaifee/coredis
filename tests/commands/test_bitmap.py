@@ -102,8 +102,8 @@ class TestBitmap:
     async def test_bitpos_unit(self, client, _s):
         key = "key:bitpos"
         await client.set(key, b"\xff\xf0\x00")
-        assert await client.bitpos(key, 0, 0, 24, end_index_unit=PureToken.BIT) == 12
-        assert await client.bitpos(key, 0, 0, 3, end_index_unit=PureToken.BYTE) == 12
+        assert await client.bitpos(key, 0, 0, 24, index_unit=PureToken.BIT) == 12
+        assert await client.bitpos(key, 0, 0, 3, index_unit=PureToken.BYTE) == 12
 
     async def test_bitpos_wrong_arguments(self, client, _s):
         key = "key:bitpos:wrong:args"

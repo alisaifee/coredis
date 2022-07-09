@@ -5474,15 +5474,16 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.BITPOS,
         readonly=True,
         group=CommandGroup.BITMAP,
-        arguments={"end_index_unit": {"version_introduced": "7.0.0"}},
+        arguments={"index_unit": {"version_introduced": "7.0.0"}},
     )
+    @mutually_inclusive_parameters("end", leaders=("start",))
     async def bitpos(
         self,
         key: KeyT,
         bit: int,
         start: Optional[int] = None,
         end: Optional[int] = None,
-        end_index_unit: Optional[Literal[PureToken.BIT, PureToken.BYTE]] = None,
+        index_unit: Optional[Literal[PureToken.BIT, PureToken.BYTE]] = None,
     ) -> int:
         """
 
@@ -5521,11 +5522,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         if start is not None and end is not None:
             params.append(end)
-        elif start is None and end is not None:
-            raise RedisError("start argument is not set, when end is specified")
 
-        if end_index_unit is not None:
-            params.append(end_index_unit)
+        if index_unit is not None:
+            params.append(index_unit)
 
         return await self.execute_command(
             CommandName.BITPOS, *params, callback=IntCallback()
