@@ -5210,7 +5210,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         consumer: StringT,
         min_idle_time: Union[int, datetime.timedelta],
         identifiers: Parameters[ValueT],
-        idle: Optional[int] = None,
+        idle: Optional[Union[int, datetime.timedelta]] = None,
         time: Optional[Union[int, datetime.datetime]] = None,
         retrycount: Optional[int] = None,
         force: Optional[bool] = None,
@@ -5229,7 +5229,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         pieces.extend(identifiers)
 
         if idle is not None:
-            pieces.extend(["IDLE", idle])
+            pieces.extend(["IDLE", normalized_milliseconds(idle)])
 
         if time is not None:
             pieces.extend(["TIME", normalized_time_milliseconds(time)])

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import datetime
+
 import pytest
 
 from coredis import PureToken
@@ -117,6 +119,10 @@ class TestStreams:
             consumer2,
             0,
             [message_id],
+            retrycount=1,
+            force=True,
+            idle=datetime.timedelta(minutes=1),
+            time=datetime.datetime.utcnow() - datetime.timedelta(minutes=1)
         )
         assert response[0] == message
 
