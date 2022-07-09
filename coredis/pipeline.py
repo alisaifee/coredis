@@ -162,18 +162,6 @@ class NodeCommands:
         success = True
 
         for c in self.commands:
-
-            # if there is a result on this command, it means we ran into an exception
-            # like a connection error. Trying to parse a response on a connection that
-            # is no longer open will result in a connection error raised by redis-py.
-            # but redis-py doesn't check in parse_response that the sock object is
-            # still set and if you try to read from a closed connection, it will
-            # result in an AttributeError because it will do a readline() call on None.
-            # This can have all kinds of nasty side-effects.
-            # Treating this case as a connection error is fine because it will dump
-            # the connection object back into the pool and on the next write, it will
-            # explicitly open the connection and all will be well.
-
             if c.result is None:
                 try:
                     if self.in_transaction:
