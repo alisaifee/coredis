@@ -44,6 +44,7 @@ class TestStreams:
                 threshold=10,
             )
 
+    @pytest.mark.min_server_version("6.2")
     async def test_xadd_nomkstream(self, client, _s):
         assert not await client.xadd(
             "test_stream",
@@ -81,7 +82,21 @@ class TestStreams:
         length = await client.xlen("test_stream")
         assert length == 2
 
+    @pytest.mark.min_server_version("7.0")
     async def test_xadd_with_maxlen_approximately(self, client, _s):
+        for idx in range(10):
+            await client.xadd(
+                "test_stream",
+                field_values={"k1": "v1", "k2": "1"},
+                trim_strategy=PureToken.MAXLEN,
+                trim_operator=PureToken.APPROXIMATELY,
+                threshold=2,
+            )
+        length = await client.xlen("test_stream")
+        assert length == 10
+
+    @pytest.mark.min_server_version("6.2")
+    async def test_xadd_with_maxlen_approximately_limit(self, client, _s):
         for idx in range(10):
             await client.xadd(
                 "test_stream",
