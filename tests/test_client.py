@@ -217,7 +217,7 @@ class TestFromUrl:
 
     async def test_cluster_ssl_client(self, redis_ssl_cluster_server):
         storage_url = (
-            f"rediss://{redis_ssl_cluster_server[0]}:{redis_ssl_cluster_server[1]}/?ssl_cert_reqs=required"
+            f"rediss://{redis_ssl_cluster_server[0]}:{redis_ssl_cluster_server[1]}/?ssl_cert_reqs=required"  # noqa
             "&ssl_keyfile=./tests/tls/client.key"
             "&ssl_certfile=./tests/tls/client.crt"
             "&ssl_ca_certs=./tests/tls/ca.crt"
