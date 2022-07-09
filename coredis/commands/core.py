@@ -5425,8 +5425,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         if start is not None and end is not None:
             params.append(start)
             params.append(end)
-        elif (start is not None and end is None) or (end is not None and start is None):
-            raise RedisError("Both start and end must be specified")
 
         if index_unit is not None:
             params.append(index_unit)
