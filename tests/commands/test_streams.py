@@ -469,6 +469,7 @@ class TestStreams:
         xinfo_full = await client.xinfo_stream("test_stream", full=True, count=2)
         assert len(xinfo_full["entries"]) == 2
 
+    @pytest.mark.min_server_version("6.2.0")
     async def test_xtrim(self, client, _s):
         for i in range(10):
             await client.xadd(
