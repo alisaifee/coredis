@@ -8,7 +8,7 @@ import inspect
 import textwrap
 from abc import ABCMeta
 from ssl import SSLContext
-from typing import TYPE_CHECKING, Any, cast, overload
+from typing import TYPE_CHECKING, Any, cast, overload, List
 
 from deprecated.sphinx import versionadded
 from packaging.version import Version
@@ -1325,7 +1325,7 @@ class RedisCluster(
 
     def determine_node(
         self, command: bytes, **kwargs: Optional[ValueT]
-    ) -> Optional[Iterable[Node]]:
+    ) -> Optional[List[Node]]:
         node_flag = self.route_flags.get(command)
 
         if command in self.split_flags and self.non_atomic_cross_slot:
