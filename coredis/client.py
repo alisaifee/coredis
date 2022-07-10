@@ -1385,11 +1385,15 @@ class RedisCluster(
 
         try_random_node = False
         try_random_type = NodeFlag.ALL
-        slot = self._determine_slot(command, *args)
-        if not slot:
-            try_random_node = True
-            try_random_type = NodeFlag.PRIMARIES
-
+        node = None
+        slot = None
+        if not nodes:
+            slot = self._determine_slot(command, *args)
+            if not slot:
+                try_random_node = True
+                try_random_type = NodeFlag.PRIMARIES
+        else:
+            node = nodes.pop()
         ttl = int(self.RedisClusterRequestTTL)
 
         while ttl > 0:
@@ -1409,6 +1413,8 @@ class RedisCluster(
                     node = self.connection_pool.get_primary_node_by_slot(slot)
                 else:
                     node = self.connection_pool.get_node_by_slot(slot, command)
+                r = self.connection_pool.get_connection_by_node(node)
+            elif node:
                 r = self.connection_pool.get_connection_by_node(node)
             else:
                 continue
