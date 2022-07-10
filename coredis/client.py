@@ -8,7 +8,7 @@ import inspect
 import textwrap
 from abc import ABCMeta
 from ssl import SSLContext
-from typing import TYPE_CHECKING, Any, cast, overload, List
+from typing import TYPE_CHECKING, Any, List, cast, overload
 
 from deprecated.sphinx import versionadded
 from packaging.version import Version
