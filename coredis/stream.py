@@ -234,51 +234,45 @@ class GroupConsumer(Consumer[AnyStr]):
         self.start_from_backlog = start_from_backlog
 
     async def initialize(self) -> "GroupConsumer[AnyStr]":
-        if self._initialized:
-            return self
-        group_presence: Dict[KeyT, bool] = {stream: False for stream in self.streams}
-        for stream in self.streams:
-            try:
-                group_presence[stream] = (
-                    len(
-                        [
-                            info
-                            for info in [
-                                EncodingInsensitiveDict(d)
-                                for d in await self.client.xinfo_groups(stream)
+        if not self._initialized:
+            group_presence: Dict[KeyT, bool] = {stream: False for stream in self.streams}
+            for stream in self.streams:
+                try:
+                    group_presence[stream] = (
+                        len(
+                            [
+                                info
+                                for info in [
+                                    EncodingInsensitiveDict(d)
+                                    for d in await self.client.xinfo_groups(stream)
+                                ]
+                                if nativestr(info["name"]) == self.group
                             ]
-                            if nativestr(info["name"]) == self.group
-                        ]
+                        )
+                        == 1
                     )
-                    == 1
+                    if group_presence[stream] and self.start_from_backlog:
+                        self.state[stream]["pending"] = True
+                        self.state[stream]["identifier"] = "0-0"
+                except ResponseError:
+                    self.state[stream].setdefault("identifier", ">")
+
+            if not (self.auto_create or all(group_presence.values())):
+                missing_streams = self.streams - {
+                    k for k in group_presence if not group_presence[k]
+                }
+                raise StreamConsumerInitializationError(
+                    f"Consumer group: {self.group!r} does not exist for streams: {missing_streams}"
                 )
-                if group_presence[stream] and self.start_from_backlog:
-                    self.state[stream]["pending"] = True
-                    self.state[stream]["identifier"] = "0-0"
-            except ResponseError:
+            for stream in self.streams:
+                if self.auto_create and not group_presence.get(stream):
+                    try:
+                        await self.client.xgroup_create(stream, self.group, PureToken.NEW_ID, mkstream=True)
+                    except StreamDuplicateConsumerGroupError:  # noqa
+                        pass
                 self.state[stream].setdefault("identifier", ">")
 
-        if not (self.auto_create or all(group_presence.values())):
-            missing_streams = self.streams - {
-                k for k in group_presence if not group_presence[k]
-            }
-            raise StreamConsumerInitializationError(
-                f"Consumer group: {self.group!r} does not exist for streams: {missing_streams}"
-            )
-        for stream in self.streams:
-            if self.auto_create and not group_presence.get(stream):
-                try:
-                    if not await self.client.xgroup_create(
-                        stream, self.group, PureToken.NEW_ID, mkstream=True
-                    ):
-                        raise StreamConsumerInitializationError(
-                            f"Unable to create group {self.group!r} for stream {stream!r}"
-                        )
-                except StreamDuplicateConsumerGroupError:
-                    pass
-            self.state[stream].setdefault("identifier", ">")
-
-        self._initialized = True
+            self._initialized = True
         return self
 
     def __await__(self) -> Generator[Any, None, GroupConsumer[AnyStr]]:
