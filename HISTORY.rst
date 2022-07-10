@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v3.11.4
+-------
+Release Date: 2022-07-09
+
+* Bug Fix
+
+  * Fix issue with sharded pubsub not handling multiple channel
+    subscriptions
+
 v3.11.3
 -------
 Release Date: 2022-07-07
@@ -928,6 +937,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
