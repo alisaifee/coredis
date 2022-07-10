@@ -108,6 +108,7 @@ class NodeManager:
         for node in self.slots[slot]:
             if node["server_type"] == "master":
                 return node
+        return None  # noqa
 
     def all_nodes(self) -> Iterator[Node]:
         yield from self.nodes.values()
