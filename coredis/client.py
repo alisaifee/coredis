@@ -1279,10 +1279,6 @@ class RedisCluster(
                 ),
             )
 
-    def set_result_callback(self, command: str, callback: Callable[..., Any]) -> None:
-        "Sets a custom Result Callback"
-        self.result_callbacks[command.encode("latin-1")] = callback
-
     def _determine_slot(self, command: bytes, *args: ValueT) -> Optional[int]:
         """Figures out what slot based on command and args"""
         keys = KeySpec.extract_keys((command,) + args, self.connection_pool.readonly)
