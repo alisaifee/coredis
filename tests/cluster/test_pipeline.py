@@ -275,3 +275,29 @@ class TestPipeline:
         assert await client.get("x{foo}") is None
         assert await client.get("x{bar}") is None
         assert await client.get("x{baz}") is None
+
+    @pytest.mark.flaky
+    async def test_transaction_callable(self, client, cloner):
+        clone = await cloner(client)
+
+        async def _incr():
+            for i in range(10):
+                await clone.incr("a{fubar}")
+
+        await client.set("a{fubar}", "1")
+        await client.set("b{fubar}", "2")
+
+        async def my_transaction(pipe):
+            await asyncio.sleep(0)
+            a_value = await client.get("a{fubar}")
+            b_value = await client.get("b{fubar}")
+            await pipe.set("c{fubar}", str(int(a_value) + int(b_value)))
+
+        results = await asyncio.gather(
+            client.transaction(
+                my_transaction, "a{fubar}", "b{fubar}", watch_delay=0.01
+            ),
+            _incr(),
+        )
+        assert results[0] == (True,)
+        assert int(await client.get("c{fubar}")) > 3
