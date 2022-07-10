@@ -228,11 +228,6 @@ class AnyStrCallback(ResponseCallback[StringT, StringT, AnyStr]):
         raise ValueError(f"Unable to map {response!r} to AnyStr")
 
 
-class BytesCallback(ResponseCallback[bytes, bytes, bytes]):
-    def transform(self, response: bytes, **options: Optional[ValueT]) -> bytes:
-        return response
-
-
 class FloatCallback(
     ResponseCallback[Union[StringT, int, float], Union[StringT, int, float], float]
 ):

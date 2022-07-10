@@ -37,7 +37,6 @@ from coredis.response._callbacks import (
     AnyStrCallback,
     BoolCallback,
     BoolsCallback,
-    BytesCallback,
     ClusterAlignedBoolsCombine,
     ClusterBoolCombine,
     ClusterEnsureConsistent,
@@ -2326,7 +2325,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return await self.execute_command(
-            CommandName.DUMP, key, decode=False, callback=BytesCallback()
+            CommandName.DUMP, key, decode=False, callback=NoopCallback[bytes]()
         )
 
     @redis_command(
@@ -5980,7 +5979,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return await self.execute_command(
-            CommandName.FUNCTION_DUMP, decode=False, callback=BytesCallback()
+            CommandName.FUNCTION_DUMP, decode=False, callback=NoopCallback[bytes]()
         )
 
     @versionadded(version="3.1.0")

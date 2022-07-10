@@ -16,3 +16,4 @@ exclude_lines =
     __repr__
     except ConnectionError
     except \(ConnectionError
+    raise ValueError\(.*?Unable to map
