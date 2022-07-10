@@ -260,6 +260,13 @@ async def test_flush_config(client):
 
 
 @targets("redis_sentinel", "redis_sentinel_resp2")
+async def test_role(client):
+    assert (await client.sentinels[0].role()).role == "sentinel"
+    assert (await client.primary_for("mymaster").role()).role == "master"
+    assert (await client.replica_for("mymaster").role()).role == "slave"
+
+
+@targets("redis_sentinel", "redis_sentinel_resp2")
 async def test_infocache(client):
     assert await client.sentinels[0].sentinel_flushconfig()
     info_cache = await client.sentinels[0].sentinel_infocache("mymaster")

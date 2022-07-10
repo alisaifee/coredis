@@ -176,34 +176,32 @@ class RoleCallback(ResponseCallback[ResponseType, ResponseType, RoleInfo]):
         role = nativestr(response[0])
 
         def _parse_master(response: Any) -> Any:
-            offset, slaves = response[1:]
+            offset, replicas = response[1:]
             res: Dict[str, Any] = {"role": role, "offset": offset, "slaves": []}
 
-            for slave in slaves:
-                host, port, offset = slave
+            for replica in replicas:
+                host, port, offset = replica
                 res["slaves"].append(
                     {"host": host, "port": int(port), "offset": int(offset)}
                 )
 
             return res
 
-        def _parse_slave(response: Any) -> Any:
+        def _parse_replica(response: Any) -> Any:
             host, port, status, offset = response[1:]
 
             return dict(
                 role=role,
-                host=host,
-                port=port,
                 status=status,
                 offset=offset,
             )
 
         def _parse_sentinel(response: Any) -> Any:
-            return RoleInfo(role=role, masters=response[1:])
+            return {"role": role, "masters": response[1]}
 
         parser = {
             "master": _parse_master,
-            "slave": _parse_slave,
+            "slave": _parse_replica,
             "sentinel": _parse_sentinel,
         }[role]
         return RoleInfo(**parser(response))  # type: ignore
