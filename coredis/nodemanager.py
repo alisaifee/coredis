@@ -4,7 +4,7 @@ import enum
 import random
 from typing import TYPE_CHECKING, Any, cast
 
-from coredis._utils import hash_slot, nativestr
+from coredis._utils import b, hash_slot, nativestr
 from coredis.exceptions import ConnectionError, RedisClusterException
 from coredis.typing import (
     Dict,
@@ -81,26 +81,10 @@ class NodeManager:
         if not self.startup_nodes:
             raise RedisClusterException("No startup nodes provided")
 
-    def encode(self, value: ValueT) -> bytes:
-        """Returns a bytestring representation of the value"""
-        if isinstance(value, bytes):
-            return value
-        elif isinstance(value, int):
-            return b"%d" % value
-        elif isinstance(value, float):
-            return b"%.15g" % value
-        value = value.encode()
-        return value
-
-    def keyslot(self, key: ValueT) -> int:
-        """Calculates keyslot for a given key"""
-        key = self.encode(key)
-        return hash_slot(key)
-
     def keys_to_nodes(self, *keys: ValueT) -> Dict[str, List[ValueT]]:
         mapping: Dict[str, List[ValueT]] = {}
         for k in keys:
-            if node := self.node_from_slot(self.keyslot(k)):
+            if node := self.node_from_slot(hash_slot(b(k))):
                 mapping.setdefault(node["name"], []).append(k)
         return mapping
 
@@ -279,7 +263,6 @@ class NodeManager:
         """
         nodes = nodes_cache or self.nodes
 
-        # at least one node should have cluster-require-full-coverage yes
         for node in nodes.values():
             try:
                 if await self.node_require_full_coverage(node):
@@ -317,13 +300,9 @@ class NodeManager:
         return node
 
     def populate_startup_nodes(self) -> None:
-        """
-        Do something with all startup nodes and filters out any duplicates
-        """
         self.startup_nodes.clear()
         for n in self.nodes.values():
             self.startup_nodes.append(n)
 
     async def reset(self) -> None:
-        """Drops all node data and start over from startup_nodes"""
         await self.initialize()

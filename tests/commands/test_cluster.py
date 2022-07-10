@@ -5,6 +5,7 @@ import asyncio
 import pytest
 
 from coredis import MovedError, PureToken, ResponseError
+from coredis._utils import hash_slot
 from coredis.tokens import PrefixToken
 from tests.conftest import targets
 
@@ -56,7 +57,7 @@ class TestCluster:
 
     async def test_readonly_explicit(self, client, _s):
         await client.set("fubar", 1)
-        slot = client.connection_pool.nodes.keyslot("fubar")
+        slot = hash_slot(b"fubar")
         node = client.connection_pool.get_replica_node_by_slot(slot, replica_only=True)
         node_client = client.connection_pool.nodes.get_redis_link(
             node["host"], node["port"]

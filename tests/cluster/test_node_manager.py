@@ -24,28 +24,6 @@ def test_set_node_name(s):
     assert n["name"] == "127.0.0.1:7000"
 
 
-def test_keyslot():
-    """
-    Test that method will compute correct key in all supported cases
-    """
-    n = NodeManager([{}])
-
-    assert n.keyslot("foo") == 12182
-    assert n.keyslot("{foo}bar") == 12182
-    assert n.keyslot("{foo}") == 12182
-    assert n.keyslot(1337) == 4314
-
-    assert n.keyslot(125) == n.keyslot(b"125")
-    assert n.keyslot(125) == n.keyslot("\x31\x32\x35")
-    assert n.keyslot("大奖") == n.keyslot(b"\xe5\xa4\xa7\xe5\xa5\x96")
-    assert n.keyslot("大奖") == n.keyslot(b"\xe5\xa4\xa7\xe5\xa5\x96")
-    assert n.keyslot(1337.1234) == n.keyslot("1337.1234")
-    assert n.keyslot(1337) == n.keyslot("1337")
-    assert n.keyslot(b"abc") == n.keyslot("abc")
-    assert n.keyslot("abc") == n.keyslot("abc")
-    assert n.keyslot("abc") == n.keyslot(b"abc")
-
-
 @pytest.mark.asyncio
 async def test_init_slots_cache_not_all_slots(s, redis_cluster):
     """

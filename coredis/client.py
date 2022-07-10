@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, cast, overload
 from deprecated.sphinx import versionadded
 from packaging.version import Version
 
-from coredis._utils import clusterdown_wrapper, first_key, nativestr
+from coredis._utils import b, clusterdown_wrapper, first_key, hash_slot, nativestr
 from coredis.cache import AbstractCache, SupportsClientTracking
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName
@@ -1298,7 +1298,7 @@ class RedisCluster(
         ):
             return None
 
-        slots = {self.connection_pool.nodes.keyslot(key) for key in keys}
+        slots = {hash_slot(b(key)) for key in keys}
         if not slots:
             raise RedisClusterException(
                 f"No way to dispatch command:{str(command)} with args: {args}"

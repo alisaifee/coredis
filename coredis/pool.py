@@ -12,6 +12,7 @@ from ssl import SSLContext, VerifyMode
 from typing import Any, cast
 from urllib.parse import parse_qs, unquote, urlparse
 
+from coredis._utils import b, hash_slot
 from coredis.connection import (
     BaseConnection,
     ClusterConnection,
@@ -636,7 +637,7 @@ class ClusterConnectionPool(ConnectionPool):
         if not routing_key:
             return self.get_random_connection()
 
-        slot = self.nodes.keyslot(routing_key)
+        slot = hash_slot(b(routing_key))
         if node_type == "replica":
             node = self.get_replica_node_by_slot(slot)
         else:
@@ -772,7 +773,7 @@ class ClusterConnectionPool(ConnectionPool):
                 "No way to dispatch this command to Redis Cluster."
             )
 
-        return self.get_connection_by_slot(self.nodes.keyslot(key))
+        return self.get_connection_by_slot(hash_slot(b(key)))
 
     def get_connection_by_slot(self, slot: int) -> ClusterConnection:
         """

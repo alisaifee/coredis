@@ -13,7 +13,7 @@ from typing import Any, cast
 
 from wrapt import ObjectProxy  # type: ignore
 
-from coredis._utils import clusterdown_wrapper
+from coredis._utils import b, clusterdown_wrapper, hash_slot
 from coredis.client import Client
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName
@@ -1022,7 +1022,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
                 f"No way to dispatch {command} to Redis Cluster. Missing key"
             )
 
-        slots = {self.connection_pool.nodes.keyslot(key) for key in keys}
+        slots = {hash_slot(b(key)) for key in keys}
 
         if len(slots) != 1:
             raise ClusterCrossSlotError(command=command, keys=keys)

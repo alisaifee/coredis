@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from deprecated.sphinx import versionadded
 
-from coredis._utils import b, nativestr
+from coredis._utils import b, hash_slot, nativestr
 from coredis.commands.constants import CommandName
 from coredis.connection import BaseConnection, Connection
 from coredis.exceptions import ConnectionError, PubSubError, TimeoutError
@@ -565,7 +565,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
         assert isinstance(args[0], (bytes, str))
         channel = nativestr(args[0])
-        slot = self.connection_pool.nodes.keyslot(channel)
+        slot = hash_slot(b(channel))
         node = self.connection_pool.nodes.node_from_slot(slot)
         if node and node["node_id"]:
             key = node["node_id"]

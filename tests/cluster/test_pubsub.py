@@ -11,6 +11,7 @@ import pytest
 
 # rediscluster imports
 from coredis import Redis, RedisCluster
+from coredis._utils import b, hash_slot
 from tests.conftest import targets
 
 
@@ -84,9 +85,9 @@ class TestPubSubSubscribeUnsubscribe:
 
         for i, key in enumerate(keys):
             if sharded:
-                node_key = p.connection_pool.nodes.node_from_slot(
-                    p.connection_pool.nodes.keyslot(key)
-                )["node_id"]
+                node_key = p.connection_pool.nodes.node_from_slot(hash_slot(b(key)))[
+                    "node_id"
+                ]
             else:
                 node_key = "legacy"
             counter[node_key] += 1
@@ -104,9 +105,9 @@ class TestPubSubSubscribeUnsubscribe:
 
         for i, key in enumerate(keys):
             if sharded:
-                node_key = p.connection_pool.nodes.node_from_slot(
-                    p.connection_pool.nodes.keyslot(key)
-                )["node_id"]
+                node_key = p.connection_pool.nodes.node_from_slot(hash_slot(b(key)))[
+                    "node_id"
+                ]
             else:
                 node_key = "legacy"
             counter[node_key] -= 1
@@ -149,9 +150,9 @@ class TestPubSubSubscribeUnsubscribe:
         received = set()
         for i, key in enumerate(keys):
             if sharded:
-                node_key = p.connection_pool.nodes.node_from_slot(
-                    p.connection_pool.nodes.keyslot(key)
-                )["node_id"]
+                node_key = p.connection_pool.nodes.node_from_slot(hash_slot(b(key)))[
+                    "node_id"
+                ]
             else:
                 node_key = "legacy"
             counter[node_key] += 1

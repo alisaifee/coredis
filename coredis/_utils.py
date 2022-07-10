@@ -96,14 +96,14 @@ class EncodingInsensitiveDict(ObjectProxy):  # type: ignore
         return repr(self.__wrapped__)
 
 
-def b(x: ResponseType, encoding: str = "latin-1") -> bytes:
+def b(x: ResponseType, encoding: Optional[str] = None) -> bytes:
     if isinstance(x, bytes):
         return x
     if not isinstance(x, str):
         _v = str(x)
     else:
         _v = x
-    return _v.encode(encoding)
+    return _v.encode(encoding) if encoding else _v.encode()
 
 
 def defaultvalue(value: Optional[U], default: T) -> Union[U, T]:
