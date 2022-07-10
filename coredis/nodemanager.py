@@ -240,10 +240,14 @@ class NodeManager:
 
                 self.refresh_table_asap = False
 
-            if not (
-                self._skip_full_coverage_check
-                or await (self.cluster_require_full_coverage(nodes_cache))
-            ):
+            if self._skip_full_coverage_check:
+                need_full_slots_coverage = False
+            else:
+                need_full_slots_coverage = await (
+                    self.cluster_require_full_coverage(nodes_cache)
+                )
+
+            if need_full_slots_coverage:
                 all_slots_covered = set(tmp_slots.keys()) == HASH_SLOTS_SET
 
             if all_slots_covered:
