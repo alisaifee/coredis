@@ -1334,9 +1334,9 @@ class RedisCluster(
         if node_flag == NodeFlag.RANDOM:
             return [self.connection_pool.nodes.random_node()]
         elif node_flag == NodeFlag.PRIMARIES:
-            return self.connection_pool.nodes.all_primaries()
+            return list(self.connection_pool.nodes.all_primaries())
         elif node_flag == NodeFlag.ALL:
-            return self.connection_pool.nodes.all_nodes()
+            return list(self.connection_pool.nodes.all_nodes())
         elif node_flag == NodeFlag.SLOT_ID:
             slot_id: Optional[ValueT] = kwargs.get("slot_id")
             if node_from_slot := (
@@ -1361,7 +1361,7 @@ class RedisCluster(
         if not self.connection_pool.initialized:
             await self
         nodes = self.determine_node(command, **kwargs)
-        if nodes:
+        if nodes and len(nodes) > 1:
             try:
                 return await self.execute_command_on_nodes(
                     nodes,
