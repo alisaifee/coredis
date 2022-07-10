@@ -235,7 +235,9 @@ class GroupConsumer(Consumer[AnyStr]):
 
     async def initialize(self) -> "GroupConsumer[AnyStr]":
         if not self._initialized:
-            group_presence: Dict[KeyT, bool] = {stream: False for stream in self.streams}
+            group_presence: Dict[KeyT, bool] = {
+                stream: False for stream in self.streams
+            }
             for stream in self.streams:
                 try:
                     group_presence[stream] = (
@@ -267,7 +269,9 @@ class GroupConsumer(Consumer[AnyStr]):
             for stream in self.streams:
                 if self.auto_create and not group_presence.get(stream):
                     try:
-                        await self.client.xgroup_create(stream, self.group, PureToken.NEW_ID, mkstream=True)
+                        await self.client.xgroup_create(
+                            stream, self.group, PureToken.NEW_ID, mkstream=True
+                        )
                     except StreamDuplicateConsumerGroupError:  # noqa
                         pass
                 self.state[stream].setdefault("identifier", ">")
