@@ -108,7 +108,6 @@ class NodeManager:
         for node in self.slots[slot]:
             if node["server_type"] == "master":
                 return node
-        return None
 
     def all_nodes(self) -> Iterator[Node]:
         yield from self.nodes.values()
@@ -128,10 +127,7 @@ class NodeManager:
 
     def random_startup_node_iter(self, primary: bool = False) -> Iterator[Node]:
         """A generator that returns a random startup nodes"""
-        if primary:
-            options = list(self.all_primaries())
-        else:
-            options = self.startup_nodes
+        options = list(self.all_primaries()) if primary else self.startup_nodes
         while True:
             yield random.choice(options)
 
@@ -216,8 +212,7 @@ class NodeManager:
                 assert _nodes
                 master_node, slave_nodes = _nodes[0], _nodes[1:]
 
-                if master_node["host"] == "":
-                    master_node["host"] = node["host"]
+                master_node["host"] = master_node["host"] or node["host"]
                 self.set_node_name(master_node)
                 nodes_cache[master_node["name"]] = master_node
 
@@ -244,19 +239,13 @@ class NodeManager:
 
                 self.refresh_table_asap = False
 
-            if self._skip_full_coverage_check:
-                need_full_slots_coverage = False
-            else:
-                need_full_slots_coverage = await self.cluster_require_full_coverage(
-                    nodes_cache
-                )
-
-            # Validate if all slots are covered or if we should try next startup node
-            if need_full_slots_coverage:
+            if not (
+                self._skip_full_coverage_check
+                or await (self.cluster_require_full_coverage(nodes_cache))
+            ):
                 all_slots_covered = set(tmp_slots.keys()) == HASH_SLOTS_SET
 
             if all_slots_covered:
-                # All slots are covered and application can continue to execute
                 break
 
         if not startup_nodes_reachable:
