@@ -144,7 +144,7 @@ def dict_to_flat_list(
     return ret
 
 
-# ++++++++++ result callbacks helpers ++++++++++++++
+# ++++++++++ cluster utils ++++++++++++++
 
 
 def first_key(res: Dict[str, R]) -> R:
