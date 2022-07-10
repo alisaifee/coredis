@@ -190,11 +190,6 @@ class NodeManager:
 
             except ConnectionError:
                 continue
-            # except Exception:
-            #    raise RedisClusterException(
-            #        f'ERROR sending "cluster slots" command to redis server: {node}'
-            #    )
-
             all_slots_covered = True
 
             # If there's only one server in the cluster, its ``host`` is ''
@@ -207,7 +202,6 @@ class NodeManager:
                     single_node_slots["host"] = self.startup_nodes[0]["host"]
                     single_node_slots["server_type"] = "master"
 
-            # No need to decode response because Redis should handle that for us...
             for min_slot, max_slot in cluster_slots:
                 _nodes = cast(List[Node], cluster_slots.get((min_slot, max_slot)))
                 assert _nodes
@@ -240,14 +234,9 @@ class NodeManager:
 
                 self.refresh_table_asap = False
 
-            if self._skip_full_coverage_check:
-                need_full_slots_coverage = False
-            else:
-                need_full_slots_coverage = await (
-                    self.cluster_require_full_coverage(nodes_cache)
-                )
-
-            if need_full_slots_coverage:
+            if not self._skip_full_coverage_check and (
+                await self.cluster_require_full_coverage(nodes_cache)
+            ):
                 all_slots_covered = set(tmp_slots.keys()) == HASH_SLOTS_SET
 
             if all_slots_covered:
