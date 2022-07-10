@@ -8,8 +8,10 @@ from unittest.mock import patch
 
 import pytest
 
+import coredis
+
 # rediscluster imports
-from coredis import RedisCluster
+from coredis import ClusterDownError, RedisCluster
 from coredis.pool import ClusterConnectionPool
 
 pytestmark = [pytest.mark.asyncio]
@@ -21,6 +23,35 @@ class DummyConnectionPool(ClusterConnectionPool):
 
 class DummyConnection:
     pass
+
+
+async def test_multi_node_cluster_down_retry(mocker):
+    rc = RedisCluster(host="127.0.0.1", port=7000, decode_responses=True)
+    e = mocker.patch.object(rc, "execute_command_on_nodes")
+
+    async def raise_cluster_down(*a, **k):
+        raise ClusterDownError(b"")
+
+    e.side_effect = raise_cluster_down
+
+    with pytest.raises(ClusterDownError):
+        await rc.delete(["fubar{a}", "fubar{b}"])
+    assert e.call_count == 3
+
+
+async def test_single_node_cluster_down_retry(mocker):
+    rc = RedisCluster(host="127.0.0.1", port=7000, decode_responses=True)
+    await rc.set("fubar{a}", 1)
+    e = mocker.patch.object(coredis.pool.ClusterConnection, "send_command")
+
+    async def raise_cluster_down(*a, **k):
+        raise ClusterDownError(b"")
+
+    e.side_effect = raise_cluster_down
+
+    with pytest.raises(ClusterDownError):
+        await rc.get("fubar{a}")
+    assert e.call_count == 3
 
 
 async def test_moved_redirection():
