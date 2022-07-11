@@ -133,7 +133,6 @@ class NodeCommands:
         self.commands.append(c)
 
     async def write(self) -> None:
-        """NOTE: Code was borrowed from Redis so it can be fixed"""
         connection = self.connection
         commands = self.commands
 
@@ -178,6 +177,7 @@ class NodeCommands:
                     success = False
                     c.result = sys.exc_info()[1]
                     break
+
         if self.in_transaction:
             transaction_result = []
             if success:
@@ -199,6 +199,8 @@ class NodeCommands:
                         version=connection.protocol_version,
                         **c.options,
                     )
+            elif isinstance(self.commands[0].result, BaseException):
+                raise self.commands[0].result
 
 
 class PipelineMeta(ABCMeta):
@@ -448,6 +450,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
             await self.watch(*self.watches)
         await connection.send_packed_command(all_cmds)
         errors: List[Tuple[int, Optional[RedisError]]] = []
+        multi_failed = False
 
         # parse off the response for MULTI
         # NOTE: we need to handle ResponseErrors here and continue
@@ -456,6 +459,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         try:
             await self.parse_response(connection, b"_")
         except RedisError:
+            multi_failed = True
             errors.append((0, cast(RedisError, sys.exc_info()[1])))
 
         # and all the other commands
@@ -475,8 +479,8 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
             response = cast(
                 List[ResponseType], await self.parse_response(connection, b"_")
             )
-        except ExecAbortError:
-            if self.explicit_transaction:
+        except (ExecAbortError, ResponseError):
+            if self.explicit_transaction and not multi_failed:
                 await self.immediate_execute_command(
                     CommandName.DISCARD, callback=BoolCallback()
                 )

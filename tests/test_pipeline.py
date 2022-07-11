@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from coredis.exceptions import RedisError, ResponseError, WatchError
+from coredis.exceptions import AuthorizationError, RedisError, ResponseError, WatchError
 from tests.conftest import targets
 
 
@@ -72,6 +72,15 @@ class TestPipeline:
             await pipe.set("fubar", 1)
             with pytest.raises(RedisError):
                 pipe.multi()
+
+    @pytest.mark.nodragonfly
+    async def test_pipeline_no_permission(self, client, user_client):
+        no_perm_client = await user_client("testuser", "on", "+@all", "-MULTI")
+        async with await no_perm_client.pipeline(transaction=False) as pipe:
+            pipe.multi()
+            await pipe.get("fubar")
+            with pytest.raises(AuthorizationError):
+                await pipe.execute()
 
     @pytest.mark.nodragonfly
     async def test_pipeline_no_transaction_watch(self, client):

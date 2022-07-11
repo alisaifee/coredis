@@ -5,6 +5,7 @@ import asyncio
 import pytest
 
 from coredis.exceptions import (
+    AuthorizationError,
     ClusterCrossSlotError,
     ClusterTransactionError,
     RedisClusterException,
@@ -65,6 +66,13 @@ class TestPipeline:
         async with await client.pipeline(transaction=False) as pipe:
             with pytest.raises(RedisClusterException):
                 pipe.multi()
+
+    async def test_pipeline_no_permission(self, client, user_client):
+        no_perm_client = await user_client("testuser", "on", "+@all", "-MULTI")
+        async with await no_perm_client.pipeline(transaction=True) as pipe:
+            await pipe.get("fubar")
+            with pytest.raises(AuthorizationError):
+                await pipe.execute()
 
     @pytest.mark.xfail
     async def test_pipeline_transaction_with_watch_on_construction(self, client):

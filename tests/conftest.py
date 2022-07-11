@@ -908,6 +908,19 @@ def cloner():
     return _cloner
 
 
+@pytest.fixture
+async def user_client(client, cloner):
+    users = set()
+
+    async def _user(name, *permissions):
+        users.add(name)
+        await client.acl_setuser(name, "nopass", *permissions)
+        return await cloner(client, connection_kwargs={"username": name}, username=name)
+
+    yield _user
+    assert len(users) == await client.acl_deluser(users)
+
+
 @contextlib.contextmanager
 def server_deprecation_warning(message: str, client, since: str = "1.0"):
     if version.parse(since) <= REDIS_VERSIONS[str(client)]:
