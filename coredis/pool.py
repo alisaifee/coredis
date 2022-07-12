@@ -469,10 +469,7 @@ class BlockingConnectionPool(ConnectionPool):
                 break
 
         for conn in pooled_connections:
-            try:
-                self._pool.put_nowait(conn)
-            except asyncio.QueueFull:
-                pass
+            self._pool.put_nowait(conn)
 
         all_conns = chain(pooled_connections, self._in_use_connections)
 
