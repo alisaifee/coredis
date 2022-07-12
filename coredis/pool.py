@@ -242,8 +242,7 @@ class ConnectionPool:
 
     def __repr__(self) -> str:
         return "{}<{}>".format(
-            type(self).__name__,
-            self.connection_class.description.format(**self.connection_kwargs),
+            type(self).__name__, self.connection_class.describe(self.connection_kwargs)
         )
 
     async def disconnect_on_idle_time_exceeded(self, connection: Connection) -> None:
@@ -274,6 +273,9 @@ class ConnectionPool:
                     return
                 self.disconnect()
                 self.reset()
+
+    def peek_available(self) -> Optional[BaseConnection]:
+        return self._available_connections[0] if self._available_connections else None
 
     async def get_connection(
         self,
@@ -415,6 +417,13 @@ class BlockingConnectionPool(ConnectionPool):
                 break
 
         super().reset()
+
+    def peek_available(self) -> Optional[BaseConnection]:
+        return (
+            self._pool._queue[-1]  # type: ignore
+            if (self._pool and not self._pool.empty())
+            else None
+        )
 
     async def get_connection(
         self,
@@ -566,7 +575,7 @@ class ClusterConnectionPool(ConnectionPool):
             type(self).__name__,
             ", ".join(
                 [
-                    self.connection_class.description.format(**node)
+                    self.connection_class.describe(dict(node))
                     for node in self.nodes.startup_nodes
                 ]
             ),

@@ -9,7 +9,9 @@ from tests.conftest import targets
 
 
 @pytest.mark.asyncio()
-@targets("redis_basic", "redis_basic_resp2", "keydb", "dragonfly")
+@targets(
+    "redis_basic", "redis_basic_blocking", "redis_basic_resp2", "keydb", "dragonfly"
+)
 class TestPipeline:
     async def test_pipeline(self, client):
         async with await client.pipeline() as pipe:

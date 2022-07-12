@@ -7,7 +7,8 @@ import socket
 import ssl
 import time
 import warnings
-from typing import cast
+from collections import defaultdict
+from typing import Any, cast
 
 from coredis._packer import Packer
 from coredis._unpacker import NotEnoughData
@@ -155,11 +156,17 @@ class BaseConnection(asyncio.BaseProtocol):
         self._parser = Parser()
 
     def __repr__(self) -> str:
-        return self.description.format(**self._description_args())
+        return self.describe(self._description_args())
+
+    @classmethod
+    def describe(cls, description_args: Dict[str, Any]) -> str:
+        return cls.description.format_map(defaultdict(lambda: None, description_args))
 
     @property
     def location(self) -> str:
-        return self.locator.format(**self._description_args())
+        return self.locator.format_map(
+            defaultdict(lambda: None, self._description_args())
+        )
 
     def __del__(self) -> None:
         try:

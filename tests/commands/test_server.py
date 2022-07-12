@@ -14,6 +14,7 @@ from tests.conftest import targets
 
 @targets(
     "redis_basic",
+    "redis_basic_blocking",
     "redis_basic_raw",
     "redis_basic_resp2",
     "redis_basic_raw_resp2",
@@ -360,7 +361,7 @@ class TestServer:
     async def test_quit(self, client):
         assert await client.quit()
         await asyncio.sleep(0.1)
-        assert not client.connection_pool._available_connections[0].is_connected
+        assert not client.connection_pool.peek_available().is_connected
 
 
 async def test_shutdown(fake_redis):

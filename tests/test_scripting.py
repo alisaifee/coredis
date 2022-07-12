@@ -55,7 +55,7 @@ async def flush_scripts(client):
 
 
 @pytest.mark.asyncio()
-@targets("redis_basic", "redis_basic_resp2")
+@targets("redis_basic", "redis_basic_blocking", "redis_basic_resp2")
 class TestScripting:
     async def test_eval(self, client):
         await client.set("a", "2")

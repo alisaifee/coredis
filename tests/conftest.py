@@ -16,6 +16,7 @@ import coredis.connection
 import coredis.experimental
 import coredis.parser
 import coredis.sentinel
+from coredis import BlockingConnectionPool
 from coredis.cache import TrackingCache
 from coredis.response._callbacks import NoopCallback
 from coredis.typing import RUNTIME_TYPECHECKS, Callable, Optional, R, ValueT
@@ -256,6 +257,29 @@ def keydb_cluster_server(docker_services):
 async def redis_basic(redis_basic_server, request):
     client = coredis.Redis(
         "localhost", 6379, decode_responses=True, **get_client_test_args(request)
+    )
+    await check_test_constraints(request, client)
+    await client.flushall()
+    await set_default_test_config(client)
+
+    yield client
+
+    client.connection_pool.disconnect()
+
+
+@pytest.fixture
+async def redis_basic_blocking(redis_basic_server, request):
+    client = coredis.Redis(
+        "localhost",
+        6379,
+        decode_responses=True,
+        connection_pool=BlockingConnectionPool(
+            host="localhost",
+            port=6379,
+            decode_responses=True,
+            **get_client_test_args(request),
+        ),
+        **get_client_test_args(request),
     )
     await check_test_constraints(request, client)
     await client.flushall()

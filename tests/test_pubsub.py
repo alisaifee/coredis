@@ -72,6 +72,7 @@ def make_subscribe_test_data(pubsub, encoder, type):
 @pytest.mark.asyncio()
 @targets(
     "redis_basic",
+    "redis_basic_blocking",
     "redis_basic_raw",
     "redis_basic_resp2",
     "redis_basic_raw_resp2",

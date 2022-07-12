@@ -166,7 +166,13 @@ class CommonExamples:
 
 
 @pytest.mark.asyncio
-@targets("redis_basic", "redis_basic_raw", "redis_basic_resp2", "redis_basic_raw_resp2")
+@targets(
+    "redis_basic",
+    "redis_basic_blocking",
+    "redis_basic_raw",
+    "redis_basic_resp2",
+    "redis_basic_raw_resp2",
+)
 class TestProxyInvalidatingCache(CommonExamples):
     async def test_uninitialized_cache(self, client, cloner, _s):
         cache = self.cache(max_keys=1, max_idle_seconds=1)
