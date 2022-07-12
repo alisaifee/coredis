@@ -15,6 +15,7 @@ from coredis.exceptions import (
     ReadOnlyError,
     ReplicaNotFoundError,
     ResponseError,
+    SentinelConnectionError,
     TimeoutError,
 )
 from coredis.pool import ConnectionPool
@@ -119,7 +120,7 @@ class SentinelManagedConnection(Connection, Generic[AnyStr]):
                 # calling disconnect will force the connection to re-query
                 # sentinel during the next connect() attempt.
                 self.disconnect()
-                raise ConnectionError("The previous primary is now a replica")
+                raise SentinelConnectionError("The previous primary is now a replica")
             raise
 
 

@@ -312,6 +312,22 @@ async def test_write_to_replica(client):
 
 
 @targets("redis_sentinel", "redis_sentinel_resp2")
+async def test_primary_demoted(client, mocker):
+    p = await client.primary_for("mymaster")
+    await p.ping()
+    patched_read_response = mocker.patch.object(
+        coredis.sentinel.Connection, "read_response"
+    )
+
+    async def raise_readonly(*a, **k):
+        raise ReadOnlyError
+
+    patched_read_response.side_effect = raise_readonly
+    with pytest.raises(ConnectionError):
+        await p.set("fubar", 1)
+
+
+@targets("redis_sentinel", "redis_sentinel_resp2")
 @pytest.mark.parametrize(
     "client_arguments", [({"cache": coredis.cache.TrackingCache()})]
 )

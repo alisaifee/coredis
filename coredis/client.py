@@ -37,6 +37,7 @@ from coredis.exceptions import (
     MovedError,
     RedisClusterException,
     ReplicationError,
+    SentinelConnectionError,
     TimeoutError,
     TryAgainError,
     WatchError,
@@ -809,8 +810,11 @@ class Redis(Client[AnyStr]):
             raise
         except (ConnectionError, TimeoutError) as e:
             connection.disconnect()
-
-            if not connection.retry_on_timeout and isinstance(e, TimeoutError):
+            if (
+                not connection.retry_on_timeout and isinstance(e, TimeoutError)
+            ) or isinstance(
+                e, SentinelConnectionError
+            ):  # do not retry explicit sentinel connection errors
                 raise
             await connection.send_command(command, *args)
 
