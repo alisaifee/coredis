@@ -72,6 +72,7 @@ class NodeManager:
         self.startup_nodes: List[Node] = (
             [] if startup_nodes is None else list(startup_nodes)
         )
+        self.startup_nodes_reachable = False
         self.orig_startup_nodes = list(self.startup_nodes)
         self.reinitialize_counter = 0
         self.reinitialize_steps = reinitialize_steps or 25
@@ -112,9 +113,15 @@ class NodeManager:
 
     def random_startup_node_iter(self, primary: bool = False) -> Iterator[Node]:
         """A generator that returns a random startup nodes"""
-        options = list(self.all_primaries()) if primary else self.startup_nodes
-        while True:
-            yield random.choice(options)
+        options = (
+            list(self.all_primaries())
+            if primary
+            else (self.startup_nodes if self.startup_nodes_reachable else [])
+        )
+        while options:
+            choice = random.choice(options)
+            options.remove(choice)
+            yield choice
 
     def random_node(self) -> Node:
         return random.choice(list(self.nodes.values()))
@@ -155,7 +162,7 @@ class NodeManager:
 
         all_slots_covered = False
         disagreements: List[str] = []
-        startup_nodes_reachable = False
+        self.startup_nodes_reachable = False
 
         nodes = self.orig_startup_nodes
 
@@ -170,7 +177,7 @@ class NodeManager:
                 if node:
                     r = self.get_redis_link(host=node["host"], port=node["port"])
                     cluster_slots = await r.cluster_slots()
-                    startup_nodes_reachable = True
+                    self.startup_nodes_reachable = True
 
             except ConnectionError:
                 continue
@@ -226,7 +233,7 @@ class NodeManager:
             if all_slots_covered:
                 break
 
-        if not startup_nodes_reachable:
+        if not self.startup_nodes_reachable:
             raise RedisClusterException(
                 "Redis Cluster cannot be connected. "
                 "Please provide at least one reachable node."

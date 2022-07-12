@@ -461,11 +461,8 @@ class BlockingConnectionPool(ConnectionPool):
                 _connection.disconnect()
                 _connection = None
 
-            try:
+            if not self._pool.full():
                 self._pool.put_nowait(_connection)
-            except asyncio.QueueFull:
-                # perhaps the pool have been reset() ?
-                pass
 
     def disconnect(self) -> None:
         """Closes all connections in the pool"""
@@ -703,33 +700,31 @@ class ClusterConnectionPool(ConnectionPool):
 
         self.checkpid()
 
-        if connection.pid != self.pid:
-            return
+        if connection.pid == self.pid:
+            # Remove the current connection from _in_use_connection and add it back to the available
+            # pool. There is cases where the connection is to be removed but it will not exist and
+            # there must be a safe way to remove
+            i_c = self._cluster_in_use_connections.get(connection.node["name"], set())
 
-        # Remove the current connection from _in_use_connection and add it back to the available
-        # pool. There is cases where the connection is to be removed but it will not exist and
-        # there must be a safe way to remove
-        i_c = self._cluster_in_use_connections.get(connection.node["name"], set())
+            if connection in i_c:
+                i_c.remove(connection)
+            else:
+                pass
+            # discard connection with unread response
 
-        if connection in i_c:
-            i_c.remove(connection)
-        else:
-            pass
-        # discard connection with unread response
+            if connection.awaiting_response:
+                connection.disconnect()
+                # reduce node connection count in case of too many connection error raised
 
-        if connection.awaiting_response:
-            connection.disconnect()
-            # reduce node connection count in case of too many connection error raised
-
-            if self._created_connections_per_node.get(connection.node["name"]):
-                self._created_connections_per_node[connection.node["name"]] -= 1
-        else:
-            self._cluster_available_connections.setdefault(
-                connection.node["name"], []
-            ).append(connection)
+                if self._created_connections_per_node.get(connection.node["name"]):
+                    self._created_connections_per_node[connection.node["name"]] -= 1
+            else:
+                self._cluster_available_connections.setdefault(
+                    connection.node["name"], []
+                ).append(connection)
 
     def disconnect(self) -> None:
-        """Closes all connectins in the pool"""
+        """Closes all connections in the pool"""
         all_conns = chain(
             self._cluster_available_connections.values(),
             self._cluster_in_use_connections.values(),
@@ -746,8 +741,7 @@ class ClusterConnectionPool(ConnectionPool):
         return sum(i for i in self._created_connections_per_node.values())
 
     def get_random_connection(self, primary: bool = False) -> ClusterConnection:
-        """Opens new connection to random redis server"""
-
+        """Opens new connection to random redis server in the cluster"""
         if self._cluster_available_connections:
             filter = []
             if primary:
@@ -771,7 +765,7 @@ class ClusterConnectionPool(ConnectionPool):
 
             if connection:
                 return connection
-        raise Exception("Cant reach a single startup node.")
+        raise RedisClusterException("Cant reach a single startup node.")
 
     def get_connection_by_key(self, key: StringT) -> ClusterConnection:
         if not key:
