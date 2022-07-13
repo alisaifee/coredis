@@ -1292,7 +1292,9 @@ class RedisCluster(
             command
             in {
                 CommandName.EVAL,
+                CommandName.EVAL_RO,
                 CommandName.EVALSHA,
+                CommandName.EVALSHA_RO,
                 CommandName.FCALL,
                 CommandName.FCALL_RO,
             }
