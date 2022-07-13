@@ -1538,6 +1538,8 @@ class RedisCluster(
                 if cur["name"] in node_arg_mapping:
                     for i, args in enumerate(node_arg_mapping[cur["name"]]):
                         await connection.send_command(command, *args)
+                        if self.noreply:
+                            continue
                         try:
                             res[f'{cur["name"]}:{i}'] = callback(
                                 await connection.read_response(
