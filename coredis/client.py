@@ -1301,12 +1301,6 @@ class RedisCluster(
             return None
 
         slots = {hash_slot(b(key)) for key in keys}
-        if not slots:
-            raise RedisClusterException(
-                f"No way to dispatch command:{str(command)} with args: {args}"
-                " to Redis Cluster. Missing key."
-            )
-
         if len(slots) != 1:
             raise RedisClusterException(
                 f"{str(command)} - all keys must map to the same key slot"
