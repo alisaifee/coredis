@@ -3,6 +3,14 @@
 Changelog
 =========
 
+v3.11.5
+-------
+Release Date: 2022-07-13
+
+* Chore
+
+  * Remove python 3.11 binary wheel builds
+
 v3.11.4
 -------
 Release Date: 2022-07-09
@@ -937,6 +945,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
