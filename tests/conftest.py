@@ -17,6 +17,7 @@ import coredis.experimental
 import coredis.parser
 import coredis.sentinel
 from coredis import BlockingConnectionPool
+from coredis._utils import b, hash_slot
 from coredis.cache import TrackingCache
 from coredis.response._callbacks import NoopCallback
 from coredis.typing import RUNTIME_TYPECHECKS, Callable, Optional, R, ValueT
@@ -106,6 +107,42 @@ def get_client_test_args(request):
     if "client_arguments" in request.fixturenames:
         return request.getfixturevalue("client_arguments")
     return {}
+
+
+def get_remapped_slots(request):
+    if "cluster_remap_keyslots" in request.fixturenames:
+        return request.getfixturevalue("cluster_remap_keyslots")
+    return []
+
+
+@contextlib.asynccontextmanager
+async def remapped_slots(client, request):
+    keys = get_remapped_slots(request)
+    slots = set([hash_slot(b(key)) for key in keys])
+    sources = {}
+    destinations = {}
+    originals = {}
+    moves = {}
+    for slot in slots:
+        sources[slot] = client.connection_pool.nodes.node_from_slot(slot)
+        destinations[slot] = [
+            k
+            for k in client.connection_pool.nodes.all_primaries()
+            if k != sources[slot]
+        ][0]
+        originals[slot] = sources[slot]["node_id"]
+        moves[slot] = destinations[slot]["node_id"]
+    try:
+        for slot in moves.keys():
+            [await p.cluster_setslot(slot, node=moves[slot]) for p in client.primaries]
+        yield
+    finally:
+        await client.flushall()
+        for slot in originals.keys():
+            [
+                await p.cluster_setslot(slot, node=originals[slot])
+                for p in client.primaries
+            ]
 
 
 def check_redis_cluster_ready(host, port):
@@ -564,7 +601,9 @@ async def redis_cluster(redis_cluster_server, request):
 
     for primary in cluster.primaries:
         await set_default_test_config(primary)
-    yield cluster
+
+    async with remapped_slots(cluster, request):
+        yield cluster
 
     cluster.connection_pool.disconnect()
 

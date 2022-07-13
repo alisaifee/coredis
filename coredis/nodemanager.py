@@ -82,11 +82,15 @@ class NodeManager:
         if not self.startup_nodes:
             raise RedisClusterException("No startup nodes provided")
 
-    def keys_to_nodes(self, *keys: ValueT) -> Dict[str, List[ValueT]]:
-        mapping: Dict[str, List[ValueT]] = {}
+    def keys_to_nodes_by_slot(
+        self, *keys: ValueT
+    ) -> Dict[str, Dict[int, List[ValueT]]]:
+        mapping: Dict[str, Dict[int, List[ValueT]]] = {}
         for k in keys:
             if node := self.node_from_slot(hash_slot(b(k))):
-                mapping.setdefault(node["name"], []).append(k)
+                mapping.setdefault(node["name"], {}).setdefault(
+                    hash_slot(b(k)), []
+                ).append(k)
         return mapping
 
     def node_from_slot(self, slot: int) -> Optional[Node]:

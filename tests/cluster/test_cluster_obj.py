@@ -186,3 +186,30 @@ async def test_access_correct_slave_with_readonly_mode_client(sr):
                 url="redis://127.0.0.1:7000/0", readonly=True, decode_responses=True
             )
             assert "foo" == await readonly_client.get("foo16706")
+
+
+@pytest.mark.parametrize(
+    "cluster_remap_keyslots", [("a{fu}", "b{fu}", "c{bar}", "d{bar}")]
+)
+async def test_slot_moved_redirection(redis_cluster, cluster_remap_keyslots):
+    await redis_cluster.set("a{fu}", 1)
+    assert "1" == await redis_cluster.get("a{fu}")
+    await redis_cluster.set("c{bar}", 2)
+    assert "2" == await redis_cluster.get("c{bar}")
+    assert 2 == await redis_cluster.exists(["a{fu}", "b{fu}", "c{bar}", "d{bar}"])
+    assert 2 == await redis_cluster.delete(["a{fu}", "b{fu}", "c{bar}", "d{bar}"])
+    assert 0 == await redis_cluster.exists(["a{fu}", "b{fu}", "c{bar}", "d{bar}"])
+
+
+@pytest.mark.parametrize(
+    "cluster_remap_keyslots", [("a{fu}", "b{fu}", "c{bar}", "d{bar}")]
+)
+async def test_slot_moved_redirection_non_atomic_multi_node(
+    redis_cluster, cluster_remap_keyslots
+):
+    assert 0 == await redis_cluster.exists(["a{fu}", "b{fu}", "c{bar}", "d{bar}"])
+    assert await redis_cluster.set("a{fu}", 1)
+    assert 1 == await redis_cluster.exists(["a{fu}", "b{fu}", "c{bar}", "d{bar}"])
+    assert await redis_cluster.set("c{bar}", 1)
+    assert 2 == await redis_cluster.exists(["a{fu}", "b{fu}", "c{bar}", "d{bar}"])
+    assert 2 == await redis_cluster.delete(["a{fu}", "b{fu}", "c{bar}", "d{bar}"])
