@@ -1442,12 +1442,15 @@ class RedisCluster(
                 await r.send_command(command, *args)
 
                 if self.noreply:
-                    return None  # type: ignore
-                return callback(
-                    await r.read_response(decode=kwargs.get("decode")),
-                    version=self.protocol_version,
-                    **kwargs,
-                )
+                    response = None
+                else:
+                    response = callback(
+                        await r.read_response(decode=kwargs.get("decode")),
+                        version=self.protocol_version,
+                        **kwargs,
+                    )
+                await self._ensure_wait(command, r)
+                return response  # type: ignore
             except (RedisClusterException, BusyLoadingError, asyncio.CancelledError):
                 raise
             except (ConnectionError, TimeoutError):
@@ -1479,7 +1482,6 @@ class RedisCluster(
             except AskError as e:
                 redirect_addr, asking = f"{e.host}:{e.port}", True
             finally:
-                await self._ensure_wait(command, r)
                 self._ensure_server_version(r.server_version)
                 self.connection_pool.release(r)
 
@@ -1541,6 +1543,7 @@ class RedisCluster(
                         version=self.protocol_version,
                         **options,
                     )
+                await self._ensure_wait(command, connection)
             except asyncio.CancelledError:
                 # do not retry when coroutine is cancelled
                 connection.disconnect()
@@ -1561,9 +1564,8 @@ class RedisCluster(
                         version=self.protocol_version,
                         **options,
                     )
-
-            finally:
                 await self._ensure_wait(command, connection)
+            finally:
                 self._ensure_server_version(connection.server_version)
                 self.connection_pool.release(connection)
 
