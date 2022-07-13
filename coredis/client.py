@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, List, cast, overload
 from deprecated.sphinx import versionadded
 from packaging.version import Version
 
-from coredis._utils import b, clusterdown_wrapper, first_key, hash_slot, nativestr
+from coredis._utils import b, clusterdown_wrapper, hash_slot, nativestr
 from coredis.cache import AbstractCache, SupportsClientTracking
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName
@@ -1319,15 +1319,13 @@ class RedisCluster(
         res: Dict[str, R],
         **kwargs: Optional[ValueT],
     ) -> R:
-        if command in self.result_callbacks:
-            # TODO: move cluster combine callbacks inline
-            return cast(
-                R,
-                self.result_callbacks[command](
-                    res, version=self.protocol_version, **kwargs
-                ),
-            )
-        return first_key(res)
+        assert command in self.result_callbacks
+        return cast(
+            R,
+            self.result_callbacks[command](
+                res, version=self.protocol_version, **kwargs
+            ),
+        )
 
     def determine_node(
         self, command: bytes, **kwargs: Optional[ValueT]

@@ -2,16 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from coredis._utils import clusterdown_wrapper, first_key
-from coredis.exceptions import ClusterDownError, RedisClusterException
-
-
-def test_first_key():
-    assert first_key({"foo": 1}) == 1
-
-    with pytest.raises(RedisClusterException) as ex:
-        first_key({"foo": 1, "bar": 2})
-    assert str(ex.value).startswith("More then 1 result from command")
+from coredis._utils import clusterdown_wrapper
+from coredis.exceptions import ClusterDownError
 
 
 @pytest.mark.asyncio()

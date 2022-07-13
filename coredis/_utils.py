@@ -7,11 +7,10 @@ from typing import Any
 
 from wrapt import ObjectProxy
 
-from coredis.exceptions import ClusterDownError, RedisClusterException
+from coredis.exceptions import ClusterDownError
 from coredis.typing import (
     Callable,
     Coroutine,
-    Dict,
     Iterable,
     List,
     Mapping,
@@ -145,19 +144,6 @@ def dict_to_flat_list(
 
 
 # ++++++++++ cluster utils ++++++++++++++
-
-
-def first_key(res: Dict[str, R]) -> R:
-    """
-    Returns the first result for the given command.
-
-    If more then 1 result is returned then a `RedisClusterException` is raised.
-    """
-
-    if len(res.keys()) != 1:
-        raise RedisClusterException("More then 1 result from command")
-
-    return list(res.values())[0]
 
 
 def clusterdown_wrapper(
