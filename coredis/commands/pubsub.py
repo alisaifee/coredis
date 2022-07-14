@@ -192,7 +192,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
             return await command(*args)
 
     async def parse_response(
-        self, block: bool = True, timeout: float = 0.0
+        self, block: bool = True, timeout: Optional[float] = None
     ) -> ResponseType:
         """
         Parses the response from a publish/subscribe command
@@ -215,13 +215,12 @@ class BasePubSub(Generic[AnyStr, PoolT]):
             ),
         )
 
-        if not block and timeout > 0:
-            try:
-                return await asyncio.wait_for(coro, timeout)
-            except asyncio.TimeoutError:
-                return None
-
-        return await coro
+        try:
+            return await asyncio.wait_for(
+                coro, timeout if (timeout and timeout > 0) else None
+            )
+        except asyncio.TimeoutError:
+            return None
 
     async def psubscribe(
         self,
@@ -307,7 +306,9 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         return None
 
     async def get_message(
-        self, ignore_subscribe_messages: bool = False, timeout: Union[int, float] = 0
+        self,
+        ignore_subscribe_messages: bool = False,
+        timeout: Optional[Union[int, float]] = None,
     ) -> Optional[PubSubMessage]:
         """
         Gets the next message if one is available, otherwise None.
@@ -315,7 +316,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         :param ignore_subscribe_messages: Whether to skip subscription
          acknowledgement messages
         :param timeout: Number of seconds to wait for a message to be available
-         on the connection.
+         on the connection. If the ``None`` the command will block forever.
         """
         response = await self.parse_response(block=False, timeout=timeout)
 
@@ -590,7 +591,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         raise PubSubError(f"Unable to determine shard for channel {args[0]!r}")
 
     async def parse_response(
-        self, block: bool = True, timeout: float = 0.0
+        self, block: bool = True, timeout: Optional[float] = None
     ) -> ResponseType:
         if not self.shard_connections:
             raise RuntimeError(
@@ -626,7 +627,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
             }:
                 done, pending = await asyncio.wait(
                     tasks.values(),
-                    timeout=timeout if timeout > 0 else None,
+                    timeout=timeout if (timeout and timeout > 0) else None,
                     return_when=asyncio.FIRST_COMPLETED,
                 )
                 if done:
