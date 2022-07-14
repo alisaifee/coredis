@@ -18,7 +18,6 @@ from coredis.connection import (
 from coredis.constants import NodeFlag
 from coredis.pool import BlockingConnectionPool, ClusterConnectionPool, ConnectionPool
 from coredis.tokens import PureToken
-from coredis.typing import Node
 
 from . import _version
 
@@ -32,7 +31,6 @@ __all__ = [
     "BlockingConnectionPool",
     "ConnectionPool",
     "ClusterConnectionPool",
-    "Node",
     "NodeFlag",
     "PureToken",
 ]
