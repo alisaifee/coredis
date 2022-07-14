@@ -199,17 +199,11 @@ class BasePubSub(Generic[AnyStr, PoolT]):
 
         :meta private:
         """
-        connection = self.connection
-
-        if connection is None:
-            raise RuntimeError(
-                "pubsub connection not set: "
-                "did you forget to call subscribe() or psubscribe()?"
-            )
+        assert self.connection
         coro = self._execute(
-            connection,
+            self.connection,
             partial(
-                connection.read_response,
+                self.connection.read_response,
                 push_message_types=self.SUBUNSUB_MESSAGE_TYPES
                 | self.PUBLISH_MESSAGE_TYPES,
             ),
@@ -374,10 +368,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
                 subscribed_dict = self.patterns
             else:
                 subscribed_dict = self.channels
-            try:
-                del subscribed_dict[message["channel"]]
-            except KeyError:
-                pass
+            subscribed_dict.pop(message["channel"])
 
         if message_type in self.PUBLISH_MESSAGE_TYPES:
             handler = None
