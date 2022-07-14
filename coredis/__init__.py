@@ -37,9 +37,4 @@ __all__ = [
     "PureToken",
 ]
 
-# For backward compatibility
-StrictRedis = Redis
-StrictRedisCluster = RedisCluster
-
-
 __version__ = _version.get_versions()["version"]  # type: ignore
