@@ -63,6 +63,7 @@ jobs:
         uvloop: ["True", "False"]
         runtime_type_checks: ["True"]
         extensions: ["True"]
+        coverage: ["True"]
         include:
           - python-version: "3.10"
             service_version: "REDIS_VERSION=latest REDIS_SSL_VERSION=latest"
@@ -81,6 +82,9 @@ jobs:
             test_params: "-m dragonfly"
             runtime_type_checks: "False"
             extensions: "False"
+          - python-version: "3.11.0-beta.3"
+            coverage: "False"
+            extensions: "True"
     steps:
     - uses: actions/checkout@v3
     - name: Cache dependencies
@@ -106,7 +110,8 @@ jobs:
       if: ${{ matrix.uvloop == 'True' }}
       run:
         pip install uvloop
-    - name: Tests
+    - name: Tests with coverage
+      if: ${{ matrix.coverage == 'True' }}
       env:
         COREDIS_UVLOOP: ${{ matrix.uvloop }}
         HOST_OS: linux
@@ -118,8 +123,22 @@ jobs:
         echo "UVLoop: $COREDIS_UVLOOP"
         echo "CI: $CI"
         pytest --cov-report=xml ${{ matrix.test_params }}
+    - name: Tests without coverage
+      if: ${{ matrix.coverage == 'False' }}
+      env:
+        COREDIS_UVLOOP: ${{ matrix.uvloop }}
+        HOST_OS: linux
+        CI: "True"
+        COREDIS_RUNTIME_CHECKS: ${{matrix.runtime_type_checks}}
+      run: |
+        eval "export ${{ matrix.service_version }}"
+        echo "Runtime checks: $COREDIS_RUNTIME_CHECKS"
+        echo "UVLoop: $COREDIS_UVLOOP"
+        echo "CI: $CI"
+        pytest --no-cov ${{ matrix.test_params }}
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2
+      if: ${{ matrix.coverage == 'True' }}
   build_wheels:
     needs: [lint]
     name: Build wheels on ${{ matrix.os }}
