@@ -386,16 +386,6 @@ class TestPubSubMessages:
         await p.unsubscribe(channel)
         await p.punsubscribe(pattern)
 
-    async def test_get_message_without_subscribe(self, client):
-        p = client.pubsub()
-        with pytest.raises(RuntimeError) as info:
-            await p.get_message()
-        expect = (
-            "connection not set: " "did you forget to call subscribe() or psubscribe()?"
-        )
-        assert expect in info.exconly()
-        await p.unsubscribe()
-
     async def test_pubsub_worker_thread_no_handler(self, client, _s):
         p = client.pubsub()
         await p.subscribe("fubar")
