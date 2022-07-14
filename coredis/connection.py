@@ -20,7 +20,6 @@ from coredis.exceptions import (
     TimeoutError,
     UnknownCommandError,
 )
-from coredis.nodemanager import Node
 from coredis.parser import Parser
 from coredis.typing import (
     Awaitable,
@@ -29,6 +28,7 @@ from coredis.typing import (
     Dict,
     List,
     Literal,
+    Node,
     Optional,
     ResponseType,
     Set,

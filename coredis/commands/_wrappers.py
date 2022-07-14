@@ -13,7 +13,7 @@ from packaging import version
 from coredis.cache import AbstractCache, SupportsSampling
 from coredis.commands._utils import check_version, redis_command_link
 from coredis.commands.constants import CommandGroup, CommandName
-from coredis.nodemanager import NodeFlag
+from coredis.constants import NodeFlag
 from coredis.response._callbacks import ClusterMultiNodeCallback
 from coredis.typing import (
     AsyncIterator,

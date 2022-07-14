@@ -10,24 +10,25 @@ import re  # noqa
 import shutil
 import typing  # noqa
 from pathlib import Path
-from typing import Any
+from typing import *  # noqa
 
 import click
 import inflect
 from black import FileMode, WriteBack, format_file_in_place
 from jinja2 import Environment
 from packaging import version
+
 import coredis
 import coredis.client
 import coredis.pipeline
-from coredis import NodeFlag, PureToken  # noqa
 from coredis.commands.constants import *  # noqa
 from coredis.commands.monitor import Monitor
-from coredis.nodemanager import Node  # noqa
+from coredis.constants import NodeFlag  # noqa
 from coredis.pool import ClusterConnectionPool, ConnectionPool  # noqa
 from coredis.response.types import *  # noqa
+from coredis.tokens import PureToken  # noqa
 from coredis.typing import *  # noqa
-from typing import *  # noqa
+from coredis.typing import Node  # noqa
 
 MAX_SUPPORTED_VERSION = version.parse("7.999.999")
 MIN_SUPPORTED_VERSION = version.parse("6.0.0")
@@ -779,9 +780,7 @@ def skip_command(command):
 
 
 def is_deprecated(command, kls):
-    if (
-        command.get("deprecated_since")
-    ):
+    if command.get("deprecated_since"):
         replacement = command.get("replaced_by", "")
         replacement = re.sub("`(.*?)`", "``\\1``", replacement)
         replacement_tokens = [k for k in re.findall("(``(.*?)``)", replacement)]
@@ -2284,7 +2283,7 @@ from wrapt import ObjectProxy
 
 from coredis import PureToken
 from coredis.commands.script import Script
-from coredis.nodemanager import Node
+from coredis.typing import Node
 from coredis.pool import ClusterConnectionPool, ConnectionPool
 from coredis.typing import (
     AnyStr,
@@ -2492,10 +2491,7 @@ def cluster_key_extraction(path):
                     )
 
     readonly = {}
-    all = {
-        "OBJECT": ["(args[2],)"],
-        "DEBUG OBJECT": ["(args[1],)"]
-    }
+    all = {"OBJECT": ["(args[2],)"], "DEBUG OBJECT": ["(args[1],)"]}
 
     for mode, commands in lookups.items():
         for command, exprs in commands.items():

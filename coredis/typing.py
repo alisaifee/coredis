@@ -115,6 +115,18 @@ def add_runtime_checks(func: Callable[P, R]) -> Callable[P, R]:
 CommandArgList = List[Union[str, bytes, int, float]]
 
 
+class Node(TypedDict):
+    """
+    Definition of a cluster node
+    """
+
+    host: str
+    port: int
+    name: str
+    server_type: Optional[str]
+    node_id: Optional[str]
+
+
 #: Represents the acceptable types of a redis key
 KeyT = Union[str, bytes]
 
@@ -206,6 +218,7 @@ __all__ = [
     "MutableSet",
     "MutableSequence",
     "NamedTuple",
+    "Node",
     "OrderedDict",
     "Optional",
     "Parameters",

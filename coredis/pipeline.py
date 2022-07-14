@@ -19,6 +19,7 @@ from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName
 from coredis.commands.script import Script
 from coredis.connection import BaseConnection, ClusterConnection
+from coredis.constants import NodeFlag
 from coredis.exceptions import (
     AskError,
     ClusterCrossSlotError,
@@ -33,7 +34,6 @@ from coredis.exceptions import (
     TryAgainError,
     WatchError,
 )
-from coredis.nodemanager import Node, NodeFlag
 from coredis.pool import ClusterConnectionPool, ConnectionPool
 from coredis.response._callbacks import (
     AnyStrCallback,
@@ -51,6 +51,7 @@ from coredis.typing import (
     Iterable,
     KeyT,
     List,
+    Node,
     Optional,
     Parameters,
     ParamSpec,

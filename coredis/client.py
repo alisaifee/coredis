@@ -28,6 +28,7 @@ from coredis.connection import (
     RedisSSLContext,
     UnixDomainSocketConnection,
 )
+from coredis.constants import NodeFlag
 from coredis.exceptions import (
     AskError,
     BusyLoadingError,
@@ -42,7 +43,6 @@ from coredis.exceptions import (
     TryAgainError,
     WatchError,
 )
-from coredis.nodemanager import Node, NodeFlag
 from coredis.pool import ClusterConnectionPool, ConnectionPool
 from coredis.response._callbacks import NoopCallback
 from coredis.response.types import ScoredMember
@@ -60,6 +60,7 @@ from coredis.typing import (
     Iterator,
     KeyT,
     Literal,
+    Node,
     Optional,
     Parameters,
     ParamSpec,

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import enum
 import random
 from typing import TYPE_CHECKING, Any, cast
 
@@ -12,9 +11,9 @@ from coredis.typing import (
     Iterator,
     List,
     Literal,
+    Node,
     Optional,
     StringT,
-    TypedDict,
     ValueT,
 )
 
@@ -23,22 +22,6 @@ HASH_SLOTS_SET = set(range(HASH_SLOTS))
 
 if TYPE_CHECKING:
     from coredis import Redis
-
-
-class Node(TypedDict):
-    host: str
-    port: int
-    name: str
-    server_type: Optional[str]
-    node_id: Optional[str]
-
-
-class NodeFlag(enum.Enum):
-    ALL = "all"
-    PRIMARIES = "primaries"
-    REPLICAS = "replicas"
-    RANDOM = "random"
-    SLOT_ID = "slot-id"
 
 
 class NodeManager:

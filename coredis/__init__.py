@@ -15,6 +15,7 @@ from coredis.connection import (
     Connection,
     UnixDomainSocketConnection,
 )
+from coredis.constants import NodeFlag
 from coredis.exceptions import (
     AskError,
     AuthenticationError,
@@ -54,9 +55,9 @@ from coredis.exceptions import (
     UnknownCommandError,
     WatchError,
 )
-from coredis.nodemanager import Node, NodeFlag
 from coredis.pool import BlockingConnectionPool, ClusterConnectionPool, ConnectionPool
 from coredis.tokens import PureToken
+from coredis.typing import Node
 
 from . import _version
 

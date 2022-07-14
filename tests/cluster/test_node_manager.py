@@ -11,7 +11,7 @@ import pytest
 # rediscluster imports
 from coredis import ConnectionError, RedisCluster, RedisClusterException
 from coredis.client import Redis
-from coredis.nodemanager import HASH_SLOTS, NodeManager
+from coredis.pool.nodemanager import HASH_SLOTS, NodeManager
 
 
 def test_set_node_name(s):

@@ -26,13 +26,13 @@ from coredis.commands._wrappers import (
 )
 from coredis.commands.bitfield import BitFieldOperation
 from coredis.commands.constants import CommandGroup, CommandName
+from coredis.constants import NodeFlag
 from coredis.exceptions import (
     AuthorizationError,
     ConnectionError,
     DataError,
     RedisError,
 )
-from coredis.nodemanager import NodeFlag
 from coredis.response._callbacks import (
     AnyStrCallback,
     BoolCallback,
