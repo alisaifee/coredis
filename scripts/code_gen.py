@@ -2290,7 +2290,6 @@ from wrapt import ObjectProxy
 
 from coredis import PureToken
 from coredis.commands.script import Script
-from coredis.typing import Node
 from coredis.pool import ClusterConnectionPool, ConnectionPool
 from coredis.typing import (
     AnyStr,
@@ -2302,6 +2301,7 @@ from coredis.typing import (
     List,
     Literal,
     Mapping,
+    Node,
     Optional,
     Parameters,
     Set,
