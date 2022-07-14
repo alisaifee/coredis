@@ -11,6 +11,7 @@ from coredis.exceptions import (
     CommandNotSupportedError,
     ConnectionError,
     ReplicationError,
+    UnknownCommandError,
 )
 from tests.conftest import targets
 
@@ -56,6 +57,10 @@ class TestClient:
         await client.ping()
         with pytest.raises(CommandNotSupportedError):
             await client.function_list()
+
+    async def test_unknown_command(self, client):
+        with pytest.raises(UnknownCommandError):
+            await client.execute_command(b"BOGUS")
 
     @pytest.mark.min_server_version("6.2.0")
     @pytest.mark.parametrize("client_arguments", [({"db": 1})])
