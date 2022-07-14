@@ -86,9 +86,6 @@ jobs:
             runtime_type_checks: "False"
             extensions: "False"
             coverage: "True"
-          - python-version: "3.11.0-beta.3"
-            coverage: "False"
-            extensions: "True"
     steps:
     - uses: actions/checkout@v3
     - name: Cache dependencies
