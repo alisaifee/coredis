@@ -25,6 +25,34 @@ Sentinel
    :class-doc-from: both
    :inherited-members:
 
+KeyDB
+-----
+.. autoclass:: coredis.KeyDB
+   :no-inherited-members:
+
+   .. automethod:: bitop
+   .. automethod:: cron
+   .. automethod:: expiremember
+   .. automethod:: expirememberat
+   .. automethod:: pexpirememberat
+   .. automethod:: hrename
+   .. automethod:: mexists
+   .. automethod:: ttl
+   .. automethod:: pttl
+   .. automethod:: object_lastmodified
+
+.. autoclass:: coredis.KeyDBCluster
+   :no-inherited-members:
+
+   .. automethod:: expiremember
+   .. automethod:: expirememberat
+   .. automethod:: pexpirememberat
+   .. automethod:: hrename
+   .. automethod:: mexists
+   .. automethod:: ttl
+   .. automethod:: pttl
+   .. automethod:: object_lastmodified
+
 Pipeline Support
 ^^^^^^^^^^^^^^^^
 :mod:`coredis.pipeline`
@@ -403,47 +431,3 @@ General Exceptions
    :no-inherited-members:
 .. autoexception:: coredis.exceptions.WatchError
    :no-inherited-members:
-
-
-Experimental
-^^^^^^^^^^^^
-
-:mod:`coredis.experimental`
-
-.. code-block:: text
-
-  This is pretty experimental stuff
-  You really shouldn't take this too seriously
-  If you did, how you?
-
-                                         - Ali
-
-KeyDB
------
-.. autoclass:: coredis.experimental.KeyDB
-   :no-inherited-members:
-
-   .. automethod:: bitop
-   .. automethod:: cron
-   .. automethod:: expiremember
-   .. automethod:: expirememberat
-   .. automethod:: pexpirememberat
-   .. automethod:: hrename
-   .. automethod:: mexists
-   .. automethod:: ttl
-   .. automethod:: pttl
-   .. automethod:: object_lastmodified
-
-.. autoclass:: coredis.experimental.KeyDBCluster
-   :no-inherited-members:
-
-   .. automethod:: expiremember
-   .. automethod:: expirememberat
-   .. automethod:: pexpirememberat
-   .. automethod:: hrename
-   .. automethod:: mexists
-   .. automethod:: ttl
-   .. automethod:: pttl
-   .. automethod:: object_lastmodified
-
-

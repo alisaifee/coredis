@@ -9,6 +9,7 @@ cluster & sentinel.
 from __future__ import annotations
 
 from coredis.client import Redis, RedisCluster
+from coredis.client import KeyDB, KeyDBCluster
 from coredis.connection import (
     BaseConnection,
     ClusterConnection,
@@ -21,6 +22,8 @@ from coredis.tokens import PureToken
 from . import _version
 
 __all__ = [
+    "KeyDB",
+    "KeyDBCluster",
     "Redis",
     "RedisCluster",
     "BaseConnection",
