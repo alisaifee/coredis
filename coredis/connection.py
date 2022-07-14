@@ -222,10 +222,10 @@ class BaseConnection(asyncio.BaseProtocol):
         self._last_error = exc
         self.disconnect()
 
-    def pause_writing(self) -> None:
+    def pause_writing(self) -> None:  # noqa
         self._write_flag.clear()
 
-    def resume_writing(self) -> None:
+    def resume_writing(self) -> None:  # noqa
         self._write_flag.set()
 
     def data_received(self, data: bytes) -> None:
