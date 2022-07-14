@@ -43,7 +43,7 @@ async def test_multi_node_cluster_down_retry(mocker):
 async def test_single_node_cluster_down_retry(mocker):
     rc = RedisCluster(host="127.0.0.1", port=7000, decode_responses=True)
     await rc.set("fubar{a}", 1)
-    e = mocker.patch.object(coredis.pool.ClusterConnection, "send_command")
+    e = mocker.patch.object(coredis.pool.cluster.ClusterConnection, "send_command")
 
     async def raise_cluster_down(*a, **k):
         raise ClusterDownError(b"")
