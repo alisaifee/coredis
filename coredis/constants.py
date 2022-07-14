@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import enum
-
 from coredis._utils import b
 from coredis.typing import Final
 
@@ -37,11 +35,3 @@ class RESPDataType:
     SET: Final[int] = ord(b"~")
     ERROR: Final[int] = ord(b"-")
     ATTRIBUTE: Final[int] = ord(b"|")
-
-
-class NodeFlag(enum.Enum):
-    ALL = "all"
-    PRIMARIES = "primaries"
-    REPLICAS = "replicas"
-    RANDOM = "random"
-    SLOT_ID = "slot-id"

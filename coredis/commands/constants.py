@@ -458,3 +458,11 @@ class CommandGroup(enum.Enum):
     STREAM = "stream"
     STRING = "string"
     TRANSACTIONS = "transactions"
+
+
+class NodeFlag(enum.Enum):
+    ALL = "all"
+    PRIMARIES = "primaries"
+    REPLICAS = "replicas"
+    RANDOM = "random"
+    SLOT_ID = "slot-id"

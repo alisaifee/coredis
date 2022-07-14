@@ -15,7 +15,6 @@ from coredis.connection import (
     Connection,
     UnixDomainSocketConnection,
 )
-from coredis.constants import NodeFlag
 from coredis.pool import BlockingConnectionPool, ClusterConnectionPool, ConnectionPool
 from coredis.tokens import PureToken
 
@@ -31,7 +30,6 @@ __all__ = [
     "BlockingConnectionPool",
     "ConnectionPool",
     "ClusterConnectionPool",
-    "NodeFlag",
     "PureToken",
 ]
 

@@ -25,8 +25,7 @@ from coredis.commands._wrappers import (
     redis_command,
 )
 from coredis.commands.bitfield import BitFieldOperation
-from coredis.commands.constants import CommandGroup, CommandName
-from coredis.constants import NodeFlag
+from coredis.commands.constants import CommandGroup, CommandName, NodeFlag
 from coredis.exceptions import (
     AuthorizationError,
     ConnectionError,

@@ -16,7 +16,7 @@ from packaging.version import Version
 from coredis._utils import b, clusterdown_wrapper, hash_slot, nativestr
 from coredis.cache import AbstractCache, SupportsClientTracking
 from coredis.commands._key_spec import KeySpec
-from coredis.commands.constants import CommandName
+from coredis.commands.constants import CommandName, NodeFlag
 from coredis.commands.core import CoreCommands
 from coredis.commands.function import Library
 from coredis.commands.monitor import Monitor
@@ -28,7 +28,6 @@ from coredis.connection import (
     RedisSSLContext,
     UnixDomainSocketConnection,
 )
-from coredis.constants import NodeFlag
 from coredis.exceptions import (
     AskError,
     BusyLoadingError,

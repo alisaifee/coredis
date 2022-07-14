@@ -23,7 +23,6 @@ import coredis.client
 import coredis.pipeline
 from coredis.commands.constants import *  # noqa
 from coredis.commands.monitor import Monitor
-from coredis.constants import NodeFlag  # noqa
 from coredis.pool import ClusterConnectionPool, ConnectionPool  # noqa
 from coredis.response.types import *  # noqa
 from coredis.tokens import PureToken  # noqa
@@ -2029,6 +2028,14 @@ class CommandGroup(enum.Enum):
     {% for group in sorted(commands) -%}
     {{ group.upper().replace(" ", "_").replace("-", "_")}} = "{{group.lower()}}"
     {% endfor %}
+
+
+class NodeFlag(enum.Enum):
+    ALL = "all"
+    PRIMARIES = "primaries"
+    REPLICAS = "replicas"
+    RANDOM = "random"
+    SLOT_ID = "slot-id"
     """
     )
 

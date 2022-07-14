@@ -16,10 +16,9 @@ from wrapt import ObjectProxy  # type: ignore
 from coredis._utils import b, clusterdown_wrapper, hash_slot
 from coredis.client import Client
 from coredis.commands._key_spec import KeySpec
-from coredis.commands.constants import CommandName
+from coredis.commands.constants import CommandName, NodeFlag
 from coredis.commands.script import Script
 from coredis.connection import BaseConnection, ClusterConnection
-from coredis.constants import NodeFlag
 from coredis.exceptions import (
     AskError,
     ClusterCrossSlotError,
