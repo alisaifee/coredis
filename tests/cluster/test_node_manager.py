@@ -9,8 +9,9 @@ from unittest.mock import Mock, patch
 import pytest
 
 # rediscluster imports
-from coredis import ConnectionError, RedisCluster, RedisClusterException
+from coredis import RedisCluster
 from coredis.client import Redis
+from coredis.exceptions import ConnectionError, RedisClusterException
 from coredis.pool.nodemanager import HASH_SLOTS, NodeManager
 
 

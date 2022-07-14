@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from coredis import NotBusyError, PureToken, ResponseError
+from coredis import PureToken
 from coredis.commands.function import Library
+from coredis.exceptions import NotBusyError, ResponseError
 from coredis.typing import KeyT, List, StringT, ValueT
 from tests.conftest import targets
 

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from coredis import CommandSyntaxError, PureToken, ReadOnlyError, RedisError
+from coredis import PureToken
+from coredis.exceptions import CommandSyntaxError, ReadOnlyError, RedisError
 from tests.conftest import targets
 
 

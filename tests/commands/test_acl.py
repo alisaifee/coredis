@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from coredis import AuthenticationError, AuthorizationError, ResponseError
+from coredis.exceptions import AuthenticationError, AuthorizationError, ResponseError
 from tests.conftest import targets
 
 

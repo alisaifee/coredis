@@ -6,8 +6,8 @@ import datetime
 import pytest
 from pytest import approx
 
-from coredis import PureToken, ReadOnlyError, ResponseError
-from coredis.exceptions import ConnectionError, RedisError
+from coredis import PureToken
+from coredis.exceptions import ConnectionError, ReadOnlyError, RedisError, ResponseError
 from coredis.tokens import PrefixToken
 from tests.conftest import targets
 

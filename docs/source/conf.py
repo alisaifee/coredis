@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.abspath("../../"))
 sys.path.insert(0, os.path.abspath("./"))
 
 import coredis
+import coredis.exceptions
 from theme_config import *
 
 master_doc = "index"

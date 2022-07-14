@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from coredis import ResponseError
+from coredis.exceptions import ResponseError
 from tests.conftest import targets
 
 

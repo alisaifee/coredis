@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from coredis import RedisClusterException
+from coredis.exceptions import RedisClusterException
 from tests.conftest import targets
 
 pytestmarks = pytest.mark.asyncio

@@ -5,7 +5,8 @@ import time
 
 import pytest
 
-from coredis import DataError, NoKeyError, PureToken, ResponseError
+from coredis import PureToken
+from coredis.exceptions import DataError, NoKeyError, ResponseError
 from tests.conftest import targets
 
 

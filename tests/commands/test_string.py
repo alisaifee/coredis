@@ -4,7 +4,8 @@ import datetime
 
 import pytest
 
-from coredis import CommandSyntaxError, PureToken
+from coredis import PureToken
+from coredis.exceptions import CommandSyntaxError
 from tests.conftest import server_deprecation_warning, targets
 
 

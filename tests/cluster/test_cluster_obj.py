@@ -9,9 +9,10 @@ from unittest.mock import patch
 import pytest
 
 import coredis
+from coredis import RedisCluster
 
 # rediscluster imports
-from coredis import ClusterDownError, RedisCluster
+from coredis.exceptions import ClusterDownError
 from coredis.pool import ClusterConnectionPool
 
 pytestmark = [pytest.mark.asyncio]

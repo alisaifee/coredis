@@ -13,7 +13,7 @@ from coredis.exceptions import (
     ReadOnlyError,
     RedisError,
 )
-from coredis.pool import to_bool
+from coredis.pool.basic import to_bool
 
 
 class DummyConnection:

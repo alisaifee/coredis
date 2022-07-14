@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from coredis import CommandSyntaxError, DataError, PureToken
+from coredis import PureToken
+from coredis.exceptions import CommandSyntaxError, DataError
 from tests.conftest import server_deprecation_warning, targets
 
 

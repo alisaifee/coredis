@@ -4,8 +4,9 @@ import asyncio
 
 import pytest
 
-from coredis import MovedError, PureToken, ResponseError
+from coredis import PureToken
 from coredis._utils import hash_slot
+from coredis.exceptions import MovedError, ResponseError
 from coredis.tokens import PrefixToken
 from tests.conftest import targets
 

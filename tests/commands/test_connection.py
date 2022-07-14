@@ -5,8 +5,8 @@ import asyncio
 import pytest
 
 import coredis
-from coredis import AuthenticationFailureError, PureToken, ResponseError
-from coredis.exceptions import UnblockedError
+from coredis import PureToken
+from coredis.exceptions import AuthenticationFailureError, ResponseError, UnblockedError
 from tests.conftest import targets
 
 
