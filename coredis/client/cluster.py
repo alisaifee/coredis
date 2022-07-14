@@ -16,9 +16,7 @@ from coredis.client.basic import Client, Redis
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName, NodeFlag
 from coredis.commands.pubsub import ClusterPubSub, ShardedPubSub
-from coredis.connection import (
-    RedisSSLContext,
-)
+from coredis.connection import RedisSSLContext
 from coredis.exceptions import (
     AskError,
     BusyLoadingError,

@@ -4,7 +4,7 @@ import asyncio
 import contextlib
 import contextvars
 from ssl import SSLContext
-from typing import Any, TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, Any, overload
 
 from deprecated.sphinx import versionadded
 from packaging.version import Version
