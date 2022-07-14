@@ -6,7 +6,7 @@ from coredis._unpacker import NotEnoughData, Unpacker
 from coredis._utils import b
 from coredis.constants import RESPDataType
 from coredis.exceptions import ConnectionError
-from coredis.protocols import ConnectionP
+from coredis._protocols import ConnectionP
 from coredis.typing import Optional, ResponseType, Set, Union
 
 

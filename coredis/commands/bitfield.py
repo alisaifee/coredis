@@ -4,7 +4,7 @@ import enum
 
 from coredis.commands.constants import CommandName
 from coredis.exceptions import ReadOnlyError
-from coredis.protocols import AbstractExecutor
+from coredis._protocols import AbstractExecutor
 from coredis.tokens import PrefixToken, PureToken
 from coredis.typing import (
     AnyStr,

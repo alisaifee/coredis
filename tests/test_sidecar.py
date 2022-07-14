@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from coredis.sidecar import Sidecar
+from coredis._sidecar import Sidecar
 from tests.conftest import targets
 
 pytestmark = pytest.mark.asyncio

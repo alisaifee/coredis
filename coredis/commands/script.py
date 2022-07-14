@@ -10,7 +10,7 @@ from deprecated.sphinx import versionadded
 
 from coredis._utils import b
 from coredis.exceptions import NoScriptError
-from coredis.protocols import SupportsScript
+from coredis._protocols import SupportsScript
 from coredis.typing import (
     AnyStr,
     Awaitable,
