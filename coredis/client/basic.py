@@ -536,8 +536,8 @@ class Redis(Client[AnyStr]):
         :param idle_check_interval: Periodicity of idle checks to release idle connections.
         :param client_name: The client name to identifiy with the redis server
         :param protocol_version: Whether to use the RESP (``2``) or RESP3 (``3``)
-         protocol for parsing responses from the server (Default ``2``).
-         (See :ref:`handbook/response:parsers`)
+         protocol for parsing responses from the server (Default ``3``).
+         (See :ref:`handbook/response:redis response`)
         :param verify_version: Validate redis server version against the documented
          version introduced before executing a command and raises a
          :exc:`CommandNotSupportedError` error if the required version is higher than

@@ -290,8 +290,8 @@ class RedisCluster(
         :param connection_pool: The connection pool instance to use. If not provided
          a new pool will be assigned to this client.
         :param protocol_version: Whether to use the RESP (``2``) or RESP3 (``3``)
-         protocol for parsing responses from the server (Default ``2``).
-         (See :ref:`handbook/response:parsers`)
+         protocol for parsing responses from the server (Default ``3``).
+         (See :ref:`handbook/response:redis response`)
         :param verify_version: Validate redis server version against the documented
          version introduced before executing a command and raises a
          :exc:`CommandNotSupportedError` error if the required version is higher than
