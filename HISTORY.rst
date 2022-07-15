@@ -3,6 +3,27 @@
 Changelog
 =========
 
+v4.0.0b1
+--------
+Release Date: 2022-07-14
+
+* Features
+
+  * Added support for using noreply when sending commands
+  * Added support for ensuring replication to n replicas
+  * Moved KeyDB client out of experimental namespace
+
+* Deprecations
+
+  * Dropped support for hiredis
+  * Removed StrictRedis & StrictRedisCluster aliases
+
+* Backward incompatible changes
+
+  * Use RESP3 as default protocol version
+  * non_atomic_cross_slot is default behavior for cluster clients
+  * Moved exceptions out of root namespace to coredis.exceptions
+
 v3.11.5
 -------
 Release Date: 2022-07-13
@@ -945,6 +966,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
