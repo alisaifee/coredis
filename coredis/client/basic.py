@@ -479,8 +479,9 @@ class Redis(Client[AnyStr]):
         """
         Changes
           - .. versionchanged:: 4.0.0
-            :paramref:`non_atomic_cross_slot` defaults to ``True``
-            :paramref:`protocol_version`` defaults to ``3``
+
+            - :paramref:`non_atomic_cross_slot` defaults to ``True``
+            - :paramref:`protocol_version`` defaults to ``3``
           - .. versionadded:: 3.11.0
              Added :paramref:`noreply`
           - .. versionadded:: 3.9.0
