@@ -239,7 +239,7 @@ class NodeManager:
         self.populate_startup_nodes()
 
     async def increment_reinitialize_counter(self, ct: int = 1) -> None:
-        for _ in range(1, ct):
+        for _ in range(min(ct, self.reinitialize_steps)):
             self.reinitialize_counter += 1
             if self.reinitialize_counter % self.reinitialize_steps == 0:
                 await self.initialize()
