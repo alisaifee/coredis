@@ -10,10 +10,10 @@ from typing import TYPE_CHECKING, Any, runtime_checkable
 
 from pympler import asizeof
 
+from coredis._sidecar import Sidecar
 from coredis._utils import b
 from coredis.commands import PubSub
 from coredis.connection import BaseConnection
-from coredis._sidecar import Sidecar
 from coredis.typing import (
     Dict,
     Generic,

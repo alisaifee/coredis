@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import enum
 
+from coredis._protocols import AbstractExecutor
 from coredis.commands.constants import CommandName
 from coredis.exceptions import ReadOnlyError
-from coredis._protocols import AbstractExecutor
 from coredis.tokens import PrefixToken, PureToken
 from coredis.typing import (
     AnyStr,

@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING, Any, cast
 
 from deprecated.sphinx import versionadded
 
+from coredis._protocols import SupportsScript
 from coredis._utils import b
 from coredis.exceptions import NoScriptError
-from coredis._protocols import SupportsScript
 from coredis.typing import (
     AnyStr,
     Awaitable,

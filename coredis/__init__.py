@@ -8,8 +8,7 @@ cluster & sentinel.
 
 from __future__ import annotations
 
-from coredis.client import Redis, RedisCluster
-from coredis.client import KeyDB, KeyDBCluster
+from coredis.client import KeyDB, KeyDBCluster, Redis, RedisCluster
 from coredis.connection import (
     BaseConnection,
     ClusterConnection,
