@@ -1,4 +1,4 @@
 beartype
-git+https://github.com/python/mypy.git@master#egg=mypy
+mypy==0.961
 packaging>=21,<22
 types-deprecated
