@@ -58,6 +58,14 @@ class TestBasicCache:
         cached = await cloner(client, cache=cache)
         assert 1 == await cached.get("fubar")
 
+    async def test_cache_with_no_reply(self, client, cloner, _s):
+        cache = DummyCache({"fubar": 1})
+        cached = await cloner(client, cache=cache)
+        assert 1 == await cached.get("fubar")
+        with cached.ignore_replies():
+            assert await cached.get("fubar") is None
+        assert 1 == await cached.get("fubar")
+
     async def test_cache_miss(self, client, cloner, _s):
         cache = DummyCache({})
         cached = await cloner(client, cache=cache)
