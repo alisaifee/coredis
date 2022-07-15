@@ -9,48 +9,19 @@ Release Date: 2022-07-15
 
 * Features
 
-  * Added support for using noreply when sending commands
-  * Added support for ensuring replication to n replicas
-  * Moved KeyDB client out of experimental namespace
+  * Added support for using ``noreply`` when sending commands (see :ref:`handbook/noreply:no reply mode`)
+  * Added support for ensuring replication to ``n`` replicas using :meth:`~coredis.Redis.ensure_replication`.
+  * Moved :class:`~coredis.KeyDB` client out of experimental namespace
 
 * Backward incompatible changes
 
-  * Use RESP3 as default protocol version
-  * non_atomic_cross_slot is default behavior for cluster clients
-  * Moved exceptions out of root namespace to coredis.exceptions
+  * Use RESP3 as default protocol version (see :ref:`handbook/response:redis response`)
+  * :paramref:`~coredis.RedisCluster.non_atomic_cross_slot` is default behavior for cluster clients
+  * Moved exceptions out of root namespace to ``coredis.exceptions``
   * Removed Lock implementations
-  * Dropped support for hiredis
-  * Removed StrictRedis & StrictRedisCluster aliases
+  * Dropped support for hiredis (see :ref:`history:parsers`)
+  * Removed ``StrictRedis`` & ``StrictRedisCluster`` aliases
 
-
-v4.0.0b2
---------
-Release Date: 2022-07-15
-
-* Chores
-
-  * Update documentation en route to 4.0 release
-
-v4.0.0b1
---------
-Release Date: 2022-07-14
-
-* Features
-
-  * Added support for using noreply when sending commands
-  * Added support for ensuring replication to n replicas
-  * Moved KeyDB client out of experimental namespace
-
-* Deprecations
-
-  * Dropped support for hiredis
-  * Removed StrictRedis & StrictRedisCluster aliases
-
-* Backward incompatible changes
-
-  * Use RESP3 as default protocol version
-  * non_atomic_cross_slot is default behavior for cluster clients
-  * Moved exceptions out of root namespace to coredis.exceptions
 
 v3.11.5
 -------

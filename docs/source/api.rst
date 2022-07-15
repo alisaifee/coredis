@@ -296,7 +296,7 @@ Redis Response (RESP) descriptions
 ----------------------------------
 
 The follow two types describe the total representation of parsed responses from the redis
-serialization protocol(s) (RESP & RESP3) (See :ref:`handbook/response:parsers` for more details).
+serialization protocol(s) (RESP & RESP3) (See :ref:`handbook/response:redis response` for more details).
 
 In most cases these are not exposed through the client API and are only meant
 for internal pre-validation before the parsed response is transformed or narrowed
