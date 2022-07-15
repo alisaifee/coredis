@@ -179,6 +179,8 @@ class Client(
 
     @property
     def noreply(self) -> bool:
+        if not hasattr(self, "_noreplycontext"):
+            return False
         if ctx := self._noreplycontext.get() is not None:
             return ctx
         return self.__noreply
