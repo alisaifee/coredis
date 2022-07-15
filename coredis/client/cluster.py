@@ -69,7 +69,7 @@ class ClusterMeta(ABCMeta):
         NodeFlag.REPLICAS: "all replicas",
         NodeFlag.RANDOM: "a random node",
         NodeFlag.ALL: "all nodes",
-        NodeFlag.SLOT_ID: "a node selected by :paramref:`slot`",
+        NodeFlag.SLOT_ID: "one or more nodes based on the slots provided",
     }
 
     def __new__(
@@ -101,9 +101,9 @@ class ClusterMeta(ABCMeta):
                     doc_addition = f"""
 .. admonition:: Cluster note
 
-   If :paramref:`RedisCluster.non_atomic_cross_slot` is set the
-   command will be run on **{cls.NODE_FLAG_DOC_MAPPING[cmd.cluster.split]}**
-   by distributing the keys to the appropriate nodes and the results aggregated
+   The command will be run on **{cls.NODE_FLAG_DOC_MAPPING[cmd.cluster.split]}**
+   by distributing the keys to the appropriate nodes and the results aggregated.
+   To disable this behavior set :paramref:`RedisCluster.non_atomic_cross_slot` to ``False``
                 """
                 if cmd.cluster.multi_node:
                     kls.RESULT_CALLBACKS[cmd.command] = cmd.cluster.combine
