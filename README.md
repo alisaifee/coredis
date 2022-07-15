@@ -24,7 +24,7 @@ coredis is an async redis client with support for redis server, cluster
 	- [Cluster client](#cluster-client)
 - [Compatibility](#compatibility)
 	- [Supported python versions](#supported-python-versions)
-- [Experimental Backends](#experimental-backends)
+- [Redis-"like" Backends](#redis-like-backends)
 - [References](#references)
 
 <!-- /TOC -->
@@ -131,9 +131,9 @@ coredis is additionally tested against:
 -   3.10
 
 
-## Experimental Backends
+## Redis-like backends
 
-**coredis** has experimental support for the following redis compatible backends:
+**coredis** is known to work with the following databases that have redis protocol compatibility:
 
 - [KeyDB](https://docs.keydb.dev/)
 - [Dragonfly](https://dragonflydb.io/)
