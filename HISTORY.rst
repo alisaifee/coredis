@@ -3,6 +3,14 @@
 Changelog
 =========
 
+v4.0.0b2
+--------
+Release Date: 2022-07-15
+
+* Chores
+
+  * Update documentation en route to 4.0 release
+
 v4.0.0b1
 --------
 Release Date: 2022-07-14
@@ -966,6 +974,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
