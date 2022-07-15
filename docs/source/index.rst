@@ -1,3 +1,4 @@
+=======
 coredis
 =======
 
@@ -58,18 +59,21 @@ Feature Summary
   * :ref:`handbook/typing:runtime type checking`
 
 Installation
-------------
+============
+
+Released versions of coredis published on `pypi <https://pypi.org/project/coredis/>`__ contain
+precompiled native extensions for various architectures that provide significant performance improvements
+especially when dealing with large bulk responses.
 
 .. code-block:: bash
 
     $ pip install coredis
 
-
 Getting started
----------------
+===============
 
 Single Node client
-^^^^^^^^^^^^^^^^^^
+------------------
 
 .. code-block:: python
 
@@ -95,7 +99,7 @@ Single Node client
         asyncio.run(example())
 
 Cluster client
-^^^^^^^^^^^^^^
+--------------
 
 .. code-block:: python
 
@@ -139,9 +143,10 @@ sequencing of redis commands (see :ref:`api:command wrappers`) and the :ref:`han
 The redis command API does **NOT** mirror :pypi:`redis`.
 For details about the high level differences refer to :ref:`history:divergence from aredis & redis-py`
 
-Dependencies & supported python versions
-----------------------------------------
-coredis is tested against redis versions ``6.0.x``, ``6.2.x`` & ``7.0.x``. The
+Compatibility
+=============
+
+**coredis** is tested against redis versions ``6.0.x``, ``6.2.x`` & ``7.0.x``. The
 test matrix status can be reviewed `here <https://github.com/alisaifee/coredis/actions/workflows/main.yml>`__
 
 coredis is additionally tested against:
@@ -149,12 +154,32 @@ coredis is additionally tested against:
 - :pypi:`uvloop` >= `0.15.0`.
 
 Supported python versions
-^^^^^^^^^^^^^^^^^^^^^^^^^
+-------------------------
 
 - 3.8
 - 3.9
 - 3.10
 
+Support for Redis-"like" databases
+----------------------------------
+
+**coredis** is known to work with the following databases that have redis protocol compatibility:
+
+`KeyDB <https://docs.keydb.dev/>`__
+    KeyDB exposes a few commands that don't exist in redis and these are exposed by the :class:`~coredis.KeyDB`
+    and :class:`~coredis.KeyDBCluster` clients respectively.
+
+`Dragonfly <https://dragonflydb.io/>`__
+    Dragonfly currently has compatibility with redis 2.8, though there is increasing support for commands from higher versions.
+    For up to date details please refer to the `dragonfly api status documentation <https://github.com/dragonflydb/dragonfly/blob/main/docs/api_status.md>`__.
+
+    To see which functionality of **coredis** is tested against dragonfly, checkout a copy of **coredis** and run the
+    following::
+
+        pytest --collect-only -m dragonfly
+
+Compatibility tests for the above are included in the
+continuous integration test matrix `here <https://github.com/alisaifee/coredis/actions/workflows/main.yml>`__.
 
 .. toctree::
     :maxdepth: 2
