@@ -178,6 +178,9 @@ Support for Redis-"like" databases
 
         pytest --collect-only -m dragonfly
 
+    .. warning:: Since dragonfly does not yet support RESP3 (which is the default protocol version
+       for **coredis**) connecting to a dragonfly instance requires setting :paramref:`coredis.Redis.protocol_version` to ``2``.
+
 Compatibility tests for the above are included in the
 continuous integration test matrix `here <https://github.com/alisaifee/coredis/actions/workflows/main.yml>`__.
 

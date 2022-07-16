@@ -885,7 +885,6 @@ async def dragonfly(dragonfly_server, request):
         11379,
         protocol_version=2,
         decode_responses=True,
-        verify_version=False,
         **get_client_test_args(request),
     )
     await check_test_constraints(request, client, protocol=2)

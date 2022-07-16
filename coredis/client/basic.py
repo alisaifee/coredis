@@ -3,11 +3,12 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import contextvars
+import warnings
 from ssl import SSLContext
 from typing import TYPE_CHECKING, Any, overload
 
 from deprecated.sphinx import versionadded
-from packaging.version import Version
+from packaging.version import InvalidVersion, Version
 
 from coredis._utils import nativestr
 from coredis.cache import AbstractCache, SupportsClientTracking
@@ -197,7 +198,19 @@ class Client(
         if not version:
             return
         if not self.server_version and version:
-            self.server_version = Version(nativestr(version))
+            try:
+                self.server_version = Version(nativestr(version))
+            except InvalidVersion:
+                warnings.warn(
+                    (
+                        f"Server reported an invalid version: {version}."
+                        "If this is expected you can dismiss this warning by passing "
+                        "verify_version=False to the client constructor"
+                    ),
+                    category=UserWarning,
+                )
+                self.verify_version = False
+                self.server_version = None
 
     async def _ensure_wait(self, command: bytes, connection: BaseConnection) -> None:
         if wait := self._waitcontext.get():
