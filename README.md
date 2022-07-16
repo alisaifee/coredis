@@ -13,7 +13,6 @@ coredis is an async redis client with support for redis server, cluster
 <!-- TOC depthFrom:2 depthTo:6 withLinks:1 updateOnSave:1 orderedList:0 -->
 
 - [Installation](#installation)
-- [Why?](#why)
 - [Feature Summary](#feature-summary)
 	- [Deployment topologies](#deployment-topologies)
 	- [Application patterns](#application-patterns)
