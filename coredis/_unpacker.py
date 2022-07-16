@@ -90,6 +90,8 @@ class Unpacker:
         "ERR": {
             "max number of clients reached": ConnectionError,
             "unknown command": UnknownCommandError,
+            "unknown subcommand": UnknownCommandError,
+            "sub command not supported": UnknownCommandError,
         },
         "EXECABORT": ExecAbortError,
         "LOADING": BusyLoadingError,

@@ -253,6 +253,8 @@ class BaseConnection(asyncio.BaseProtocol):
                 raise ConnectionError("Unable to toggle client tracking")
             self.tracking_client_id = client_id
             return True
+        except UnknownCommandError:  # noqa
+            raise
         except Exception:  # noqa
             return False
 
