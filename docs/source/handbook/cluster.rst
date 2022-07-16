@@ -30,11 +30,11 @@ Examples of such APIs are:
 Replication
 ^^^^^^^^^^^
 
-**coredis** supports ensuring synchronous replication of writes using the ``WAIT``
+**coredis** supports ensuring synchronous replication of writes using the :command:`WAIT`
 command. This is abstracted away with the :meth:`~coredis.RedisCluster.ensure_replication`
 context manager.
 
-The following example will ensure that the ``SET`` is replicated to atleast 2 replicas within 100 milliseconds (default
+The following example will ensure that the :command:`SET` is replicated to atleast 2 replicas within 100 milliseconds (default
 value of :paramref:`~coredis.RedisCluster.ensure_replication.timeout_ms`),
 else raise a :exc:`~coredis.exceptions.ReplicationError`::
 

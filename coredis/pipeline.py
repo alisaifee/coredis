@@ -1156,6 +1156,10 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         return await self.__wrapped__.execute(raise_on_error=raise_on_error)
 
     async def reset(self) -> None:
+        """
+        Resets the command stack and releases any connections acquired from the
+        pool
+        """
         await self.__wrapped__.reset_pipeline()
 
 
@@ -1222,4 +1226,8 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         return await self.__wrapped__.execute(raise_on_error=raise_on_error)
 
     def reset(self) -> None:
+        """
+        Resets the command stack and releases any connections acquired from the
+        pool
+        """
         self.__wrapped__.reset_pipeline()

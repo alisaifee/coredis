@@ -3,7 +3,7 @@ Scripting
 
 LUA Scripts
 ^^^^^^^^^^^
-coredis supports the ``EVAL``, ``EVALSHA``, and ``SCRIPT`` commands. However, there are
+coredis supports the :command:`EVAL`, :command:`EVALSHA`, and :command:`SCRIPT` commands. However, there are
 a number of edge cases that make these commands tedious to use in real world
 scenarios. Therefore, coredis exposes a :class:`~coredis.commands.Script`
 class that makes scripting much easier to use.
@@ -33,7 +33,7 @@ invoked by calling it like a function. Script instances accept the following opt
 * **args**: A list of argument values. This becomes the ARGV list in LUA.
 * **client**: A coredis Client or Pipeline instance that will invoke the
   script. If client isn't specified, the client that initially
-  created the Script instance (the one that `register_script` was
+  created the :class:`coredis.commands.Script` instance (the one that :meth:`~coredis.Redis.register_script` was
   invoked from) will be used.
 
 Continuing the example from above:
