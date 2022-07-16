@@ -5,19 +5,19 @@ Handbook
     :hidden:
     :maxdepth: 3
 
-    connections
-    encoding
-    response
     cluster
     sentinel
     pubsub
     streams
+    caching
     pipelines
     noreply
     scripting
-    caching
-    development
+    connections
+    encoding
+    response
     typing
+    development
 
 
 This section contains details on high level concepts
