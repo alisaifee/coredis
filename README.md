@@ -23,7 +23,7 @@ coredis is an async redis client with support for redis server, cluster
 	- [Cluster client](#cluster-client)
 - [Compatibility](#compatibility)
 	- [Supported python versions](#supported-python-versions)
-- [Redis-"like" Backends](#redis-like-backends)
+	- [Redis-like Backends](#redis-like-backends)
 - [References](#references)
 
 <!-- /TOC -->
@@ -130,7 +130,7 @@ coredis is additionally tested against:
 -   3.10
 
 
-## Redis-like backends
+### Redis-like backends
 
 **coredis** is known to work with the following databases that have redis protocol compatibility:
 
