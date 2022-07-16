@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v4.0.1
+------
+Release Date: 2022-07-16
+
+* Documentation
+
+  * Added section about reliability in handbook
+  * Improved cross referencing
+
 v4.0.0
 ------
 Release Date: 2022-07-15
@@ -965,6 +974,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
