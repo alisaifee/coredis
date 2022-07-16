@@ -45,6 +45,11 @@ Performance
 - :ref:`handbook/pipelines:pipelines`
 - :ref:`handbook/noreply:no reply mode`
 
+Reliability
+-----------
+- :ref:`handbook/pipelines:atomicity & transactions`
+- :ref:`handbook/cluster:replication`
+
 Implementation Details
 ----------------------
 - :ref:`handbook/connections:connections`

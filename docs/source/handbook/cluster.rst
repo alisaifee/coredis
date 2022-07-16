@@ -27,3 +27,24 @@ Examples of such APIs are:
 - .. automethod:: coredis.RedisCluster.script_load
      :noindex:
 
+Replication
+^^^^^^^^^^^
+
+**coredis** supports ensuring synchronous replication of writes using the ``WAIT``
+command. This is abstracted away with the :meth:`~coredis.RedisCluster.ensure_replication`
+context manager.
+
+The following example will ensure that the ``SET`` is replicated to atleast 2 replicas within 100 milliseconds (default
+value of :paramref:`~coredis.RedisCluster.ensure_replication.timeout_ms`),
+else raise a :exc:`~coredis.exceptions.ReplicationError`::
+
+    import asyncio
+    import coredis
+
+
+    async def test():
+        client = coredis.RedisCluster("localhost", 7000)
+        with client.ensure_replication(replicas=2):
+            await client.set("fubar", 1)
+
+    asyncio.run(test())
