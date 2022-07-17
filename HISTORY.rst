@@ -3,6 +3,23 @@
 Changelog
 =========
 
+v4.0.2
+------
+Release Date: 2022-07-16
+
+* Compatibility
+
+  * Relax version checking to only warn if a server reports
+    a non standard server version (for example with Redis-like
+    databases)
+  * Raise an exception when client tracking is not available
+    and server assisted caching cannot be used (for example
+    with upstash provisioned redis instances)
+
+* Documentation
+
+  * Add more detail about Sharded Pub/Sub
+
 v4.0.1
 ------
 Release Date: 2022-07-16
@@ -974,6 +991,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
