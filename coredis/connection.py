@@ -391,13 +391,12 @@ class BaseConnection(asyncio.BaseProtocol):
         """Disconnects from the Redis server"""
         self.needs_handshake = True
         self._parser.on_disconnect(self._last_error)
-        # set the read flag for any final call to read a response
-        # to be able to pick up the exception or raise.
-        self._read_flag.set()
-
         if self._transport:
             try:
                 self._transport.close()
+                # set the read flag for any final call to read a response
+                # to be able to pick up the exception or raise.
+                self._read_flag.set()
             except RuntimeError:
                 pass
         self._transport = None
