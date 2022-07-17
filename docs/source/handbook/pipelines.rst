@@ -52,18 +52,18 @@ off transactions.
 
 A common issue occurs when requiring atomic transactions but needing to
 retrieve values in Redis prior for use within the transaction. For instance,
-let's assume that the :command:`INCR` command didn't exist and we need to build an atomic
-version of :command:`INCR` in Python.
+let's assume that the :rediscommand:`INCR` command didn't exist and we need to build an atomic
+version of :rediscommand:`INCR` in Python.
 
-The completely naive implementation could :command:`GET` the value, increment it in
-Python, and :command:`SET` the new value back. However, this is not atomic because
+The completely naive implementation could :rediscommand:`GET` the value, increment it in
+Python, and :rediscommand:`SET` the new value back. However, this is not atomic because
 multiple clients could be doing this at the same time, each getting the same
-value from :command:`GET`.
+value from :rediscommand:`GET`.
 
-Enter the :command:`WATCH` command. :command:`WATCH` provides the ability to monitor one or more keys
+Enter the :rediscommand:`WATCH` command. :rediscommand:`WATCH` provides the ability to monitor one or more keys
 prior to starting a transaction. If any of those keys change prior the
 execution of that transaction, the entire transaction will be canceled and a
-WatchError will be raised. To implement our own client-side :command:`INCR` command, we
+WatchError will be raised. To implement our own client-side :rediscommand:`INCR` command, we
 could do something like this:
 
 .. code-block:: python
@@ -94,7 +94,7 @@ could do something like this:
                     continue
 
 Note that, because the Pipeline must bind to a single connection for the
-duration of a :command:`WATCH`, care must be taken to ensure that the connection is
+duration of a :rediscommand:`WATCH`, care must be taken to ensure that the connection is
 returned to the connection pool by calling the :meth:`~coredis.pipeline.Pipeline.reset` method. If the
 :class:`~coredis.pipeline.Pipeline` is used as a context manager (as in the example above) :meth:`~coredis.pipeline.Pipeline.reset`
 will be called automatically. Of course you can do this the manual way by
@@ -118,7 +118,7 @@ explicitly calling :meth:`~coredis.pipeline.Pipeline.reset`:
 A convenience method :meth:`~coredis.Redis.transaction` exists for handling all the
 boilerplate of handling and retrying watch errors. It takes a callable that
 should expect a single parameter, a pipeline object, and any number of keys to
-be watched. Our client-side :command:`INCR` command above can be written like this,
+be watched. Our client-side :rediscommand:`INCR` command above can be written like this,
 which is much easier to read:
 
 .. code-block:: python

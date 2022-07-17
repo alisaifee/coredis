@@ -5,7 +5,7 @@ For scenarios where the response from the redis server is not relevant
 to the client the :paramref:`~coredis.Redis.noreply` parameter can be passed to
 either the :class:`~coredis.Redis` or :class:`~coredis.RedisCluster` constructors
 which ensures the client does not wait for responses from the server and additionally
-sets ``CLIENT REPLY OFF`` (using the :command:`CLIENT-REPLY` command) for any connection used by the client. This can provide some
+sets ``CLIENT REPLY OFF`` (using the :rediscommand:`CLIENT-REPLY` command) for any connection used by the client. This can provide some
 performance benefits.
 
 For example::

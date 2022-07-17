@@ -3,7 +3,7 @@ Scripting
 
 LUA Scripts
 ^^^^^^^^^^^
-coredis supports the :command:`EVAL`, :command:`EVALSHA`, and :command:`SCRIPT` commands. However, there are
+coredis supports the :rediscommand:`EVAL`, :rediscommand:`EVALSHA`, and :rediscommand:`SCRIPT` commands. However, there are
 a number of edge cases that make these commands tedious to use in real world
 scenarios. Therefore, coredis exposes a :class:`~coredis.commands.Script`
 class that makes scripting much easier to use.

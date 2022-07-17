@@ -169,7 +169,7 @@ cannot be delivered. When you're finished with a PubSub object, call the
     ...
     p.close()
 
-The Pub/Sub support commands :command:`PUBSUB-CHANNELS`, :command:`PUBSUB-NUMSUB` and :command:`PUBSUB-NUMPAT` are also
+The Pub/Sub support commands :rediscommand:`PUBSUB-CHANNELS`, :rediscommand:`PUBSUB-NUMSUB` and :rediscommand:`PUBSUB-NUMPAT` are also
 supported:
 
 .. code-block:: python
@@ -191,7 +191,7 @@ application.
 
 :meth:`~coredis.RedisCluster.pubsub` returns an instance of :class:`coredis.commands.ClusterPubSub`
 which exposes identical functionality to the non clustered client. This is possible
-without worrying about sharding as the :command:``PUBLISH`` command in clustered redis results
+without worrying about sharding as the :rediscommand:``PUBLISH`` command in clustered redis results
 in messages being broadcasted to every node in the cluster. On the consumer side of the equation
 **coredis** simply picks a node by hashing the first subscribed channel using the same algorithm
 used to find slots for keys and consumes the messages from the node the channel hashes to.
@@ -204,7 +204,7 @@ Sharded Pub/Sub
 ===============
 
 As of :redis-version:`7.0.0` support for :term:`Sharded Pub/Sub` has been added
-through the :command:`SSUBSCRIBE`, :command:`SUNSUBSCRIBE` and :command:`SPUBLISH` commands
+through the :rediscommand:`SSUBSCRIBE`, :rediscommand:`SUNSUBSCRIBE` and :rediscommand:`SPUBLISH` commands
 which restricts publishing of messages to individual shards based on the same algorithm used
 to route keys to shards.
 

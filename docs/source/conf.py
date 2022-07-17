@@ -88,7 +88,7 @@ extlinks = {
         "https://raw.githubusercontent.com/redis/redis/%s/00-RELEASENOTES",
         "Redis version: %s",
     ),
-    "command": ("https://redis.io/commands/%s", "%s"),
+    "rediscommand": ("https://redis.io/commands/%s", "%s"),
 }
 
 
