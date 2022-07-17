@@ -135,7 +135,7 @@ class TestConnection:
         assert await client.client_unpause()
         assert await clone.set("fubar", 1)
 
-    @pytest.mark.flaky
+    @pytest.mark.xfail
     async def test_client_unblock(self, client, cloner, event_loop):
         clone = await cloner(client)
         client_id = await clone.client_id()

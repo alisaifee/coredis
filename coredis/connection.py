@@ -150,6 +150,7 @@ class BaseConnection(asyncio.BaseProtocol):
         self.noreply = noreply
         self.needs_handshake = True
         self._transport: Optional[asyncio.Transport] = None
+        self._read_flag = asyncio.Event()
         self._write_flag = asyncio.Event()
         self._connect_event = asyncio.Event()
         self._last_error: Optional[BaseException] = None
@@ -219,7 +220,11 @@ class BaseConnection(asyncio.BaseProtocol):
         self._write_flag.set()
 
     def connection_lost(self, exc: Optional[BaseException]) -> None:
-        self._last_error = exc
+        if exc:
+            self._last_error = exc
+        # set the read flag for any final call to read a response
+        # to be able to pick up the exception or raise.
+        self._read_flag.set()
         self.disconnect()
 
     def pause_writing(self) -> None:  # noqa
@@ -231,6 +236,7 @@ class BaseConnection(asyncio.BaseProtocol):
     def data_received(self, data: bytes) -> None:
         if self._parser.unpacker:
             self._parser.unpacker.feed(data)
+            self._read_flag.set()
 
     def eof_received(self) -> None:
         self.disconnect()
@@ -339,7 +345,9 @@ class BaseConnection(asyncio.BaseProtocol):
             (response := self._parser.get_response(decode, push_message_types)),
             NotEnoughData,
         ):
-            await asyncio.sleep(0)
+            self._read_flag.clear()
+            await self._read_flag.wait()
+
         return response
 
     async def read_response(
