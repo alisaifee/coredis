@@ -165,7 +165,7 @@ def redis_command(
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
             if redirect_usage:
                 if redirect_usage.warn:
-                    warnings.warn(redirect_usage.reason, UserWarning)
+                    warnings.warn(redirect_usage.reason, UserWarning, stacklevel=2)
                 else:
                     raise NotImplementedError(redirect_usage.reason)
 
