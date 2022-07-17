@@ -8,8 +8,9 @@ source .benchmarks/bin/activate
 pip install -r python-redis-benchmark/requirements.txt
 pip install -r requirements/dev.txt
 pip uninstall coredis -y
-python setup.py install
+pip install pytest-profiling
+pip install -U coredis
 cd python-redis-benchmark
-pytest $@
+pytest --profile $@
 deactivate
 cd ../
