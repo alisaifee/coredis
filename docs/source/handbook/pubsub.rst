@@ -189,13 +189,21 @@ Cluster Pub/Sub
 The :class:`coredis.RedisCluster` client exposes two ways of building a :term:`Pub/Sub`
 application.
 
-1. :meth:`~coredis.RedisCluster.pubsub` returns an instance of :class:`coredis.commands.ClusterPubSub`
+:meth:`~coredis.RedisCluster.pubsub` returns an instance of :class:`coredis.commands.ClusterPubSub`
 which exposes identical functionality to the non clustered client. This is possible
-without worrying about sharding as the ``PSUBLISH`` command in clustered redis results
-in messages being broadcasted to every node in the cluster. This ofcourse inherently limits the
-potential for horizontal scaling.∂
+without worrying about sharding as the :command:``PUBLISH`` command in clustered redis results
+in messages being broadcasted to every node in the cluster. On the consumer side of the equation
+**coredis** simply picks a node by hashing the first subscribed channel using the same algorithm
+used to find slots for keys and consumes the messages from the node the channel hashes to.
 
-2. As of :redis-version:`7.0.0` support for :term:`Sharded Pub/Sub` has been added
+This approach, though functional does pose limited opportunity for horizontal scaling as all the nodes
+in the cluster will have to process the published messages for all channels.
+
+===============
+Sharded Pub/Sub
+===============
+
+As of :redis-version:`7.0.0` support for :term:`Sharded Pub/Sub` has been added
 through the :command:`SSUBSCRIBE`, :command:`SUNSUBSCRIBE` and :command:`SPUBLISH` commands
 which restricts publishing of messages to individual shards based on the same algorithm used
 to route keys to shards.
@@ -208,3 +216,11 @@ method which exposes the same api and functionality (except for pattern support)
 
 To publish a messages that is meant to be consumed by a Sharded Pub/Sub consumer use
 :meth:`coredis.Redis.spublish` instead of :meth:`coredis.Redis.publish`
+
+:term:`Sharded Pub/Sub` can provide much better performance as each node in the cluster
+only routes messages for channels that reside on the node (which in turn means that **coredis**
+can use a dedicated connection per node to drain messages).
+
+Additionally, the :paramref:`~coredis.RedisCluster.sharded_pubsub.read_from_replicas`
+parameter can be set to ``True`` when constructing a :class:`~coredis.commands.pubsub.ShardedPubSub` instance
+to further increase throughput by letting the consumer use read replicas.

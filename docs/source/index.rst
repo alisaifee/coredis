@@ -39,6 +39,7 @@ Feature Summary
 
   * :ref:`handbook/pubsub:pubsub`
   * :ref:`handbook/pubsub:cluster pub/sub`
+  * :ref:`handbook/pubsub:sharded pub/sub`
   * :ref:`handbook/streams:streams`
   * :ref:`handbook/pipelines:pipelines`
   * :ref:`handbook/caching:caching`
