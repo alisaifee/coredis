@@ -337,14 +337,15 @@ class TestServer:
 
     @pytest.mark.nocluster
     async def test_slaveof(self, client, _s):
-        assert await client.slaveof()
-        try:
-            await client.slaveof("nowhere", 6666)
-            with pytest.raises(ReadOnlyError):
-                await client.set("fubar", 1)
-        finally:
-            # reset to replica of self
-            await client.slaveof()
+        with pytest.warns(DeprecationWarning):
+            assert await client.slaveof()
+            try:
+                await client.slaveof("nowhere", 6666)
+                with pytest.raises(ReadOnlyError):
+                    await client.set("fubar", 1)
+            finally:
+                # reset to replica of self
+                await client.slaveof()
 
     @pytest.mark.nokeydb
     @pytest.mark.nocluster
