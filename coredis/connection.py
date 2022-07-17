@@ -397,7 +397,8 @@ class BaseConnection(asyncio.BaseProtocol):
                 # set the read flag for any final call to read a response
                 # to be able to pick up the exception or raise.
                 self._read_flag.set()
-            except RuntimeError:
+            # Raised if event loop is already closed.
+            except RuntimeError:  # noqa
                 pass
         self._transport = None
 
