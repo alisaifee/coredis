@@ -2,8 +2,8 @@ PubSub
 ------
 
 coredis includes a :class:`~coredis.commands.PubSub` class
-that subscribes to channels and listens for new messages. Creating a :class:`~coredis.commands.PubSub` instance
-can be done through the :meth:`~coredis.Redis.pubsub` or :meth:`~coredis.RedisCluster.pubsub` methods.
+that subscribes to channels and listens for new messages.
+Creating an instance can be done through the :meth:`coredis.Redis.pubsub` or :meth:`coredis.RedisCluster.pubsub` methods.
 
 .. code-block:: python
 
@@ -169,7 +169,7 @@ cannot be delivered. When you're finished with a PubSub object, call the
     ...
     p.close()
 
-The Pub/Sub support commands ``CHANNELS``, ``NUMSUB`` and ``NUMPAT`` are also
+The Pub/Sub support commands :command:`PUBSUB-CHANNELS`, :command:`PUBSUB-NUMSUB` and :command:`PUBSUB-NUMPAT` are also
 supported:
 
 .. code-block:: python
@@ -196,10 +196,12 @@ in messages being broadcasted to every node in the cluster. This ofcourse inhere
 potential for horizontal scaling.∂
 
 2. As of :redis-version:`7.0.0` support for :term:`Sharded Pub/Sub` has been added
-through the ``SSUBSCRIBE``, ``SUNSUBSCRIBE`` and ``SPUBLISH`` commands which restricts publishing
-of messages to individual shards based on the same algorithm used to route keys to shards.
-Note that there is no corresponding support for pattern based subscriptions
-(as you might have guessed, it wouldn't be possible to shard those).
+through the :command:`SSUBSCRIBE`, :command:`SUNSUBSCRIBE` and :command:`SPUBLISH` commands
+which restricts publishing of messages to individual shards based on the same algorithm used
+to route keys to shards.
+
+.. note:: There is no corresponding support for pattern based subscriptions
+   (as you might have guessed, it wouldn't be possible to shard those).
 
 Access to Sharded Pub/Sub is available through the :meth:`coredis.RedisCluster.sharded_pubsub`
 method which exposes the same api and functionality (except for pattern support) as the other previously mentioned `PubSub` classes.
