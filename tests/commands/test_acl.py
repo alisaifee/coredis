@@ -59,8 +59,9 @@ class TestACL:
     @pytest.mark.min_server_version("6.0.0")
     @pytest.mark.nocluster
     async def test_acl_log(self, client, _s):
-        with pytest.raises(AuthenticationError):
-            await client.auth("wrong", "wrong")
+        with pytest.warns(UserWarning):
+            with pytest.raises(AuthenticationError):
+                await client.auth("wrong", "wrong")
         log = await client.acl_log()
         assert len(log) == 1
         log = await client.acl_log(count=0)
