@@ -222,9 +222,6 @@ class BaseConnection(asyncio.BaseProtocol):
     def connection_lost(self, exc: Optional[BaseException]) -> None:
         if exc:
             self._last_error = exc
-        # set the read flag for any final call to read a response
-        # to be able to pick up the exception or raise.
-        self._read_flag.set()
         self.disconnect()
 
     def pause_writing(self) -> None:  # noqa
@@ -394,6 +391,10 @@ class BaseConnection(asyncio.BaseProtocol):
         """Disconnects from the Redis server"""
         self.needs_handshake = True
         self._parser.on_disconnect(self._last_error)
+        # set the read flag for any final call to read a response
+        # to be able to pick up the exception or raise.
+        self._read_flag.set()
+
         if self._transport:
             try:
                 self._transport.close()

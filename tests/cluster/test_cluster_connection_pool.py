@@ -26,6 +26,7 @@ class DummyConnection(ClusterConnection):
         self._parser = Parser()
         self._last_error = None
         self._transport = None
+        self._read_flag = asyncio.Event()
 
 
 @pytest.mark.asyncio
