@@ -1,12 +1,12 @@
 {
     "strict": [
-        "coredis/client.py",
+        "coredis/client/*.py",
         "coredis/connection.py",
         "coredis/constants.py",
         "coredis/exceptions.py",
         "coredis/nodemanager.py",
         "coredis/parser.py",
-        "coredis/pool.py",
+        "coredis/pool/*.py",
         "coredis/sentinel.py",
         "coredis/tokens.py",
         "coredis/typing.py",
