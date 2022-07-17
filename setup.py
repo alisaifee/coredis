@@ -121,7 +121,7 @@ setup(
     maintainer_email=__email__,
     keywords=["Redis", "key-value store", "asyncio"],
     license="MIT",
-    packages=find_packages(exclude=["tests", "benchmarks"]),
+    packages=find_packages(exclude=["tests"]),
     include_package_data=True,
     package_data={
         "coredis": ["py.typed"],
