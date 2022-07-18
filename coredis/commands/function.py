@@ -116,9 +116,10 @@ class Library(Generic[AnyStr]):
 
     async def initialize(self: LibraryT, replace: bool = False) -> LibraryT:
         self._functions.clear()
-        if self.code:
-            await self.client.function_load(self.code, replace=replace or self.replace)
         library = (await self.client.function_list(self.name)).get(self.name)
+        if (not library and self.code) or (replace or self.replace):
+            await self.client.function_load(self.code, replace=replace or self.replace)
+            library = (await self.client.function_list(self.name)).get(self.name)
 
         if not library:
             raise FunctionError(f"No library found for {self.name}")

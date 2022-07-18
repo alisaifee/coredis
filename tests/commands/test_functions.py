@@ -139,6 +139,18 @@ class TestLibrary:
         library = await client.register_library("coredis", library_definition)
         assert len(library.functions) == 4
 
+    async def test_library_constructor(self, client, _s, mocker):
+        function_load = mocker.spy(client, "function_load")
+        library = await Library(client, "coredis", library_definition)
+        assert len(library.functions) == 4
+        assert function_load.call_count == 1
+        library = await Library(client, "coredis", library_definition)
+        assert len(library.functions) == 4
+        assert function_load.call_count == 1
+        library = await Library(client, "coredis", library_definition, replace=True)
+        assert len(library.functions) == 4
+        assert function_load.call_count == 2
+
     async def test_load_library(self, client, simple_library):
         library = await client.get_library("coredis")
         assert len(library.functions) == 4
