@@ -59,7 +59,11 @@ async def test_legacy_authentication(redis_auth, mocker):
             await coredis.Redis("localhost", 6389, password="sekret").ping()
         with pytest.raises(AuthenticationError):
             await coredis.Redis(
-                "localhost", 6389, username="bogus", password="sekret", protocol_version=2
+                "localhost",
+                6389,
+                username="bogus",
+                password="sekret",
+                protocol_version=2,
             ).ping()
 
         assert (
@@ -71,6 +75,10 @@ async def test_legacy_authentication(redis_auth, mocker):
         assert (
             b"PONG"
             == await coredis.Redis(
-                "localhost", 6389, username="default", password="sekret", protocol_version=2
+                "localhost",
+                6389,
+                username="default",
+                password="sekret",
+                protocol_version=2,
             ).ping()
         )
