@@ -3,13 +3,13 @@
 Changelog
 =========
 
-* Bug Fix
-
-  * Ensure lua scripts for lock recipe are included in package
-
 v4.1.1
 ------
 Release Date: 2022-07-18
+
+* Bug Fix
+
+  * Ensure lua scripts for lock recipe are included in package
 
 v4.1.0
 ------
