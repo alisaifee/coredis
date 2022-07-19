@@ -3,6 +3,25 @@
 Changelog
 =========
 
+v4.1.0
+------
+Release Date: 2022-07-18
+
+* Features
+
+  * Reintroduce distributed lock implementation under
+    `coredis.recipes.locks`
+
+* Bug Fix
+
+  * Allow initializing a LUA library without loading the code
+    when it already exists if replace=False
+
+* Performance
+
+  * Reduce unnecessary calls to parser by using an async Event
+    to signal that data is available for parsing
+
 v4.0.2
 ------
 Release Date: 2022-07-16
@@ -991,6 +1010,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
