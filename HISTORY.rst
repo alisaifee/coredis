@@ -3,6 +3,14 @@
 Changelog
 =========
 
+* Bug Fix
+
+  * Ensure lua scripts for lock recipe are included in package
+
+v4.1.1
+------
+Release Date: 2022-07-18
+
 v4.1.0
 ------
 Release Date: 2022-07-18
@@ -1010,6 +1018,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
