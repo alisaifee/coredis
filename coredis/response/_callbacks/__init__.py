@@ -149,6 +149,18 @@ class ClusterEnsureConsistent(ClusterMultiNodeCallback[Optional[R]]):
         return None
 
 
+class ClusterFirstNonException(ClusterMultiNodeCallback[Optional[R]]):
+    def combine(
+        self, responses: Mapping[str, Optional[R]], **kwargs: Optional[ValueT]
+    ) -> Optional[R]:
+        for r in responses.values():
+            if not isinstance(r, BaseException):
+                return r
+        for r in responses.values():
+            if isinstance(r, BaseException):
+                raise r
+
+
 class ClusterConcatTuples(ClusterMultiNodeCallback[Tuple[R, ...]]):
     def combine(
         self, responses: Mapping[str, Tuple[R, ...]], **kwargs: Optional[ValueT]

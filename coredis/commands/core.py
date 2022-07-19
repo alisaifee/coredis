@@ -39,6 +39,7 @@ from coredis.response._callbacks import (
     ClusterAlignedBoolsCombine,
     ClusterBoolCombine,
     ClusterEnsureConsistent,
+    ClusterFirstNonException,
     ClusterMergeMapping,
     ClusterMergeSets,
     ClusterSum,
@@ -5876,6 +5877,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SCRIPT_KILL,
         group=CommandGroup.SCRIPTING,
+        cluster=ClusterCommandConfig(
+            route=NodeFlag.ALL,
+            combine=ClusterFirstNonException[bool](),
+        ),
     )
     async def script_kill(self) -> bool:
         """
@@ -6015,6 +6020,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.FUNCTION_KILL,
         version_introduced="7.0.0",
         group=CommandGroup.SCRIPTING,
+        cluster=ClusterCommandConfig(
+            route=NodeFlag.ALL,
+            combine=ClusterFirstNonException[bool](),
+        ),
     )
     async def function_kill(self) -> bool:
         """

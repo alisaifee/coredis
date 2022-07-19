@@ -8,7 +8,7 @@ from beartype.roar import BeartypeCallHintParamViolation
 from coredis import PureToken
 from coredis.client import Client
 from coredis.commands import Script
-from coredis.exceptions import NoScriptError, ResponseError
+from coredis.exceptions import NoScriptError, NotBusyError, ResponseError
 from coredis.typing import KeyT, List, ValueT
 from tests.conftest import targets
 
@@ -160,7 +160,7 @@ class TestScripting:
         assert excinfo.type == ResponseError
 
     async def test_script_kill_no_scripts(self, client):
-        with pytest.raises(ResponseError):
+        with pytest.raises(NotBusyError):
             await client.script_kill()
 
     async def test_wraps_function_no_keys(self, client):
