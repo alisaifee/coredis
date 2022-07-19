@@ -4,7 +4,7 @@ autoflake8==0.3.2
 black==22.6.0
 flake8==4.0.1
 isort==5.10.1
-mypy==0.961
+mypy==0.971
 pyright==1.1.249
 redis>=4.2.0
 twine
