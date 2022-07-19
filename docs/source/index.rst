@@ -192,6 +192,7 @@ continuous integration test matrix `here <https://github.com/alisaifee/coredis/a
     handbook/index
     compatibility
     api
+    recipes/index
     release_notes
     history
     glossary
