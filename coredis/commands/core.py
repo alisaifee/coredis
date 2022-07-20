@@ -1447,7 +1447,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         longitude: Union[int, float],
         latitude: Union[int, float],
         radius: Union[int, float],
-        unit: Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI],
+        unit: Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI],
     ) -> Tuple[AnyStr, ...]:
         ...
 
@@ -1458,7 +1458,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         longitude: Union[int, float],
         latitude: Union[int, float],
         radius: Union[int, float],
-        unit: Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI],
+        unit: Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI],
         *,
         withcoord: Literal[True],
         withdist: Optional[bool] = ...,
@@ -1473,7 +1473,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         longitude: Union[int, float],
         latitude: Union[int, float],
         radius: Union[int, float],
-        unit: Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI],
+        unit: Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI],
         *,
         withcoord: Optional[bool] = ...,
         withdist: Literal[True],
@@ -1488,7 +1488,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         longitude: Union[int, float],
         latitude: Union[int, float],
         radius: Union[int, float],
-        unit: Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI],
+        unit: Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI],
         *,
         withcoord: Optional[bool] = ...,
         withdist: Optional[bool] = ...,
@@ -1503,7 +1503,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         longitude: Union[int, float],
         latitude: Union[int, float],
         radius: Union[int, float],
-        unit: Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI],
+        unit: Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI],
         *,
         store: KeyT,
     ) -> int:
@@ -1516,7 +1516,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         longitude: Union[int, float],
         latitude: Union[int, float],
         radius: Union[int, float],
-        unit: Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI],
+        unit: Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI],
         *,
         withcoord: Optional[bool] = ...,
         withdist: Optional[bool] = ...,
@@ -1544,7 +1544,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         longitude: Union[int, float],
         latitude: Union[int, float],
         radius: Union[int, float],
-        unit: Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI],
+        unit: Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI],
         *,
         withcoord: Optional[bool] = None,
         withdist: Optional[bool] = None,
@@ -1605,7 +1605,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         key: KeyT,
         member: ValueT,
         radius: Union[int, float],
-        unit: Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI],
+        unit: Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI],
         withcoord: Optional[bool] = None,
         withdist: Optional[bool] = None,
         withhash: Optional[bool] = None,
@@ -3775,7 +3775,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         self,
         keys: Parameters[KeyT],
         timeout: Union[int, float],
-        where: Literal[PureToken.MIN, PureToken.MAX],
+        where: Literal[PureToken.MAX, PureToken.MIN],
         count: Optional[int] = None,
     ) -> Optional[Tuple[AnyStr, Tuple[ScoredMember, ...]]]:
         """
@@ -3997,7 +3997,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         keys: Parameters[KeyT],
         weights: Optional[Parameters[int]] = None,
         aggregate: Optional[
-            Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX]
+            Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM]
         ] = None,
         withscores: Optional[bool] = None,
     ) -> Tuple[Union[AnyStr, ScoredMember], ...]:
@@ -4026,7 +4026,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         destination: KeyT,
         weights: Optional[Parameters[int]] = None,
         aggregate: Optional[
-            Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX]
+            Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM]
         ] = None,
     ) -> int:
         """
@@ -4091,7 +4091,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def zmpop(
         self,
         keys: Parameters[KeyT],
-        where: Literal[PureToken.MIN, PureToken.MAX],
+        where: Literal[PureToken.MAX, PureToken.MIN],
         count: Optional[int] = None,
     ) -> Optional[Tuple[AnyStr, Tuple[ScoredMember, ...]]]:
         """
@@ -5812,7 +5812,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def script_debug(
         self,
-        mode: Literal[PureToken.YES, PureToken.SYNC, PureToken.NO],
+        mode: Literal[PureToken.NO, PureToken.SYNC, PureToken.YES],
     ) -> bool:
         """
         Set the debug mode for executed scripts
@@ -6163,7 +6163,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="6.0.0",
         group=CommandGroup.CONNECTION,
     )
-    async def client_caching(self, mode: Literal[PureToken.YES, PureToken.NO]) -> bool:
+    async def client_caching(self, mode: Literal[PureToken.NO, PureToken.YES]) -> bool:
         """
         Instruct the server about tracking or not keys in the next request
         """
@@ -6427,7 +6427,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         ),
     )
     async def client_reply(
-        self, mode: Literal[PureToken.ON, PureToken.OFF, PureToken.SKIP]
+        self, mode: Literal[PureToken.OFF, PureToken.ON, PureToken.SKIP]
     ) -> bool:
         """
         Instruct the server whether to reply to commands
@@ -6442,7 +6442,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def client_tracking(
         self,
-        status: Literal[PureToken.ON, PureToken.OFF],
+        status: Literal[PureToken.OFF, PureToken.ON],
         *prefixes: StringT,
         redirect: Optional[int] = None,
         bcast: Optional[bool] = None,
