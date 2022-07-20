@@ -137,7 +137,6 @@ from coredis.typing import (
     AnyStr,
     CommandArgList,
     Dict,
-    Iterable,
     KeyT,
     List,
     Literal,
@@ -715,7 +714,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CLUSTER_ADDSLOTS,
         group=CommandGroup.CLUSTER,
     )
-    async def cluster_addslots(self, slots: Iterable[int]) -> bool:
+    async def cluster_addslots(self, slots: Parameters[int]) -> bool:
         """
         Assign new hash slots to receiving node
         """
@@ -730,7 +729,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="7.0.0",
         group=CommandGroup.CLUSTER,
     )
-    async def cluster_addslotsrange(self, slots: Iterable[Tuple[int, int]]) -> bool:
+    async def cluster_addslotsrange(self, slots: Parameters[Tuple[int, int]]) -> bool:
         """
         Assign new hash slots to receiving node
         """
@@ -805,7 +804,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.CLUSTER,
         cluster=ClusterCommandConfig(route=NodeFlag.SLOT_ID),
     )
-    async def cluster_delslots(self, slots: Iterable[int]) -> bool:
+    async def cluster_delslots(self, slots: Parameters[int]) -> bool:
         """
         Set hash slots as unbound in the cluster.
         It determines by it self what node the slot is in and sends it there
@@ -829,7 +828,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.CLUSTER,
         cluster=ClusterCommandConfig(route=NodeFlag.SLOT_ID),
     )
-    async def cluster_delslotsrange(self, slots: Iterable[Tuple[int, int]]) -> bool:
+    async def cluster_delslotsrange(self, slots: Parameters[Tuple[int, int]]) -> bool:
         """
         Set hash slots as unbound in receiving node
         """
@@ -1350,7 +1349,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def geoadd(
         self,
         key: KeyT,
-        longitude_latitude_members: Iterable[
+        longitude_latitude_members: Parameters[
             Tuple[Union[int, float], Union[int, float], ValueT]
         ],
         condition: Optional[Literal[PureToken.NX, PureToken.XX]] = None,
@@ -3182,7 +3181,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def lmpop(
         self,
-        keys: Iterable[Union[str, bytes]],
+        keys: Parameters[KeyT],
         where: Literal[PureToken.LEFT, PureToken.RIGHT],
         count: Optional[int] = None,
     ) -> Optional[List[AnyStr]]:
@@ -3546,7 +3545,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def sintercard(
         self,
-        keys: Iterable[Union[str, bytes]],
+        keys: Parameters[KeyT],
         limit: Optional[int] = None,
     ) -> int:
         """
@@ -3996,7 +3995,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def zinter(
         self,
         keys: Parameters[KeyT],
-        weights: Optional[Iterable[int]] = None,
+        weights: Optional[Parameters[int]] = None,
         aggregate: Optional[
             Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX]
         ] = None,
@@ -4025,7 +4024,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         self,
         keys: Parameters[KeyT],
         destination: KeyT,
-        weights: Optional[Iterable[int]] = None,
+        weights: Optional[Parameters[int]] = None,
         aggregate: Optional[
             Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX]
         ] = None,
@@ -4661,7 +4660,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def zunion(
         self,
         keys: Parameters[KeyT],
-        weights: Optional[Iterable[int]] = None,
+        weights: Optional[Parameters[int]] = None,
         aggregate: Optional[
             Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX]
         ] = None,
@@ -4689,7 +4688,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         self,
         keys: Parameters[KeyT],
         destination: KeyT,
-        weights: Optional[Iterable[int]] = None,
+        weights: Optional[Parameters[int]] = None,
         aggregate: Optional[
             Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX]
         ] = None,
@@ -4783,7 +4782,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         command: Literal[CommandName.ZUNIONSTORE, CommandName.ZINTERSTORE],
         keys: Parameters[KeyT],
         destination: Optional[KeyT] = ...,
-        weights: Optional[Iterable[int]] = ...,
+        weights: Optional[Parameters[int]] = ...,
         aggregate: Optional[PureToken] = ...,
         withscores: Optional[bool] = ...,
     ) -> int:
@@ -4795,7 +4794,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         command: Literal[CommandName.ZUNION, CommandName.ZINTER],
         keys: Parameters[KeyT],
         destination: Optional[KeyT] = ...,
-        weights: Optional[Iterable[int]] = ...,
+        weights: Optional[Parameters[int]] = ...,
         aggregate: Optional[PureToken] = ...,
         withscores: Optional[bool] = ...,
     ) -> Tuple[Union[AnyStr, ScoredMember], ...]:
@@ -4811,7 +4810,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         ],
         keys: Parameters[KeyT],
         destination: Optional[KeyT] = None,
-        weights: Optional[Iterable[int]] = None,
+        weights: Optional[Parameters[int]] = None,
         aggregate: Optional[PureToken] = None,
         withscores: Optional[bool] = None,
     ) -> Union[int, Tuple[Union[AnyStr, ScoredMember], ...]]:
@@ -6242,10 +6241,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         self,
         type_: Optional[
             Literal[
-                PureToken.NORMAL, PureToken.MASTER, PureToken.REPLICA, PureToken.PUBSUB
+                PureToken.MASTER, PureToken.NORMAL, PureToken.PUBSUB, PureToken.REPLICA
             ]
         ] = None,
-        identifiers: Optional[Iterable[int]] = None,
+        identifiers: Optional[Parameters[int]] = None,
     ) -> Tuple[ClientInfo, ...]:
         """
         Get client connections
