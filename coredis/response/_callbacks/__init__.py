@@ -107,6 +107,11 @@ class ClusterMultiNodeCallback(ABC, Generic[R], metaclass=ClusterCallbackMeta):
             return self.combine_3(responses, **kwargs)
         return self.combine(responses, **kwargs)
 
+    @property
+    @abstractmethod
+    def response_policy(self) -> str:
+        ...
+
     @abstractmethod
     def combine(self, responses: Mapping[str, R], **kwargs: Optional[ValueT]) -> R:
         pass
@@ -133,12 +138,24 @@ class ClusterBoolCombine(ClusterMultiNodeCallback[bool]):
         assert (isinstance(value, bool) for value in values)
         return any(values) if self.any else all(values)
 
+    @property
+    def response_policy(self) -> str:
+        return (
+            "success if any shards responded ``True``"
+            if self.any
+            else "success if all shards responded ``True``"
+        )
+
 
 class ClusterAlignedBoolsCombine(ClusterMultiNodeCallback[Tuple[bool, ...]]):
     def combine(
         self, responses: Mapping[str, Tuple[bool, ...]], **kwargs: Optional[ValueT]
     ) -> Tuple[bool, ...]:
         return tuple(all(k) for k in zip(*responses.values()))
+
+    @property
+    def response_policy(self) -> str:
+        return "the logical AND of all responses"
 
 
 class ClusterEnsureConsistent(ClusterMultiNodeCallback[Optional[R]]):
@@ -156,6 +173,14 @@ class ClusterEnsureConsistent(ClusterMultiNodeCallback[Optional[R]]):
             return values[0]
         return None
 
+    @property
+    def response_policy(self) -> str:
+        return (
+            "the response from any shard if all responses are consistent"
+            if self.ensure_consistent
+            else "first response"
+        )
+
 
 class ClusterFirstNonException(ClusterMultiNodeCallback[Optional[R]]):
     def combine(
@@ -168,13 +193,9 @@ class ClusterFirstNonException(ClusterMultiNodeCallback[Optional[R]]):
             if isinstance(r, BaseException):
                 raise r
 
-
-class ClusterConcatTuples(ClusterMultiNodeCallback[Tuple[R, ...]]):
-    def combine(
-        self, responses: Mapping[str, Tuple[R, ...]], **kwargs: Optional[ValueT]
-    ) -> Tuple[R, ...]:
-        self.raise_any(responses.values())
-        return tuple(itertools.chain(*responses.values()))
+    @property
+    def response_policy(self) -> str:
+        return "the first response that is not an error"
 
 
 class ClusterMergeSets(ClusterMultiNodeCallback[Set[R]]):
@@ -184,11 +205,19 @@ class ClusterMergeSets(ClusterMultiNodeCallback[Set[R]]):
         self.raise_any(responses.values())
         return set(itertools.chain(*responses.values()))
 
+    @property
+    def response_policy(self) -> str:
+        return "the union of the results"
+
 
 class ClusterSum(ClusterMultiNodeCallback[int]):
     def combine(self, responses: Mapping[str, int], **kwargs: Optional[ValueT]) -> int:
         self.raise_any(responses.values())
         return sum(responses.values())
+
+    @property
+    def response_policy(self) -> str:
+        return "the sum of results"
 
 
 class ClusterMergeMapping(ClusterMultiNodeCallback[Dict[CK_co, CR_co]]):
@@ -205,6 +234,10 @@ class ClusterMergeMapping(ClusterMultiNodeCallback[Dict[CK_co, CR_co]]):
                 responses[n][key] for n in responses if key in responses[n]
             )
         return response
+
+    @property
+    def response_policy(self) -> str:
+        return "the merged mapping"
 
 
 class SimpleStringCallback(

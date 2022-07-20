@@ -86,7 +86,9 @@ class ClusterMeta(ABCMeta):
                     aggregate_note = ""
                     if cmd.cluster.multi_node:
                         if cmd.cluster.combine:
-                            aggregate_note = "and the results will be aggregated"
+                            aggregate_note = (
+                                f"and return {cmd.cluster.combine.response_policy}"
+                            )
                         else:
                             aggregate_note = (
                                 "and a mapping of nodes to results will be returned"
