@@ -186,7 +186,7 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     BITOP = b"BITOP"  # Since redis: 2.6.0
     BITPOS = b"BITPOS"  # Since redis: 2.8.7
     BITFIELD = b"BITFIELD"  # Since redis: 3.2.0
-    BITFIELD_RO = b"BITFIELD_RO"  # Since redis: 6.2.0
+    BITFIELD_RO = b"BITFIELD_RO"  # Since redis: 6.0.0
 
     #: Commands for list
     LINDEX = b"LINDEX"  # Since redis: 1.0.0
