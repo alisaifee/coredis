@@ -187,13 +187,13 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self,
         key: "KeyT",
         value: "ValueT",
+        condition: "Optional[Literal[PureToken.NX, PureToken.XX]]" = ...,
+        get: "Optional[bool]" = ...,
         ex: "Optional[Union[int, datetime.timedelta]]" = ...,
         px: "Optional[Union[int, datetime.timedelta]]" = ...,
         exat: "Optional[Union[int, datetime.datetime]]" = ...,
         pxat: "Optional[Union[int, datetime.datetime]]" = ...,
         keepttl: "Optional[bool]" = ...,
-        condition: "Optional[Literal[PureToken.NX, PureToken.XX]]" = ...,
-        get: "Optional[bool]" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def setex(
         self, key: "KeyT", value: "ValueT", seconds: "Union[int, datetime.timedelta]"
@@ -1272,13 +1272,13 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self,
         key: "KeyT",
         value: "ValueT",
+        condition: "Optional[Literal[PureToken.NX, PureToken.XX]]" = ...,
+        get: "Optional[bool]" = ...,
         ex: "Optional[Union[int, datetime.timedelta]]" = ...,
         px: "Optional[Union[int, datetime.timedelta]]" = ...,
         exat: "Optional[Union[int, datetime.datetime]]" = ...,
         pxat: "Optional[Union[int, datetime.datetime]]" = ...,
         keepttl: "Optional[bool]" = ...,
-        condition: "Optional[Literal[PureToken.NX, PureToken.XX]]" = ...,
-        get: "Optional[bool]" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def setex(
         self, key: "KeyT", value: "ValueT", seconds: "Union[int, datetime.timedelta]"
