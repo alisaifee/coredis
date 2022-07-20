@@ -5878,7 +5878,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.SCRIPT_KILL,
         group=CommandGroup.SCRIPTING,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.ALL,
+            route=NodeFlag.PRIMARIES,
             combine=ClusterFirstNonException[bool](),
         ),
     )
@@ -6021,7 +6021,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="7.0.0",
         group=CommandGroup.SCRIPTING,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.ALL,
+            route=NodeFlag.PRIMARIES,
             combine=ClusterFirstNonException[bool](),
         ),
     )
