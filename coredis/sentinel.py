@@ -107,10 +107,13 @@ class SentinelManagedConnection(Connection, Generic[AnyStr]):
         self,
         decode: Optional[ValueT] = None,
         push_message_types: Optional[Set[bytes]] = None,
+        raise_exceptions: bool = True,
     ) -> ResponseType:
         try:
             return await super().read_response(
-                decode=decode, push_message_types=push_message_types
+                decode=decode,
+                push_message_types=push_message_types,
+                raise_exceptions=raise_exceptions,
             )
         except ReadOnlyError:
             if self.connection_pool.is_primary:

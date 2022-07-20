@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from coredis.exceptions import NoScriptError, RedisClusterException, ResponseError
+from coredis.exceptions import (
+    NoScriptError,
+    NotBusyError,
+    RedisClusterException,
+    ResponseError,
+)
 from tests.conftest import targets
 
 multiply_script = """
@@ -114,6 +119,10 @@ class TestScripting:
         assert await client.script_exists([sha]) == (False,)
         await client.script_load(multiply_script)
         assert await client.script_exists([sha]) == (True,)
+
+    async def test_script_kill_no_scripts(self, client):
+        with pytest.raises(NotBusyError):
+            await client.script_kill()
 
     async def test_script_object(self, client):
         await client.set("a", 2)

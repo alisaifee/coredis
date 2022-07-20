@@ -351,6 +351,7 @@ class BaseConnection(asyncio.BaseProtocol):
         self,
         decode: Optional[ValueT] = None,
         push_message_types: Optional[Set[bytes]] = None,
+        raise_exceptions: bool = True,
     ) -> ResponseType:
         try:
             response = await exec_with_timeout(
@@ -365,10 +366,9 @@ class BaseConnection(asyncio.BaseProtocol):
             self.disconnect()
             raise
 
-        if isinstance(response, RedisError):
+        if raise_exceptions and isinstance(response, RedisError):
             raise response
         self.awaiting_response = False
-
         return response
 
     async def send_packed_command(self, command: List[bytes]) -> None:

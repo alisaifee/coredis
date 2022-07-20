@@ -107,10 +107,9 @@ class TestFunctions:
         with pytest.raises(ResponseError):
             await client.function_delete("coredis")
 
-    @pytest.mark.nocluster
     async def test_function_kill(self, client, simple_library, _s):
         with pytest.raises(NotBusyError):
-            await client.function_kill()
+            print(await client.function_kill())
 
     async def test_dump_restore(self, client, simple_library, _s):
         dump = await client.function_dump()

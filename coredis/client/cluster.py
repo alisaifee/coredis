@@ -86,7 +86,9 @@ class ClusterMeta(ABCMeta):
                     aggregate_note = ""
                     if cmd.cluster.multi_node:
                         if cmd.cluster.combine:
-                            aggregate_note = "and the results will be aggregated"
+                            aggregate_note = (
+                                f"and return {cmd.cluster.combine.response_policy}"
+                            )
                         else:
                             aggregate_note = (
                                 "and a mapping of nodes to results will be returned"
@@ -788,7 +790,7 @@ class RedisCluster(
                     if not self.noreply:
                         res[cur["name"]] = callback(
                             await connection.read_response(
-                                decode=options.get("decode")
+                                decode=options.get("decode"), raise_exceptions=False
                             ),
                             version=self.protocol_version,
                             **options,
@@ -810,7 +812,9 @@ class RedisCluster(
                     raise ClusterDownError(str(err))
                 if not self.noreply:
                     res[cur["name"]] = callback(
-                        await connection.read_response(decode=options.get("decode")),
+                        await connection.read_response(
+                            decode=options.get("decode"), raise_exceptions=False
+                        ),
                         version=self.protocol_version,
                         **options,
                     )
