@@ -104,7 +104,9 @@ class ClusterMeta(ABCMeta):
 .. admonition:: Cluster note
 
    The command will be run on **{cls.NODE_FLAG_DOC_MAPPING[cmd.cluster.split]}**
-   by distributing the keys to the appropriate nodes and the results aggregated.
+   by distributing the keys to the appropriate nodes and return
+   {cmd.cluster.combine.response_policy}.
+
    To disable this behavior set :paramref:`RedisCluster.non_atomic_cross_slot` to ``False``
                 """
                 if cmd.cluster.multi_node:
