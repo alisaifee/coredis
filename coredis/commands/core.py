@@ -524,12 +524,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         key: KeyT,
         value: ValueT,
         *,
+        condition: Optional[Literal[PureToken.NX, PureToken.XX]] = ...,
         ex: Optional[Union[int, datetime.timedelta]] = ...,
         px: Optional[Union[int, datetime.timedelta]] = ...,
         exat: Optional[Union[int, datetime.datetime]] = ...,
         pxat: Optional[Union[int, datetime.datetime]] = ...,
         keepttl: Optional[bool] = ...,
-        condition: Optional[Literal[PureToken.NX, PureToken.XX]] = ...,
     ) -> bool:
         ...
 
@@ -539,13 +539,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         key: KeyT,
         value: ValueT,
         *,
+        condition: Optional[Literal[PureToken.NX, PureToken.XX]] = ...,
+        get: Literal[True],
         ex: Optional[Union[int, datetime.timedelta]] = ...,
         px: Optional[Union[int, datetime.timedelta]] = ...,
         exat: Optional[Union[int, datetime.datetime]] = ...,
         pxat: Optional[Union[int, datetime.datetime]] = ...,
         keepttl: Optional[bool] = ...,
-        condition: Optional[Literal[PureToken.NX, PureToken.XX]] = ...,
-        get: Literal[True],
     ) -> Optional[AnyStr]:
         ...
 
@@ -564,26 +564,26 @@ class CoreCommands(CommandMixin[AnyStr]):
         key: KeyT,
         value: ValueT,
         *,
+        condition: Optional[Literal[PureToken.NX, PureToken.XX]] = None,
+        get: Optional[bool] = None,
         ex: Optional[Union[int, datetime.timedelta]] = None,
         px: Optional[Union[int, datetime.timedelta]] = None,
         exat: Optional[Union[int, datetime.datetime]] = None,
         pxat: Optional[Union[int, datetime.datetime]] = None,
         keepttl: Optional[bool] = None,
-        condition: Optional[Literal[PureToken.NX, PureToken.XX]] = None,
-        get: Optional[bool] = None,
     ) -> Optional[Union[AnyStr, bool]]:
         """
         Set the string value of a key
 
+        :param condition: Condition to use when setting the key
+        :param get: Return the old string stored at key, or nil if key did not exist.
+         An error is returned and the command is aborted if the value stored at
+         key is not a string.
         :param ex: Number of seconds to expire in
         :param px: Number of milliseconds to expire in
         :param exat: Expiry time with seconds granularity
         :param pxat: Expiry time with milliseconds granularity
         :param keepttl: Retain the time to live associated with the key
-        :param condition: Condition to use when setting the key
-        :param get: Return the old string stored at key, or nil if key did not exist.
-         An error is returned and the command is aborted if the value stored at
-         key is not a string.
 
         :return: Whether the operation was performed successfully.
 
