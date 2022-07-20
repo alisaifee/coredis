@@ -311,7 +311,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> Pipeline[AnyStr]: ...
     async def lmpop(
         self,
-        keys: "Iterable[Union[str, bytes]]",
+        keys: "Parameters[KeyT]",
         where: "Literal[PureToken.LEFT, PureToken.RIGHT]",
         count: "Optional[int]" = ...,
     ) -> Pipeline[AnyStr]: ...
@@ -366,7 +366,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> Pipeline[AnyStr]: ...
     async def sinter(self, keys: "Parameters[KeyT]") -> Pipeline[AnyStr]: ...
     async def sintercard(
-        self, keys: "Iterable[Union[str, bytes]]", limit: "Optional[int]" = ...
+        self, keys: "Parameters[KeyT]", limit: "Optional[int]" = ...
     ) -> Pipeline[AnyStr]: ...
     async def sinterstore(
         self, keys: "Parameters[KeyT]", destination: "KeyT"
@@ -403,7 +403,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self,
         keys: "Parameters[KeyT]",
         timeout: "Union[int, float]",
-        where: "Literal[PureToken.MIN, PureToken.MAX]",
+        where: "Literal[PureToken.MAX, PureToken.MIN]",
         count: "Optional[int]" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def bzpopmax(
@@ -437,8 +437,8 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def zinter(
         self,
         keys: "Parameters[KeyT]",
-        weights: "Optional[Iterable[int]]" = ...,
-        aggregate: "Optional[Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX]]" = ...,
+        weights: "Optional[Parameters[int]]" = ...,
+        aggregate: "Optional[Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM]]" = ...,
         withscores: "Optional[bool]" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def zintercard(
@@ -448,8 +448,8 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self,
         keys: "Parameters[KeyT]",
         destination: "KeyT",
-        weights: "Optional[Iterable[int]]" = ...,
-        aggregate: "Optional[Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX]]" = ...,
+        weights: "Optional[Parameters[int]]" = ...,
+        aggregate: "Optional[Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM]]" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def zlexcount(
         self, key: "KeyT", min_: "ValueT", max_: "ValueT"
@@ -457,7 +457,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def zmpop(
         self,
         keys: "Parameters[KeyT]",
-        where: "Literal[PureToken.MIN, PureToken.MAX]",
+        where: "Literal[PureToken.MAX, PureToken.MIN]",
         count: "Optional[int]" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def zmscore(
@@ -559,7 +559,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def zunion(
         self,
         keys: "Parameters[KeyT]",
-        weights: "Optional[Iterable[int]]" = ...,
+        weights: "Optional[Parameters[int]]" = ...,
         aggregate: "Optional[Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX]]" = ...,
         withscores: "Optional[bool]" = ...,
     ) -> Pipeline[AnyStr]: ...
@@ -567,7 +567,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self,
         keys: "Parameters[KeyT]",
         destination: "KeyT",
-        weights: "Optional[Iterable[int]]" = ...,
+        weights: "Optional[Parameters[int]]" = ...,
         aggregate: "Optional[Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX]]" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def pfadd(self, key: "KeyT", *elements: "ValueT") -> Pipeline[AnyStr]: ...
@@ -578,7 +578,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def geoadd(
         self,
         key: "KeyT",
-        longitude_latitude_members: "Iterable[Tuple[Union[int, float], Union[int, float], ValueT]]",
+        longitude_latitude_members: "Parameters[Tuple[Union[int, float], Union[int, float], ValueT]]",
         condition: "Optional[Literal[PureToken.NX, PureToken.XX]]" = ...,
         change: "Optional[bool]" = ...,
     ) -> Pipeline[AnyStr]: ...
@@ -601,7 +601,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         longitude: "Union[int, float]",
         latitude: "Union[int, float]",
         radius: "Union[int, float]",
-        unit: "Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI]",
+        unit: "Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI]",
         withcoord: "Optional[bool]" = ...,
         withdist: "Optional[bool]" = ...,
         withhash: "Optional[bool]" = ...,
@@ -616,7 +616,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         key: "KeyT",
         member: "ValueT",
         radius: "Union[int, float]",
-        unit: "Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI]",
+        unit: "Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI]",
         withcoord: "Optional[bool]" = ...,
         withdist: "Optional[bool]" = ...,
         withhash: "Optional[bool]" = ...,
@@ -835,7 +835,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> Pipeline[AnyStr]: ...
     async def function_stats(self) -> Pipeline[AnyStr]: ...
     async def script_debug(
-        self, mode: "Literal[PureToken.YES, PureToken.SYNC, PureToken.NO]"
+        self, mode: "Literal[PureToken.NO, PureToken.SYNC, PureToken.YES]"
     ) -> Pipeline[AnyStr]: ...
     async def script_exists(self, sha1s: "Parameters[StringT]") -> Pipeline[AnyStr]: ...
     async def script_flush(
@@ -974,7 +974,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self, password: "StringT", username: "Optional[StringT]" = ...
     ) -> Pipeline[AnyStr]: ...
     async def client_caching(
-        self, mode: "Literal[PureToken.YES, PureToken.NO]"
+        self, mode: "Literal[PureToken.NO, PureToken.YES]"
     ) -> Pipeline[AnyStr]: ...
     async def client_getname(self) -> Pipeline[AnyStr]: ...
     async def client_getredir(self) -> Pipeline[AnyStr]: ...
@@ -992,8 +992,8 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> Pipeline[AnyStr]: ...
     async def client_list(
         self,
-        type_: "Optional[Literal[PureToken.NORMAL, PureToken.MASTER, PureToken.REPLICA, PureToken.PUBSUB]]" = ...,
-        identifiers: "Optional[Iterable[int]]" = ...,
+        type_: "Optional[Literal[PureToken.MASTER, PureToken.NORMAL, PureToken.PUBSUB, PureToken.REPLICA]]" = ...,
+        identifiers: "Optional[Parameters[int]]" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def client_no_evict(
         self, enabled: "Literal[PureToken.ON, PureToken.OFF]"
@@ -1004,12 +1004,12 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         mode: "Optional[Literal[PureToken.WRITE, PureToken.ALL]]" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def client_reply(
-        self, mode: "Literal[PureToken.ON, PureToken.OFF, PureToken.SKIP]"
+        self, mode: "Literal[PureToken.OFF, PureToken.ON, PureToken.SKIP]"
     ) -> Pipeline[AnyStr]: ...
     async def client_setname(self, connection_name: "StringT") -> Pipeline[AnyStr]: ...
     async def client_tracking(
         self,
-        status: "Literal[PureToken.ON, PureToken.OFF]",
+        status: "Literal[PureToken.OFF, PureToken.ON]",
         *prefixes: "StringT",
         redirect: "Optional[int]" = ...,
         bcast: "Optional[bool]" = ...,
@@ -1037,18 +1037,18 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def reset(self) -> Pipeline[AnyStr]: ...
     async def select(self, index: "int") -> Pipeline[AnyStr]: ...
     async def asking(self) -> Pipeline[AnyStr]: ...
-    async def cluster_addslots(self, slots: "Iterable[int]") -> Pipeline[AnyStr]: ...
+    async def cluster_addslots(self, slots: "Parameters[int]") -> Pipeline[AnyStr]: ...
     async def cluster_addslotsrange(
-        self, slots: "Iterable[Tuple[int, int]]"
+        self, slots: "Parameters[Tuple[int, int]]"
     ) -> Pipeline[AnyStr]: ...
     async def cluster_bumpepoch(self) -> Pipeline[AnyStr]: ...
     async def cluster_count_failure_reports(
         self, node_id: "StringT"
     ) -> Pipeline[AnyStr]: ...
     async def cluster_countkeysinslot(self, slot: "int") -> Pipeline[AnyStr]: ...
-    async def cluster_delslots(self, slots: "Iterable[int]") -> Pipeline[AnyStr]: ...
+    async def cluster_delslots(self, slots: "Parameters[int]") -> Pipeline[AnyStr]: ...
     async def cluster_delslotsrange(
-        self, slots: "Iterable[Tuple[int, int]]"
+        self, slots: "Parameters[Tuple[int, int]]"
     ) -> Pipeline[AnyStr]: ...
     async def cluster_failover(
         self, options: "Optional[Literal[PureToken.FORCE, PureToken.TAKEOVER]]" = ...
@@ -1061,7 +1061,9 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def cluster_info(self) -> Pipeline[AnyStr]: ...
     async def cluster_keyslot(self, key: "KeyT") -> Pipeline[AnyStr]: ...
     async def cluster_links(self) -> Pipeline[AnyStr]: ...
-    async def cluster_meet(self, ip: "StringT", port: "int") -> Pipeline[AnyStr]: ...
+    async def cluster_meet(
+        self, ip: "StringT", port: "int", cluster_bus_port: "Optional[int]" = ...
+    ) -> Pipeline[AnyStr]: ...
     async def cluster_myid(self) -> Pipeline[AnyStr]: ...
     async def cluster_nodes(self) -> Pipeline[AnyStr]: ...
     async def cluster_replicas(self, node_id: "StringT") -> Pipeline[AnyStr]: ...
@@ -1398,7 +1400,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> ClusterPipeline[AnyStr]: ...
     async def lmpop(
         self,
-        keys: "Iterable[Union[str, bytes]]",
+        keys: "Parameters[KeyT]",
         where: "Literal[PureToken.LEFT, PureToken.RIGHT]",
         count: "Optional[int]" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
@@ -1453,7 +1455,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> ClusterPipeline[AnyStr]: ...
     async def sinter(self, keys: "Parameters[KeyT]") -> ClusterPipeline[AnyStr]: ...
     async def sintercard(
-        self, keys: "Iterable[Union[str, bytes]]", limit: "Optional[int]" = ...
+        self, keys: "Parameters[KeyT]", limit: "Optional[int]" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def sinterstore(
         self, keys: "Parameters[KeyT]", destination: "KeyT"
@@ -1492,7 +1494,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self,
         keys: "Parameters[KeyT]",
         timeout: "Union[int, float]",
-        where: "Literal[PureToken.MIN, PureToken.MAX]",
+        where: "Literal[PureToken.MAX, PureToken.MIN]",
         count: "Optional[int]" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def bzpopmax(
@@ -1526,8 +1528,8 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def zinter(
         self,
         keys: "Parameters[KeyT]",
-        weights: "Optional[Iterable[int]]" = ...,
-        aggregate: "Optional[Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX]]" = ...,
+        weights: "Optional[Parameters[int]]" = ...,
+        aggregate: "Optional[Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM]]" = ...,
         withscores: "Optional[bool]" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def zintercard(
@@ -1537,8 +1539,8 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self,
         keys: "Parameters[KeyT]",
         destination: "KeyT",
-        weights: "Optional[Iterable[int]]" = ...,
-        aggregate: "Optional[Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX]]" = ...,
+        weights: "Optional[Parameters[int]]" = ...,
+        aggregate: "Optional[Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM]]" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def zlexcount(
         self, key: "KeyT", min_: "ValueT", max_: "ValueT"
@@ -1546,7 +1548,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def zmpop(
         self,
         keys: "Parameters[KeyT]",
-        where: "Literal[PureToken.MIN, PureToken.MAX]",
+        where: "Literal[PureToken.MAX, PureToken.MIN]",
         count: "Optional[int]" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def zmscore(
@@ -1652,7 +1654,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def zunion(
         self,
         keys: "Parameters[KeyT]",
-        weights: "Optional[Iterable[int]]" = ...,
+        weights: "Optional[Parameters[int]]" = ...,
         aggregate: "Optional[Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX]]" = ...,
         withscores: "Optional[bool]" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
@@ -1660,7 +1662,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self,
         keys: "Parameters[KeyT]",
         destination: "KeyT",
-        weights: "Optional[Iterable[int]]" = ...,
+        weights: "Optional[Parameters[int]]" = ...,
         aggregate: "Optional[Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX]]" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def pfadd(
@@ -1673,7 +1675,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def geoadd(
         self,
         key: "KeyT",
-        longitude_latitude_members: "Iterable[Tuple[Union[int, float], Union[int, float], ValueT]]",
+        longitude_latitude_members: "Parameters[Tuple[Union[int, float], Union[int, float], ValueT]]",
         condition: "Optional[Literal[PureToken.NX, PureToken.XX]]" = ...,
         change: "Optional[bool]" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
@@ -1696,7 +1698,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         longitude: "Union[int, float]",
         latitude: "Union[int, float]",
         radius: "Union[int, float]",
-        unit: "Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI]",
+        unit: "Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI]",
         withcoord: "Optional[bool]" = ...,
         withdist: "Optional[bool]" = ...,
         withhash: "Optional[bool]" = ...,
@@ -1711,7 +1713,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         key: "KeyT",
         member: "ValueT",
         radius: "Union[int, float]",
-        unit: "Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI]",
+        unit: "Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI]",
         withcoord: "Optional[bool]" = ...,
         withdist: "Optional[bool]" = ...,
         withhash: "Optional[bool]" = ...,
@@ -1932,7 +1934,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> ClusterPipeline[AnyStr]: ...
     async def function_stats(self) -> ClusterPipeline[AnyStr]: ...
     async def script_debug(
-        self, mode: "Literal[PureToken.YES, PureToken.SYNC, PureToken.NO]"
+        self, mode: "Literal[PureToken.NO, PureToken.SYNC, PureToken.YES]"
     ) -> ClusterPipeline[AnyStr]: ...
     async def script_exists(
         self, sha1s: "Parameters[StringT]"
@@ -2089,7 +2091,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self, password: "StringT", username: "Optional[StringT]" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def client_caching(
-        self, mode: "Literal[PureToken.YES, PureToken.NO]"
+        self, mode: "Literal[PureToken.NO, PureToken.YES]"
     ) -> ClusterPipeline[AnyStr]: ...
     async def client_getname(self) -> ClusterPipeline[AnyStr]: ...
     async def client_getredir(self) -> ClusterPipeline[AnyStr]: ...
@@ -2107,8 +2109,8 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> ClusterPipeline[AnyStr]: ...
     async def client_list(
         self,
-        type_: "Optional[Literal[PureToken.NORMAL, PureToken.MASTER, PureToken.REPLICA, PureToken.PUBSUB]]" = ...,
-        identifiers: "Optional[Iterable[int]]" = ...,
+        type_: "Optional[Literal[PureToken.MASTER, PureToken.NORMAL, PureToken.PUBSUB, PureToken.REPLICA]]" = ...,
+        identifiers: "Optional[Parameters[int]]" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def client_no_evict(
         self, enabled: "Literal[PureToken.ON, PureToken.OFF]"
@@ -2119,14 +2121,14 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         mode: "Optional[Literal[PureToken.WRITE, PureToken.ALL]]" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def client_reply(
-        self, mode: "Literal[PureToken.ON, PureToken.OFF, PureToken.SKIP]"
+        self, mode: "Literal[PureToken.OFF, PureToken.ON, PureToken.SKIP]"
     ) -> ClusterPipeline[AnyStr]: ...
     async def client_setname(
         self, connection_name: "StringT"
     ) -> ClusterPipeline[AnyStr]: ...
     async def client_tracking(
         self,
-        status: "Literal[PureToken.ON, PureToken.OFF]",
+        status: "Literal[PureToken.OFF, PureToken.ON]",
         *prefixes: "StringT",
         redirect: "Optional[int]" = ...,
         bcast: "Optional[bool]" = ...,
@@ -2157,10 +2159,10 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def select(self, index: "int") -> ClusterPipeline[AnyStr]: ...
     async def asking(self) -> ClusterPipeline[AnyStr]: ...
     async def cluster_addslots(
-        self, slots: "Iterable[int]"
+        self, slots: "Parameters[int]"
     ) -> ClusterPipeline[AnyStr]: ...
     async def cluster_addslotsrange(
-        self, slots: "Iterable[Tuple[int, int]]"
+        self, slots: "Parameters[Tuple[int, int]]"
     ) -> ClusterPipeline[AnyStr]: ...
     async def cluster_bumpepoch(self) -> ClusterPipeline[AnyStr]: ...
     async def cluster_count_failure_reports(
@@ -2168,10 +2170,10 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> ClusterPipeline[AnyStr]: ...
     async def cluster_countkeysinslot(self, slot: "int") -> ClusterPipeline[AnyStr]: ...
     async def cluster_delslots(
-        self, slots: "Iterable[int]"
+        self, slots: "Parameters[int]"
     ) -> ClusterPipeline[AnyStr]: ...
     async def cluster_delslotsrange(
-        self, slots: "Iterable[Tuple[int, int]]"
+        self, slots: "Parameters[Tuple[int, int]]"
     ) -> ClusterPipeline[AnyStr]: ...
     async def cluster_failover(
         self, options: "Optional[Literal[PureToken.FORCE, PureToken.TAKEOVER]]" = ...
@@ -2185,7 +2187,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def cluster_keyslot(self, key: "KeyT") -> ClusterPipeline[AnyStr]: ...
     async def cluster_links(self) -> ClusterPipeline[AnyStr]: ...
     async def cluster_meet(
-        self, ip: "StringT", port: "int"
+        self, ip: "StringT", port: "int", cluster_bus_port: "Optional[int]" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def cluster_myid(self) -> ClusterPipeline[AnyStr]: ...
     async def cluster_nodes(self) -> ClusterPipeline[AnyStr]: ...
