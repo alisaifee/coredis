@@ -3,6 +3,25 @@
 Changelog
 =========
 
+v4.2.0
+------
+Release Date: 2022-07-20
+
+* Bug Fix
+
+  * Fix routing of :meth:`coredis.Redis.script_kill` and
+    :meth:`coredis.Redis.function_kill` to only route to primaries
+  * Ensure all arguments expecting collections consistently
+    use :data:`coredis.typing.Parameters`
+
+* Chores
+
+  * Fix ordering of keyword arguments of :meth:`coredis.Redis.set`
+    to be consistent with command documentation
+  * Improve documentation regarding request routing and repsonse
+    merging for cluster multi node and multi shard commands
+  * Sort all literal annotations
+
 v4.1.1
 ------
 Release Date: 2022-07-18
@@ -1018,6 +1037,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
