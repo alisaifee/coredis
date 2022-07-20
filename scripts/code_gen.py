@@ -27,10 +27,9 @@ from coredis.pool import ClusterConnectionPool, ConnectionPool  # noqa
 from coredis.response.types import *  # noqa
 from coredis.tokens import PureToken  # noqa
 from coredis.typing import *  # noqa
-from coredis.typing import Node  # noqa
 
 MAX_SUPPORTED_VERSION = version.parse("7.999.999")
-MIN_SUPPORTED_VERSION = version.parse("6.0.0")
+MIN_SUPPORTED_VERSION = version.parse("5.999.999")
 
 MAPPING = {"DEL": "delete"}
 SKIP_SPEC = ["BITFIELD", "BITFIELD_RO"]
@@ -80,6 +79,7 @@ REDIS_ARGUMENT_NAME_OVERRIDES = {
     "SORT_RO": {"sorting": "alpha"},
     "SCRIPT FLUSH": {"async": "sync_type"},
     "ZADD": {"score_member": "member_score"},
+    "ZRANGE": {"start": "min", "stop": "max"},
 }
 REDIS_ARGUMENT_TYPE_OVERRIDES = {
     "CLIENT KILL": {"skipme": bool},
@@ -91,19 +91,25 @@ REDIS_ARGUMENT_TYPE_OVERRIDES = {
     "HMSET": {"field_values": Dict[StringT, ValueT]},
     "HSET": {"field_values": Dict[StringT, ValueT]},
     "MIGRATE": {"port": int},
-    "RESTORE": {"serialized_value": bytes},
+    "RESTORE": {
+        "serialized_value": bytes,
+        "ttl": Union[int, datetime.timedelta, datetime.datetime],
+    },
     "SORT": {"gets": KeyT},
     "SORT_RO": {"gets": KeyT},
     "XADD": {"field_values": Dict[StringT, ValueT], "threshold": Optional[int]},
     "XAUTOCLAIM": {"min_idle_time": Union[int, datetime.timedelta]},
-    "XCLAIM": {"min_idle_time": Union[int, datetime.timedelta]},
-    "XREAD": {"streams": Dict[ValueT, ValueT]},
-    "XREADGROUP": {"streams": Dict[ValueT, ValueT]},
+    "XCLAIM": {
+        "min_idle_time": Union[int, datetime.timedelta],
+        "ms": Optional[Union[int, datetime.timedelta]],
+    },
+    "XREAD": {"streams": Mapping[ValueT, ValueT]},
+    "XREADGROUP": {"streams": Mapping[ValueT, ValueT]},
     "XTRIM": {"threshold": int},
     "ZADD": {"member_scores": Dict[StringT, float]},
     "ZCOUNT": {"min": Union[ValueT, float], "max": Union[ValueT, float]},
     "ZREVRANGE": {"min": Union[int, ValueT], "max": Union[int, ValueT]},
-    "ZRANGE": {"min": Union[int, ValueT], "max": Union[int, ValueT]},
+    "ZRANGE": {"start": Union[int, ValueT], "stop": Union[int, ValueT]},
     "ZRANGESTORE": {"min": Union[int, ValueT], "max": Union[int, ValueT]},
 }
 IGNORED_ARGUMENTS = {
@@ -134,7 +140,7 @@ REDIS_RETURN_OVERRIDES = {
     "ACL USERS": Tuple[AnyStr, ...],
     "ACL GETUSER": Dict[AnyStr, List[AnyStr]],
     "ACL LIST": Tuple[AnyStr, ...],
-    "ACL LOG": Union[Tuple[Dict[AnyStr, AnyStr], ...], bool],
+    "ACL LOG": Union[bool, Tuple[Dict[AnyStr, AnyStr], ...]],
     "BZPOPMAX": Optional[Tuple[AnyStr, AnyStr, float]],
     "BZPOPMIN": Optional[Tuple[AnyStr, AnyStr, float]],
     "BZMPOP": Optional[Tuple[AnyStr, ScoredMembers]],
@@ -142,24 +148,32 @@ REDIS_RETURN_OVERRIDES = {
     "CLIENT INFO": ClientInfo,
     "CLUSTER BUMPEPOCH": AnyStr,
     "CLUSTER INFO": Dict[str, str],
-    "CLUSTER LINKS": List[Dict[AnyStr, Any]],
-    "CLUSTER NODES": List[Dict[str, str]],
-    "CLUSTER REPLICAS": List[Dict[AnyStr, AnyStr]],
-    "CLUSTER SHARDS": List[Dict[AnyStr, Any]],
-    "CLUSTER SLAVES": List[Dict[AnyStr, AnyStr]],
+    "CLUSTER LINKS": List[Dict[AnyStr, ResponseType]],
+    "CLUSTER NODES": List[ClusterNodeDetail],
+    "CLUSTER REPLICAS": List[ClusterNodeDetail],
+    "CLUSTER SHARDS": List[Dict[AnyStr, Union[List[ValueT], Mapping[AnyStr, ValueT]]]],
+    "CLUSTER SLAVES": List[ClusterNodeDetail],
     "CLUSTER SLOTS": Dict[Tuple[int, int], Tuple[ClusterNode, ...]],
     "COMMAND": Dict[str, Command],
     "COMMAND DOCS": Dict[AnyStr, Dict],
     "COMMAND GETKEYSANDFLAGS": Dict[AnyStr, Set[AnyStr]],
-    "COMMAND INFO": Dict[AnyStr, Command],
+    "COMMAND INFO": Dict[str, Command],
     "COMMAND LIST": Set[AnyStr],
     "CONFIG GET": Dict[AnyStr, AnyStr],
     "DUMP": bytes,
     "EXPIRETIME": "datetime.datetime",
+    "EVAL": ResponseType,
+    "EVAL_RO": ResponseType,
+    "EVALSHA": ResponseType,
+    "EVALSHA_RO": ResponseType,
+    "FCALL": ResponseType,
+    "FCALL_RO": ResponseType,
     "FUNCTION DUMP": bytes,
     "FUNCTION LOAD": AnyStr,
-    "FUNCTION STATS": Dict[AnyStr, Union[AnyStr, Dict]],
-    "FUNCTION LIST": Dict[AnyStr, LibraryDefinition],
+    "FUNCTION STATS": Dict[
+        AnyStr, Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]
+    ],
+    "FUNCTION LIST": Dict[str, LibraryDefinition],
     "GEODIST": Optional[float],
     "GEOPOS": Tuple[Optional[GeoCoordinates], ...],
     "GEOSEARCH": Union[int, Tuple[Union[AnyStr, GeoSearchResult], ...]],
@@ -168,10 +182,11 @@ REDIS_RETURN_OVERRIDES = {
     "HELLO": Dict[AnyStr, AnyStr],
     "HINCRBYFLOAT": float,
     "HRANDFIELD": Union[AnyStr, Tuple[AnyStr, ...], Dict[AnyStr, AnyStr]],
+    "HMGET": Tuple[Optional[AnyStr], ...],
     "HSCAN": Tuple[int, Dict[AnyStr, AnyStr]],
     "INCRBYFLOAT": float,
-    "INFO": Dict[AnyStr, AnyStr],
-    "KEYS": Set[AnyStr],
+    "INFO": Dict[str, ResponseType],
+    "KEYS": "Set[AnyStr]",
     "LASTSAVE": "datetime.datetime",
     "LATENCY LATEST": Dict[AnyStr, Tuple[int, int, int]],
     "LATENCY HISTOGRAM": Dict[AnyStr, Dict[AnyStr, Any]],
@@ -201,6 +216,7 @@ REDIS_RETURN_OVERRIDES = {
         Tuple[AnyStr, Tuple[AnyStr, ...]],
         Tuple[AnyStr, Tuple[StreamEntry, ...], Tuple[AnyStr, ...]],
     ],
+    "XGROUP CREATECONSUMER": bool,
     "XINFO GROUPS": Tuple[Dict[AnyStr, AnyStr], ...],
     "XINFO CONSUMERS": Tuple[Dict[AnyStr, AnyStr], ...],
     "XINFO STREAM": StreamInfo,
@@ -323,7 +339,7 @@ def render_annotation(annotation):
     if not annotation:
         return "None"
 
-    if isinstance(annotation, type):
+    if isinstance(annotation, type) and not hasattr(annotation, "__args__"):
         if not annotation.__name__ == "NoneType":
             return annotation.__name__
 
@@ -336,10 +352,10 @@ def render_annotation(annotation):
                     args = list(annotation.__args__)
                     none_seen = False
                     for a in annotation.__args__:
-                        if getattr(a, "__name__") == "NoneType":
+                        if getattr(a, "__name__", "NotNoneType") == "NoneType":
                             args.remove(a)
                             none_seen = True
-                        if getattr(a, "__name__") == "Ellipsis":
+                        if getattr(a, "__name__", "NotEllipsis") == "Ellipsis":
                             args.remove(a)
 
                     if none_seen:
@@ -388,6 +404,7 @@ def get_commands():
 def sanitize_parameter(p, eval_forward_annotations=True):
     if isinstance(p.annotation, str) and eval_forward_annotations:
         p = p.replace(annotation=eval(p.annotation))
+
     v = sanitized_rendered_type(str(p))
     if (
         hasattr(p, "annotation")
@@ -412,13 +429,15 @@ def sanitize_parameter(p, eval_forward_annotations=True):
     return v
 
 
-def render_signature(signature, eval_forward_annotations=False, skip_defaults=False):
+def render_signature(
+    signature, eval_forward_annotations=False, skip_defaults=False, with_return=True
+):
     params = []
     for n, p in signature.parameters.items():
         if skip_defaults and p.default is not inspect._empty:
             p = p.replace(default=Ellipsis)
         params.append(sanitize_parameter(p, eval_forward_annotations))
-    if signature.return_annotation != inspect._empty:
+    if with_return and signature.return_annotation != inspect._empty:
         return (
             f"({', '.join(params)}) -> {render_annotation(signature.return_annotation)}"
         )
@@ -426,10 +445,10 @@ def render_signature(signature, eval_forward_annotations=False, skip_defaults=Fa
         return f"({', '.join(params)})"
 
 
-def compare_signatures(s1, s2, eval_forward_annotations=True):
-    return render_signature(s1, eval_forward_annotations) == render_signature(
-        s2, eval_forward_annotations
-    )
+def compare_signatures(s1, s2, eval_forward_annotations=True, with_return=True):
+    return render_signature(
+        s1, eval_forward_annotations, with_return=with_return
+    ) == render_signature(s2, eval_forward_annotations, with_return=with_return)
 
 
 def get_token_mapping():
@@ -931,7 +950,6 @@ def get_argument(
             forced_order = BLOCK_ARGUMENT_FORCED_ORDER.get(command["name"], {}).get(
                 name
             )
-
             if forced_order:
                 child_args = sorted(
                     arg["arguments"], key=lambda a: forced_order.index(a["name"])
@@ -1354,6 +1372,14 @@ def get_command_spec(command):
             annotation=recommended_signature[-1].annotation,
         )
 
+    if forced_order:
+        recommended_signature = sorted(
+            recommended_signature,
+            key=lambda r: forced_order.index(r.name)
+            if r.name in forced_order
+            else recommended_signature.index(r),
+        )
+
     mapping = OrderedDict(
         {
             k: v
@@ -1502,8 +1528,8 @@ def generate_compatibility_section(
      {% if method["full_match"] %}
      async def {{method["name"]}}{{render_signature(method["current_signature"])}}:
      {% else %}
-     - async def {{method["name"]}}{{render_signature(method["current_signature"])}}:
-     + async def {{method["name"]}}{{render_signature(method["rec_signature"])}}:
+     - async def {{method["name"]}}{{render_signature(method["current_signature"], True)}}:
+     + async def {{method["name"]}}{{render_signature(method["rec_signature"], True)}}:
      {% endif %}
          \"\"\"
          {% for line in (implementation.__doc__ or "").split("\n") -%}
@@ -1534,8 +1560,6 @@ def generate_compatibility_section(
          {% endif %}
          {% endif -%}
          \"\"\"
-
-
          {% if "execute_command" not in inspect.getclosurevars(implementation).unbound -%}
          {% if len(method["arg_mapping"]) > 0 -%}
          pieces: CommandArgList = []
@@ -1758,12 +1782,14 @@ def generate_compatibility_section(
                     current_signature = [k for k in cur.parameters]
                     method_details["current_signature"] = cur
                     if debug:
-                        if compare_signatures(
-                            cur, method_details["rec_signature"]
-                        ) and render_annotation(
-                            cur.return_annotation
-                        ) == render_annotation(
-                            method_details["rec_signature"].return_annotation
+                        if (
+                            compare_signatures(
+                                cur, method_details["rec_signature"], with_return=False
+                            )
+                            and render_annotation(cur.return_annotation).lower()
+                            == render_annotation(
+                                method_details["rec_signature"].return_annotation
+                            ).lower()
                         ):
                             src = inspect.getsource(located)
                             version_introduced_valid = command_details and str(
@@ -1820,11 +1846,13 @@ def generate_compatibility_section(
                                     if not arg_version_valid
                                     else "unknown"
                                 )
-                        elif compare_signatures(cur, method_details["rec_signature"]):
+                        elif compare_signatures(
+                            cur, method_details["rec_signature"], with_return=False
+                        ):
                             recommended_return = read_command_docs(
                                 method["name"], method["group"]
                             )
-                            method_details["mismatch_reason"] = "Missing return type."
+                            method_details["mismatch_reason"] = "Mismatched return type"
                             if recommended_return:
                                 new_sig = inspect.Signature(
                                     [
