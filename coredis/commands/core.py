@@ -969,13 +969,18 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.CLUSTER,
         cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
-    async def cluster_meet(self, ip: StringT, port: int) -> bool:
+    async def cluster_meet(
+        self, ip: StringT, port: int, cluster_bus_port: Optional[int] = None
+    ) -> bool:
         """
         Force a node cluster to handshake with another node.
         """
 
+        pieces: CommandArgList = [ip, port]
+        if cluster_bus_port is not None:
+            pieces.append(cluster_bus_port)
         return await self.execute_command(
-            CommandName.CLUSTER_MEET, ip, port, callback=SimpleStringCallback()
+            CommandName.CLUSTER_MEET, *pieces, callback=SimpleStringCallback()
         )
 
     @versionadded(version="3.1.1")
