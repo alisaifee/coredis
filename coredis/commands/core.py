@@ -571,7 +571,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         keepttl: Optional[bool] = None,
         condition: Optional[Literal[PureToken.NX, PureToken.XX]] = None,
         get: Optional[bool] = None,
-    ) -> Union[Optional[AnyStr], bool]:
+    ) -> Optional[Union[AnyStr, bool]]:
         """
         Set the string value of a key
 
