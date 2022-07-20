@@ -8,8 +8,6 @@ from abc import ABC, abstractmethod
 from collections import Counter
 from typing import TYPE_CHECKING, Any, runtime_checkable
 
-from pympler import asizeof
-
 from coredis._sidecar import Sidecar
 from coredis._utils import b
 from coredis.commands import PubSub
@@ -29,6 +27,12 @@ from coredis.typing import (
     Union,
     ValueT,
 )
+
+try:
+    from pympler import asizeof
+# Not available in pypy
+except AttributeError:
+    asizeof = None
 
 if TYPE_CHECKING:
     import coredis.client
@@ -64,6 +68,7 @@ class CacheStats:
 
         :meta private:
         """
+
         for counter in [self.hits, self.misses, self.invalidations, self.dirty]:
             total = sum(counter.values())
             counter.clear()
@@ -87,6 +92,7 @@ class CacheStats:
         Aggregated totals of ``hits``, ``misses``, ``dirty_hits``
         and ``invalidations``
         """
+
         return {
             "hits": sum(self.hits.values()),
             "misses": sum(self.misses.values()),
@@ -96,6 +102,7 @@ class CacheStats:
 
     def __repr__(self) -> str:
         summary = self.summary
+
         return (
             f"CacheStats<hits={summary['hits']}, "
             f"misses={summary['misses']}, "
@@ -252,13 +259,19 @@ class LRUCache(Generic[ET]):
         self.max_items = max_items
         self.max_bytes = max_bytes
         self.__cache: OrderedDict[Hashable, ET] = OrderedDict()
-        if self.max_bytes > 0:
+
+        if self.max_bytes > 0 and asizeof is not None:
             self.max_bytes += asizeof.asizeof(self.__cache)
+        elif self.max_bytes > 0:
+            raise UserWarning(
+                "max_bytes not supported as dependency pympler not available"
+            )
 
     def get(self, key: Hashable) -> ET:
         if key not in self.__cache:
             raise KeyError(key)
         self.__cache.move_to_end(key)
+
         return self.__cache[key]
 
     def insert(self, key: Hashable, value: ET) -> None:
@@ -269,9 +282,11 @@ class LRUCache(Generic[ET]):
     def setdefault(self, key: Hashable, value: ET) -> ET:
         try:
             self.__check_capacity()
+
             return self.get(key)
         except KeyError:
             self.insert(key, value)
+
             return self.get(key)
 
     def remove(self, key: Hashable) -> None:
@@ -298,6 +313,7 @@ class LRUCache(Generic[ET]):
             if item.popitem():
                 return True
         self.__cache.popitem(last=False)
+
         return True
 
     def shrink(self) -> None:
@@ -306,19 +322,27 @@ class LRUCache(Generic[ET]):
         is less than :paramref:`LRUCache.max_bytes` or if
         there is nothing left to remove.
         """
-        if self.max_bytes > 0:
+
+        if self.max_bytes > 0 and asizeof is not None:
             while asizeof.asizeof(self.__cache) > self.max_bytes:
                 if not self.popitem():
                     # nothing left to remove
+
                     return
 
     def __repr__(self) -> str:
-        return (
-            f"LruCache<max_items={self.max_items}, "
-            f"current_items={len(self.__cache)}, "
-            f"max_bytes={self.max_bytes}, "
-            f"current_size_bytes={asizeof.asizeof(self)}>"
-        )
+        if asizeof is not None:
+            return (
+                f"LruCache<max_items={self.max_items}, "
+                f"current_items={len(self.__cache)}, "
+                f"max_bytes={self.max_bytes}, "
+                f"current_size_bytes={asizeof.asizeof(self)}>"
+            )
+        else:
+            return (
+                f"LruCache<max_items={self.max_items}, "
+                f"current_items={len(self.__cache)}, "
+            )
 
     def __check_capacity(self) -> None:
         if len(self.__cache) == self.max_items:
@@ -397,6 +421,7 @@ class NodeTrackingCache(
                 self.__cache.get(b(key)).get(command).get(self.hashable_args(*args))
             )
             self.__stats.hit(key)
+
             return cached
         except KeyError:
             self.__stats.miss(key)
@@ -418,6 +443,7 @@ class NodeTrackingCache(
         if not match:
             self.__stats.mark_dirty(key)
             self.invalidate(key)
+
         if self.__dynamic_confidence:
             self.__confidence = min(
                 100.0,
@@ -431,6 +457,7 @@ class NodeTrackingCache(
 
     def process_message(self, message: ResponseType) -> Tuple[ResponseType, ...]:
         assert isinstance(message, list)
+
         if self.__protocol_version == 2:
             assert isinstance(message[0], bytes)
 
@@ -438,10 +465,13 @@ class NodeTrackingCache(
                 return ()
             elif message[2] is not None:
                 assert isinstance(message[2], list)
+
                 return tuple(k for k in message[2])
         elif message[1] is not None:
             assert isinstance(message[1], list)
+
             return tuple(k for k in message[1])
+
         return ()  # noqa
 
     async def initialize(
@@ -450,23 +480,29 @@ class NodeTrackingCache(
     ) -> NodeTrackingCache:
         self.__protocol_version = client.protocol_version
         await super().start(client)
+
         if not self.__invalidation_task or self.__invalidation_task.done():
             self.__invalidation_task = asyncio.create_task(self.__invalidate())
+
         if not self.__compact_task or self.__compact_task.done():
             self.__compact_task = asyncio.create_task(self.__compact())
+
         return self
 
     async def on_reconnect(self, connection: BaseConnection) -> None:
         self.__cache.clear()
         await super().on_reconnect(connection)
+
         if self.__protocol_version == 2 and self.connection:
             await self.connection.send_command(b"SUBSCRIBE", b"__redis__:invalidate")
 
     def shutdown(self) -> None:
         try:
             asyncio.get_running_loop()
+
             if self.__invalidation_task:
                 self.__invalidation_task.cancel()
+
             if self.__compact_task:
                 self.__compact_task.cancel()
             super().stop()
@@ -476,6 +512,7 @@ class NodeTrackingCache(
     def get_client_id(self, client: BaseConnection) -> Optional[int]:
         if self.connection and self.connection.is_connected:
             return self.client_id
+
         return None
 
     async def __compact(self) -> None:
@@ -560,6 +597,7 @@ class ClusterTrackingCache(
 
         self.__client = weakref.ref(client)
         self.__cache.clear()
+
         for sidecar in self.node_caches.values():
             sidecar.shutdown()
         self.node_caches.clear()
@@ -576,12 +614,14 @@ class ClusterTrackingCache(
             await node_cache.initialize(node)
             assert node_cache.connection
             self.node_caches[node_cache.connection.location] = node_cache
+
         return self
 
     @property
     def client(self) -> Optional["coredis.client.RedisCluster[Any]"]:
         if self.__client:
             return self.__client()
+
         return None  # noqa
 
     @property
@@ -613,6 +653,7 @@ class ClusterTrackingCache(
                 self.__cache.get(b(key)).get(command).get(self.hashable_args(*args))
             )
             self.__stats.hit(key)
+
             return cached
         except KeyError:
             self.__stats.miss(key)
@@ -634,6 +675,7 @@ class ClusterTrackingCache(
         if not match:
             self.__stats.mark_dirty(key)
             self.invalidate(key)
+
         if self.__dynamic_confidence:
             self.__confidence = min(
                 100.0,
@@ -715,6 +757,7 @@ class TrackingCache(
 
         if self.__client and self.__client() != client:
             copy = self.share()
+
             return await copy.initialize(client)
 
         self.__client = weakref.ref(client)
@@ -741,6 +784,7 @@ class TrackingCache(
                     stats=self.__stats,
                 )
         await self.instance.initialize(client)
+
         return self
 
     @property
@@ -751,6 +795,7 @@ class TrackingCache(
     def confidence(self) -> float:
         if not self.instance:
             return self.__confidence
+
         return self.instance.confidence
 
     @property
@@ -760,10 +805,12 @@ class TrackingCache(
     def get_client_id(self, connection: BaseConnection) -> Optional[int]:
         if self.instance:
             return self.instance.get_client_id(connection)
+
         return None
 
     def get(self, command: bytes, key: bytes, *args: ValueT) -> ResponseType:
         assert self.instance
+
         return self.instance.get(command, key, *args)
 
     def put(
@@ -810,6 +857,7 @@ class TrackingCache(
             self.__cache,
             self.__stats,
         )
+
         return copy
 
     def __del__(self) -> None:

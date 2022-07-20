@@ -543,7 +543,7 @@ async def redis_uds(redis_uds_server, request):
 
 @pytest.fixture
 async def redis_cached(redis_basic_server, request):
-    cache = TrackingCache()
+    cache = TrackingCache(max_size_bytes=-1)
     client = coredis.Redis(
         "localhost",
         6379,
@@ -562,7 +562,7 @@ async def redis_cached(redis_basic_server, request):
 
 @pytest.fixture
 async def redis_cached_resp2(redis_basic_server, request):
-    cache = TrackingCache()
+    cache = TrackingCache(max_size_bytes=-1)
     client = coredis.Redis(
         "localhost",
         6379,
@@ -634,7 +634,7 @@ async def redis_cluster_ssl(redis_ssl_cluster_server, request):
 
 @pytest.fixture
 async def redis_cluster_cached(redis_cluster_server, request):
-    cache = TrackingCache()
+    cache = TrackingCache(max_size_bytes=-1)
     cluster = coredis.RedisCluster(
         "localhost",
         7000,
