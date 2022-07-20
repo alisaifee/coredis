@@ -846,7 +846,7 @@ Perform arbitrary bitfield integer operations on strings. Read-only variant of B
 - Documentation: `BITFIELD_RO <https://redis.io/commands/bitfield_ro>`_
 - Implementation: :meth:`~coredis.Redis.bitfield_ro`
 
-- New in redis: 6.2.0
+- New in redis: 6.0.0
 
 
 
@@ -3372,6 +3372,8 @@ List the ACL categories or the commands inside a category
 - Documentation: `ACL CAT <https://redis.io/commands/acl-cat>`_
 - Implementation: :meth:`~coredis.Redis.acl_cat`
 
+- New in redis: 6.0.0
+
 
 
 - .. versionadded:: 3.0.0
@@ -3387,6 +3389,8 @@ Remove the specified ACL users and the associated rules
 
 - Documentation: `ACL DELUSER <https://redis.io/commands/acl-deluser>`_
 - Implementation: :meth:`~coredis.Redis.acl_deluser`
+
+- New in redis: 6.0.0
 
 
 
@@ -3422,6 +3426,8 @@ Generate a pseudorandom secure password to use for ACL users
 - Documentation: `ACL GENPASS <https://redis.io/commands/acl-genpass>`_
 - Implementation: :meth:`~coredis.Redis.acl_genpass`
 
+- New in redis: 6.0.0
+
 
 
 - .. versionadded:: 3.0.0
@@ -3437,6 +3443,8 @@ Get the rules for a specific ACL user
 
 - Documentation: `ACL GETUSER <https://redis.io/commands/acl-getuser>`_
 - Implementation: :meth:`~coredis.Redis.acl_getuser`
+
+- New in redis: 6.0.0
 
 
 
@@ -3454,6 +3462,8 @@ List the current ACL rules in ACL config file format
 - Documentation: `ACL LIST <https://redis.io/commands/acl-list>`_
 - Implementation: :meth:`~coredis.Redis.acl_list`
 
+- New in redis: 6.0.0
+
 
 
 - .. versionadded:: 3.0.0
@@ -3469,6 +3479,8 @@ Reload the ACLs from the configured ACL file
 
 - Documentation: `ACL LOAD <https://redis.io/commands/acl-load>`_
 - Implementation: :meth:`~coredis.Redis.acl_load`
+
+- New in redis: 6.0.0
 
 
 
@@ -3486,6 +3498,8 @@ List latest events denied because of ACLs in place
 - Documentation: `ACL LOG <https://redis.io/commands/acl-log>`_
 - Implementation: :meth:`~coredis.Redis.acl_log`
 
+- New in redis: 6.0.0
+
 
 
 - .. versionadded:: 3.0.0
@@ -3501,6 +3515,8 @@ Save the current ACL rules in the configured ACL file
 
 - Documentation: `ACL SAVE <https://redis.io/commands/acl-save>`_
 - Implementation: :meth:`~coredis.Redis.acl_save`
+
+- New in redis: 6.0.0
 
 
 
@@ -3518,6 +3534,8 @@ Modify or create the rules for a specific ACL user
 - Documentation: `ACL SETUSER <https://redis.io/commands/acl-setuser>`_
 - Implementation: :meth:`~coredis.Redis.acl_setuser`
 
+- New in redis: 6.0.0
+
 
 
 - .. versionadded:: 3.0.0
@@ -3534,6 +3552,8 @@ List the username of all the configured ACL rules
 - Documentation: `ACL USERS <https://redis.io/commands/acl-users>`_
 - Implementation: :meth:`~coredis.Redis.acl_users`
 
+- New in redis: 6.0.0
+
 
 
 - .. versionadded:: 3.0.0
@@ -3549,6 +3569,8 @@ Return the name of the user associated to the current connection
 
 - Documentation: `ACL WHOAMI <https://redis.io/commands/acl-whoami>`_
 - Implementation: :meth:`~coredis.Redis.acl_whoami`
+
+- New in redis: 6.0.0
 
 
 
@@ -4298,6 +4320,8 @@ Instruct the server about tracking or not keys in the next request
 - Documentation: `CLIENT CACHING <https://redis.io/commands/client-caching>`_
 - Implementation: :meth:`~coredis.Redis.client_caching`
 
+- New in redis: 6.0.0
+
 
 
 - .. versionadded:: 3.0.0
@@ -4327,6 +4351,8 @@ Get tracking notifications redirection client ID if any
 
 - Documentation: `CLIENT GETREDIR <https://redis.io/commands/client-getredir>`_
 - Implementation: :meth:`~coredis.Redis.client_getredir`
+
+- New in redis: 6.0.0
 
 
 
@@ -4468,6 +4494,8 @@ Enable or disable server assisted client side caching support
 - Documentation: `CLIENT TRACKING <https://redis.io/commands/client-tracking>`_
 - Implementation: :meth:`~coredis.Redis.client_tracking`
 
+- New in redis: 6.0.0
+
 
 
 - .. versionadded:: 3.0.0
@@ -4549,6 +4577,8 @@ Handshake with Redis
 
 - Documentation: `HELLO <https://redis.io/commands/hello>`_
 - Implementation: :meth:`~coredis.Redis.hello`
+
+- New in redis: 6.0.0
 
 
 
