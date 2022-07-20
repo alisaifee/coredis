@@ -54,7 +54,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.8, 3.9, "3.10"]
+        python-version: [3.8, 3.9, "3.10", "pypy-3.7", "pypy-3.8"]
         service_version:
           - REDIS_VERSION=6.0.16 REDIS_SENTINEL_VERSION=6.0.16 REDIS_SSL_VERSION=6.0.16 DEFAULT_ARGS=""
           - REDIS_VERSION=6.2.6 REDIS_SSL_VERSION=6.2.6 REDIS_SENTINEL_VERSION=6.2.6 REDIS_STACK_VERSION=6.2.0-edge DEFAULT_ARGS=""
