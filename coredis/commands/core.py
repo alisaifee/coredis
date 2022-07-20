@@ -5854,7 +5854,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SCRIPTING,
         arguments={"sync_type": {"version_introduced": "6.2.0"}},
         cluster=ClusterCommandConfig(
-            route=NodeFlag.PRIMARIES,
+            route=NodeFlag.ALL,
             combine=ClusterBoolCombine(),
         ),
     )

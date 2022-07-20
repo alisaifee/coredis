@@ -316,6 +316,21 @@ STD_GROUPS = [
 VERSIONADDED_DOC = re.compile(r"(.. versionadded:: ([\d\.]+))", re.DOTALL)
 VERSIONCHANGED_DOC = re.compile(r"(.. versionchanged:: ([\d\.]+))", re.DOTALL)
 
+ROUTE_MAPPING = {
+    "all_nodes": NodeFlag.ALL,
+    "all_shards": NodeFlag.PRIMARIES,
+
+}
+
+MERGE_MAPPING = {
+    "one_succeeded": ["first response", "the first response that is not an error"],
+    "all_succeeded": ["success if all shards responded ``True``", "the response from any shard if all responses are consistent"],
+    "agg_logical_and": ["the logical AND of all responses"],
+    "agg_logical_or": ["the logical OR of all responses"],
+    "agg_sum": ["the sum of results"],
+
+}
+
 inflection_engine = inflect.engine()
 
 
@@ -1814,6 +1829,17 @@ def generate_compatibility_section(
                                     .get("version")
                                 ]
                             )
+                            routing_valid = True
+                            merging_valid = True
+                            if command_details and (hints := method.get("hints", [])):
+                                request_policy = [hint.split("request_policy:")[1] for hint in hints if "request_policy" in hint]
+                                response_policy = [hint.split("response_policy:")[1] for hint in hints if "response_policy" in hint]
+                                if request_policy and (route := command_details.cluster.route):
+                                    routing_valid = ROUTE_MAPPING.get(request_policy[0], "") == route
+                                    if not routing_valid:
+                                        print(method["name"], route, request_policy[0], ROUTE_MAPPING.get(request_policy[0]))
+                                if response_policy and command_details.cluster.combine and (combine := command_details.cluster.combine.response_policy):
+                                    merging_valid = combine in MERGE_MAPPING.get(response_policy[0], [])
                             if (
                                 src.find("@redis_command") >= 0
                                 and src.find(
@@ -1830,6 +1856,8 @@ def generate_compatibility_section(
                                 and version_introduced_valid
                                 and version_deprecated_valid
                                 and arg_version_valid
+                                and routing_valid
+                                and merging_valid
                             ):
                                 method_details["full_match"] = True
                             else:
@@ -1844,6 +1872,10 @@ def generate_compatibility_section(
                                     if not readonly_valid
                                     else "Argument version mismatch"
                                     if not arg_version_valid
+                                    else "Routing mismatch"
+                                    if not routing_valid
+                                    else "Response merge mismatch"
+                                    if not merging_valid
                                     else "unknown"
                                 )
                         elif compare_signatures(
