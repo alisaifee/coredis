@@ -23,6 +23,7 @@ from coredis.response._callbacks import NoopCallback
 from coredis.typing import RUNTIME_TYPECHECKS, Callable, Optional, R, ValueT
 
 REDIS_VERSIONS = {}
+PY_IMPLEMENTATION = platform.python_implementation()
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -89,6 +90,10 @@ async def check_test_constraints(request, client, protocol=3):
 
         if marker.name == "nodragonfly" and str(client_version).startswith("df"):
             return pytest.skip("Skipped for Dragonfly")
+        if marker.name == "nopypy" and PY_IMPLEMENTATION == "PyPy":
+            return pytest.skip("Skipped for PyPy")
+        if marker.name == "pypyonly" and PY_IMPLEMENTATION != "PyPy":
+            return pytest.skip("Skipped for !PyPy")
 
 
 async def set_default_test_config(client):
@@ -543,7 +548,7 @@ async def redis_uds(redis_uds_server, request):
 
 @pytest.fixture
 async def redis_cached(redis_basic_server, request):
-    cache = TrackingCache()
+    cache = TrackingCache(max_size_bytes=-1)
     client = coredis.Redis(
         "localhost",
         6379,
@@ -562,7 +567,7 @@ async def redis_cached(redis_basic_server, request):
 
 @pytest.fixture
 async def redis_cached_resp2(redis_basic_server, request):
-    cache = TrackingCache()
+    cache = TrackingCache(max_size_bytes=-1)
     client = coredis.Redis(
         "localhost",
         6379,
@@ -634,7 +639,7 @@ async def redis_cluster_ssl(redis_ssl_cluster_server, request):
 
 @pytest.fixture
 async def redis_cluster_cached(redis_cluster_server, request):
-    cache = TrackingCache()
+    cache = TrackingCache(max_size_bytes=-1)
     cluster = coredis.RedisCluster(
         "localhost",
         7000,

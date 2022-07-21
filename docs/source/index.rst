@@ -160,6 +160,7 @@ Supported python versions
 - 3.8
 - 3.9
 - 3.10
+- PyPy 3.8
 
 Support for Redis-"like" databases
 ----------------------------------

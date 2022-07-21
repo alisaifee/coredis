@@ -86,6 +86,13 @@ jobs:
             runtime_type_checks: "False"
             extensions: "False"
             coverage: "True"
+          - python-version: "pypy-3.8"
+            test_params: "-m '(not (keydb or dragonfly))' tests/commands"
+            service_version: "REDIS_VERSION=7.0.0 REDIS_SSL_VERSION=7.0.0"
+            runtime_type_checks: "True"
+            extensions: "False"
+            uvloop: "False"
+            coverage: "True"
     steps:
     - uses: actions/checkout@v3
     - name: Cache dependencies

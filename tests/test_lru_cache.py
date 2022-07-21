@@ -13,6 +13,7 @@ class TestLRUCache:
         with pytest.raises(KeyError):
             cache.get("a")
 
+    @pytest.mark.nopypy
     def test_max_bytes(self):
         cache = LRUCache(max_bytes=500)
         cache.insert("a", bytearray(400))
