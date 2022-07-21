@@ -300,7 +300,7 @@ class ConnectionPool:
 
         if connection.pid == self.pid:
             self._in_use_connections.remove(connection)
-            if connection.awaiting_response or not connection.initialized:
+            if connection.awaiting_response:
                 connection.disconnect()
                 self._created_connections -= 1
             else:
@@ -452,7 +452,7 @@ class BlockingConnectionPool(ConnectionPool):
         if _connection and _connection.pid == self.pid:
             self._in_use_connections.remove(_connection)
             # discard connection with unread response
-            if connection.awaiting_response or not connection.initialized:
+            if connection.awaiting_response:
                 _connection.disconnect()
                 _connection = None
 

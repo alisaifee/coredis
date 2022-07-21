@@ -149,7 +149,6 @@ class BaseConnection(asyncio.BaseProtocol):
         self.tracking_client_id = None
         self.noreply = noreply
         self.needs_handshake = True
-        self.initialized = False
         self._transport: Optional[asyncio.Transport] = None
         self._read_flag = asyncio.Event()
         self._write_flag = asyncio.Event()
@@ -332,7 +331,6 @@ class BaseConnection(asyncio.BaseProtocol):
         if self.noreply:
             await self.send_command(b"CLIENT REPLY", b"OFF")
 
-        self.initialized = True
         self.last_active_at = time.time()
 
     async def _wait_for_response(
@@ -391,7 +389,6 @@ class BaseConnection(asyncio.BaseProtocol):
 
     def disconnect(self) -> None:
         """Disconnects from the Redis server"""
-        self.initialized = False
         self.needs_handshake = True
         self._parser.on_disconnect(self._last_error)
         if self._transport:
