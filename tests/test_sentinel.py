@@ -329,7 +329,7 @@ async def test_primary_demoted(client, mocker):
 
 @targets("redis_sentinel", "redis_sentinel_resp2")
 @pytest.mark.parametrize(
-    "client_arguments", [({"cache": coredis.cache.TrackingCache()})]
+    "client_arguments", [({"cache": coredis.cache.TrackingCache(max_size_bytes=-1)})]
 )
 async def test_sentinel_cache(client, client_arguments, mocker):
     await client.primary_for("mymaster").set("fubar", 1)

@@ -263,7 +263,7 @@ class LRUCache(Generic[ET]):
         if self.max_bytes > 0 and asizeof is not None:
             self.max_bytes += asizeof.asizeof(self.__cache)
         elif self.max_bytes > 0:
-            raise UserWarning(
+            raise RuntimeError(
                 "max_bytes not supported as dependency pympler not available"
             )
 
@@ -387,17 +387,17 @@ class NodeTrackingCache(
          confirmations of correct cached values will increase the confidence by 0.01%
          upto 100.
         """
+        super().__init__({b"invalidate"}, max(1, max_idle_seconds - 1))
         self.__protocol_version: Optional[Literal[2, 3]] = None
         self.__invalidation_task: Optional[asyncio.Task[None]] = None
         self.__compact_task: Optional[asyncio.Task[None]] = None
-        self.__cache: LRUCache[LRUCache[LRUCache[ResponseType]]] = cache or LRUCache(
-            max_keys, max_size_bytes
-        )
         self.__max_idle_seconds = max_idle_seconds
         self.__confidence = self.__original_confidence = confidence
         self.__dynamic_confidence = dynamic_confidence
         self.__stats = stats or CacheStats()
-        super().__init__({b"invalidate"}, max(1, max_idle_seconds - 1))
+        self.__cache: LRUCache[LRUCache[LRUCache[ResponseType]]] = cache or LRUCache(
+            max_keys, max_size_bytes
+        )
 
     @property
     def healthy(self) -> bool:
@@ -573,11 +573,11 @@ class ClusterTrackingCache(
          confirmations of correct cached values will increase the confidence by 0.01%
          upto 100.
         """
+        self.node_caches: Dict[str, NodeTrackingCache] = {}
         self.__protocol_version: Optional[Literal[2, 3]] = None
         self.__cache: LRUCache[LRUCache[LRUCache[ResponseType]]] = cache or LRUCache(
             max_keys, max_size_bytes
         )
-        self.node_caches: Dict[str, NodeTrackingCache] = {}
         self.__nodes: List["coredis.client.Redis[Any]"] = []
         self.__max_idle_seconds = max_idle_seconds
         self.__confidence = self.__original_confidence = confidence
