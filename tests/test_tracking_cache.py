@@ -223,7 +223,7 @@ class TestClusterProxyInvalidatingCache(CommonExamples):
         assert cache.get_client_id(client.connection_pool.get_random_connection()) > 0
 
     async def test_single_entry_cache_tracker_disconnected(self, client, cloner, _s):
-        cache = self.cache(max_keys=1)
+        cache = self.cache(max_keys=1, max_size_bytes=-1)
         cached = await cloner(client, cache=cache)
         assert not await client.get("fubar")
         await client.set("fubar", 1)
