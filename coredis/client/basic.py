@@ -5,7 +5,7 @@ import contextlib
 import contextvars
 import warnings
 from ssl import SSLContext
-from typing import TYPE_CHECKING, Any, overload, cast
+from typing import TYPE_CHECKING, Any, cast, overload
 
 from deprecated.sphinx import versionadded
 from packaging.version import InvalidVersion, Version
