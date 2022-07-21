@@ -54,7 +54,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.8, 3.9, "3.10", "pypy-3.8"]
+        python-version: [3.8, 3.9, "3.10"]
         service_version:
           - REDIS_VERSION=6.0.16 REDIS_SENTINEL_VERSION=6.0.16 REDIS_SSL_VERSION=6.0.16 DEFAULT_ARGS=""
           - REDIS_VERSION=6.2.6 REDIS_SSL_VERSION=6.2.6 REDIS_SENTINEL_VERSION=6.2.6 REDIS_STACK_VERSION=6.2.0-edge DEFAULT_ARGS=""
@@ -85,6 +85,12 @@ jobs:
             test_params: "-m dragonfly"
             runtime_type_checks: "False"
             extensions: "False"
+            coverage: "True"
+          - python-version: "pypy-3.8"
+            service_version: "REDIS_VERSION=7.0.0 REDIS_SSL_VERSION=7.0.0"
+            runtime_type_checks: "True"
+            extensions: "False"
+            uvloop: "False"
             coverage: "True"
     steps:
     - uses: actions/checkout@v3
