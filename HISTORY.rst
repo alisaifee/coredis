@@ -3,6 +3,20 @@
 Changelog
 =========
 
+v4.2.1
+------
+Release Date: 2022-07-21
+
+* Compatibility
+
+  * Add support and test coverage for PyPy 3.8.
+
+* Bug Fix
+
+  * Ensure :meth:`coredis.RedisCluster.ensure_replication` can be used
+    with :paramref:`~coredis.RedisCluster.ensure_replication.replicas` <
+    total number of replicas
+
 v4.2.0
 ------
 Release Date: 2022-07-20
@@ -1037,6 +1051,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
