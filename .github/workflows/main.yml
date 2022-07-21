@@ -87,7 +87,7 @@ jobs:
             extensions: "False"
             coverage: "True"
           - python-version: "pypy-3.8"
-            test_params: "-m '(not (keydb or dragonfly))' tests/commands"
+            test_params: "-m '(not (keydb or dragonfly))' tests/commands tests/test_tracking_cache.py"
             service_version: "REDIS_VERSION=7.0.0 REDIS_SSL_VERSION=7.0.0"
             runtime_type_checks: "True"
             extensions: "False"
