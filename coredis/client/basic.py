@@ -367,7 +367,8 @@ class Client(
     ) -> Iterator[ClientT]:
         """
         Context manager to ensure that commands executed within the context
-        are replicated to :paramref:`replicas` within :paramref:`timeout_ms` milliseconds.
+        are replicated to atleast :paramref:`replicas` within
+        :paramref:`timeout_ms` milliseconds.
 
         Internally this uses `WAIT <https://redis.io/commands/wait>`_ after
         each command executed within the context
