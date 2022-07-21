@@ -5,7 +5,7 @@ import contextlib
 import contextvars
 import warnings
 from ssl import SSLContext
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, overload, cast
 
 from deprecated.sphinx import versionadded
 from packaging.version import InvalidVersion, Version
@@ -215,7 +215,7 @@ class Client(
     async def _ensure_wait(self, command: bytes, connection: BaseConnection) -> None:
         if wait := self._waitcontext.get():
             await connection.send_command(b"WAIT", *wait)
-            if not await connection.read_response(decode=False) == wait[0]:
+            if not cast(int, await connection.read_response(decode=False)) >= wait[0]:
                 raise ReplicationError(command, wait[0], wait[1])
 
     async def initialize(self: ClientT) -> ClientT:
