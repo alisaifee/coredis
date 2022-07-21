@@ -366,9 +366,9 @@ class BaseConnection(asyncio.BaseProtocol):
             self.disconnect()
             raise
 
-        self.awaiting_response = False
         if raise_exceptions and isinstance(response, RedisError):
             raise response
+        self.awaiting_response = False
         return response
 
     async def send_packed_command(self, command: List[bytes]) -> None:
