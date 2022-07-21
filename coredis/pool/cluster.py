@@ -254,7 +254,7 @@ class ClusterConnectionPool(ConnectionPool):
                 pass
             # discard connection with unread response
 
-            if connection.awaiting_response:
+            if connection.awaiting_response or not connection.initialized:
                 connection.disconnect()
                 # reduce node connection count in case of too many connection error raised
 

@@ -609,14 +609,14 @@ class TestSSLConnectionURLParsing:
 
 class TestConnection:
     @pytest.mark.asyncio()
-    async def test_on_connect_error(self, event_loop):
+    async def test_on_connect_error(self):
         """
         An error in Connection.on_connect should disconnect from the server
         see for details: https://github.com/andymccurdy/redis-py/issues/368
         """
         # this assumes the Redis server being tested against doesn't have
         # 9999 databases ;)
-        bad_connection = coredis.Redis(db=9999, loop=event_loop)
+        bad_connection = coredis.Redis(db=9999)
         # an error should be raised on connect
         with pytest.raises(RedisError):
             await bad_connection.info()
