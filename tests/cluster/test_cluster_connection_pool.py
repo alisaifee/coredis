@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import os
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -61,11 +61,11 @@ class TestConnectionPool:
         with pytest.raises(
             RedisClusterException, match="Cant reach a single startup node"
         ):
-            pool.get_connection_by_slot(1)
+            await pool.get_connection_by_slot(1)
         with pytest.raises(
             RedisClusterException, match="Cant reach a single startup node"
         ):
-            pool.get_random_connection()
+            await pool.get_random_connection()
 
     async def test_in_use_not_exists(self, redis_cluster):
         """
@@ -79,7 +79,9 @@ class TestConnectionPool:
     async def test_connection_creation(self, redis_cluster):
         connection_kwargs = {"foo": "bar", "biz": "baz"}
         pool = await self.get_pool(connection_kwargs=connection_kwargs)
-        connection = pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+        connection = await pool.get_connection_by_node(
+            {"host": "127.0.0.1", "port": 7000}
+        )
         assert isinstance(connection, DummyConnection)
 
         for key in connection_kwargs:
@@ -87,25 +89,25 @@ class TestConnectionPool:
 
     async def test_multiple_connections(self, redis_cluster):
         pool = await self.get_pool()
-        c1 = pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
-        c2 = pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
+        c1 = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+        c2 = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
         assert c1 != c2
 
     async def test_max_connections(self, redis_cluster):
         pool = await self.get_pool(max_connections=2)
-        pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
-        pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
+        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
         with pytest.raises(RedisClusterException):
-            pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+            await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
 
     async def test_max_connections_per_node(self, redis_cluster):
         pool = await self.get_pool(max_connections=2, max_connections_per_node=True)
-        pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
-        pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
-        pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
-        pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
+        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
+        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
         with pytest.raises(RedisClusterException):
-            pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+            await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
 
     async def test_max_connections_default_setting(self):
         pool = await self.get_pool(max_connections=None)
@@ -113,9 +115,9 @@ class TestConnectionPool:
 
     async def test_pool_disconnect(self):
         pool = await self.get_pool()
-        c1 = pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
-        c2 = pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
-        c3 = pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+        c1 = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+        c2 = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
+        c3 = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
         pool.release(c3)
         pool.disconnect()
         assert not c1.is_connected
@@ -124,9 +126,9 @@ class TestConnectionPool:
 
     async def test_reuse_previously_released_connection(self):
         pool = await self.get_pool()
-        c1 = pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+        c1 = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
         pool.release(c1)
-        c2 = pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+        c2 = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
         assert c1 == c2
 
     async def test_repr_contains_db_info_tcp(self, host_ip):
@@ -153,16 +155,16 @@ class TestConnectionPool:
             ClusterConnectionPool, "get_connection_by_slot", autospec=True
         ) as pool_mock:
 
-            def side_effect(self, *args, **kwargs):
+            async def side_effect(self, *args, **kwargs):
                 return DummyConnection(port=1337)
 
             pool_mock.side_effect = side_effect
 
-            connection = pool.get_connection_by_key("foo")
+            connection = await pool.get_connection_by_key("foo")
             assert connection.port == 1337
 
         with pytest.raises(RedisClusterException) as ex:
-            pool.get_connection_by_key(None)
+            await pool.get_connection_by_key(None)
         assert str(ex.value).startswith(
             "No way to dispatch this command to Redis Cluster."
         ), True
@@ -179,19 +181,19 @@ class TestConnectionPool:
             ClusterConnectionPool, "get_connection_by_node", autospec=True
         ) as pool_mock:
 
-            def side_effect(self, *args, **kwargs):
+            async def side_effect(self, *args, **kwargs):
                 return DummyConnection(port=1337)
 
             pool_mock.side_effect = side_effect
 
-            connection = pool.get_connection_by_slot(12182)
+            connection = await pool.get_connection_by_slot(12182)
             assert connection.port == 1337
 
-        m = Mock()
+        m = AsyncMock()
         pool.get_random_connection = m
 
         # If None value is provided then a random node should be tried/returned
-        pool.get_connection_by_slot(None)
+        await pool.get_connection_by_slot(None)
         m.assert_called_once_with()
 
     async def test_get_connection_blocked(self):
@@ -221,7 +223,7 @@ class TestConnectionPool:
             max_idle_time=0.2,
             idle_check_interval=0.1,
         )
-        conn = pool.get_connection_by_node(
+        conn = await pool.get_connection_by_node(
             {
                 "name": "127.0.0.1:7000",
                 "host": "127.0.0.1",
@@ -276,10 +278,10 @@ class TestReadOnlyConnectionPool:
 
     async def test_max_connections(self):
         pool = await self.get_pool(max_connections=2)
-        pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
-        pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
+        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
         with pytest.raises(RedisClusterException):
-            pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+            await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
 
 
 class TestConnectionPoolURLParsing:

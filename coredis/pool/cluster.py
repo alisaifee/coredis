@@ -180,7 +180,7 @@ class ClusterConnectionPool(ConnectionPool):
         node_type = options.pop("node_type", "master")
 
         if not routing_key:
-            return self.get_random_connection()
+            return await self.get_random_connection()
 
         slot = hash_slot(b(routing_key))
         if node_type == "replica":
@@ -282,7 +282,7 @@ class ClusterConnectionPool(ConnectionPool):
 
         return sum(i for i in self._created_connections_per_node.values())
 
-    def get_random_connection(self, primary: bool = False) -> ClusterConnection:
+    async def get_random_connection(self, primary: bool = False) -> ClusterConnection:
         """Opens new connection to random redis server in the cluster"""
         if self._cluster_available_connections:
             filter = []
@@ -303,21 +303,21 @@ class ClusterConnectionPool(ConnectionPool):
                 return cast(ClusterConnection, conn_list.pop())
 
         for node in self.nodes.random_startup_node_iter(primary):
-            connection = self.get_connection_by_node(node)
+            connection = await self.get_connection_by_node(node)
 
             if connection:
                 return connection
         raise RedisClusterException("Cant reach a single startup node.")
 
-    def get_connection_by_key(self, key: StringT) -> ClusterConnection:
+    async def get_connection_by_key(self, key: StringT) -> ClusterConnection:
         if not key:
             raise RedisClusterException(
                 "No way to dispatch this command to Redis Cluster."
             )
 
-        return self.get_connection_by_slot(hash_slot(b(key)))
+        return await self.get_connection_by_slot(hash_slot(b(key)))
 
-    def get_connection_by_slot(self, slot: int) -> ClusterConnection:
+    async def get_connection_by_slot(self, slot: int) -> ClusterConnection:
         """
         Determines what server a specific slot belongs to and return a redis
         object that is connected
@@ -325,11 +325,11 @@ class ClusterConnectionPool(ConnectionPool):
         self.checkpid()
 
         try:
-            return self.get_connection_by_node(self.get_node_by_slot(slot))
+            return await self.get_connection_by_node(self.get_node_by_slot(slot))
         except KeyError:
-            return self.get_random_connection()
+            return await self.get_random_connection()
 
-    def get_connection_by_node(self, node: Node) -> ClusterConnection:
+    async def get_connection_by_node(self, node: Node) -> ClusterConnection:
         """Gets a connection by node"""
         self.checkpid()
         self.nodes.set_node_name(node)

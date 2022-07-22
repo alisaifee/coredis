@@ -843,7 +843,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         if not slots:
             raise ClusterTransactionError("No slots found for transaction")
         node = self.connection_pool.get_node_by_slot(slots.pop())
-        conn = self.connection_pool.get_connection_by_node(node)
+        conn = await self.connection_pool.get_connection_by_node(node)
 
         if self.watches:
             await self._watch(node, conn, self.watches)
@@ -916,7 +916,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
             if node_name not in nodes:
                 nodes[node_name] = NodeCommands(
                     self.parse_response,
-                    self.connection_pool.get_connection_by_node(node),
+                    await self.connection_pool.get_connection_by_node(node),
                 )
 
             nodes[node_name].append(c)

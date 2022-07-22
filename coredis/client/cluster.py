@@ -632,9 +632,9 @@ class RedisCluster(
 
             if asking and redirect_addr:
                 node = self.connection_pool.nodes.nodes[redirect_addr]
-                r = self.connection_pool.get_connection_by_node(node)
+                r = await self.connection_pool.get_connection_by_node(node)
             elif try_random_node:
-                r = self.connection_pool.get_random_connection(
+                r = await self.connection_pool.get_random_connection(
                     primary=try_random_type == NodeFlag.PRIMARIES
                 )
                 try_random_node = False
@@ -644,9 +644,9 @@ class RedisCluster(
                     node = self.connection_pool.get_primary_node_by_slot(slot)
                 else:
                     node = self.connection_pool.get_node_by_slot(slot, command)
-                r = self.connection_pool.get_connection_by_node(node)
+                r = await self.connection_pool.get_connection_by_node(node)
             elif node:
-                r = self.connection_pool.get_connection_by_node(node)
+                r = await self.connection_pool.get_connection_by_node(node)
             else:
                 continue
 
@@ -751,7 +751,7 @@ class RedisCluster(
                 self.cache.invalidate(*keys)
         while _nodes:
             cur = _nodes[0]
-            connection = self.connection_pool.get_connection_by_node(cur)
+            connection = await self.connection_pool.get_connection_by_node(cur)
             if (
                 self.cache
                 and isinstance(self.cache, SupportsClientTracking)
