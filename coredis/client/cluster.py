@@ -161,6 +161,7 @@ class RedisCluster(
         ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = ...,
         ssl_check_hostname: Optional[bool] = ...,
         ssl_ca_certs: Optional[str] = ...,
+        blocking: bool = ...,
         max_connections: int = ...,
         max_connections_per_node: bool = ...,
         readonly: bool = ...,
@@ -192,6 +193,7 @@ class RedisCluster(
         ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = ...,
         ssl_check_hostname: Optional[bool] = ...,
         ssl_ca_certs: Optional[str] = ...,
+        blocking: bool = ...,
         max_connections: int = ...,
         max_connections_per_node: bool = ...,
         readonly: bool = ...,
@@ -222,6 +224,7 @@ class RedisCluster(
         ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = None,
         ssl_check_hostname: Optional[bool] = None,
         ssl_ca_certs: Optional[str] = None,
+        blocking: bool = False,
         max_connections: int = 32,
         max_connections_per_node: bool = False,
         readonly: bool = False,
@@ -240,6 +243,8 @@ class RedisCluster(
         """
 
         Changes
+          - .. versionadded:: 4.3.0
+            :paramref:`blocking`
           - .. versionchanged:: 4.0.0
             :paramref:`non_atomic_cross_slot` defaults to ``True``
             :paramref:`protocol_version`` defaults to ``3``
@@ -347,6 +352,7 @@ class RedisCluster(
 
             pool = ClusterConnectionPool(
                 startup_nodes=startup_nodes,
+                blocking=blocking,
                 max_connections=max_connections,
                 reinitialize_steps=reinitialize_steps,
                 max_connections_per_node=max_connections_per_node,

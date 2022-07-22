@@ -18,6 +18,7 @@ from coredis.typing import Dict, Iterable, Node, Optional, Set, StringT, Type, V
 class ClusterConnectionPool(ConnectionPool):
     """
     Custom connection pool for :class:`~coredis.RedisCluster` client
+    that can be used both in non-blocking & blocking mode.
     """
 
     nodes: NodeManager
@@ -44,6 +45,16 @@ class ClusterConnectionPool(ConnectionPool):
         **connection_kwargs: Optional[Any],
     ):
         """
+        :param max_connections: Maximum number of connections to allow concurrently from this
+         client. If the value is ``None`` it will default to 32.
+        :param max_connections_per_node: Whether to use the value of :paramref:`max_connections`
+         on a per node basis or cluster wide. If ``False`` and :paramref:`blocking` is ``True``
+         the per-node connection pools will have a maximum size of :paramref:`max_connections`
+         divided by the number of nodes in the cluster.
+        :param blocking: If ``True`` the client will block at most :paramref:`timeout` seconds
+         if :paramref:`max_connections` is reachd when trying to obtain a connection
+        :param timeout: Number of seconds to block if :paramref:`block` is ``True`` when trying to
+         obtain a connection.
         :param skip_full_coverage_check:
             Skips the check of cluster-require-full-coverage config, useful for clusters
             without the CONFIG command (like aws)
