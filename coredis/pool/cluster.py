@@ -5,7 +5,6 @@ import os
 import random
 import threading
 import time
-from itertools import chain
 from typing import Any, cast
 
 from coredis._utils import b, hash_slot
@@ -13,17 +12,7 @@ from coredis.connection import ClusterConnection, Connection
 from coredis.exceptions import RedisClusterException
 from coredis.pool.basic import ConnectionPool
 from coredis.pool.nodemanager import NodeManager
-from coredis.typing import (
-    Dict,
-    Iterable,
-    List,
-    Node,
-    Optional,
-    Set,
-    StringT,
-    Type,
-    ValueT,
-)
+from coredis.typing import Dict, Iterable, Node, Optional, Set, StringT, Type, ValueT
 
 
 class ClusterConnectionPool(ConnectionPool):
@@ -35,7 +24,7 @@ class ClusterConnectionPool(ConnectionPool):
     connection_class: Type[ClusterConnection]
 
     _created_connections_per_node: Dict[str, int]
-    _cluster_available_connections: Dict[str, List[Connection]]
+    _cluster_available_connections: Dict[str, asyncio.Queue[Optional[Connection]]]
     _cluster_in_use_connections: Dict[str, Set[Connection]]
 
     def __init__(
@@ -82,7 +71,7 @@ class ClusterConnectionPool(ConnectionPool):
                         node_id=None,
                     )
                 ]
-        self.max_connections = max_connections or 2**31
+        self.max_connections = max_connections or 32
         self.max_connections_per_node = max_connections_per_node
         self.nodes = NodeManager(
             startup_nodes,
@@ -134,12 +123,7 @@ class ClusterConnectionPool(ConnectionPool):
             ):
                 connection.disconnect()
                 node = connection.node
-                connections = self._cluster_available_connections.get(node["name"])
-
-                if connections:
-                    connections.remove(connection)
                 self._created_connections_per_node[node["name"]] -= 1
-
                 break
             await asyncio.sleep(self.idle_check_interval)
 
@@ -190,15 +174,18 @@ class ClusterConnectionPool(ConnectionPool):
         self.checkpid()
 
         try:
-            connection = self._cluster_available_connections.get(node["name"], []).pop()
+            connection = self._cluster_available_connections.get(
+                node["name"], self.default_node_queue
+            ).get_nowait()
+        except asyncio.QueueEmpty:
+            connection = None
+        if not connection:
+            connection = self._make_connection(node)
+        else:
             if connection.needs_handshake:
                 await connection.perform_handshake()
-        except IndexError:
-            connection = self._make_connection(node)
 
-        if node["name"] not in self._cluster_in_use_connections:
-            self._cluster_in_use_connections[node["name"]] = set()
-
+        self._cluster_in_use_connections.setdefault(node["name"], set())
         self._cluster_in_use_connections[node["name"]].add(connection)
 
         return connection
@@ -236,6 +223,36 @@ class ClusterConnectionPool(ConnectionPool):
 
         return connection
 
+    @property
+    def default_node_queue(self) -> asyncio.Queue[Optional[Connection]]:
+        q_size = max(
+            1,
+            int(
+                self.max_connections
+                if self.max_connections_per_node
+                else (
+                    self.max_connections / len(self.nodes.nodes)
+                    if self.readonly
+                    else self.max_connections
+                    / len(
+                        [
+                            k
+                            for k in self.nodes.nodes.values()
+                            if k["server_type"] == "master"
+                        ]
+                    )
+                )
+            ),
+        )
+
+        q: asyncio.Queue[Optional[Connection]] = asyncio.LifoQueue(q_size)
+        while True:
+            try:
+                q.put_nowait(None)
+            except asyncio.QueueFull:
+                break
+        return q
+
     def release(self, connection: Connection) -> None:
         """Releases the connection back to the pool"""
         assert isinstance(connection, ClusterConnection)
@@ -261,20 +278,28 @@ class ClusterConnectionPool(ConnectionPool):
                 if self._created_connections_per_node.get(connection.node["name"]):
                     self._created_connections_per_node[connection.node["name"]] -= 1
             else:
-                self._cluster_available_connections.setdefault(
-                    connection.node["name"], []
-                ).append(connection)
+                try:
+                    self._cluster_available_connections.setdefault(
+                        connection.node["name"], self.default_node_queue
+                    ).put_nowait(connection)
+                except asyncio.QueueFull:
+                    pass
 
     def disconnect(self) -> None:
         """Closes all connections in the pool"""
-        all_conns = chain(
-            self._cluster_available_connections.values(),
-            self._cluster_in_use_connections.values(),
-        )
-
-        for node_connections in all_conns:
+        for node_connections in self._cluster_in_use_connections.values():
             for connection in node_connections:
                 connection.disconnect()
+        for node, available_connections in list(
+            self._cluster_available_connections.items()
+        ):
+            while True:
+                try:
+                    if _connection := available_connections.get_nowait():
+                        _connection.disconnect()
+                except asyncio.QueueEmpty:
+                    break
+            self._cluster_available_connections.pop(node)
 
     def count_all_num_connections(self, node: Node) -> int:
         if self.max_connections_per_node:
@@ -300,8 +325,11 @@ class ClusterConnectionPool(ConnectionPool):
                 conn_list = self._cluster_available_connections[node_name]
 
             if conn_list:
-                return cast(ClusterConnection, conn_list.pop())
-
+                conn = cast(ClusterConnection, conn_list.get_nowait())
+                if not conn:
+                    conn_list.put_nowait(conn)
+                else:
+                    return conn
         for node in self.nodes.random_startup_node_iter(primary):
             connection = await self.get_connection_by_node(node)
 
@@ -334,10 +362,11 @@ class ClusterConnectionPool(ConnectionPool):
         self.checkpid()
         self.nodes.set_node_name(node)
 
-        try:
-            # Try to get connection from existing pool
-            connection = self._cluster_available_connections.get(node["name"], []).pop()
-        except IndexError:
+        # Try to get connection from existing pool
+        connection = self._cluster_available_connections.setdefault(
+            node["name"], self.default_node_queue
+        ).get_nowait()
+        if not connection:
             connection = self._make_connection(node)
 
         self._cluster_in_use_connections.setdefault(node["name"], set()).add(connection)

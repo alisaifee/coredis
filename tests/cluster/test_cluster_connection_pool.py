@@ -27,6 +27,7 @@ class DummyConnection(ClusterConnection):
         self._last_error = None
         self._transport = None
         self._read_flag = asyncio.Event()
+        self._description_args = lambda: {}
 
 
 @pytest.mark.asyncio
@@ -111,7 +112,7 @@ class TestConnectionPool:
 
     async def test_max_connections_default_setting(self):
         pool = await self.get_pool(max_connections=None)
-        assert pool.max_connections == 2**31
+        assert pool.max_connections == 32
 
     async def test_pool_disconnect(self):
         pool = await self.get_pool()
@@ -126,8 +127,11 @@ class TestConnectionPool:
 
     async def test_reuse_previously_released_connection(self):
         pool = await self.get_pool()
+        print(pool._cluster_available_connections)
         c1 = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+        print(pool._cluster_available_connections)
         pool.release(c1)
+        print(pool._cluster_available_connections)
         c2 = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
         assert c1 == c2
 
