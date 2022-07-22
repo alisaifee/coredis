@@ -39,6 +39,8 @@ class ClusterConnectionPool(ConnectionPool):
         readonly: bool = False,
         max_idle_time: int = 0,
         idle_check_interval: int = 1,
+        blocking: bool = False,
+        timeout: int = 20,
         **connection_kwargs: Optional[Any],
     ):
         """
@@ -71,6 +73,8 @@ class ClusterConnectionPool(ConnectionPool):
                         node_id=None,
                     )
                 ]
+        self.blocking = blocking
+        self.blocking_timeout = timeout
         self.max_connections = max_connections or 32
         self.max_connections_per_node = max_connections_per_node
         self.nodes = NodeManager(
@@ -283,7 +287,7 @@ class ClusterConnectionPool(ConnectionPool):
                         connection.node["name"], self.default_node_queue
                     ).put_nowait(connection)
                 except asyncio.QueueFull:
-                    pass
+                    connection.disconnect()
 
     def disconnect(self) -> None:
         """Closes all connections in the pool"""
@@ -362,15 +366,26 @@ class ClusterConnectionPool(ConnectionPool):
         self.checkpid()
         self.nodes.set_node_name(node)
 
-        # Try to get connection from existing pool
-        connection = self._cluster_available_connections.setdefault(
-            node["name"], self.default_node_queue
-        ).get_nowait()
+        if not self.blocking:
+            # Try to get connection from existing pool
+            try:
+                connection = self._cluster_available_connections.setdefault(
+                    node["name"], self.default_node_queue
+                ).get_nowait()
+            except asyncio.QueueEmpty:
+                connection = None
+        else:
+            connection = await asyncio.wait_for(
+                self._cluster_available_connections.setdefault(
+                    node["name"], self.default_node_queue
+                ).get(),
+                self.blocking_timeout,
+            )
+
         if not connection:
             connection = self._make_connection(node)
 
         self._cluster_in_use_connections.setdefault(node["name"], set()).add(connection)
-
         return cast(ClusterConnection, connection)
 
     def get_primary_node_by_slot(self, slot: int) -> Node:
