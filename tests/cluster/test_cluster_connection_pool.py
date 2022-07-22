@@ -107,7 +107,7 @@ class TestConnectionPool:
 
     async def test_max_connections_blocking(self, redis_cluster):
         pool = await self.get_pool(max_connections=2, blocking=True, timeout=1)
-        c1 = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+        _ = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
         c2 = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
         with pytest.raises(ConnectionError):
             await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
