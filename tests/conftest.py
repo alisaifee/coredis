@@ -619,10 +619,12 @@ async def redis_cluster_blocking(redis_cluster_server, request):
         startup_nodes=[{"host": "localhost", "port": 7000}],
         stream_timeout=10,
         blocking=True,
+        decode_responses=True,
         **get_client_test_args(request),
     )
     cluster = coredis.RedisCluster(
         connection_pool=pool,
+        decode_responses=True,
         **get_client_test_args(request),
     )
     await check_test_constraints(request, cluster)
