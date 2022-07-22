@@ -9,7 +9,7 @@ from typing import Any, cast
 
 from coredis._utils import b, hash_slot
 from coredis.connection import ClusterConnection, Connection
-from coredis.exceptions import RedisClusterException
+from coredis.exceptions import ConnectionError, RedisClusterException
 from coredis.pool.basic import ConnectionPool
 from coredis.pool.nodemanager import NodeManager
 from coredis.typing import Dict, Iterable, Node, Optional, Set, StringT, Type, ValueT
@@ -375,12 +375,15 @@ class ClusterConnectionPool(ConnectionPool):
             except asyncio.QueueEmpty:
                 connection = None
         else:
-            connection = await asyncio.wait_for(
-                self._cluster_available_connections.setdefault(
-                    node["name"], self.default_node_queue
-                ).get(),
-                self.blocking_timeout,
-            )
+            try:
+                connection = await asyncio.wait_for(
+                    self._cluster_available_connections.setdefault(
+                        node["name"], self.default_node_queue
+                    ).get(),
+                    self.blocking_timeout,
+                )
+            except asyncio.TimeoutError:
+                raise ConnectionError("No connection available.")
 
         if not connection:
             connection = self._make_connection(node)

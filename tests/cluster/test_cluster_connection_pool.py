@@ -8,7 +8,7 @@ import pytest
 
 from coredis import Redis
 from coredis.connection import ClusterConnection, Connection, UnixDomainSocketConnection
-from coredis.exceptions import RedisClusterException
+from coredis.exceptions import ConnectionError, RedisClusterException
 from coredis.parser import Parser
 from coredis.pool import ClusterConnectionPool, ConnectionPool
 
@@ -38,6 +38,8 @@ class TestConnectionPool:
         max_connections=None,
         max_connections_per_node=None,
         connection_class=DummyConnection,
+        blocking=False,
+        timeout=0,
     ):
         connection_kwargs = connection_kwargs or {}
         pool = ClusterConnectionPool(
@@ -45,6 +47,8 @@ class TestConnectionPool:
             max_connections=max_connections,
             max_connections_per_node=max_connections_per_node,
             startup_nodes=[{"host": "127.0.0.1", "port": 7000}],
+            blocking=blocking,
+            timeout=timeout,
             **connection_kwargs,
         )
         await pool.initialize()
@@ -100,6 +104,17 @@ class TestConnectionPool:
         await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
         with pytest.raises(RedisClusterException):
             await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+
+    async def test_max_connections_blocking(self, redis_cluster):
+        pool = await self.get_pool(max_connections=2, blocking=True, timeout=1)
+        c1 = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+        c2 = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
+        with pytest.raises(ConnectionError):
+            await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+        pool.release(c2)
+        assert c2 == await pool.get_connection_by_node(
+            {"host": "127.0.0.1", "port": 7001}
+        )
 
     async def test_max_connections_per_node(self, redis_cluster):
         pool = await self.get_pool(max_connections=2, max_connections_per_node=True)
