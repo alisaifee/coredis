@@ -86,7 +86,7 @@ class ClusterConnectionPool(ConnectionPool):
                 ]
         self.blocking = blocking
         self.blocking_timeout = timeout
-        self.max_connections = max_connections or 32
+        self.max_connections = max_connections or 2**31
         self.max_connections_per_node = max_connections_per_node
         self.nodes = NodeManager(
             startup_nodes,
@@ -190,7 +190,7 @@ class ClusterConnectionPool(ConnectionPool):
 
         try:
             connection = self._cluster_available_connections.get(
-                node["name"], self.default_node_queue
+                node["name"], self.__default_node_queue()
             ).get_nowait()
         except asyncio.QueueEmpty:
             connection = None
@@ -238,8 +238,7 @@ class ClusterConnectionPool(ConnectionPool):
 
         return connection
 
-    @property
-    def default_node_queue(self) -> asyncio.Queue[Optional[Connection]]:
+    def __default_node_queue(self) -> asyncio.Queue[Optional[Connection]]:
         q_size = max(
             1,
             int(
@@ -261,6 +260,16 @@ class ClusterConnectionPool(ConnectionPool):
         )
 
         q: asyncio.Queue[Optional[Connection]] = asyncio.LifoQueue(q_size)
+
+        # If the queue is non-blocking, we don't need to pre-populate it
+        if not self.blocking:
+            return q
+
+        if q_size > 2**16:  # noqa
+            raise RuntimeError(
+                f"Requested unsupported value of max_connections: {q_size} in blocking mode"
+            )
+
         while True:
             try:
                 q.put_nowait(None)
@@ -295,7 +304,7 @@ class ClusterConnectionPool(ConnectionPool):
             else:
                 try:
                     self._cluster_available_connections.setdefault(
-                        connection.node["name"], self.default_node_queue
+                        connection.node["name"], self.__default_node_queue()
                     ).put_nowait(connection)
                 except asyncio.QueueFull:
                     connection.disconnect()
@@ -340,7 +349,10 @@ class ClusterConnectionPool(ConnectionPool):
                 conn_list = self._cluster_available_connections[node_name]
 
             if conn_list:
-                conn = cast(ClusterConnection, conn_list.get_nowait())
+                try:
+                    conn = cast(ClusterConnection, conn_list.get_nowait())
+                except asyncio.QueueEmpty:
+                    conn = None
                 if not conn:
                     conn_list.put_nowait(conn)
                 else:
@@ -378,10 +390,9 @@ class ClusterConnectionPool(ConnectionPool):
         self.nodes.set_node_name(node)
 
         if not self.blocking:
-            # Try to get connection from existing pool
             try:
                 connection = self._cluster_available_connections.setdefault(
-                    node["name"], self.default_node_queue
+                    node["name"], self.__default_node_queue()
                 ).get_nowait()
             except asyncio.QueueEmpty:
                 connection = None
@@ -389,7 +400,7 @@ class ClusterConnectionPool(ConnectionPool):
             try:
                 connection = await asyncio.wait_for(
                     self._cluster_available_connections.setdefault(
-                        node["name"], self.default_node_queue
+                        node["name"], self.__default_node_queue()
                     ).get(),
                     self.blocking_timeout,
                 )

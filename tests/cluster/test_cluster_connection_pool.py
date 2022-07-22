@@ -125,9 +125,20 @@ class TestConnectionPool:
         with pytest.raises(RedisClusterException):
             await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
 
+    async def test_max_connections_per_node_blocking(self, redis_cluster):
+        pool = await self.get_pool(
+            max_connections=2, max_connections_per_node=True, blocking=True, timeout=1
+        )
+        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
+        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
+        with pytest.raises(ConnectionError):
+            await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+
     async def test_max_connections_default_setting(self):
         pool = await self.get_pool(max_connections=None)
-        assert pool.max_connections == 32
+        assert pool.max_connections == 2**31
 
     async def test_pool_disconnect(self):
         pool = await self.get_pool()
