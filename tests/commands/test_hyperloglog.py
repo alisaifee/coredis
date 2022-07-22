@@ -12,6 +12,7 @@ from tests.conftest import targets
     "redis_basic_resp2",
     "redis_basic_raw_resp2",
     "redis_cluster",
+    "redis_cluster_blocking",
     "redis_cluster_raw",
     "keydb",
 )

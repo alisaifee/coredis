@@ -286,6 +286,7 @@ class TestNodeInvalidatingCache(CommonExamples):
 @pytest.mark.asyncio
 @targets(
     "redis_cluster",
+    "redis_cluster_blocking",
     "redis_cluster_raw",
     "redis_cluster_resp2",
     "redis_cluster_raw_resp2",
