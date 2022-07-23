@@ -615,10 +615,9 @@ async def redis_cluster(redis_cluster_server, request):
 
 @pytest.fixture
 async def redis_cluster_blocking(redis_cluster_server, request):
-    pool = coredis.ClusterConnectionPool(
+    pool = coredis.BlockingClusterConnectionPool(
         startup_nodes=[{"host": "localhost", "port": 7000}],
         stream_timeout=10,
-        blocking=True,
         max_connections=32,
         decode_responses=True,
         **get_client_test_args(request),
