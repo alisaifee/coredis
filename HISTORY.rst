@@ -3,6 +3,22 @@
 Changelog
 =========
 
+* Features
+
+  * Introduced :class:`coredis.pool.BlockingClusterConnectionPool`
+  * Allow passing :paramref:`~coredis.Redis.connection_pool_cls`
+    and :paramref:`~coredis.RedisCluster.connection_pool_cls` to pick
+    the connection pool implementation during client construction
+
+* Breaking Changes
+
+  * :class:`~coredis.RedisCluster` now raises a :exc:`~coredis.exceptions.ConnectionError`
+    when a connection can't be acquired due to ``max_connections`` being hit.
+
+v4.3.0
+------
+Release Date: 2022-07-22
+
 v4.2.1
 ------
 Release Date: 2022-07-21
@@ -1051,6 +1067,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
