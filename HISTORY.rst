@@ -3,6 +3,17 @@
 Changelog
 =========
 
+v4.3.1
+------
+Release Date: 2022-07-23
+
+* Bug Fix
+
+  * Fix incorrect calculation of per node connection pool size
+    when readonly=False
+  * Ensure max_connection is atleast equal to the number of nodes
+    in the cluster and raise a warning when it is not
+
 v4.3.0
 ------
 Release Date: 2022-07-22
@@ -1067,6 +1078,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
