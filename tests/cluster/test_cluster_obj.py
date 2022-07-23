@@ -145,7 +145,7 @@ async def test_moved_redirection_on_slave_with_readonly_mode_client(sr):
         RedisCluster(
             host="127.0.0.1",
             port=7000,
-            readonly=True,
+            read_from_replicas=True,
             reinitialize_steps=1,
             decode_responses=True,
         ),
@@ -180,11 +180,16 @@ async def test_access_correct_slave_with_readonly_mode_client(sr):
             ClusterConnectionPool, "get_primary_node_by_slot", return_value=master_value
         ):
             readonly_client = RedisCluster(
-                host="127.0.0.1", port=7000, readonly=True, decode_responses=True
+                host="127.0.0.1",
+                port=7000,
+                read_from_replicas=True,
+                decode_responses=True,
             )
             assert "foo" == await readonly_client.get("foo16706")
             readonly_client = RedisCluster.from_url(
-                url="redis://127.0.0.1:7000/0", readonly=True, decode_responses=True
+                url="redis://127.0.0.1:7000/0",
+                read_from_replicas=True,
+                decode_responses=True,
             )
             assert "foo" == await readonly_client.get("foo16706")
 

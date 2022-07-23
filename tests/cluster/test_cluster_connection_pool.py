@@ -291,7 +291,7 @@ class TestReadOnlyConnectionPool:
         pool = ClusterConnectionPool(
             max_connections=max_connections,
             startup_nodes=startup_nodes,
-            readonly=True,
+            read_from_replicas=True,
             **connection_kwargs,
         )
         await pool.initialize()

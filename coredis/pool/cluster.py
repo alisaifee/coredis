@@ -36,8 +36,9 @@ class ClusterConnectionPool(ConnectionPool):
         max_connections_per_node: bool = False,
         reinitialize_steps: Optional[int] = None,
         skip_full_coverage_check: bool = False,
-        nodemanager_follow_cluster: bool = False,
+        nodemanager_follow_cluster: bool = True,
         readonly: bool = False,
+        read_from_replicas: bool = False,
         max_idle_time: int = 0,
         idle_check_interval: int = 1,
         blocking: bool = False,
@@ -45,6 +46,13 @@ class ClusterConnectionPool(ConnectionPool):
         **connection_kwargs: Optional[Any],
     ):
         """
+
+        Changes
+          - .. versionchanged:: 4.4.0
+            - :paramref:`nodemanager_follow_cluster` now defaults to ``True``
+          - .. deprecated:: 4.4.0
+            - :paramref:`readonly` renamed to :paramref:`read_from_replicas`
+
         :param max_connections: Maximum number of connections to allow concurrently from this
          client. If the value is ``None`` it will default to 32.
         :param max_connections_per_node: Whether to use the value of :paramref:`max_connections`
@@ -57,11 +65,12 @@ class ClusterConnectionPool(ConnectionPool):
          obtain a connection.
         :param skip_full_coverage_check:
             Skips the check of cluster-require-full-coverage config, useful for clusters
-            without the CONFIG command (like aws)
+            without the :rediscommand:`CONFIG` command (For example with AWS Elasticache)
         :param nodemanager_follow_cluster:
             The node manager will during initialization try the last set of nodes that
             it was operating on. This will allow the client to drift along side the cluster
             if the cluster nodes move around alot.
+        :param read_from_replicas: If ``True`` the client will route readonly commands to replicas
         """
         super().__init__(
             connection_class=connection_class, max_connections=max_connections
@@ -99,8 +108,8 @@ class ClusterConnectionPool(ConnectionPool):
         self.initialized = False
 
         self.connection_kwargs = connection_kwargs
-        self.connection_kwargs["readonly"] = readonly
-        self.readonly = readonly
+        self.connection_kwargs["read_from_replicas"] = read_from_replicas
+        self.read_from_replicas = read_from_replicas or readonly
         self.max_idle_time = max_idle_time
         self.idle_check_interval = idle_check_interval
         self.reset()
@@ -428,7 +437,7 @@ class ClusterConnectionPool(ConnectionPool):
             return random.choice(self.nodes.slots[slot])
 
     def get_node_by_slot(self, slot: int, command: Optional[bytes] = None) -> Node:
-        if self.readonly and command in self.READONLY_COMMANDS:
+        if self.read_from_replicas and command in self.READONLY_COMMANDS:
             return self.get_replica_node_by_slot(slot)
         return self.get_primary_node_by_slot(slot)
 
@@ -451,14 +460,22 @@ class BlockingClusterConnectionPool(ClusterConnectionPool):
         max_connections_per_node: bool = False,
         reinitialize_steps: Optional[int] = None,
         skip_full_coverage_check: bool = False,
-        nodemanager_follow_cluster: bool = False,
+        nodemanager_follow_cluster: bool = True,
         readonly: bool = False,
+        read_from_replicas: bool = False,
         max_idle_time: int = 0,
         idle_check_interval: int = 1,
         timeout: int = 20,
         **connection_kwargs: Optional[Any],
     ):
         """
+
+        Changes
+          - .. versionchanged:: 4.4.0
+            - :paramref:`nodemanager_follow_cluster` now defaults to ``True``
+          - .. deprecated:: 4.4.0
+            - :paramref:`readonly` renamed to :paramref:`read_from_replicas`
+
         :param max_connections: Maximum number of connections to allow concurrently from this
          client.
         :param max_connections_per_node: Whether to use the value of :paramref:`max_connections`
@@ -482,7 +499,7 @@ class BlockingClusterConnectionPool(ClusterConnectionPool):
             reinitialize_steps=reinitialize_steps,
             skip_full_coverage_check=skip_full_coverage_check,
             nodemanager_follow_cluster=nodemanager_follow_cluster,
-            readonly=readonly,
+            read_from_replicas=read_from_replicas or readonly,
             max_idle_time=max_idle_time,
             idle_check_interval=idle_check_interval,
             timeout=timeout,

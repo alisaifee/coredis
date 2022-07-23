@@ -34,7 +34,7 @@ def sr(redis_cluster_server):
 def ro(redis_cluster_server):
     cluster = coredis.RedisCluster(
         startup_nodes=[{"host": "localhost", "port": 7000}],
-        readonly=True,
+        read_from_replicas=True,
         decode_responses=True,
     )
     yield cluster

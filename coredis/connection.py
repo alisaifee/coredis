@@ -559,10 +559,10 @@ class ClusterConnection(Connection):
         *,
         client_name: Optional[str] = None,
         protocol_version: Literal[2, 3] = 3,
-        readonly: bool = False,
+        read_from_replicas: bool = False,
         noreply: bool = False,
     ) -> None:
-        self.readonly = readonly
+        self.read_from_replicas = read_from_replicas
         super().__init__(
             host=host,
             port=port,
@@ -584,14 +584,15 @@ class ClusterConnection(Connection):
 
     async def on_connect(self) -> None:
         """
-        Initialize the connection, authenticate and select a database and send READONLY if it is
-        set during object initialization.
+        Initialize the connection, authenticate and select a database and send
+        :rediscommand:`READONLY` if :paramref:`coredis.connection.ClusterConnection.read_from_replicas`
+        is set during initialization.
 
         :meta private:
         """
 
         await super().on_connect()
-        if self.readonly:
+        if self.read_from_replicas:
             await self.send_command(b"READONLY")
 
             if await self.read_response(decode=False) != b"OK":  # noqa

@@ -34,7 +34,7 @@ class NodeManager:
         startup_nodes: Optional[Iterable[Node]] = None,
         reinitialize_steps: Optional[int] = None,
         skip_full_coverage_check: bool = False,
-        nodemanager_follow_cluster: bool = False,
+        nodemanager_follow_cluster: bool = True,
         decode_responses: bool = False,
         **connection_kwargs: Optional[Any],
     ) -> None:

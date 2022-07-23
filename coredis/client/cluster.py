@@ -164,6 +164,7 @@ class RedisCluster(
         max_connections: int = ...,
         max_connections_per_node: bool = ...,
         readonly: bool = ...,
+        read_from_replicas: bool = ...,
         reinitialize_steps: Optional[int] = ...,
         skip_full_coverage_check: bool = ...,
         nodemanager_follow_cluster: bool = ...,
@@ -196,6 +197,7 @@ class RedisCluster(
         max_connections: int = ...,
         max_connections_per_node: bool = ...,
         readonly: bool = ...,
+        read_from_replicas: bool = ...,
         reinitialize_steps: Optional[int] = ...,
         skip_full_coverage_check: bool = ...,
         nodemanager_follow_cluster: bool = ...,
@@ -227,9 +229,10 @@ class RedisCluster(
         max_connections: int = 32,
         max_connections_per_node: bool = False,
         readonly: bool = False,
+        read_from_replicas: bool = False,
         reinitialize_steps: Optional[int] = None,
         skip_full_coverage_check: bool = False,
-        nodemanager_follow_cluster: bool = False,
+        nodemanager_follow_cluster: bool = True,
         decode_responses: bool = False,
         connection_pool: Optional[ClusterConnectionPool] = None,
         connection_pool_cls: Type[ClusterConnectionPool] = ClusterConnectionPool,
@@ -243,6 +246,11 @@ class RedisCluster(
         """
 
         Changes
+          - .. versionchanged:: 4.4.0
+            - :paramref:`nodemanager_follow_cluster` now defaults to ``True``
+          - .. deprecated:: 4.4.0
+            - The :paramref:`readonly` argument is deprecated in favour of
+            :paramref:`read_from_replicas`
           - .. versionadded:: 4.3.0
             Added :paramref:`connection_pool_cls`
           - .. versionchanged:: 4.0.0
@@ -286,8 +294,9 @@ class RedisCluster(
          (See :meth:`ssl.SSLContext.load_verify_locations`).
         :param max_connections: Maximum number of connections that should be kept open at one time
         :param max_connections_per_node:
-        :param readonly: enable READONLY mode. You can read possibly stale data from slave.
-        :param reinitialize_steps:
+        :param read_from_replicas: If ``True`` the client will route readonly commands to replicas
+        :param reinitialize_steps: Number of consecutive moved errors that result in a cluster topology
+         refresh using the startup nodes provided
         :param skip_full_coverage_check: Skips the check of cluster-require-full-coverage config,
          useful for clusters without the CONFIG command (like aws)
         :param nodemanager_follow_cluster: The node manager will during initialization try the
@@ -359,7 +368,7 @@ class RedisCluster(
                 max_connections_per_node=max_connections_per_node,
                 skip_full_coverage_check=skip_full_coverage_check,
                 nodemanager_follow_cluster=nodemanager_follow_cluster,
-                readonly=readonly,
+                read_from_replicas=readonly or read_from_replicas,
                 decode_responses=decode_responses,
                 protocol_version=protocol_version,
                 noreply=noreply,
@@ -528,7 +537,7 @@ class RedisCluster(
 
     def _determine_slot(self, command: bytes, *args: ValueT) -> Optional[int]:
         """Figures out what slot based on command and args"""
-        keys = KeySpec.extract_keys((command,) + args, self.connection_pool.readonly)
+        keys = KeySpec.extract_keys((command,) + args, self.connection_pool.read_from_replicas)
         if (
             command
             in {
