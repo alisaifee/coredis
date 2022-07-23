@@ -161,7 +161,6 @@ class RedisCluster(
         ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = ...,
         ssl_check_hostname: Optional[bool] = ...,
         ssl_ca_certs: Optional[str] = ...,
-        blocking: bool = ...,
         max_connections: int = ...,
         max_connections_per_node: bool = ...,
         readonly: bool = ...,
@@ -170,6 +169,7 @@ class RedisCluster(
         nodemanager_follow_cluster: bool = ...,
         decode_responses: Literal[False] = ...,
         connection_pool: Optional[ClusterConnectionPool] = ...,
+        connection_pool_cls: Type[ClusterConnectionPool] = ...,
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         non_atomic_cross_slot: bool = ...,
@@ -193,7 +193,6 @@ class RedisCluster(
         ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = ...,
         ssl_check_hostname: Optional[bool] = ...,
         ssl_ca_certs: Optional[str] = ...,
-        blocking: bool = ...,
         max_connections: int = ...,
         max_connections_per_node: bool = ...,
         readonly: bool = ...,
@@ -202,6 +201,7 @@ class RedisCluster(
         nodemanager_follow_cluster: bool = ...,
         decode_responses: Literal[True],
         connection_pool: Optional[ClusterConnectionPool] = ...,
+        connection_pool_cls: Type[ClusterConnectionPool] = ...,
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         non_atomic_cross_slot: bool = ...,
@@ -224,7 +224,6 @@ class RedisCluster(
         ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = None,
         ssl_check_hostname: Optional[bool] = None,
         ssl_ca_certs: Optional[str] = None,
-        blocking: bool = False,
         max_connections: int = 32,
         max_connections_per_node: bool = False,
         readonly: bool = False,
@@ -233,6 +232,7 @@ class RedisCluster(
         nodemanager_follow_cluster: bool = False,
         decode_responses: bool = False,
         connection_pool: Optional[ClusterConnectionPool] = None,
+        connection_pool_cls: Type[ClusterConnectionPool] = ClusterConnectionPool,
         protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
         non_atomic_cross_slot: bool = True,
@@ -244,7 +244,7 @@ class RedisCluster(
 
         Changes
           - .. versionadded:: 4.3.0
-            :paramref:`blocking`
+            Added :paramref:`connection_pool_cls`
           - .. versionchanged:: 4.0.0
             :paramref:`non_atomic_cross_slot` defaults to ``True``
             :paramref:`protocol_version`` defaults to ``3``
@@ -298,6 +298,8 @@ class RedisCluster(
          (See :ref:`handbook/encoding:encoding/decoding`)
         :param connection_pool: The connection pool instance to use. If not provided
          a new pool will be assigned to this client.
+        :param connection_pool_cls: The connection pool class to use when constructing
+         a connection pool for this instance.
         :param protocol_version: Whether to use the RESP (``2``) or RESP3 (``3``)
          protocol for parsing responses from the server (Default ``3``).
          (See :ref:`handbook/response:redis response`)
@@ -350,9 +352,8 @@ class RedisCluster(
                 ).get()
                 kwargs["ssl_context"] = ssl_context
 
-            pool = ClusterConnectionPool(
+            pool = connection_pool_cls(
                 startup_nodes=startup_nodes,
-                blocking=blocking,
                 max_connections=max_connections,
                 reinitialize_steps=reinitialize_steps,
                 max_connections_per_node=max_connections_per_node,
@@ -367,7 +368,7 @@ class RedisCluster(
 
         super().__init__(
             connection_pool=pool,
-            connection_pool_cls=ClusterConnectionPool,
+            connection_pool_cls=connection_pool_cls,
             decode_responses=decode_responses,
             verify_version=verify_version,
             protocol_version=protocol_version,

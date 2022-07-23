@@ -18,7 +18,6 @@ from coredis.typing import Dict, Iterable, Node, Optional, Set, StringT, Type, V
 class ClusterConnectionPool(ConnectionPool):
     """
     Custom connection pool for :class:`~coredis.RedisCluster` client
-    that can be used both in non-blocking & blocking mode.
     """
 
     nodes: NodeManager
@@ -432,3 +431,61 @@ class ClusterConnectionPool(ConnectionPool):
         if self.readonly and command in self.READONLY_COMMANDS:
             return self.get_replica_node_by_slot(slot)
         return self.get_primary_node_by_slot(slot)
+
+
+class BlockingClusterConnectionPool(ClusterConnectionPool):
+    """
+    .. versionadded:: 4.3.0
+
+    Blocking connection pool for :class:`~coredis.RedisCluster` client
+
+    .. note:: This is just a convenience subclass of :class:`~coredis.pool.ClusterConnectionPool`
+       that sets :paramref:`~coredis.pool.ClusterConnectionPool.blocking` to ``True``
+    """
+
+    def __init__(
+        self,
+        startup_nodes: Optional[Iterable[Node]] = None,
+        connection_class: Type[ClusterConnection] = ClusterConnection,
+        max_connections: Optional[int] = None,
+        max_connections_per_node: bool = False,
+        reinitialize_steps: Optional[int] = None,
+        skip_full_coverage_check: bool = False,
+        nodemanager_follow_cluster: bool = False,
+        readonly: bool = False,
+        max_idle_time: int = 0,
+        idle_check_interval: int = 1,
+        timeout: int = 20,
+        **connection_kwargs: Optional[Any],
+    ):
+        """
+        :param max_connections: Maximum number of connections to allow concurrently from this
+         client.
+        :param max_connections_per_node: Whether to use the value of :paramref:`max_connections`
+         on a per node basis or cluster wide. If ``False`` the per-node connection pools will have
+         a maximum size of :paramref:`max_connections` divided by the number of nodes in the
+         cluster.
+        :param timeout: Number of seconds to block when trying to obtain a connection.
+        :param skip_full_coverage_check:
+            Skips the check of cluster-require-full-coverage config, useful for clusters
+            without the CONFIG command (like aws)
+        :param nodemanager_follow_cluster:
+            The node manager will during initialization try the last set of nodes that
+            it was operating on. This will allow the client to drift along side the cluster
+            if the cluster nodes move around alot.
+        """
+        super().__init__(
+            startup_nodes=startup_nodes,
+            connection_class=connection_class,
+            max_connections=max_connections,
+            max_connections_per_node=max_connections_per_node,
+            reinitialize_steps=reinitialize_steps,
+            skip_full_coverage_check=skip_full_coverage_check,
+            nodemanager_follow_cluster=nodemanager_follow_cluster,
+            readonly=readonly,
+            max_idle_time=max_idle_time,
+            idle_check_interval=idle_check_interval,
+            timeout=timeout,
+            blocking=True,
+            **connection_kwargs,
+        )

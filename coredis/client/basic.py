@@ -402,6 +402,7 @@ class Redis(Client[AnyStr]):
         stream_timeout: Optional[int] = ...,
         connect_timeout: Optional[int] = ...,
         connection_pool: Optional[ConnectionPool] = ...,
+        connection_pool_cls: Type[ConnectionPool] = ...,
         unix_socket_path: Optional[str] = ...,
         encoding: str = ...,
         decode_responses: Literal[False] = ...,
@@ -437,6 +438,7 @@ class Redis(Client[AnyStr]):
         stream_timeout: Optional[int] = ...,
         connect_timeout: Optional[int] = ...,
         connection_pool: Optional[ConnectionPool] = ...,
+        connection_pool_cls: Type[ConnectionPool] = ...,
         unix_socket_path: Optional[str] = ...,
         encoding: str = ...,
         decode_responses: Literal[True],
@@ -471,6 +473,7 @@ class Redis(Client[AnyStr]):
         stream_timeout: Optional[int] = None,
         connect_timeout: Optional[int] = None,
         connection_pool: Optional[ConnectionPool] = None,
+        connection_pool_cls: Type[ConnectionPool] = ConnectionPool,
         unix_socket_path: Optional[str] = None,
         encoding: str = "utf-8",
         decode_responses: bool = False,
@@ -494,6 +497,8 @@ class Redis(Client[AnyStr]):
     ) -> None:
         """
         Changes
+          - .. versionadded:: 4.3.0
+             Added :paramref:`connection_pool_cls`
           - .. versionchanged:: 4.0.0
 
             - :paramref:`non_atomic_cross_slot` defaults to ``True``
@@ -521,6 +526,8 @@ class Redis(Client[AnyStr]):
         :param connect_timeout: Timeout for establishing a connection to the server
         :param connection_pool: The connection pool instance to use. If not provided
          a new pool will be assigned to this client.
+        :param connection_pool_cls: The connection pool class to use when constructing
+         a connection pool for this instance.
         :param unix_socket_path: Path to the UDS which the redis server
          is listening at
         :param encoding: The codec to use to encode strings transmitted to redis
@@ -574,7 +581,7 @@ class Redis(Client[AnyStr]):
             stream_timeout=stream_timeout,
             connect_timeout=connect_timeout,
             connection_pool=connection_pool,
-            connection_pool_cls=ConnectionPool,
+            connection_pool_cls=connection_pool_cls,
             unix_socket_path=unix_socket_path,
             encoding=encoding,
             decode_responses=decode_responses,

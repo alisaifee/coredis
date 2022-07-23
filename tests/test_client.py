@@ -93,6 +93,7 @@ class TestClient:
 
 @targets(
     "redis_cluster",
+    "redis_cluster_blocking",
     "redis_cluster_resp2",
 )
 @pytest.mark.asyncio

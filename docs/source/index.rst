@@ -37,6 +37,7 @@ Feature Summary
 
 * Application patterns
 
+  * :ref:`handbook/connections:connection pools`
   * :ref:`handbook/pubsub:pubsub`
   * :ref:`handbook/pubsub:cluster pub/sub`
   * :ref:`handbook/pubsub:sharded pub/sub`

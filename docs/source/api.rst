@@ -227,6 +227,13 @@ Cluster Connection Pool
    :show-inheritance:
    :inherited-members:
 
+Blocking Cluster Connection Pool
+--------------------------------
+.. autoclass:: coredis.pool.BlockingClusterConnectionPool
+   :class-doc-from: both
+   :show-inheritance:
+   :inherited-members:
+
 Sentinel Connection Pool
 ------------------------
 
