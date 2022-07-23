@@ -310,7 +310,7 @@ class TestReadOnlyConnectionPool:
         pool = await self.get_pool(max_connections=2)
         await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
         await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
-        with pytest.raises(RedisClusterException):
+        with pytest.raises(ConnectionError):
             await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
 
 
