@@ -254,13 +254,13 @@ class TestConnectionPool:
         node = pool.get_primary_node_by_slot(12182)
         node["port"] = 7002
 
-    @pytest.mark.xfail
     async def test_connection_idle_check(self, event_loop):
         pool = ClusterConnectionPool(
             startup_nodes=[dict(host="127.0.0.1", port=7000)],
             max_idle_time=0.2,
             idle_check_interval=0.1,
         )
+        await pool.initialize()
         conn = await pool.get_connection_by_node(
             {
                 "name": "127.0.0.1:7000",
@@ -271,13 +271,11 @@ class TestConnectionPool:
         )
         name = conn.node["name"]
         assert len(pool._cluster_in_use_connections[name]) == 1
-        assert not pool._cluster_available_connections
         pool.release(conn)
         assert len(pool._cluster_in_use_connections[name]) == 0
-        assert len(pool._cluster_available_connections[name]) == 1
-        await asyncio.sleep(0.21)
+        assert pool._cluster_available_connections[name].qsize() == 1
+        await asyncio.sleep(0.3)
         assert len(pool._cluster_in_use_connections[name]) == 0
-        assert len(pool._cluster_available_connections[name]) == 0
         last_active_at = conn.last_active_at
         assert last_active_at == conn.last_active_at
         assert conn._transport is None
