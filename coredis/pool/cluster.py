@@ -212,13 +212,13 @@ class ClusterConnectionPool(ConnectionPool):
         assert node
         if self.count_all_num_connections(node) >= self.max_connections:
             if self.max_connections_per_node:
-                raise RedisClusterException(
+                raise ConnectionError(
                     "Too many connection ({}) for node: {}".format(
                         self.count_all_num_connections(node), node["name"]
                     )
                 )
 
-            raise RedisClusterException("Too many connections")
+            raise ConnectionError("Too many connections")
 
         self._created_connections_per_node.setdefault(node["name"], 0)
         self._created_connections_per_node[node["name"]] += 1
