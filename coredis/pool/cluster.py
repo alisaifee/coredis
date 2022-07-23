@@ -253,18 +253,7 @@ class ClusterConnectionPool(ConnectionPool):
             int(
                 self.max_connections
                 if self.max_connections_per_node
-                else (
-                    self.max_connections / len(self.nodes.nodes)
-                    if self.readonly
-                    else self.max_connections
-                    / len(
-                        [
-                            k
-                            for k in self.nodes.nodes.values()
-                            if k["server_type"] == "master"
-                        ]
-                    )
-                )
+                else self.max_connections / len(self.nodes.nodes)
             ),
         )
 
