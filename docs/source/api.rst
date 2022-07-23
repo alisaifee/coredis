@@ -160,6 +160,46 @@ Monitor
    :no-inherited-members:
    :show-inheritance:
 
+Connection Pools
+^^^^^^^^^^^^^^^^
+:mod:`coredis`
+
+Connection Pool
+---------------
+.. autoclass:: coredis.pool.ConnectionPool
+   :class-doc-from: both
+
+Blocking Connection Pool
+------------------------
+.. autoclass:: coredis.pool.BlockingConnectionPool
+   :class-doc-from: both
+   :show-inheritance:
+   :inherited-members:
+
+Cluster Connection Pool
+-----------------------
+.. autoclass:: coredis.pool.ClusterConnectionPool
+   :class-doc-from: both
+   :show-inheritance:
+   :inherited-members:
+
+Blocking Cluster Connection Pool
+--------------------------------
+.. autoclass:: coredis.pool.BlockingClusterConnectionPool
+   :class-doc-from: both
+   :show-inheritance:
+   :inherited-members:
+
+Sentinel Connection Pool
+------------------------
+
+.. autoclass:: coredis.sentinel.SentinelConnectionPool
+   :class-doc-from: both
+   :show-inheritance:
+   :inherited-members:
+
+
+
 Connection Classes
 ^^^^^^^^^^^^^^^^^^
 :mod:`coredis`
@@ -203,45 +243,6 @@ Parser
 ------
 
 .. autoclass:: coredis.parser.Parser
-
-Connection Pools
-^^^^^^^^^^^^^^^^
-:mod:`coredis`
-
-Connection Pool
----------------
-.. autoclass:: coredis.pool.ConnectionPool
-   :class-doc-from: both
-
-Blocking Connection Pool
-------------------------
-.. autoclass:: coredis.pool.BlockingConnectionPool
-   :class-doc-from: both
-   :show-inheritance:
-   :inherited-members:
-
-Cluster Connection Pool
------------------------
-.. autoclass:: coredis.pool.ClusterConnectionPool
-   :class-doc-from: both
-   :show-inheritance:
-   :inherited-members:
-
-Blocking Cluster Connection Pool
---------------------------------
-.. autoclass:: coredis.pool.BlockingClusterConnectionPool
-   :class-doc-from: both
-   :show-inheritance:
-   :inherited-members:
-
-Sentinel Connection Pool
-------------------------
-
-.. autoclass:: coredis.sentinel.SentinelConnectionPool
-   :class-doc-from: both
-   :show-inheritance:
-   :inherited-members:
-
 
 Caching
 ^^^^^^^
