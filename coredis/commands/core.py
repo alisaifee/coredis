@@ -5183,7 +5183,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         Get information about the stream stored at :paramref:`key`
 
         :param full: If specified the return will contained extended information
-         about the stream (see :class:`StreamInfo`).
+         about the stream ( see: :class:`coredis.response.types.StreamInfo` ).
         :param count: restrict the number of `entries` returned when using :paramref:`full`
         """
         pieces: CommandArgList = []
