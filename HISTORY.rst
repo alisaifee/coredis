@@ -3,6 +3,10 @@
 Changelog
 =========
 
+v4.3.0
+------
+Release Date: 2022-07-22
+
 * Features
 
   * Introduced :class:`coredis.pool.BlockingClusterConnectionPool`
@@ -14,10 +18,6 @@ Changelog
 
   * :class:`~coredis.RedisCluster` now raises a :exc:`~coredis.exceptions.ConnectionError`
     when a connection can't be acquired due to ``max_connections`` being hit.
-
-v4.3.0
-------
-Release Date: 2022-07-22
 
 v4.2.1
 ------
