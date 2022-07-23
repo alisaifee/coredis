@@ -98,22 +98,30 @@ class TestConnectionPool:
         c2 = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
         assert c1 != c2
 
+    async def test_max_connections_too_low(self, redis_cluster):
+        with pytest.warns(UserWarning, match="increased by 4 connections"):
+            pool = await self.get_pool(max_connections=2)
+        assert pool.max_connections == 6
+
     async def test_max_connections(self, redis_cluster):
-        pool = await self.get_pool(max_connections=2)
-        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
-        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
+        pool = await self.get_pool(max_connections=6)
+        for port in range(7000, 7006):
+            await pool.get_connection_by_node({"host": "127.0.0.1", "port": port})
         with pytest.raises(ConnectionError):
             await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
 
     async def test_max_connections_blocking(self, redis_cluster):
-        pool = await self.get_pool(max_connections=2, blocking=True, timeout=1)
-        _ = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
-        c2 = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
+        pool = await self.get_pool(max_connections=6, blocking=True, timeout=1)
+        connections = []
+        for port in range(7000, 7006):
+            connections.append(
+                await pool.get_connection_by_node({"host": "127.0.0.1", "port": port})
+            )
         with pytest.raises(ConnectionError):
             await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
-        pool.release(c2)
-        assert c2 == await pool.get_connection_by_node(
-            {"host": "127.0.0.1", "port": 7001}
+        pool.release(connections[0])
+        assert connections[0] == await pool.get_connection_by_node(
+            {"host": "127.0.0.1", "port": 7000}
         )
 
     async def test_max_connections_per_node(self, redis_cluster):
@@ -307,9 +315,9 @@ class TestReadOnlyConnectionPool:
         assert f"ClusterConnection<host={host_ip},port=7000>" in repr(pool)
 
     async def test_max_connections(self):
-        pool = await self.get_pool(max_connections=2)
-        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
-        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
+        pool = await self.get_pool(max_connections=6)
+        for port in range(7000, 7006):
+            await pool.get_connection_by_node({"host": "127.0.0.1", "port": port})
         with pytest.raises(ConnectionError):
             await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
 

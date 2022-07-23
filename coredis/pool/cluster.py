@@ -5,6 +5,7 @@ import os
 import random
 import threading
 import time
+import warnings
 from typing import Any, cast
 
 from coredis._utils import b, hash_slot
@@ -126,6 +127,15 @@ class ClusterConnectionPool(ConnectionPool):
     async def initialize(self) -> None:
         if not self.initialized:
             await self.nodes.initialize()
+            if not self.max_connections_per_node and self.max_connections < len(
+                self.nodes.nodes
+            ):
+                warnings.warn(
+                    f"The value of max_connections={self.max_connections} "
+                    f"should be atleast equal to the number of nodes ({len(self.nodes.nodes)}) in the cluster. "
+                    f"It has been increased by {len(self.nodes.nodes)-self.max_connections} connections."
+                )
+                self.max_connections = len(self.nodes.nodes)
             self.initialized = True
 
     async def disconnect_on_idle_time_exceeded(self, connection: Connection) -> None:
