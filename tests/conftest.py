@@ -614,6 +614,35 @@ async def redis_cluster(redis_cluster_server, request):
 
 
 @pytest.fixture
+async def redis_cluster_blocking(redis_cluster_server, request):
+    pool = coredis.ClusterConnectionPool(
+        startup_nodes=[{"host": "localhost", "port": 7000}],
+        stream_timeout=10,
+        blocking=True,
+        max_connections=32,
+        decode_responses=True,
+        **get_client_test_args(request),
+    )
+    cluster = coredis.RedisCluster(
+        connection_pool=pool,
+        decode_responses=True,
+        **get_client_test_args(request),
+    )
+    await check_test_constraints(request, cluster)
+    await cluster
+    await cluster.flushall()
+    await cluster.flushdb()
+
+    for primary in cluster.primaries:
+        await set_default_test_config(primary)
+
+    async with remapped_slots(cluster, request):
+        yield cluster
+
+    cluster.connection_pool.disconnect()
+
+
+@pytest.fixture
 async def redis_cluster_ssl(redis_ssl_cluster_server, request):
     storage_url = (
         "rediss://localhost:8301/?ssl_cert_reqs=required"

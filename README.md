@@ -43,6 +43,7 @@ $ pip install coredis
 - [Sentinel](https://coredis.readthedocs.org/en/latest/api.html#sentinel)
 
 ### Application patterns
+- [Connection Pooling](https://coredis.readthedocs.org/en/latest/handbook/connections.html#connection-pools)
 - [PubSub](https://coredis.readthedocs.org/en/latest/handbook/pubsub.html)
 - [Sharded PubSub](https://coredis.readthedocs.org/en/latest/handbook/pubsub.html#sharded-pub-sub) [`>= Redis 7.0`]
 - [Stream Consumers](https://coredis.readthedocs.org/en/latest/handbook/streams.html)

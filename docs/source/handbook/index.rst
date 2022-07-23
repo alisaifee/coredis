@@ -41,6 +41,7 @@ Server side scripting
 
 Performance
 -----------
+- :ref:`handbook/connections:connection pools`
 - :ref:`handbook/caching:caching`
 - :ref:`handbook/pipelines:pipelines`
 - :ref:`handbook/noreply:no reply mode`
@@ -52,6 +53,6 @@ Reliability
 
 Implementation Details
 ----------------------
-- :ref:`handbook/connections:connections`
+- :ref:`handbook/connections:connection types`
 - :ref:`handbook/development:development`
 - :ref:`handbook/typing:typing`

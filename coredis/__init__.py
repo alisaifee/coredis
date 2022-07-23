@@ -15,7 +15,12 @@ from coredis.connection import (
     Connection,
     UnixDomainSocketConnection,
 )
-from coredis.pool import BlockingConnectionPool, ClusterConnectionPool, ConnectionPool
+from coredis.pool import (
+    BlockingClusterConnectionPool,
+    BlockingConnectionPool,
+    ClusterConnectionPool,
+    ConnectionPool,
+)
 from coredis.tokens import PureToken
 
 from . import _version
@@ -31,6 +36,7 @@ __all__ = [
     "ClusterConnection",
     "BlockingConnectionPool",
     "ConnectionPool",
+    "BlockingClusterConnectionPool",
     "ClusterConnectionPool",
     "PureToken",
 ]

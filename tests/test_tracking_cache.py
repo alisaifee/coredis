@@ -217,10 +217,15 @@ class TestProxyInvalidatingCache(CommonExamples):
 class TestClusterProxyInvalidatingCache(CommonExamples):
     async def test_uninitialized_cache(self, client, cloner, _s):
         cache = self.cache(max_keys=1, max_size_bytes=-1)
-        assert not cache.get_client_id(client.connection_pool.get_random_connection())
+        assert not cache.get_client_id(
+            await client.connection_pool.get_random_connection()
+        )
         assert cache.confidence == 100
         _ = await cloner(client, cache=cache)
-        assert cache.get_client_id(client.connection_pool.get_random_connection()) > 0
+        assert (
+            cache.get_client_id(await client.connection_pool.get_random_connection())
+            > 0
+        )
 
     async def test_single_entry_cache_tracker_disconnected(self, client, cloner, _s):
         cache = self.cache(max_keys=1, max_size_bytes=-1)
@@ -281,6 +286,7 @@ class TestNodeInvalidatingCache(CommonExamples):
 @pytest.mark.asyncio
 @targets(
     "redis_cluster",
+    "redis_cluster_blocking",
     "redis_cluster_raw",
     "redis_cluster_resp2",
     "redis_cluster_raw_resp2",
@@ -292,10 +298,15 @@ class TestClusterInvalidatingCache(CommonExamples):
 
     async def test_uninitialized_cache(self, client, cloner, _s):
         cache = self.cache(max_keys=1, max_size_bytes=-1)
-        assert not cache.get_client_id(client.connection_pool.get_random_connection())
+        assert not cache.get_client_id(
+            await client.connection_pool.get_random_connection()
+        )
         assert cache.confidence == 100
         _ = await cloner(client, cache=cache)
-        assert cache.get_client_id(client.connection_pool.get_random_connection()) > 0
+        assert (
+            cache.get_client_id(await client.connection_pool.get_random_connection())
+            > 0
+        )
 
     async def test_single_entry_cache_tracker_disconnected(self, client, cloner, _s):
         cache = self.cache(max_keys=1, max_size_bytes=-1)
