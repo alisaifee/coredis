@@ -11,6 +11,7 @@ from coredis.connection import ClusterConnection, Connection, UnixDomainSocketCo
 from coredis.exceptions import ConnectionError, RedisClusterException
 from coredis.parser import Parser
 from coredis.pool import ClusterConnectionPool, ConnectionPool
+from tests.conftest import targets
 
 
 class DummyConnection(ClusterConnection):
@@ -279,6 +280,17 @@ class TestConnectionPool:
         last_active_at = conn.last_active_at
         assert last_active_at == conn.last_active_at
         assert conn._transport is None
+
+    @targets(
+        "redis_cluster",
+    )
+    async def test_coverage_check_fail(self, client, user_client, _s):
+        with pytest.warns(
+            UserWarning,
+            match="Unable to determine whether the cluster requires full coverage",
+        ):
+            no_perm_client = await user_client("testuser", "on", "+@all", "-CONFIG")
+            assert _s("PONG") == no_perm_client.ping()
 
 
 @pytest.mark.asyncio

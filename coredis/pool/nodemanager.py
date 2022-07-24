@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import random
+import warnings
 from typing import TYPE_CHECKING, Any, cast
 
 from coredis._utils import b, hash_slot, nativestr
-from coredis.exceptions import ConnectionError, RedisClusterException
+from coredis.exceptions import ConnectionError, RedisClusterException, RedisError
 from coredis.typing import (
     Dict,
     Iterable,
@@ -144,7 +145,7 @@ class NodeManager:
         Maybe it should stop to try after it have correctly covered all slots or when one node is
         reached and it could execute CLUSTER SLOTS command.
         """
-        nodes_cache = {}
+        nodes_cache: Dict[str, Node] = {}
         tmp_slots: Dict[int, List[Node]] = {}
 
         all_slots_covered = False
@@ -245,9 +246,17 @@ class NodeManager:
                 await self.initialize()
 
     async def node_require_full_coverage(self, node: Node) -> bool:
-        r_node = self.get_redis_link(host=node["host"], port=node["port"])
-        node_config = await r_node.config_get(["cluster-require-full-coverage"])
-        return "yes" in node_config.values()
+        try:
+            r_node = self.get_redis_link(host=node["host"], port=node["port"])
+            node_config = await r_node.config_get(["cluster-require-full-coverage"])
+            return "yes" in node_config.values()
+        except RedisError as err:
+            warnings.warn(
+                "Unable to determine whether the cluster requires full coverage "
+                f"due to response error from `CONFIG GET`: {err}. To suppress this "
+                "warning use skip_full_coverage=True when initializing the client."
+            )
+            return False
 
     async def cluster_require_full_coverage(self, nodes_cache: Dict[str, Node]) -> bool:
         """
@@ -269,7 +278,7 @@ class NodeManager:
         """
         Formats the name for the given node object
 
-        # TODO: This shold not be constructed this way. It should update the name of the node in
+        # TODO: This should not be constructed this way. It should update the name of the node in
         the node cache dict
         """
         if not node.get("name"):
