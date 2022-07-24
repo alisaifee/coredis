@@ -585,8 +585,7 @@ class ClusterConnection(Connection):
     async def on_connect(self) -> None:
         """
         Initialize the connection, authenticate and select a database and send
-        :rediscommand:`READONLY` if :paramref:`coredis.connection.ClusterConnection.read_from_replicas`
-        is set during initialization.
+        `READONLY` if `read_from_replicas` is set during initialization.
 
         :meta private:
         """

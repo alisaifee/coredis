@@ -295,8 +295,8 @@ class RedisCluster(
         :param max_connections: Maximum number of connections that should be kept open at one time
         :param max_connections_per_node:
         :param read_from_replicas: If ``True`` the client will route readonly commands to replicas
-        :param reinitialize_steps: Number of consecutive moved errors that result in a cluster topology
-         refresh using the startup nodes provided
+        :param reinitialize_steps: Number of moved errors that result in a cluster
+         topology refresh using the startup nodes provided
         :param skip_full_coverage_check: Skips the check of cluster-require-full-coverage config,
          useful for clusters without the CONFIG command (like aws)
         :param nodemanager_follow_cluster: The node manager will during initialization try the
@@ -537,7 +537,9 @@ class RedisCluster(
 
     def _determine_slot(self, command: bytes, *args: ValueT) -> Optional[int]:
         """Figures out what slot based on command and args"""
-        keys = KeySpec.extract_keys((command,) + args, self.connection_pool.read_from_replicas)
+        keys = KeySpec.extract_keys(
+            (command,) + args, self.connection_pool.read_from_replicas
+        )
         if (
             command
             in {
