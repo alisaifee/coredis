@@ -71,7 +71,7 @@ class TestScripting:
     async def test_eval_crossslot(self, client):
         """
         This test assumes that {foo} and {bar} will not go to the same
-        server when used. In 3 masters + 3 slaves config this should pass.
+        server when used. In a 3 primary + 3 replica config this should pass.
         """
         await client.set("A{foo}", 2)
         await client.set("B{bar}", 4)

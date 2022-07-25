@@ -244,9 +244,9 @@ async def test_all_nodes(redis_cluster):
 
 
 @pytest.mark.asyncio
-async def test_all_nodes_masters(redis_cluster):
+async def test_all_nodes_primaries(redis_cluster):
     """
-    Set a list of nodes with random masters/slaves config and it shold be possible
+    Set a list of nodes with random primary/replica config and it shold be possible
     to iterate over all of them.
     """
     n = NodeManager(
