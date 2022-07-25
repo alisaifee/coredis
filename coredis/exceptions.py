@@ -247,7 +247,7 @@ class AuthenticationRequiredError(AuthenticationError):
     """
 
 
-class AuthorizationError(RedisError):
+class AuthorizationError(ResponseError):
     """
     Base class for authorization errors
     """

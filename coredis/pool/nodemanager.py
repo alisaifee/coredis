@@ -5,7 +5,11 @@ import warnings
 from typing import TYPE_CHECKING, Any, cast
 
 from coredis._utils import b, hash_slot, nativestr
-from coredis.exceptions import ConnectionError, RedisClusterException, RedisError
+from coredis.exceptions import (
+    ConnectionError,
+    RedisClusterException,
+    ResponseError,
+)
 from coredis.typing import (
     Dict,
     Iterable,
@@ -250,7 +254,7 @@ class NodeManager:
             r_node = self.get_redis_link(host=node["host"], port=node["port"])
             node_config = await r_node.config_get(["cluster-require-full-coverage"])
             return "yes" in node_config.values()
-        except RedisError as err:
+        except ResponseError as err:
             warnings.warn(
                 "Unable to determine whether the cluster requires full coverage "
                 f"due to response error from `CONFIG GET`: {err}. To suppress this "
