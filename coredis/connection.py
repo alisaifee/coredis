@@ -8,7 +8,7 @@ import ssl
 import time
 import warnings
 from collections import defaultdict
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from coredis._packer import Packer
 from coredis._unpacker import NotEnoughData
@@ -28,7 +28,6 @@ from coredis.typing import (
     Dict,
     List,
     Literal,
-    Node,
     Optional,
     ResponseType,
     Set,
@@ -38,6 +37,9 @@ from coredis.typing import (
 )
 
 R = TypeVar("R")
+
+if TYPE_CHECKING:
+    from coredis.pool.nodemanager import ManagedNode
 
 
 async def exec_with_timeout(
@@ -539,7 +541,7 @@ class ClusterConnection(Connection):
     "Manages TCP communication to and from a Redis server"
     description: ClassVar[str] = "ClusterConnection<host={host},port={port}>"
     locator: ClassVar[str] = "host={host},port={port}"
-    node: Node
+    node: "ManagedNode"
 
     def __init__(
         self,

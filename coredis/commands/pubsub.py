@@ -559,13 +559,13 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         channel = nativestr(args[0])
         slot = hash_slot(b(channel))
         node = self.connection_pool.nodes.node_from_slot(slot)
-        if node and node["node_id"]:
-            key = node["node_id"]
+        if node and node.node_id:
+            key = node.node_id
             if self.shard_connections.get(key) is None:
                 self.shard_connections[key] = await self.connection_pool.get_connection(
                     b"pubsub",
                     channel=channel,
-                    node_type="replica" if self.read_from_replicas else "master",
+                    node_type="replica" if self.read_from_replicas else "primary",
                 )
                 # register a callback that re-subscribes to any channels we
                 # were listening to when we were disconnected

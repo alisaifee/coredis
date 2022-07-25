@@ -22,7 +22,6 @@ from coredis.typing import (
     ClassVar,
     Dict,
     List,
-    Node,
     Optional,
     Set,
     StringT,
@@ -287,7 +286,7 @@ class ConnectionPool:
         except IndexError:
             if self._created_connections >= self.max_connections:
                 raise ConnectionError("Too many connections")
-            connection = self._make_connection(**kwargs)  # type: ignore
+            connection = self._make_connection(**kwargs)
         self._in_use_connections.add(connection)
 
         return connection
@@ -314,9 +313,7 @@ class ConnectionPool:
             connection.disconnect()
             self._created_connections -= 1
 
-    def _make_connection(
-        self, node: Optional[Node] = None, **options: Optional[ValueT]
-    ) -> Connection:
+    def _make_connection(self, **options: Optional[ValueT]) -> Connection:
         """
         Creates a new connection
         """

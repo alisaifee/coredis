@@ -22,26 +22,26 @@ from tests.conftest import targets
 class TestCluster:
     async def test_addslots(self, client, _s):
         node = client.connection_pool.get_primary_node_by_slot(1)
-        client = client.connection_pool.nodes.get_redis_link(node["host"], node["port"])
+        client = client.connection_pool.nodes.get_redis_link(node.host, node.port)
         with pytest.raises(ResponseError, match="Slot 1 is already busy"):
             await client.cluster_addslots([1])
 
     @pytest.mark.min_server_version("7.0.0")
     async def test_addslots_range(self, client, _s):
         node = client.connection_pool.get_primary_node_by_slot(1)
-        client = client.connection_pool.nodes.get_redis_link(node["host"], node["port"])
+        client = client.connection_pool.nodes.get_redis_link(node.host, node.port)
         with pytest.raises(ResponseError, match="Slot 1 is already busy"):
             await client.cluster_addslotsrange([(1, 2)])
 
     async def test_asking(self, client, _s):
         node = client.connection_pool.get_primary_node_by_slot(1)
         assert await client.connection_pool.nodes.get_redis_link(
-            node["host"], node["port"]
+            node.host, node.port
         ).asking()
 
     async def test_count_failure_reports(self, client, _s):
         node = client.connection_pool.get_primary_node_by_slot(1)
-        assert 0 == await client.cluster_count_failure_reports(node["node_id"])
+        assert 0 == await client.cluster_count_failure_reports(node.node_id)
         with pytest.raises(ResponseError, match="Unknown node"):
             await client.cluster_count_failure_reports("bogus")
 
@@ -49,7 +49,7 @@ class TestCluster:
         node = client.connection_pool.get_primary_node_by_slot(1)
         assert await client.cluster_delslots([1])
         assert await client.connection_pool.nodes.get_redis_link(
-            node["host"], node["port"]
+            node.host, node.port
         ).cluster_addslots([1])
 
     @pytest.mark.min_server_version("7.0.0")
@@ -57,16 +57,14 @@ class TestCluster:
         node = client.connection_pool.get_primary_node_by_slot(1)
         assert await client.cluster_delslotsrange([(1, 2)])
         assert await client.connection_pool.nodes.get_redis_link(
-            node["host"], node["port"]
+            node.host, node.port
         ).cluster_addslots([1, 2])
 
     async def test_readonly_explicit(self, client, _s):
         await client.set("fubar", 1)
         slot = hash_slot(b"fubar")
         node = client.connection_pool.get_replica_node_by_slot(slot, replica_only=True)
-        node_client = client.connection_pool.nodes.get_redis_link(
-            node["host"], node["port"]
-        )
+        node_client = client.connection_pool.nodes.get_redis_link(node.host, node.port)
         with pytest.raises(MovedError):
             await node_client.get("fubar")
         await node_client.readonly()
@@ -128,7 +126,7 @@ class TestCluster:
             ids.append(node.cluster_myid())
         ids = await asyncio.gather(*ids)
         known_nodes = (
-            _s(node["node_id"]) for node in client.connection_pool.nodes.all_nodes()
+            _s(node.node_id) for node in client.connection_pool.nodes.all_nodes()
         )
         assert set(ids) == set(known_nodes)
 
@@ -136,7 +134,7 @@ class TestCluster:
     async def test_cluster_shards(self, client, _s):
         await client
         known_nodes = {
-            _s(node["node_id"]) for node in client.connection_pool.nodes.all_nodes()
+            _s(node.node_id) for node in client.connection_pool.nodes.all_nodes()
         }
         shards = await client.cluster_shards()
 

@@ -30,6 +30,7 @@ from coredis.exceptions import (
     WatchError,
 )
 from coredis.pool import ClusterConnectionPool, ConnectionPool
+from coredis.pool.nodemanager import ManagedNode
 from coredis.response._callbacks import NoopCallback
 from coredis.typing import (
     AnyStr,
@@ -344,9 +345,6 @@ class RedisCluster(
                     Node(
                         host=host,
                         port=port if port else 7000,
-                        name="",
-                        server_type=None,
-                        node_id=None,
                     )
                 )
             if ssl_context is not None:
@@ -496,7 +494,7 @@ class RedisCluster(
     def __repr__(self) -> str:
         servers = list(
             {
-                "{}:{}".format(info["host"], info["port"])
+                "{}:{}".format(info.host, info.port)
                 for info in self.connection_pool.nodes.startup_nodes
             }
         )
@@ -510,18 +508,16 @@ class RedisCluster(
         for node in self.connection_pool.nodes.all_nodes():
             yield cast(
                 Redis[AnyStr],
-                self.connection_pool.nodes.get_redis_link(node["host"], node["port"]),
+                self.connection_pool.nodes.get_redis_link(node.host, node.port),
             )
 
     @property
     def primaries(self) -> Iterator[Redis[AnyStr]]:
         """ """
-        for master in self.connection_pool.nodes.all_primaries():
+        for primary in self.connection_pool.nodes.all_primaries():
             yield cast(
                 Redis[AnyStr],
-                self.connection_pool.nodes.get_redis_link(
-                    master["host"], master["port"]
-                ),
+                self.connection_pool.nodes.get_redis_link(primary.host, primary.port),
             )
 
     @property
@@ -530,9 +526,7 @@ class RedisCluster(
         for replica in self.connection_pool.nodes.all_replicas():
             yield cast(
                 Redis[AnyStr],
-                self.connection_pool.nodes.get_redis_link(
-                    replica["host"], replica["port"]
-                ),
+                self.connection_pool.nodes.get_redis_link(replica.host, replica.port),
             )
 
     def _determine_slot(self, command: bytes, *args: ValueT) -> Optional[int]:
@@ -577,9 +571,8 @@ class RedisCluster(
 
     def determine_node(
         self, command: bytes, **kwargs: Optional[ValueT]
-    ) -> Optional[List[Node]]:
+    ) -> Optional[List[ManagedNode]]:
         node_flag = self.route_flags.get(command)
-
         if command in self.split_flags and self.non_atomic_cross_slot:
             node_flag = self.split_flags[command]
 
@@ -718,7 +711,7 @@ class RedisCluster(
                 await self.connection_pool.nodes.increment_reinitialize_counter()
 
                 node = self.connection_pool.nodes.set_node(
-                    e.host, e.port, server_type="master"
+                    e.host, e.port, server_type="primary"
                 )
                 self.connection_pool.nodes.slots[e.slot_id][0] = node
             except TryAgainError:
@@ -734,7 +727,7 @@ class RedisCluster(
 
     async def execute_command_on_nodes(
         self,
-        nodes: Iterable[Node],
+        nodes: Iterable[ManagedNode],
         command: bytes,
         *args: ValueT,
         callback: Callable[..., R],
@@ -781,13 +774,13 @@ class RedisCluster(
                     True, self.cache.get_client_id(connection)
                 )
             try:
-                if cur["name"] in node_arg_mapping:
-                    for i, args in enumerate(node_arg_mapping[cur["name"]]):
+                if cur.name in node_arg_mapping:
+                    for i, args in enumerate(node_arg_mapping[cur.name]):
                         await connection.send_command(command, *args)
                         if self.noreply:
                             continue
                         try:
-                            res[f'{cur["name"]}:{i}'] = callback(
+                            res[f"{cur.name}:{i}"] = callback(
                                 await connection.read_response(
                                     decode=options.get("decode")
                                 ),
@@ -808,7 +801,7 @@ class RedisCluster(
                 else:
                     await connection.send_command(command, *args)
                     if not self.noreply:
-                        res[cur["name"]] = callback(
+                        res[cur.name] = callback(
                             await connection.read_response(
                                 decode=options.get("decode"), raise_exceptions=False
                             ),
@@ -831,7 +824,7 @@ class RedisCluster(
                     # if a retry attempt results in a connection error assume cluster error
                     raise ClusterDownError(str(err))
                 if not self.noreply:
-                    res[cur["name"]] = callback(
+                    res[cur.name] = callback(
                         await connection.read_response(
                             decode=options.get("decode"), raise_exceptions=False
                         ),
@@ -917,7 +910,6 @@ class RedisCluster(
 
         return ClusterPipeline[AnyStr].proxy(
             connection_pool=self.connection_pool,
-            startup_nodes=self.connection_pool.nodes.startup_nodes,
             result_callbacks=self.result_callbacks,
             transaction=transaction,
             watches=watches,

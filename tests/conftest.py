@@ -135,8 +135,8 @@ async def remapped_slots(client, request):
             for k in client.connection_pool.nodes.all_primaries()
             if k != sources[slot]
         ][0]
-        originals[slot] = sources[slot]["node_id"]
-        moves[slot] = destinations[slot]["node_id"]
+        originals[slot] = sources[slot].node_id
+        moves[slot] = destinations[slot].node_id
     try:
         for slot in moves.keys():
             [await p.cluster_setslot(slot, node=moves[slot]) for p in client.primaries]
@@ -990,8 +990,8 @@ def cloner():
             )
         else:
             c = client.__class__(
-                client.connection_pool.nodes.startup_nodes[0]["host"],
-                client.connection_pool.nodes.startup_nodes[0]["port"],
+                client.connection_pool.nodes.startup_nodes[0].host,
+                client.connection_pool.nodes.startup_nodes[0].port,
                 decode_responses=client.decode_responses,
                 protocol_version=client.protocol_version,
                 encoding=client.encoding,

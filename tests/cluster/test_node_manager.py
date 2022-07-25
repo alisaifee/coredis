@@ -9,20 +9,9 @@ from unittest.mock import Mock, patch
 import pytest
 
 # rediscluster imports
-from coredis import RedisCluster
 from coredis.client import Redis
-from coredis.exceptions import ConnectionError, RedisClusterException
-from coredis.pool.nodemanager import HASH_SLOTS, NodeManager
-
-
-def test_set_node_name(s):
-    """
-    Test that method sets ["name"] correctly
-    """
-    n = {"host": "127.0.0.1", "port": 7000}
-    s.connection_pool.nodes.set_node_name(n)
-    assert "name" in n
-    assert n["name"] == "127.0.0.1:7000"
+from coredis.exceptions import ConnectionError, RedisClusterException, RedisError
+from coredis.pool.nodemanager import HASH_SLOTS, ManagedNode, NodeManager
 
 
 @pytest.mark.asyncio
@@ -220,23 +209,24 @@ async def test_init_slots_cache(s, redis_cluster):
 
                 for i in range(slot_start, slot_end + 1):
                     assert len(s.connection_pool.nodes.slots[i]) == len(node_info)
-                    assert s.connection_pool.nodes.slots[i][0]["host"] in all_hosts
-                    assert s.connection_pool.nodes.slots[i][1]["host"] in all_hosts
-                    assert s.connection_pool.nodes.slots[i][0]["port"] in all_ports
-                    assert s.connection_pool.nodes.slots[i][1]["port"] in all_ports
+                    assert s.connection_pool.nodes.slots[i][0].host in all_hosts
+                    assert s.connection_pool.nodes.slots[i][1].host in all_hosts
+                    assert s.connection_pool.nodes.slots[i][0].port in all_ports
+                    assert s.connection_pool.nodes.slots[i][1].port in all_ports
 
         assert len(s.connection_pool.nodes.nodes) == 6
 
 
-def test_empty_startup_nodes():
+@pytest.mark.asyncio
+async def test_empty_startup_nodes():
     """
     It should not be possible to create a node manager with no nodes specified
     """
     with pytest.raises(RedisClusterException):
-        NodeManager()
+        await NodeManager().initialize()
 
     with pytest.raises(RedisClusterException):
-        NodeManager([])
+        await NodeManager([]).initialize()
 
 
 @pytest.mark.asyncio
@@ -267,22 +257,10 @@ async def test_all_nodes_masters(redis_cluster):
     )
     await n.initialize()
 
-    nodes = [node for node in n.nodes.values() if node["server_type"] == "master"]
+    nodes = [node for node in n.nodes.values() if node.server_type == "primary"]
 
     for node in n.all_primaries():
         assert node in nodes
-
-
-def test_random_startup_node(redis_cluster):
-    """
-    Hard to test reliable for a random
-    """
-    s = [{"1": 1}, {"2": 2}, {"3": 3}]
-    n = NodeManager(startup_nodes=s)
-    random_node = n.random_startup_node()
-
-    for i in range(0, 5):
-        assert random_node in s
 
 
 @pytest.mark.asyncio
@@ -291,10 +269,10 @@ async def test_cluster_slots_error(redis_cluster):
     Check that exception is raised if initialize can't execute
     'CLUSTER SLOTS' command.
     """
-    with patch.object(RedisCluster, "execute_command") as execute_command_mock:
-        execute_command_mock.side_effect = Exception("foobar")
+    with patch.object(Redis, "execute_command") as execute_command_mock:
+        execute_command_mock.side_effect = RedisError("foobar")
 
-        n = NodeManager(startup_nodes=[{}])
+        n = NodeManager(startup_nodes=[{"host": "6.6.6.6", "port": 1234}])
 
         with pytest.raises(RedisClusterException):
             await n.initialize()
@@ -304,19 +282,12 @@ def test_set_node():
     """
     Test to update data in a slot.
     """
-    expected = {
-        "host": "127.0.0.1",
-        "name": "127.0.0.1:7000",
-        "port": 7000,
-        "server_type": "master",
-        "node_id": None,
-    }
-
-    n = NodeManager(startup_nodes=[{}])
+    expected = ManagedNode(host="127.0.0.1", port=7000, server_type="primary")
+    n = NodeManager(startup_nodes=[])
     assert len(n.slots) == 0, "no slots should exist"
-    res = n.set_node(host="127.0.0.1", port=7000, server_type="master")
+    res = n.set_node(host="127.0.0.1", port=7000, server_type="primary")
     assert res == expected
-    assert n.nodes == {expected["name"]: expected}
+    assert n.nodes == {expected.name: expected}
 
 
 @pytest.mark.asyncio
@@ -363,26 +334,21 @@ async def test_cluster_one_instance(redis_cluster):
             n = NodeManager(startup_nodes=[{"host": "127.0.0.1", "port": 7006}])
             await n.initialize()
 
-            del n.nodes["127.0.0.1:7006"]["node_id"]
+            del n.nodes["127.0.0.1:7006"].node_id
             assert n.nodes == {
-                "127.0.0.1:7006": {
-                    "host": "127.0.0.1",
-                    "name": "127.0.0.1:7006",
-                    "port": 7006,
-                    "server_type": "master",
-                }
+                "127.0.0.1:7006": ManagedNode(
+                    host="127.0.0.1", port=7006, server_type="primary"
+                )
             }
-
             assert len(n.slots) == 16384
 
             for i in range(0, 16384):
                 assert n.slots[i] == [
-                    {
-                        "host": "127.0.0.1",
-                        "name": "127.0.0.1:7006",
-                        "port": 7006,
-                        "server_type": "master",
-                    }
+                    ManagedNode(
+                        host="127.0.0.1",
+                        port=7006,
+                        server_type="primary",
+                    )
                 ]
 
 

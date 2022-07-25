@@ -1106,7 +1106,6 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         cls,
         connection_pool: "ClusterConnectionPool",
         result_callbacks: "Optional[Dict[bytes, Callable[..., Any]]]" = ...,
-        startup_nodes: "Optional[List[Node]]" = ...,
         transaction: "Optional[bool]" = ...,
         watches: "Optional[Parameters[KeyT]]" = ...,
     ) -> ClusterPipeline[AnyStr]: ...

@@ -122,9 +122,6 @@ class Node(TypedDict):
 
     host: str
     port: int
-    name: str
-    server_type: Optional[str]
-    node_id: Optional[str]
 
 
 #: Represents the acceptable types of a redis key

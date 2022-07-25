@@ -14,6 +14,7 @@ from coredis import RedisCluster
 # rediscluster imports
 from coredis.exceptions import ClusterDownError
 from coredis.pool import ClusterConnectionPool
+from coredis.pool.nodemanager import ManagedNode
 
 pytestmark = [pytest.mark.asyncio]
 
@@ -99,19 +100,15 @@ async def assert_moved_redirection_on_slave(sr, connection_pool_cls, cluster_obj
     await sr.set("foo16706", "foo")
     await asyncio.sleep(1)
     with patch.object(connection_pool_cls, "get_node_by_slot") as return_slave_mock:
-        return_slave_mock.return_value = {
-            "name": "127.0.0.1:7004",
-            "host": "127.0.0.1",
-            "port": 7004,
-            "server_type": "slave",
-        }
+        return_slave_mock.return_value = ManagedNode(
+            host="127.0.0.1", port=7004, server_type="replica"
+        )
 
-        master_value = {
-            "host": "127.0.0.1",
-            "name": "127.0.0.1:7000",
-            "port": 7000,
-            "server_type": "master",
-        }
+        master_value = ManagedNode(
+            host="127.0.0.1",
+            port=7000,
+            server_type="primary",
+        )
         with patch.object(
             connection_pool_cls, "get_primary_node_by_slot"
         ) as return_master_mock:
@@ -163,19 +160,11 @@ async def test_access_correct_slave_with_readonly_mode_client(sr):
     await asyncio.sleep(1)
 
     with patch.object(ClusterConnectionPool, "get_node_by_slot") as return_slave_mock:
-        return_slave_mock.return_value = {
-            "name": "127.0.0.1:7004",
-            "host": "127.0.0.1",
-            "port": 7004,
-            "server_type": "slave",
-        }
+        return_slave_mock.return_value = ManagedNode(
+            host="127.0.0.1", port=7004, server_type="replica"
+        )
 
-        master_value = {
-            "host": "127.0.0.1",
-            "name": "127.0.0.1:7000",
-            "port": 7000,
-            "server_type": "master",
-        }
+        master_value = ManagedNode(host="127.0.0.1", port=7000, server_type="primary")
         with patch.object(
             ClusterConnectionPool, "get_primary_node_by_slot", return_value=master_value
         ):

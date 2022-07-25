@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import dataclasses
 import random
 import warnings
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from coredis._utils import b, hash_slot, nativestr
 from coredis.exceptions import (
     ConnectionError,
     RedisClusterException,
+    RedisError,
     ResponseError,
 )
 from coredis.typing import (
@@ -29,9 +31,25 @@ if TYPE_CHECKING:
     from coredis import Redis
 
 
+@dataclasses.dataclass
+class ManagedNode:
+    """
+    Represents a cluster node (primary or replica) in a redis cluster
+    """
+
+    host: str
+    port: int
+    server_type: Optional[Literal["primary", "replica"]] = None
+    node_id: Optional[str] = None
+
+    @property
+    def name(self) -> str:
+        return f"{self.host}:{self.port}"
+
+
 class NodeManager:
     """
-    TODO: document
+    Utility class to manage the topology of a redis cluster
     """
 
     def __init__(
@@ -55,10 +73,12 @@ class NodeManager:
         self.connection_kwargs = connection_kwargs
         self.connection_kwargs.update(decode_responses=decode_responses)
 
-        self.nodes: Dict[str, Node] = {}
-        self.slots: Dict[int, List[Node]] = {}
-        self.startup_nodes: List[Node] = (
-            [] if startup_nodes is None else list(startup_nodes)
+        self.nodes: Dict[str, ManagedNode] = {}
+        self.slots: Dict[int, List[ManagedNode]] = {}
+        self.startup_nodes: List[ManagedNode] = (
+            []
+            if startup_nodes is None
+            else list(ManagedNode(n["host"], n["port"]) for n in startup_nodes if n)
         )
         self.startup_nodes_reachable = False
         self.orig_startup_nodes = list(self.startup_nodes)
@@ -67,43 +87,40 @@ class NodeManager:
         self._skip_full_coverage_check = skip_full_coverage_check
         self.nodemanager_follow_cluster = nodemanager_follow_cluster
 
-        if not self.startup_nodes:
-            raise RedisClusterException("No startup nodes provided")
-
     def keys_to_nodes_by_slot(
         self, *keys: ValueT
     ) -> Dict[str, Dict[int, List[ValueT]]]:
         mapping: Dict[str, Dict[int, List[ValueT]]] = {}
         for k in keys:
             if node := self.node_from_slot(hash_slot(b(k))):
-                mapping.setdefault(node["name"], {}).setdefault(
+                mapping.setdefault(node.name, {}).setdefault(
                     hash_slot(b(k)), []
                 ).append(k)
         return mapping
 
-    def node_from_slot(self, slot: int) -> Optional[Node]:
+    def node_from_slot(self, slot: int) -> Optional[ManagedNode]:
         for node in self.slots[slot]:
-            if node["server_type"] == "master":
+            if node.server_type == "primary":
                 return node
         return None  # noqa
 
-    def all_nodes(self) -> Iterator[Node]:
+    def all_nodes(self) -> Iterator[ManagedNode]:
         yield from self.nodes.values()
 
-    def all_primaries(self) -> Iterator[Node]:
+    def all_primaries(self) -> Iterator[ManagedNode]:
         for node in self.nodes.values():
-            if node["server_type"] == "master":
+            if node.server_type == "primary":
                 yield node
 
-    def all_replicas(self) -> Iterator[Node]:
+    def all_replicas(self) -> Iterator[ManagedNode]:
         for node in self.nodes.values():
-            if node["server_type"] == "slave":
+            if node.server_type == "replica":
                 yield node
 
-    def random_startup_node(self) -> Node:
+    def random_startup_node(self) -> ManagedNode:
         return random.choice(self.startup_nodes)
 
-    def random_startup_node_iter(self, primary: bool = False) -> Iterator[Node]:
+    def random_startup_node_iter(self, primary: bool = False) -> Iterator[ManagedNode]:
         """A generator that returns a random startup nodes"""
         options = list(
             self.all_primaries()
@@ -115,7 +132,7 @@ class NodeManager:
             options.remove(choice)
             yield choice
 
-    def random_node(self) -> Node:
+    def random_node(self) -> ManagedNode:
         return random.choice(list(self.nodes.values()))
 
     def get_redis_link(self, host: str, port: int) -> Redis[Any]:
@@ -149,8 +166,8 @@ class NodeManager:
         Maybe it should stop to try after it have correctly covered all slots or when one node is
         reached and it could execute CLUSTER SLOTS command.
         """
-        nodes_cache: Dict[str, Node] = {}
-        tmp_slots: Dict[int, List[Node]] = {}
+        nodes_cache: Dict[str, ManagedNode] = {}
+        tmp_slots: Dict[int, List[ManagedNode]] = {}
 
         all_slots_covered = False
         disagreements: List[str] = []
@@ -159,7 +176,7 @@ class NodeManager:
         nodes = self.orig_startup_nodes
 
         # With this option the client will attempt to connect to any of the previous set of nodes
-        # instead of the original set of nodes
+        # instead of the original set of startup nodes
         if self.nodemanager_follow_cluster:
             nodes = self.startup_nodes
 
@@ -167,11 +184,11 @@ class NodeManager:
             cluster_slots = {}
             try:
                 if node:
-                    r = self.get_redis_link(host=node["host"], port=node["port"])
+                    r = self.get_redis_link(host=node.host, port=node.port)
                     cluster_slots = await r.cluster_slots()
                     self.startup_nodes_reachable = True
 
-            except ConnectionError:
+            except RedisError:
                 continue
             all_slots_covered = True
 
@@ -182,31 +199,43 @@ class NodeManager:
                 assert slots
                 single_node_slots = slots[0]
                 if len(single_node_slots["host"]) == 0:
-                    single_node_slots["host"] = self.startup_nodes[0]["host"]
+                    single_node_slots["host"] = self.startup_nodes[0].host
                     single_node_slots["server_type"] = "master"
 
             for min_slot, max_slot in cluster_slots:
-                _nodes = cast(List[Node], cluster_slots.get((min_slot, max_slot)))
+                _nodes = cluster_slots.get((min_slot, max_slot))
                 assert _nodes
-                master_node, slave_nodes = _nodes[0], _nodes[1:]
+                primary_node = ManagedNode(
+                    host=_nodes[0]["host"],
+                    port=_nodes[0]["port"],
+                    server_type="primary",
+                    node_id=_nodes[0]["node_id"],
+                )
+                replica_nodes = [
+                    ManagedNode(
+                        host=n["host"],
+                        port=n["port"],
+                        server_type="replica",
+                        node_id=n["node_id"],
+                    )
+                    for n in _nodes[1:]
+                ]
 
-                master_node["host"] = master_node["host"] or node["host"]
-                self.set_node_name(master_node)
-                nodes_cache[master_node["name"]] = master_node
+                primary_node.host = primary_node.host or node.host
+                nodes_cache[primary_node.name] = primary_node
 
                 for i in range(min_slot, max_slot + 1):
                     if i not in tmp_slots:
-                        tmp_slots[i] = [master_node]
-                        for slave_node in slave_nodes:
-                            self.set_node_name(slave_node)
-                            nodes_cache[slave_node["name"]] = slave_node
-                            tmp_slots[i].append(slave_node)
+                        tmp_slots[i] = [primary_node]
+                        for replica_node in replica_nodes:
+                            nodes_cache[replica_node.name] = replica_node
+                            tmp_slots[i].append(replica_node)
                     else:
                         # Validate that 2 nodes want to use the same slot cache setup
-                        if tmp_slots[i][0]["name"] != node["name"]:
+                        if tmp_slots[i][0].name != node.name:
                             disagreements.append(
                                 "{} vs {} on slot: {}".format(
-                                    tmp_slots[i][0]["name"], node["name"], i
+                                    tmp_slots[i][0].name, node.name, i
                                 ),
                             )
                             if len(disagreements) > 5:
@@ -249,9 +278,9 @@ class NodeManager:
             if self.reinitialize_counter % self.reinitialize_steps == 0:
                 await self.initialize()
 
-    async def node_require_full_coverage(self, node: Node) -> bool:
+    async def node_require_full_coverage(self, node: ManagedNode) -> bool:
         try:
-            r_node = self.get_redis_link(host=node["host"], port=node["port"])
+            r_node = self.get_redis_link(host=node.host, port=node.port)
             node_config = await r_node.config_get(["cluster-require-full-coverage"])
             return "yes" in node_config.values()
         except ResponseError as err:
@@ -262,7 +291,9 @@ class NodeManager:
             )
             return False
 
-    async def cluster_require_full_coverage(self, nodes_cache: Dict[str, Node]) -> bool:
+    async def cluster_require_full_coverage(
+        self, nodes_cache: Dict[str, ManagedNode]
+    ) -> bool:
         """
         If exists 'cluster-require-full-coverage no' config on redis servers,
         then even all slots are not covered, cluster still will be able to
@@ -278,32 +309,20 @@ class NodeManager:
                 continue
         return False
 
-    def set_node_name(self, node: Node) -> None:
-        """
-        Formats the name for the given node object
-
-        # TODO: This should not be constructed this way. It should update the name of the node in
-        the node cache dict
-        """
-        if not node.get("name"):
-            node["name"] = f'{nativestr(node["host"])}:{node["port"]}'
-
     def set_node(
         self,
         host: StringT,
         port: int,
-        server_type: Literal["master", "slave"],
-    ) -> Node:
+        server_type: Literal["primary", "replica"],
+    ) -> ManagedNode:
         """Updates data for a node"""
-        node_name = f"{nativestr(host)}:{port}"
-        node = Node(
+        node = ManagedNode(
             host=nativestr(host),
             port=port,
-            name=node_name,
             server_type=server_type,
             node_id=None,
         )
-        self.nodes[node_name] = node
+        self.nodes[node.name] = node
         return node
 
     def populate_startup_nodes(self) -> None:

@@ -11,6 +11,7 @@ from coredis.connection import ClusterConnection, Connection, UnixDomainSocketCo
 from coredis.exceptions import ConnectionError, RedisClusterException
 from coredis.parser import Parser
 from coredis.pool import ClusterConnectionPool, ConnectionPool
+from coredis.pool.nodemanager import ManagedNode
 from tests.conftest import targets
 
 
@@ -86,7 +87,7 @@ class TestConnectionPool:
         connection_kwargs = {"foo": "bar", "biz": "baz"}
         pool = await self.get_pool(connection_kwargs=connection_kwargs)
         connection = await pool.get_connection_by_node(
-            {"host": "127.0.0.1", "port": 7000}
+            ManagedNode(**{"host": "127.0.0.1", "port": 7000})
         )
         assert isinstance(connection, DummyConnection)
 
@@ -95,8 +96,12 @@ class TestConnectionPool:
 
     async def test_multiple_connections(self, redis_cluster):
         pool = await self.get_pool()
-        c1 = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
-        c2 = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
+        c1 = await pool.get_connection_by_node(
+            ManagedNode(**{"host": "127.0.0.1", "port": 7000})
+        )
+        c2 = await pool.get_connection_by_node(
+            ManagedNode(**{"host": "127.0.0.1", "port": 7001})
+        )
         assert c1 != c2
 
     async def test_max_connections_too_low(self, redis_cluster):
@@ -107,43 +112,71 @@ class TestConnectionPool:
     async def test_max_connections(self, redis_cluster):
         pool = await self.get_pool(max_connections=6)
         for port in range(7000, 7006):
-            await pool.get_connection_by_node({"host": "127.0.0.1", "port": port})
+            await pool.get_connection_by_node(
+                ManagedNode(**{"host": "127.0.0.1", "port": port})
+            )
         with pytest.raises(ConnectionError):
-            await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+            await pool.get_connection_by_node(
+                ManagedNode(**{"host": "127.0.0.1", "port": 7000})
+            )
 
     async def test_max_connections_blocking(self, redis_cluster):
         pool = await self.get_pool(max_connections=6, blocking=True, timeout=1)
         connections = []
         for port in range(7000, 7006):
             connections.append(
-                await pool.get_connection_by_node({"host": "127.0.0.1", "port": port})
+                await pool.get_connection_by_node(
+                    ManagedNode(**{"host": "127.0.0.1", "port": port})
+                )
             )
         with pytest.raises(ConnectionError):
-            await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+            await pool.get_connection_by_node(
+                ManagedNode(**{"host": "127.0.0.1", "port": 7000})
+            )
         pool.release(connections[0])
         assert connections[0] == await pool.get_connection_by_node(
-            {"host": "127.0.0.1", "port": 7000}
+            ManagedNode(**{"host": "127.0.0.1", "port": 7000})
         )
 
     async def test_max_connections_per_node(self, redis_cluster):
         pool = await self.get_pool(max_connections=2, max_connections_per_node=True)
-        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
-        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
-        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
-        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
+        await pool.get_connection_by_node(
+            ManagedNode(**{"host": "127.0.0.1", "port": 7000})
+        )
+        await pool.get_connection_by_node(
+            ManagedNode(**{"host": "127.0.0.1", "port": 7001})
+        )
+        await pool.get_connection_by_node(
+            ManagedNode(**{"host": "127.0.0.1", "port": 7000})
+        )
+        await pool.get_connection_by_node(
+            ManagedNode(**{"host": "127.0.0.1", "port": 7001})
+        )
         with pytest.raises(ConnectionError):
-            await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+            await pool.get_connection_by_node(
+                ManagedNode(**{"host": "127.0.0.1", "port": 7000})
+            )
 
     async def test_max_connections_per_node_blocking(self, redis_cluster):
         pool = await self.get_pool(
             max_connections=2, max_connections_per_node=True, blocking=True, timeout=1
         )
-        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
-        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
-        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
-        await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
+        await pool.get_connection_by_node(
+            ManagedNode(**{"host": "127.0.0.1", "port": 7000})
+        )
+        await pool.get_connection_by_node(
+            ManagedNode(**{"host": "127.0.0.1", "port": 7001})
+        )
+        await pool.get_connection_by_node(
+            ManagedNode(**{"host": "127.0.0.1", "port": 7000})
+        )
+        await pool.get_connection_by_node(
+            ManagedNode(**{"host": "127.0.0.1", "port": 7001})
+        )
         with pytest.raises(ConnectionError):
-            await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+            await pool.get_connection_by_node(
+                ManagedNode(**{"host": "127.0.0.1", "port": 7000})
+            )
 
     async def test_max_connections_default_setting(self):
         pool = await self.get_pool(max_connections=None)
@@ -151,9 +184,15 @@ class TestConnectionPool:
 
     async def test_pool_disconnect(self):
         pool = await self.get_pool()
-        c1 = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
-        c2 = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7001})
-        c3 = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+        c1 = await pool.get_connection_by_node(
+            ManagedNode(**{"host": "127.0.0.1", "port": 7000})
+        )
+        c2 = await pool.get_connection_by_node(
+            ManagedNode(**{"host": "127.0.0.1", "port": 7001})
+        )
+        c3 = await pool.get_connection_by_node(
+            ManagedNode(**{"host": "127.0.0.1", "port": 7000})
+        )
         pool.release(c3)
         pool.disconnect()
         assert not c1.is_connected
@@ -163,11 +202,15 @@ class TestConnectionPool:
     async def test_reuse_previously_released_connection(self):
         pool = await self.get_pool()
         print(pool._cluster_available_connections)
-        c1 = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+        c1 = await pool.get_connection_by_node(
+            ManagedNode(**{"host": "127.0.0.1", "port": 7000})
+        )
         print(pool._cluster_available_connections)
         pool.release(c1)
         print(pool._cluster_available_connections)
-        c2 = await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+        c2 = await pool.get_connection_by_node(
+            ManagedNode(**{"host": "127.0.0.1", "port": 7000})
+        )
         assert c1 == c2
 
     async def test_repr_contains_db_info_tcp(self, host_ip):
@@ -251,9 +294,9 @@ class TestConnectionPool:
     async def test_master_node_by_slot(self):
         pool = await self.get_pool(connection_kwargs={})
         node = pool.get_primary_node_by_slot(0)
-        node["port"] = 7000
+        node.port = 7000
         node = pool.get_primary_node_by_slot(12182)
-        node["port"] = 7002
+        node.port = 7002
 
     async def test_connection_idle_check(self, event_loop):
         pool = ClusterConnectionPool(
@@ -263,14 +306,15 @@ class TestConnectionPool:
         )
         await pool.initialize()
         conn = await pool.get_connection_by_node(
-            {
-                "name": "127.0.0.1:7000",
-                "host": "127.0.0.1",
-                "port": 7000,
-                "server_type": "master",
-            }
+            ManagedNode(
+                **{
+                    "host": "127.0.0.1",
+                    "port": 7000,
+                    "server_type": "primary",
+                }
+            )
         )
-        name = conn.node["name"]
+        name = conn.node.name
         assert len(pool._cluster_in_use_connections[name]) == 1
         pool.release(conn)
         assert len(pool._cluster_in_use_connections[name]) == 0
@@ -327,9 +371,13 @@ class TestReadOnlyConnectionPool:
     async def test_max_connections(self):
         pool = await self.get_pool(max_connections=6)
         for port in range(7000, 7006):
-            await pool.get_connection_by_node({"host": "127.0.0.1", "port": port})
+            await pool.get_connection_by_node(
+                ManagedNode(**{"host": "127.0.0.1", "port": port})
+            )
         with pytest.raises(ConnectionError):
-            await pool.get_connection_by_node({"host": "127.0.0.1", "port": 7000})
+            await pool.get_connection_by_node(
+                ManagedNode(**{"host": "127.0.0.1", "port": 7000})
+            )
 
 
 class TestConnectionPoolURLParsing:

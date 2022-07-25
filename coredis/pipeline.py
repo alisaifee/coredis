@@ -34,6 +34,7 @@ from coredis.exceptions import (
     WatchError,
 )
 from coredis.pool import ClusterConnectionPool, ConnectionPool
+from coredis.pool.nodemanager import ManagedNode
 from coredis.response._callbacks import (
     AnyStrCallback,
     BoolCallback,
@@ -50,7 +51,6 @@ from coredis.typing import (
     Iterable,
     KeyT,
     List,
-    Node,
     Optional,
     Parameters,
     ParamSpec,
@@ -706,7 +706,6 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         self,
         connection_pool: ClusterConnectionPool,
         result_callbacks: Optional[Dict[bytes, Callable[..., Any]]] = None,
-        startup_nodes: Optional[List[Node]] = None,
         transaction: Optional[bool] = False,
         watches: Optional[Parameters[KeyT]] = None,
     ) -> None:
@@ -714,7 +713,6 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         self.refresh_table_asap = False
         self.connection_pool: ClusterConnectionPool = connection_pool
         self.result_callbacks = result_callbacks
-        self.startup_nodes = startup_nodes if startup_nodes else []
         self._transaction = transaction
         self.watches: Optional[Parameters[KeyT]] = watches or None
         self.watching = False
@@ -906,20 +904,13 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
             slot = self._determine_slot(c.command, *c.args)
             node = self.connection_pool.get_node_by_slot(slot)
 
-            # little hack to make sure the node name is populated. probably could clean this up.
-            self.connection_pool.nodes.set_node_name(node)
-
-            # now that we know the name of the node ( it's just a string in the form of host:port )
-            # we can build a list of commands for each node.
-            node_name = node["name"]
-
-            if node_name not in nodes:
-                nodes[node_name] = NodeCommands(
+            if node.name not in nodes:
+                nodes[node.name] = NodeCommands(
                     self.parse_response,
                     await self.connection_pool.get_connection_by_node(node),
                 )
 
-            nodes[node_name].append(c)
+            nodes[node.name].append(c)
 
         # send the commands in sequence.
         # we  write to all the open sockets for each node first, before reading anything
@@ -1056,7 +1047,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         raise RedisClusterException("method load_scripts() is not implemented")
 
     async def _watch(
-        self, node: Node, conn: BaseConnection, keys: Parameters[KeyT]
+        self, node: ManagedNode, conn: BaseConnection, keys: Parameters[KeyT]
     ) -> bool:
         "Watches the values at keys ``keys``"
 
@@ -1064,13 +1055,10 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
             slot = self._determine_slot(CommandName.WATCH, key)
             dist_node = self.connection_pool.get_node_by_slot(slot)
 
-            if node.get("name") != dist_node["name"]:
-                # raise error if commands in a transaction can not hash to same node
-
-                if len(node) > 0:
-                    raise ClusterTransactionError(
-                        "Keys in request don't hash to the same node"
-                    )
+            if node.name != dist_node.name:
+                raise ClusterTransactionError(
+                    "Keys in request don't hash to the same node"
+                )
 
         if self.explicit_transaction:
             raise RedisError("Cannot issue a WATCH after a MULTI")
@@ -1191,7 +1179,6 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         cls,
         connection_pool: ClusterConnectionPool,
         result_callbacks: Optional[Dict[bytes, Callable[..., Any]]] = None,
-        startup_nodes: Optional[List[Node]] = None,
         transaction: Optional[bool] = False,
         watches: Optional[Parameters[KeyT]] = None,
     ) -> ClusterPipeline[AnyStr]:
@@ -1199,7 +1186,6 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
             ClusterPipelineImpl(
                 connection_pool,
                 result_callbacks=result_callbacks,
-                startup_nodes=startup_nodes,
                 transaction=transaction,
                 watches=watches,
             )
