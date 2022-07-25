@@ -117,9 +117,6 @@ class NodeManager:
             if node.server_type == "replica":
                 yield node
 
-    def random_startup_node(self) -> ManagedNode:
-        return random.choice(self.startup_nodes)
-
     def random_startup_node_iter(self, primary: bool = False) -> Iterator[ManagedNode]:
         """A generator that returns a random startup nodes"""
         options = list(
