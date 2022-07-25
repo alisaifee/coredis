@@ -290,7 +290,7 @@ class TestConnectionPool:
             match="Unable to determine whether the cluster requires full coverage",
         ):
             no_perm_client = await user_client("testuser", "on", "+@all", "-CONFIG")
-            assert _s("PONG") == no_perm_client.ping()
+            assert _s("PONG") == await no_perm_client.ping()
 
 
 @pytest.mark.asyncio
