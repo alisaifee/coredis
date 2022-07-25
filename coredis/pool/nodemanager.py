@@ -101,8 +101,8 @@ class NodeManager:
 
     def random_startup_node_iter(self, primary: bool = False) -> Iterator[Node]:
         """A generator that returns a random startup nodes"""
-        options = (
-            list(self.all_primaries())
+        options = list(
+            self.all_primaries()
             if primary
             else (self.startup_nodes if self.startup_nodes_reachable else [])
         )

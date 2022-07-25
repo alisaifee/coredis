@@ -342,34 +342,8 @@ class ClusterConnectionPool(ConnectionPool):
 
     async def get_random_connection(self, primary: bool = False) -> ClusterConnection:
         """Opens new connection to random redis server in the cluster"""
-        if self._cluster_available_connections:
-            filter = []
-            if primary:
-                filter = [node["name"] for node in self.nodes.all_primaries()]
-            node_name = random.choice(
-                list(
-                    node
-                    for node in self._cluster_available_connections.keys()
-                    if not filter or node in filter
-                )
-            )
-            conn_list = None
-            if node_name:
-                conn_list = self._cluster_available_connections[node_name]
-
-            if conn_list:
-                try:
-                    conn = cast(ClusterConnection, conn_list.get_nowait())
-                except asyncio.QueueEmpty:
-                    conn = None
-                if not conn:
-                    conn_list.put_nowait(conn)
-                else:
-                    return conn
         for node in self.nodes.random_startup_node_iter(primary):
-            connection = await self.get_connection_by_node(node)
-
-            if connection:
+            if connection := await self.get_connection_by_node(node):
                 return connection
         raise RedisClusterException("Cant reach a single startup node.")
 
