@@ -203,6 +203,10 @@ class BaseConnection(asyncio.BaseProtocol):
         return self._parser.can_read()
 
     async def connect(self) -> None:
+        """
+        Establish a connnection to the redis server
+        and initiate any post connect callbacks
+        """
         try:
             await self._connect()
         except (asyncio.CancelledError, RedisError):
@@ -218,26 +222,44 @@ class BaseConnection(asyncio.BaseProtocol):
                 await task
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
+        """
+        :meta private:
+        """
         self._transport = cast(asyncio.Transport, transport)
         self._write_flag.set()
 
     def connection_lost(self, exc: Optional[BaseException]) -> None:
+        """
+        :meta private:
+        """
         if exc:
             self._last_error = exc
         self.disconnect()
 
     def pause_writing(self) -> None:  # noqa
+        """
+        :meta private:
+        """
         self._write_flag.clear()
 
     def resume_writing(self) -> None:  # noqa
+        """
+        :meta private:
+        """
         self._write_flag.set()
 
     def data_received(self, data: bytes) -> None:
+        """
+        :meta private:
+        """
         if self._parser.unpacker:
             self._parser.unpacker.feed(data)
             self._read_flag.set()
 
     def eof_received(self) -> None:
+        """
+        :meta private:
+        """
         self.disconnect()
 
     async def _connect(self) -> None:
@@ -246,6 +268,10 @@ class BaseConnection(asyncio.BaseProtocol):
     async def update_tracking_client(
         self, enabled: bool, client_id: Optional[int] = None
     ) -> bool:
+        """
+        Associate this connection to :paramref:`client_id` to
+        relay any tracking notifications to.
+        """
         try:
             params: List[ValueT] = (
                 [b"ON", b"REDIRECT", client_id]
@@ -355,6 +381,9 @@ class BaseConnection(asyncio.BaseProtocol):
         push_message_types: Optional[Set[bytes]] = None,
         raise_exceptions: bool = True,
     ) -> ResponseType:
+        """
+        Read the next pending response
+        """
         try:
             response = await exec_with_timeout(
                 self._wait_for_response(
@@ -374,7 +403,11 @@ class BaseConnection(asyncio.BaseProtocol):
         return response
 
     async def send_packed_command(self, command: List[bytes]) -> None:
-        """Sends an already packed command to the Redis server"""
+        """
+        Sends an already packed command to the Redis server
+
+        :meta private:
+        """
 
         if not self._transport:
             await self.connect()
@@ -383,6 +416,9 @@ class BaseConnection(asyncio.BaseProtocol):
         self._transport.writelines(command)
 
     async def send_command(self, command: bytes, *args: ValueT) -> None:
+        """
+        Send a command to the redis server
+        """
         if not self.is_connected:
             await self.connect()
         await self.send_packed_command(self.packer.pack_command(command, *args))
@@ -390,7 +426,9 @@ class BaseConnection(asyncio.BaseProtocol):
         self.last_active_at = time.time()
 
     def disconnect(self) -> None:
-        """Disconnects from the Redis server"""
+        """
+        Disconnect from the Redis server
+        """
         self.needs_handshake = True
         self._parser.on_disconnect(self._last_error)
         if self._transport:
