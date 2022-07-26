@@ -8,13 +8,11 @@ Redis
 -----
 .. autoclass:: coredis.Redis
    :class-doc-from: both
-   :inherited-members:
 
 Cluster
 -------
 .. autoclass:: coredis.RedisCluster
    :class-doc-from: both
-   :inherited-members:
 
 
 Sentinel
@@ -23,7 +21,6 @@ Sentinel
 
 .. autoclass:: coredis.sentinel.Sentinel
    :class-doc-from: both
-   :inherited-members:
 
 KeyDB
 -----
@@ -174,21 +171,18 @@ Blocking Connection Pool
 .. autoclass:: coredis.pool.BlockingConnectionPool
    :class-doc-from: both
    :show-inheritance:
-   :inherited-members:
 
 Cluster Connection Pool
 -----------------------
 .. autoclass:: coredis.pool.ClusterConnectionPool
    :class-doc-from: both
    :show-inheritance:
-   :inherited-members:
 
 Blocking Cluster Connection Pool
 --------------------------------
 .. autoclass:: coredis.pool.BlockingClusterConnectionPool
    :class-doc-from: both
    :show-inheritance:
-   :inherited-members:
 
 Sentinel Connection Pool
 ------------------------
@@ -196,7 +190,6 @@ Sentinel Connection Pool
 .. autoclass:: coredis.sentinel.SentinelConnectionPool
    :class-doc-from: both
    :show-inheritance:
-   :inherited-members:
 
 
 
