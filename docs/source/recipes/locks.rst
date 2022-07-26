@@ -20,6 +20,7 @@ The implementation uses the following LUA scripts:
 #. Extend the lock
 
    .. literalinclude:: ../../../coredis/recipes/locks/extend.lua
+
 .. autoclass:: coredis.recipes.locks.LuaLock
    :class-doc-from: both
 

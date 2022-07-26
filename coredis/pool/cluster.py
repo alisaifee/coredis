@@ -49,8 +49,11 @@ class ClusterConnectionPool(ConnectionPool):
 
         Changes
           - .. versionchanged:: 4.4.0
+
             - :paramref:`nodemanager_follow_cluster` now defaults to ``True``
+
           - .. deprecated:: 4.4.0
+
             - :paramref:`readonly` renamed to :paramref:`read_from_replicas`
 
         :param max_connections: Maximum number of connections to allow concurrently from this
@@ -439,8 +442,11 @@ class BlockingClusterConnectionPool(ClusterConnectionPool):
 
         Changes
           - .. versionchanged:: 4.4.0
+
             - :paramref:`nodemanager_follow_cluster` now defaults to ``True``
+
           - .. deprecated:: 4.4.0
+
             - :paramref:`readonly` renamed to :paramref:`read_from_replicas`
 
         :param max_connections: Maximum number of connections to allow concurrently from this

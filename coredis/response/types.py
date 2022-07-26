@@ -409,7 +409,7 @@ class PubSubMessage(TypedDict):
     pattern: Optional[StringT]
     #: - If ``type`` is one of ``{message, pmessage}`` this is the actual published message
     #: - If ``type`` is one of
-    #:    ``{subscribe, psubscribe, ssubscribe, unsubscribe, punsubscribe, sunsubscribe}``
+    #:   ``{subscribe, psubscribe, ssubscribe, unsubscribe, punsubscribe, sunsubscribe}``
     #:   this will be an :class:`int` corresponding to the  number of channels and patterns that the
     #:   connection is currently subscribed to.
     data: Union[int, StringT]

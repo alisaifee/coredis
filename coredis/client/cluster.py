@@ -247,30 +247,49 @@ class RedisCluster(
         """
 
         Changes
+
           - .. versionchanged:: 4.4.0
+
             - :paramref:`nodemanager_follow_cluster` now defaults to ``True``
+
           - .. deprecated:: 4.4.0
+
             - The :paramref:`readonly` argument is deprecated in favour of
-            :paramref:`read_from_replicas`
+              :paramref:`read_from_replicas`
+
           - .. versionadded:: 4.3.0
+
             - Added :paramref:`connection_pool_cls`
+
           - .. versionchanged:: 4.0.0
+
             - :paramref:`non_atomic_cross_slot` defaults to ``True``
             - :paramref:`protocol_version`` defaults to ``3``
+
           - .. versionadded:: 3.11.0
+
             - Added :paramref:`noreply`
+
           - .. versionadded:: 3.10.0
+
             - Synchronized ssl constructor parameters with :class:`coredis.Redis`
+
           - .. versionadded:: 3.9.0
+
             - If :paramref:`cache` is provided the client will check & populate
               the cache for read only commands and invalidate it for commands
               that could change the key(s) in the request.
+
           - .. versionadded:: 3.6.0
+
             - The :paramref:`non_atomic_cross_slot` parameter was added
+
           - .. versionchanged:: 3.5.0
+
             - The :paramref:`verify_version` parameter now defaults to ``True``
 
           - .. versionadded:: 3.1.0
+
             - The :paramref:`protocol_version` and :paramref:`verify_version`
               parameters were added
 
