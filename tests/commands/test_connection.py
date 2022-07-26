@@ -73,8 +73,9 @@ class TestConnection:
 
     @pytest.mark.min_server_version("6.2.0")
     async def test_client_tracking(self, client, _s, cloner):
-        clone = await (await cloner(client)).connection_pool.get_connection("tracking")
-        clone_id = clone.client_id
+        clone = await cloner(client)
+        clone_connection = await clone.connection_pool.get_connection("tracking")
+        clone_id = clone_connection.client_id
         assert await client.client_tracking(
             PureToken.ON, redirect=clone_id, noloop=True
         )

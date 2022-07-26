@@ -239,6 +239,9 @@ class ConnectionPool:
             type(self).__name__, self.connection_class.describe(self.connection_kwargs)
         )
 
+    def __del__(self) -> None:
+        self.disconnect()
+
     async def disconnect_on_idle_time_exceeded(self, connection: Connection) -> None:
         while True:
             if (
