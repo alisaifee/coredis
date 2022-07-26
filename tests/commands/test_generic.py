@@ -186,6 +186,7 @@ class TestGeneric:
         assert await client.get("a{foo}") is None
         assert await client.get("b{foo}") is None
 
+    @pytest.mark.xfail
     async def test_dump_and_restore_with_ttl(self, client, _s):
         await client.set("a", "foo")
         dumped = await client.dump("a")
