@@ -15,9 +15,9 @@ class Parser:
     Interface between a connection and Unpacker
     """
 
-    def __init__(self) -> None:
-        self.encoding: Optional[str] = None
-        self.unpacker: Optional[Unpacker] = None
+    def __init__(self, encoding: str, decode_responses: bool) -> None:
+        self.decode_responses: bool = decode_responses
+        self.unpacker: Unpacker = Unpacker(encoding)
         self.push_messages: Optional[asyncio.Queue[ResponseType]] = None
         self.connected = asyncio.Event()
         self._last_error: Optional[BaseException] = None
@@ -29,17 +29,12 @@ class Parser:
         """Called when the stream connects"""
         self.connected.set()
         self._last_error = None
-        if not self.unpacker:
-            self.unpacker = Unpacker(connection.encoding)
         self.push_messages = connection.push_messages
-        if connection.decode_responses:
-            self.encoding = connection.encoding
 
     def on_disconnect(self, exc: Optional[BaseException]) -> None:
         """Called when the stream disconnects"""
         self._last_error = exc
         self.connected.clear()
-        self.encoding = None
 
     def can_read(self) -> bool:
         return (
@@ -64,7 +59,7 @@ class Parser:
          If there is not enough data on the wire a ``NotEnoughData`` instance
          will be returned.
         """
-        decode_bytes = (decode is None or decode) if self.encoding else False
+        decode_bytes = (decode is None or decode) if self.decode_responses else False
         assert self.unpacker
         if not self.connected.is_set():
             if self._last_error:

@@ -133,7 +133,7 @@ class Unpacker:
 
     def __init__(
         self,
-        encoding: str,
+        encoding: Optional[str] = None,
     ):
         self.encoding = encoding
         self.localbuffer = BytesIO(b"")

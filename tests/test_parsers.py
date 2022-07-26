@@ -25,7 +25,7 @@ def connection(request):
 
 @pytest.fixture
 def parser(connection):
-    parser = Parser()
+    parser = Parser(connection.encoding, connection.decode_responses)
     parser.on_connect(connection)
     return parser
 

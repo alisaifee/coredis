@@ -156,7 +156,7 @@ class BaseConnection(asyncio.BaseProtocol):
         self._write_flag = asyncio.Event()
         self._connect_event = asyncio.Event()
         self._last_error: Optional[BaseException] = None
-        self._parser = Parser()
+        self._parser = Parser(encoding, decode_responses)
 
     def __repr__(self) -> str:
         return self.describe(self._description_args())
@@ -252,7 +252,6 @@ class BaseConnection(asyncio.BaseProtocol):
         """
         :meta private:
         """
-        assert self._parser.unpacker
         self._parser.unpacker.feed(data)
         self._read_flag.set()
 
