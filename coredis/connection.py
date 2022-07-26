@@ -252,9 +252,9 @@ class BaseConnection(asyncio.BaseProtocol):
         """
         :meta private:
         """
-        if self._parser.unpacker:
-            self._parser.unpacker.feed(data)
-            self._read_flag.set()
+        assert self._parser.unpacker
+        self._parser.unpacker.feed(data)
+        self._read_flag.set()
 
     def eof_received(self) -> None:
         """
