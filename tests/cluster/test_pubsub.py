@@ -132,6 +132,7 @@ class TestPubSubSubscribeUnsubscribe:
         await self._test_subscribe_unsubscribe(**kwargs, sharded=True)
 
     @pytest.mark.asyncio
+    @pytest.mark.xfail
     async def test_pattern_subscribe_unsubscribe(self, redis_cluster):
         kwargs = make_subscribe_test_data(redis_cluster.pubsub(), "pattern")
         await self._test_subscribe_unsubscribe(**kwargs)
