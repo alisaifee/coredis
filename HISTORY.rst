@@ -377,7 +377,7 @@ Release Date: 2022-05-21
     initialization race condition
 
 v3.7.57 ("Puffles")
-------------------
+-------------------
 Release Date: 2022-05-19
 
 * Features
