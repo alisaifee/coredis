@@ -200,37 +200,34 @@ Connection Classes
 All connection classes derive from the same base-class:
 
 .. autoclass:: coredis.connection.BaseConnection
+   :show-inheritance:
    :class-doc-from: both
 
 TCP Connection
 --------------
 
 .. autoclass:: coredis.connection.Connection
-   :class-doc-from: both
    :show-inheritance:
-   :inherited-members:
+   :class-doc-from: both
 
 Unix Domain Socket Connection
 -----------------------------
 .. autoclass:: coredis.connection.UnixDomainSocketConnection
-   :class-doc-from: both
    :show-inheritance:
-   :inherited-members:
+   :class-doc-from: both
 
 Cluster TCP Connection
 ----------------------
 .. autoclass:: coredis.connection.ClusterConnection
-   :class-doc-from: both
    :show-inheritance:
-   :inherited-members:
+   :class-doc-from: both
 
 Sentinel Connection
 -------------------
 
 .. autoclass:: coredis.sentinel.SentinelManagedConnection
-   :class-doc-from: both
    :show-inheritance:
-   :inherited-members:
+   :class-doc-from: both
 
 Parser
 ------
