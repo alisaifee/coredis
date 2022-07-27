@@ -44,7 +44,7 @@ async def test_valid_authentication_delayed(redis_auth):
 async def test_legacy_authentication(redis_auth, mocker):
     original_send_command = coredis.connection.BaseConnection.send_command
 
-    async def fake_send_command(self, command, *args):
+    async def fake_send_command(self, command, *args, **kwargs):
         if command == b"HELLO":
             raise UnknownCommandError("fubar")
         else:

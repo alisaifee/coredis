@@ -414,14 +414,16 @@ class BaseConnection(asyncio.BaseProtocol):
         await self._write_flag.wait()
         self._transport.writelines(command)
 
-    async def send_command(self, command: bytes, *args: ValueT) -> None:
+    async def send_command(
+        self, command: bytes, *args: ValueT, noreply: Optional[bool] = None
+    ) -> None:
         """
         Send a command to the redis server
         """
         if not self.is_connected:
             await self.connect()
         await self.send_packed_command(self.packer.pack_command(command, *args))
-        self.awaiting_response = not self.noreply
+        self.awaiting_response = not (self.noreply or noreply)
         self.last_active_at = time.time()
 
     def disconnect(self) -> None:

@@ -13,6 +13,7 @@ from packaging.version import InvalidVersion, Version
 from coredis._utils import nativestr
 from coredis.cache import AbstractCache, SupportsClientTracking
 from coredis.commands._key_spec import KeySpec
+from coredis.commands.constants import CommandName
 from coredis.commands.core import CoreCommands
 from coredis.commands.function import Library
 from coredis.commands.monitor import Monitor
@@ -34,6 +35,7 @@ from coredis.exceptions import (
 from coredis.pool import ConnectionPool
 from coredis.response._callbacks import NoopCallback
 from coredis.response.types import ScoredMember
+from coredis.tokens import PureToken
 from coredis.typing import (
     AnyStr,
     AsyncGenerator,
@@ -186,12 +188,6 @@ class Client(
             return ctx
         return self.__noreply
 
-    @noreply.setter
-    def noreply(self, value: bool) -> None:
-        if value != self.__noreply:
-            self.__noreply = value
-            self.connection_pool.disconnect()
-
     def _ensure_server_version(self, version: Optional[str]) -> None:
         if not self.verify_version:
             return
@@ -212,9 +208,15 @@ class Client(
                 self.verify_version = False
                 self.server_version = None
 
+    async def _ensure_noreply(self, connection: BaseConnection) -> None:
+        if not self.__noreply and self.noreply:
+            await connection.send_command(
+                CommandName.CLIENT_REPLY, PureToken.SKIP, noreply=True
+            )
+
     async def _ensure_wait(self, command: bytes, connection: BaseConnection) -> None:
         if wait := self._waitcontext.get():
-            await connection.send_command(b"WAIT", *wait)
+            await connection.send_command(CommandName.WAIT, *wait)
             if not cast(int, await connection.read_response(decode=False)) >= wait[0]:
                 raise ReplicationError(command, wait[0], wait[1])
 
@@ -694,6 +696,7 @@ class Redis(Client[AnyStr]):
                     db=db,
                     decode_responses=decode_responses,
                     protocol_version=protocol_version,
+                    noreply=noreply,
                     **kwargs,
                 ),
             )
@@ -708,6 +711,7 @@ class Redis(Client[AnyStr]):
                     db=db,
                     decode_responses=decode_responses,
                     protocol_version=protocol_version,
+                    noreply=noreply,
                     **kwargs,
                 ),
             )
@@ -742,7 +746,8 @@ class Redis(Client[AnyStr]):
         try:
             if self.cache and command not in self.connection_pool.READONLY_COMMANDS:
                 self.cache.invalidate(*KeySpec.extract_keys((command,) + args))
-            await connection.send_command(command, *args)
+            await self._ensure_noreply(connection)
+            await connection.send_command(command, *args, noreply=self.noreply)
             if self.noreply:
                 return None  # type: ignore
 

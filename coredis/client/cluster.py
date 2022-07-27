@@ -475,6 +475,7 @@ class RedisCluster(
                 decode_responses=True,
                 protocol_version=protocol_version,
                 verify_version=verify_version,
+                noreply=noreply,
                 connection_pool=ClusterConnectionPool.from_url(
                     url,
                     db=db,
@@ -490,6 +491,7 @@ class RedisCluster(
                 decode_responses=False,
                 protocol_version=protocol_version,
                 verify_version=verify_version,
+                noreply=noreply,
                 connection_pool=ClusterConnectionPool.from_url(
                     url,
                     db=db,
@@ -682,7 +684,7 @@ class RedisCluster(
 
             try:
                 if asking:
-                    await r.send_command(CommandName.ASKING)
+                    await r.send_command(CommandName.ASKING, noreply=self.noreply)
                     if not self.noreply:
                         await r.read_response(decode=kwargs.get("decode"))
                     asking = False
@@ -696,7 +698,8 @@ class RedisCluster(
                     await r.update_tracking_client(True, self.cache.get_client_id(r))
                 if self.cache and command not in self.connection_pool.READONLY_COMMANDS:
                     self.cache.invalidate(*KeySpec.extract_keys((command,) + args))
-                await r.send_command(command, *args)
+                await self._ensure_noreply(r)
+                await r.send_command(command, *args, noreply=self.noreply)
 
                 if self.noreply:
                     response = None
@@ -795,7 +798,10 @@ class RedisCluster(
             try:
                 if cur.name in node_arg_mapping:
                     for i, args in enumerate(node_arg_mapping[cur.name]):
-                        await connection.send_command(command, *args)
+                        await self._ensure_noreply(connection)
+                        await connection.send_command(
+                            command, *args, noreply=self.noreply
+                        )
                         if self.noreply:
                             continue
                         try:
@@ -818,7 +824,8 @@ class RedisCluster(
                 elif node_arg_mapping:
                     continue
                 else:
-                    await connection.send_command(command, *args)
+                    await self._ensure_noreply(connection)
+                    await connection.send_command(command, *args, noreply=self.noreply)
                     if not self.noreply:
                         res[cur.name] = callback(
                             await connection.read_response(
@@ -838,7 +845,8 @@ class RedisCluster(
                 if not connection.retry_on_timeout and isinstance(e, TimeoutError):
                     raise
                 try:
-                    await connection.send_command(command, *args)
+                    await self._ensure_noreply(connection)
+                    await connection.send_command(command, *args, noreply=self.noreply)
                 except ConnectionError as err:
                     # if a retry attempt results in a connection error assume cluster error
                     raise ClusterDownError(str(err))

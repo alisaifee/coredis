@@ -21,20 +21,7 @@ For example::
     assert await other_client.hgetall("hash_fubar") == {b"a": b"1", b"b": b"2"}
 
 
-The mode can also be enabled temporarily using the :attr:`~coredis.Redis.noreply` attribute::
-
-    import coredis
-
-    client = coredis.Redis()
-    client.noreply = True
-    assert await client.set("fubar", 1) is None
-    assert await client.hset("hash_fubar", {"a": 1, "b": 2}) is None
-    assert await client.get("fubar") is None
-    client.noreply = False
-    assert await client.get("fubar") == b"1"
-    assert await client.hgetall("hash_fubar") == {b"a": b"1", b"b": b"2"}
-
-Or used through the :meth:`~coredis.Redis.ignore_replies` context manager::
+The mode can also be enabled temporarily through the :meth:`~coredis.Redis.ignore_replies` context manager::
 
     import coredis
 

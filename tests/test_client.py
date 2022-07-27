@@ -81,8 +81,6 @@ class TestClient:
         await asyncio.sleep(0.01)
         assert not await client.get("fubar")
         assert not await noreply.ping()
-        noreply.noreply = False
-        assert _s("PONG") == await noreply.ping()
 
     async def test_noreply_context(self, client, _s):
         with client.ignore_replies():

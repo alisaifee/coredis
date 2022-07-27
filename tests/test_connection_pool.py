@@ -462,6 +462,7 @@ class TestConnectionPoolURLParsing:
             "protocol_version": 3,
             "username": None,
             "password": None,
+            "noreply": False,
         }
 
 
