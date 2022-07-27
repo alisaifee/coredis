@@ -36,7 +36,6 @@ from coredis.globals import READONLY_COMMANDS
 from coredis.pool import ConnectionPool
 from coredis.response._callbacks import NoopCallback
 from coredis.response.types import ScoredMember
-from coredis.tokens import PureToken
 from coredis.typing import (
     AnyStr,
     AsyncGenerator,
@@ -209,12 +208,6 @@ class Client(
                 )
                 self.verify_version = False
                 self.server_version = None
-
-    async def _ensure_noreply(self, connection: BaseConnection) -> None:
-        if not self.__noreply and self.noreply:
-            await connection.send_command(
-                CommandName.CLIENT_REPLY, PureToken.SKIP, noreply=True
-            )
 
     async def _ensure_wait(self, command: bytes, connection: BaseConnection) -> None:
         wait = self._waitcontext.get()
@@ -754,7 +747,6 @@ class Redis(Client[AnyStr]):
         try:
             if self.cache and command not in READONLY_COMMANDS:
                 self.cache.invalidate(*KeySpec.extract_keys((command,) + args))
-            await self._ensure_noreply(connection)
             await connection.send_command(command, *args, noreply=self.noreply)
             if self.noreply:
                 return None  # type: ignore

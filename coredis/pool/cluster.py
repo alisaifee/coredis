@@ -145,10 +145,7 @@ class ClusterConnectionPool(ConnectionPool):
     async def disconnect_on_idle_time_exceeded(self, connection: Connection) -> None:
         assert isinstance(connection, ClusterConnection)
         while True:
-            if (
-                time.time() - connection.last_active_at > self.max_idle_time
-                and not connection.awaiting_response
-            ):
+            if time.time() - connection.last_active_at > self.max_idle_time:
                 connection.disconnect()
                 node = connection.node
                 if node.name in self._created_connections_per_node:
@@ -296,9 +293,11 @@ class ClusterConnectionPool(ConnectionPool):
                 i_c.remove(connection)
             else:
                 pass
-            # discard connection with unread response
-
-            if connection.awaiting_response:
+            try:
+                self._cluster_available_connections.setdefault(
+                    connection.node.name, self.__default_node_queue()
+                ).put_nowait(connection)
+            except asyncio.QueueFull:
                 connection.disconnect()
                 # reduce node connection count in case of too many connection error raised
 

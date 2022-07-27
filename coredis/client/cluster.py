@@ -707,7 +707,6 @@ class RedisCluster(
                     await r.update_tracking_client(True, self.cache.get_client_id(r))
                 if self.cache and command not in READONLY_COMMANDS:
                     self.cache.invalidate(*KeySpec.extract_keys((command,) + args))
-                await self._ensure_noreply(r)
                 await r.send_command(command, *args, noreply=self.noreply)
 
                 if self.noreply:
@@ -807,7 +806,6 @@ class RedisCluster(
             try:
                 if cur.name in node_arg_mapping:
                     for i, args in enumerate(node_arg_mapping[cur.name]):
-                        await self._ensure_noreply(connection)
                         await connection.send_command(
                             command, *args, noreply=self.noreply
                         )
@@ -833,7 +831,6 @@ class RedisCluster(
                 elif node_arg_mapping:
                     continue
                 else:
-                    await self._ensure_noreply(connection)
                     await connection.send_command(command, *args, noreply=self.noreply)
                     if not self.noreply:
                         res[cur.name] = callback(
@@ -854,7 +851,6 @@ class RedisCluster(
                 if not connection.retry_on_timeout and isinstance(e, TimeoutError):
                     raise
                 try:
-                    await self._ensure_noreply(connection)
                     await connection.send_command(command, *args, noreply=self.noreply)
                 except ConnectionError as err:
                     # if a retry attempt results in a connection error assume cluster error

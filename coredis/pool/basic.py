@@ -299,7 +299,7 @@ class ConnectionPool:
 
         if connection.pid == self.pid:
             self._in_use_connections.remove(connection)
-            if connection.awaiting_response:
+            if connection.needs_handshake:
                 connection.disconnect()
                 self._created_connections -= 1
             else:
@@ -388,10 +388,7 @@ class BlockingConnectionPool(ConnectionPool):
 
     async def disconnect_on_idle_time_exceeded(self, connection: Connection) -> None:
         while True:
-            if (
-                time.time() - connection.last_active_at > self.max_idle_time
-                and not connection.awaiting_response
-            ):
+            if time.time() - connection.last_active_at > self.max_idle_time:
                 # Unlike the non blocking pool, we don't free the connection object,
                 # but always reuse it
                 connection.disconnect()
@@ -449,7 +446,7 @@ class BlockingConnectionPool(ConnectionPool):
         if _connection and _connection.pid == self.pid:
             self._in_use_connections.remove(_connection)
             # discard connection with unread response
-            if connection.awaiting_response:
+            if connection.needs_handshake:
                 _connection.disconnect()
                 _connection = None
 

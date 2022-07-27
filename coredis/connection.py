@@ -21,6 +21,7 @@ from coredis.exceptions import (
     UnknownCommandError,
 )
 from coredis.parser import Parser
+from coredis.tokens import PureToken
 from coredis.typing import (
     Awaitable,
     Callable,
@@ -154,7 +155,6 @@ class BaseConnection(asyncio.BaseProtocol):
         self.client_name = client_name
         self.client_id = None
         # flag to show if a connection is waiting for response
-        self.awaiting_response = False
         self.last_active_at = time.time()
         self.packer = Packer(self.encoding)
         self.push_messages: asyncio.Queue[ResponseType] = asyncio.Queue()
@@ -410,7 +410,6 @@ class BaseConnection(asyncio.BaseProtocol):
 
         if raise_exceptions and isinstance(response, RedisError):
             raise response
-        self.awaiting_response = False
         return response
 
     async def send_packed_command(self, command: List[bytes]) -> None:
@@ -432,10 +431,17 @@ class BaseConnection(asyncio.BaseProtocol):
         """
         Send a command to the redis server
         """
+        from coredis.commands.constants import CommandName
+
         if not self.is_connected:
             await self.connect()
-        await self.send_packed_command(self.packer.pack_command(command, *args))
-        self.awaiting_response = not (self.noreply or noreply)
+        cmd_list = []
+        if noreply and not self.noreply:
+            cmd_list = self.packer.pack_command(
+                CommandName.CLIENT_REPLY, PureToken.SKIP
+            )
+        cmd_list.extend(self.packer.pack_command(command, *args))
+        await self.send_packed_command(cmd_list)
         self.last_active_at = time.time()
 
     def disconnect(self) -> None:
