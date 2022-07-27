@@ -3,7 +3,7 @@
 furo==2022.6.21
 Sphinx==5.1.1
 sphinx-copybutton==0.5.0
-sphinx-autodoc-typehints==1.17.1
+sphinx-autodoc-typehints==1.19.0
 sphinx-autobuild==2021.3.14
 sphinx-issues==3.0.1
 sphinxext-opengraph==0.6.2
