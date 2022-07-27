@@ -3,6 +3,30 @@
 Changelog
 =========
 
+v4.4.0
+------
+Release Date: 2022-07-26
+
+* Breaking changes
+
+  * Default `nodemanager_follow_cluster` to True
+* Deprecations
+
+  * Deprecate `readonly` constructor argument in
+    cluster client in favor of `read_from_replicas`
+
+  * Remove invalid property setter for noreply mode
+
+* Bug Fixes
+
+  * Fix incorrect behavior of ignore_replies context manager
+    as it was not actually setting CLIENT REPLY and simply
+    discarding connections
+  * Ensure fetching a random connection doesn't deplete the
+    node list in the connection pool
+  * Ensure connection pools are disconnected on finalization
+    to avoid leaking connections
+
 v4.3.1
 ------
 Release Date: 2022-07-23
@@ -1078,6 +1102,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
