@@ -215,10 +215,7 @@ class Unpacker:
                     if length > 0:
                         continue
             elif marker == RESPDataType.ERROR:
-                error = self.parse_error(bytes(chunk).decode())
-                if isinstance(error, ConnectionError):
-                    raise error
-                response = error
+                response = self.parse_error(bytes(chunk).decode())
             else:
                 raise InvalidResponse(
                     f"Protocol Error: {chr(marker)}, {bytes(chunk)!r}"

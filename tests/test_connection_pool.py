@@ -25,12 +25,14 @@ class DummyConnection:
         self.awaiting_response = False
         self.is_connected = False
         self.needs_handshake = True
+        self._last_error = None
 
     def connect(self):
         self.is_connected = True
 
     def disconnect(self):
         self.is_connected = False
+        self._last_error = None
 
     async def perform_handshake(self) -> None:
         self.needs_handshake = False
@@ -620,7 +622,8 @@ class TestConnection:
         with pytest.raises(BusyLoadingError):
             await client.execute_command(b"DEBUG", b"ERROR", b"LOADING fake message")
         pool = client.connection_pool
-        assert len(pool._available_connections) == 0
+        assert len(pool._available_connections) == 1
+        assert not pool._available_connections[0].is_connected
 
     @pytest.mark.max_server_version("6.2.0")
     async def test_busy_loading_from_pipeline_immediate_command(self, event_loop):
@@ -636,7 +639,7 @@ class TestConnection:
             )
         pool = client.connection_pool
         assert not pipe.connection
-        assert len(pool._available_connections) == 0
+        assert len(pool._available_connections) == 1
 
     async def test_busy_loading_from_pipeline(self, event_loop):
         """

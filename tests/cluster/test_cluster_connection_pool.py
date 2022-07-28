@@ -30,6 +30,7 @@ class DummyConnection(ClusterConnection):
         self._transport = None
         self._read_flag = asyncio.Event()
         self._description_args = lambda: {}
+        self._parse_task = None
 
 
 class TestConnectionPool:

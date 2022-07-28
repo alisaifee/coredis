@@ -243,7 +243,7 @@ class ConnectionPool:
         while True:
             if (
                 time.time() - connection.last_active_at > self.max_idle_time
-                and not connection.awaiting_response
+                and not connection.requests_pending
             ):
                 connection.disconnect()
                 if connection in self._available_connections:
@@ -299,11 +299,7 @@ class ConnectionPool:
 
         if connection.pid == self.pid:
             self._in_use_connections.remove(connection)
-            if connection.needs_handshake:
-                connection.disconnect()
-                self._created_connections -= 1
-            else:
-                self._available_connections.append(connection)
+            self._available_connections.append(connection)
 
     def disconnect(self) -> None:
         """Closes all connections in the pool"""
@@ -445,11 +441,6 @@ class BlockingConnectionPool(ConnectionPool):
 
         if _connection and _connection.pid == self.pid:
             self._in_use_connections.remove(_connection)
-            # discard connection with unread response
-            if connection.needs_handshake:
-                _connection.disconnect()
-                _connection = None
-
             if not self._pool.full():
                 self._pool.put_nowait(_connection)
 

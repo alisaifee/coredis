@@ -693,9 +693,10 @@ class RedisCluster(
 
             try:
                 if asking:
-                    await r.send_command(CommandName.ASKING, noreply=self.noreply)
-                    if not self.noreply:
-                        await r.read_response(decode=kwargs.get("decode"))
+                    request = await r.create_request(
+                        CommandName.ASKING, noreply=self.noreply, decode=False
+                    )
+                    await request
                     asking = False
 
                 if (
@@ -707,17 +708,22 @@ class RedisCluster(
                     await r.update_tracking_client(True, self.cache.get_client_id(r))
                 if self.cache and command not in READONLY_COMMANDS:
                     self.cache.invalidate(*KeySpec.extract_keys((command,) + args))
-                await r.send_command(command, *args, noreply=self.noreply)
+                request = await r.create_request(
+                    command,
+                    *args,
+                    noreply=self.noreply,
+                    decode=kwargs.get("decode"),
+                )
 
-                if self.noreply:
-                    response = None
-                else:
+                reply = await request
+                response = None
+                if not self.noreply:
                     response = callback(
-                        await r.read_response(decode=kwargs.get("decode")),
+                        reply,
                         version=self.protocol_version,
                         **kwargs,
                     )
-                await self._ensure_wait(command, r)
+                await (await self._ensure_wait(command, r))
                 return response  # type: ignore
             except (RedisClusterException, BusyLoadingError, asyncio.CancelledError):
                 raise
@@ -766,7 +772,6 @@ class RedisCluster(
         res: Dict[str, R] = {}
         node_arg_mapping: Dict[str, List[Tuple[ValueT, ...]]] = {}
         _nodes = list(nodes)
-
         if command in self.split_flags and self.non_atomic_cross_slot:
             keys = KeySpec.extract_keys((command,) + args)
             if keys:
@@ -806,20 +811,22 @@ class RedisCluster(
             try:
                 if cur.name in node_arg_mapping:
                     for i, args in enumerate(node_arg_mapping[cur.name]):
-                        await connection.send_command(
-                            command, *args, noreply=self.noreply
+                        request = await connection.create_request(
+                            command,
+                            *args,
+                            noreply=self.noreply,
+                            decode=options.get("decode"),
                         )
-                        if self.noreply:
-                            continue
                         try:
+                            reply = await request
+                            if self.noreply:
+                                continue
                             res[f"{cur.name}:{i}"] = callback(
-                                await connection.read_response(
-                                    decode=options.get("decode")
-                                ),
+                                reply,
                                 version=self.protocol_version,
                                 **options,
                             )
-                            await self._ensure_wait(command, connection)
+                            await (await self._ensure_wait(command, connection))
                         except MovedError as err:
                             target = f"{err.node_addr[0]}:{err.node_addr[1]}"
                             target_node = self.connection_pool.nodes.nodes[target]
@@ -831,16 +838,21 @@ class RedisCluster(
                 elif node_arg_mapping:
                     continue
                 else:
-                    await connection.send_command(command, *args, noreply=self.noreply)
+                    request = await connection.create_request(
+                        command,
+                        *args,
+                        noreply=self.noreply,
+                        decode=options.get("decode"),
+                        raise_exceptions=False,
+                    )
+                    reply = await request
                     if not self.noreply:
                         res[cur.name] = callback(
-                            await connection.read_response(
-                                decode=options.get("decode"), raise_exceptions=False
-                            ),
+                            reply,
                             version=self.protocol_version,
                             **options,
                         )
-                    await self._ensure_wait(command, connection)
+                    await (await self._ensure_wait(command, connection))
             except asyncio.CancelledError:
                 # do not retry when coroutine is cancelled
                 connection.disconnect()
@@ -851,19 +863,24 @@ class RedisCluster(
                 if not connection.retry_on_timeout and isinstance(e, TimeoutError):
                     raise
                 try:
-                    await connection.send_command(command, *args, noreply=self.noreply)
+                    request = await connection.create_request(
+                        command,
+                        *args,
+                        noreply=self.noreply,
+                        decode=options.get("decode"),
+                        raise_exceptions=False,
+                    )
                 except ConnectionError as err:
                     # if a retry attempt results in a connection error assume cluster error
                     raise ClusterDownError(str(err))
+                reply = await request
                 if not self.noreply:
                     res[cur.name] = callback(
-                        await connection.read_response(
-                            decode=options.get("decode"), raise_exceptions=False
-                        ),
+                        reply,
                         version=self.protocol_version,
                         **options,
                     )
-                await self._ensure_wait(command, connection)
+                await (await self._ensure_wait(command, connection))
             finally:
                 _nodes.pop(0)
                 self._ensure_server_version(connection.server_version)

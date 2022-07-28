@@ -495,7 +495,7 @@ class NodeTrackingCache(
         await super().on_reconnect(connection)
 
         if self.__protocol_version == 2 and self.connection:
-            await self.connection.send_command(b"SUBSCRIBE", b"__redis__:invalidate")
+            await self.connection.create_request(b"SUBSCRIBE", b"__redis__:invalidate")
 
     def shutdown(self) -> None:
         try:

@@ -727,7 +727,7 @@ class TestSortedSet:
 
     @pytest.mark.min_server_version("7.0.0")
     @pytest.mark.nocluster
-    async def test_bzmpop(self, client, _s):
+    async def test_bzmpop(self, client, cloner, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3))
         await client.zadd("b{foo}", dict(a1=4, a2=5, a3=6))
         result = await client.bzmpop(["a{foo}", "b{foo}"], 1, PureToken.MIN)
@@ -742,8 +742,9 @@ class TestSortedSet:
         assert await client.bzmpop(["a{foo}"], 1, PureToken.MAX) is None
 
         async def _delayadd():
+            clone = await cloner(client)
             await asyncio.sleep(0.1)
-            return await client.zadd("a{foo}", dict(a1=42))
+            return await clone.zadd("a{foo}", dict(a1=42))
 
         result = await asyncio.gather(
             client.bzmpop(["a{foo}"], 1, PureToken.MIN), _delayadd()

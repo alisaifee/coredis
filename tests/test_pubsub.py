@@ -125,7 +125,6 @@ class TestPubSubSubscribeUnsubscribe:
 
         for key in keys:
             assert await sub_func(key) is None
-
         # should be a message for each channel/pattern we just subscribed to
 
         for i, key in enumerate(keys):
@@ -144,6 +143,7 @@ class TestPubSubSubscribeUnsubscribe:
         for i in range(len(keys)):
             messages.append(await wait_for_message(p))
 
+        print("okay")
         unique_channels = set()
         assert len(messages) == len(keys)
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import contextvars
+import functools
 import warnings
 from ssl import SSLContext
 from typing import TYPE_CHECKING, Any, cast, overload
@@ -26,6 +27,7 @@ from coredis.connection import (
     UnixDomainSocketConnection,
 )
 from coredis.exceptions import (
+    BusyLoadingError,
     ConnectionError,
     ReplicationError,
     SentinelConnectionError,
@@ -50,6 +52,7 @@ from coredis.typing import (
     Optional,
     Parameters,
     ParamSpec,
+    ResponseType,
     StringT,
     Tuple,
     Type,
@@ -209,12 +212,29 @@ class Client(
                 self.verify_version = False
                 self.server_version = None
 
-    async def _ensure_wait(self, command: bytes, connection: BaseConnection) -> None:
+    async def _ensure_wait(
+        self, command: bytes, connection: BaseConnection
+    ) -> asyncio.Future[None]:
+        maybe_wait: asyncio.Future[None] = asyncio.get_running_loop().create_future()
         wait = self._waitcontext.get()
         if wait and wait[0] > 0:
-            await connection.send_command(CommandName.WAIT, *wait)
-            if not cast(int, await connection.read_response(decode=False)) >= wait[0]:
-                raise ReplicationError(command, wait[0], wait[1])
+            def check_wait(
+                wait: Tuple[int, int], response: asyncio.Future[ResponseType]
+            ) -> None:
+                if not cast(int, response.result()) >= wait[0]:
+                    maybe_wait.set_exception(
+                        ReplicationError(command, wait[0], wait[1])
+                    )
+                else:
+                    maybe_wait.set_result(None)
+
+            request = await connection.create_request(
+                CommandName.WAIT, *wait, decode=False
+            )
+            request.add_done_callback(functools.partial(check_wait, wait))
+        else:
+            maybe_wait.set_result(None)
+        return maybe_wait
 
     async def initialize(self: ClientT) -> ClientT:
         await self.connection_pool.initialize()
@@ -747,17 +767,25 @@ class Redis(Client[AnyStr]):
         try:
             if self.cache and command not in READONLY_COMMANDS:
                 self.cache.invalidate(*KeySpec.extract_keys((command,) + args))
-            await connection.send_command(command, *args, noreply=self.noreply)
+            request = await connection.create_request(
+                command, *args, noreply=self.noreply, decode=options.get("decode")
+            )
+            maybe_wait = await self._ensure_wait(command, connection)
+            pool.release(connection)
+            reply = await request
+            await maybe_wait
             if self.noreply:
                 return None  # type: ignore
-
             return callback(
-                await connection.read_response(decode=options.get("decode")),
+                reply,
                 version=self.protocol_version,
                 **options,
             )
         except asyncio.CancelledError:
             # do not retry when coroutine is cancelled
+            connection.disconnect()
+            raise
+        except BusyLoadingError:
             connection.disconnect()
             raise
         except (ConnectionError, TimeoutError) as e:
@@ -768,20 +796,22 @@ class Redis(Client[AnyStr]):
                 e, SentinelConnectionError
             ):  # do not retry explicit sentinel connection errors
                 raise
-            await connection.send_command(command, *args)
-
+            connection = await pool.get_connection(command, *args)
+            request = await connection.create_request(
+                command, *args, decode=options.get("decode")
+            )
+            pool.release(connection)
+            reply = await request
             if self.noreply:
                 return None  # type: ignore
 
             return callback(
-                await connection.read_response(decode=options.get("decode")),
+                reply,
                 version=self.protocol_version,
                 **options,
             )
         finally:
-            await self._ensure_wait(command, connection)
             self._ensure_server_version(connection.server_version)
-            pool.release(connection)
 
     def monitor(self) -> Monitor[AnyStr]:
         """

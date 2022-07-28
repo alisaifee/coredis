@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 import coredis
@@ -39,16 +41,18 @@ async def test_valid_authentication_delayed(redis_auth):
 
 
 async def test_legacy_authentication(redis_auth, mocker):
-    original_send_command = coredis.connection.BaseConnection.send_command
+    original_request = coredis.connection.BaseConnection.create_request
 
-    async def fake_send_command(self, command, *args, **kwargs):
+    async def fake_request(self, command, *args, **kwargs):
+        fut = asyncio.get_running_loop().create_future()
         if command == b"HELLO":
-            raise UnknownCommandError("fubar")
+            fut.set_exception(UnknownCommandError("fubar"))
+            return fut
         else:
-            return await original_send_command(self, command, *args)
+            return await original_request(self, command, *args)
 
     mocker.patch.object(
-        coredis.connection.BaseConnection, "send_command", fake_send_command
+        coredis.connection.BaseConnection, "create_request", fake_request
     )
 
     with pytest.warns(UserWarning, match="no support for the `HELLO` command"):

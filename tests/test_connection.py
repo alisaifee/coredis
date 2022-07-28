@@ -15,8 +15,8 @@ async def test_connect_tcp(redis_basic):
     assert conn.host == "127.0.0.1"
     assert conn.port == 6379
     assert str(conn) == "Connection<host=127.0.0.1,port=6379,db=0>"
-    await conn.send_command(b"PING")
-    res = await conn.read_response()
+    request = await conn.create_request(b"PING")
+    res = await request
     assert res == b"PONG"
     assert conn._transport is not None
     conn.disconnect()
@@ -61,8 +61,8 @@ async def test_connect_unix_socket(redis_uds):
     await conn.connect()
     assert conn.path == path
     assert str(conn) == f"UnixDomainSocketConnection<path={path},db=0>"
-    await conn.send_command(b"PING")
-    res = await conn.read_response()
+    req = await conn.create_request(b"PING")
+    res = await req
     assert res == b"PONG"
     assert conn._transport is not None
     conn.disconnect()
@@ -79,6 +79,6 @@ async def test_stream_timeout(redis_basic):
 
     conn = Connection(stream_timeout=0.01)
     await conn.connect() is None
-    await conn.send_command(b"debug", "sleep", 0.05)
+    req = await conn.create_request(b"debug", "sleep", 0.05)
     with pytest.raises(TimeoutError):
-        await conn.read_response()
+        await req

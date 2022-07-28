@@ -12,10 +12,8 @@ from coredis.connection import Connection
 from coredis.exceptions import (
     ConnectionError,
     PrimaryNotFoundError,
-    ReadOnlyError,
     ReplicaNotFoundError,
     ResponseError,
-    SentinelConnectionError,
     TimeoutError,
 )
 from coredis.pool import ConnectionPool
@@ -27,13 +25,10 @@ from coredis.typing import (
     List,
     Literal,
     Optional,
-    ResponseType,
-    Set,
     StringT,
     Tuple,
     Type,
     Union,
-    ValueT,
 )
 
 
@@ -102,29 +97,6 @@ class SentinelManagedConnection(Connection, Generic[AnyStr]):
                         continue
                 raise ReplicaNotFoundError  # Never be here
         return None
-
-    async def read_response(
-        self,
-        decode: Optional[ValueT] = None,
-        push_message_types: Optional[Set[bytes]] = None,
-        raise_exceptions: bool = True,
-    ) -> ResponseType:
-        try:
-            return await super().read_response(
-                decode=decode,
-                push_message_types=push_message_types,
-                raise_exceptions=raise_exceptions,
-            )
-        except ReadOnlyError:
-            if self.connection_pool.is_primary:
-                # When talking to a primary, a ReadOnlyError when likely
-                # indicates that the previous primary that we're still connected
-                # to has been demoted to a replica and there's a new primary.
-                # calling disconnect will force the connection to re-query
-                # sentinel during the next connect() attempt.
-                self.disconnect()
-                raise SentinelConnectionError("The previous primary is now a replica")
-            raise
 
 
 class SentinelConnectionPool(ConnectionPool):

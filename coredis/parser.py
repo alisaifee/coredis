@@ -6,7 +6,6 @@ from coredis._protocols import ConnectionP
 from coredis._unpacker import NotEnoughData, Unpacker
 from coredis._utils import b
 from coredis.constants import RESPDataType
-from coredis.exceptions import ConnectionError
 from coredis.typing import Optional, ResponseType, Set, Union
 
 
@@ -19,29 +18,16 @@ class Parser:
         self.decode_responses: bool = decode_responses
         self.unpacker: Unpacker = Unpacker(encoding)
         self.push_messages: Optional[asyncio.Queue[ResponseType]] = None
-        self.connected = asyncio.Event()
-        self._last_error: Optional[BaseException] = None
-
-    def __del__(self) -> None:
-        self.on_disconnect(None)
 
     def on_connect(self, connection: ConnectionP) -> None:
         """Called when the stream connects"""
-        self.connected.set()
-        self._last_error = None
         self.push_messages = connection.push_messages
 
-    def on_disconnect(self, exc: Optional[BaseException]) -> None:
+    def on_disconnect(self) -> None:
         """Called when the stream disconnects"""
-        self._last_error = exc
-        self.connected.clear()
 
     def can_read(self) -> bool:
-        return (
-            (self.unpacker.bytes_written - self.unpacker.bytes_read) > 0
-            if self.unpacker
-            else False
-        )
+        return (self.unpacker.bytes_written - self.unpacker.bytes_read) > 0
 
     def get_response(
         self,
@@ -60,12 +46,6 @@ class Parser:
          will be returned.
         """
         decode_bytes = (decode is None or decode) if self.decode_responses else False
-        assert self.unpacker
-        if not self.connected.is_set():
-            if self._last_error:
-                raise self._last_error
-            else:
-                raise ConnectionError("Socket closed")
         while True:
             response = self.unpacker.parse(decode_bytes)
             if isinstance(response, NotEnoughData):

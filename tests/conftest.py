@@ -169,12 +169,13 @@ async def remapped_slots(client, request):
             [await p.cluster_setslot(slot, node=moves[slot]) for p in client.primaries]
         yield
     finally:
-        await client.flushall()
-        for slot in originals.keys():
-            [
-                await p.cluster_setslot(slot, node=originals[slot])
-                for p in client.primaries
-            ]
+        if originals:
+            await client.flushall()
+            for slot in originals.keys():
+                [
+                    await p.cluster_setslot(slot, node=originals[slot])
+                    for p in client.primaries
+                ]
 
 
 def check_redis_cluster_ready(host, port):
@@ -634,6 +635,7 @@ async def redis_cached(redis_basic_server, request):
     yield client
 
     client.connection_pool.disconnect()
+    cache.shutdown()
 
 
 @pytest.fixture
@@ -659,6 +661,7 @@ async def redis_cached_resp2(redis_basic_server, request):
     yield client
 
     client.connection_pool.disconnect()
+    cache.shutdown()
 
 
 @pytest.fixture
