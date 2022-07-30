@@ -126,7 +126,7 @@ setup(
     package_data={
         "coredis": ["py.typed"],
     },
-    python_requires=">=3.8",
+    python_requires=">=3.7",
     install_requires=get_requirements("main.txt"),
     cmdclass=versioneer.get_cmdclass(
         {
