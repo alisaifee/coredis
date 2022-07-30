@@ -397,13 +397,13 @@ class BaseConnection(asyncio.BaseProtocol):
                 ):
                     self._read_flag.clear()
                     await asyncio.wait_for(self._read_flag.wait(), timeout)
+                    response = self._parser.get_response(
+                        request.decode, request.push_message_types
+                    )
                 if request.raise_exceptions and isinstance(response, RedisError):
                     request.future.set_exception(response)
                 else:
                     request.future.set_result(response)
-                response = self._parser.get_response(
-                    request.decode, request.push_message_types
-                )
             except (
                 asyncio.CancelledError,
                 ConnectionError,
@@ -415,7 +415,7 @@ class BaseConnection(asyncio.BaseProtocol):
             except asyncio.TimeoutError:
                 if request:
                     request.future.set_exception(TimeoutError())
-            except asyncio.InvalidStateError:
+            except (RuntimeError, asyncio.InvalidStateError):
                 break
 
     def _clear_pending_requests(self, reason: BaseException) -> None:
