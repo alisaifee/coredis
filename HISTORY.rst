@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v4.5.0
+------
+Release Date: 2022-07-30
+
+* Compatibility
+
+  * Bring back python 3.7 support
+
+
 v4.4.0
 ------
 Release Date: 2022-07-26
@@ -1102,6 +1111,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
