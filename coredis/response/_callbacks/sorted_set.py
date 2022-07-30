@@ -104,7 +104,8 @@ class ZMPopCallback(
         self, response: Optional[List[ResponseType]], **options: Optional[ValueT]
     ) -> Optional[Tuple[AnyStr, ScoredMembers]]:
 
-        if r := cast(Tuple[AnyStr, List[Tuple[AnyStr, int]]], response):
+        r = cast(Tuple[AnyStr, List[Tuple[AnyStr, int]]], response)
+        if r:
             return r[0], tuple(ScoredMember(v[0], float(v[1])) for v in r[1])
 
         return None

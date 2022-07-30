@@ -92,7 +92,8 @@ class NodeManager:
     ) -> Dict[str, Dict[int, List[ValueT]]]:
         mapping: Dict[str, Dict[int, List[ValueT]]] = {}
         for k in keys:
-            if node := self.node_from_slot(hash_slot(b(k))):
+            node = self.node_from_slot(hash_slot(b(k)))
+            if node:
                 mapping.setdefault(node.name, {}).setdefault(
                     hash_slot(b(k)), []
                 ).append(k)

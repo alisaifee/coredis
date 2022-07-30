@@ -15,6 +15,7 @@ from coredis.pool.nodemanager import HASH_SLOTS, ManagedNode, NodeManager
 
 
 @pytest.mark.asyncio
+@pytest.mark.min_python("3.8")
 async def test_init_slots_cache_not_all_slots(s, redis_cluster):
     """
     Test that if not all slots are covered it should raise an exception
@@ -85,6 +86,7 @@ async def test_init_slots_cache_not_all_slots(s, redis_cluster):
 
 
 @pytest.mark.asyncio
+@pytest.mark.min_python("3.8")
 async def test_init_slots_cache_not_all_slots_not_require_full_coverage(
     s, redis_cluster
 ):
@@ -144,6 +146,7 @@ async def test_init_slots_cache_not_all_slots_not_require_full_coverage(
 
 
 @pytest.mark.asyncio
+@pytest.mark.min_python("3.8")
 async def test_init_slots_cache(s, redis_cluster):
     """
     Test that slots cache can in initialized and all slots are covered
@@ -311,6 +314,7 @@ async def test_reset(redis_cluster):
 
 
 @pytest.mark.asyncio
+@pytest.mark.min_python("3.8")
 async def test_cluster_one_instance(redis_cluster):
     """
     If the cluster exists of only 1 node then there is some hacks that must

@@ -6,7 +6,7 @@ import time
 import weakref
 from abc import ABC, abstractmethod
 from collections import Counter
-from typing import TYPE_CHECKING, Any, runtime_checkable
+from typing import TYPE_CHECKING, Any
 
 from coredis._sidecar import Sidecar
 from coredis._utils import b
@@ -26,6 +26,7 @@ from coredis.typing import (
     TypeVar,
     Union,
     ValueT,
+    runtime_checkable,
 )
 
 try:

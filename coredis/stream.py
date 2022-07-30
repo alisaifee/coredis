@@ -108,10 +108,12 @@ class Consumer(Generic[AnyStr]):
 
         for stream in self.streams:
             try:
-                if info := await self.client.xinfo_stream(stream):  # type: ignore[has-type]
-                    if last_entry := info["last-entry"]:
+                info = await self.client.xinfo_stream(stream)
+                if info:
+                    last_entry = info["last-entry"]
+                    if last_entry:
                         self.state[stream].setdefault(
-                            "identifier", last_entry.identifier  # type: ignore[has-type]
+                            "identifier", last_entry.identifier
                         )
             except ResponseError:
                 pass

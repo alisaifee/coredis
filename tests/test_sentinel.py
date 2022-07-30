@@ -245,6 +245,7 @@ async def test_master_address_by_name(client):
 
 
 @targets("redis_sentinel", "redis_sentinel_resp2")
+@pytest.mark.min_python("3.8")
 async def test_failover(client, mocker):
     mock_exec = mocker.patch.object(
         client.sentinels[0], "execute_command", autospec=True
@@ -295,6 +296,7 @@ async def test_sentinel_replicas(client):
 
 
 @targets("redis_sentinel", "redis_sentinel_resp2")
+@pytest.mark.min_python("3.8")
 async def test_no_replicas(client, mocker):
     p = await client.replica_for("mymaster")
     replica_rotate = mocker.patch.object(p.connection_pool, "rotate_replicas")

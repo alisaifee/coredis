@@ -24,6 +24,7 @@ from coredis.typing import RUNTIME_TYPECHECKS, Callable, Optional, R, ValueT
 
 REDIS_VERSIONS = {}
 PY_IMPLEMENTATION = platform.python_implementation()
+PY_VERSION = version.Version(platform.python_version())
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -56,6 +57,9 @@ async def check_test_constraints(request, client, protocol=3):
     await get_version(client)
     client_version = REDIS_VERSIONS[str(client)]
     for marker in request.node.iter_markers():
+        if marker.name == "min_python" and marker.args:
+            if PY_VERSION < version.parse(marker.args[0]):
+                return pytest.skip(f"Skipped for python versions < {marker.args[0]}")
         if marker.name == "min_server_version" and marker.args:
             if client_version < version.parse(marker.args[0]):
                 return pytest.skip(f"Skipped for versions < {marker.args[0]}")

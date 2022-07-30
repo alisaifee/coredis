@@ -601,8 +601,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                     task.cancel()
         # If there were no pending results check the shards
         if not result:
-            tasks: Dict[str, asyncio.Task[ResponseType]]
-            if tasks := {
+            tasks: Dict[str, asyncio.Task[ResponseType]] = {
                 node_id: asyncio.create_task(
                     self._execute(
                         connection,
@@ -615,7 +614,8 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                 )
                 for node_id, connection in self.shard_connections.items()
                 if node_id not in self.pending_tasks
-            }:
+            }
+            if tasks:
                 done, pending = await asyncio.wait(
                     tasks.values(),
                     timeout=timeout if (timeout and timeout > 0) else None,

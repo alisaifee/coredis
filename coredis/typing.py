@@ -14,21 +14,18 @@ from typing import (
     ClassVar,
     Coroutine,
     Dict,
-    Final,
     Generator,
     Generic,
     Hashable,
     Iterable,
     Iterator,
     List,
-    Literal,
     Mapping,
     MutableMapping,
     MutableSequence,
     MutableSet,
     NamedTuple,
     Optional,
-    Protocol,
     Sequence,
     Set,
     Tuple,
@@ -40,12 +37,16 @@ from typing import (
 
 from typing_extensions import (
     Deque,
+    Final,
+    Literal,
     OrderedDict,
     ParamSpec,
+    Protocol,
     Self,
     TypeAlias,
     TypedDict,
     TypeGuard,
+    runtime_checkable,
 )
 
 _runtime_checks = False
@@ -70,7 +71,6 @@ try:
             Sequence,
             Set,
             Tuple,
-            TypedDict,
             ValuesView,
         )
 
@@ -223,6 +223,7 @@ __all__ = [
     "Protocol",
     "ResponsePrimitive",
     "ResponseType",
+    "runtime_checkable",
     "Sequence",
     "Self",
     "Set",
