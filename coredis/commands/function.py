@@ -303,8 +303,10 @@ class Library(Generic[AnyStr]):
                 bound_arguments = sig.bind(*a, **k)
                 bound_arguments.apply_defaults()
                 arguments: Dict[str, Any] = bound_arguments.arguments
-                instance: Library[AnyStr]
-                if not isinstance(instance := arguments.pop(first_arg), Library):
+                instance: Library[AnyStr] = arguments.pop(first_arg)
+                if not isinstance(
+                    instance, Library
+                ):  # pyright: reportUnnecessaryIsInstance=false
                     raise RuntimeError(
                         f"{instance.__class__.__name__} is not a subclass of"
                         " coredis.commands.function.Library therefore it's methods cannot be bound "

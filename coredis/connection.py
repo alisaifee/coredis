@@ -365,12 +365,14 @@ class BaseConnection(asyncio.BaseProtocol):
         decode: Optional[bool] = None,
         push_message_types: Optional[Set[bytes]] = None,
     ) -> ResponseType:
+        response = self._parser.get_response(decode, push_message_types)
         while isinstance(
-            (response := self._parser.get_response(decode, push_message_types)),
+            response,
             NotEnoughData,
         ):
             self._read_flag.clear()
             await self._read_flag.wait()
+            response = self._parser.get_response(decode, push_message_types)
 
         return response
 

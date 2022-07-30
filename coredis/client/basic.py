@@ -184,7 +184,8 @@ class Client(
     def noreply(self) -> bool:
         if not hasattr(self, "_noreplycontext"):
             return False
-        if ctx := self._noreplycontext.get() is not None:
+        ctx = self._noreplycontext.get()
+        if ctx is not None:
             return ctx
         return self.__noreply
 
@@ -215,7 +216,8 @@ class Client(
             )
 
     async def _ensure_wait(self, command: bytes, connection: BaseConnection) -> None:
-        if wait := self._waitcontext.get():
+        wait = self._waitcontext.get()
+        if wait:
             await connection.send_command(CommandName.WAIT, *wait)
             if not cast(int, await connection.read_response(decode=False)) >= wait[0]:
                 raise ReplicationError(command, wait[0], wait[1])

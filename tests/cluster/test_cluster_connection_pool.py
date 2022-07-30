@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import os
-from unittest.mock import AsyncMock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -270,6 +270,14 @@ class TestConnectionPool:
 
             connection = await pool.get_connection_by_slot(12182)
             assert connection.port == 1337
+
+        class AsyncMock(Mock):
+            def __await__(self):
+                future = asyncio.Future(loop=asyncio.get_event_loop())
+                future.set_result(self)
+                result = yield from future
+
+                return result
 
         m = AsyncMock()
         pool.get_random_connection = m

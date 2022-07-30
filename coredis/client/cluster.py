@@ -81,7 +81,8 @@ class ClusterMeta(ABCMeta):
 
         for name, method in methods.items():
             doc_addition = ""
-            if cmd := getattr(method, "__coredis_command", None):
+            cmd = getattr(method, "__coredis_command", None)
+            if cmd:
                 if cmd.cluster.route:
                     kls.ROUTING_FLAGS[cmd.command] = cmd.cluster.route
                     aggregate_note = ""
@@ -605,11 +606,12 @@ class RedisCluster(
             return list(self.connection_pool.nodes.all_nodes())
         elif node_flag == NodeFlag.SLOT_ID:
             slot_id: Optional[ValueT] = kwargs.get("slot_id")
-            if node_from_slot := (
+            node_from_slot = (
                 self.connection_pool.nodes.node_from_slot(int(slot_id))
                 if slot_id is not None
                 else None
-            ):
+            )
+            if node_from_slot:
                 return [node_from_slot]
         return None
 

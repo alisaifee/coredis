@@ -2,12 +2,22 @@ from __future__ import annotations
 
 import asyncio
 import threading
+from collections import OrderedDict
 
 import pytest
 
 from coredis.exceptions import StreamConsumerInitializationError
 from coredis.stream import Consumer, GroupConsumer
 from tests.conftest import targets
+
+
+async def consume_entries(consumer, count, consumed=None):
+    consumed = OrderedDict() if consumed is None else consumed
+    for i in range(count):
+        entry = await consumer.get_entry()
+        if entry:
+            consumed.setdefault(entry[0], []).append(entry[1])
+    return consumed
 
 
 @targets(
@@ -26,12 +36,7 @@ class TestStreamConsumers:
         consumer = await Consumer(client, ["a", "b"])
         [await client.xadd("a", {"id": i}) for i in range(10)]
         [await client.xadd("b", {"id": i}) for i in range(10, 20)]
-        consumed = {}
-        [
-            consumed.setdefault(e[0], []).append(e[1])
-            for _ in range(20)
-            if (e := await consumer.get_entry())
-        ]
+        consumed = await consume_entries(consumer, 20)
         assert list(range(10)) == [
             int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]
         ]
@@ -45,12 +50,7 @@ class TestStreamConsumers:
         consumer = await Consumer(client, ["a", "b"])
         [await client.xadd("a", {"id": i}) for i in range(5, 10)]
         [await client.xadd("b", {"id": i}) for i in range(15, 20)]
-        consumed = {}
-        [
-            consumed.setdefault(e[0], []).append(e[1])
-            for _ in range(20)
-            if (e := await consumer.get_entry())
-        ]
+        consumed = await consume_entries(consumer, 20)
         assert list(range(5, 10)) == [
             int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]
         ]
@@ -64,12 +64,7 @@ class TestStreamConsumers:
         consumer = await Consumer(client, ["a", "b"], a={"identifier": "0-0"})
         [await client.xadd("a", {"id": i}) for i in range(5, 10)]
         [await client.xadd("b", {"id": i}) for i in range(15, 20)]
-        consumed = {}
-        [
-            consumed.setdefault(e[0], []).append(e[1])
-            for _ in range(20)
-            if (e := await consumer.get_entry())
-        ]
+        consumed = await consume_entries(consumer, 20)
         assert list(range(0, 10)) == [
             int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]
         ]
@@ -90,12 +85,7 @@ class TestStreamConsumers:
         )
         [await client.xadd("a", {"id": i}) for i in range(10)]
         [await client.xadd("b", {"id": i}) for i in range(10, 20)]
-        consumed = {}
-        [
-            consumed.setdefault(e[0], []).append(e[1])
-            for _ in range(20)
-            if (e := await consumer.get_entry())
-        ]
+        consumed = await consume_entries(consumer, 20)
         assert list(range(10)) == [
             int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]
         ]
@@ -109,12 +99,7 @@ class TestStreamConsumers:
         )
         [await client.xadd("a", {"id": i}) for i in range(10)]
         [await client.xadd("b", {"id": i}) for i in range(10, 20)]
-        consumed = {}
-        [
-            consumed.setdefault(e[0], []).append(e[1])
-            for _ in range(20)
-            if (e := await consumer.get_entry())
-        ]
+        consumed = await consume_entries(consumer, 20)
         assert list(range(10)) == [
             int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]
         ]
@@ -134,17 +119,8 @@ class TestStreamConsumers:
         )
         [await client.xadd("a", {"id": i}) for i in range(10)]
         [await client.xadd("b", {"id": i}) for i in range(10, 20)]
-        consumed = {}
-        [
-            consumed.setdefault(e[0], []).append(e[1])
-            for _ in range(10)
-            if (e := await consumer_1.get_entry())
-        ]
-        [
-            consumed.setdefault(e[0], []).append(e[1])
-            for _ in range(10)
-            if (e := await consumer_2.get_entry())
-        ]
+        consumed = await consume_entries(consumer_1, 20)
+        consumed = await consume_entries(consumer_2, 20, consumed)
         assert list(range(10)) == [
             int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]
         ]
@@ -187,12 +163,12 @@ class TestStreamConsumers:
 
         await client.xadd("a", {"id": "a1"})
         await client.xadd("b", {"id": "b1"})
-
-        assert {_s("a1"), _s("b1")} == {
-            k[1].field_values[_s("id")]
-            for _ in range(2)
-            if (k := await consumer.get_entry())
-        }
+        consumed = set()
+        for _ in range(2):
+            k = await consumer.get_entry()
+            if k:
+                consumed.add(k[1].field_values[_s("id")])
+        assert {_s("a1"), _s("b1")} == consumed
 
     async def test_single_consumer_buffered(self, client, _s):
         consumer = await Consumer(client, ["a"], buffer_size=10)
@@ -200,11 +176,12 @@ class TestStreamConsumers:
         for i in range(10):
             await client.xadd("a", {"id": i})
             expected.append(i)
-        assert expected == [
-            int(e[1].field_values[_s("id")])
-            for _ in range(10)
-            if (e := await consumer.get_entry())
-        ]
+        consumed = set()
+        for _ in range(10):
+            entry = await consumer.get_entry()
+            if entry:
+                consumed.add(int(entry[1].field_values[_s("id")]))
+        assert set(expected) == consumed
 
     async def test_group_consumer_buffered(self, client, _s):
         consumer = await GroupConsumer(
@@ -214,11 +191,12 @@ class TestStreamConsumers:
         for i in range(10):
             await client.xadd("a", {"id": i})
             expected.append(i)
-        assert expected == [
-            int(e[1].field_values[_s("id")])
-            for _ in range(10)
-            if (e := await consumer.get_entry())
-        ]
+        consumed = set()
+        for _ in range(10):
+            entry = await consumer.get_entry()
+            if entry:
+                consumed.add(int(entry[1].field_values[_s("id")]))
+        assert set(expected) == consumed
 
     async def test_single_blocking_consumer(self, client, _s):
         consumer = await Consumer(client, ["a"], timeout=1000)

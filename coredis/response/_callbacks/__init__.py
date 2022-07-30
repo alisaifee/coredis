@@ -9,7 +9,7 @@ from __future__ import annotations
 import datetime
 import itertools
 from abc import ABC, ABCMeta, abstractmethod
-from typing import SupportsFloat, SupportsInt, cast
+from typing import cast
 
 from coredis._utils import b
 from coredis.exceptions import ClusterResponseError, ResponseError
@@ -77,7 +77,8 @@ class ResponseCallback(ABC, Generic[RESP, RESP3, R], metaclass=ResponseCallbackM
     ) -> R:
         self.version = version
         if isinstance(response, ResponseError):
-            if exc_to_response := self.handle_exception(response):
+            exc_to_response = self.handle_exception(response)
+            if exc_to_response:
                 return exc_to_response
         if version == 3:
             return self.transform_3(cast(RESP3, response), **options)
@@ -291,7 +292,7 @@ class FloatCallback(
     def transform(self, response: ResponseType, **options: Optional[ValueT]) -> float:
         if isinstance(response, float):
             return response
-        if isinstance(response, (SupportsFloat, SupportsInt, bytes, str)):
+        if isinstance(response, (int, bytes, str)):
             return float(response)
 
         raise ValueError(f"Unable to map {response} to float")

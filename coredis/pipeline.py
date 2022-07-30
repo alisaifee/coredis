@@ -225,7 +225,8 @@ class ClusterPipelineMeta(PipelineMeta):
     def __new__(cls, name: str, bases: Tuple[type, ...], namespace: Dict[str, object]):
         kls = super().__new__(cls, name, bases, namespace)
         for name, method in ClusterPipelineMeta.get_methods(kls).items():
-            if cmd := getattr(method, "__coredis_command", None):
+            cmd = getattr(method, "__coredis_command", None)
+            if cmd:
                 if cmd.cluster.route:
                     kls.NODES_FLAGS[cmd.command] = cmd.cluster.route
                 if cmd.cluster.multi_node:

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import enum
-import functools
 from functools import wraps
 from typing import Any
 
@@ -463,10 +462,19 @@ except ImportError:
 
 @enum.unique
 class CaseAndEncodingInsensitiveEnum(bytes, enum.Enum):
-    @functools.cached_property
+    __decoded: Set[StringT]
+
+    @property
     def variants(self) -> Set[StringT]:
-        decoded = str(self)
-        return {self.value.lower(), self.value, decoded.lower(), decoded.upper()}
+        if not hasattr(self, "__decoded"):
+            decoded = str(self)
+            self.__decoded = {
+                self.value.lower(),  # type: ignore
+                self.value,  # type: ignore
+                decoded.lower(),
+                decoded.upper(),
+            }
+        return self.__decoded
 
     def __eq__(self, other: object) -> bool:
         """
