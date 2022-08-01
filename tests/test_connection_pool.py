@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 import re
+from collections import deque
 
 import pytest
 
@@ -26,6 +27,7 @@ class DummyConnection:
         self.is_connected = False
         self.needs_handshake = True
         self._last_error = None
+        self._requests = deque()
 
     def connect(self):
         self.is_connected = True

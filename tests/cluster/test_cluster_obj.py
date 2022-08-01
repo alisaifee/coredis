@@ -23,10 +23,6 @@ class DummyConnectionPool(ClusterConnectionPool):
     pass
 
 
-class DummyConnection:
-    pass
-
-
 async def test_multi_node_cluster_down_retry(mocker):
     rc = RedisCluster(host="127.0.0.1", port=7000, decode_responses=True)
     e = mocker.patch.object(rc, "execute_command_on_nodes")

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+from collections import deque
 from unittest.mock import Mock, patch
 
 import pytest
@@ -31,6 +32,7 @@ class DummyConnection(ClusterConnection):
         self._read_flag = asyncio.Event()
         self._description_args = lambda: {}
         self._parse_task = None
+        self._requests = deque()
 
 
 class TestConnectionPool:
