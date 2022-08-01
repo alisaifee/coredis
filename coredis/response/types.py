@@ -8,6 +8,7 @@ from typing import Pattern
 
 from coredis.typing import (
     AbstractSet,
+    AnyStr,
     ClassVar,
     Dict,
     Generic,
@@ -21,7 +22,6 @@ from coredis.typing import (
     StringT,
     Tuple,
     TypedDict,
-    TypeVar,
     Union,
     ValueT,
 )
@@ -384,11 +384,8 @@ class ClusterNodeDetail(TypedDict):
     migrations: List[Dict[str, ValueT]]
 
 
-T = TypeVar("T")
-
-
 @dataclasses.dataclass
-class PubSubSubscription(Generic[T]):
+class PubSubSubscription(Generic[AnyStr]):
     __slots__ = ()
     #: One of the following:
     #:
@@ -398,7 +395,7 @@ class PubSubSubscription(Generic[T]):
     #:   Server response when a client unsubscribes from a channel(s)
     type: Literal["subscribe", "unsubscribe"]
     #: The channel subscribed to or unsubscribed from
-    channel: T
+    channel: AnyStr
     #: The Number of channels and patterns that the connection is currently subscribed to
     data: int
 
@@ -409,7 +406,7 @@ class PubSubSubscription(Generic[T]):
 
 
 @dataclasses.dataclass
-class PubSubShardedSubscription(Generic[T]):
+class PubSubShardedSubscription(Generic[AnyStr]):
     __slots__ = ()
     #: One of the following:
     #:
@@ -419,7 +416,7 @@ class PubSubShardedSubscription(Generic[T]):
     #:   Server response when a client unsubscribes from a shard channel(s)
     type: Literal["ssubscribe", "sunsubscribe"]
     #: The channel subscribed to or unsubscribed from
-    channel: T
+    channel: AnyStr
     #: The Number of channels and patterns that the connection is currently subscribed to
     data: int
 
@@ -430,7 +427,7 @@ class PubSubShardedSubscription(Generic[T]):
 
 
 @dataclasses.dataclass
-class PubSubPatternSubscription(Generic[T]):
+class PubSubPatternSubscription(Generic[AnyStr]):
     __slots__ = ()
     #: One of the following:
     #:
@@ -440,7 +437,7 @@ class PubSubPatternSubscription(Generic[T]):
     #:   Server response when a client unsubscribes from a pattern(s)
     type: Literal["psubscribe", "punsubscribe"]
     #: The pattern that was subscribed to or unsubscribed from
-    pattern: T
+    pattern: AnyStr
     #: The Number of channels and patterns that the connection is currently subscribed to
     data: int
 
@@ -451,7 +448,7 @@ class PubSubPatternSubscription(Generic[T]):
 
 
 @dataclasses.dataclass
-class PubSubMessage(Generic[T]):
+class PubSubMessage(Generic[AnyStr]):
     __slots__ = ()
     #: One of the following:
     #:
@@ -461,9 +458,9 @@ class PubSubMessage(Generic[T]):
     #:   A message received from subscribing to a shard channel
     type: Literal["message", "smessage"]
     #: The channel a message was published to
-    channel: T
+    channel: AnyStr
     #: The published message
-    data: T
+    data: AnyStr
 
     is_subscription: Literal[False] = False
     is_pattern: Literal[False] = False
@@ -472,7 +469,7 @@ class PubSubMessage(Generic[T]):
 
 
 @dataclasses.dataclass
-class PubSubPatternMessage(Generic[T]):
+class PubSubPatternMessage(Generic[AnyStr]):
     __slots__ = ()
     #: The following:
     #:
@@ -480,11 +477,11 @@ class PubSubPatternMessage(Generic[T]):
     #:   A message received from subscribing to a pattern
     type: Literal["pmessage"]
     #: The channel a message was published to
-    channel: T
+    channel: AnyStr
     #: The pattern that to which a received message was routed to
-    pattern: T
+    pattern: AnyStr
     #: The published message
-    data: T
+    data: AnyStr
 
     is_subscription: Literal[False] = False
     is_pattern: Literal[True] = True
@@ -493,9 +490,9 @@ class PubSubPatternMessage(Generic[T]):
 
 
 PubSubMessageTypes = Union[
-    PubSubSubscription[T],
-    PubSubShardedSubscription[T],
-    PubSubPatternSubscription[T],
-    PubSubMessage[T],
-    PubSubPatternMessage[T],
+    PubSubSubscription[AnyStr],
+    PubSubShardedSubscription[AnyStr],
+    PubSubPatternSubscription[AnyStr],
+    PubSubMessage[AnyStr],
+    PubSubPatternMessage[AnyStr],
 ]
