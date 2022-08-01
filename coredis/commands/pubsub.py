@@ -13,7 +13,14 @@ from coredis._utils import b, hash_slot, nativestr
 from coredis.commands.constants import CommandName
 from coredis.connection import BaseConnection, Connection
 from coredis.exceptions import ConnectionError, PubSubError, TimeoutError
-from coredis.response.types import PubSubMessage
+from coredis.response.types import (
+    PubSubMessage,
+    PubSubMessageTypes,
+    PubSubPatternMessage,
+    PubSubPatternSubscription,
+    PubSubShardedSubscription,
+    PubSubSubscription,
+)
 from coredis.typing import (
     AnyStr,
     Awaitable,
@@ -21,6 +28,7 @@ from coredis.typing import (
     Dict,
     Generic,
     List,
+    Literal,
     MutableMapping,
     Optional,
     ResponsePrimitive,
@@ -54,8 +62,25 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         b"unsubscribe",
         b"punsubscribe",
     }
-    channels: MutableMapping[StringT, Optional[Callable[[PubSubMessage], None]]]
-    patterns: MutableMapping[StringT, Optional[Callable[[PubSubMessage], None]]]
+    channels: MutableMapping[
+        StringT,
+        Optional[
+            Callable[[Union[PubSubSubscription[AnyStr], PubSubMessage[AnyStr]]], None]
+        ],
+    ]
+    patterns: MutableMapping[
+        StringT,
+        Optional[
+            Callable[
+                [
+                    Union[
+                        PubSubPatternSubscription[AnyStr], PubSubPatternMessage[AnyStr]
+                    ]
+                ],
+                None,
+            ]
+        ],
+    ]
 
     def __init__(
         self,
@@ -219,7 +244,16 @@ class BasePubSub(Generic[AnyStr, PoolT]):
     async def psubscribe(
         self,
         *patterns: StringT,
-        **pattern_handlers: Optional[Callable[[PubSubMessage], None]],
+        **pattern_handlers: Optional[
+            Callable[
+                [
+                    Union[
+                        PubSubPatternSubscription[AnyStr], PubSubPatternMessage[AnyStr]
+                    ]
+                ],
+                None,
+            ]
+        ],
     ) -> None:
         """
         Subscribes to channel patterns. Patterns supplied as keyword arguments
@@ -231,7 +265,18 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         await self._ensure_encoding()
 
         new_patterns: MutableMapping[
-            StringT, Optional[Callable[[PubSubMessage], None]]
+            StringT,
+            Optional[
+                Callable[
+                    [
+                        Union[
+                            PubSubPatternSubscription[AnyStr],
+                            PubSubPatternMessage[AnyStr],
+                        ]
+                    ],
+                    None,
+                ]
+            ],
         ] = {}
         new_patterns.update(dict.fromkeys(map(self.encode, patterns)))
 
@@ -254,7 +299,9 @@ class BasePubSub(Generic[AnyStr, PoolT]):
     async def subscribe(
         self,
         *channels: StringT,
-        **channel_handlers: Optional[Callable[[PubSubMessage], None]],
+        **channel_handlers: Optional[
+            Callable[[Union[PubSubSubscription[AnyStr], PubSubMessage[AnyStr]]], None]
+        ],
     ) -> None:
         """
         Subscribes to channels. Channels supplied as keyword arguments expect
@@ -267,7 +314,12 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         await self._ensure_encoding()
 
         new_channels: MutableMapping[
-            StringT, Optional[Callable[[PubSubMessage], None]]
+            StringT,
+            Optional[
+                Callable[
+                    [Union[PubSubSubscription[AnyStr], PubSubMessage[AnyStr]]], None
+                ]
+            ],
         ] = {}
         new_channels.update(dict.fromkeys(map(self.encode, channels)))
 
@@ -288,7 +340,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         await self._ensure_encoding()
         await self.execute_command(CommandName.UNSUBSCRIBE, *channels)
 
-    async def listen(self) -> Optional[PubSubMessage]:
+    async def listen(self) -> Optional[PubSubMessageTypes[AnyStr]]:
         """
         Listens for messages on channels this client has been subscribed to
         """
@@ -303,14 +355,14 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         self,
         ignore_subscribe_messages: bool = False,
         timeout: Optional[Union[int, float]] = None,
-    ) -> Optional[PubSubMessage]:
+    ) -> Optional[PubSubMessageTypes[AnyStr]]:
         """
         Gets the next message if one is available, otherwise None.
 
         :param ignore_subscribe_messages: Whether to skip subscription
          acknowledgement messages
         :param timeout: Number of seconds to wait for a message to be available
-         on the connection. If the ``None`` the command will block forever.
+         on the connection. If ``None``, the command will block forever.
         """
         response = await self.parse_response(block=False, timeout=timeout)
 
@@ -321,7 +373,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
 
     def handle_message(
         self, response: ResponseType, ignore_subscribe_messages: bool = False
-    ) -> Optional[PubSubMessage]:
+    ) -> Optional[PubSubMessageTypes[AnyStr]]:
         """
         Parses a pub/sub message. If the channel or pattern was subscribed to
         with a message handler, the handler is invoked instead of a parsed
@@ -330,56 +382,62 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         :meta private:
         """
         r = cast(List[ResponsePrimitive], response)
+        print(r)
         message_type = b(r[0])
         message_type_str = nativestr(r[0])
-        message: PubSubMessage
+        message: PubSubMessageTypes[AnyStr]
 
         if message_type in self.SUBUNSUB_MESSAGE_TYPES:
-            message = PubSubMessage(
-                type=message_type_str,
-                pattern=cast(StringT, r[1]) if message_type[0] == ord(b"p") else None,
-                # This field is populated in all cases for backward compatibility
-                # as older versions were incorrectly populating the channel
-                # with the pattern on psubscribe/punsubscribe responses.
-                channel=cast(StringT, r[1]),
-                data=cast(int, r[2]),
-            )
+            if message_type[0] == ord(b"p"):
+                message = PubSubPatternSubscription(
+                    type=cast(Literal["psubscribe", "punsubscribe"], message_type_str),
+                    pattern=cast(AnyStr, r[1]),
+                    data=cast(int, r[2]),
+                )
+            else:
+                message = PubSubSubscription(
+                    type=cast(Literal["subscribe", "unsubscribe"], message_type_str),
+                    channel=cast(AnyStr, r[1]),
+                    data=cast(int, r[2]),
+                )
+
         elif message_type in self.PUBLISH_MESSAGE_TYPES:
             if message_type == b"pmessage":
-                message = PubSubMessage(
+                message = PubSubPatternMessage(
                     type="pmessage",
-                    pattern=cast(StringT, r[1]),
-                    channel=cast(StringT, r[2]),
-                    data=cast(StringT, r[3]),
+                    pattern=cast(AnyStr, r[1]),
+                    channel=cast(AnyStr, r[2]),
+                    data=cast(AnyStr, r[3]),
                 )
             else:
                 message = PubSubMessage(
                     type="message",
-                    pattern=None,
-                    channel=cast(StringT, r[1]),
-                    data=cast(StringT, r[2]),
+                    channel=cast(AnyStr, r[1]),
+                    data=cast(AnyStr, r[2]),
                 )
+
         else:
             raise PubSubError(f"Unknown message type {message_type_str}")  # noqa
 
         # if this is an unsubscribe message, remove it from memory
         if message_type in self.UNSUBSCRIBE_MESSAGE_TYPES:
-            if message_type == b"punsubscribe":
-                subscribed_dict = self.patterns
+            if message.is_pattern:
+                self.patterns.pop(message.pattern)
             else:
-                subscribed_dict = self.channels
-            subscribed_dict.pop(message["channel"])
+                self.channels.pop(message.channel)
 
-        if message_type in self.PUBLISH_MESSAGE_TYPES:
-            handler = None
-            if message_type == b"pmessage" and message["pattern"]:
-                handler = self.patterns.get(message["pattern"], None)
-            elif message["channel"]:
-                handler = self.channels.get(message["channel"], None)
+        if message.is_message:
+            if message.is_pattern:
+                pattern_handler = self.patterns.get(message.pattern, None)
+                if pattern_handler:
+                    pattern_handler(message)
+                    return None
 
-            if handler:
-                handler(message)
-                return None
+            else:
+                channel_handler = self.channels.get(message.channel, None)
+                if channel_handler:
+                    channel_handler(message)
+                    return None
         else:
             # this is a subscribe/unsubscribe message. ignore if we don't
             # want them
@@ -397,12 +455,12 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         To stop listening invoke :meth:`PubSubWorkerThread.stop` on the returned
         instead of :class:`PubSubWorkerThread`.
         """
-        for channel, handler in self.channels.items():
-            if handler is None:
+        for channel, channel_handler in self.channels.items():
+            if channel_handler is None:
                 raise PubSubError(f"Channel: {channel!r} has no handler registered")
 
-        for pattern, handler in self.patterns.items():
-            if handler is None:
+        for pattern, pattern_handler in self.patterns.items():
+            if pattern_handler is None:
                 raise PubSubError(f"Pattern: {pattern!r} has no handler registered")
         thread = PubSubWorkerThread(self, poll_timeout=poll_timeout)
         thread.start()
@@ -475,6 +533,15 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
     SUBUNSUB_MESSAGE_TYPES = {b"ssubscribe", b"sunsubscribe"}
     UNSUBSCRIBE_MESSAGE_TYPES = {b"unsubscribe"}
 
+    channels: MutableMapping[  # type: ignore
+        StringT,
+        Optional[
+            Callable[
+                [Union[PubSubShardedSubscription[AnyStr], PubSubMessage[AnyStr]]], None
+            ]
+        ],
+    ]
+
     def __init__(
         self,
         connection_pool: coredis.pool.ClusterConnectionPool,
@@ -487,10 +554,14 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         self.read_from_replicas = read_from_replicas
         super().__init__(connection_pool, ignore_subscribe_messages)
 
-    async def subscribe(
+    async def subscribe(  # type: ignore[override]
         self,
         *channels: StringT,
-        **channel_handlers: Optional[Callable[[PubSubMessage], None]],
+        **channel_handlers: Optional[
+            Callable[
+                [Union[PubSubShardedSubscription[AnyStr], PubSubMessage[AnyStr]]], None
+            ]
+        ],
     ) -> None:
         """
         :param channels: The shard channels to subscribe to.
@@ -503,7 +574,13 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
         await self._ensure_encoding()
         new_channels: MutableMapping[
-            StringT, Optional[Callable[[PubSubMessage], None]]
+            StringT,
+            Optional[
+                Callable[
+                    [Union[PubSubShardedSubscription[AnyStr], PubSubMessage[AnyStr]]],
+                    None,
+                ]
+            ],
         ] = {}
         new_channels.update(dict.fromkeys(map(self.encode, channels)))
 
@@ -529,7 +606,16 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
     async def psubscribe(
         self,
         *patterns: StringT,
-        **pattern_handlers: Optional[Callable[[PubSubMessage], None]],
+        **pattern_handlers: Optional[
+            Callable[
+                [
+                    Union[
+                        PubSubPatternSubscription[AnyStr], PubSubPatternMessage[AnyStr]
+                    ]
+                ],
+                None,
+            ]
+        ],
     ) -> None:
         """
         Not available in sharded pubsub
@@ -586,8 +672,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
     ) -> ResponseType:
         if not self.shard_connections:
             raise RuntimeError(
-                "pubsub connection not set: "
-                "did you forget to call subscribe() or psubscribe()?"
+                "pubsub connection not set: did you forget to call subscribe()?"
             )
         result = None
         # Check any stashed results first.

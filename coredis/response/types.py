@@ -10,6 +10,7 @@ from coredis.typing import (
     AbstractSet,
     ClassVar,
     Dict,
+    Generic,
     List,
     Literal,
     Mapping,
@@ -20,6 +21,7 @@ from coredis.typing import (
     StringT,
     Tuple,
     TypedDict,
+    TypeVar,
     Union,
     ValueT,
 )
@@ -382,34 +384,118 @@ class ClusterNodeDetail(TypedDict):
     migrations: List[Dict[str, ValueT]]
 
 
-class PubSubMessage(TypedDict):
+T = TypeVar("T")
+
+
+@dataclasses.dataclass
+class PubSubSubscription(Generic[T]):
+    __slots__ = ()
     #: One of the following:
     #:
     #: subscribe
     #:   Server response when a client subscribes to a channel(s)
     #: unsubscribe
     #:   Server response when a client unsubscribes from a channel(s)
-    #: psubscribe
-    #:   Server response when a client subscribes to a pattern(s)
-    #: punsubscribe
-    #:   Server response when a client unsubscribes from a pattern(s)
+    type: Literal["subscribe", "unsubscribe"]
+    #: The channel subscribed to or unsubscribed from
+    channel: T
+    #: The Number of channels and patterns that the connection is currently subscribed to
+    data: int
+
+    is_subscription: Literal[True] = True
+    is_pattern: Literal[False] = False
+    is_shard: Literal[False] = False
+    is_message: Literal[False] = False
+
+
+@dataclasses.dataclass
+class PubSubShardedSubscription(Generic[T]):
+    __slots__ = ()
+    #: One of the following:
+    #:
     #: ssubscribe
     #:   Server response when a client subscribes to a shard channel(s)
     #: sunsubscribe
     #:   Server response when a client unsubscribes from a shard channel(s)
+    type: Literal["ssubscribe", "sunsubscribe"]
+    #: The channel subscribed to or unsubscribed from
+    channel: T
+    #: The Number of channels and patterns that the connection is currently subscribed to
+    data: int
+
+    is_subscription: Literal[True] = True
+    is_pattern: Literal[False] = False
+    is_shard: Literal[True] = True
+    is_message: Literal[False] = False
+
+
+@dataclasses.dataclass
+class PubSubPatternSubscription(Generic[T]):
+    __slots__ = ()
+    #: One of the following:
+    #:
+    #: psubscribe
+    #:   Server response when a client subscribes to a pattern(s)
+    #: punsubscribe
+    #:   Server response when a client unsubscribes from a pattern(s)
+    type: Literal["psubscribe", "punsubscribe"]
+    #: The pattern that was subscribed to or unsubscribed from
+    pattern: T
+    #: The Number of channels and patterns that the connection is currently subscribed to
+    data: int
+
+    is_subscription: Literal[True] = True
+    is_pattern: Literal[True] = True
+    is_shard: Literal[False] = False
+    is_message: Literal[False] = False
+
+
+@dataclasses.dataclass
+class PubSubMessage(Generic[T]):
+    __slots__ = ()
+    #: One of the following:
+    #:
     #: message
     #:   A message received from subscribing to a channel
+    #: smessage
+    #:   A message received from subscribing to a shard channel
+    type: Literal["message", "smessage"]
+    #: The channel a message was published to
+    channel: T
+    #: The published message
+    data: T
+
+    is_subscription: Literal[False] = False
+    is_pattern: Literal[False] = False
+    is_shard: Literal[False] = False
+    is_message: Literal[True] = True
+
+
+@dataclasses.dataclass
+class PubSubPatternMessage(Generic[T]):
+    __slots__ = ()
+    #: The following:
+    #:
     #: pmessage
     #:   A message received from subscribing to a pattern
-    type: str
-    #: The channel subscribed to or unsubscribed from or the channel a message was published to
-    channel: StringT
-    #: The pattern that was subscribed to or unsubscribed from or to which a received message was
-    #: routed to
-    pattern: Optional[StringT]
-    #: - If ``type`` is one of ``{message, pmessage}`` this is the actual published message
-    #: - If ``type`` is one of
-    #:   ``{subscribe, psubscribe, ssubscribe, unsubscribe, punsubscribe, sunsubscribe}``
-    #:   this will be an :class:`int` corresponding to the  number of channels and patterns that the
-    #:   connection is currently subscribed to.
-    data: Union[int, StringT]
+    type: Literal["pmessage"]
+    #: The channel a message was published to
+    channel: T
+    #: The pattern that to which a received message was routed to
+    pattern: T
+    #: The published message
+    data: T
+
+    is_subscription: Literal[False] = False
+    is_pattern: Literal[True] = True
+    is_shard: Literal[False] = False
+    is_message: Literal[True] = True
+
+
+PubSubMessageTypes = Union[
+    PubSubSubscription[T],
+    PubSubShardedSubscription[T],
+    PubSubPatternSubscription[T],
+    PubSubMessage[T],
+    PubSubPatternMessage[T],
+]
