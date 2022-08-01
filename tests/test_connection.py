@@ -70,13 +70,6 @@ async def test_connect_unix_socket(redis_uds):
 
 
 async def test_stream_timeout(redis_basic):
-    conn = Connection(stream_timeout=0)
-    with pytest.raises(TimeoutError):
-        await conn.connect()
-
-    conn = Connection(stream_timeout=1)
-    assert await conn.connect() is None
-
     conn = Connection(stream_timeout=0.01)
     await conn.connect() is None
     req = await conn.create_request(b"debug", "sleep", 0.05)
