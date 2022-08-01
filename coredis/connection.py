@@ -8,7 +8,7 @@ import socket
 import ssl
 import time
 import warnings
-from collections import defaultdict
+from collections import defaultdict, deque
 from typing import TYPE_CHECKING, Any, cast
 
 from coredis._packer import Packer
@@ -27,6 +27,7 @@ from coredis.typing import (
     Awaitable,
     Callable,
     ClassVar,
+    Deque,
     Dict,
     List,
     Literal,
@@ -48,15 +49,15 @@ if TYPE_CHECKING:
 @dataclasses.dataclass
 class Request:
     command: bytes
-    args: Tuple[ValueT, ...]
-    deadline: Optional[float]
-    noreply: Optional[bool] = None
     decode: Optional[bool] = None
     raise_exceptions: bool = True
-    push_message_types: Optional[Set[bytes]] = None
     future: asyncio.Future[ResponseType] = dataclasses.field(
         default_factory=lambda: asyncio.get_running_loop().create_future()
     )
+
+    def enforce_deadline(self) -> None:
+        if not self.future.done():
+            self.future.set_exception(TimeoutError())
 
 
 async def exec_with_timeout(
@@ -180,11 +181,9 @@ class BaseConnection(asyncio.BaseProtocol):
         self.needs_handshake = True
         self._transport: Optional[asyncio.Transport] = None
         self._read_flag = asyncio.Event()
-        self._write_flag = asyncio.Event()
         self._last_error: Optional[BaseException] = None
         self._parser = Parser(encoding, decode_responses)
-        self._requests: asyncio.Queue[Request] = asyncio.Queue()
-        self._parse_task: Optional[asyncio.Task[None]] = None
+        self._requests: Deque[Request] = deque()
 
     def __repr__(self) -> str:
         return self.describe(self._description_args())
@@ -211,7 +210,7 @@ class BaseConnection(asyncio.BaseProtocol):
 
     @property
     def requests_pending(self) -> bool:
-        return self._requests.qsize() > 0
+        return len(self._requests) > 0
 
     def register_connect_callback(
         self,
@@ -258,7 +257,6 @@ class BaseConnection(asyncio.BaseProtocol):
         :meta private:
         """
         self._transport = cast(asyncio.Transport, transport)
-        self._write_flag.set()
 
     def connection_lost(self, exc: Optional[BaseException]) -> None:
         """
@@ -273,13 +271,13 @@ class BaseConnection(asyncio.BaseProtocol):
         """
         :meta private:
         """
-        self._write_flag.clear()
+        pass
 
     def resume_writing(self) -> None:  # noqa
         """
         :meta private:
         """
-        self._write_flag.set()
+        pass
 
     def data_received(self, data: bytes) -> None:
         """
@@ -287,6 +285,31 @@ class BaseConnection(asyncio.BaseProtocol):
         """
         self._parser.unpacker.feed(data)
         self._read_flag.set()
+        if not self._requests:
+            return
+
+        request = self._requests.popleft()
+        response = self._parser.get_response(request.decode)
+        while not isinstance(
+            response,
+            NotEnoughData,
+        ):
+            if request.raise_exceptions and isinstance(response, RedisError):
+                request.future.set_exception(response)
+            else:
+                request.future.set_result(response)
+
+            try:
+                request = self._requests.popleft()
+            except IndexError:
+                return
+
+            response = self._parser.get_response(request.decode)
+
+        # In case the first request pulled from the queue doesn't have enough data
+        # to process, put it back to the start of the queue for the next iteration
+        if request:
+            self._requests.appendleft(request)
 
     def eof_received(self) -> None:
         """
@@ -378,59 +401,7 @@ class BaseConnection(asyncio.BaseProtocol):
                 await self.try_legacy_auth()
             self.needs_handshake = False
 
-    async def _parse_loop(self) -> None:
-        while True:
-            request = None
-            try:
-                request = await self._requests.get()
-                timeout = (
-                    request.deadline - time.time()
-                    if request.deadline is not None
-                    else None
-                )
-                response = self._parser.get_response(
-                    request.decode, request.push_message_types
-                )
-                while isinstance(
-                    response,
-                    NotEnoughData,
-                ):
-                    self._read_flag.clear()
-                    await asyncio.wait_for(self._read_flag.wait(), timeout)
-                    response = self._parser.get_response(
-                        request.decode, request.push_message_types
-                    )
-                if request.raise_exceptions and isinstance(response, RedisError):
-                    request.future.set_exception(response)
-                else:
-                    request.future.set_result(response)
-            except (
-                asyncio.CancelledError,
-                ConnectionError,
-            ) as err:
-                if request:
-                    request.future.set_exception(self._last_error or err)
-                self._clear_pending_requests(err)
-                break
-            except asyncio.TimeoutError:
-                if request:
-                    request.future.set_exception(TimeoutError())
-            except (RuntimeError, asyncio.InvalidStateError):
-                break
-
-    def _clear_pending_requests(self, reason: BaseException) -> None:
-        while True:
-            try:
-                request = self._requests.get_nowait()
-                request.future.set_exception(reason)
-            except asyncio.QueueEmpty:
-                break
-
     async def on_connect(self) -> None:
-        if not self._parse_task or self._parse_task.done():
-            self._parse_task = asyncio.get_running_loop().create_task(
-                self._parse_loop()
-            )
         self._parser.on_connect(self)
         await self.perform_handshake()
 
@@ -468,9 +439,9 @@ class BaseConnection(asyncio.BaseProtocol):
         if not self.is_connected:
             await self.connect()
 
-        if self._requests.qsize() > 0:
+        if len(self._requests) > 0:
             raise ConnectionError(
-                f"Invalid request for push messages. {self._requests.qsize} requests still pending"
+                f"Invalid request for push messages. {len(self._requests)} requests still pending"
             )
 
         message = self._parser.get_response(
@@ -490,13 +461,12 @@ class BaseConnection(asyncio.BaseProtocol):
             )
         return message
 
-    async def _send_packed_command(self, command: List[bytes]) -> None:
+    def _send_packed_command(self, command: List[bytes]) -> None:
         """
         Sends an already packed command to the Redis server
         """
 
         assert self._transport
-        await self._write_flag.wait()
         self._transport.writelines(command)
 
     async def send_command(
@@ -510,7 +480,9 @@ class BaseConnection(asyncio.BaseProtocol):
 
         if not self.is_connected:
             await self.connect()
-        await self._send_packed_command(self.packer.pack_command(command, *args))
+
+        self._send_packed_command(self.packer.pack_command(command, *args))
+
         self.last_active_at = time.time()
 
     async def create_request(
@@ -528,26 +500,28 @@ class BaseConnection(asyncio.BaseProtocol):
 
         if not self.is_connected:
             await self.connect()
+
         cmd_list = []
         if self.is_connected and noreply and not self.noreply:
             cmd_list = self.packer.pack_command(
                 CommandName.CLIENT_REPLY, PureToken.SKIP
             )
         cmd_list.extend(self.packer.pack_command(command, *args))
-        await self._send_packed_command(cmd_list)
+        self._send_packed_command(cmd_list)
+
         self.last_active_at = time.time()
+
         if not (self.noreply_set or noreply):
             request = Request(
                 command,
-                args,
-                time.time() + self._stream_timeout
-                if self._stream_timeout is not None
-                else None,
-                noreply,
                 bool(decode) if decode is not None else None,
                 raise_exceptions,
             )
-            self._requests.put_nowait(request)
+            self._requests.append(request)
+            if self._stream_timeout is not None:
+                asyncio.get_running_loop().call_later(
+                    self._stream_timeout, request.enforce_deadline
+                )
             return request.future
         else:
             none: asyncio.Future[ResponseType] = asyncio.Future()
@@ -564,18 +538,18 @@ class BaseConnection(asyncio.BaseProtocol):
         if self._transport:
             try:
                 self._transport.close()
-                # set the read flag for any final call to read a response
-                # to be able to pick up the exception or raise.
-                self._read_flag.set()
             # Raised if event loop is already closed.
             except RuntimeError:  # noqa
                 pass
-        if self._parse_task and not self._parse_task.done():
+
+        while True:
             try:
-                self._parse_task.cancel()
-            # Raised if event loop is already closed.
-            except RuntimeError:  # noqa
-                pass
+                request = self._requests.popleft()
+                request.future.set_exception(
+                    self._last_error or ConnectionError("Connection lost")
+                )
+            except IndexError:
+                break
         self._transport = None
 
 
