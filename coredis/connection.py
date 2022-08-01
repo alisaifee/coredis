@@ -11,6 +11,8 @@ import warnings
 from collections import defaultdict, deque
 from typing import TYPE_CHECKING, Any, cast
 
+import async_timeout
+
 from coredis._packer import Packer
 from coredis._unpacker import NotEnoughData
 from coredis._utils import nativestr
@@ -34,7 +36,6 @@ from coredis.typing import (
     Optional,
     ResponseType,
     Set,
-    Tuple,
     TypeVar,
     Union,
     ValueT,
@@ -58,16 +59,6 @@ class Request:
     def enforce_deadline(self) -> None:
         if not self.future.done():
             self.future.set_exception(TimeoutError())
-
-
-async def exec_with_timeout(
-    coroutine: Awaitable[R],
-    timeout: Optional[float] = None,
-) -> R:
-    try:
-        return await asyncio.wait_for(coroutine, timeout)
-    except asyncio.TimeoutError as exc:
-        raise TimeoutError(exc)
 
 
 class RedisSSLContext:
@@ -271,13 +262,11 @@ class BaseConnection(asyncio.BaseProtocol):
         """
         :meta private:
         """
-        pass
 
     def resume_writing(self) -> None:  # noqa
         """
         :meta private:
         """
-        pass
 
     def data_received(self, data: bytes) -> None:
         """
@@ -453,7 +442,8 @@ class BaseConnection(asyncio.BaseProtocol):
         ):
             self._read_flag.clear()
             try:
-                await asyncio.wait_for(self._read_flag.wait(), self._stream_timeout)
+                async with async_timeout.timeout(self._stream_timeout):
+                    await self._read_flag.wait()
             except asyncio.TimeoutError:
                 raise TimeoutError
             message = self._parser.get_response(
@@ -615,10 +605,9 @@ class Connection(BaseConnection):
                 lambda: self, host=self.host, port=self.port
             )
 
-        transport, _ = await exec_with_timeout(
-            connection,
-            self._connect_timeout,
-        )
+        async with async_timeout.timeout(self._connect_timeout):
+            transport, _ = await connection
+
         sock = transport.get_extra_info("socket")
         if sock is not None:
             try:
@@ -672,14 +661,11 @@ class UnixDomainSocketConnection(BaseConnection):
         self._description_args = lambda: {"path": self.path, "db": self.db}
 
     async def _connect(self) -> None:
-        connection = asyncio.get_running_loop().create_unix_connection(
-            lambda: self, path=self.path
-        )
+        async with async_timeout.timeout(self._connect_timeout):
+            await asyncio.get_running_loop().create_unix_connection(
+                lambda: self, path=self.path
+            )
 
-        await exec_with_timeout(
-            connection,
-            self._connect_timeout,
-        )
         await self.on_connect()
 
 

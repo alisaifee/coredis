@@ -8,6 +8,8 @@ import time
 import warnings
 from typing import Any, cast
 
+import async_timeout
+
 from coredis._utils import b, hash_slot
 from coredis.connection import ClusterConnection, Connection
 from coredis.exceptions import ConnectionError, RedisClusterException
@@ -375,10 +377,8 @@ class ClusterConnectionPool(ConnectionPool):
                 connection = None
         else:
             try:
-                connection = await asyncio.wait_for(
-                    self.__node_pool(node.name).get(),
-                    self.blocking_timeout,
-                )
+                async with async_timeout.timeout(self.blocking_timeout):
+                    connection = await self.__node_pool(node.name).get()
             except asyncio.TimeoutError:
                 raise ConnectionError("No connection available.")
 

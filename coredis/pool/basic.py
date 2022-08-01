@@ -10,6 +10,8 @@ from ssl import SSLContext, VerifyMode
 from typing import Any, cast
 from urllib.parse import parse_qs, unquote, urlparse
 
+import async_timeout
+
 from coredis.connection import (
     BaseConnection,
     Connection,
@@ -420,7 +422,8 @@ class BlockingConnectionPool(ConnectionPool):
         self.checkpid()
 
         try:
-            connection = await asyncio.wait_for(self._pool.get(), self.timeout)
+            async with async_timeout.timeout(self.timeout):
+                connection = await self._pool.get()
             if connection and connection.needs_handshake:
                 await connection.perform_handshake()
         except asyncio.TimeoutError:
