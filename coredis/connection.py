@@ -535,9 +535,10 @@ class BaseConnection(asyncio.BaseProtocol):
         while True:
             try:
                 request = self._requests.popleft()
-                request.future.set_exception(
-                    self._last_error or ConnectionError("Connection lost")
-                )
+                if not request.future.cancelled():
+                    request.future.set_exception(
+                        self._last_error or ConnectionError("Connection lost")
+                    )
             except IndexError:
                 break
         self._transport = None
