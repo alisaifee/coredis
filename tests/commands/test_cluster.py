@@ -13,6 +13,7 @@ from tests.conftest import targets
 
 @targets(
     "redis_cluster",
+    "redis_cluster_noreplica",
     "redis_cluster_blocking",
     "redis_cluster_raw",
     "redis_cluster_resp2",
@@ -60,6 +61,7 @@ class TestCluster:
             node.host, node.port
         ).cluster_addslots([1, 2])
 
+    @pytest.mark.replicated_clusteronly
     async def test_readonly_explicit(self, client, _s):
         await client.set("fubar", 1)
         slot = hash_slot(b"fubar")
@@ -73,6 +75,7 @@ class TestCluster:
         with pytest.raises(MovedError):
             await node_client.get("fubar")
 
+    @pytest.mark.replicated_clusteronly
     async def test_cluster_info(self, client, _s):
         info = await client.cluster_info()
         assert info["cluster_state"] == "ok"
@@ -90,6 +93,7 @@ class TestCluster:
         assert await client.cluster_countkeysinslot(slot) == 1
         assert await client.cluster_getkeysinslot(slot, 1) == (_s("a"),)
 
+    @pytest.mark.replicated_clusteronly
     async def test_cluster_nodes(self, client, _s):
         nodes = await client.cluster_nodes()
         assert len(nodes) == 6
