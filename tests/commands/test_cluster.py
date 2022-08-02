@@ -107,6 +107,7 @@ class TestCluster:
         assert len(replicas) == len(replicas_depr) == 1
 
     @pytest.mark.min_server_version("7.0.0")
+    @pytest.mark.replicated_clusteronly
     async def test_cluster_links(self, client, _s):
         links = []
         for node in client.primaries:
