@@ -217,7 +217,7 @@ class Client(
 
     async def _ensure_wait(self, command: bytes, connection: BaseConnection) -> None:
         wait = self._waitcontext.get()
-        if wait:
+        if wait and wait[0] > 0:
             await connection.send_command(CommandName.WAIT, *wait)
             if not cast(int, await connection.read_response(decode=False)) >= wait[0]:
                 raise ReplicationError(command, wait[0], wait[1])

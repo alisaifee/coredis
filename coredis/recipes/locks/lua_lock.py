@@ -195,6 +195,10 @@ class LuaLock(Generic[AnyStr]):
 
     @property
     def replication_factor(self) -> int:
+        """
+        Number of replicas the lock needs to replicate to, to be
+        considered acquired.
+        """
         if isinstance(self.client, RedisCluster):
             return math.ceil(self.client.num_replicas_per_shard / 2)
         return 0
@@ -212,7 +216,10 @@ class LuaLock(Generic[AnyStr]):
                         px=int(self.timeout * 1000) if self.timeout else None,
                     )
             except ReplicationError:
-                raise LockError(f"Unable to ensure lock {self.name!r} was replicated ")
+                raise LockError(
+                    f"Unable to ensure lock {self.name!r} was replicated "
+                    f"to {self.replication_factor} replicas"
+                )
         else:
             return await self.client.set(
                 self.name,
