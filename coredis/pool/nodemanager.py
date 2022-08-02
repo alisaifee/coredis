@@ -269,7 +269,7 @@ class NodeManager:
         # Set the tmp variables to the real variables
         self.slots = tmp_slots
         self.nodes = nodes_cache
-        self.replicas_per_shard = (
+        self.replicas_per_shard = int(
             (len(self.nodes) / len(replicas)) - 1 if replicas else 0
         )
         self.reinitialize_counter = 0
