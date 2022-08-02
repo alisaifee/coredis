@@ -6,6 +6,7 @@ import importlib.resources
 import math
 import time
 import uuid
+import warnings
 from types import TracebackType
 from typing import cast
 
@@ -206,7 +207,6 @@ class LuaLock(Generic[AnyStr]):
     async def __acquire(self, token: StringT, stop_trying_at: Optional[float]) -> bool:
         if isinstance(self.client, RedisCluster):
             try:
-
                 replication_wait = (
                     1000 * (max(0, stop_trying_at - time.time()))
                     if stop_trying_at is not None
@@ -222,10 +222,12 @@ class LuaLock(Generic[AnyStr]):
                         px=int(self.timeout * 1000) if self.timeout else None,
                     )
             except ReplicationError:
-                raise LockError(
+                warnings.warn(
                     f"Unable to ensure lock {self.name!r} was replicated "
-                    f"to {self.replication_factor} replicas"
+                    f"to {self.replication_factor} replicas",
+                    category=RuntimeWarning
                 )
+                return False
         else:
             return await self.client.set(
                 self.name,

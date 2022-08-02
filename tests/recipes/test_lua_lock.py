@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from unittest.mock import PropertyMock
 
 import pytest
 
@@ -67,6 +68,17 @@ class TestLock:
         assert not await lock2.acquire()
         assert (time.time() - start) > 0.2
         await lock1.release()
+
+    @pytest.mark.replicated_clusteronly
+    async def test_lock_replication_failed(self, client, mocker):
+        replication_factor = mocker.patch(
+            "coredis.recipes.locks.LuaLock.replication_factor",
+            new_callable=PropertyMock
+        )
+        replication_factor.return_value = 2
+        lock1 = LuaLock(client, "foo", blocking=True, blocking_timeout=1)
+        with pytest.warns(RuntimeWarning):
+            assert not await lock1.acquire()
 
     async def test_context_manager(self, client, _s):
         # blocking_timeout prevents a deadlock if the lock can't be acquired
