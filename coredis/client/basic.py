@@ -218,6 +218,7 @@ class Client(
         maybe_wait: asyncio.Future[None] = asyncio.get_running_loop().create_future()
         wait = self._waitcontext.get()
         if wait and wait[0] > 0:
+
             def check_wait(
                 wait: Tuple[int, int], response: asyncio.Future[ResponseType]
             ) -> None:
