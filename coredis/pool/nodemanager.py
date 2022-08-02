@@ -86,6 +86,7 @@ class NodeManager:
         self.reinitialize_steps = reinitialize_steps or 25
         self._skip_full_coverage_check = skip_full_coverage_check
         self.nodemanager_follow_cluster = nodemanager_follow_cluster
+        self.replicas_per_shard = 0
 
     def keys_to_nodes_by_slot(
         self, *keys: ValueT
@@ -172,6 +173,7 @@ class NodeManager:
         self.startup_nodes_reachable = False
 
         nodes = self.orig_startup_nodes
+        replicas = set()
 
         # With this option the client will attempt to connect to any of the previous set of nodes
         # instead of the original set of startup nodes
@@ -189,7 +191,6 @@ class NodeManager:
             except RedisError:
                 continue
             all_slots_covered = True
-
             # If there's only one server in the cluster, its ``host`` is ''
             # Fix it to the host in startup_nodes
             if len(cluster_slots) == 1 and len(self.startup_nodes) == 1:
@@ -228,6 +229,7 @@ class NodeManager:
                         for replica_node in replica_nodes:
                             nodes_cache[replica_node.name] = replica_node
                             tmp_slots[i].append(replica_node)
+                            replicas.add(replica_node.name)
                     else:
                         # Validate that 2 nodes want to use the same slot cache setup
                         if tmp_slots[i][0].name != node.name:
@@ -267,6 +269,9 @@ class NodeManager:
         # Set the tmp variables to the real variables
         self.slots = tmp_slots
         self.nodes = nodes_cache
+        self.replicas_per_shard = (
+            (len(self.nodes) / len(replicas)) - 1 if replicas else 0
+        )
         self.reinitialize_counter = 0
         self.populate_startup_nodes()
 

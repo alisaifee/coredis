@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextvars
 import importlib.resources
+import math
 import time
 import uuid
 from types import TracebackType
@@ -145,7 +146,7 @@ class LuaLock(Generic[AnyStr]):
         to acquire a lock. If the lock is being used with a cluster client
         the :meth:`coredis.RedisCluster.ensure_replication` context manager
         will be used to ensure that the command was replicated to atleast
-        1 replica.
+        half the replicas of the shard where the lock would be acquired.
 
         :raises: :exc:`~coredis.exceptions.LockError`
         """
@@ -192,10 +193,18 @@ class LuaLock(Generic[AnyStr]):
             raise LockError("Cannot extend a lock with no timeout")
         return await self.__extend(additional_time)
 
+    @property
+    def replication_factor(self) -> int:
+        if isinstance(self.client, RedisCluster):
+            return math.ceil(self.client.num_replicas_per_shard / 2)
+        return 0
+
     async def __acquire(self, token: StringT) -> bool:
         if isinstance(self.client, RedisCluster):
             try:
-                with self.client.ensure_replication(1, timeout_ms=0):
+                with self.client.ensure_replication(
+                    self.replication_factor, timeout_ms=0
+                ):
                     return await self.client.set(
                         self.name,
                         token,
