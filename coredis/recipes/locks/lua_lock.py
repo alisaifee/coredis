@@ -157,7 +157,7 @@ class LuaLock(Generic[AnyStr]):
         if blocking_timeout is not None:
             stop_trying_at = time.time() + blocking_timeout
         while True:
-            if await self.__acquire(token):
+            if await self.__acquire(token, stop_trying_at):
                 self.local.set(token)
                 return True
             if not blocking:
@@ -203,11 +203,22 @@ class LuaLock(Generic[AnyStr]):
             return math.ceil(self.client.num_replicas_per_shard / 2)
         return 0
 
-    async def __acquire(self, token: StringT) -> bool:
+    async def __acquire(self, token: StringT, stop_trying_at: Optional[int]) -> bool:
         if isinstance(self.client, RedisCluster):
             try:
+
+                if self.blocking:
+                    replication_wait = (
+                        1000 * (max(0, stop_trying_at - time.time()))
+                        if stop_trying_at is not None
+                        else 0
+                    )
+                else:
+                    replication_wait = 1000 * (
+                        self.timeout if self.timeout is not None else 0.1
+                    )
                 with self.client.ensure_replication(
-                    self.replication_factor, timeout_ms=0
+                    self.replication_factor, timeout_ms=int(replication_wait)
                 ):
                     return await self.client.set(
                         self.name,
