@@ -362,8 +362,10 @@ class Client(
             assert True == await client.set("fubar", 1), "reply"
         """
         self._noreplycontext.set(True)
-        yield self
-        self._noreplycontext.set(None)
+        try:
+            yield self
+        finally:
+            self._noreplycontext.set(None)
 
     @contextlib.contextmanager
     def ensure_replication(
@@ -387,8 +389,10 @@ class Client(
 
         """
         self._waitcontext.set((replicas, timeout_ms))
-        yield self
-        self._waitcontext.set(None)
+        try:
+            yield self
+        finally:
+            self._waitcontext.set(None)
 
 
 class Redis(Client[AnyStr]):

@@ -119,6 +119,7 @@ class TestClusterClient:
         with pytest.raises(ReplicationError):
             with client.ensure_replication(2):
                 assert await client.set("fubar", 1)
+        assert await client.set("fubar", 1)
 
 
 class TestSSL:
