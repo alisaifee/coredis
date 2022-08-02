@@ -553,6 +553,10 @@ class RedisCluster(
 
     @property
     def num_replicas_per_shard(self) -> int:
+        """
+        Number of replicas per shard of the cluster determined by
+        initial cluster topology discovery
+        """
         return self.connection_pool.nodes.replicas_per_shard
 
     def _determine_slot(self, command: bytes, *args: ValueT) -> Optional[int]:
