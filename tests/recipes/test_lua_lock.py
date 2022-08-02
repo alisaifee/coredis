@@ -15,6 +15,7 @@ from tests.conftest import targets
     "redis_basic_raw",
     "redis_basic_resp2",
     "redis_cluster",
+    "redis_cluster_noreplica",
     "redis_cluster_raw",
     "redis_cluster_resp2",
 )
