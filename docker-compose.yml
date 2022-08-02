@@ -43,7 +43,7 @@ services:
       - REDIS_SENTINEL_PASSWORD=sekret
     ports:
       - '36379:26379'
-  # cluster
+  # cluster with replication
   redis-cluster-1:
     image: "redis:${REDIS_VERSION:-latest}"
     command: redis-server --port 7000 ${DEFAULT_ARGS---enable-debug-command yes} --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
@@ -83,6 +83,7 @@ services:
     ports:
       - '7005:7005'
       - '17005:17005'
+  # ssl cluster with replication
   redis-cluster-init:
     image: "redis:${REDIS_VERSION:-latest}"
     command: bash -c "echo yes | redis-cli --cluster create --cluster-replicas 1 ${HOST_IP}:7000 ${HOST_IP}:7001 ${HOST_IP}:7002 ${HOST_IP}:7003 ${HOST_IP}:7004 ${HOST_IP}:7005"
@@ -141,6 +142,30 @@ services:
     depends_on: [redis-ssl-cluster-1, redis-ssl-cluster-2, redis-ssl-cluster-3, redis-ssl-cluster-4, redis-ssl-cluster-5, redis-ssl-cluster-6]
     volumes:
       - ./tests/tls:/tls
+  # primary only cluster
+  redis-cluster-noreplica-1:
+    image: "redis:${REDIS_VERSION:-latest}"
+    command: redis-server --port 8400 ${DEFAULT_ARGS---enable-debug-command yes} --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
+    ports:
+      - '8400:8400'
+      - '18400:18400'
+  redis-cluster-noreplica-2:
+    image: "redis:${REDIS_VERSION:-latest}"
+    command: redis-server --port 8401 ${DEFAULT_ARGS---enable-debug-command yes} --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
+    depends_on: [redis-cluster-1]
+    ports:
+      - '8401:8401'
+      - '18401:18401'
+  redis-cluster-noreplica-3:
+    image: "redis:${REDIS_VERSION:-latest}"
+    command: redis-server --port 8402 ${DEFAULT_ARGS---enable-debug-command yes} --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
+    ports:
+      - '8402:8402'
+      - '18402:18402'
+  redis-cluster-noreplica-init:
+    image: "redis:${REDIS_VERSION:-latest}"
+    command: bash -c "echo yes | redis-cli --cluster create --cluster-replicas 0 ${HOST_IP}:8400 ${HOST_IP}:8401 ${HOST_IP}:8402"
+    depends_on: [redis-cluster-noreplica-1, redis-cluster-noreplica-2, redis-cluster-noreplica-3]
   redis-basic:
     image: "redis:${REDIS_VERSION:-latest}"
     command: redis-server --port 6379 ${DEFAULT_ARGS---enable-debug-command yes}
