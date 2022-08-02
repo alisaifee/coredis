@@ -20,6 +20,7 @@ from coredis.typing import (
     Literal,
     Node,
     Optional,
+    Set,
     StringT,
     ValueT,
 )
@@ -173,7 +174,7 @@ class NodeManager:
         self.startup_nodes_reachable = False
 
         nodes = self.orig_startup_nodes
-        replicas = set()
+        replicas: Set[str] = set()
 
         # With this option the client will attempt to connect to any of the previous set of nodes
         # instead of the original set of startup nodes
