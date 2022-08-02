@@ -10,5 +10,4 @@ pytest-cov
 pytest-env
 pytest-lazy-fixture
 pytest-mock
-pytest-timeout
 redis
