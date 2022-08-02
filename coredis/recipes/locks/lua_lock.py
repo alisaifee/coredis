@@ -203,7 +203,7 @@ class LuaLock(Generic[AnyStr]):
             return math.ceil(self.client.num_replicas_per_shard / 2)
         return 0
 
-    async def __acquire(self, token: StringT, stop_trying_at: Optional[int]) -> bool:
+    async def __acquire(self, token: StringT, stop_trying_at: Optional[float]) -> bool:
         if isinstance(self.client, RedisCluster):
             try:
 
