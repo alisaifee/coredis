@@ -71,6 +71,13 @@ async def check_test_constraints(request, client, protocol=3):
         if marker.name == "nocluster" and isinstance(client, coredis.RedisCluster):
             return pytest.skip("Skipped for redis cluster")
 
+        if marker.name == "replicated_clusteronly":
+            is_cluster = isinstance(client, coredis.RedisCluster)
+            if not is_cluster or not any(
+                node.server_type == "replica"
+                for _, node in client.connection_pool.nodes.nodes.items()
+            ):
+                return pytest.skip("Skipped for non replicated cluster")
         if marker.name == "noruntimechecks" and RUNTIME_TYPECHECKS:
             return pytest.skip("Skipped with runtime checks enabled")
         if marker.name == "clusteronly" and not isinstance(
@@ -233,6 +240,17 @@ def redis_cluster_server(docker_services):
     if os.environ.get("CI") == "True":
         time.sleep(10)
     yield ["localhost", 7000]
+
+
+@pytest.fixture(scope="session")
+def redis_cluster_noreplica_server(docker_services):
+    docker_services.start("redis-cluster-noreplica-init")
+    docker_services.wait_for_service(
+        "redis-cluster-noreplica-3", 8402, check_redis_cluster_ready
+    )
+    if os.environ.get("CI") == "True":
+        time.sleep(10)
+    yield ["localhost", 8400]
 
 
 @pytest.fixture(scope="session")
@@ -628,6 +646,29 @@ async def redis_cluster_blocking(redis_cluster_server, request):
     )
     cluster = coredis.RedisCluster(
         connection_pool=pool,
+        decode_responses=True,
+        **get_client_test_args(request),
+    )
+    await check_test_constraints(request, cluster)
+    await cluster
+    await cluster.flushall()
+    await cluster.flushdb()
+
+    for primary in cluster.primaries:
+        await set_default_test_config(primary)
+
+    async with remapped_slots(cluster, request):
+        yield cluster
+
+    cluster.connection_pool.disconnect()
+
+
+@pytest.fixture
+async def redis_cluster_noreplica(redis_cluster_noreplica_server, request):
+    cluster = coredis.RedisCluster(
+        "localhost",
+        8400,
+        stream_timeout=10,
         decode_responses=True,
         **get_client_test_args(request),
     )

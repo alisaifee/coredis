@@ -551,6 +551,14 @@ class RedisCluster(
                 self.connection_pool.nodes.get_redis_link(replica.host, replica.port),
             )
 
+    @property
+    def num_replicas_per_shard(self) -> int:
+        """
+        Number of replicas per shard of the cluster determined by
+        initial cluster topology discovery
+        """
+        return self.connection_pool.nodes.replicas_per_shard
+
     def _determine_slot(self, command: bytes, *args: ValueT) -> Optional[int]:
         """Figures out what slot based on command and args"""
         keys = KeySpec.extract_keys(

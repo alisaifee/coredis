@@ -3,8 +3,10 @@ from __future__ import annotations
 import asyncio
 import contextvars
 import importlib.resources
+import math
 import time
 import uuid
+import warnings
 from types import TracebackType
 from typing import cast
 
@@ -145,7 +147,7 @@ class LuaLock(Generic[AnyStr]):
         to acquire a lock. If the lock is being used with a cluster client
         the :meth:`coredis.RedisCluster.ensure_replication` context manager
         will be used to ensure that the command was replicated to atleast
-        1 replica.
+        half the replicas of the shard where the lock would be acquired.
 
         :raises: :exc:`~coredis.exceptions.LockError`
         """
@@ -156,7 +158,7 @@ class LuaLock(Generic[AnyStr]):
         if blocking_timeout is not None:
             stop_trying_at = time.time() + blocking_timeout
         while True:
-            if await self.__acquire(token):
+            if await self.__acquire(token, stop_trying_at):
                 self.local.set(token)
                 return True
             if not blocking:
@@ -192,10 +194,27 @@ class LuaLock(Generic[AnyStr]):
             raise LockError("Cannot extend a lock with no timeout")
         return await self.__extend(additional_time)
 
-    async def __acquire(self, token: StringT) -> bool:
+    @property
+    def replication_factor(self) -> int:
+        """
+        Number of replicas the lock needs to replicate to, to be
+        considered acquired.
+        """
+        if isinstance(self.client, RedisCluster):
+            return math.ceil(self.client.num_replicas_per_shard / 2)
+        return 0
+
+    async def __acquire(self, token: StringT, stop_trying_at: Optional[float]) -> bool:
         if isinstance(self.client, RedisCluster):
             try:
-                with self.client.ensure_replication(1, timeout_ms=0):
+                replication_wait = (
+                    1000 * (max(0, stop_trying_at - time.time()))
+                    if stop_trying_at is not None
+                    else 100
+                )
+                with self.client.ensure_replication(
+                    self.replication_factor, timeout_ms=int(replication_wait)
+                ):
                     return await self.client.set(
                         self.name,
                         token,
@@ -203,7 +222,13 @@ class LuaLock(Generic[AnyStr]):
                         px=int(self.timeout * 1000) if self.timeout else None,
                     )
             except ReplicationError:
-                raise LockError(f"Unable to ensure lock {self.name!r} was replicated ")
+                warnings.warn(
+                    f"Unable to ensure lock {self.name!r} was replicated "
+                    f"to {self.replication_factor} replicas",
+                    category=RuntimeWarning,
+                )
+                await self.client.delete([self.name])
+                return False
         else:
             return await self.client.set(
                 self.name,
