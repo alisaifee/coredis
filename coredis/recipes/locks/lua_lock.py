@@ -207,16 +207,11 @@ class LuaLock(Generic[AnyStr]):
         if isinstance(self.client, RedisCluster):
             try:
 
-                if self.blocking:
-                    replication_wait = (
-                        1000 * (max(0, stop_trying_at - time.time()))
-                        if stop_trying_at is not None
-                        else 0
-                    )
-                else:
-                    replication_wait = 1000 * (
-                        self.timeout if self.timeout is not None else 0.1
-                    )
+                replication_wait = (
+                    1000 * (max(0, stop_trying_at - time.time()))
+                    if stop_trying_at is not None
+                    else 100
+                )
                 with self.client.ensure_replication(
                     self.replication_factor, timeout_ms=int(replication_wait)
                 ):
