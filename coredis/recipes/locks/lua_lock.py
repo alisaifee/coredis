@@ -225,8 +225,9 @@ class LuaLock(Generic[AnyStr]):
                 warnings.warn(
                     f"Unable to ensure lock {self.name!r} was replicated "
                     f"to {self.replication_factor} replicas",
-                    category=RuntimeWarning
+                    category=RuntimeWarning,
                 )
+                await self.client.delete([self.name])
                 return False
         else:
             return await self.client.set(

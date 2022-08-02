@@ -73,7 +73,7 @@ class TestLock:
     async def test_lock_replication_failed(self, client, mocker):
         replication_factor = mocker.patch(
             "coredis.recipes.locks.LuaLock.replication_factor",
-            new_callable=PropertyMock
+            new_callable=PropertyMock,
         )
         replication_factor.return_value = 2
         lock1 = LuaLock(client, "foo", blocking=True, blocking_timeout=1)
