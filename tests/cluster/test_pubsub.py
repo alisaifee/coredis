@@ -316,7 +316,9 @@ class TestPubSubSubscribeUnsubscribe:
         assert not client.connection_pool.initialized
         await p.subscribe("foo")
         assert p.subscribed
+        assert await p.get_message(ignore_subscribe_messages=True) is None
         await p.unsubscribe()
+        assert await p.get_message(ignore_subscribe_messages=True) is None
         assert not p.subscribed
 
     @pytest.mark.asyncio
@@ -325,8 +327,10 @@ class TestPubSubSubscribeUnsubscribe:
         p = client.sharded_pubsub()
         assert not client.connection_pool.initialized
         await p.subscribe("foo")
+        assert await p.get_message(ignore_subscribe_messages=True) is None
         assert p.subscribed
         await p.unsubscribe()
+        assert await p.get_message(ignore_subscribe_messages=True) is None
         assert not p.subscribed
 
 
