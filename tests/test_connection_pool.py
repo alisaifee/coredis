@@ -28,6 +28,7 @@ class DummyConnection:
         self.needs_handshake = True
         self._last_error = None
         self._requests = deque()
+        self.requests_pending = 0
 
     def connect(self):
         self.is_connected = True

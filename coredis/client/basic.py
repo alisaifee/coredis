@@ -445,7 +445,7 @@ class Redis(Client[AnyStr]):
         verify_version: bool = ...,
         cache: Optional[AbstractCache] = ...,
         noreply: bool = ...,
-        **_: Any,
+        **kwargs: Any,
     ) -> None:
         ...
 
@@ -481,7 +481,7 @@ class Redis(Client[AnyStr]):
         verify_version: bool = ...,
         cache: Optional[AbstractCache] = ...,
         noreply: bool = ...,
-        **_: Any,
+        **kwargs: Any,
     ) -> None:
         ...
 
@@ -516,7 +516,7 @@ class Redis(Client[AnyStr]):
         verify_version: bool = True,
         cache: Optional[AbstractCache] = None,
         noreply: bool = False,
-        **_: Any,
+        **kwargs: Any,
     ) -> None:
         """
         Changes
@@ -635,6 +635,11 @@ class Redis(Client[AnyStr]):
             noreply=noreply,
         )
         self.cache = cache
+        # Experimental. Release connections back to the pool if the connection
+        # lag < 10ms
+        self._quick_release_threshold = float(
+            kwargs.get("quick_release_threshold", 0.01)
+        )
 
     @classmethod
     @overload
@@ -756,6 +761,7 @@ class Redis(Client[AnyStr]):
 
         pool = self.connection_pool
         connection = await pool.get_connection(command, *args)
+        quick_release = connection.lag < self._quick_release_threshold
         if (
             self.cache
             and isinstance(self.cache, SupportsClientTracking)
@@ -772,7 +778,8 @@ class Redis(Client[AnyStr]):
                 command, *args, noreply=self.noreply, decode=options.get("decode")
             )
             maybe_wait = await self._ensure_wait(command, connection)
-            pool.release(connection)
+            if quick_release:
+                pool.release(connection)
             reply = await request
             await maybe_wait
             if self.noreply:
@@ -797,11 +804,11 @@ class Redis(Client[AnyStr]):
                 e, SentinelConnectionError
             ):  # do not retry explicit sentinel connection errors
                 raise
-            connection = await pool.get_connection(command, *args)
-            request = await connection.create_request(
+            _connection = await pool.get_connection(command, *args)
+            request = await _connection.create_request(
                 command, *args, decode=options.get("decode")
             )
-            pool.release(connection)
+            pool.release(_connection)
             reply = await request
             if self.noreply:
                 return None  # type: ignore
@@ -813,6 +820,8 @@ class Redis(Client[AnyStr]):
             )
         finally:
             self._ensure_server_version(connection.server_version)
+            if not quick_release:
+                pool.release(connection)
 
     def monitor(self) -> Monitor[AnyStr]:
         """

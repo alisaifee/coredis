@@ -163,7 +163,8 @@ class BaseConnection(asyncio.BaseProtocol):
         self.client_name = client_name
         self.client_id = None
         # flag to show if a connection is waiting for response
-        self.last_active_at = time.time()
+        self.last_active_at: float = time.time()
+        self.last_request_processed: Optional[float] = None
         self.packer = Packer(self.encoding)
         self.push_messages: asyncio.Queue[ResponseType] = asyncio.Queue()
         self.tracking_client_id = None
@@ -200,8 +201,17 @@ class BaseConnection(asyncio.BaseProtocol):
         return self._transport is not None
 
     @property
-    def requests_pending(self) -> bool:
-        return len(self._requests) > 0
+    def requests_pending(self) -> int:
+        return len(self._requests)
+
+    @property
+    def lag(self) -> float:
+        if not self._requests:
+            return 0
+        elif self.last_request_processed is None:
+            return time.time()
+        else:
+            return time.time() - self.last_request_processed
 
     def register_connect_callback(
         self,
@@ -287,6 +297,8 @@ class BaseConnection(asyncio.BaseProtocol):
                 request.future.set_exception(response)
             else:
                 request.future.set_result(response)
+
+            self.last_request_processed = time.time()
 
             try:
                 request = self._requests.popleft()
@@ -449,6 +461,7 @@ class BaseConnection(asyncio.BaseProtocol):
             message = self._parser.get_response(
                 bool(decode) if decode is not None else None, push_message_types
             )
+        self.last_request_processed = time.time()
         return message
 
     def _send_packed_command(self, command: List[bytes]) -> None:

@@ -26,6 +26,7 @@ from coredis.typing import (
     Optional,
     Set,
     StringT,
+    Tuple,
     Type,
     TypeVar,
     Union,
@@ -363,7 +364,9 @@ class BlockingConnectionPool(ConnectionPool):
     def __init__(
         self,
         connection_class: Optional[Type[Connection]] = None,
-        queue_class: Type[asyncio.Queue[Optional[Connection]]] = asyncio.LifoQueue,
+        queue_class: Type[
+            asyncio.Queue[Tuple[int, float, Optional[Connection]]]
+        ] = asyncio.LifoQueue,
         max_connections: Optional[int] = None,
         timeout: int = 20,
         max_idle_time: int = 0,
@@ -395,11 +398,15 @@ class BlockingConnectionPool(ConnectionPool):
             await asyncio.sleep(self.idle_check_interval)
 
     def reset(self) -> None:
-        self._pool = self.queue_class(self.max_connections)
+        self._pool: asyncio.Queue[
+            Tuple[int, float, Optional[Connection]]
+        ] = self.queue_class(self.max_connections)
 
+        i = 0
         while True:
             try:
-                self._pool.put_nowait(None)
+                self._pool.put_nowait((i, -1 * time.time(), None))
+                i += 1
             except asyncio.QueueFull:
                 break
 
@@ -407,7 +414,7 @@ class BlockingConnectionPool(ConnectionPool):
 
     def peek_available(self) -> Optional[BaseConnection]:
         return (
-            self._pool._queue[-1]  # type: ignore
+            self._pool._queue[-1][-1]  # type: ignore
             if (self._pool and not self._pool.empty())
             else None
         )
@@ -423,7 +430,7 @@ class BlockingConnectionPool(ConnectionPool):
 
         try:
             async with async_timeout.timeout(self.timeout):
-                connection = await self._pool.get()
+                _, _, connection = await self._pool.get()
             if connection and connection.needs_handshake:
                 await connection.perform_handshake()
         except asyncio.TimeoutError:
@@ -445,7 +452,9 @@ class BlockingConnectionPool(ConnectionPool):
         if _connection and _connection.pid == self.pid:
             self._in_use_connections.remove(_connection)
             if not self._pool.full():
-                self._pool.put_nowait(_connection)
+                self._pool.put_nowait(
+                    (_connection.requests_pending, -1 * time.time(), _connection)
+                )
 
     def disconnect(self) -> None:
         """Closes all connections in the pool"""
@@ -453,12 +462,12 @@ class BlockingConnectionPool(ConnectionPool):
 
         while True:
             try:
-                pooled_connections.append(self._pool.get_nowait())
+                pooled_connections.append(self._pool.get_nowait()[-1])
             except asyncio.QueueEmpty:
                 break
 
-        for conn in pooled_connections:
-            self._pool.put_nowait(conn)
+        for idx, conn in enumerate(pooled_connections):
+            self._pool.put_nowait((idx, -1 * time.time(), conn))
 
         all_conns = chain(pooled_connections, self._in_use_connections)
 
