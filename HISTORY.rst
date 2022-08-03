@@ -3,6 +3,24 @@
 Changelog
 =========
 
+v4.5.1
+------
+Release Date: 2022-08-02
+
+* Bug Fix
+
+  * Fix context leak when commands issued
+    within ensure_replication and ignore_replies
+    context managers fail
+
+* Recipes
+
+  * Fix LUA lock recipe to work with
+    clusters with no replicas.
+  * Ensure LUA lock recipe waits on replication
+    of lock to n/2 replicas if replicas exist in
+    the cluster
+
 v4.5.0
 ------
 Release Date: 2022-07-30
@@ -1111,6 +1129,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
