@@ -243,6 +243,17 @@ def redis_cluster_server(docker_services):
 
 
 @pytest.fixture(scope="session")
+def redis_cluster_auth_server(docker_services):
+    docker_services.start("redis-cluster-auth-init")
+    docker_services.wait_for_service(
+        "redis-cluster-auth-1", 8500, lambda h, p: ping_socket("localhost", 8500)
+    )
+    if os.environ.get("CI") == "True":
+        time.sleep(10)
+    yield ["localhost", 8500]
+
+
+@pytest.fixture(scope="session")
 def redis_cluster_noreplica_server(docker_services):
     docker_services.start("redis-cluster-noreplica-init")
     docker_services.wait_for_service(
@@ -619,6 +630,30 @@ async def redis_cluster(redis_cluster_server, request):
         7000,
         stream_timeout=10,
         decode_responses=True,
+        **get_client_test_args(request),
+    )
+    await check_test_constraints(request, cluster)
+    await cluster
+    await cluster.flushall()
+    await cluster.flushdb()
+
+    for primary in cluster.primaries:
+        await set_default_test_config(primary)
+
+    async with remapped_slots(cluster, request):
+        yield cluster
+
+    cluster.connection_pool.disconnect()
+
+
+@pytest.fixture
+async def redis_cluster_auth(redis_cluster_auth_server, request):
+    cluster = coredis.RedisCluster(
+        "localhost",
+        8500,
+        stream_timeout=10,
+        decode_responses=True,
+        password="sekret",
         **get_client_test_args(request),
     )
     await check_test_constraints(request, cluster)

@@ -165,6 +165,29 @@ services:
     image: "redis:${REDIS_VERSION:-latest}"
     command: bash -c "echo yes | redis-cli --cluster create --cluster-replicas 0 ${HOST_IP}:8400 ${HOST_IP}:8401 ${HOST_IP}:8402"
     depends_on: [redis-cluster-noreplica-1, redis-cluster-noreplica-2, redis-cluster-noreplica-3]
+  # auth required cluster
+  redis-cluster-auth-1:
+    image: "redis:${REDIS_VERSION:-latest}"
+    command: redis-server --port 8500 ${DEFAULT_ARGS---enable-debug-command yes} --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP} --requirepass sekret
+    ports:
+      - '8500:8500'
+      - '18500:18500'
+  redis-cluster-auth-2:
+    image: "redis:${REDIS_VERSION:-latest}"
+    command: redis-server --port 8501 ${DEFAULT_ARGS---enable-debug-command yes} --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP} --requirepass sekret
+    ports:
+      - '8501:8501'
+      - '18501:18501'
+  redis-cluster-auth-3:
+    image: "redis:${REDIS_VERSION:-latest}"
+    command: redis-server --port 8502 ${DEFAULT_ARGS---enable-debug-command yes} --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP} --requirepass sekret
+    ports:
+      - '8502:8502'
+      - '18502:18502'
+  redis-cluster-auth-init:
+    image: "redis:${REDIS_VERSION:-latest}"
+    command: bash -c "echo yes | redis-cli --cluster create --cluster-replicas 0 ${HOST_IP}:8500 ${HOST_IP}:8501 ${HOST_IP}:8502 -a sekret"
+    depends_on: [redis-cluster-auth-1, redis-cluster-auth-2, redis-cluster-auth-3]
   redis-basic:
     image: "redis:${REDIS_VERSION:-latest}"
     command: redis-server --port 6379 ${DEFAULT_ARGS---enable-debug-command yes}
