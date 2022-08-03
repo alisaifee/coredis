@@ -3,6 +3,22 @@
 Changelog
 =========
 
+v4.5.2
+------
+Release Date: 2022-08-03
+
+* Bug Fix
+
+  * Implicitly initialize cluster connection pool when
+    pubsub subscribe is called
+  * Fix handling of sharded pubsub unsubscribe message
+  * Fix unsubscribe all for sharded pubsub
+
+* Compatibility
+
+  * Improve surfacing underlying errors when initializing
+    cluster
+
 v4.5.1
 ------
 Release Date: 2022-08-02
@@ -1129,6 +1145,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
