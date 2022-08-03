@@ -175,6 +175,7 @@ class NodeManager:
 
         nodes = self.orig_startup_nodes
         replicas: Set[str] = set()
+        startup_node_errors: Dict[str, List[str]] = {}
 
         # With this option the client will attempt to connect to any of the previous set of nodes
         # instead of the original set of startup nodes
@@ -188,9 +189,10 @@ class NodeManager:
                     r = self.get_redis_link(host=node.host, port=node.port)
                     cluster_slots = await r.cluster_slots()
                     self.startup_nodes_reachable = True
-
-            except RedisError:
+            except RedisError as err:
+                startup_node_errors.setdefault(str(err), []).append(node.name)
                 continue
+
             all_slots_covered = True
             # If there's only one server in the cluster, its ``host`` is ''
             # Fix it to the host in startup_nodes
@@ -256,9 +258,19 @@ class NodeManager:
                 break
 
         if not self.startup_nodes_reachable:
+            details = ""
+            # collapse any startup nodes by error representation
+            if startup_node_errors:
+                details = " Underlying errors:\n" + "\n".join(
+                    [
+                        f"- {err} [{','.join(nodes)}]"
+                        for err, nodes in startup_node_errors.items()
+                    ]
+                )
             raise RedisClusterException(
                 "Redis Cluster cannot be connected. "
                 "Please provide at least one reachable node."
+                f"{details}"
             )
 
         if not all_slots_covered:

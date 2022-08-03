@@ -384,3 +384,9 @@ async def test_init_with_down_node(redis_cluster):
         with pytest.raises(RedisClusterException) as e:
             await n.initialize()
         assert "Redis Cluster cannot be connected" in str(e.value)
+
+
+@pytest.mark.asyncio
+async def test_cluster_initialization_fail(redis_cluster_auth, cloner):
+    with pytest.raises(RedisClusterException, match="invalid username-password pair"):
+        await cloner(redis_cluster_auth, password="wrong")
