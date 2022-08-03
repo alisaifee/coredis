@@ -322,6 +322,7 @@ class TestPubSubSubscribeUnsubscribe:
         assert not p.subscribed
 
     @pytest.mark.asyncio
+    @pytest.mark.min_server_version("7.0")
     async def test_sharded_pubsub_uninitialized_client(self, redis_cluster, cloner):
         client = await cloner(redis_cluster, initialize=False)
         p = client.sharded_pubsub()
