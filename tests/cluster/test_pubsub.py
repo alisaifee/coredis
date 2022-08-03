@@ -316,6 +316,8 @@ class TestPubSubSubscribeUnsubscribe:
         assert not client.connection_pool.initialized
         await p.subscribe("foo")
         assert p.subscribed
+        await p.unsubscribe()
+        assert not p.subscribed
 
     @pytest.mark.asyncio
     async def test_sharded_pubsub_uninitialized_client(self, redis_cluster, cloner):
@@ -324,6 +326,8 @@ class TestPubSubSubscribeUnsubscribe:
         assert not client.connection_pool.initialized
         await p.subscribe("foo")
         assert p.subscribed
+        await p.unsubscribe()
+        assert not p.subscribed
 
 
 class TestPubSubMessages:

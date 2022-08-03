@@ -252,6 +252,10 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         """
         await self._ensure_encoding()
         await self.execute_command(CommandName.PUNSUBSCRIBE, *patterns)
+        if patterns:
+            [self.patterns.pop(pattern) for pattern in patterns]
+        else:
+            self.patterns.clear()
 
     async def subscribe(
         self,
@@ -289,6 +293,11 @@ class BasePubSub(Generic[AnyStr, PoolT]):
 
         await self._ensure_encoding()
         await self.execute_command(CommandName.UNSUBSCRIBE, *channels)
+
+        if channels:
+            [self.channels.pop(channel) for channel in channels]
+        else:
+            self.channels.clear()
 
     async def listen(self) -> Optional[PubSubMessage]:
         """
@@ -525,7 +534,8 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         """
 
         await self._ensure_encoding()
-        for channel in channels:
+        for channel in channels or list(self.channels.keys()):
+            self.channels.pop(channel)
             await self.execute_command(CommandName.SUNSUBSCRIBE, channel, sharded=True)
 
     async def psubscribe(
