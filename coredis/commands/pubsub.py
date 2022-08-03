@@ -71,7 +71,9 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         if hasattr(self, "encoding"):
             return
 
+        await self.connection_pool.initialize()
         conn = await self.connection_pool.get_connection(b"pubsub")
+
         try:
             self.encoding = conn.encoding
             self.decode_responses = conn.decode_responses

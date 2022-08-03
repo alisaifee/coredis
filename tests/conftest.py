@@ -1057,7 +1057,7 @@ def _s(client):
 
 @pytest.fixture
 def cloner():
-    async def _cloner(client, connection_kwargs={}, **kwargs):
+    async def _cloner(client, initialize=True, connection_kwargs={}, **kwargs):
         if isinstance(client, coredis.client.Redis):
             c_kwargs = client.connection_pool.connection_kwargs
             c_kwargs.update(connection_kwargs)
@@ -1077,7 +1077,8 @@ def cloner():
                 encoding=client.encoding,
                 **kwargs,
             )
-        await c.ping()
+        if initialize:
+            await c.ping()
         return c
 
     return _cloner
