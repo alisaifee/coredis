@@ -152,7 +152,6 @@ services:
   redis-cluster-noreplica-2:
     image: "redis:${REDIS_VERSION:-latest}"
     command: redis-server --port 8401 ${DEFAULT_ARGS---enable-debug-command yes} --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
-    depends_on: [redis-cluster-1]
     ports:
       - '8401:8401'
       - '18401:18401'
