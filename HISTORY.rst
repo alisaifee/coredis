@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v4.5.3
+------
+Release Date: 2022-08-03
+
+* Bug Fix
+
+  * Ensure default cluster connection pools are not recreated
+    upon access. (`Issue 92 <https://github.com/alisaifee/coredis/issues/92>`_)
+
 v4.5.2
 ------
 Release Date: 2022-08-03
@@ -1145,6 +1154,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
