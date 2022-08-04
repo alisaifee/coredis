@@ -204,9 +204,7 @@ class ClusterConnectionPool(ConnectionPool):
         self.checkpid()
 
         try:
-            connection = self._cluster_available_connections.get(
-                node.name, self.__default_node_queue()
-            ).get_nowait()
+            connection = self.__node_pool(node.name).get_nowait()
         except asyncio.QueueEmpty:
             connection = None
         if not connection:
@@ -249,6 +247,11 @@ class ClusterConnectionPool(ConnectionPool):
             asyncio.ensure_future(self.disconnect_on_idle_time_exceeded(connection))
 
         return connection
+
+    def __node_pool(self, node: str) -> asyncio.Queue[Optional[Connection]]:
+        if not self._cluster_available_connections.get(node):
+            self._cluster_available_connections[node] = self.__default_node_queue()
+        return self._cluster_available_connections[node]
 
     def __default_node_queue(self) -> asyncio.Queue[Optional[Connection]]:
         q_size = max(
@@ -304,9 +307,7 @@ class ClusterConnectionPool(ConnectionPool):
                     self._created_connections_per_node[connection.node.name] -= 1
             else:
                 try:
-                    self._cluster_available_connections.setdefault(
-                        connection.node.name, self.__default_node_queue()
-                    ).put_nowait(connection)
+                    self.__node_pool(connection.node.name).put_nowait(connection)
                 except asyncio.QueueFull:
                     connection.disconnect()
 
@@ -315,17 +316,20 @@ class ClusterConnectionPool(ConnectionPool):
         for node_connections in self._cluster_in_use_connections.values():
             for connection in node_connections:
                 connection.disconnect()
-        for node, available_connections in list(
-            self._cluster_available_connections.items()
-        ):
+        for node, available_connections in self._cluster_available_connections.items():
+            removed = 0
             while True:
                 try:
                     _connection = available_connections.get_nowait()
                     if _connection:
                         _connection.disconnect()
+                        self._created_connections_per_node[node] -= 1
+                    removed += 1
                 except asyncio.QueueEmpty:
                     break
-            self._cluster_available_connections.pop(node)
+            # Refill queue with empty slots
+            for _ in range(removed):
+                available_connections.put_nowait(None)
 
     def count_all_num_connections(self, node: ManagedNode) -> int:
         if self.max_connections_per_node:
@@ -367,9 +371,7 @@ class ClusterConnectionPool(ConnectionPool):
 
         if not self.blocking:
             try:
-                connection = self._cluster_available_connections.setdefault(
-                    node.name, self.__default_node_queue()
-                ).get_nowait()
+                connection = self.__node_pool(node.name).get_nowait()
             except asyncio.QueueEmpty:
                 connection = None
         else:
