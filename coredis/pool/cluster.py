@@ -303,7 +303,7 @@ class ClusterConnectionPool(ConnectionPool):
                 connection.disconnect()
                 # reduce node connection count in case of too many connection error raised
 
-                if self._created_connections_per_node.get(connection.node.name):
+                if connection.node.name in self._created_connections_per_node:
                     self._created_connections_per_node[connection.node.name] -= 1
             else:
                 try:
@@ -323,7 +323,8 @@ class ClusterConnectionPool(ConnectionPool):
                     _connection = available_connections.get_nowait()
                     if _connection:
                         _connection.disconnect()
-                        self._created_connections_per_node[node] -= 1
+                        if node in self._created_connections_per_node:
+                            self._created_connections_per_node[node] -= 1
                     removed += 1
                 except asyncio.QueueEmpty:
                     break
