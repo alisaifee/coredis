@@ -12,7 +12,7 @@ class DummyConnection(BaseConnection):
         super().__init__(*a, **k)
 
     def data_received(self, data):
-        self._parser.unpacker.feed(data)
+        self._parser.feed(data)
 
     async def _connect(self) -> None:
         pass
@@ -44,82 +44,82 @@ class TestPyParser:
         return value
 
     def test_none(self, parser, decode):
-        parser.unpacker.feed(b"_\r\n")
+        parser.feed(b"_\r\n")
         assert parser.get_response() is None
 
     def test_simple_string(self, parser, decode):
-        parser.unpacker.feed(b"+PONG\r\n")
+        parser.feed(b"+PONG\r\n")
         assert parser.get_response() == self.encoded_value(decode, b"PONG")
 
     def test_nil_bulk_string(self, parser, decode):
-        parser.unpacker.feed(b"$-1\r\n")
+        parser.feed(b"$-1\r\n")
         assert parser.get_response() is None
 
     def test_bulk_string(self, parser, decode):
-        parser.unpacker.feed(b"$5\r\nhello\r\n")
+        parser.feed(b"$5\r\nhello\r\n")
         assert parser.get_response() == self.encoded_value(decode, b"hello")
 
     def test_bulk_string_forced_raw(self, parser, decode):
-        parser.unpacker.feed(b"$5\r\nhello\r\n")
+        parser.feed(b"$5\r\nhello\r\n")
         assert parser.get_response(decode=False) == b"hello"
 
     def test_nil_verbatim_text(self, parser, decode):
-        parser.unpacker.feed(b"=-1\r\n")
+        parser.feed(b"=-1\r\n")
         assert parser.get_response() is None
 
     def test_verbatim_text(self, parser, decode):
-        parser.unpacker.feed(b"=9\r\ntxt:hello\r\n")
+        parser.feed(b"=9\r\ntxt:hello\r\n")
         assert parser.get_response() == self.encoded_value(decode, b"hello")
 
     def test_unknown_verbatim_text_type(self, parser, decode):
-        parser.unpacker.feed(b"=9\r\nrst:hello\r\n")
+        parser.feed(b"=9\r\nrst:hello\r\n")
         with pytest.raises(
             InvalidResponse, match="Unexpected verbatim string of type b'rst'"
         ):
             parser.get_response()
 
     def test_bool(self, parser, decode):
-        parser.unpacker.feed(b"#f\r\n")
+        parser.feed(b"#f\r\n")
         assert parser.get_response() is False
-        parser.unpacker.feed(b"#t\r\n")
+        parser.feed(b"#t\r\n")
         assert parser.get_response() is True
 
     def test_int(self, parser, decode):
-        parser.unpacker.feed(b":1\r\n")
+        parser.feed(b":1\r\n")
         assert parser.get_response() == 1
-        parser.unpacker.feed(b":2\r\n")
+        parser.feed(b":2\r\n")
         assert parser.get_response() == 2
 
     def test_double(self, parser, decode):
-        parser.unpacker.feed(b",3.142\r\n")
+        parser.feed(b",3.142\r\n")
         assert parser.get_response() == 3.142
 
     def test_bignumber(self, parser, decode):
-        parser.unpacker.feed(b"(3.142\r\n")
+        parser.feed(b"(3.142\r\n")
         with pytest.raises(InvalidResponse):
             parser.get_response()
 
     def test_nil_array(self, parser, decode):
-        parser.unpacker.feed(b"*-1\r\n")
+        parser.feed(b"*-1\r\n")
         assert parser.get_response() is None
 
     def test_empty_array(self, parser, decode):
-        parser.unpacker.feed(b"*0\r\n")
+        parser.feed(b"*0\r\n")
         assert parser.get_response() == []
 
     def test_int_array(self, parser, decode):
-        parser.unpacker.feed(b"*2\r\n:1\r\n:2\r\n")
+        parser.feed(b"*2\r\n:1\r\n:2\r\n")
         assert parser.get_response() == [1, 2]
 
     def test_string_array(self, parser, decode):
-        parser.unpacker.feed(b"*2\r\n$2\r\nco\r\n$5\r\nredis\r\n")
+        parser.feed(b"*2\r\n$2\r\nco\r\n$5\r\nredis\r\n")
         assert parser.get_response() == [
             self.encoded_value(decode, b"co"),
             self.encoded_value(decode, b"redis"),
         ]
 
     def test_mixed_array(self, parser, decode):
-        parser.unpacker.feed(b"*3\r\n:-1\r\n$2\r\nco\r\n$5\r\nredis\r\n")
+        parser.feed(b"*3\r\n:-1\r\n$2\r\nco\r\n$5\r\nredis\r\n")
         assert parser.get_response() == [
             -1,
             self.encoded_value(decode, b"co"),
@@ -127,7 +127,7 @@ class TestPyParser:
         ]
 
     def test_nested_array(self, parser, decode):
-        parser.unpacker.feed(b"*2\r\n*2\r\n$2\r\nco\r\n$5\r\nredis\r\n:1\r\n")
+        parser.feed(b"*2\r\n*2\r\n$2\r\nco\r\n$5\r\nredis\r\n:1\r\n")
         assert parser.get_response() == [
             [
                 self.encoded_value(decode, b"co"),
@@ -137,45 +137,45 @@ class TestPyParser:
         ]
 
     def test_simple_push_array(self, parser, decode):
-        parser.unpacker.feed(b">2\r\n$2\r\nco\r\n$5\r\nredis\r\n")
-        assert parser.get_response(push_message_types=[b"co"]) == [
+        parser.feed(b">2\r\n$2\r\nco\r\n$5\r\nredis\r\n")
+        assert parser.get_response(push_message_types={b"co"}) == [
             self.encoded_value(decode, b"co"),
             self.encoded_value(decode, b"redis"),
         ]
 
     def test_interleaved_simple_push_array(self, parser, decode):
-        parser.unpacker.feed(b":3\r\n>2\r\n:1\r\n:2\r\n:4\r\n")
+        parser.feed(b":3\r\n>2\r\n:1\r\n:2\r\n:4\r\n")
         assert parser.get_response() == 3
         assert parser.get_response() == 4
         assert parser.push_messages.get_nowait() == [1, 2]
 
     def test_nil_map(self, parser, decode):
-        parser.unpacker.feed(b"%-1\r\n")
+        parser.feed(b"%-1\r\n")
         assert parser.get_response() is None
 
     def test_empty_map(self, parser, decode):
-        parser.unpacker.feed(b"%0\r\n")
+        parser.feed(b"%0\r\n")
         assert parser.get_response() == {}
 
     def test_simple_map(self, parser, decode):
-        parser.unpacker.feed(b"%2\r\n:1\r\n:2\r\n:3\r\n:4\r\n")
+        parser.feed(b"%2\r\n:1\r\n:2\r\n:3\r\n:4\r\n")
         assert parser.get_response() == {1: 2, 3: 4}
 
     def test_nil_set(self, parser, decode):
-        parser.unpacker.feed(b"~-1\r\n")
+        parser.feed(b"~-1\r\n")
         assert parser.get_response() is None
 
     def test_empty_set(self, parser, decode):
-        parser.unpacker.feed(b"~0\r\n")
+        parser.feed(b"~0\r\n")
         assert parser.get_response() == set()
 
     def test_simple_set(self, parser, decode):
-        parser.unpacker.feed(b"~2\r\n:1\r\n:2\r\n")
+        parser.feed(b"~2\r\n:1\r\n:2\r\n")
         assert parser.get_response() == {1, 2}
 
     def test_multi_container(self, parser, decode):
         # dict containing list and set
-        parser.unpacker.feed(
+        parser.feed(
             b"%2\r\n$2\r\nco\r\n*1\r\n:1\r\n$2\r\nre\r\n~3\r\n:1\r\n:2\r\n:3\r\n"
         )
         assert parser.get_response() == {
@@ -187,6 +187,6 @@ class TestPyParser:
         # set containing a dict
         # This specifically represents a minimal example of the response from
         # ``COMMANDS INFO with RESP 3``
-        parser.unpacker.feed(b"~1\r\n%1\r\n:1\r\n:2\r\n")
+        parser.feed(b"~1\r\n%1\r\n:1\r\n:2\r\n")
         with pytest.raises(TypeError, match="unhashable type"):
             parser.get_response()

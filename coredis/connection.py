@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING, Any, cast
 import async_timeout
 
 from coredis._packer import Packer
-from coredis._unpacker import NotEnoughData
 from coredis._utils import nativestr
 from coredis.exceptions import (
     AuthenticationRequiredError,
@@ -23,7 +22,7 @@ from coredis.exceptions import (
     TimeoutError,
     UnknownCommandError,
 )
-from coredis.parser import Parser
+from coredis.parser import NotEnoughData, Parser
 from coredis.tokens import PureToken
 from coredis.typing import (
     Awaitable,
@@ -282,7 +281,7 @@ class BaseConnection(asyncio.BaseProtocol):
         """
         :meta private:
         """
-        self._parser.unpacker.feed(data)
+        self._parser.feed(data)
         self._read_flag.set()
         if not self._requests:
             return
