@@ -118,7 +118,7 @@ class Parser:
         "WRONGTYPE": WrongTypeError,
     }
 
-    def __init__(self, encoding: str, decode_responses: bool) -> None:
+    def __init__(self, encoding: Optional[str], decode_responses: bool) -> None:
         self.decode_responses: bool = decode_responses
         self.push_messages: Optional[asyncio.Queue[ResponseType]] = None
         self.encoding = encoding
