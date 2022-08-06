@@ -378,9 +378,7 @@ class ClusterConnectionPool(ConnectionPool):
         else:
             try:
                 connection = await asyncio.wait_for(
-                    self._cluster_available_connections.setdefault(
-                        node.name, self.__default_node_queue()
-                    ).get(),
+                    self.__node_pool(node.name).get(),
                     self.blocking_timeout,
                 )
             except asyncio.TimeoutError:
