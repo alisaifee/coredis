@@ -13,7 +13,7 @@ from packaging import version
 from coredis.cache import AbstractCache, SupportsSampling
 from coredis.commands._utils import check_version, redis_command_link
 from coredis.commands.constants import CommandFlag, CommandGroup, CommandName, NodeFlag
-from coredis.globals import READONLY_COMMANDS
+from coredis.globals import COMMAND_FLAGS, READONLY_COMMANDS
 from coredis.response._callbacks import ClusterMultiNodeCallback
 from coredis.typing import (
     AsyncIterator,
@@ -150,6 +150,8 @@ def redis_command(
         raise RuntimeError(
             f"Can't decorate non readonly command {command_name} with cache config"
         )
+
+    COMMAND_FLAGS[command_name] = flags or set()
 
     command_details = CommandDetails(
         command_name,

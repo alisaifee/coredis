@@ -28,9 +28,14 @@ class DummyConnection:
         self.needs_handshake = True
         self._last_error = None
         self._requests = deque()
+        self.average_response_time = 0.0
+        self.lag = 0.0
         self.requests_pending = 0
+        self.requests_processed = 0
+        self.estimated_time_to_idle = 0
+        self.latency = 0
 
-    def connect(self):
+    async def connect(self):
         self.is_connected = True
 
     def disconnect(self):
@@ -96,6 +101,7 @@ class TestConnectionPool:
     async def test_reuse_previously_released_connection(self):
         pool = self.get_pool()
         c1 = await pool.get_connection()
+        await c1.connect()
         pool.release(c1)
         c2 = await pool.get_connection()
         assert c1 == c2
@@ -613,7 +619,7 @@ class TestConnection:
         with pytest.raises(RedisError):
             await bad_connection.info()
         pool = bad_connection.connection_pool
-        assert len(pool._available_connections) == 0
+        assert not pool._available_connections[0].is_connected
 
     @pytest.mark.max_server_version("6.2.0")
     async def test_busy_loading_disconnects_socket(self, event_loop):

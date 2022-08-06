@@ -691,6 +691,7 @@ class RedisCluster(
             else:
                 continue
 
+            quick_release = self.should_quick_release(command)
             try:
                 if asking:
                     request = await r.create_request(
@@ -714,16 +715,19 @@ class RedisCluster(
                     noreply=self.noreply,
                     decode=kwargs.get("decode"),
                 )
+                if quick_release:
+                    self.connection_pool.release(r)
 
                 reply = await request
                 response = None
+                maybe_wait = await self._ensure_wait(command, r)
                 if not self.noreply:
                     response = callback(
                         reply,
                         version=self.protocol_version,
                         **kwargs,
                     )
-                await (await self._ensure_wait(command, r))
+                await maybe_wait
                 return response  # type: ignore
             except (RedisClusterException, BusyLoadingError, asyncio.CancelledError):
                 raise
@@ -757,7 +761,8 @@ class RedisCluster(
                 redirect_addr, asking = f"{e.host}:{e.port}", True
             finally:
                 self._ensure_server_version(r.server_version)
-                self.connection_pool.release(r)
+                if not quick_release:
+                    self.connection_pool.release(r)
 
         raise ClusterError("TTL exhausted.")
 

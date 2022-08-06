@@ -54,6 +54,7 @@ class Request:
     future: asyncio.Future[ResponseType] = dataclasses.field(
         default_factory=lambda: asyncio.get_running_loop().create_future()
     )
+    created_at: float = dataclasses.field(default_factory=lambda: time.time())
 
     def enforce_deadline(self) -> None:
         if not self.future.done():
@@ -129,6 +130,9 @@ class BaseConnection(asyncio.BaseProtocol):
     description: ClassVar[str] = "BaseConnection"
     locator: ClassVar[str] = ""
 
+    #: average response time of requests made on this connection
+    average_response_time: float
+
     def __init__(
         self,
         retry_on_timeout: bool = False,
@@ -161,20 +165,28 @@ class BaseConnection(asyncio.BaseProtocol):
         self.server_version: Optional[str] = None
         self.client_name = client_name
         self.client_id = None
-        # flag to show if a connection is waiting for response
+        self.tracking_client_id = None
+
         self.last_active_at: float = time.time()
-        self.last_request_processed: Optional[float] = None
+        self.last_request_processed_at: Optional[float] = None
+
+        self._transport: Optional[asyncio.Transport] = None
+        self._parser = Parser(encoding, decode_responses)
+        self._read_flag = asyncio.Event()
         self.packer = Packer(self.encoding)
         self.push_messages: asyncio.Queue[ResponseType] = asyncio.Queue()
-        self.tracking_client_id = None
+
         self.noreply = noreply
         self.noreply_set = False
+
         self.needs_handshake = True
-        self._transport: Optional[asyncio.Transport] = None
-        self._read_flag = asyncio.Event()
         self._last_error: Optional[BaseException] = None
-        self._parser = Parser(encoding, decode_responses)
+        self._connection_error: Optional[BaseException] = None
+
         self._requests: Deque[Request] = deque()
+
+        self.average_response_time: float = 0
+        self.requests_processed: int = 0
 
     def __repr__(self) -> str:
         return self.describe(self._description_args())
@@ -189,6 +201,14 @@ class BaseConnection(asyncio.BaseProtocol):
             defaultdict(lambda: None, self._description_args())
         )
 
+    @property
+    def estimated_time_to_idle(self) -> float:
+        """
+        Estimated time till the pending request queue of this connection
+        has been cleared
+        """
+        return self.requests_pending * self.average_response_time
+
     def __del__(self) -> None:
         try:
             self.disconnect()
@@ -197,20 +217,31 @@ class BaseConnection(asyncio.BaseProtocol):
 
     @property
     def is_connected(self) -> bool:
-        return self._transport is not None
+        """
+        Whether the connection is established and initial handshakes were
+        performed without error
+        """
+        return self._transport is not None and self._connection_error is None
 
     @property
     def requests_pending(self) -> int:
+        """
+        Number of requests pending response on this connection
+        """
         return len(self._requests)
 
     @property
     def lag(self) -> float:
+        """
+        Returns the amount of seconds since the last request was processed
+        if there are still in flight requests pending on this connection
+        """
         if not self._requests:
             return 0
-        elif self.last_request_processed is None:
+        elif self.last_request_processed_at is None:
             return time.time()
         else:
-            return time.time() - self.last_request_processed
+            return time.time() - self.last_request_processed_at
 
     def register_connect_callback(
         self,
@@ -238,11 +269,14 @@ class BaseConnection(asyncio.BaseProtocol):
         Establish a connnection to the redis server
         and initiate any post connect callbacks
         """
+        self._connection_error = None
         try:
             await self._connect()
-        except (asyncio.CancelledError, RedisError):
+        except (asyncio.CancelledError, RedisError) as err:
+            self._connection_error = err
             raise
         except Exception as err:
+            self._connection_error = err
             raise ConnectionError(str(err)) from err
 
         # run any user callbacks. right now the only internal callback
@@ -297,7 +331,14 @@ class BaseConnection(asyncio.BaseProtocol):
             else:
                 request.future.set_result(response)
 
-            self.last_request_processed = time.time()
+            self.last_request_processed_at = time.time()
+            self.requests_processed += 1
+            response_time = time.time() - request.created_at
+
+            self.average_response_time = (
+                (self.average_response_time * (self.requests_processed - 1))
+                + response_time
+            ) / self.requests_processed
 
             try:
                 request = self._requests.popleft()
@@ -460,7 +501,6 @@ class BaseConnection(asyncio.BaseProtocol):
             message = self._parser.get_response(
                 bool(decode) if decode is not None else None, push_message_types
             )
-        self.last_request_processed = time.time()
         return message
 
     def _send_packed_command(self, command: List[bytes]) -> None:

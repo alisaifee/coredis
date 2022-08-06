@@ -14,7 +14,7 @@ from packaging.version import InvalidVersion, Version
 from coredis._utils import nativestr
 from coredis.cache import AbstractCache, SupportsClientTracking
 from coredis.commands._key_spec import KeySpec
-from coredis.commands.constants import CommandName
+from coredis.commands.constants import CommandFlag, CommandName
 from coredis.commands.core import CoreCommands
 from coredis.commands.function import Library
 from coredis.commands.monitor import Monitor
@@ -34,7 +34,7 @@ from coredis.exceptions import (
     TimeoutError,
     WatchError,
 )
-from coredis.globals import READONLY_COMMANDS
+from coredis.globals import COMMAND_FLAGS, READONLY_COMMANDS
 from coredis.pool import ConnectionPool
 from coredis.response._callbacks import NoopCallback
 from coredis.response.types import ScoredMember
@@ -133,7 +133,6 @@ class Client(
                 "protocol_version": protocol_version,
                 "noreply": noreply,
             }
-            # based on input, setup appropriate connection args
 
             if unix_socket_path is not None:
                 kwargs.update(
@@ -409,6 +408,9 @@ class Client(
         finally:
             self._waitcontext.set(None)
 
+    def should_quick_release(self, command: bytes) -> bool:
+        return CommandFlag.BLOCKING not in COMMAND_FLAGS[command]
+
 
 class Redis(Client[AnyStr]):
     connection_pool: ConnectionPool
@@ -633,13 +635,9 @@ class Redis(Client[AnyStr]):
             protocol_version=protocol_version,
             verify_version=verify_version,
             noreply=noreply,
+            **kwargs,
         )
         self.cache = cache
-        # Experimental. Release connections back to the pool if the connection
-        # lag < 10ms
-        self._quick_release_threshold = float(
-            kwargs.get("quick_release_threshold", 0.01)
-        )
 
     @classmethod
     @overload
@@ -761,7 +759,7 @@ class Redis(Client[AnyStr]):
 
         pool = self.connection_pool
         connection = await pool.get_connection(command, *args)
-        quick_release = connection.lag < self._quick_release_threshold
+        quick_release = self.should_quick_release(command)
         if (
             self.cache
             and isinstance(self.cache, SupportsClientTracking)
