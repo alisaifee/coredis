@@ -128,9 +128,9 @@ jobs:
         COREDIS_UVLOOP: ${{ matrix.uvloop }}
         HOST_OS: linux
         CI: "True"
+        COREDIS_REDIS_VERSION: ${{matrix.redis-version}}
         COREDIS_RUNTIME_CHECKS: ${{matrix.runtime_type_checks}}
       run: |
-        eval "export COREDIS_REDIS_VERSION=${{ matrix.redis_version }}"
         echo "Runtime checks: $COREDIS_RUNTIME_CHECKS"
         echo "UVLoop: $COREDIS_UVLOOP"
         echo "CI: $CI"
