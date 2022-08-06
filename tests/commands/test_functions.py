@@ -69,7 +69,6 @@ async def simple_library(client):
     "redis_cluster_raw",
     "keydb",
 )
-@pytest.mark.asyncio
 @pytest.mark.min_server_version("7.0.0")
 class TestFunctions:
     async def test_empty_library(self, client, _s):
@@ -133,7 +132,6 @@ class TestFunctions:
     "redis_cluster_blocking",
     "redis_cluster_raw",
 )
-@pytest.mark.asyncio
 @pytest.mark.min_server_version("7.0.0")
 class TestLibrary:
     async def test_register_library(self, client, _s):

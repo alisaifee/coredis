@@ -18,7 +18,6 @@ from tests.conftest import targets
     "redis_cluster_raw",
     "keydb",
 )
-@pytest.mark.asyncio()
 class TestBitmap:
     async def test_bitcount(self, client, _s):
         await client.setbit("a", 5, True)

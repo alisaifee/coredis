@@ -24,7 +24,6 @@ from tests.conftest import server_deprecation_warning, targets
     "keydb",
     "dragonfly",
 )
-@pytest.mark.asyncio()
 class TestSortedSet:
     async def test_zadd(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3))

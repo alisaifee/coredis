@@ -16,7 +16,6 @@ from tests.conftest import targets
     "redis_cluster_raw",
     "keydb",
 )
-@pytest.mark.asyncio()
 class TestHyperLogLog:
     async def test_pfadd(self, client, _s):
         members = {"1", "2", "3"}

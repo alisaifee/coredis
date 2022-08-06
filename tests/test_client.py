@@ -25,7 +25,6 @@ from tests.conftest import targets
     "redis_ssl",
     "redis_ssl_resp2",
 )
-@pytest.mark.asyncio
 class TestClient:
     @pytest.fixture(autouse=True)
     async def configure_client(self, client):
@@ -94,7 +93,6 @@ class TestClient:
     "redis_cluster_blocking",
     "redis_cluster_resp2",
 )
-@pytest.mark.asyncio
 class TestClusterClient:
     async def test_noreply_client(self, client, cloner, _s):
         noreply = await cloner(client, noreply=True)
@@ -182,7 +180,6 @@ class TestSSL:
         assert isinstance(exc_info.value.__cause__, SSLError)
 
 
-@pytest.mark.asyncio
 class TestFromUrl:
     async def test_basic_client(self, redis_basic_server):
         client = coredis.Redis.from_url(

@@ -14,7 +14,6 @@ from coredis.exceptions import ConnectionError, RedisClusterException, RedisErro
 from coredis.pool.nodemanager import HASH_SLOTS, ManagedNode, NodeManager
 
 
-@pytest.mark.asyncio
 @pytest.mark.min_python("3.8")
 async def test_init_slots_cache_not_all_slots(s, redis_cluster):
     """
@@ -85,7 +84,6 @@ async def test_init_slots_cache_not_all_slots(s, redis_cluster):
         )
 
 
-@pytest.mark.asyncio
 @pytest.mark.min_python("3.8")
 async def test_init_slots_cache_not_all_slots_not_require_full_coverage(
     s, redis_cluster
@@ -145,7 +143,6 @@ async def test_init_slots_cache_not_all_slots_not_require_full_coverage(
             assert 5460 not in s.connection_pool.nodes.slots
 
 
-@pytest.mark.asyncio
 @pytest.mark.min_python("3.8")
 async def test_init_slots_cache(s, redis_cluster):
     """
@@ -220,7 +217,6 @@ async def test_init_slots_cache(s, redis_cluster):
         assert len(s.connection_pool.nodes.nodes) == 6
 
 
-@pytest.mark.asyncio
 async def test_empty_startup_nodes():
     """
     It should not be possible to create a node manager with no nodes specified
@@ -232,7 +228,6 @@ async def test_empty_startup_nodes():
         await NodeManager([]).initialize()
 
 
-@pytest.mark.asyncio
 async def test_all_nodes(redis_cluster):
     """
     Set a list of nodes and it should be possible to iterate over all
@@ -246,7 +241,6 @@ async def test_all_nodes(redis_cluster):
         assert node in nodes
 
 
-@pytest.mark.asyncio
 async def test_all_nodes_primaries(redis_cluster):
     """
     Set a list of nodes with random primary/replica config and it shold be possible
@@ -266,7 +260,6 @@ async def test_all_nodes_primaries(redis_cluster):
         assert node in nodes
 
 
-@pytest.mark.asyncio
 async def test_cluster_slots_error(redis_cluster):
     """
     Check that exception is raised if initialize can't execute
@@ -293,7 +286,6 @@ def test_set_node():
     assert n.nodes == {expected.name: expected}
 
 
-@pytest.mark.asyncio
 async def test_reset(redis_cluster):
     """
     Test that reset method resets variables back to correct default values.
@@ -313,7 +305,6 @@ async def test_reset(redis_cluster):
     assert n.initialize.call_count == 1
 
 
-@pytest.mark.asyncio
 @pytest.mark.min_python("3.8")
 async def test_cluster_one_instance(redis_cluster):
     """
@@ -356,7 +347,6 @@ async def test_cluster_one_instance(redis_cluster):
                 ]
 
 
-@pytest.mark.asyncio
 async def test_initialize_follow_cluster(redis_cluster):
     n = NodeManager(
         nodemanager_follow_cluster=True,
@@ -366,7 +356,6 @@ async def test_initialize_follow_cluster(redis_cluster):
     await n.initialize()
 
 
-@pytest.mark.asyncio
 async def test_init_with_down_node(redis_cluster):
     """
     If I can't connect to one of the nodes, everything should still work.
@@ -386,7 +375,6 @@ async def test_init_with_down_node(redis_cluster):
         assert "Redis Cluster cannot be connected" in str(e.value)
 
 
-@pytest.mark.asyncio
 async def test_cluster_initialization_fail(redis_cluster_auth, cloner):
     with pytest.raises(RedisClusterException, match="invalid username-password pair"):
         await cloner(redis_cluster_auth, password="wrong")

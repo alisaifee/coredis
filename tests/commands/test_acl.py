@@ -25,7 +25,6 @@ async def teardown(client):
     "keydb",
 )
 @pytest.mark.min_server_version("6.0.0")
-@pytest.mark.asyncio()
 class TestACL:
     async def test_acl_cat(self, client, _s):
         assert {_s("keyspace")} & set(await client.acl_cat())

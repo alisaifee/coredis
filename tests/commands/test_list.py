@@ -23,7 +23,6 @@ from tests.conftest import server_deprecation_warning, targets
     "keydb",
     "dragonfly",
 )
-@pytest.mark.asyncio()
 class TestList:
     @pytest.mark.nodragonfly
     async def test_large_list(self, client, _s):

@@ -10,7 +10,6 @@ from coredis.recipes.locks import LuaLock
 from tests.conftest import targets
 
 
-@pytest.mark.asyncio
 @targets(
     "redis_basic",
     "redis_basic_raw",

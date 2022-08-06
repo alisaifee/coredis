@@ -24,7 +24,6 @@ from tests.conftest import targets
     "redis_cluster_cached",
     "keydb",
 )
-@pytest.mark.asyncio()
 class TestGeneric:
     async def test_sort_basic(self, client, _s):
         await client.rpush("a", ["3", "2", "1", "4"])

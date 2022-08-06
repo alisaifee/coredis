@@ -8,7 +8,6 @@ from coredis.exceptions import AuthorizationError, RedisError, ResponseError, Wa
 from tests.conftest import targets
 
 
-@pytest.mark.asyncio()
 @targets(
     "redis_basic", "redis_basic_blocking", "redis_basic_resp2", "keydb", "dragonfly"
 )

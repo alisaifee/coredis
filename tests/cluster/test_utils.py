@@ -6,7 +6,6 @@ from coredis._utils import clusterdown_wrapper
 from coredis.exceptions import ClusterDownError
 
 
-@pytest.mark.asyncio()
 async def test_clusterdown_wrapper():
     @clusterdown_wrapper
     def bad_func():

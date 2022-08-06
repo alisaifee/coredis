@@ -178,7 +178,6 @@ class CommonExamples:
         }
 
 
-@pytest.mark.asyncio
 @targets(
     "redis_basic",
     "redis_basic_blocking",
@@ -207,7 +206,6 @@ class TestProxyInvalidatingCache(CommonExamples):
         assert await cached.get("fubar") == _s("2")
 
 
-@pytest.mark.asyncio
 @targets(
     "redis_cluster",
     "redis_cluster_raw",
@@ -256,7 +254,6 @@ class TestClusterProxyInvalidatingCache(CommonExamples):
         assert pre != post
 
 
-@pytest.mark.asyncio
 @targets("redis_basic", "redis_basic_raw", "redis_basic_resp2", "redis_basic_raw_resp2")
 class TestNodeInvalidatingCache(CommonExamples):
     @property
@@ -283,7 +280,6 @@ class TestNodeInvalidatingCache(CommonExamples):
         assert await cached.get("fubar") == _s("2")
 
 
-@pytest.mark.asyncio
 @targets(
     "redis_cluster",
     "redis_cluster_blocking",

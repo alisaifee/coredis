@@ -14,7 +14,6 @@ from tests.conftest import targets
     "keydb_resp2",
     "keydb_cluster",
 )
-@pytest.mark.asyncio()
 @pytest.mark.flaky
 class TestKeyDBCommands:
     @pytest.mark.nocluster

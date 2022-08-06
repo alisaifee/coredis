@@ -14,7 +14,6 @@ async def redis_no_decode(redis_basic_server):
     return client
 
 
-@pytest.mark.asyncio()
 class TestEncoding:
     async def test_simple_encoding(self, redis_basic):
         unicode_string = chr(124) + "abcd" + chr(125)

@@ -25,7 +25,6 @@ from tests.conftest import server_deprecation_warning, targets
     "keydb_resp2",
     "dragonfly",
 )
-@pytest.mark.asyncio()
 class TestString:
     async def test_append(self, client, _s):
         assert await client.append("a", "a1") == 2

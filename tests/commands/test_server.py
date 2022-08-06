@@ -22,7 +22,6 @@ from tests.conftest import targets
     "redis_cluster_blocking",
     "redis_cluster_resp2",
 )
-@pytest.mark.asyncio()
 class TestServer:
     async def slowlog(self, client, _s):
         current_config = await client.config_get(["*"])

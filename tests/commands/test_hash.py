@@ -20,7 +20,6 @@ from tests.conftest import server_deprecation_warning, targets
     "keydb",
     "dragonfly",
 )
-@pytest.mark.asyncio()
 class TestHash:
     async def test_hget_and_hset(self, client, _s):
         await client.hset("a", {"1": 1, "2": 2, "3": 3})

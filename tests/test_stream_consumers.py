@@ -30,7 +30,6 @@ async def consume_entries(consumer, count, consumed=None):
     "redis_cluster_raw",
     "keydb",
 )
-@pytest.mark.asyncio
 class TestStreamConsumers:
     async def test_single_consumer(self, client, _s):
         consumer = await Consumer(client, ["a", "b"])

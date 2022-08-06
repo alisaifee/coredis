@@ -16,7 +16,6 @@ from coredis.pipeline import ClusterPipelineImpl
 from tests.conftest import targets
 
 
-@pytest.mark.asyncio()
 @targets("redis_cluster", "redis_cluster_resp2")
 class TestPipeline:
     async def test_pipeline(self, client):

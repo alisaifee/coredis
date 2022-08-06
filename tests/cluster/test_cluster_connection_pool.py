@@ -32,7 +32,6 @@ class DummyConnection(ClusterConnection):
         self._description_args = lambda: {}
 
 
-@pytest.mark.asyncio
 class TestConnectionPool:
     async def get_pool(
         self,
@@ -345,7 +344,6 @@ class TestConnectionPool:
             assert _s("PONG") == await no_perm_client.ping()
 
 
-@pytest.mark.asyncio
 class TestReadOnlyConnectionPool:
     async def get_pool(
         self, connection_kwargs=None, max_connections=None, startup_nodes=None

@@ -19,7 +19,6 @@ from tests.conftest import targets
     "redis_cluster_resp2",
     "redis_cluster_ssl",
 )
-@pytest.mark.asyncio()
 class TestCluster:
     async def test_addslots(self, client, _s):
         node = client.connection_pool.get_primary_node_by_slot(1)

@@ -117,12 +117,10 @@ class TestPubSubSubscribeUnsubscribe:
             )
         assert expected == received
 
-    @pytest.mark.asyncio
     async def test_channel_subscribe_unsubscribe(self, redis_cluster):
         kwargs = make_subscribe_test_data(redis_cluster.pubsub(), "channel")
         await self._test_subscribe_unsubscribe(**kwargs)
 
-    @pytest.mark.asyncio
     @pytest.mark.min_server_version("7.0")
     @pytest.mark.xfail
     async def test_sharded_channel_subscribe_unsubscribe(self, redis_cluster):
@@ -131,7 +129,6 @@ class TestPubSubSubscribeUnsubscribe:
         )
         await self._test_subscribe_unsubscribe(**kwargs, sharded=True)
 
-    @pytest.mark.asyncio
     @pytest.mark.xfail
     async def test_pattern_subscribe_unsubscribe(self, redis_cluster):
         kwargs = make_subscribe_test_data(redis_cluster.pubsub(), "pattern")
@@ -195,12 +192,10 @@ class TestPubSubSubscribeUnsubscribe:
         for channel in unique_channels:
             assert channel in keys
 
-    @pytest.mark.asyncio
     async def test_resubscribe_to_channels_on_reconnection(self, redis_cluster):
         kwargs = make_subscribe_test_data(redis_cluster.pubsub(), "channel")
         await self._test_resubscribe_on_reconnection(**kwargs)
 
-    @pytest.mark.asyncio
     @pytest.mark.min_server_version("7.0")
     @pytest.mark.xfail
     async def test_sharded_resubscribe_to_channels_on_reconnection(self, redis_cluster):
@@ -209,7 +204,6 @@ class TestPubSubSubscribeUnsubscribe:
         )
         await self._test_resubscribe_on_reconnection(**kwargs, sharded=True)
 
-    @pytest.mark.asyncio
     async def test_resubscribe_to_patterns_on_reconnection(self, redis_cluster):
         kwargs = make_subscribe_test_data(redis_cluster.pubsub(), "pattern")
         await self._test_resubscribe_on_reconnection(**kwargs)
@@ -260,17 +254,14 @@ class TestPubSubSubscribeUnsubscribe:
         # now we're finally unsubscribed
         assert p.subscribed is False
 
-    @pytest.mark.asyncio
     async def test_subscribe_property_with_channels(self, redis_cluster):
         kwargs = make_subscribe_test_data(redis_cluster.pubsub(), "channel")
         await self._test_subscribed_property(**kwargs)
 
-    @pytest.mark.asyncio
     async def test_subscribe_property_with_patterns(self, redis_cluster):
         kwargs = make_subscribe_test_data(redis_cluster.pubsub(), "pattern")
         await self._test_subscribed_property(**kwargs)
 
-    @pytest.mark.asyncio
     async def test_ignore_all_subscribe_messages(self, redis_cluster):
         p = redis_cluster.pubsub(ignore_subscribe_messages=True)
 
@@ -289,7 +280,6 @@ class TestPubSubSubscribeUnsubscribe:
             assert await wait_for_message(p) is None
         assert p.subscribed is False
 
-    @pytest.mark.asyncio
     async def test_ignore_individual_subscribe_messages(self, redis_cluster):
         p = redis_cluster.pubsub()
 
@@ -309,7 +299,6 @@ class TestPubSubSubscribeUnsubscribe:
             assert message is None
         assert p.subscribed is False
 
-    @pytest.mark.asyncio
     async def test_uninitialized_client(self, redis_cluster, cloner):
         client = await cloner(redis_cluster, initialize=False)
         p = client.pubsub()
@@ -321,7 +310,6 @@ class TestPubSubSubscribeUnsubscribe:
         assert await p.get_message(ignore_subscribe_messages=True) is None
         assert not p.subscribed
 
-    @pytest.mark.asyncio
     @pytest.mark.min_server_version("7.0")
     async def test_sharded_pubsub_uninitialized_client(self, redis_cluster, cloner):
         client = await cloner(redis_cluster, initialize=False)
@@ -353,7 +341,6 @@ class TestPubSubMessages:
     def message_handler(self, message):
         self.message = message
 
-    @pytest.mark.asyncio
     async def test_published_message_to_channel(self):
         node = self.get_strict_redis_node(7000)
         p = node.pubsub(ignore_subscribe_messages=True)
@@ -368,7 +355,6 @@ class TestPubSubMessages:
         # Cleanup pubsub connections
         p.close()
 
-    @pytest.mark.asyncio
     @pytest.mark.min_server_version("7.0")
     @pytest.mark.parametrize(
         "pubsub_arguments",
@@ -392,7 +378,6 @@ class TestPubSubMessages:
         # Cleanup pubsub connections
         p.close()
 
-    @pytest.mark.asyncio
     @pytest.mark.xfail(reason="This test is buggy and fails randomly")
     async def test_publish_message_to_channel_other_server(self):
         """
@@ -413,7 +398,6 @@ class TestPubSubMessages:
         # Cleanup pubsub connections
         p.close()
 
-    @pytest.mark.asyncio
     async def test_published_message_to_pattern(self, redis_cluster):
         p = redis_cluster.pubsub(ignore_subscribe_messages=True)
         try:
@@ -439,7 +423,6 @@ class TestPubSubMessages:
             await p.unsubscribe("foo")
             await p.punsubscribe("f*")
 
-    @pytest.mark.asyncio
     async def test_channel_message_handler(self, redis_cluster):
         p = redis_cluster.pubsub(ignore_subscribe_messages=True)
         try:
@@ -450,7 +433,6 @@ class TestPubSubMessages:
         finally:
             await p.unsubscribe("foo")
 
-    @pytest.mark.asyncio
     async def test_pattern_message_handler(self, redis_cluster):
         p = redis_cluster.pubsub(ignore_subscribe_messages=True)
         await p.psubscribe(**{"f*": self.message_handler})
@@ -460,7 +442,6 @@ class TestPubSubMessages:
             "pmessage", "foo", "test message", pattern="f*"
         )
 
-    @pytest.mark.asyncio
     async def test_unicode_channel_message_handler(self, redis_cluster):
         p = redis_cluster.pubsub(ignore_subscribe_messages=True)
         channel = "uni" + chr(4456) + "code"
@@ -471,7 +452,6 @@ class TestPubSubMessages:
         assert await wait_for_message(p) is None
         assert self.message == make_message("message", channel, "test message")
 
-    @pytest.mark.asyncio
     @pytest.mark.xfail
     async def test_unicode_pattern_message_handler(self, redis_cluster):
         p = redis_cluster.pubsub(ignore_subscribe_messages=True)
@@ -484,7 +464,6 @@ class TestPubSubMessages:
             "pmessage", channel, "test message", pattern=pattern
         )
 
-    @pytest.mark.asyncio
     async def test_pubsub_worker_thread_subscribe_channel(self, redis_cluster):
         p = redis_cluster.pubsub()
         messages = []
@@ -500,7 +479,6 @@ class TestPubSubMessages:
         assert [m["data"] for m in messages] == [str(i) for i in range(10)]
 
     @pytest.mark.xfail
-    @pytest.mark.asyncio
     async def test_pubsub_worker_thread_subscribe_pattern(self, redis_cluster):
         p = redis_cluster.pubsub()
         messages = []
@@ -517,7 +495,6 @@ class TestPubSubMessages:
         assert [m["data"] for m in messages] == [str(i) for i in range(20)]
 
     @pytest.mark.min_server_version("7.0")
-    @pytest.mark.asyncio
     async def test_pubsub_worker_thread_subscribe_sharded_channel(self, redis_cluster):
         p = redis_cluster.sharded_pubsub()
         messages = []
@@ -533,7 +510,6 @@ class TestPubSubMessages:
         assert [m["data"] for m in messages] == [str(i) for i in range(10)]
 
 
-@pytest.mark.asyncio()
 @targets("redis_cluster", "redis_cluster_raw")
 class TestPubSubPubSubSubcommands:
     async def test_pubsub_channels(self, client, _s):

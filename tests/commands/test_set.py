@@ -20,7 +20,6 @@ from tests.conftest import targets
     "keydb",
     "dragonfly",
 )
-@pytest.mark.asyncio()
 class TestSet:
     async def test_sadd(self, client, _s):
         members = {"1", "2", "3"}

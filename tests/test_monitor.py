@@ -2,13 +2,10 @@ from __future__ import annotations
 
 import asyncio
 
-import pytest
-
 from tests.conftest import targets
 
 
 @targets("redis_basic", "redis_basic_blocking", "redis_basic_resp2")
-@pytest.mark.asyncio()
 class TestMonitor:
     async def test_explicit_fetch(self, client):
         monitor = client.monitor()

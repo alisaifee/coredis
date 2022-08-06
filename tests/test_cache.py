@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
 import coredis.client
 from coredis.cache import AbstractCache
 from coredis.typing import ResponseType, ValueT
@@ -40,7 +38,6 @@ class DummyCache(AbstractCache):
         self.reset()
 
 
-@pytest.mark.asyncio
 @targets(
     "redis_basic",
     "redis_basic_blocking",

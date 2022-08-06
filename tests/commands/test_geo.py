@@ -18,7 +18,6 @@ from tests.conftest import server_deprecation_warning, targets
     "redis_cluster_raw",
     "keydb",
 )
-@pytest.mark.asyncio()
 class TestGeo:
     async def test_geoadd(self, client, _s):
         values = [
