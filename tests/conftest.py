@@ -25,6 +25,22 @@ from coredis.typing import RUNTIME_TYPECHECKS, Callable, Optional, R, ValueT
 REDIS_VERSIONS = {}
 PY_IMPLEMENTATION = platform.python_implementation()
 PY_VERSION = version.Version(platform.python_version())
+DOCKER_TAG_MAPPING = {
+    "6.0": {
+        "default": "6.0.16",
+        "stack": "6.2.2-v5",
+    },
+    "6.2": {
+        "default": "6.2.6",
+        "stack": "6.2.2-v5",
+    },
+    "7.0": {"default": "7.0.0", "stack": "7.0.0-RC6"},
+}
+SERVER_DEFAULT_ARGS = {
+    "6.0": "",
+    "6.2": "",
+    "7.0": None,
+}
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -202,7 +218,29 @@ def host_ip_env(host_ip):
 
 
 @pytest.fixture(scope="session")
-def docker_services(host_ip_env, docker_services):
+def docker_tags():
+    redis_server_version = os.environ.get("COREDIS_REDIS_VERSION", "latest")
+    mapping = DOCKER_TAG_MAPPING.get(redis_server_version, {"default": "latest"})
+    os.environ.setdefault(
+        "REDIS_VERSION", mapping.get("standalone", mapping.get("default"))
+    )
+    os.environ.setdefault(
+        "REDIS_SENTINEL_VERSION", mapping.get("sentinel", mapping.get("default"))
+    )
+    os.environ.setdefault(
+        "REDIS_SSL_VERSION", mapping.get("ssl", mapping.get("default"))
+    )
+    os.environ.setdefault(
+        "REDIS_STACK_VERSION", mapping.get("stack", mapping.get("default"))
+    )
+
+    args = SERVER_DEFAULT_ARGS.get(redis_server_version, None)
+    if args is not None:
+        os.environ.setdefault("DEFAULT_ARGS", args)
+
+
+@pytest.fixture(scope="session")
+def docker_services(host_ip_env, docker_tags, docker_services):
     return docker_services
 
 

@@ -1,6 +1,12 @@
-name: CI
+name: Compatibility
 
-on: [push, pull_request]
+on:
+  create:
+    tags: ['*']
+  push:
+    branches: ['master']
+  schedule:
+  - cron: 0 23 * * *
 
 jobs:
   lint:
@@ -56,7 +62,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.7, "3.10"]
+        python-version: [3.7, 3.8, 3.9, "3.10"]
         redis-version: ["6.0", "6.2", "7.0", "latest"]
         test_params: ["-m '(not (keydb or dragonfly))'"]
         uvloop: ["True", "False"]
@@ -65,18 +71,28 @@ jobs:
         label: [""]
         include:
           - python-version: "3.10"
-            redis-version: "7.0"
+            redis-version: latest
+            test_params: "-m '(not (keydb or dragonfly))'"
+            runtime_type_checks: "True"
+            label: ""
+          - python-version: "3.10"
+            redis-version: 7.0
+            test_params: "-m '(not (keydb or dragonfly))'"
+            runtime_type_checks: "False"
+            label: ""
+          - python-version: "3.10"
+            redis-version: 7.0
             test_params: "-m keydb"
             runtime_type_checks: "False"
             label: "KeyDB"
           - python-version: "3.10"
-            redis-version: "7.0"
+            redis-version: 7.0
             test_params: "-m dragonfly"
             runtime_type_checks: "False"
             extensions: "False"
             label: "Dragonfly"
           - python-version: "pypy-3.8"
-            redis-version: "7.0"
+            redis-version: 7.0
             test_params: "-m '(not (keydb or dragonfly))' tests/commands tests/test_tracking_cache.py"
             runtime_type_checks: "True"
             extensions: "False"
@@ -107,7 +123,7 @@ jobs:
       if: ${{ matrix.uvloop == 'True' }}
       run:
         pip install uvloop
-    - name: Tests
+    - name: Tests with coverage
       env:
         COREDIS_UVLOOP: ${{ matrix.uvloop }}
         HOST_OS: linux
@@ -169,58 +185,3 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           path: dist/*.tar.gz
-  upload_pypi:
-    needs: [test, build_wheels, build_sdist]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
-    steps:
-      - uses: actions/download-artifact@v2
-        with:
-          name: artifact
-          path: dist
-      - uses: pypa/gh-action-pypi-publish@v1.4.2
-        with:
-          user: __token__
-          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-          repository_url: https://test.pypi.org/legacy/
-          skip_existing: true
-  upload_pypi_release:
-    needs: [test, build_wheels, build_sdist]
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-    steps:
-      - uses: actions/download-artifact@v2
-        with:
-          name: artifact
-          path: dist
-
-      - uses: pypa/gh-action-pypi-publish@v1.4.2
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
-
-  github_release:
-    needs: [upload_pypi_release]
-    name: Create Release
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Download artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: artifact
-          path: dist
-      - name: Generate release notes
-        run: |
-          ./scripts/github_release_notes.sh > release_notes.md
-      - name: Create Release
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: "dist/*"
-          bodyFile: release_notes.md
-          token: ${{ secrets.GITHUB_TOKEN }}
-
