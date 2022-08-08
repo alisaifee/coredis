@@ -3,6 +3,25 @@
 Changelog
 =========
 
+v4.5.4
+------
+Release Date: 2022-08-08
+
+* Bug Fix
+
+  * Fix leftover default connection pool construction in
+    blocking cluster connection pool
+
+* Chores
+
+  * Reduce excessive matrix in default CI
+  * Add scheduled compatibility CI run
+  * Cleanup unnecessary asyncio markers in tests
+  * Refactor readonly command detection to use
+    command flags from redis documentation
+  * Issue warning if :meth:`Redis.select` is
+    called directly
+
 v4.5.3
 ------
 Release Date: 2022-08-03
@@ -1154,6 +1173,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
