@@ -1329,13 +1329,22 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="3.0.0")
     @redis_command(
-        CommandName.SELECT, group=CommandGroup.CONNECTION, flags={CommandFlag.FAST}
+        CommandName.SELECT,
+        group=CommandGroup.CONNECTION,
+        redirect_usage=RedirectUsage(
+            (
+                "Use the `db` argument when initializing the client "
+                "to ensure that all connections originating from this client use the "
+                "desired database number"
+            ),
+            True,
+        ),
+        flags={CommandFlag.FAST},
     )
     async def select(self, index: int) -> bool:
         """
         Change the selected database for the current connection
         """
-
         return await self.execute_command(
             CommandName.SELECT, index, callback=SimpleStringCallback()
         )

@@ -145,21 +145,17 @@ class TestServer:
         ],
     )
     @pytest.mark.nocluster
-    async def test_flushall(self, client, _s, mode):
+    async def test_flushall(self, client, cloner, _s, mode):
         await client.set("a", "foo")
         await client.set("b", "bar")
-        await client.select(1)
-        await client.set("a", "foo")
-        await client.set("b", "bar")
-        await client.select(0)
+        db1 = await cloner(client, connection_kwargs={"db": 1})
+        await db1.set("a", "foo")
+        await db1.set("b", "bar")
         assert len(await client.keys()) == 2
-        await client.select(1)
-        assert len(await client.keys()) == 2
+        assert len(await db1.keys()) == 2
         assert await client.flushall(mode)
-        await client.select(0)
         assert len(await client.keys()) == 0
-        await client.select(1)
-        assert len(await client.keys()) == 0
+        assert len(await db1.keys()) == 0
 
     @pytest.mark.min_server_version("6.2.0")
     @pytest.mark.parametrize(
