@@ -25,7 +25,7 @@ from coredis.commands._wrappers import (
     redis_command,
 )
 from coredis.commands.bitfield import BitFieldOperation
-from coredis.commands.constants import CommandGroup, CommandName, NodeFlag
+from coredis.commands.constants import CommandFlag, CommandGroup, CommandName, NodeFlag
 from coredis.exceptions import (
     AuthorizationError,
     ConnectionError,
@@ -155,7 +155,9 @@ from coredis.typing import (
 
 
 class CoreCommands(CommandMixin[AnyStr]):
-    @redis_command(CommandName.APPEND, group=CommandGroup.STRING)
+    @redis_command(
+        CommandName.APPEND, group=CommandGroup.STRING, flags={CommandFlag.FAST}
+    )
     async def append(self, key: KeyT, value: ValueT) -> int:
         """
         Append a value to a key
@@ -167,7 +169,9 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.APPEND, key, value, callback=IntCallback()
         )
 
-    @redis_command(CommandName.DECR, group=CommandGroup.STRING)
+    @redis_command(
+        CommandName.DECR, group=CommandGroup.STRING, flags={CommandFlag.FAST}
+    )
     async def decr(self, key: KeyT) -> int:
         """
         Decrement the integer value of a key by one
@@ -177,7 +181,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return await self.decrby(key, 1)
 
-    @redis_command(CommandName.DECRBY, group=CommandGroup.STRING)
+    @redis_command(
+        CommandName.DECRBY, group=CommandGroup.STRING, flags={CommandFlag.FAST}
+    )
     async def decrby(self, key: KeyT, decrement: int) -> int:
         """
         Decrement the integer value of a key by the given number
@@ -191,9 +197,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.GET,
-        readonly=True,
         group=CommandGroup.STRING,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.FAST, CommandFlag.READONLY},
     )
     async def get(self, key: KeyT) -> Optional[AnyStr]:
         """
@@ -211,6 +217,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.GETDEL,
         group=CommandGroup.STRING,
         version_introduced="6.2.0",
+        flags={CommandFlag.FAST},
     )
     async def getdel(self, key: KeyT) -> Optional[AnyStr]:
         """
@@ -227,7 +234,10 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @mutually_exclusive_parameters("ex", "px", "exat", "pxat", "persist")
     @redis_command(
-        CommandName.GETEX, group=CommandGroup.STRING, version_introduced="6.2.0"
+        CommandName.GETEX,
+        group=CommandGroup.STRING,
+        version_introduced="6.2.0",
+        flags={CommandFlag.FAST},
     )
     async def getex(
         self,
@@ -285,9 +295,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.GETRANGE,
-        readonly=True,
         group=CommandGroup.STRING,
         cache_config=CacheConfig(lambda *a, **k: a[0]),
+        flags={CommandFlag.READONLY},
     )
     async def getrange(self, key: KeyT, start: int, end: int) -> AnyStr:
         """
@@ -306,6 +316,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_deprecated="6.2.0",
         deprecation_reason="Use :meth:`set` with the get argument",
         group=CommandGroup.STRING,
+        flags={CommandFlag.FAST},
     )
     async def getset(self, key: KeyT, value: ValueT) -> Optional[AnyStr]:
         """
@@ -319,7 +330,9 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.GETSET, key, value, callback=OptionalAnyStrCallback[AnyStr]()
         )
 
-    @redis_command(CommandName.INCR, group=CommandGroup.STRING)
+    @redis_command(
+        CommandName.INCR, group=CommandGroup.STRING, flags={CommandFlag.FAST}
+    )
     async def incr(self, key: KeyT) -> int:
         """
         Increment the integer value of a key by one
@@ -330,7 +343,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return await self.incrby(key, 1)
 
-    @redis_command(CommandName.INCRBY, group=CommandGroup.STRING)
+    @redis_command(
+        CommandName.INCRBY, group=CommandGroup.STRING, flags={CommandFlag.FAST}
+    )
     async def incrby(self, key: KeyT, increment: int) -> int:
         """
         Increment the integer value of a key by the given amount
@@ -344,8 +359,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(
-        CommandName.INCRBYFLOAT,
-        group=CommandGroup.STRING,
+        CommandName.INCRBYFLOAT, group=CommandGroup.STRING, flags={CommandFlag.FAST}
     )
     async def incrbyfloat(self, key: KeyT, increment: Union[int, float]) -> float:
         """
@@ -391,7 +405,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.LCS,
         version_introduced="7.0.0",
         group=CommandGroup.STRING,
-        readonly=True,
+        flags={CommandFlag.READONLY},
     )
     async def lcs(
         self,
@@ -452,8 +466,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.MGET,
-        readonly=True,
         group=CommandGroup.STRING,
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def mget(self, keys: Parameters[KeyT]) -> Tuple[Optional[AnyStr], ...]:
         """
@@ -645,7 +659,9 @@ class CoreCommands(CommandMixin[AnyStr]):
             callback=SimpleStringCallback(),
         )
 
-    @redis_command(CommandName.SETNX, group=CommandGroup.STRING)
+    @redis_command(
+        CommandName.SETNX, group=CommandGroup.STRING, flags={CommandFlag.FAST}
+    )
     async def setnx(self, key: KeyT, value: ValueT) -> bool:
         """
         Sets the value of key :paramref:`key` to ``value`` if key doesn't exist
@@ -675,9 +691,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.STRLEN,
-        readonly=True,
         group=CommandGroup.STRING,
         cache_config=CacheConfig(lambda *a: a[0]),
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def strlen(self, key: KeyT) -> int:
         """
@@ -692,11 +708,11 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.SUBSTR,
-        readonly=True,
         group=CommandGroup.STRING,
         version_deprecated="2.0.0",
         deprecation_reason="Use :meth:`getrange`",
         cache_config=CacheConfig(lambda *a: a[0]),
+        flags={CommandFlag.READONLY},
     )
     async def substr(self, key: KeyT, start: int, end: int) -> AnyStr:
         """
@@ -744,7 +760,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @versionadded(version="3.0.0")
-    @redis_command(CommandName.ASKING, group=CommandGroup.CLUSTER)
+    @redis_command(
+        CommandName.ASKING, group=CommandGroup.CLUSTER, flags={CommandFlag.FAST}
+    )
     async def asking(self) -> bool:
         """
         Sent by cluster clients after an -ASK redirect
@@ -1178,8 +1196,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="3.2.0")
     @redis_command(
-        CommandName.READONLY,
-        group=CommandGroup.CLUSTER,
+        CommandName.READONLY, group=CommandGroup.CLUSTER, flags={CommandFlag.FAST}
     )
     async def readonly(self) -> bool:
         """
@@ -1191,8 +1208,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="3.2.0")
     @redis_command(
-        CommandName.READWRITE,
-        group=CommandGroup.CLUSTER,
+        CommandName.READWRITE, group=CommandGroup.CLUSTER, flags={CommandFlag.FAST}
     )
     async def readwrite(self) -> bool:
         """
@@ -1215,6 +1231,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             ),
             True,
         ),
+        flags={CommandFlag.FAST},
     )
     async def auth(self, password: StringT, username: Optional[StringT] = None) -> bool:
         """
@@ -1237,6 +1254,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             route=NodeFlag.ALL,
             combine=ClusterEnsureConsistent(),
         ),
+        flags={CommandFlag.FAST},
     )
     async def echo(self, message: StringT) -> AnyStr:
         "Echo the string back from the server"
@@ -1250,6 +1268,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.HELLO,
         version_introduced="6.0.0",
         group=CommandGroup.CONNECTION,
+        flags={CommandFlag.FAST},
     )
     async def hello(
         self,
@@ -1290,6 +1309,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             route=NodeFlag.PRIMARIES,
             combine=ClusterEnsureConsistent(),
         ),
+        flags={CommandFlag.FAST},
     )
     async def ping(self, message: Optional[StringT] = None) -> AnyStr:
         """
@@ -1309,8 +1329,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="3.0.0")
     @redis_command(
-        CommandName.SELECT,
-        group=CommandGroup.CONNECTION,
+        CommandName.SELECT, group=CommandGroup.CONNECTION, flags={CommandFlag.FAST}
     )
     async def select(self, index: int) -> bool:
         """
@@ -1322,8 +1341,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(
-        CommandName.QUIT,
-        group=CommandGroup.CONNECTION,
+        CommandName.QUIT, group=CommandGroup.CONNECTION, flags={CommandFlag.FAST}
     )
     async def quit(self) -> bool:
         """
@@ -1336,7 +1354,10 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="3.0.0")
     @redis_command(
-        CommandName.RESET, version_introduced="6.2.0", group=CommandGroup.CONNECTION
+        CommandName.RESET,
+        version_introduced="6.2.0",
+        group=CommandGroup.CONNECTION,
+        flags={CommandFlag.FAST},
     )
     async def reset(self) -> None:
         """
@@ -1385,8 +1406,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.GEODIST,
-        readonly=True,
         group=CommandGroup.GEO,
+        flags={CommandFlag.READONLY},
     )
     async def geodist(
         self,
@@ -1413,8 +1434,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.GEOHASH,
-        readonly=True,
         group=CommandGroup.GEO,
+        flags={CommandFlag.READONLY},
     )
     async def geohash(
         self, key: KeyT, members: Parameters[ValueT]
@@ -1429,8 +1450,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.GEOPOS,
-        readonly=True,
         group=CommandGroup.GEO,
+        flags={CommandFlag.READONLY},
     )
     async def geopos(
         self, key: KeyT, members: Parameters[ValueT]
@@ -1715,9 +1736,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @mutually_exclusive_parameters("member", ("longitude", "latitude"))
     @redis_command(
         CommandName.GEOSEARCH,
-        readonly=True,
         version_introduced="6.2.0",
         group=CommandGroup.GEO,
+        flags={CommandFlag.READONLY},
     )
     async def geosearch(
         self,
@@ -1934,7 +1955,7 @@ class CoreCommands(CommandMixin[AnyStr]):
                 command, *pieces, **kwargs, callback=GeoSearchCallback[AnyStr]()
             )
 
-    @redis_command(CommandName.HDEL, group=CommandGroup.HASH)
+    @redis_command(CommandName.HDEL, group=CommandGroup.HASH, flags={CommandFlag.FAST})
     async def hdel(self, key: KeyT, fields: Parameters[StringT]) -> int:
         """Deletes ``fields`` from hash :paramref:`key`"""
 
@@ -1944,9 +1965,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.HEXISTS,
-        readonly=True,
         group=CommandGroup.HASH,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def hexists(self, key: KeyT, field: StringT) -> bool:
         """
@@ -1959,9 +1980,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.HGET,
-        readonly=True,
         group=CommandGroup.HASH,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def hget(self, key: KeyT, field: StringT) -> Optional[AnyStr]:
         """Returns the value of ``field`` within the hash :paramref:`key`"""
@@ -1972,9 +1993,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.HGETALL,
-        readonly=True,
         group=CommandGroup.HASH,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY},
     )
     async def hgetall(self, key: KeyT) -> Dict[AnyStr, AnyStr]:
         """Returns a Python dict of the hash's name/value pairs"""
@@ -1983,7 +2004,9 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.HGETALL, key, callback=HGetAllCallback[AnyStr]()
         )
 
-    @redis_command(CommandName.HINCRBY, group=CommandGroup.HASH)
+    @redis_command(
+        CommandName.HINCRBY, group=CommandGroup.HASH, flags={CommandFlag.FAST}
+    )
     async def hincrby(self, key: KeyT, field: StringT, increment: int) -> int:
         """Increments the value of ``field`` in hash :paramref:`key` by ``increment``"""
 
@@ -1992,8 +2015,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(
-        CommandName.HINCRBYFLOAT,
-        group=CommandGroup.HASH,
+        CommandName.HINCRBYFLOAT, group=CommandGroup.HASH, flags={CommandFlag.FAST}
     )
     async def hincrbyfloat(
         self, key: KeyT, field: StringT, increment: Union[int, float]
@@ -2009,9 +2031,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.HKEYS,
-        readonly=True,
         group=CommandGroup.HASH,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY},
     )
     async def hkeys(self, key: KeyT) -> Tuple[AnyStr, ...]:
         """Returns the list of keys within hash :paramref:`key`"""
@@ -2022,16 +2044,16 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.HLEN,
-        readonly=True,
         group=CommandGroup.HASH,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def hlen(self, key: KeyT) -> int:
         """Returns the number of elements in hash :paramref:`key`"""
 
         return await self.execute_command(CommandName.HLEN, key, callback=IntCallback())
 
-    @redis_command(CommandName.HSET, group=CommandGroup.HASH)
+    @redis_command(CommandName.HSET, group=CommandGroup.HASH, flags={CommandFlag.FAST})
     async def hset(self, key: KeyT, field_values: Dict[StringT, ValueT]) -> int:
         """
         Sets ``field`` to ``value`` within hash :paramref:`key`
@@ -2047,8 +2069,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(
-        CommandName.HSETNX,
-        group=CommandGroup.HASH,
+        CommandName.HSETNX, group=CommandGroup.HASH, flags={CommandFlag.FAST}
     )
     async def hsetnx(self, key: KeyT, field: StringT, value: ValueT) -> bool:
         """
@@ -2067,6 +2088,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.HASH,
         version_deprecated="4.0.0",
         deprecation_reason="Use :meth:`hset` with multiple field-value pairs",
+        flags={CommandFlag.FAST},
     )
     async def hmset(self, key: KeyT, field_values: Dict[StringT, ValueT]) -> bool:
         """
@@ -2085,9 +2107,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.HMGET,
-        readonly=True,
         group=CommandGroup.HASH,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def hmget(
         self, key: KeyT, fields: Parameters[StringT]
@@ -2100,9 +2122,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.HVALS,
-        readonly=True,
         group=CommandGroup.HASH,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY},
     )
     async def hvals(self, key: KeyT) -> Tuple[AnyStr, ...]:
         """
@@ -2117,8 +2139,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.HSCAN,
-        readonly=True,
         group=CommandGroup.HASH,
+        flags={CommandFlag.READONLY},
     )
     async def hscan(
         self,
@@ -2149,9 +2171,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.HSTRLEN,
-        readonly=True,
         group=CommandGroup.HASH,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def hstrlen(self, key: KeyT, field: StringT) -> int:
         """
@@ -2186,9 +2208,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.HRANDFIELD,
-        readonly=True,
         version_introduced="6.2.0",
         group=CommandGroup.HASH,
+        flags={CommandFlag.READONLY},
     )
     async def hrandfield(
         self,
@@ -2230,6 +2252,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.PFADD,
         group=CommandGroup.HYPERLOGLOG,
+        flags={CommandFlag.FAST},
     )
     async def pfadd(self, key: KeyT, *elements: ValueT) -> bool:
 
@@ -2249,8 +2272,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.PFCOUNT,
-        readonly=True,
         group=CommandGroup.HYPERLOGLOG,
+        flags={CommandFlag.READONLY},
     )
     async def pfcount(self, keys: Parameters[KeyT]) -> int:
         """
@@ -2320,7 +2343,11 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.DEL, *keys, callback=IntCallback()
         )
 
-    @redis_command(CommandName.DUMP, readonly=True, group=CommandGroup.GENERIC)
+    @redis_command(
+        CommandName.DUMP,
+        group=CommandGroup.GENERIC,
+        flags={CommandFlag.READONLY},
+    )
     async def dump(self, key: KeyT) -> bytes:
         """
         Return a serialized version of the value stored at the specified key.
@@ -2334,9 +2361,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.EXISTS,
-        readonly=True,
         group=CommandGroup.GENERIC,
         cluster=ClusterCommandConfig(split=NodeFlag.PRIMARIES, combine=ClusterSum()),
+        flags={CommandFlag.FAST, CommandFlag.READONLY},
     )
     async def exists(self, keys: Parameters[KeyT]) -> int:
         """
@@ -2353,6 +2380,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.EXPIRE,
         group=CommandGroup.GENERIC,
         arguments={"condition": {"version_introduced": "7.0.0"}},
+        flags={CommandFlag.FAST},
     )
     async def expire(
         self,
@@ -2384,6 +2412,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.EXPIREAT,
         group=CommandGroup.GENERIC,
         arguments={"condition": {"version_introduced": "7.0.0"}},
+        flags={CommandFlag.FAST},
     )
     async def expireat(
         self,
@@ -2416,7 +2445,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.EXPIRETIME,
         version_introduced="7.0.0",
         group=CommandGroup.GENERIC,
-        readonly=True,
+        flags={CommandFlag.FAST, CommandFlag.READONLY},
     )
     async def expiretime(self, key: Union[str, bytes]) -> datetime.datetime:
         """
@@ -2436,12 +2465,12 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.KEYS,
-        readonly=True,
         group=CommandGroup.GENERIC,
         cluster=ClusterCommandConfig(
             route=NodeFlag.PRIMARIES,
             combine=ClusterMergeSets(),
         ),
+        flags={CommandFlag.READONLY},
     )
     async def keys(self, pattern: StringT = "*") -> Set[AnyStr]:
         """
@@ -2511,8 +2540,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(
-        CommandName.MOVE,
-        group=CommandGroup.GENERIC,
+        CommandName.MOVE, group=CommandGroup.GENERIC, flags={CommandFlag.FAST}
     )
     async def move(self, key: KeyT, db: int) -> bool:
         """Move a key to another database"""
@@ -2522,7 +2550,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(
-        CommandName.OBJECT_ENCODING, readonly=True, group=CommandGroup.GENERIC
+        CommandName.OBJECT_ENCODING,
+        group=CommandGroup.GENERIC,
+        flags={CommandFlag.READONLY},
     )
     async def object_encoding(self, key: KeyT) -> Optional[AnyStr]:
         """
@@ -2535,7 +2565,11 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.OBJECT_ENCODING, key, callback=AnyStrCallback[AnyStr]()
         )
 
-    @redis_command(CommandName.OBJECT_FREQ, readonly=True, group=CommandGroup.GENERIC)
+    @redis_command(
+        CommandName.OBJECT_FREQ,
+        group=CommandGroup.GENERIC,
+        flags={CommandFlag.READONLY},
+    )
     async def object_freq(self, key: KeyT) -> int:
         """
         Return the logarithmic access frequency counter for the object
@@ -2549,7 +2583,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(
-        CommandName.OBJECT_IDLETIME, readonly=True, group=CommandGroup.GENERIC
+        CommandName.OBJECT_IDLETIME,
+        group=CommandGroup.GENERIC,
+        flags={CommandFlag.READONLY},
     )
     async def object_idletime(self, key: KeyT) -> int:
         """
@@ -2564,7 +2600,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(
-        CommandName.OBJECT_REFCOUNT, readonly=True, group=CommandGroup.GENERIC
+        CommandName.OBJECT_REFCOUNT,
+        group=CommandGroup.GENERIC,
+        flags={CommandFlag.READONLY},
     )
     async def object_refcount(self, key: KeyT) -> int:
         """
@@ -2578,8 +2616,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(
-        CommandName.PERSIST,
-        group=CommandGroup.GENERIC,
+        CommandName.PERSIST, group=CommandGroup.GENERIC, flags={CommandFlag.FAST}
     )
     async def persist(self, key: KeyT) -> bool:
         """Removes an expiration on :paramref:`key`"""
@@ -2592,6 +2629,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.PEXPIRE,
         group=CommandGroup.GENERIC,
         arguments={"condition": {"version_introduced": "7.0.0"}},
+        flags={CommandFlag.FAST},
     )
     async def pexpire(
         self,
@@ -2620,6 +2658,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.PEXPIREAT,
         group=CommandGroup.GENERIC,
         arguments={"condition": {"version_introduced": "7.0.0"}},
+        flags={CommandFlag.FAST},
     )
     async def pexpireat(
         self,
@@ -2653,7 +2692,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.PEXPIRETIME,
         version_introduced="7.0.0",
         group=CommandGroup.GENERIC,
-        readonly=True,
+        flags={CommandFlag.FAST, CommandFlag.READONLY},
     )
     async def pexpiretime(self, key: Union[str, bytes]) -> datetime.datetime:
         """
@@ -2671,7 +2710,11 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.PEXPIRETIME, key, unit="milliseconds", callback=ExpiryCallback()
         )
 
-    @redis_command(CommandName.PTTL, readonly=True, group=CommandGroup.GENERIC)
+    @redis_command(
+        CommandName.PTTL,
+        group=CommandGroup.GENERIC,
+        flags={CommandFlag.FAST, CommandFlag.READONLY},
+    )
     async def pttl(self, key: KeyT) -> int:
         """
         Returns the number of milliseconds until the key :paramref:`key` will expire
@@ -2683,9 +2726,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.RANDOMKEY,
-        readonly=True,
         group=CommandGroup.GENERIC,
         cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        flags={CommandFlag.READONLY},
     )
     async def randomkey(self) -> Optional[AnyStr]:
         """
@@ -2712,8 +2755,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(
-        CommandName.RENAMENX,
-        group=CommandGroup.GENERIC,
+        CommandName.RENAMENX, group=CommandGroup.GENERIC, flags={CommandFlag.FAST}
     )
     async def renamenx(self, key: KeyT, newkey: KeyT) -> bool:
         """
@@ -2830,7 +2872,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.SORT_RO,
         version_introduced="7.0.0",
         group=CommandGroup.GENERIC,
-        readonly=True,
+        flags={CommandFlag.READONLY},
     )
     async def sort_ro(
         self,
@@ -2874,6 +2916,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.TOUCH,
         group=CommandGroup.GENERIC,
         cluster=ClusterCommandConfig(split=NodeFlag.PRIMARIES, combine=ClusterSum()),
+        flags={CommandFlag.FAST, CommandFlag.READONLY},
     )
     async def touch(self, keys: Parameters[KeyT]) -> int:
         """
@@ -2887,7 +2930,11 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.TOUCH, *keys, callback=IntCallback()
         )
 
-    @redis_command(CommandName.TTL, readonly=True, group=CommandGroup.GENERIC)
+    @redis_command(
+        CommandName.TTL,
+        group=CommandGroup.GENERIC,
+        flags={CommandFlag.FAST, CommandFlag.READONLY},
+    )
     async def ttl(self, key: KeyT) -> int:
         """
         Get the time to live for a key in seconds
@@ -2899,9 +2946,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.TYPE,
-        readonly=True,
         group=CommandGroup.GENERIC,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.FAST, CommandFlag.READONLY},
     )
     async def type(self, key: KeyT) -> Optional[AnyStr]:
         """
@@ -2918,6 +2965,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.UNLINK,
         group=CommandGroup.GENERIC,
         cluster=ClusterCommandConfig(split=NodeFlag.PRIMARIES, combine=ClusterSum()),
+        flags={CommandFlag.FAST},
     )
     async def unlink(self, keys: Parameters[KeyT]) -> int:
         """
@@ -2955,9 +3003,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.SCAN,
-        readonly=True,
         group=CommandGroup.GENERIC,
         cluster=ClusterCommandConfig(route=NodeFlag.PRIMARIES),
+        flags={CommandFlag.READONLY},
     )
     async def scan(
         self,
@@ -2985,7 +3033,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(
-        CommandName.BLMOVE, version_introduced="6.2.0", group=CommandGroup.LIST
+        CommandName.BLMOVE,
+        version_introduced="6.2.0",
+        group=CommandGroup.LIST,
+        flags={CommandFlag.BLOCKING},
     )
     async def blmove(
         self,
@@ -3017,7 +3068,10 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="3.0.0")
     @redis_command(
-        CommandName.BLMPOP, version_introduced="7.0.0", group=CommandGroup.LIST
+        CommandName.BLMPOP,
+        version_introduced="7.0.0",
+        group=CommandGroup.LIST,
+        flags={CommandFlag.BLOCKING},
     )
     async def blmpop(
         self,
@@ -3046,7 +3100,9 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.BLMPOP, *pieces, callback=OptionalListCallback[AnyStr]()
         )
 
-    @redis_command(CommandName.BLPOP, group=CommandGroup.LIST)
+    @redis_command(
+        CommandName.BLPOP, group=CommandGroup.LIST, flags={CommandFlag.BLOCKING}
+    )
     async def blpop(
         self, keys: Parameters[KeyT], timeout: Union[int, float]
     ) -> Optional[List[AnyStr]]:
@@ -3065,7 +3121,9 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.BLPOP, *keys, timeout, callback=OptionalListCallback[AnyStr]()
         )
 
-    @redis_command(CommandName.BRPOP, group=CommandGroup.LIST)
+    @redis_command(
+        CommandName.BRPOP, group=CommandGroup.LIST, flags={CommandFlag.BLOCKING}
+    )
     async def brpop(
         self, keys: Parameters[KeyT], timeout: Union[int, float]
     ) -> Optional[List[AnyStr]]:
@@ -3089,6 +3147,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_deprecated="6.2.0",
         deprecation_reason="Use :meth:`blmove` with the `wherefrom` and `whereto` arguments",
         group=CommandGroup.LIST,
+        flags={CommandFlag.BLOCKING},
     )
     async def brpoplpush(
         self, source: KeyT, destination: KeyT, timeout: Union[int, float]
@@ -3111,9 +3170,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.LINDEX,
-        readonly=True,
         group=CommandGroup.LIST,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY},
     )
     async def lindex(self, key: KeyT, index: int) -> Optional[AnyStr]:
         """
@@ -3149,9 +3208,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.LLEN,
-        readonly=True,
         group=CommandGroup.LIST,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def llen(self, key: KeyT) -> int:
         """
@@ -3214,6 +3273,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.LPOP,
         group=CommandGroup.LIST,
         arguments={"count": {"version_introduced": "6.2.0"}},
+        flags={CommandFlag.FAST},
     )
     async def lpop(
         self, key: KeyT, count: Optional[int] = None
@@ -3242,8 +3302,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.LPOS,
         version_introduced="6.0.6",
         group=CommandGroup.LIST,
-        readonly=True,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY},
     )
     async def lpos(
         self,
@@ -3283,7 +3343,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.LPOS, *pieces, callback=OptionalListCallback[int]()
         )
 
-    @redis_command(CommandName.LPUSH, group=CommandGroup.LIST)
+    @redis_command(CommandName.LPUSH, group=CommandGroup.LIST, flags={CommandFlag.FAST})
     async def lpush(self, key: KeyT, elements: Parameters[ValueT]) -> int:
         """
         Prepend one or multiple elements to a list
@@ -3295,7 +3355,9 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.LPUSH, key, *elements, callback=IntCallback()
         )
 
-    @redis_command(CommandName.LPUSHX, group=CommandGroup.LIST)
+    @redis_command(
+        CommandName.LPUSHX, group=CommandGroup.LIST, flags={CommandFlag.FAST}
+    )
     async def lpushx(self, key: KeyT, elements: Parameters[ValueT]) -> int:
         """
         Prepend an element to a list, only if the list exists
@@ -3309,9 +3371,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.LRANGE,
-        readonly=True,
         group=CommandGroup.LIST,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY},
     )
     async def lrange(self, key: KeyT, start: int, stop: int) -> List[AnyStr]:
         """
@@ -3382,6 +3444,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.RPOP,
         group=CommandGroup.LIST,
         arguments={"count": {"version_introduced": "6.2.0"}},
+        flags={CommandFlag.FAST},
     )
     async def rpop(
         self, key: KeyT, count: Optional[int] = None
@@ -3432,7 +3495,11 @@ class CoreCommands(CommandMixin[AnyStr]):
             callback=OptionalAnyStrCallback[AnyStr](),
         )
 
-    @redis_command(CommandName.RPUSH, group=CommandGroup.LIST)
+    @redis_command(
+        CommandName.RPUSH,
+        group=CommandGroup.LIST,
+        flags={CommandFlag.FAST},
+    )
     async def rpush(self, key: KeyT, elements: Parameters[ValueT]) -> int:
         """
         Append an element(s) to a list
@@ -3444,7 +3511,11 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.RPUSH, key, *elements, callback=IntCallback()
         )
 
-    @redis_command(CommandName.RPUSHX, group=CommandGroup.LIST)
+    @redis_command(
+        CommandName.RPUSHX,
+        group=CommandGroup.LIST,
+        flags={CommandFlag.FAST},
+    )
     async def rpushx(self, key: KeyT, elements: Parameters[ValueT]) -> int:
         """
         Append a element(s) to a list, only if the list exists
@@ -3456,7 +3527,11 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.RPUSHX, key, *elements, callback=IntCallback()
         )
 
-    @redis_command(CommandName.SADD, group=CommandGroup.SET)
+    @redis_command(
+        CommandName.SADD,
+        group=CommandGroup.SET,
+        flags={CommandFlag.FAST},
+    )
     async def sadd(self, key: KeyT, members: Parameters[ValueT]) -> int:
         """
         Add one or more members to a set
@@ -3471,9 +3546,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.SCARD,
-        readonly=True,
         group=CommandGroup.SET,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def scard(self, key: KeyT) -> int:
         """
@@ -3489,8 +3564,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.SDIFF,
-        readonly=True,
         group=CommandGroup.SET,
+        flags={CommandFlag.READONLY},
     )
     async def sdiff(self, keys: Parameters[KeyT]) -> Set[AnyStr]:
         """
@@ -3516,8 +3591,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.SINTER,
-        readonly=True,
         group=CommandGroup.SET,
+        flags={CommandFlag.READONLY},
     )
     async def sinter(self, keys: Parameters[KeyT]) -> Set[AnyStr]:
         """
@@ -3547,7 +3622,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.SINTERCARD,
         version_introduced="7.0.0",
         group=CommandGroup.SET,
-        readonly=True,
+        flags={CommandFlag.READONLY},
     )
     async def sintercard(
         self,
@@ -3572,9 +3647,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.SISMEMBER,
-        readonly=True,
         group=CommandGroup.SET,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def sismember(self, key: KeyT, member: ValueT) -> bool:
         """
@@ -3589,9 +3664,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.SMEMBERS,
-        readonly=True,
         group=CommandGroup.SET,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY},
     )
     async def smembers(self, key: KeyT) -> Set[AnyStr]:
         """Returns all members of the set"""
@@ -3602,10 +3677,10 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.SMISMEMBER,
-        readonly=True,
         version_introduced="6.2.0",
         group=CommandGroup.SET,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def smismember(
         self, key: KeyT, members: Parameters[ValueT]
@@ -3624,6 +3699,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SMOVE,
         group=CommandGroup.SET,
+        flags={CommandFlag.FAST},
     )
     async def smove(self, source: KeyT, destination: KeyT, member: ValueT) -> bool:
         """
@@ -3637,6 +3713,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SPOP,
         group=CommandGroup.SET,
+        flags={CommandFlag.FAST},
     )
     async def spop(
         self, key: KeyT, count: Optional[int] = None
@@ -3666,8 +3743,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.SRANDMEMBER,
-        readonly=True,
         group=CommandGroup.SET,
+        flags={CommandFlag.READONLY},
     )
     async def srandmember(
         self, key: KeyT, count: Optional[int] = None
@@ -3696,7 +3773,11 @@ class CoreCommands(CommandMixin[AnyStr]):
             callback=ItemOrSetCallback[AnyStr](),
         )
 
-    @redis_command(CommandName.SREM, group=CommandGroup.SET)
+    @redis_command(
+        CommandName.SREM,
+        group=CommandGroup.SET,
+        flags={CommandFlag.FAST},
+    )
     async def srem(self, key: KeyT, members: Parameters[ValueT]) -> int:
         """
         Remove one or more members from a set
@@ -3712,8 +3793,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.SUNION,
-        readonly=True,
         group=CommandGroup.SET,
+        flags={CommandFlag.READONLY},
     )
     async def sunion(self, keys: Parameters[KeyT]) -> Set[AnyStr]:
         """
@@ -3741,9 +3822,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.SSCAN,
-        readonly=True,
         group=CommandGroup.SET,
         cluster=ClusterCommandConfig(combine=ClusterEnsureConsistent()),
+        flags={CommandFlag.READONLY},
     )
     async def sscan(
         self,
@@ -3776,6 +3857,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.BZMPOP,
         version_introduced="7.0.0",
         group=CommandGroup.SORTED_SET,
+        flags={CommandFlag.BLOCKING},
     )
     async def bzmpop(
         self,
@@ -3805,6 +3887,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.BZPOPMAX,
         group=CommandGroup.SORTED_SET,
+        flags={CommandFlag.FAST, CommandFlag.BLOCKING},
     )
     async def bzpopmax(
         self, keys: Parameters[KeyT], timeout: Union[int, float]
@@ -3828,6 +3911,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.BZPOPMIN,
         group=CommandGroup.SORTED_SET,
+        flags={CommandFlag.FAST, CommandFlag.BLOCKING},
     )
     async def bzpopmin(
         self, keys: Parameters[KeyT], timeout: Union[int, float]
@@ -3853,6 +3937,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ZADD,
         group=CommandGroup.SORTED_SET,
         arguments={"comparison": {"version_introduced": "6.2.0"}},
+        flags={CommandFlag.FAST},
     )
     async def zadd(
         self,
@@ -3898,7 +3983,11 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.ZADD, key, *pieces, callback=ZAddCallback()
         )
 
-    @redis_command(CommandName.ZCARD, readonly=True, group=CommandGroup.SORTED_SET)
+    @redis_command(
+        CommandName.ZCARD,
+        group=CommandGroup.SORTED_SET,
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
+    )
     async def zcard(self, key: KeyT) -> int:
         """
         Get the number of members in a sorted set
@@ -3912,7 +4001,11 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.ZCARD, key, callback=IntCallback()
         )
 
-    @redis_command(CommandName.ZCOUNT, readonly=True, group=CommandGroup.SORTED_SET)
+    @redis_command(
+        CommandName.ZCOUNT,
+        group=CommandGroup.SORTED_SET,
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
+    )
     async def zcount(
         self,
         key: KeyT,
@@ -3931,9 +4024,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.ZDIFF,
-        readonly=True,
         version_introduced="6.2.0",
         group=CommandGroup.SORTED_SET,
+        flags={CommandFlag.READONLY},
     )
     async def zdiff(
         self, keys: Parameters[KeyT], withscores: Optional[bool] = None
@@ -3976,6 +4069,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.ZINCRBY,
         group=CommandGroup.SORTED_SET,
+        flags={CommandFlag.FAST},
     )
     async def zincrby(self, key: KeyT, member: ValueT, increment: int) -> float:
         """
@@ -3994,9 +4088,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.ZINTER,
-        readonly=True,
         version_introduced="6.2.0",
         group=CommandGroup.SORTED_SET,
+        flags={CommandFlag.READONLY},
     )
     async def zinter(
         self,
@@ -4050,7 +4144,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ZINTERCARD,
         version_introduced="7.0.0",
         group=CommandGroup.SORTED_SET,
-        readonly=True,
+        flags={CommandFlag.READONLY},
     )
     async def zintercard(
         self, keys: Parameters[KeyT], limit: Optional[int] = None
@@ -4073,9 +4167,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.ZLEXCOUNT,
-        readonly=True,
         group=CommandGroup.SORTED_SET,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def zlexcount(self, key: KeyT, min_: ValueT, max_: ValueT) -> int:
         """
@@ -4117,10 +4211,10 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.ZMSCORE,
-        readonly=True,
         version_introduced="6.2.0",
         group=CommandGroup.SORTED_SET,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def zmscore(
         self, key: KeyT, members: Parameters[ValueT]
@@ -4188,9 +4282,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.ZRANDMEMBER,
-        readonly=True,
         version_introduced="6.2.0",
         group=CommandGroup.SORTED_SET,
+        flags={CommandFlag.READONLY},
     )
     async def zrandmember(
         self,
@@ -4261,7 +4355,6 @@ class CoreCommands(CommandMixin[AnyStr]):
     @mutually_inclusive_parameters("offset", "count")
     @redis_command(
         CommandName.ZRANGE,
-        readonly=True,
         group=CommandGroup.SORTED_SET,
         arguments={
             "sortby": {"version_introduced": "6.2.0"},
@@ -4270,6 +4363,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             "count": {"version_introduced": "6.2.0"},
         },
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY},
     )
     async def zrange(
         self,
@@ -4305,11 +4399,11 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.ZRANGEBYLEX,
-        readonly=True,
         version_deprecated="6.2.0",
         deprecation_reason=" Use :meth:`zrange` with the sortby=BYLEX argument",
         group=CommandGroup.SORTED_SET,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY},
     )
     @mutually_inclusive_parameters("offset", "count")
     async def zrangebylex(
@@ -4338,11 +4432,11 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.ZRANGEBYSCORE,
-        readonly=True,
         version_deprecated="6.2.0",
         deprecation_reason=" Use :meth:`zrange` with the sortby=BYSCORE argument",
         group=CommandGroup.SORTED_SET,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY},
     )
     @mutually_inclusive_parameters("offset", "count")
     async def zrangebyscore(
@@ -4415,9 +4509,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.ZRANK,
-        readonly=True,
         group=CommandGroup.SORTED_SET,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def zrank(self, key: KeyT, member: ValueT) -> Optional[int]:
         """
@@ -4433,6 +4527,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.ZREM,
         group=CommandGroup.SORTED_SET,
+        flags={CommandFlag.FAST},
     )
     async def zrem(self, key: KeyT, members: Parameters[ValueT]) -> int:
         """
@@ -4486,11 +4581,11 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.ZREVRANGE,
-        readonly=True,
         version_deprecated="6.2.0",
         deprecation_reason="Use :meth:`zrange` with the rev argument",
         group=CommandGroup.SORTED_SET,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY},
     )
     async def zrevrange(
         self,
@@ -4521,11 +4616,11 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.ZREVRANGEBYLEX,
-        readonly=True,
         version_deprecated="6.2.0",
         deprecation_reason="Use :meth:`zrange` with the rev and sort=BYLEX arguments",
         group=CommandGroup.SORTED_SET,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY},
     )
     @mutually_inclusive_parameters("offset", "count")
     async def zrevrangebylex(
@@ -4555,11 +4650,11 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.ZREVRANGEBYSCORE,
-        readonly=True,
         version_deprecated="6.2.0",
         deprecation_reason="Use :meth:`zrange` with the rev and sort=BYSCORE arguments",
         group=CommandGroup.SORTED_SET,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY},
     )
     @mutually_inclusive_parameters("offset", "count")
     async def zrevrangebyscore(
@@ -4596,9 +4691,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.ZREVRANK,
-        readonly=True,
         group=CommandGroup.SORTED_SET,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def zrevrank(self, key: KeyT, member: ValueT) -> Optional[int]:
         """
@@ -4613,8 +4708,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.ZSCAN,
-        readonly=True,
         group=CommandGroup.SORTED_SET,
+        flags={CommandFlag.READONLY},
     )
     async def zscan(
         self,
@@ -4641,9 +4736,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.ZSCORE,
-        readonly=True,
         group=CommandGroup.SORTED_SET,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def zscore(self, key: KeyT, member: ValueT) -> Optional[float]:
         """
@@ -4659,9 +4754,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.ZUNION,
-        readonly=True,
         version_introduced="6.2.0",
         group=CommandGroup.SORTED_SET,
+        flags={CommandFlag.READONLY},
     )
     async def zunion(
         self,
@@ -4849,7 +4944,11 @@ class CoreCommands(CommandMixin[AnyStr]):
                 command, *pieces, callback=ZMembersOrScoredMembers[AnyStr](), **options
             )
 
-    @redis_command(CommandName.XACK, group=CommandGroup.STREAM)
+    @redis_command(
+        CommandName.XACK,
+        group=CommandGroup.STREAM,
+        flags={CommandFlag.FAST},
+    )
     async def xack(
         self, key: KeyT, group: StringT, identifiers: Parameters[ValueT]
     ) -> int:
@@ -4873,6 +4972,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             "nomkstream": {"version_introduced": "6.2.0"},
             "limit": {"version_introduced": "6.2.0"},
         },
+        flags={CommandFlag.FAST},
     )
     async def xadd(
         self,
@@ -4923,7 +5023,11 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.XADD, key, *pieces, callback=OptionalAnyStrCallback[AnyStr]()
         )
 
-    @redis_command(CommandName.XLEN, readonly=True, group=CommandGroup.STREAM)
+    @redis_command(
+        CommandName.XLEN,
+        group=CommandGroup.STREAM,
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
+    )
     async def xlen(self, key: KeyT) -> int:
         """ """
 
@@ -4931,8 +5035,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.XRANGE,
-        readonly=True,
         group=CommandGroup.STREAM,
+        flags={CommandFlag.READONLY},
     )
     async def xrange(
         self,
@@ -4957,8 +5061,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.XREVRANGE,
-        readonly=True,
         group=CommandGroup.STREAM,
+        flags={CommandFlag.READONLY},
     )
     async def xrevrange(
         self,
@@ -4983,8 +5087,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.XREAD,
-        readonly=True,
         group=CommandGroup.STREAM,
+        flags={CommandFlag.READONLY, CommandFlag.BLOCKING},
     )
     async def xread(
         self,
@@ -5024,8 +5128,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(
-        CommandName.XREADGROUP,
-        group=CommandGroup.STREAM,
+        CommandName.XREADGROUP, group=CommandGroup.STREAM, flags={CommandFlag.BLOCKING}
     )
     async def xreadgroup(
         self,
@@ -5064,9 +5167,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @mutually_inclusive_parameters("start", "end", "count")
     @redis_command(
         CommandName.XPENDING,
-        readonly=True,
         group=CommandGroup.STREAM,
         arguments={"idle": {"version_introduced": "6.2.0"}},
+        flags={CommandFlag.READONLY},
     )
     async def xpending(
         self,
@@ -5128,7 +5231,11 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.XTRIM, key, *pieces, callback=IntCallback()
         )
 
-    @redis_command(CommandName.XDEL, group=CommandGroup.STREAM)
+    @redis_command(
+        CommandName.XDEL,
+        group=CommandGroup.STREAM,
+        flags={CommandFlag.FAST},
+    )
     async def xdel(self, key: KeyT, identifiers: Parameters[ValueT]) -> int:
         """ """
 
@@ -5138,8 +5245,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.XINFO_CONSUMERS,
-        readonly=True,
         group=CommandGroup.STREAM,
+        flags={CommandFlag.READONLY},
     )
     async def xinfo_consumers(
         self, key: KeyT, groupname: StringT
@@ -5158,8 +5265,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.XINFO_GROUPS,
-        readonly=True,
         group=CommandGroup.STREAM,
+        flags={CommandFlag.READONLY},
     )
     async def xinfo_groups(self, key: KeyT) -> Tuple[Dict[AnyStr, AnyStr], ...]:
         """
@@ -5173,8 +5280,8 @@ class CoreCommands(CommandMixin[AnyStr]):
     @mutually_inclusive_parameters("count", leaders=["full"])
     @redis_command(
         CommandName.XINFO_STREAM,
-        readonly=True,
         group=CommandGroup.STREAM,
+        flags={CommandFlag.READONLY},
     )
     async def xinfo_stream(
         self, key: KeyT, full: Optional[bool] = None, count: Optional[int] = None
@@ -5205,6 +5312,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.XCLAIM,
         group=CommandGroup.STREAM,
+        flags={CommandFlag.FAST},
     )
     async def xclaim(
         self,
@@ -5360,6 +5468,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.XAUTOCLAIM,
         version_introduced="6.2.0",
         group=CommandGroup.STREAM,
+        flags={CommandFlag.FAST},
     )
     async def xautoclaim(
         self,
@@ -5406,9 +5515,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.BITCOUNT,
-        readonly=True,
         group=CommandGroup.BITMAP,
         arguments={"index_unit": {"version_introduced": "7.0.0"}},
+        flags={CommandFlag.READONLY},
     )
     @mutually_inclusive_parameters("start", "end")
     async def bitcount(
@@ -5475,9 +5584,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.BITPOS,
-        readonly=True,
         group=CommandGroup.BITMAP,
         arguments={"index_unit": {"version_introduced": "7.0.0"}},
+        flags={CommandFlag.READONLY},
     )
     @mutually_inclusive_parameters("end", leaders=("start",))
     async def bitpos(
@@ -5533,7 +5642,11 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.BITPOS, *params, callback=IntCallback()
         )
 
-    @redis_command(CommandName.GETBIT, readonly=True, group=CommandGroup.BITMAP)
+    @redis_command(
+        CommandName.GETBIT,
+        group=CommandGroup.BITMAP,
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
+    )
     async def getbit(self, key: KeyT, offset: int) -> int:
         """
         Returns the bit value at offset in the string value stored at key
@@ -5738,7 +5851,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.EVAL_RO,
         version_introduced="7.0.0",
         group=CommandGroup.SCRIPTING,
-        readonly=True,
+        flags={CommandFlag.READONLY},
     )
     async def eval_ro(
         self,
@@ -5794,7 +5907,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.EVALSHA_RO,
         version_introduced="7.0.0",
         group=CommandGroup.SCRIPTING,
-        readonly=True,
+        flags={CommandFlag.READONLY},
     )
     async def evalsha_ro(
         self,
@@ -5937,7 +6050,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.FCALL_RO,
         version_introduced="7.0.0",
         group=CommandGroup.SCRIPTING,
-        readonly=True,
+        flags={CommandFlag.READONLY},
     )
     async def fcall_ro(
         self,
@@ -6535,8 +6648,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.DBSIZE,
-        readonly=True,
         group=CommandGroup.SERVER,
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def dbsize(self) -> int:
         """Returns the number of keys in the current database"""
@@ -6654,8 +6767,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(
-        CommandName.LASTSAVE,
-        group=CommandGroup.SERVER,
+        CommandName.LASTSAVE, group=CommandGroup.SERVER, flags={CommandFlag.FAST}
     )
     async def lastsave(self) -> datetime.datetime:
         """
@@ -6813,7 +6925,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @versionadded(version="3.0.0")
-    @redis_command(CommandName.MEMORY_USAGE, readonly=True, group=CommandGroup.SERVER)
+    @redis_command(
+        CommandName.MEMORY_USAGE,
+        group=CommandGroup.SERVER,
+        flags={CommandFlag.READONLY},
+    )
     async def memory_usage(
         self, key: KeyT, *, samples: Optional[int] = None
     ) -> Optional[int]:
@@ -6955,8 +7071,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(
-        CommandName.TIME,
-        group=CommandGroup.SERVER,
+        CommandName.TIME, group=CommandGroup.SERVER, flags={CommandFlag.FAST}
     )
     async def time(self) -> datetime.datetime:
         """
@@ -6988,8 +7103,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(
-        CommandName.ROLE,
-        group=CommandGroup.SERVER,
+        CommandName.ROLE, group=CommandGroup.SERVER, flags={CommandFlag.FAST}
     )
     async def role(self) -> RoleInfo:
         """
@@ -7004,8 +7118,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="3.0.0")
     @redis_command(
-        CommandName.SWAPDB,
-        group=CommandGroup.SERVER,
+        CommandName.SWAPDB, group=CommandGroup.SERVER, flags={CommandFlag.FAST}
     )
     async def swapdb(self, index1: int, index2: int) -> bool:
         """
@@ -7017,7 +7130,11 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.SWAPDB, *pieces, callback=SimpleStringCallback()
         )
 
-    @redis_command(CommandName.LOLWUT, readonly=True, group=CommandGroup.SERVER)
+    @redis_command(
+        CommandName.LOLWUT,
+        group=CommandGroup.SERVER,
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
+    )
     async def lolwut(self, version: Optional[int] = None) -> AnyStr:
         """
         Get the Redis version and a piece of generative computer art

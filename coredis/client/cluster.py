@@ -29,7 +29,8 @@ from coredis.exceptions import (
     TryAgainError,
     WatchError,
 )
-from coredis.pool import ClusterConnectionPool, ConnectionPool
+from coredis.globals import READONLY_COMMANDS
+from coredis.pool import ClusterConnectionPool
 from coredis.pool.nodemanager import ManagedNode
 from coredis.response._callbacks import NoopCallback
 from coredis.typing import (
@@ -113,8 +114,6 @@ class ClusterMeta(ABCMeta):
                 """
                 if cmd.cluster.multi_node:
                     kls.RESULT_CALLBACKS[cmd.command] = cmd.cluster.combine
-                if cmd.readonly:
-                    ConnectionPool.READONLY_COMMANDS.add(cmd.command)
             if doc_addition and not hasattr(method, "__cluster_docs"):
 
                 def __w(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
@@ -706,7 +705,7 @@ class RedisCluster(
                 ):
                     self.cache.reset()
                     await r.update_tracking_client(True, self.cache.get_client_id(r))
-                if self.cache and command not in self.connection_pool.READONLY_COMMANDS:
+                if self.cache and command not in READONLY_COMMANDS:
                     self.cache.invalidate(*KeySpec.extract_keys((command,) + args))
                 await self._ensure_noreply(r)
                 await r.send_command(command, *args, noreply=self.noreply)
@@ -790,7 +789,7 @@ class RedisCluster(
                                 *args[1 + key_end :],
                             )
                         )
-            if self.cache and command not in self.connection_pool.READONLY_COMMANDS:
+            if self.cache and command not in READONLY_COMMANDS:
                 self.cache.invalidate(*keys)
         while _nodes:
             cur = _nodes[0]

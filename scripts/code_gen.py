@@ -223,7 +223,7 @@ REDIS_RETURN_OVERRIDES = {
     "XPENDING": Union[Tuple[StreamPendingExt, ...], StreamPending],
     "XRANGE": Tuple[StreamEntry, ...],
     "XREVRANGE": Tuple[StreamEntry, ...],
-    "XREADGROUP": Dict[AnyStr, Tuple[StreamEntry, ...]],
+    "XREADGROUP": Optional[Dict[AnyStr, Tuple[StreamEntry, ...]]],
     "XREAD": Optional[Dict[AnyStr, Tuple[StreamEntry, ...]]],
     "ZDIFF": Tuple[Union[AnyStr, ScoredMember], ...],
     "ZINTER": Tuple[Union[AnyStr, ScoredMember], ...],
@@ -1829,6 +1829,7 @@ def generate_compatibility_section(
                                     .get("version")
                                 ]
                             )
+                            missing_command_flags = []
                             routing_valid = True
                             merging_valid = True
                             if command_details and (hints := method.get("hints", [])):
@@ -1840,6 +1841,10 @@ def generate_compatibility_section(
                                         print(method["name"], route, request_policy[0], ROUTE_MAPPING.get(request_policy[0]))
                                 if response_policy and command_details.cluster.combine and (combine := command_details.cluster.combine.response_policy):
                                     merging_valid = combine in MERGE_MAPPING.get(response_policy[0], [])
+                            if command_details and (flags := [k for k in method.get("command_flags", []) if k in [e.value for e in CommandFlag]]):
+                                if set(flags) != set(k.value for k in command_details.flags):
+                                    missing_command_flags = set(flags) - set([k.value for k in command_details.flags])
+                                method_details["usable_flags"] = set(flags)
                             if (
                                 src.find("@redis_command") >= 0
                                 and src.find(
@@ -1858,6 +1863,7 @@ def generate_compatibility_section(
                                 and arg_version_valid
                                 and routing_valid
                                 and merging_valid
+                                and not missing_command_flags
                             ):
                                 method_details["full_match"] = True
                             else:
@@ -1876,6 +1882,8 @@ def generate_compatibility_section(
                                     if not routing_valid
                                     else "Response merge mismatch"
                                     if not merging_valid
+                                    else f"Flags mismatched {missing_command_flags}"
+                                    if missing_command_flags
                                     else "unknown"
                                 )
                         elif compare_signatures(
@@ -2096,6 +2104,12 @@ class NodeFlag(enum.Enum):
     REPLICAS = "replicas"
     RANDOM = "random"
     SLOT_ID = "slot-id"
+
+class CommandFlag(enum.Enum):
+    BLOCKING = "blocking"
+    SLOW = "slow"
+    FAST = "fast"
+    READONLY = "readonly"
     """
     )
 

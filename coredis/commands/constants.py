@@ -466,3 +466,10 @@ class NodeFlag(enum.Enum):
     REPLICAS = "replicas"
     RANDOM = "random"
     SLOT_ID = "slot-id"
+
+
+class CommandFlag(enum.Enum):
+    BLOCKING = "blocking"
+    SLOW = "slow"
+    FAST = "fast"
+    READONLY = "readonly"

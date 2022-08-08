@@ -32,6 +32,7 @@ from coredis.exceptions import (
     TimeoutError,
     WatchError,
 )
+from coredis.globals import READONLY_COMMANDS
 from coredis.pool import ConnectionPool
 from coredis.response._callbacks import NoopCallback
 from coredis.response.types import ScoredMember
@@ -750,7 +751,7 @@ class Redis(Client[AnyStr]):
                 True, self.cache.get_client_id(connection)
             )
         try:
-            if self.cache and command not in self.connection_pool.READONLY_COMMANDS:
+            if self.cache and command not in READONLY_COMMANDS:
                 self.cache.invalidate(*KeySpec.extract_keys((command,) + args))
             await self._ensure_noreply(connection)
             await connection.send_command(command, *args, noreply=self.noreply)

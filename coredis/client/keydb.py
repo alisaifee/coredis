@@ -17,7 +17,7 @@ from coredis.commands._utils import (
     normalized_time_seconds,
 )
 from coredis.commands._wrappers import ClusterCommandConfig, CommandDetails
-from coredis.commands.constants import CommandGroup
+from coredis.commands.constants import CommandFlag, CommandGroup
 from coredis.response._callbacks import (
     BoolCallback,
     BoolsCallback,
@@ -37,6 +37,7 @@ from coredis.typing import (
     P,
     Parameters,
     R,
+    Set,
     StringT,
     Tuple,
     Union,
@@ -75,20 +76,20 @@ def keydb_command(
     version_deprecated: Optional[str] = None,
     deprecation_reason: Optional[str] = None,
     arguments: Optional[Dict[str, Dict[str, str]]] = None,
-    readonly: bool = False,
     cluster: ClusterCommandConfig = ClusterCommandConfig(),
+    flags: Optional[Set[CommandFlag]] = None,
 ) -> Callable[
     [Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]
 ]:
     command_details = CommandDetails(
         command_name,
         group,
-        readonly,
         version.Version(version_introduced) if version_introduced else None,
         version.Version(version_deprecated) if version_deprecated else None,
         arguments or {},
         cluster or ClusterCommandConfig(),
         None,
+        flags or set(),
     )
 
     def wrapper(
@@ -276,7 +277,9 @@ class KeyDBCommands(CommandMixin[AnyStr]):
             callback=BoolCallback(),
         )
 
-    @keydb_command(CommandName.MEXISTS, readonly=True, group=CommandGroup.GENERIC)
+    @keydb_command(
+        CommandName.MEXISTS, group=CommandGroup.GENERIC, flags={CommandFlag.READONLY}
+    )
     async def mexists(self, keys: Iterable[KeyT]) -> Tuple[bool, ...]:
         """
         Returns a tuple of bools in the same order as :paramref:`keys`
@@ -288,7 +291,9 @@ class KeyDBCommands(CommandMixin[AnyStr]):
         )
 
     @keydb_command(
-        CommandName.OBJECT_LASTMODIFIED, readonly=True, group=CommandGroup.GENERIC
+        CommandName.OBJECT_LASTMODIFIED,
+        group=CommandGroup.GENERIC,
+        flags={CommandFlag.READONLY},
     )
     async def object_lastmodified(self, key: KeyT) -> int:
         """
@@ -302,7 +307,9 @@ class KeyDBCommands(CommandMixin[AnyStr]):
             CommandName.OBJECT_LASTMODIFIED, key, callback=IntCallback()
         )
 
-    @keydb_command(CommandName.PTTL, readonly=True, group=CommandGroup.GENERIC)
+    @keydb_command(
+        CommandName.PTTL, group=CommandGroup.GENERIC, flags={CommandFlag.READONLY}
+    )
     async def pttl(self, key: KeyT, subkey: Optional[ValueT] = None) -> int:
         """
         Returns the number of milliseconds until the key :paramref:`key` will expire.
@@ -318,7 +325,9 @@ class KeyDBCommands(CommandMixin[AnyStr]):
             CommandName.PTTL, *pieces, callback=IntCallback()
         )
 
-    @keydb_command(CommandName.TTL, readonly=True, group=CommandGroup.GENERIC)
+    @keydb_command(
+        CommandName.TTL, group=CommandGroup.GENERIC, flags={CommandFlag.READONLY}
+    )
     async def ttl(self, key: KeyT, subkey: Optional[ValueT] = None) -> int:
         """
         Get the time to live for a key (or subkey) in seconds

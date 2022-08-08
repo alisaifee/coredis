@@ -12,7 +12,8 @@ from packaging import version
 
 from coredis.cache import AbstractCache, SupportsSampling
 from coredis.commands._utils import check_version, redis_command_link
-from coredis.commands.constants import CommandGroup, CommandName, NodeFlag
+from coredis.commands.constants import CommandFlag, CommandGroup, CommandName, NodeFlag
+from coredis.globals import READONLY_COMMANDS
 from coredis.response._callbacks import ClusterMultiNodeCallback
 from coredis.typing import (
     AsyncIterator,
@@ -24,6 +25,7 @@ from coredis.typing import (
     P,
     R,
     ResponseType,
+    Set,
     add_runtime_checks,
 )
 
@@ -44,12 +46,12 @@ class RedirectUsage(NamedTuple):
 class CommandDetails(NamedTuple):
     command: bytes
     group: Optional[CommandGroup]
-    readonly: bool
     version_introduced: Optional[version.Version]
     version_deprecated: Optional[version.Version]
     arguments: Dict[str, Dict[str, str]]
     cluster: ClusterCommandConfig
     cache_config: Optional[CacheConfig]
+    flags: Set[CommandFlag]
 
 
 @dataclasses.dataclass
@@ -133,26 +135,31 @@ def redis_command(
     deprecation_reason: Optional[str] = None,
     redirect_usage: Optional[RedirectUsage] = None,
     arguments: Optional[Dict[str, Dict[str, str]]] = None,
-    readonly: bool = False,
+    flags: Optional[Set[CommandFlag]] = None,
     cluster: ClusterCommandConfig = ClusterCommandConfig(),
     cache_config: Optional[CacheConfig] = None,
 ) -> Callable[
     [Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]
 ]:
+    readonly = False
+    if flags and CommandFlag.READONLY in flags:
+        READONLY_COMMANDS.add(command_name)
+        readonly = True
+
     if not readonly and cache_config:  # noqa
         raise RuntimeError(
-            f"Can't decorate readonly command {command_name} with cache config"
+            f"Can't decorate non readonly command {command_name} with cache config"
         )
 
     command_details = CommandDetails(
         command_name,
         group,
-        readonly,
         version.Version(version_introduced) if version_introduced else None,
         version.Version(version_deprecated) if version_deprecated else None,
         arguments or {},
         cluster or ClusterCommandConfig(),
         cache_config,
+        flags or set(),
     )
 
     def wrapper(

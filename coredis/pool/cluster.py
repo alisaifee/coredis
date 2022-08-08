@@ -11,6 +11,7 @@ from typing import Any, cast
 from coredis._utils import b, hash_slot
 from coredis.connection import ClusterConnection, Connection
 from coredis.exceptions import ConnectionError, RedisClusterException
+from coredis.globals import READONLY_COMMANDS
 from coredis.pool.basic import ConnectionPool
 from coredis.pool.nodemanager import ManagedNode, NodeManager
 from coredis.typing import Dict, Iterable, Node, Optional, Set, StringT, Type, ValueT
@@ -410,7 +411,7 @@ class ClusterConnectionPool(ConnectionPool):
     def get_node_by_slot(
         self, slot: int, command: Optional[bytes] = None
     ) -> ManagedNode:
-        if self.read_from_replicas and command in self.READONLY_COMMANDS:
+        if self.read_from_replicas and command in READONLY_COMMANDS:
             return self.get_replica_node_by_slot(slot)
         return self.get_primary_node_by_slot(slot)
 

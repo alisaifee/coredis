@@ -19,7 +19,6 @@ from coredis.connection import (
 from coredis.exceptions import ConnectionError
 from coredis.typing import (
     Callable,
-    ClassVar,
     Dict,
     List,
     Optional,
@@ -61,8 +60,6 @@ _CPT = TypeVar("_CPT", bound="ConnectionPool")
 
 class ConnectionPool:
     """Generic connection pool"""
-
-    READONLY_COMMANDS: ClassVar[Set[bytes]] = set()
 
     @classmethod
     def from_url(
