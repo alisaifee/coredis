@@ -121,7 +121,6 @@ jobs:
         pytest --cov=coredis --cov-report=xml ${{ matrix.test_params }}
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2
-      if: ${{ matrix.coverage == 'True' }}
   build_wheels:
     needs: [lint]
     name: Build wheels on ${{ matrix.os }}
