@@ -18,7 +18,7 @@ from tests.conftest import targets
     "redis_basic_raw_resp2",
 )
 class TestConnection:
-    @pytest.mark.flaky
+    @pytest.mark.xfail
     async def test_bgsave(self, client):
         await asyncio.sleep(0.5)
         assert await client.bgsave()
