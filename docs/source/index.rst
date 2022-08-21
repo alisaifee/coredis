@@ -26,6 +26,28 @@ coredis
 
 coredis is an async redis client with support for redis server, cluster & sentinel.
 
+The coredis :ref:`api:clients` attempt to mirror the specifications in
+the `Redis command documentation <https://redis.io/commands>`__ by using the following rules:
+
+- Arguments retain naming from redis as much as possible
+- **Only** optional variadic arguments are mapped to position or keyword variadic arguments. When
+  the variable length arguments are not optional the expected argument is an
+  :class:`~typing.Iterable` or :class:`~typing.Mapping`.
+- Pure tokens used as flags are mapped to boolean arguments
+- ``One of`` arguments accepting pure tokens are collapsed and accept a :class:`~coredis.tokens.PureToken`
+- Responses are mapped as closely from redis <-> python types as possible.
+
+.. tip:: It is strongly recommended to use a static type checker of your choice to catch any errors with respect to argument
+   and response types. If static type checking is not a part of your workflow, you can consider using the optional
+   :ref:`handbook/typing:runtime type checking` provided with the help of the excellent :pypi:`beartype` library.
+
+For higher level concepts such as :ref:`handbook/pipelines:pipelines`, :ref:`handbook/scripting:lua scripts`,
+:ref:`handbook/pubsub:pubsub` abstractions are provided to simplify interaction requires pre-defined
+sequencing of redis commands (see :ref:`api:command wrappers`) and the :ref:`handbook/index:handbook`.
+
+.. warning:: The command API does **NOT** mirror the official python :pypi:`redis` client.
+   For details about the high level differences refer to :ref:`history:divergence from aredis & redis-py`
+
 Feature Summary
 ===============
 
@@ -126,24 +148,6 @@ Cluster client
     # {'host': b'172.17.0.2', 'node_id': b'aac4799b65ff35d8dd2ad152a5515d15c0dc8ab7', 'server_type': 'slave', 'port': 7004}],
     # (0, 5460): [{'host': b'172.17.0.2', 'node_id': b'0932215036dc0d908cf662fdfca4d3614f221b01', 'server_type': 'master', 'port': 7000},
     # {'host': b'172.17.0.2', 'node_id': b'f6603ab4cb77e672de23a6361ec165f3a1a2bb42', 'server_type': 'slave', 'port': 7003}]}
-
-The coredis :ref:`api:clients` attempt to mirror the specifications in
-the `Redis command documentation <https://redis.io/commands>`__ by using the following rules:
-
-- Arguments retain naming from redis as much as possible
-- **Only** optional variadic arguments are mapped to ``*args`` or ``**kwargs``. When
-  the variable length arguments are not optional the expected argument is an
-  :class:`~typing.Iterable` or :class:`~typing.Mapping`.
-- Pure tokens used as flags are mapped to boolean arguments
-- ``One of`` arguments accepting pure tokens are collapsed and accept a :class:`~coredis.tokens.PureToken`
-- Responses are mapped as closely from redis <-> python types as possible.
-
-For higher level concepts such as :ref:`handbook/pipelines:pipelines`, :ref:`handbook/scripting:lua scripts`,
-:ref:`handbook/pubsub:pubsub` abstractions are provided to simplify interaction requires pre-defined
-sequencing of redis commands (see :ref:`api:command wrappers`) and the :ref:`handbook/index:handbook`.
-
-The redis command API does **NOT** mirror :pypi:`redis`.
-For details about the high level differences refer to :ref:`history:divergence from aredis & redis-py`
 
 Compatibility
 =============

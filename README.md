@@ -7,8 +7,28 @@
 [![ci](https://github.com/alisaifee/coredis/workflows/CI/badge.svg?branch=master)](https://github.com/alisaifee/coredis/actions?query=branch%3Amaster+workflow%3ACI)
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/coredis.svg)](https://pypi.python.org/pypi/coredis/)
 
-coredis is an async redis client with support for redis server, cluster
-& sentinel.
+---
+
+coredis is an async redis client with support for redis server, cluster & sentinel.
+
+- The client API mirrors the specifications in the [Redis command documentation](https://redis.io/commands/) by using the following rules:
+
+    - Arguments retain naming from redis as much as possible
+    - Only optional variadic arguments are mapped to variadic positional or keyword arguments.
+      When the variable length arguments are not optional (which is almost always the case) the expected argument 
+      is an `Iterable` or `Mapping`. 
+    - Pure tokens used as flags are mapped to boolean arguments
+    - `One of` arguments accepting pure tokens are collapsed and accept a [PureToken](https://coredis.readthedocs.io/en/latest/api.html#coredis.tokens.PureToken)
+
+- Responses are mapped as closely from redis <-> python types as possible.
+
+- For higher level concepts such as Pipelines, LUA Scripts, PubSub & Streams
+  abstractions are provided to simplify interaction requires pre-defined sequencing of redis commands (see [Command Wrappers](https://coredis.readthedocs.io/en/latest/api.html#command-wrappers))
+  and the [Handbook](https://coredis.readthedocs.io/en/latest/handbook/index.html).
+
+*It is strongly recommended to use a static type checker of your choice to catch any errors with respect to argument and response types. If static type checking is not a part of your workflow, you can consider using the optional [runtime type validation](https://coredis.readthedocs.org/en/latest/handbook/typing.html#runtime-type-checking) provided with the help of the excellent [beartype](https://github.com/beartype/beartype) library.*
+
+---
 
 <!-- TOC depthFrom:2 depthTo:6 withLinks:1 updateOnSave:1 orderedList:0 -->
 
@@ -110,7 +130,7 @@ asyncio.run(example())
 ```
 
 To see a full list of supported redis commands refer to the [Command
-compatibility](https://coredis.readthedocs.io/en/stable/compatibility.html)
+compatibility](https://coredis.readthedocs.io/en/latest/compatibility.html)
 documentation
 
 ## Compatibility
