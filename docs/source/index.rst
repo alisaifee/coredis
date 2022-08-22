@@ -32,7 +32,7 @@ the `Redis command documentation <https://redis.io/commands>`__ by using the fol
 - Arguments retain naming from redis as much as possible
 - **Only** optional variadic arguments are mapped to position or keyword variadic arguments. When
   the variable length arguments are not optional the expected argument is an
-  :class:`~typing.Iterable` or :class:`~typing.Mapping`.
+  iterable of type :class:`~coredis.typing.Parameters` or :class:`~typing.Mapping`.
 - Pure tokens used as flags are mapped to boolean arguments
 - ``One of`` arguments accepting pure tokens are collapsed and accept a :class:`~coredis.tokens.PureToken`
 - Responses are mapped as closely from redis <-> python types as possible.

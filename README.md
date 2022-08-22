@@ -16,7 +16,7 @@ coredis is an async redis client with support for redis server, cluster & sentin
     - Arguments retain naming from redis as much as possible
     - Only optional variadic arguments are mapped to variadic positional or keyword arguments.
       When the variable length arguments are not optional (which is almost always the case) the expected argument 
-      is an `Iterable` or `Mapping`. 
+      is an iterable of type [Parameters](https://coredis.readthedocs.io/en/latest/api.html#coredis.typing.Parameters) or `Mapping`. 
     - Pure tokens used as flags are mapped to boolean arguments
     - `One of` arguments accepting pure tokens are collapsed and accept a [PureToken](https://coredis.readthedocs.io/en/latest/api.html#coredis.tokens.PureToken)
 
