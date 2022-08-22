@@ -15,6 +15,7 @@ from coredis.commands._utils import (
     normalized_time_seconds,
 )
 from coredis.commands._validators import (
+    ensure_iterable_valid,
     mutually_exclusive_parameters,
     mutually_inclusive_parameters,
 )
@@ -464,6 +465,7 @@ class CoreCommands(CommandMixin[AnyStr]):
                     CommandName.LCS, *pieces, callback=AnyStrCallback[AnyStr]()
                 )
 
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.MGET,
         group=CommandGroup.STRING,
@@ -1441,6 +1443,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.GEODIST, *pieces, callback=OptionalFloatCallback()
         )
 
+    @ensure_iterable_valid("members")
     @redis_command(
         CommandName.GEOHASH,
         group=CommandGroup.GEO,
@@ -1457,6 +1460,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.GEOHASH, key, *members, callback=TupleCallback[AnyStr]()
         )
 
+    @ensure_iterable_valid("members")
     @redis_command(
         CommandName.GEOPOS,
         group=CommandGroup.GEO,
@@ -1964,6 +1968,7 @@ class CoreCommands(CommandMixin[AnyStr]):
                 command, *pieces, **kwargs, callback=GeoSearchCallback[AnyStr]()
             )
 
+    @ensure_iterable_valid("fields")
     @redis_command(CommandName.HDEL, group=CommandGroup.HASH, flags={CommandFlag.FAST})
     async def hdel(self, key: KeyT, fields: Parameters[StringT]) -> int:
         """Deletes ``fields`` from hash :paramref:`key`"""
@@ -2114,6 +2119,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.HMSET, key, *pieces, callback=SimpleStringCallback()
         )
 
+    @ensure_iterable_valid("fields")
     @redis_command(
         CommandName.HMGET,
         group=CommandGroup.HASH,
@@ -2279,6 +2285,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.PFADD, *pieces, callback=BoolCallback()
         )
 
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.PFCOUNT,
         group=CommandGroup.HYPERLOGLOG,
@@ -2295,6 +2302,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.PFCOUNT, *keys, callback=IntCallback()
         )
 
+    @ensure_iterable_valid("sourcekeys")
     @redis_command(
         CommandName.PFMERGE,
         group=CommandGroup.HYPERLOGLOG,
@@ -2336,6 +2344,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.COPY, source, destination, *pieces, callback=BoolCallback()
         )
 
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.DEL,
         group=CommandGroup.GENERIC,
@@ -2368,6 +2377,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.DUMP, key, decode=False, callback=NoopCallback[bytes]()
         )
 
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.EXISTS,
         group=CommandGroup.GENERIC,
@@ -2921,6 +2931,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.SORT_RO, *pieces, callback=TupleCallback[AnyStr]()
         )
 
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.TOUCH,
         group=CommandGroup.GENERIC,
@@ -2970,6 +2981,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.TYPE, key, callback=OptionalAnyStrCallback[AnyStr]()
         )
 
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.UNLINK,
         group=CommandGroup.GENERIC,
@@ -3076,6 +3088,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @versionadded(version="3.0.0")
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.BLMPOP,
         version_introduced="7.0.0",
@@ -3109,6 +3122,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.BLMPOP, *pieces, callback=OptionalListCallback[AnyStr]()
         )
 
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.BLPOP, group=CommandGroup.LIST, flags={CommandFlag.BLOCKING}
     )
@@ -3130,6 +3144,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.BLPOP, *keys, timeout, callback=OptionalListCallback[AnyStr]()
         )
 
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.BRPOP, group=CommandGroup.LIST, flags={CommandFlag.BLOCKING}
     )
@@ -3250,6 +3265,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @versionadded(version="3.0.0")
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.LMPOP, version_introduced="7.0.0", group=CommandGroup.LIST
     )
@@ -3352,6 +3368,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.LPOS, *pieces, callback=OptionalListCallback[int]()
         )
 
+    @ensure_iterable_valid("elements")
     @redis_command(CommandName.LPUSH, group=CommandGroup.LIST, flags={CommandFlag.FAST})
     async def lpush(self, key: KeyT, elements: Parameters[ValueT]) -> int:
         """
@@ -3359,11 +3376,11 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :return: the length of the list after the push operations.
         """
-
         return await self.execute_command(
             CommandName.LPUSH, key, *elements, callback=IntCallback()
         )
 
+    @ensure_iterable_valid("elements")
     @redis_command(
         CommandName.LPUSHX, group=CommandGroup.LIST, flags={CommandFlag.FAST}
     )
@@ -3504,6 +3521,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             callback=OptionalAnyStrCallback[AnyStr](),
         )
 
+    @ensure_iterable_valid("elements")
     @redis_command(
         CommandName.RPUSH,
         group=CommandGroup.LIST,
@@ -3520,6 +3538,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.RPUSH, key, *elements, callback=IntCallback()
         )
 
+    @ensure_iterable_valid("elements")
     @redis_command(
         CommandName.RPUSHX,
         group=CommandGroup.LIST,
@@ -3536,6 +3555,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.RPUSHX, key, *elements, callback=IntCallback()
         )
 
+    @ensure_iterable_valid("members")
     @redis_command(
         CommandName.SADD,
         group=CommandGroup.SET,
@@ -3571,6 +3591,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.SCARD, key, callback=IntCallback()
         )
 
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.SDIFF,
         group=CommandGroup.SET,
@@ -3587,6 +3608,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.SDIFF, *keys, callback=SetCallback[AnyStr]()
         )
 
+    @ensure_iterable_valid("keys")
     @redis_command(CommandName.SDIFFSTORE, group=CommandGroup.SET)
     async def sdiffstore(self, keys: Parameters[KeyT], destination: KeyT) -> int:
         """
@@ -3598,6 +3620,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.SDIFFSTORE, destination, *keys, callback=IntCallback()
         )
 
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.SINTER,
         group=CommandGroup.SET,
@@ -3614,6 +3637,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.SINTER, *keys, callback=SetCallback[AnyStr]()
         )
 
+    @ensure_iterable_valid("keys")
     @redis_command(CommandName.SINTERSTORE, group=CommandGroup.SET)
     async def sinterstore(self, keys: Parameters[KeyT], destination: KeyT) -> int:
         """
@@ -3627,6 +3651,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @versionadded(version="3.0.0")
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.SINTERCARD,
         version_introduced="7.0.0",
@@ -3684,6 +3709,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.SMEMBERS, key, callback=SetCallback[AnyStr]()
         )
 
+    @ensure_iterable_valid("members")
     @redis_command(
         CommandName.SMISMEMBER,
         version_introduced="6.2.0",
@@ -3782,6 +3808,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             callback=ItemOrSetCallback[AnyStr](),
         )
 
+    @ensure_iterable_valid("members")
     @redis_command(
         CommandName.SREM,
         group=CommandGroup.SET,
@@ -3800,6 +3827,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.SREM, key, *members, callback=IntCallback()
         )
 
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.SUNION,
         group=CommandGroup.SET,
@@ -3816,6 +3844,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.SUNION, *keys, callback=SetCallback[AnyStr]()
         )
 
+    @ensure_iterable_valid("keys")
     @redis_command(CommandName.SUNIONSTORE, group=CommandGroup.SET)
     async def sunionstore(self, keys: Parameters[KeyT], destination: KeyT) -> int:
         """
@@ -3862,6 +3891,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @versionadded(version="3.0.0")
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.BZMPOP,
         version_introduced="7.0.0",
@@ -3893,6 +3923,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.BZMPOP, *pieces, callback=ZMPopCallback[AnyStr]()
         )
 
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.BZPOPMAX,
         group=CommandGroup.SORTED_SET,
@@ -3917,6 +3948,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.BZPOPMAX, *params, callback=BZPopCallback[AnyStr]()
         )
 
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.BZPOPMIN,
         group=CommandGroup.SORTED_SET,
@@ -4031,6 +4063,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.ZCOUNT, key, min_, max_, callback=IntCallback()
         )
 
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.ZDIFF,
         version_introduced="6.2.0",
@@ -4058,6 +4091,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             callback=ZMembersOrScoredMembers[AnyStr](),
         )
 
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.ZDIFFSTORE,
         version_introduced="6.2.0",
@@ -4095,6 +4129,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             callback=FloatCallback(),
         )
 
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.ZINTER,
         version_introduced="6.2.0",
@@ -4128,6 +4163,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             withscores=withscores,
         )
 
+    @ensure_iterable_valid("keys")
     @redis_command(CommandName.ZINTERSTORE, group=CommandGroup.SORTED_SET)
     async def zinterstore(
         self,
@@ -4149,6 +4185,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @versionadded(version="3.0.0")
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.ZINTERCARD,
         version_introduced="7.0.0",
@@ -4192,6 +4229,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @versionadded(version="3.0.0")
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.ZMPOP,
         version_introduced="7.0.0",
@@ -4218,6 +4256,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.ZMPOP, *pieces, callback=ZMPopCallback[AnyStr]()
         )
 
+    @ensure_iterable_valid("members")
     @redis_command(
         CommandName.ZMSCORE,
         version_introduced="6.2.0",
@@ -4533,6 +4572,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.ZRANK, key, member, callback=OptionalIntCallback()
         )
 
+    @ensure_iterable_valid("members")
     @redis_command(
         CommandName.ZREM,
         group=CommandGroup.SORTED_SET,
@@ -4761,6 +4801,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.ZSCORE, key, member, callback=OptionalFloatCallback()
         )
 
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.ZUNION,
         version_introduced="6.2.0",
@@ -4793,6 +4834,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             withscores=withscores,
         )
 
+    @ensure_iterable_valid("keys")
     @redis_command(CommandName.ZUNIONSTORE, group=CommandGroup.SORTED_SET)
     async def zunionstore(
         self,
@@ -4953,6 +4995,7 @@ class CoreCommands(CommandMixin[AnyStr]):
                 command, *pieces, callback=ZMembersOrScoredMembers[AnyStr](), **options
             )
 
+    @ensure_iterable_valid("identifiers")
     @redis_command(
         CommandName.XACK,
         group=CommandGroup.STREAM,
@@ -5240,6 +5283,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.XTRIM, key, *pieces, callback=IntCallback()
         )
 
+    @ensure_iterable_valid("identifiers")
     @redis_command(
         CommandName.XDEL,
         group=CommandGroup.STREAM,
@@ -5318,6 +5362,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             callback=StreamInfoCallback(),
         )
 
+    @ensure_iterable_valid("identifiers")
     @redis_command(
         CommandName.XCLAIM,
         group=CommandGroup.STREAM,
@@ -5575,6 +5620,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return BitFieldOperation[AnyStr](self, key, readonly=True)
 
+    @ensure_iterable_valid("keys")
     @redis_command(
         CommandName.BITOP,
         group=CommandGroup.BITMAP,
@@ -5950,6 +5996,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         raise NotImplementedError()
 
+    @ensure_iterable_valid("sha1s")
     @redis_command(
         CommandName.SCRIPT_EXISTS,
         group=CommandGroup.SCRIPTING,
@@ -7185,6 +7232,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.ACL_CAT, *pieces, callback=TupleCallback[AnyStr]()
         )
 
+    @ensure_iterable_valid("usernames")
     @versionadded(version="3.0.0")
     @redis_command(
         CommandName.ACL_DELUSER,
@@ -7503,6 +7551,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @versionadded(version="3.0.0")
+    @ensure_iterable_valid("arguments")
     @redis_command(
         CommandName.COMMAND_GETKEYS,
         group=CommandGroup.SERVER,
@@ -7525,6 +7574,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @versionadded(version="3.1.0")
+    @ensure_iterable_valid("arguments")
     @redis_command(
         CommandName.COMMAND_GETKEYSANDFLAGS,
         version_introduced="7.0.0",
@@ -7599,6 +7649,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.COMMAND_LIST, *pieces, callback=SetCallback[AnyStr]()
         )
 
+    @ensure_iterable_valid("parameters")
     @redis_command(
         CommandName.CONFIG_GET,
         group=CommandGroup.SERVER,
