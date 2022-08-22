@@ -154,7 +154,7 @@ class TestPipeline:
         await client.set("c", "a")
         async with await client.pipeline() as pipe:
             await (
-                await (await (await pipe.set("a", "1")).set("b", "2")).lpush("c", "3")
+                await (await (await pipe.set("a", "1")).set("b", "2")).lpush("c", ["3"])
             ).set("d", "4")
             result = await pipe.execute(raise_on_error=False)
 
@@ -183,7 +183,7 @@ class TestPipeline:
         async with await client.pipeline() as pipe:
             await pipe.set("a", "1")
             await pipe.set("b", "2")
-            await pipe.lpush("c", "3")
+            await pipe.lpush("c", ["3"])
             await pipe.set("d", "4")
             with pytest.raises(ResponseError) as ex:
                 await pipe.execute()

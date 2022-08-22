@@ -128,3 +128,34 @@ def mutually_inclusive_parameters(
         return wrapped
 
     return wrapper
+
+
+def ensure_iterable_valid(
+    argument: str,
+) -> Callable[
+    [Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]
+]:
+    def iterable_valid(value: Any) -> bool:
+        return isinstance(value, Iterable) and not isinstance(value, (str, bytes))
+
+    def wrapper(
+        func: Callable[P, Coroutine[Any, Any, R]]
+    ) -> Callable[P, Coroutine[Any, Any, R]]:
+        sig = inspect.signature(func)
+        expected_type = sig.parameters[argument].annotation
+
+        @functools.wraps(func)
+        async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
+            bound = sig.bind_partial(*args, **kwargs)
+            value = bound.arguments.get(argument)
+            if not iterable_valid(value):
+                raise TypeError(
+                    f"{func.__name__} parameter {argument}={value!r} "
+                    f"violates expected iterable of type {expected_type}"
+                )
+
+            return await func(*args, **kwargs)
+
+        return wrapped
+
+    return wrapper
