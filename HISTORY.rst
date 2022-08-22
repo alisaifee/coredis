@@ -3,6 +3,19 @@
 Changelog
 =========
 
+v4.5.5
+------
+Release Date: 2022-08-22
+
+* Compatibility
+
+  * Add test coverage for PyPy version 3.7 & 3.9
+
+* Bug Fix
+
+  * Ensure methods expecting iterables for an argument raise a TypeError
+    when a single string or byte sequence is used incorrectly.
+
 v4.5.4
 ------
 Release Date: 2022-08-08
@@ -1173,6 +1186,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
