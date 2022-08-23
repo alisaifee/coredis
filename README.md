@@ -11,7 +11,7 @@
 
 coredis is an async redis client with support for redis server, cluster & sentinel.
 
-- The client API mirrors the specifications in the [Redis command documentation](https://redis.io/commands/) by using the following rules:
+- The client API follows the specifications in the [Redis command documentation](https://redis.io/commands/) by using the following rules:
 
     - Arguments retain naming from redis as much as possible
     - Only optional variadic arguments are mapped to variadic positional or keyword arguments.
@@ -25,8 +25,6 @@ coredis is an async redis client with support for redis server, cluster & sentin
 - For higher level concepts such as Pipelines, LUA Scripts, PubSub & Streams
   abstractions are provided to simplify interaction requires pre-defined sequencing of redis commands (see [Command Wrappers](https://coredis.readthedocs.io/en/latest/api.html#command-wrappers))
   and the [Handbook](https://coredis.readthedocs.io/en/latest/handbook/index.html).
-
-*It is strongly recommended to use a static type checker of your choice to catch any errors with respect to argument and response types. If static type checking is not a part of your workflow, you can consider using the optional [runtime type validation](https://coredis.readthedocs.org/en/latest/handbook/typing.html#runtime-type-checking) provided with the help of the excellent [beartype](https://github.com/beartype/beartype) library.*
 
 ---
 

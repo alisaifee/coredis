@@ -26,7 +26,7 @@ coredis
 
 coredis is an async redis client with support for redis server, cluster & sentinel.
 
-The coredis :ref:`api:clients` attempt to mirror the specifications in
+The coredis :ref:`api:clients` API follows the specifications in
 the `Redis command documentation <https://redis.io/commands>`__ by using the following rules:
 
 - Arguments retain naming from redis as much as possible
@@ -36,10 +36,6 @@ the `Redis command documentation <https://redis.io/commands>`__ by using the fol
 - Pure tokens used as flags are mapped to boolean arguments
 - ``One of`` arguments accepting pure tokens are collapsed and accept a :class:`~coredis.tokens.PureToken`
 - Responses are mapped as closely from redis <-> python types as possible.
-
-.. tip:: It is strongly recommended to use a static type checker of your choice to catch any errors with respect to argument
-   and response types. If static type checking is not a part of your workflow, you can consider using the optional
-   :ref:`handbook/typing:runtime type checking` provided with the help of the excellent :pypi:`beartype` library.
 
 For higher level concepts such as :ref:`handbook/pipelines:pipelines`, :ref:`handbook/scripting:lua scripts`,
 :ref:`handbook/pubsub:pubsub` abstractions are provided to simplify interaction requires pre-defined
