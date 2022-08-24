@@ -692,6 +692,7 @@ class RedisCluster(
                 continue
 
             quick_release = self.should_quick_release(command)
+            released = False
             try:
                 if asking:
                     request = await r.create_request(
@@ -716,6 +717,7 @@ class RedisCluster(
                     decode=kwargs.get("decode"),
                 )
                 if quick_release:
+                    released = True
                     self.connection_pool.release(r)
 
                 reply = await request
@@ -761,7 +763,7 @@ class RedisCluster(
                 redirect_addr, asking = f"{e.host}:{e.port}", True
             finally:
                 self._ensure_server_version(r.server_version)
-                if not quick_release:
+                if not released:
                     self.connection_pool.release(r)
 
         raise ClusterError("TTL exhausted.")
