@@ -1,6 +1,6 @@
 -r test.txt
 -r publishing.txt
-autoflake8==0.3.2
+autoflake8==0.4.0
 black==22.6.0
 flake8==5.0.4
 isort==5.10.1
