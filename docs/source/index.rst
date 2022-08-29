@@ -1,6 +1,8 @@
 =======
 coredis
 =======
+.. meta::
+  :google-site-verification: qMs8VG0PBPYnnP-xkJxhuhlVq-1W2jlgSORpsYi26NQ
 
 .. container:: badges
 
