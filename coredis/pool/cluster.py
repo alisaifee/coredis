@@ -101,8 +101,6 @@ class ClusterConnectionPool(ConnectionPool):
             nodemanager_follow_cluster=nodemanager_follow_cluster,
             **connection_kwargs,  # type: ignore
         )
-        self.initialized = False
-
         self.connection_kwargs = connection_kwargs
         self.connection_kwargs["read_from_replicas"] = read_from_replicas
         self.read_from_replicas = read_from_replicas or readonly
@@ -142,7 +140,7 @@ class ClusterConnectionPool(ConnectionPool):
                     f"{len(self.nodes.nodes)-self.max_connections} connections."
                 )
                 self.max_connections = len(self.nodes.nodes)
-            self.initialized = True
+            await super().initialize()
 
     async def disconnect_on_idle_time_exceeded(self, connection: Connection) -> None:
         assert isinstance(connection, ClusterConnection)

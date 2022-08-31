@@ -225,11 +225,11 @@ class ConnectionPool:
         self.max_idle_time = max_idle_time
         self.idle_check_interval = idle_check_interval
         self.loop = self.connection_kwargs.get("loop")
-
+        self.initialized = False
         self.reset()
 
     async def initialize(self) -> None:
-        pass
+        self.initialized = True
 
     def __repr__(self) -> str:
         return "{}<{}>".format(

@@ -724,9 +724,10 @@ class Redis(Client[AnyStr]):
             )
 
     async def initialize(self) -> Redis[AnyStr]:
-        await super().initialize()
-        if self.cache:
-            self.cache = await self.cache.initialize(self)
+        if not self.connection_pool.initialized:
+            await super().initialize()
+            if self.cache:
+                self.cache = await self.cache.initialize(self)
         return self
 
     async def execute_command(
