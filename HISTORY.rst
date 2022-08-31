@@ -3,6 +3,14 @@
 Changelog
 =========
 
+v4.5.6
+------
+Release Date: 2022-08-31
+
+* Bug Fix
+
+  * Remove duplicated initialization calls to connection pool & cache
+
 v4.5.5
 ------
 Release Date: 2022-08-22
@@ -1186,6 +1194,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
