@@ -758,9 +758,10 @@ class Redis(Client[AnyStr]):
         await self
 
         pool = self.connection_pool
-        connection = await pool.get_connection(command, *args)
         quick_release = self.should_quick_release(command)
-        released = False
+        connection = await pool.get_connection(
+            command, *args, acquire=not quick_release
+        )
         if (
             self.cache
             and isinstance(self.cache, SupportsClientTracking)
@@ -777,9 +778,6 @@ class Redis(Client[AnyStr]):
                 command, *args, noreply=self.noreply, decode=options.get("decode")
             )
             maybe_wait = await self._ensure_wait(command, connection)
-            if quick_release:
-                pool.release(connection)
-                released = True
             reply = await request
             await maybe_wait
             if self.noreply:
@@ -820,7 +818,7 @@ class Redis(Client[AnyStr]):
             )
         finally:
             self._ensure_server_version(connection.server_version)
-            if not released:
+            if not quick_release:
                 pool.release(connection)
 
     def monitor(self) -> Monitor[AnyStr]:

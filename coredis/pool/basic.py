@@ -277,6 +277,7 @@ class ConnectionPool:
         self,
         command_name: Optional[bytes] = None,
         *args: ValueT,
+        acquire: bool = True,
         **kwargs: Optional[ValueT],
     ) -> Connection:
         """Gets a connection from the pool"""
@@ -289,7 +290,11 @@ class ConnectionPool:
             if self._created_connections >= self.max_connections:
                 raise ConnectionError("Too many connections")
             connection = self._make_connection(**kwargs)
-        self._in_use_connections.add(connection)
+
+        if acquire:
+            self._in_use_connections.add(connection)
+        else:
+            self._available_connections.append(connection)
 
         return connection
 
@@ -419,6 +424,7 @@ class BlockingConnectionPool(ConnectionPool):
         self,
         command_name: Optional[bytes] = None,
         *args: ValueT,
+        acquire: bool = True,
         **kwargs: Optional[ValueT],
     ) -> Connection:
         """Gets a connection from the pool"""
@@ -433,8 +439,12 @@ class BlockingConnectionPool(ConnectionPool):
             raise ConnectionError("No connection available.")
         if connection is None:
             connection = self._make_connection()
+            await connection.connect()
 
-        self._in_use_connections.add(connection)
+        if acquire:
+            self._in_use_connections.add(connection)
+        else:
+            self._pool.put_nowait(connection)
 
         return connection
 
