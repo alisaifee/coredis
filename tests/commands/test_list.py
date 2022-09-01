@@ -271,7 +271,7 @@ class TestList:
 
     @pytest.mark.min_server_version("7.0.0")
     @pytest.mark.nocluster
-    async def test_blmpop(self, client, _s):
+    async def test_blmpop(self, client, cloner, _s):
         await client.rpush("a{foo}", [1, 2, 3])
         await client.rpush("b{foo}", [4, 5, 6])
         result = await client.blmpop(["a{foo}", "b{foo}"], 1, PureToken.LEFT)
@@ -286,7 +286,8 @@ class TestList:
 
         async def _delayadd():
             await asyncio.sleep(0.1)
-            return await client.rpush("a{foo}", ["42"])
+            clone = await cloner(client)
+            return await clone.rpush("a{foo}", ["42"])
 
         result = await asyncio.gather(
             client.blmpop(["a{foo}"], 1, PureToken.LEFT), _delayadd()

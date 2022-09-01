@@ -205,7 +205,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         coro = self._execute(
             self.connection,
             partial(
-                self.connection.read_response,
+                self.connection.fetch_push_message,
                 push_message_types=self.SUBUNSUB_MESSAGE_TYPES
                 | self.PUBLISH_MESSAGE_TYPES,
             ),
@@ -608,7 +608,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                     self._execute(
                         connection,
                         partial(
-                            connection.read_response,
+                            connection.fetch_push_message,
                             push_message_types=self.SUBUNSUB_MESSAGE_TYPES
                             | self.PUBLISH_MESSAGE_TYPES,
                         ),

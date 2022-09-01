@@ -60,12 +60,6 @@ class Sidecar:
         return (message,)  # noqa
 
     def stop(self) -> None:
-        if self.connection:
-            self.connection.disconnect()
-            if self.client and self.connection:  # noqa
-                self.client.connection_pool.release(self.connection)
-            self.connection = None
-            self.client_id = None
         try:
             asyncio.get_running_loop()
             if self.read_task and not self.read_task.done():
@@ -74,6 +68,12 @@ class Sidecar:
                 self.health_check_task.cancel()
         except RuntimeError:
             pass
+        if self.connection:
+            self.connection.disconnect()
+            if self.client and self.connection:  # noqa
+                self.client.connection_pool.release(self.connection)
+            self.connection = None
+            self.client_id = None
 
     def __del__(self) -> None:
         self.stop()
@@ -94,7 +94,7 @@ class Sidecar:
     async def __read_loop(self) -> None:
         while self.connection:
             try:
-                response = await self.connection.read_response(
+                response = await self.connection.fetch_push_message(
                     decode=False, push_message_types=self.push_message_types
                 )
                 self.last_checkin = time.monotonic()

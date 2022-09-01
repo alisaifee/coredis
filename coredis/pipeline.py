@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import functools
 import inspect
 import sys
@@ -105,6 +106,7 @@ class PipelineCommand:
     args: Tuple[ValueT, ...]
     callback: Callable[..., Any] = NoopCallback()  # type: ignore
     options: Dict[str, Optional[ValueT]] = field(default_factory=dict)
+    request: Optional[asyncio.Future[ResponseType]] = None
 
 
 @dataclass
@@ -117,11 +119,9 @@ class ClusterPipelineCommand(PipelineCommand):
 class NodeCommands:
     def __init__(
         self,
-        parse_response: Callable[..., Coroutine[Any, Any, ResponseType]],
         connection: ClusterConnection,
         in_transaction: bool = False,
     ):
-        self.parse_response = parse_response
         self.connection = connection
         self.commands: List[ClusterPipelineCommand] = []
         self.in_transaction = in_transaction
@@ -145,11 +145,10 @@ class NodeCommands:
         # build up all commands into a single request to increase network perf
         # send all the commands and catch connection and timeout errors.
         try:
-            await connection.send_packed_command(
-                connection.packer.pack_commands(
-                    [(c.command,) + c.args for c in commands]
+            for cmd in commands:
+                cmd.request = await connection.create_request(
+                    cmd.command, *cmd.args, decode=cmd.options.get("decode")
                 )
-            )
         except (ConnectionError, TimeoutError) as e:
             for c in commands:
                 c.result = e
@@ -161,11 +160,7 @@ class NodeCommands:
         for c in self.commands:
             if c.result is None:
                 try:
-                    if self.in_transaction:
-                        cmd = "_"
-                    else:
-                        cmd = c.command
-                    c.result = await self.parse_response(connection, cmd, **c.options)
+                    c.result = await c.request if c.request else None
                 except ExecAbortError:
                     raise
                 except (ConnectionError, TimeoutError) as e:
@@ -307,8 +302,10 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
             try:
                 # call this manually since our unwatch or
                 # immediate_execute_command methods can call reset_pipeline()
-                await self.connection.send_command(CommandName.UNWATCH)
-                await self.connection.read_response()
+                request = await self.connection.create_request(
+                    CommandName.UNWATCH, decode=False
+                )
+                await request
             except ConnectionError:
                 # disconnect will also remove any previous WATCHes
                 self.connection.disconnect()
@@ -378,11 +375,14 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
             conn = await self.connection_pool.get_connection()
             self.connection = conn
         try:
-            await conn.send_command(command, *args)
+            request = await conn.create_request(
+                command, *args, decode=kwargs.get("decode")
+            )
 
             return callback(
-                await self.parse_response(conn, command, **kwargs),
+                await request,
                 version=conn.protocol_version,
+                **kwargs,
             )
         except (ConnectionError, TimeoutError) as e:
             conn.disconnect()
@@ -392,17 +392,22 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
             # if we're not already watching, we can safely retry the command
             try:
                 if not self.watching:
-                    await conn.send_command(command, *args)
-
+                    request = await conn.create_request(
+                        command, *args, decode=kwargs.get("decode")
+                    )
                     return callback(
-                        await self.parse_response(conn, command, **kwargs),
-                        version=conn.protocol_version,
+                        await request, version=conn.protocol_version, **kwargs
                     )
             except ConnectionError:
                 # the retry failed so cleanup.
                 conn.disconnect()
                 await self.reset_pipeline()
                 raise
+        finally:
+            if command in self.UNWATCH_COMMANDS:
+                self.watching = False
+            elif command == CommandName.WATCH:
+                self.watching = True
 
     def pipeline_execute_command(
         self,
@@ -439,17 +444,31 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         raise_on_error: bool,
     ) -> Tuple[Any, ...]:
 
-        cmds = chain(
-            [PipelineCommand(command=CommandName.MULTI, args=())],
-            commands,
-            [PipelineCommand(command=CommandName.EXEC, args=())],
-        )
-        all_cmds = connection.packer.pack_commands(
-            [(cmd.command,) + cmd.args for cmd in cmds]
+        cmds = list(
+            chain(
+                [
+                    PipelineCommand(
+                        command=CommandName.MULTI,
+                        args=(),
+                    )
+                ],
+                commands,
+                [
+                    PipelineCommand(
+                        command=CommandName.EXEC,
+                        args=(),
+                    )
+                ],
+            )
         )
         if self.watches:
             await self.watch(*self.watches)
-        await connection.send_packed_command(all_cmds)
+
+        for cmd in cmds:
+            cmd.request = await connection.create_request(
+                cmd.command, *cmd.args, decode=cmd.options.get("decode")
+            )
+
         errors: List[Tuple[int, Optional[RedisError]]] = []
         multi_failed = False
 
@@ -458,27 +477,26 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         # so that we read all the additional command messages from
         # the socket
         try:
-            await self.parse_response(connection, b"_")
+            await cmds[0].request if cmds[0].request else None
         except RedisError:
             multi_failed = True
             errors.append((0, cast(RedisError, sys.exc_info()[1])))
 
         # and all the other commands
-
-        for i, cmd in enumerate(commands):
+        for i, cmd in enumerate(cmds[1:-1]):
             try:
-                await self.parse_response(connection, b"_")
+                if cmd.request:
+                    assert (await cmd.request) in {b"QUEUED", "QUEUED"}
             except RedisError:
                 ex = cast(RedisError, sys.exc_info()[1])
                 self.annotate_exception(ex, i + 1, cmd.command, cmd.args)
                 errors.append((i, ex))
 
-        # parse the EXEC.
         response: List[ResponseType]
-
         try:
             response = cast(
-                List[ResponseType], await self.parse_response(connection, b"_")
+                List[ResponseType],
+                await cmds[-1].request if cmds[-1].request else None,
             )
         except (ExecAbortError, ResponseError):
             if self.explicit_transaction and not multi_failed:
@@ -506,7 +524,6 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
             )
 
         # find any errors in the response and raise if necessary
-
         if raise_on_error:
             self.raise_first_error(commands, response)
 
@@ -525,10 +542,10 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         raise_on_error: bool,
     ) -> Tuple[Any, ...]:
         # build up all commands into a single request to increase network perf
-        all_cmds = connection.packer.pack_commands(
-            [(cmd.command,) + cmd.args for cmd in commands]
-        )
-        await connection.send_packed_command(all_cmds)
+        for cmd in commands:
+            cmd.request = await connection.create_request(
+                cmd.command, *cmd.args, decode=cmd.options.get("decode")
+            )
 
         response: List[Any] = []
 
@@ -536,9 +553,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
             try:
                 response.append(
                     cmd.callback(
-                        await self.parse_response(
-                            connection, cmd.command, **cmd.options
-                        ),
+                        await cmd.request if cmd.request else None,
                         **cmd.options,
                     )
                 )
@@ -555,7 +570,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
     ) -> None:
         assert isinstance(response, list)
         for i, r in enumerate(response):
-            if isinstance(r, ResponseError):
+            if isinstance(r, RedisError):
                 self.annotate_exception(r, i + 1, commands[i].command, commands[i].args)
                 raise r
 
@@ -576,33 +591,6 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
                 str(exception.args[0]),
             )
             exception.args = (msg,) + exception.args[1:]
-
-    async def _parse(
-        self,
-        connection: BaseConnection,
-        command_name: bytes,
-        **options: Optional[ValueT],
-    ) -> ResponseType:
-        "Parses a response from the Redis server"
-        decode = options.get("decode")
-        return await connection.read_response(
-            decode=decode if decode is None else bool(decode)
-        )
-
-    async def parse_response(
-        self,
-        connection: BaseConnection,
-        command_name: bytes,
-        **options: Optional[ValueT],
-    ) -> ResponseType:
-        result = await self._parse(connection, command_name, **options)
-
-        if command_name in self.UNWATCH_COMMANDS:
-            self.watching = False
-        elif command_name == CommandName.WATCH:
-            self.watching = True
-
-        return result
 
     async def load_scripts(self):
         # make sure all scripts that are about to be run on this pipeline exist
@@ -846,7 +834,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
         if self.watches:
             await self._watch(node, conn, self.watches)
-        node_commands = NodeCommands(self.parse_response, conn, in_transaction=True)
+        node_commands = NodeCommands(conn, in_transaction=True)
         node_commands.append(ClusterPipelineCommand(CommandName.MULTI, ()))
         node_commands.extend(attempt)
         node_commands.append(ClusterPipelineCommand(CommandName.EXEC, ()))
@@ -857,8 +845,8 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
             await node_commands.read()
         except ExecAbortError:
             if self.explicit_transaction:
-                await conn.send_command(CommandName.DISCARD)
-                await conn.read_response()
+                request = await conn.create_request(CommandName.DISCARD)
+                await request
 
         # If at least one watched key is modified before the EXEC command,
         # the whole transaction aborts,
@@ -907,7 +895,6 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
             if node.name not in nodes:
                 nodes[node.name] = NodeCommands(
-                    self.parse_response,
                     await self.connection_pool.get_connection_by_node(node),
                 )
 
@@ -993,21 +980,6 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
         return response
 
-    async def parse_response(
-        self,
-        connection: ClusterConnection,
-        command_name: bytes,
-        **options: Any,
-    ) -> ResponseType:
-        """
-        Parses a response from the Redis server
-        :meta private:
-        """
-        decode = options.get("decode")
-        return await connection.read_response(
-            decode=decode if decode is None else bool(decode)
-        )
-
     def _determine_slot(self, command: bytes, *args: ValueT) -> int:
         """Figure out what slot based on command and args"""
 
@@ -1063,17 +1035,18 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
         if self.explicit_transaction:
             raise RedisError("Cannot issue a WATCH after a MULTI")
-        await conn.send_command(CommandName.WATCH, *keys)
+        request = await conn.create_request(CommandName.WATCH, *keys)
 
         return SimpleStringCallback()(
-            cast(StringT, await conn.read_response()), version=conn.protocol_version
+            cast(StringT, await request),
+            version=conn.protocol_version,
         )
 
     async def _unwatch(self, conn: BaseConnection) -> bool:
         """Unwatches all previously specified keys"""
-        await conn.send_command(CommandName.UNWATCH)
-        res = cast(StringT, await conn.read_response())
-        return res in {"OK", b"OK"} if self.watching else True
+        request = await conn.create_request(CommandName.UNWATCH, decode=False)
+        res = cast(StringT, await request)
+        return res == b"OK" if self.watching else True
 
 
 class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore

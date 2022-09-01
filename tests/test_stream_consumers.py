@@ -197,12 +197,13 @@ class TestStreamConsumers:
                 consumed.add(int(entry[1].field_values[_s("id")]))
         assert set(expected) == consumed
 
-    async def test_single_blocking_consumer(self, client, _s):
+    async def test_single_blocking_consumer(self, client, cloner, _s):
         consumer = await Consumer(client, ["a"], timeout=1000)
+        clone = await cloner(client)
 
         async def _inner():
             await asyncio.sleep(0.2)
-            await client.xadd("a", {"id": 1})
+            await clone.xadd("a", {"id": 1})
 
         th = threading.Thread(
             target=asyncio.run_coroutine_threadsafe,
@@ -213,14 +214,15 @@ class TestStreamConsumers:
         th.join()
         assert entry.field_values[_s("id")] == _s(1)
 
-    async def test_group_blocking_consumer(self, client, _s):
+    async def test_group_blocking_consumer(self, client, cloner, _s):
         consumer = await GroupConsumer(
             client, ["a"], "group-a", "consumer-a", auto_create=True, timeout=1000
         )
+        clone = await cloner(client)
 
         async def _inner():
             await asyncio.sleep(0.2)
-            await client.xadd("a", {"id": 1})
+            await clone.xadd("a", {"id": 1})
 
         th = threading.Thread(
             target=asyncio.run_coroutine_threadsafe,
@@ -241,12 +243,13 @@ class TestStreamConsumers:
         assert consumed[_s("a")] == list(range(10))
         assert consumed[_s("b")] == list(range(10))
 
-    async def test_single_blocking_iterator(self, client, _s):
+    async def test_single_blocking_iterator(self, client, cloner, _s):
         consumer = await Consumer(client, ["a"], timeout=1000)
+        clone = await cloner(client)
 
         async def _inner():
             await asyncio.sleep(0.2)
-            await client.xadd("a", {"id": 1})
+            await clone.xadd("a", {"id": 1})
 
         th = threading.Thread(
             target=asyncio.run_coroutine_threadsafe,
@@ -261,14 +264,15 @@ class TestStreamConsumers:
         assert len(consumed[_s("a")]) == 1
         assert _s(1) == consumed[_s("a")][0].field_values[_s("id")]
 
-    async def test_group_blocking_iterator(self, client, _s):
+    async def test_group_blocking_iterator(self, client, cloner, _s):
         consumer = await GroupConsumer(
             client, ["a"], "group-a", "consumer-a", auto_create=True, timeout=1000
         )
+        clone = await cloner(client)
 
         async def _inner():
             await asyncio.sleep(0.2)
-            await client.xadd("a", {"id": 1})
+            await clone.xadd("a", {"id": 1})
 
         th = threading.Thread(
             target=asyncio.run_coroutine_threadsafe,

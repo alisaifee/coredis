@@ -314,22 +314,6 @@ async def test_write_to_replica(client):
 
 
 @targets("redis_sentinel", "redis_sentinel_resp2")
-async def test_primary_demoted(client, mocker):
-    p = await client.primary_for("mymaster")
-    await p.ping()
-    patched_read_response = mocker.patch.object(
-        coredis.sentinel.Connection, "read_response"
-    )
-
-    async def raise_readonly(*a, **k):
-        raise ReadOnlyError
-
-    patched_read_response.side_effect = raise_readonly
-    with pytest.raises(ConnectionError):
-        await p.set("fubar", 1)
-
-
-@targets("redis_sentinel", "redis_sentinel_resp2")
 @pytest.mark.parametrize(
     "client_arguments", [({"cache": coredis.cache.TrackingCache(max_size_bytes=-1)})]
 )
@@ -370,8 +354,6 @@ async def test_replication(client):
         with client.primary_for("mymaster").ensure_replication(2) as primary:
             await primary.set("fubar", 1)
 
-    with pytest.raises(
-        ResponseError, match="WAIT cannot be used with replica instances"
-    ):
+    with pytest.raises(ResponseError):
         with client.replica_for("mymaster").ensure_replication(2) as replica:
             await replica.set("fubar", 1)

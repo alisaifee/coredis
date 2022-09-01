@@ -65,7 +65,7 @@ class Monitor(Generic[AnyStr]):
         """
         await self.__start_monitor()
         assert self.connection
-        response = await self.connection.read_response()
+        response = await self.connection.fetch_push_message()
         if isinstance(response, bytes):
             response = response.decode(self.encoding)
         assert isinstance(response, str)
@@ -106,16 +106,20 @@ class Monitor(Generic[AnyStr]):
             return
         await self.__connect()
         assert self.connection
-        await self.connection.send_command(CommandName.MONITOR)
-        response = await self.connection.read_response(decode=False)
+        request = await self.connection.create_request(
+            CommandName.MONITOR, decode=False
+        )
+        response = await request
         if not response == b"OK":  # noqa
             raise RedisError(f"Failed to start MONITOR {response!r}")
         self.monitoring = True
 
     async def __stop_monitoring(self) -> None:
         if self.connection:
-            await self.connection.send_command(CommandName.RESET)
-            response = await self.connection.read_response(decode=False)
+            request = await self.connection.create_request(
+                CommandName.RESET, decode=False
+            )
+            response = await request
             if not response == CommandName.RESET:  # noqa
                 raise RedisError("Failed to reset connection")
         self.__reset()

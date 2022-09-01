@@ -92,8 +92,8 @@ if PY_IMPLEMENTATION == "CPython":
         extensions += mypycify(
             [
                 "coredis/constants.py",
+                "coredis/parser.py",
                 "coredis/_packer.py",
-                "coredis/_unpacker.py",
             ],
             debug_level="0",
             strip_asserts=True,

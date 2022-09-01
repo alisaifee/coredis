@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 import re
+from collections import deque
 
 import pytest
 
@@ -25,12 +26,21 @@ class DummyConnection:
         self.awaiting_response = False
         self.is_connected = False
         self.needs_handshake = True
+        self._last_error = None
+        self._requests = deque()
+        self.average_response_time = 0.0
+        self.lag = 0.0
+        self.requests_pending = 0
+        self.requests_processed = 0
+        self.estimated_time_to_idle = 0
+        self.latency = 0
 
-    def connect(self):
+    async def connect(self):
         self.is_connected = True
 
     def disconnect(self):
         self.is_connected = False
+        self._last_error = None
 
     async def perform_handshake(self) -> None:
         self.needs_handshake = False
@@ -91,6 +101,7 @@ class TestConnectionPool:
     async def test_reuse_previously_released_connection(self):
         pool = self.get_pool()
         c1 = await pool.get_connection()
+        await c1.connect()
         pool.release(c1)
         c2 = await pool.get_connection()
         assert c1 == c2
@@ -608,7 +619,7 @@ class TestConnection:
         with pytest.raises(RedisError):
             await bad_connection.info()
         pool = bad_connection.connection_pool
-        assert len(pool._available_connections) == 0
+        assert not pool._available_connections[0].is_connected
 
     @pytest.mark.max_server_version("6.2.0")
     async def test_busy_loading_disconnects_socket(self, event_loop):
@@ -620,7 +631,8 @@ class TestConnection:
         with pytest.raises(BusyLoadingError):
             await client.execute_command(b"DEBUG", b"ERROR", b"LOADING fake message")
         pool = client.connection_pool
-        assert len(pool._available_connections) == 0
+        assert len(pool._available_connections) == 1
+        assert not pool._available_connections[0].is_connected
 
     @pytest.mark.max_server_version("6.2.0")
     async def test_busy_loading_from_pipeline_immediate_command(self, event_loop):
@@ -636,7 +648,7 @@ class TestConnection:
             )
         pool = client.connection_pool
         assert not pipe.connection
-        assert len(pool._available_connections) == 0
+        assert len(pool._available_connections) == 1
 
     async def test_busy_loading_from_pipeline(self, event_loop):
         """

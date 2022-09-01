@@ -10,6 +10,8 @@ from ssl import SSLContext, VerifyMode
 from typing import Any, cast
 from urllib.parse import parse_qs, unquote, urlparse
 
+import async_timeout
+
 from coredis.connection import (
     BaseConnection,
     Connection,
@@ -243,7 +245,7 @@ class ConnectionPool:
         while True:
             if (
                 time.time() - connection.last_active_at > self.max_idle_time
-                and not connection.awaiting_response
+                and not connection.requests_pending
             ):
                 connection.disconnect()
                 if connection in self._available_connections:
@@ -299,11 +301,7 @@ class ConnectionPool:
 
         if connection.pid == self.pid:
             self._in_use_connections.remove(connection)
-            if connection.awaiting_response:
-                connection.disconnect()
-                self._created_connections -= 1
-            else:
-                self._available_connections.append(connection)
+            self._available_connections.append(connection)
 
     def disconnect(self) -> None:
         """Closes all connections in the pool"""
@@ -375,7 +373,8 @@ class BlockingConnectionPool(ConnectionPool):
 
         self.timeout = timeout
         self.queue_class = queue_class
-
+        self.total_wait = 0
+        self.total_allocated = 0
         max_connections = max_connections or 50
 
         super().__init__(
@@ -388,10 +387,7 @@ class BlockingConnectionPool(ConnectionPool):
 
     async def disconnect_on_idle_time_exceeded(self, connection: Connection) -> None:
         while True:
-            if (
-                time.time() - connection.last_active_at > self.max_idle_time
-                and not connection.awaiting_response
-            ):
+            if time.time() - connection.last_active_at > self.max_idle_time:
                 # Unlike the non blocking pool, we don't free the connection object,
                 # but always reuse it
                 connection.disconnect()
@@ -400,7 +396,9 @@ class BlockingConnectionPool(ConnectionPool):
             await asyncio.sleep(self.idle_check_interval)
 
     def reset(self) -> None:
-        self._pool = self.queue_class(self.max_connections)
+        self._pool: asyncio.Queue[Optional[Connection]] = self.queue_class(
+            self.max_connections
+        )
 
         while True:
             try:
@@ -427,12 +425,12 @@ class BlockingConnectionPool(ConnectionPool):
         self.checkpid()
 
         try:
-            connection = await asyncio.wait_for(self._pool.get(), self.timeout)
+            async with async_timeout.timeout(self.timeout):
+                connection = await self._pool.get()
             if connection and connection.needs_handshake:
                 await connection.perform_handshake()
         except asyncio.TimeoutError:
             raise ConnectionError("No connection available.")
-
         if connection is None:
             connection = self._make_connection()
 
@@ -448,13 +446,10 @@ class BlockingConnectionPool(ConnectionPool):
 
         if _connection and _connection.pid == self.pid:
             self._in_use_connections.remove(_connection)
-            # discard connection with unread response
-            if connection.awaiting_response:
-                _connection.disconnect()
-                _connection = None
-
-            if not self._pool.full():
+            try:
                 self._pool.put_nowait(_connection)
+            except asyncio.QueueFull:
+                _connection.disconnect()
 
     def disconnect(self) -> None:
         """Closes all connections in the pool"""
@@ -465,7 +460,6 @@ class BlockingConnectionPool(ConnectionPool):
                 pooled_connections.append(self._pool.get_nowait())
             except asyncio.QueueEmpty:
                 break
-
         for conn in pooled_connections:
             self._pool.put_nowait(conn)
 
