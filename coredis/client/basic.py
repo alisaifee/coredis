@@ -778,8 +778,8 @@ class Redis(Client[AnyStr]):
             )
             maybe_wait = await self._ensure_wait(command, connection)
             if quick_release:
-                released = True
                 pool.release(connection)
+                released = True
             reply = await request
             await maybe_wait
             if self.noreply:
