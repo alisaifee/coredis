@@ -11,7 +11,7 @@
 
 coredis is an async redis client with support for redis server, cluster & sentinel.
 
-- The client API follows the specifications in the [Redis command documentation](https://redis.io/commands/) by using the following rules:
+- The client API uses the specifications in the [Redis command documentation](https://redis.io/commands/) to define the API by using the following conventions:
 
     - Arguments retain naming from redis as much as possible
     - Only optional variadic arguments are mapped to variadic positional or keyword arguments.
@@ -20,7 +20,7 @@ coredis is an async redis client with support for redis server, cluster & sentin
     - Pure tokens used as flags are mapped to boolean arguments
     - `One of` arguments accepting pure tokens are collapsed and accept a [PureToken](https://coredis.readthedocs.io/en/latest/api.html#coredis.tokens.PureToken)
 
-- Responses are mapped as closely from redis <-> python types as possible.
+- Responses are mapped as closely from RESP <-> python types as possible.
 
 - For higher level concepts such as Pipelines, LUA Scripts, PubSub & Streams
   abstractions are provided to simplify interaction requires pre-defined sequencing of redis commands (see [Command Wrappers](https://coredis.readthedocs.io/en/latest/api.html#command-wrappers))

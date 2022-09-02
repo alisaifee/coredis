@@ -27,9 +27,10 @@ coredis
       :class: header-badge
 
 coredis is an async redis client with support for redis server, cluster & sentinel.
+The client API uses the specifications in the Redis command documentation to define the API by using the following conventions:
 
-The coredis :ref:`api:clients` API follows the specifications in
-the `Redis command documentation <https://redis.io/commands>`__ by using the following rules:
+The coredis :ref:`api:clients` use the specifications in
+the `Redis command documentation <https://redis.io/commands>`__ to define the API by using the following conventions:
 
 - Arguments retain naming from redis as much as possible
 - **Only** optional variadic arguments are mapped to position or keyword variadic arguments. When
@@ -37,7 +38,7 @@ the `Redis command documentation <https://redis.io/commands>`__ by using the fol
   iterable of type :class:`~coredis.typing.Parameters` or :class:`~typing.Mapping`.
 - Pure tokens used as flags are mapped to boolean arguments
 - ``One of`` arguments accepting pure tokens are collapsed and accept a :class:`~coredis.tokens.PureToken`
-- Responses are mapped as closely from redis <-> python types as possible.
+- Responses are mapped as closely from :term:`RESP` <-> python types as possible.
 
 For higher level concepts such as :ref:`handbook/pipelines:pipelines`, :ref:`handbook/scripting:lua scripts`,
 :ref:`handbook/pubsub:pubsub` abstractions are provided to simplify interaction requires pre-defined
