@@ -26,6 +26,8 @@ coredis is an async redis client with support for redis server, cluster & sentin
   abstractions are provided to simplify interaction requires pre-defined sequencing of redis commands (see [Command Wrappers](https://coredis.readthedocs.io/en/latest/api.html#command-wrappers))
   and the [Handbook](https://coredis.readthedocs.io/en/latest/handbook/index.html).
 
+> **Warning**
+> The command API does NOT mirror the official python [redis client](https://github.com/redis/redis-py). For details about the high level differences refer to [Divergence from aredis & redis-py](https://coredis.readthedocs.io/en/latest/history.html#divergence-from-aredis-redis-py)
 ---
 
 <!-- TOC depthFrom:2 depthTo:6 withLinks:1 updateOnSave:1 orderedList:0 -->
