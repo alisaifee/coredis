@@ -439,7 +439,6 @@ class BlockingConnectionPool(ConnectionPool):
             raise ConnectionError("No connection available.")
         if connection is None:
             connection = self._make_connection()
-            await connection.connect()
 
         if acquire:
             self._in_use_connections.add(connection)
