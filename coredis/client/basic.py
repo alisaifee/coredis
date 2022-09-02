@@ -191,6 +191,12 @@ class Client(
             return ctx
         return self.__noreply
 
+    @property
+    def requires_wait(self) -> bool:
+        if not hasattr(self, "_waitcontext") or not self._waitcontext.get():
+            return False
+        return True
+
     def _ensure_server_version(self, version: Optional[str]) -> None:
         if not self.verify_version:
             return
@@ -760,7 +766,7 @@ class Redis(Client[AnyStr]):
         pool = self.connection_pool
         quick_release = self.should_quick_release(command)
         connection = await pool.get_connection(
-            command, *args, acquire=not quick_release
+            command, *args, acquire=not quick_release or self.requires_wait
         )
         if (
             self.cache

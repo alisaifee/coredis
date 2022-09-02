@@ -716,7 +716,7 @@ class RedisCluster(
                     noreply=self.noreply,
                     decode=kwargs.get("decode"),
                 )
-                if quick_release:
+                if quick_release and not self.requires_wait:
                     released = True
                     self.connection_pool.release(r)
 
