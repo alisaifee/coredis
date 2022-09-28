@@ -42,7 +42,7 @@ class TestSidecar:
         assert sidecar.connection is not None
         sidecar.connection.disconnect()
         assert not sidecar.connection.is_connected
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.5)
         assert sidecar.connection is not None
         assert sidecar.connection.is_connected
         sidecar.stop()
