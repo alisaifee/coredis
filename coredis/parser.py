@@ -192,7 +192,7 @@ class Parser:
             data_len = len(data)
             self.bytes_read += data_len
             marker, chunk = data[0], data[1:-2]
-            response: ResponsePrimitive | RedisError = None
+            response: ResponseType = None
             if marker == RESPDataType.SIMPLE_STRING:
                 response = chunk
                 if decode_bytes and self.encoding:
@@ -248,7 +248,7 @@ class Parser:
                     if length > 0:
                         continue
             elif marker == RESPDataType.ERROR:
-                response = self.parse_error(bytes(chunk).decode())
+                response = cast(ResponseType, self.parse_error(bytes(chunk).decode()))
             else:
                 raise InvalidResponse(
                     f"Protocol Error: {chr(marker)}, {bytes(chunk)!r}"

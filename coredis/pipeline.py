@@ -514,7 +514,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         # put any parse errors into the response
 
         for i, e in errors:
-            response.insert(i, e)
+            response.insert(i, cast(ResponseType, e))
 
         if len(response) != len(commands):
             if self.connection:

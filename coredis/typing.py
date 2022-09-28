@@ -5,7 +5,6 @@ import warnings
 from typing import (
     TYPE_CHECKING,
     AbstractSet,
-    Any,
     AnyStr,
     AsyncGenerator,
     AsyncIterator,
@@ -43,7 +42,6 @@ from typing_extensions import (
     ParamSpec,
     Protocol,
     Self,
-    TypeAlias,
     TypedDict,
     TypeGuard,
     runtime_checkable,
@@ -92,9 +90,6 @@ if (
 
 RUNTIME_TYPECHECKS = _runtime_checks
 
-if TYPE_CHECKING:
-    import coredis.exceptions
-
 P = ParamSpec("P")
 T_co = TypeVar("T_co", covariant=True)
 R = TypeVar("R")
@@ -103,13 +98,22 @@ R = TypeVar("R")
 def safe_beartype(func: Callable[P, R]) -> Callable[P, R]:
     if TYPE_CHECKING:
         return func
+
     return beartype.beartype(func) if _beartype_found else func
 
 
 def add_runtime_checks(func: Callable[P, R]) -> Callable[P, R]:
     if RUNTIME_TYPECHECKS and not TYPE_CHECKING:
         return safe_beartype(func)
+
     return func
+
+
+class RedisError(Exception):
+    """
+    Base exception from which all other exceptions in coredis
+    derive from.
+    """
 
 
 CommandArgList = List[Union[str, bytes, int, float]]
@@ -162,33 +166,33 @@ Parameters = Union[
 ]
 
 #: Mapping of primitives returned by redis
-ResponsePrimitive: TypeAlias = Optional[Union[StringT, int, float, bool]]
+ResponsePrimitive = Optional[Union[StringT, int, float, bool]]
 
 #: Represents the total structure of any response for a redis
 #: command.
 #:
 #: This should preferably be represented by a recursive definition to allow for
-#: nested containers, however limitations in both static and runtime
-#: type checkers (mypy & beartype) requires loosening the definition with the use of
-#: :class:`typing.Any` for now.
-#:
-#: Ideally the representation should be::
-#:
-#:    ResponseType = Union[
-#:          ResponsePrimitive,
-#:          List["ResponseType"],
-#:          Set[ResponsePrimitive],
-#:          Dict[ResponsePrimitive, "ResponseType"],
-#:          "coredis.exceptions.RedisError", # response errors get mapped to exceptions.
-#:      ]
-ResponseType = Union[
-    ResponsePrimitive,
-    List[Any],
-    MutableSet[Union[ResponsePrimitive, Tuple[ResponsePrimitive, ...]]],
-    Dict[ResponsePrimitive, Any],
-    "coredis.exceptions.RedisError",
-]
+#: Limitations in runtime type checkers (beartype) requires conditionally loosening
+#: the definition with the use of  :class:`typing.Any` for now.
 
+if TYPE_CHECKING:
+    ResponseType = Union[
+        ResponsePrimitive,
+        List["ResponseType"],
+        MutableSet[Union[ResponsePrimitive, Tuple[ResponsePrimitive, ...]]],
+        Dict[ResponsePrimitive, "ResponseType"],
+        RedisError,  # response errors get mapped to exceptions.
+    ]
+else:
+    from typing import Any
+
+    ResponseType = Union[
+        ResponsePrimitive,
+        List[Any],
+        MutableSet[Union[ResponsePrimitive, Tuple[ResponsePrimitive, ...]]],
+        Dict[ResponsePrimitive, Any],
+        RedisError,  # response errors get mapped to exceptions.
+    ]
 __all__ = [
     "AbstractSet",
     "AnyStr",
