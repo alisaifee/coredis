@@ -89,6 +89,7 @@ class TestFunctions:
         assert await client.fcall("echo_key", ["a"], []) == _s("a")
         assert await client.fcall("return_arg", ["a"], [2]) == 20
 
+    @pytest.mark.xfail
     @pytest.mark.clusteronly
     @pytest.mark.parametrize("client_arguments", [({"read_from_replicas": True})])
     async def test_fcall_ro(self, client, simple_library, _s, client_arguments, mocker):
