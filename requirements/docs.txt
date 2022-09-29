@@ -1,6 +1,6 @@
 -r main.txt
 -r dev.txt
-furo==2022.9.15
+furo==2022.9.29
 Sphinx==5.2.2
 sphinx-copybutton==0.5.0
 sphinx-autobuild==2021.3.14
