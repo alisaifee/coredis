@@ -60,6 +60,7 @@ class TestCluster:
             node.host, node.port
         ).cluster_addslots([1, 2])
 
+    @pytest.mark.xfail
     @pytest.mark.replicated_clusteronly
     async def test_readonly_explicit(self, client, _s):
         await client.set("fubar", 1)
