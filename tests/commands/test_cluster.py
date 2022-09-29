@@ -93,6 +93,7 @@ class TestCluster:
         assert await client.cluster_countkeysinslot(slot) == 1
         assert await client.cluster_getkeysinslot(slot, 1) == (_s("a"),)
 
+    @pytest.mark.xfail
     @pytest.mark.replicated_clusteronly
     async def test_cluster_nodes(self, client, _s):
         nodes = await client.cluster_nodes()
