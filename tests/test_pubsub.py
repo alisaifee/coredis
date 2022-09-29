@@ -143,7 +143,6 @@ class TestPubSubSubscribeUnsubscribe:
         for i in range(len(keys)):
             messages.append(await wait_for_message(p))
 
-        print("okay")
         unique_channels = set()
         assert len(messages) == len(keys)
 

@@ -110,7 +110,7 @@ class TestFunctions:
 
     async def test_function_kill(self, client, simple_library, _s):
         with pytest.raises(NotBusyError):
-            print(await client.function_kill())
+            await client.function_kill()
 
     async def test_dump_restore(self, client, simple_library, _s):
         dump = await client.function_dump()

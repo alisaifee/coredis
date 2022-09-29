@@ -446,7 +446,6 @@ class TestPubSubMessages:
         p = redis_cluster.pubsub(ignore_subscribe_messages=True)
         channel = "uni" + chr(4456) + "code"
         channels = {channel: self.message_handler}
-        print(channels)
         await p.subscribe(**channels)
         await redis_cluster.publish(channel, "test message")
         assert await wait_for_message(p) is None
@@ -581,11 +580,6 @@ def test_pubsub_thread_publish():
             await rc.publish("ewq", "foo")
             await rc.publish("wer", "dsa")
             await rc.publish("rew", "asd")
-
-        # Use this for debugging
-        # print(rc.connection_pool._available_connections)
-        # print(rc.connection_pool._in_use_connections)
-        # print(rc.connection_pool._created_connections)
 
     try:
         loop = asyncio.get_event_loop()
