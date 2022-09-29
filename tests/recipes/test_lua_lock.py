@@ -167,6 +167,7 @@ class TestLock:
             await lock.extend(10)
         await lock.release()
 
+    @pytest.mark.xfail
     async def test_extending_lock_no_longer_owned_raises_error(self, client, lock_name):
         lock = LuaLock(client, lock_name, blocking=False)
         await client.flushdb()
