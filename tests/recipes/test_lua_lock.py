@@ -162,7 +162,7 @@ class TestLock:
         await lock.release()
 
     async def test_extending_lock_no_longer_owned_raises_error(self, client):
-        lock = LuaLock(client, "foo", blocking=False)
+        lock = LuaLock(client, "foo", blocking=True)
         await client.flushdb()
         assert await lock.acquire()
         await client.set("foo", "a")
