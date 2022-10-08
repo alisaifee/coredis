@@ -283,7 +283,6 @@ class TestPipeline:
         assert await client.get("x{bar}") is None
         assert await client.get("x{baz}") is None
 
-    @pytest.mark.flaky
     async def test_transaction_callable(self, client, cloner):
         clone = await cloner(client)
 

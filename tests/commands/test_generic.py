@@ -544,7 +544,6 @@ class TestGeneric:
         expire_time = await client.pexpiretime("a")
         assert set_time == expire_time
 
-    @pytest.mark.flaky
     async def test_randomkey(self, client, _s):
         assert await client.randomkey() is None
 
