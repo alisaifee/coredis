@@ -165,20 +165,20 @@ jobs:
           fetch-depth: 0
       - name: Build wheels (All Architectures)
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-        uses: pypa/cibuildwheel@v2.6.0
+        uses: pypa/cibuildwheel@v2.10.2
         env:
           CIBW_SKIP: '*musllinux* pp*'
           CIBW_BEFORE_BUILD: 'pip install -r requirements/build_ext.txt'
           CIBW_ARCHS_MACOS: all
       - name: Build wheels (Default Architectures)
         if: github.ref == 'refs/heads/master'
-        uses: pypa/cibuildwheel@v2.6.0
+        uses: pypa/cibuildwheel@v2.10.2
         env:
           CIBW_SKIP: '*musllinux* pp*'
           CIBW_BEFORE_BUILD: 'pip install -r requirements/build_ext.txt'
       - name: Build wheels (Minimal)
         if: github.ref != 'refs/heads/master' && !startsWith(github.ref, 'refs/tags/')
-        uses: pypa/cibuildwheel@v2.6.0
+        uses: pypa/cibuildwheel@v2.10.2
         env:
           CIBW_SKIP: '*musllinux* pp*'
           CIBW_BEFORE_BUILD: 'pip install -r requirements/build_ext.txt'
