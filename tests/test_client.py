@@ -109,7 +109,6 @@ class TestClusterClient:
             assert not await client.get("fubar")
         assert await client.get("fubar") == _s(1)
 
-    @pytest.mark.flaky
     async def test_ensure_replication(self, client, _s):
         with client.ensure_replication(1):
             assert await client.set("fubar", 1)

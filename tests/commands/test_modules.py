@@ -5,8 +5,6 @@ import pytest
 from coredis.tokens import PrefixToken
 from tests.conftest import targets
 
-pytestmark = pytest.mark.flaky
-
 
 @pytest.mark.xfail
 @targets(

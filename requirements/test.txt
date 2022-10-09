@@ -1,7 +1,6 @@
 -r main.txt
 beartype
 coverage
-flaky
 lovely-pytest-docker
 mock
 pytest

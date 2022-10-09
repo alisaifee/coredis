@@ -14,7 +14,6 @@ from tests.conftest import targets
     "keydb_resp2",
     "keydb_cluster",
 )
-@pytest.mark.flaky
 class TestKeyDBCommands:
     @pytest.mark.nocluster
     async def test_bitop_lshift(self, client, _s):
