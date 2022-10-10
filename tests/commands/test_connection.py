@@ -197,7 +197,6 @@ class TestConnection:
             await client.client_kill(user="noexist") == 0
 
         clone_addr = (await clone.client_info())["addr"]
-        assert await client.client_kill(type_=PureToken.PUBSUB) == 0
         assert await client.client_kill(addr=clone_addr) == 1
 
     @pytest.mark.min_server_version("6.2.0")
