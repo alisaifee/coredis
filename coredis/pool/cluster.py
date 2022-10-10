@@ -113,6 +113,7 @@ class ClusterConnectionPool(ConnectionPool):
 
         if "stream_timeout" not in self.connection_kwargs:
             self.connection_kwargs["stream_timeout"] = None
+        self._init_lock = asyncio.Lock()
 
     def __repr__(self) -> str:
         """
@@ -132,18 +133,21 @@ class ClusterConnectionPool(ConnectionPool):
 
     async def initialize(self) -> None:
         if not self.initialized:
-            await self.nodes.initialize()
-            if not self.max_connections_per_node and self.max_connections < len(
-                self.nodes.nodes
-            ):
-                warnings.warn(
-                    f"The value of max_connections={self.max_connections} "
-                    f"should be atleast equal to the number of nodes ({len(self.nodes.nodes)}) "
-                    "in the cluster and has been increased by "
-                    f"{len(self.nodes.nodes)-self.max_connections} connections."
-                )
-                self.max_connections = len(self.nodes.nodes)
-            await super().initialize()
+            async with self._init_lock:
+                if not self.initialized:
+                    await self.nodes.initialize()
+                    if (
+                        not self.max_connections_per_node
+                        and self.max_connections < len(self.nodes.nodes)
+                    ):
+                        warnings.warn(
+                            f"The value of max_connections={self.max_connections} "
+                            f"should be atleast equal to the number of nodes ({len(self.nodes.nodes)}) "
+                            "in the cluster and has been increased by "
+                            f"{len(self.nodes.nodes)-self.max_connections} connections."
+                        )
+                        self.max_connections = len(self.nodes.nodes)
+                    await super().initialize()
 
     async def disconnect_on_idle_time_exceeded(self, connection: Connection) -> None:
         assert isinstance(connection, ClusterConnection)
