@@ -142,8 +142,8 @@ class ClusterConnectionPool(ConnectionPool):
                     ):
                         warnings.warn(
                             f"The value of max_connections={self.max_connections} "
-                            f"should be atleast equal to the number of nodes ({len(self.nodes.nodes)}) "
-                            "in the cluster and has been increased by "
+                            "should be atleast equal to the number of nodes "
+                            f"({len(self.nodes.nodes)}) in the cluster and has been increased by "
                             f"{len(self.nodes.nodes)-self.max_connections} connections."
                         )
                         self.max_connections = len(self.nodes.nodes)
