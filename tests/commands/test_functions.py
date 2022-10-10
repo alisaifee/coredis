@@ -170,6 +170,7 @@ class TestLibrary:
         assert await library["echo_key"](args=(1, 2, 3), keys=["A"]) == _s("A")
         fcall.assert_not_called()
 
+    @pytest.mark.nocluster
     async def test_call_library_update(self, client, simple_library):
         library = await client.get_library("coredis")
         assert len(library.functions) == 4
