@@ -148,7 +148,7 @@ jobs:
         echo "Runtime checks: $COREDIS_RUNTIME_CHECKS"
         echo "UVLoop: $COREDIS_UVLOOP"
         echo "CI: $CI"
-        pytest --reverse --cov=coredis --cov-report=xml ${{ matrix.test_params }}
+        pytest -q --reverse --cov=coredis --cov-report=xml ${{ matrix.test_params }}
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2
       if: ${{ matrix.coverage == 'True' }}
