@@ -3,6 +3,32 @@
 Changelog
 =========
 
+v4.6.0
+------
+Release Date: 2022-10-10
+
+* Feature
+
+  * Implement early release back to connection pool to allow
+    multiple concurrent commands to use the some connection
+    thus significantly reducing the need to expand the connection
+    pool when using blocking connection pools
+
+* Bug Fix
+
+  * Add a lock when initializing the cluster client to ensure
+    concurrent "first access" does not result in corruption of the
+    cluster node layout or a thundering herd to initialize the layout
+
+* Compatibility
+
+  * Enable wheel build for python 3.11
+
+* Chores
+
+  * Improve stability of test suite
+  * Enable recursive response types for mypy & pyright
+
 v4.5.6
 ------
 Release Date: 2022-08-31
@@ -1194,6 +1220,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
