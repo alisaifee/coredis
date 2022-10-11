@@ -51,16 +51,6 @@ def uvloop():
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    policy = asyncio.get_event_loop_policy()
-    loop = policy.new_event_loop()
-    yield loop
-    if os.environ.get("CI") == "True":
-        asyncio.sleep(1)
-    loop.close()
-
-
 async def get_version(client):
     if str(client) not in REDIS_VERSIONS:
         if isinstance(client, coredis.RedisCluster):
