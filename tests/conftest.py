@@ -55,11 +55,13 @@ def uvloop():
 def event_loop():
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
-    tasks = asyncio.all_tasks(loop)
-    for task in [t for t in tasks if not t.done()]:
+
+    for task in [t for t in asyncio.all_tasks(loop) if not (t.done() or t.cancelled())]:
         task.cancel()
-    for task in [t for t in tasks if t.cancelled()]:
-        loop.run_until_complete(task)
+        try:
+            loop.run_until_complete(task)
+        except:  # noqa
+            pass
     loop.close()
 
 
