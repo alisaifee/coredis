@@ -4,6 +4,7 @@ import functools
 import inspect
 from typing import Any
 
+from coredis.config import Config
 from coredis.exceptions import CommandSyntaxError
 from coredis.typing import (
     Callable,
@@ -63,6 +64,8 @@ def mutually_exclusive_parameters(
 
         @functools.wraps(func)
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
+            if Config.optimized:
+                return await func(*args, **kwargs)
             call_args = sig.bind_partial(*args, **kwargs)
             params = {
                 k
@@ -108,6 +111,8 @@ def mutually_inclusive_parameters(
 
         @functools.wraps(func)
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
+            if Config.optimized:
+                return await func(*args, **kwargs)
             call_args = sig.bind_partial(*args, **kwargs)
             params = {
                 k
@@ -146,6 +151,8 @@ def ensure_iterable_valid(
 
         @functools.wraps(func)
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
+            if Config.optimized:
+                return await func(*args, **kwargs)
             bound = sig.bind_partial(*args, **kwargs)
             value = bound.arguments.get(argument)
             if not iterable_valid(value):

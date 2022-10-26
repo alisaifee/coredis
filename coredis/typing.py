@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import warnings
 from typing import (
     TYPE_CHECKING,
@@ -47,6 +46,8 @@ from typing_extensions import (
     runtime_checkable,
 )
 
+from coredis.config import Config
+
 _runtime_checks = False
 _beartype_found = False
 
@@ -76,10 +77,7 @@ try:
 except ImportError:  # pragma: no cover
     pass
 
-if (
-    os.environ.get("COREDIS_RUNTIME_CHECKS", "").lower() in ["1", "true", "t"]
-    and not TYPE_CHECKING
-):  # pragma: no cover
+if Config.runtime_checks and not TYPE_CHECKING:  # pragma: no cover
     if _beartype_found:
         _runtime_checks = True
     else:
