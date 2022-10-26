@@ -697,6 +697,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         retrycount: "Optional[int]" = ...,
         force: "Optional[bool]" = ...,
         justid: "Optional[bool]" = ...,
+        lastid: "Optional[ValueT]" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def xdel(
         self, key: "KeyT", identifiers: "Parameters[ValueT]"
@@ -1793,6 +1794,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         retrycount: "Optional[int]" = ...,
         force: "Optional[bool]" = ...,
         justid: "Optional[bool]" = ...,
+        lastid: "Optional[ValueT]" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def xdel(
         self, key: "KeyT", identifiers: "Parameters[ValueT]"
