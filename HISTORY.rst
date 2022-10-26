@@ -3,6 +3,24 @@
 Changelog
 =========
 
+v4.7.0
+------
+Release Date: 2022-10-26
+
+* Feature
+
+  * Add optimized mode to allow skipping validation code paths
+  * Add ``lastid`` parameter to ``xclaim`` method
+
+* Bug Fix
+
+  * Ensure ``LuaLock`` context manager throws an exception when a
+    lock cannot be acquired
+
+* Compatibility
+
+  * Add final python 3.11 wheels
+
 v4.6.0
 ------
 Release Date: 2022-10-10
@@ -1220,6 +1238,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
