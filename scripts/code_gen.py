@@ -319,16 +319,17 @@ VERSIONCHANGED_DOC = re.compile(r"(.. versionchanged:: ([\d\.]+))", re.DOTALL)
 ROUTE_MAPPING = {
     "all_nodes": NodeFlag.ALL,
     "all_shards": NodeFlag.PRIMARIES,
-
 }
 
 MERGE_MAPPING = {
     "one_succeeded": ["first response", "the first response that is not an error"],
-    "all_succeeded": ["success if all shards responded ``True``", "the response from any shard if all responses are consistent"],
+    "all_succeeded": [
+        "success if all shards responded ``True``",
+        "the response from any shard if all responses are consistent",
+    ],
     "agg_logical_and": ["the logical AND of all responses"],
     "agg_logical_or": ["the logical OR of all responses"],
     "agg_sum": ["the sum of results"],
-
 }
 
 inflection_engine = inflect.engine()
@@ -1815,7 +1816,7 @@ def generate_compatibility_section(
                             ) == str(method_details.get("deprecation_info", [None])[0])
                             readonly_valid = (
                                 command_details
-                                and command_details.readonly
+                                and (CommandFlag.READONLY in command_details.flags)
                                 == method_details["readonly"]
                             )
                             arg_version_valid = command_details and len(
@@ -1833,17 +1834,53 @@ def generate_compatibility_section(
                             routing_valid = True
                             merging_valid = True
                             if command_details and (hints := method.get("hints", [])):
-                                request_policy = [hint.split("request_policy:")[1] for hint in hints if "request_policy" in hint]
-                                response_policy = [hint.split("response_policy:")[1] for hint in hints if "response_policy" in hint]
-                                if request_policy and (route := command_details.cluster.route):
-                                    routing_valid = ROUTE_MAPPING.get(request_policy[0], "") == route
+                                request_policy = [
+                                    hint.split("request_policy:")[1]
+                                    for hint in hints
+                                    if "request_policy" in hint
+                                ]
+                                response_policy = [
+                                    hint.split("response_policy:")[1]
+                                    for hint in hints
+                                    if "response_policy" in hint
+                                ]
+                                if request_policy and (
+                                    route := command_details.cluster.route
+                                ):
+                                    routing_valid = (
+                                        ROUTE_MAPPING.get(request_policy[0], "")
+                                        == route
+                                    )
                                     if not routing_valid:
-                                        print(method["name"], route, request_policy[0], ROUTE_MAPPING.get(request_policy[0]))
-                                if response_policy and command_details.cluster.combine and (combine := command_details.cluster.combine.response_policy):
-                                    merging_valid = combine in MERGE_MAPPING.get(response_policy[0], [])
-                            if command_details and (flags := [k for k in method.get("command_flags", []) if k in [e.value for e in CommandFlag]]):
-                                if set(flags) != set(k.value for k in command_details.flags):
-                                    missing_command_flags = set(flags) - set([k.value for k in command_details.flags])
+                                        print(
+                                            method["name"],
+                                            route,
+                                            request_policy[0],
+                                            ROUTE_MAPPING.get(request_policy[0]),
+                                        )
+                                if (
+                                    response_policy
+                                    and command_details.cluster.combine
+                                    and (
+                                        combine := command_details.cluster.combine.response_policy
+                                    )
+                                ):
+                                    merging_valid = combine in MERGE_MAPPING.get(
+                                        response_policy[0], []
+                                    )
+                            if command_details and (
+                                flags := [
+                                    k
+                                    for k in method.get("command_flags", [])
+                                    if k in [e.value for e in CommandFlag]
+                                ]
+                            ):
+                                if set(flags) != set(
+                                    k.value for k in command_details.flags
+                                ):
+                                    missing_command_flags = set(flags) - set(
+                                        [k.value for k in command_details.flags]
+                                    )
                                 method_details["usable_flags"] = set(flags)
                             if (
                                 src.find("@redis_command") >= 0
@@ -1856,7 +1893,7 @@ def generate_compatibility_section(
                                 )
                                 >= 0
                                 and command_details
-                                and command_details.readonly
+                                and (CommandFlag.READONLY in command_details.flags)
                                 == method_details["readonly"]
                                 and version_introduced_valid
                                 and version_deprecated_valid
