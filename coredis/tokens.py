@@ -914,6 +914,11 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``XCLAIM``
+    LASTID = b"LASTID"
+
+    #: Used by:
+    #:
+    #:  - ``XCLAIM``
     RETRYCOUNT = b"RETRYCOUNT"
 
     #: Used by:

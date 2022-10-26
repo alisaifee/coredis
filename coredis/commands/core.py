@@ -5380,6 +5380,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         retrycount: Optional[int] = None,
         force: Optional[bool] = None,
         justid: Optional[bool] = None,
+        lastid: Optional[ValueT] = None,
     ) -> Union[Tuple[AnyStr, ...], Tuple[StreamEntry, ...]]:
         """
         Changes (or acquires) ownership of a message in a consumer group, as
@@ -5394,13 +5395,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         pieces.extend(identifiers)
 
         if idle is not None:
-            pieces.extend(["IDLE", normalized_milliseconds(idle)])
+            pieces.extend([PrefixToken.IDLE, normalized_milliseconds(idle)])
 
         if time is not None:
-            pieces.extend(["TIME", normalized_time_milliseconds(time)])
+            pieces.extend([PrefixToken.TIME, normalized_time_milliseconds(time)])
 
         if retrycount is not None:
-            pieces.extend(["RETRYCOUNT", retrycount])
+            pieces.extend([PrefixToken.RETRYCOUNT, retrycount])
 
         if force is not None:
             pieces.append(PureToken.FORCE)
@@ -5408,6 +5409,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         if justid is not None:
             pieces.append(PureToken.JUSTID)
 
+        if lastid is not None:
+            pieces.extend([PrefixToken.LASTID, lastid])
         return await self.execute_command(
             CommandName.XCLAIM, *pieces, justid=justid, callback=ClaimCallback[AnyStr]()
         )
