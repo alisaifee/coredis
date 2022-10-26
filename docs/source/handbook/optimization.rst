@@ -8,6 +8,7 @@ Optimized mode
 - Runtime validation of parameter combinations for redis
   commands that can take various combinations of inputs (examples: :meth:`~coredis.Redis.set` or :meth:`~coredis.Redis.xadd`)
 - Validation of correct use of iterables as parameters
+- Compatibility checks by redis server version
 
 Optimized mode can be enabled in any of the following ways:
 

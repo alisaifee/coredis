@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from packaging import version
 
 from coredis.commands.constants import CommandName
+from coredis.config import Config
 from coredis.exceptions import CommandNotSupportedError
 from coredis.typing import Optional, Union
 
@@ -54,7 +55,7 @@ def check_version(
     deprecated_version: Optional[version.Version],
     deprecation_reason: Optional[str],
 ) -> None:
-    if not any([min_version, deprecated_version]):
+    if Config.optimized or not any([min_version, deprecated_version]):
         return
 
     if getattr(instance, "verify_version", False):

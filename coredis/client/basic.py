@@ -21,6 +21,7 @@ from coredis.commands.monitor import Monitor
 from coredis.commands.pubsub import PubSub
 from coredis.commands.script import Script
 from coredis.commands.sentinel import SentinelCommands
+from coredis.config import Config
 from coredis.connection import (
     BaseConnection,
     RedisSSLContext,
@@ -198,7 +199,7 @@ class Client(
         return True
 
     def _ensure_server_version(self, version: Optional[str]) -> None:
-        if not self.verify_version:
+        if not self.verify_version or Config.optimized:
             return
         if not version:
             return
