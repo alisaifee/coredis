@@ -16,6 +16,7 @@ Handbook
     connections
     encoding
     response
+    optimization
     typing
     development
 
@@ -45,6 +46,7 @@ Performance
 - :ref:`handbook/caching:caching`
 - :ref:`handbook/pipelines:pipelines`
 - :ref:`handbook/noreply:no reply mode`
+- :ref:`handbook/optimization:optimized mode`
 
 Reliability
 -----------
