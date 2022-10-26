@@ -128,7 +128,9 @@ class LuaLock(Generic[AnyStr]):
 
         # force blocking, as otherwise the user would have to check whether
         # the lock was actually acquired or not.
-        await self.acquire()
+        did_acquire = await self.acquire()
+        if not did_acquire:
+            raise LockError("Could not acquire lock")
         return self
 
     async def __aexit__(
