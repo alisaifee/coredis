@@ -89,7 +89,7 @@ def mutually_exclusive_parameters(
 
             return await func(*args, **kwargs)
 
-        return wrapped
+        return wrapped if not Config.optimized else func
 
     return wrapper
 
@@ -130,7 +130,7 @@ def mutually_inclusive_parameters(
                 )
             return await func(*args, **kwargs)
 
-        return wrapped
+        return wrapped if not Config.optimized else func
 
     return wrapper
 
@@ -163,6 +163,6 @@ def ensure_iterable_valid(
 
             return await func(*args, **kwargs)
 
-        return wrapped
+        return wrapped if not Config.optimized else func
 
     return wrapper
