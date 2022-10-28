@@ -645,6 +645,9 @@ class Redis(Client[AnyStr]):
             **kwargs,
         )
         self.cache = cache
+        self._decodecontext: contextvars.ContextVar[
+            Optional[bool],
+        ] = contextvars.ContextVar("decode", default=None)
 
     @classmethod
     @overload
@@ -782,7 +785,10 @@ class Redis(Client[AnyStr]):
             if self.cache and command not in READONLY_COMMANDS:
                 self.cache.invalidate(*KeySpec.extract_keys((command,) + args))
             request = await connection.create_request(
-                command, *args, noreply=self.noreply, decode=options.get("decode")
+                command,
+                *args,
+                noreply=self.noreply,
+                decode=options.get("decode", self._decodecontext.get()),
             )
             maybe_wait = await self._ensure_wait(command, connection)
             reply = await request
@@ -811,7 +817,9 @@ class Redis(Client[AnyStr]):
                 raise
             _connection = await pool.get_connection(command, *args)
             request = await _connection.create_request(
-                command, *args, decode=options.get("decode")
+                command,
+                *args,
+                decode=options.get("decode", self._decodecontext.get()),
             )
             pool.release(_connection)
             reply = await request
@@ -827,6 +835,30 @@ class Redis(Client[AnyStr]):
             self._ensure_server_version(connection.server_version)
             if not quick_release:
                 pool.release(connection)
+
+    @contextlib.contextmanager
+    def decoding(self, mode: bool) -> Iterator[Redis[bytes]]:
+        """
+        Context manager to temporarily change the decoding behavior
+        of the client
+
+        Example::
+
+            client = coredis.Redis(decode_responses=True)
+            await client.set("fubar", "baz")
+            assert await client.get("fubar") == "baz"
+            with client.decoding(False):
+                assert await client.get("fubar") == b"baz"
+                with client.decoding(True):
+                    assert await client.get("fubar") == "baz"
+
+        """
+        prev = self._decodecontext.get()
+        self._decodecontext.set(mode)
+        try:
+            yield cast(Redis[bytes], self)  # type: ignore[redundant-cast]
+        finally:
+            self._decodecontext.set(prev)
 
     def monitor(self) -> Monitor[AnyStr]:
         """

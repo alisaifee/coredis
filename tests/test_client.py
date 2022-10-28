@@ -87,6 +87,13 @@ class TestClient:
             assert not await client.get("fubar")
         assert await client.get("fubar") == _s(1)
 
+    async def test_decoding_context(self, client):
+        await client.set("fubar", "baz")
+        with client.decoding(False):
+            assert b"baz" == await client.get("fubar")
+            with client.decoding(True):
+                assert "baz" == await client.get("fubar")
+
 
 @targets(
     "redis_cluster",
@@ -117,6 +124,13 @@ class TestClusterClient:
             with client.ensure_replication(2):
                 assert await client.set("fubar", 1)
         assert await client.set("fubar", 1)
+
+    async def test_decoding_context(self, client):
+        await client.set("fubar", "baz")
+        with client.decoding(False):
+            assert b"baz" == await client.get("fubar")
+            with client.decoding(True):
+                assert "baz" == await client.get("fubar")
 
 
 class TestSSL:

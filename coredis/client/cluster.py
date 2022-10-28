@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import contextvars
 import functools
 import inspect
 import textwrap
@@ -410,6 +412,9 @@ class RedisCluster(
         ] = self.__class__.RESULT_CALLBACKS.copy()
         self.non_atomic_cross_slot = non_atomic_cross_slot
         self.cache = cache
+        self._decodecontext: contextvars.ContextVar[
+            Optional[bool],
+        ] = contextvars.ContextVar("decode", default=None)
 
     @classmethod
     @overload
@@ -714,7 +719,7 @@ class RedisCluster(
                     command,
                     *args,
                     noreply=self.noreply,
-                    decode=kwargs.get("decode"),
+                    decode=kwargs.get("decode", self._decodecontext.get()),
                 )
                 if quick_release and not self.requires_wait:
                     released = True
@@ -822,7 +827,7 @@ class RedisCluster(
                             command,
                             *args,
                             noreply=self.noreply,
-                            decode=options.get("decode"),
+                            decode=options.get("decode", self._decodecontext.get()),
                         )
                         try:
                             reply = await request
@@ -849,7 +854,7 @@ class RedisCluster(
                         command,
                         *args,
                         noreply=self.noreply,
-                        decode=options.get("decode"),
+                        decode=options.get("decode", self._decodecontext.get()),
                         raise_exceptions=False,
                     )
                     reply = await request
@@ -874,7 +879,7 @@ class RedisCluster(
                         command,
                         *args,
                         noreply=self.noreply,
-                        decode=options.get("decode"),
+                        decode=options.get("decode", self._decodecontext.get()),
                         raise_exceptions=False,
                     )
                 except ConnectionError as err:
@@ -896,6 +901,30 @@ class RedisCluster(
         if self.noreply:
             return None  # type: ignore
         return self._merge_result(command, res, **options)
+
+    @contextlib.contextmanager
+    def decoding(self, mode: bool) -> Iterator[RedisCluster[bytes]]:
+        """
+        Context manager to temporarily change the decoding behavior
+        of the client
+
+        Example::
+
+            client = coredis.RedisCluster(decode_responses=True)
+            await client.set("fubar", "baz")
+            assert await client.get("fubar") == "baz"
+            with client.decoding(False):
+                assert await client.get("fubar") == b"baz"
+                with client.decoding(True):
+                    assert await client.get("fubar") == "baz"
+
+        """
+        prev = self._decodecontext.get()
+        self._decodecontext.set(mode)
+        try:
+            yield cast(RedisCluster[bytes], self)  # type: ignore[redundant-cast]
+        finally:
+            self._decodecontext.set(prev)
 
     def pubsub(
         self, ignore_subscribe_messages: bool = False, **kwargs: Any

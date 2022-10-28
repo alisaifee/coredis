@@ -158,7 +158,7 @@ class Parser:
          If there is not enough data on the wire a ``NotEnoughData`` instance
          will be returned.
         """
-        decode_bytes = (decode is None or decode) if self.decode_responses else False
+        decode_bytes = decode if decode is not None else self.decode_responses
         while True:
             response = self.parse(decode_bytes)
             if isinstance(response, NotEnoughData):
