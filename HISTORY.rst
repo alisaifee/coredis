@@ -3,6 +3,18 @@
 Changelog
 =========
 
+v4.8.0
+------
+Release Date: 2022-10-28
+
+* Feature
+
+  * Add a ``decoding`` context manager to control decoding behavior
+
+* Performance
+
+  * Remove validation code paths at decoration time in optimized mode
+
 v4.7.0
 ------
 Release Date: 2022-10-26
@@ -1238,6 +1250,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
