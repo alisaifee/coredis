@@ -44,6 +44,7 @@ from coredis.typing import (
     AsyncGenerator,
     AsyncIterator,
     Callable,
+    ContextManager,
     Coroutine,
     Generator,
     Generic,
@@ -836,8 +837,16 @@ class Redis(Client[AnyStr]):
             if not quick_release:
                 pool.release(connection)
 
+    @overload
+    def decoding(self, mode: Literal[False]) -> ContextManager[Redis[bytes]]:
+        ...
+
+    @overload
+    def decoding(self, mode: Literal[True]) -> ContextManager[Redis[str]]:
+        ...
+
     @contextlib.contextmanager
-    def decoding(self, mode: bool) -> Iterator[Redis[bytes]]:
+    def decoding(self, mode: bool) -> Iterator[Redis[Any]]:
         """
         Context manager to temporarily change the decoding behavior
         of the client
@@ -856,7 +865,7 @@ class Redis(Client[AnyStr]):
         prev = self._decodecontext.get()
         self._decodecontext.set(mode)
         try:
-            yield cast(Redis[bytes], self)  # type: ignore[redundant-cast]
+            yield self
         finally:
             self._decodecontext.set(prev)
 

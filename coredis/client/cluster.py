@@ -40,6 +40,7 @@ from coredis.typing import (
     AsyncIterator,
     Awaitable,
     Callable,
+    ContextManager,
     Coroutine,
     Dict,
     Iterable,
@@ -902,8 +903,16 @@ class RedisCluster(
             return None  # type: ignore
         return self._merge_result(command, res, **options)
 
+    @overload
+    def decoding(self, mode: Literal[False]) -> ContextManager[RedisCluster[bytes]]:
+        ...
+
+    @overload
+    def decoding(self, mode: Literal[True]) -> ContextManager[RedisCluster[str]]:
+        ...
+
     @contextlib.contextmanager
-    def decoding(self, mode: bool) -> Iterator[RedisCluster[bytes]]:
+    def decoding(self, mode: bool) -> Iterator[RedisCluster[Any]]:
         """
         Context manager to temporarily change the decoding behavior
         of the client
@@ -922,7 +931,7 @@ class RedisCluster(
         prev = self._decodecontext.get()
         self._decodecontext.set(mode)
         try:
-            yield cast(RedisCluster[bytes], self)  # type: ignore[redundant-cast]
+            yield self
         finally:
             self._decodecontext.set(prev)
 
