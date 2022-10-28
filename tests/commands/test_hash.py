@@ -129,7 +129,6 @@ class TestHash:
         assert len(await client.hrandfield("key", count=-10)) == 10
         assert await client.hrandfield("key-not-exist") is None
 
-    @pytest.mark.nodragonfly
     async def test_hscan(self, client, _s):
         await client.hset("a", {"a": 1, "b": 2, "c": 3})
         await client.hset("b", {i: i for i in range(1000)})
@@ -141,7 +140,6 @@ class TestHash:
         _, dic = await client.hscan("b", count=100)
         assert len(dic) < 1000
 
-    @pytest.mark.nodragonfly
     async def test_hscan_iter(self, client, _s):
         await client.hset("a", {"a": 1, "b": 2, "c": 3})
         dic = dict()
