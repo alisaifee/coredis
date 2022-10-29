@@ -855,6 +855,7 @@ class Redis(Client[AnyStr]):
         ...
 
     @contextlib.contextmanager
+    @versionadded(version="4.8.0")
     def decoding(
         self, mode: bool, encoding: Optional[str] = None
     ) -> Iterator[Redis[Any]]:

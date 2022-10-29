@@ -923,6 +923,7 @@ class RedisCluster(
         ...
 
     @contextlib.contextmanager
+    @versionadded(version="4.8.0")
     def decoding(
         self, mode: bool, encoding: Optional[str] = None
     ) -> Iterator[RedisCluster[Any]]:
