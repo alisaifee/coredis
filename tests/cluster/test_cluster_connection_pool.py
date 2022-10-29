@@ -26,7 +26,7 @@ class DummyConnection(ClusterConnection):
         self.port = port
         self.socket_timeout = socket_timeout
         self.awaiting_response = False
-        self._parser = Parser(None, False)
+        self._parser = Parser()
         self._last_error = None
         self._transport = None
         self._read_flag = asyncio.Event()
