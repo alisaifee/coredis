@@ -649,6 +649,9 @@ class Redis(Client[AnyStr]):
         self._decodecontext: contextvars.ContextVar[
             Optional[bool],
         ] = contextvars.ContextVar("decode", default=None)
+        self._encodingcontext: contextvars.ContextVar[
+            Optional[str],
+        ] = contextvars.ContextVar("decode", default=None)
 
     @classmethod
     @overload
@@ -790,6 +793,7 @@ class Redis(Client[AnyStr]):
                 *args,
                 noreply=self.noreply,
                 decode=options.get("decode", self._decodecontext.get()),
+                encoding=self._encodingcontext.get(),
             )
             maybe_wait = await self._ensure_wait(command, connection)
             reply = await request
@@ -821,6 +825,7 @@ class Redis(Client[AnyStr]):
                 command,
                 *args,
                 decode=options.get("decode", self._decodecontext.get()),
+                encoding=self._encodingcontext.get(),
             )
             pool.release(_connection)
             reply = await request
@@ -838,18 +843,29 @@ class Redis(Client[AnyStr]):
                 pool.release(connection)
 
     @overload
-    def decoding(self, mode: Literal[False]) -> ContextManager[Redis[bytes]]:
+    def decoding(
+        self, mode: Literal[False], encoding: Optional[str] = None
+    ) -> ContextManager[Redis[bytes]]:
         ...
 
     @overload
-    def decoding(self, mode: Literal[True]) -> ContextManager[Redis[str]]:
+    def decoding(
+        self, mode: Literal[True], encoding: Optional[str] = None
+    ) -> ContextManager[Redis[str]]:
         ...
 
     @contextlib.contextmanager
-    def decoding(self, mode: bool) -> Iterator[Redis[Any]]:
+    def decoding(
+        self, mode: bool, encoding: Optional[str] = None
+    ) -> Iterator[Redis[Any]]:
         """
         Context manager to temporarily change the decoding behavior
         of the client
+
+        :param mode: Whether to decode or not
+        :param encoding: Optional encoding to use if decoding. If not provided
+         the :paramref:`~coredis.Redis.encoding` parameter provided to the client will
+         be used.
 
         Example::
 
@@ -862,12 +878,15 @@ class Redis(Client[AnyStr]):
                     assert await client.get("fubar") == "baz"
 
         """
-        prev = self._decodecontext.get()
+        prev_decode = self._decodecontext.get()
+        prev_encoding = self._encodingcontext.get()
         self._decodecontext.set(mode)
+        self._encodingcontext.set(encoding)
         try:
             yield self
         finally:
-            self._decodecontext.set(prev)
+            self._decodecontext.set(prev_decode)
+            self._encodingcontext.set(prev_encoding)
 
     def monitor(self) -> Monitor[AnyStr]:
         """

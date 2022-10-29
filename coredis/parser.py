@@ -118,10 +118,8 @@ class Parser:
         "WRONGTYPE": WrongTypeError,
     }
 
-    def __init__(self, encoding: Optional[str], decode_responses: bool) -> None:
-        self.decode_responses: bool = decode_responses
+    def __init__(self) -> None:
         self.push_messages: Optional[asyncio.Queue[ResponseType]] = None
-        self.encoding = encoding
         self.localbuffer = BytesIO(b"")
         self.bytes_read = 0
         self.bytes_written = 0
@@ -144,7 +142,8 @@ class Parser:
 
     def get_response(
         self,
-        decode: Optional[bool] = None,
+        decode: bool,
+        encoding: Optional[str] = None,
         push_message_types: Optional[Set[bytes]] = None,
     ) -> Union[NotEnoughData, ResponseType]:
         """
@@ -158,9 +157,8 @@ class Parser:
          If there is not enough data on the wire a ``NotEnoughData`` instance
          will be returned.
         """
-        decode_bytes = decode if decode is not None else self.decode_responses
         while True:
-            response = self.parse(decode_bytes)
+            response = self.parse(decode, encoding)
             if isinstance(response, NotEnoughData):
                 return response
             else:
@@ -182,6 +180,7 @@ class Parser:
     def parse(
         self,
         decode_bytes: bool,
+        encoding: Optional[str],
     ) -> Union[Optional[UnpackedResponse], NotEnoughData]:
         parsed: Optional[UnpackedResponse] = None
 
@@ -195,8 +194,8 @@ class Parser:
             response: ResponseType = None
             if marker == RESPDataType.SIMPLE_STRING:
                 response = chunk
-                if decode_bytes and self.encoding:
-                    response = response.decode(self.encoding)
+                if decode_bytes and encoding:
+                    response = response.decode(encoding)
             elif marker == RESPDataType.BULK_STRING or marker == RESPDataType.VERBATIM:
                 length = int(chunk)
                 if length == -1:
@@ -214,8 +213,8 @@ class Parser:
                                 f"Unexpected verbatim string of type {response[:3]!r}"
                             )
                         response = response[4:]
-                    if decode_bytes and self.encoding:
-                        response = response.decode(self.encoding)
+                    if decode_bytes and encoding:
+                        response = response.decode(encoding)
             elif marker == RESPDataType.INT:
                 response = int(chunk)
             elif marker == RESPDataType.DOUBLE:

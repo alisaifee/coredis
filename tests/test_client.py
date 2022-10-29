@@ -88,11 +88,11 @@ class TestClient:
         assert await client.get("fubar") == _s(1)
 
     async def test_decoding_context(self, client):
-        await client.set("fubar", "baz")
+        await client.set("fubar", "A")
         with client.decoding(False):
-            assert b"baz" == await client.get("fubar")
-            with client.decoding(True):
-                assert "baz" == await client.get("fubar")
+            assert b"A" == await client.get("fubar")
+            with client.decoding(True, encoding="cp424"):
+                assert "א" == await client.get("fubar")
 
 
 @targets(
@@ -126,11 +126,11 @@ class TestClusterClient:
         assert await client.set("fubar", 1)
 
     async def test_decoding_context(self, client):
-        await client.set("fubar", "baz")
+        await client.set("fubar", "A")
         with client.decoding(False):
-            assert b"baz" == await client.get("fubar")
-            with client.decoding(True):
-                assert "baz" == await client.get("fubar")
+            assert b"A" == await client.get("fubar")
+            with client.decoding(True, encoding="cp424"):
+                assert "א" == await client.get("fubar")
 
 
 class TestSSL:

@@ -49,7 +49,8 @@ if TYPE_CHECKING:
 @dataclasses.dataclass
 class Request:
     command: bytes
-    decode: Optional[bool] = None
+    decode: bool
+    encoding: Optional[str] = None
     raise_exceptions: bool = True
     future: asyncio.Future[ResponseType] = dataclasses.field(
         default_factory=lambda: asyncio.get_running_loop().create_future()
@@ -171,7 +172,7 @@ class BaseConnection(asyncio.BaseProtocol):
         self.last_request_processed_at: Optional[float] = None
 
         self._transport: Optional[asyncio.Transport] = None
-        self._parser = Parser(encoding, decode_responses)
+        self._parser = Parser()
         self._read_flag = asyncio.Event()
         self.packer = Packer(self.encoding)
         self.push_messages: asyncio.Queue[ResponseType] = asyncio.Queue()
@@ -321,7 +322,7 @@ class BaseConnection(asyncio.BaseProtocol):
             return
 
         request = self._requests.popleft()
-        response = self._parser.get_response(request.decode)
+        response = self._parser.get_response(request.decode, request.encoding)
         while not isinstance(
             response,
             NotEnoughData,
@@ -345,7 +346,7 @@ class BaseConnection(asyncio.BaseProtocol):
             except IndexError:
                 return
 
-            response = self._parser.get_response(request.decode)
+            response = self._parser.get_response(request.decode, request.encoding)
 
         # In case the first request pulled from the queue doesn't have enough data
         # to process, put it back to the start of the queue for the next iteration
@@ -486,7 +487,9 @@ class BaseConnection(asyncio.BaseProtocol):
             )
 
         message = self._parser.get_response(
-            bool(decode) if decode is not None else None, push_message_types
+            bool(decode) if decode is not None else self.decode_responses,
+            self.encoding,
+            push_message_types,
         )
         while isinstance(
             message,
@@ -499,7 +502,9 @@ class BaseConnection(asyncio.BaseProtocol):
             except asyncio.TimeoutError:
                 raise TimeoutError
             message = self._parser.get_response(
-                bool(decode) if decode is not None else None, push_message_types
+                bool(decode) if decode is not None else self.decode_responses,
+                self.encoding,
+                push_message_types,
             )
         return message
 
@@ -533,6 +538,7 @@ class BaseConnection(asyncio.BaseProtocol):
         *args: ValueT,
         noreply: Optional[bool] = None,
         decode: Optional[ValueT] = None,
+        encoding: Optional[str] = None,
         raise_exceptions: bool = True,
     ) -> asyncio.Future[ResponseType]:
         """
@@ -556,7 +562,8 @@ class BaseConnection(asyncio.BaseProtocol):
         if not (self.noreply_set or noreply):
             request = Request(
                 command,
-                bool(decode) if decode is not None else None,
+                bool(decode) if decode is not None else self.decode_responses,
+                encoding or self.encoding,
                 raise_exceptions,
             )
             self._requests.append(request)

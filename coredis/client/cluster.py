@@ -416,6 +416,9 @@ class RedisCluster(
         self._decodecontext: contextvars.ContextVar[
             Optional[bool],
         ] = contextvars.ContextVar("decode", default=None)
+        self._encodingcontext: contextvars.ContextVar[
+            Optional[str],
+        ] = contextvars.ContextVar("decode", default=None)
 
     @classmethod
     @overload
@@ -721,6 +724,7 @@ class RedisCluster(
                     *args,
                     noreply=self.noreply,
                     decode=kwargs.get("decode", self._decodecontext.get()),
+                    encoding=self._encodingcontext.get(),
                 )
                 if quick_release and not self.requires_wait:
                     released = True
@@ -829,6 +833,7 @@ class RedisCluster(
                             *args,
                             noreply=self.noreply,
                             decode=options.get("decode", self._decodecontext.get()),
+                            encoding=self._encodingcontext.get(),
                         )
                         try:
                             reply = await request
@@ -856,6 +861,7 @@ class RedisCluster(
                         *args,
                         noreply=self.noreply,
                         decode=options.get("decode", self._decodecontext.get()),
+                        encoding=self._encodingcontext.get(),
                         raise_exceptions=False,
                     )
                     reply = await request
@@ -881,6 +887,7 @@ class RedisCluster(
                         *args,
                         noreply=self.noreply,
                         decode=options.get("decode", self._decodecontext.get()),
+                        encoding=self._encodingcontext.get(),
                         raise_exceptions=False,
                     )
                 except ConnectionError as err:
@@ -904,18 +911,29 @@ class RedisCluster(
         return self._merge_result(command, res, **options)
 
     @overload
-    def decoding(self, mode: Literal[False]) -> ContextManager[RedisCluster[bytes]]:
+    def decoding(
+        self, mode: Literal[False], encoding: Optional[str] = None
+    ) -> ContextManager[RedisCluster[bytes]]:
         ...
 
     @overload
-    def decoding(self, mode: Literal[True]) -> ContextManager[RedisCluster[str]]:
+    def decoding(
+        self, mode: Literal[True], encoding: Optional[str] = None
+    ) -> ContextManager[RedisCluster[str]]:
         ...
 
     @contextlib.contextmanager
-    def decoding(self, mode: bool) -> Iterator[RedisCluster[Any]]:
+    def decoding(
+        self, mode: bool, encoding: Optional[str] = None
+    ) -> Iterator[RedisCluster[Any]]:
         """
         Context manager to temporarily change the decoding behavior
         of the client
+
+        :param mode: Whether to decode or not
+        :param encoding: Optional encoding to use if decoding. If not provided
+         the :paramref:`~coredis.RedisCluster.encoding` parameter provided to the client will
+         be used.
 
         Example::
 
@@ -928,12 +946,15 @@ class RedisCluster(
                     assert await client.get("fubar") == "baz"
 
         """
-        prev = self._decodecontext.get()
+        prev_decode = self._decodecontext.get()
+        prev_encoding = self._encodingcontext.get()
         self._decodecontext.set(mode)
+        self._encodingcontext.set(encoding)
         try:
             yield self
         finally:
-            self._decodecontext.set(prev)
+            self._decodecontext.set(prev_decode)
+            self._encodingcontext.set(prev_encoding)
 
     def pubsub(
         self, ignore_subscribe_messages: bool = False, **kwargs: Any
