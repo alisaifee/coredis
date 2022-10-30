@@ -3,6 +3,14 @@
 Changelog
 =========
 
+v4.8.1
+------
+Release Date: 2022-10-29
+
+* Feature
+
+  * Extend ``decoding`` context manager to selecting codec overrides
+
 v4.8.0
 ------
 Release Date: 2022-10-28
@@ -1250,6 +1258,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
