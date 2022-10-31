@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 import inspect
+import itertools
 import os
 import socket
 import ssl
@@ -35,6 +36,7 @@ from coredis.typing import (
     Optional,
     ResponseType,
     Set,
+    Tuple,
     TypeVar,
     Union,
     ValueT,
@@ -60,6 +62,14 @@ class Request:
     def enforce_deadline(self) -> None:
         if not self.future.done():
             self.future.set_exception(TimeoutError())
+
+
+@dataclasses.dataclass
+class CommandInvocation:
+    command: bytes
+    args: Tuple[ValueT, ...]
+    decode: Optional[bool]
+    encoding: Optional[str]
 
 
 class RedisSSLContext:
@@ -576,6 +586,41 @@ class BaseConnection(asyncio.BaseProtocol):
             none: asyncio.Future[ResponseType] = asyncio.Future()
             none.set_result(None)
             return none
+
+    async def create_requests(
+        self,
+        commands: List[CommandInvocation],
+        raise_exceptions: bool = True,
+    ) -> List[asyncio.Future[ResponseType]]:
+        """
+        Send multiple commands to the redis server
+        """
+
+        if not self.is_connected:
+            await self.connect()
+
+        self._send_packed_command(
+            self.packer.pack_commands(
+                list(itertools.chain((cmd.command,) + cmd.args for cmd in commands))
+            )
+        )
+
+        self.last_active_at = time.time()
+        requests: List[asyncio.Future[ResponseType]] = []
+        for cmd in commands:
+            request = Request(
+                cmd.command,
+                bool(cmd.decode) if cmd.decode is not None else self.decode_responses,
+                cmd.encoding or self.encoding,
+                raise_exceptions,
+            )
+            self._requests.append(request)
+            if self._stream_timeout is not None:
+                asyncio.get_running_loop().call_later(
+                    self._stream_timeout, request.enforce_deadline
+                )
+            requests.append(request.future)
+        return requests
 
     def disconnect(self) -> None:
         """

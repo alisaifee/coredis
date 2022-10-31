@@ -19,7 +19,7 @@ from coredis.client import Client
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName, NodeFlag
 from coredis.commands.script import Script
-from coredis.connection import BaseConnection, ClusterConnection
+from coredis.connection import BaseConnection, ClusterConnection, CommandInvocation
 from coredis.exceptions import (
     AskError,
     ClusterCrossSlotError,
@@ -145,10 +145,21 @@ class NodeCommands:
         # build up all commands into a single request to increase network perf
         # send all the commands and catch connection and timeout errors.
         try:
-            for cmd in commands:
-                cmd.request = await connection.create_request(
-                    cmd.command, *cmd.args, decode=cmd.options.get("decode")
-                )
+            requests = await connection.create_requests(
+                [
+                    CommandInvocation(
+                        cmd.command,
+                        cmd.args,
+                        bool(cmd.options.get("decode"))
+                        if cmd.options.get("decode")
+                        else None,
+                        None,
+                    )
+                    for cmd in commands
+                ]
+            )
+            for i, cmd in enumerate(commands):
+                cmd.request = requests[i]
         except (ConnectionError, TimeoutError) as e:
             for c in commands:
                 c.result = e
@@ -464,10 +475,21 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         if self.watches:
             await self.watch(*self.watches)
 
-        for cmd in cmds:
-            cmd.request = await connection.create_request(
-                cmd.command, *cmd.args, decode=cmd.options.get("decode")
-            )
+        requests = await connection.create_requests(
+            [
+                CommandInvocation(
+                    cmd.command,
+                    cmd.args,
+                    bool(cmd.options.get("decode"))
+                    if cmd.options.get("decode")
+                    else None,
+                    None,
+                )
+                for cmd in cmds
+            ]
+        )
+        for i, cmd in enumerate(cmds):
+            cmd.request = requests[i]
 
         errors: List[Tuple[int, Optional[RedisError]]] = []
         multi_failed = False
@@ -542,10 +564,21 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         raise_on_error: bool,
     ) -> Tuple[Any, ...]:
         # build up all commands into a single request to increase network perf
-        for cmd in commands:
-            cmd.request = await connection.create_request(
-                cmd.command, *cmd.args, decode=cmd.options.get("decode")
-            )
+        requests = await connection.create_requests(
+            [
+                CommandInvocation(
+                    cmd.command,
+                    cmd.args,
+                    bool(cmd.options.get("decode"))
+                    if cmd.options.get("decode")
+                    else None,
+                    None,
+                )
+                for cmd in commands
+            ]
+        )
+        for i, cmd in enumerate(commands):
+            cmd.request = requests[i]
 
         response: List[Any] = []
 
