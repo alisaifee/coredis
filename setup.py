@@ -98,6 +98,9 @@ if PY_IMPLEMENTATION == "CPython":
             debug_level="0",
             strip_asserts=True,
         )
+        for ext in extensions:
+            if "-Werror" in ext.extra_compile_args:
+                ext.extra_compile_args.remove("-Werror")
     except ImportError:
         pass
 else:
