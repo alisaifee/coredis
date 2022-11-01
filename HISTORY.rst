@@ -23,6 +23,14 @@ Release Date: 2022-10-28
 
   * Remove validation code paths at decoration time in optimized mode
 
+v4.7.1
+------
+Release Date: 2022-10-31
+
+* Bug Fix
+
+  * Fix wheels for macos
+
 v4.7.0
 ------
 Release Date: 2022-10-26
@@ -1329,4 +1337,7 @@ v1.0.1
 
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 4.7-maint
