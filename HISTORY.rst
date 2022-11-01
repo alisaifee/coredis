@@ -3,6 +3,14 @@
 Changelog
 =========
 
+v4.8.2
+------
+Release Date: 2022-10-31
+
+* Bug Fix
+
+  * Fix wheels for macos
+
 v4.8.1
 ------
 Release Date: 2022-10-29
@@ -1258,6 +1266,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
