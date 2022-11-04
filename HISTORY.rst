@@ -3,6 +3,20 @@
 Changelog
 =========
 
+v4.8.3
+------
+Release Date: 2022-11-04
+
+* Bug Fix
+
+  * Ensure pipeline commands are written to the socket in one
+    shot
+
+* Chore
+
+  * Reduce package size by removing test folder
+  * Add a post wheel packaging import test
+
 v4.8.2
 ------
 Release Date: 2022-10-31
@@ -1274,3 +1288,4 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
