@@ -63,7 +63,7 @@ class LuaLock(Generic[AnyStr]):
 
     @classmethod
     @RELEASE_SCRIPT.wraps(client_arg="client")
-    async def lua_release(
+    async def lua_release(  # type: ignore[empty-body]
         cls,
         client: Union[Redis[AnyStr], RedisCluster[AnyStr]],
         name: KeyT,
@@ -73,7 +73,7 @@ class LuaLock(Generic[AnyStr]):
 
     @classmethod
     @EXTEND_SCRIPT.wraps(client_arg="client")
-    async def lua_extend(
+    async def lua_extend(  # type: ignore[empty-body]
         cls,
         client: Union[Redis[AnyStr], RedisCluster[AnyStr]],
         name: KeyT,
