@@ -193,7 +193,7 @@ def redis_command(
                 command_details.version_deprecated,
                 deprecation_reason,
             )
-            async with command_cache(callable, *args, **kwargs) as response:
+            async with command_cache(callable, *args, **kwargs) as response:  # type: ignore
                 return response
 
         wrapped.__doc__ = textwrap.dedent(wrapped.__doc__ or "")
