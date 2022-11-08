@@ -76,6 +76,8 @@ ERRORS_ALLOW_RETRY = (
     TryAgainError,
 )
 
+UNWATCH_COMMANDS = {CommandName.DISCARD, CommandName.EXEC, CommandName.UNWATCH}
+
 
 def wrap_pipeline_method(
     kls: PipelineMeta, func: Callable[P, Coroutine[Any, Any, R]]
@@ -192,7 +194,7 @@ class NodeCommands:
                         if c.result:
                             transaction_result = cast(List[ResponseType], c.result)
                         else:
-                            raise WatchError()
+                            raise WatchError("Watched variable changed.")
                 for idx, c in enumerate(
                     [
                         _c
@@ -268,7 +270,6 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
     """
 
     command_stack: List[PipelineCommand]
-    UNWATCH_COMMANDS = {CommandName.DISCARD, CommandName.EXEC, CommandName.UNWATCH}
 
     def __init__(
         self,
@@ -415,7 +416,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
                 await self.reset_pipeline()
                 raise
         finally:
-            if command in self.UNWATCH_COMMANDS:
+            if command in UNWATCH_COMMANDS:
                 self.watching = False
             elif command == CommandName.WATCH:
                 self.watching = True
@@ -736,16 +737,32 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         self.connection_pool: ClusterConnectionPool = connection_pool
         self.result_callbacks = result_callbacks
         self._transaction = transaction
+        self._watched_node: Optional[ManagedNode] = None
+        self._watched_connection: Optional[ClusterConnection] = None
         self.watches: Optional[Parameters[KeyT]] = watches or None
         self.watching = False
         self.explicit_transaction = False
         self.cache = None  # not implemented.
 
     async def watch(self, *keys: KeyT) -> bool:
-        raise NotImplementedError
+        if self.explicit_transaction:
+            raise RedisError("Cannot issue a WATCH after a MULTI")
+
+        return await self.immediate_execute_command(
+            CommandName.WATCH, *keys, callback=SimpleStringCallback()
+        )
 
     async def unwatch(self) -> bool:
-        raise NotImplementedError
+        if self._watched_connection:
+            try:
+                return await self._unwatch(self._watched_connection)
+            finally:
+                if self._watched_connection:
+                    self.connection_pool.release(self._watched_connection)
+                    self.watching = False
+                    self._watched_node = None
+                    self._watched_connection = None
+        return True
 
     def __repr__(self):
         return f"{type(self).__name__}"
@@ -777,6 +794,12 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         callback: Callable[..., Any] = NoopCallback(),  # type: ignore
         **options: Optional[ValueT],
     ) -> ClusterPipelineImpl[AnyStr]:  # type: ignore
+        if (
+            self.watching or command == CommandName.WATCH
+        ) and not self.explicit_transaction:
+            return await self.immediate_execute_command(
+                command, *args, callback=callback, **options
+            )  # type: ignore
         return self.pipeline_execute_command(
             command, *args, callback=callback, **options
         )
@@ -829,7 +852,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         if not self.command_stack:
             return ()
 
-        if self._transaction:
+        if self._transaction or self.explicit_transaction:
             execute = self.send_cluster_transaction
         else:
             execute = self.send_cluster_commands
@@ -846,6 +869,10 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         # clean up the other instance attributes
         self.watching = False
         self.explicit_transaction = False
+        self._watched_node = None
+        if self._watched_connection:
+            self.connection_pool.release(self._watched_connection)
+            self._watched_connection = None
 
     @clusterdown_wrapper
     async def send_cluster_transaction(
@@ -863,7 +890,14 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         if not slots:
             raise ClusterTransactionError("No slots found for transaction")
         node = self.connection_pool.get_node_by_slot(slots.pop())
-        conn = await self.connection_pool.get_connection_by_node(node)
+
+        if self._watched_node and node.name != self._watched_node.name:
+            raise ClusterTransactionError("Multiple nodes involved in transaction")
+
+        conn = (
+            self._watched_connection
+            or await self.connection_pool.get_connection_by_node(node)
+        )
 
         if self.watches:
             await self._watch(node, conn, self.watches)
@@ -1022,7 +1056,6 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
             raise RedisClusterException(
                 f"No way to dispatch {command} to Redis Cluster. Missing key"
             )
-
         slots = {hash_slot(b(key)) for key in keys}
 
         if len(slots) != 1:
@@ -1036,18 +1069,74 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
             )
 
     def multi(self) -> None:
-        raise RedisClusterException("method multi() is not implemented")
+        if self.explicit_transaction:
+            raise RedisError("Cannot issue nested calls to MULTI")
 
-    def immediate_execute_command(
+        if self.command_stack:
+            raise RedisError(
+                "Commands without an initial WATCH have already been issued"
+            )
+        self.explicit_transaction = True
+
+    async def immediate_execute_command(
         self,
-        command: CommandName,
+        command: bytes,
         *args: ValueT,
         callback: Callable[..., Any] = NoopCallback(),
         **kwargs: Optional[ValueT],
     ) -> Any:
-        raise RedisClusterException(
-            "method immediate_execute_command() is not implemented"
-        )
+        slot = self._determine_slot(command, *args)
+        node = self.connection_pool.get_node_by_slot(slot)
+        if command == CommandName.WATCH:
+            if self._watched_node and node.name != self._watched_node.name:
+                raise ClusterTransactionError(
+                    "Cannot issue a watch on a different node in the same transaction"
+                )
+            else:
+                self._watched_node = node
+            self._watched_connection = conn = (
+                self._watched_connection
+                or await self.connection_pool.get_connection_by_node(node)
+            )
+        else:
+            conn = await self.connection_pool.get_connection_by_node(node)
+
+        try:
+            request = await conn.create_request(
+                command, *args, decode=kwargs.get("decode")
+            )
+
+            return callback(
+                await request,
+                version=conn.protocol_version,
+                **kwargs,
+            )
+        except (ConnectionError, TimeoutError) as e:
+            conn.disconnect()
+
+            if not conn.retry_on_timeout and isinstance(e, TimeoutError):
+                raise
+            try:
+                if not self.watching:
+                    request = await conn.create_request(
+                        command, *args, decode=kwargs.get("decode")
+                    )
+                    return callback(
+                        await request, version=conn.protocol_version, **kwargs
+                    )
+            except ConnectionError:
+                # the retry failed so cleanup.
+                conn.disconnect()
+                self.reset_pipeline()
+                raise
+        finally:
+            if command in UNWATCH_COMMANDS:
+                self.watching = False
+            elif command == CommandName.WATCH:
+                self.watching = True
+                # don't release the connection if the command was a watch
+                return
+            self.connection_pool.release(conn)
 
     def load_scripts(self):
         raise RedisClusterException("method load_scripts() is not implemented")
@@ -1198,17 +1287,30 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
             )
         )
 
+    def multi(self) -> None:
+        """
+        Starts a transactional block of the pipeline after WATCH commands
+        are issued. End the transactional block with :meth:`execute`
+        """
+        self.__wrapped__.multi()  # Only here for documentation purposes.
+
     async def watch(self, *keys: KeyT) -> bool:  # noqa
         """
-        Unsupported for Cluster
+        Watches the values at keys ``keys``
+
+        :raises: :exc:`~coredis.exceptions.ClusterTransactionError`
+         if a watch is issued on a key that resides on a different
+         cluster node than a previous watch.
         """
-        raise NotImplementedError
+        return await self.__wrapped__.watch(
+            *keys
+        )  # Only here for documentation purposes.
 
     async def unwatch(self) -> bool:  # noqa
         """
-        Unsupported for Cluster
+        Unwatches all previously specified keys
         """
-        raise NotImplementedError
+        return await self.__wrapped__.unwatch()  # Only here for documentation purposes.
 
     async def execute(self, raise_on_error: bool = True) -> Tuple[object, ...]:
         """
