@@ -1015,10 +1015,10 @@ class RedisCluster(
 
         Specifically:
 
-        - Transactions are only supported if all commands in the pipeline
-          only access keys which route to the same node.
         - Each command in the pipeline should only access keys on the same node
-        - Transactions with :paramref:`watch` are not supported.
+        - Transactions are disabled by default and are only supported if all
+          watched keys route to the same node as where the commands in the multi/exec
+          part of the pipeline.
         """
         await self.connection_pool.initialize()
 
@@ -1052,9 +1052,11 @@ class RedisCluster(
         """
         value_from_callable = kwargs.pop("value_from_callable", False)
         watch_delay = kwargs.pop("watch_delay", None)
-        async with await self.pipeline(True, watches=watches) as pipe:
+        async with await self.pipeline(True) as pipe:
             while True:
                 try:
+                    if watches:
+                        await pipe.watch(*watches)
                     func_value = await func(pipe)
                     exec_value = await pipe.execute()
                     return func_value if value_from_callable else exec_value
