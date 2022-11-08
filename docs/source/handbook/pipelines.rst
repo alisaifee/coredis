@@ -123,14 +123,16 @@ which is much easier to read:
 
 .. code-block:: python
 
-    async def client_side_incr(pipe):
-        current_value = await pipe.get('OUR-SEQUENCE-KEY')
+    async def client_side_incr(pipe) -> int:
+        current_value = await pipe.get('OUR-SEQUENCE-KEY') or 0
         next_value = int(current_value) + 1
         pipe.multi()
         await pipe.set('OUR-SEQUENCE-KEY', next_value)
+        return next_value
 
     await r.transaction(client_side_incr, 'OUR-SEQUENCE-KEY')
-    # [True]
-
+    # (True,)
+    await r.transaction(client_side_incr, 'OUR-SEQUENCE-KEY', value_from_callable=True)
+    # 2
 
 

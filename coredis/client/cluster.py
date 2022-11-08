@@ -1038,20 +1038,25 @@ class RedisCluster(
             Coroutine[Any, Any, Any],
         ],
         *watches: StringT,
+        value_from_callable: bool = False,
+        watch_delay: Optional[float] = None,
         **kwargs: Any,
     ) -> Any:
         """
         Convenience method for executing the callable :paramref:`func` as a
         transaction while watching all keys specified in :paramref:`watches`.
-        The :paramref:`func` callable should expect a single argument which is a
-        :class:`~coredis.pipeline.ClusterPipeline` instance retrieved
-        by calling :meth:`~coredis.RedisCluster.pipeline`
+
+        :param func: callable should expect a single argument which is a
+         :class:`coredis.pipeline.ClusterPipeline` object retrieved by calling
+         :meth:`~coredis.RedisCluster.pipeline`.
+        :param watches: The keys to watch during the transaction. The keys should route
+         to the same node as the keys touched by the commands in :paramref:`func`
+        :param value_from_callable: Whether to return the result of transaction or the value
+         returned from :paramref:`func`
 
         .. warning:: Cluster transactions can only be run with commands that
-           route to the same node.
+           route to the same slot.
         """
-        value_from_callable = kwargs.pop("value_from_callable", False)
-        watch_delay = kwargs.pop("watch_delay", None)
         async with await self.pipeline(True) as pipe:
             while True:
                 try:

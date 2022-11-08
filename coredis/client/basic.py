@@ -935,17 +935,21 @@ class Redis(Client[AnyStr]):
         self,
         func: Callable[["coredis.pipeline.Pipeline[AnyStr]"], Coroutine[Any, Any, Any]],
         *watches: KeyT,
+        value_from_callable: bool = False,
+        watch_delay: Optional[float] = None,
         **kwargs: Any,
     ) -> Optional[Any]:
         """
         Convenience method for executing the callable :paramref:`func` as a
         transaction while watching all keys specified in :paramref:`watches`.
-        The :paramref:`func` callable should expect a single argument which is a
-        :class:`coredis.pipeline.Pipeline` object retrieved by calling
-        :meth:`~coredis.Redis.pipeline`.
+
+        :param func: callable should expect a single argument which is a
+         :class:`coredis.pipeline.Pipeline` object retrieved by calling
+         :meth:`~coredis.Redis.pipeline`.
+        :param watches: The keys to watch during the transaction
+        :param value_from_callable: Whether to return the result of transaction or the value
+         returned from :paramref:`func`
         """
-        value_from_callable = kwargs.pop("value_from_callable", False)
-        watch_delay = kwargs.pop("watch_delay", None)
         async with await self.pipeline(True) as pipe:
             while True:
                 try:
