@@ -231,10 +231,6 @@ Sentinel Connection
    :show-inheritance:
    :class-doc-from: both
 
-Parser
-------
-
-.. autoclass:: coredis.parser.Parser
 
 Caching
 ^^^^^^^
