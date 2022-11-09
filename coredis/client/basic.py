@@ -922,10 +922,11 @@ class Redis(Client[AnyStr]):
     ) -> "coredis.pipeline.Pipeline[AnyStr]":
         """
         Returns a new pipeline object that can queue multiple commands for
-        later execution. :paramref:`transaction` indicates whether all commands
-        should be executed atomically. Apart from making a group of operations
-        atomic, pipelines are useful for reducing the back-and-forth overhead
-        between the client and server.
+        later execution.
+
+        :param transaction: indicates whether all commands should be executed atomically.
+        :param watches: If :paramref:`transaction` is True these keys are watched for external
+         changes during the transaction.
         """
         from coredis.pipeline import Pipeline
 

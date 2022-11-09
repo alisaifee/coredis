@@ -1019,6 +1019,11 @@ class RedisCluster(
         - Transactions are disabled by default and are only supported if all
           watched keys route to the same node as where the commands in the multi/exec
           part of the pipeline.
+
+        :param transaction: indicates whether all commands should be executed atomically.
+        :param watches: If :paramref:`transaction` is True these keys are watched for external
+         changes during the transaction.
+
         """
         await self.connection_pool.initialize()
 

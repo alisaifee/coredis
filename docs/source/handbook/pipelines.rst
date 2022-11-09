@@ -42,13 +42,11 @@ pipeline object itself. Which enable you to use it like the example provided.
 Atomicity & Transactions
 ^^^^^^^^^^^^^^^^^^^^^^^^
 In addition, pipelines can also ensure the buffered commands are executed
-atomically as a group. This happens by default. If you want to disable the
-atomic nature of a pipeline but still want to buffer commands, you can turn
-off transactions.
+atomically as a group by using the :paramref:`~coredis.Redis.pipeline.transaction` argument.
 
 .. code-block:: python
 
-    pipe = r.pipeline(transaction=False)
+    pipe = r.pipeline(transaction=True)
 
 A common issue occurs when requiring atomic transactions but needing to
 retrieve values in Redis prior for use within the transaction. For instance,
