@@ -1010,8 +1010,9 @@ class RedisCluster(
         watches: Optional[Parameters[StringT]] = None,
     ) -> "coredis.pipeline.ClusterPipeline[AnyStr]":
         """
-        Pipelines in cluster mode only provide a subset of the functionality
-        of pipelines in standalone mode.
+        Returns a new pipeline object that can queue multiple commands for
+        batch execution. Pipelines in cluster mode only provide a subset of the
+        functionality of pipelines in standalone mode.
 
         Specifically:
 

@@ -922,7 +922,7 @@ class Redis(Client[AnyStr]):
     ) -> "coredis.pipeline.Pipeline[AnyStr]":
         """
         Returns a new pipeline object that can queue multiple commands for
-        later execution.
+        batch execution.
 
         :param transaction: indicates whether all commands should be executed atomically.
         :param watches: If :paramref:`transaction` is True these keys are watched for external
