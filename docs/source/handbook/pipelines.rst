@@ -63,7 +63,7 @@ value from :rediscommand:`GET`.
 Enter the :rediscommand:`WATCH` command. :rediscommand:`WATCH` provides the ability to monitor one or more keys
 prior to starting a transaction. If any of those keys change prior the
 execution of that transaction, the entire transaction will be canceled and a
-WatchError will be raised. To implement our own client-side :rediscommand:`INCR` command, we
+:exc:`~coredis.exceptions.WatchError` will be raised. To implement our own client-side :rediscommand:`INCR` command, we
 could do something like this:
 
 .. code-block:: python
