@@ -3,6 +3,23 @@
 Changelog
 =========
 
+v4.9.0
+------
+Release Date: 2022-11-09
+
+* Feature
+
+  * Update implementation of transactional pipeline and the
+    behavior of the ``transaction`` method exposed by they cluster
+    client to be consistent with the standalone client.
+
+* Breaking changes
+
+  * Pipeline instances passed into the callable ``func`` parameter
+    of the cluster ``transaction`` method will no longer automatically
+    queue commands until a call to ``multi`` is issued to be consistent
+    with the implementation in the standalone client.
+
 v4.8.3
 ------
 Release Date: 2022-11-04
@@ -1288,4 +1305,5 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
