@@ -1062,6 +1062,14 @@ class RedisCluster(
 
         .. warning:: Cluster transactions can only be run with commands that
            route to the same slot.
+
+        .. versionchanged:: 4.9.0
+
+           When the transaction is started with :paramref:`watches` the
+           :class:`~coredis.pipeline.ClusterPipeline` instance passed to :paramref:`func`
+           will not start queuing commands until a call to
+           :meth:`~coredis.pipeline.ClusterPipeline.multi` is made. This makes the cluster
+           implementation consistent with :meth:`coredis.Redis.transaction`
         """
         async with await self.pipeline(True) as pipe:
             while True:
