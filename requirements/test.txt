@@ -9,7 +9,6 @@ pytest-cov
 pytest-env
 pytest-lazy-fixture
 pytest-mock
-pytest-rerunfailures
 pytest-reverse
 pytest-sentry
 redis
