@@ -2,7 +2,7 @@
 -r dev.txt
 furo==2022.9.29
 Sphinx==5.3.0
-sphinx-copybutton==0.5.0
+sphinx-copybutton==0.5.1
 sphinx-autobuild==2021.3.14
 sphinx-issues==3.0.1
 sphinxext-opengraph==0.7.2
