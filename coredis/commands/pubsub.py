@@ -42,6 +42,7 @@ T = TypeVar("T")
 PoolT = TypeVar("PoolT", bound="coredis.pool.ConnectionPool")
 PubSubHandler = Union[Callable[[PubSubMessage], Awaitable[None]], Callable[[PubSubMessage], None]]
 
+
 class BasePubSub(Generic[AnyStr, PoolT]):
     PUBLISH_MESSAGE_TYPES = {b"message", b"pmessage"}
     SUBUNSUB_MESSAGE_TYPES = {
