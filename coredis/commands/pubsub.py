@@ -40,7 +40,9 @@ T = TypeVar("T")
 
 
 PoolT = TypeVar("PoolT", bound="coredis.pool.ConnectionPool")
-PubSubHandler = Union[Callable[[PubSubMessage], Awaitable[None]], Callable[[PubSubMessage], None]]
+PubSubHandler = Union[
+    Callable[[PubSubMessage], Awaitable[None]], Callable[[PubSubMessage], None]
+]
 
 
 class BasePubSub(Generic[AnyStr, PoolT]):
@@ -233,9 +235,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         """
         await self._ensure_encoding()
 
-        new_patterns: MutableMapping[
-            StringT, Optional[PubSubHandler]
-        ] = {}
+        new_patterns: MutableMapping[StringT, Optional[PubSubHandler]] = {}
         new_patterns.update(dict.fromkeys(map(self.encode, patterns)))
 
         for pattern, handler in pattern_handlers.items():
@@ -269,9 +269,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
 
         await self._ensure_encoding()
 
-        new_channels: MutableMapping[
-            StringT, Optional[PubSubHandler]
-        ] = {}
+        new_channels: MutableMapping[StringT, Optional[PubSubHandler]] = {}
         new_channels.update(dict.fromkeys(map(self.encode, channels)))
 
         for channel, handler in channel_handlers.items():
@@ -508,9 +506,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         """
 
         await self._ensure_encoding()
-        new_channels: MutableMapping[
-            StringT, Optional[PubSubHandler]
-        ] = {}
+        new_channels: MutableMapping[StringT, Optional[PubSubHandler]] = {}
         new_channels.update(dict.fromkeys(map(self.encode, channels)))
 
         for channel, handler in channel_handlers.items():
