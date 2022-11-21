@@ -40,7 +40,7 @@ T = TypeVar("T")
 
 
 PoolT = TypeVar("PoolT", bound="coredis.pool.ConnectionPool")
-
+PubSubHandler = Callable[[PubSubMessage], Awaitable[None]] | Callable[[PubSubMessage], None]
 
 class BasePubSub(Generic[AnyStr, PoolT]):
     PUBLISH_MESSAGE_TYPES = {b"message", b"pmessage"}
@@ -54,8 +54,8 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         b"unsubscribe",
         b"punsubscribe",
     }
-    channels: MutableMapping[StringT, Optional[Callable[[PubSubMessage], None]]]
-    patterns: MutableMapping[StringT, Optional[Callable[[PubSubMessage], None]]]
+    channels: MutableMapping[StringT, Optional[PubSubHandler]]
+    patterns: MutableMapping[StringT, Optional[PubSubHandler]]
 
     def __init__(
         self,
@@ -298,7 +298,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         if self.subscribed:
             response = await self.parse_response(block=True)
             if response:
-                return self.handle_message(response)
+                return await self.handle_message(response)
         return None
 
     async def get_message(
@@ -317,11 +317,11 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         response = await self.parse_response(block=False, timeout=timeout)
 
         if response:
-            return self.handle_message(response, ignore_subscribe_messages)
+            return await self.handle_message(response, ignore_subscribe_messages)
 
         return None
 
-    def handle_message(
+    async def handle_message(
         self, response: ResponseType, ignore_subscribe_messages: bool = False
     ) -> Optional[PubSubMessage]:
         """
@@ -380,7 +380,10 @@ class BasePubSub(Generic[AnyStr, PoolT]):
                 handler = self.channels.get(message["channel"], None)
 
             if handler:
-                handler(message)
+                if asyncio.iscoroutinefunction(handler):
+                    await handler(message)
+                else:
+                    handler(message)
                 return None
         else:
             # this is a subscribe/unsubscribe message. ignore if we don't

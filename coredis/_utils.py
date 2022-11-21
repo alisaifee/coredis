@@ -496,7 +496,6 @@ class CaseAndEncodingInsensitiveEnum(bytes, enum.Enum):
     def __hash__(self) -> int:
         return hash(self.value)
 
-
 __all__ = [
     "hash_slot",
     "EncodingInsensitiveDict",
