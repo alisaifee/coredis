@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import threading
 from asyncio import CancelledError
 from concurrent.futures import Future
@@ -379,10 +380,9 @@ class BasePubSub(Generic[AnyStr, PoolT]):
                 handler = self.channels.get(message["channel"], None)
 
             if handler:
-                if asyncio.iscoroutinefunction(handler):
-                    await handler(message)
-                else:
-                    handler(message)
+                handler_response = handler(message)
+                if inspect.isawaitable(handler_response):
+                    await handler_response
                 return None
         else:
             # this is a subscribe/unsubscribe message. ignore if we don't
