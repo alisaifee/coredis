@@ -274,6 +274,9 @@ class TestPubSubMessages:
     def message_handler(self, message):
         self.message = message
 
+    async def async_message_handler(self, message):
+        self.message = message
+
     async def test_published_message_to_channel(self, client, _s):
         p = client.pubsub(ignore_subscribe_messages=True)
         await p.subscribe("foo")
@@ -350,9 +353,27 @@ class TestPubSubMessages:
         assert self.message == make_message("message", _s("foo"), _s("test message"))
         await p.unsubscribe("foo")
 
+    async def test_channel_async_message_handler(self, client, _s):
+        p = client.pubsub(ignore_subscribe_messages=True)
+        await p.subscribe(foo=self.async_message_handler)
+        assert await client.publish("foo", "test message")
+        assert await wait_for_message(p) is None
+        assert self.message == make_message("message", _s("foo"), _s("test message"))
+        await p.unsubscribe("foo")
+
     async def test_pattern_message_handler(self, client, _s):
         p = client.pubsub(ignore_subscribe_messages=True)
         await p.psubscribe(**{"f*": self.message_handler})
+        assert await client.publish("foo", "test message")
+        assert await wait_for_message(p) is None
+        assert self.message == make_message(
+            "pmessage", _s("foo"), _s("test message"), pattern=_s("f*")
+        )
+        await p.unsubscribe("foo")
+
+    async def test_pattern_async_message_handler(self, client, _s):
+        p = client.pubsub(ignore_subscribe_messages=True)
+        await p.psubscribe(**{"f*": self.async_message_handler})
         assert await client.publish("foo", "test message")
         assert await wait_for_message(p) is None
         assert self.message == make_message(
