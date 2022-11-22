@@ -120,6 +120,7 @@ PubSub
    ~coredis.commands.ClusterPubSub
    ~coredis.commands.ShardedPubSub
    ~coredis.commands.pubsub.PubSubWorkerThread
+   ~coredis.commands.pubsub.SubscriptionCallback
 
 .. autoclass:: coredis.commands.PubSub
    :class-doc-from: both
@@ -133,6 +134,8 @@ PubSub
 .. autoclass:: coredis.commands.pubsub.PubSubWorkerThread
    :no-inherited-members:
    :show-inheritance:
+
+.. autodata:: coredis.commands.pubsub.SubscriptionCallback
 
 
 Scripting
