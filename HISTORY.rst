@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v4.10.0
+-------
+Release Date: 2022-11-21
+
+* Feature
+
+  * Allow using async functions as callbacks for pubsub message
+    handlers
+
 v4.9.0
 ------
 Release Date: 2022-11-09
@@ -1305,5 +1314,6 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
