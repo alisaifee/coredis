@@ -96,7 +96,7 @@ The consumer is initialized in a similar manner as the standalone consumer, howe
 it requires at minimum the :paramref:`~coredis.stream.GroupConsumer.group` and
 :paramref:`~coredis.stream.GroupConsumer.consumer` attributes.
 
-The following two consumers will cooperatively consume from streams ``{a, b, c}``
+The following two consumers will cooperatively consume from streams ``{one, two, three}``
 without ever seeing an entry that the other has fetched::
 
     from coredis.stream import GroupConsumer
