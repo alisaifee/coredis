@@ -417,8 +417,8 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         Run the listeners in a thread. For each message received on a
         subscribed channel or pattern the registered handlers will be invoked.
 
-        To stop listening invoke :meth:`PubSubWorkerThread.stop` on the returned
-        instead of :class:`PubSubWorkerThread`.
+        To stop listening invoke :meth:`~coredis.commands.pubsub.PubSubWorkerThread.stop`
+        on the returned instance
         """
         for channel, handler in self.channels.items():
             if handler is None:
@@ -724,7 +724,6 @@ class PubSubWorkerThread(threading.Thread):
     def stop(self) -> None:
         """
         Stop the worker thread from processing any more messages
-        :return:
         """
         if self._future:
             self._future.cancel()
