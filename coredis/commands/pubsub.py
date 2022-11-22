@@ -62,16 +62,19 @@ class PubSubMessageTypes(CaseAndEncodingInsensitiveEnum):
 
 
 class BasePubSub(Generic[AnyStr, PoolT]):
-    PUBLISH_MESSAGE_TYPES = {PubSubMessageTypes.MESSAGE, PubSubMessageTypes.PMESSAGE}
+    PUBLISH_MESSAGE_TYPES = {
+        PubSubMessageTypes.MESSAGE.value,
+        PubSubMessageTypes.PMESSAGE.value,
+    }
     SUBUNSUB_MESSAGE_TYPES = {
-        PubSubMessageTypes.SUBSCRIBE,
-        PubSubMessageTypes.PSUBSCRIBE,
-        PubSubMessageTypes.UNSUBSCRIBE,
-        PubSubMessageTypes.PUNSUBSCRIBE,
+        PubSubMessageTypes.SUBSCRIBE.value,
+        PubSubMessageTypes.PSUBSCRIBE.value,
+        PubSubMessageTypes.UNSUBSCRIBE.value,
+        PubSubMessageTypes.PUNSUBSCRIBE.value,
     }
     UNSUBSCRIBE_MESSAGE_TYPES = {
-        PubSubMessageTypes.UNSUBSCRIBE,
-        PubSubMessageTypes.PUNSUBSCRIBE,
+        PubSubMessageTypes.UNSUBSCRIBE.value,
+        PubSubMessageTypes.PUNSUBSCRIBE.value,
     }
 
     channels: MutableMapping[StringT, Optional[SubscriptionCallback]]
@@ -491,12 +494,15 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
        **NOT** support pattern based subscriptions.
     """
 
-    PUBLISH_MESSAGE_TYPES = {PubSubMessageTypes.MESSAGE, PubSubMessageTypes.SMESSAGE}
-    SUBUNSUB_MESSAGE_TYPES = {
-        PubSubMessageTypes.SSUBSCRIBE,
-        PubSubMessageTypes.SUNSUBSCRIBE,
+    PUBLISH_MESSAGE_TYPES = {
+        PubSubMessageTypes.MESSAGE.value,
+        PubSubMessageTypes.SMESSAGE.value,
     }
-    UNSUBSCRIBE_MESSAGE_TYPES = {PubSubMessageTypes.SUNSUBSCRIBE}
+    SUBUNSUB_MESSAGE_TYPES = {
+        PubSubMessageTypes.SSUBSCRIBE.value,
+        PubSubMessageTypes.SUNSUBSCRIBE.value,
+    }
+    UNSUBSCRIBE_MESSAGE_TYPES = {PubSubMessageTypes.SUNSUBSCRIBE.value}
 
     def __init__(
         self,
