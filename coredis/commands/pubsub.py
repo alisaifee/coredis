@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from deprecated.sphinx import versionadded
 
-from coredis._utils import b, hash_slot, nativestr
+from coredis._utils import CaseAndEncodingInsensitiveEnum, b, hash_slot, nativestr
 from coredis.commands.constants import CommandName
 from coredis.connection import BaseConnection, Connection
 from coredis.exceptions import ConnectionError, PubSubError, TimeoutError
@@ -49,18 +49,31 @@ SubscriptionCallback = Union[
 ]
 
 
+class PubSubMessageTypes(CaseAndEncodingInsensitiveEnum):
+    MESSAGE = b"message"
+    PMESSAGE = b"pmessage"
+    SMESSAGE = b"smessage"
+    SUBSCRIBE = b"subscribe"
+    UNSUBSCRIBE = b"unsubscribe"
+    PSUBSCRIBE = b"psubscribe"
+    PUNSUBSCRIBE = b"punsubscribe"
+    SSUBSCRIBE = b"ssubscribe"
+    SUNSUBSCRIBE = b"sunsubscribe"
+
+
 class BasePubSub(Generic[AnyStr, PoolT]):
-    PUBLISH_MESSAGE_TYPES = {b"message", b"pmessage"}
+    PUBLISH_MESSAGE_TYPES = {PubSubMessageTypes.MESSAGE, PubSubMessageTypes.PMESSAGE}
     SUBUNSUB_MESSAGE_TYPES = {
-        b"subscribe",
-        b"psubscribe",
-        b"unsubscribe",
-        b"punsubscribe",
+        PubSubMessageTypes.SUBSCRIBE,
+        PubSubMessageTypes.PSUBSCRIBE,
+        PubSubMessageTypes.UNSUBSCRIBE,
+        PubSubMessageTypes.PUNSUBSCRIBE,
     }
     UNSUBSCRIBE_MESSAGE_TYPES = {
-        b"unsubscribe",
-        b"punsubscribe",
+        PubSubMessageTypes.UNSUBSCRIBE,
+        PubSubMessageTypes.PUNSUBSCRIBE,
     }
+
     channels: MutableMapping[StringT, Optional[SubscriptionCallback]]
     patterns: MutableMapping[StringT, Optional[SubscriptionCallback]]
 
@@ -350,7 +363,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
                 data=cast(int, r[2]),
             )
         elif message_type in self.PUBLISH_MESSAGE_TYPES:
-            if message_type == b"pmessage":
+            if message_type == PubSubMessageTypes.PMESSAGE:
                 message = PubSubMessage(
                     type="pmessage",
                     pattern=cast(StringT, r[1]),
@@ -369,7 +382,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
 
         # if this is an unsubscribe message, remove it from memory
         if message_type in self.UNSUBSCRIBE_MESSAGE_TYPES:
-            if message_type == b"punsubscribe":
+            if message_type == PubSubMessageTypes.PUNSUBSCRIBE:
                 subscribed_dict = self.patterns
             else:
                 subscribed_dict = self.channels
@@ -377,7 +390,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
 
         if message_type in self.PUBLISH_MESSAGE_TYPES:
             handler = None
-            if message_type == b"pmessage" and message["pattern"]:
+            if message_type == PubSubMessageTypes.PMESSAGE and message["pattern"]:
                 handler = self.patterns.get(message["pattern"], None)
             elif message["channel"]:
                 handler = self.channels.get(message["channel"], None)
@@ -478,9 +491,12 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
        **NOT** support pattern based subscriptions.
     """
 
-    PUBLISH_MESSAGE_TYPES = {b"message", b"smessage"}
-    SUBUNSUB_MESSAGE_TYPES = {b"ssubscribe", b"sunsubscribe"}
-    UNSUBSCRIBE_MESSAGE_TYPES = {b"sunsubscribe"}
+    PUBLISH_MESSAGE_TYPES = {PubSubMessageTypes.MESSAGE, PubSubMessageTypes.SMESSAGE}
+    SUBUNSUB_MESSAGE_TYPES = {
+        PubSubMessageTypes.SSUBSCRIBE,
+        PubSubMessageTypes.SUNSUBSCRIBE,
+    }
+    UNSUBSCRIBE_MESSAGE_TYPES = {PubSubMessageTypes.SUNSUBSCRIBE}
 
     def __init__(
         self,
