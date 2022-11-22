@@ -248,7 +248,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         expect a pattern name as the key and a callable as the value. A
         pattern's callable will be invoked automatically when a message is
         received on that pattern rather than producing a message via
-        ``listen()``.
+        :meth:`listen`.
         """
         await self._ensure_encoding()
 
@@ -280,8 +280,8 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         Subscribes to channels. Channels supplied as keyword arguments expect
         a channel name as the key and a callable as the value. A channel's
         callable will be invoked automatically when a message is received on
-        that channel rather than producing a message via ``listen()`` or
-        ``get_message()``.
+        that channel rather than producing a message via :meth:`listen` or
+        :meth:`get_message`.
         """
 
         await self._ensure_encoding()
@@ -520,8 +520,8 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         :param channel_handlers: Channels supplied as keyword arguments expect
          a channel name as the key and a callable as the value. A channel's
          callable will be invoked automatically when a message is received on
-         that channel rather than producing a message via ``listen()`` or
-         ``get_message()``.
+         that channel rather than producing a message via :meth:`listen` or
+         :meth:`get_message`.
         """
 
         await self._ensure_encoding()
