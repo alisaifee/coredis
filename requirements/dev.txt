@@ -2,7 +2,7 @@
 -r publishing.txt
 autoflake8==0.4.0
 black==22.10.0
-flake8==5.0.4
+flake8==6.0.0
 isort==5.10.1
 mypy==0.991; implementation_name!='pypy'
 pyright==1.1.249
