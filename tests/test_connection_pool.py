@@ -402,7 +402,8 @@ class TestConnectionPoolURLParsing:
             )
         # Compare the message values
         assert [
-            str(m.message) for m in sorted(warning_log, key=lambda l: str(l.message))
+            str(m.message)
+            for m in sorted(warning_log, key=lambda log: str(log.message))
         ] == [
             "Invalid value for `connect_timeout` in connection URL.",
             "Invalid value for `stream_timeout` in connection URL.",
