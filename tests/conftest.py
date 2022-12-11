@@ -67,19 +67,22 @@ def event_loop():
 
 async def get_version(client):
     if str(client) not in REDIS_VERSIONS:
-        if isinstance(client, coredis.RedisCluster):
-            await client
-            node = list(client.primaries).pop()
-            REDIS_VERSIONS[str(client)] = version.parse(
-                (await node.info())["redis_version"]
-            )
-        elif isinstance(client, coredis.sentinel.Sentinel):
-            REDIS_VERSIONS[str(client)] = version.parse(
-                (await client.sentinels[0].info())["redis_version"]
-            )
-        else:
-            version_string = (await client.info())["redis_version"]
-            REDIS_VERSIONS[str(client)] = version.parse(version_string)
+        try:
+            if isinstance(client, coredis.RedisCluster):
+                await client
+                node = list(client.primaries).pop()
+                REDIS_VERSIONS[str(client)] = version.parse(
+                    (await node.info())["redis_version"]
+                )
+            elif isinstance(client, coredis.sentinel.Sentinel):
+                REDIS_VERSIONS[str(client)] = version.parse(
+                    (await client.sentinels[0].info())["redis_version"]
+                )
+            else:
+                version_string = (await client.info())["redis_version"]
+                REDIS_VERSIONS[str(client)] = version.parse(version_string)
+        except version.InvalidVersion:
+            REDIS_VERSIONS[str(client)] = version.Version("0")
     return REDIS_VERSIONS[str(client)]
 
 
