@@ -71,28 +71,29 @@ async def get_version(client):
             if isinstance(client, coredis.RedisCluster):
                 await client
                 node = list(client.primaries).pop()
-                REDIS_VERSIONS[str(client)] = version.parse(
-                    (await node.info())["redis_version"]
-                )
+                version_string = (await node.info())["redis_version"]
+                REDIS_VERSIONS[str(client)] = version.parse(version_string)
             elif isinstance(client, coredis.sentinel.Sentinel):
-                REDIS_VERSIONS[str(client)] = version.parse(
-                    (await client.sentinels[0].info())["redis_version"]
-                )
+                version_string = (await client.sentinels[0].info())["redis_version"]
+                REDIS_VERSIONS[str(client)] = version.parse(version_string)
             else:
                 version_string = (await client.info())["redis_version"]
                 REDIS_VERSIONS[str(client)] = version.parse(version_string)
         except version.InvalidVersion:
-            REDIS_VERSIONS[str(client)] = version.Version("0")
+            REDIS_VERSIONS[str(client)] = version_string
+
     return REDIS_VERSIONS[str(client)]
 
 
 async def check_test_constraints(request, client, protocol=3):
     await get_version(client)
     client_version = REDIS_VERSIONS[str(client)]
+
     for marker in request.node.iter_markers():
         if marker.name == "min_python" and marker.args:
             if PY_VERSION < version.parse(marker.args[0]):
                 return pytest.skip(f"Skipped for python versions < {marker.args[0]}")
+
         if marker.name == "min_server_version" and marker.args:
             if client_version < version.parse(marker.args[0]):
                 return pytest.skip(f"Skipped for versions < {marker.args[0]}")
@@ -106,17 +107,21 @@ async def check_test_constraints(request, client, protocol=3):
 
         if marker.name == "replicated_clusteronly":
             is_cluster = isinstance(client, coredis.RedisCluster)
+
             if not is_cluster or not any(
                 node.server_type == "replica"
                 for _, node in client.connection_pool.nodes.nodes.items()
             ):
                 return pytest.skip("Skipped for non replicated cluster")
+
         if marker.name == "noruntimechecks" and RUNTIME_TYPECHECKS:
             return pytest.skip("Skipped with runtime checks enabled")
+
         if marker.name == "clusteronly" and not isinstance(
             client, coredis.RedisCluster
         ):
             return pytest.skip("Skipped for non redis cluster")
+
         if (
             marker.name == "os"
             and not marker.args[0].lower() == platform.system().lower()
@@ -134,20 +139,24 @@ async def check_test_constraints(request, client, protocol=3):
 
         if marker.name == "nodragonfly" and str(client_version).startswith("df"):
             return pytest.skip("Skipped for Dragonfly")
+
         if marker.name == "nopypy" and PY_IMPLEMENTATION == "PyPy":
             return pytest.skip("Skipped for PyPy")
+
         if marker.name == "pypyonly" and PY_IMPLEMENTATION != "PyPy":
             return pytest.skip("Skipped for !PyPy")
 
 
 async def set_default_test_config(client):
     await get_version(client)
+
     if isinstance(client, coredis.sentinel.Sentinel):
         if REDIS_VERSIONS[str(client)] >= version.parse("6.2.0"):
             await client.sentinels[0].sentinel_config_set("resolve-hostnames", "yes")
     else:
         await client.config_set({"maxmemory-policy": "noeviction"})
         await client.config_set({"latency-monitor-threshold": 10})
+
         if REDIS_VERSIONS[str(client)] >= version.parse("6.0.0"):
             await client.acl_log(reset=True)
 
@@ -155,12 +164,14 @@ async def set_default_test_config(client):
 def get_client_test_args(request):
     if "client_arguments" in request.fixturenames:
         return request.getfixturevalue("client_arguments")
+
     return {}
 
 
 def get_remapped_slots(request):
     if "cluster_remap_keyslots" in request.fixturenames:
         return request.getfixturevalue("cluster_remap_keyslots")
+
     return []
 
 
@@ -172,6 +183,7 @@ async def remapped_slots(client, request):
     destinations = {}
     originals = {}
     moves = {}
+
     for slot in slots:
         sources[slot] = client.connection_pool.nodes.node_from_slot(slot)
         destinations[slot] = [
@@ -188,6 +200,7 @@ async def remapped_slots(client, request):
     finally:
         if originals:
             await client.flushall()
+
             for slot in originals.keys():
                 [
                     await p.cluster_setslot(slot, node=originals[slot])
@@ -253,6 +266,7 @@ def docker_tags():
     )
 
     args = SERVER_DEFAULT_ARGS.get(redis_server_version, None)
+
     if args is not None:
         os.environ.setdefault("DEFAULT_ARGS", args)
 
@@ -293,6 +307,7 @@ def redis_ssl_server(docker_services):
 def redis_cluster_server(docker_services):
     docker_services.start("redis-cluster-init")
     docker_services.wait_for_service("redis-cluster-6", 7005, check_redis_cluster_ready)
+
     if os.environ.get("CI") == "True":
         time.sleep(10)
     yield ["localhost", 7000]
@@ -304,6 +319,7 @@ def redis_cluster_auth_server(docker_services):
     docker_services.wait_for_service(
         "redis-cluster-auth-1", 8500, lambda h, p: ping_socket("localhost", 8500)
     )
+
     if os.environ.get("CI") == "True":
         time.sleep(10)
     yield ["localhost", 8500]
@@ -315,6 +331,7 @@ def redis_cluster_noreplica_server(docker_services):
     docker_services.wait_for_service(
         "redis-cluster-noreplica-3", 8402, check_redis_cluster_ready
     )
+
     if os.environ.get("CI") == "True":
         time.sleep(10)
     yield ["localhost", 8400]
@@ -326,6 +343,7 @@ def redis_ssl_cluster_server(docker_services):
     docker_services.wait_for_service(
         "redis-ssl-cluster-6", 8306, lambda h, p: ping_socket("localhost", 8306)
     )
+
     if os.environ.get("CI") == "True":
         time.sleep(10)
     yield ["localhost", 8301]
@@ -352,6 +370,7 @@ def redis_sentinel_auth_server(docker_services):
 def redis_stack_server(docker_services):
     if os.environ.get("CI") == "True" and not os.environ.get("REDIS_STACK_VERSION"):
         pytest.skip("Redis stack tests skipped")
+
     if os.environ.get("CI") == "True":
         time.sleep(10)
     docker_services.start("redis-stack")
@@ -363,6 +382,7 @@ def redis_stack_server(docker_services):
 def keydb_server(docker_services):
     docker_services.start("keydb")
     docker_services.wait_for_service("keydb", 6379, ping_socket)
+
     if os.environ.get("CI") == "True":
         time.sleep(10)
     yield ["localhost", 10379]
@@ -379,6 +399,7 @@ def dragonfly_server(docker_services):
 def keydb_cluster_server(docker_services):
     docker_services.start("keydb-cluster-init")
     docker_services.wait_for_service("keydb-cluster-6", 8005, check_redis_cluster_ready)
+
     if os.environ.get("CI") == "True":
         time.sleep(10)
     yield
@@ -903,6 +924,7 @@ async def redis_sentinel(redis_sentinel_server, request):
     await check_test_constraints(request, master)
     await set_default_test_config(sentinel)
     await master.flushall()
+
     return sentinel
 
 
@@ -919,6 +941,7 @@ async def redis_sentinel_resp2(redis_sentinel_server, request):
     await check_test_constraints(request, master)
     await set_default_test_config(sentinel)
     await master.flushall()
+
     return sentinel
 
 
@@ -936,6 +959,7 @@ async def redis_sentinel_auth(redis_sentinel_auth_server, request):
     await set_default_test_config(sentinel)
     await master.flushall()
     await asyncio.sleep(0.1)
+
     return sentinel
 
 
@@ -1016,8 +1040,10 @@ def fake_redis():
             **options: Optional[ValueT],
         ) -> R:
             resp = self.responses.get(command, {}).get(args)
+
             if isinstance(resp, Exception):
                 raise resp
+
             return callback(resp, **options)
 
     return _()
@@ -1042,8 +1068,10 @@ def fake_redis_cluster():
             **options: Optional[ValueT],
         ) -> R:
             resp = self.responses.get(command, {}).get(args)
+
             if isinstance(resp, Exception):
                 raise resp
+
             return callback(resp, **options)
 
     return _()
@@ -1094,6 +1122,7 @@ def redis_server_time():
         if isinstance(client, coredis.RedisCluster):
             await client
             node = list(client.primaries).pop()
+
             return await node.time()
         elif isinstance(client, coredis.Redis):
             return await client.time()
@@ -1108,6 +1137,7 @@ def _s(client):
             return str(value)
         else:
             value = str(value)
+
             return value.encode(client.encoding)
 
     return str_or_bytes
@@ -1135,8 +1165,10 @@ def cloner():
                 encoding=client.encoding,
                 **kwargs,
             )
+
         if initialize:
             await c.ping()
+
         return c
 
     return _cloner
@@ -1149,6 +1181,7 @@ async def user_client(client, cloner):
     async def _user(name, *permissions):
         users.add(name)
         await client.acl_setuser(name, "nopass", *permissions)
+
         return await cloner(client, connection_kwargs={"username": name}, username=name)
 
     yield _user
@@ -1168,18 +1201,22 @@ def pytest_collection_modifyitems(items):
     for item in items:
         if hasattr(item, "callspec") and "client" in item.callspec.params:
             client_name = item.callspec.params["client"].name
+
             if client_name.startswith("redis_"):
                 tokens = client_name.replace("redis_", "").split("_")
+
                 for token in tokens:
                     item.add_marker(getattr(pytest.mark, token))
             elif client_name.startswith("keydb"):
                 item.add_marker(getattr(pytest.mark, "keydb"))
                 item.add_marker(getattr(pytest.mark, "xfail"))
                 tokens = client_name.replace("keydb_", "").split("_")
+
                 for token in tokens:
                     item.add_marker(getattr(pytest.mark, token))
             elif client_name.startswith("dragonfly"):
                 item.add_marker(getattr(pytest.mark, "dragonfly"))
                 tokens = client_name.replace("dragonfly_", "").split("_")
+
                 for token in tokens:
                     item.add_marker(getattr(pytest.mark, token))
