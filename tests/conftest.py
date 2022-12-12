@@ -6,6 +6,7 @@ import os
 import platform
 import socket
 import time
+from functools import total_ordering
 
 import pytest
 import redis
@@ -65,6 +66,21 @@ def event_loop():
     loop.close()
 
 
+@total_ordering
+class UnparseableVersion:
+    def __init__(self, version: str):
+        self.version = version
+
+    def __str__(self):
+        return self.version
+
+    def __eq__(self, other):
+        return str(other) == self.version
+
+    def __lt__(self, other):
+        return True
+
+
 async def get_version(client):
     if str(client) not in REDIS_VERSIONS:
         try:
@@ -80,7 +96,7 @@ async def get_version(client):
                 version_string = (await client.info())["redis_version"]
                 REDIS_VERSIONS[str(client)] = version.parse(version_string)
         except version.InvalidVersion:
-            REDIS_VERSIONS[str(client)] = version_string
+            REDIS_VERSIONS[str(client)] = UnparseableVersion(version_string)
 
     return REDIS_VERSIONS[str(client)]
 
