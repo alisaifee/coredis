@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v4.10.1
+-------
+Release Date: 2022-12-11
+
+* Compatibility
+
+  * Upgrade documentation dependencies
+  * Relax version contraint for packaging dependency
+
 v4.10.0
 -------
 Release Date: 2022-11-21
@@ -1314,6 +1323,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
