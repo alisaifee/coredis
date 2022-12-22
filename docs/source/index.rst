@@ -6,7 +6,7 @@ coredis
 
 .. container:: badges
 
-   .. image:: https://img.shields.io/github/workflow/status/alisaifee/coredis/CI?logo=github&style=for-the-badge&labelColor=#282828
+   .. image:: https://img.shields.io/github/actions/workflow/status/alisaifee/coredis/main.yml?logo=github&style=for-the-badge&labelColor=#282828
       :alt: CI status
       :target: https://github.com/alisaifee/coredis/actions?query=branch%3Amaster+workflow%3ACI
       :class: header-badge
