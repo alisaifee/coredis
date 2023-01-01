@@ -13,7 +13,7 @@ from theme_config import *
 
 master_doc = "index"
 project = "coredis"
-copyright = "2107, NoneGG | 2022, Ali-Akber Saifee"
+copyright = "2107, NoneGG | 2023, Ali-Akber Saifee"
 author = "alisaifee"
 description = "Async redis client for python"
 

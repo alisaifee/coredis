@@ -8,7 +8,7 @@ import versioneer
 
 __author__ = "Ali-Akber Saifee"
 __email__ = "ali@indydevs.org"
-__copyright__ = "Copyright 2022, Ali-Akber Saifee"
+__copyright__ = "Copyright 2023, Ali-Akber Saifee"
 
 from setuptools import find_packages, setup
 from setuptools.command.build_ext import build_ext
