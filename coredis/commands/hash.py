@@ -53,7 +53,7 @@ class HashCommandMixin:
     async def hincrby(self, key, field, amount=1):
         """Increments the value of ``field`` in hash ``key`` by ``amount``"""
 
-        return await self.execute_command("HINCRBY", key, key, amount)
+        return await self.execute_command("HINCRBY", key, field, amount)
 
     async def hincrbyfloat(self, key, field, amount=1.0):
         """
