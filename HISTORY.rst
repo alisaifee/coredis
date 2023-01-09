@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v2.3.2
+------
+Release Date: 2023-01-09
+
+Bug Fix:
+
+    * Fix incorrect argument (key instead of field) used for
+      hincrby command
+
 v2.3.1
 ------
 Release Date: 2022-01-30
@@ -241,6 +250,7 @@ v1.0.1
     * fix bug of `PubSub.run_in_thread`
     * add more examples
     * change `Script.register` to `Script.execute`
+
 
 
 
