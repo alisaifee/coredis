@@ -1093,6 +1093,15 @@ Release Date: 2022-03-20
     * ``client_tracking`` -> ``*prefixes`` - > ``prefixes: Iterable[ValueT]``
     * ``info`` -> ``*sections`` - > ``sections: Iterable[ValueT]``
 
+v2.3.2
+------
+Release Date: 2023-01-09
+
+Bug Fix:
+
+    * Fix incorrect argument (key instead of field) used for
+      hincrby command
+
 v2.3.1
 ------
 Release Date: 2022-01-30
