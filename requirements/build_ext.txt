@@ -1,4 +1,4 @@
 beartype
 mypy==0.991
-packaging>=21,<23
+packaging>=21,<24
 types-deprecated
