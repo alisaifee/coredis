@@ -56,23 +56,21 @@ try:
     import beartype  # pyright: reportUnusedImport=false
 
     if not TYPE_CHECKING:
-        from beartype.typing import (  # noqa: F811
-            AbstractSet,
-            Deque,
-            Dict,
-            Iterable,
-            Iterator,
-            List,
-            Mapping,
-            MutableMapping,
-            MutableSequence,
-            MutableSet,
-            OrderedDict,
-            Sequence,
-            Set,
-            Tuple,
-            ValuesView,
-        )
+        from beartype.typing import AbstractSet  # noqa: F811
+        from beartype.typing import Deque  # noqa: F811
+        from beartype.typing import Dict  # noqa: F811
+        from beartype.typing import Iterable  # noqa: F811
+        from beartype.typing import Iterator  # noqa: F811
+        from beartype.typing import List  # noqa: F811
+        from beartype.typing import Mapping  # noqa: F811
+        from beartype.typing import MutableMapping  # noqa: F811
+        from beartype.typing import MutableSequence  # noqa: F811
+        from beartype.typing import MutableSet  # noqa: F811
+        from beartype.typing import OrderedDict  # noqa: F811
+        from beartype.typing import Sequence  # noqa: F811
+        from beartype.typing import Set  # noqa: F811
+        from beartype.typing import Tuple  # noqa: F811
+        from beartype.typing import ValuesView  # noqa: F811
 
     _beartype_found = True
 except ImportError:  # pragma: no cover

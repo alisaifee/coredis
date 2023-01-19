@@ -1,0 +1,4 @@
+[tool.ruff]
+line-length=100
+exclude = ["doc/**","_version.py","versioneer.py", "coredis/pipeline.pyi"]
+typing-modules = ["coredis.typing"]

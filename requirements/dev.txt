@@ -1,9 +1,7 @@
 -r test.txt
 -r publishing.txt
-autoflake8==0.4.0
 black==22.12.0
-flake8==6.0.0;python_version>"3.7"
-flake8==5.0.0;python_version=="3.7"
+ruff
 isort==5.11.4
 mypy==0.991; implementation_name!='pypy'
 pyright==1.1.249
