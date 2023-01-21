@@ -24,7 +24,7 @@ class Monitor(Generic[AnyStr]):
     It can be used as an infinite async iterator::
 
         async for command in client.monitor():
-            print(command.time, command.type, command.command, command.args)
+            print(command.time, command.client_type, command.command, command.args)
 
     Alternatively, each command can be fetched explicitly::
 
