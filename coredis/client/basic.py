@@ -787,7 +787,7 @@ class Redis(Client[AnyStr]):
             )
         try:
             if self.cache and command not in READONLY_COMMANDS:
-                self.cache.invalidate(*KeySpec.extract_keys((command,) + args))
+                self.cache.invalidate(*KeySpec.extract_keys(command, *args))
             request = await connection.create_request(
                 command,
                 *args,

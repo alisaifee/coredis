@@ -601,7 +601,7 @@ class BaseConnection(asyncio.BaseProtocol):
 
         self._send_packed_command(
             self.packer.pack_commands(
-                list(itertools.chain((cmd.command,) + cmd.args for cmd in commands))
+                list(itertools.chain((cmd.command, *cmd.args) for cmd in commands))
             )
         )
 

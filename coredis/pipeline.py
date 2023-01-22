@@ -1050,7 +1050,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
     def _determine_slot(self, command: bytes, *args: ValueT) -> int:
         """Figure out what slot based on command and args"""
 
-        keys: Tuple[ValueT, ...] = KeySpec.extract_keys((command,) + args)
+        keys: Tuple[ValueT, ...] = KeySpec.extract_keys(command, *args)
 
         if not keys:
             raise RedisClusterException(

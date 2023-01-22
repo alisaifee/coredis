@@ -570,7 +570,7 @@ class RedisCluster(
     def _determine_slot(self, command: bytes, *args: ValueT) -> Optional[int]:
         """Figures out what slot based on command and args"""
         keys = KeySpec.extract_keys(
-            (command,) + args, self.connection_pool.read_from_replicas
+            command, *args, readonly_command=self.connection_pool.read_from_replicas
         )
         if (
             command
@@ -718,7 +718,7 @@ class RedisCluster(
                     self.cache.reset()
                     await r.update_tracking_client(True, self.cache.get_client_id(r))
                 if self.cache and command not in READONLY_COMMANDS:
-                    self.cache.invalidate(*KeySpec.extract_keys((command,) + args))
+                    self.cache.invalidate(*KeySpec.extract_keys(command, *args))
                 request = await r.create_request(
                     command,
                     *args,
@@ -790,7 +790,7 @@ class RedisCluster(
         node_arg_mapping: Dict[str, List[Tuple[ValueT, ...]]] = {}
         _nodes = list(nodes)
         if command in self.split_flags and self.non_atomic_cross_slot:
-            keys = KeySpec.extract_keys((command,) + args)
+            keys = KeySpec.extract_keys(command, *args)
             if keys:
                 key_start: int = args.index(keys[0])
                 key_end: int = args.index(keys[-1])

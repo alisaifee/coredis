@@ -389,7 +389,7 @@ class KeySpec:
 
     @classmethod
     def extract_keys(
-        cls, arguments: Tuple[ValueT, ...], readonly_command: bool = False
+        cls, *arguments: ValueT, readonly_command: bool = False
     ) -> Tuple[ValueT, ...]:
         if len(arguments) <= 1:
             return ()

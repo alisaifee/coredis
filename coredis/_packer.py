@@ -26,14 +26,15 @@ class Packer:
         # arguments to be sent separately, so split the first argument
         # manually. All of these arguements get wrapped in the Token class
         # to prevent them from being encoded.
+        cleaned_args = args
         if b" " in command:
-            args = tuple(s for s in command.split()) + args
+            cleaned_args = tuple(s for s in command.split()) + cleaned_args
         else:
-            args = (command,) + args
+            cleaned_args = (command,) + cleaned_args
 
-        buff = SYM_EMPTY.join((SYM_STAR, b"%d" % len(args), SYM_CRLF))
+        buff = SYM_EMPTY.join((SYM_STAR, b"%d" % len(cleaned_args), SYM_CRLF))
 
-        for arg in args:
+        for arg in cleaned_args:
             if not isinstance(arg, bytes):
                 arg = self.encode(arg)
             # to avoid large string mallocs, chunk the command into the
