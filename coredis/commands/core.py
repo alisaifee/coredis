@@ -269,29 +269,32 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: the value of :paramref:`key`, or ``None`` when :paramref:`key` does not exist.
         """
 
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if ex is not None:
-            pieces.append("EX")
-            pieces.append(normalized_seconds(ex))
+            command_arguments.append("EX")
+            command_arguments.append(normalized_seconds(ex))
 
         if px is not None:
-            pieces.append("PX")
-            pieces.append(normalized_milliseconds(px))
+            command_arguments.append("PX")
+            command_arguments.append(normalized_milliseconds(px))
 
         if exat is not None:
-            pieces.append("EXAT")
-            pieces.append(normalized_time_seconds(exat))
+            command_arguments.append("EXAT")
+            command_arguments.append(normalized_time_seconds(exat))
 
         if pxat is not None:
-            pieces.append("PXAT")
-            pieces.append(normalized_time_milliseconds(pxat))
+            command_arguments.append("PXAT")
+            command_arguments.append(normalized_time_milliseconds(pxat))
 
         if persist:
-            pieces.append(PureToken.PERSIST)
+            command_arguments.append(PureToken.PERSIST)
 
         return await self.execute_command(
-            CommandName.GETEX, key, *pieces, callback=OptionalAnyStrCallback[AnyStr]()
+            CommandName.GETEX,
+            key,
+            *command_arguments,
+            callback=OptionalAnyStrCallback[AnyStr](),
         )
 
     @redis_command(
@@ -430,23 +433,23 @@ class CoreCommands(CommandMixin[AnyStr]):
            will contain the length of the match.
 
         """
-        pieces: CommandArgList = [key1, key2]
+        command_arguments: CommandArgList = [key1, key2]
 
         if len_ is not None:
-            pieces.append(PureToken.LEN)
+            command_arguments.append(PureToken.LEN)
 
         if idx is not None:
-            pieces.append(PureToken.IDX)
+            command_arguments.append(PureToken.IDX)
 
         if minmatchlen is not None:
-            pieces.extend([PrefixToken.MINMATCHLEN, minmatchlen])
+            command_arguments.extend([PrefixToken.MINMATCHLEN, minmatchlen])
 
         if withmatchlen is not None:
-            pieces.append(PureToken.WITHMATCHLEN)
+            command_arguments.append(PureToken.WITHMATCHLEN)
         if idx is not None:
             return await self.execute_command(
                 CommandName.LCS,
-                *pieces,
+                *command_arguments,
                 callback=LCSCallback[AnyStr](),
                 **{
                     "len": len_,
@@ -458,11 +461,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         else:
             if len_ is not None:
                 return await self.execute_command(
-                    CommandName.LCS, *pieces, callback=IntCallback()
+                    CommandName.LCS, *command_arguments, callback=IntCallback()
                 )
             else:
                 return await self.execute_command(
-                    CommandName.LCS, *pieces, callback=AnyStrCallback[AnyStr]()
+                    CommandName.LCS,
+                    *command_arguments,
+                    callback=AnyStrCallback[AnyStr](),
                 )
 
     @ensure_iterable_valid("keys")
@@ -608,35 +613,38 @@ class CoreCommands(CommandMixin[AnyStr]):
             stored at :paramref:`key` is return regardless of success or failure
             - except if the :paramref:`key` was not found.
         """
-        pieces: CommandArgList = [key, value]
+        command_arguments: CommandArgList = [key, value]
 
         if ex is not None:
-            pieces.append("EX")
-            pieces.append(normalized_seconds(ex))
+            command_arguments.append("EX")
+            command_arguments.append(normalized_seconds(ex))
 
         if px is not None:
-            pieces.append("PX")
-            pieces.append(normalized_milliseconds(px))
+            command_arguments.append("PX")
+            command_arguments.append(normalized_milliseconds(px))
 
         if exat is not None:
-            pieces.append("EXAT")
-            pieces.append(normalized_time_seconds(exat))
+            command_arguments.append("EXAT")
+            command_arguments.append(normalized_time_seconds(exat))
 
         if pxat is not None:
-            pieces.append("PXAT")
-            pieces.append(normalized_time_milliseconds(pxat))
+            command_arguments.append("PXAT")
+            command_arguments.append(normalized_time_milliseconds(pxat))
 
         if keepttl:
-            pieces.append(PureToken.KEEPTTL)
+            command_arguments.append(PureToken.KEEPTTL)
 
         if get:
-            pieces.append(PureToken.GET)
+            command_arguments.append(PureToken.GET)
 
         if condition:
-            pieces.append(condition)
+            command_arguments.append(condition)
 
         return await self.execute_command(
-            CommandName.SET, *pieces, get=get, callback=StringSetCallback[AnyStr]()
+            CommandName.SET,
+            *command_arguments,
+            get=get,
+            callback=StringSetCallback[AnyStr](),
         )
 
     @redis_command(
@@ -752,13 +760,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Assign new hash slots to receiving node
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         for slot in slots:
-            pieces.extend(slot)
+            command_arguments.extend(slot)
 
         return await self.execute_command(
-            CommandName.CLUSTER_ADDSLOTSRANGE, *pieces, callback=BoolCallback()
+            CommandName.CLUSTER_ADDSLOTSRANGE,
+            *command_arguments,
+            callback=BoolCallback(),
         )
 
     @versionadded(version="3.0.0")
@@ -879,13 +889,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         Forces a replica to perform a manual failover of its master.
         """
 
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if options is not None:
-            pieces.append(options)
+            command_arguments.append(options)
 
         return await self.execute_command(
-            CommandName.CLUSTER_FAILOVER, *pieces, callback=SimpleStringCallback()
+            CommandName.CLUSTER_FAILOVER,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )
 
     @versionadded(version="3.0.0")
@@ -929,11 +941,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: :paramref:`count` key names
 
         """
-        pieces: CommandArgList = [slot, count]
+        command_arguments: CommandArgList = [slot, count]
 
         return await self.execute_command(
             CommandName.CLUSTER_GETKEYSINSLOT,
-            *pieces,
+            *command_arguments,
             slot_id=slot,
             callback=TupleCallback[AnyStr](),
         )
@@ -997,11 +1009,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         Force a node cluster to handshake with another node.
         """
 
-        pieces: CommandArgList = [ip, port]
+        command_arguments: CommandArgList = [ip, port]
         if cluster_bus_port is not None:
-            pieces.append(cluster_bus_port)
+            command_arguments.append(cluster_bus_port)
         return await self.execute_command(
-            CommandName.CLUSTER_MEET, *pieces, callback=SimpleStringCallback()
+            CommandName.CLUSTER_MEET,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )
 
     @versionadded(version="3.1.1")
@@ -1054,13 +1068,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         Reset a Redis Cluster node
         """
 
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if hard_soft is not None:
-            pieces.append(hard_soft)
+            command_arguments.append(hard_soft)
 
         return await self.execute_command(
-            CommandName.CLUSTER_RESET, *pieces, callback=SimpleStringCallback()
+            CommandName.CLUSTER_RESET,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )
 
     @redis_command(
@@ -1113,22 +1129,25 @@ class CoreCommands(CommandMixin[AnyStr]):
         Bind a hash slot to a specific node
         """
 
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if importing is not None:
-            pieces.extend([PrefixToken.IMPORTING, importing])
+            command_arguments.extend([PrefixToken.IMPORTING, importing])
 
         if migrating is not None:
-            pieces.extend([PrefixToken.MIGRATING, migrating])
+            command_arguments.extend([PrefixToken.MIGRATING, migrating])
 
         if node is not None:
-            pieces.extend([PrefixToken.NODE, node])
+            command_arguments.extend([PrefixToken.NODE, node])
 
         if stable is not None:
-            pieces.append(PureToken.STABLE)
+            command_arguments.append(PureToken.STABLE)
 
         return await self.execute_command(
-            CommandName.CLUSTER_SETSLOT, slot, *pieces, callback=SimpleStringCallback()
+            CommandName.CLUSTER_SETSLOT,
+            slot,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )
 
     @redis_command(
@@ -1239,14 +1258,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Authenticate to the server
         """
-        pieces: CommandArgList = []
-        pieces.append(password)
+        command_arguments: CommandArgList = []
+        command_arguments.append(password)
 
         if username is not None:
-            pieces.append(username)
+            command_arguments.append(username)
 
         return await self.execute_command(
-            CommandName.AUTH, *pieces, callback=SimpleStringCallback()
+            CommandName.AUTH, *command_arguments, callback=SimpleStringCallback()
         )
 
     @redis_command(
@@ -1284,23 +1303,23 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :return: a mapping of server properties.
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if protover is not None:
-            pieces.append(protover)
+            command_arguments.append(protover)
 
         if password:
-            pieces.append("AUTH")
-            pieces.append(username or "default")
-            pieces.append(password)
+            command_arguments.append("AUTH")
+            command_arguments.append(username or "default")
+            command_arguments.append(password)
 
         if setname is not None:
-            pieces.append(PrefixToken.SETNAME)
-            pieces.append(setname)
+            command_arguments.append(PrefixToken.SETNAME)
+            command_arguments.append(setname)
 
         return await self.execute_command(
             CommandName.HELLO,
-            *pieces,
+            *command_arguments,
             callback=DictCallback[AnyStr, AnyStr](),
         )
 
@@ -1320,13 +1339,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: ``PONG``, when no argument is provided else the
          :paramref:`message` provided
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if message:
-            pieces.append(message)
+            command_arguments.append(message)
 
         return await self.execute_command(
-            CommandName.PING, *pieces, callback=AnyStrCallback[AnyStr]()
+            CommandName.PING, *command_arguments, callback=AnyStrCallback[AnyStr]()
         )
 
     @versionadded(version="3.0.0")
@@ -1401,18 +1420,18 @@ class CoreCommands(CommandMixin[AnyStr]):
          is the number of elements that were changed.
 
         """
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
 
         if condition is not None:
-            pieces.append(condition)
+            command_arguments.append(condition)
 
         if change is not None:
-            pieces.append(PureToken.CHANGE)
+            command_arguments.append(PureToken.CHANGE)
 
-        pieces.extend(tuples_to_flat_list(longitude_latitude_members))
+        command_arguments.extend(tuples_to_flat_list(longitude_latitude_members))
 
         return await self.execute_command(
-            CommandName.GEOADD, *pieces, callback=IntCallback()
+            CommandName.GEOADD, *command_arguments, callback=IntCallback()
         )
 
     @redis_command(
@@ -1434,13 +1453,13 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :return: Distance in the unit specified by :paramref:`unit`
         """
-        pieces: CommandArgList = [key, member1, member2]
+        command_arguments: CommandArgList = [key, member1, member2]
 
         if unit:
-            pieces.append(unit.lower())
+            command_arguments.append(unit.lower())
 
         return await self.execute_command(
-            CommandName.GEODIST, *pieces, callback=OptionalFloatCallback()
+            CommandName.GEODIST, *command_arguments, callback=OptionalFloatCallback()
         )
 
     @ensure_iterable_valid("members")
@@ -1703,43 +1722,43 @@ class CoreCommands(CommandMixin[AnyStr]):
         store: Optional[KeyT] = None,
         storedist: Optional[KeyT] = None,
     ) -> Union[int, Tuple[Union[AnyStr, GeoSearchResult], ...]]:
-        pieces: CommandArgList = list(args)
+        command_arguments: CommandArgList = list(args)
         options: Dict[str, ValueT] = {}
         if unit:
-            pieces.append(unit.lower())
+            command_arguments.append(unit.lower())
 
         if withdist:
-            pieces.append(PureToken.WITHDIST)
+            command_arguments.append(PureToken.WITHDIST)
             options["withdist"] = withdist
         if withcoord:
-            pieces.append(PureToken.WITHCOORD)
+            command_arguments.append(PureToken.WITHCOORD)
             options["withcoord"] = withcoord
         if withhash:
-            pieces.append(PureToken.WITHHASH)
+            command_arguments.append(PureToken.WITHHASH)
             options["withhash"] = withhash
 
         if count is not None:
-            pieces.extend(["COUNT", count])
+            command_arguments.extend(["COUNT", count])
             options["count"] = count
 
             if any_:
-                pieces.append(PureToken.ANY)
+                command_arguments.append(PureToken.ANY)
                 options["any_"] = any_
 
         if order:
-            pieces.append(order)
+            command_arguments.append(order)
             options["order"] = order
 
         if store:
-            pieces.extend([PrefixToken.STORE, store])
+            command_arguments.extend([PrefixToken.STORE, store])
             options["store"] = store
 
         if storedist:
-            pieces.extend([PrefixToken.STOREDIST, storedist])
+            command_arguments.extend([PrefixToken.STOREDIST, storedist])
             options["storedist"] = storedist
 
         return await self.execute_command(
-            command, *pieces, **options, callback=GeoSearchCallback[AnyStr]()
+            command, *command_arguments, **options, callback=GeoSearchCallback[AnyStr]()
         )
 
     @mutually_inclusive_parameters("longitude", "latitude")
@@ -1919,34 +1938,34 @@ class CoreCommands(CommandMixin[AnyStr]):
         any_: Optional[bool] = None,
         **kwargs: Optional[ValueT],
     ) -> Union[int, Tuple[Union[AnyStr, GeoSearchResult], ...]]:
-        pieces: CommandArgList = list(args)
+        command_arguments: CommandArgList = list(args)
 
         if member:
-            pieces.extend([PrefixToken.FROMMEMBER, member])
+            command_arguments.extend([PrefixToken.FROMMEMBER, member])
 
         if longitude is not None and latitude is not None:
-            pieces.extend([PrefixToken.FROMLONLAT, longitude, latitude])
+            command_arguments.extend([PrefixToken.FROMLONLAT, longitude, latitude])
 
         # BYRADIUS or BYBOX
         if unit is None:
             raise DataError("GEOSEARCH must have unit")
 
         if radius is not None:
-            pieces.extend([PrefixToken.BYRADIUS, radius, unit.lower()])
+            command_arguments.extend([PrefixToken.BYRADIUS, radius, unit.lower()])
 
         if width is not None and height is not None:
-            pieces.extend([PrefixToken.BYBOX, width, height, unit.lower()])
+            command_arguments.extend([PrefixToken.BYBOX, width, height, unit.lower()])
 
         # sort
         if order:
-            pieces.append(order)
+            command_arguments.append(order)
 
         # count any
         if count is not None:
-            pieces.extend([PrefixToken.COUNT, count])
+            command_arguments.extend([PrefixToken.COUNT, count])
 
             if any_:
-                pieces.append(PureToken.ANY)
+                command_arguments.append(PureToken.ANY)
 
         # other properties
 
@@ -1957,15 +1976,18 @@ class CoreCommands(CommandMixin[AnyStr]):
             ("storedist", PureToken.STOREDIST),
         ):
             if kwargs[arg_name]:
-                pieces.append(byte_repr)
+                command_arguments.append(byte_repr)
 
         if command == CommandName.GEOSEARCHSTORE:
             return await self.execute_command(
-                command, *pieces, **kwargs, callback=IntCallback()
+                command, *command_arguments, **kwargs, callback=IntCallback()
             )
         else:
             return await self.execute_command(
-                command, *pieces, **kwargs, callback=GeoSearchCallback[AnyStr]()
+                command,
+                *command_arguments,
+                **kwargs,
+                callback=GeoSearchCallback[AnyStr](),
             )
 
     @ensure_iterable_valid("fields")
@@ -2110,13 +2132,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         key and value from the ``field_items`` dict.
         """
 
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         for pair in field_values.items():
-            pieces.extend(pair)
+            command_arguments.extend(pair)
 
         return await self.execute_command(
-            CommandName.HMSET, key, *pieces, callback=SimpleStringCallback()
+            CommandName.HMSET, key, *command_arguments, callback=SimpleStringCallback()
         )
 
     @ensure_iterable_valid("fields")
@@ -2172,16 +2194,16 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param match: allows for filtering the keys by pattern
         :param count: allows for hint the minimum number of returns
         """
-        pieces: CommandArgList = [key, cursor or "0"]
+        command_arguments: CommandArgList = [key, cursor or "0"]
 
         if match is not None:
-            pieces.extend([PrefixToken.MATCH, match])
+            command_arguments.extend([PrefixToken.MATCH, match])
 
         if count is not None:
-            pieces.extend([PrefixToken.COUNT, count])
+            command_arguments.extend([PrefixToken.COUNT, count])
 
         return await self.execute_command(
-            CommandName.HSCAN, *pieces, callback=HScanCallback[AnyStr]()
+            CommandName.HSCAN, *command_arguments, callback=HScanCallback[AnyStr]()
         )
 
     @redis_command(
@@ -2276,13 +2298,13 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :return: Whether atleast 1 HyperLogLog internal register was altered
         """
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
 
         if elements:
-            pieces.extend(elements)
+            command_arguments.extend(elements)
 
         return await self.execute_command(
-            CommandName.PFADD, *pieces, callback=BoolCallback()
+            CommandName.PFADD, *command_arguments, callback=BoolCallback()
         )
 
     @ensure_iterable_valid("keys")
@@ -2332,16 +2354,20 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Copy a key
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if db is not None:
-            pieces.extend([PrefixToken.DB, db])
+            command_arguments.extend([PrefixToken.DB, db])
 
         if replace:
-            pieces.append(PureToken.REPLACE)
+            command_arguments.append(PureToken.REPLACE)
 
         return await self.execute_command(
-            CommandName.COPY, source, destination, *pieces, callback=BoolCallback()
+            CommandName.COPY,
+            source,
+            destination,
+            *command_arguments,
+            callback=BoolCallback(),
         )
 
     @ensure_iterable_valid("keys")
@@ -2418,13 +2444,13 @@ class CoreCommands(CommandMixin[AnyStr]):
          e.g. key doesn't exist, or operation skipped due to the provided arguments.
         """
 
-        pieces: CommandArgList = [key, normalized_seconds(seconds)]
+        command_arguments: CommandArgList = [key, normalized_seconds(seconds)]
 
         if condition is not None:
-            pieces.append(condition)
+            command_arguments.append(condition)
 
         return await self.execute_command(
-            CommandName.EXPIRE, *pieces, callback=BoolCallback()
+            CommandName.EXPIRE, *command_arguments, callback=BoolCallback()
         )
 
     @redis_command(
@@ -2450,13 +2476,16 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         """
 
-        pieces: CommandArgList = [key, normalized_time_seconds(unix_time_seconds)]
+        command_arguments: CommandArgList = [
+            key,
+            normalized_time_seconds(unix_time_seconds),
+        ]
 
         if condition is not None:
-            pieces.append(condition)
+            command_arguments.append(condition)
 
         return await self.execute_command(
-            CommandName.EXPIREAT, *pieces, callback=BoolCallback()
+            CommandName.EXPIREAT, *command_arguments, callback=BoolCallback()
         )
 
     @versionadded(version="3.0.0")
@@ -2527,25 +2556,25 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         if not keys:
             raise DataError("MIGRATE requires at least one key")
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if copy:
-            pieces.append(PureToken.COPY)
+            command_arguments.append(PureToken.COPY)
 
         if replace:
-            pieces.append(PureToken.REPLACE)
+            command_arguments.append(PureToken.REPLACE)
 
         if auth:
-            pieces.append("AUTH")
-            pieces.append(auth)
+            command_arguments.append("AUTH")
+            command_arguments.append(auth)
 
         if username and password:
-            pieces.append("AUTH2")
-            pieces.append(username)
-            pieces.append(password)
+            command_arguments.append("AUTH2")
+            command_arguments.append(username)
+            command_arguments.append(password)
 
-        pieces.append("KEYS")
-        pieces.extend(keys)
+        command_arguments.append("KEYS")
+        command_arguments.extend(keys)
 
         return await self.execute_command(
             CommandName.MIGRATE,
@@ -2554,7 +2583,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             b"",
             destination_db,
             timeout,
-            *pieces,
+            *command_arguments,
             callback=SimpleStringCallback(),
         )
 
@@ -2664,13 +2693,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: if the timeout was set or not.
          e.g. key doesn't exist, or operation skipped due to the provided arguments.
         """
-        pieces: CommandArgList = [key, normalized_milliseconds(milliseconds)]
+        command_arguments: CommandArgList = [key, normalized_milliseconds(milliseconds)]
 
         if condition is not None:
-            pieces.append(condition)
+            command_arguments.append(condition)
 
         return await self.execute_command(
-            CommandName.PEXPIRE, *pieces, callback=BoolCallback()
+            CommandName.PEXPIRE, *command_arguments, callback=BoolCallback()
         )
 
     @redis_command(
@@ -2694,16 +2723,16 @@ class CoreCommands(CommandMixin[AnyStr]):
          e.g. key doesn't exist, or operation skipped due to the provided arguments.
         """
 
-        pieces: CommandArgList = [
+        command_arguments: CommandArgList = [
             key,
             normalized_time_milliseconds(unix_time_milliseconds),
         ]
 
         if condition is not None:
-            pieces.append(condition)
+            command_arguments.append(condition)
 
         return await self.execute_command(
-            CommandName.PEXPIREAT, *pieces, callback=BoolCallback()
+            CommandName.PEXPIREAT, *command_arguments, callback=BoolCallback()
         )
 
     @versionadded(version="3.0.0")
@@ -2854,35 +2883,38 @@ class CoreCommands(CommandMixin[AnyStr]):
          sorted elements in the destination list.
         """
 
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
         options = {}
 
         if by is not None:
-            pieces.append(PrefixToken.BY)
-            pieces.append(by)
+            command_arguments.append(PrefixToken.BY)
+            command_arguments.append(by)
 
         if offset is not None and count is not None:
-            pieces.append(PrefixToken.LIMIT)
-            pieces.append(offset)
-            pieces.append(count)
+            command_arguments.append(PrefixToken.LIMIT)
+            command_arguments.append(offset)
+            command_arguments.append(count)
 
         for g in gets or []:
-            pieces.append(PrefixToken.GET)
-            pieces.append(g)
+            command_arguments.append(PrefixToken.GET)
+            command_arguments.append(g)
 
         if order:
-            pieces.append(order)
+            command_arguments.append(order)
 
         if alpha is not None:
-            pieces.append(PureToken.SORTING)
+            command_arguments.append(PureToken.SORTING)
 
         if store is not None:
-            pieces.append(PrefixToken.STORE)
-            pieces.append(store)
+            command_arguments.append(PrefixToken.STORE)
+            command_arguments.append(store)
             options["store"] = True
 
         return await self.execute_command(
-            CommandName.SORT, *pieces, **options, callback=SortCallback[AnyStr]()
+            CommandName.SORT,
+            *command_arguments,
+            **options,
+            callback=SortCallback[AnyStr](),
         )
 
     @mutually_inclusive_parameters("offset", "count")
@@ -2910,25 +2942,25 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: sorted elements.
 
         """
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
 
         if by is not None:
-            pieces.extend([PrefixToken.BY, by])
+            command_arguments.extend([PrefixToken.BY, by])
 
         if offset is not None and count is not None:
-            pieces.extend([PrefixToken.LIMIT, offset, count])
+            command_arguments.extend([PrefixToken.LIMIT, offset, count])
 
         for g in gets or []:
-            pieces.extend([PrefixToken.GET, g])
+            command_arguments.extend([PrefixToken.GET, g])
 
         if order:
-            pieces.append(order)
+            command_arguments.append(order)
 
         if alpha is not None:
-            pieces.append(PureToken.SORTING)
+            command_arguments.append(PureToken.SORTING)
 
         return await self.execute_command(
-            CommandName.SORT_RO, *pieces, callback=TupleCallback[AnyStr]()
+            CommandName.SORT_RO, *command_arguments, callback=TupleCallback[AnyStr]()
         )
 
     @ensure_iterable_valid("keys")
@@ -3038,19 +3070,19 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Incrementally iterate the keys space
         """
-        pieces: CommandArgList = [cursor or b"0"]
+        command_arguments: CommandArgList = [cursor or b"0"]
 
         if match is not None:
-            pieces.extend([PrefixToken.MATCH, match])
+            command_arguments.extend([PrefixToken.MATCH, match])
 
         if count is not None:
-            pieces.extend([PrefixToken.COUNT, count])
+            command_arguments.extend([PrefixToken.COUNT, count])
 
         if type_ is not None:
-            pieces.extend([PrefixToken.TYPE, type_])
+            command_arguments.extend([PrefixToken.TYPE, type_])
 
         return await self.execute_command(
-            CommandName.SCAN, *pieces, callback=ScanCallback[AnyStr]()
+            CommandName.SCAN, *command_arguments, callback=ScanCallback[AnyStr]()
         )
 
     @redis_command(
@@ -3113,13 +3145,15 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         """
         _keys: List[KeyT] = list(keys)
-        pieces: CommandArgList = [timeout, len(_keys), *_keys, where]
+        command_arguments: CommandArgList = [timeout, len(_keys), *_keys, where]
 
         if count is not None:
-            pieces.extend([PrefixToken.COUNT, count])
+            command_arguments.extend([PrefixToken.COUNT, count])
 
         return await self.execute_command(
-            CommandName.BLMPOP, *pieces, callback=OptionalListCallback[AnyStr]()
+            CommandName.BLMPOP,
+            *command_arguments,
+            callback=OptionalListCallback[AnyStr](),
         )
 
     @ensure_iterable_valid("keys")
@@ -3285,13 +3319,15 @@ class CoreCommands(CommandMixin[AnyStr]):
            from which elements were popped, and the second element is an array of elements.
         """
         _keys: List[KeyT] = list(keys)
-        pieces: CommandArgList = [len(_keys), *_keys, where]
+        command_arguments: CommandArgList = [len(_keys), *_keys, where]
 
         if count is not None:
-            pieces.extend([PrefixToken.COUNT, count])
+            command_arguments.extend([PrefixToken.COUNT, count])
 
         return await self.execute_command(
-            CommandName.LMPOP, *pieces, callback=OptionalListCallback[AnyStr]()
+            CommandName.LMPOP,
+            *command_arguments,
+            callback=OptionalListCallback[AnyStr](),
         )
 
     @redis_command(
@@ -3310,17 +3346,23 @@ class CoreCommands(CommandMixin[AnyStr]):
          If :paramref:`count` is provided the return is a list of popped elements,
          or ``None`` when :paramref:`key` does not exist.
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if count is not None:
-            pieces.append(count)
+            command_arguments.append(count)
 
         if count is not None:
             return await self.execute_command(
-                CommandName.LPOP, key, *pieces, callback=OptionalListCallback[AnyStr]()
+                CommandName.LPOP,
+                key,
+                *command_arguments,
+                callback=OptionalListCallback[AnyStr](),
             )
         return await self.execute_command(
-            CommandName.LPOP, key, *pieces, callback=OptionalAnyStrCallback[AnyStr]()
+            CommandName.LPOP,
+            key,
+            *command_arguments,
+            callback=OptionalAnyStrCallback[AnyStr](),
         )
 
     @redis_command(
@@ -3349,23 +3391,23 @@ class CoreCommands(CommandMixin[AnyStr]):
          If the :paramref:`count` argument is given a list of integers representing
          the matching elements.
         """
-        pieces: CommandArgList = [key, element]
+        command_arguments: CommandArgList = [key, element]
 
         if count is not None:
-            pieces.extend([PrefixToken.COUNT, count])
+            command_arguments.extend([PrefixToken.COUNT, count])
 
         if rank is not None:
-            pieces.extend([PrefixToken.RANK, rank])
+            command_arguments.extend([PrefixToken.RANK, rank])
 
         if maxlen is not None:
-            pieces.extend([PrefixToken.MAXLEN, maxlen])
+            command_arguments.extend([PrefixToken.MAXLEN, maxlen])
 
         if count is None:
             return await self.execute_command(
-                CommandName.LPOS, *pieces, callback=OptionalIntCallback()
+                CommandName.LPOS, *command_arguments, callback=OptionalIntCallback()
             )
         return await self.execute_command(
-            CommandName.LPOS, *pieces, callback=OptionalListCallback[int]()
+            CommandName.LPOS, *command_arguments, callback=OptionalListCallback[int]()
         )
 
     @ensure_iterable_valid("elements")
@@ -3485,20 +3527,23 @@ class CoreCommands(CommandMixin[AnyStr]):
          or ``None`` when :paramref:`key` does not exist.
         """
 
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if count is not None:
-            pieces.extend([count])
+            command_arguments.extend([count])
 
         if count is None:
             return await self.execute_command(
                 CommandName.RPOP,
                 key,
-                *pieces,
+                *command_arguments,
                 callback=OptionalAnyStrCallback[AnyStr](),
             )
         return await self.execute_command(
-            CommandName.RPOP, key, *pieces, callback=OptionalListCallback[AnyStr]()
+            CommandName.RPOP,
+            key,
+            *command_arguments,
+            callback=OptionalListCallback[AnyStr](),
         )
 
     @redis_command(
@@ -3670,13 +3715,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         _keys: List[KeyT] = list(keys)
 
-        pieces: CommandArgList = [len(_keys), *_keys]
+        command_arguments: CommandArgList = [len(_keys), *_keys]
 
         if limit is not None:
-            pieces.extend(["LIMIT", limit])
+            command_arguments.extend(["LIMIT", limit])
 
         return await self.execute_command(
-            CommandName.SINTERCARD, *pieces, callback=IntCallback()
+            CommandName.SINTERCARD, *command_arguments, callback=IntCallback()
         )
 
     @redis_command(
@@ -3795,15 +3840,15 @@ class CoreCommands(CommandMixin[AnyStr]):
          When the additional :paramref:`count` argument is passed, the command returns elements,
          or an empty set when :paramref:`key` does not exist.
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if count is not None:
-            pieces.append(count)
+            command_arguments.append(count)
 
         return await self.execute_command(
             CommandName.SRANDMEMBER,
             key,
-            *pieces,
+            *command_arguments,
             count=count,
             callback=ItemOrSetCallback[AnyStr](),
         )
@@ -3878,16 +3923,16 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param match: is for filtering the keys by pattern
         :param count: is for hint the minimum number of returns
         """
-        pieces: CommandArgList = [key, cursor or "0"]
+        command_arguments: CommandArgList = [key, cursor or "0"]
 
         if match is not None:
-            pieces.extend(["MATCH", match])
+            command_arguments.extend(["MATCH", match])
 
         if count is not None:
-            pieces.extend(["COUNT", count])
+            command_arguments.extend(["COUNT", count])
 
         return await self.execute_command(
-            CommandName.SSCAN, *pieces, callback=SScanCallback[AnyStr]()
+            CommandName.SSCAN, *command_arguments, callback=SScanCallback[AnyStr]()
         )
 
     @versionadded(version="3.0.0")
@@ -3914,13 +3959,13 @@ class CoreCommands(CommandMixin[AnyStr]):
           - A tuple of (name of key, popped (member, score) pairs)
         """
         _keys: List[KeyT] = list(keys)
-        pieces: CommandArgList = [timeout, len(_keys), *_keys, where]
+        command_arguments: CommandArgList = [timeout, len(_keys), *_keys, where]
 
         if count is not None:
-            pieces.extend(["COUNT", count])
+            command_arguments.extend(["COUNT", count])
 
         return await self.execute_command(
-            CommandName.BZMPOP, *pieces, callback=ZMPopCallback[AnyStr]()
+            CommandName.BZMPOP, *command_arguments, callback=ZMPopCallback[AnyStr]()
         )
 
     @ensure_iterable_valid("keys")
@@ -4003,25 +4048,25 @@ class CoreCommands(CommandMixin[AnyStr]):
          - ``None`` if the operation is aborted
 
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if change is not None:
-            pieces.append(PureToken.CHANGE)
+            command_arguments.append(PureToken.CHANGE)
 
         if increment is not None:
-            pieces.append(PureToken.INCREMENT)
+            command_arguments.append(PureToken.INCREMENT)
 
         if condition:
-            pieces.append(condition)
+            command_arguments.append(condition)
 
         if comparison:
-            pieces.append(comparison)
+            command_arguments.append(comparison)
 
         flat_member_scores = dict_to_flat_list(member_scores, reverse=True)
-        pieces.extend(flat_member_scores)
+        command_arguments.extend(flat_member_scores)
 
         return await self.execute_command(
-            CommandName.ZADD, key, *pieces, callback=ZAddCallback()
+            CommandName.ZADD, key, *command_arguments, callback=ZAddCallback()
         )
 
     @redis_command(
@@ -4079,14 +4124,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: the result of the difference (optionally with their scores, in case
          the ``withscores`` option is given).
         """
-        pieces: CommandArgList = [len(list(keys)), *keys]
+        command_arguments: CommandArgList = [len(list(keys)), *keys]
 
         if withscores:
-            pieces.append(PureToken.WITHSCORES)
+            command_arguments.append(PureToken.WITHSCORES)
 
         return await self.execute_command(
             CommandName.ZDIFF,
-            *pieces,
+            *command_arguments,
             withscores=withscores,
             callback=ZMembersOrScoredMembers[AnyStr](),
         )
@@ -4103,10 +4148,13 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :return: the number of elements in the resulting sorted set at :paramref:`destination`.
         """
-        pieces: CommandArgList = [len(list(keys)), *keys]
+        command_arguments: CommandArgList = [len(list(keys)), *keys]
 
         return await self.execute_command(
-            CommandName.ZDIFFSTORE, destination, *pieces, callback=IntCallback()
+            CommandName.ZDIFFSTORE,
+            destination,
+            *command_arguments,
+            callback=IntCallback(),
         )
 
     @redis_command(
@@ -4202,13 +4250,13 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         """
         _keys: List[KeyT] = list(keys)
-        pieces: CommandArgList = [len(_keys), *_keys]
+        command_arguments: CommandArgList = [len(_keys), *_keys]
 
         if limit is not None:
-            pieces.extend(["LIMIT", limit])
+            command_arguments.extend(["LIMIT", limit])
 
         return await self.execute_command(
-            CommandName.ZINTERCARD, *pieces, callback=IntCallback()
+            CommandName.ZINTERCARD, *command_arguments, callback=IntCallback()
         )
 
     @redis_command(
@@ -4247,13 +4295,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: A tuple of (name of key, popped (member, score) pairs)
         """
         _keys: List[KeyT] = list(keys)
-        pieces: CommandArgList = [len(_keys), *_keys, where]
+        command_arguments: CommandArgList = [len(_keys), *_keys, where]
 
         if count is not None:
-            pieces.extend(["COUNT", count])
+            command_arguments.extend(["COUNT", count])
 
         return await self.execute_command(
-            CommandName.ZMPOP, *pieces, callback=ZMPopCallback[AnyStr]()
+            CommandName.ZMPOP, *command_arguments, callback=ZMPopCallback[AnyStr]()
         )
 
     @ensure_iterable_valid("members")
@@ -4469,13 +4517,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: elements in the specified score range.
         """
 
-        pieces: CommandArgList = [key, min_, max_]
+        command_arguments: CommandArgList = [key, min_, max_]
 
         if offset is not None and count is not None:
-            pieces.extend(["LIMIT", offset, count])
+            command_arguments.extend(["LIMIT", offset, count])
 
         return await self.execute_command(
-            CommandName.ZRANGEBYLEX, *pieces, callback=TupleCallback[AnyStr]()
+            CommandName.ZRANGEBYLEX,
+            *command_arguments,
+            callback=TupleCallback[AnyStr](),
         )
 
     @redis_command(
@@ -4503,18 +4553,18 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: elements in the specified score range (optionally with their scores).
         """
 
-        pieces: CommandArgList = [key, min_, max_]
+        command_arguments: CommandArgList = [key, min_, max_]
 
         if offset is not None and count is not None:
-            pieces.extend([PrefixToken.LIMIT, offset, count])
+            command_arguments.extend([PrefixToken.LIMIT, offset, count])
 
         if withscores:
-            pieces.append(PureToken.WITHSCORES)
+            command_arguments.append(PureToken.WITHSCORES)
         options = {"withscores": withscores}
 
         return await self.execute_command(
             CommandName.ZRANGEBYSCORE,
-            *pieces,
+            *command_arguments,
             callback=ZMembersOrScoredMembers[AnyStr](),
             **options,
         )
@@ -4650,15 +4700,15 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :return: elements in the specified range (optionally with their scores).
         """
-        pieces: CommandArgList = [key, start, stop]
+        command_arguments: CommandArgList = [key, start, stop]
 
         if withscores:
-            pieces.append(PureToken.WITHSCORES)
+            command_arguments.append(PureToken.WITHSCORES)
         options = {"withscores": withscores}
 
         return await self.execute_command(
             CommandName.ZREVRANGE,
-            *pieces,
+            *command_arguments,
             callback=ZMembersOrScoredMembers[AnyStr](),
             **options,
         )
@@ -4688,13 +4738,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: elements in the specified score range
         """
 
-        pieces: CommandArgList = [key, max_, min_]
+        command_arguments: CommandArgList = [key, max_, min_]
 
         if offset is not None and count is not None:
-            pieces.extend(["LIMIT", offset, count])
+            command_arguments.extend(["LIMIT", offset, count])
 
         return await self.execute_command(
-            CommandName.ZREVRANGEBYLEX, *pieces, callback=TupleCallback[AnyStr]()
+            CommandName.ZREVRANGEBYLEX,
+            *command_arguments,
+            callback=TupleCallback[AnyStr](),
         )
 
     @redis_command(
@@ -4722,18 +4774,18 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: elements in the specified score range (optionally with their scores)
         """
 
-        pieces: CommandArgList = [key, max_, min_]
+        command_arguments: CommandArgList = [key, max_, min_]
 
         if offset is not None and count is not None:
-            pieces.extend(["LIMIT", offset, count])
+            command_arguments.extend(["LIMIT", offset, count])
 
         if withscores:
-            pieces.append(PureToken.WITHSCORES)
+            command_arguments.append(PureToken.WITHSCORES)
         options = {"withscores": withscores}
 
         return await self.execute_command(
             CommandName.ZREVRANGEBYSCORE,
-            *pieces,
+            *command_arguments,
             **options,
             callback=ZMembersOrScoredMembers[AnyStr](),
         )
@@ -4771,16 +4823,16 @@ class CoreCommands(CommandMixin[AnyStr]):
         Incrementally iterate sorted sets elements and associated scores
 
         """
-        pieces: CommandArgList = [key, cursor or "0"]
+        command_arguments: CommandArgList = [key, cursor or "0"]
 
         if match is not None:
-            pieces.extend(["MATCH", match])
+            command_arguments.extend(["MATCH", match])
 
         if count is not None:
-            pieces.extend(["COUNT", count])
+            command_arguments.extend(["COUNT", count])
 
         return await self.execute_command(
-            CommandName.ZSCAN, *pieces, callback=ZScanCallback[AnyStr]()
+            CommandName.ZSCAN, *command_arguments, callback=ZScanCallback[AnyStr]()
         )
 
     @redis_command(
@@ -4900,32 +4952,35 @@ class CoreCommands(CommandMixin[AnyStr]):
         offset: Optional[int] = None,
         count: Optional[int] = None,
     ) -> Union[int, Tuple[Union[AnyStr, ScoredMember], ...]]:
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if dest:
-            pieces.append(dest)
-        pieces.extend([key, start, stop])
+            command_arguments.append(dest)
+        command_arguments.extend([key, start, stop])
 
         if sortby:
-            pieces.append(sortby)
+            command_arguments.append(sortby)
 
         if rev is not None:
-            pieces.append(PureToken.REV)
+            command_arguments.append(PureToken.REV)
 
         if offset is not None and count is not None:
-            pieces.extend([PrefixToken.LIMIT, offset, count])
+            command_arguments.extend([PrefixToken.LIMIT, offset, count])
 
         if withscores:
-            pieces.append(PureToken.WITHSCORES)
+            command_arguments.append(PureToken.WITHSCORES)
         options = {"withscores": withscores}
 
         if command == CommandName.ZRANGE:
             return await self.execute_command(
-                command, *pieces, callback=ZMembersOrScoredMembers[AnyStr](), **options
+                command,
+                *command_arguments,
+                callback=ZMembersOrScoredMembers[AnyStr](),
+                **options,
             )
         else:
             return await self.execute_command(
-                command, *pieces, callback=IntCallback(), **options
+                command, *command_arguments, callback=IntCallback(), **options
             )
 
     @overload
@@ -4966,33 +5021,36 @@ class CoreCommands(CommandMixin[AnyStr]):
         aggregate: Optional[PureToken] = None,
         withscores: Optional[bool] = None,
     ) -> Union[int, Tuple[Union[AnyStr, ScoredMember], ...]]:
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if destination:
-            pieces.append(destination)
-        pieces.append(len(list(keys)))
-        pieces.extend(keys)
+            command_arguments.append(destination)
+        command_arguments.append(len(list(keys)))
+        command_arguments.extend(keys)
         options = {}
 
         if weights:
-            pieces.append(PrefixToken.WEIGHTS)
-            pieces.extend(weights)
+            command_arguments.append(PrefixToken.WEIGHTS)
+            command_arguments.extend(weights)
 
         if aggregate:
-            pieces.append(PrefixToken.AGGREGATE)
-            pieces.append(aggregate)
+            command_arguments.append(PrefixToken.AGGREGATE)
+            command_arguments.append(aggregate)
 
         if withscores is not None:
-            pieces.append(PureToken.WITHSCORES)
+            command_arguments.append(PureToken.WITHSCORES)
             options = {"withscores": True}
 
         if command in [CommandName.ZUNIONSTORE, CommandName.ZINTERSTORE]:
             return await self.execute_command(
-                command, *pieces, callback=IntCallback(), **options
+                command, *command_arguments, callback=IntCallback(), **options
             )
         else:
             return await self.execute_command(
-                command, *pieces, callback=ZMembersOrScoredMembers[AnyStr](), **options
+                command,
+                *command_arguments,
+                callback=ZMembersOrScoredMembers[AnyStr](),
+                **options,
             )
 
     @ensure_iterable_valid("identifiers")
@@ -5049,30 +5107,33 @@ class CoreCommands(CommandMixin[AnyStr]):
          Returns ``None`` when used with :paramref:`nomkstream` and the key doesn't exist.
 
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if nomkstream is not None:
-            pieces.append(PureToken.NOMKSTREAM)
+            command_arguments.append(PureToken.NOMKSTREAM)
 
         if trim_strategy == PureToken.MAXLEN:
-            pieces.append(trim_strategy)
+            command_arguments.append(trim_strategy)
 
             if trim_operator:
-                pieces.append(trim_operator)
+                command_arguments.append(trim_operator)
 
             if threshold is not None:
-                pieces.append(threshold)
+                command_arguments.append(threshold)
 
         if limit is not None:
-            pieces.extend(["LIMIT", limit])
+            command_arguments.extend(["LIMIT", limit])
 
-        pieces.append(identifier or PureToken.AUTO_ID)
+        command_arguments.append(identifier or PureToken.AUTO_ID)
 
         for kv in field_values.items():
-            pieces.extend(list(kv))
+            command_arguments.extend(list(kv))
 
         return await self.execute_command(
-            CommandName.XADD, key, *pieces, callback=OptionalAnyStrCallback[AnyStr]()
+            CommandName.XADD,
+            key,
+            *command_arguments,
+            callback=OptionalAnyStrCallback[AnyStr](),
         )
 
     @redis_command(
@@ -5101,14 +5162,17 @@ class CoreCommands(CommandMixin[AnyStr]):
         Return a range of elements in a stream, with IDs matching the specified IDs interval
         """
 
-        pieces: CommandArgList = [defaultvalue(start, "-"), defaultvalue(end, "+")]
+        command_arguments: CommandArgList = [
+            defaultvalue(start, "-"),
+            defaultvalue(end, "+"),
+        ]
 
         if count is not None:
-            pieces.append("COUNT")
-            pieces.append(count)
+            command_arguments.append("COUNT")
+            command_arguments.append(count)
 
         return await self.execute_command(
-            CommandName.XRANGE, key, *pieces, callback=StreamRangeCallback()
+            CommandName.XRANGE, key, *command_arguments, callback=StreamRangeCallback()
         )
 
     @redis_command(
@@ -5127,14 +5191,20 @@ class CoreCommands(CommandMixin[AnyStr]):
         Return a range of elements in a stream, with IDs matching the specified
         IDs interval, in reverse order (from greater to smaller IDs) compared to XRANGE
         """
-        pieces: CommandArgList = [defaultvalue(end, "+"), defaultvalue(start, "-")]
+        command_arguments: CommandArgList = [
+            defaultvalue(end, "+"),
+            defaultvalue(start, "-"),
+        ]
 
         if count is not None:
-            pieces.append("COUNT")
-            pieces.append(count)
+            command_arguments.append("COUNT")
+            command_arguments.append(count)
 
         return await self.execute_command(
-            CommandName.XREVRANGE, key, *pieces, callback=StreamRangeCallback()
+            CommandName.XREVRANGE,
+            key,
+            *command_arguments,
+            callback=StreamRangeCallback(),
         )
 
     @redis_command(
@@ -5158,25 +5228,27 @@ class CoreCommands(CommandMixin[AnyStr]):
 
          When :paramref:`block` is used, on timeout ``None`` is returned.
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if block is not None:
-            pieces.append(PrefixToken.BLOCK)
-            pieces.append(normalized_milliseconds(block))
+            command_arguments.append(PrefixToken.BLOCK)
+            command_arguments.append(normalized_milliseconds(block))
 
         if count is not None:
-            pieces.append(PrefixToken.COUNT)
-            pieces.append(count)
-        pieces.append(PrefixToken.STREAMS)
+            command_arguments.append(PrefixToken.COUNT)
+            command_arguments.append(count)
+        command_arguments.append(PrefixToken.STREAMS)
         ids: CommandArgList = []
 
         for partial_stream in streams.items():
-            pieces.append(partial_stream[0])
+            command_arguments.append(partial_stream[0])
             ids.append(partial_stream[1])
-        pieces.extend(ids)
+        command_arguments.extend(ids)
 
         return await self.execute_command(
-            CommandName.XREAD, *pieces, callback=MultiStreamRangeCallback[AnyStr]()
+            CommandName.XREAD,
+            *command_arguments,
+            callback=MultiStreamRangeCallback[AnyStr](),
         )
 
     @redis_command(
@@ -5192,28 +5264,30 @@ class CoreCommands(CommandMixin[AnyStr]):
         noack: Optional[bool] = None,
     ) -> Optional[Dict[AnyStr, Tuple[StreamEntry, ...]]]:
         """ """
-        pieces: CommandArgList = [PrefixToken.GROUP, group, consumer]
+        command_arguments: CommandArgList = [PrefixToken.GROUP, group, consumer]
 
         if block is not None:
-            pieces.append(PrefixToken.BLOCK)
-            pieces.append(normalized_milliseconds(block))
+            command_arguments.append(PrefixToken.BLOCK)
+            command_arguments.append(normalized_milliseconds(block))
 
         if count is not None:
-            pieces.append(PrefixToken.COUNT)
-            pieces.append(count)
+            command_arguments.append(PrefixToken.COUNT)
+            command_arguments.append(count)
 
         if noack:
-            pieces.append(PureToken.NOACK)
+            command_arguments.append(PureToken.NOACK)
 
-        pieces.append(PrefixToken.STREAMS)
+        command_arguments.append(PrefixToken.STREAMS)
         ids: CommandArgList = []
 
         for partial_stream in streams.items():
-            pieces.append(partial_stream[0])
+            command_arguments.append(partial_stream[0])
             ids.append(partial_stream[1])
-        pieces.extend(ids)
+        command_arguments.extend(ids)
         return await self.execute_command(
-            CommandName.XREADGROUP, *pieces, callback=MultiStreamRangeCallback[AnyStr]()
+            CommandName.XREADGROUP,
+            *command_arguments,
+            callback=MultiStreamRangeCallback[AnyStr](),
         )
 
     @mutually_inclusive_parameters("start", "end", "count")
@@ -5237,19 +5311,22 @@ class CoreCommands(CommandMixin[AnyStr]):
         Return information and entries from a stream consumer group pending
         entries list, that are messages fetched but never acknowledged.
         """
-        pieces: CommandArgList = [key, group]
+        command_arguments: CommandArgList = [key, group]
 
         if idle is not None:
-            pieces.extend([PrefixToken.IDLE, idle])
+            command_arguments.extend([PrefixToken.IDLE, idle])
 
         if count is not None and end is not None and start is not None:
-            pieces.extend([start, end, count])
+            command_arguments.extend([start, end, count])
 
         if consumer is not None:
-            pieces.append(consumer)
+            command_arguments.append(consumer)
 
         return await self.execute_command(
-            CommandName.XPENDING, *pieces, count=count, callback=PendingCallback()
+            CommandName.XPENDING,
+            *command_arguments,
+            count=count,
+            callback=PendingCallback(),
         )
 
     @mutually_inclusive_parameters("trim_strategy", "threshold")
@@ -5269,18 +5346,18 @@ class CoreCommands(CommandMixin[AnyStr]):
         limit: Optional[int] = None,
     ) -> int:
         """ """
-        pieces: CommandArgList = [trim_strategy]
+        command_arguments: CommandArgList = [trim_strategy]
 
         if trim_operator:
-            pieces.append(trim_operator)
+            command_arguments.append(trim_operator)
 
-        pieces.append(threshold)
+        command_arguments.append(threshold)
 
         if limit is not None:
-            pieces.extend(["LIMIT", limit])
+            command_arguments.extend(["LIMIT", limit])
 
         return await self.execute_command(
-            CommandName.XTRIM, key, *pieces, callback=IntCallback()
+            CommandName.XTRIM, key, *command_arguments, callback=IntCallback()
         )
 
     @ensure_iterable_valid("identifiers")
@@ -5346,18 +5423,18 @@ class CoreCommands(CommandMixin[AnyStr]):
          about the stream ( see: :class:`coredis.response.types.StreamInfo` ).
         :param count: restrict the number of `entries` returned when using :paramref:`full`
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if full:
-            pieces.append("FULL")
+            command_arguments.append("FULL")
 
             if count is not None:
-                pieces.extend(["COUNT", count])
+                command_arguments.extend(["COUNT", count])
 
         return await self.execute_command(
             CommandName.XINFO_STREAM,
             key,
-            *pieces,
+            *command_arguments,
             full=full,
             callback=StreamInfoCallback(),
         )
@@ -5386,33 +5463,38 @@ class CoreCommands(CommandMixin[AnyStr]):
         Changes (or acquires) ownership of a message in a consumer group, as
         if the message was delivered to the specified consumer.
         """
-        pieces: CommandArgList = [
+        command_arguments: CommandArgList = [
             key,
             group,
             consumer,
             normalized_milliseconds(min_idle_time),
         ]
-        pieces.extend(identifiers)
+        command_arguments.extend(identifiers)
 
         if idle is not None:
-            pieces.extend([PrefixToken.IDLE, normalized_milliseconds(idle)])
+            command_arguments.extend([PrefixToken.IDLE, normalized_milliseconds(idle)])
 
         if time is not None:
-            pieces.extend([PrefixToken.TIME, normalized_time_milliseconds(time)])
+            command_arguments.extend(
+                [PrefixToken.TIME, normalized_time_milliseconds(time)]
+            )
 
         if retrycount is not None:
-            pieces.extend([PrefixToken.RETRYCOUNT, retrycount])
+            command_arguments.extend([PrefixToken.RETRYCOUNT, retrycount])
 
         if force is not None:
-            pieces.append(PureToken.FORCE)
+            command_arguments.append(PureToken.FORCE)
 
         if justid is not None:
-            pieces.append(PureToken.JUSTID)
+            command_arguments.append(PureToken.JUSTID)
 
         if lastid is not None:
-            pieces.extend([PrefixToken.LASTID, lastid])
+            command_arguments.extend([PrefixToken.LASTID, lastid])
         return await self.execute_command(
-            CommandName.XCLAIM, *pieces, justid=justid, callback=ClaimCallback[AnyStr]()
+            CommandName.XCLAIM,
+            *command_arguments,
+            justid=justid,
+            callback=ClaimCallback[AnyStr](),
         )
 
     @redis_command(
@@ -5431,16 +5513,22 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Create a consumer group.
         """
-        pieces: CommandArgList = [key, groupname, identifier or PureToken.NEW_ID]
+        command_arguments: CommandArgList = [
+            key,
+            groupname,
+            identifier or PureToken.NEW_ID,
+        ]
 
         if mkstream is not None:
-            pieces.append(PureToken.MKSTREAM)
+            command_arguments.append(PureToken.MKSTREAM)
 
         if entriesread is not None:
-            pieces.extend([PrefixToken.ENTRIESREAD, entriesread])
+            command_arguments.extend([PrefixToken.ENTRIESREAD, entriesread])
 
         return await self.execute_command(
-            CommandName.XGROUP_CREATE, *pieces, callback=SimpleStringCallback()
+            CommandName.XGROUP_CREATE,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )
 
     @versionadded(version="3.0.0")
@@ -5457,10 +5545,12 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :return: whether the consumer was created
         """
-        pieces: CommandArgList = [key, groupname, consumername]
+        command_arguments: CommandArgList = [key, groupname, consumername]
 
         return await self.execute_command(
-            CommandName.XGROUP_CREATECONSUMER, *pieces, callback=BoolCallback()
+            CommandName.XGROUP_CREATECONSUMER,
+            *command_arguments,
+            callback=BoolCallback(),
         )
 
     @versionadded(version="3.0.0")
@@ -5480,13 +5570,19 @@ class CoreCommands(CommandMixin[AnyStr]):
         Set a consumer group to an arbitrary last delivered ID value.
         """
 
-        pieces: CommandArgList = [key, groupname, identifier or PureToken.NEW_ID]
+        command_arguments: CommandArgList = [
+            key,
+            groupname,
+            identifier or PureToken.NEW_ID,
+        ]
 
         if entriesread is not None:
-            pieces.extend([PrefixToken.ENTRIESREAD, entriesread])
+            command_arguments.extend([PrefixToken.ENTRIESREAD, entriesread])
 
         return await self.execute_command(
-            CommandName.XGROUP_SETID, *pieces, callback=SimpleStringCallback()
+            CommandName.XGROUP_SETID,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )
 
     @redis_command(CommandName.XGROUP_DESTROY, group=CommandGroup.STREAM)
@@ -5549,7 +5645,7 @@ class CoreCommands(CommandMixin[AnyStr]):
          all the successfully claimed messages in the same format as :meth:`xrange`
 
         """
-        pieces: CommandArgList = [
+        command_arguments: CommandArgList = [
             key,
             group,
             consumer,
@@ -5558,14 +5654,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         ]
 
         if count is not None:
-            pieces.extend(["COUNT", count])
+            command_arguments.extend(["COUNT", count])
 
         if justid is not None:
-            pieces.append(PureToken.JUSTID)
+            command_arguments.append(PureToken.JUSTID)
 
         return await self.execute_command(
             CommandName.XAUTOCLAIM,
-            *pieces,
+            *command_arguments,
             justid=justid,
             callback=AutoClaimCallback[AnyStr](),
         )
@@ -5832,14 +5928,14 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :return: Mapping of channels to number of subscribers per channel
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if channels:
-            pieces.extend(channels)
+            command_arguments.extend(channels)
 
         return await self.execute_command(
             CommandName.PUBSUB_NUMSUB,
-            *pieces,
+            *command_arguments,
             callback=DictCallback[AnyStr, int](),
         )
 
@@ -5857,14 +5953,14 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :return: Ordered mapping of shard channels to number of subscribers per channel
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if channels:
-            pieces.extend(channels)
+            command_arguments.extend(channels)
 
         return await self.execute_command(
             CommandName.PUBSUB_SHARDNUMSUB,
-            *pieces,
+            *command_arguments,
             callback=DictCallback[AnyStr, int](),
         )
 
@@ -5876,13 +5972,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         args: Optional[Parameters[ValueT]] = None,
     ) -> ResponseType:
         _keys: List[KeyT] = list(keys) if keys else []
-        pieces: CommandArgList = [script, len(_keys), *_keys]
+        command_arguments: CommandArgList = [script, len(_keys), *_keys]
 
         if args:
-            pieces.extend(args)
+            command_arguments.extend(args)
 
         return await self.execute_command(
-            command, *pieces, callback=NoopCallback[ResponseType]()
+            command, *command_arguments, callback=NoopCallback[ResponseType]()
         )
 
     @redis_command(
@@ -5934,13 +6030,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         args: Optional[Parameters[ValueT]] = None,
     ) -> ResponseType:
         _keys: List[KeyT] = list(keys) if keys else []
-        pieces: CommandArgList = [sha1, len(_keys), *_keys]
+        command_arguments: CommandArgList = [sha1, len(_keys), *_keys]
 
         if args:
-            pieces.extend(args)
+            command_arguments.extend(args)
 
         return await self.execute_command(
-            command, *pieces, callback=NoopCallback[ResponseType]()
+            command, *command_arguments, callback=NoopCallback[ResponseType]()
         )
 
     @redis_command(CommandName.EVALSHA, group=CommandGroup.SCRIPTING)
@@ -6037,13 +6133,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Flushes all scripts from the script cache
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if sync_type:
-            pieces = [sync_type]
+            command_arguments = [sync_type]
 
         return await self.execute_command(
-            CommandName.SCRIPT_FLUSH, *pieces, callback=BoolCallback()
+            CommandName.SCRIPT_FLUSH, *command_arguments, callback=BoolCallback()
         )
 
     @redis_command(
@@ -6098,10 +6194,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         Invoke a function
         """
         _keys: List[KeyT] = list(keys or [])
-        pieces: CommandArgList = [function, len(_keys), *_keys, *(args or [])]
+        command_arguments: CommandArgList = [
+            function,
+            len(_keys),
+            *_keys,
+            *(args or []),
+        ]
 
         return await self.execute_command(
-            CommandName.FCALL, *pieces, callback=NoopCallback[ResponseType]()
+            CommandName.FCALL, *command_arguments, callback=NoopCallback[ResponseType]()
         )
 
     @versionadded(version="3.1.0")
@@ -6121,10 +6222,17 @@ class CoreCommands(CommandMixin[AnyStr]):
         Read-only variant of :meth:`~coredis.Redis.fcall`
         """
         _keys: List[KeyT] = list(keys or [])
-        pieces: CommandArgList = [function, len(_keys), *_keys, *(args or [])]
+        command_arguments: CommandArgList = [
+            function,
+            len(_keys),
+            *_keys,
+            *(args or []),
+        ]
 
         return await self.execute_command(
-            CommandName.FCALL_RO, *pieces, callback=NoopCallback[ResponseType]()
+            CommandName.FCALL_RO,
+            *command_arguments,
+            callback=NoopCallback[ResponseType](),
         )
 
     @versionadded(version="3.1.0")
@@ -6178,13 +6286,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Delete all functions
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if async_ is not None:
-            pieces.append(async_)
+            command_arguments.append(async_)
 
         return await self.execute_command(
-            CommandName.FUNCTION_FLUSH, *pieces, callback=SimpleStringCallback()
+            CommandName.FUNCTION_FLUSH,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )
 
     @versionadded(version="3.1.0")
@@ -6220,16 +6330,18 @@ class CoreCommands(CommandMixin[AnyStr]):
         List information about the functions registered under
         :paramref:`libraryname`
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if libraryname is not None:
-            pieces.extend(["LIBRARYNAME", libraryname])
+            command_arguments.extend(["LIBRARYNAME", libraryname])
 
         if withcode:
-            pieces.append(PureToken.WITHCODE)
+            command_arguments.append(PureToken.WITHCODE)
 
         return await self.execute_command(
-            CommandName.FUNCTION_LIST, *pieces, callback=FunctionListCallback()
+            CommandName.FUNCTION_LIST,
+            *command_arguments,
+            callback=FunctionListCallback(),
         )
 
     @versionadded(version="3.1.0")
@@ -6250,15 +6362,17 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Load a library of functions.
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if replace:
-            pieces.append(PureToken.REPLACE)
+            command_arguments.append(PureToken.REPLACE)
 
-        pieces.append(function_code)
+        command_arguments.append(function_code)
 
         return await self.execute_command(
-            CommandName.FUNCTION_LOAD, *pieces, callback=AnyStrCallback[AnyStr]()
+            CommandName.FUNCTION_LOAD,
+            *command_arguments,
+            callback=AnyStrCallback[AnyStr](),
         )
 
     @versionadded(version="3.1.0")
@@ -6281,13 +6395,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Restore all the functions on the given payload
         """
-        pieces: CommandArgList = [serialized_value]
+        command_arguments: CommandArgList = [serialized_value]
 
         if policy is not None:
-            pieces.append(policy)
+            command_arguments.append(policy)
 
         return await self.execute_command(
-            CommandName.FUNCTION_RESTORE, *pieces, callback=SimpleStringCallback()
+            CommandName.FUNCTION_RESTORE,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )
 
     @versionadded(version="3.1.0")
@@ -6330,14 +6446,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         Tells the Redis server to save its data to disk.  Unlike save(),
         this method is asynchronous and returns immediately.
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if schedule:
-            pieces.append(PureToken.SCHEDULE)
+            command_arguments.append(PureToken.SCHEDULE)
 
         return await self.execute_command(
             CommandName.BGSAVE,
-            *pieces,
+            *command_arguments,
             callback=SimpleStringCallback(
                 ok_values={"Background saving started", "Background saving scheduled"}
             ),
@@ -6353,10 +6469,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Instruct the server about tracking or not keys in the next request
         """
-        pieces: CommandArgList = [mode]
+        command_arguments: CommandArgList = [mode]
 
         return await self.execute_command(
-            CommandName.CLIENT_CACHING, *pieces, callback=SimpleStringCallback()
+            CommandName.CLIENT_CACHING,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )
 
     @redis_command(
@@ -6389,31 +6507,33 @@ class CoreCommands(CommandMixin[AnyStr]):
          or the number of clients killed.
         """
 
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if ip_port:
-            pieces.append(ip_port)
+            command_arguments.append(ip_port)
 
         if identifier:
-            pieces.extend(["ID", identifier])
+            command_arguments.extend(["ID", identifier])
 
         if type_:
-            pieces.extend(["TYPE", type_])
+            command_arguments.extend(["TYPE", type_])
 
         if user:
-            pieces.extend(["USER", user])
+            command_arguments.extend(["USER", user])
 
         if addr:
-            pieces.extend(["ADDR", addr])
+            command_arguments.extend(["ADDR", addr])
 
         if laddr:
-            pieces.extend(["LADDR", laddr])
+            command_arguments.extend(["LADDR", laddr])
 
         if skipme is not None:
-            pieces.extend(["SKIPME", skipme and "yes" or "no"])
+            command_arguments.extend(["SKIPME", skipme and "yes" or "no"])
 
         return await self.execute_command(
-            CommandName.CLIENT_KILL, *pieces, callback=SimpleStringOrIntCallback()
+            CommandName.CLIENT_KILL,
+            *command_arguments,
+            callback=SimpleStringOrIntCallback(),
         )
 
     @redis_command(
@@ -6438,17 +6558,17 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: a tuple of dictionaries containing client fields
         """
 
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if type_:
-            pieces.extend(["TYPE", type_])
+            command_arguments.extend(["TYPE", type_])
 
         if identifiers is not None:
-            pieces.append("ID")
-            pieces.extend(identifiers)
+            command_arguments.append("ID")
+            command_arguments.extend(identifiers)
 
         return await self.execute_command(
-            CommandName.CLIENT_LIST, *pieces, callback=ClientListCallback()
+            CommandName.CLIENT_LIST, *command_arguments, callback=ClientListCallback()
         )
 
     @redis_command(
@@ -6504,13 +6624,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The command returns ``True`` or raises an error if the timeout is invalid.
         """
 
-        pieces: CommandArgList = [timeout]
+        command_arguments: CommandArgList = [timeout]
 
         if mode is not None:
-            pieces.append(mode)
+            command_arguments.append(mode)
 
         return await self.execute_command(
-            CommandName.CLIENT_PAUSE, *pieces, callback=SimpleStringCallback()
+            CommandName.CLIENT_PAUSE,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )
 
     @versionadded(version="3.0.0")
@@ -6542,13 +6664,13 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :return: Whether the client was unblocked
         """
-        pieces: CommandArgList = [client_id]
+        command_arguments: CommandArgList = [client_id]
 
         if timeout_error is not None:
-            pieces.append(timeout_error)
+            command_arguments.append(timeout_error)
 
         return await self.execute_command(
-            CommandName.CLIENT_UNBLOCK, *pieces, callback=BoolCallback()
+            CommandName.CLIENT_UNBLOCK, *command_arguments, callback=BoolCallback()
         )
 
     @versionadded(version="3.0.0")
@@ -6644,29 +6766,31 @@ class CoreCommands(CommandMixin[AnyStr]):
          tracking mode was successfully disabled.
         """
 
-        pieces: CommandArgList = [status]
+        command_arguments: CommandArgList = [status]
 
         if prefixes:
-            pieces.extend(
+            command_arguments.extend(
                 itertools.chain(*zip([PrefixToken.PREFIX] * len(prefixes), prefixes))
             )
         if redirect is not None:
-            pieces.extend([PrefixToken.REDIRECT, redirect])
+            command_arguments.extend([PrefixToken.REDIRECT, redirect])
 
         if bcast is not None:
-            pieces.append(PureToken.BCAST)
+            command_arguments.append(PureToken.BCAST)
 
         if optin is not None:
-            pieces.append(PureToken.OPTIN)
+            command_arguments.append(PureToken.OPTIN)
 
         if optout is not None:
-            pieces.append(PureToken.OPTOUT)
+            command_arguments.append(PureToken.OPTOUT)
 
         if noloop is not None:
-            pieces.append(PureToken.NOLOOP)
+            command_arguments.append(PureToken.NOLOOP)
 
         return await self.execute_command(
-            CommandName.CLIENT_TRACKING, *pieces, callback=SimpleStringCallback()
+            CommandName.CLIENT_TRACKING,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )
 
     @versionadded(version="3.0.0")
@@ -6747,23 +6871,23 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: `True` if the command was accepted and a coordinated failover
          is in progress.
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if host and port:
-            pieces.extend([PrefixToken.TO, host, port])
+            command_arguments.extend([PrefixToken.TO, host, port])
 
             if force is not None:
-                pieces.append(PureToken.FORCE)
+                command_arguments.append(PureToken.FORCE)
 
         if abort:
-            pieces.append(PureToken.ABORT)
+            command_arguments.append(PureToken.ABORT)
 
         if timeout is not None:
-            pieces.append(PrefixToken.TIMEOUT)
-            pieces.append(normalized_milliseconds(timeout))
+            command_arguments.append(PrefixToken.TIMEOUT)
+            command_arguments.append(normalized_milliseconds(timeout))
 
         return await self.execute_command(
-            CommandName.FAILOVER, *pieces, callback=SimpleStringCallback()
+            CommandName.FAILOVER, *command_arguments, callback=SimpleStringCallback()
         )
 
     @redis_command(
@@ -6778,13 +6902,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, async_: Optional[Literal[PureToken.ASYNC, PureToken.SYNC]] = None
     ) -> bool:
         """Deletes all keys in all databases on the current host"""
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if async_:
-            pieces.append(async_)
+            command_arguments.append(async_)
 
         return await self.execute_command(
-            CommandName.FLUSHALL, *pieces, callback=SimpleStringCallback()
+            CommandName.FLUSHALL, *command_arguments, callback=SimpleStringCallback()
         )
 
     @redis_command(
@@ -6799,13 +6923,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, async_: Optional[Literal[PureToken.ASYNC, PureToken.SYNC]] = None
     ) -> bool:
         """Deletes all keys in the current database"""
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if async_:
-            pieces.append(async_)
+            command_arguments.append(async_)
 
         return await self.execute_command(
-            CommandName.FLUSHDB, *pieces, callback=SimpleStringCallback()
+            CommandName.FLUSHDB, *command_arguments, callback=SimpleStringCallback()
         )
 
     @redis_command(
@@ -6891,10 +7015,12 @@ class CoreCommands(CommandMixin[AnyStr]):
          representing the timestamp and the latency of the event.
 
         """
-        pieces: CommandArgList = [event]
+        command_arguments: CommandArgList = [event]
 
         return await self.execute_command(
-            CommandName.LATENCY_HISTORY, *pieces, callback=TupleCallback[AnyStr]()
+            CommandName.LATENCY_HISTORY,
+            *command_arguments,
+            callback=TupleCallback[AnyStr](),
         )
 
     @versionadded(version="3.0.0")
@@ -6922,10 +7048,10 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :return: the number of event time series that were reset.
         """
-        pieces: CommandArgList = list(events) if events else []
+        command_arguments: CommandArgList = list(events) if events else []
 
         return await self.execute_command(
-            CommandName.LATENCY_RESET, *pieces, callback=IntCallback()
+            CommandName.LATENCY_RESET, *command_arguments, callback=IntCallback()
         )
 
     @versionadded(version="3.0.0")
@@ -6998,14 +7124,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: the memory usage in bytes, or ``None`` when the key does not exist.
 
         """
-        pieces: CommandArgList = []
-        pieces.append(key)
+        command_arguments: CommandArgList = []
+        command_arguments.append(key)
 
         if samples is not None:
-            pieces.extend([PrefixToken.SAMPLES, samples])
+            command_arguments.extend([PrefixToken.SAMPLES, samples])
 
         return await self.execute_command(
-            CommandName.MEMORY_USAGE, *pieces, callback=OptionalIntCallback()
+            CommandName.MEMORY_USAGE, *command_arguments, callback=OptionalIntCallback()
         )
 
     @redis_command(
@@ -7043,21 +7169,23 @@ class CoreCommands(CommandMixin[AnyStr]):
         abort: Optional[bool] = None,
     ) -> bool:
         """Stops Redis server"""
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if nosave_save:
-            pieces.append(nosave_save)
+            command_arguments.append(nosave_save)
 
         if now is not None:
-            pieces.append(PureToken.NOW)
+            command_arguments.append(PureToken.NOW)
         if force is not None:
-            pieces.append(PureToken.FORCE)
+            command_arguments.append(PureToken.FORCE)
         if abort is not None:
-            pieces.append(PureToken.ABORT)
+            command_arguments.append(PureToken.ABORT)
 
         try:
             response = await self.execute_command(
-                CommandName.SHUTDOWN, *pieces, callback=SimpleStringCallback()
+                CommandName.SHUTDOWN,
+                *command_arguments,
+                callback=SimpleStringCallback(),
             )
             if abort is not None:
                 return response
@@ -7101,13 +7229,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         Gets the entries from the slowlog. If :paramref:`count` is specified, get the
         most recent :paramref:`count` items.
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if count is not None:
-            pieces.append(count)
+            command_arguments.append(count)
 
         return await self.execute_command(
-            CommandName.SLOWLOG_GET, *pieces, callback=SlowlogCallback()
+            CommandName.SLOWLOG_GET, *command_arguments, callback=SlowlogCallback()
         )
 
     @redis_command(CommandName.SLOWLOG_LEN, group=CommandGroup.SERVER)
@@ -7183,10 +7311,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Swaps two Redis databases
         """
-        pieces: CommandArgList = [index1, index2]
+        command_arguments: CommandArgList = [index1, index2]
 
         return await self.execute_command(
-            CommandName.SWAPDB, *pieces, callback=SimpleStringCallback()
+            CommandName.SWAPDB, *command_arguments, callback=SimpleStringCallback()
         )
 
     @redis_command(
@@ -7198,13 +7326,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Get the Redis version and a piece of generative computer art
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if version is not None:
-            pieces.append(version)
+            command_arguments.append(version)
 
         return await self.execute_command(
-            CommandName.LOLWUT, *pieces, callback=AnyStrCallback[AnyStr]()
+            CommandName.LOLWUT, *command_arguments, callback=AnyStrCallback[AnyStr]()
         )
 
     @versionadded(version="3.0.0")
@@ -7226,13 +7354,13 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         """
 
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if categoryname:
-            pieces.append(categoryname)
+            command_arguments.append(categoryname)
 
         return await self.execute_command(
-            CommandName.ACL_CAT, *pieces, callback=TupleCallback[AnyStr]()
+            CommandName.ACL_CAT, *command_arguments, callback=TupleCallback[AnyStr]()
         )
 
     @ensure_iterable_valid("usernames")
@@ -7275,14 +7403,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Returns whether the user can execute the given command without executing the command.
         """
-        pieces: CommandArgList = [username, command]
+        command_arguments: CommandArgList = [username, command]
 
         if args:
-            pieces.extend(args)
+            command_arguments.extend(args)
 
         return await self.execute_command(
             CommandName.ACL_DRYRUN,
-            *pieces,
+            *command_arguments,
             callback=SimpleStringCallback(AuthorizationError),
         )
 
@@ -7302,13 +7430,15 @@ class CoreCommands(CommandMixin[AnyStr]):
          Otherwise if an argument if needed, the output string length is the number of
          specified bits (rounded to the next multiple of 4) divided by 4.
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if bits is not None:
-            pieces.append(bits)
+            command_arguments.append(bits)
 
         return await self.execute_command(
-            CommandName.ACL_GENPASS, *pieces, callback=AnyStrCallback[AnyStr]()
+            CommandName.ACL_GENPASS,
+            *command_arguments,
+            callback=AnyStrCallback[AnyStr](),
         )
 
     @versionadded(version="3.0.0")
@@ -7392,21 +7522,23 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         """
 
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if count is not None:
-            pieces.append(count)
+            command_arguments.append(count)
 
         if reset is not None:
-            pieces.append(PureToken.RESET)
+            command_arguments.append(PureToken.RESET)
 
         if reset:
             return await self.execute_command(
-                CommandName.ACL_LOG, *pieces, callback=SimpleStringCallback()
+                CommandName.ACL_LOG, *command_arguments, callback=SimpleStringCallback()
             )
         else:
             return await self.execute_command(
-                CommandName.ACL_LOG, *pieces, callback=ACLLogCallback[AnyStr]()
+                CommandName.ACL_LOG,
+                *command_arguments,
+                callback=ACLLogCallback[AnyStr](),
             )
 
     @versionadded(version="3.0.0")
@@ -7454,13 +7586,16 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :return: True if successful. If the rules contain errors, the error is returned.
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if rules:
-            pieces.extend(rules)
+            command_arguments.extend(rules)
 
         return await self.execute_command(
-            CommandName.ACL_SETUSER, username, *pieces, callback=SimpleStringCallback()
+            CommandName.ACL_SETUSER,
+            username,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )
 
     @versionadded(version="3.0.0")
@@ -7634,22 +7769,22 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Get an array of Redis command names
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
         if any([module, aclcat, pattern]):
-            pieces.append(PrefixToken.FILTERBY)
+            command_arguments.append(PrefixToken.FILTERBY)
 
         if module is not None:
-            pieces.extend([PrefixToken.MODULE, module])
+            command_arguments.extend([PrefixToken.MODULE, module])
 
         if aclcat is not None:
-            pieces.extend([PrefixToken.ACLCAT, aclcat])
+            command_arguments.extend([PrefixToken.ACLCAT, aclcat])
 
         if pattern is not None:
-            pieces.extend([PrefixToken.PATTERN, pattern])
+            command_arguments.extend([PrefixToken.PATTERN, pattern])
 
         return await self.execute_command(
-            CommandName.COMMAND_LIST, *pieces, callback=SetCallback[AnyStr]()
+            CommandName.COMMAND_LIST, *command_arguments, callback=SetCallback[AnyStr]()
         )
 
     @ensure_iterable_valid("parameters")
@@ -7735,13 +7870,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Load a module
         """
-        pieces: CommandArgList = [path]
+        command_arguments: CommandArgList = [path]
 
         if args:
-            pieces.extend(args)
+            command_arguments.extend(args)
 
         return await self.execute_command(
-            CommandName.MODULE_LOAD, *pieces, callback=SimpleStringCallback()
+            CommandName.MODULE_LOAD, *command_arguments, callback=SimpleStringCallback()
         )
 
     @versionadded(version="3.4.0")
@@ -7757,17 +7892,19 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Loads a module from a dynamic library at runtime with configuration directives.
         """
-        pieces: CommandArgList = [path]
+        command_arguments: CommandArgList = [path]
 
         if configs:
             for pair in configs.items():
-                pieces.append(PrefixToken.CONFIG)
-                pieces.extend(pair)
+                command_arguments.append(PrefixToken.CONFIG)
+                command_arguments.extend(pair)
         if args:
-            pieces.append(PrefixToken.ARGS)
-            pieces.extend(args)
+            command_arguments.append(PrefixToken.ARGS)
+            command_arguments.extend(args)
         return await self.execute_command(
-            CommandName.MODULE_LOADEX, *pieces, callback=SimpleStringCallback()
+            CommandName.MODULE_LOADEX,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )
 
     @versionadded(version="3.2.0")
