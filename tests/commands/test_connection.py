@@ -82,7 +82,9 @@ class TestConnection:
         assert await client.client_tracking(PureToken.OFF)
         assert -1 == await client.client_getredir()
         with pytest.raises(ResponseError, match="does not exist"):
-            await client.client_tracking(PureToken.ON, redirect=1234)
+            clients = await client.client_list()
+            invalid_client_id = max(c['id'] for c in clients) + 100
+            await client.client_tracking(PureToken.ON, redirect=invalid_client_id)
         assert await client.client_tracking(PureToken.ON, bcast=True, redirect=clone_id)
         assert await client.client_tracking(PureToken.OFF)
         assert await client.client_tracking(
