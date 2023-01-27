@@ -56,26 +56,68 @@ NOT_ENOUGH_DATA: Final[NotEnoughData] = NotEnoughData()
 
 
 class RESPNode:
-    __slots__ = ("container", "depth", "key", "node_type")
+    __slots__ = ("depth", "key", "node_type")
     depth: int
-    node_type: int
     key: ResponsePrimitive
+    node_type: int
 
     def __init__(
         self,
-        container: Union[
-            List[ResponseType],
-            MutableSet[Union[ResponsePrimitive, Tuple[ResponsePrimitive, ...]]],
-            Dict[ResponsePrimitive, ResponseType],
-        ],
         depth: int,
         node_type: int,
         key: ResponsePrimitive,
     ):
-        self.container = container
         self.depth = depth
         self.node_type = node_type
         self.key = key
+
+    def append(self, item: ResponseType) -> None:
+        ...
+
+
+class ListNode(RESPNode):
+    __slots__ = ("container",)
+
+    def __init__(self, depth: int, node_type: int) -> None:
+        self.container: List[ResponseType] = []
+        super().__init__(depth, node_type, None)
+
+    def append(self, item: ResponseType) -> None:
+        self.depth -= 1
+        self.container.append(item)
+
+
+class DictNode(RESPNode):
+    __slots__ = ("container",)
+
+    def __init__(self, depth: int) -> None:
+        self.container: Dict[ResponsePrimitive, ResponseType] = {}
+        super().__init__(depth * 2, RESPDataType.MAP, None)
+
+    def append(self, item: ResponseType) -> None:
+        self.depth -= 1
+        if not self.key:
+            self.key = cast(ResponsePrimitive, item)
+        else:
+            self.container[self.key] = item
+            self.key = None
+
+
+class SetNode(RESPNode):
+    __slots__ = ("container",)
+
+    def __init__(self, depth: int) -> None:
+        self.container: MutableSet[
+            Union[ResponsePrimitive, Tuple[ResponsePrimitive, ...]]
+        ] = set()
+        super().__init__(depth, RESPDataType.SET, None)
+
+    def append(
+        self,
+        item: ResponseType,
+    ) -> None:
+        self.depth -= 1
+        self.container.add(cast(ResponsePrimitive, item))
 
 
 class UnpackedResponse(NamedTuple):
@@ -123,7 +165,7 @@ class Parser:
         self.localbuffer = BytesIO(b"")
         self.bytes_read = 0
         self.bytes_written = 0
-        self.nodes: List[RESPNode] = []
+        self.nodes: List[Union[ListNode, SetNode, DictNode]] = []
 
     def feed(self, data: bytes) -> None:
         self.localbuffer.seek(self.bytes_written)
@@ -232,18 +274,11 @@ class Parser:
                 length = int(chunk)
                 if length >= 0:
                     if marker in {RESPDataType.ARRAY, RESPDataType.PUSH}:
-                        self.nodes.append(
-                            RESPNode(
-                                [],
-                                length,
-                                marker,
-                                None,
-                            )
-                        )
+                        self.nodes.append(ListNode(length, marker))
                     elif marker == RESPDataType.MAP:
-                        self.nodes.append(RESPNode({}, length * 2, marker, None))
+                        self.nodes.append(DictNode(length))
                     else:
-                        self.nodes.append(RESPNode(set(), length, marker, None))
+                        self.nodes.append(SetNode(length))
                     if length > 0:
                         continue
             elif marker == RESPDataType.ERROR:
@@ -255,34 +290,12 @@ class Parser:
 
             if self.nodes:
                 if self.nodes[-1].depth > 0:
-                    self.nodes[-1].depth -= 1
-                    if isinstance(self.nodes[-1].container, list):
-                        self.nodes[-1].container.append(response)
-                    elif isinstance(self.nodes[-1].container, dict):
-                        if self.nodes[-1].key is not None:
-                            self.nodes[-1].container[self.nodes[-1].key] = response
-                            self.nodes[-1].key = None
-                        else:
-                            self.nodes[-1].key = cast(ResponsePrimitive, response)
-                    else:
-                        self.nodes[-1].container.add(cast(ResponsePrimitive, response))
+                    self.nodes[-1].append(response)
                     if self.nodes[-1].depth > 1:
                         continue
 
                 while len(self.nodes) > 1 and self.nodes[-1].depth == 0:
-                    self.nodes[-2].depth -= 1
-                    if isinstance(self.nodes[-2].container, list):
-                        self.nodes[-2].container.append(self.nodes[-1].container)
-                    elif (
-                        isinstance(self.nodes[-2].container, dict)
-                        and self.nodes[-2].key is not None
-                    ):
-                        self.nodes[-2].container[self.nodes[-2].key] = self.nodes[
-                            -1
-                        ].container
-                        self.nodes[-2].key = None
-                    else:
-                        raise TypeError(f"unhashable type {self.nodes[-1].container}")
+                    self.nodes[-2].append(self.nodes[-1].container)
                     self.nodes.pop()
 
             if len(self.nodes) == 1 and self.nodes[-1].depth == 0:

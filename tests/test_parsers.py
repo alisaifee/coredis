@@ -310,7 +310,7 @@ class TestPyParser:
         # This specifically represents a minimal example of the response from
         # ``COMMANDS INFO with RESP 3``
         parser.feed(b"~1\r\n%1\r\n:1\r\n:2\r\n")
-        with pytest.raises(TypeError, match="unhashable type"):
+        with pytest.raises(TypeError):
             parser.get_response(
                 decode=decode,
                 encoding="latin-1",
