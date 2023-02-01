@@ -2,7 +2,7 @@
 -r publishing.txt
 black==22.12.0
 ruff
-isort==5.11.4
+isort==5.12.0
 mypy==0.991; implementation_name!='pypy'
 pyright==1.1.249
 redis>=4.2.0
