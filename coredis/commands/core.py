@@ -2186,7 +2186,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         match: Optional[StringT] = None,
         count: Optional[int] = None,
     ) -> Tuple[int, Dict[AnyStr, AnyStr]]:
-
         """
         Incrementallys return key/value slices in a hash. Also returns a
         cursor pointing to the scan position.
@@ -2292,7 +2291,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         flags={CommandFlag.FAST},
     )
     async def pfadd(self, key: KeyT, *elements: ValueT) -> bool:
-
         """
         Adds the specified elements to the specified HyperLogLog.
 
@@ -2873,7 +2871,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         alpha: Optional[bool] = None,
         store: Optional[KeyT] = None,
     ) -> Union[Tuple[AnyStr, ...], int]:
-
         """
         Sort the elements in a list, set or sorted set
 
@@ -5636,7 +5633,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         Tuple[AnyStr, Tuple[AnyStr, ...]],
         Tuple[AnyStr, Tuple[StreamEntry, ...], Tuple[AnyStr, ...]],
     ]:
-
         """
         Changes (or acquires) ownership of messages in a consumer group, as if the messages were
         delivered to the specified consumer.
@@ -6758,7 +6754,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         optout: Optional[bool] = None,
         noloop: Optional[bool] = None,
     ) -> bool:
-
         """
         Enable or disable server assisted client side caching support
 

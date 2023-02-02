@@ -723,7 +723,6 @@ class Redis(Client[AnyStr]):
         of conflicting arguments, querystring arguments always win.
         """
         if decode_responses:
-
             return cls(
                 decode_responses=True,
                 protocol_version=protocol_version,

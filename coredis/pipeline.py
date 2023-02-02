@@ -455,7 +455,6 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         commands: List[PipelineCommand],
         raise_on_error: bool,
     ) -> Tuple[Any, ...]:
-
         cmds = list(
             chain(
                 [
@@ -718,7 +717,6 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
 
 
 class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
-
     connection_pool: ClusterConnectionPool
     command_stack: List[ClusterPipelineCommand]
 

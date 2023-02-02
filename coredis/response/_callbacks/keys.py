@@ -52,7 +52,6 @@ class ScanCallback(
 
 class ExpiryCallback(DateTimeCallback):
     def transform(self, response: int, **options: Optional[ValueT]) -> datetime:
-
         if response > 0:
             return super().transform(response, **options)
         else:

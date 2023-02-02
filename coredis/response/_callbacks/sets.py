@@ -23,7 +23,6 @@ class SScanCallback(
     def transform(
         self, response: List[ResponseType], **options: Optional[ValueT]
     ) -> Tuple[int, Set[AnyStr]]:
-
         cursor, r = response
         assert isinstance(cursor, (bytes, str)) and isinstance(r, Iterable)
         return int(cursor), set(cast(Iterable[AnyStr], r))

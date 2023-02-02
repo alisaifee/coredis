@@ -61,7 +61,6 @@ class CommandKeyFlagCallback(
     def transform(
         self, response: List[ResponseType], **options: Optional[ValueT]
     ) -> Dict[AnyStr, Set[AnyStr]]:
-
         return {k[0]: set(k[1]) for k in response}
 
 
@@ -75,7 +74,6 @@ class CommandDocCallback(
     def transform(
         self, response: List[ResponseType], **options: Optional[ValueT]
     ) -> Dict[AnyStr, Dict[AnyStr, ResponseType]]:
-
         cmd_mapping = flat_pairs_to_dict(response)
         for cmd, doc in cmd_mapping.items():
             cmd_mapping[cmd] = EncodingInsensitiveDict(flat_pairs_to_dict(doc))
@@ -89,5 +87,4 @@ class CommandDocCallback(
         response: Dict[ResponsePrimitive, ResponseType],
         **options: Optional[ValueT],
     ) -> Dict[AnyStr, Dict[AnyStr, ResponseType]]:
-
         return response  # noqa

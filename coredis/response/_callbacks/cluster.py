@@ -33,7 +33,6 @@ class ClusterLinksCallback(
     def transform_3(
         self, response: ResponseType, **options: Optional[ValueT]
     ) -> List[Dict[AnyStr, ResponsePrimitive]]:
-
         return response
 
 
@@ -41,7 +40,6 @@ class ClusterInfoCallback(ResponseCallback[ResponseType, ResponseType, Dict[str,
     def transform(
         self, response: ResponseType, **options: Optional[ValueT]
     ) -> Dict[str, str]:
-
         response_str = nativestr(response)
         return dict([line.split(":") for line in response_str.splitlines() if line])
 
@@ -54,7 +52,6 @@ class ClusterSlotsCallback(
     def transform(
         self, response: ResponseType, **options: Optional[ValueT]
     ) -> Dict[Tuple[int, int], Tuple[ClusterNode, ...]]:
-
         res: Dict[Tuple[int, int], Tuple[ClusterNode, ...]] = {}
 
         for slot_info in response:
@@ -187,5 +184,4 @@ class ClusterShardsCallback(
     def transform_3(
         self, response: ResponseType, **options: Optional[ValueT]
     ) -> List[Dict[AnyStr, Union[List[ValueT], Mapping[AnyStr, ValueT]]]]:
-
         return response

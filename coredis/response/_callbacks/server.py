@@ -25,7 +25,6 @@ class TimeCallback(ResponseCallback[ResponseType, ResponseType, datetime.datetim
     def transform(
         self, response: ResponseType, **options: Optional[ValueT]
     ) -> datetime.datetime:
-
         return datetime.datetime.fromtimestamp(int(response[0])) + datetime.timedelta(
             microseconds=int(response[1]) / 1000.0
         )
@@ -37,7 +36,6 @@ class SlowlogCallback(
     def transform(
         self, response: ResponseType, **options: Optional[ValueT]
     ) -> Tuple[SlowLogInfo, ...]:
-
         return tuple(
             SlowLogInfo(
                 id=item[0],
@@ -74,7 +72,6 @@ class ClientInfoCallback(ResponseCallback[ResponseType, ResponseType, ClientInfo
     def transform(
         self, response: ResponseType, **options: Optional[ValueT]
     ) -> ClientInfo:
-
         decoded_response = nativestr(response)
         pairs = [pair.split("=", 1) for pair in decoded_response.strip().split(" ")]
 
@@ -93,7 +90,6 @@ class ClientListCallback(
     def transform(
         self, response: ResponseType, **options: Optional[ValueT]
     ) -> Tuple[ClientInfo, ...]:
-
         return tuple(ClientInfoCallback()(c) for c in response.splitlines())
 
 
@@ -172,7 +168,6 @@ class RoleCallback(ResponseCallback[ResponseType, ResponseType, RoleInfo]):
     def transform(
         self, response: ResponseType, **options: Optional[ValueT]
     ) -> RoleInfo:
-
         role = nativestr(response[0])
 
         def _parse_master(response: Any) -> Any:
@@ -213,7 +208,6 @@ class LatencyHistogramCallback(
     def transform(
         self, response: ResponseType, **options: Optional[ValueT]
     ) -> Dict[AnyStr, Dict[AnyStr, ValueT]]:
-
         histogram = flat_pairs_to_dict(response)
         for key, value in histogram.items():
             histogram[key] = EncodingInsensitiveDict(flat_pairs_to_dict(value))
@@ -229,5 +223,4 @@ class LatencyCallback(
     def transform(
         self, response: ResponseType, **options: Optional[ValueT]
     ) -> Dict[AnyStr, Tuple[int, int, int]]:
-
         return {k[0]: (k[1], k[2], k[3]) for k in response}

@@ -361,7 +361,12 @@ class TestSortedSet:
         )
 
         # custom score function
-        assert await client.zrange("a{foo}", 0, 1, withscores=True,) == (
+        assert await client.zrange(
+            "a{foo}",
+            0,
+            1,
+            withscores=True,
+        ) == (
             (_s("a1"), 1),
             (_s("a2"), 2),
         )
@@ -383,7 +388,12 @@ class TestSortedSet:
         )
 
         # custom score function
-        assert await client.zrange("a{foo}", 0, 1, withscores=True,) == (
+        assert await client.zrange(
+            "a{foo}",
+            0,
+            1,
+            withscores=True,
+        ) == (
             (_s("a1"), 1),
             (_s("a2"), 2),
         )
@@ -574,7 +584,12 @@ class TestSortedSet:
             )
 
             # custom score function
-            assert await client.zrevrange("a{foo}", 0, 1, withscores=True,) == (
+            assert await client.zrevrange(
+                "a{foo}",
+                0,
+                1,
+                withscores=True,
+            ) == (
                 (_s("a3"), 3.0),
                 (_s("a2"), 2.0),
             )

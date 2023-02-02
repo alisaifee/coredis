@@ -15,7 +15,6 @@ class GeoSearchCallback(
     def transform(
         self, response: ResponseType, **options: Optional[ValueT]
     ) -> Union[int, Tuple[Union[AnyStr, GeoSearchResult], ...]]:
-
         if options.get("store") or options.get("storedist"):
             return response
 
@@ -49,7 +48,6 @@ class GeoCoordinatessCallback(
     def transform(
         self, response: ResponseType, **options: Optional[ValueT]
     ) -> Tuple[Optional[GeoCoordinates], ...]:
-
         return tuple(
             map(
                 lambda ll: (

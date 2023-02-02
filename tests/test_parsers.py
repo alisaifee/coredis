@@ -191,14 +191,20 @@ class TestPyParser:
 
     def test_string_array(self, parser, decode):
         parser.feed(b"*2\r\n$2\r\nco\r\n$5\r\nredis\r\n")
-        assert parser.get_response(decode=decode, encoding="latin-1",) == [
+        assert parser.get_response(
+            decode=decode,
+            encoding="latin-1",
+        ) == [
             self.encoded_value(decode, b"co"),
             self.encoded_value(decode, b"redis"),
         ]
 
     def test_mixed_array(self, parser, decode):
         parser.feed(b"*3\r\n:-1\r\n$2\r\nco\r\n$5\r\nredis\r\n")
-        assert parser.get_response(decode=decode, encoding="latin-1",) == [
+        assert parser.get_response(
+            decode=decode,
+            encoding="latin-1",
+        ) == [
             -1,
             self.encoded_value(decode, b"co"),
             self.encoded_value(decode, b"redis"),
@@ -206,7 +212,10 @@ class TestPyParser:
 
     def test_nested_array(self, parser, decode):
         parser.feed(b"*2\r\n*2\r\n$2\r\nco\r\n$5\r\nredis\r\n:1\r\n")
-        assert parser.get_response(decode=decode, encoding="latin-1",) == [
+        assert parser.get_response(
+            decode=decode,
+            encoding="latin-1",
+        ) == [
             [
                 self.encoded_value(decode, b"co"),
                 self.encoded_value(decode, b"redis"),
@@ -300,7 +309,10 @@ class TestPyParser:
         parser.feed(
             b"%2\r\n$2\r\nco\r\n*1\r\n:1\r\n$2\r\nre\r\n~3\r\n:1\r\n:2\r\n:3\r\n"
         )
-        assert parser.get_response(decode=decode, encoding="latin-1",) == {
+        assert parser.get_response(
+            decode=decode,
+            encoding="latin-1",
+        ) == {
             self.encoded_value(decode, b"co"): [1],
             self.encoded_value(decode, b"re"): {1, 2, 3},
         }

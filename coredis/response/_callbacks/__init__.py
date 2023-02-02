@@ -370,7 +370,6 @@ class DictCallback(
         response: Union[Sequence[ResponseType], Dict[ResponsePrimitive, ResponseType]],
         **options: Optional[ValueT],
     ) -> Dict[CK_co, CR_co]:
-
         if isinstance(response, Dict):
             return cast(Dict[CK_co, CR_co], response)
         return self.transform(response, **options)

@@ -25,7 +25,6 @@ class ClientTrackingInfoCallback(
     def transform(
         self, response: ResponseType, **options: Optional[ValueT]
     ) -> Dict[AnyStr, Union[AnyStr, Set[AnyStr], List[AnyStr]]]:
-
         response = EncodingInsensitiveDict(flat_pairs_to_dict(response))
         response["flags"] = set(response["flags"])
         return dict(response)
@@ -33,5 +32,4 @@ class ClientTrackingInfoCallback(
     def transform_3(
         self, response: ResponseType, **options: Optional[ValueT]
     ) -> Dict[AnyStr, Union[AnyStr, Set[AnyStr], List[AnyStr]]]:
-
         return response

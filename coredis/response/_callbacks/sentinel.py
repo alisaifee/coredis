@@ -93,7 +93,6 @@ class PrimaryCallback(
     def transform(
         self, response: ResponseType, **options: Optional[ValueT]
     ) -> Dict[str, Union[str, int, bool]]:
-
         return parse_sentinel_state(cast(List[ResponsePrimitive], response))
 
     def transform_3(
@@ -101,7 +100,6 @@ class PrimaryCallback(
         response: Dict[ResponsePrimitive, ResponsePrimitive],
         **options: Optional[ValueT],
     ) -> Dict[str, Union[str, int, bool]]:
-
         return add_flags(EncodingInsensitiveDict(response))
 
 
@@ -117,7 +115,6 @@ class PrimariesCallback(
         response: Union[List[ResponseType], Dict[ResponsePrimitive, ResponsePrimitive]],
         **options: Optional[ValueT],
     ) -> Dict[str, Dict[str, Union[str, int, bool]]]:
-
         result: Dict[str, Dict[str, Union[str, int, bool]]] = {}
 
         for item in response:
@@ -129,7 +126,6 @@ class PrimariesCallback(
     def transform_3(
         self, response: List[ResponseType], **options: Optional[ValueT]
     ) -> Dict[str, Dict[str, Union[str, int, bool]]]:
-
         states: Dict[str, Dict[str, Union[str, int, bool]]] = {}
         for state in response:
             proxy = add_flags(EncodingInsensitiveDict(state))
@@ -147,7 +143,6 @@ class SentinelsStateCallback(
     def transform(
         self, response: List[ResponseType], **options: Optional[ValueT]
     ) -> Tuple[Dict[str, Union[str, bool, int]], ...]:
-
         return tuple(
             parse_sentinel_state([nativestr(i) for i in item]) for item in response
         )
@@ -155,7 +150,6 @@ class SentinelsStateCallback(
     def transform_3(
         self, response: List[ResponseType], **options: Optional[ValueT]
     ) -> Tuple[Dict[str, Union[str, bool, int]], ...]:
-
         return tuple(add_flags(EncodingInsensitiveDict(state)) for state in response)
 
 
@@ -182,5 +176,4 @@ class SentinelInfoCallback(
     def transform(
         self, response: List[ResponseType], **options: Optional[ValueT]
     ) -> Dict[AnyStr, Dict[int, Dict[str, ResponseType]]]:
-
         return {response[0]: {r[0]: InfoCallback()(r[1]) for r in response[1]}}

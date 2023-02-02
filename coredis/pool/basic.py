@@ -375,7 +375,6 @@ class BlockingConnectionPool(ConnectionPool):
         idle_check_interval: int = 1,
         **connection_kwargs: Optional[ValueT],
     ):
-
         self.timeout = timeout
         self.queue_class = queue_class
         self.total_wait = 0

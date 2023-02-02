@@ -29,7 +29,6 @@ class ZMembersOrScoredMembers(
         response: List[Union[AnyStr, List[ResponsePrimitive]]],
         **options: Optional[ValueT],
     ) -> Tuple[Union[AnyStr, ScoredMember], ...]:
-
         if not response:
             return ()
         elif options.get("withscores"):
@@ -43,7 +42,6 @@ class ZMembersOrScoredMembers(
         response: List[Union[AnyStr, List[ResponsePrimitive]]],
         **options: Optional[ValueT],
     ) -> Tuple[Union[AnyStr, ScoredMember], ...]:
-
         if options.get("withscores"):
             return tuple(
                 ScoredMember(*v) for v in cast(List[Tuple[AnyStr, float]], response)
@@ -63,7 +61,6 @@ class ZSetScorePairCallback(
     def transform(
         self, response: Optional[List[ResponsePrimitive]], **options: Optional[ValueT]
     ) -> Optional[Union[ScoredMember, ScoredMembers]]:
-
         if not response:
             return None
 
@@ -80,7 +77,6 @@ class ZSetScorePairCallback(
         response: Optional[List[Union[ResponsePrimitive, List[ResponsePrimitive]]]],
         **options: Optional[ValueT],
     ) -> Optional[Union[ScoredMember, ScoredMembers]]:
-
         if not response:
             return None
 
@@ -103,7 +99,6 @@ class ZMPopCallback(
     def transform(
         self, response: Optional[List[ResponseType]], **options: Optional[ValueT]
     ) -> Optional[Tuple[AnyStr, ScoredMembers]]:
-
         r = cast(Tuple[AnyStr, List[Tuple[AnyStr, int]]], response)
         if r:
             return r[0], tuple(ScoredMember(v[0], float(v[1])) for v in r[1])
@@ -119,7 +114,6 @@ class ZMScoreCallback(
     def transform(
         self, response: List[ResponsePrimitive], **options: Optional[ValueT]
     ) -> Tuple[Optional[float], ...]:
-
         return tuple(score if score is None else float(score) for score in response)
 
 
@@ -130,7 +124,6 @@ class ZScanCallback(
     def transform(
         self, response: List[ResponseType], **options: Optional[ValueT]
     ) -> Tuple[int, ScoredMembers]:
-
         cursor, r = cast(Tuple[int, List[AnyStr]], response)
         it = iter(r)
         return int(cursor), tuple(
@@ -151,7 +144,6 @@ class ZRandMemberCallback(
         response: Optional[Union[AnyStr, List[ResponsePrimitive]]],
         **options: Optional[ValueT],
     ) -> Optional[Union[AnyStr, ScoredMembers]]:
-
         if not (response and options.get("withscores")):
             return response
 
@@ -163,7 +155,6 @@ class ZRandMemberCallback(
         response: Optional[Union[AnyStr, List[ResponsePrimitive]]],
         **options: Optional[ValueT],
     ) -> Optional[Union[AnyStr, ScoredMembers]]:
-
         if not (response and options.get("withscores")):
             return response
 

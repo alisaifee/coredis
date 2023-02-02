@@ -313,7 +313,6 @@ async def test_cluster_one_instance(redis_cluster):
     """
     with patch.object(Redis, "cluster_slots") as mock_cluster_slots:
         with patch.object(Redis, "config_get") as mock_config_get:
-
             mock_config_get.return_value = {"cluster-require-full-coverage": "yes"}
             mock_cluster_slots.return_value = {
                 (0, 16383): [

@@ -32,7 +32,6 @@ class MutuallyExclusiveParametersError(CommandSyntaxError):
 
 class MutuallyInclusiveParametersMissing(CommandSyntaxError):
     def __init__(self, arguments: Set[str], leaders: Set[str], details: Optional[str]):
-
         if leaders:
             message = (
                 f"The [{','.join(arguments)}] parameters(s)"
@@ -53,7 +52,6 @@ def mutually_exclusive_parameters(
 ) -> Callable[
     [Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]
 ]:
-
     primary = {k for k in exclusive_params if isinstance(k, str)}
     secondary = [k for k in set(exclusive_params) - primary]
 

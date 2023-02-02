@@ -32,7 +32,6 @@ class TestACL:
 
     @pytest.mark.min_server_version("7.0.0")
     async def test_acl_dryrun(self, client, _s):
-
         await client.acl_setuser("test_user", "+set", "~*")
         assert await client.acl_dryrun("test_user", "set", "foo", "bar")
         with pytest.raises(AuthorizationError):

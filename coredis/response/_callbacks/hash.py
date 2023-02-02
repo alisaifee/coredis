@@ -77,7 +77,6 @@ class HGetAllCallback(
     def transform(
         self, response: List[AnyStr], **options: Optional[ValueT]
     ) -> Dict[AnyStr, AnyStr]:
-
         return flat_pairs_to_dict(response) if response else {}
 
     def transform_3(
