@@ -24,6 +24,9 @@ from coredis.typing import (
     Union,
 )
 
+T = TypeVar("T")
+U = TypeVar("U")
+
 
 class EncodingInsensitiveDict(ObjectProxy):  # type: ignore
     def __init__(
@@ -151,10 +154,6 @@ def nativestr(x: ResponseType, encoding: str = "utf-8") -> str:
     elif isinstance(x, (int, float, bool)):
         return str(x)
     raise ValueError(f"Unable to cast {x} to string")
-
-
-T = TypeVar("T")
-U = TypeVar("U")
 
 
 def tuples_to_flat_list(nested_list: Iterable[Tuple[T, ...]]) -> List[T]:
