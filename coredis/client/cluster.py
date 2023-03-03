@@ -671,7 +671,7 @@ class RedisCluster(
         slot = None
         if not nodes:
             slot = self._determine_slot(command, *args)
-            if not slot:
+            if slot is None:
                 try_random_node = True
                 try_random_type = NodeFlag.PRIMARIES
         else:
@@ -680,7 +680,8 @@ class RedisCluster(
 
         while ttl > 0:
             ttl -= 1
-
+            if self.refresh_table_asap and slot is None:
+                await self
             if asking and redirect_addr:
                 node = self.connection_pool.nodes.nodes[redirect_addr]
                 r = await self.connection_pool.get_connection_by_node(node)
@@ -688,7 +689,8 @@ class RedisCluster(
                 r = await self.connection_pool.get_random_connection(
                     primary=try_random_type == NodeFlag.PRIMARIES
                 )
-                try_random_node = False
+                if slot is not None:
+                    try_random_node = False
             elif slot is not None:
                 if self.refresh_table_asap:
                     # MOVED
@@ -700,7 +702,6 @@ class RedisCluster(
                 r = await self.connection_pool.get_connection_by_node(node)
             else:
                 continue
-
             quick_release = self.should_quick_release(command)
             released = False
             try:
@@ -745,10 +746,11 @@ class RedisCluster(
             except (RedisClusterException, BusyLoadingError, asyncio.CancelledError):
                 raise
             except (ConnectionError, TimeoutError):
-                try_random_node = True
-
-                if ttl < self.RedisClusterRequestTTL / 2:
+                if ttl < self.RedisClusterRequestTTL / 2 and slot is not None:
+                    try_random_node = True
                     await asyncio.sleep(0.1)
+                else:
+                    self.refresh_table_asap = True
             except ClusterDownError as e:
                 self.connection_pool.disconnect()
                 self.connection_pool.reset()
