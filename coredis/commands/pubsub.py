@@ -5,7 +5,7 @@ import inspect
 import threading
 from asyncio import CancelledError
 from concurrent.futures import Future
-from functools import partial, wraps
+from functools import partial
 from typing import TYPE_CHECKING, Any, cast
 
 from deprecated.sphinx import versionadded
@@ -15,23 +15,19 @@ from coredis.commands.constants import CommandName
 from coredis.connection import BaseConnection, Connection
 from coredis.exceptions import ConnectionError, PubSubError, TimeoutError
 from coredis.response.types import PubSubMessage
+from coredis.retry import retryable
 from coredis.typing import (
     AnyStr,
     Awaitable,
     Callable,
-    Coroutine,
     Dict,
     Generic,
     List,
     MutableMapping,
     Optional,
-    P,
-    R,
     ResponsePrimitive,
     ResponseType,
     StringT,
-    Tuple,
-    Type,
     TypeVar,
     Union,
     ValueT,
@@ -52,35 +48,6 @@ PoolT = TypeVar("PoolT", bound="coredis.pool.ConnectionPool")
 SubscriptionCallback = Union[
     Callable[[PubSubMessage], Awaitable[None]], Callable[[PubSubMessage], None]
 ]
-
-
-def retryable(
-    retryable_exceptions: Tuple[Type[BaseException], ...],
-    failure_hook: Optional[Callable[..., Coroutine[Any, Any, None]]],
-    retries: int = 3,
-) -> Callable[
-    [Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]
-]:
-    def inner(
-        func: Callable[P, Coroutine[Any, Any, R]]
-    ) -> Callable[P, Coroutine[Any, Any, R]]:
-        @wraps(func)
-        async def _inner(*args: P.args, **kwargs: P.kwargs) -> R:
-            last_error: Optional[BaseException] = None
-            for _ in range(retries):
-                try:
-                    return await func(*args, **kwargs)
-                except retryable_exceptions as e:
-                    if failure_hook:
-                        await failure_hook(args[0])
-                    last_error = e
-            if last_error:
-                raise last_error
-            assert False
-
-        return _inner
-
-    return inner
 
 
 class PubSubMessageTypes(CaseAndEncodingInsensitiveEnum):

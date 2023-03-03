@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, List, cast, overload
 
 from deprecated.sphinx import versionadded
 
-from coredis._utils import b, clusterdown_wrapper, hash_slot
+from coredis._utils import b, hash_slot
 from coredis.cache import AbstractCache, SupportsClientTracking
 from coredis.client.basic import Client, Redis
 from coredis.commands._key_spec import KeySpec
@@ -35,6 +35,7 @@ from coredis.globals import READONLY_COMMANDS
 from coredis.pool import ClusterConnectionPool
 from coredis.pool.nodemanager import ManagedNode
 from coredis.response._callbacks import NoopCallback
+from coredis.retry import ConstantRetryPolicy, retryable
 from coredis.typing import (
     AnyStr,
     AsyncIterator,
@@ -632,7 +633,7 @@ class RedisCluster(
                 return [node_from_slot]
         return None
 
-    @clusterdown_wrapper
+    @retryable((ClusterDownError,), policy=ConstantRetryPolicy(3, 0.1))
     async def execute_command(
         self,
         command: bytes,

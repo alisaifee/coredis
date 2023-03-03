@@ -14,7 +14,7 @@ from typing import Any, cast
 
 from wrapt import ObjectProxy  # type: ignore
 
-from coredis._utils import b, clusterdown_wrapper, hash_slot
+from coredis._utils import b, hash_slot
 from coredis.client import Client
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName, NodeFlag
@@ -23,6 +23,7 @@ from coredis.connection import BaseConnection, ClusterConnection, CommandInvocat
 from coredis.exceptions import (
     AskError,
     ClusterCrossSlotError,
+    ClusterDownError,
     ClusterTransactionError,
     ConnectionError,
     ExecAbortError,
@@ -43,6 +44,7 @@ from coredis.response._callbacks import (
     NoopCallback,
     SimpleStringCallback,
 )
+from coredis.retry import ConstantRetryPolicy, retryable
 from coredis.typing import (
     AnyStr,
     Callable,
@@ -872,7 +874,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
             self.connection_pool.release(self._watched_connection)
             self._watched_connection = None
 
-    @clusterdown_wrapper
+    @retryable((ClusterDownError,), policy=ConstantRetryPolicy(3, 0.1))
     async def send_cluster_transaction(
         self, raise_on_error: bool = True
     ) -> Tuple[object, ...]:
@@ -933,7 +935,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
             if n.command not in {CommandName.MULTI, CommandName.EXEC}
         )
 
-    @clusterdown_wrapper
+    @retryable((ClusterDownError,), policy=ConstantRetryPolicy(3, 0.1))
     async def send_cluster_commands(
         self, raise_on_error: bool = True, allow_redirections: bool = True
     ) -> Tuple[object, ...]:
