@@ -5,7 +5,7 @@ import inspect
 import threading
 from asyncio import CancelledError
 from concurrent.futures import Future
-from functools import partial
+from functools import partial, wraps
 from typing import TYPE_CHECKING, Any, cast
 
 from deprecated.sphinx import versionadded
@@ -19,14 +19,19 @@ from coredis.typing import (
     AnyStr,
     Awaitable,
     Callable,
+    Coroutine,
     Dict,
     Generic,
     List,
     MutableMapping,
     Optional,
+    P,
+    R,
     ResponsePrimitive,
     ResponseType,
     StringT,
+    Tuple,
+    Type,
     TypeVar,
     Union,
     ValueT,
@@ -47,6 +52,35 @@ PoolT = TypeVar("PoolT", bound="coredis.pool.ConnectionPool")
 SubscriptionCallback = Union[
     Callable[[PubSubMessage], Awaitable[None]], Callable[[PubSubMessage], None]
 ]
+
+
+def retryable(
+    retryable_exceptions: Tuple[Type[BaseException], ...],
+    failure_hook: Optional[Callable[..., Coroutine[Any, Any, None]]],
+    retries: int = 3,
+) -> Callable[
+    [Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]
+]:
+    def inner(
+        func: Callable[P, Coroutine[Any, Any, R]]
+    ) -> Callable[P, Coroutine[Any, Any, R]]:
+        @wraps(func)
+        async def _inner(*args: P.args, **kwargs: P.kwargs) -> R:
+            last_error: Optional[BaseException] = None
+            for _ in range(retries):
+                try:
+                    return await func(*args, **kwargs)
+                except retryable_exceptions as e:
+                    if failure_hook:
+                        await failure_hook(args[0])
+                    last_error = e
+            if last_error:
+                raise last_error
+            assert False
+
+        return _inner
+
+    return inner
 
 
 class PubSubMessageTypes(CaseAndEncodingInsensitiveEnum):
@@ -465,18 +499,30 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         await self.connection_pool.initialize()
 
         if self.connection is None:
-            self.connection = await self.connection_pool.get_connection(
-                b"pubsub",
-                channel=str(args[0]),
-            )
-            # register a callback that re-subscribes to any channels we
-            # were listening to when we were disconnected
-            self.connection.register_connect_callback(self.on_connect)
+            await self.reset_connection()
 
         assert self.connection
         return await self._execute(
             self.connection, self.connection.send_command, command, *args
         )
+
+    async def reset_connection(self) -> None:
+        if self.connection:
+            self.connection.disconnect()
+            self.connection_pool.initialized = False
+
+        await self.connection_pool.initialize()
+
+        self.connection = await self.connection_pool.get_connection(b"pubsub")
+        self.connection.register_connect_callback(self.on_connect)
+
+    @retryable((ConnectionError, TimeoutError), reset_connection)
+    async def get_message(
+        self,
+        ignore_subscribe_messages: bool = False,
+        timeout: Optional[Union[int, float]] = None,
+    ) -> Optional[PubSubMessage]:
+        return await super().get_message(ignore_subscribe_messages, timeout)
 
 
 @versionadded(version="3.6.0")
