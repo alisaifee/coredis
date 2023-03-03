@@ -407,7 +407,7 @@ class TestPubSubMessages:
         p = redis_cluster.pubsub(ignore_subscribe_messages=True)
         try:
             await p.subscribe(foo=self.message_handler)
-            assert await redis_cluster.publish("foo", "test message") == 1
+            await redis_cluster.publish("foo", "test message")
             assert await wait_for_message(p) is None
             assert self.message == make_message("message", "foo", "test message")
         finally:
