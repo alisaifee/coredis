@@ -15,7 +15,7 @@ from coredis.commands.constants import CommandName
 from coredis.connection import BaseConnection, Connection
 from coredis.exceptions import ConnectionError, PubSubError, TimeoutError
 from coredis.response.types import PubSubMessage
-from coredis.retry import retryable
+from coredis.retry import ExponentialBackoffRetryPolicy, retryable
 from coredis.typing import (
     AnyStr,
     Awaitable,
@@ -483,7 +483,11 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         self.connection = await self.connection_pool.get_connection(b"pubsub")
         self.connection.register_connect_callback(self.on_connect)
 
-    @retryable((ConnectionError, TimeoutError), reset_connection)
+    @retryable(
+        (ConnectionError, TimeoutError),
+        ExponentialBackoffRetryPolicy(3, 0.1),
+        reset_connection,
+    )
     async def get_message(
         self,
         ignore_subscribe_messages: bool = False,
@@ -621,6 +625,39 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
             )
         raise PubSubError(f"Unable to determine shard for channel {args[0]!r}")
 
+    async def reset_shard_connections(self) -> None:
+        for connection in self.shard_connections.values():
+            connection.disconnect()
+            connection.clear_connect_callbacks()
+            self.connection_pool.release(connection)
+        self.shard_connections.clear()
+        for node_id, task in self.pending_tasks.items():
+            if task.exception():
+                _ = task.exception()
+                self.pending_tasks.pop(node_id)
+            elif not task.done():
+                task.cancel()
+                self.pending_tasks.pop(node_id)
+        self.pending_tasks.clear()
+        self.connection_pool.disconnect()
+        self.connection_pool.reset()
+        self.connection_pool.initialized = False
+        await self.connection_pool.initialize()
+        for channel in self.channels:
+            slot = hash_slot(b(channel))
+            node = self.connection_pool.nodes.node_from_slot(slot)
+            if node and node.node_id:
+                key = node.node_id
+                self.shard_connections[key] = await self.connection_pool.get_connection(
+                    b"pubsub",
+                    channel=channel,
+                    node_type="replica" if self.read_from_replicas else "primary",
+                )
+                # register a callback that re-subscribes to any channels we
+                # were listening to when we were disconnected
+                self.shard_connections[key].register_connect_callback(self.on_connect)
+                self.channel_connection_mapping[channel] = self.shard_connections[key]
+
     async def parse_response(
         self, block: bool = True, timeout: Optional[float] = None
     ) -> ResponseType:
@@ -641,6 +678,13 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                     task.cancel()
         # If there were no pending results check the shards
         if not result:
+            connections = list(self.shard_connections.values())
+            if not all(connection.is_connected for connection in connections):
+                for connection in [c for c in connections if not c.is_connected]:
+                    try:
+                        await connection.connect()
+                    except:  # noqa
+                        raise ConnectionError("Shard connections not stable")
             tasks: Dict[str, asyncio.Task[ResponseType]] = {
                 node_id: asyncio.create_task(
                     self._execute(
@@ -662,7 +706,8 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                     return_when=asyncio.FIRST_COMPLETED,
                 )
                 if done:
-                    result = done.pop().result()
+                    done_task = done.pop()
+                    result = done_task.result()
 
                 # Stash any other tasks for the next iteration
                 for task in list(done) + list(pending):
@@ -670,6 +715,18 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                         if task == scheduled:
                             self.pending_tasks[node_id] = task
         return result
+
+    @retryable(
+        (ConnectionError,),
+        ExponentialBackoffRetryPolicy(3, 0.1),
+        reset_shard_connections,
+    )
+    async def get_message(
+        self,
+        ignore_subscribe_messages: bool = False,
+        timeout: Optional[Union[int, float]] = None,
+    ) -> Optional[PubSubMessage]:
+        return await super().get_message(ignore_subscribe_messages, timeout)
 
     async def on_connect(self, connection: BaseConnection) -> None:
         """

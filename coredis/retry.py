@@ -43,8 +43,8 @@ class ExponentialBackoffRetryPolicy(RetryPolicy):
 
 def retryable(
     retryable_exceptions: Tuple[Type[BaseException], ...],
+    policy: RetryPolicy,
     failure_hook: Optional[Callable[..., Coroutine[Any, Any, None]]] = None,
-    policy: RetryPolicy = ConstantRetryPolicy(3, 0),
 ) -> Callable[
     [Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]
 ]:
