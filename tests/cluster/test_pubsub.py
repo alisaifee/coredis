@@ -378,26 +378,6 @@ class TestPubSubMessages:
         # Cleanup pubsub connections
         p.close()
 
-    @pytest.mark.xfail(reason="This test is buggy and fails randomly")
-    async def test_publish_message_to_channel_other_server(self):
-        """
-        Test that pubsub still works across the cluster on different nodes
-        """
-        node_subscriber = self.get_strict_redis_node(7000)
-        p = node_subscriber.pubsub(ignore_subscribe_messages=True)
-        await p.subscribe("foo")
-
-        node_sender = self.get_strict_redis_node(7001)
-        # This should return 0 because of no connected clients to this serveredis_cluster.
-        assert await node_sender.publish("foo", "test message") == 0
-
-        message = await wait_for_message(p)
-        assert isinstance(message, dict)
-        assert message == make_message("message", "foo", "test message")
-
-        # Cleanup pubsub connections
-        p.close()
-
     async def test_published_message_to_pattern(self, redis_cluster):
         p = redis_cluster.pubsub(ignore_subscribe_messages=True)
         try:
