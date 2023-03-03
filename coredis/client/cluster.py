@@ -581,6 +581,7 @@ class RedisCluster(
                 CommandName.EVALSHA_RO,
                 CommandName.FCALL,
                 CommandName.FCALL_RO,
+                CommandName.PUBLISH,
             }
             and not keys
         ):

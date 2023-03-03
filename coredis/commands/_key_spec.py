@@ -378,7 +378,6 @@ class KeySpec:
         b"SSUBSCRIBE": lambda args: (args[1 : (len(args))]),
         b"SUNSUBSCRIBE": lambda args: (args[1 : (len(args))]),
         b"UNLINK": lambda args: (args[1 : (len(args))]),
-        b"PUBLISH": lambda args: ((args[1],)),
         b"EXPIREMEMBER": lambda args: ((args[1],)),
         b"EXPIREMEMBERAT": lambda args: ((args[1],)),
         b"PEXPIREMEMBERAT": lambda args: ((args[1],)),
