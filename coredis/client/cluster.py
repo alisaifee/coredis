@@ -751,6 +751,8 @@ class RedisCluster(
                     try_random_node = True
                     await asyncio.sleep(0.1)
                 else:
+                    self.connection_pool.disconnect()
+                    self.connection_pool.reset()
                     self.refresh_table_asap = True
             except ClusterDownError as e:
                 self.connection_pool.disconnect()
