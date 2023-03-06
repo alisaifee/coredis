@@ -145,7 +145,7 @@ class RedisCluster(
     Client[AnyStr],
     metaclass=ClusterMeta,
 ):
-    RedisClusterRequestTTL = 16
+    MAX_RETRIES = 16
     ROUTING_FLAGS: Dict[bytes, NodeFlag] = {}
     SPLIT_FLAGS: Dict[bytes, NodeFlag] = {}
     RESULT_CALLBACKS: Dict[bytes, Callable[..., Any]] = {}
@@ -677,10 +677,10 @@ class RedisCluster(
                 try_random_type = NodeFlag.PRIMARIES
         else:
             node = nodes.pop()
-        ttl = int(self.RedisClusterRequestTTL)
+        remaining_attempts = int(self.MAX_RETRIES)
 
-        while ttl > 0:
-            ttl -= 1
+        while remaining_attempts > 0:
+            remaining_attempts -= 1
             if self.refresh_table_asap and slot is None:
                 await self
             if asking and redirect_addr:
@@ -747,7 +747,7 @@ class RedisCluster(
             except (RedisClusterException, BusyLoadingError, asyncio.CancelledError):
                 raise
             except (ConnectionError, TimeoutError):
-                if ttl < self.RedisClusterRequestTTL / 2 and slot is not None:
+                if remaining_attempts < self.MAX_RETRIES / 2 and slot is not None:
                     try_random_node = True
                     await asyncio.sleep(0.1)
                 else:
@@ -771,7 +771,7 @@ class RedisCluster(
                 )
                 self.connection_pool.nodes.slots[e.slot_id][0] = node
             except TryAgainError:
-                if ttl < self.RedisClusterRequestTTL / 2:
+                if remaining_attempts < self.MAX_RETRIES / 2:
                     await asyncio.sleep(0.05)
             except AskError as e:
                 redirect_addr, asking = f"{e.host}:{e.port}", True
@@ -780,7 +780,7 @@ class RedisCluster(
                 if not released:
                     self.connection_pool.release(r)
 
-        raise ClusterError("TTL exhausted.")
+        raise ClusterError("Maximum retries exhausted.")
 
     async def execute_command_on_nodes(
         self,
