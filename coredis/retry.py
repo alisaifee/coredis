@@ -24,8 +24,9 @@ class ConstantRetryPolicy(RetryPolicy):
 
     async def retries(self) -> AsyncIterator[int]:
         for i in range(self.__retries):
+            if i > 0:
+                await asyncio.sleep(self.__delay)
             yield i
-            await asyncio.sleep(self.__delay)
 
 
 class ExponentialBackoffRetryPolicy(RetryPolicy):
@@ -35,8 +36,9 @@ class ExponentialBackoffRetryPolicy(RetryPolicy):
 
     async def retries(self) -> AsyncIterator[int]:
         for i in range(self.__retries):
+            if i > 0:
+                await asyncio.sleep(pow(2, i) * self.__initial_delay)
             yield i
-            await asyncio.sleep(pow(2, i) * self.__initial_delay)
 
 
 def retryable(
