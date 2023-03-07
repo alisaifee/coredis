@@ -874,7 +874,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
             self.connection_pool.release(self._watched_connection)
             self._watched_connection = None
 
-    @retryable((ClusterDownError,), policy=ConstantRetryPolicy(3, 0.1))
+    @retryable(policy=ConstantRetryPolicy((ClusterDownError,), 3, 0.1))
     async def send_cluster_transaction(
         self, raise_on_error: bool = True
     ) -> Tuple[object, ...]:
@@ -935,7 +935,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
             if n.command not in {CommandName.MULTI, CommandName.EXEC}
         )
 
-    @retryable((ClusterDownError,), policy=ConstantRetryPolicy(3, 0.1))
+    @retryable(policy=ConstantRetryPolicy((ClusterDownError,), 3, 0.1))
     async def send_cluster_commands(
         self, raise_on_error: bool = True, allow_redirections: bool = True
     ) -> Tuple[object, ...]:
