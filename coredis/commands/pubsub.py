@@ -485,7 +485,7 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
     @retryable(
         (ConnectionError, TimeoutError),
-        ExponentialBackoffRetryPolicy(3, 0.1),
+        ExponentialBackoffRetryPolicy(5, 0.01),
         reset_connection,
     )
     async def get_message(
@@ -718,7 +718,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
     @retryable(
         (ConnectionError,),
-        ExponentialBackoffRetryPolicy(3, 0.1),
+        ExponentialBackoffRetryPolicy(5, 0.01),
         reset_shard_connections,
     )
     async def get_message(
