@@ -631,7 +631,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
             connection.clear_connect_callbacks()
             self.connection_pool.release(connection)
         self.shard_connections.clear()
-        for node_id, task in self.pending_tasks.items():
+        for _, task in self.pending_tasks.items():
             if not task.done():
                 task.cancel()
         self.pending_tasks.clear()
