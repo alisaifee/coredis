@@ -181,7 +181,6 @@ class RedisCluster(
         non_atomic_cross_slot: bool = ...,
         cache: Optional[AbstractCache] = ...,
         noreply: bool = ...,
-        retry_policy: Optional[RetryPolicy] = ...,
         **kwargs: Any,
     ):
         ...
@@ -215,7 +214,6 @@ class RedisCluster(
         non_atomic_cross_slot: bool = ...,
         cache: Optional[AbstractCache] = ...,
         noreply: bool = ...,
-        retry_policy: Optional[RetryPolicy] = ...,
         **kwargs: Any,
     ):
         ...
@@ -248,17 +246,11 @@ class RedisCluster(
         non_atomic_cross_slot: bool = True,
         cache: Optional[AbstractCache] = None,
         noreply: bool = False,
-        retry_policy: Optional[RetryPolicy] = None,
         **kwargs: Any,
     ):
         """
 
         Changes
-
-          - .. versionadded:: 4.11.0
-
-            - Added :paramref:`retry_policy`
-
           - .. versionchanged:: 4.4.0
 
             - :paramref:`nodemanager_follow_cluster` now defaults to ``True``
@@ -356,7 +348,6 @@ class RedisCluster(
          The cache is responsible for any mutations to the keys that happen outside of this client
         :param noreply: If ``True`` the client will not request a response for any
          commands sent to the server.
-        :param retry_policy: The retry policy to use when interacting with the redis server
         """
 
         if "db" in kwargs:  # noqa
@@ -411,7 +402,6 @@ class RedisCluster(
             verify_version=verify_version,
             protocol_version=protocol_version,
             noreply=noreply,
-            retry_policy=retry_policy,
             **kwargs,
         )
 
@@ -442,7 +432,6 @@ class RedisCluster(
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         noreply: bool = ...,
-        retry_policy: Optional[RetryPolicy] = ...,
         **kwargs: Any,
     ) -> RedisClusterBytesT:
         ...
@@ -459,7 +448,6 @@ class RedisCluster(
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         noreply: bool = ...,
-        retry_policy: Optional[RetryPolicy] = ...,
         **kwargs: Any,
     ) -> RedisClusterStringT:
         ...
@@ -475,7 +463,6 @@ class RedisCluster(
         protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
         noreply: bool = False,
-        retry_policy: Optional[RetryPolicy] = None,
         **kwargs: Any,
     ) -> RedisClusterT:
         """
@@ -498,7 +485,6 @@ class RedisCluster(
                 protocol_version=protocol_version,
                 verify_version=verify_version,
                 noreply=noreply,
-                retry_policy=retry_policy,
                 connection_pool=ClusterConnectionPool.from_url(
                     url,
                     db=db,
@@ -515,7 +501,6 @@ class RedisCluster(
                 protocol_version=protocol_version,
                 verify_version=verify_version,
                 noreply=noreply,
-                retry_policy=retry_policy,
                 connection_pool=ClusterConnectionPool.from_url(
                     url,
                     db=db,
@@ -989,13 +974,12 @@ class RedisCluster(
 
         :param ignore_subscribe_messages: Whether to skip subscription
          acknowledgement messages
-        :param retry_policy: An explicit retry policy to use in the subscriber. If none
-         is provided the one provided by :paramref:`Redis.retry_policy` will be considered.
+        :param retry_policy: An explicit retry policy to use in the subscriber.
         """
         return ClusterPubSub[AnyStr](
             self.connection_pool,
             ignore_subscribe_messages=ignore_subscribe_messages,
-            retry_policy=retry_policy or self._retry_policy,
+            retry_policy=retry_policy,
             **kwargs,
         )
 
@@ -1020,8 +1004,7 @@ class RedisCluster(
         :param ignore_subscribe_messages: Whether to skip subscription
          acknowledgement messages
         :param read_from_replicas: Whether to read messages from replica nodes
-        :param retry_policy: An explicit retry policy to use in the subscriber. If none
-         is provided the one provided by :paramref:`Redis.retry_policy` will be considered.
+        :param retry_policy: An explicit retry policy to use in the subscriber.
 
         New in :redis-version:`7.0.0`
         """
@@ -1030,7 +1013,7 @@ class RedisCluster(
             self.connection_pool,
             ignore_subscribe_messages=ignore_subscribe_messages,
             read_from_replicas=read_from_replicas,
-            retry_policy=retry_policy or self._retry_policy,
+            retry_policy=retry_policy,
             **kwargs,
         )
 

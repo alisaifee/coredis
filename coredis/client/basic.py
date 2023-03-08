@@ -458,7 +458,6 @@ class Redis(Client[AnyStr]):
         verify_version: bool = ...,
         cache: Optional[AbstractCache] = ...,
         noreply: bool = ...,
-        retry_policy: Optional[RetryPolicy] = ...,
         **kwargs: Any,
     ) -> None:
         ...
@@ -495,7 +494,6 @@ class Redis(Client[AnyStr]):
         verify_version: bool = ...,
         cache: Optional[AbstractCache] = ...,
         noreply: bool = ...,
-        retry_policy: Optional[RetryPolicy] = ...,
         **kwargs: Any,
     ) -> None:
         ...
@@ -531,15 +529,10 @@ class Redis(Client[AnyStr]):
         verify_version: bool = True,
         cache: Optional[AbstractCache] = None,
         noreply: bool = False,
-        retry_policy: Optional[RetryPolicy] = None,
         **kwargs: Any,
     ) -> None:
         """
         Changes
-
-          - .. versionadded:: 4.11.0
-
-            - Added :paramref:`retry_policy`
 
           - .. versionadded:: 4.3.0
 
@@ -623,7 +616,6 @@ class Redis(Client[AnyStr]):
          The cache is responsible for any mutations to the keys that happen outside of this client
         :param noreply: If ``True`` the client will not request a response for any
          commands sent to the server.
-        :param retry_policy: The retry policy to use when interacting with the redis server
 
         """
         super().__init__(
@@ -654,7 +646,6 @@ class Redis(Client[AnyStr]):
             protocol_version=protocol_version,
             verify_version=verify_version,
             noreply=noreply,
-            retry_policy=retry_policy,
             **kwargs,
         )
         self.cache = cache
@@ -676,7 +667,6 @@ class Redis(Client[AnyStr]):
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         noreply: bool = ...,
-        retry_policy: Optional[RetryPolicy] = ...,
         **kwargs: Any,
     ) -> RedisBytesT:
         ...
@@ -692,7 +682,6 @@ class Redis(Client[AnyStr]):
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         noreply: bool = ...,
-        retry_policy: Optional[RetryPolicy] = ...,
         **kwargs: Any,
     ) -> RedisStringT:
         ...
@@ -707,7 +696,6 @@ class Redis(Client[AnyStr]):
         protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
         noreply: bool = False,
-        retry_policy: Optional[RetryPolicy] = None,
         **kwargs: Any,
     ) -> RedisT:
         """
@@ -743,7 +731,6 @@ class Redis(Client[AnyStr]):
                 protocol_version=protocol_version,
                 verify_version=verify_version,
                 noreply=noreply,
-                retry_policy=retry_policy,
                 connection_pool=ConnectionPool.from_url(
                     url,
                     db=db,
@@ -759,7 +746,6 @@ class Redis(Client[AnyStr]):
                 protocol_version=protocol_version,
                 verify_version=verify_version,
                 noreply=noreply,
-                retry_policy=retry_policy,
                 connection_pool=ConnectionPool.from_url(
                     url,
                     db=db,
@@ -926,14 +912,13 @@ class Redis(Client[AnyStr]):
 
         :param ignore_subscribe_messages: Whether to skip subscription
          acknowledgement messages
-        :param retry_policy: An explicit retry policy to use in the subscriber. If none
-         is provided the one provided by :paramref:`Redis.retry_policy` will be considered.
+        :param retry_policy: An explicit retry policy to use in the subscriber.
         """
 
         return PubSub[AnyStr](
             self.connection_pool,
             ignore_subscribe_messages=ignore_subscribe_messages,
-            retry_policy=retry_policy or self._retry_policy,
+            retry_policy=retry_policy,
             **kwargs,
         )
 
