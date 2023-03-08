@@ -3,6 +3,21 @@
 Changelog
 =========
 
+v4.10.3
+-------
+Release Date: 2023-03-08
+
+* Bug Fix
+
+  * Ensure extension compilation goes through without
+    beartype available
+
+* Chores
+
+  * Update dependencies
+  * Update github actions
+  * Use ruff for linting
+
 v4.10.2
 -------
 Release Date: 2022-12-24
@@ -1341,6 +1356,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
