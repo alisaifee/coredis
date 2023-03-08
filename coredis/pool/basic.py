@@ -35,7 +35,7 @@ from coredis.typing import (
 FALSE_STRINGS = ("0", "F", "FALSE", "N", "NO")
 
 
-def to_bool(value: StringT) -> Optional[bool]:
+def to_bool(value: Optional[StringT]) -> Optional[bool]:
     if value is None or value == "":
         return None
 

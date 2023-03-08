@@ -816,7 +816,7 @@ class RedisCluster(
             cur = _nodes[0]
             connection = await self.connection_pool.get_connection_by_node(cur)
             if (
-                self.cache
+                isinstance(self.cache, AbstractCache)
                 and isinstance(self.cache, SupportsClientTracking)
                 and connection.tracking_client_id
                 != self.cache.get_client_id(connection)
