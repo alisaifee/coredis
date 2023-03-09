@@ -5,6 +5,7 @@ import inspect
 import threading
 from asyncio import CancelledError
 from concurrent.futures import Future
+from contextlib import suppress
 from functools import partial
 from typing import TYPE_CHECKING, Any, cast
 
@@ -634,6 +635,8 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         for _, task in self.pending_tasks.items():
             if not task.done():
                 task.cancel()
+                with suppress(CancelledError):
+                    await task
         self.pending_tasks.clear()
         self.connection_pool.disconnect()
         self.connection_pool.reset()
@@ -671,12 +674,25 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                     result = task.result()
                     break
                 else:
-                    task.cancel()
+                    done, pending = await asyncio.wait(
+                        [task],
+                        timeout=0.001,
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+                    if done:
+                        result = done.pop().result()
+                        break
+                    else:
+                        task.cancel()
+                        with suppress(CancelledError):
+                            await task
         # If there were no pending results check the shards
         if not result:
-            connections = list(self.shard_connections.values())
-            if not all(connection.is_connected for connection in connections):
-                for connection in [c for c in connections if not c.is_connected]:
+            broken_connections = [
+                c for c in self.shard_connections.values() if not c.is_connected
+            ]
+            if broken_connections:
+                for connection in broken_connections:
                     try:
                         await connection.connect()
                     except:  # noqa
