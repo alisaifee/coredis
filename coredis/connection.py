@@ -710,9 +710,13 @@ class Connection(BaseConnection):
                 lambda: self, host=self.host, port=self.port
             )
 
-        async with async_timeout.timeout(self._connect_timeout):
-            transport, _ = await connection
-
+        try:
+            async with async_timeout.timeout(self._connect_timeout):
+                transport, _ = await connection
+        except asyncio.TimeoutError:
+            raise ConnectionError(
+                f"Unable to establish a connection within {self._connect_timeout} seconds"
+            )
         sock = transport.get_extra_info("socket")
         if sock is not None:
             try:

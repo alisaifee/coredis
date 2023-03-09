@@ -455,7 +455,7 @@ class TestPubSubMessages:
         [await redis_cluster.publish("fubar", str(i)) for i in range(10)]
         await asyncio.sleep(0.5)
         th.stop()
-        assert [m["data"] for m in messages] == [str(i) for i in range(10)]
+        assert set([m["data"] for m in messages]) == {str(i) for i in range(10)}
 
     @pytest.mark.xfail
     async def test_pubsub_worker_thread_subscribe_pattern(self, redis_cluster):

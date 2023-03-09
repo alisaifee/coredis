@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, List, cast, overload
 
 from deprecated.sphinx import versionadded
 
-from coredis._utils import b, clusterdown_wrapper, hash_slot
+from coredis._utils import b, hash_slot
 from coredis.cache import AbstractCache, SupportsClientTracking
 from coredis.client.basic import Client, Redis
 from coredis.commands._key_spec import KeySpec
@@ -35,6 +35,7 @@ from coredis.globals import READONLY_COMMANDS
 from coredis.pool import ClusterConnectionPool
 from coredis.pool.nodemanager import ManagedNode
 from coredis.response._callbacks import NoopCallback
+from coredis.retry import ConstantRetryPolicy, RetryPolicy, retryable
 from coredis.typing import (
     AnyStr,
     AsyncIterator,
@@ -144,7 +145,7 @@ class RedisCluster(
     Client[AnyStr],
     metaclass=ClusterMeta,
 ):
-    RedisClusterRequestTTL = 16
+    MAX_RETRIES = 16
     ROUTING_FLAGS: Dict[bytes, NodeFlag] = {}
     SPLIT_FLAGS: Dict[bytes, NodeFlag] = {}
     RESULT_CALLBACKS: Dict[bytes, Callable[..., Any]] = {}
@@ -250,7 +251,6 @@ class RedisCluster(
         """
 
         Changes
-
           - .. versionchanged:: 4.4.0
 
             - :paramref:`nodemanager_follow_cluster` now defaults to ``True``
@@ -581,6 +581,7 @@ class RedisCluster(
                 CommandName.EVALSHA_RO,
                 CommandName.FCALL,
                 CommandName.FCALL_RO,
+                CommandName.PUBLISH,
             }
             and not keys
         ):
@@ -631,7 +632,7 @@ class RedisCluster(
                 return [node_from_slot]
         return None
 
-    @clusterdown_wrapper
+    @retryable(policy=ConstantRetryPolicy((ClusterDownError,), 3, 0.1))
     async def execute_command(
         self,
         command: bytes,
@@ -670,16 +671,17 @@ class RedisCluster(
         slot = None
         if not nodes:
             slot = self._determine_slot(command, *args)
-            if not slot:
+            if slot is None:
                 try_random_node = True
                 try_random_type = NodeFlag.PRIMARIES
         else:
             node = nodes.pop()
-        ttl = int(self.RedisClusterRequestTTL)
+        remaining_attempts = int(self.MAX_RETRIES)
 
-        while ttl > 0:
-            ttl -= 1
-
+        while remaining_attempts > 0:
+            remaining_attempts -= 1
+            if self.refresh_table_asap and slot is None:
+                await self
             if asking and redirect_addr:
                 node = self.connection_pool.nodes.nodes[redirect_addr]
                 r = await self.connection_pool.get_connection_by_node(node)
@@ -687,7 +689,8 @@ class RedisCluster(
                 r = await self.connection_pool.get_random_connection(
                     primary=try_random_type == NodeFlag.PRIMARIES
                 )
-                try_random_node = False
+                if slot is not None:
+                    try_random_node = False
             elif slot is not None:
                 if self.refresh_table_asap:
                     # MOVED
@@ -699,7 +702,6 @@ class RedisCluster(
                 r = await self.connection_pool.get_connection_by_node(node)
             else:
                 continue
-
             quick_release = self.should_quick_release(command)
             released = False
             try:
@@ -744,10 +746,13 @@ class RedisCluster(
             except (RedisClusterException, BusyLoadingError, asyncio.CancelledError):
                 raise
             except (ConnectionError, TimeoutError):
-                try_random_node = True
-
-                if ttl < self.RedisClusterRequestTTL / 2:
+                if remaining_attempts < self.MAX_RETRIES / 2 and slot is not None:
+                    try_random_node = True
                     await asyncio.sleep(0.1)
+                else:
+                    self.connection_pool.disconnect()
+                    self.connection_pool.reset()
+                    self.refresh_table_asap = True
             except ClusterDownError as e:
                 self.connection_pool.disconnect()
                 self.connection_pool.reset()
@@ -767,7 +772,7 @@ class RedisCluster(
                 )
                 self.connection_pool.nodes.slots[e.slot_id][0] = node
             except TryAgainError:
-                if ttl < self.RedisClusterRequestTTL / 2:
+                if remaining_attempts < self.MAX_RETRIES / 2:
                     await asyncio.sleep(0.05)
             except AskError as e:
                 redirect_addr, asking = f"{e.host}:{e.port}", True
@@ -776,7 +781,7 @@ class RedisCluster(
                 if not released:
                     self.connection_pool.release(r)
 
-        raise ClusterError("TTL exhausted.")
+        raise ClusterError("Maximum retries exhausted.")
 
     async def execute_command_on_nodes(
         self,
@@ -958,7 +963,10 @@ class RedisCluster(
             self._encodingcontext.set(prev_encoding)
 
     def pubsub(
-        self, ignore_subscribe_messages: bool = False, **kwargs: Any
+        self,
+        ignore_subscribe_messages: bool = False,
+        retry_policy: Optional[RetryPolicy] = None,
+        **kwargs: Any,
     ) -> ClusterPubSub[AnyStr]:
         """
         Return a Pub/Sub instance that can be used to subscribe to channels or
@@ -966,10 +974,12 @@ class RedisCluster(
 
         :param ignore_subscribe_messages: Whether to skip subscription
          acknowledgement messages
+        :param retry_policy: An explicit retry policy to use in the subscriber.
         """
         return ClusterPubSub[AnyStr](
             self.connection_pool,
             ignore_subscribe_messages=ignore_subscribe_messages,
+            retry_policy=retry_policy,
             **kwargs,
         )
 
@@ -978,6 +988,7 @@ class RedisCluster(
         self,
         ignore_subscribe_messages: bool = False,
         read_from_replicas: bool = False,
+        retry_policy: Optional[RetryPolicy] = None,
         **kwargs: Any,
     ) -> ShardedPubSub[AnyStr]:
         """
@@ -993,6 +1004,7 @@ class RedisCluster(
         :param ignore_subscribe_messages: Whether to skip subscription
          acknowledgement messages
         :param read_from_replicas: Whether to read messages from replica nodes
+        :param retry_policy: An explicit retry policy to use in the subscriber.
 
         New in :redis-version:`7.0.0`
         """
@@ -1001,6 +1013,7 @@ class RedisCluster(
             self.connection_pool,
             ignore_subscribe_messages=ignore_subscribe_messages,
             read_from_replicas=read_from_replicas,
+            retry_policy=retry_policy,
             **kwargs,
         )
 

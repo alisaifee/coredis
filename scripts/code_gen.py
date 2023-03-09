@@ -2617,8 +2617,6 @@ def cluster_key_extraction(path):
                 readonly[command] = exprs
             all.setdefault(command, []).extend(exprs)
 
-    all["PUBLISH"] = all["SPUBLISH"]
-
     # KeyDB custom commands
     all["EXPIREMEMBER"] = all["EXPIRE"]
     all["EXPIREMEMBERAT"] = all["EXPIREAT"]

@@ -39,6 +39,7 @@ from coredis.globals import COMMAND_FLAGS, READONLY_COMMANDS
 from coredis.pool import ConnectionPool
 from coredis.response._callbacks import NoopCallback
 from coredis.response.types import ScoredMember
+from coredis.retry import RetryPolicy
 from coredis.typing import (
     AnyStr,
     AsyncGenerator,
@@ -116,6 +117,7 @@ class Client(
         protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
         noreply: bool = False,
+        retry_policy: Optional[RetryPolicy] = None,
         **kwargs: Any,
     ):
         if not connection_pool:
@@ -183,6 +185,7 @@ class Client(
         self._waitcontext: contextvars.ContextVar[
             Optional[Tuple[int, int]]
         ] = contextvars.ContextVar("wait", default=None)
+        self._retry_policy = retry_policy
 
     @property
     def noreply(self) -> bool:
@@ -898,7 +901,10 @@ class Redis(Client[AnyStr]):
         return Monitor[AnyStr](self)
 
     def pubsub(
-        self, ignore_subscribe_messages: bool = False, **kwargs: Any
+        self,
+        ignore_subscribe_messages: bool = False,
+        retry_policy: Optional[RetryPolicy] = None,
+        **kwargs: Any,
     ) -> PubSub[AnyStr]:
         """
         Return a Pub/Sub instance that can be used to subscribe to channels
@@ -906,11 +912,13 @@ class Redis(Client[AnyStr]):
 
         :param ignore_subscribe_messages: Whether to skip subscription
          acknowledgement messages
+        :param retry_policy: An explicit retry policy to use in the subscriber.
         """
 
         return PubSub[AnyStr](
             self.connection_pool,
             ignore_subscribe_messages=ignore_subscribe_messages,
+            retry_policy=retry_policy,
             **kwargs,
         )
 

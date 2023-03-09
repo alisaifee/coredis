@@ -1,21 +1,15 @@
 from __future__ import annotations
 
 import enum
-from functools import wraps
 from typing import Any
 
 from wrapt import ObjectProxy
 
-from coredis.exceptions import ClusterDownError
 from coredis.typing import (
-    Callable,
-    Coroutine,
     Iterable,
     List,
     Mapping,
     Optional,
-    P,
-    R,
     ResponseType,
     Set,
     StringT,
@@ -179,38 +173,6 @@ def dict_to_flat_list(
 
 
 # ++++++++++ cluster utils ++++++++++++++
-
-
-def clusterdown_wrapper(
-    func: Callable[P, Coroutine[Any, Any, R]]
-) -> Callable[P, Coroutine[Any, Any, R]]:
-    """
-    Wrapper for CLUSTERDOWN error handling.
-
-    If the cluster reports it is down it is assumed that:
-     - connection_pool was disconnected
-     - connection_pool was reset
-     - referesh_table_asap set to True
-
-    It will try 3 times to rerun the command and raises ClusterDownException if it continues to
-    fail.
-    """
-
-    @wraps(func)
-    async def inner(*args: P.args, **kwargs: P.kwargs) -> R:
-        for _ in range(0, 3):
-            try:
-                return await func(*args, **kwargs)
-            except ClusterDownError:
-                # Try again with the new cluster setup. All other errors
-                # should be raised.
-                pass
-
-        # If it fails 3 times then raise exception back to caller
-        raise ClusterDownError("CLUSTERDOWN error. Unable to rebuild the cluster")
-
-    return inner
-
 
 try:
     from coredis.speedups import crc16, hash_slot
