@@ -191,7 +191,7 @@ application.
 
 :meth:`~coredis.RedisCluster.pubsub` returns an instance of :class:`coredis.commands.ClusterPubSub`
 which exposes identical functionality to the non clustered client. This is possible
-without worrying about sharding as the :rediscommand:``PUBLISH`` command in clustered redis results
+without worrying about sharding as the :rediscommand:`PUBLISH` command in clustered redis results
 in messages being broadcasted to every node in the cluster. On the consumer side of the equation
 **coredis** simply picks a node by hashing the first subscribed channel using the same algorithm
 used to find slots for keys and consumes the messages from the node the channel hashes to.
