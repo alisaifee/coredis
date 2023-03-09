@@ -213,17 +213,12 @@ class BasePubSub(Generic[AnyStr, PoolT]):
             if await connection.can_read():  # noqa
                 connection.disconnect()
             raise
-        except (ConnectionError, TimeoutError) as e:
+        except TimeoutError:
             connection.disconnect()
-            if not connection.retry_on_timeout and isinstance(e, TimeoutError):  # noqa
-                raise
-            # Connect manually here. If the Redis server is down, this will
-            # fail and raise a ConnectionError as desired.
-            await connection.connect()
-            # the ``on_connect`` callback should haven been called by the
-            # connection to resubscribe us to any channels and patterns we were
-            # previously listening to
-            return await command(*args)
+            if connection.retry_on_timeout:
+                await connection.connect()
+                return await command(*args)
+            raise
 
     async def parse_response(
         self, block: bool = True, timeout: Optional[float] = None
