@@ -3,6 +3,26 @@
 Changelog
 =========
 
+v4.11.0
+-------
+Release Date: 2023-03-09
+
+* Features
+
+  * Add retries to pubsub subscribers
+  * Generate prebuilt wheel for aarch64 + Linux
+
+* Bug Fix
+
+  * Use random nodes with cluster pubsub
+  * Trigger a refresh of cluster topology on connection errors
+  * Raise ConnectionError on timeout errors when establishing a connection
+
+
+* Chores
+
+  * Update pyright
+
 v4.10.3
 -------
 Release Date: 2023-03-08
@@ -1356,6 +1376,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
