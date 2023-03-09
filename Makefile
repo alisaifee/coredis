@@ -1,13 +1,13 @@
 lint:
 	black --check coredis tests
-	ruff coredis tests
+	flake8 coredis tests
 	pyright coredis
 	mypy coredis
 
 lint-fix:
 	black coredis tests
 	isort -r --profile=black tests coredis
-	ruff --fix coredis tests
+	autoflake8 -i -r tests coredis
 
 DEBUG := False
 NEXT_VERSION := 4.0.0
