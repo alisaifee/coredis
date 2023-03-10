@@ -2,7 +2,9 @@
 build-backend = "setuptools.build_meta"
 requires = [
   "mypy==1.1.1",
+  "packaging>=21,<24",
   "setuptools",
+  "types_deprecated",
   "versioneer[toml]",
 ]
 
