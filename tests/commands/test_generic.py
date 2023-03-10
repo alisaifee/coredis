@@ -339,11 +339,11 @@ class TestGeneric:
         await client.set("a{foo}", "foo")
         await client.set("c{foo}", "bar")
         assert await client.copy("x{foo}", "y{foo}") is False
-        assert True == (await client.copy(_s("a{foo}"), "b{foo}"))
+        assert True is await client.copy(_s("a{foo}"), "b{foo}")
         assert await client.get("b{foo}") == _s("foo")
-        assert False == (await client.copy(_s("a{foo}"), "c{foo}", replace=False))
+        assert False is await client.copy(_s("a{foo}"), "c{foo}", replace=False)
         assert await client.get("c{foo}") == _s("bar")
-        assert True == (await client.copy(_s("a{foo}"), "c{foo}", replace=True))
+        assert True is await client.copy(_s("a{foo}"), "c{foo}", replace=True)
         assert await client.get("c{foo}") == _s("foo")
 
     @pytest.mark.min_server_version("6.2.0")

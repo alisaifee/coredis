@@ -27,10 +27,9 @@ jobs:
         python -m pip install --upgrade pip setuptools wheel
         pip install -r requirements/dev.txt
         python setup.py build
-    - name: Lint with flake8
+    - name: Lint with ruff
       run: |
-        flake8 coredis tests --count --show-source --statistics
-        flake8 coredis tests --count --exit-zero --max-complexity=10
+        ruff coredis tests
     - name: Lint with black
       run: |
         black --check coredis tests
