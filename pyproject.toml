@@ -1,3 +1,10 @@
+[build-system]
+requires = [
+    "setuptools", "versioneer[toml]",
+    "mypy==1.1.1"
+]
+build-backend = "setuptools.build_meta"
+
 [tool.ruff]
 line-length=100
 exclude = ["doc/**","_version.py","versioneer.py", "coredis/pipeline.pyi", "coredis/speedups.pyi"]
