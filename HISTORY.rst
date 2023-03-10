@@ -3,6 +3,14 @@
 Changelog
 =========
 
+v4.11.2
+-------
+Release Date: 2023-03-09
+
+* Chores
+
+  * Add changelog link to pypi
+
 v4.11.1
 -------
 Release Date: 2023-03-09
@@ -1384,6 +1392,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
