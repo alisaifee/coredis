@@ -116,6 +116,7 @@ setup(
     url="https://github.com/alisaifee/coredis",
     project_urls={
         "Source": "https://github.com/alisaifee/coredis",
+        "Changes": "https://github.com/alisaifee/coredis/releases",
         "Documentation": "https://coredis.readthedocs.org",
     },
     author=__author__,
