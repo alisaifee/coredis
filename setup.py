@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import sys
+
 import os
 import pathlib
 import platform
@@ -16,6 +18,7 @@ from setuptools.extension import Extension
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 PY_IMPLEMENTATION = platform.python_implementation()
+USE_MYPYC=False
 
 def get_requirements(req_file):
     requirements = []
@@ -78,6 +81,10 @@ _ROOT_DIR = pathlib.Path(__file__).parent
 with open(str(_ROOT_DIR / "README.md")) as f:
     long_description = f.read()
 
+if len(sys.argv) > 1 and '--use-mypyc' in sys.argv:
+    sys.argv.remove("--use-mypyc")
+    USE_MYPYC = True
+
 if PY_IMPLEMENTATION == "CPython":
     extensions = [
         Extension(
@@ -86,7 +93,7 @@ if PY_IMPLEMENTATION == "CPython":
         )
     ]
 
-    try:
+    if USE_MYPYC:
         from mypyc.build import mypycify
 
         extensions += mypycify(
@@ -101,8 +108,6 @@ if PY_IMPLEMENTATION == "CPython":
         for ext in extensions:
             if "-Werror" in ext.extra_compile_args:
                 ext.extra_compile_args.remove("-Werror")
-    except ImportError:
-        pass
 else:
     extensions = []
 

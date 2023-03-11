@@ -142,6 +142,8 @@ jobs:
         uses: pypa/cibuildwheel@v2.12.0
         env:
           CIBW_BUILD_VERBOSITY: 3
+          CIBW_BUILD_FRONTEND: "build"
+          CIBW_CONFIG_SETTINGS: "--build-option=--use-mypyc"
           CIBW_SKIP: '*musllinux* pp*'
           CIBW_ARCHS_LINUX: auto aarch64
           CIBW_ARCHS_MACOS: all
@@ -151,6 +153,8 @@ jobs:
         uses: pypa/cibuildwheel@v2.12.0
         env:
           CIBW_BUILD_VERBOSITY: 3
+          CIBW_BUILD_FRONTEND: "build"
+          CIBW_CONFIG_SETTINGS: "--build-option=--use-mypyc"
           CIBW_SKIP: '*musllinux* pp*'
           CIBW_TEST_COMMAND: "python -c 'import coredis'"
       - name: Build wheels (Minimal)
@@ -158,6 +162,8 @@ jobs:
         uses: pypa/cibuildwheel@v2.12.0
         env:
           CIBW_BUILD_VERBOSITY: 3
+          CIBW_BUILD_FRONTEND: "build"
+          CIBW_CONFIG_SETTINGS: "--build-option=--use-mypyc"
           CIBW_SKIP: '*musllinux* pp*'
           CIBW_TEST_COMMAND: "python -c 'import coredis'"
       - uses: actions/upload-artifact@v2
