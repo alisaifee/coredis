@@ -3,6 +3,18 @@
 Changelog
 =========
 
+v4.11.3
+-------
+Release Date: 2023-03-11
+
+* Chores
+
+  * Update cibuildwheels action
+  * Update versioneer
+  * Migrate setup.cfg to pyproject
+  * Parallelize CI wheel build
+  * Reintroduce ruff for linting
+
 v4.11.2
 -------
 Release Date: 2023-03-09
@@ -1392,6 +1404,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
