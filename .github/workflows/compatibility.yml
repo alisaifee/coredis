@@ -131,7 +131,7 @@ jobs:
         python setup.py build
     - name: Compile extensions
       if: ${{ matrix.extensions == 'True' }}
-      run: python setup.py build_ext --inplace
+      run: python setup.py build_ext --inplace --use-mypyc
     - name: Install uvloop
       if: ${{ matrix.uvloop == 'True' }}
       run:
