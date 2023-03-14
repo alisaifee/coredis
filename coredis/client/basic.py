@@ -807,11 +807,7 @@ class Redis(Client[AnyStr]):
                 version=self.protocol_version,
                 **options,
             )
-        except asyncio.CancelledError:
-            # do not retry when coroutine is cancelled
-            connection.disconnect()
-            raise
-        except BusyLoadingError:
+        except (asyncio.CancelledError, BusyLoadingError):
             connection.disconnect()
             raise
         except (ConnectionError, TimeoutError) as e:
