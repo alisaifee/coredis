@@ -259,18 +259,18 @@ class FunctionError(RedisError):
     """
 
 
-class SentinelConnectionError(ConnectionError):
+class SentinelError(RedisError):
     pass
 
 
-class PrimaryNotFoundError(SentinelConnectionError):
+class PrimaryNotFoundError(SentinelError):
     """
     Raised when a primary cannot be located in a
     sentinel managed redis
     """
 
 
-class ReplicaNotFoundError(SentinelConnectionError):
+class ReplicaNotFoundError(SentinelError):
     """
     Raised when a replica cannot be located in a
     sentinel managed redis

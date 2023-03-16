@@ -35,7 +35,7 @@ from coredis.globals import READONLY_COMMANDS
 from coredis.pool import ClusterConnectionPool
 from coredis.pool.nodemanager import ManagedNode
 from coredis.response._callbacks import NoopCallback
-from coredis.retry import ConstantRetryPolicy, RetryPolicy, retryable
+from coredis.retry import CompositeRetryPolicy, ConstantRetryPolicy, RetryPolicy
 from coredis.typing import (
     AnyStr,
     AsyncIterator,
@@ -181,6 +181,7 @@ class RedisCluster(
         non_atomic_cross_slot: bool = ...,
         cache: Optional[AbstractCache] = ...,
         noreply: bool = ...,
+        retry_policy: RetryPolicy = ...,
         **kwargs: Any,
     ):
         ...
@@ -214,6 +215,7 @@ class RedisCluster(
         non_atomic_cross_slot: bool = ...,
         cache: Optional[AbstractCache] = ...,
         noreply: bool = ...,
+        retry_policy: RetryPolicy = ...,
         **kwargs: Any,
     ):
         ...
@@ -246,11 +248,18 @@ class RedisCluster(
         non_atomic_cross_slot: bool = True,
         cache: Optional[AbstractCache] = None,
         noreply: bool = False,
+        retry_policy: RetryPolicy = CompositeRetryPolicy(
+            ConstantRetryPolicy((ClusterDownError,), 2, 0.1)
+        ),
         **kwargs: Any,
     ):
         """
 
         Changes
+          - .. versionadded:: 4.12.0
+
+            - Added :paramref:`retry_policy`
+
           - .. versionchanged:: 4.4.0
 
             - :paramref:`nodemanager_follow_cluster` now defaults to ``True``
@@ -348,6 +357,7 @@ class RedisCluster(
          The cache is responsible for any mutations to the keys that happen outside of this client
         :param noreply: If ``True`` the client will not request a response for any
          commands sent to the server.
+        :param retry_policy: The retry policy to use when interacting with the cluster
         """
 
         if "db" in kwargs:  # noqa
@@ -402,6 +412,7 @@ class RedisCluster(
             verify_version=verify_version,
             protocol_version=protocol_version,
             noreply=noreply,
+            retry_policy=retry_policy,
             **kwargs,
         )
 
@@ -432,6 +443,7 @@ class RedisCluster(
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         noreply: bool = ...,
+        retry_policy: RetryPolicy = ...,
         **kwargs: Any,
     ) -> RedisClusterBytesT:
         ...
@@ -448,6 +460,7 @@ class RedisCluster(
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         noreply: bool = ...,
+        retry_policy: RetryPolicy = ...,
         **kwargs: Any,
     ) -> RedisClusterStringT:
         ...
@@ -463,6 +476,9 @@ class RedisCluster(
         protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
         noreply: bool = False,
+        retry_policy: RetryPolicy = CompositeRetryPolicy(
+            ConstantRetryPolicy((ClusterDownError,), 2, 0.1)
+        ),
         **kwargs: Any,
     ) -> RedisClusterT:
         """
@@ -485,6 +501,7 @@ class RedisCluster(
                 protocol_version=protocol_version,
                 verify_version=verify_version,
                 noreply=noreply,
+                retry_policy=retry_policy,
                 connection_pool=ClusterConnectionPool.from_url(
                     url,
                     db=db,
@@ -501,6 +518,7 @@ class RedisCluster(
                 protocol_version=protocol_version,
                 verify_version=verify_version,
                 noreply=noreply,
+                retry_policy=retry_policy,
                 connection_pool=ClusterConnectionPool.from_url(
                     url,
                     db=db,
@@ -567,6 +585,10 @@ class RedisCluster(
         """
         return self.connection_pool.nodes.replicas_per_shard
 
+    async def _ensure_initialized(self) -> None:
+        if not self.connection_pool.initialized or self.refresh_table_asap:
+            await self
+
     def _determine_slot(self, command: bytes, *args: ValueT) -> Optional[int]:
         """Figures out what slot based on command and args"""
         keys = KeySpec.extract_keys(
@@ -632,7 +654,6 @@ class RedisCluster(
                 return [node_from_slot]
         return None
 
-    @retryable(policy=ConstantRetryPolicy((ClusterDownError,), 3, 0.1))
     async def execute_command(
         self,
         command: bytes,
@@ -641,15 +662,31 @@ class RedisCluster(
         **kwargs: Optional[ValueT],
     ) -> R:
         """
-        Sends a command to a node in the cluster
+        Sends a command to one or many nodes in the cluster
+        with retries based on :paramref:`RedisCluster.retry_policy`
         """
-        if not self.connection_pool.initialized or self.refresh_table_asap:
-            await self
 
+        return await self._retry_policy.call_with_retries(
+            lambda: self._execute_command_on_node(
+                command, *args, callback=callback, **kwargs
+            ),
+            before_hook=self._ensure_initialized,
+        )
+
+    async def _execute_command_on_node(
+        self,
+        command: bytes,
+        *args: ValueT,
+        callback: Callable[..., R] = NoopCallback(),
+        **kwargs: Optional[ValueT],
+    ) -> R:
+        """
+        Sends a command to one or many nodes in the cluster
+        """
         nodes = self.determine_node(command, **kwargs)
         if nodes and len(nodes) > 1:
             try:
-                return await self.execute_command_on_nodes(
+                return await self._execute_command_on_nodes(
                     nodes,
                     command,
                     *args,
@@ -713,7 +750,7 @@ class RedisCluster(
                     asking = False
 
                 if (
-                    self.cache
+                    isinstance(self.cache, AbstractCache)
                     and isinstance(self.cache, SupportsClientTracking)
                     and r.tracking_client_id != self.cache.get_client_id(r)
                 ):
@@ -783,17 +820,19 @@ class RedisCluster(
 
         raise ClusterError("Maximum retries exhausted.")
 
-    async def execute_command_on_nodes(
+    async def _execute_command_on_nodes(
         self,
-        nodes: Iterable[ManagedNode],
+        nodes: List[ManagedNode],
         command: bytes,
         *args: ValueT,
         callback: Callable[..., R],
         **options: Optional[ValueT],
     ) -> R:
         res: Dict[str, R] = {}
-        node_arg_mapping: Dict[str, List[Tuple[ValueT, ...]]] = {}
+
         _nodes = list(nodes)
+        node_arg_mapping: Dict[str, List[Tuple[ValueT, ...]]] = {}
+
         if command in self.split_flags and self.non_atomic_cross_slot:
             keys = KeySpec.extract_keys(command, *args)
             if keys:

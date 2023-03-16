@@ -28,10 +28,9 @@ from coredis.connection import (
     UnixDomainSocketConnection,
 )
 from coredis.exceptions import (
-    BusyLoadingError,
     ConnectionError,
+    RedisError,
     ReplicationError,
-    SentinelConnectionError,
     TimeoutError,
     WatchError,
 )
@@ -39,7 +38,12 @@ from coredis.globals import COMMAND_FLAGS, READONLY_COMMANDS
 from coredis.pool import ConnectionPool
 from coredis.response._callbacks import NoopCallback
 from coredis.response.types import ScoredMember
-from coredis.retry import RetryPolicy
+from coredis.retry import (
+    CompositeRetryPolicy,
+    ConstantRetryPolicy,
+    NoRetryPolicy,
+    RetryPolicy,
+)
 from coredis.typing import (
     AnyStr,
     AsyncGenerator,
@@ -117,7 +121,7 @@ class Client(
         protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
         noreply: bool = False,
-        retry_policy: Optional[RetryPolicy] = None,
+        retry_policy: RetryPolicy = NoRetryPolicy(),
         **kwargs: Any,
     ):
         if not connection_pool:
@@ -458,6 +462,7 @@ class Redis(Client[AnyStr]):
         verify_version: bool = ...,
         cache: Optional[AbstractCache] = ...,
         noreply: bool = ...,
+        retry_policy: RetryPolicy = ...,
         **kwargs: Any,
     ) -> None:
         ...
@@ -494,6 +499,7 @@ class Redis(Client[AnyStr]):
         verify_version: bool = ...,
         cache: Optional[AbstractCache] = ...,
         noreply: bool = ...,
+        retry_policy: RetryPolicy = ...,
         **kwargs: Any,
     ) -> None:
         ...
@@ -529,10 +535,17 @@ class Redis(Client[AnyStr]):
         verify_version: bool = True,
         cache: Optional[AbstractCache] = None,
         noreply: bool = False,
+        retry_policy: RetryPolicy = CompositeRetryPolicy(
+            ConstantRetryPolicy((ConnectionError,), 1, 0.01),
+        ),
         **kwargs: Any,
     ) -> None:
         """
         Changes
+
+          - .. versionadded:: 4.12.0
+
+            - Added :paramref:`retry_policy`
 
           - .. versionadded:: 4.3.0
 
@@ -616,6 +629,7 @@ class Redis(Client[AnyStr]):
          The cache is responsible for any mutations to the keys that happen outside of this client
         :param noreply: If ``True`` the client will not request a response for any
          commands sent to the server.
+        :param retry_policy: The retry policy to use when interacting with the redis server
 
         """
         super().__init__(
@@ -646,6 +660,7 @@ class Redis(Client[AnyStr]):
             protocol_version=protocol_version,
             verify_version=verify_version,
             noreply=noreply,
+            retry_policy=retry_policy,
             **kwargs,
         )
         self.cache = cache
@@ -667,6 +682,7 @@ class Redis(Client[AnyStr]):
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         noreply: bool = ...,
+        retry_policy: RetryPolicy = ...,
         **kwargs: Any,
     ) -> RedisBytesT:
         ...
@@ -682,6 +698,7 @@ class Redis(Client[AnyStr]):
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         noreply: bool = ...,
+        retry_policy: RetryPolicy = ...,
         **kwargs: Any,
     ) -> RedisStringT:
         ...
@@ -696,6 +713,10 @@ class Redis(Client[AnyStr]):
         protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
         noreply: bool = False,
+        retry_policy: RetryPolicy = CompositeRetryPolicy(
+            ConstantRetryPolicy((ConnectionError,), 2, 0.01),
+            ConstantRetryPolicy((TimeoutError,), 2, 0.01),
+        ),
         **kwargs: Any,
     ) -> RedisT:
         """
@@ -731,6 +752,7 @@ class Redis(Client[AnyStr]):
                 protocol_version=protocol_version,
                 verify_version=verify_version,
                 noreply=noreply,
+                retry_policy=retry_policy,
                 connection_pool=ConnectionPool.from_url(
                     url,
                     db=db,
@@ -746,6 +768,7 @@ class Redis(Client[AnyStr]):
                 protocol_version=protocol_version,
                 verify_version=verify_version,
                 noreply=noreply,
+                retry_policy=retry_policy,
                 connection_pool=ConnectionPool.from_url(
                     url,
                     db=db,
@@ -770,9 +793,22 @@ class Redis(Client[AnyStr]):
         callback: Callable[..., R] = NoopCallback(),
         **options: Optional[ValueT],
     ) -> R:
-        """Executes a command and returns a parsed response"""
-        await self
+        """
+        Executes a command with configured retries and returns
+        the parsed response
+        """
+        return await self._retry_policy.call_with_retries(
+            lambda: self._execute_command(command, *args, callback=callback, **options),
+            before_hook=self.initialize,
+        )
 
+    async def _execute_command(
+        self,
+        command: bytes,
+        *args: ValueT,
+        callback: Callable[..., R] = NoopCallback(),
+        **options: Optional[ValueT],
+    ) -> R:
         pool = self.connection_pool
         quick_release = self.should_quick_release(command)
         connection = await pool.get_connection(
@@ -807,34 +843,9 @@ class Redis(Client[AnyStr]):
                 version=self.protocol_version,
                 **options,
             )
-        except (asyncio.CancelledError, BusyLoadingError):
+        except RedisError:
             connection.disconnect()
             raise
-        except (ConnectionError, TimeoutError) as e:
-            connection.disconnect()
-            if (
-                not connection.retry_on_timeout and isinstance(e, TimeoutError)
-            ) or isinstance(
-                e, SentinelConnectionError
-            ):  # do not retry explicit sentinel connection errors
-                raise
-            _connection = await pool.get_connection(command, *args)
-            request = await _connection.create_request(
-                command,
-                *args,
-                decode=options.get("decode", self._decodecontext.get()),
-                encoding=self._encodingcontext.get(),
-            )
-            pool.release(_connection)
-            reply = await request
-            if self.noreply:
-                return None  # type: ignore
-
-            return callback(
-                reply,
-                version=self.protocol_version,
-                **options,
-            )
         finally:
             self._ensure_server_version(connection.server_version)
             if not quick_release:

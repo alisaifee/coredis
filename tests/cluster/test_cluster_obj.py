@@ -25,7 +25,7 @@ class DummyConnectionPool(ClusterConnectionPool):
 
 async def test_multi_node_cluster_down_retry(mocker):
     rc = RedisCluster(host="127.0.0.1", port=7000, decode_responses=True)
-    e = mocker.patch.object(rc, "execute_command_on_nodes")
+    e = mocker.patch.object(rc, "_execute_command_on_nodes")
 
     async def raise_cluster_down(*a, **k):
         raise ClusterDownError(b"")
