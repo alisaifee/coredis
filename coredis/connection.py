@@ -337,10 +337,11 @@ class BaseConnection(asyncio.BaseProtocol):
             response,
             NotEnoughData,
         ):
-            if request.raise_exceptions and isinstance(response, RedisError):
-                request.future.set_exception(response)
-            else:
-                request.future.set_result(response)
+            if not request.future.cancelled():
+                if request.raise_exceptions and isinstance(response, RedisError):
+                    request.future.set_exception(response)
+                else:
+                    request.future.set_result(response)
 
             self.last_request_processed_at = time.time()
             self.requests_processed += 1
@@ -639,7 +640,7 @@ class BaseConnection(asyncio.BaseProtocol):
         while True:
             try:
                 request = self._requests.popleft()
-                if not request.future.cancelled():
+                if not request.future.done():
                     request.future.set_exception(
                         self._last_error or ConnectionError("Connection lost")
                     )
