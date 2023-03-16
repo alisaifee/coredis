@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import asyncio
-import functools
 from abc import ABC, abstractmethod
 from functools import wraps
-from typing import Any, AsyncIterator
+from typing import Any
 
-from coredis.typing import Callable, Coroutine, Optional, P, R, Tuple, Type
+from coredis.typing import Callable, Coroutine, Dict, Optional, P, R, Tuple, Type, Union
 
 
 class RetryPolicy(ABC):
@@ -14,46 +13,75 @@ class RetryPolicy(ABC):
     Abstract retry policy
     """
 
-    def __init__(self, retryable_exceptions: Tuple[Type[BaseException], ...]) -> None:
+    def __init__(
+        self, retries: int, retryable_exceptions: Tuple[Type[BaseException], ...]
+    ) -> None:
+        """
+        :param retries: number of times to retry if a :paramref:`retryable_exception`
+         is encountered.
+        :param retryable_exceptions: The exceptions to trigger a retry for
+        """
         self.retryable_exceptions = retryable_exceptions
+        self.retries = retries
 
     @abstractmethod
-    async def retries(self) -> AsyncIterator[int]:
-        """
-        Iterator that yields the number of retries and delays if
-        desired
-        """
-        # mypy shenanigans
-        raise NotImplementedError()
-        if False:
-            yield 0
+    async def delay(self, attempt_number: int) -> None:
+        pass
 
     async def call_with_retries(
         self,
         func: Callable[..., Coroutine[Any, Any, R]],
-        failure_hook: Optional[Callable[..., Coroutine[Any, Any, None]]] = None,
+        before_hook: Optional[Callable[..., Coroutine[Any, Any, Any]]] = None,
+        failure_hook: Optional[
+            Union[
+                Callable[..., Coroutine[Any, Any, Any]],
+                Dict[Type[BaseException], Callable[..., Coroutine[Any, Any, Any]]],
+            ]
+        ] = None,
     ) -> R:
         """
-        Calls :paramref:`func` repeatedly according to this retry policy
-        if :paramref:`RetryPolicy.retryable_exceptions` is encountered.
-
-        If :paramref:`failure_hook` is provided it will be called everytime
-        a retryable exception is encountered.
+        :param func: a function that should return the coroutine that will be
+         awaited when retrying if :paramref:`RetryPolicy.retryable_exceptions` is encountered.
+        :param before_hook: if provided will be called on every attempt.
+        :param failure_hook: if provided and is a callable it will be
+         called everytime a retryable exception is encountered. If it is a mapping
+         of exception types to callables, the first exception type that is a parent
+         of any encountered exception will be called.
         """
         last_error: Optional[BaseException] = None
-        async for _ in self.retries():
+        for attempt in range(self.retries + 1):
             try:
+                await self.delay(attempt)
+                if before_hook:
+                    await before_hook()
                 return await func()
             except self.retryable_exceptions as e:
                 if failure_hook:
                     try:
-                        await failure_hook()
+                        if isinstance(failure_hook, dict):
+                            for exc_type, hook in failure_hook.items():
+                                if isinstance(e, exc_type):
+                                    await hook(e)
+                                    break
+                        else:
+                            await failure_hook(e)
                     except:  # noqa
                         pass
                 last_error = e
         if last_error:
             raise last_error
         assert False
+
+    def will_retry(self, exc: BaseException) -> bool:
+        return isinstance(exc, self.retryable_exceptions)
+
+
+class NoRetryPolicy(RetryPolicy):
+    def __init__(self) -> None:
+        super().__init__(1, ())
+
+    async def delay(self, attempt_number: int) -> None:
+        pass
 
 
 class ConstantRetryPolicy(RetryPolicy):
@@ -70,15 +98,12 @@ class ConstantRetryPolicy(RetryPolicy):
         retries: int,
         delay: float,
     ) -> None:
-        self.__retries = retries
         self.__delay = delay
-        super().__init__(retryable_exceptions)
+        super().__init__(retries, retryable_exceptions)
 
-    async def retries(self) -> AsyncIterator[int]:
-        for i in range(self.__retries):
-            if i > 0:
-                await asyncio.sleep(self.__delay)
-            yield i
+    async def delay(self, attempt_number: int) -> None:
+        if attempt_number > 0:
+            await asyncio.sleep(self.__delay)
 
 
 class ExponentialBackoffRetryPolicy(RetryPolicy):
@@ -86,7 +111,7 @@ class ExponentialBackoffRetryPolicy(RetryPolicy):
     Retry policy that exponentially backs off before retrying up to
     :paramref:`ExponentialBackoffRetryPolicy.retries` if any
     of :paramref:`ExponentialBackoffRetryPolicy.retryable_exceptions` are
-    encountered. :paramref:`ExponentialBackoffRetryPolicy.initial_delay`
+    encountered. :paramref:`ExponentialBckoffRetryPolicy.initial_delay`
     is used as the initial value for calculating the exponential backoff.
 
     """
@@ -97,15 +122,12 @@ class ExponentialBackoffRetryPolicy(RetryPolicy):
         retries: int,
         initial_delay: float,
     ) -> None:
-        self.__retries = retries
         self.__initial_delay = initial_delay
-        super().__init__(retryable_exceptions)
+        super().__init__(retries, retryable_exceptions)
 
-    async def retries(self) -> AsyncIterator[int]:
-        for i in range(self.__retries):
-            if i > 0:
-                await asyncio.sleep(pow(2, i) * self.__initial_delay)
-            yield i
+    async def delay(self, attempt_number: int) -> None:
+        if attempt_number > 0:
+            await asyncio.sleep(pow(2, attempt_number) * self.__initial_delay)
 
 
 class CompositeRetryPolicy(RetryPolicy):
@@ -114,31 +136,68 @@ class CompositeRetryPolicy(RetryPolicy):
     """
 
     def __init__(self, *retry_policies: RetryPolicy):
-        self._retry_policies = retry_policies
+        self._retry_policies = set(retry_policies)
 
-    async def retries(self) -> AsyncIterator[int]:
+    def add_retry_policy(self, policy: RetryPolicy) -> None:
+        """
+        Add to the retry policies that this instance was created with
+        """
+        self._retry_policies.add(policy)
+
+    async def delay(self, attempt_number: int) -> None:
         raise NotImplementedError()
-        if False:
-            yield 0
 
     async def call_with_retries(
         self,
         func: Callable[..., Coroutine[Any, Any, R]],
-        failure_hook: Optional[Callable[..., Coroutine[Any, Any, None]]] = None,
+        before_hook: Optional[Callable[..., Coroutine[Any, Any, Any]]] = None,
+        failure_hook: Optional[
+            Union[
+                Callable[..., Coroutine[Any, Any, Any]],
+                Dict[Type[BaseException], Callable[..., Coroutine[Any, Any, Any]]],
+            ]
+        ] = None,
     ) -> R:
         """
         Calls :paramref:`func` repeatedly according to the retry policies that
         this class was instantiated with (:paramref:`CompositeRetryPolicy.retry_policies`).
 
-        If :paramref:`failure_hook` is provided it will be called everytime
-        a retryable exception is encountered.
+        :param func: a function that should return the coroutine that will be
+         awaited when retrying if :paramref:`RetryPolicy.retryable_exceptions` is encountered.
+        :param before_hook: if provided will be called before every attempt.
+        :param failure_hook: if provided and is a callable it will be
+         called everytime a retryable exception is encountered. If it is a mapping
+         of exception types to callables, the first exception type that is a parent
+         of any encountered exception will be called.
         """
-        wrapped = None
-        for policy in self._retry_policies:
-            wrapped = functools.partial(
-                policy.call_with_retries, wrapped or func, failure_hook
-            )
-        return await (wrapped or func)()  # type: ignore
+        attempts = {policy: 0 for policy in self._retry_policies}
+        while True:
+            try:
+                if before_hook:
+                    await before_hook()
+                return await func()
+            except Exception as e:
+                will_retry = False
+                for policy in attempts:
+                    if policy.will_retry(e) and attempts[policy] < policy.retries:
+                        attempts[policy] += 1
+                        await policy.delay(attempts[policy])
+                        will_retry = True
+                        break
+
+                if failure_hook:
+                    if isinstance(failure_hook, dict):
+                        for exc_type in failure_hook:
+                            if isinstance(e, exc_type):
+                                await failure_hook[exc_type](e)
+                                break
+                    else:
+                        await failure_hook(e)
+
+                if will_retry:
+                    continue
+
+                raise e
 
 
 def retryable(

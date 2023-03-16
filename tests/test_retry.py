@@ -17,28 +17,28 @@ class TestRetryPolicies:
     @pytest.mark.parametrize(
         "policy",
         [
-            ConstantRetryPolicy((ZeroDivisionError,), 1, 1),
-            ExponentialBackoffRetryPolicy((ZeroDivisionError,), 1, 1),
+            ConstantRetryPolicy((ZeroDivisionError,), 0, 1),
+            ExponentialBackoffRetryPolicy((ZeroDivisionError,), 0, 1),
             CompositeRetryPolicy(
-                ConstantRetryPolicy((ZeroDivisionError,), 1, 1),
-                ExponentialBackoffRetryPolicy((AttributeError,), 1, 1),
+                ConstantRetryPolicy((ZeroDivisionError,), 0, 1),
+                ExponentialBackoffRetryPolicy((AttributeError,), 0, 1),
             ),
         ],
     )
     async def test_no_exception(self, policy):
         call = unittest.mock.AsyncMock()
         failure = unittest.mock.AsyncMock()
-        await policy.call_with_retries(call, failure)
+        await policy.call_with_retries(call, failure_hook=failure)
         call.assert_awaited_once()
         failure.assert_not_awaited()
 
     @pytest.mark.parametrize(
         "policy",
         [
-            ConstantRetryPolicy((ZeroDivisionError,), 2, 1),
-            ExponentialBackoffRetryPolicy((ZeroDivisionError,), 2, 1),
+            ConstantRetryPolicy((ZeroDivisionError,), 1, 1),
+            ExponentialBackoffRetryPolicy((ZeroDivisionError,), 1, 1),
             CompositeRetryPolicy(
-                ConstantRetryPolicy((ZeroDivisionError,), 2, 1),
+                ConstantRetryPolicy((ZeroDivisionError,), 1, 1),
             ),
         ],
     )
@@ -50,7 +50,7 @@ class TestRetryPolicies:
         failure = unittest.mock.AsyncMock()
 
         with pytest.raises(ZeroDivisionError):
-            await policy.call_with_retries(call, failure)
+            await policy.call_with_retries(call, failure_hook=failure)
 
         assert call.await_count == 2
         assert failure.await_count == 2
@@ -66,11 +66,25 @@ class TestRetryPolicies:
                 elif self.state == 0:
                     self.state = str(self.state)
                 elif self.state == "0":
+                    self.state = "one"
+                elif self.state == "one":
                     self.state = 1
-                return 1 / self.state
+                return 1 / int(self.state)
 
         mock = Mock()
+        failure1 = unittest.mock.AsyncMock()
+        failure2 = unittest.mock.AsyncMock()
         assert 1 == await CompositeRetryPolicy(
             ConstantRetryPolicy((ZeroDivisionError,), 2, 1),
             ConstantRetryPolicy((TypeError,), 2, 1),
-        ).call_with_retries(mock.call)
+            ConstantRetryPolicy((ValueError,), 1, 1),
+        ).call_with_retries(
+            mock.call,
+            failure_hook={
+                ArithmeticError: failure1,
+                ValueError: failure2,
+            },
+        )
+
+        assert failure1.await_count == 2
+        assert failure2.await_count == 1

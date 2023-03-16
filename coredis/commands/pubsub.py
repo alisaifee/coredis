@@ -16,7 +16,7 @@ from coredis.commands.constants import CommandName
 from coredis.connection import BaseConnection, Connection
 from coredis.exceptions import ConnectionError, PubSubError, TimeoutError
 from coredis.response.types import PubSubMessage
-from coredis.retry import ConstantRetryPolicy, RetryPolicy
+from coredis.retry import ConstantRetryPolicy, NoRetryPolicy, RetryPolicy
 from coredis.typing import (
     AnyStr,
     Awaitable,
@@ -86,14 +86,14 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         self,
         connection_pool: PoolT,
         ignore_subscribe_messages: bool = False,
-        retry_policy: Optional[RetryPolicy] = None,
+        retry_policy: Optional[RetryPolicy] = ConstantRetryPolicy(
+            (ConnectionError,), 3, 0.1
+        ),
     ):
         self.connection_pool = connection_pool
         self.ignore_subscribe_messages = ignore_subscribe_messages
         self.connection: Optional[coredis.connection.Connection] = None
-        self._retry_policy = retry_policy or ConstantRetryPolicy(
-            (ConnectionError,), 5, 0.1
-        )
+        self._retry_policy = retry_policy or NoRetryPolicy()
         self.reset()
 
     async def _ensure_encoding(self) -> None:
@@ -128,7 +128,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
     def close(self) -> None:
         self.reset()
 
-    async def reset_connections(self) -> None:
+    async def reset_connections(self, exc: Optional[BaseException] = None) -> None:
         pass
 
     async def on_connect(self, connection: BaseConnection) -> None:
@@ -340,7 +340,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
 
         response = await self._retry_policy.call_with_retries(
             lambda: self.parse_response(block=False, timeout=timeout),
-            self.reset_connections,
+            failure_hook=self.reset_connections,
         )
 
         if response:
@@ -473,14 +473,14 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         await self.connection_pool.initialize()
 
         if self.connection is None:
-            await self.reset_connections()
+            await self.reset_connections(None)
 
         assert self.connection
         return await self._execute(
             self.connection, self.connection.send_command, command, *args
         )
 
-    async def reset_connections(self) -> None:
+    async def reset_connections(self, exc: Optional[BaseException] = None) -> None:
         if self.connection:
             self.connection.disconnect()
             self.connection_pool.initialized = False
@@ -621,7 +621,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
             )
         raise PubSubError(f"Unable to determine shard for channel {args[0]!r}")
 
-    async def reset_connections(self) -> None:
+    async def reset_connections(self, exc: Optional[BaseException] = None) -> None:
         for connection in self.shard_connections.values():
             connection.disconnect()
             connection.clear_connect_callbacks()
