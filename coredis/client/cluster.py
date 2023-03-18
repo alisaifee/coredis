@@ -667,13 +667,11 @@ class RedisCluster(
         """
 
         return await self._retry_policy.call_with_retries(
-            lambda: self._execute_command_on_node(
-                command, *args, callback=callback, **kwargs
-            ),
+            lambda: self._execute_command(command, *args, callback=callback, **kwargs),
             before_hook=self._ensure_initialized,
         )
 
-    async def _execute_command_on_node(
+    async def _execute_command(
         self,
         command: bytes,
         *args: ValueT,
@@ -684,35 +682,97 @@ class RedisCluster(
         Sends a command to one or many nodes in the cluster
         """
         nodes = self.determine_node(command, **kwargs)
-        if nodes and len(nodes) > 1:
-            try:
-                return await self._execute_command_on_nodes(
-                    nodes,
-                    command,
-                    *args,
-                    callback=callback,
-                    **kwargs,
-                )
-            except ClusterDownError:
-                self.connection_pool.disconnect()
-                self.connection_pool.reset()
-                self.refresh_table_asap = True
-                raise
 
+        if nodes and len(nodes) > 1:
+            tasks: Dict[str, Coroutine[Any, Any, R]] = {}
+            node_arg_mapping = self._split_args_over_nodes(nodes, command, *args)
+            node_name_map = {n.name: n for n in nodes}
+            for node_name in node_arg_mapping:
+                for portion, pargs in enumerate(node_arg_mapping[node_name]):
+                    tasks[
+                        f"{node_name}:{portion}"
+                    ] = self._execute_command_on_single_node(
+                        command,
+                        *pargs,
+                        callback=callback,
+                        node=node_name_map[node_name],
+                        slot=None,
+                        **kwargs,
+                    )
+
+            results = await asyncio.gather(*tasks.values(), return_exceptions=True)
+            if self.noreply:
+                return None  # type: ignore
+            return cast(
+                R,
+                self._merge_result(command, dict(zip(tasks.keys(), results)), **kwargs),
+            )
+        else:
+            node = None
+            slot = None
+            if not nodes:
+                slot = self._determine_slot(command, *args)
+            else:
+                node = nodes.pop()
+            return await self._execute_command_on_single_node(
+                command, *args, callback=callback, node=node, slot=slot, **kwargs
+            )
+
+    def _split_args_over_nodes(
+        self,
+        nodes: List[ManagedNode],
+        command: bytes,
+        *args: ValueT,
+    ) -> Dict[str, List[Tuple[ValueT, ...]]]:
+        if command in self.split_flags and self.non_atomic_cross_slot:
+            keys = KeySpec.extract_keys(command, *args)
+            node_arg_mapping: Dict[str, List[Tuple[ValueT, ...]]] = {}
+            if keys:
+                key_start: int = args.index(keys[0])
+                key_end: int = args.index(keys[-1])
+                assert (
+                    args[key_start : 1 + key_end] == keys
+                ), f"Unable to map {command.decode('latin-1')} by keys {keys}"
+
+                for (
+                    node_name,
+                    key_groups,
+                ) in self.connection_pool.nodes.keys_to_nodes_by_slot(*keys).items():
+                    for _, node_keys in key_groups.items():
+                        node_arg_mapping.setdefault(node_name, []).append(
+                            (
+                                *args[:key_start],
+                                *node_keys,  # type: ignore
+                                *args[1 + key_end :],
+                            )
+                        )
+            if self.cache and command not in READONLY_COMMANDS:
+                self.cache.invalidate(*keys)
+            return node_arg_mapping
+        else:
+            # This command is not meant to be split across nodes and each node
+            # should be called with the same arguments
+            return {node.name: [args] for node in nodes}
+
+    async def _execute_command_on_single_node(
+        self,
+        command: bytes,
+        *args: ValueT,
+        callback: Callable[..., R] = NoopCallback(),
+        node: Optional[ManagedNode] = None,
+        slot: Optional[int] = None,
+        **kwargs: Optional[ValueT],
+    ) -> R:
         redirect_addr = None
+
         asking = False
 
-        try_random_node = False
-        try_random_type = NodeFlag.ALL
-        node = None
-        slot = None
-        if not nodes:
-            slot = self._determine_slot(command, *args)
-            if slot is None:
-                try_random_node = True
-                try_random_type = NodeFlag.PRIMARIES
+        if not node and slot is None:
+            try_random_node = True
+            try_random_type = NodeFlag.PRIMARIES
         else:
-            node = nodes.pop()
+            try_random_node = False
+            try_random_type = NodeFlag.ALL
         remaining_attempts = int(self.MAX_RETRIES)
 
         while remaining_attempts > 0:
@@ -728,14 +788,14 @@ class RedisCluster(
                 )
                 if slot is not None:
                     try_random_node = False
+            elif node:
+                r = await self.connection_pool.get_connection_by_node(node)
             elif slot is not None:
                 if self.refresh_table_asap:
                     # MOVED
                     node = self.connection_pool.get_primary_node_by_slot(slot)
                 else:
                     node = self.connection_pool.get_node_by_slot(slot, command)
-                r = await self.connection_pool.get_connection_by_node(node)
-            elif node:
                 r = await self.connection_pool.get_connection_by_node(node)
             else:
                 continue
@@ -801,6 +861,7 @@ class RedisCluster(
                 # This counter will increase faster when the same client object
                 # is shared between multiple threads. To reduce the frequency you
                 # can set the variable 'reinitialize_steps' in the constructor.
+                print("moved", e)
                 self.refresh_table_asap = True
                 await self.connection_pool.nodes.increment_reinitialize_counter()
 
@@ -819,140 +880,6 @@ class RedisCluster(
                     self.connection_pool.release(r)
 
         raise ClusterError("Maximum retries exhausted.")
-
-    async def _execute_command_on_nodes(
-        self,
-        nodes: List[ManagedNode],
-        command: bytes,
-        *args: ValueT,
-        callback: Callable[..., R],
-        **options: Optional[ValueT],
-    ) -> R:
-        res: Dict[str, R] = {}
-
-        _nodes = list(nodes)
-        node_arg_mapping: Dict[str, List[Tuple[ValueT, ...]]] = {}
-
-        if command in self.split_flags and self.non_atomic_cross_slot:
-            keys = KeySpec.extract_keys(command, *args)
-            if keys:
-                key_start: int = args.index(keys[0])
-                key_end: int = args.index(keys[-1])
-                assert (
-                    args[key_start : 1 + key_end] == keys
-                ), f"Unable to map {command.decode('latin-1')} by keys {keys}"
-
-                for (
-                    node_name,
-                    key_groups,
-                ) in self.connection_pool.nodes.keys_to_nodes_by_slot(*keys).items():
-                    for _, node_keys in key_groups.items():
-                        node_arg_mapping.setdefault(node_name, []).append(
-                            (
-                                *args[:key_start],
-                                *node_keys,  # type: ignore
-                                *args[1 + key_end :],
-                            )
-                        )
-            if self.cache and command not in READONLY_COMMANDS:
-                self.cache.invalidate(*keys)
-        while _nodes:
-            cur = _nodes[0]
-            connection = await self.connection_pool.get_connection_by_node(cur)
-            if (
-                isinstance(self.cache, AbstractCache)
-                and isinstance(self.cache, SupportsClientTracking)
-                and connection.tracking_client_id
-                != self.cache.get_client_id(connection)
-            ):
-                self.cache.reset()
-                await connection.update_tracking_client(
-                    True, self.cache.get_client_id(connection)
-                )
-            try:
-                if cur.name in node_arg_mapping:
-                    for i, args in enumerate(node_arg_mapping[cur.name]):
-                        request = await connection.create_request(
-                            command,
-                            *args,
-                            noreply=self.noreply,
-                            decode=options.get("decode", self._decodecontext.get()),
-                            encoding=self._encodingcontext.get(),
-                        )
-                        try:
-                            reply = await request
-                            if self.noreply:
-                                continue
-                            res[f"{cur.name}:{i}"] = callback(
-                                reply,
-                                version=self.protocol_version,
-                                **options,
-                            )
-                            await (await self._ensure_wait(command, connection))
-                        except MovedError as err:
-                            target = f"{err.node_addr[0]}:{err.node_addr[1]}"
-                            target_node = self.connection_pool.nodes.nodes[target]
-                            node_arg_mapping.setdefault(target, []).append(args)
-                            if target_node not in _nodes:
-                                _nodes.append(target_node)
-                            self.refresh_table_asap = True
-                            await self.connection_pool.nodes.increment_reinitialize_counter()
-                elif node_arg_mapping:
-                    continue
-                else:
-                    request = await connection.create_request(
-                        command,
-                        *args,
-                        noreply=self.noreply,
-                        decode=options.get("decode", self._decodecontext.get()),
-                        encoding=self._encodingcontext.get(),
-                        raise_exceptions=False,
-                    )
-                    reply = await request
-                    if not self.noreply:
-                        res[cur.name] = callback(
-                            reply,
-                            version=self.protocol_version,
-                            **options,
-                        )
-                    await (await self._ensure_wait(command, connection))
-            except asyncio.CancelledError:
-                # do not retry when coroutine is cancelled
-                connection.disconnect()
-                raise
-            except (ConnectionError, TimeoutError) as e:
-                connection.disconnect()
-
-                if not connection.retry_on_timeout and isinstance(e, TimeoutError):
-                    raise
-                try:
-                    request = await connection.create_request(
-                        command,
-                        *args,
-                        noreply=self.noreply,
-                        decode=options.get("decode", self._decodecontext.get()),
-                        encoding=self._encodingcontext.get(),
-                        raise_exceptions=False,
-                    )
-                except ConnectionError as err:
-                    # if a retry attempt results in a connection error assume cluster error
-                    raise ClusterDownError(str(err))
-                reply = await request
-                if not self.noreply:
-                    res[cur.name] = callback(
-                        reply,
-                        version=self.protocol_version,
-                        **options,
-                    )
-                await (await self._ensure_wait(command, connection))
-            finally:
-                _nodes.pop(0)
-                self._ensure_server_version(connection.server_version)
-                self.connection_pool.release(connection)
-
-        if self.noreply:
-            return None  # type: ignore
-        return self._merge_result(command, res, **options)
 
     @overload
     def decoding(
