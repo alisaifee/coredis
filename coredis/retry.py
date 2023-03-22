@@ -216,7 +216,7 @@ def retryable(
         @wraps(func)
         async def _inner(*args: P.args, **kwargs: P.kwargs) -> R:
             return await policy.call_with_retries(
-                lambda: func(*args, **kwargs), failure_hook
+                lambda: func(*args, **kwargs), failure_hook=failure_hook
             )
 
         return _inner
