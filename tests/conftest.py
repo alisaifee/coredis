@@ -93,7 +93,11 @@ async def get_version(client):
                 version_string = (await client.sentinels[0].info())["redis_version"]
                 REDIS_VERSIONS[str(client)] = version.parse(version_string)
             else:
-                version_string = (await client.info())["redis_version"]
+                client_info = await client.info()
+                if "dfly_version" in client_info:
+                    version_string = client_info["dfly_version"]
+                else:
+                    version_string = client_info["redis_version"]
                 REDIS_VERSIONS[str(client)] = version.parse(version_string)
         except version.InvalidVersion:
             REDIS_VERSIONS[str(client)] = UnparseableVersion(version_string)
