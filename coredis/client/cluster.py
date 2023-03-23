@@ -861,7 +861,6 @@ class RedisCluster(
                 # This counter will increase faster when the same client object
                 # is shared between multiple threads. To reduce the frequency you
                 # can set the variable 'reinitialize_steps' in the constructor.
-                print("moved", e)
                 self.refresh_table_asap = True
                 await self.connection_pool.nodes.increment_reinitialize_counter()
 
