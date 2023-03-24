@@ -255,7 +255,15 @@ class RedisCluster(
         noevict: bool = False,
         notouch: bool = False,
         retry_policy: RetryPolicy = CompositeRetryPolicy(
-            ConstantRetryPolicy((ClusterDownError,), 2, 0.1)
+            ConstantRetryPolicy((ClusterDownError,), 2, 0.1),
+            ConstantRetryPolicy(
+                (
+                    ConnectionError,
+                    TimeoutError,
+                ),
+                2,
+                0.1,
+            ),
         ),
         **kwargs: Any,
     ):
@@ -683,6 +691,16 @@ class RedisCluster(
                 return [node_from_slot]
         return None
 
+    async def on_connection_error(self, _: BaseException) -> None:
+        self.connection_pool.disconnect()
+        self.connection_pool.reset()
+        self.refresh_table_asap = True
+
+    async def on_cluster_down_error(self, _: BaseException) -> None:
+        self.connection_pool.disconnect()
+        self.connection_pool.reset()
+        self.refresh_table_asap = True
+
     async def execute_command(
         self,
         command: bytes,
@@ -697,6 +715,10 @@ class RedisCluster(
 
         return await self._retry_policy.call_with_retries(
             lambda: self._execute_command(command, *args, callback=callback, **kwargs),
+            failure_hook={
+                ConnectionError: self.on_connection_error,
+                ClusterDownError: self.on_cluster_down_error,
+            },
             before_hook=self._ensure_initialized,
         )
 
@@ -874,20 +896,6 @@ class RedisCluster(
                 return response  # type: ignore
             except (RedisClusterException, BusyLoadingError, asyncio.CancelledError):
                 raise
-            except (ConnectionError, TimeoutError):
-                if remaining_attempts < self.MAX_RETRIES / 2 and slot is not None:
-                    try_random_node = True
-                    await asyncio.sleep(0.1)
-                else:
-                    self.connection_pool.disconnect()
-                    self.connection_pool.reset()
-                    self.refresh_table_asap = True
-            except ClusterDownError as e:
-                self.connection_pool.disconnect()
-                self.connection_pool.reset()
-                self.refresh_table_asap = True
-
-                raise e
             except MovedError as e:
                 # Reinitialize on ever x number of MovedError.
                 # This counter will increase faster when the same client object

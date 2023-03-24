@@ -148,7 +148,6 @@ class NodeManager:
             "decode_responses",
             "stream_timeout",
             "connect_timeout",
-            "retry_on_timeout",
             "ssl_context",
             "parser_class",
             "reader_read_size",

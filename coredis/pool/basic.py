@@ -50,7 +50,6 @@ URL_QUERY_ARGUMENT_PARSERS: Dict[
 ] = {
     "stream_timeout": float,
     "connect_timeout": float,
-    "retry_on_timeout": to_bool,
     "max_connections": int,
     "max_idle_time": int,
     "idle_check_interval": int,
@@ -106,9 +105,7 @@ class ConnectionPool:
         Any additional querystring arguments and keyword arguments will be
         passed along to the ConnectionPool class's initializer. The querystring
         arguments ``connect_timeout`` and ``stream_timeout`` if supplied
-        are parsed as float values. The arguments ``retry_on_timeout`` are
-        parsed to boolean values that accept True/False, Yes/No values to indicate state.
-        Invalid types cause a :exc:`UserWarning` to be raised.
+        are parsed as float values.
 
         .. note:: In the case of conflicting arguments, querystring arguments always win.
         """

@@ -115,7 +115,6 @@ class Client(
         ssl_check_hostname: Optional[bool] = None,
         ssl_ca_certs: Optional[str] = None,
         max_connections: Optional[int] = None,
-        retry_on_timeout: bool = False,
         max_idle_time: float = 0,
         idle_check_interval: float = 1,
         client_name: Optional[str] = None,
@@ -136,7 +135,6 @@ class Client(
                 "stream_timeout": stream_timeout,
                 "connect_timeout": connect_timeout,
                 "max_connections": max_connections,
-                "retry_on_timeout": retry_on_timeout,
                 "decode_responses": decode_responses,
                 "max_idle_time": max_idle_time,
                 "idle_check_interval": idle_check_interval,
@@ -526,7 +524,6 @@ class Redis(Client[AnyStr]):
         ssl_check_hostname: Optional[bool] = ...,
         ssl_ca_certs: Optional[str] = ...,
         max_connections: Optional[int] = ...,
-        retry_on_timeout: bool = ...,
         max_idle_time: float = ...,
         idle_check_interval: float = ...,
         client_name: Optional[str] = ...,
@@ -565,7 +562,6 @@ class Redis(Client[AnyStr]):
         ssl_check_hostname: Optional[bool] = ...,
         ssl_ca_certs: Optional[str] = ...,
         max_connections: Optional[int] = ...,
-        retry_on_timeout: bool = ...,
         max_idle_time: float = ...,
         idle_check_interval: float = ...,
         client_name: Optional[str] = ...,
@@ -603,7 +599,6 @@ class Redis(Client[AnyStr]):
         ssl_check_hostname: Optional[bool] = None,
         ssl_ca_certs: Optional[str] = None,
         max_connections: Optional[int] = None,
-        retry_on_timeout: bool = False,
         max_idle_time: float = 0,
         idle_check_interval: float = 1,
         client_name: Optional[str] = None,
@@ -692,8 +687,6 @@ class Redis(Client[AnyStr]):
          (See :meth:`ssl.SSLContext.load_verify_locations`).
         :param max_connections: Maximum capacity of the connection pool (Ignored if
          :paramref:`connection_pool` is not ``None``.
-        :param retry_on_timeout: Whether to retry a commmand once if a :exc:`TimeoutError`
-         is encountered
         :param max_idle_time: Maximum number of a seconds an unused connection is cached
          before it is disconnected.
         :param idle_check_interval: Periodicity of idle checks to release idle connections.
@@ -738,7 +731,6 @@ class Redis(Client[AnyStr]):
             ssh_check_hostname=ssl_check_hostname,
             ssl_ca_certs=ssl_ca_certs,
             max_connections=max_connections,
-            retry_on_timeout=retry_on_timeout,
             max_idle_time=max_idle_time,
             idle_check_interval=idle_check_interval,
             client_name=client_name,

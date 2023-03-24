@@ -152,7 +152,6 @@ class BaseConnection(asyncio.BaseProtocol):
 
     def __init__(
         self,
-        retry_on_timeout: bool = False,
         stream_timeout: Optional[float] = None,
         encoding: str = "utf-8",
         decode_responses: bool = False,
@@ -168,7 +167,6 @@ class BaseConnection(asyncio.BaseProtocol):
         self.password: Optional[str] = ""
         self.db: Optional[int] = None
         self.pid = os.getpid()
-        self.retry_on_timeout = retry_on_timeout
         self._description_args: Callable[
             ..., Dict[str, Optional[Union[str, int]]]
         ] = lambda: dict()
@@ -694,7 +692,6 @@ class Connection(BaseConnection):
         username: Optional[str] = None,
         password: Optional[str] = None,
         db: Optional[int] = 0,
-        retry_on_timeout: bool = False,
         stream_timeout: Optional[float] = None,
         connect_timeout: Optional[float] = None,
         ssl_context: Optional[ssl.SSLContext] = None,
@@ -710,7 +707,6 @@ class Connection(BaseConnection):
         notouch: bool = False,
     ):
         super().__init__(
-            retry_on_timeout,
             stream_timeout,
             encoding,
             decode_responses,
@@ -783,7 +779,6 @@ class UnixDomainSocketConnection(BaseConnection):
         username: Optional[str] = None,
         password: Optional[str] = None,
         db: int = 0,
-        retry_on_timeout: bool = False,
         stream_timeout: Optional[float] = None,
         connect_timeout: Optional[float] = None,
         encoding: str = "utf-8",
@@ -794,7 +789,6 @@ class UnixDomainSocketConnection(BaseConnection):
         **_: ValueT,
     ) -> None:
         super().__init__(
-            retry_on_timeout,
             stream_timeout,
             encoding,
             decode_responses,
@@ -830,7 +824,6 @@ class ClusterConnection(Connection):
         username: Optional[str] = None,
         password: Optional[str] = None,
         db: Optional[int] = 0,
-        retry_on_timeout: bool = False,
         stream_timeout: Optional[float] = None,
         connect_timeout: Optional[float] = None,
         ssl_context: Optional[ssl.SSLContext] = None,
@@ -853,7 +846,6 @@ class ClusterConnection(Connection):
             username=username,
             password=password,
             db=db,
-            retry_on_timeout=retry_on_timeout,
             stream_timeout=stream_timeout,
             connect_timeout=connect_timeout,
             ssl_context=ssl_context,

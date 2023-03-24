@@ -16,7 +16,12 @@ from coredis.commands.constants import CommandName
 from coredis.connection import BaseConnection, Connection
 from coredis.exceptions import ConnectionError, PubSubError, TimeoutError
 from coredis.response.types import PubSubMessage
-from coredis.retry import ConstantRetryPolicy, NoRetryPolicy, RetryPolicy
+from coredis.retry import (
+    CompositeRetryPolicy,
+    ConstantRetryPolicy,
+    NoRetryPolicy,
+    RetryPolicy,
+)
 from coredis.typing import (
     AnyStr,
     Awaitable,
@@ -86,8 +91,9 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         self,
         connection_pool: PoolT,
         ignore_subscribe_messages: bool = False,
-        retry_policy: Optional[RetryPolicy] = ConstantRetryPolicy(
-            (ConnectionError,), 3, 0.1
+        retry_policy: Optional[RetryPolicy] = CompositeRetryPolicy(
+            ConstantRetryPolicy((ConnectionError,), 3, 0.1),
+            ConstantRetryPolicy((TimeoutError,), 2, 0.1),
         ),
     ):
         self.connection_pool = connection_pool
@@ -212,12 +218,6 @@ class BasePubSub(Generic[AnyStr, PoolT]):
             # do not retry if coroutine is cancelled
             if await connection.can_read():  # noqa
                 connection.disconnect()
-            raise
-        except TimeoutError:
-            connection.disconnect()
-            if connection.retry_on_timeout:
-                await connection.connect()
-                return await command(*args)
             raise
 
     async def parse_response(

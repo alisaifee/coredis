@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from abc import ABC, abstractmethod
 from functools import wraps
 from typing import Any
 
 from coredis.typing import Callable, Coroutine, Dict, Optional, P, R, Tuple, Type, Union
+
+logger = logging.getLogger(__name__)
 
 
 class RetryPolicy(ABC):
@@ -34,8 +37,8 @@ class RetryPolicy(ABC):
         before_hook: Optional[Callable[..., Coroutine[Any, Any, Any]]] = None,
         failure_hook: Optional[
             Union[
-                Callable[..., Coroutine[Any, Any, Any]],
-                Dict[Type[BaseException], Callable[..., Coroutine[Any, Any, Any]]],
+                Callable[..., Coroutine[Any, Any, None]],
+                Dict[Type[BaseException], Callable[..., Coroutine[Any, Any, None]]],
             ]
         ] = None,
     ) -> R:
@@ -56,6 +59,7 @@ class RetryPolicy(ABC):
                     await before_hook()
                 return await func()
             except self.retryable_exceptions as e:
+                logger.info(f"Retry attempt {attempt + 1} due to error: {e}")
                 if failure_hook:
                     try:
                         if isinstance(failure_hook, dict):
@@ -153,8 +157,8 @@ class CompositeRetryPolicy(RetryPolicy):
         before_hook: Optional[Callable[..., Coroutine[Any, Any, Any]]] = None,
         failure_hook: Optional[
             Union[
-                Callable[..., Coroutine[Any, Any, Any]],
-                Dict[Type[BaseException], Callable[..., Coroutine[Any, Any, Any]]],
+                Callable[..., Coroutine[Any, Any, None]],
+                Dict[Type[BaseException], Callable[..., Coroutine[Any, Any, None]]],
             ]
         ] = None,
     ) -> R:
@@ -178,8 +182,10 @@ class CompositeRetryPolicy(RetryPolicy):
                 return await func()
             except Exception as e:
                 will_retry = False
+                attempt = 0
                 for policy in attempts:
                     if policy.will_retry(e) and attempts[policy] < policy.retries:
+                        attempt = attempts[policy]
                         attempts[policy] += 1
                         await policy.delay(attempts[policy])
                         will_retry = True
@@ -195,6 +201,7 @@ class CompositeRetryPolicy(RetryPolicy):
                         await failure_hook(e)
 
                 if will_retry:
+                    logger.info(f"Retry attempt {attempt} due to error: {e}")
                     continue
 
                 raise e

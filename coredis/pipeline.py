@@ -398,11 +398,9 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
                 version=conn.protocol_version,
                 **kwargs,
             )
-        except (ConnectionError, TimeoutError) as e:
+        except (ConnectionError, TimeoutError):
             conn.disconnect()
 
-            if not conn.retry_on_timeout and isinstance(e, TimeoutError):
-                raise
             # if we're not already watching, we can safely retry the command
             try:
                 if not self.watching:
@@ -672,11 +670,9 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
 
         try:
             return await exec(conn, stack, raise_on_error)
-        except (ConnectionError, TimeoutError, CancelledError) as e:
+        except (ConnectionError, TimeoutError, CancelledError):
             conn.disconnect()
 
-            if not conn.retry_on_timeout and isinstance(e, TimeoutError):
-                raise
             # if we were watching a variable, the watch is no longer valid
             # since this connection has died. raise a WatchError, which
             # indicates the user should retry his transaction. If this is more
@@ -1111,11 +1107,9 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
                 version=conn.protocol_version,
                 **kwargs,
             )
-        except (ConnectionError, TimeoutError) as e:
+        except (ConnectionError, TimeoutError):
             conn.disconnect()
 
-            if not conn.retry_on_timeout and isinstance(e, TimeoutError):
-                raise
             try:
                 if not self.watching:
                     request = await conn.create_request(
