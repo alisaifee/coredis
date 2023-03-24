@@ -122,7 +122,7 @@ IGNORED_ARGUMENTS = {
     "EVAL_RO": ["numkeys"],
     "EVALSHA": ["numkeys"],
     "EVALSHA_RO": ["numkeys"],
-    "MIGRATE": ["key_or_empty_string"],
+    "MIGRATE": ["key-selector"],
     "SINTERCARD": ["numkeys"],
     "ZDIFF": ["numkeys"],
     "ZDIFFSTORE": ["numkeys"],
@@ -132,7 +132,7 @@ IGNORED_ARGUMENTS = {
     "ZMPOP": ["numkeys"],
     "ZUNION": ["numkeys"],
     "ZUNIONSTORE": ["numkeys"],
-    "XADD": ["auto_id"],
+    "XADD": ["id-selector"],
     "XGROUP CREATE": ["new_id"],
     "XGROUP SETID": ["new_id"],
 }
@@ -281,17 +281,15 @@ REDIS_ARGUMENT_FORCED_ORDER = {
         "laddr",
         "skipme",
     ],
-    "CLIENT LIST": ["type_", "identifiers"],
+    "CLIENT LIST": ["type", "identifiers"],
     "FCALL": ["function", "keys", "args"],
     "FCALL_RO": ["function", "keys", "args"],
 }
 REDIS_ARGUMENT_FORCED = {
     "COMMAND GETKEYS": [
-        {"name": "command", "type": "string"},
         {"name": "arguments", "type": "bulk-string", "multiple": True},
     ],
     "COMMAND GETKEYSANDFLAGS": [
-        {"name": "command", "type": "string"},
         {"name": "arguments", "type": "bulk-string", "multiple": True},
     ],
 }
