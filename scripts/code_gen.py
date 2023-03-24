@@ -823,9 +823,11 @@ def is_deprecated(command, kls):
             if token[1] in all_commands:
                 replacement_string[
                     token[0]
-                ] = f":meth:`~coredis.{kls.__name__}.{sanitized(token[1], None)}`"
+                ] = f":meth:`~coredis.{kls.__name__}.{sanitized(token[1], None, ignore_reserved_words=True)}`"
             else:
-                replacement_string[token[1]] = sanitized(token[1], None)
+                replacement_string[token[1]] = sanitized(
+                    token[1], None, ignore_reserved_words=True
+                )
 
         for token, mapped in replacement_string.items():
             replacement = replacement.replace(token, mapped)
@@ -835,7 +837,7 @@ def is_deprecated(command, kls):
         return [None, None]
 
 
-def sanitized(x, command=None):
+def sanitized(x, command=None, ignore_reserved_words=False):
     cleansed_name = (
         x.lower().strip().replace("-", "_").replace(":", "_").replace(" ", "_")
     )
@@ -851,7 +853,9 @@ def sanitized(x, command=None):
     if cleansed_name == "id":
         return "identifier"
 
-    if cleansed_name in (list(globals()["__builtins__"].__dict__.keys()) + ["async"]):
+    if not ignore_reserved_words and cleansed_name in (
+        list(globals()["__builtins__"].__dict__.keys()) + ["async"]
+    ):
         cleansed_name = cleansed_name + "_"
 
     return cleansed_name
@@ -1052,7 +1056,6 @@ def get_argument(
 
         if all(child["type"] == "pure-token" for child in arg["arguments"]):
             if parent:
-
                 syn_name = sanitized(f"{parent['name']}_{arg.get('name')}", command)
             else:
                 syn_name = sanitized(f"{arg.get('token', arg.get('name'))}", command)
@@ -1407,7 +1410,6 @@ def get_command_spec(command):
 
 
 def generate_method_details(kls, method, debug):
-
     method_details = {"kls": kls, "command": method}
 
     if skip_command(method):
@@ -1761,7 +1763,6 @@ def generate_compatibility_section(
     methods_by_group = {}
 
     for group in groups:
-
         methods = {"supported": [], "missing": []}
         for method in get_official_commands(group):
             method_details = generate_method_details(kls, method, debug)

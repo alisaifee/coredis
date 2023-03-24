@@ -466,6 +466,16 @@ Wait for the synchronous replication of all the write commands sent in the conte
 
 
 
+WAITAOF [X]
+***********
+
+Wait for all write commands sent in the context of the current connection to be synced to AOF of local host and/or replicas
+
+- Documentation: `WAITAOF <https://redis.io/commands/waitaof>`_
+
+- Not Implemented
+
+
 
 
 
@@ -589,7 +599,7 @@ Set the string value of a key and return its old value
 - Implementation: :meth:`~coredis.Redis.getset`
 
 
-- Deprecated in redis: 6.2.0. Use :meth:`~coredis.Redis.set_` with the ``!get`` argument
+- Deprecated in redis: 6.2.0. Use :meth:`~coredis.Redis.set` with the ``!get`` argument
 
 
 
@@ -707,6 +717,8 @@ Set the value and expiration in milliseconds of a key
 - Implementation: :meth:`~coredis.Redis.psetex`
 
 
+- Deprecated in redis: 2.6.12. Use :meth:`~coredis.Redis.set` with the ``px`` argument
+
 
 
 
@@ -735,6 +747,8 @@ Set the value and expiration of a key
 - Implementation: :meth:`~coredis.Redis.setex`
 
 
+- Deprecated in redis: 2.6.12. Use :meth:`~coredis.Redis.set` with the ``ex`` argument
+
 
 
 
@@ -748,6 +762,8 @@ Set the value of a key, only if the key does not exist
 - Documentation: `SETNX <https://redis.io/commands/setnx>`_
 - Implementation: :meth:`~coredis.Redis.setnx`
 
+
+- Deprecated in redis: 2.6.12. Use :meth:`~coredis.Redis.set` with the ``nx`` argument
 
 
 
@@ -4611,6 +4627,8 @@ Close the connection
 - Implementation: :meth:`~coredis.Redis.quit`
 
 
+- Deprecated in redis: 7.2.0. Use just closing the connection
+
 
 
 
@@ -4648,6 +4666,26 @@ Change the selected database for the current connection
 
 
 
+
+
+CLIENT NO-TOUCH [X]
+*******************
+
+Controls whether commands sent by the client will alter the LRU/LFU of the keys they access.
+
+- Documentation: `CLIENT NO-TOUCH <https://redis.io/commands/client-no-touch>`_
+
+- Not Implemented
+
+
+CLIENT SETINFO [X]
+******************
+
+Set client or connection specific info
+
+- Documentation: `CLIENT SETINFO <https://redis.io/commands/client-setinfo>`_
+
+- Not Implemented
 
 
 
@@ -5096,6 +5134,16 @@ Disables read queries for a connection to a cluster replica node
 
 
 
+
+
+CLUSTER MYSHARDID [X]
+*********************
+
+Return the node shard id
+
+- Documentation: `CLUSTER MYSHARDID <https://redis.io/commands/cluster-myshardid>`_
+
+- Not Implemented
 
 
 
