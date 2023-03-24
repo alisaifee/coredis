@@ -10,7 +10,7 @@ lint-fix:
 	ruff --fix coredis tests
 
 DEBUG := False
-NEXT_VERSION := 4.0.0
+NEXT_VERSION := 4.12.0
 
 coverage-docs:
 	rm -rf docs/source/compatibility.rst
