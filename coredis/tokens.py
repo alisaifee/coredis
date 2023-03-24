@@ -47,6 +47,26 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``BITOP``
+    AND = b"AND"
+
+    #: Used by:
+    #:
+    #:  - ``BITOP``
+    NOT = b"NOT"
+
+    #: Used by:
+    #:
+    #:  - ``BITOP``
+    OR = b"OR"
+
+    #: Used by:
+    #:
+    #:  - ``BITOP``
+    XOR = b"XOR"
+
+    #: Used by:
+    #:
     #:  - ``BLMOVE``
     #:  - ``BLMPOP``
     #:  - ``LMOVE``
@@ -84,12 +104,14 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``CLIENT CACHING``
+    #:  - ``CLIENT KILL``
     #:  - ``SCRIPT DEBUG``
     NO = b"NO"
 
     #: Used by:
     #:
     #:  - ``CLIENT CACHING``
+    #:  - ``CLIENT KILL``
     #:  - ``SCRIPT DEBUG``
     YES = b"YES"
 
@@ -125,6 +147,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``CLIENT NO-EVICT``
+    #:  - ``CLIENT NO-TOUCH``
     #:  - ``CLIENT REPLY``
     #:  - ``CLIENT TRACKING``
     OFF = b"OFF"
@@ -132,6 +155,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``CLIENT NO-EVICT``
+    #:  - ``CLIENT NO-TOUCH``
     #:  - ``CLIENT REPLY``
     #:  - ``CLIENT TRACKING``
     ON = b"ON"
@@ -548,6 +572,11 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``XINFO STREAM``
+    FULL = b"FULL"
+
+    #: Used by:
+    #:
     #:  - ``XREADGROUP``
     NOACK = b"NOACK"
 
@@ -593,6 +622,12 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``ZRANGE``
     #:  - ``ZRANGESTORE``
     REV = b"REV"
+
+    #: Used by:
+    #:
+    #:  - ``ZRANK``
+    #:  - ``ZREVRANK``
+    WITHSCORE = b"WITHSCORE"
 
 
 class PrefixToken(CaseAndEncodingInsensitiveEnum):
@@ -680,6 +715,16 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``CLIENT KILL``
     USER = b"USER"
+
+    #: Used by:
+    #:
+    #:  - ``CLIENT SETINFO``
+    LIB_NAME = b"LIB-NAME"
+
+    #: Used by:
+    #:
+    #:  - ``CLIENT SETINFO``
+    LIB_VER = b"LIB-VER"
 
     #: Used by:
     #:
@@ -931,11 +976,6 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``XGROUP CREATE``
     #:  - ``XGROUP SETID``
     ENTRIESREAD = b"ENTRIESREAD"
-
-    #: Used by:
-    #:
-    #:  - ``XINFO STREAM``
-    FULL = b"FULL"
 
     #: Used by:
     #:

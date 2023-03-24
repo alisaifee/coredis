@@ -102,21 +102,21 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     INCRBY = b"INCRBY"  # Since redis: 1.0.0
     MGET = b"MGET"  # Since redis: 1.0.0
     SET = b"SET"  # Since redis: 1.0.0
-    SETNX = b"SETNX"  # Since redis: 1.0.0
     MSET = b"MSET"  # Since redis: 1.0.1
     MSETNX = b"MSETNX"  # Since redis: 1.0.1
     APPEND = b"APPEND"  # Since redis: 2.0.0
-    SETEX = b"SETEX"  # Since redis: 2.0.0
     SETRANGE = b"SETRANGE"  # Since redis: 2.2.0
     STRLEN = b"STRLEN"  # Since redis: 2.2.0
     GETRANGE = b"GETRANGE"  # Since redis: 2.4.0
     INCRBYFLOAT = b"INCRBYFLOAT"  # Since redis: 2.6.0
-    PSETEX = b"PSETEX"  # Since redis: 2.6.0
     GETDEL = b"GETDEL"  # Since redis: 6.2.0
     GETEX = b"GETEX"  # Since redis: 6.2.0
     LCS = b"LCS"  # Since redis: 7.0.0
     GETSET = b"GETSET"  # Deprecated in redis: 6.2.0
+    SETNX = b"SETNX"  # Deprecated in redis: 2.6.12
     SUBSTR = b"SUBSTR"  # Deprecated in redis: 2.0.0
+    SETEX = b"SETEX"  # Deprecated in redis: 2.6.12
+    PSETEX = b"PSETEX"  # Deprecated in redis: 2.6.12
 
     #: Commands for cluster
     ASKING = b"ASKING"  # Since redis: 3.0.0
@@ -150,6 +150,7 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     CLUSTER_DELSLOTSRANGE = b"CLUSTER DELSLOTSRANGE"  # Since redis: 7.0.0
     CLUSTER_LINKS = b"CLUSTER LINKS"  # Since redis: 7.0.0
     CLUSTER_SHARDS = b"CLUSTER SHARDS"  # Since redis: 7.0.0
+    CLUSTER_MYSHARDID = b"CLUSTER MYSHARDID"  # Since redis: 7.2.0
     CLUSTER_SLAVES = b"CLUSTER SLAVES"  # Deprecated in redis: 5.0.0
     CLUSTER_SLOTS = b"CLUSTER SLOTS"  # Deprecated in redis: 7.0.0
 
@@ -157,14 +158,13 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     AUTH = b"AUTH"  # Since redis: 1.0.0
     ECHO = b"ECHO"  # Since redis: 1.0.0
     PING = b"PING"  # Since redis: 1.0.0
-    QUIT = b"QUIT"  # Since redis: 1.0.0
     SELECT = b"SELECT"  # Since redis: 1.0.0
     CLIENT = b"CLIENT"  # Since redis: 2.4.0
     CLIENT_KILL = b"CLIENT KILL"  # Since redis: 2.4.0
     CLIENT_LIST = b"CLIENT LIST"  # Since redis: 2.4.0
     CLIENT_GETNAME = b"CLIENT GETNAME"  # Since redis: 2.6.9
     CLIENT_SETNAME = b"CLIENT SETNAME"  # Since redis: 2.6.9
-    CLIENT_PAUSE = b"CLIENT PAUSE"  # Since redis: 2.9.50
+    CLIENT_PAUSE = b"CLIENT PAUSE"  # Since redis: 3.0.0
     CLIENT_REPLY = b"CLIENT REPLY"  # Since redis: 3.2.0
     CLIENT_HELP = b"CLIENT HELP"  # Since redis: 5.0.0
     CLIENT_ID = b"CLIENT ID"  # Since redis: 5.0.0
@@ -178,6 +178,9 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     CLIENT_UNPAUSE = b"CLIENT UNPAUSE"  # Since redis: 6.2.0
     RESET = b"RESET"  # Since redis: 6.2.0
     CLIENT_NO_EVICT = b"CLIENT NO-EVICT"  # Since redis: 7.0.0
+    CLIENT_NO_TOUCH = b"CLIENT NO-TOUCH"  # Since redis: 7.2.0
+    CLIENT_SETINFO = b"CLIENT SETINFO"  # Since redis: 7.2.0
+    QUIT = b"QUIT"  # Deprecated in redis: 7.2.0
 
     #: Commands for bitmap
     GETBIT = b"GETBIT"  # Since redis: 2.2.0
@@ -283,6 +286,7 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     EXPIRETIME = b"EXPIRETIME"  # Since redis: 7.0.0
     PEXPIRETIME = b"PEXPIRETIME"  # Since redis: 7.0.0
     SORT_RO = b"SORT_RO"  # Since redis: 7.0.0
+    WAITAOF = b"WAITAOF"  # Since redis: 7.2.0
 
     #: Commands for transactions
     EXEC = b"EXEC"  # Since redis: 1.2.0
