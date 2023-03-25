@@ -1017,6 +1017,11 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def client_reply(
         self, mode: "Literal[PureToken.OFF, PureToken.ON, PureToken.SKIP]"
     ) -> Pipeline[AnyStr]: ...
+    async def client_setinfo(
+        self,
+        lib_name: "Optional[Union[str, bytes]]" = ...,
+        lib_ver: "Optional[Union[str, bytes]]" = ...,
+    ) -> Pipeline[AnyStr]: ...
     async def client_setname(self, connection_name: "StringT") -> Pipeline[AnyStr]: ...
     async def client_tracking(
         self,
@@ -2141,6 +2146,11 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> ClusterPipeline[AnyStr]: ...
     async def client_reply(
         self, mode: "Literal[PureToken.OFF, PureToken.ON, PureToken.SKIP]"
+    ) -> ClusterPipeline[AnyStr]: ...
+    async def client_setinfo(
+        self,
+        lib_name: "Optional[Union[str, bytes]]" = ...,
+        lib_ver: "Optional[Union[str, bytes]]" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def client_setname(
         self, connection_name: "StringT"

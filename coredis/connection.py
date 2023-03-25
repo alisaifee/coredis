@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import async_timeout
 
+import coredis
 from coredis._packer import Packer
 from coredis._utils import nativestr
 from coredis.exceptions import (
@@ -437,6 +438,20 @@ class BaseConnection(asyncio.BaseProtocol):
                 resp = cast(List[ValueT], hello_resp)
                 self.server_version = nativestr(resp[3])
                 self.client_id = int(resp[7])
+            # TODO: change this to 7.2 once it is officially released?
+            if self.server_version > "7.1":
+                await asyncio.gather(
+                    await self.create_request(
+                        b"CLIENT SETINFO",
+                        b"LIB-NAME",
+                        b"coredis",
+                    ),
+                    await self.create_request(
+                        b"CLIENT SETINFO",
+                        b"LIB-VER",
+                        coredis.__version__,
+                    ),
+                )
             self.needs_handshake = False
         except AuthenticationRequiredError:
             await self.try_legacy_auth()

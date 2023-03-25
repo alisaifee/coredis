@@ -6661,6 +6661,42 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.CLIENT_SETNAME, connection_name, callback=SimpleStringCallback()
         )
 
+    @mutually_exclusive_parameters("lib_name", "lib_ver")
+    @versionadded(version="4.12.0")
+    @redis_command(
+        CommandName.CLIENT_SETINFO,
+        version_introduced="7.2.0",
+        group=CommandGroup.CONNECTION,
+        redirect_usage=RedirectUsage(
+            (
+                "Coredis sets the library name and version by default during the handshake phase."
+                "Explicitly calling this command will only apply to the connection from the pool "
+                "that was used to send it and not for subsequent commands"
+            ),
+            True,
+        ),
+    )
+    async def client_setinfo(
+        self,
+        lib_name: Optional[Union[str, bytes]] = None,
+        lib_ver: Optional[Union[str, bytes]] = None,
+    ) -> bool:
+        """
+        Set client or connection specific info
+
+        :param lib_name: name of the library
+        :param lib_ver: version of the library
+        """
+        pieces: CommandArgList = []
+        if lib_name:
+            pieces.extend([PrefixToken.LIB_NAME, lib_name])
+        if lib_ver:
+            pieces.extend([PrefixToken.LIB_VER, lib_ver])
+
+        return await self.execute_command(
+            CommandName.CLIENT_SETINFO, *pieces, callback=SimpleStringCallback()
+        )
+
     @redis_command(
         CommandName.CLIENT_PAUSE,
         group=CommandGroup.CONNECTION,

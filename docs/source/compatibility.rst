@@ -4526,6 +4526,26 @@ Instruct the server whether to reply to commands
 
 
 
+CLIENT SETINFO
+**************
+
+Set client or connection specific info
+
+- Documentation: `CLIENT SETINFO <https://redis.io/commands/client-setinfo>`_
+- Implementation: :meth:`~coredis.Redis.client_setinfo`
+  
+  .. warning:: Using :meth:`~coredis.Redis.client_setinfo` directly is not recommended. Coredis sets the library name and version by default during the handshake phase.Explicitly calling this command will only apply to the connection from the pool that was used to send it and not for subsequent commands
+
+- New in redis: 7.2.0
+
+
+
+- .. versionadded:: 4.12.0
+
+
+
+
+
 CLIENT SETNAME
 **************
 
@@ -4708,16 +4728,6 @@ Change the selected database for the current connection
 
 
 
-
-
-CLIENT SETINFO [X]
-******************
-
-Set client or connection specific info
-
-- Documentation: `CLIENT SETINFO <https://redis.io/commands/client-setinfo>`_
-
-- Not Implemented
 
 
 

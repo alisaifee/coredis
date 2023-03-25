@@ -8,6 +8,8 @@ cluster & sentinel.
 
 from __future__ import annotations
 
+from typing import cast
+
 from coredis.client import KeyDB, KeyDBCluster, Redis, RedisCluster
 from coredis.config import Config
 from coredis.connection import (
@@ -43,4 +45,4 @@ __all__ = [
     "PureToken",
 ]
 
-__version__ = _version.get_versions()["version"]  # type: ignore
+__version__ = cast(str, _version.get_versions()["version"])  # type: ignore
