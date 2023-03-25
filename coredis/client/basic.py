@@ -29,6 +29,7 @@ from coredis.connection import (
 )
 from coredis.exceptions import (
     ConnectionError,
+    PersistenceError,
     RedisError,
     ReplicationError,
     TimeoutError,
@@ -189,6 +190,9 @@ class Client(
         self._waitcontext: contextvars.ContextVar[
             Optional[Tuple[int, int]]
         ] = contextvars.ContextVar("wait", default=None)
+        self._waitaof_context: contextvars.ContextVar[
+            Optional[Tuple[int, int, int]]
+        ] = contextvars.ContextVar("waitaof", default=None)
         self._retry_policy = retry_policy
 
     @property
@@ -203,6 +207,12 @@ class Client(
     @property
     def requires_wait(self) -> bool:
         if not hasattr(self, "_waitcontext") or not self._waitcontext.get():
+            return False
+        return True
+
+    @property
+    def requires_waitaof(self) -> bool:
+        if not hasattr(self, "_waitaof_context") or not self._waitaof_context.get():
             return False
         return True
 
@@ -236,7 +246,10 @@ class Client(
             def check_wait(
                 wait: Tuple[int, int], response: asyncio.Future[ResponseType]
             ) -> None:
-                if not cast(int, response.result()) >= wait[0]:
+                exc = response.exception()
+                if exc:
+                    maybe_wait.set_exception(exc)
+                elif not cast(int, response.result()) >= wait[0]:
                     maybe_wait.set_exception(
                         ReplicationError(command, wait[0], wait[1])
                     )
@@ -247,6 +260,34 @@ class Client(
                 CommandName.WAIT, *wait, decode=False
             )
             request.add_done_callback(functools.partial(check_wait, wait))
+        else:
+            maybe_wait.set_result(None)
+        return maybe_wait
+
+    async def _ensure_persisted(
+        self, command: bytes, connection: BaseConnection
+    ) -> asyncio.Future[None]:
+        maybe_wait: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+        waitaof = self._waitaof_context.get()
+        if waitaof and waitaof[0] > 0:
+
+            def check_wait(
+                waitaof: Tuple[int, int, int], response: asyncio.Future[ResponseType]
+            ) -> None:
+                exc = response.exception()
+                if exc:
+                    maybe_wait.set_exception(exc)
+                else:
+                    res = cast(Tuple[int, int], response.result())
+                    if not (res[0] >= waitaof[0] and res[1] >= waitaof[1]):
+                        maybe_wait.set_exception(PersistenceError(command, *waitaof))
+                    else:
+                        maybe_wait.set_result(None)
+
+            request = await connection.create_request(
+                CommandName.WAITAOF, *waitaof, decode=False
+            )
+            request.add_done_callback(functools.partial(check_wait, waitaof))
         else:
             maybe_wait.set_result(None)
         return maybe_wait
@@ -422,6 +463,33 @@ class Client(
             yield self
         finally:
             self._waitcontext.set(None)
+
+    @contextlib.contextmanager
+    def ensure_persisted(
+        self: ClientT, local: int = 0, replicas: int = 0, timeout_ms: int = 100
+    ) -> Iterator[ClientT]:
+        """
+        Context manager to ensure that commands executed within the context
+        are are synced to AOF of :paramref:`local` host and/or :paramref:`replicas`
+        within :paramref:`timeout_ms` milliseconds.
+
+        Internally this uses `WAITAOF <https://redis.io/commands/waitaof>`_ after
+        each command executed within the context
+
+        :raises: :exc:`coredis.exceptions.PersistenceError`
+
+        Example::
+
+            client = coredis.RedisCluster(["localhost", 7000])
+            with client.ensure_persisted(1, 1, 20):
+                await client.set("fubar", 1)
+
+        """
+        self._waitaof_context.set((local, replicas, timeout_ms))
+        try:
+            yield self
+        finally:
+            self._waitaof_context.set(None)
 
     def should_quick_release(self, command: bytes) -> bool:
         return CommandFlag.BLOCKING not in COMMAND_FLAGS[command]
@@ -812,7 +880,9 @@ class Redis(Client[AnyStr]):
         pool = self.connection_pool
         quick_release = self.should_quick_release(command)
         connection = await pool.get_connection(
-            command, *args, acquire=not quick_release or self.requires_wait
+            command,
+            *args,
+            acquire=not quick_release or self.requires_wait or self.requires_waitaof,
         )
         if (
             self.cache
@@ -833,9 +903,12 @@ class Redis(Client[AnyStr]):
                 decode=options.get("decode", self._decodecontext.get()),
                 encoding=self._encodingcontext.get(),
             )
-            maybe_wait = await self._ensure_wait(command, connection)
+            maybe_wait = [
+                await self._ensure_wait(command, connection),
+                await self._ensure_persisted(command, connection),
+            ]
             reply = await request
-            await maybe_wait
+            await asyncio.gather(*maybe_wait)
             if self.noreply:
                 return None  # type: ignore
             return callback(

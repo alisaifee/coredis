@@ -3038,7 +3038,7 @@ class CoreCommands(CommandMixin[AnyStr]):
                 ":meth:`RedisCluster.ensure_replication` context managers to ensure "
                 "a command is replicated to the number of replicas"
             ),
-            False,
+            True,
         ),
     )
     async def wait(self, numreplicas: int, timeout: int) -> int:
@@ -3046,9 +3046,45 @@ class CoreCommands(CommandMixin[AnyStr]):
         Wait for the synchronous replication of all the write commands sent in the context of
         the current connection
 
+        :return: the number of replicas the write was replicated to
+        """
+
+        return await self.execute_command(
+            CommandName.WAIT, numreplicas, timeout, callback=IntCallback()
+        )
+
+    @versionadded(version="4.12.0")
+    @redis_command(
+        CommandName.WAITAOF,
+        version_introduced="7.2.0",
+        group=CommandGroup.GENERIC,
+        redirect_usage=RedirectUsage(
+            (
+                "Use the :meth:`Redis.ensure_persisted`  or "
+                ":meth:`RedisCluster.ensure_persisted` context managers to ensure "
+                "a command is synced to the AOF of the number of local hosts or replicas"
+            ),
+            True,
+        ),
+    )
+    async def waitaof(
+        self, numlocal: int, numreplicas: int, timeout: int
+    ) -> Tuple[int, ...]:
+        """
+        Wait for all write commands sent in the context of the current connection to be synced
+        to AOF of local host and/or replicas
+
+
         :raises: :exc:`NotImplementedError`
         """
 
+        return await self.execute_command(
+            CommandName.WAITAOF,
+            numlocal,
+            numreplicas,
+            timeout,
+            callback=TupleCallback[int](),
+        )
         raise NotImplementedError()
 
     @redis_command(

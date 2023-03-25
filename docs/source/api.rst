@@ -427,6 +427,8 @@ General Exceptions
    :no-inherited-members:
 .. autoexception:: coredis.exceptions.NoKeyError
    :no-inherited-members:
+.. autoexception:: coredis.exceptions.PersistenceError
+   :no-inherited-members:
 .. autoexception:: coredis.exceptions.PubSubError
    :no-inherited-members:
 .. autoexception:: coredis.exceptions.ReadOnlyError

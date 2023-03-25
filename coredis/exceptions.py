@@ -72,12 +72,24 @@ class NoKeyError(RedisError):
 
 class ReplicationError(RedisError):
     """
-    Raised when then replication requirements were not met
+    Raised when the replication requirements were not met
     """
 
     def __init__(self, command: bytes, replicas: int, timeout: int):
         super().__init__(
             f"Command {str(command)} did not replicate to {replicas} replicas within {timeout} ms."
+        )
+
+
+class PersistenceError(RedisError):
+    """
+    Raised when the persistence requirements were not met
+    """
+
+    def __init__(self, command: bytes, local: int, replicas: int, timeout: int):
+        super().__init__(
+            f"Command {str(command)} did not sync to the aof of {local} hosts and/or {replicas} "
+            f"replicas within {timeout} ms."
         )
 
 

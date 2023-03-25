@@ -460,7 +460,9 @@ WAIT
 Wait for the synchronous replication of all the write commands sent in the context of the current connection
 
 - Documentation: `WAIT <https://redis.io/commands/wait>`_
-- .. danger:: :meth:`~coredis.Redis.wait` intentionally raises an :exc:`NotImplemented` error. Use the :meth:`Redis.ensure_replication`  or :meth:`RedisCluster.ensure_replication` context managers to ensure a command is replicated to the number of replicas
+- Implementation: :meth:`~coredis.Redis.wait`
+  
+  .. warning:: Using :meth:`~coredis.Redis.wait` directly is not recommended. Use the :meth:`Redis.ensure_replication`  or :meth:`RedisCluster.ensure_replication` context managers to ensure a command is replicated to the number of replicas
 
 
 
@@ -468,14 +470,24 @@ Wait for the synchronous replication of all the write commands sent in the conte
 
 
 
-WAITAOF [X]
-***********
+WAITAOF
+*******
 
 Wait for all write commands sent in the context of the current connection to be synced to AOF of local host and/or replicas
 
 - Documentation: `WAITAOF <https://redis.io/commands/waitaof>`_
+- Implementation: :meth:`~coredis.Redis.waitaof`
+  
+  .. warning:: Using :meth:`~coredis.Redis.waitaof` directly is not recommended. Use the :meth:`Redis.ensure_persisted`  or :meth:`RedisCluster.ensure_persisted` context managers to ensure a command is synced to the AOF of the number of local hosts or replicas
 
-- Not Implemented
+- New in redis: 7.2.0
+
+
+
+- .. versionadded:: 4.12.0
+
+
+
 
 
 

@@ -10,6 +10,7 @@ import coredis
 from coredis.exceptions import (
     CommandNotSupportedError,
     ConnectionError,
+    PersistenceError,
     ReplicationError,
     UnknownCommandError,
 )
@@ -87,6 +88,16 @@ class TestClient:
             assert not await client.get("fubar")
         assert await client.get("fubar") == _s(1)
 
+    @pytest.mark.min_server_version("7.1.240")
+    async def test_ensure_persistence(self, client, _s):
+        with client.ensure_persisted(1, 0, 2000):
+            assert await client.set("fubar", 1)
+
+        with pytest.raises(PersistenceError):
+            with client.ensure_persisted(1, 1, 2000):
+                assert await client.set("fubar", 1)
+        assert await client.set("fubar", 1)
+
     async def test_decoding_context(self, client):
         await client.set("fubar", "A")
         with client.decoding(False):
@@ -122,6 +133,16 @@ class TestClusterClient:
 
         with pytest.raises(ReplicationError):
             with client.ensure_replication(2):
+                assert await client.set("fubar", 1)
+        assert await client.set("fubar", 1)
+
+    @pytest.mark.min_server_version("7.1.240")
+    async def test_ensure_persistence(self, client, _s):
+        with client.ensure_persisted(1, 1, 2000):
+            assert await client.set("fubar", 1)
+
+        with pytest.raises(PersistenceError):
+            with client.ensure_persisted(1, 2, 2000):
                 assert await client.set("fubar", 1)
         assert await client.set("fubar", 1)
 

@@ -825,20 +825,23 @@ class RedisCluster(
                     decode=kwargs.get("decode", self._decodecontext.get()),
                     encoding=self._encodingcontext.get(),
                 )
-                if quick_release and not self.requires_wait:
+                if quick_release and not (self.requires_wait or self.requires_waitaof):
                     released = True
                     self.connection_pool.release(r)
 
                 reply = await request
                 response = None
-                maybe_wait = await self._ensure_wait(command, r)
+                maybe_wait = [
+                    await self._ensure_wait(command, r),
+                    await self._ensure_persisted(command, r),
+                ]
                 if not self.noreply:
                     response = callback(
                         reply,
                         version=self.protocol_version,
                         **kwargs,
                     )
-                await maybe_wait
+                await asyncio.gather(*maybe_wait)
                 return response  # type: ignore
             except (RedisClusterException, BusyLoadingError, asyncio.CancelledError):
                 raise
