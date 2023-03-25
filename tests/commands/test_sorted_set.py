@@ -529,6 +529,13 @@ class TestSortedSet:
         assert await client.zrank("a{foo}", "a2") == 1
         assert await client.zrank("a{foo}", "a6") is None
 
+    @pytest.mark.min_server_version("7.1.240")
+    async def test_zrank_with_score(self, client, _s):
+        await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3, a4=4, a5=5))
+        assert await client.zrank("a{foo}", "a1", withscore=True) == (0, 1.0)
+        assert await client.zrank("a{foo}", "a2", withscore=True) == (1, 2.0)
+        assert await client.zrank("a{foo}", "a6", withscore=True) is None
+
     async def test_zrem(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3))
         assert await client.zrem("a{foo}", ["a2"]) == 1
@@ -629,6 +636,13 @@ class TestSortedSet:
         assert await client.zrevrank("a{foo}", "a1") == 4
         assert await client.zrevrank("a{foo}", "a2") == 3
         assert await client.zrevrank("a{foo}", "a6") is None
+
+    @pytest.mark.min_server_version("7.1.240")
+    async def test_zrevrank_with_score(self, client, _s):
+        await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3, a4=4, a5=5))
+        assert await client.zrevrank("a{foo}", "a1", withscore=True) == (4, 1.0)
+        assert await client.zrevrank("a{foo}", "a2", withscore=True) == (3, 2.0)
+        assert await client.zrevrank("a{foo}", "a6", withscore=True) is None
 
     async def test_zscore(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3))

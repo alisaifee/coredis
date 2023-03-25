@@ -17,6 +17,34 @@ from coredis.typing import (
 )
 
 
+class ZRankCallback(
+    ResponseCallback[
+        Optional[Union[int, List[ResponsePrimitive]]],
+        Optional[Union[int, List[ResponsePrimitive]]],
+        Optional[Union[int, Tuple[int, float]]],
+    ],
+):
+    def transform(
+        self,
+        response: Optional[Union[int, List[ResponsePrimitive]]],
+        **options: Optional[ValueT],
+    ) -> Optional[Union[int, Tuple[int, float]]]:
+        if options.get("withscore"):
+            return (response[0], float(response[1])) if response else None
+        else:
+            return cast(Optional[int], response)
+
+    def transform_3(
+        self,
+        response: Optional[Union[int, List[ResponsePrimitive]]],
+        **options: Optional[ValueT],
+    ) -> Optional[Union[int, Tuple[int, float]]]:
+        if options.get("withscore"):
+            return (response[0], response[1]) if response else None
+        else:
+            return cast(Optional[int], response)
+
+
 class ZMembersOrScoredMembers(
     ResponseCallback[
         List[Union[AnyStr, List[ResponsePrimitive]]],

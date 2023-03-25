@@ -104,6 +104,7 @@ from coredis.response._callbacks.sorted_set import (
     ZMPopCallback,
     ZMScoreCallback,
     ZRandMemberCallback,
+    ZRankCallback,
     ZScanCallback,
     ZSetScorePairCallback,
 )
@@ -4640,19 +4641,30 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.ZRANK,
+        arguments={"withscore": {"version_introduced": "7.2.0"}},
         group=CommandGroup.SORTED_SET,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
-    async def zrank(self, key: KeyT, member: ValueT) -> Optional[int]:
+    async def zrank(
+        self, key: KeyT, member: ValueT, withscore: Optional[bool] = None
+    ) -> Optional[Union[int, Tuple[int, float]]]:
         """
         Determine the index of a member in a sorted set
 
-        :return: the rank of :paramref:`member`
+        :return: the rank of :paramref:`member`. If :paramref:`withscore` is `True`
+         the return is a tuple of (rank, score).
         """
+        command_arguments: CommandArgList = [key, member]
+
+        if withscore:
+            command_arguments.append(PureToken.WITHSCORE)
 
         return await self.execute_command(
-            CommandName.ZRANK, key, member, callback=OptionalIntCallback()
+            CommandName.ZRANK,
+            *command_arguments,
+            callback=ZRankCallback(),
+            withscore=withscore,
         )
 
     @ensure_iterable_valid("members")
@@ -4825,19 +4837,28 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.ZREVRANK,
+        arguments={"withscore": {"version_introduced": "7.2.0"}},
         group=CommandGroup.SORTED_SET,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
-    async def zrevrank(self, key: KeyT, member: ValueT) -> Optional[int]:
+    async def zrevrank(
+        self, key: KeyT, member: ValueT, withscore: Optional[bool] = None
+    ) -> Optional[Union[int, Tuple[int, float]]]:
         """
         Determine the index of a member in a sorted set, with scores ordered from high to low
 
-        :return: the rank of :paramref:`member`
+        :return: the rank of :paramref:`member`. If :paramref:`withscore` is `True`
+         the return is a tuple of (rank, score).
         """
-
+        command_arguments: CommandArgList = [key, member]
+        if withscore:
+            command_arguments.append(PureToken.WITHSCORE)
         return await self.execute_command(
-            CommandName.ZREVRANK, key, member, callback=OptionalIntCallback()
+            CommandName.ZREVRANK,
+            *command_arguments,
+            callback=ZRankCallback(),
+            withscore=withscore,
         )
 
     @redis_command(

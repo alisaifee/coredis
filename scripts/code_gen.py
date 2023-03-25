@@ -235,6 +235,8 @@ REDIS_RETURN_OVERRIDES = {
     "ZRANGEBYSCORE": Tuple[Union[AnyStr, ScoredMember], ...],
     "ZREVRANGEBYSCORE": Tuple[Union[AnyStr, ScoredMember], ...],
     "ZREVRANGE": Tuple[Union[AnyStr, ScoredMember], ...],
+    "ZRANK": Optional[Union[int, Tuple[int, float]]],
+    "ZREVRANK": Optional[Union[int, Tuple[int, float]]],
     "ZUNION": Tuple[Union[AnyStr, ScoredMember], ...],
     "ZSCAN": Tuple[int, ScoredMembers],
     "ZSCORE": Optional[float],
