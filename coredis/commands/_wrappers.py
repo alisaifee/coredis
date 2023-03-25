@@ -52,6 +52,7 @@ class CommandDetails(NamedTuple):
     cluster: ClusterCommandConfig
     cache_config: Optional[CacheConfig]
     flags: Set[CommandFlag]
+    redirect_usage: Optional[RedirectUsage]
 
 
 @dataclasses.dataclass
@@ -162,6 +163,7 @@ def redis_command(
         cluster or ClusterCommandConfig(),
         cache_config,
         flags or set(),
+        redirect_usage,
     )
 
     def wrapper(

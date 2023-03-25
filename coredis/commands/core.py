@@ -6723,7 +6723,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             (
                 "Use the :paramref:`Redis.noreply` argument when initializing the client "
                 "to ensure that all connections originating from this client disable "
-                "or enable replies. You can also use the :meth:`Redis.ignore_reply` "
+                "or enable replies. You can also use the :meth:`Redis.ignore_replies` "
                 "context manager to selectively execute certain commands without waiting "
                 "for a reply"
             ),

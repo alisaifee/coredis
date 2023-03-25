@@ -90,6 +90,7 @@ def keydb_command(
         cluster or ClusterCommandConfig(),
         None,
         flags or set(),
+        None,
     )
 
     def wrapper(
