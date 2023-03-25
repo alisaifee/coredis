@@ -462,6 +462,8 @@ class TestConnectionPoolURLParsing:
             "username": None,
             "password": None,
             "noreply": False,
+            "noevict": False,
+            "notouch": False,
         }
 
 

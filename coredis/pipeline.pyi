@@ -1006,6 +1006,9 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def client_no_evict(
         self, enabled: "Literal[PureToken.ON, PureToken.OFF]"
     ) -> Pipeline[AnyStr]: ...
+    async def client_no_touch(
+        self, enabled: "Literal[PureToken.OFF, PureToken.ON]"
+    ) -> Pipeline[AnyStr]: ...
     async def client_pause(
         self,
         timeout: "int",
@@ -2127,6 +2130,9 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> ClusterPipeline[AnyStr]: ...
     async def client_no_evict(
         self, enabled: "Literal[PureToken.ON, PureToken.OFF]"
+    ) -> ClusterPipeline[AnyStr]: ...
+    async def client_no_touch(
+        self, enabled: "Literal[PureToken.OFF, PureToken.ON]"
     ) -> ClusterPipeline[AnyStr]: ...
     async def client_pause(
         self,

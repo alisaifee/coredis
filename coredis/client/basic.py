@@ -123,6 +123,8 @@ class Client(
         verify_version: bool = True,
         noreply: bool = False,
         retry_policy: RetryPolicy = NoRetryPolicy(),
+        noevict: bool = False,
+        notouch: bool = False,
         **kwargs: Any,
     ):
         if not connection_pool:
@@ -141,6 +143,8 @@ class Client(
                 "client_name": client_name,
                 "protocol_version": protocol_version,
                 "noreply": noreply,
+                "noevict": noevict,
+                "notouch": notouch,
             }
 
             if unix_socket_path is not None:
@@ -530,6 +534,8 @@ class Redis(Client[AnyStr]):
         verify_version: bool = ...,
         cache: Optional[AbstractCache] = ...,
         noreply: bool = ...,
+        noevict: bool = ...,
+        notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         **kwargs: Any,
     ) -> None:
@@ -567,6 +573,8 @@ class Redis(Client[AnyStr]):
         verify_version: bool = ...,
         cache: Optional[AbstractCache] = ...,
         noreply: bool = ...,
+        noevict: bool = ...,
+        notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         **kwargs: Any,
     ) -> None:
@@ -603,6 +611,8 @@ class Redis(Client[AnyStr]):
         verify_version: bool = True,
         cache: Optional[AbstractCache] = None,
         noreply: bool = False,
+        noevict: bool = False,
+        notouch: bool = False,
         retry_policy: RetryPolicy = CompositeRetryPolicy(
             ConstantRetryPolicy((ConnectionError,), 1, 0.01),
         ),
@@ -614,6 +624,9 @@ class Redis(Client[AnyStr]):
           - .. versionadded:: 4.12.0
 
             - Added :paramref:`retry_policy`
+            - Added :paramref:`noevict`
+            - Added :paramref:`notouch`
+            - Added the :meth:`Redis.ensure_persisted` context manager
 
           - .. versionadded:: 4.3.0
 
@@ -697,6 +710,10 @@ class Redis(Client[AnyStr]):
          The cache is responsible for any mutations to the keys that happen outside of this client
         :param noreply: If ``True`` the client will not request a response for any
          commands sent to the server.
+        :param noevict: Ensures that connections from the client will be excluded from the
+         client eviction process even if we're above the configured client eviction threshold.
+        :param notouch: Ensures that commands sent by the client will not alter the LRU/LFU of
+         the keys they access.
         :param retry_policy: The retry policy to use when interacting with the redis server
 
         """
@@ -728,6 +745,8 @@ class Redis(Client[AnyStr]):
             protocol_version=protocol_version,
             verify_version=verify_version,
             noreply=noreply,
+            noevict=noevict,
+            notouch=notouch,
             retry_policy=retry_policy,
             **kwargs,
         )
@@ -750,6 +769,8 @@ class Redis(Client[AnyStr]):
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         noreply: bool = ...,
+        noevict: bool = ...,
+        notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         **kwargs: Any,
     ) -> RedisBytesT:
@@ -766,6 +787,8 @@ class Redis(Client[AnyStr]):
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         noreply: bool = ...,
+        noevict: bool = ...,
+        notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         **kwargs: Any,
     ) -> RedisStringT:
@@ -781,6 +804,8 @@ class Redis(Client[AnyStr]):
         protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
         noreply: bool = False,
+        noevict: bool = False,
+        notouch: bool = False,
         retry_policy: RetryPolicy = CompositeRetryPolicy(
             ConstantRetryPolicy((ConnectionError,), 2, 0.01),
             ConstantRetryPolicy((TimeoutError,), 2, 0.01),
@@ -827,6 +852,8 @@ class Redis(Client[AnyStr]):
                     decode_responses=decode_responses,
                     protocol_version=protocol_version,
                     noreply=noreply,
+                    noevict=noevict,
+                    notouch=notouch,
                     **kwargs,
                 ),
             )
@@ -843,6 +870,8 @@ class Redis(Client[AnyStr]):
                     decode_responses=decode_responses,
                     protocol_version=protocol_version,
                     noreply=noreply,
+                    noevict=noevict,
+                    notouch=notouch,
                     **kwargs,
                 ),
             )

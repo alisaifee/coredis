@@ -154,6 +154,8 @@ class BaseConnection(asyncio.BaseProtocol):
         client_name: Optional[str] = None,
         protocol_version: Literal[2, 3] = 3,
         noreply: bool = False,
+        noevict: bool = False,
+        notouch: bool = False,
     ):
         self._stream_timeout = stream_timeout
         self.username: Optional[str] = None
@@ -189,6 +191,9 @@ class BaseConnection(asyncio.BaseProtocol):
 
         self.noreply = noreply
         self.noreply_set = False
+
+        self.noevict = noevict
+        self.notouch = notouch
 
         self.needs_handshake = True
         self._last_error: Optional[BaseException] = None
@@ -475,6 +480,13 @@ class BaseConnection(asyncio.BaseProtocol):
                 != b"OK"
             ):
                 raise ConnectionError(f"Failed to set client name: {self.client_name}")
+
+        if self.noevict:
+            await (await self.create_request(b"CLIENT NO-EVICT", b"ON"))
+
+        if self.notouch:
+            await (await self.create_request(b"CLIENT NO-TOUCH", b"ON"))
+
         if self.noreply:
             await (await self.create_request(b"CLIENT REPLY", b"OFF", noreply=True))
             self.noreply_set = True
@@ -672,6 +684,8 @@ class Connection(BaseConnection):
         client_name: Optional[str] = None,
         protocol_version: Literal[2, 3] = 3,
         noreply: bool = False,
+        noevict: bool = False,
+        notouch: bool = False,
     ):
         super().__init__(
             retry_on_timeout,
@@ -681,6 +695,8 @@ class Connection(BaseConnection):
             client_name=client_name,
             protocol_version=protocol_version,
             noreply=noreply,
+            noevict=noevict,
+            notouch=notouch,
         )
         self.host = host
         self.port = port
@@ -805,6 +821,8 @@ class ClusterConnection(Connection):
         protocol_version: Literal[2, 3] = 3,
         read_from_replicas: bool = False,
         noreply: bool = False,
+        noevict: bool = False,
+        notouch: bool = False,
     ) -> None:
         self.read_from_replicas = read_from_replicas
         super().__init__(
@@ -824,6 +842,8 @@ class ClusterConnection(Connection):
             client_name=client_name,
             protocol_version=protocol_version,
             noreply=noreply,
+            noevict=noevict,
+            notouch=notouch,
         )
 
     async def on_connect(self) -> None:

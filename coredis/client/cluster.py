@@ -181,6 +181,8 @@ class RedisCluster(
         non_atomic_cross_slot: bool = ...,
         cache: Optional[AbstractCache] = ...,
         noreply: bool = ...,
+        noevict: bool = ...,
+        notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         **kwargs: Any,
     ):
@@ -215,6 +217,8 @@ class RedisCluster(
         non_atomic_cross_slot: bool = ...,
         cache: Optional[AbstractCache] = ...,
         noreply: bool = ...,
+        noevict: bool = ...,
+        notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         **kwargs: Any,
     ):
@@ -248,6 +252,8 @@ class RedisCluster(
         non_atomic_cross_slot: bool = True,
         cache: Optional[AbstractCache] = None,
         noreply: bool = False,
+        noevict: bool = False,
+        notouch: bool = False,
         retry_policy: RetryPolicy = CompositeRetryPolicy(
             ConstantRetryPolicy((ClusterDownError,), 2, 0.1)
         ),
@@ -259,6 +265,9 @@ class RedisCluster(
           - .. versionadded:: 4.12.0
 
             - Added :paramref:`retry_policy`
+            - Added :paramref:`noevict`
+            - Added :paramref:`notouch`
+            - Added the :meth:`RedisCluster.ensure_persisted` context manager
 
           - .. versionchanged:: 4.4.0
 
@@ -357,6 +366,10 @@ class RedisCluster(
          The cache is responsible for any mutations to the keys that happen outside of this client
         :param noreply: If ``True`` the client will not request a response for any
          commands sent to the server.
+        :param noevict: Ensures that connections from the client will be excluded from the
+         client eviction process even if we're above the configured client eviction threshold.
+        :param notouch: Ensures that commands sent by the client will not alter the LRU/LFU
+         of the keys they access.
         :param retry_policy: The retry policy to use when interacting with the cluster
         """
 
@@ -402,6 +415,8 @@ class RedisCluster(
                 decode_responses=decode_responses,
                 protocol_version=protocol_version,
                 noreply=noreply,
+                noevict=noevict,
+                notouch=notouch,
                 **kwargs,
             )
 
@@ -412,6 +427,8 @@ class RedisCluster(
             verify_version=verify_version,
             protocol_version=protocol_version,
             noreply=noreply,
+            noevict=noevict,
+            notouch=notouch,
             retry_policy=retry_policy,
             **kwargs,
         )
@@ -443,6 +460,8 @@ class RedisCluster(
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         noreply: bool = ...,
+        noevict: bool = ...,
+        notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         **kwargs: Any,
     ) -> RedisClusterBytesT:
@@ -460,6 +479,8 @@ class RedisCluster(
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         noreply: bool = ...,
+        noevict: bool = ...,
+        notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         **kwargs: Any,
     ) -> RedisClusterStringT:
@@ -476,6 +497,8 @@ class RedisCluster(
         protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
         noreply: bool = False,
+        noevict: bool = False,
+        notouch: bool = False,
         retry_policy: RetryPolicy = CompositeRetryPolicy(
             ConstantRetryPolicy((ClusterDownError,), 2, 0.1)
         ),
@@ -509,6 +532,8 @@ class RedisCluster(
                     decode_responses=decode_responses,
                     protocol_version=protocol_version,
                     noreply=noreply,
+                    noevict=noevict,
+                    notouch=notouch,
                     **kwargs,
                 ),
             )
@@ -526,6 +551,8 @@ class RedisCluster(
                     decode_responses=decode_responses,
                     protocol_version=protocol_version,
                     noreply=noreply,
+                    noevict=noevict,
+                    notouch=notouch,
                     **kwargs,
                 ),
             )

@@ -6870,6 +6870,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CLIENT_NO_EVICT,
         version_introduced="7.0.0",
         group=CommandGroup.CONNECTION,
+        redirect_usage=RedirectUsage(
+            (
+                "Use :paramref:`Redis.noevict` argument when initializing the client "
+                "to ensure that all connections originating from this client use the "
+                "desired mode"
+            ),
+            True,
+        ),
     )
     async def client_no_evict(
         self, enabled: Literal[PureToken.ON, PureToken.OFF]
@@ -6879,6 +6887,30 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         return await self.execute_command(
             CommandName.CLIENT_NO_EVICT, enabled, callback=SimpleStringCallback()
+        )
+
+    @versionadded(version="4.12.0")
+    @redis_command(
+        CommandName.CLIENT_NO_TOUCH,
+        version_introduced="7.2.0",
+        group=CommandGroup.CONNECTION,
+        redirect_usage=RedirectUsage(
+            (
+                "Use :paramref:`Redis.notouch` argument when initializing the client "
+                "to ensure that all connections originating from this client use the "
+                "desired mode"
+            ),
+            True,
+        ),
+    )
+    async def client_no_touch(
+        self, enabled: Literal[PureToken.OFF, PureToken.ON]
+    ) -> bool:
+        """
+        Controls whether commands sent by the client will alter the LRU/LFU of the keys they access.
+        """
+        return await self.execute_command(
+            CommandName.CLIENT_NO_TOUCH, enabled, callback=SimpleStringCallback()
         )
 
     @redis_command(

@@ -4463,12 +4463,34 @@ Set client eviction mode for the current connection
 
 - Documentation: `CLIENT NO-EVICT <https://redis.io/commands/client-no-evict>`_
 - Implementation: :meth:`~coredis.Redis.client_no_evict`
+  
+  .. warning:: Using :meth:`~coredis.Redis.client_no_evict` directly is not recommended. Use :paramref:`Redis.noevict` argument when initializing the client to ensure that all connections originating from this client use the desired mode
 
 - New in redis: 7.0.0
 
 
 
 - .. versionadded:: 3.2.0
+
+
+
+
+
+CLIENT NO-TOUCH
+***************
+
+Controls whether commands sent by the client will alter the LRU/LFU of the keys they access.
+
+- Documentation: `CLIENT NO-TOUCH <https://redis.io/commands/client-no-touch>`_
+- Implementation: :meth:`~coredis.Redis.client_no_touch`
+  
+  .. warning:: Using :meth:`~coredis.Redis.client_no_touch` directly is not recommended. Use :paramref:`Redis.notouch` argument when initializing the client to ensure that all connections originating from this client use the desired mode
+
+- New in redis: 7.2.0
+
+
+
+- .. versionadded:: 4.12.0
 
 
 
@@ -4686,16 +4708,6 @@ Change the selected database for the current connection
 
 
 
-
-
-CLIENT NO-TOUCH [X]
-*******************
-
-Controls whether commands sent by the client will alter the LRU/LFU of the keys they access.
-
-- Documentation: `CLIENT NO-TOUCH <https://redis.io/commands/client-no-touch>`_
-
-- Not Implemented
 
 
 CLIENT SETINFO [X]
