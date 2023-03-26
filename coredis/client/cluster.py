@@ -667,7 +667,7 @@ class RedisCluster(
             node_flag = self.split_flags[command]
 
         if node_flag == NodeFlag.RANDOM:
-            return [self.connection_pool.nodes.random_node()]
+            return [self.connection_pool.nodes.random_node(primary=True)]
         elif node_flag == NodeFlag.PRIMARIES:
             return list(self.connection_pool.nodes.all_primaries())
         elif node_flag == NodeFlag.ALL:

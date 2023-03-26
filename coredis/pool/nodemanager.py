@@ -132,8 +132,11 @@ class NodeManager:
             options.remove(choice)
             yield choice
 
-    def random_node(self) -> ManagedNode:
-        return random.choice(list(self.nodes.values()))
+    def random_node(self, primary: bool = True) -> ManagedNode:
+        if primary:
+            return random.choice(list(self.all_primaries()))
+        else:
+            return random.choice(list(self.nodes.values()))
 
     def get_redis_link(self, host: str, port: int) -> Redis[Any]:
         from coredis.client import Redis
