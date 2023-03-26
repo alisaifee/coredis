@@ -79,6 +79,14 @@ class RetryPolicy(ABC):
     def will_retry(self, exc: BaseException) -> bool:
         return isinstance(exc, self.retryable_exceptions)
 
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}<"
+            f"retries={self.retries}, "
+            f"retryable_exceptions={','.join(e.__name__ for e in self.retryable_exceptions)}"
+            ">"
+        )
+
 
 class NoRetryPolicy(RetryPolicy):
     def __init__(self) -> None:
@@ -141,6 +149,9 @@ class CompositeRetryPolicy(RetryPolicy):
 
     def __init__(self, *retry_policies: RetryPolicy):
         self._retry_policies = set(retry_policies)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}<{','.join(str(p) for p in self._retry_policies)}>"
 
     def add_retry_policy(self, policy: RetryPolicy) -> None:
         """
