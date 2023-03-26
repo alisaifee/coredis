@@ -39,12 +39,7 @@ from coredis.globals import COMMAND_FLAGS, READONLY_COMMANDS
 from coredis.pool import ConnectionPool
 from coredis.response._callbacks import NoopCallback
 from coredis.response.types import ScoredMember
-from coredis.retry import (
-    CompositeRetryPolicy,
-    ConstantRetryPolicy,
-    NoRetryPolicy,
-    RetryPolicy,
-)
+from coredis.retry import ConstantRetryPolicy, NoRetryPolicy, RetryPolicy
 from coredis.typing import (
     AnyStr,
     AsyncGenerator,
@@ -608,8 +603,8 @@ class Redis(Client[AnyStr]):
         noreply: bool = False,
         noevict: bool = False,
         notouch: bool = False,
-        retry_policy: RetryPolicy = CompositeRetryPolicy(
-            ConstantRetryPolicy((ConnectionError,), 1, 0.01),
+        retry_policy: RetryPolicy = ConstantRetryPolicy(
+            (ConnectionError, TimeoutError), 2, 0.01
         ),
         **kwargs: Any,
     ) -> None:
@@ -798,9 +793,8 @@ class Redis(Client[AnyStr]):
         noreply: bool = False,
         noevict: bool = False,
         notouch: bool = False,
-        retry_policy: RetryPolicy = CompositeRetryPolicy(
-            ConstantRetryPolicy((ConnectionError,), 2, 0.01),
-            ConstantRetryPolicy((TimeoutError,), 2, 0.01),
+        retry_policy: RetryPolicy = ConstantRetryPolicy(
+            (ConnectionError, TimeoutError), 2, 0.01
         ),
         **kwargs: Any,
     ) -> RedisT:

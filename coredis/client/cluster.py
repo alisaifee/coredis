@@ -508,7 +508,15 @@ class RedisCluster(
         noevict: bool = False,
         notouch: bool = False,
         retry_policy: RetryPolicy = CompositeRetryPolicy(
-            ConstantRetryPolicy((ClusterDownError,), 2, 0.1)
+            ConstantRetryPolicy((ClusterDownError,), 2, 0.1),
+            ConstantRetryPolicy(
+                (
+                    ConnectionError,
+                    TimeoutError,
+                ),
+                2,
+                0.1,
+            ),
         ),
         **kwargs: Any,
     ) -> RedisClusterT:
