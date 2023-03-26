@@ -90,11 +90,11 @@ class TestClient:
 
     @pytest.mark.min_server_version("7.1.240")
     async def test_ensure_persistence(self, client, _s):
-        with client.ensure_persisted(1, 0, 2000):
+        with client.ensure_persistence(1, 0, 2000):
             assert await client.set("fubar", 1)
 
         with pytest.raises(PersistenceError):
-            with client.ensure_persisted(1, 1, 2000):
+            with client.ensure_persistence(1, 1, 2000):
                 assert await client.set("fubar", 1)
         assert await client.set("fubar", 1)
 
@@ -138,11 +138,11 @@ class TestClusterClient:
 
     @pytest.mark.min_server_version("7.1.240")
     async def test_ensure_persistence(self, client, _s):
-        with client.ensure_persisted(1, 1, 2000):
+        with client.ensure_persistence(1, 1, 2000):
             assert await client.set("fubar", 1)
 
         with pytest.raises(PersistenceError):
-            with client.ensure_persisted(1, 2, 2000):
+            with client.ensure_persistence(1, 2, 2000):
                 assert await client.set("fubar", 1)
         assert await client.set("fubar", 1)
 

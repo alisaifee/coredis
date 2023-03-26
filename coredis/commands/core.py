@@ -3061,8 +3061,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.GENERIC,
         redirect_usage=RedirectUsage(
             (
-                "Use the :meth:`Redis.ensure_persisted`  or "
-                ":meth:`RedisCluster.ensure_persisted` context managers to ensure "
+                "Use the :meth:`Redis.ensure_persistence`  or "
+                ":meth:`RedisCluster.ensure_persistence` context managers to ensure "
                 "a command is synced to the AOF of the number of local hosts or replicas"
             ),
             True,

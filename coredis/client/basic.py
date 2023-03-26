@@ -268,7 +268,7 @@ class Client(
             maybe_wait.set_result(None)
         return maybe_wait
 
-    async def _ensure_persisted(
+    async def _ensure_persistence(
         self, command: bytes, connection: BaseConnection
     ) -> asyncio.Future[None]:
         maybe_wait: asyncio.Future[None] = asyncio.get_running_loop().create_future()
@@ -469,7 +469,7 @@ class Client(
             self._waitcontext.set(None)
 
     @contextlib.contextmanager
-    def ensure_persisted(
+    def ensure_persistence(
         self: ClientT, local: int = 0, replicas: int = 0, timeout_ms: int = 100
     ) -> Iterator[ClientT]:
         """
@@ -485,7 +485,7 @@ class Client(
         Example::
 
             client = coredis.RedisCluster(["localhost", 7000])
-            with client.ensure_persisted(1, 1, 20):
+            with client.ensure_persistence(1, 1, 20):
                 await client.set("fubar", 1)
 
         """
@@ -626,7 +626,7 @@ class Redis(Client[AnyStr]):
             - Added :paramref:`retry_policy`
             - Added :paramref:`noevict`
             - Added :paramref:`notouch`
-            - Added the :meth:`Redis.ensure_persisted` context manager
+            - Added the :meth:`Redis.ensure_persistence` context manager
 
           - .. versionadded:: 4.3.0
 
@@ -934,7 +934,7 @@ class Redis(Client[AnyStr]):
             )
             maybe_wait = [
                 await self._ensure_wait(command, connection),
-                await self._ensure_persisted(command, connection),
+                await self._ensure_persistence(command, connection),
             ]
             reply = await request
             await asyncio.gather(*maybe_wait)

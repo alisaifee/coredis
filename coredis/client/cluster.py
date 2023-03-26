@@ -267,7 +267,7 @@ class RedisCluster(
             - Added :paramref:`retry_policy`
             - Added :paramref:`noevict`
             - Added :paramref:`notouch`
-            - Added the :meth:`RedisCluster.ensure_persisted` context manager
+            - Added the :meth:`RedisCluster.ensure_persistence` context manager
 
           - .. versionchanged:: 4.4.0
 
@@ -862,7 +862,7 @@ class RedisCluster(
                 response = None
                 maybe_wait = [
                     await self._ensure_wait(command, r),
-                    await self._ensure_persisted(command, r),
+                    await self._ensure_persistence(command, r),
                 ]
                 if not self.noreply:
                     response = callback(
