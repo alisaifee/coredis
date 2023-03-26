@@ -67,8 +67,15 @@ class TestConnection:
 
     @pytest.mark.min_server_version("7.0.0")
     async def test_client_no_evict(self, client, _s):
-        assert await client.client_no_evict(PureToken.ON)
-        assert await client.client_no_evict(PureToken.OFF)
+        with pytest.warns(UserWarning):
+            assert await client.client_no_evict(PureToken.ON)
+            assert await client.client_no_evict(PureToken.OFF)
+
+    @pytest.mark.min_server_version("7.1.240")
+    async def test_client_no_touch(self, client, _s):
+        with pytest.warns(UserWarning):
+            assert await client.client_no_touch(PureToken.ON)
+            assert await client.client_no_touch(PureToken.OFF)
 
     @pytest.mark.min_server_version("6.2.0")
     async def test_client_tracking(self, client, _s, cloner):

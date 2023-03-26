@@ -3057,7 +3057,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="4.12.0")
     @redis_command(
         CommandName.WAITAOF,
-        version_introduced="7.2.0",
+        version_introduced="7.1.240",
         group=CommandGroup.GENERIC,
         redirect_usage=RedirectUsage(
             (
@@ -4639,7 +4639,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.ZRANK,
-        arguments={"withscore": {"version_introduced": "7.2.0"}},
+        arguments={"withscore": {"version_introduced": "7.1.240"}},
         group=CommandGroup.SORTED_SET,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
         flags={CommandFlag.READONLY, CommandFlag.FAST},
@@ -4835,7 +4835,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(
         CommandName.ZREVRANK,
-        arguments={"withscore": {"version_introduced": "7.2.0"}},
+        arguments={"withscore": {"version_introduced": "7.1.240"}},
         group=CommandGroup.SORTED_SET,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
         flags={CommandFlag.READONLY, CommandFlag.FAST},
@@ -6663,7 +6663,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="4.12.0")
     @redis_command(
         CommandName.CLIENT_SETINFO,
-        version_introduced="7.2.0",
+        version_introduced="7.1.240",
         group=CommandGroup.CONNECTION,
         redirect_usage=RedirectUsage(
             (
@@ -6926,7 +6926,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="4.12.0")
     @redis_command(
         CommandName.CLIENT_NO_TOUCH,
-        version_introduced="7.2.0",
+        version_introduced="7.1.240",
         group=CommandGroup.CONNECTION,
         redirect_usage=RedirectUsage(
             (
