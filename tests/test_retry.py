@@ -28,8 +28,10 @@ class TestRetryPolicies:
     async def test_no_exception(self, policy):
         call = unittest.mock.AsyncMock()
         failure = unittest.mock.AsyncMock()
-        await policy.call_with_retries(call, failure_hook=failure)
+        before = unittest.mock.AsyncMock()
+        await policy.call_with_retries(call, before_hook=before, failure_hook=failure)
         call.assert_awaited_once()
+        before.assert_awaited_once()
         failure.assert_not_awaited()
 
     @pytest.mark.parametrize(
@@ -48,12 +50,39 @@ class TestRetryPolicies:
 
         call = unittest.mock.AsyncMock(side_effect=raise_zerodiv)
         failure = unittest.mock.AsyncMock()
+        before = unittest.mock.AsyncMock()
+
+        with pytest.raises(ZeroDivisionError):
+            await policy.call_with_retries(
+                call, before_hook=before, failure_hook=failure
+            )
+
+        assert before.await_count == 2
+        assert call.await_count == 2
+        assert failure.await_count == 2
+
+    @pytest.mark.parametrize(
+        "policy",
+        [
+            ConstantRetryPolicy((ZeroDivisionError,), 1, 1),
+            ExponentialBackoffRetryPolicy((ZeroDivisionError,), 1, 1),
+            CompositeRetryPolicy(
+                ConstantRetryPolicy((ZeroDivisionError,), 1, 1),
+            ),
+        ],
+    )
+    async def test_exception_with_mapped_failure_hook(self, policy):
+        def raise_zerodiv():
+            1 / 0
+
+        call = unittest.mock.AsyncMock(side_effect=raise_zerodiv)
+        failure = {ArithmeticError: unittest.mock.AsyncMock()}
 
         with pytest.raises(ZeroDivisionError):
             await policy.call_with_retries(call, failure_hook=failure)
 
         assert call.await_count == 2
-        assert failure.await_count == 2
+        assert failure[ArithmeticError].await_count == 2
 
     async def test_composite_retry(self):
         class Mock:
