@@ -343,7 +343,7 @@ class BaseConnection(asyncio.BaseProtocol):
             response,
             NotEnoughData,
         ):
-            if not request.future.cancelled():
+            if not (request.future.cancelled() or request.future.done()):
                 if request.raise_exceptions and isinstance(response, RedisError):
                     request.future.set_exception(response)
                 else:
