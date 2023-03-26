@@ -640,6 +640,8 @@ class RedisCluster(
         if len(slots) != 1:
             raise RedisClusterException(
                 f"{str(command)} - all keys must map to the same key slot"
+                if len(slots) > 1
+                else f"No way to dispatch {str(command)} to Redis Cluster"
             )
         return slots.pop()
 
