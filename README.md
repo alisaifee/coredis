@@ -15,8 +15,8 @@ coredis is an async redis client with support for redis server, cluster & sentin
 
     - Arguments retain naming from redis as much as possible
     - Only optional variadic arguments are mapped to variadic positional or keyword arguments.
-      When the variable length arguments are not optional (which is almost always the case) the expected argument 
-      is an iterable of type [Parameters](https://coredis.readthedocs.io/en/latest/api.html#coredis.typing.Parameters) or `Mapping`. 
+      When the variable length arguments are not optional (which is almost always the case) the expected argument
+      is an iterable of type [Parameters](https://coredis.readthedocs.io/en/latest/api.html#coredis.typing.Parameters) or `Mapping`.
     - Pure tokens used as flags are mapped to boolean arguments
     - `One of` arguments accepting pure tokens are collapsed and accept a [PureToken](https://coredis.readthedocs.io/en/latest/api.html#coredis.tokens.PureToken)
 
@@ -89,14 +89,14 @@ from coredis import Redis, RedisCluster
 async def example():
     client = Redis(host='127.0.0.1', port=6379, db=0)
     # or with redis cluster
-    # client = RedisCluster(startup_nodes=[{"host": "127.0.01", "port": 7001}]) 
+    # client = RedisCluster(startup_nodes=[{"host": "127.0.01", "port": 7001}])
     await client.flushdb()
     await client.set('foo', 1)
     assert await client.exists(['foo']) == 1
     assert await client.incr('foo') == 2
     assert await client.incrby('foo', increment=100) == 102
     assert int(await client.get('foo')) == 102
-    
+
     assert await client.expire('foo', 1)
     await asyncio.sleep(0.1)
     assert await client.ttl('foo') == 1
@@ -114,10 +114,10 @@ import asyncio
 from coredis.sentinel import Sentinel
 
 async def example():
-    sentinel = Sentinel(sentinels=[("localhost", 26379)]) 
+    sentinel = Sentinel(sentinels=[("localhost", 26379)])
     primary = sentinel.primary_for("myservice")
     replica = sentinel.replica_for("myservice")
-    
+
     assert await primary.set("fubar", 1)
     assert int(await replica.get("fubar")) == 1
 
@@ -130,8 +130,8 @@ documentation
 
 ## Compatibility
 
-coredis is tested against redis versions `6.0.x`, `6.2.x` & `7.0.x`. The
-test matrix status can be reviewed
+coredis is tested against redis versions `6.0.x`, `6.2.x`, `7.0.x` & `7.2-rc1`.
+The test matrix status can be reviewed
 [here](https://github.com/alisaifee/coredis/actions/workflows/main.yml)
 
 coredis is additionally tested against:
