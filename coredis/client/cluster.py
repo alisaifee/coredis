@@ -713,7 +713,7 @@ class RedisCluster(
         with retries based on :paramref:`RedisCluster.retry_policy`
         """
 
-        return await self._retry_policy.call_with_retries(
+        return await self.retry_policy.call_with_retries(
             lambda: self._execute_command(command, *args, callback=callback, **kwargs),
             failure_hook={
                 ConnectionError: self.on_connection_error,

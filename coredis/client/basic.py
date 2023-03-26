@@ -195,7 +195,7 @@ class Client(
         self._waitaof_context: contextvars.ContextVar[
             Optional[Tuple[int, int, int]]
         ] = contextvars.ContextVar("waitaof", default=None)
-        self._retry_policy = retry_policy
+        self.retry_policy = retry_policy
 
     @property
     def noreply(self) -> bool:
@@ -886,7 +886,7 @@ class Redis(Client[AnyStr]):
         Executes a command with configured retries and returns
         the parsed response
         """
-        return await self._retry_policy.call_with_retries(
+        return await self.retry_policy.call_with_retries(
             lambda: self._execute_command(command, *args, callback=callback, **options),
             before_hook=self.initialize,
         )
