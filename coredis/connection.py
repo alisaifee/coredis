@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import functools
 import inspect
 import itertools
 import os
@@ -60,9 +61,13 @@ class Request:
     )
     created_at: float = dataclasses.field(default_factory=lambda: time.time())
 
-    def enforce_deadline(self) -> None:
+    def enforce_deadline(self, timeout: float) -> None:
         if not self.future.done():
-            self.future.set_exception(TimeoutError())
+            self.future.set_exception(
+                TimeoutError(
+                    f"command {nativestr(self.command)} timed out after {timeout} seconds"
+                )
+            )
 
 
 @dataclasses.dataclass
@@ -607,7 +612,8 @@ class BaseConnection(asyncio.BaseProtocol):
             self._requests.append(request)
             if self._stream_timeout is not None:
                 asyncio.get_running_loop().call_later(
-                    self._stream_timeout, request.enforce_deadline
+                    self._stream_timeout,
+                    functools.partial(request.enforce_deadline, self._stream_timeout),
                 )
             return request.future
         else:
@@ -645,7 +651,8 @@ class BaseConnection(asyncio.BaseProtocol):
             self._requests.append(request)
             if self._stream_timeout is not None:
                 asyncio.get_running_loop().call_later(
-                    self._stream_timeout, request.enforce_deadline
+                    self._stream_timeout,
+                    functools.partial(request.enforce_deadline, self._stream_timeout),
                 )
             requests.append(request.future)
         return requests
