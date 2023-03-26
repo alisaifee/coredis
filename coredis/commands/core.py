@@ -3075,8 +3075,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         Wait for all write commands sent in the context of the current connection to be synced
         to AOF of local host and/or replicas
 
-
-        :raises: :exc:`NotImplementedError`
+        :return: a tuple of (numlocal, numreplicas) that the write commands were synced to
         """
 
         return await self.execute_command(
@@ -3086,7 +3085,6 @@ class CoreCommands(CommandMixin[AnyStr]):
             timeout,
             callback=TupleCallback[int](),
         )
-        raise NotImplementedError()
 
     @redis_command(
         CommandName.SCAN,
