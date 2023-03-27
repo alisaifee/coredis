@@ -3,6 +3,31 @@
 Changelog
 =========
 
+v4.12.0b1
+---------
+Release Date: 2023-03-26
+
+* Features
+
+  * Expose `retry_policy` to client constructors
+  * Expose `noevict` in client constructors
+  * Add initial support for redis 7.2
+    * Expose `notouch` in client constructors
+    * Add support for `client_no_touch`
+    * Add support for `client_setinfo``
+    * Add support for `waitaof`
+    * Add new `withscore` argument for `zrank` & `zrevrank`
+    * Add new context manager `ensure_persistence`
+
+
+* Bug Fix
+
+  * Fix leaked connections when using `ensure_replication`
+  * Improve handling of cancellation errors
+  * Improve handling of timeout errors
+  * Ensure cluster commands routed to random nodes use
+    primaries by default
+
 v4.11.3
 -------
 Release Date: 2023-03-11
@@ -1404,6 +1429,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
