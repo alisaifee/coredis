@@ -450,7 +450,7 @@ class Client(
 
         Example::
 
-            client = coredis.RedisCluster(["localhost", 7000])
+            client = coredis.RedisCluster("localhost", 7000)
             with client.ensure_replication(1, 20):
                 await client.set("fubar", 1)
 
@@ -487,7 +487,7 @@ class Client(
 
         Example for cluster::
 
-            client = coredis.RedisCluster(["localhost", 7000])
+            client = coredis.RedisCluster("localhost", 7000)
             with client.ensure_persistence(1, 1, 20):
                 await client.set("fubar", 1)
 
