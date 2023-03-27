@@ -628,6 +628,11 @@ class Redis(Client[AnyStr]):
             - Added :paramref:`notouch`
             - Added the :meth:`Redis.ensure_persistence` context manager
 
+          - .. versionchanged:: 4.12.0
+
+            - Removed :paramref:`retry_on_timeout` constructor argument. Use
+              :paramref:`retry_policy` instead.
+
           - .. versionadded:: 4.3.0
 
             - Added :paramref:`connection_pool_cls`
