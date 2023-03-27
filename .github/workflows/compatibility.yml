@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8, 3.9, "3.10", "3.11"]
+        python-version: [3.8, 3.9, "3.10", "3.11", "3.12.0-alpha.6"]
     steps:
     - uses: actions/checkout@v3
     - name: Cache dependencies
@@ -111,6 +111,11 @@ jobs:
             extensions: "False"
             uvloop: "False"
             label: ""
+          - python-version: "3.12.0-alpha.6"
+            redis-version: 7.0
+            runtime_type_checks: "True"
+            extensions: "True"
+
     steps:
     - uses: actions/checkout@v3
     - name: Cache dependencies
