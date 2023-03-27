@@ -936,7 +936,7 @@ class Redis(Client[AnyStr]):
             raise
         finally:
             self._ensure_server_version(connection.server_version)
-            if not quick_release:
+            if not quick_release or self.requires_wait or self.requires_waitaof:
                 pool.release(connection)
 
     @overload
