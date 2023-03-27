@@ -10,5 +10,4 @@ pytest-env
 pytest-lazy-fixture
 pytest-mock
 pytest-reverse
-pytest-sentry
 redis
