@@ -464,7 +464,10 @@ class Client(
     @versionadded(version="4.12.0")
     @contextlib.contextmanager
     def ensure_persistence(
-        self: ClientT, local: int = 0, replicas: int = 0, timeout_ms: int = 100
+        self: ClientT,
+        local: Literal[0, 1] = 0,
+        replicas: int = 0,
+        timeout_ms: int = 100,
     ) -> Iterator[ClientT]:
         """
         Context manager to ensure that commands executed within the context
