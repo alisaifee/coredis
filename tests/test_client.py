@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-from ssl import SSLContext, SSLError
+import ssl
+from ssl import SSLError
 
 import pytest
 from packaging.version import Version
@@ -166,7 +167,9 @@ class TestSSL:
         assert await client.ping() == b"PONG"
 
     async def test_explicit_ssl_context(self, redis_ssl_server):
-        context = SSLContext()
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
         context.load_cert_chain(
             certfile="./tests/tls/client.crt", keyfile="./tests/tls/client.key"
         )
@@ -188,7 +191,9 @@ class TestSSL:
         assert await client.ping() == b"PONG"
 
     async def test_cluster_explicit_ssl_context(self, redis_ssl_cluster_server):
-        context = SSLContext()
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
         context.load_cert_chain(
             certfile="./tests/tls/client.crt", keyfile="./tests/tls/client.key"
         )
@@ -200,7 +205,9 @@ class TestSSL:
         assert await client.ping() == b"PONG"
 
     async def test_invalid_ssl_parameters(self, redis_ssl_server):
-        context = SSLContext()
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
         context.load_cert_chain(
             certfile="./tests/tls/invalid-client.crt",
             keyfile="./tests/tls/invalid-client.key",
