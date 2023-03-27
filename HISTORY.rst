@@ -15,7 +15,7 @@ Release Date: 2023-03-26
 
     * Expose :paramref:`~coredis.Redis.notouch` in client constructors
     * Add support for :meth:`~coredis.Redis.client_no_touch`
-    * Add support for :meth:`~coredis.Redis.client_setinfo``
+    * Add support for :meth:`~coredis.Redis.client_setinfo`
     * Add support for :meth:`~coredis.Redis.waitaof`
     * Add new ``withscore`` argument for :meth:`~coredis.Redis.zrank` & :meth:`~coredis.Redis.zrevrank`
     * Add new context manager :meth:`~coredis.Redis.ensure_persistence`
