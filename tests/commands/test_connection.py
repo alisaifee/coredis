@@ -226,6 +226,16 @@ class TestConnection:
         clients = await client.client_list()
         assert "cl=i=ent" in [c["name"] for c in clients]
 
+    @pytest.mark.min_server_version("7.1.240")
+    async def test_client_list_after_client_setinfo(self, client, _s):
+        with pytest.warns(UserWarning):
+            await client.client_setinfo(lib_name="lolwut")
+            await client.client_setinfo(lib_ver="12.12.12")
+        clients = await client.client_list()
+        assert ("lolwut", "12.12.12") in [
+            (c["lib-name"], c["lib-ver"]) for c in clients
+        ]
+
     async def test_client_getname(self, client, _s):
         assert await client.client_getname() is None
 
