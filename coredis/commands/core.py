@@ -387,9 +387,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         ...
 
     @overload
-    async def lcs(
-        self, key1: Union[str, bytes], key2: Union[str, bytes], *, len_: Literal[True]
-    ) -> int:
+    async def lcs(self, key1: KeyT, key2: KeyT, *, len_: Literal[True]) -> int:
         ...
 
     @overload
@@ -2494,7 +2492,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.GENERIC,
         flags={CommandFlag.FAST, CommandFlag.READONLY},
     )
-    async def expiretime(self, key: Union[str, bytes]) -> datetime.datetime:
+    async def expiretime(self, key: KeyT) -> datetime.datetime:
         """
         Get the expiration Unix timestamp for a key
 
@@ -2741,7 +2739,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.GENERIC,
         flags={CommandFlag.FAST, CommandFlag.READONLY},
     )
-    async def pexpiretime(self, key: Union[str, bytes]) -> datetime.datetime:
+    async def pexpiretime(self, key: KeyT) -> datetime.datetime:
         """
         Get the expiration Unix timestamp for a key in milliseconds
 
@@ -6676,8 +6674,8 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def client_setinfo(
         self,
-        lib_name: Optional[Union[str, bytes]] = None,
-        lib_ver: Optional[Union[str, bytes]] = None,
+        lib_name: Optional[StringT] = None,
+        lib_ver: Optional[StringT] = None,
     ) -> bool:
         """
         Set client or connection specific info
@@ -7108,7 +7106,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SERVER,
     )
     async def latency_histogram(
-        self, *commands: Union[str, bytes]
+        self, *commands: StringT
     ) -> Dict[AnyStr, Dict[AnyStr, ValueT]]:
         """
         Return the cumulative distribution of latencies of a subset of commands or all.
@@ -7983,7 +7981,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="3.2.0")
     @redis_command(CommandName.MODULE_LOAD, group=CommandGroup.SERVER)
     async def module_load(
-        self, path: Union[str, bytes], *args: Union[str, bytes, int, float]
+        self, path: StringT, *args: Union[str, bytes, int, float]
     ) -> bool:
         """
         Load a module
@@ -8003,7 +8001,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def module_loadex(
         self,
-        path: Union[str, bytes],
+        path: StringT,
         configs: Optional[Dict[StringT, ValueT]] = None,
         args: Optional[Parameters[ValueT]] = None,
     ) -> bool:
@@ -8027,7 +8025,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="3.2.0")
     @redis_command(CommandName.MODULE_UNLOAD, group=CommandGroup.SERVER)
-    async def module_unload(self, name: Union[str, bytes]) -> bool:
+    async def module_unload(self, name: StringT) -> bool:
         """
         Unload a module
         """
