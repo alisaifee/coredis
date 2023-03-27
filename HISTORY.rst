@@ -9,20 +9,21 @@ Release Date: 2023-03-26
 
 * Features
 
-  * Expose `retry_policy` to client constructors
-  * Expose `noevict` in client constructors
+  * Expose :paramref:`~coredis.Redis.retry_policy` to client constructors
+  * Expose :paramref:`~coredis.Redis.noevict` in client constructors
   * Add initial support for redis 7.2
-    * Expose `notouch` in client constructors
-    * Add support for `client_no_touch`
-    * Add support for `client_setinfo``
-    * Add support for `waitaof`
-    * Add new `withscore` argument for `zrank` & `zrevrank`
-    * Add new context manager `ensure_persistence`
+
+    * Expose :paramref:`~coredis.Redis.notouch` in client constructors
+    * Add support for :meth:`~coredis.Redis.client_no_touch`
+    * Add support for :meth:`~coredis.Redis.client_setinfo``
+    * Add support for :meth:`~coredis.Redis.waitaof`
+    * Add new ``withscore`` argument for :meth:`~coredis.Redis.zrank` & :meth:`~coredis.Redis.zrevrank`
+    * Add new context manager :meth:`~coredis.Redis.ensure_persistence`
 
 
 * Bug Fix
 
-  * Fix leaked connections when using `ensure_replication`
+  * Fix leaked connections when using :meth:`~coredis.Redis.ensure_replication`
   * Improve handling of cancellation errors
   * Improve handling of timeout errors
   * Ensure cluster commands routed to random nodes use
