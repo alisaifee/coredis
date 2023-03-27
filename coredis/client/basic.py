@@ -461,6 +461,7 @@ class Client(
         finally:
             self._waitcontext.set(None)
 
+    @versionadded(version="4.12.0")
     @contextlib.contextmanager
     def ensure_persistence(
         self: ClientT, local: int = 0, replicas: int = 0, timeout_ms: int = 100
