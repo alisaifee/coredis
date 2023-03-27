@@ -476,7 +476,13 @@ class Client(
 
         :raises: :exc:`coredis.exceptions.PersistenceError`
 
-        Example::
+        Example for standalone client::
+
+            client = coredis.Redis()
+            with client.ensure_persistence(1, 0, 20):
+                await client.set("fubar", 1)
+
+        Example for cluster::
 
             client = coredis.RedisCluster(["localhost", 7000])
             with client.ensure_persistence(1, 1, 20):
