@@ -46,13 +46,17 @@ def to_bool(value: Optional[StringT]) -> Optional[bool]:
 
 
 URL_QUERY_ARGUMENT_PARSERS: Dict[
-    str, Callable[..., Optional[Union[int, float, bool]]]
+    str, Callable[..., Optional[Union[int, float, bool, str]]]
 ] = {
+    "client_name": str,
     "stream_timeout": float,
     "connect_timeout": float,
     "max_connections": int,
     "max_idle_time": int,
     "idle_check_interval": int,
+    "noreply": bool,
+    "noevict": bool,
+    "notouch": bool,
 }
 
 _CPT = TypeVar("_CPT", bound="ConnectionPool")
