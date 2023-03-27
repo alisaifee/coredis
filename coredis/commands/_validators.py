@@ -62,28 +62,27 @@ def mutually_exclusive_parameters(
 
         @functools.wraps(func)
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
-            if Config.optimized:
-                return await func(*args, **kwargs)
-            call_args = sig.bind_partial(*args, **kwargs)
-            params = {
-                k
-                for k in primary
-                if not call_args.arguments.get(k)
-                == getattr(sig.parameters.get(k), "default")
-            }
+            if not Config.optimized:
+                call_args = sig.bind_partial(*args, **kwargs)
+                params = {
+                    k
+                    for k in primary
+                    if not call_args.arguments.get(k)
+                    == getattr(sig.parameters.get(k), "default")
+                }
 
-            if params:
-                for group in secondary:
-                    for k in group:
-                        if not call_args.arguments.get(k) == getattr(
-                            sig.parameters.get(k), "default"
-                        ):
-                            params.add(k)
+                if params:
+                    for group in secondary:
+                        for k in group:
+                            if not call_args.arguments.get(k) == getattr(
+                                sig.parameters.get(k), "default"
+                            ):
+                                params.add(k)
 
-                            break
+                                break
 
-            if len(params) > 1:
-                raise MutuallyExclusiveParametersError(params, details)
+                if len(params) > 1:
+                    raise MutuallyExclusiveParametersError(params, details)
 
             return await func(*args, **kwargs)
 
@@ -109,23 +108,22 @@ def mutually_inclusive_parameters(
 
         @functools.wraps(func)
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
-            if Config.optimized:
-                return await func(*args, **kwargs)
-            call_args = sig.bind_partial(*args, **kwargs)
-            params = {
-                k
-                for k in _inclusive_params | _leaders
-                if not call_args.arguments.get(k)
-                == getattr(sig.parameters.get(k), "default")
-            }
-            if _leaders and _leaders & params != _leaders and len(params) > 0:
-                raise MutuallyInclusiveParametersMissing(
-                    _inclusive_params, _leaders, details
-                )
-            elif not _leaders and params and len(params) != len(_inclusive_params):
-                raise MutuallyInclusiveParametersMissing(
-                    _inclusive_params, _leaders, details
-                )
+            if not Config.optimized:
+                call_args = sig.bind_partial(*args, **kwargs)
+                params = {
+                    k
+                    for k in _inclusive_params | _leaders
+                    if not call_args.arguments.get(k)
+                    == getattr(sig.parameters.get(k), "default")
+                }
+                if _leaders and _leaders & params != _leaders and len(params) > 0:
+                    raise MutuallyInclusiveParametersMissing(
+                        _inclusive_params, _leaders, details
+                    )
+                elif not _leaders and params and len(params) != len(_inclusive_params):
+                    raise MutuallyInclusiveParametersMissing(
+                        _inclusive_params, _leaders, details
+                    )
             return await func(*args, **kwargs)
 
         return wrapped if not Config.optimized else func
