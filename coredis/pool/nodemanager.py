@@ -150,7 +150,6 @@ class NodeManager:
             "connect_timeout",
             "ssl_context",
             "parser_class",
-            "reader_read_size",
             "loop",
             "protocol_version",
         )

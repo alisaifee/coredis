@@ -423,20 +423,6 @@ class TestConnectionPoolURLParsing:
         )
         assert pool.idle_check_interval == 1
 
-    def test_reader_read_size_querystring_option(self):
-        pool = coredis.ConnectionPool.from_url(
-            "redis://localhost?reader_read_size=65535"
-        )
-        assert pool.connection_class == coredis.Connection
-        assert pool.connection_kwargs == {
-            "host": "localhost",
-            "port": 6379,
-            "db": 0,
-            "username": None,
-            "password": None,
-            "reader_read_size": 65535,
-        }
-
     def test_extra_querystring_options(self):
         pool = coredis.ConnectionPool.from_url("redis://localhost?a=1&b=2")
         assert pool.connection_class == coredis.Connection
@@ -546,17 +532,6 @@ class TestConnectionPoolUnixSocketURLParsing:
             "unix:///localhost?idle_check_interval=1"
         )
         assert pool.idle_check_interval == 1
-
-    def test_reader_read_size_querystring_option(self):
-        pool = coredis.ConnectionPool.from_url("unix:///socket?reader_read_size=65535")
-        assert pool.connection_class == coredis.UnixDomainSocketConnection
-        assert pool.connection_kwargs == {
-            "path": "/socket",
-            "db": 0,
-            "username": None,
-            "password": None,
-            "reader_read_size": 65535,
-        }
 
     def test_extra_querystring_options(self):
         pool = coredis.ConnectionPool.from_url("unix:///socket?a=1&b=2")
