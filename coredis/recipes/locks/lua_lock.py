@@ -16,10 +16,14 @@ from coredis.exceptions import LockError, ReplicationError
 from coredis.tokens import PureToken
 from coredis.typing import AnyStr, Generic, KeyT, Optional, StringT, Type, Union
 
-EXTEND_SCRIPT = Script(script=importlib.resources.read_text(__package__, "extend.lua"))
-RELEASE_SCRIPT = Script(
-    script=importlib.resources.read_text(__package__, "release.lua")
-)
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", DeprecationWarning)
+    EXTEND_SCRIPT = Script(
+        script=importlib.resources.read_text(__package__, "extend.lua")
+    )
+    RELEASE_SCRIPT = Script(
+        script=importlib.resources.read_text(__package__, "release.lua")
+    )
 
 
 class LuaLock(Generic[AnyStr]):
