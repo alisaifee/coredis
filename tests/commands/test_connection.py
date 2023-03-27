@@ -244,15 +244,16 @@ class TestConnection:
 
     @pytest.mark.min_server_version("6.2.0")
     async def test_select(self, client, _s):
+        assert (await client.client_info())["db"] == 0
         with pytest.warns(UserWarning):
-            assert (await client.client_info())["db"] == 0
             assert await client.select(1)
-            assert (await client.client_info())["db"] == 1
+        assert (await client.client_info())["db"] == 1
 
     @pytest.mark.min_server_version("6.2.0")
     async def test_reset(self, client, _s):
         assert (await client.client_info())["db"] == 0
-        assert await client.select(1)
+        with pytest.warns(UserWarning):
+            assert await client.select(1)
         assert (await client.client_info())["db"] == 1
         await client.reset()
         assert (await client.client_info())["db"] == 0

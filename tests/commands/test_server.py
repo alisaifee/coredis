@@ -347,12 +347,13 @@ class TestServer:
     @pytest.mark.nocluster
     async def test_swapdb(self, client, _s):
         await client.set("fubar", 1)
-        await client.select(1)
-        await client.set("fubar", 2)
-        await client.select(0)
-        assert await client.get("fubar") == _s(1)
-        assert await client.swapdb(0, 1)
-        assert await client.get("fubar") == _s(2)
+        with pytest.warns(UserWarning):
+            await client.select(1)
+            await client.set("fubar", 2)
+            await client.select(0)
+            assert await client.get("fubar") == _s(1)
+            assert await client.swapdb(0, 1)
+            assert await client.get("fubar") == _s(2)
 
     @pytest.mark.nocluster
     async def test_quit(self, client):
