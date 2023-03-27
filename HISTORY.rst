@@ -3,6 +3,17 @@
 Changelog
 =========
 
+v4.12.0b2
+---------
+Release Date: 2023-03-27
+
+* Chores
+
+  * Handle external warnings in tests
+  * Improve docstrings & annotations for ensure_persistence
+  * Add reruns for test failures in CI
+  * Add python 3.12 to CI
+
 v4.12.0b1
 ---------
 Release Date: 2023-03-26
@@ -1430,6 +1441,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
