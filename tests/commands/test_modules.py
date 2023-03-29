@@ -6,7 +6,6 @@ from coredis.tokens import PrefixToken
 from tests.conftest import targets
 
 
-@pytest.mark.xfail
 @targets(
     "redis_stack",
     "redis_stack_raw",
