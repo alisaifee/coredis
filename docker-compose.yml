@@ -4,13 +4,13 @@ services:
   # redis sentinel
   redis-sentinel-master:
     image: "redis:${REDIS_SENTINEL_VERSION:-latest}"
-    command: redis-server --port 6380 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes}
+    command: redis-server --port 6380 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes
     ports:
       - '6380:6380'
   redis-sentinel-slave:
     image: "redis:${REDIS_SENTINEL_VERSION:-latest}"
     depends_on: [redis-sentinel-master]
-    command: redis-server --port 6381 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --slaveof ${HOST_IP} 6380 --slave-announce-ip ${HOST_IP}
+    command: redis-server --port 6381 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --slaveof ${HOST_IP} 6380 --slave-announce-ip ${HOST_IP}
     ports:
       - '6381:6381'
   redis-sentinel:
@@ -24,13 +24,13 @@ services:
       - '26379:26379'
   redis-sentinel-master-auth:
     image: "redis:${REDIS_SENTINEL_VERSION:-latest}"
-    command: redis-server --port 6382 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --requirepass sekret
+    command: redis-server --port 6382 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --requirepass sekret
     ports:
       - '6382:6382'
   redis-sentinel-slave-auth:
     image: "redis:${REDIS_SENTINEL_VERSION:-latest}"
     depends_on: [redis-sentinel-master-auth]
-    command: redis-server --port 6383 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --slaveof ${HOST_IP} 6382 --slave-announce-ip ${HOST_IP} --requirepass sekret --masterauth sekret
+    command: redis-server --port 6383 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --slaveof ${HOST_IP} 6382 --slave-announce-ip ${HOST_IP} --requirepass sekret --masterauth sekret
     ports:
       - '6383:6383'
   redis-sentinel-auth:
@@ -46,51 +46,51 @@ services:
   # cluster with replication
   redis-cluster-1:
     image: "redis:${REDIS_VERSION:-latest}"
-    command: redis-server --port 7000 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
+    command: redis-server --port 7000 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
     ports:
       - '7000:7000'
       - '17000:17000'
   redis-cluster-2:
     image: "redis:${REDIS_VERSION:-latest}"
-    command: redis-server --port 7001 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
+    command: redis-server --port 7001 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
     depends_on: [redis-cluster-1]
     ports:
       - '7001:7001'
       - '17001:17001'
   redis-cluster-3:
     image: "redis:${REDIS_VERSION:-latest}"
-    command: redis-server --port 7002 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
+    command: redis-server --port 7002 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
     ports:
       - '7002:7002'
       - '17002:17002'
   redis-cluster-4:
     image: "redis:${REDIS_VERSION:-latest}"
-    command: redis-server --port 7003 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
+    command: redis-server --port 7003 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
     depends_on: [redis-cluster-3]
     ports:
       - '7003:7003'
       - '17003:17003'
   redis-cluster-5:
     image: "redis:${REDIS_VERSION:-latest}"
-    command: redis-server --port 7004 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
+    command: redis-server --port 7004 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
     ports:
       - '7004:7004'
       - '17004:17004'
   redis-cluster-6:
     image: "redis:${REDIS_VERSION:-latest}"
-    command: redis-server --port 7005 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
+    command: redis-server --port 7005 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
     depends_on: [redis-cluster-5]
     ports:
       - '7005:7005'
       - '17005:17005'
-  # ssl cluster with replication
   redis-cluster-init:
     image: "redis:${REDIS_VERSION:-latest}"
     command: bash -c "echo yes | redis-cli --cluster create --cluster-replicas 1 ${HOST_IP}:7000 ${HOST_IP}:7001 ${HOST_IP}:7002 ${HOST_IP}:7003 ${HOST_IP}:7004 ${HOST_IP}:7005"
     depends_on: [redis-cluster-1, redis-cluster-2, redis-cluster-3, redis-cluster-4, redis-cluster-5, redis-cluster-6]
+  # ssl cluster with replication
   redis-ssl-cluster-1:
     image: "redis:${REDIS_VERSION:-latest}"
-    command: redis-server --port 0 --tls-port 8301 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --tls-replication yes --tls-cluster yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP} --tls-cert-file /tls/redis.crt --tls-key-file /tls/redis.key --tls-ca-cert-file /tls/ca.crt
+    command: redis-server --port 0 --tls-port 8301 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --tls-replication yes --tls-cluster yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP} --tls-cert-file /tls/redis.crt --tls-key-file /tls/redis.key --tls-ca-cert-file /tls/ca.crt
     ports:
       - '8301:8301'
       - '18301:18301'
@@ -98,7 +98,7 @@ services:
       - ./tests/tls:/tls
   redis-ssl-cluster-2:
     image: "redis:${REDIS_VERSION:-latest}"
-    command: redis-server --port 0 --tls-port 8302 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --tls-replication yes --tls-cluster yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP} --tls-cert-file /tls/redis.crt --tls-key-file /tls/redis.key --tls-ca-cert-file /tls/ca.crt
+    command: redis-server --port 0 --tls-port 8302 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --tls-replication yes --tls-cluster yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP} --tls-cert-file /tls/redis.crt --tls-key-file /tls/redis.key --tls-ca-cert-file /tls/ca.crt
     ports:
       - '8302:8302'
       - '18302:18302'
@@ -106,7 +106,7 @@ services:
       - ./tests/tls:/tls
   redis-ssl-cluster-3:
     image: "redis:${REDIS_VERSION:-latest}"
-    command: redis-server --port 0 --tls-port 8303 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --tls-replication yes --tls-cluster yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP} --tls-cert-file /tls/redis.crt --tls-key-file /tls/redis.key --tls-ca-cert-file /tls/ca.crt
+    command: redis-server --port 0 --tls-port 8303 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --tls-replication yes --tls-cluster yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP} --tls-cert-file /tls/redis.crt --tls-key-file /tls/redis.key --tls-ca-cert-file /tls/ca.crt
     ports:
       - '8303:8303'
       - '18303:18303'
@@ -114,7 +114,7 @@ services:
       - ./tests/tls:/tls
   redis-ssl-cluster-4:
     image: "redis:${REDIS_VERSION:-latest}"
-    command: redis-server --port 0 --tls-port 8304 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --tls-replication yes --tls-cluster yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP} --tls-cert-file /tls/redis.crt --tls-key-file /tls/redis.key --tls-ca-cert-file /tls/ca.crt
+    command: redis-server --port 0 --tls-port 8304 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --tls-replication yes --tls-cluster yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP} --tls-cert-file /tls/redis.crt --tls-key-file /tls/redis.key --tls-ca-cert-file /tls/ca.crt
     ports:
       - '8304:8304'
       - '18304:18304'
@@ -122,7 +122,7 @@ services:
       - ./tests/tls:/tls
   redis-ssl-cluster-5:
     image: "redis:${REDIS_VERSION:-latest}"
-    command: redis-server --port 0 --tls-port 8305 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --tls-replication yes --tls-cluster yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP} --tls-cert-file /tls/redis.crt --tls-key-file /tls/redis.key --tls-ca-cert-file /tls/ca.crt
+    command: redis-server --port 0 --tls-port 8305 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --tls-replication yes --tls-cluster yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP} --tls-cert-file /tls/redis.crt --tls-key-file /tls/redis.key --tls-ca-cert-file /tls/ca.crt
     ports:
       - '8305:8305'
       - '18305:18305'
@@ -130,7 +130,7 @@ services:
       - ./tests/tls:/tls
   redis-ssl-cluster-6:
     image: "redis:${REDIS_VERSION:-latest}"
-    command: redis-server --port 0 --tls-port 8306 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --tls-replication yes --tls-cluster yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP} --tls-cert-file /tls/redis.crt --tls-key-file /tls/redis.key --tls-ca-cert-file /tls/ca.crt
+    command: redis-server --port 0 --tls-port 8306 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --tls-replication yes --tls-cluster yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP} --tls-cert-file /tls/redis.crt --tls-key-file /tls/redis.key --tls-ca-cert-file /tls/ca.crt
     ports:
       - '8306:8306'
       - '18306:18306'
@@ -145,19 +145,19 @@ services:
   # primary only cluster
   redis-cluster-noreplica-1:
     image: "redis:${REDIS_VERSION:-latest}"
-    command: redis-server --port 8400 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
+    command: redis-server --port 8400 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
     ports:
       - '8400:8400'
       - '18400:18400'
   redis-cluster-noreplica-2:
     image: "redis:${REDIS_VERSION:-latest}"
-    command: redis-server --port 8401 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
+    command: redis-server --port 8401 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
     ports:
       - '8401:8401'
       - '18401:18401'
   redis-cluster-noreplica-3:
     image: "redis:${REDIS_VERSION:-latest}"
-    command: redis-server --port 8402 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
+    command: redis-server --port 8402 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
     ports:
       - '8402:8402'
       - '18402:18402'
@@ -168,19 +168,19 @@ services:
   # auth required cluster
   redis-cluster-auth-1:
     image: "redis:${REDIS_VERSION:-latest}"
-    command: redis-server --port 8500 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP} --requirepass sekret
+    command: redis-server --port 8500 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP} --requirepass sekret
     ports:
       - '8500:8500'
       - '18500:18500'
   redis-cluster-auth-2:
     image: "redis:${REDIS_VERSION:-latest}"
-    command: redis-server --port 8501 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP} --requirepass sekret
+    command: redis-server --port 8501 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP} --requirepass sekret
     ports:
       - '8501:8501'
       - '18501:18501'
   redis-cluster-auth-3:
     image: "redis:${REDIS_VERSION:-latest}"
-    command: redis-server --port 8502 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP} --requirepass sekret
+    command: redis-server --port 8502 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP} --requirepass sekret
     ports:
       - '8502:8502'
       - '18502:18502'
@@ -188,26 +188,76 @@ services:
     image: "redis:${REDIS_VERSION:-latest}"
     command: bash -c "echo yes | redis-cli --cluster create --cluster-replicas 0 ${HOST_IP}:8500 ${HOST_IP}:8501 ${HOST_IP}:8502 -a sekret"
     depends_on: [redis-cluster-auth-1, redis-cluster-auth-2, redis-cluster-auth-3]
+  # stack cluster with replication
+  redis-stack-cluster-1:
+    image: "redis/redis-stack:${REDIS_STACK_VERSION:-latest}"
+    environment:
+      REDIS_ARGS: "--port 9000 --appendonly yes --protected-mode no --cluster-enabled yes --cluster-announce-ip ${HOST_IP}"
+    ports:
+      - '9000:9000'
+      - '19000:19000'
+  redis-stack-cluster-2:
+    image: "redis/redis-stack:${REDIS_STACK_VERSION:-latest}"
+    environment:
+      REDIS_ARGS: "--port 9001 --appendonly yes --protected-mode no --cluster-enabled yes --cluster-announce-ip ${HOST_IP}"
+    depends_on: [redis-stack-cluster-1]
+    ports:
+      - '9001:9001'
+      - '19001:19001'
+  redis-stack-cluster-3:
+    image: "redis/redis-stack:${REDIS_STACK_VERSION:-latest}"
+    environment:
+      REDIS_ARGS: "--port 9002 --appendonly yes --protected-mode no --cluster-enabled yes --cluster-announce-ip ${HOST_IP}"
+    ports:
+      - '9002:9002'
+      - '19002:19002'
+  redis-stack-cluster-4:
+    image: "redis/redis-stack:${REDIS_STACK_VERSION:-latest}"
+    environment:
+      REDIS_ARGS: "--port 9003 --appendonly yes --protected-mode no --cluster-enabled yes --cluster-announce-ip ${HOST_IP}"
+    depends_on: [redis-stack-cluster-3]
+    ports:
+      - '9003:9003'
+      - '19003:19003'
+  redis-stack-cluster-5:
+    image: "redis/redis-stack:${REDIS_STACK_VERSION:-latest}"
+    environment:
+      REDIS_ARGS: "--port 9004 --appendonly yes --protected-mode no --cluster-enabled yes --cluster-announce-ip ${HOST_IP}"
+    ports:
+      - '9004:9004'
+      - '19004:19004'
+  redis-stack-cluster-6:
+    image: "redis/redis-stack:${REDIS_STACK_VERSION:-latest}"
+    environment:
+      REDIS_ARGS: "--port 9005 --appendonly yes --protected-mode no --cluster-enabled yes --cluster-announce-ip ${HOST_IP}"
+    depends_on: [redis-stack-cluster-5]
+    ports:
+      - '9005:9005'
+      - '19005:19005'
+  redis-stack-cluster-init:
+    image: "redis/redis-stack:${REDIS_STACK_VERSION:-latest}"
+    command: bash -c "echo yes | redis-cli --cluster create --cluster-replicas 1 ${HOST_IP}:9000 ${HOST_IP}:9001 ${HOST_IP}:9002 ${HOST_IP}:9003 ${HOST_IP}:9004 ${HOST_IP}:9005"
+    depends_on: [redis-stack-cluster-1, redis-stack-cluster-2, redis-stack-cluster-3, redis-stack-cluster-4, redis-stack-cluster-5, redis-stack-cluster-6]
   redis-basic:
     image: "redis:${REDIS_VERSION:-latest}"
-    command: redis-server --port 6379 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes}
+    command: redis-server --port 6379 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes
     ports:
       - '6379:6379'
   redis-auth:
     image: "redis:${REDIS_VERSION:-latest}"
-    command: redis-server --port 6389 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --requirepass sekret
+    command: redis-server --port 6389 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --requirepass sekret
     ports:
       - '6389:6389'
   redis-ssl:
     image: "redis:${REDIS_SSL_VERSION:-latest}"
-    command: redis-server --port 0 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --tls-port 8379 --tls-cert-file /tls/redis.crt --tls-key-file /tls/redis.key --tls-ca-cert-file /tls/ca.crt
+    command: redis-server --port 0 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --tls-port 8379 --tls-cert-file /tls/redis.crt --tls-key-file /tls/redis.key --tls-ca-cert-file /tls/ca.crt
     ports:
       - '8379:8379'
     volumes:
       - ./tests/tls:/tls
   redis-uds:
     image: "redis:${REDIS_VERSION:-latest}"
-    command: sh -c "test ${HOST_OS} = \"Darwin\" && exit || redis-server --port 0 ${DEFAULT_ARGS---enable-debug-command yes --appendonly yes} --unixsocket /sockets/coredis.redis.sock --unixsocketperm 777"
+    command: sh -c "test ${HOST_OS} = \"Darwin\" && exit || redis-server --port 0 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --unixsocket /sockets/coredis.redis.sock --unixsocketperm 777"
     volumes:
       - type: bind
         source: /tmp/

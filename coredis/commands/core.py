@@ -7965,6 +7965,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.MODULE_LIST,
         group=CommandGroup.SERVER,
+        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
     async def module_list(self) -> Tuple[Dict[AnyStr, ResponsePrimitive], ...]:
         """
@@ -7979,7 +7980,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @versionadded(version="3.2.0")
-    @redis_command(CommandName.MODULE_LOAD, group=CommandGroup.SERVER)
+    @redis_command(
+        CommandName.MODULE_LOAD,
+        group=CommandGroup.SERVER,
+        cluster=ClusterCommandConfig(
+            route=NodeFlag.ALL,
+            combine=ClusterBoolCombine(),
+        ),
+    )
     async def module_load(
         self, path: StringT, *args: Union[str, bytes, int, float]
     ) -> bool:
@@ -7997,7 +8005,13 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="3.4.0")
     @redis_command(
-        CommandName.MODULE_LOADEX, group=CommandGroup.SERVER, version_introduced="7.0.0"
+        CommandName.MODULE_LOADEX,
+        group=CommandGroup.SERVER,
+        version_introduced="7.0.0",
+        cluster=ClusterCommandConfig(
+            route=NodeFlag.ALL,
+            combine=ClusterBoolCombine(),
+        ),
     )
     async def module_loadex(
         self,
@@ -8024,7 +8038,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @versionadded(version="3.2.0")
-    @redis_command(CommandName.MODULE_UNLOAD, group=CommandGroup.SERVER)
+    @redis_command(
+        CommandName.MODULE_UNLOAD,
+        group=CommandGroup.SERVER,
+        cluster=ClusterCommandConfig(
+            route=NodeFlag.ALL,
+            combine=ClusterBoolCombine(),
+        ),
+    )
     async def module_unload(self, name: StringT) -> bool:
         """
         Unload a module

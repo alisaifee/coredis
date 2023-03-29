@@ -35,7 +35,7 @@ DOCKER_TAG_MAPPING = {
         "default": "6.2.6",
         "stack": "6.2.2-v5",
     },
-    "7.0": {"default": "7.0.0", "stack": "7.0.0-RC6"},
+    "7.0": {"default": "7.0.0", "stack": "7.0.6-RC8"},
 }
 SERVER_DEFAULT_ARGS = {
     "6.0": "",
@@ -367,6 +367,18 @@ def redis_ssl_cluster_server(docker_services):
     if os.environ.get("CI") == "True":
         time.sleep(10)
     yield ["localhost", 8301]
+
+
+@pytest.fixture(scope="session")
+def redis_stack_cluster_server(docker_services):
+    docker_services.start("redis-stack-cluster-init")
+    docker_services.wait_for_service(
+        "redis-stack-cluster-6", 9005, check_redis_cluster_ready
+    )
+
+    if os.environ.get("CI") == "True":
+        time.sleep(10)
+    yield ["localhost", 9005]
 
 
 @pytest.fixture(scope="session")
@@ -928,6 +940,29 @@ async def redis_cluster_resp2(redis_cluster_server, request):
     for primary in cluster.primaries:
         await set_default_test_config(primary)
     yield cluster
+
+    cluster.connection_pool.disconnect()
+
+
+@pytest.fixture
+async def redis_stack_cluster(redis_stack_cluster_server, request):
+    cluster = coredis.RedisCluster(
+        "localhost",
+        9000,
+        stream_timeout=10,
+        decode_responses=True,
+        **get_client_test_args(request),
+    )
+    await check_test_constraints(request, cluster)
+    await cluster
+    await cluster.flushall()
+    await cluster.flushdb()
+
+    for primary in cluster.primaries:
+        await set_default_test_config(primary)
+
+    async with remapped_slots(cluster, request):
+        yield cluster
 
     cluster.connection_pool.disconnect()
 

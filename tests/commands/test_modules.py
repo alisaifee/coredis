@@ -12,6 +12,7 @@ from tests.conftest import targets
     "redis_stack_raw",
     "redis_stack_resp2",
     "redis_stack_raw_resp2",
+    "redis_stack_cluster",
 )
 async def test_modules_list(client, _s):
     module_info = await client.module_list()
@@ -23,28 +24,50 @@ async def test_modules_list(client, _s):
     "redis_basic_raw",
     "redis_basic_resp2",
     "redis_basic_raw_resp2",
+    "redis_cluster",
 )
 async def test_no_modules(client):
     module_info = await client.module_list()
     assert module_info == ()
 
 
-async def test_module_load(fake_redis):
-    fake_redis.responses[b"MODULE LOAD"] = {
+@pytest.mark.parametrize(
+    "redis",
+    [
+        pytest.param(pytest.lazy_fixture("fake_redis")),
+        pytest.param(pytest.lazy_fixture("fake_redis_cluster")),
+    ],
+)
+async def test_module_load(redis):
+    redis.responses[b"MODULE LOAD"] = {
         ("/var/tmp/module.so",): b"OK",
         ("/var/tmp/module.so", "1"): b"OK",
     }
-    assert await fake_redis.module_load("/var/tmp/module.so")
-    assert await fake_redis.module_load("/var/tmp/module.so", "1")
+    assert await redis.module_load("/var/tmp/module.so")
+    assert await redis.module_load("/var/tmp/module.so", "1")
 
 
-async def test_module_unload(fake_redis):
-    fake_redis.responses[b"MODULE UNLOAD"] = {("module",): b"OK"}
-    assert await fake_redis.module_unload("module")
+@pytest.mark.parametrize(
+    "redis",
+    [
+        pytest.param(pytest.lazy_fixture("fake_redis")),
+        pytest.param(pytest.lazy_fixture("fake_redis_cluster")),
+    ],
+)
+async def test_module_unload(redis):
+    redis.responses[b"MODULE UNLOAD"] = {("module",): b"OK"}
+    assert await redis.module_unload("module")
 
 
-async def test_module_loadex(fake_redis):
-    fake_redis.responses[b"MODULE LOADEX"] = {
+@pytest.mark.parametrize(
+    "redis",
+    [
+        pytest.param(pytest.lazy_fixture("fake_redis")),
+        pytest.param(pytest.lazy_fixture("fake_redis_cluster")),
+    ],
+)
+async def test_module_loadex(redis):
+    redis.responses[b"MODULE LOADEX"] = {
         ("/var/tmp/module.so",): b"OK",
         ("/var/tmp/module.so", PrefixToken.CONFIG, "fu", "bar"): b"OK",
         ("/var/tmp/module.so", PrefixToken.ARGS, "1"): b"OK",
@@ -59,9 +82,9 @@ async def test_module_loadex(fake_redis):
         ): b"OK",
     }
 
-    assert await fake_redis.module_loadex("/var/tmp/module.so")
-    assert await fake_redis.module_loadex("/var/tmp/module.so", configs={"fu": "bar"})
-    assert await fake_redis.module_loadex(
+    assert await redis.module_loadex("/var/tmp/module.so")
+    assert await redis.module_loadex("/var/tmp/module.so", configs={"fu": "bar"})
+    assert await redis.module_loadex(
         "/var/tmp/module.so", configs={"fu": "bar", "bar": "fu"}
     )
-    assert await fake_redis.module_loadex("/var/tmp/module.so", args=["1"])
+    assert await redis.module_loadex("/var/tmp/module.so", args=["1"])
