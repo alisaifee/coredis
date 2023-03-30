@@ -632,9 +632,11 @@ class RedisCluster(
         if not self.connection_pool.initialized or self.refresh_table_asap:
             await self
 
-    def _determine_slot(self, command: bytes, *args: ValueT) -> Optional[int]:
+    def _determine_slot(
+        self, command: bytes, *args: ValueT, **options: Optional[ValueT]
+    ) -> Optional[int]:
         """Figures out what slot based on command and args"""
-        keys = KeySpec.extract_keys(
+        keys = cast(Tuple[ValueT, ...], options.get("keys")) or KeySpec.extract_keys(
             command, *args, readonly_command=self.connection_pool.read_from_replicas
         )
         if (
@@ -770,7 +772,7 @@ class RedisCluster(
             node = None
             slot = None
             if not nodes:
-                slot = self._determine_slot(command, *args)
+                slot = self._determine_slot(command, *args, **kwargs)
             else:
                 node = nodes.pop()
             return await self._execute_command_on_single_node(

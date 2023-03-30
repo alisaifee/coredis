@@ -36,6 +36,7 @@ from coredis.exceptions import (
     WatchError,
 )
 from coredis.globals import COMMAND_FLAGS, READONLY_COMMANDS
+from coredis.modules import ModuleMixin
 from coredis.pool import ConnectionPool
 from coredis.response._callbacks import NoopCallback
 from coredis.response.types import ScoredMember
@@ -79,6 +80,7 @@ RedisBytesT = TypeVar("RedisBytesT", bound="Redis[bytes]")
 class Client(
     Generic[AnyStr],
     CoreCommands[AnyStr],
+    ModuleMixin[AnyStr],
     SentinelCommands[AnyStr],
 ):
     cache: Optional[AbstractCache]

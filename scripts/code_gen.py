@@ -31,6 +31,15 @@ from coredis.typing import *  # noqa
 MAX_SUPPORTED_VERSION = version.parse("7.999.999")
 MIN_SUPPORTED_VERSION = version.parse("5.999.999")
 
+MODULES = {
+    "ReJSON": {
+        "repo": "https://github.com/RedisJSON/RedisJSON",
+        "prefix": "json",
+        "group": "json",
+        "module": "ReJSON",
+    },
+}
+
 MAPPING = {"DEL": "delete"}
 SKIP_SPEC = ["BITFIELD", "BITFIELD_RO"]
 SKIP_COMMANDS = [
@@ -412,9 +421,9 @@ def version_added_from_doc(doc):
 
 
 @functools.lru_cache
-def get_commands():
+def get_commands(name: str="commands.json"):
     cur_dir = os.path.split(__file__)[0]
-    return json.loads(open(os.path.join(cur_dir, "commands.json")).read())
+    return json.loads(open(os.path.join(cur_dir, name)).read())
 
 
 def sanitize_parameter(p, eval_forward_annotations=True):
@@ -468,52 +477,57 @@ def compare_signatures(s1, s2, eval_forward_annotations=True, with_return=True):
 
 
 def get_token_mapping():
-    commands = get_commands()
     pure_token_mapping = collections.OrderedDict()
     prefix_token_mapping = collections.OrderedDict()
 
-    for command, details in commands.items():
+    for name in ['commands', *MODULES.keys()]:
+        commands = get_commands(name+".json")
+        for command, details in commands.items():
 
-        def _extract_pure_tokens(obj):
-            tokens = []
+            def _extract_pure_tokens(obj):
+                tokens = []
 
-            if args := obj.get("arguments"):
-                for arg in args:
-                    if arg["type"] == "pure-token":
-                        tokens.append((arg["name"], arg["token"]))
+                if args := obj.get("arguments"):
+                    for arg in args:
+                        if arg["type"] == "pure-token":
+                            tokens.append((sanitized(arg["name"], ignore_reserved_words=True), arg["token"].upper()))
 
-                    if arg.get("arguments"):
-                        tokens.extend(_extract_pure_tokens(arg))
+                        if arg.get("arguments"):
+                            tokens.extend(_extract_pure_tokens(arg))
 
-            return tokens
+                return tokens
 
-        def _extract_prefix_tokens(obj):
-            tokens = []
+            def _extract_prefix_tokens(obj):
+                tokens = []
 
-            if args := obj.get("arguments"):
-                for arg in args:
-                    if arg["type"] != "pure-token" and arg.get("token"):
-                        tokens.append((arg["token"], arg["token"]))
+                if args := obj.get("arguments"):
+                    for arg in args:
+                        if arg["type"] != "pure-token" and arg.get("token"):
+                            tokens.append((sanitized(arg["token"], ignore_reserved_words=True), arg["token"].upper()))
 
-                    if arg.get("arguments"):
-                        tokens.extend(_extract_prefix_tokens(arg))
+                        if arg.get("arguments"):
+                            tokens.extend(_extract_prefix_tokens(arg))
 
-            return tokens
+                return tokens
 
-        for token in sorted(_extract_pure_tokens(details), key=lambda token: token[0]):
-            pure_token_mapping.setdefault(token, set()).add(command)
-        for token in sorted(
-            _extract_prefix_tokens(details), key=lambda token: token[0]
-        ):
-            prefix_token_mapping.setdefault(token, set()).add(command)
-
+            for token in sorted(_extract_pure_tokens(details), key=lambda token: token[0]):
+                pure_token_mapping.setdefault(token, set()).add(command)
+            for token in sorted(
+                _extract_prefix_tokens(details), key=lambda token: token[0]
+            ):
+                prefix_token_mapping.setdefault(token, set()).add(command)
     return pure_token_mapping, prefix_token_mapping
 
 
-def read_command_docs(command, group):
-    doc = open(
-        "/var/tmp/redis-doc/commands/%s.md" % command.lower().replace(" ", "-")
-    ).read()
+def read_command_docs(command, group, module=None):
+    if not module:
+        doc = open(
+            "/var/tmp/redis-doc/commands/%s.md" % command.lower().replace(" ", "-")
+        ).read()
+    else:
+        doc = open(
+            f"/var/tmp/redis-module-{module}/docs/commands/%s.md" % command.lower().replace(" ", "-")
+        ).read()
 
     return_description = re.compile(
         r"(@(.*?)-reply[:,]*\s*(.*?)$)", re.MULTILINE
@@ -768,6 +782,17 @@ def get_official_commands(group=None, include_skipped=False):
 
     return by_group if not group else by_group.get(group)
 
+@functools.lru_cache
+def get_module_commands(module: str):
+    response = get_commands(module+'.json')
+    by_module = {}
+    [
+        by_module.setdefault(command["group"], []).append({**command, **{"name": name}})
+        for name, command in response.items()
+    ]
+    return by_module
+
+
 
 def find_method(kls, command_name):
     members = inspect.getmembers(kls)
@@ -841,7 +866,7 @@ def is_deprecated(command, kls):
 
 def sanitized(x, command=None, ignore_reserved_words=False):
     cleansed_name = (
-        x.lower().strip().replace("-", "_").replace(":", "_").replace(" ", "_")
+        x.lower().strip().replace("-", "_").replace(":", "_").replace(" ", "_").replace(".", "_")
     )
 
     if command:
@@ -856,7 +881,7 @@ def sanitized(x, command=None, ignore_reserved_words=False):
         return "identifier"
 
     if not ignore_reserved_words and cleansed_name in (
-        list(globals()["__builtins__"].__dict__.keys()) + ["async"]
+        list(globals()["__builtins__"].__dict__.keys()) + ["async", "return", "if", "else", "for"]
     ):
         cleansed_name = cleansed_name + "_"
 
@@ -928,7 +953,7 @@ def get_type_annotation(arg, command, parent=None, default=None):
     if arg["type"] == "oneof" and all(
         k["type"] == "pure-token" for k in arg["arguments"]
     ):
-        tokens = ["PureToken.%s" % s["name"].upper() for s in arg["arguments"]]
+        tokens = ["PureToken.%s" % sanitized(s["name"], ignore_reserved_words=True).upper() for s in arg["arguments"]]
         literal_type = eval(f"Literal[{','.join(sorted(tokens))}]")
 
         if (
@@ -964,8 +989,7 @@ def get_argument(
             c.get("multiple") for c in arg.get("arguments", [])
         ):
             name = sanitized(arg["name"], command)
-
-            if not inflection_engine.singular_noun(name):
+            if not inflection_engine.singular_noun(name) or name == 'prefix':
                 name = inflection_engine.plural(name)
             forced_order = BLOCK_ARGUMENT_FORCED_ORDER.get(command["name"], {}).get(
                 name
@@ -1022,26 +1046,34 @@ def get_argument(
 
         else:
             plist_d = []
-            if len(arg["arguments"]) == 1 and not arg.get("multiple"):
-                synthetic_parent = arg.copy()
-                synthetic_parent["type"] = "pure-token"
-                synthetic_parent.pop("arguments")
+            children = sorted(
+                    arg["arguments"], key=lambda v: int(v.get("optional") == True)
+            )
+            for child in list(children):
+                if child["type"] == "pure-token" and not "optional" in child:
+                    children.remove(child)
+                elif child["name"] == "count" and "token" in child:
+                    children.remove(child)
+            if len(children) == 1 and not arg.get("multiple"):
+                a = children[0].copy()
+                if parent:
+                    a["name"] = parent["name"] + "_" + arg["name"]
+                else:
+                    a["name"] = arg["name"]
+
                 plist_p, declist, vmap = get_argument(
-                    synthetic_parent, parent, command, arg_type, False
+                    a,  parent, command, arg_type, a.get("multiple", False)
                 )
                 param_list.extend(plist_p)
                 meta_mapping.update(vmap)
             if parent and parent.get("type") == "oneof":
                 arg["partof"] = "oneof"
-            for child in sorted(
-                arg["arguments"], key=lambda v: int(v.get("optional") == True)
-            ):
+            for child in children:
                 plist, declist, vmap = get_argument(
                     child, arg, command, arg_type, arg.get("multiple"), num_multiples
                 )
                 param_list.extend(plist)
                 meta_mapping.update(vmap)
-
                 if not child.get("optional"):
                     plist_d.extend(plist)
 
@@ -1218,6 +1250,7 @@ def get_command_spec(command):
     arguments = command.get("arguments", []) + REDIS_ARGUMENT_FORCED.get(
         command["name"], []
     )
+    arguments = [a for a in arguments if not (a['type'] == 'pure-token' and not {'optional', 'multiple'} & a.keys())]
     recommended_signature = []
     decorators = []
     forced_order = REDIS_ARGUMENT_FORCED_ORDER.get(command["name"], [])
@@ -1228,7 +1261,6 @@ def get_command_spec(command):
     history = command.get("history", [])
     extra_version_info = {}
     num_multiples = len([k for k in arguments if k.get("multiple")])
-
     for arg_name in arg_names:
         for version, entry in history:
             if "`%s`" % arg_name in entry and "added" in entry.lower():
@@ -1411,7 +1443,7 @@ def get_command_spec(command):
     return recommended_signature, decorators, mapping, meta_mapping
 
 
-def generate_method_details(kls, method, debug):
+def generate_method_details(kls, method, module=None, debug=False):
     method_details = {"kls": kls, "command": method}
 
     if skip_command(method):
@@ -1420,6 +1452,8 @@ def generate_method_details(kls, method, debug):
         method["name"],
         method["name"].strip().lower().replace(" ", "_").replace("-", "_"),
     )
+    if module:
+        name = name.replace(MODULES[module].get("prefix", module)+".", "")
     method_details["name"] = name
     method_details["redis_method"] = method
     method_details["located"] = find_method(kls, name)
@@ -1435,11 +1469,17 @@ def generate_method_details(kls, method, debug):
     return_summary = ""
 
     if debug and not method["name"] in SKIP_SPEC:
-        recommended_return = read_command_docs(method["name"], method["group"])
+        recommended_return = read_command_docs(method["name"], method["group"], module=module)
 
         if recommended_return:
             return_summary = recommended_return[1]
         rec_params, rec_decorators, arg_mapping, meta_mapping = get_command_spec(method)
+        seen = set()
+        for param in list(rec_params):
+            if param.name in seen:
+                rec_params.remove(param)
+            seen.add(param.name)
+
         method_details["arg_mapping"] = arg_mapping
         method_details["arg_meta_mapping"] = meta_mapping
         method_details["rec_decorators"] = rec_decorators
@@ -1461,6 +1501,7 @@ def generate_method_details(kls, method, debug):
             )
             method_details["rec_signature"] = rec_signature
         except:
+            import pdb; pdb.set_trace()
             raise Exception(method["name"], [(k.name, k.kind) for k in rec_params])
 
         method_details["readonly"] = READONLY_OVERRIDES.get(
@@ -1499,7 +1540,7 @@ def generate_compatibility_section(
 - Documentation: {{command_link}}
 {% if method["redirect_usage"] and method["redirect_usage"].warn -%}
 - Implementation: :meth:`~coredis.{{kls.__name__}}.{{method["located"].__name__}}`
-  
+
   .. warning:: Using :meth:`~coredis.{{kls.__name__}}.{{method["located"].__name__}}` directly is not recommended. {{method["redirect_usage"].reason}}
 {% elif method["redirect_usage"] and not method["redirect_usage"].warn -%}
 - .. danger:: :meth:`~coredis.{{kls.__name__}}.{{method["located"].__name__}}` intentionally raises an :exc:`NotImplemented` error. {{method["redirect_usage"].reason}}
@@ -1774,7 +1815,7 @@ def generate_compatibility_section(
     for group in groups:
         methods = {"supported": [], "missing": []}
         for method in get_official_commands(group):
-            method_details = generate_method_details(kls, method, debug)
+            method_details = generate_method_details(kls, method, debug=debug)
             if debug and not method_details.get("rec_signature"):
                 continue
             if not debug and skip_command(method):
@@ -1988,6 +2029,15 @@ def code_gen(ctx, debug: bool, next_version: str):
         else:
             os.system("cd /var/tmp/redis-doc && git pull")
         shutil.copy("/var/tmp/redis-doc/commands.json", cur_dir)
+        for module, details in MODULES.items():
+            if not os.path.isdir(f"/var/tmp/redis-module-{details['module']}"):
+                os.system(
+                    f"git clone {details['repo']} /var/tmp/redis-module-{details['module']}"
+                )
+            else:
+                os.system(f"cd /var/tmp/redis-module-{details['module']} && git pull")
+            shutil.copy(f"/var/tmp/redis-module-{details['module']}/commands.json", os.path.join(cur_dir, f"{module}.json"))
+
     ctx.obj["DEBUG"] = debug
     ctx.obj["NEXT_VERSION"] = next_version
 
@@ -2077,6 +2127,9 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
 @click.pass_context
 def command_constants(ctx, path):
     commands = get_official_commands(include_skipped=True)
+    for module in MODULES:
+        commands.update(get_module_commands(module))
+
     sort_fn = lambda command: command.get("since")
     env = Environment()
     env.globals.update(sorted=sorted)
@@ -2103,15 +2156,15 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     {% for command in sorted(commands, key=sort_fn) -%}
     {% if not command.get("deprecated_since") -%}
     {% if command.get("since") -%}
-    {{ command["name"].upper().replace(" ", "_").replace("-", "_")}} = b"{{command["name"]}}"  # Since redis: {{command["since"]}}
+    {{ command["name"].upper().replace(" ", "_").replace("-", "_").replace(".", "_")}} = b"{{command["name"]}}"  # Since redis: {{command["since"]}}
     {% else -%}
-    {{ command["name"].upper().replace(" ", "_").replace("-", "_")}} = b"{{command["name"]}}"
+    {{ command["name"].upper().replace(" ", "_").replace("-", "_").replace(".", "_")}} = b"{{command["name"]}}"
     {% endif -%}
     {% endif -%}
     {% endfor -%}
     {% for command in sorted(commands, key=sort_fn) -%}
     {% if command.get("deprecated_since") -%}
-    {{ command["name"].upper().replace(" ", "_").replace("-", "_")}} = b"{{command["name"]}}"  # Deprecated in redis: {{command["deprecated_since"]}}
+    {{ command["name"].upper().replace(" ", "_").replace("-", "_").replace(".", "_")}} = b"{{command["name"]}}"  # Deprecated in redis: {{command["deprecated_since"]}}
     {% endif -%}
     {% endfor %}
     {% endfor -%}
@@ -2232,21 +2285,22 @@ def changes():
 @code_gen.command()
 @click.option("--command", "-c", multiple=True)
 @click.option("--group", "-g", default=None)
+@click.option("--module", "-m", default=None)
 @click.option("--expr", "-e", default=None)
+@click.option("--debug", default=False, help="Output debug")
 @click.pass_context
-def implementation(ctx, command, group, expr):
+def implementation(ctx, command, group, module, expr, debug=False):
     cur_version = version.parse(coredis.__version__.split("+")[0])
     kls = coredis.Redis
-    commands = []
 
     method_template_str = """
-
     {% for decorator in method["rec_decorators"] %}
     {{decorator}}
     {% endfor -%}
+    {%- if not module %}
     @versionadded(version="{{next_version}}")
     @redis_command("{{method["command"]["name"]}}"
-    {%- if method["redis_version_introduced"] > MIN_SUPPORTED_VERSION -%}
+    {%- if method["redis_version_introduced"] and method["redis_version_introduced"] > MIN_SUPPORTED_VERSION -%}
     , version_introduced="{{method["command"].get("since")}}"
     {%- endif -%}, group=CommandGroup.{{method["command"]["group"].upper().replace(" ","_").replace("-","_")}}
     {%- if len(method["arg_mapping"]) > 0 -%}
@@ -2259,8 +2313,11 @@ def implementation(ctx, command, group, expr):
     {%- endfor -%}
     {%- endfor -%}
     {% if argument_with_version %}, arguments={{ argument_with_version }}{%endif%}
+    {%- endif -%}
+    {%- else -%}
+    @module_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}, group=CommandGroup.{{module["group"].upper()}}, module="{{module["module"]}}"
     {%- endif -%})
-    async def {{method["name"]}}{{render_signature(method["rec_signature"])}}:
+    async def {{method["name"]}}{{render_signature(method["rec_signature"], True)}}:
         \"\"\"
         {{method["summary"]}}
 
@@ -2278,53 +2335,13 @@ def implementation(ctx, command, group, expr):
         {%- endfor %}
         {% endif %}
         \"\"\"
-        WTF?
-        {% if len(method["arg_mapping"]) > 0 %}
-        pieces = []
-        {% for name, arg  in method["arg_mapping"].items() %}
-        # Handle {{name}}
-        {% if len(arg[1]) > 0 %}
-        {% for param in arg[1] %}
-        {% if not arg[0].get("optional") %}
-        {% if arg[0].get("multiple") %}
-        {% if arg[0].get("token") %}
-        pieces.extend(*{{param.name}})
-        {% else %}
-        pieces.extend(*{{param.name}})
+        pieces: CommandArgList = []
+         
+        {% if module %}
+        return await self.execute_module_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}, *pieces)
+        {% else %} 
+        return await self.execute_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}, *pieces)
         {% endif %}
-        {% else %}
-        {% if arg[0].get("token") %}
-        pieces.append("{{arg[0].get("token")}}")
-        pieces.append({{param.name}})
-        {% else %}
-        pieces.append({{param.name}})
-        {% endif %}
-        {% endif %}
-        {% else %}
-        {% if arg[0].get("multiple") %}
-
-        if {{arg[1][0].name}}:
-            pieces.extend({{param.name}})
-        {% else %}
-
-        if {{param.name}}{% if arg[0].get("type") != "pure-token" %} is not None{%endif%}:
-        {% if arg[0].get("token") %}
-            pieces.append({{arg[0].get("token")}})
-        {% else %}
-            pieces.append({{param.name}})
-        {% endif %}
-        {% endif }
-        {% endif %}
-        {% endfor %}
-        {% endif %}
-        {% endfor %}
-
-        return await self.execute_command("{{method["command"]["name"]}}", *pieces)
-        {% else -%}
-
-        return await self.execute_command("{{method["command"]["name"]}}")
-        {% endif -%}
-        pass
 """
     env = Environment()
     env.globals.update(
@@ -2341,12 +2358,16 @@ def implementation(ctx, command, group, expr):
         kls=kls,
         render_signature=render_signature,
         next_version=ctx.obj["NEXT_VERSION"],
+        module=MODULES[module] if module else None,
+        sanitized=sanitized,
         debug=True,
     )
     method_template = env.from_string(method_template_str)
 
     if group:
         commands = get_official_commands(group)
+    elif module:
+        commands = get_module_commands(module)[MODULES[module].get("group", module)]
     else:
         all_commands = get_official_commands()
         commands = []
@@ -2358,10 +2379,9 @@ def implementation(ctx, command, group, expr):
                 commands.extend([k for k in group_commands if k["name"] in command])
 
     for command in commands:
-        method_details = generate_method_details(kls, command, debug)
+        method_details = generate_method_details(kls, command, module=module, debug=True)
         if method_details.get("rec_signature"):
             print(method_template.render(method=method_details))
-
 
 @click.option("--path", default="coredis/pipeline.pyi")
 @code_gen.command()
@@ -2621,6 +2641,11 @@ def cluster_key_extraction(path):
                     )
 
     readonly = {}
+    fixed_args = {
+        "first": ["args[1],"],
+        "second": ["args[2],"],
+        "all": ["args[1:]"]
+    }
     all = {"OBJECT": ["(args[2],)"], "DEBUG OBJECT": ["(args[1],)"]}
 
     for mode, commands in lookups.items():
@@ -2636,6 +2661,29 @@ def cluster_key_extraction(path):
     all["KEYDB.HRENAME"] = ["(args[1],)"]
     all["KEYDB.MEXISTS"] = ["args[1:]"]
     all["OBJECT LASTMODIFIED"] = ["(args[1],)"]
+
+    # ReJSON
+    all["JSON.DEBUG MEMORY"] = fixed_args["first"]
+    all["JSON.DEL"] = fixed_args["first"]
+    all["JSON.FORGET"] = fixed_args["first"]
+    all["JSON.GET"] = fixed_args["first"]
+    all["JSON.SET"] = fixed_args["first"]
+    all["JSON.NUMINCRBY"] = fixed_args["first"]
+    all["JSON.STRAPPEND"] = fixed_args["first"]
+    all["JSON.STRLEN"] = fixed_args["first"]
+    all["JSON.ARRAPPEND"] = fixed_args["first"]
+    all["JSON.ARRINDEX"] = fixed_args["first"]
+    all["JSON.ARRINSERT"] = fixed_args["first"]
+    all["JSON.ARRLEN"] = fixed_args["first"]
+    all["JSON.ARRPOP"] = fixed_args["first"]
+    all["JSON.ARRTRIM"] = fixed_args["first"]
+    all["JSON.OBJKEYS"] = fixed_args["first"]
+    all["JSON.OBJLEN"] = fixed_args["first"]
+    all["JSON.TYPE"] = fixed_args["first"]
+    all["JSON.RESP"] = fixed_args["first"]
+    all["JSON.TOGGLE"] = fixed_args["first"]
+    all["JSON.CLEAR"] = fixed_args["first"]
+    all["JSON.NUMMULTBY"] = fixed_args["first"]
 
     key_spec_template = """
 from __future__ import annotations

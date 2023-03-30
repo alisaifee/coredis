@@ -83,10 +83,14 @@ class CommandCache:
         *args: P.args,
         **kwargs: P.kwargs,
     ) -> AsyncIterator[R]:
+        from coredis.modules.base import ModuleGroup
+
         client = args[0]
+        if isinstance(args[0], ModuleGroup):
+            client = args[0].client
+
         cache = getattr(client, "cache")
         noreply = getattr(client, "noreply")
-
         if not (self.cache_config and cache) or noreply:
             yield await func(*args, **kwargs)
         else:

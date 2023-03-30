@@ -420,6 +420,32 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     XAUTOCLAIM = b"XAUTOCLAIM"  # Since redis: 6.2.0
     XGROUP_CREATECONSUMER = b"XGROUP CREATECONSUMER"  # Since redis: 6.2.0
 
+    #: Commands for json
+    JSON_DEL = b"JSON.DEL"  # Since redis: 1.0.0
+    JSON_FORGET = b"JSON.FORGET"  # Since redis: 1.0.0
+    JSON_GET = b"JSON.GET"  # Since redis: 1.0.0
+    JSON_SET = b"JSON.SET"  # Since redis: 1.0.0
+    JSON_MGET = b"JSON.MGET"  # Since redis: 1.0.0
+    JSON_NUMINCRBY = b"JSON.NUMINCRBY"  # Since redis: 1.0.0
+    JSON_STRAPPEND = b"JSON.STRAPPEND"  # Since redis: 1.0.0
+    JSON_STRLEN = b"JSON.STRLEN"  # Since redis: 1.0.0
+    JSON_ARRAPPEND = b"JSON.ARRAPPEND"  # Since redis: 1.0.0
+    JSON_ARRINDEX = b"JSON.ARRINDEX"  # Since redis: 1.0.0
+    JSON_ARRINSERT = b"JSON.ARRINSERT"  # Since redis: 1.0.0
+    JSON_ARRLEN = b"JSON.ARRLEN"  # Since redis: 1.0.0
+    JSON_ARRPOP = b"JSON.ARRPOP"  # Since redis: 1.0.0
+    JSON_ARRTRIM = b"JSON.ARRTRIM"  # Since redis: 1.0.0
+    JSON_OBJKEYS = b"JSON.OBJKEYS"  # Since redis: 1.0.0
+    JSON_OBJLEN = b"JSON.OBJLEN"  # Since redis: 1.0.0
+    JSON_TYPE = b"JSON.TYPE"  # Since redis: 1.0.0
+    JSON_RESP = b"JSON.RESP"  # Since redis: 1.0.0
+    JSON_DEBUG = b"JSON.DEBUG"  # Since redis: 1.0.0
+    JSON_DEBUG_HELP = b"JSON.DEBUG HELP"  # Since redis: 1.0.0
+    JSON_DEBUG_MEMORY = b"JSON.DEBUG MEMORY"  # Since redis: 1.0.0
+    JSON_TOGGLE = b"JSON.TOGGLE"  # Since redis: 2.0.0
+    JSON_CLEAR = b"JSON.CLEAR"  # Since redis: 2.0.0
+    JSON_NUMMULTBY = b"JSON.NUMMULTBY"  # Deprecated in redis: 2.0
+
     #: Oddball command
     DEBUG_OBJECT = b"DEBUG OBJECT"
 
@@ -453,6 +479,7 @@ class CommandGroup(enum.Enum):
     GEO = "geo"
     HASH = "hash"
     HYPERLOGLOG = "hyperloglog"
+    JSON = "json"
     LIST = "list"
     PUBSUB = "pubsub"
     SCRIPTING = "scripting"
