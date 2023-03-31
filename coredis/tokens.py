@@ -266,6 +266,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``EXPIRE``
     #:  - ``EXPIREAT``
     #:  - ``GEOADD``
+    #:  - ``JSON.SET``
     #:  - ``PEXPIRE``
     #:  - ``PEXPIREAT``
     #:  - ``SET``
@@ -277,6 +278,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``EXPIRE``
     #:  - ``EXPIREAT``
     #:  - ``GEOADD``
+    #:  - ``JSON.SET``
     #:  - ``PEXPIRE``
     #:  - ``PEXPIREAT``
     #:  - ``SET``
@@ -692,7 +694,7 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``CLIENT KILL``
     #:  - ``CLIENT LIST``
-    ID = b"ID"
+    IDENTIFIER = b"ID"
 
     #: Used by:
     #:
@@ -1019,3 +1021,18 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``ZUNION``
     #:  - ``ZUNIONSTORE``
     WEIGHTS = b"WEIGHTS"
+
+    #: Used by:
+    #:
+    #:  - ``JSON.GET``
+    INDENT = b"INDENT"
+
+    #: Used by:
+    #:
+    #:  - ``JSON.GET``
+    NEWLINE = b"NEWLINE"
+
+    #: Used by:
+    #:
+    #:  - ``JSON.GET``
+    SPACE = b"SPACE"

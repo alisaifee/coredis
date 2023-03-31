@@ -11,6 +11,7 @@
         "coredis/tokens.py",
         "coredis/typing.py",
         "coredis/commands/**/*.py",
+        "coredis/modules/**/*.py",
         "coredis/experimental/**/*.py"
     ],
     "exclude": [

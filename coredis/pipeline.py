@@ -877,7 +877,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         attempt = sorted(self.command_stack, key=lambda x: x.position)
         slots: Set[int] = set()
         for c in attempt:
-            slot = self._determine_slot(c.command, *c.args)
+            slot = self._determine_slot(c.command, *c.args, **c.options)
             if slot:
                 slots.add(slot)
 
@@ -1043,10 +1043,12 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
         return response
 
-    def _determine_slot(self, command: bytes, *args: ValueT) -> int:
+    def _determine_slot(self, command: bytes, *args: ValueT, **options: ValueT) -> int:
         """Figure out what slot based on command and args"""
 
-        keys: Tuple[ValueT, ...] = KeySpec.extract_keys(command, *args)
+        keys: Tuple[ValueT, ...] = cast(
+            Tuple[ValueT, ...], options.get("keys")
+        ) or KeySpec.extract_keys(command, *args)
 
         if not keys:
             raise RedisClusterException(

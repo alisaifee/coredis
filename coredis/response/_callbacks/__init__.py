@@ -402,12 +402,36 @@ class SetCallback(
             return self.transform(response)
 
 
+class OneOrManyCallback(
+    ResponseCallback[
+        Optional[Union[CR_co, List[Optional[CR_co]]]],
+        Optional[Union[CR_co, List[Optional[CR_co]]]],
+        Optional[Union[CR_co, List[Optional[CR_co]]]],
+    ]
+):
+    def transform(
+        self,
+        response: Optional[Union[CR_co, List[Optional[CR_co]]]],
+        **options: Optional[ValueT],
+    ) -> Optional[Union[CR_co, List[Optional[CR_co]]]]:
+        return response
+
+
 class BoolsCallback(ResponseCallback[ResponseType, ResponseType, Tuple[bool, ...]]):
     def transform(
         self, response: ResponseType, **options: Optional[ValueT]
     ) -> Tuple[bool, ...]:
         if isinstance(response, List):
             return tuple(BoolCallback()(r) for r in response)
+        return ()
+
+
+class FloatsCallback(ResponseCallback[ResponseType, ResponseType, Tuple[float, ...]]):
+    def transform(
+        self, response: ResponseType, **options: Optional[ValueT]
+    ) -> Tuple[float, ...]:
+        if isinstance(response, List):
+            return tuple(FloatCallback()(r) for r in response)
         return ()
 
 

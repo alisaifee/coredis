@@ -162,6 +162,12 @@ Monitor
    :no-inherited-members:
    :show-inheritance:
 
+Modules
+^^^^^^^
+
+.. autoclass:: coredis.modules.json.Json
+
+
 Connection Pools
 ^^^^^^^^^^^^^^^^
 :mod:`coredis`
