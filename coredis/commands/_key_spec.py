@@ -415,6 +415,18 @@ class KeySpec:
         b"BF.LOADCHUNK": lambda args: (args[1],),
         b"BF.INFO": lambda args: (args[1],),
         b"BF.CARD": lambda args: (args[1],),
+        b"CF.RESERVE": lambda args: (args[1],),
+        b"CF.ADD": lambda args: (args[1],),
+        b"CF.ADDNX": lambda args: (args[1],),
+        b"CF.INSERT": lambda args: (args[1],),
+        b"CF.INSERTNX": lambda args: (args[1],),
+        b"CF.EXISTS": lambda args: (args[1],),
+        b"CF.MEXISTS": lambda args: (args[1],),
+        b"CF.DEL": lambda args: (args[1],),
+        b"CF.COUNT": lambda args: (args[1],),
+        b"CF.SCANDUMP": lambda args: (args[1],),
+        b"CF.LOADCHUNK": lambda args: (args[1],),
+        b"CF.INFO": lambda args: (args[1],),
     }
 
     @classmethod

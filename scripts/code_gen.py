@@ -44,12 +44,12 @@ MODULES = {
         "group": "bf",
         "module": "bf"
     },
-    #"cuckoo": {
-    #    "repo": "https://github.com/RedisBloom/RedisBloom",
-    #    "prefix": "cf",
-    #    "group": "cf",
-    #    "module": "bf"
-    #},
+    "cuckoo": {
+        "repo": "https://github.com/RedisBloom/RedisBloom",
+        "prefix": "cf",
+        "group": "cf",
+        "module": "bf"
+    },
     #"countmin": {
     #    "repo": "https://github.com/RedisBloom/RedisBloom",
     #    "prefix": "cms",
@@ -2733,6 +2733,18 @@ def cluster_key_extraction(path):
     all["BF.LOADCHUNK"] = fixed_args["first"]
     all["BF.INFO"] = fixed_args["first"]
     all["BF.CARD"] = fixed_args["first"]
+    all["CF.RESERVE"] = fixed_args["first"]
+    all["CF.ADD"] = fixed_args["first"]
+    all["CF.ADDNX"] = fixed_args["first"]
+    all["CF.INSERT"] = fixed_args["first"]
+    all["CF.INSERTNX"] = fixed_args["first"]
+    all["CF.EXISTS"] = fixed_args["first"]
+    all["CF.MEXISTS"] = fixed_args["first"]
+    all["CF.DEL"] = fixed_args["first"]
+    all["CF.COUNT"] = fixed_args["first"]
+    all["CF.SCANDUMP"] = fixed_args["first"]
+    all["CF.LOADCHUNK"] = fixed_args["first"]
+    all["CF.INFO"] = fixed_args["first"]
 
     key_spec_template = """
 from __future__ import annotations

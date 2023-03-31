@@ -458,6 +458,20 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     BF_INFO = b"BF.INFO"  # Since bf: 1.0.0
     BF_CARD = b"BF.CARD"  # Since bf: 2.4.4
 
+    #: Commands for cf
+    CF_RESERVE = b"CF.RESERVE"  # Since bf: 1.0.0
+    CF_ADD = b"CF.ADD"  # Since bf: 1.0.0
+    CF_ADDNX = b"CF.ADDNX"  # Since bf: 1.0.0
+    CF_INSERT = b"CF.INSERT"  # Since bf: 1.0.0
+    CF_INSERTNX = b"CF.INSERTNX"  # Since bf: 1.0.0
+    CF_EXISTS = b"CF.EXISTS"  # Since bf: 1.0.0
+    CF_MEXISTS = b"CF.MEXISTS"  # Since bf: 1.0.0
+    CF_DEL = b"CF.DEL"  # Since bf: 1.0.0
+    CF_COUNT = b"CF.COUNT"  # Since bf: 1.0.0
+    CF_SCANDUMP = b"CF.SCANDUMP"  # Since bf: 1.0.0
+    CF_LOADCHUNK = b"CF.LOADCHUNK"  # Since bf: 1.0.0
+    CF_INFO = b"CF.INFO"  # Since bf: 1.0.0
+
     #: Oddball command
     DEBUG_OBJECT = b"DEBUG OBJECT"
 
@@ -486,6 +500,7 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
 class CommandGroup(enum.Enum):
     BF = "bf"
     BITMAP = "bitmap"
+    CF = "cf"
     CLUSTER = "cluster"
     CONNECTION = "connection"
     GENERIC = "generic"

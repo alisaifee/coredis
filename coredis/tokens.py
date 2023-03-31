@@ -641,11 +641,15 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``BF.INFO``
     #:  - ``BF.INSERT``
+    #:  - ``CF.INSERT``
+    #:  - ``CF.INSERTNX``
     ITEMS = b"ITEMS"
 
     #: Used by:
     #:
     #:  - ``BF.INSERT``
+    #:  - ``CF.INSERT``
+    #:  - ``CF.INSERTNX``
     NOCREATE = b"NOCREATE"
 
     #: Used by:
@@ -1078,14 +1082,27 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``BF.INSERT``
     #:  - ``BF.RESERVE``
+    #:  - ``CF.RESERVE``
     EXPANSION = b"EXPANSION"
 
     #: Used by:
     #:
     #:  - ``BF.INSERT``
+    #:  - ``CF.INSERT``
+    #:  - ``CF.INSERTNX``
     CAPACITY = b"CAPACITY"
 
     #: Used by:
     #:
     #:  - ``BF.INSERT``
     ERROR = b"ERROR"
+
+    #: Used by:
+    #:
+    #:  - ``CF.RESERVE``
+    BUCKETSIZE = b"BUCKETSIZE"
+
+    #: Used by:
+    #:
+    #:  - ``CF.RESERVE``
+    MAXITERATIONS = b"MAXITERATIONS"

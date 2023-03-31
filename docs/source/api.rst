@@ -167,6 +167,7 @@ Modules
 
 .. autoclass:: coredis.modules.json.Json
 .. autoclass:: coredis.modules.filters.BloomFilter
+.. autoclass:: coredis.modules.filters.CuckooFilter
 
 
 Connection Pools
