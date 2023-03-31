@@ -421,30 +421,30 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     XGROUP_CREATECONSUMER = b"XGROUP CREATECONSUMER"  # Since redis: 6.2.0
 
     #: Commands for json
-    JSON_DEL = b"JSON.DEL"  # Since redis: 1.0.0
-    JSON_FORGET = b"JSON.FORGET"  # Since redis: 1.0.0
-    JSON_GET = b"JSON.GET"  # Since redis: 1.0.0
-    JSON_SET = b"JSON.SET"  # Since redis: 1.0.0
-    JSON_MGET = b"JSON.MGET"  # Since redis: 1.0.0
-    JSON_NUMINCRBY = b"JSON.NUMINCRBY"  # Since redis: 1.0.0
-    JSON_STRAPPEND = b"JSON.STRAPPEND"  # Since redis: 1.0.0
-    JSON_STRLEN = b"JSON.STRLEN"  # Since redis: 1.0.0
-    JSON_ARRAPPEND = b"JSON.ARRAPPEND"  # Since redis: 1.0.0
-    JSON_ARRINDEX = b"JSON.ARRINDEX"  # Since redis: 1.0.0
-    JSON_ARRINSERT = b"JSON.ARRINSERT"  # Since redis: 1.0.0
-    JSON_ARRLEN = b"JSON.ARRLEN"  # Since redis: 1.0.0
-    JSON_ARRPOP = b"JSON.ARRPOP"  # Since redis: 1.0.0
-    JSON_ARRTRIM = b"JSON.ARRTRIM"  # Since redis: 1.0.0
-    JSON_OBJKEYS = b"JSON.OBJKEYS"  # Since redis: 1.0.0
-    JSON_OBJLEN = b"JSON.OBJLEN"  # Since redis: 1.0.0
-    JSON_TYPE = b"JSON.TYPE"  # Since redis: 1.0.0
-    JSON_RESP = b"JSON.RESP"  # Since redis: 1.0.0
-    JSON_DEBUG = b"JSON.DEBUG"  # Since redis: 1.0.0
-    JSON_DEBUG_HELP = b"JSON.DEBUG HELP"  # Since redis: 1.0.0
-    JSON_DEBUG_MEMORY = b"JSON.DEBUG MEMORY"  # Since redis: 1.0.0
-    JSON_TOGGLE = b"JSON.TOGGLE"  # Since redis: 2.0.0
-    JSON_CLEAR = b"JSON.CLEAR"  # Since redis: 2.0.0
-    JSON_NUMMULTBY = b"JSON.NUMMULTBY"  # Deprecated in redis: 2.0
+    JSON_DEL = b"JSON.DEL"  # Since ReJSON: 1.0.0
+    JSON_FORGET = b"JSON.FORGET"  # Since ReJSON: 1.0.0
+    JSON_GET = b"JSON.GET"  # Since ReJSON: 1.0.0
+    JSON_SET = b"JSON.SET"  # Since ReJSON: 1.0.0
+    JSON_MGET = b"JSON.MGET"  # Since ReJSON: 1.0.0
+    JSON_NUMINCRBY = b"JSON.NUMINCRBY"  # Since ReJSON: 1.0.0
+    JSON_STRAPPEND = b"JSON.STRAPPEND"  # Since ReJSON: 1.0.0
+    JSON_STRLEN = b"JSON.STRLEN"  # Since ReJSON: 1.0.0
+    JSON_ARRAPPEND = b"JSON.ARRAPPEND"  # Since ReJSON: 1.0.0
+    JSON_ARRINDEX = b"JSON.ARRINDEX"  # Since ReJSON: 1.0.0
+    JSON_ARRINSERT = b"JSON.ARRINSERT"  # Since ReJSON: 1.0.0
+    JSON_ARRLEN = b"JSON.ARRLEN"  # Since ReJSON: 1.0.0
+    JSON_ARRPOP = b"JSON.ARRPOP"  # Since ReJSON: 1.0.0
+    JSON_ARRTRIM = b"JSON.ARRTRIM"  # Since ReJSON: 1.0.0
+    JSON_OBJKEYS = b"JSON.OBJKEYS"  # Since ReJSON: 1.0.0
+    JSON_OBJLEN = b"JSON.OBJLEN"  # Since ReJSON: 1.0.0
+    JSON_TYPE = b"JSON.TYPE"  # Since ReJSON: 1.0.0
+    JSON_RESP = b"JSON.RESP"  # Since ReJSON: 1.0.0
+    JSON_DEBUG = b"JSON.DEBUG"  # Since ReJSON: 1.0.0
+    JSON_DEBUG_HELP = b"JSON.DEBUG HELP"  # Since ReJSON: 1.0.0
+    JSON_DEBUG_MEMORY = b"JSON.DEBUG MEMORY"  # Since ReJSON: 1.0.0
+    JSON_TOGGLE = b"JSON.TOGGLE"  # Since ReJSON: 2.0.0
+    JSON_CLEAR = b"JSON.CLEAR"  # Since ReJSON: 2.0.0
+    JSON_NUMMULTBY = b"JSON.NUMMULTBY"  # Deprecated in ReJSON: 2.0
 
     #: Oddball command
     DEBUG_OBJECT = b"DEBUG OBJECT"

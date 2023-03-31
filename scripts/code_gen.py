@@ -787,7 +787,7 @@ def get_module_commands(module: str):
     response = get_commands(module+'.json')
     by_module = {}
     [
-        by_module.setdefault(command["group"], []).append({**command, **{"name": name}})
+        by_module.setdefault(command["group"], []).append({**command, **{"name": name, "module": module}})
         for name, command in response.items()
     ]
     return by_module
@@ -2156,7 +2156,11 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     {% for command in sorted(commands, key=sort_fn) -%}
     {% if not command.get("deprecated_since") -%}
     {% if command.get("since") -%}
+    {% if command.get("module") -%}
+    {{ command["name"].upper().replace(" ", "_").replace("-", "_").replace(".", "_")}} = b"{{command["name"]}}"  # Since {{command.get("module")}}: {{command["since"]}}
+    {% else -%}
     {{ command["name"].upper().replace(" ", "_").replace("-", "_").replace(".", "_")}} = b"{{command["name"]}}"  # Since redis: {{command["since"]}}
+    {% endif -%}
     {% else -%}
     {{ command["name"].upper().replace(" ", "_").replace("-", "_").replace(".", "_")}} = b"{{command["name"]}}"
     {% endif -%}
@@ -2164,7 +2168,11 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     {% endfor -%}
     {% for command in sorted(commands, key=sort_fn) -%}
     {% if command.get("deprecated_since") -%}
+    {% if command.get("module") -%}
+    {{ command["name"].upper().replace(" ", "_").replace("-", "_").replace(".", "_")}} = b"{{command["name"]}}"  # Deprecated in {{command.get("module")}}: {{command["deprecated_since"]}}
+    {% else -%}
     {{ command["name"].upper().replace(" ", "_").replace("-", "_").replace(".", "_")}} = b"{{command["name"]}}"  # Deprecated in redis: {{command["deprecated_since"]}}
+    {% endif -%}
     {% endif -%}
     {% endfor %}
     {% endfor -%}
