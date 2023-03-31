@@ -672,6 +672,11 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``BF.INFO``
     SIZE = b"SIZE"
 
+    #: Used by:
+    #:
+    #:  - ``CMS.MERGE``
+    WEIGHTS = b"WEIGHTS"
+
 
 class PrefixToken(CaseAndEncodingInsensitiveEnum):
     """

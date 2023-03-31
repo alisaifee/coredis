@@ -427,6 +427,12 @@ class KeySpec:
         b"CF.SCANDUMP": lambda args: (args[1],),
         b"CF.LOADCHUNK": lambda args: (args[1],),
         b"CF.INFO": lambda args: (args[1],),
+        b"CMS.INITBYDIM": lambda args: (args[1],),
+        b"CMS.INITBYPROB": lambda args: (args[1],),
+        b"CMS.INCRBY": lambda args: (args[1],),
+        b"CMS.QUERY": lambda args: (args[1],),
+        b"CMS.INFO": lambda args: (args[1],),
+        b"CMS.MERGE": lambda args: ((args[1],) + args[3 : 3 + int(args[2])]),
     }
 
     @classmethod

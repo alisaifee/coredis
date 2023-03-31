@@ -5,6 +5,7 @@ from coredis.typing import (
     CommandArgList,
     Dict,
     KeyT,
+    List,
     Literal,
     Optional,
     Parameters,
@@ -15,6 +16,7 @@ from coredis.typing import (
     ValueT,
 )
 
+from .._utils import dict_to_flat_list
 from ..commands.constants import CommandGroup, CommandName
 from ..response._callbacks import (
     BoolCallback,
@@ -24,6 +26,7 @@ from ..response._callbacks import (
     IntCallback,
     MixedTupleCallback,
     SimpleStringCallback,
+    TupleCallback,
 )
 from ..tokens import PrefixToken, PureToken
 from .base import ModuleGroup, module_command
@@ -360,4 +363,94 @@ class CuckooFilter(ModuleGroup[AnyStr]):
 
         return await self.execute_module_command(
             CommandName.CF_INFO, key, callback=DictCallback[AnyStr, ResponsePrimitive]()
+        )
+
+
+class CountMinSketch(ModuleGroup[AnyStr]):
+    @module_command(CommandName.CMS_INITBYDIM, group=CommandGroup.CMS, module="bf")
+    async def initbydim(self, key: KeyT, width: int, depth: int) -> bool:
+        """
+        Initializes a Count-Min Sketch to dimensions specified by user
+        """
+        return await self.execute_module_command(
+            CommandName.CMS_INITBYDIM,
+            key,
+            width,
+            depth,
+            callback=SimpleStringCallback(),
+        )
+
+    @module_command(CommandName.CMS_INITBYPROB, group=CommandGroup.CMS, module="bf")
+    async def initbyprob(
+        self, key: KeyT, error: Union[int, float], probability: Union[int, float]
+    ) -> bool:
+        """
+        Initializes a Count-Min Sketch to accommodate requested tolerances.
+        """
+        return await self.execute_module_command(
+            CommandName.CMS_INITBYPROB,
+            key,
+            error,
+            probability,
+            callback=SimpleStringCallback(),
+        )
+
+    @module_command(CommandName.CMS_INCRBY, group=CommandGroup.CMS, module="bf")
+    async def incrby(self, key: KeyT, items: Dict[AnyStr, int]) -> Tuple[int, ...]:
+        """
+        Increases the count of one or more items by increment
+        """
+
+        return await self.execute_module_command(
+            CommandName.CMS_INCRBY,
+            key,
+            *dict_to_flat_list(items),
+            callback=TupleCallback[int](),
+        )
+
+    @module_command(CommandName.CMS_QUERY, group=CommandGroup.CMS, module="bf")
+    async def query(
+        self,
+        key: KeyT,
+        items: Parameters[StringT],
+    ) -> Tuple[int, ...]:
+        """
+        Returns the count for one or more items in a sketch
+        """
+        pieces: CommandArgList = [key, *items]
+
+        return await self.execute_module_command(
+            CommandName.CMS_QUERY, *pieces, callback=TupleCallback[int]()
+        )
+
+    @module_command(CommandName.CMS_MERGE, group=CommandGroup.CMS, module="bf")
+    async def merge(
+        self,
+        destination: KeyT,
+        sources: Parameters[KeyT],
+        weights: Optional[Parameters[Union[int, float]]] = None,
+    ) -> bool:
+        """
+        Merges several sketches into one sketch
+        """
+        _sources: List[KeyT] = list(sources)
+        pieces: CommandArgList = [destination, len(_sources), *_sources]
+        if weights:
+            pieces.append(PrefixToken.WEIGHTS)
+            pieces.extend(weights)
+
+        return await self.execute_module_command(
+            CommandName.CMS_MERGE, *pieces, callback=SimpleStringCallback()
+        )
+
+    @module_command(CommandName.CMS_INFO, group=CommandGroup.CMS, module="bf")
+    async def info(self, key: KeyT) -> Dict[AnyStr, int]:
+        """
+        Returns information about a sketch
+        """
+
+        return await self.execute_module_command(
+            CommandName.CMS_INFO,
+            key,
+            callback=DictCallback[AnyStr, int](),
         )

@@ -50,12 +50,12 @@ MODULES = {
         "group": "cf",
         "module": "bf"
     },
-    #"countmin": {
-    #    "repo": "https://github.com/RedisBloom/RedisBloom",
-    #    "prefix": "cms",
-    #    "group": "cms",
-    #    "module": "bf"
-    #},
+    "countmin": {
+        "repo": "https://github.com/RedisBloom/RedisBloom",
+        "prefix": "cms",
+        "group": "cms",
+        "module": "bf"
+    },
     #"topk": {
     #    "repo": "https://github.com/RedisBloom/RedisBloom",
     #    "prefix": "topk",
@@ -2745,6 +2745,12 @@ def cluster_key_extraction(path):
     all["CF.SCANDUMP"] = fixed_args["first"]
     all["CF.LOADCHUNK"] = fixed_args["first"]
     all["CF.INFO"] = fixed_args["first"]
+    all["CMS.INITBYDIM"] = fixed_args["first"]
+    all["CMS.INITBYPROB"] = fixed_args["first"]
+    all["CMS.INCRBY"] = fixed_args["first"]
+    all["CMS.QUERY"] = fixed_args["first"]
+    all["CMS.INFO"] = fixed_args["first"]
+    all["CMS.MERGE"] = ["(args[1],) + args[3 : 3 + int(args[2])]"]
 
     key_spec_template = """
 from __future__ import annotations

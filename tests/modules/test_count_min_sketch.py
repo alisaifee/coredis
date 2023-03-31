@@ -1,0 +1,102 @@
+from __future__ import annotations
+
+import asyncio
+
+import pytest
+
+from coredis import Redis
+from coredis.exceptions import ResponseError
+from tests.conftest import targets
+
+
+@targets(
+    "redis_stack",
+    "redis_stack_cluster",
+)
+class TestCountMinSketch:
+    async def test_init(self, client: Redis):
+        assert await client.cms.initbydim("sketch", 2, 50)
+        assert await client.cms.initbyprob("sketchprob", 0.042, 0.42)
+        infos = await asyncio.gather(
+            client.cms.info("sketch"), client.cms.info("sketchprob")
+        )
+        assert infos[0]["width"] == 2
+        assert infos[0]["depth"] == 50
+        assert infos[1]["width"] == 48
+        assert infos[1]["depth"] == 2
+
+    async def test_incrby(self, client: Redis):
+        assert await client.cms.initbydim("sketch", 2, 50)
+        assert (1, 2) == await client.cms.incrby(
+            "sketch",
+            {
+                "fu": 1,
+                "bar": 2,
+            },
+        )
+
+        with pytest.raises(ResponseError):
+            await client.cms.incrby(
+                "missingsketch",
+                {
+                    "fu": 1,
+                },
+            )
+        await client.set("notsketch", 1)
+        with pytest.raises(ResponseError):
+            await client.cms.incrby(
+                "notsketch",
+                {
+                    "fu": 1,
+                },
+            )
+
+    @pytest.mark.nocluster
+    async def test_merge(self, client):
+        assert await client.cms.initbydim("sketch1", 2, 50)
+        assert await client.cms.initbydim("sketch2", 2, 50)
+        assert await client.cms.initbydim("sketch", 2, 50)
+        assert await client.cms.initbydim("sketchweighed", 2, 50)
+        assert (1, 1) == await client.cms.incrby(
+            "sketch1",
+            {
+                "fu": 1,
+                "bar": 1,
+            },
+        )
+        assert (2,) == await client.cms.incrby(
+            "sketch2",
+            {
+                "bar": 2,
+            },
+        )
+        await client.cms.merge("sketch", ["sketch1", "sketch2"])
+        await client.cms.merge("sketchweighed", ["sketch1", "sketch2"], [2, 1])
+
+        assert (1, 3) == await client.cms.query("sketch", ["fu", "bar"])
+        assert (2, 4) == await client.cms.query("sketchweighed", ["fu", "bar"])
+
+    @pytest.mark.clusteronly
+    async def test_merge_cluster(self, client):
+        assert await client.cms.initbydim("sketch1{a}", 2, 50)
+        assert await client.cms.initbydim("sketch2{a}", 2, 50)
+        assert await client.cms.initbydim("sketch{a}", 2, 50)
+        assert await client.cms.initbydim("sketchweighed{a}", 2, 50)
+        assert (1, 1) == await client.cms.incrby(
+            "sketch1{a}",
+            {
+                "fu": 1,
+                "bar": 1,
+            },
+        )
+        assert (2,) == await client.cms.incrby(
+            "sketch2{a}",
+            {
+                "bar": 2,
+            },
+        )
+        await client.cms.merge("sketch{a}", ["sketch1{a}", "sketch2{a}"])
+        await client.cms.merge("sketchweighed{a}", ["sketch1{a}", "sketch2{a}"], [2, 1])
+
+        assert (1, 3) == await client.cms.query("sketch{a}", ["fu", "bar"])
+        assert (2, 4) == await client.cms.query("sketchweighed{a}", ["fu", "bar"])

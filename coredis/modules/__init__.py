@@ -5,7 +5,7 @@ from deprecated.sphinx import versionadded
 from coredis.commands import CommandMixin
 from coredis.typing import AnyStr
 
-from .filters import BloomFilter, CuckooFilter
+from .filters import BloomFilter, CountMinSketch, CuckooFilter
 from .json import Json
 
 
@@ -33,3 +33,11 @@ class ModuleMixin(CommandMixin[AnyStr]):
         Property to access :class:`~coredis.modules.filters.CuckooFilter` commands.
         """
         return CuckooFilter(self)
+
+    @property
+    @versionadded(version="4.12.0")
+    def cms(self) -> CountMinSketch[AnyStr]:
+        """
+        Property to access :class:`~coredis.modules.filters.CountMinSketch` commands.
+        """
+        return CountMinSketch(self)

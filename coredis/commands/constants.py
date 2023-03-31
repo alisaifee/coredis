@@ -472,6 +472,14 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     CF_LOADCHUNK = b"CF.LOADCHUNK"  # Since bf: 1.0.0
     CF_INFO = b"CF.INFO"  # Since bf: 1.0.0
 
+    #: Commands for cms
+    CMS_INITBYDIM = b"CMS.INITBYDIM"  # Since bf: 2.0.0
+    CMS_INITBYPROB = b"CMS.INITBYPROB"  # Since bf: 2.0.0
+    CMS_INCRBY = b"CMS.INCRBY"  # Since bf: 2.0.0
+    CMS_QUERY = b"CMS.QUERY"  # Since bf: 2.0.0
+    CMS_MERGE = b"CMS.MERGE"  # Since bf: 2.0.0
+    CMS_INFO = b"CMS.INFO"  # Since bf: 2.0.0
+
     #: Oddball command
     DEBUG_OBJECT = b"DEBUG OBJECT"
 
@@ -502,6 +510,7 @@ class CommandGroup(enum.Enum):
     BITMAP = "bitmap"
     CF = "cf"
     CLUSTER = "cluster"
+    CMS = "cms"
     CONNECTION = "connection"
     GENERIC = "generic"
     GEO = "geo"
