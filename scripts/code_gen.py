@@ -38,6 +38,36 @@ MODULES = {
         "group": "json",
         "module": "ReJSON",
     },
+    "bloom": {
+        "repo": "https://github.com/RedisBloom/RedisBloom",
+        "prefix": "bf",
+        "group": "bf",
+        "module": "bf"
+    },
+    #"cuckoo": {
+    #    "repo": "https://github.com/RedisBloom/RedisBloom",
+    #    "prefix": "cf",
+    #    "group": "cf",
+    #    "module": "bf"
+    #},
+    #"countmin": {
+    #    "repo": "https://github.com/RedisBloom/RedisBloom",
+    #    "prefix": "cms",
+    #    "group": "cms",
+    #    "module": "bf"
+    #},
+    #"topk": {
+    #    "repo": "https://github.com/RedisBloom/RedisBloom",
+    #    "prefix": "topk",
+    #    "group": "topk",
+    #    "module": "bf"
+    #},
+    #"tdigest": {
+    #    "repo": "https://github.com/RedisBloom/RedisBloom",
+    #    "prefix": "tdigest",
+    #    "group": "tdigest",
+    #    "module": "bf"
+    #},
 }
 
 MAPPING = {"DEL": "delete"}
@@ -483,7 +513,8 @@ def get_token_mapping():
     for name in ['commands', *MODULES.keys()]:
         commands = get_commands(name+".json")
         for command, details in commands.items():
-
+            if name in MODULES and not details["group"] == MODULES[name]["group"]:
+                continue
             def _extract_pure_tokens(obj):
                 tokens = []
 
@@ -787,8 +818,8 @@ def get_module_commands(module: str):
     response = get_commands(module+'.json')
     by_module = {}
     [
-        by_module.setdefault(command["group"], []).append({**command, **{"name": name, "module": module}})
-        for name, command in response.items()
+        by_module.setdefault(command["group"], []).append({**command, **{"name": name, "module": MODULES[module]["module"]}})
+        for name, command in response.items() if command["group"] == MODULES[module]["group"]
     ]
     return by_module
 
@@ -2692,6 +2723,16 @@ def cluster_key_extraction(path):
     all["JSON.TOGGLE"] = fixed_args["first"]
     all["JSON.CLEAR"] = fixed_args["first"]
     all["JSON.NUMMULTBY"] = fixed_args["first"]
+    all["BF.RESERVE"] = fixed_args["first"]
+    all["BF.ADD"] = fixed_args["first"]
+    all["BF.MADD"] = fixed_args["first"]
+    all["BF.INSERT"] = fixed_args["first"]
+    all["BF.EXISTS"] = fixed_args["first"]
+    all["BF.MEXISTS"] = fixed_args["first"]
+    all["BF.SCANDUMP"] = fixed_args["first"]
+    all["BF.LOADCHUNK"] = fixed_args["first"]
+    all["BF.INFO"] = fixed_args["first"]
+    all["BF.CARD"] = fixed_args["first"]
 
     key_spec_template = """
 from __future__ import annotations

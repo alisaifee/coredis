@@ -446,6 +446,18 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     JSON_CLEAR = b"JSON.CLEAR"  # Since ReJSON: 2.0.0
     JSON_NUMMULTBY = b"JSON.NUMMULTBY"  # Deprecated in ReJSON: 2.0
 
+    #: Commands for bf
+    BF_RESERVE = b"BF.RESERVE"  # Since bf: 1.0.0
+    BF_ADD = b"BF.ADD"  # Since bf: 1.0.0
+    BF_MADD = b"BF.MADD"  # Since bf: 1.0.0
+    BF_INSERT = b"BF.INSERT"  # Since bf: 1.0.0
+    BF_EXISTS = b"BF.EXISTS"  # Since bf: 1.0.0
+    BF_MEXISTS = b"BF.MEXISTS"  # Since bf: 1.0.0
+    BF_SCANDUMP = b"BF.SCANDUMP"  # Since bf: 1.0.0
+    BF_LOADCHUNK = b"BF.LOADCHUNK"  # Since bf: 1.0.0
+    BF_INFO = b"BF.INFO"  # Since bf: 1.0.0
+    BF_CARD = b"BF.CARD"  # Since bf: 2.4.4
+
     #: Oddball command
     DEBUG_OBJECT = b"DEBUG OBJECT"
 
@@ -472,6 +484,7 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
 
 
 class CommandGroup(enum.Enum):
+    BF = "bf"
     BITMAP = "bitmap"
     CLUSTER = "cluster"
     CONNECTION = "connection"

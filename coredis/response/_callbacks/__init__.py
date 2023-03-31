@@ -38,6 +38,7 @@ from coredis.typing import (
 )
 
 R = TypeVar("R")
+S = TypeVar("S")
 P = ParamSpec("P")
 CR_co = TypeVar("CR_co", covariant=True)
 CK_co = TypeVar("CK_co", covariant=True)
@@ -327,6 +328,17 @@ class TupleCallback(
         raise ValueError(f"Unable to map {response!r} to tuple")
 
 
+class MixedTupleCallback(
+    ResponseCallback[List[ResponseType], List[ResponseType], Tuple[R, S]]
+):
+    def transform(
+        self, response: ResponseType, **options: Optional[ValueT]
+    ) -> Tuple[R, S]:
+        if isinstance(response, List):
+            return cast(Tuple[R, S], tuple(response))
+        raise ValueError(f"Unable to map {response!r} to tuple")
+
+
 class ListCallback(
     ResponseCallback[List[ResponseType], List[ResponseType], List[CR_co]]
 ):
@@ -489,3 +501,11 @@ class OptionalListCallback(
         self, response: ResponseType, **options: Optional[ValueT]
     ) -> Optional[List[CR_co]]:
         return cast(List[CR_co], response)
+
+
+class FirstValueCallback(ResponseCallback[List[CR_co], List[CR_co], CR_co]):
+    def transform(self, response: List[CR_co], **options: Optional[ValueT]) -> CR_co:
+        if response:
+            return response[0]
+        else:
+            raise ValueError("Empty response list")

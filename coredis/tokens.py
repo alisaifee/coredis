@@ -631,6 +631,43 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``ZREVRANK``
     WITHSCORE = b"WITHSCORE"
 
+    #: Used by:
+    #:
+    #:  - ``BF.INSERT``
+    #:  - ``BF.RESERVE``
+    NONSCALING = b"NONSCALING"
+
+    #: Used by:
+    #:
+    #:  - ``BF.INFO``
+    #:  - ``BF.INSERT``
+    ITEMS = b"ITEMS"
+
+    #: Used by:
+    #:
+    #:  - ``BF.INSERT``
+    NOCREATE = b"NOCREATE"
+
+    #: Used by:
+    #:
+    #:  - ``BF.INFO``
+    CAPACITY = b"CAPACITY"
+
+    #: Used by:
+    #:
+    #:  - ``BF.INFO``
+    EXPANSION = b"EXPANSION"
+
+    #: Used by:
+    #:
+    #:  - ``BF.INFO``
+    FILTERS = b"FILTERS"
+
+    #: Used by:
+    #:
+    #:  - ``BF.INFO``
+    SIZE = b"SIZE"
+
 
 class PrefixToken(CaseAndEncodingInsensitiveEnum):
     """
@@ -1036,3 +1073,19 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``JSON.GET``
     SPACE = b"SPACE"
+
+    #: Used by:
+    #:
+    #:  - ``BF.INSERT``
+    #:  - ``BF.RESERVE``
+    EXPANSION = b"EXPANSION"
+
+    #: Used by:
+    #:
+    #:  - ``BF.INSERT``
+    CAPACITY = b"CAPACITY"
+
+    #: Used by:
+    #:
+    #:  - ``BF.INSERT``
+    ERROR = b"ERROR"

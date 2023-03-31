@@ -405,6 +405,16 @@ class KeySpec:
         b"JSON.TOGGLE": lambda args: (args[1],),
         b"JSON.CLEAR": lambda args: (args[1],),
         b"JSON.NUMMULTBY": lambda args: (args[1],),
+        b"BF.RESERVE": lambda args: (args[1],),
+        b"BF.ADD": lambda args: (args[1],),
+        b"BF.MADD": lambda args: (args[1],),
+        b"BF.INSERT": lambda args: (args[1],),
+        b"BF.EXISTS": lambda args: (args[1],),
+        b"BF.MEXISTS": lambda args: (args[1],),
+        b"BF.SCANDUMP": lambda args: (args[1],),
+        b"BF.LOADCHUNK": lambda args: (args[1],),
+        b"BF.INFO": lambda args: (args[1],),
+        b"BF.CARD": lambda args: (args[1],),
     }
 
     @classmethod
