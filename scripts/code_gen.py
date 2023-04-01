@@ -56,18 +56,18 @@ MODULES = {
         "group": "cms",
         "module": "bf"
     },
-    #"topk": {
-    #    "repo": "https://github.com/RedisBloom/RedisBloom",
-    #    "prefix": "topk",
-    #    "group": "topk",
-    #    "module": "bf"
-    #},
-    #"tdigest": {
-    #    "repo": "https://github.com/RedisBloom/RedisBloom",
-    #    "prefix": "tdigest",
-    #    "group": "tdigest",
-    #    "module": "bf"
-    #},
+    "topk": {
+        "repo": "https://github.com/RedisBloom/RedisBloom",
+        "prefix": "topk",
+        "group": "topk",
+        "module": "bf"
+    },
+    "tdigest": {
+        "repo": "https://github.com/RedisBloom/RedisBloom",
+        "prefix": "tdigest",
+        "group": "tdigest",
+        "module": "bf"
+    },
 }
 
 MAPPING = {"DEL": "delete"}
@@ -2723,6 +2723,8 @@ def cluster_key_extraction(path):
     all["JSON.TOGGLE"] = fixed_args["first"]
     all["JSON.CLEAR"] = fixed_args["first"]
     all["JSON.NUMMULTBY"] = fixed_args["first"]
+
+    # bf
     all["BF.RESERVE"] = fixed_args["first"]
     all["BF.ADD"] = fixed_args["first"]
     all["BF.MADD"] = fixed_args["first"]
@@ -2751,6 +2753,27 @@ def cluster_key_extraction(path):
     all["CMS.QUERY"] = fixed_args["first"]
     all["CMS.INFO"] = fixed_args["first"]
     all["CMS.MERGE"] = ["(args[1],) + args[3 : 3 + int(args[2])]"]
+    all["TOPK.RESERVE"] = fixed_args["first"]
+    all["TOPK.ADD"] = fixed_args["first"]
+    all["TOPK.INCRBY"] = fixed_args["first"]
+    all["TOPK.QUERY"] = fixed_args["first"]
+    all["TOPK.LIST"] = fixed_args["first"]
+    all["TOPK.INFO"] = fixed_args["first"]
+    all["TOPK.COUNT"] = fixed_args["first"]
+    all["TDIGEST.CREATE"] = fixed_args["first"]
+    all["TDIGEST.RESET"] = fixed_args["first"]
+    all["TDIGEST.ADD"] = fixed_args["first"]
+    all["TDIGEST.MERGE"] = ["(args[1],) + args[3 : 3 + int(args[2])]"]
+    all["TDIGEST.MIN"] = fixed_args["first"]
+    all["TDIGEST.MAX"] = fixed_args["first"]
+    all["TDIGEST.QUANTILE"] = fixed_args["first"]
+    all["TDIGEST.CDF"] = fixed_args["first"]
+    all["TDIGEST.TRIMMED_MEAN"] = fixed_args["first"]
+    all["TDIGEST.RANK"] = fixed_args["first"]
+    all["TDIGEST.REVRANK"] = fixed_args["first"]
+    all["TDIGEST.BYRANK"] = fixed_args["first"]
+    all["TDIGEST.BYREVRANK"] = fixed_args["first"]
+    all["TDIGEST.INFO"] = fixed_args["first"]
 
     key_spec_template = """
 from __future__ import annotations

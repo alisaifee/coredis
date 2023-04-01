@@ -677,6 +677,21 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``CMS.MERGE``
     WEIGHTS = b"WEIGHTS"
 
+    #: Used by:
+    #:
+    #:  - ``TOPK.LIST``
+    WITHCOUNT = b"WITHCOUNT"
+
+    #: Used by:
+    #:
+    #:  - ``TDIGEST.MERGE``
+    COMPRESSION = b"COMPRESSION"
+
+    #: Used by:
+    #:
+    #:  - ``TDIGEST.MERGE``
+    OVERRIDE = b"OVERRIDE"
+
 
 class PrefixToken(CaseAndEncodingInsensitiveEnum):
     """
@@ -1111,3 +1126,8 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``CF.RESERVE``
     MAXITERATIONS = b"MAXITERATIONS"
+
+    #: Used by:
+    #:
+    #:  - ``TDIGEST.CREATE``
+    COMPRESSION = b"COMPRESSION"

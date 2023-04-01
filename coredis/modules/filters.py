@@ -17,12 +17,15 @@ from coredis.typing import (
 )
 
 from .._utils import dict_to_flat_list
+from ..commands._validators import mutually_inclusive_parameters
 from ..commands.constants import CommandGroup, CommandName
 from ..response._callbacks import (
     BoolCallback,
     BoolsCallback,
     DictCallback,
     FirstValueCallback,
+    FloatCallback,
+    FloatsCallback,
     IntCallback,
     MixedTupleCallback,
     SimpleStringCallback,
@@ -453,4 +456,333 @@ class CountMinSketch(ModuleGroup[AnyStr]):
             CommandName.CMS_INFO,
             key,
             callback=DictCallback[AnyStr, int](),
+        )
+
+
+class TopK(ModuleGroup[AnyStr]):
+    @mutually_inclusive_parameters("width", "depth", "decay")
+    @module_command(CommandName.TOPK_RESERVE, group=CommandGroup.TOPK, module="bf")
+    async def reserve(
+        self,
+        key: KeyT,
+        topk: int,
+        width: Optional[int] = None,
+        depth: Optional[int] = None,
+        decay: Optional[Union[int, float]] = None,
+    ) -> bool:
+        """
+        Initializes a TopK with specified parameters
+        """
+        pieces: CommandArgList = [key, topk]
+        if width is not None and depth is not None and decay is not None:
+            pieces.extend([width, depth, decay])
+        return await self.execute_module_command(
+            CommandName.TOPK_RESERVE, *pieces, callback=SimpleStringCallback()
+        )
+
+    @module_command(CommandName.TOPK_ADD, group=CommandGroup.TOPK, module="bf")
+    async def add(
+        self, key: KeyT, items: Parameters[AnyStr]
+    ) -> Tuple[Optional[AnyStr], ...]:
+        """
+        Increases the count of one or more items by increment
+        """
+        return await self.execute_module_command(
+            CommandName.TOPK_ADD,
+            key,
+            *items,
+            callback=TupleCallback[Optional[AnyStr]](),
+        )
+
+    @module_command(CommandName.TOPK_INCRBY, group=CommandGroup.TOPK, module="bf")
+    async def incrby(
+        self, key: KeyT, items: Dict[AnyStr, int]
+    ) -> Tuple[Optional[AnyStr], ...]:
+        """
+        Increases the count of one or more items by increment
+        """
+        return await self.execute_module_command(
+            CommandName.TOPK_INCRBY,
+            key,
+            *dict_to_flat_list(items),
+            callback=TupleCallback[Optional[AnyStr]](),
+        )
+
+    @module_command(CommandName.TOPK_QUERY, group=CommandGroup.TOPK, module="bf")
+    async def query(
+        self,
+        key: KeyT,
+        items: Parameters[StringT],
+    ) -> Tuple[bool, ...]:
+        """
+        Checks whether one or more items are in a sketch
+        """
+        pieces: CommandArgList = [key, *items]
+
+        return await self.execute_module_command(
+            CommandName.TOPK_QUERY, *pieces, callback=BoolsCallback()
+        )
+
+    @module_command(CommandName.TOPK_COUNT, group=CommandGroup.TOPK, module="bf")
+    async def count(
+        self,
+        key: KeyT,
+        items: Parameters[StringT],
+    ) -> Tuple[int, ...]:
+        """
+        Return the count for one or more items are in a sketch
+        """
+        pieces: CommandArgList = [key, *items]
+
+        return await self.execute_module_command(
+            CommandName.TOPK_COUNT, *pieces, callback=TupleCallback[int]()
+        )
+
+    @module_command(CommandName.TOPK_LIST, group=CommandGroup.TOPK, module="bf")
+    async def list(
+        self, key: KeyT, withcount: Optional[bool] = None
+    ) -> Union[Dict[AnyStr, int], Tuple[AnyStr, ...]]:
+        """
+        Return full list of items in Top K list
+        """
+        pieces: CommandArgList = [key]
+        if withcount:
+            pieces.append(PureToken.WITHCOUNT)
+            return await self.execute_module_command(
+                CommandName.TOPK_LIST, *pieces, callback=DictCallback[AnyStr, int]()
+            )
+        else:
+            return await self.execute_module_command(
+                CommandName.TOPK_LIST, *pieces, callback=TupleCallback[AnyStr]()
+            )
+
+    @module_command(CommandName.TOPK_INFO, group=CommandGroup.TOPK, module="bf")
+    async def info(self, key: KeyT) -> Dict[AnyStr, int]:
+        """
+        Returns information about a sketch
+        """
+
+        return await self.execute_module_command(
+            CommandName.TOPK_INFO,
+            key,
+            callback=DictCallback[AnyStr, int](),
+        )
+
+
+class TDigest(ModuleGroup[AnyStr]):
+    @module_command(CommandName.TDIGEST_CREATE, group=CommandGroup.TDIGEST, module="bf")
+    async def create(self, key: KeyT, compression: Optional[int] = None) -> bool:
+        """
+        Allocates memory and initializes a new t-digest sketch
+        """
+        pieces: CommandArgList = [key]
+        if compression is not None:
+            pieces.extend([PrefixToken.COMPRESSION, compression])
+        return await self.execute_module_command(
+            CommandName.TDIGEST_CREATE, *pieces, callback=SimpleStringCallback()
+        )
+
+    @module_command(CommandName.TDIGEST_RESET, group=CommandGroup.TDIGEST, module="bf")
+    async def reset(self, key: KeyT) -> bool:
+        """
+        Resets a t-digest sketch: empty the sketch and re-initializes it.
+        """
+        return await self.execute_module_command(
+            CommandName.TDIGEST_RESET, key, callback=SimpleStringCallback()
+        )
+
+    @module_command(CommandName.TDIGEST_ADD, group=CommandGroup.TDIGEST, module="bf")
+    async def add(
+        self,
+        key: KeyT,
+        values: Parameters[Union[int, float]],
+    ) -> bool:
+        """
+        Adds one or more observations to a t-digest sketch
+        """
+        pieces: CommandArgList = [key, *values]
+
+        return await self.execute_module_command(
+            CommandName.TDIGEST_ADD, *pieces, callback=SimpleStringCallback()
+        )
+
+    @module_command(CommandName.TDIGEST_MERGE, group=CommandGroup.TDIGEST, module="bf")
+    async def merge(
+        self,
+        destination_key: KeyT,
+        source_keys: Parameters[KeyT],
+        compression: Optional[int] = None,
+        override: Optional[bool] = None,
+    ) -> bool:
+        """
+        Merges multiple t-digest sketches into a single sketch
+        """
+        _source_keys: List[KeyT] = list(source_keys)
+        pieces: CommandArgList = [
+            destination_key,
+            len(_source_keys),
+            *_source_keys,
+        ]
+        if compression is not None:
+            pieces.extend([PrefixToken.COMPRESSION, compression])
+        if override is not None:
+            pieces.append(PureToken.OVERRIDE)
+        return await self.execute_module_command(
+            CommandName.TDIGEST_MERGE, *pieces, callback=SimpleStringCallback()
+        )
+
+    @module_command(CommandName.TDIGEST_MIN, group=CommandGroup.TDIGEST, module="bf")
+    async def min(self, key: KeyT) -> float:
+        """
+        Returns the minimum observation value from a t-digest sketch
+        """
+
+        return await self.execute_module_command(
+            CommandName.TDIGEST_MIN, key, callback=FloatCallback()
+        )
+
+    @module_command(CommandName.TDIGEST_MAX, group=CommandGroup.TDIGEST, module="bf")
+    async def max(self, key: KeyT) -> float:
+        """
+        Returns the maximum observation value from a t-digest sketch
+        """
+
+        return await self.execute_module_command(
+            CommandName.TDIGEST_MAX, key, callback=FloatCallback()
+        )
+
+    @module_command(
+        CommandName.TDIGEST_QUANTILE, group=CommandGroup.TDIGEST, module="bf"
+    )
+    async def quantile(
+        self,
+        key: KeyT,
+        quantiles: Parameters[Union[int, float]],
+    ) -> Tuple[float, ...]:
+        """
+        Returns, for each input fraction, an estimation of the value (floating point)
+        that is smaller than the given fraction of observations
+        """
+        pieces: CommandArgList = [key, *quantiles]
+
+        return await self.execute_module_command(
+            CommandName.TDIGEST_QUANTILE, *pieces, callback=FloatsCallback()
+        )
+
+    @module_command(CommandName.TDIGEST_CDF, group=CommandGroup.TDIGEST, module="bf")
+    async def cdf(
+        self,
+        key: KeyT,
+        values: Parameters[Union[int, float]],
+    ) -> Tuple[float, ...]:
+        """
+        Returns, for each input value, an estimation of the fraction (floating-point)
+        of (observations smaller than the given value + half the observations equal
+        to the given value)
+        """
+        pieces: CommandArgList = [key, *values]
+
+        return await self.execute_module_command(
+            CommandName.TDIGEST_CDF, *pieces, callback=FloatsCallback()
+        )
+
+    @module_command(
+        CommandName.TDIGEST_TRIMMED_MEAN, group=CommandGroup.TDIGEST, module="bf"
+    )
+    async def trimmed_mean(
+        self,
+        key: KeyT,
+        low_cut_quantile: Union[int, float],
+        high_cut_quantile: Union[int, float],
+    ) -> float:
+        """
+        Returns an estimation of the mean value from the sketch,
+        excluding observation values outside the low and high cutoff quantiles
+        """
+        pieces: CommandArgList = [key, low_cut_quantile, high_cut_quantile]
+
+        return await self.execute_module_command(
+            CommandName.TDIGEST_TRIMMED_MEAN, *pieces, callback=FloatCallback()
+        )
+
+    @module_command(CommandName.TDIGEST_RANK, group=CommandGroup.TDIGEST, module="bf")
+    async def rank(
+        self,
+        key: KeyT,
+        values: Parameters[Union[int, float]],
+    ) -> Tuple[int, ...]:
+        """
+        Returns, for each input value (floating-point), the estimated rank of
+        the value (the number of observations in the sketch that are smaller
+        than the value + half the number of observations that are equal to the value)
+        """
+        pieces: CommandArgList = [key, *values]
+
+        return await self.execute_module_command(
+            CommandName.TDIGEST_RANK, *pieces, callback=TupleCallback[int]()
+        )
+
+    @module_command(
+        CommandName.TDIGEST_REVRANK, group=CommandGroup.TDIGEST, module="bf"
+    )
+    async def revrank(
+        self,
+        key: KeyT,
+        values: Parameters[Union[int, float]],
+    ) -> Tuple[int, ...]:
+        """
+        Returns, for each input value (floating-point), the estimated reverse rank of
+        the value (the number of observations in the sketch that are larger than
+        the value + half the number of observations that are equal to the value)
+        """
+        pieces: CommandArgList = [key, *values]
+
+        return await self.execute_module_command(
+            CommandName.TDIGEST_REVRANK, *pieces, callback=TupleCallback[int]()
+        )
+
+    @module_command(CommandName.TDIGEST_BYRANK, group=CommandGroup.TDIGEST, module="bf")
+    async def byrank(
+        self,
+        key: KeyT,
+        ranks: Parameters[Union[int, float]],
+    ) -> Tuple[float, ...]:
+        """
+        Returns, for each input rank, an estimation of the value (floating-point) with
+        that rank
+        """
+        pieces: CommandArgList = [key, *ranks]
+
+        return await self.execute_module_command(
+            CommandName.TDIGEST_BYRANK, *pieces, callback=FloatsCallback()
+        )
+
+    @module_command(
+        CommandName.TDIGEST_BYREVRANK, group=CommandGroup.TDIGEST, module="bf"
+    )
+    async def byrevrank(
+        self,
+        key: KeyT,
+        reverse_ranks: Parameters[Union[int, float]],
+    ) -> Tuple[float, ...]:
+        """
+        Returns, for each input reverse rank, an estimation of the value
+        (floating-point) with that reverse rank
+        """
+        pieces: CommandArgList = [key, *reverse_ranks]
+
+        return await self.execute_module_command(
+            CommandName.TDIGEST_BYREVRANK, *pieces, callback=FloatsCallback()
+        )
+
+    @module_command(CommandName.TDIGEST_INFO, group=CommandGroup.TDIGEST, module="bf")
+    async def info(self, key: KeyT) -> Dict[AnyStr, ResponsePrimitive]:
+        """
+        Returns information and statistics about a t-digest sketch
+        """
+
+        return await self.execute_module_command(
+            CommandName.TDIGEST_INFO,
+            key,
+            callback=DictCallback[AnyStr, ResponsePrimitive](),
         )

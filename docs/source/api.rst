@@ -165,9 +165,17 @@ Monitor
 Modules
 ^^^^^^^
 
+ReJSON
+----
 .. autoclass:: coredis.modules.json.Json
+
+RedisBloom
+----------
 .. autoclass:: coredis.modules.filters.BloomFilter
 .. autoclass:: coredis.modules.filters.CuckooFilter
+.. autoclass:: coredis.modules.filters.CountMinSketch
+.. autoclass:: coredis.modules.filters.TDigest
+.. autoclass:: coredis.modules.filters.TopK
 
 
 Connection Pools

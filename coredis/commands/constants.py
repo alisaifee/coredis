@@ -480,6 +480,31 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     CMS_MERGE = b"CMS.MERGE"  # Since bf: 2.0.0
     CMS_INFO = b"CMS.INFO"  # Since bf: 2.0.0
 
+    #: Commands for topk
+    TOPK_RESERVE = b"TOPK.RESERVE"  # Since bf: 2.0.0
+    TOPK_ADD = b"TOPK.ADD"  # Since bf: 2.0.0
+    TOPK_INCRBY = b"TOPK.INCRBY"  # Since bf: 2.0.0
+    TOPK_QUERY = b"TOPK.QUERY"  # Since bf: 2.0.0
+    TOPK_LIST = b"TOPK.LIST"  # Since bf: 2.0.0
+    TOPK_INFO = b"TOPK.INFO"  # Since bf: 2.0.0
+    TOPK_COUNT = b"TOPK.COUNT"  # Deprecated in bf: 2.4
+
+    #: Commands for tdigest
+    TDIGEST_CREATE = b"TDIGEST.CREATE"  # Since bf: 2.4.0
+    TDIGEST_RESET = b"TDIGEST.RESET"  # Since bf: 2.4.0
+    TDIGEST_ADD = b"TDIGEST.ADD"  # Since bf: 2.4.0
+    TDIGEST_MERGE = b"TDIGEST.MERGE"  # Since bf: 2.4.0
+    TDIGEST_MIN = b"TDIGEST.MIN"  # Since bf: 2.4.0
+    TDIGEST_MAX = b"TDIGEST.MAX"  # Since bf: 2.4.0
+    TDIGEST_QUANTILE = b"TDIGEST.QUANTILE"  # Since bf: 2.4.0
+    TDIGEST_CDF = b"TDIGEST.CDF"  # Since bf: 2.4.0
+    TDIGEST_TRIMMED_MEAN = b"TDIGEST.TRIMMED_MEAN"  # Since bf: 2.4.0
+    TDIGEST_RANK = b"TDIGEST.RANK"  # Since bf: 2.4.0
+    TDIGEST_REVRANK = b"TDIGEST.REVRANK"  # Since bf: 2.4.0
+    TDIGEST_BYRANK = b"TDIGEST.BYRANK"  # Since bf: 2.4.0
+    TDIGEST_BYREVRANK = b"TDIGEST.BYREVRANK"  # Since bf: 2.4.0
+    TDIGEST_INFO = b"TDIGEST.INFO"  # Since bf: 2.4.0
+
     #: Oddball command
     DEBUG_OBJECT = b"DEBUG OBJECT"
 
@@ -525,6 +550,8 @@ class CommandGroup(enum.Enum):
     SORTED_SET = "sorted-set"
     STREAM = "stream"
     STRING = "string"
+    TDIGEST = "tdigest"
+    TOPK = "topk"
     TRANSACTIONS = "transactions"
 
 
