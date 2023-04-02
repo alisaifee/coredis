@@ -621,7 +621,7 @@ class TestJson:
 
         assert await client.json.objkeys("doc1", "$..nowhere") == []
 
-    @pytest.mark.min_server_version("7.0.0")
+    @pytest.mark.min_module_version("ReJSON", "2.4.0")
     async def test_objlen(self, client):
         obj = {"foo": "bar", "baz": "qaz"}
         await client.json.set("obj", ".", obj)
@@ -771,7 +771,7 @@ class TestJson:
         with pytest.raises(ResponseError):
             await client.json.toggle("non_existing_doc", "$..a")
 
-    @pytest.mark.min_server_version("7.0.0")
+    @pytest.mark.min_module_version("ReJSON", "2.4.0")
     async def test_debug_memory(self, client, seed):
         assert 8 == await client.json.debug_memory("seed", ".int")
         assert 14 == await client.json.debug_memory("seed", ".string")

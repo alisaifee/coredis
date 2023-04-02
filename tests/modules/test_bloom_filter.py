@@ -49,7 +49,7 @@ class TestBloomFilter:
         with pytest.raises(ResponseError):
             await client.bf.insert("filter_missing", [1, 2, 3], nocreate=True)
 
-    @pytest.mark.min_server_version("7.0.0")
+    @pytest.mark.min_module_version("bf", "2.4.4")
     async def test_cardinality(self, client: Redis):
         assert await client.bf.add("filter", 1)
         assert 1 == await client.bf.card("filter")

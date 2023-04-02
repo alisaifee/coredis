@@ -8,7 +8,7 @@ from coredis import Redis
 from tests.conftest import targets
 
 
-@pytest.mark.min_server_version("7.0.0")
+@pytest.mark.min_module_version("bf", "2.4.0")
 @targets(
     "redis_stack",
     "redis_stack_cluster",

@@ -18,12 +18,13 @@ import coredis.experimental
 import coredis.parser
 import coredis.sentinel
 from coredis import BlockingConnectionPool
-from coredis._utils import b, hash_slot
+from coredis._utils import EncodingInsensitiveDict, b, hash_slot, nativestr
 from coredis.cache import TrackingCache
 from coredis.response._callbacks import NoopCallback
 from coredis.typing import RUNTIME_TYPECHECKS, Callable, Optional, R, ValueT
 
 REDIS_VERSIONS = {}
+MODULE_VERSIONS = {}
 PY_IMPLEMENTATION = platform.python_implementation()
 PY_VERSION = version.Version(platform.python_version())
 DOCKER_TAG_MAPPING = {
@@ -81,6 +82,26 @@ class UnparseableVersion:
         return True
 
 
+async def get_module_versions(client):
+    if str(client) not in MODULE_VERSIONS:
+        try:
+            module_list = await client.module_list()
+            for module in module_list:
+                mod = EncodingInsensitiveDict(module)
+                name = nativestr(mod["name"])
+                ver = mod["ver"]
+                patch = ver % 100
+                ver = int(str(ver)[:-2])
+                minor = ver % 100
+                major = int(str(ver)[:-2])
+                MODULE_VERSIONS.setdefault(str(client), {})[name] = version.Version(
+                    f"{major}.{minor}.{patch}"
+                )
+        except Exception:
+            MODULE_VERSIONS[str(client)] = {}
+    return MODULE_VERSIONS[str(client)]
+
+
 async def get_version(client):
     if str(client) not in REDIS_VERSIONS:
         try:
@@ -107,6 +128,7 @@ async def get_version(client):
 
 async def check_test_constraints(request, client, protocol=3):
     await get_version(client)
+    await get_module_versions(client)
     client_version = REDIS_VERSIONS[str(client)]
 
     for marker in request.node.iter_markers():
@@ -121,6 +143,12 @@ async def check_test_constraints(request, client, protocol=3):
         if marker.name == "max_server_version" and marker.args:
             if client_version > version.parse(marker.args[0]):
                 return pytest.skip(f"Skipped for versions > {marker.args[0]}")
+
+        if marker.name == "min_module_version" and marker.args:
+            name, ver = marker.args[0], marker.args[1]
+            cur_ver = MODULE_VERSIONS.get(str(client), {}).get(name)
+            if not cur_ver or cur_ver < version.parse(ver):
+                return pytest.skip(f"Skipped for module {name} versions < {ver}")
 
         if marker.name == "nocluster" and isinstance(client, coredis.RedisCluster):
             return pytest.skip("Skipped for redis cluster")
