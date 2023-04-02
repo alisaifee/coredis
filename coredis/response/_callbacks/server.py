@@ -152,15 +152,34 @@ class InfoCallback(
 
                 return sub_dict
 
+        cur_info = {}
+        header = None
         for line in response.splitlines():
             if line and not line.startswith("#"):
                 if line.find(":") != -1:
                     key, value = line.split(":", 1)
-                    info[key] = get_value(value)
+                    if key in cur_info:
+                        if not isinstance(cur_info[key], list):
+                            cur_info[key] = [cur_info[key]]
+                        cur_info[key].append(get_value(value))
+                    else:
+                        cur_info[key] = get_value(value)
                 else:
                     # if the line isn't splittable, append it to the "__raw__" key
-                    info.setdefault("__raw__", []).append(line)
-
+                    cur_info.setdefault("__raw__", []).append(line)
+            elif line:
+                if cur_info and header:
+                    if options.get("nested"):
+                        info[header] = cur_info
+                    else:
+                        info.update(cur_info)
+                    cur_info = {}
+                header = line.lstrip("#").strip().lower()
+        if header and header not in info:
+            if options.get("nested"):
+                info[header] = cur_info
+            else:
+                info.update(cur_info)
         return info
 
 

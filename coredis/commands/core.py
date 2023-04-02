@@ -7053,16 +7053,22 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SERVER,
         cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
     )
-    async def info(self, *sections: StringT) -> Dict[str, ResponseType]:
+    async def info(
+        self,
+        *sections: StringT,
+    ) -> Dict[str, ResponseType]:
         """
         Get information and statistics about the server
 
         The :paramref:`sections` option can be used to select a specific section(s)
-        of information
+        of information.
+
         """
 
         return await self.execute_command(
-            CommandName.INFO, *sections, callback=InfoCallback()
+            CommandName.INFO,
+            *sections,
+            callback=InfoCallback(),
         )
 
     @redis_command(
