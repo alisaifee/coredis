@@ -232,9 +232,8 @@ class ClusterMergeMapping(ClusterMultiNodeCallback[Dict[CK_co, CR_co]]):
         self.raise_any(responses.values())
         response: Dict[CK_co, CR_co] = {}
         for key in set(itertools.chain(*responses.values())):
-            response[key] = self.value_combine(
-                responses[n][key] for n in responses if key in responses[n]
-            )
+            values = list(responses[n][key] for n in responses if key in responses[n])
+            response[key] = self.value_combine(values)
         return response
 
     @property

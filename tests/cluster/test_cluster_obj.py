@@ -99,7 +99,7 @@ async def assert_moved_redirection_on_slave(sr, connection_pool_cls, cluster_obj
     # we assume this key is set on 127.0.0.1:7000(7003)
     await sr.set("foo16706", "foo")
     await asyncio.sleep(1)
-    with patch.object(connection_pool_cls, "get_node_by_slot") as return_slave_mock:
+    with patch.object(connection_pool_cls, "get_node_by_slots") as return_slave_mock:
         return_slave_mock.return_value = ManagedNode(
             host="127.0.0.1", port=7004, server_type="replica"
         )
@@ -110,7 +110,7 @@ async def assert_moved_redirection_on_slave(sr, connection_pool_cls, cluster_obj
             server_type="primary",
         )
         with patch.object(
-            connection_pool_cls, "get_primary_node_by_slot"
+            connection_pool_cls, "get_primary_node_by_slots"
         ) as return_master_mock:
             return_master_mock.return_value = master_value
             assert await cluster_obj.get("foo16706") == "foo"

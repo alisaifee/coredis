@@ -1,0 +1,1519 @@
+{
+    "TS.CREATE": {
+        "summary": "Create a new time series",
+        "complexity": "O(1)",
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key"
+            },
+            {
+                "type": "integer",
+                "token": "RETENTION",
+                "name": "retentionPeriod",
+                "optional": true
+            },
+            {
+                "token": "ENCODING",
+                "name": "enc",
+                "type": "oneof",
+                "arguments": [
+                    {
+                        "name": "uncompressed",
+                        "type": "pure-token",
+                        "token": "UNCOMPRESSED"
+                    },
+                    {
+                        "name": "compressed",
+                        "type": "pure-token",
+                        "token": "COMPRESSED"
+                    }
+                ],
+                "optional": true
+            },
+            {
+                "type": "integer",
+                "token": "CHUNK_SIZE",
+                "name": "size",
+                "optional": true
+            },
+            {
+                "type": "oneof",
+                "token": "DUPLICATE_POLICY",
+                "name": "policy",
+                "arguments": [
+                    {
+                        "name": "block",
+                        "type": "pure-token",
+                        "token": "BLOCK"
+                    },
+                    {
+                        "name": "first",
+                        "type": "pure-token",
+                        "token": "FIRST"
+                    },
+                    {
+                        "name": "last",
+                        "type": "pure-token",
+                        "token": "LAST"
+                    },
+                    {
+                        "name": "min",
+                        "type": "pure-token",
+                        "token": "MIN"
+                    },
+                    {
+                        "name": "max",
+                        "type": "pure-token",
+                        "token": "MAX"
+                    },
+                    {
+                        "name": "sum",
+                        "type": "pure-token",
+                        "token": "SUM"
+                    }
+                ],
+                "optional": true
+            },
+            {
+                "type": "block",
+                "name": "labels",
+                "token": "LABELS",
+                "optional": true,
+                "multiple": true,
+                "arguments": [
+                    {
+                        "type": "string",
+                        "name": "label"
+                    },
+                    {
+                        "type": "string",
+                        "name": "value"
+                    }
+                ]
+            }
+        ],
+        "since": "1.0.0",
+        "group": "timeseries"
+    },
+    "TS.DEL": {
+        "summary": "Delete all samples between two timestamps for a given time series",
+        "complexity": "O(N) where N is the number of data points that will be removed",
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key"
+            },
+            {
+                "name": "from_timestamp",
+                "type": "integer"
+            },
+            {
+                "name": "to_timestamp",
+                "type": "integer"
+            }
+        ],
+        "since": "1.6.0",
+        "group": "timeseries"
+    },
+    "TS.ALTER": {
+        "summary": "Update the retention, chunk size, duplicate policy, and labels of an existing time series",
+        "complexity": "O(N) where N is the number of labels requested to update",
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key"
+            },
+            {
+                "type": "integer",
+                "token": "RETENTION",
+                "name": "retentionPeriod",
+                "optional": true
+            },
+            {
+                "type": "integer",
+                "token": "CHUNK_SIZE",
+                "name": "size",
+                "optional": true
+            },
+            {
+                "type": "oneof",
+                "token": "DUPLICATE_POLICY",
+                "name": "policy",
+                "arguments": [
+                    {
+                        "name": "block",
+                        "type": "pure-token",
+                        "token": "BLOCK"
+                    },
+                    {
+                        "name": "first",
+                        "type": "pure-token",
+                        "token": "FIRST"
+                    },
+                    {
+                        "name": "last",
+                        "type": "pure-token",
+                        "token": "LAST"
+                    },
+                    {
+                        "name": "min",
+                        "type": "pure-token",
+                        "token": "MIN"
+                    },
+                    {
+                        "name": "max",
+                        "type": "pure-token",
+                        "token": "MAX"
+                    },
+                    {
+                        "name": "sum",
+                        "type": "pure-token",
+                        "token": "SUM"
+                    }
+                ],
+                "optional": true
+            },
+            {
+                "type": "block",
+                "name": "labels",
+                "token": "LABELS",
+                "optional": true,
+                "multiple": true,
+                "arguments": [
+                    {
+                        "type": "string",
+                        "name": "label"
+                    },
+                    {
+                        "type": "string",
+                        "name": "value"
+                    }
+                ]
+            }
+        ],
+        "since": "1.0.0",
+        "group": "timeseries"
+    },
+    "TS.ADD": {
+        "summary": "Append a sample to a time series",
+        "complexity": "O(M) when M is the amount of compaction rules or O(1) with no compaction",
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key"
+            },
+            {
+                "name": "timestamp",
+                "type": "integer"
+            },
+            {
+                "name": "value",
+                "type": "double"
+            },
+            {
+                "type": "integer",
+                "token": "RETENTION",
+                "name": "retentionPeriod",
+                "optional": true
+            },
+            {
+                "token": "ENCODING",
+                "name": "enc",
+                "type": "oneof",
+                "arguments": [
+                    {
+                        "name": "uncompressed",
+                        "type": "pure-token",
+                        "token": "UNCOMPRESSED"
+                    },
+                    {
+                        "name": "compressed",
+                        "type": "pure-token",
+                        "token": "COMPRESSED"
+                    }
+                ],
+                "optional": true
+            },
+            {
+                "type": "integer",
+                "token": "CHUNK_SIZE",
+                "name": "size",
+                "optional": true
+            },
+            {
+                "type": "oneof",
+                "token": "ON_DUPLICATE",
+                "name": "policy",
+                "arguments": [
+                    {
+                        "name": "block",
+                        "type": "pure-token",
+                        "token": "BLOCK"
+                    },
+                    {
+                        "name": "first",
+                        "type": "pure-token",
+                        "token": "FIRST"
+                    },
+                    {
+                        "name": "last",
+                        "type": "pure-token",
+                        "token": "LAST"
+                    },
+                    {
+                        "name": "min",
+                        "type": "pure-token",
+                        "token": "MIN"
+                    },
+                    {
+                        "name": "max",
+                        "type": "pure-token",
+                        "token": "MAX"
+                    },
+                    {
+                        "name": "sum",
+                        "type": "pure-token",
+                        "token": "SUM"
+                    }
+                ],
+                "optional": true
+            },
+            {
+                "type": "block",
+                "name": "labels",
+                "token": "LABELS",
+                "optional": true,
+                "multiple": true,
+                "arguments": [
+                    {
+                        "type": "string",
+                        "name": "label"
+                    },
+                    {
+                        "type": "string",
+                        "name": "value"
+                    }
+                ]
+            }
+        ],
+        "since": "1.0.0",
+        "group": "timeseries"
+    },
+    "TS.MADD": {
+        "summary": "Append new samples to one or more time series",
+        "complexity": "O(N*M) when N is the amount of series updated and M is the amount of compaction rules or O(N) with no compaction",
+        "arguments": [
+            {
+                "type": "block",
+                "name": "ktv",
+                "multiple": true,
+                "arguments": [
+                    {
+                        "type": "key",
+                        "name": "key"
+                    },
+                    {
+                        "type": "integer",
+                        "name": "timestamp"
+                    },
+                    {
+                        "type": "double",
+                        "name": "value"
+                    }
+                ]
+            }
+        ],
+        "since": "1.0.0",
+        "group": "timeseries"
+    },
+    "TS.INCRBY": {
+        "summary": "Increase the value of the sample with the maximal existing timestamp, or create a new sample with a value equal to the value of the sample with the maximal existing timestamp with a given increment",
+        "complexity": "O(M) when M is the amount of compaction rules or O(1) with no compaction",
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key"
+            },
+            {
+                "name": "value",
+                "type": "double"
+            },
+            {
+                "name": "timestamp",
+                "type": "integer",
+                "token": "TIMESTAMP",
+                "optional": true
+            },
+            {
+                "type": "integer",
+                "token": "RETENTION",
+                "name": "retentionPeriod",
+                "optional": true
+            },
+            {
+                "name": "uncompressed",
+                "type": "pure-token",
+                "token": "UNCOMPRESSED",
+                "optional": true
+            },
+            {
+                "type": "integer",
+                "token": "CHUNK_SIZE",
+                "name": "size",
+                "optional": true
+            },
+            {
+                "type": "block",
+                "name": "labels",
+                "token": "LABELS",
+                "optional": true,
+                "multiple": true,
+                "arguments": [
+                    {
+                        "type": "string",
+                        "name": "label"
+                    },
+                    {
+                        "type": "string",
+                        "name": "value"
+                    }
+                ]
+            }
+        ],
+        "since": "1.0.0",
+        "group": "timeseries"
+    },
+    "TS.DECRBY": {
+        "summary": "Decrease the value of the sample with the maximal existing timestamp, or create a new sample with a value equal to the value of the sample with the maximal existing timestamp with a given decrement",
+        "complexity": "O(M) when M is the amount of compaction rules or O(1) with no compaction",
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key"
+            },
+            {
+                "name": "value",
+                "type": "double"
+            },
+            {
+                "name": "timestamp",
+                "type": "integer",
+                "token": "TIMESTAMP",
+                "optional": true
+            },
+            {
+                "type": "integer",
+                "token": "RETENTION",
+                "name": "retentionPeriod",
+                "optional": true
+            },
+            {
+                "name": "uncompressed",
+                "type": "pure-token",
+                "token": "UNCOMPRESSED",
+                "optional": true
+            },
+            {
+                "type": "integer",
+                "token": "CHUNK_SIZE",
+                "name": "size",
+                "optional": true
+            },
+            {
+                "type": "block",
+                "name": "labels",
+                "token": "LABELS",
+                "optional": true,
+                "multiple": true,
+                "arguments": [
+                    {
+                        "type": "string",
+                        "name": "label"
+                    },
+                    {
+                        "type": "string",
+                        "name": "value"
+                    }
+                ]
+            }
+        ],
+        "since": "1.0.0",
+        "group": "timeseries"
+    },
+    "TS.CREATERULE": {
+        "summary": "Create a compaction rule",
+        "complexity": "O(1)",
+        "arguments": [
+            {
+                "name": "sourceKey",
+                "type": "key"
+            },
+            {
+                "name": "destKey",
+                "type": "key"
+            },
+            {
+                "type": "oneof",
+                "token": "AGGREGATION",
+                "name": "aggregator",
+                "arguments": [
+                    {
+                        "name": "avg",
+                        "type": "pure-token",
+                        "token": "AVG"
+                    },
+                    {
+                        "name": "first",
+                        "type": "pure-token",
+                        "token": "FIRST"
+                    },
+                    {
+                        "name": "last",
+                        "type": "pure-token",
+                        "token": "LAST"
+                    },
+                    {
+                        "name": "min",
+                        "type": "pure-token",
+                        "token": "MIN"
+                    },
+                    {
+                        "name": "max",
+                        "type": "pure-token",
+                        "token": "MAX"
+                    },
+                    {
+                        "name": "sum",
+                        "type": "pure-token",
+                        "token": "SUM"
+                    },
+                    {
+                        "name": "range",
+                        "type": "pure-token",
+                        "token": "RANGE"
+                    },
+                    {
+                        "name": "count",
+                        "type": "pure-token",
+                        "token": "COUNT"
+                    },
+                    {
+                        "name": "std.p",
+                        "type": "pure-token",
+                        "token": "STD.P"
+                    },
+                    {
+                        "name": "std.s",
+                        "type": "pure-token",
+                        "token": "STD.S"
+                    },
+                    {
+                        "name": "var.p",
+                        "type": "pure-token",
+                        "token": "VAR.P"
+                    },
+                    {
+                        "name": "var.s",
+                        "type": "pure-token",
+                        "token": "VAR.S"
+                    },
+                    {
+                        "name": "twa",
+                        "type": "pure-token",
+                        "token": "TWA",
+                        "since": "1.8.0"
+                    }
+                ]
+            },
+            {
+                "name": "bucketDuration",
+                "type": "integer"
+            },
+            {
+                "name": "alignTimestamp",
+                "type": "integer",
+                "optional": true,
+                "since": "1.8.0"
+            }
+        ],
+        "since": "1.0.0",
+        "group": "timeseries"
+    },
+    "TS.DELETERULE": {
+        "summary": "Delete a compaction rule",
+        "complexity": "O(1)",
+        "arguments": [
+            {
+                "name": "sourceKey",
+                "type": "key"
+            },
+            {
+                "name": "destKey",
+                "type": "key"
+            }
+        ],
+        "since": "1.0.0",
+        "group": "timeseries"
+    },
+    "TS.RANGE": {
+        "summary": "Query a range in forward direction",
+        "complexity": "O(n/m+k) where n = Number of data points, m = Chunk size (data points per chunk), k = Number of data points that are in the requested range",
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key"
+            },
+            {
+                "name": "fromTimestamp",
+                "type": "integer"
+            },
+            {
+                "name": "toTimestamp",
+                "type": "integer"
+            },
+            {
+                "name": "LATEST",
+                "type": "string",
+                "optional": true,
+                "since": "1.8.0"
+            },
+            {
+                "token": "FILTER_BY_TS",
+                "name": "Timestamp",
+                "type": "integer",
+                "multiple": true,
+                "optional": true
+            },
+            {
+                "type": "block",
+                "name": "fbv",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "FILTER_BY_VALUE",
+                        "type": "pure-token",
+                        "token": "FILTER_BY_VALUE"
+                    },
+                    {
+                        "type": "double",
+                        "name": "min"
+                    },
+                    {
+                        "type": "double",
+                        "name": "max"
+                    }
+                ]
+            },
+            {
+                "token": "COUNT",
+                "name": "count",
+                "type": "integer",
+                "optional": true
+            },
+            {
+                "name": "aggregation",
+                "type": "block",
+                "optional": true,
+                "arguments": [
+                    {
+                        "token": "ALIGN",
+                        "name": "value",
+                        "type": "integer",
+                        "optional": true
+                    },
+                    {
+                        "type": "oneof",
+                        "token": "AGGREGATION",
+                        "name": "aggregator",
+                        "arguments": [
+                            {
+                                "name": "avg",
+                                "type": "pure-token",
+                                "token": "AVG"
+                            },
+                            {
+                                "name": "first",
+                                "type": "pure-token",
+                                "token": "FIRST"
+                            },
+                            {
+                                "name": "last",
+                                "type": "pure-token",
+                                "token": "LAST"
+                            },
+                            {
+                                "name": "min",
+                                "type": "pure-token",
+                                "token": "MIN"
+                            },
+                            {
+                                "name": "max",
+                                "type": "pure-token",
+                                "token": "MAX"
+                            },
+                            {
+                                "name": "sum",
+                                "type": "pure-token",
+                                "token": "SUM"
+                            },
+                            {
+                                "name": "range",
+                                "type": "pure-token",
+                                "token": "RANGE"
+                            },
+                            {
+                                "name": "count",
+                                "type": "pure-token",
+                                "token": "COUNT"
+                            },
+                            {
+                                "name": "std.p",
+                                "type": "pure-token",
+                                "token": "STD.P"
+                            },
+                            {
+                                "name": "std.s",
+                                "type": "pure-token",
+                                "token": "STD.S"
+                            },
+                            {
+                                "name": "var.p",
+                                "type": "pure-token",
+                                "token": "VAR.P"
+                            },
+                            {
+                                "name": "var.s",
+                                "type": "pure-token",
+                                "token": "VAR.S"
+                            },
+                            {
+                                "name": "twa",
+                                "type": "pure-token",
+                                "token": "TWA",
+                                "since": "1.8.0"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "bucketDuration",
+                        "type": "integer"
+                    },
+                    {
+                        "name": "buckettimestamp",
+                        "type": "pure-token",
+                        "token": "BUCKETTIMESTAMP",
+                        "optional": true,
+                        "since": "1.8.0"
+                    },
+                    {
+                        "name": "empty",
+                        "type": "pure-token",
+                        "token": "EMPTY",
+                        "optional": true,
+                        "since": "1.8.0"
+                    }
+                ]
+            }
+        ],
+        "since": "1.0.0",
+        "group": "timeseries"
+    },
+    "TS.REVRANGE": {
+        "summary": "Query a range in reverse direction",
+        "complexity": "O(n/m+k) where n = Number of data points, m = Chunk size (data points per chunk), k = Number of data points that are in the requested range",
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key"
+            },
+            {
+                "name": "fromTimestamp",
+                "type": "integer"
+            },
+            {
+                "name": "toTimestamp",
+                "type": "integer"
+            },
+            {
+                "name": "LATEST",
+                "type": "string",
+                "optional": true,
+                "since": "1.8.0"
+            },
+            {
+                "token": "FILTER_BY_TS",
+                "name": "Timestamp",
+                "type": "integer",
+                "multiple": true,
+                "optional": true
+            },
+            {
+                "type": "block",
+                "name": "fbv",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "FILTER_BY_VALUE",
+                        "type": "pure-token",
+                        "token": "FILTER_BY_VALUE"
+                    },
+                    {
+                        "type": "double",
+                        "name": "min"
+                    },
+                    {
+                        "type": "double",
+                        "name": "max"
+                    }
+                ]
+            },
+            {
+                "token": "COUNT",
+                "name": "count",
+                "type": "integer",
+                "optional": true
+            },
+            {
+                "name": "aggregation",
+                "type": "block",
+                "optional": true,
+                "arguments": [
+                    {
+                        "token": "ALIGN",
+                        "name": "value",
+                        "type": "integer",
+                        "optional": true
+                    },
+                    {
+                        "type": "oneof",
+                        "token": "AGGREGATION",
+                        "name": "aggregator",
+                        "arguments": [
+                            {
+                                "name": "avg",
+                                "type": "pure-token",
+                                "token": "AVG"
+                            },
+                            {
+                                "name": "first",
+                                "type": "pure-token",
+                                "token": "FIRST"
+                            },
+                            {
+                                "name": "last",
+                                "type": "pure-token",
+                                "token": "LAST"
+                            },
+                            {
+                                "name": "min",
+                                "type": "pure-token",
+                                "token": "MIN"
+                            },
+                            {
+                                "name": "max",
+                                "type": "pure-token",
+                                "token": "MAX"
+                            },
+                            {
+                                "name": "sum",
+                                "type": "pure-token",
+                                "token": "SUM"
+                            },
+                            {
+                                "name": "range",
+                                "type": "pure-token",
+                                "token": "RANGE"
+                            },
+                            {
+                                "name": "count",
+                                "type": "pure-token",
+                                "token": "COUNT"
+                            },
+                            {
+                                "name": "std.p",
+                                "type": "pure-token",
+                                "token": "STD.P"
+                            },
+                            {
+                                "name": "std.s",
+                                "type": "pure-token",
+                                "token": "STD.S"
+                            },
+                            {
+                                "name": "var.p",
+                                "type": "pure-token",
+                                "token": "VAR.P"
+                            },
+                            {
+                                "name": "var.s",
+                                "type": "pure-token",
+                                "token": "VAR.S"
+                            },
+                            {
+                                "name": "twa",
+                                "type": "pure-token",
+                                "token": "TWA",
+                                "since": "1.8.0"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "bucketDuration",
+                        "type": "integer"
+                    },
+                    {
+                        "name": "buckettimestamp",
+                        "type": "pure-token",
+                        "token": "BUCKETTIMESTAMP",
+                        "optional": true,
+                        "since": "1.8.0"
+                    },
+                    {
+                        "name": "empty",
+                        "type": "pure-token",
+                        "token": "EMPTY",
+                        "optional": true,
+                        "since": "1.8.0"
+                    }
+                ]
+            }
+        ],
+        "since": "1.4.0",
+        "group": "timeseries"
+    },
+    "TS.MRANGE": {
+        "summary": "Query a range across multiple time series by filters in forward direction",
+        "complexity": "O(n/m+k) where n = Number of data points, m = Chunk size (data points per chunk), k = Number of data points that are in the requested ranges",
+        "arguments": [
+            {
+                "name": "fromTimestamp",
+                "type": "integer"
+            },
+            {
+                "name": "toTimestamp",
+                "type": "integer"
+            },
+            {
+                "name": "LATEST",
+                "type": "string",
+                "optional": true,
+                "since": "1.8.0"
+            },
+            {
+                "token": "FILTER_BY_TS",
+                "name": "Timestamp",
+                "type": "integer",
+                "multiple": true,
+                "optional": true
+            },
+            {
+                "type": "block",
+                "name": "fbv",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "FILTER_BY_VALUE",
+                        "type": "pure-token",
+                        "token": "FILTER_BY_VALUE"
+                    },
+                    {
+                        "type": "double",
+                        "name": "min"
+                    },
+                    {
+                        "type": "double",
+                        "name": "max"
+                    }
+                ]
+            },
+            {
+                "name": "labels",
+                "type": "oneof",
+                "arguments": [
+                    {
+                        "name": "WITHLABELS",
+                        "type": "pure-token",
+                        "token": "WITHLABELS"
+                    },
+                    {
+                        "type": "block",
+                        "name": "SELECTED_LABELS_BLOCK",
+                        "arguments": [
+                            {
+                                "name": "SELECTED_LABELS",
+                                "type": "pure-token",
+                                "token": "SELECTED_LABELS"
+                            },
+                            {
+                                "name": "label1",
+                                "type": "string",
+                                "multiple": true
+                            }
+                        ]
+                    }
+                ],
+                "optional": true
+            },
+            {
+                "token": "COUNT",
+                "name": "count",
+                "type": "integer",
+                "optional": true
+            },
+            {
+                "name": "aggregation",
+                "type": "block",
+                "optional": true,
+                "arguments": [
+                    {
+                        "token": "ALIGN",
+                        "name": "value",
+                        "type": "integer",
+                        "optional": true
+                    },
+                    {
+                        "type": "oneof",
+                        "token": "AGGREGATION",
+                        "name": "aggregator",
+                        "arguments": [
+                            {
+                                "name": "avg",
+                                "type": "pure-token",
+                                "token": "AVG"
+                            },
+                            {
+                                "name": "first",
+                                "type": "pure-token",
+                                "token": "FIRST"
+                            },
+                            {
+                                "name": "last",
+                                "type": "pure-token",
+                                "token": "LAST"
+                            },
+                            {
+                                "name": "min",
+                                "type": "pure-token",
+                                "token": "MIN"
+                            },
+                            {
+                                "name": "max",
+                                "type": "pure-token",
+                                "token": "MAX"
+                            },
+                            {
+                                "name": "sum",
+                                "type": "pure-token",
+                                "token": "SUM"
+                            },
+                            {
+                                "name": "range",
+                                "type": "pure-token",
+                                "token": "RANGE"
+                            },
+                            {
+                                "name": "count",
+                                "type": "pure-token",
+                                "token": "COUNT"
+                            },
+                            {
+                                "name": "std.p",
+                                "type": "pure-token",
+                                "token": "STD.P"
+                            },
+                            {
+                                "name": "std.s",
+                                "type": "pure-token",
+                                "token": "STD.S"
+                            },
+                            {
+                                "name": "var.p",
+                                "type": "pure-token",
+                                "token": "VAR.P"
+                            },
+                            {
+                                "name": "var.s",
+                                "type": "pure-token",
+                                "token": "VAR.S"
+                            },
+                            {
+                                "name": "twa",
+                                "type": "pure-token",
+                                "token": "TWA",
+                                "since": "1.8.0"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "bucketDuration",
+                        "type": "integer"
+                    },
+                    {
+                        "name": "buckettimestamp",
+                        "type": "pure-token",
+                        "token": "BUCKETTIMESTAMP",
+                        "optional": true,
+                        "since": "1.8.0"
+                    },
+                    {
+                        "name": "empty",
+                        "type": "pure-token",
+                        "token": "EMPTY",
+                        "optional": true,
+                        "since": "1.8.0"
+                    }
+                ]
+            },
+            {
+                "name": "filterExpr",
+                "token": "FILTER",
+                "type": "oneof",
+                "arguments": [
+                    {
+                        "name": "l=v",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l!=v",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l=",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l!=",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l=(v1,v2,...)",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l!=(v1,v2,...)",
+                        "type": "string"
+                    }
+                ],
+                "multiple": true
+            },
+            {
+                "type": "block",
+                "name": "groupby",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "GROUPBY",
+                        "type": "pure-token",
+                        "token": "GROUPBY"
+                    },
+                    {
+                        "type": "string",
+                        "name": "label"
+                    },
+                    {
+                        "type": "string",
+                        "name": "REDUCE"
+                    },
+                    {
+                        "type": "string",
+                        "name": "reducer"
+                    }
+                ]
+            }
+        ],
+        "since": "1.0.0",
+        "group": "timeseries"
+    },
+    "TS.MREVRANGE": {
+        "summary": "Query a range across multiple time-series by filters in reverse direction",
+        "complexity": "O(n/m+k) where n = Number of data points, m = Chunk size (data points per chunk), k = Number of data points that are in the requested ranges",
+        "since": "1.4.0",
+        "arguments": [
+            {
+                "name": "fromTimestamp",
+                "type": "integer"
+            },
+            {
+                "name": "toTimestamp",
+                "type": "integer"
+            },
+            {
+                "name": "LATEST",
+                "type": "string",
+                "optional": true,
+                "since": "1.8.0"
+            },
+            {
+                "token": "FILTER_BY_TS",
+                "name": "Timestamp",
+                "type": "integer",
+                "multiple": true,
+                "optional": true
+            },
+            {
+                "type": "block",
+                "name": "fbv",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "FILTER_BY_VALUE",
+                        "type": "pure-token",
+                        "token": "FILTER_BY_VALUE"
+                    },
+                    {
+                        "type": "double",
+                        "name": "min"
+                    },
+                    {
+                        "type": "double",
+                        "name": "max"
+                    }
+                ]
+            },
+            {
+                "name": "labels",
+                "type": "oneof",
+                "arguments": [
+                    {
+                        "name": "WITHLABELS",
+                        "type": "pure-token",
+                        "token": "WITHLABELS"
+                    },
+                    {
+                        "type": "block",
+                        "name": "SELECTED_LABELS_BLOCK",
+                        "arguments": [
+                            {
+                                "name": "SELECTED_LABELS",
+                                "type": "pure-token",
+                                "token": "SELECTED_LABELS"
+                            },
+                            {
+                                "name": "label1",
+                                "type": "string",
+                                "multiple": true
+                            }
+                        ]
+                    }
+                ],
+                "optional": true
+            },
+            {
+                "token": "COUNT",
+                "name": "count",
+                "type": "integer",
+                "optional": true
+            },
+            {
+                "name": "aggregation",
+                "type": "block",
+                "optional": true,
+                "arguments": [
+                    {
+                        "token": "ALIGN",
+                        "name": "value",
+                        "type": "integer",
+                        "optional": true
+                    },
+                    {
+                        "type": "oneof",
+                        "token": "AGGREGATION",
+                        "name": "aggregator",
+                        "arguments": [
+                            {
+                                "name": "avg",
+                                "type": "pure-token",
+                                "token": "AVG"
+                            },
+                            {
+                                "name": "first",
+                                "type": "pure-token",
+                                "token": "FIRST"
+                            },
+                            {
+                                "name": "last",
+                                "type": "pure-token",
+                                "token": "LAST"
+                            },
+                            {
+                                "name": "min",
+                                "type": "pure-token",
+                                "token": "MIN"
+                            },
+                            {
+                                "name": "max",
+                                "type": "pure-token",
+                                "token": "MAX"
+                            },
+                            {
+                                "name": "sum",
+                                "type": "pure-token",
+                                "token": "SUM"
+                            },
+                            {
+                                "name": "range",
+                                "type": "pure-token",
+                                "token": "RANGE"
+                            },
+                            {
+                                "name": "count",
+                                "type": "pure-token",
+                                "token": "COUNT"
+                            },
+                            {
+                                "name": "std.p",
+                                "type": "pure-token",
+                                "token": "STD.P"
+                            },
+                            {
+                                "name": "std.s",
+                                "type": "pure-token",
+                                "token": "STD.S"
+                            },
+                            {
+                                "name": "var.p",
+                                "type": "pure-token",
+                                "token": "VAR.P"
+                            },
+                            {
+                                "name": "var.s",
+                                "type": "pure-token",
+                                "token": "VAR.S"
+                            },
+                            {
+                                "name": "twa",
+                                "type": "pure-token",
+                                "token": "TWA",
+                                "since": "1.8.0"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "bucketDuration",
+                        "type": "integer"
+                    },
+                    {
+                        "name": "buckettimestamp",
+                        "type": "pure-token",
+                        "token": "BUCKETTIMESTAMP",
+                        "optional": true,
+                        "since": "1.8.0"
+                    },
+                    {
+                        "name": "empty",
+                        "type": "pure-token",
+                        "token": "EMPTY",
+                        "optional": true,
+                        "since": "1.8.0"
+                    }
+                ]
+            },
+            {
+                "name": "filterExpr",
+                "token": "FILTER",
+                "type": "oneof",
+                "arguments": [
+                    {
+                        "name": "l=v",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l!=v",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l=",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l!=",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l=(v1,v2,...)",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l!=(v1,v2,...)",
+                        "type": "string"
+                    }
+                ],
+                "multiple": true
+            },
+            {
+                "type": "block",
+                "name": "groupby",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "GROUPBY",
+                        "type": "pure-token",
+                        "token": "GROUPBY"
+                    },
+                    {
+                        "type": "string",
+                        "name": "label"
+                    },
+                    {
+                        "type": "string",
+                        "name": "REDUCE"
+                    },
+                    {
+                        "type": "string",
+                        "name": "reducer"
+                    }
+                ]
+            }
+        ],
+            "group": "timeseries"
+    },
+    "TS.GET": {
+        "summary": "Get the sample with the highest timestamp from a given time series",
+        "complexity": "O(1)",
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key"
+            },
+            {
+                "name": "LATEST",
+                "type": "string",
+                "optional": true,
+                "since": "1.8.0"
+            }
+        ],
+        "since": "1.0.0",
+        "group": "timeseries"
+    },
+    "TS.MGET": {
+        "summary": "Get the sample with the highest timestamp from each time series matching a specific filter",
+        "complexity": "O(n) where n is the number of time-series that match the filters",
+        "arguments": [
+            {
+                "name": "LATEST",
+                "type": "string",
+                "optional": true,
+                "since": "1.8.0"
+            },
+            {
+                "name": "labels",
+                "type": "oneof",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "WITHLABELS",
+                        "type": "pure-token",
+                        "token": "WITHLABELS"
+                    },
+                    {
+                        "type": "block",
+                        "name": "SELECTED_LABELS_BLOCK",
+                        "arguments": [
+                            {
+                                "name": "SELECTED_LABELS",
+                                "type": "pure-token",
+                                "token": "SELECTED_LABELS"
+                            },
+                            {
+                                "name": "label1",
+                                "type": "string",
+                                "multiple": true
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "filterExpr",
+                "token": "FILTER",
+                "type": "oneof",
+                "arguments": [
+                    {
+                        "name": "l=v",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l!=v",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l=",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l!=",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l=(v1,v2,...)",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l!=(v1,v2,...)",
+                        "type": "string"
+                    }
+                ],
+                "multiple": true
+            }
+        ],
+        "since": "1.0.0",
+        "group": "timeseries"
+    },
+    "TS.INFO": {
+        "summary": "Returns information and statistics for a time series",
+        "complexity": "O(1)",
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key"
+            },
+            {
+                "name": "DEBUG",
+                "type": "string",
+                "optional": true
+            }
+        ],
+        "since": "1.0.0",
+        "group": "timeseries"
+    },
+    "TS.QUERYINDEX": {
+        "summary": "Get all time series keys matching a filter list",
+        "complexity": "O(n) where n is the number of time-series that match the filters",
+        "arguments": [
+            {
+                "name": "filterExpr",
+                "type": "oneof",
+                "arguments": [
+                    {
+                        "name": "l=v",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l!=v",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l=",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l!=",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l=(v1,v2,...)",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l!=(v1,v2,...)",
+                        "type": "string"
+                    }
+                ],
+                "multiple": true
+            }
+        ],
+        "since": "1.0.0",
+        "group": "timeseries"
+    }
+}

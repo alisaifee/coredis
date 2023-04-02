@@ -36,6 +36,8 @@ from .base import ModuleGroup, module_command
 
 
 class BloomFilter(ModuleGroup[AnyStr]):
+    MODULE = "bf"
+
     @module_command(CommandName.BF_RESERVE, group=CommandGroup.BF, module="bf")
     async def reserve(
         self,
@@ -197,6 +199,8 @@ class BloomFilter(ModuleGroup[AnyStr]):
 
 
 class CuckooFilter(ModuleGroup[AnyStr]):
+    MODULE = "bf"
+
     @module_command(CommandName.CF_RESERVE, group=CommandGroup.CF, module="bf")
     async def reserve(
         self,
@@ -370,6 +374,8 @@ class CuckooFilter(ModuleGroup[AnyStr]):
 
 
 class CountMinSketch(ModuleGroup[AnyStr]):
+    MODULE = "bf"
+
     @module_command(CommandName.CMS_INITBYDIM, group=CommandGroup.CMS, module="bf")
     async def initbydim(self, key: KeyT, width: int, depth: int) -> bool:
         """
@@ -460,6 +466,8 @@ class CountMinSketch(ModuleGroup[AnyStr]):
 
 
 class TopK(ModuleGroup[AnyStr]):
+    MODULE = "bf"
+
     @mutually_inclusive_parameters("width", "depth", "decay")
     @module_command(CommandName.TOPK_RESERVE, group=CommandGroup.TOPK, module="bf")
     async def reserve(
@@ -570,6 +578,8 @@ class TopK(ModuleGroup[AnyStr]):
 
 
 class TDigest(ModuleGroup[AnyStr]):
+    MODULE = "bf"
+
     @module_command(CommandName.TDIGEST_CREATE, group=CommandGroup.TDIGEST, module="bf")
     async def create(self, key: KeyT, compression: Optional[int] = None) -> bool:
         """

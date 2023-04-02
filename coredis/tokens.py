@@ -84,6 +84,14 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``BZMPOP``
+    #:  - ``TS.ADD``
+    #:  - ``TS.ALTER``
+    #:  - ``TS.CREATE``
+    #:  - ``TS.CREATERULE``
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    #:  - ``TS.RANGE``
+    #:  - ``TS.REVRANGE``
     #:  - ``ZINTER``
     #:  - ``ZINTERSTORE``
     #:  - ``ZMPOP``
@@ -94,6 +102,14 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``BZMPOP``
+    #:  - ``TS.ADD``
+    #:  - ``TS.ALTER``
+    #:  - ``TS.CREATE``
+    #:  - ``TS.CREATERULE``
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    #:  - ``TS.RANGE``
+    #:  - ``TS.REVRANGE``
     #:  - ``ZINTER``
     #:  - ``ZINTERSTORE``
     #:  - ``ZMPOP``
@@ -601,6 +617,14 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``TS.ADD``
+    #:  - ``TS.ALTER``
+    #:  - ``TS.CREATE``
+    #:  - ``TS.CREATERULE``
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    #:  - ``TS.RANGE``
+    #:  - ``TS.REVRANGE``
     #:  - ``ZINTER``
     #:  - ``ZINTERSTORE``
     #:  - ``ZUNION``
@@ -692,6 +716,167 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``TDIGEST.MERGE``
     OVERRIDE = b"OVERRIDE"
 
+    #: Used by:
+    #:
+    #:  - ``TS.ADD``
+    #:  - ``TS.ALTER``
+    #:  - ``TS.CREATE``
+    BLOCK = b"BLOCK"
+
+    #: Used by:
+    #:
+    #:  - ``TS.ADD``
+    #:  - ``TS.CREATE``
+    COMPRESSED = b"COMPRESSED"
+
+    #: Used by:
+    #:
+    #:  - ``TS.ADD``
+    #:  - ``TS.ALTER``
+    #:  - ``TS.CREATE``
+    #:  - ``TS.CREATERULE``
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    #:  - ``TS.RANGE``
+    #:  - ``TS.REVRANGE``
+    FIRST = b"FIRST"
+
+    #: Used by:
+    #:
+    #:  - ``TS.ADD``
+    #:  - ``TS.ALTER``
+    #:  - ``TS.CREATE``
+    #:  - ``TS.CREATERULE``
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    #:  - ``TS.RANGE``
+    #:  - ``TS.REVRANGE``
+    LAST = b"LAST"
+
+    #: Used by:
+    #:
+    #:  - ``TS.ADD``
+    #:  - ``TS.CREATE``
+    #:  - ``TS.DECRBY``
+    #:  - ``TS.INCRBY``
+    UNCOMPRESSED = b"UNCOMPRESSED"
+
+    #: Used by:
+    #:
+    #:  - ``TS.CREATERULE``
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    #:  - ``TS.RANGE``
+    #:  - ``TS.REVRANGE``
+    AVG = b"AVG"
+
+    #: Used by:
+    #:
+    #:  - ``TS.CREATERULE``
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    #:  - ``TS.RANGE``
+    #:  - ``TS.REVRANGE``
+    COUNT = b"COUNT"
+
+    #: Used by:
+    #:
+    #:  - ``TS.CREATERULE``
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    #:  - ``TS.RANGE``
+    #:  - ``TS.REVRANGE``
+    RANGE = b"RANGE"
+
+    #: Used by:
+    #:
+    #:  - ``TS.CREATERULE``
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    #:  - ``TS.RANGE``
+    #:  - ``TS.REVRANGE``
+    STD_P = b"STD.P"
+
+    #: Used by:
+    #:
+    #:  - ``TS.CREATERULE``
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    #:  - ``TS.RANGE``
+    #:  - ``TS.REVRANGE``
+    STD_S = b"STD.S"
+
+    #: Used by:
+    #:
+    #:  - ``TS.CREATERULE``
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    #:  - ``TS.RANGE``
+    #:  - ``TS.REVRANGE``
+    TWA = b"TWA"
+
+    #: Used by:
+    #:
+    #:  - ``TS.CREATERULE``
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    #:  - ``TS.RANGE``
+    #:  - ``TS.REVRANGE``
+    VAR_P = b"VAR.P"
+
+    #: Used by:
+    #:
+    #:  - ``TS.CREATERULE``
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    #:  - ``TS.RANGE``
+    #:  - ``TS.REVRANGE``
+    VAR_S = b"VAR.S"
+
+    #: Used by:
+    #:
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    #:  - ``TS.RANGE``
+    #:  - ``TS.REVRANGE``
+    BUCKETTIMESTAMP = b"BUCKETTIMESTAMP"
+
+    #: Used by:
+    #:
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    #:  - ``TS.RANGE``
+    #:  - ``TS.REVRANGE``
+    EMPTY = b"EMPTY"
+
+    #: Used by:
+    #:
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    #:  - ``TS.RANGE``
+    #:  - ``TS.REVRANGE``
+    FILTER_BY_VALUE = b"FILTER_BY_VALUE"
+
+    #: Used by:
+    #:
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    GROUPBY = b"GROUPBY"
+
+    #: Used by:
+    #:
+    #:  - ``TS.MGET``
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    SELECTED_LABELS = b"SELECTED_LABELS"
+
+    #: Used by:
+    #:
+    #:  - ``TS.MGET``
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    WITHLABELS = b"WITHLABELS"
+
 
 class PrefixToken(CaseAndEncodingInsensitiveEnum):
     """
@@ -736,6 +921,10 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``LPOS``
     #:  - ``SCAN``
     #:  - ``SSCAN``
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    #:  - ``TS.RANGE``
+    #:  - ``TS.REVRANGE``
     #:  - ``XAUTOCLAIM``
     #:  - ``XINFO STREAM``
     #:  - ``XRANGE``
@@ -1131,3 +1320,85 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``TDIGEST.CREATE``
     COMPRESSION = b"COMPRESSION"
+
+    #: Used by:
+    #:
+    #:  - ``TS.ADD``
+    #:  - ``TS.ALTER``
+    #:  - ``TS.CREATE``
+    #:  - ``TS.DECRBY``
+    #:  - ``TS.INCRBY``
+    CHUNK_SIZE = b"CHUNK_SIZE"
+
+    #: Used by:
+    #:
+    #:  - ``TS.ALTER``
+    #:  - ``TS.CREATE``
+    DUPLICATE_POLICY = b"DUPLICATE_POLICY"
+
+    #: Used by:
+    #:
+    #:  - ``TS.ADD``
+    #:  - ``TS.CREATE``
+    ENCODING = b"ENCODING"
+
+    #: Used by:
+    #:
+    #:  - ``TS.ADD``
+    #:  - ``TS.ALTER``
+    #:  - ``TS.CREATE``
+    #:  - ``TS.DECRBY``
+    #:  - ``TS.INCRBY``
+    LABELS = b"LABELS"
+
+    #: Used by:
+    #:
+    #:  - ``TS.ADD``
+    #:  - ``TS.ALTER``
+    #:  - ``TS.CREATE``
+    #:  - ``TS.DECRBY``
+    #:  - ``TS.INCRBY``
+    RETENTION = b"RETENTION"
+
+    #: Used by:
+    #:
+    #:  - ``TS.ADD``
+    ON_DUPLICATE = b"ON_DUPLICATE"
+
+    #: Used by:
+    #:
+    #:  - ``TS.DECRBY``
+    #:  - ``TS.INCRBY``
+    TIMESTAMP = b"TIMESTAMP"
+
+    #: Used by:
+    #:
+    #:  - ``TS.CREATERULE``
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    #:  - ``TS.RANGE``
+    #:  - ``TS.REVRANGE``
+    AGGREGATION = b"AGGREGATION"
+
+    #: Used by:
+    #:
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    #:  - ``TS.RANGE``
+    #:  - ``TS.REVRANGE``
+    ALIGN = b"ALIGN"
+
+    #: Used by:
+    #:
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    #:  - ``TS.RANGE``
+    #:  - ``TS.REVRANGE``
+    FILTER_BY_TS = b"FILTER_BY_TS"
+
+    #: Used by:
+    #:
+    #:  - ``TS.MGET``
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    FILTER = b"FILTER"

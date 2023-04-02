@@ -6,7 +6,7 @@ import random
 import threading
 import time
 import warnings
-from typing import Any, cast
+from typing import Any, List, cast
 
 import async_timeout
 
@@ -394,21 +394,36 @@ class ClusterConnectionPool(ConnectionPool):
         return cast(ClusterConnection, connection)
 
     def get_primary_node_by_slot(self, slot: int) -> ManagedNode:
-        return self.nodes.slots[slot][0]
+        return self.get_primary_node_by_slots([slot])
 
-    def get_replica_node_by_slot(
-        self, slot: int, replica_only: bool = False
-    ) -> ManagedNode:
-        if replica_only:
-            return random.choice(
-                [
-                    node
-                    for node in self.nodes.slots[slot]
-                    if node.server_type != "primary"
-                ]
-            )
+    def get_primary_node_by_slots(self, slots: List[int]) -> ManagedNode:
+        nodes = {self.nodes.slots[slot][0].node_id for slot in slots}
+        if len(nodes) == 1:
+            return self.nodes.slots[slots[0]][0]
         else:
-            return random.choice(self.nodes.slots[slot])
+            raise RedisClusterException(f"Unable to map slots {slots} to a single node")
+
+    def get_replica_node_by_slot(self, slot: int) -> ManagedNode:
+        return self.get_replica_node_by_slots([slot])
+
+    def get_replica_node_by_slots(
+        self, slots: List[int], replica_only: bool = False
+    ) -> ManagedNode:
+        nodes = {self.nodes.slots[slot][0].node_id for slot in slots}
+        if len(nodes) == 1:
+            slot = slots[0]
+            if replica_only:
+                return random.choice(
+                    [
+                        node
+                        for node in self.nodes.slots[slot]
+                        if node.server_type != "primary"
+                    ]
+                )
+            else:
+                return random.choice(self.nodes.slots[slot])
+        else:
+            raise RedisClusterException(f"Unable to map slots {slots} to a single node")
 
     def get_node_by_slot(
         self, slot: int, command: Optional[bytes] = None
@@ -416,6 +431,13 @@ class ClusterConnectionPool(ConnectionPool):
         if self.read_from_replicas and command in READONLY_COMMANDS:
             return self.get_replica_node_by_slot(slot)
         return self.get_primary_node_by_slot(slot)
+
+    def get_node_by_slots(
+        self, slots: List[int], command: Optional[bytes] = None
+    ) -> ManagedNode:
+        if self.read_from_replicas and command in READONLY_COMMANDS:
+            return self.get_replica_node_by_slots(slots)
+        return self.get_primary_node_by_slots(slots)
 
 
 class BlockingClusterConnectionPool(ClusterConnectionPool):

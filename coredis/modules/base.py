@@ -3,7 +3,8 @@ from __future__ import annotations
 import functools
 import textwrap
 import weakref
-from typing import Any, cast
+from abc import ABCMeta
+from typing import Any, ClassVar, cast
 
 from .._protocols import AbstractExecutor
 from ..commands._utils import redis_command_link
@@ -14,17 +15,19 @@ from ..commands._wrappers import (
     CommandDetails,
 )
 from ..commands.constants import CommandFlag, CommandGroup, CommandName
-from ..globals import READONLY_COMMANDS
+from ..globals import MODULE_GROUPS, READONLY_COMMANDS
 from ..response._callbacks import NoopCallback
 from ..typing import (
     AnyStr,
     Callable,
     Coroutine,
+    Dict,
     Generic,
     Optional,
     P,
     R,
     Set,
+    Tuple,
     ValueT,
     add_runtime_checks,
 )
@@ -64,7 +67,8 @@ def module_command(
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
             from coredis.client import Redis, RedisCluster
 
-            client = cast(ModuleGroup[bytes], args[0]).client
+            mg = cast(ModuleGroup[bytes], args[0])
+            client = mg.client
             is_regular_client = isinstance(client, (Redis, RedisCluster))
             runtime_checking = (
                 not getattr(client, "noreply", None) and is_regular_client
@@ -85,12 +89,28 @@ Redis {module} module command documentation: {redis_command_link(command_name)}
 Supports client side caching
             """
         setattr(wrapped, "__coredis_command", command_details)
+        setattr(wrapped, "__coredis_module", module)
         return wrapped
 
     return wrapper
 
 
-class ModuleGroup(Generic[AnyStr]):
+class ModuleGroupRegistry(ABCMeta):
+    MODULE: Optional[str]
+
+    def __new__(
+        cls, name: str, bases: Tuple[type, ...], namespace: Dict[str, object]
+    ) -> ModuleGroupRegistry:
+        kls = super().__new__(cls, name, bases, namespace)
+        if kls.MODULE:
+            MODULE_GROUPS.add(kls)
+        return kls
+
+
+class ModuleGroup(Generic[AnyStr], metaclass=ModuleGroupRegistry):
+    #: The name of the module as reported by ``MODULES LIST``
+    MODULE: ClassVar[Optional[str]] = None
+
     def __init__(self, client: AbstractExecutor):
         self.client = weakref.proxy(client)
 

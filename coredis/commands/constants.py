@@ -505,6 +505,25 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     TDIGEST_BYREVRANK = b"TDIGEST.BYREVRANK"  # Since bf: 2.4.0
     TDIGEST_INFO = b"TDIGEST.INFO"  # Since bf: 2.4.0
 
+    #: Commands for timeseries
+    TS_CREATE = b"TS.CREATE"  # Since timeseries: 1.0.0
+    TS_ALTER = b"TS.ALTER"  # Since timeseries: 1.0.0
+    TS_ADD = b"TS.ADD"  # Since timeseries: 1.0.0
+    TS_MADD = b"TS.MADD"  # Since timeseries: 1.0.0
+    TS_INCRBY = b"TS.INCRBY"  # Since timeseries: 1.0.0
+    TS_DECRBY = b"TS.DECRBY"  # Since timeseries: 1.0.0
+    TS_CREATERULE = b"TS.CREATERULE"  # Since timeseries: 1.0.0
+    TS_DELETERULE = b"TS.DELETERULE"  # Since timeseries: 1.0.0
+    TS_RANGE = b"TS.RANGE"  # Since timeseries: 1.0.0
+    TS_MRANGE = b"TS.MRANGE"  # Since timeseries: 1.0.0
+    TS_GET = b"TS.GET"  # Since timeseries: 1.0.0
+    TS_MGET = b"TS.MGET"  # Since timeseries: 1.0.0
+    TS_INFO = b"TS.INFO"  # Since timeseries: 1.0.0
+    TS_QUERYINDEX = b"TS.QUERYINDEX"  # Since timeseries: 1.0.0
+    TS_REVRANGE = b"TS.REVRANGE"  # Since timeseries: 1.4.0
+    TS_MREVRANGE = b"TS.MREVRANGE"  # Since timeseries: 1.4.0
+    TS_DEL = b"TS.DEL"  # Since timeseries: 1.6.0
+
     #: Oddball command
     DEBUG_OBJECT = b"DEBUG OBJECT"
 
@@ -551,6 +570,7 @@ class CommandGroup(enum.Enum):
     STREAM = "stream"
     STRING = "string"
     TDIGEST = "tdigest"
+    TIMESERIES = "timeseries"
     TOPK = "topk"
     TRANSACTIONS = "transactions"
 

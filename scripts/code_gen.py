@@ -68,6 +68,12 @@ MODULES = {
         "group": "tdigest",
         "module": "bf"
     },
+    "timeseries":{
+        "repo": "https://github.com/RedisTimeSeries/RedisTimeSeries/",
+        "prefix": "ts",
+        "group": "timeseries",
+        "module": "timeseries"
+    }
 }
 
 MAPPING = {"DEL": "delete"}
@@ -174,6 +180,11 @@ IGNORED_ARGUMENTS = {
     "XADD": ["id-selector"],
     "XGROUP CREATE": ["new_id"],
     "XGROUP SETID": ["new_id"],
+    "TS.MGET": ["filterExpr"],
+    "TS.RANGE": ["filterExpr"],
+    "TS.REVRANGE": ["filterExpr"],
+    "TS.MRANGE": ["filterExpr"],
+    "TS.MREVRANGE": ["filterExpr"],
 }
 REDIS_RETURN_OVERRIDES = {
     "ACL USERS": Tuple[AnyStr, ...],
@@ -899,7 +910,7 @@ def sanitized(x, command=None, ignore_reserved_words=False):
     cleansed_name = (
         x.lower().strip().replace("-", "_").replace(":", "_").replace(" ", "_").replace(".", "_")
     )
-
+    cleansed_name = re.sub("[!=><\(\),]", "_", cleansed_name)
     if command:
         override = REDIS_ARGUMENT_NAME_OVERRIDES.get(command["name"], {}).get(
             cleansed_name
@@ -1492,7 +1503,7 @@ def generate_method_details(kls, method, module=None, debug=False):
 
     version_introduced = version.parse(method["since"])
 
-    if version_introduced > MIN_SUPPORTED_VERSION:
+    if version_introduced > MIN_SUPPORTED_VERSION or module:
         method_details["redis_version_introduced"] = version_introduced
     else:
         method_details["redis_version_introduced"] = None
@@ -2354,7 +2365,22 @@ def implementation(ctx, command, group, module, expr, debug=False):
     {% if argument_with_version %}, arguments={{ argument_with_version }}{%endif%}
     {%- endif -%}
     {%- else -%}
-    @module_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}, group=CommandGroup.{{module["group"].upper()}}, module="{{module["module"]}}"
+    @module_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}, module="{{module["module"]}}"
+    {%- if method["redis_version_introduced"] -%}
+    , version_introduced="{{method["command"].get("since")}}"
+    {%- endif -%}, group=CommandGroup.{{method["command"]["group"].upper().replace(" ","_").replace("-","_").replace(".", "_")}}
+    {%- if len(method["arg_mapping"]) > 0 -%}
+    {% set argument_with_version = {} %}
+    {%- for name, arg  in method["arg_mapping"].items() -%}
+    {%- for param in arg[1] -%}
+    {%- if arg[0].get("since")  -%}
+    {% set _ = argument_with_version.update({param.name: {"version_introduced": arg[0].get("since")}}) %}
+    {%- endif -%}
+    {%- endfor -%}
+    {%- endfor -%}
+    {% if method["readonly"] %}, readonly=True{% endif -%}
+    {% if argument_with_version %}, arguments={{ argument_with_version }}{%endif%}
+    {%- endif -%})
     {%- endif -%})
     async def {{method["name"]}}{{render_signature(method["rec_signature"], True)}}:
         \"\"\"
@@ -2774,6 +2800,21 @@ def cluster_key_extraction(path):
     all["TDIGEST.BYRANK"] = fixed_args["first"]
     all["TDIGEST.BYREVRANK"] = fixed_args["first"]
     all["TDIGEST.INFO"] = fixed_args["first"]
+
+    # timeseries
+    all["TS.CREATE"] = fixed_args["first"]
+    all["TS.CREATERULE"] = ["args[1:3]"]
+    all["TS.ALTER"] = fixed_args["first"]
+    all["TS.ADD"] = fixed_args["first"]
+    all["TS.MADD"] = ["args[1:-1:3]"]
+    all["TS.INCRBY"] = fixed_args["first"]
+    all["TS.DECRBY"] = fixed_args["first"]
+    all["TS.DELETERULE"] = ["args[1:3]"]
+    all["TS.GET"] = fixed_args["first"]
+    all["TS.INFO"] = fixed_args["first"]
+    all["TS.REVRANGE"] = fixed_args["first"]
+    all["TS.RANGE"] = fixed_args["first"]
+    all["TS.DEL"] = fixed_args["first"]
 
     key_spec_template = """
 from __future__ import annotations

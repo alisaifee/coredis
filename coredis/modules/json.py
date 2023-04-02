@@ -50,6 +50,8 @@ class Json(ModuleGroup[AnyStr]):
     `RedisJSON <https://redis.io/docs/stack/json/>`_ module.
     """
 
+    MODULE = "ReJSON"
+
     @module_command(CommandName.JSON_DEL, group=CommandGroup.JSON, module="ReJSON")
     async def delete(self, key: KeyT, path: Optional[StringT] = None) -> int:
         """

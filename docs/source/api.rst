@@ -166,7 +166,7 @@ Modules
 ^^^^^^^
 
 ReJSON
-----
+------
 .. autoclass:: coredis.modules.json.Json
 
 RedisBloom
@@ -177,6 +177,9 @@ RedisBloom
 .. autoclass:: coredis.modules.filters.TDigest
 .. autoclass:: coredis.modules.filters.TopK
 
+TimeSeries
+----------
+.. autoclass:: coredis.modules.timeseries.TimeSeries
 
 Connection Pools
 ^^^^^^^^^^^^^^^^

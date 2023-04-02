@@ -31,7 +31,7 @@ from coredis.exceptions import (
     TryAgainError,
     WatchError,
 )
-from coredis.globals import READONLY_COMMANDS
+from coredis.globals import MODULE_GROUPS, READONLY_COMMANDS
 from coredis.pool import ClusterConnectionPool
 from coredis.pool.nodemanager import ManagedNode
 from coredis.response._callbacks import NoopCallback
@@ -52,6 +52,7 @@ from coredis.typing import (
     Parameters,
     ParamSpec,
     ResponseType,
+    Set,
     StringT,
     Tuple,
     Type,
@@ -83,8 +84,15 @@ class ClusterMeta(ABCMeta):
     ) -> ClusterMeta:
         kls = super().__new__(cls, name, bases, namespace)
         methods = dict(k for k in inspect.getmembers(kls) if inspect.isfunction(k[1]))
-
-        for name, method in methods.items():
+        for module in MODULE_GROUPS:
+            methods.update(
+                dict(
+                    (f"{module.MODULE}.{k[0]}", k[1])
+                    for k in inspect.getmembers(module)
+                    if inspect.isfunction(k[1])
+                )
+            )
+        for method_name, method in methods.items():
             doc_addition = ""
             cmd = getattr(method, "__coredis_command", None)
             if cmd:
@@ -132,7 +140,8 @@ class ClusterMeta(ABCMeta):
 
                 wrapped = __w(method)
                 setattr(wrapped, "__cluster_docs", doc_addition)
-                setattr(kls, name, wrapped)
+                if not getattr(wrapped, "__coredis_module", None):
+                    setattr(kls, method_name, wrapped)
         return kls
 
 
@@ -632,10 +641,10 @@ class RedisCluster(
         if not self.connection_pool.initialized or self.refresh_table_asap:
             await self
 
-    def _determine_slot(
+    def _determine_slots(
         self, command: bytes, *args: ValueT, **options: Optional[ValueT]
-    ) -> Optional[int]:
-        """Figures out what slot based on command and args"""
+    ) -> Set[int]:
+        """Determines the slots the command and args would touch"""
         keys = cast(Tuple[ValueT, ...], options.get("keys")) or KeySpec.extract_keys(
             command, *args, readonly_command=self.connection_pool.read_from_replicas
         )
@@ -652,16 +661,9 @@ class RedisCluster(
             }
             and not keys
         ):
-            return None
+            return set()
 
-        slots = {hash_slot(b(key)) for key in keys}
-        if len(slots) != 1:
-            raise RedisClusterException(
-                f"{str(command)} - all keys must map to the same key slot"
-                if len(slots) > 1
-                else f"No way to dispatch {str(command)} to Redis Cluster"
-            )
-        return slots.pop()
+        return {hash_slot(b(key)) for key in keys}
 
     def _merge_result(
         self,
@@ -757,7 +759,7 @@ class RedisCluster(
                         *pargs,
                         callback=callback,
                         node=node_name_map[node_name],
-                        slot=None,
+                        slots=None,
                         **kwargs,
                     )
 
@@ -770,13 +772,13 @@ class RedisCluster(
             )
         else:
             node = None
-            slot = None
+            slots = None
             if not nodes:
-                slot = self._determine_slot(command, *args, **kwargs)
+                slots = list(self._determine_slots(command, *args, **kwargs))
             else:
                 node = nodes.pop()
             return await self._execute_command_on_single_node(
-                command, *args, callback=callback, node=node, slot=slot, **kwargs
+                command, *args, callback=callback, node=node, slots=slots, **kwargs
             )
 
     def _split_args_over_nodes(
@@ -821,14 +823,14 @@ class RedisCluster(
         *args: ValueT,
         callback: Callable[..., R] = NoopCallback(),
         node: Optional[ManagedNode] = None,
-        slot: Optional[int] = None,
+        slots: Optional[List[int]] = None,
         **kwargs: Optional[ValueT],
     ) -> R:
         redirect_addr = None
 
         asking = False
 
-        if not node and slot is None:
+        if not node and not slots:
             try_random_node = True
             try_random_type = NodeFlag.PRIMARIES
         else:
@@ -838,7 +840,7 @@ class RedisCluster(
 
         while remaining_attempts > 0:
             remaining_attempts -= 1
-            if self.refresh_table_asap and slot is None:
+            if self.refresh_table_asap and not slots:
                 await self
             if asking and redirect_addr:
                 node = self.connection_pool.nodes.nodes[redirect_addr]
@@ -847,16 +849,16 @@ class RedisCluster(
                 r = await self.connection_pool.get_random_connection(
                     primary=try_random_type == NodeFlag.PRIMARIES
                 )
-                if slot is not None:
+                if slots:
                     try_random_node = False
             elif node:
                 r = await self.connection_pool.get_connection_by_node(node)
-            elif slot is not None:
+            elif slots:
                 if self.refresh_table_asap:
                     # MOVED
-                    node = self.connection_pool.get_primary_node_by_slot(slot)
+                    node = self.connection_pool.get_primary_node_by_slots(slots)
                 else:
-                    node = self.connection_pool.get_node_by_slot(slot, command)
+                    node = self.connection_pool.get_node_by_slots(slots)
                 r = await self.connection_pool.get_connection_by_node(node)
             else:
                 continue

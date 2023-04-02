@@ -40,6 +40,10 @@ module = "coredis.response._callbacks.*"
 ignore_errors = true
 
 [[tool.mypy.overrides]]
+module = "coredis.modules.response._callbacks.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
 module = "coredis._version"
 ignore_errors = true
 ignore_missing_imports = true

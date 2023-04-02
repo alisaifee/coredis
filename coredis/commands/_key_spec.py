@@ -454,6 +454,19 @@ class KeySpec:
         b"TDIGEST.BYRANK": lambda args: (args[1],),
         b"TDIGEST.BYREVRANK": lambda args: (args[1],),
         b"TDIGEST.INFO": lambda args: (args[1],),
+        b"TS.CREATE": lambda args: (args[1],),
+        b"TS.CREATERULE": lambda args: (args[1:3]),
+        b"TS.ALTER": lambda args: (args[1],),
+        b"TS.ADD": lambda args: (args[1],),
+        b"TS.MADD": lambda args: (args[1:-1:3]),
+        b"TS.INCRBY": lambda args: (args[1],),
+        b"TS.DECRBY": lambda args: (args[1],),
+        b"TS.DELETERULE": lambda args: (args[1:3]),
+        b"TS.GET": lambda args: (args[1],),
+        b"TS.INFO": lambda args: (args[1],),
+        b"TS.REVRANGE": lambda args: (args[1],),
+        b"TS.RANGE": lambda args: (args[1],),
+        b"TS.DEL": lambda args: (args[1],),
     }
 
     @classmethod

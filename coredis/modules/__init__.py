@@ -7,6 +7,7 @@ from coredis.typing import AnyStr
 
 from .filters import BloomFilter, CountMinSketch, CuckooFilter, TDigest, TopK
 from .json import Json
+from .timeseries import TimeSeries
 
 
 class ModuleMixin(CommandMixin[AnyStr]):
@@ -57,3 +58,11 @@ class ModuleMixin(CommandMixin[AnyStr]):
         Property to access :class:`~coredis.modules.filters.TopK` commands.
         """
         return TopK(self)
+
+    @property
+    @versionadded(version="4.12.0")
+    def timeseries(self) -> TimeSeries[AnyStr]:
+        """
+        Property to access :class:`~coredis.modules.timeseries.TimeSeries` commands.
+        """
+        return TimeSeries(self)
