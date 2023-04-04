@@ -53,6 +53,7 @@ URL_QUERY_ARGUMENT_PARSERS: Dict[
     "connect_timeout": float,
     "max_connections": int,
     "max_idle_time": int,
+    "protocol_version": int,
     "idle_check_interval": int,
     "noreply": bool,
     "noevict": bool,
