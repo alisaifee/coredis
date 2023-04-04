@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v4.11.4
+-------
+Release Date: 2023-04-04
+
+* Bug Fix
+
+  * Ensure ``protocol_version`` is parsed as an int from url
+
+
 v4.11.3
 -------
 Release Date: 2023-03-11
@@ -1404,6 +1413,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
