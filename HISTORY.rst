@@ -40,6 +40,14 @@ Release Date: 2023-03-26
   * Ensure cluster commands routed to random nodes use
     primaries by default
 
+v4.11.5
+-------
+Release Date: 2023-04-04
+
+* Bug Fix
+
+  * Ensure ``protocol_version`` is parsed as an int from url
+
 v4.11.4
 -------
 Release Date: 2023-04-04
@@ -1450,18 +1458,3 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
-
-
-
-
-
-
-
-
-
-
-
-<<<<<<< HEAD
-
-=======
->>>>>>> 4.11.x
