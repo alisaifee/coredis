@@ -40,6 +40,15 @@ Release Date: 2023-03-26
   * Ensure cluster commands routed to random nodes use
     primaries by default
 
+v4.11.4
+-------
+Release Date: 2023-04-04
+
+* Bug Fix
+
+  * Ensure ``protocol_version`` is parsed as an int from url
+
+
 v4.11.3
 -------
 Release Date: 2023-03-11
@@ -1452,4 +1461,7 @@ v1.0.1
 
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 4.11.x
