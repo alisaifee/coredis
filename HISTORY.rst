@@ -3,6 +3,23 @@
 Changelog
 =========
 
+v4.12.0b3
+---------
+Release Date: 2023-04-04
+
+* Features
+
+  * Add support for RedisBloom module
+  * Add support for ReJSON module
+  * Add support for RedisTimeSeries module
+  * Improve cluster routing for commands that act on multiple
+    slots but are handled by the same node.
+
+* Bug Fix
+
+  * Ensure multiple properties returned from info command
+    are collapsed into an array
+
 v4.12.0b2
 ---------
 Release Date: 2023-03-27
@@ -1458,3 +1475,4 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
