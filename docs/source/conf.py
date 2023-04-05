@@ -1,15 +1,26 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 import os
 import sys
-from typing import List, Tuple
 import types
+from typing import List, Tuple
 
 sys.path.insert(0, os.path.abspath("../../"))
 sys.path.insert(0, os.path.abspath("./"))
 
+import requests
+from theme_config import *
+
 import coredis
 import coredis.exceptions
-from theme_config import *
+
+try:
+    latest_version = requests.get("https://pypi.org/pypi/coredis/json").json()["info"][
+        "version"
+    ]
+except:
+    latest_version = None
 
 master_doc = "index"
 project = "coredis"
@@ -62,7 +73,7 @@ try:
         html_theme_options[
             "announcement"
         ] = f"""
-        This is a development version. The documentation for the latest version: <b>{release}</b> can be found <a href="/en/stable">here</a>
+        This is a development version. The documentation for the latest version: <b>{latest_version or release}</b> can be found <a href="/en/stable">here</a>
         """
         html_title = f"{project} <small><b style='color: var(--color-brand-primary)'>{{dev}}</b></small>"
 except:
@@ -120,10 +131,9 @@ intersphinx_mapping = {
     "redis-py": ("https://redis-py.readthedocs.io/en/latest/", None),
 }
 
-from sphinx.ext.autodoc import ClassDocumenter, Documenter, _
-
 # Workaround for https://github.com/sphinx-doc/sphinx/issues/9560
 from sphinx.domains.python import PythonDomain
+from sphinx.ext.autodoc import ClassDocumenter, Documenter, _
 
 assert PythonDomain.object_types["data"].roles == ("data", "obj")
 PythonDomain.object_types["data"].roles = ("data", "class", "obj")
