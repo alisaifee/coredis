@@ -74,7 +74,7 @@ def module_command(
                 not getattr(client, "noreply", None) and is_regular_client
             )
             callable = runtime_checkable if runtime_checking else func
-            async with command_cache(callable, *args, **kwargs) as response:  # type: ignore
+            async with command_cache(callable, *args, **kwargs) as response:
                 return response
 
         wrapped.__doc__ = textwrap.dedent(wrapped.__doc__ or "")

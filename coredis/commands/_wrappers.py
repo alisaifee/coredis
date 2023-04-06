@@ -76,7 +76,7 @@ class CommandCache:
     command: bytes
     cache_config: Optional[CacheConfig]
 
-    @contextlib.asynccontextmanager  # type: ignore
+    @contextlib.asynccontextmanager
     async def __call__(
         self,
         func: Callable[P, Coroutine[Any, Any, R]],
@@ -199,7 +199,7 @@ def redis_command(
                 command_details.version_deprecated,
                 deprecation_reason,
             )
-            async with command_cache(callable, *args, **kwargs) as response:  # type: ignore
+            async with command_cache(callable, *args, **kwargs) as response:
                 return response
 
         wrapped.__doc__ = textwrap.dedent(wrapped.__doc__ or "")
