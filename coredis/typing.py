@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import platform
 import warnings
 from typing import (
     TYPE_CHECKING,
@@ -37,7 +38,6 @@ from typing_extensions import (
     Deque,
     Final,
     Literal,
-    NamedTuple,
     OrderedDict,
     ParamSpec,
     Protocol,
@@ -191,6 +191,14 @@ else:
         Dict[ResponsePrimitive, Any],
         RedisError,  # response errors get mapped to exceptions.
     ]
+
+
+if platform.python_implementation() == "CPython":
+    from typing_extensions import NamedTuple
+else:
+    # PyPy implementations < 3.9 don't play well with the backport
+    from typing import NamedTuple
+
 __all__ = [
     "AbstractSet",
     "AnyStr",
