@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import platform
 import warnings
 from typing import (
     TYPE_CHECKING,
@@ -24,6 +23,7 @@ from typing import (
     MutableMapping,
     MutableSequence,
     MutableSet,
+    NamedTuple,
     Optional,
     Sequence,
     Set,
@@ -191,15 +191,6 @@ else:
         Dict[ResponsePrimitive, Any],
         RedisError,  # response errors get mapped to exceptions.
     ]
-
-
-if platform.python_implementation() == "CPython":
-    from typing_extensions import NamedTuple
-else:
-    # PyPy implementations < 3.9 don't play well with the backport
-    if not TYPE_CHECKING and platform.python_implementation() != "CPython":
-        from typing import NamedTuple
-
 __all__ = [
     "AbstractSet",
     "AnyStr",
