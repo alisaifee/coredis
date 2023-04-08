@@ -197,7 +197,8 @@ if platform.python_implementation() == "CPython":
     from typing_extensions import NamedTuple
 else:
     # PyPy implementations < 3.9 don't play well with the backport
-    from typing import NamedTuple
+    if not TYPE_CHECKING and platform.python_implementation() != "CPython":
+        from typing import NamedTuple
 
 __all__ = [
     "AbstractSet",
