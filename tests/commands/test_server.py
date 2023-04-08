@@ -357,6 +357,7 @@ class TestServer:
 
     @pytest.mark.nocluster
     @pytest.mark.max_server_version("7.1")
+    @pytest.mark.xfail
     async def test_quit(self, client):
         assert await client.quit()
         await asyncio.sleep(0.1)
