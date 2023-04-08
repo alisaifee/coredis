@@ -1370,7 +1370,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(
-        CommandName.QUIT, group=CommandGroup.CONNECTION, flags={CommandFlag.FAST}
+        CommandName.QUIT,
+        group=CommandGroup.CONNECTION,
+        flags={CommandFlag.FAST},
+        version_deprecated="7.1.240",
     )
     async def quit(self) -> bool:
         """
