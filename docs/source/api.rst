@@ -177,6 +177,11 @@ RedisBloom
 .. autoclass:: coredis.modules.filters.TDigest
 .. autoclass:: coredis.modules.filters.TopK
 
+RedisSearch
+-----------
+.. automodule:: coredis.modules.search
+.. automodule:: coredis.modules.autocomplete
+
 TimeSeries
 ----------
 .. autoclass:: coredis.modules.timeseries.TimeSeries
@@ -337,6 +342,12 @@ returned by redis - to avoid errors in indexing.
 :mod:`coredis.response.types`
 
 .. automodule:: coredis.response.types
+   :no-inherited-members:
+   :show-inheritance:
+
+:mod:`coredis.modules.response.types`
+
+.. automodule:: coredis.modules.response.types
    :no-inherited-members:
    :show-inheritance:
 

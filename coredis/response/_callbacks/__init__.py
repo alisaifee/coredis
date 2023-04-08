@@ -18,6 +18,7 @@ from coredis.typing import (
     Callable,
     Dict,
     Generic,
+    Hashable,
     Iterable,
     List,
     Literal,
@@ -241,6 +242,18 @@ class ClusterMergeMapping(ClusterMultiNodeCallback[Dict[CK_co, CR_co]]):
         return "the merged mapping"
 
 
+class ClusterConcatenateTuples(ClusterMultiNodeCallback[Tuple[R, ...]]):
+    def combine(
+        self, responses: Mapping[str, Tuple[R, ...]], **kwargs: Optional[ValueT]
+    ) -> Tuple[R, ...]:
+        self.raise_any(responses.values())
+        return tuple(itertools.chain(*responses.values()))
+
+    @property
+    def response_policy(self) -> str:
+        return "the concatenations of the results"
+
+
 class SimpleStringCallback(
     ResponseCallback[Optional[StringT], Optional[StringT], bool]
 ):
@@ -366,14 +379,23 @@ class DictCallback(
         Dict[CK_co, CR_co],
     ]
 ):
+    def __init__(
+        self,
+        recursive: Optional[List[str]] = None,
+    ):
+        self.recursive = recursive or []
+
     def transform(
         self,
         response: Union[Sequence[ResponseType], Dict[ResponsePrimitive, ResponseType]],
         **options: Optional[ValueT],
     ) -> Dict[CK_co, CR_co]:
         if isinstance(response, list):
-            it = iter(response)
-            return cast(Dict[CK_co, CR_co], dict(zip(it, it)))
+            if self.recursive:
+                return cast(Dict[CK_co, CR_co], self.recursive_transformer(response))
+            else:
+                it = iter(response)
+                return cast(Dict[CK_co, CR_co], dict(zip(it, it)))
         raise ValueError(f"Unable to map {response!r} to mapping")
 
     def transform_3(
@@ -384,6 +406,33 @@ class DictCallback(
         if isinstance(response, Dict):
             return cast(Dict[CK_co, CR_co], response)
         return self.transform(response, **options)
+
+    def recursive_transformer(
+        self, item: Union[Sequence[ResponseType], Dict[ResponsePrimitive, ResponseType]]
+    ) -> Union[
+        Dict[CK_co, CR_co],
+        List[CK_co],
+        List[CR_co],
+        Tuple[CK_co, ...],
+        Tuple[CR_co, ...],
+    ]:
+        if isinstance(item, (list, tuple)):
+            if len(item) % 2 == 0 and all(isinstance(k, Hashable) for k in item[::2]):
+                dct = []
+                for i in range(0, len(item), 2):
+                    key, value = item[i], item[i + 1]
+                    value = (
+                        self.recursive_transformer(value)
+                        if (key in self.recursive)
+                        else value
+                    )
+                    dct.append((key, value))
+                return dict(dct)
+            else:
+                caster = list if isinstance(item, list) else tuple
+                return caster(self.recursive_transformer(i) for i in item)
+        else:
+            return item
 
 
 class SetCallback(

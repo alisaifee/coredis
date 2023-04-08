@@ -347,6 +347,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``FT.SEARCH``
     #:  - ``GEODIST``
     #:  - ``GEORADIUS``
     #:  - ``GEORADIUSBYMEMBER``
@@ -358,6 +359,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``FT.SEARCH``
     #:  - ``GEODIST``
     #:  - ``GEORADIUS``
     #:  - ``GEORADIUSBYMEMBER``
@@ -369,6 +371,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``FT.SEARCH``
     #:  - ``GEODIST``
     #:  - ``GEORADIUS``
     #:  - ``GEORADIUSBYMEMBER``
@@ -380,6 +383,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``FT.SEARCH``
     #:  - ``GEODIST``
     #:  - ``GEORADIUS``
     #:  - ``GEORADIUSBYMEMBER``
@@ -401,6 +405,8 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``FT.AGGREGATE``
+    #:  - ``FT.SEARCH``
     #:  - ``GEORADIUS``
     #:  - ``GEORADIUSBYMEMBER``
     #:  - ``GEORADIUSBYMEMBER_RO``
@@ -413,6 +419,8 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``FT.AGGREGATE``
+    #:  - ``FT.SEARCH``
     #:  - ``GEORADIUS``
     #:  - ``GEORADIUSBYMEMBER``
     #:  - ``GEORADIUSBYMEMBER_RO``
@@ -605,6 +613,8 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``FT.SEARCH``
+    #:  - ``FT.SUGGET``
     #:  - ``ZDIFF``
     #:  - ``ZINTER``
     #:  - ``ZRANDMEMBER``
@@ -877,6 +887,223 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``TS.MREVRANGE``
     WITHLABELS = b"WITHLABELS"
 
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    GEO = b"GEO"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    HASH = b"HASH"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    JSON = b"JSON"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    MAXTEXTFIELDS = b"MAXTEXTFIELDS"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    NOFIELDS = b"NOFIELDS"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    NOFREQS = b"NOFREQS"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    NOHL = b"NOHL"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    NOINDEX = b"NOINDEX"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    NOOFFSETS = b"NOOFFSETS"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    NUMERIC = b"NUMERIC"
+
+    #: Used by:
+    #:
+    #:  - ``FT.ALTER``
+    #:  - ``FT.CREATE``
+    SCHEMA = b"SCHEMA"
+
+    #: Used by:
+    #:
+    #:  - ``FT.ALTER``
+    #:  - ``FT.CREATE``
+    #:  - ``FT.SYNUPDATE``
+    SKIPINITIALSCAN = b"SKIPINITIALSCAN"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    SORTABLE = b"SORTABLE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    TAG = b"TAG"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    TEXT = b"TEXT"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    UNF = b"UNF"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    VECTOR = b"VECTOR"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    WITHSUFFIXTRIE = b"WITHSUFFIXTRIE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.ALTER``
+    ADD = b"ADD"
+
+    #: Used by:
+    #:
+    #:  - ``FT.DROPINDEX``
+    DELETE_DOCS = b"DD"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SPELLCHECK``
+    EXCLUDE = b"EXCLUDE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SPELLCHECK``
+    INCLUDE = b"INCLUDE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SEARCH``
+    EXPLAINSCORE = b"EXPLAINSCORE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SEARCH``
+    HIGHLIGHT = b"HIGHLIGHT"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SEARCH``
+    INORDER = b"INORDER"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    #:  - ``FT.SEARCH``
+    LIMIT = b"LIMIT"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SEARCH``
+    NOCONTENT = b"NOCONTENT"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SEARCH``
+    NOSTOPWORDS = b"NOSTOPWORDS"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    #:  - ``FT.SEARCH``
+    PARAMS = b"PARAMS"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SEARCH``
+    SUMMARIZE = b"SUMMARIZE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SEARCH``
+    TAGS = b"TAGS"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    #:  - ``FT.SEARCH``
+    VERBATIM = b"VERBATIM"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SEARCH``
+    #:  - ``FT.SUGGET``
+    WITHPAYLOADS = b"WITHPAYLOADS"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SEARCH``
+    WITHSORTKEYS = b"WITHSORTKEYS"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    LOADALL = b"LOAD *"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    WITHCURSOR = b"WITHCURSOR"
+
+    #: Used by:
+    #:
+    #:  - ``FT.PROFILE``
+    AGGREGATE = b"AGGREGATE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.PROFILE``
+    LIMITED = b"LIMITED"
+
+    #: Used by:
+    #:
+    #:  - ``FT.PROFILE``
+    QUERYWORD = b"QUERY"
+
+    #: Used by:
+    #:
+    #:  - ``FT.PROFILE``
+    SEARCH = b"SEARCH"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SUGADD``
+    INCR = b"INCR"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SUGGET``
+    FUZZY = b"FUZZY"
+
 
 class PrefixToken(CaseAndEncodingInsensitiveEnum):
     """
@@ -910,6 +1137,8 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``BLMPOP``
     #:  - ``BZMPOP``
+    #:  - ``FT.AGGREGATE``
+    #:  - ``FT.CURSOR READ``
     #:  - ``GEORADIUS``
     #:  - ``GEORADIUSBYMEMBER``
     #:  - ``GEORADIUSBYMEMBER_RO``
@@ -981,6 +1210,7 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``CLIENT TRACKING``
+    #:  - ``FT.CREATE``
     PREFIX = b"PREFIX"
 
     #: Used by:
@@ -1031,6 +1261,8 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``FAILOVER``
+    #:  - ``FT.AGGREGATE``
+    #:  - ``FT.SEARCH``
     TIMEOUT = b"TIMEOUT"
 
     #: Used by:
@@ -1398,7 +1630,175 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``FT.AGGREGATE``
+    #:  - ``FT.CREATE``
+    #:  - ``FT.SEARCH``
     #:  - ``TS.MGET``
     #:  - ``TS.MRANGE``
     #:  - ``TS.MREVRANGE``
     FILTER = b"FILTER"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    #:  - ``FT.CREATE``
+    #:  - ``FT.SEARCH``
+    AS = b"AS"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    #:  - ``FT.SEARCH``
+    LANGUAGE = b"LANGUAGE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    LANGUAGE_FIELD = b"LANGUAGE_FIELD"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    ON = b"ON"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    PAYLOAD_FIELD = b"PAYLOAD_FIELD"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    SCORE = b"SCORE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    SCORE_FIELD = b"SCORE_FIELD"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    STOPWORDS = b"STOPWORDS"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    TEMPORARY = b"TEMPORARY"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    #:  - ``FT.EXPLAIN``
+    #:  - ``FT.EXPLAINCLI``
+    #:  - ``FT.SEARCH``
+    #:  - ``FT.SPELLCHECK``
+    DIALECT = b"DIALECT"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SPELLCHECK``
+    DISTANCE = b"DISTANCE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SPELLCHECK``
+    TERMS = b"TERMS"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SEARCH``
+    EXPANDER = b"EXPANDER"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SEARCH``
+    FIELDS = b"FIELDS"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SEARCH``
+    FRAGS = b"FRAGS"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SEARCH``
+    GEOFILTER = b"GEOFILTER"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SEARCH``
+    INFIELDS = b"INFIELDS"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SEARCH``
+    INKEYS = b"INKEYS"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SEARCH``
+    LEN = b"LEN"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SEARCH``
+    #:  - ``FT.SUGADD``
+    PAYLOAD = b"PAYLOAD"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SEARCH``
+    RETURN = b"RETURN"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SEARCH``
+    SCORER = b"SCORER"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SEARCH``
+    SEPARATOR = b"SEPARATOR"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SEARCH``
+    SLOP = b"SLOP"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    #:  - ``FT.SEARCH``
+    SORTBY = b"SORTBY"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    APPLY = b"APPLY"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    GROUPBY = b"GROUPBY"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    LOAD = b"LOAD"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    #:  - ``FT.SUGGET``
+    MAX = b"MAX"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    MAXIDLE = b"MAXIDLE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    REDUCE = b"REDUCE"

@@ -524,6 +524,39 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     TS_MREVRANGE = b"TS.MREVRANGE"  # Since timeseries: 1.4.0
     TS_DEL = b"TS.DEL"  # Since timeseries: 1.6.0
 
+    #: Commands for search
+    FT_CREATE = b"FT.CREATE"  # Since search: 1.0.0
+    FT_INFO = b"FT.INFO"  # Since search: 1.0.0
+    FT_EXPLAIN = b"FT.EXPLAIN"  # Since search: 1.0.0
+    FT_EXPLAINCLI = b"FT.EXPLAINCLI"  # Since search: 1.0.0
+    FT_ALTER = b"FT.ALTER"  # Since search: 1.0.0
+    FT_ALIASADD = b"FT.ALIASADD"  # Since search: 1.0.0
+    FT_ALIASUPDATE = b"FT.ALIASUPDATE"  # Since search: 1.0.0
+    FT_ALIASDEL = b"FT.ALIASDEL"  # Since search: 1.0.0
+    FT_TAGVALS = b"FT.TAGVALS"  # Since search: 1.0.0
+    FT_CONFIG_SET = b"FT.CONFIG SET"  # Since search: 1.0.0
+    FT_CONFIG_GET = b"FT.CONFIG GET"  # Since search: 1.0.0
+    FT_CONFIG_HELP = b"FT.CONFIG HELP"  # Since search: 1.0.0
+    FT_SEARCH = b"FT.SEARCH"  # Since search: 1.0.0
+    FT_AGGREGATE = b"FT.AGGREGATE"  # Since search: 1.1.0
+    FT_CURSOR_READ = b"FT.CURSOR READ"  # Since search: 1.1.0
+    FT_CURSOR_DEL = b"FT.CURSOR DEL"  # Since search: 1.1.0
+    FT_SYNUPDATE = b"FT.SYNUPDATE"  # Since search: 1.2.0
+    FT_SYNDUMP = b"FT.SYNDUMP"  # Since search: 1.2.0
+    FT_SPELLCHECK = b"FT.SPELLCHECK"  # Since search: 1.4.0
+    FT_DICTADD = b"FT.DICTADD"  # Since search: 1.4.0
+    FT_DICTDEL = b"FT.DICTDEL"  # Since search: 1.4.0
+    FT_DICTDUMP = b"FT.DICTDUMP"  # Since search: 1.4.0
+    FT_DROPINDEX = b"FT.DROPINDEX"  # Since search: 2.0.0
+    FT__LIST = b"FT._LIST"  # Since search: 2.0.0
+    FT_PROFILE = b"FT.PROFILE"  # Since search: 2.2.0
+
+    #: Commands for suggestion
+    FT_SUGADD = b"FT.SUGADD"  # Since search: 1.0.0
+    FT_SUGGET = b"FT.SUGGET"  # Since search: 1.0.0
+    FT_SUGDEL = b"FT.SUGDEL"  # Since search: 1.0.0
+    FT_SUGLEN = b"FT.SUGLEN"  # Since search: 1.0.0
+
     #: Oddball command
     DEBUG_OBJECT = b"DEBUG OBJECT"
 
@@ -564,11 +597,13 @@ class CommandGroup(enum.Enum):
     LIST = "list"
     PUBSUB = "pubsub"
     SCRIPTING = "scripting"
+    SEARCH = "search"
     SERVER = "server"
     SET = "set"
     SORTED_SET = "sorted-set"
     STREAM = "stream"
     STRING = "string"
+    SUGGESTION = "suggestion"
     TDIGEST = "tdigest"
     TIMESERIES = "timeseries"
     TOPK = "topk"

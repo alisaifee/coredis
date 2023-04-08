@@ -8,7 +8,7 @@ import inspect
 import textwrap
 from abc import ABCMeta
 from ssl import SSLContext
-from typing import TYPE_CHECKING, Any, List, cast, overload
+from typing import TYPE_CHECKING, Any, cast, overload
 
 from deprecated.sphinx import versionadded
 
@@ -46,6 +46,7 @@ from coredis.typing import (
     Dict,
     Iterable,
     Iterator,
+    List,
     Literal,
     Node,
     Optional,
