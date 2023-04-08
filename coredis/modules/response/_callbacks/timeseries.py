@@ -1,17 +1,6 @@
 from __future__ import annotations
 
-from typing import (
-    Any,
-    AnyStr,
-    Dict,
-    List,
-    Mapping,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-    cast,
-)
+from typing import Any, cast
 
 from coredis._utils import EncodingInsensitiveDict
 from coredis.response._callbacks import (
@@ -20,7 +9,19 @@ from coredis.response._callbacks import (
     ResponseCallback,
 )
 from coredis.response._utils import flat_pairs_to_dict
-from coredis.typing import ResponsePrimitive, ResponseType, ValueT
+from coredis.typing import (
+    AnyStr,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    ResponsePrimitive,
+    ResponseType,
+    Sequence,
+    Tuple,
+    Union,
+    ValueT,
+)
 
 
 class SampleCallback(

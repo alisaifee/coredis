@@ -3,6 +3,7 @@ beartype
 coverage
 lovely-pytest-docker
 mock
+numpy
 pytest
 pytest-asyncio
 pytest-cov
