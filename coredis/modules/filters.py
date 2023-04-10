@@ -737,6 +737,9 @@ class TDigest(ModuleGroup[AnyStr]):
     async def create(self, key: KeyT, compression: Optional[int] = None) -> bool:
         """
         Allocates memory and initializes a new t-digest sketch
+
+        :param key: The key name for the new t-digest sketch.
+        :param compression: A controllable tradeoff between accuracy and memory consumption.
         """
         pieces: CommandArgList = [key]
         if compression is not None:
@@ -749,6 +752,8 @@ class TDigest(ModuleGroup[AnyStr]):
     async def reset(self, key: KeyT) -> bool:
         """
         Resets a t-digest sketch: empty the sketch and re-initializes it.
+
+        :param key: The key name for an existing t-digest sketch.
         """
         return await self.execute_module_command(
             CommandName.TDIGEST_RESET, key, callback=SimpleStringCallback()
@@ -762,6 +767,9 @@ class TDigest(ModuleGroup[AnyStr]):
     ) -> bool:
         """
         Adds one or more observations to a t-digest sketch
+
+        :param key: Key name for an existing t-digest sketch.
+        :param values: value(s) of observation(s)
         """
         pieces: CommandArgList = [key, *values]
 
@@ -779,6 +787,16 @@ class TDigest(ModuleGroup[AnyStr]):
     ) -> bool:
         """
         Merges multiple t-digest sketches into a single sketch
+
+        :param destination_key: Key name for a t-digest sketch to merge observation values to.
+         If it does not exist, a new sketch is created.
+         If it is an existing sketch, its values are merged with the values of the source keys.
+         To override the destination key contents use :paramref:`override`.
+        :param source_keys: Key names for t-digest sketches to merge observation values from.
+        :param compression: Controllable tradeoff between accuracy and memory consumption.
+        :param override: When specified, if :paramref:`destination_key` already exists,
+         it is overwritten.
+
         """
         _source_keys: List[KeyT] = list(source_keys)
         pieces: CommandArgList = [
@@ -798,6 +816,8 @@ class TDigest(ModuleGroup[AnyStr]):
     async def min(self, key: KeyT) -> float:
         """
         Returns the minimum observation value from a t-digest sketch
+
+        :param key: The key name for an existing t-digest sketch.
         """
 
         return await self.execute_module_command(
@@ -808,6 +828,8 @@ class TDigest(ModuleGroup[AnyStr]):
     async def max(self, key: KeyT) -> float:
         """
         Returns the maximum observation value from a t-digest sketch
+
+        :param key: The key name for an existing t-digest sketch.
         """
 
         return await self.execute_module_command(
@@ -825,6 +847,9 @@ class TDigest(ModuleGroup[AnyStr]):
         """
         Returns, for each input fraction, an estimation of the value (floating point)
         that is smaller than the given fraction of observations
+
+        :param key: Key name for an existing t-digest sketch.
+        :param quantiles: Input fractions (between 0 and 1 inclusively).
         """
         pieces: CommandArgList = [key, *quantiles]
 
@@ -842,6 +867,9 @@ class TDigest(ModuleGroup[AnyStr]):
         Returns, for each input value, an estimation of the fraction (floating-point)
         of (observations smaller than the given value + half the observations equal
         to the given value)
+
+        :param key: The key name for an existing t-digest sketch.
+        :param values: The values for which the CDF should be retrieved.
         """
         pieces: CommandArgList = [key, *values]
 
@@ -861,6 +889,13 @@ class TDigest(ModuleGroup[AnyStr]):
         """
         Returns an estimation of the mean value from the sketch,
         excluding observation values outside the low and high cutoff quantiles
+
+        :param key: The key name for an existing t-digest sketch.
+        :param low_cut_quantile: A floating-point value in the range [0..1],
+         should be lower than :paramref:`high_cut_quantile`.
+        :param high_cut_quantile: A floating-point value in the range [0..1],
+         should be higher than `low_cut_quantile`.
+
         """
         pieces: CommandArgList = [key, low_cut_quantile, high_cut_quantile]
 
@@ -878,6 +913,9 @@ class TDigest(ModuleGroup[AnyStr]):
         Returns, for each input value (floating-point), the estimated rank of
         the value (the number of observations in the sketch that are smaller
         than the value + half the number of observations that are equal to the value)
+
+        :param key: The key name for an existing t-digest sketch.
+        :param values: Input values for which the rank should be estimated.
         """
         pieces: CommandArgList = [key, *values]
 
@@ -897,6 +935,9 @@ class TDigest(ModuleGroup[AnyStr]):
         Returns, for each input value (floating-point), the estimated reverse rank of
         the value (the number of observations in the sketch that are larger than
         the value + half the number of observations that are equal to the value)
+
+        :param key: The name of an existing t-digest sketch.
+        :param values: The input values for which the reverse rank should be estimated.
         """
         pieces: CommandArgList = [key, *values]
 
@@ -913,6 +954,9 @@ class TDigest(ModuleGroup[AnyStr]):
         """
         Returns, for each input rank, an estimation of the value (floating-point) with
         that rank
+
+        :param key: The key name for an existing t-digest sketch.
+        :param ranks: The ranks for which the estimated values should be retrieved.
         """
         pieces: CommandArgList = [key, *ranks]
 
@@ -931,6 +975,9 @@ class TDigest(ModuleGroup[AnyStr]):
         """
         Returns, for each input reverse rank, an estimation of the value
         (floating-point) with that reverse rank
+
+        :param key: The key name for an existing t-digest sketch.
+        :param reverse_ranks: The reverse ranks for which the values should be retrieved.
         """
         pieces: CommandArgList = [key, *reverse_ranks]
 
@@ -942,6 +989,11 @@ class TDigest(ModuleGroup[AnyStr]):
     async def info(self, key: KeyT) -> Dict[AnyStr, ResponsePrimitive]:
         """
         Returns information and statistics about a t-digest sketch
+
+        :param key: The key name for an existing t-digest sketch.
+        :return: Dictionary with information about the sketch, including compression,
+         capacity, number of merged and unmerged nodes, weight of merged and unmerged nodes,
+         number of observations, total compressions, and memory usage.
         """
 
         return await self.execute_module_command(
