@@ -80,7 +80,18 @@ class TimeSeries(ModuleGroup[AnyStr]):
         labels: Optional[Dict[StringT, ValueT]] = None,
     ) -> bool:
         """
-        Create a new time series
+        Create a new time series with the given key.
+
+        :param key: The key name for the time series.
+        :param retention: Maximum age for samples compared to the highest reported timestamp,
+         in milliseconds.
+        :param encoding: Specifies the series samples encoding format as ``COMPRESSED`` or
+         ``UNCOMPRESSED``.
+        :param chunk_size: Initial allocation size, in bytes, for the data part of each new chunk.
+        :param duplicate_policy: Policy for handling insertion of multiple samples with identical
+         timestamps.
+        :param labels: A dictionary of labels to be associated with the time series.
+        :return: True if the time series was created successfully, False otherwise.
         """
         pieces: CommandArgList = [key]
         if retention is not None:
@@ -112,7 +123,12 @@ class TimeSeries(ModuleGroup[AnyStr]):
         totimestamp: Union[int, datetime, StringT],
     ) -> int:
         """
-        Delete all samples between two timestamps for a given time series
+        Delete all samples between two timestamps for a given time series.
+
+        :param key: Key name for the time series.
+        :param fromtimestamp: Start timestamp for the range deletion.
+        :param totimestamp: End timestamp for the range deletion.
+        :return: The number of samples that were deleted, or an error reply.
         """
         return await self.execute_module_command(
             CommandName.TS_DEL,
@@ -143,7 +159,16 @@ class TimeSeries(ModuleGroup[AnyStr]):
         ] = None,
     ) -> bool:
         """
-        Update the retention, chunk size, duplicate policy, and labels of an existing time series
+        Update the retention, chunk size, duplicate policy, and labels of an existing time series.
+
+        :param key: Key name for the time series.
+        :param labels: Dictionary mapping labels to values that represent metadata labels of the
+         key and serve as a secondary index.
+        :param retention: Maximum retention period, compared to the maximum existing timestamp, in
+         milliseconds.
+        :param chunk_size: Initial allocation size, in bytes, for the data part of each new chunk.
+        :param duplicate_policy: Policy for handling multiple samples with identical timestamps.
+        :return: True if executed correctly, False otherwise.
         """
         pieces: CommandArgList = [key]
         if labels:
@@ -189,7 +214,19 @@ class TimeSeries(ModuleGroup[AnyStr]):
         labels: Optional[Dict[StringT, ValueT]] = None,
     ) -> int:
         """
-        Append a sample to a time series
+        Add a sample to a time series.
+
+        :param key: Name of the time series.
+        :param timestamp: UNIX sample timestamp in milliseconds or `*` to set the timestamp
+         according to the server clock.
+        :param value: Numeric data value of the sample.
+        :param retention: Maximum retention period, compared to the maximum existing timestamp, in
+         milliseconds.
+        :param encoding: Encoding format for the series sample.
+        :param chunk_size: Memory size, in bytes, allocated for each data chunk.
+        :param duplicate_policy: Policy for handling samples with identical timestamps.
+        :param labels: Dictionary of labels associated with the sample.
+        :return: Number of samples added to the time series.
         """
         pieces: CommandArgList = [
             key,
@@ -220,9 +257,18 @@ class TimeSeries(ModuleGroup[AnyStr]):
         group=CommandGroup.TIMESERIES,
         module="timeseries",
     )
-    async def madd(self, ktvs: Parameters[Tuple[AnyStr, int, int]]) -> Tuple[int, ...]:
+    async def madd(
+        self, ktvs: Parameters[Tuple[AnyStr, int, float]]
+    ) -> Tuple[int, ...]:
         """
-        Append new samples to one or more time series
+        Append new samples to one or more time series.
+
+        :param ktvs: A list of tuples, where each tuple contains the key name for the time series,
+         an integer UNIX sample timestamp in milliseconds or `*` to set the timestamp according
+         to the server clock, and a numeric data value of the sample.
+         The double number should follow RFC 7159 (a JSON standard). The parser rejects overly
+         large values that would not fit in binary64. It does not accept NaN or infinite values.
+        :return: A tuple of integers representing the timestamp of each added sample
         """
         pieces: CommandArgList = list(itertools.chain(*ktvs))
 
@@ -244,9 +290,24 @@ class TimeSeries(ModuleGroup[AnyStr]):
         chunk_size: Optional[int] = None,
     ) -> int:
         """
-        Increase the value of the sample with the maximal existing timestamp,
-        or create a new sample with a value equal to the value of the sample with
-        the maximal existing timestamp with a given increment
+        Increments the value of the sample with the maximum existing timestamp, or creates
+        a new sample with a value equal to the value of the sample with the maximum existing
+        timestamp with a given increment.
+
+        :param key: Name of the time series.
+        :param value: Numeric data value of the sample.
+        :param labels: Set of label-value pairs that represent metadata labels of the key and serve
+         as a secondary index. Use it only if you are creating a new time series.
+        :param timestamp: UNIX sample timestamp in milliseconds or `*` to set the timestamp
+         according to the server clock. `timestamp` must be equal to or higher than the maximum
+         existing timestamp. When not specified, the timestamp is set according to the server clock.
+        :param retention: Maximum retention period, compared to the maximum existing timestamp,
+         in milliseconds. Use it only if you are creating a new time series.
+        :param uncompressed: Changes data storage from compressed (default) to uncompressed.
+         Use it only if you are creating a new time series.
+        :param chunk_size: Memory size, in bytes, allocated for each data chunk.
+         Use it only if you are creating a new time series.
+        :return: The timestamp of the upserted sample, or an error.
         """
         pieces: CommandArgList = [key, value]
         if timestamp:
@@ -280,9 +341,27 @@ class TimeSeries(ModuleGroup[AnyStr]):
         chunk_size: Optional[int] = None,
     ) -> int:
         """
-        Decrease the value of the sample with the maximal existing timestamp,
-        or create a new sample with a value equal to the value of the sample with
-        the maximal existing timestamp with a given decrement
+        Decrease the value of the sample with the maximum existing timestamp, or create a new
+        sample with a value equal to the value of the sample with the maximum existing timestamp
+        with a given decrement.
+
+        :param key: Key name for the time series.
+        :param value: Numeric data value of the sample.
+        :param labels: Mapping of labels to values that represent metadata labels of the key
+         and serve as a secondary index. Use it only if you are creating a new time series.
+        :param timestamp: UNIX sample timestamp in milliseconds or `*` to set the timestamp
+         according to the server clock. When not specified, the timestamp is set according
+         to the server clock.
+        :param retention: Maximum retention period, compared to the maximum existing timestamp,
+         in milliseconds. Use it only if you are creating a new time series. It is ignored if
+         you are adding samples to an existing time series.
+        :param uncompressed: Changes data storage from compressed (default) to uncompressed.
+         Use it only if you are creating a new time series. It is ignored if you are adding samples
+         to an existing time series.
+        :param chunk_size: Memory size, in bytes, allocated for each data chunk. Use it only if
+         you are creating a new time series. It is ignored if you are adding samples to an existing
+         time series.
+        :return: The timestamp of the upserted sample, or an error if the operation failed.
         """
         pieces: CommandArgList = [key, value]
 
@@ -329,6 +408,15 @@ class TimeSeries(ModuleGroup[AnyStr]):
     ) -> bool:
         """
         Create a compaction rule
+
+        :param source: Key name for the source time series.
+        :param destination: Key name for the destination (compacted) time series.
+        :param aggregation: Aggregates results into time buckets by the given aggregation type
+        :param bucketduration: Duration of each bucket, in milliseconds.
+        :param aligntimestamp: Ensures that there is a bucket that starts exactly at
+         ``aligntimestamp`` and aligns all other buckets accordingly. It is expressed
+         in milliseconds. The default value is 0 aligned with the epoch.
+        :return: True if executed correctly, False otherwise.
         """
         pieces: CommandArgList = [source, destination]
         pieces.extend([PrefixToken.AGGREGATION, aggregation, bucketduration])
@@ -343,8 +431,13 @@ class TimeSeries(ModuleGroup[AnyStr]):
     )
     async def deleterule(self, source: KeyT, destination: KeyT) -> bool:
         """
-        Delete a compaction rule
+        Delete a compaction rule from a RedisTimeSeries sourceKey to a destinationKey.
 
+        :param source: Key name for the source time series.
+        :param destination: Key name for the destination (compacted) time series.
+        :return: True if the command executed correctly, False otherwise.
+
+        ..note:: This command does not delete the compacted series.
         """
         pieces: CommandArgList = [source, destination]
 
@@ -362,8 +455,9 @@ class TimeSeries(ModuleGroup[AnyStr]):
         key: KeyT,
         fromtimestamp: Union[datetime, int, StringT],
         totimestamp: Union[datetime, int, StringT],
+        *,
         filter_by_ts: Optional[Parameters[int]] = None,
-        latest: Optional[StringT] = None,
+        latest: Optional[bool] = None,
         min_value: Optional[Union[int, float]] = None,
         max_value: Optional[Union[int, float]] = None,
         count: Optional[int] = None,
@@ -390,7 +484,28 @@ class TimeSeries(ModuleGroup[AnyStr]):
         empty: Optional[bool] = None,
     ) -> Union[Tuple[Tuple[int, float], ...], Tuple[()]]:
         """
-        Query a range in forward direction
+        Query a range in forward direction.
+
+        :param key: The key name for the time series.
+        :param fromtimestamp: Start timestamp for the range query (integer UNIX timestamp in
+         milliseconds) or `-` to denote the timestamp of the earliest sample in the time series.
+        :param totimestamp: End timestamp for the range query (integer UNIX timestamp in
+         milliseconds) or `+` to denote the timestamp of the latest sample in the time series.
+        :param filter_by_ts: List of specific timestamps to filter samples by.
+        :param latest: Used when a time series is a compaction. When ``True``, the command also
+         reports the compacted value of the latest, possibly partial, bucket, given that
+         this bucket's start time falls within ``[fromtimestamp, totimestamp]``.
+        :param min_value: Minimum value to filter samples by.
+        :param max_value: Maximum value to filter samples by.
+        :param count: Limits the number of returned samples.
+        :param aggregator: Aggregates samples into time buckets by the provided aggregation type.
+        :param bucketduration: Duration of each bucket in milliseconds.
+        :param align: Time bucket alignment control for :paramref:`aggregator`.
+        :param buckettimestamp: Timestamp of the first bucket.
+        :param empty: If True, returns an empty list instead of raising an error when no data
+         is available.
+
+        :return: A tuple of samples, where each sample is a tuple of timestamp and value.
         """
         pieces: CommandArgList = [
             key,
@@ -429,8 +544,9 @@ class TimeSeries(ModuleGroup[AnyStr]):
         key: KeyT,
         fromtimestamp: Union[int, datetime, StringT],
         totimestamp: Union[int, datetime, StringT],
+        *,
         filter_by_ts: Optional[Parameters[int]] = None,
-        latest: Optional[StringT] = None,
+        latest: Optional[bool] = None,
         min_value: Optional[Union[int, float]] = None,
         max_value: Optional[Union[int, float]] = None,
         count: Optional[int] = None,
@@ -457,7 +573,25 @@ class TimeSeries(ModuleGroup[AnyStr]):
         empty: Optional[bool] = None,
     ) -> Union[Tuple[Tuple[int, float], ...], Tuple[()]]:
         """
-        Query a range in reverse direction
+        Query a range in reverse direction from a RedisTimeSeries key.
+
+        :param key: The key name for the time series.
+        :param fromtimestamp: Start timestamp for the range query (integer UNIX timestamp
+         in milliseconds) or `-` to denote the timestamp of the earliest sample in the time series.
+        :param totimestamp: End timestamp for the range query (integer UNIX timestamp in
+         milliseconds) or `+` to denote the timestamp of the latest sample in the time series.
+        :param filter_by_ts: List of specific timestamps to filter samples by.
+        :param latest: Report the compacted value of the latest, possibly partial, bucket.
+        :param min_value: Minimum value to filter samples by.
+        :param max_value: Maximum value to filter samples by.
+        :param count: Limit the number of returned samples.
+        :param aggregator: Aggregates samples into time buckets by the provided aggregation type.
+        :param bucketduration: Duration of each bucket in milliseconds.
+        :param align: Time bucket alignment control for :paramref:`aggregator`.
+        :param buckettimestamp: Timestamp for the first bucket.
+        :param empty: Return an empty list if no samples are found.
+
+        :return: A tuple of timestamp-value pairs in reverse order.
         """
         pieces: CommandArgList = [
             key,
@@ -504,7 +638,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         fromtimestamp: Union[int, datetime, StringT],
         totimestamp: Union[int, datetime, StringT],
         *,
-        latest: Optional[StringT] = None,
+        latest: Optional[bool] = None,
         filters: Optional[Parameters[StringT]] = None,
         filter_by_ts: Optional[Parameters[int]] = None,
         min_value: Optional[Union[int, float]] = None,
@@ -555,7 +689,35 @@ class TimeSeries(ModuleGroup[AnyStr]):
         Tuple[Dict[AnyStr, AnyStr], Union[Tuple[Tuple[int, float], ...], Tuple[()]]],
     ]:
         """
-        Query a range across multiple time series by filters in forward direction
+        Query a range across multiple time series by filters in forward direction.
+
+        :param fromtimestamp: Start timestamp for the range query (integer UNIX timestamp
+         in milliseconds) or `-` to denote the timestamp of the earliest sample amongst
+         all time series that passes the filters.
+        :param totimestamp: End timestamp for the range query (integer UNIX timestamp in
+         milliseconds) or `+` to denote the timestamp of the latest sample amongst all
+         time series that passes the filters
+        :param latest: Report the compacted value of the latest, possibly partial, bucket.
+        :param filters: Filter expressions to apply to the time series.
+        :param filter_by_ts: Timestamps to filter the time series by.
+        :param min_value: Minimum value to filter the time series by.
+        :param max_value: Maximum value to filter the time series by.
+        :param withlabels: Whether to include labels in the response.
+        :param selected_labels: Returns a subset of the label-value pairs that represent metadata
+         labels of the time series. Use when a large number of labels exists per series, but only
+         the values of some of the labels are required. If :paramref:`withlabels` or
+         :paramref:`selected_labels` are not specified, by default, an empty mapping is reported
+         as label-value pairs.
+        :param count: Limit the number of samples returned.
+        :param align: Time bucket alignment control for :paramref:`aggregator`.
+        :param aggregator: Aggregates samples into time buckets by the provided aggregation type.
+        :param bucketduration: Duration of each bucket, in milliseconds.
+        :param buckettimestamp: Timestamp of the first bucket.
+        :param groupby: Label to group the samples by
+        :param reducer: Aggregation type to aggregate the results in each group
+        :param empty: Optional boolean to include empty time series in the response.
+
+        :return: A dictionary containing the time series data.
         """
         pieces: CommandArgList = [
             normalized_timestamp(fromtimestamp),
@@ -612,14 +774,16 @@ class TimeSeries(ModuleGroup[AnyStr]):
         self,
         fromtimestamp: Union[int, datetime, StringT],
         totimestamp: Union[int, datetime, StringT],
+        *,
+        latest: Optional[bool] = None,
         filters: Optional[Parameters[StringT]] = None,
         filter_by_ts: Optional[Parameters[int]] = None,
-        latest: Optional[StringT] = None,
         min_value: Optional[Union[int, float]] = None,
         max_value: Optional[Union[int, float]] = None,
         withlabels: Optional[bool] = None,
         selected_labels: Optional[Parameters[StringT]] = None,
         count: Optional[int] = None,
+        align: Optional[Union[int, StringT]] = None,
         aggregator: Optional[
             Literal[
                 PureToken.AVG,
@@ -638,17 +802,44 @@ class TimeSeries(ModuleGroup[AnyStr]):
             ]
         ] = None,
         bucketduration: Optional[int] = None,
-        align: Optional[Union[int, StringT]] = None,
         buckettimestamp: Optional[StringT] = None,
-        empty: Optional[bool] = None,
         groupby: Optional[StringT] = None,
         reducer: Optional[StringT] = None,
+        empty: Optional[bool] = None,
     ) -> Dict[
         AnyStr,
         Tuple[Dict[AnyStr, AnyStr], Union[Tuple[Tuple[int, float], ...], Tuple[()]]],
     ]:
         """
-        Query a range across multiple time-series by filters in reverse direction
+        Query a range across multiple time series by filters in reverse direction.
+
+        :param fromtimestamp: Start timestamp for the range query (integer UNIX timestamp
+         in milliseconds) or `-` to denote the timestamp of the earliest sample amongst
+         all time series that passes the filters.
+        :param totimestamp: End timestamp for the range query (integer UNIX timestamp in
+         milliseconds) or `+` to denote the timestamp of the latest sample amongst all
+         time series that passes the filters
+        :param latest: Report the compacted value of the latest, possibly partial, bucket.
+        :param filters: Filter expressions to apply to the time series.
+        :param filter_by_ts: Timestamps to filter the time series by.
+        :param min_value: Minimum value to filter the time series by.
+        :param max_value: Maximum value to filter the time series by.
+        :param withlabels: Whether to include labels in the response.
+        :param selected_labels: Returns a subset of the label-value pairs that represent metadata
+         labels of the time series. Use when a large number of labels exists per series, but only
+         the values of some of the labels are required. If :paramref:`withlabels` or
+         :paramref:`selected_labels` are not specified, by default, an empty mapping is reported
+         as label-value pairs.
+        :param count: Limit the number of samples returned.
+        :param align: Time bucket alignment control for :paramref:`aggregator`.
+        :param aggregator: Aggregates samples into time buckets by the provided aggregation type.
+        :param bucketduration: Duration of each bucket, in milliseconds.
+        :param buckettimestamp: Timestamp of the first bucket.
+        :param groupby: Label to group the samples by
+        :param reducer: Aggregation type to aggregate the results in each group
+        :param empty: Optional boolean to include empty time series in the response.
+
+        :return: A dictionary containing the result of the query.
         """
         pieces: CommandArgList = [
             normalized_timestamp(fromtimestamp),
@@ -697,7 +888,15 @@ class TimeSeries(ModuleGroup[AnyStr]):
         self, key: KeyT, latest: Optional[bool] = None
     ) -> Union[Tuple[int, float], Tuple[()]]:
         """
-        Get the sample with the highest timestamp from a given time series
+        Get the sample with the highest timestamp from a given time series.
+
+        :param key: The key name for the time series.
+        :param latest: If the time series is a compaction, if ``True``, reports
+         the compacted value of the latest, possibly partial, bucket. When ``False``,
+         does not report the latest, possibly partial, bucket. When a time series is not a
+         compaction, the parameter is ignored.
+        :return: A tuple of (timestamp, value) of the sample with the highest timestamp,
+         or an empty tuple if the time series is empty.
         """
         pieces: CommandArgList = [key]
         if latest:
@@ -724,9 +923,26 @@ class TimeSeries(ModuleGroup[AnyStr]):
         selected_labels: Optional[Parameters[StringT]] = None,
     ) -> Dict[AnyStr, Tuple[Dict[AnyStr, AnyStr], Tuple[int, float]]]:
         """
-        Get the sample with the highest timestamp from each time series matching a specific filter
+        Get the sample with the highest timestamp from each time series matching a specific filter.
 
-
+        :param filters: Filters time series based on their labels and label values. At least one
+         `label=value` filter is required.
+        :param latest: Used when a time series is a compaction. If ``True``, the command also
+         reports the compacted value of the latest possibly partial bucket, given that this
+         bucket's start time falls within `[fromTimestamp, toTimestamp]`. If ``False``,
+         the command does not report the latest possibly partial bucket. When a time series is
+         not a compaction, the argument is ignored
+        :param withlabels: Includes in the reply all label-value pairs representing metadata labels
+         of the time series. If :paramref:`withlabels` or :paramref:`selected_labels` are not
+         specified, by default, an empty dictionary is reported as label-value pairs.
+        :param selected_labels: Returns a subset of the label-value pairs that represent metadata
+         labels of the time series. Use when a large number of labels exists per series, but only
+         the values of some of the labels are required. If :paramref:`withlabels` or
+         :paramref:`selected_labels` are not specified, by default, an empty mapping is reported
+         as label-value pairs.
+        :return: For each time series matching the specified filters, a dictionary is returned with
+         the time series key name as the key and a tuple containing the label-value pairs and a
+         single timestamp-value pair as the value.
         """
         pieces: CommandArgList = []
         if latest:
@@ -748,7 +964,11 @@ class TimeSeries(ModuleGroup[AnyStr]):
         self, key: KeyT, debug: Optional[bool] = None
     ) -> Dict[AnyStr, ResponseType]:
         """
-        Returns information and statistics for a time series
+        Return information and statistics for a time series.
+
+        :param key: Key name of the time series.
+        :param debug: Optional flag to get a more detailed information about the chunks.
+        :return: Dictionary with information about the time series (name-value pairs).
         """
         pieces: CommandArgList = [key]
         if debug:
@@ -768,7 +988,24 @@ class TimeSeries(ModuleGroup[AnyStr]):
     )
     async def queryindex(self, filters: Parameters[StringT]) -> Set[AnyStr]:
         """
-        Get all time series keys matching a filter list
+        Get all time series keys matching a filter list.
+
+        :param filters: A list of filter expressions to match time series based on their labels
+         and label values. Each filter expression has one of the following syntaxes:
+          - `label=value`, where `label` equals `value`
+          - `label!=value`, where `label` does not equal `value`
+          - `label=`, where `key` does not have label `label`
+          - `label!=`, where `key` has label `label`
+          - `label=(value1,value2,...)`, where `key` with label `label` equals one of
+            the values in the list
+          - `label!=(value1,value2,...)`, where key with label `label` does not equal
+            any of the values in the list
+         At least one `label=value` filter is required. Filters are conjunctive. For example, the
+         FILTER `type=temperature room=study` means the a time series is a temperature time series
+         of a study room. Don't use whitespaces in the filter expression.
+        :return: A set of time series keys matching the filter list. The set is empty if no time
+         series matches the filter. An error is returned on invalid filter expression.
+
         """
         pieces: CommandArgList = [*filters]
 
