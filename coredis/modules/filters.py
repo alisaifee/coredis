@@ -426,6 +426,10 @@ class CountMinSketch(ModuleGroup[AnyStr]):
     async def initbydim(self, key: KeyT, width: int, depth: int) -> bool:
         """
         Initializes a Count-Min Sketch to dimensions specified by user
+
+        :param key: Name of the sketch.
+        :param width: Number of counters in each array. Reduces error size.
+        :param depth: Number of counter-arrays. Reduces error probability.
         """
         return await self.execute_module_command(
             CommandName.CMS_INITBYDIM,
@@ -441,6 +445,11 @@ class CountMinSketch(ModuleGroup[AnyStr]):
     ) -> bool:
         """
         Initializes a Count-Min Sketch to accommodate requested tolerances.
+
+        :param key: Name of the sketch.
+        :param error: Estimate size of error as a percent of total counted items.
+        :param probability: Desired probability for inflated count as a decimal value
+         between 0 and 1.
         """
         return await self.execute_module_command(
             CommandName.CMS_INITBYPROB,
@@ -454,6 +463,10 @@ class CountMinSketch(ModuleGroup[AnyStr]):
     async def incrby(self, key: KeyT, items: Dict[AnyStr, int]) -> Tuple[int, ...]:
         """
         Increases the count of one or more items by increment
+
+        :param key: The name of the HyperLogLog sketch.
+        :param items: A dictionary containing the items to increment and
+         their respective increments.
         """
 
         return await self.execute_module_command(
@@ -471,6 +484,9 @@ class CountMinSketch(ModuleGroup[AnyStr]):
     ) -> Tuple[int, ...]:
         """
         Returns the count for one or more items in a sketch
+
+        :param key: The name of the Count-Min Sketch.
+        :param items: One or more items for which to return the count.
         """
         pieces: CommandArgList = [key, *items]
 
@@ -487,6 +503,10 @@ class CountMinSketch(ModuleGroup[AnyStr]):
     ) -> bool:
         """
         Merges several sketches into one sketch
+
+        :param destination: The name of the destination sketch. Must be initialized.
+        :param sources: Names of the source sketches to be merged.
+        :param weights: Multiples of each sketch. Default is 1.
         """
         _sources: List[KeyT] = list(sources)
         pieces: CommandArgList = [destination, len(_sources), *_sources]
@@ -502,6 +522,9 @@ class CountMinSketch(ModuleGroup[AnyStr]):
     async def info(self, key: KeyT) -> Dict[AnyStr, int]:
         """
         Returns information about a sketch
+
+        :param key: The name of the sketch.
+        :return: A dictionary containing the width, depth, and total count of the sketch.
         """
 
         return await self.execute_module_command(
