@@ -1,20 +1,16 @@
 from __future__ import annotations
 
-import json
-from typing import Optional, Union, cast
-
 from deprecated.sphinx import versionadded
 
+from .._json import json
 from ..commands._wrappers import CacheConfig
 from ..commands.constants import CommandFlag, CommandGroup, CommandName
 from ..response._callbacks import (
     IntCallback,
     NoopCallback,
     OneOrManyCallback,
-    ResponseCallback,
     SimpleStringCallback,
 )
-from ..response.types import JsonType
 from ..tokens import PureToken
 from ..typing import (
     AnyStr,
@@ -22,25 +18,16 @@ from ..typing import (
     KeyT,
     List,
     Literal,
+    Optional,
     Parameters,
     ResponseType,
     StringT,
+    Union,
     ValueT,
 )
 from .base import ModuleGroup, module_command
-
-
-class JsonCallback(ResponseCallback[ResponseType, ResponseType, JsonType]):
-    def transform(self, response: ResponseType, **kwargs: Optional[ValueT]) -> JsonType:
-        if isinstance(response, (bytes, str)):
-            deser = json.loads(response)
-        elif isinstance(response, list):
-            deser = [
-                json.loads(e) if isinstance(e, (bytes, str)) else e for e in response
-            ]
-        else:
-            deser = response
-        return cast(JsonType, deser)  # alas we lie.
+from .response._callbacks.json import JsonCallback
+from .response.types import JsonType
 
 
 @versionadded(version="4.12.0")

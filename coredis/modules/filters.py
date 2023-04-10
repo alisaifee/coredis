@@ -1,21 +1,5 @@
 from __future__ import annotations
 
-from coredis.typing import (
-    AnyStr,
-    CommandArgList,
-    Dict,
-    KeyT,
-    List,
-    Literal,
-    Optional,
-    Parameters,
-    ResponsePrimitive,
-    StringT,
-    Tuple,
-    Union,
-    ValueT,
-)
-
 from .._utils import dict_to_flat_list
 from ..commands._validators import mutually_inclusive_parameters
 from ..commands.constants import CommandGroup, CommandName
@@ -32,6 +16,21 @@ from ..response._callbacks import (
     TupleCallback,
 )
 from ..tokens import PrefixToken, PureToken
+from ..typing import (
+    AnyStr,
+    CommandArgList,
+    Dict,
+    KeyT,
+    List,
+    Literal,
+    Optional,
+    Parameters,
+    ResponsePrimitive,
+    StringT,
+    Tuple,
+    Union,
+    ValueT,
+)
 from .base import ModuleGroup, module_command
 
 

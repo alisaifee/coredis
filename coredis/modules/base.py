@@ -4,7 +4,7 @@ import functools
 import textwrap
 import weakref
 from abc import ABCMeta
-from typing import Any, ClassVar, cast
+from typing import Any, cast
 
 from .._protocols import AbstractExecutor
 from ..commands._utils import redis_command_link
@@ -15,11 +15,12 @@ from ..commands._wrappers import (
     CommandDetails,
 )
 from ..commands.constants import CommandFlag, CommandGroup, CommandName
-from ..globals import MODULE_GROUPS, READONLY_COMMANDS
+from ..globals import COMMAND_FLAGS, MODULE_GROUPS, READONLY_COMMANDS
 from ..response._callbacks import NoopCallback
 from ..typing import (
     AnyStr,
     Callable,
+    ClassVar,
     Coroutine,
     Dict,
     Generic,
@@ -40,6 +41,9 @@ def module_command(
     flags: Optional[Set[CommandFlag]] = None,
     cluster: ClusterCommandConfig = ClusterCommandConfig(),
     cache_config: Optional[CacheConfig] = None,
+    version_introduced: Optional[str] = None,
+    version_deprecated: Optional[str] = None,
+    arguments: Optional[Dict[str, Dict[str, str]]] = None,
 ) -> Callable[
     [Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]
 ]:
@@ -62,6 +66,7 @@ def module_command(
         command_cache = CommandCache(command_name, cache_config)
         if flags and CommandFlag.READONLY in flags:
             READONLY_COMMANDS.add(command_name)
+        COMMAND_FLAGS[command_name] = flags or set()
 
         @functools.wraps(func)
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:

@@ -73,7 +73,19 @@ MODULES = {
         "prefix": "ts",
         "group": "timeseries",
         "module": "timeseries"
-    }
+    },
+    "search": {
+        "repo": "https://github.com/RediSearch/RediSearch/",
+        "prefix": "ft",
+        "group": "search",
+        "module": "search"
+    },
+    "suggestion": {
+        "repo": "https://github.com/RediSearch/RediSearch/",
+        "prefix": "ft",
+        "group": "suggestion",
+        "module": "search"
+    },
 }
 
 MAPPING = {"DEL": "delete"}
@@ -2380,7 +2392,7 @@ def implementation(ctx, command, group, module, expr, debug=False):
     {%- endfor -%}
     {% if method["readonly"] %}, readonly=True{% endif -%}
     {% if argument_with_version %}, arguments={{ argument_with_version }}{%endif%}
-    {%- endif -%})
+    {%- endif -%}
     {%- endif -%})
     async def {{method["name"]}}{{render_signature(method["rec_signature"], True)}}:
         \"\"\"
@@ -2444,7 +2456,7 @@ def implementation(ctx, command, group, module, expr, debug=False):
                 commands.extend([k for k in group_commands if k["name"] in command])
 
     for command in commands:
-        method_details = generate_method_details(kls, command, module=module, debug=True)
+        method_details = generate_method_details(kls, command, module=MODULES[module]["module"], debug=True)
         if method_details.get("rec_signature"):
             print(method_template.render(method=method_details))
 
@@ -2815,6 +2827,34 @@ def cluster_key_extraction(path):
     all["TS.REVRANGE"] = fixed_args["first"]
     all["TS.RANGE"] = fixed_args["first"]
     all["TS.DEL"] = fixed_args["first"]
+
+    # Search
+    all["FT.CREATE"] = fixed_args["first"]
+    all["FT.INFO"] = fixed_args["first"]
+    all["FT.ALTER"] = fixed_args["first"]
+    all["FT.ALIASADD"] = fixed_args["first"]
+    all["FT.ALIASUPDATE"] = fixed_args["first"]
+    all["FT.ALIASDEL"] = fixed_args["first"]
+    all["FT.TAGVALS"] = fixed_args["first"]
+    all["FT.CONFIG GET"] = fixed_args["first"]
+    all["FT.CONFIG SET"] = fixed_args["first"]
+    all["FT.SEARCH"] = fixed_args["first"]
+    all["FT.AGGREGATE"] = fixed_args["first"]
+    all["FT.CURSOR GET"] = fixed_args["first"]
+    all["FT.CURSOR DEL"] = fixed_args["first"]
+    all["FT.SYNUPDATE"] = fixed_args["first"]
+    all["FT.SYNDUMP"] = fixed_args["first"]
+    all["FT.SPELLCHECK"] = fixed_args["first"]
+    all["FT.DICTADD"] = fixed_args["first"]
+    all["FT.DICTDEL"] = fixed_args["first"]
+    all["FT.DICTDUMP"] = fixed_args["first"]
+    all["FT.DROPINDEX"] = fixed_args["first"]
+
+    # Autocomplete
+    all["FT.SUGADD"] = fixed_args["first"]
+    all["FT.SUGDEL"] = fixed_args["first"]
+    all["FT.SUGGET"] = fixed_args["first"]
+    all["FT.SUGLEN"] = fixed_args["first"]
 
     key_spec_template = """
 from __future__ import annotations

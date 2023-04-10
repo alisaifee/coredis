@@ -4,7 +4,7 @@ import dataclasses
 import datetime
 import re
 import shlex
-from typing import Any, Pattern
+from typing import Pattern
 
 from coredis.typing import (
     AbstractSet,
@@ -413,7 +413,3 @@ class PubSubMessage(TypedDict):
     #:   this will be an :class:`int` corresponding to the  number of channels and patterns that the
     #:   connection is currently subscribed to.
     data: Union[int, StringT]
-
-
-#: Type alias for valid python types that can be represented as json
-JsonType = Union[str, int, float, bool, None, Dict[str, Any], List[Any]]

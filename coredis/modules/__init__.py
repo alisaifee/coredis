@@ -5,8 +5,10 @@ from deprecated.sphinx import versionadded
 from coredis.commands import CommandMixin
 from coredis.typing import AnyStr
 
+from .autocomplete import Autocomplete
 from .filters import BloomFilter, CountMinSketch, CuckooFilter, TDigest, TopK
 from .json import Json
+from .search import Search
 from .timeseries import TimeSeries
 
 
@@ -66,3 +68,19 @@ class ModuleMixin(CommandMixin[AnyStr]):
         Property to access :class:`~coredis.modules.timeseries.TimeSeries` commands.
         """
         return TimeSeries(self)
+
+    @property
+    @versionadded(version="4.12.0")
+    def search(self) -> Search[AnyStr]:
+        """
+        Property to access :class:`~coredis.modules.search.Search` commands.
+        """
+        return Search(self)
+
+    @property
+    @versionadded(version="4.12.0")
+    def autocomplete(self) -> Autocomplete[AnyStr]:
+        """
+        Property to access :class:`~coredis.modules.autocomplete.Autocomplete` commands.
+        """
+        return Autocomplete(self)
