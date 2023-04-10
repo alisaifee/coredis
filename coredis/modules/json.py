@@ -46,6 +46,10 @@ class Json(ModuleGroup[AnyStr]):
 
         :param key: The key of the JSON document.
         :param path: The JSONPath to specify.
+
+        Delete a value from a JSON document stored in Redis.
+
+        :return: The number of paths deleted
         """
         pieces: CommandArgList = [key]
         if path:
@@ -72,6 +76,7 @@ class Json(ModuleGroup[AnyStr]):
 
         :param key: The key of the JSON document.
         :param paths: JSONPath(s) to get values from.
+        :return: The value at :paramref:`path`
         """
         pieces: CommandArgList = [key]
         if paths:
@@ -84,11 +89,12 @@ class Json(ModuleGroup[AnyStr]):
     @module_command(CommandName.JSON_FORGET, group=CommandGroup.JSON, module="ReJSON")
     async def forget(self, key: KeyT, path: Optional[ValueT] = None) -> int:
         """
-        Deletes a value
+        Deletes an element from a path from a json object
 
-        :param key: The Redis key where the JSON object is stored.
+        :param key: The key of the JSON document.
         :param path: The path(s) to delete from the JSON object.
-         If not provided, the entire JSON object is deleted.
+
+        :return: The number of deleted elements.
         """
         pieces: CommandArgList = [key]
         if path:
@@ -104,6 +110,9 @@ class Json(ModuleGroup[AnyStr]):
 
         :param key: Redis key to modify.
         :param path: JSONPath to specify.
+        :return: A list of integer replies for each path, the new value
+         (`0` if `false` or `1` if `true`), or ``None`` for JSON values matching
+         the path that are not Boolean.
         """
         pieces: CommandArgList = [key, path]
         return await self.execute_module_command(
@@ -119,6 +128,7 @@ class Json(ModuleGroup[AnyStr]):
 
         :param key: The key to parse.
         :param path: The JSONPath to specify.
+        :return: The number of values cleared.
         """
         pieces: CommandArgList = [key]
         if path:
@@ -152,6 +162,7 @@ class Json(ModuleGroup[AnyStr]):
         :param condition: Optional argument to modify the behavior of adding a key to a JSON Object.
          If ``NX``, the key is set only if it does not already exist. If ``XX``, the key is set only
          if it already exists.
+        :return: `True` if the value was set successfully, `False` otherwise.
         """
         pieces: CommandArgList = [key, path, json.dumps(value)]
         if condition:
@@ -172,6 +183,7 @@ class Json(ModuleGroup[AnyStr]):
 
         :param keys: one or more keys to retrieve values from.
         :param path: JSONPath to specify.
+        :return: The values at :paramref:`path` for each of the keys in :paramref:`keys.
         """
         pieces: CommandArgList = [*keys, path]
         return await self.execute_module_command(
@@ -232,8 +244,10 @@ class Json(ModuleGroup[AnyStr]):
         Appends a string to a JSON string value at path
 
         :param key: The key to modify
-        :param value: The value to append to the string(s) at the specified :paramref`path`.
+        :param value: The value to append to the string(s) at the specified :paramref:`path`.
         :param path: The JSONPath to specify the location of the string(s) to modify.
+        :return: A list of integer replies for each path, the string's new length,
+         or ``None`` if the matching JSON value is not a string.
         """
         pieces: CommandArgList = [key]
         if path is not None:
@@ -257,6 +271,10 @@ class Json(ModuleGroup[AnyStr]):
 
         :param key: The key of the JSON document.
         :param path: JSONPath to specify.
+        :return: An array of integer replies for each path, the array's length,
+         or ``None``, if the matching JSON value is not a string.
+
+
         """
         pieces: CommandArgList = [key]
         if path is not None:
@@ -280,9 +298,10 @@ class Json(ModuleGroup[AnyStr]):
 
         :param key: The key to modify.
         :param values: One or more values to append to one or more arrays.
-         To specify a string as an array value to append, wrap the quoted string with an
-        additional set of single quotes. Example: `'"silver"'`.
         :param path: JSONPath to specify.
+        :return: An array of integer replies for each path, the array's new size,
+         or `None` if the matching JSON value is not an array.
+
         """
         pieces: CommandArgList = [key]
         if path:
@@ -317,7 +336,8 @@ class Json(ModuleGroup[AnyStr]):
         :param start: Inclusive start value to specify in a slice of the array to search.
         :param stop: Exclusive stop value to specify in a slice of the array to search,
          including the last element. Negative values are interpreted as starting from the end.
-
+        :return: The index of the first occurrence of the value in the array,
+         or a list of indices if the value is found in multiple arrays.
         """
         pieces: CommandArgList = [key, path, json.dumps(value)]
         if start is not None:
@@ -348,6 +368,8 @@ class Json(ModuleGroup[AnyStr]):
          The index must be in the array's range. Inserting at `index` 0 prepends to the array.
          Negative index values start from the end of the array.
         :param values: One or more values to insert in one or more arrays.
+        :returns: The length of the array after the insert operation or a list of lengths of
+         the arrays after the insert operation if the path matches multiple arrays
         """
         pieces: CommandArgList = [key, path, index]
         pieces.extend([json.dumps(value) for value in values])
@@ -365,6 +387,10 @@ class Json(ModuleGroup[AnyStr]):
 
         :param key: The key to parse.
         :param path: The JSONPath to specify.
+
+        :return: An integer if the matching value is an array, or a list of integers if
+         multiple matching values are arrays. Returns ``None`` if the :paramref:`key` or
+         :paramref:`path` do not exist.
         """
         pieces: CommandArgList = [key]
         if path:
@@ -385,6 +411,7 @@ class Json(ModuleGroup[AnyStr]):
         :param path: JSONPath to specify.
         :param index: Position in the array to start popping from. Out-of-range indexes
          round to their respective array ends.
+        :return: The popped value, or ``None`` if the matching JSON value is not an array.
         """
         pieces: CommandArgList = [key]
         if path:
@@ -404,8 +431,12 @@ class Json(ModuleGroup[AnyStr]):
         Trims the array at path to contain only the specified inclusive range of indices
         from start to stop
 
-        :param key: The key of the JSON document.
+        :param key: Key to modify.
         :param path: The JSONPath to specify.
+        :param start: The index of the first element to keep (previous elements are trimmed).
+        :param stop: The index of the last element to keep (following elements are trimmed),
+         including the last element. Negative values are interpreted as starting from the end.
+        :return: The number of elements removed or a list if multiple matching values are arrays.
         """
         pieces: CommandArgList = [key, path, start, stop]
 
@@ -420,6 +451,10 @@ class Json(ModuleGroup[AnyStr]):
 
         :param key: The key of the JSON document.
         :param path: JSONPath to specify.
+
+        :return: A list of the key names in the object or a list of lists if multiple objects
+         match the :paramref:`path`, or `None` if the matching value is not an object.
+
         """
         pieces: CommandArgList = [key]
         if path:
@@ -438,6 +473,9 @@ class Json(ModuleGroup[AnyStr]):
 
         :param key: The key of the JSON document.
         :param path: JSONPath to specify.
+        :return: An integer if the path matches exactly one object or a list of integer
+         replies for each path specified as the number of keys in the object or ``None``,
+         if the matching JSON value is not an object.
         """
         pieces: CommandArgList = [key]
         if path:
