@@ -258,7 +258,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         module="timeseries",
     )
     async def madd(
-        self, ktvs: Parameters[Tuple[AnyStr, int, float]]
+        self, ktvs: Parameters[Tuple[AnyStr, int, Union[int, float]]]
     ) -> Tuple[int, ...]:
         """
         Append new samples to one or more time series.
@@ -266,8 +266,6 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param ktvs: A list of tuples, where each tuple contains the key name for the time series,
          an integer UNIX sample timestamp in milliseconds or `*` to set the timestamp according
          to the server clock, and a numeric data value of the sample.
-         The double number should follow RFC 7159 (a JSON standard). The parser rejects overly
-         large values that would not fit in binary64. It does not accept NaN or infinite values.
         :return: A tuple of integers representing the timestamp of each added sample
         """
         pieces: CommandArgList = list(itertools.chain(*ktvs))
