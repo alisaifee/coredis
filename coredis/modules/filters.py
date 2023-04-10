@@ -258,6 +258,14 @@ class CuckooFilter(ModuleGroup[AnyStr]):
     ) -> bool:
         """
         Creates a new Cuckoo Filter
+
+        :param key: The name of the filter.
+        :param capacity: Estimated capacity for the filter.
+        :param bucketsize: Number of items in each bucket.
+        :param maxiterations: Number of attempts to swap items between buckets
+         before declaring filter as full and creating an additional filter.
+        :param expansion: When a new filter is created, its size is the size of the
+         current filter multiplied by ``expansion``.
         """
         pieces: CommandArgList = [key, capacity]
         if bucketsize is not None:
@@ -274,6 +282,9 @@ class CuckooFilter(ModuleGroup[AnyStr]):
     async def add(self, key: KeyT, item: ValueT) -> bool:
         """
         Adds an item to a Cuckoo Filter
+
+        :param key: The name of the filter.
+        :param item: The item to add.
         """
         pieces: CommandArgList = [key, item]
 
@@ -285,6 +296,9 @@ class CuckooFilter(ModuleGroup[AnyStr]):
     async def addnx(self, key: KeyT, item: ValueT) -> bool:
         """
         Adds an item to a Cuckoo Filter if the item did not exist previously.
+
+        :param key: The name of the filter.
+        :param item: The item to add.
         """
         pieces: CommandArgList = [key, item]
 
@@ -302,6 +316,14 @@ class CuckooFilter(ModuleGroup[AnyStr]):
     ) -> Tuple[bool, ...]:
         """
         Adds one or more items to a Cuckoo Filter. A filter will be created if it does not exist
+
+        :param key: The name of the filter.
+        :param items: One or more items to add.
+        :param capacity: Specifies the desired capacity of the new filter, if this filter
+         does not exist yet.
+        :param nocreate: If specified, prevents automatic filter creation if the filter
+         does not exist.
+        :return: A tuple of boolean values indicating if the command was executed correctly.
         """
         pieces: CommandArgList = [key]
         if capacity is not None:
@@ -326,6 +348,13 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         """
         Adds one or more items to a Cuckoo Filter if the items did not exist previously.
         A filter will be created if it does not exist
+
+        :param key: The name of the filter.
+        :param items: One or more items to add.
+        :param capacity: Specifies the desired capacity of the new filter,
+         if this filter does not exist yet.
+        :param nocreate: If specified, prevents automatic filter creation
+         if the filter does not exist.
         """
         pieces: CommandArgList = [key]
         if capacity is not None:
@@ -343,6 +372,9 @@ class CuckooFilter(ModuleGroup[AnyStr]):
     async def exists(self, key: KeyT, item: ValueT) -> bool:
         """
         Checks whether an item exist in a Cuckoo Filter
+
+        :param key: The name of the filter.
+        :param item: The item to check for.
         """
         pieces: CommandArgList = [key, item]
 
@@ -354,6 +386,9 @@ class CuckooFilter(ModuleGroup[AnyStr]):
     async def mexists(self, key: KeyT, items: Parameters[ValueT]) -> Tuple[bool, ...]:
         """
         Checks whether one or more items exist in a Cuckoo Filter
+
+        :param key: The name of the filter.
+        :param items: The item(s) to check for.
         """
         pieces: CommandArgList = [key, *items]
 
@@ -365,6 +400,9 @@ class CuckooFilter(ModuleGroup[AnyStr]):
     async def delete(self, key: KeyT, item: ValueT) -> bool:
         """
         Deletes an item from a Cuckoo Filter
+
+        :param key: The name of the filter.
+        :param item: The item to delete from the filter.
         """
         pieces: CommandArgList = [key, item]
 
@@ -376,6 +414,9 @@ class CuckooFilter(ModuleGroup[AnyStr]):
     async def count(self, key: KeyT, item: ValueT) -> int:
         """
         Return the number of times an item might be in a Cuckoo Filter
+
+        :param key: The name of the filter.
+        :param item: The item to count.
         """
         pieces: CommandArgList = [key, item]
 
@@ -387,6 +428,10 @@ class CuckooFilter(ModuleGroup[AnyStr]):
     async def scandump(self, key: KeyT, iterator: int) -> Tuple[int, Optional[bytes]]:
         """
         Begins an incremental save of the bloom filter
+
+        :param key: Name of the filter.
+        :param iterator: Iterator value. This is either 0, or the iterator from a
+         previous invocation of this command.
         """
         pieces: CommandArgList = [key, iterator]
 
@@ -401,6 +446,11 @@ class CuckooFilter(ModuleGroup[AnyStr]):
     async def loadchunk(self, key: KeyT, iterator: int, data: StringT) -> bool:
         """
         Restores a filter previously saved using SCANDUMP
+
+        :param key: Name of the key to restore.
+        :param iter: Iterator value associated with :paramref:`data` (returned by :meth:`scandump`).
+        :param data: Current data chunk (returned by :meth:`scandump`).
+
         """
         pieces: CommandArgList = [key, iterator, data]
 
@@ -412,6 +462,8 @@ class CuckooFilter(ModuleGroup[AnyStr]):
     async def info(self, key: KeyT) -> Dict[AnyStr, ResponsePrimitive]:
         """
         Returns information about a Cuckoo Filter
+
+        :param key: The name of the filter.
         """
 
         return await self.execute_module_command(
