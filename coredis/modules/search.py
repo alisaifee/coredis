@@ -47,6 +47,10 @@ from .response.types import SearchAggregationResult, SearchResult
 
 @dataclasses.dataclass
 class Field:
+    """
+    Field definition to be used in :meth:`Search.create` &
+    :meth:`Search.alter`
+    """
     name: StringT
     type: Literal[
         PureToken.TEXT,
@@ -108,8 +112,16 @@ class Field:
 
 @dataclasses.dataclass
 class Reduce:
+    """
+    Reduce definition to be used with :paramref:`Search.aggregate.transformations`
+    to define ``REDUCE`` steps in :meth:`Search.aggregate`
+    """
+
+    #: The name of the reducer function
     function: StringT
+    #: The arguments to the reducer function
     parameters: Optional[Parameters[ValueT]] = None
+    #: The alias to assign to the result of the reducer function
     alias: Optional[StringT] = None
 
     @property
@@ -124,7 +136,13 @@ class Reduce:
 
 @dataclasses.dataclass
 class Group:
+    """
+    Group definition to be used with :paramref:`Search.aggregate.transformations`
+    to specify ``GROUPBY`` steps in :meth:`Search.aggregate`
+    """
+    #: The field to group by
     by: Union[StringT, Parameters[StringT]]
+    #: The reducers to apply to each group
     reducers: Optional[Parameters[Reduce]] = None
 
     @property
@@ -144,7 +162,13 @@ class Group:
 
 @dataclasses.dataclass
 class Apply:
+    """
+    Apply definition to be used with :paramref:`Search.aggregate.transformations`
+    to specify ``APPLY`` steps in :meth:`Search.aggregate`
+    """
+    #: The expression to apply
     function: StringT
+    #: The alias to assign to the result of the expression
     alias: StringT
 
     @property
@@ -154,6 +178,11 @@ class Apply:
 
 @dataclasses.dataclass
 class Filter:
+    """
+    Filter definition to be used with :paramref:`Search.aggregate.transformations`
+    to specify ``FILTER`` steps in :meth:`Search.aggregate`
+    """
+    #: The filter expression
     expression: StringT
 
     @property
