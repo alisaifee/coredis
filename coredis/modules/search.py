@@ -51,6 +51,7 @@ class Field:
     Field definition to be used in :meth:`Search.create` &
     :meth:`Search.alter`
     """
+
     name: StringT
     type: Literal[
         PureToken.TEXT,
@@ -140,6 +141,7 @@ class Group:
     Group definition to be used with :paramref:`Search.aggregate.transformations`
     to specify ``GROUPBY`` steps in :meth:`Search.aggregate`
     """
+
     #: The field to group by
     by: Union[StringT, Parameters[StringT]]
     #: The reducers to apply to each group
@@ -166,6 +168,7 @@ class Apply:
     Apply definition to be used with :paramref:`Search.aggregate.transformations`
     to specify ``APPLY`` steps in :meth:`Search.aggregate`
     """
+
     #: The expression to apply
     function: StringT
     #: The alias to assign to the result of the expression
@@ -182,6 +185,7 @@ class Filter:
     Filter definition to be used with :paramref:`Search.aggregate.transformations`
     to specify ``FILTER`` steps in :meth:`Search.aggregate`
     """
+
     #: The filter expression
     expression: StringT
 
