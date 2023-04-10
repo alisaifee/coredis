@@ -49,6 +49,12 @@ class BloomFilter(ModuleGroup[AnyStr]):
     ) -> bool:
         """
         Creates a new Bloom Filter
+
+        :param key: The key under which the filter is found.
+        :param error_rate: The desired probability for false positives.
+        :param capacity: The number of entries intended to be added to the filter.
+        :param expansion: The size of the new sub-filter when `capacity` is reached.
+        :param nonscaling: Prevents the filter from creating additional sub-filters.
         """
         pieces: CommandArgList = [key, error_rate, capacity]
         if expansion is not None:
@@ -64,6 +70,9 @@ class BloomFilter(ModuleGroup[AnyStr]):
     async def add(self, key: KeyT, item: ValueT) -> bool:
         """
         Adds an item to a Bloom Filter
+
+        :param key: The key under which the filter is found.
+        :param item: The item to add to the filter.
         """
         pieces: CommandArgList = [key, item]
 
@@ -75,6 +84,9 @@ class BloomFilter(ModuleGroup[AnyStr]):
     async def madd(self, key: KeyT, items: Parameters[ValueT]) -> Tuple[bool, ...]:
         """
         Adds one or more items to a Bloom Filter. A filter will be created if it does not exist
+
+        :param key: The key under which the filter is found.
+        :param items: One or more items to add.
         """
         pieces: CommandArgList = [key, *items]
 
@@ -96,6 +108,16 @@ class BloomFilter(ModuleGroup[AnyStr]):
         """
         Adds one or more items to a Bloom Filter. A filter will be created if it
         does not exist
+
+        :param key: The key under which the filter is found.
+        :param items: One or more items to add.
+        :param capacity: The desired capacity for the filter to be created.
+        :param error: The error ratio of the newly created filter if it does not yet exist.
+        :param expansion: The expansion factor for the filter when capacity is reached.
+        :param nocreate: Indicates that the filter should not be created if it does not
+         already exist.
+        :param nonscaling: Prevents the filter from creating additional sub-filters
+         if initial capacity is reached.
         """
         pieces: CommandArgList = [key]
         if capacity is not None:
@@ -118,6 +140,9 @@ class BloomFilter(ModuleGroup[AnyStr]):
     async def exists(self, key: KeyT, item: ValueT) -> bool:
         """
         Checks whether an item exists in a Bloom Filter
+
+        :param key: The key under which the filter is found.
+        :param item: The item to check for existence.
         """
         return await self.execute_module_command(
             CommandName.BF_EXISTS, key, item, callback=BoolCallback()
@@ -127,6 +152,9 @@ class BloomFilter(ModuleGroup[AnyStr]):
     async def mexists(self, key: KeyT, items: Parameters[ValueT]) -> Tuple[bool, ...]:
         """
         Checks whether one or more items exist in a Bloom Filter
+
+        :param key: The key under which the filter is found.
+        :param items: One or more items to check.
         """
         return await self.execute_module_command(
             CommandName.BF_MEXISTS, key, *items, callback=BoolsCallback()
@@ -137,7 +165,13 @@ class BloomFilter(ModuleGroup[AnyStr]):
         """
         Begins an incremental save of the bloom filter
 
-        :return: a tuple containing (next iter, data)
+        :param key: The key under which the filter is found.
+        :param iterator: Iterator value; either 0 to start a dump or the iterator
+         from a previous invocation of this command.
+
+        :return: A tuple of iterator value and data. If iterator is 0, iteration has
+         completed. The iterator-data pair should be passed to :meth:`loadchunk` when
+         restoring the filter.
         """
 
         return await self.execute_module_command(
@@ -152,6 +186,10 @@ class BloomFilter(ModuleGroup[AnyStr]):
     async def loadchunk(self, key: KeyT, iterator: int, data: bytes) -> bool:
         """
         Restores a filter previously saved using :meth:`scandump`
+
+        :param key: Name of the key to restore.
+        :param iterator: Iterator value associated with the data chunk.
+        :param data: Current data chunk.
         """
         pieces: CommandArgList = [key, iterator, data]
 
@@ -175,6 +213,12 @@ class BloomFilter(ModuleGroup[AnyStr]):
     ) -> Union[Dict[AnyStr, int], int]:
         """
         Returns information about a Bloom Filter
+
+        :param key: The key name for an existing Bloom filter.
+        :param single_value: Optional parameter to get a specific information field.
+
+        :return: A dictionary with all information fields if :paramref:`single_value`
+         is not specified, or an integer representing the value of the specified field.
         """
         if single_value:
             return await self.execute_module_command(
@@ -192,6 +236,8 @@ class BloomFilter(ModuleGroup[AnyStr]):
     async def card(self, key: KeyT) -> int:
         """
         Returns the cardinality of a Bloom filter
+
+        :param key: The key name for an existing Bloom filter.
         """
         return await self.execute_module_command(
             CommandName.BF_CARD, key, callback=IntCallback()
