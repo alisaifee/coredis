@@ -283,7 +283,6 @@ class Json(ModuleGroup[AnyStr]):
          To specify a string as an array value to append, wrap the quoted string with an
         additional set of single quotes. Example: `'"silver"'`.
         :param path: JSONPath to specify.
-
         """
         pieces: CommandArgList = [key]
         if path:
@@ -407,7 +406,6 @@ class Json(ModuleGroup[AnyStr]):
 
         :param key: The key of the JSON document.
         :param path: The JSONPath to specify.
-        :raises TypeError: If the input parameters are of incorrect type.
         """
         pieces: CommandArgList = [key, path, start, stop]
 
