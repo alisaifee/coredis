@@ -548,7 +548,15 @@ class TopK(ModuleGroup[AnyStr]):
         decay: Optional[Union[int, float]] = None,
     ) -> bool:
         """
-        Initializes a TopK with specified parameters
+        Reserve a TopK sketch with specified parameters.
+
+        :param key: Name of the TOP-K sketch.
+        :param topk: Number of top occurring items to keep.
+        :param width: Number of counters kept in each array.
+        :param depth: Number of arrays.
+        :param decay: The probability of reducing a counter in an occupied bucket.
+         It is raised to power of it's counter (``decay ^ bucket[i].counter``).
+         Therefore, as the counter gets higher, the chance of a reduction is being reduced.
         """
         pieces: CommandArgList = [key, topk]
         if width is not None and depth is not None and decay is not None:
@@ -563,6 +571,10 @@ class TopK(ModuleGroup[AnyStr]):
     ) -> Tuple[Optional[AnyStr], ...]:
         """
         Increases the count of one or more items by increment
+
+        :param key: Name of the TOP-K sketch.
+        :param items: Item(s) to be added.
+
         """
         return await self.execute_module_command(
             CommandName.TOPK_ADD,
@@ -577,6 +589,9 @@ class TopK(ModuleGroup[AnyStr]):
     ) -> Tuple[Optional[AnyStr], ...]:
         """
         Increases the count of one or more items by increment
+
+        :param key: Name of the TOP-K sketch.
+        :param items: Dictionary of items and their corresponding increment values.
         """
         return await self.execute_module_command(
             CommandName.TOPK_INCRBY,
@@ -592,7 +607,11 @@ class TopK(ModuleGroup[AnyStr]):
         items: Parameters[StringT],
     ) -> Tuple[bool, ...]:
         """
-        Checks whether one or more items are in a sketch
+        Checks whether an item is one of Top-K items.
+        Multiple items can be checked at once.
+
+        :param key: Name of the TOP-K sketch.
+        :param items: Item(s) to be queried.
         """
         pieces: CommandArgList = [key, *items]
 
@@ -608,6 +627,9 @@ class TopK(ModuleGroup[AnyStr]):
     ) -> Tuple[int, ...]:
         """
         Return the count for one or more items are in a sketch
+
+        :param key: The name of the TOP-K sketch.
+        :param items: One or more items to count.
         """
         pieces: CommandArgList = [key, *items]
 
@@ -621,6 +643,9 @@ class TopK(ModuleGroup[AnyStr]):
     ) -> Union[Dict[AnyStr, int], Tuple[AnyStr, ...]]:
         """
         Return full list of items in Top K list
+
+        :param key: Name of the TOP-K sketch.
+        :param withcount: Whether to include counts of each element.
         """
         pieces: CommandArgList = [key]
         if withcount:
@@ -637,6 +662,13 @@ class TopK(ModuleGroup[AnyStr]):
     async def info(self, key: KeyT) -> Dict[AnyStr, int]:
         """
         Returns information about a sketch
+
+        :param key: Name of the TOP-K sketch.
+        :return: A dictionary containing the following information:
+         - ``k``: The number of items tracked by the sketch.
+         - ``width``: The width of the sketch.
+         - ``depth``: The depth of the sketch.
+         - ``decay``: The decay factor used by the sketch.
         """
 
         return await self.execute_module_command(
