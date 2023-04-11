@@ -3,6 +3,19 @@
 Changelog
 =========
 
+v4.12.0b4
+---------
+Release Date: 2023-04-10
+
+* Features
+
+  * Add support for RedisSearch module
+  * Allow adding streams to stream consumers after initialization
+
+* Chores
+
+  * Update mypy
+
 v4.12.0b3
 ---------
 Release Date: 2023-04-04
@@ -1475,4 +1488,5 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
