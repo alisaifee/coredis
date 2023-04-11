@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from deprecated.sphinx import versionadded
+
 from coredis._utils import EncodingInsensitiveDict, nativestr
 from coredis.client import Client
 from coredis.exceptions import (
@@ -81,6 +83,7 @@ class Consumer(Generic[AnyStr]):
         self.buffer_size = buffer_size
         self.timeout = timeout
         self._initialized = False
+        self._initialized_streams: Dict[StringT, bool] = {}
 
     def chunk_streams(self) -> List[Dict[ValueT, StringT]]:
         import coredis.client
@@ -102,11 +105,13 @@ class Consumer(Generic[AnyStr]):
                 }
             ]
 
-    async def initialize(self) -> "Consumer[AnyStr]":
-        if self._initialized:
+    async def initialize(self, partial: bool = False) -> "Consumer[AnyStr]":
+        if self._initialized and not partial:
             return self
 
         for stream in self.streams:
+            if partial and self._initialized_streams.get(stream):
+                continue
             try:
                 info = await self.client.xinfo_stream(stream)
                 if info:
@@ -117,8 +122,23 @@ class Consumer(Generic[AnyStr]):
                         )
             except ResponseError:
                 pass
+            self._initialized_streams[stream] = True
         self._initialized = True
         return self
+
+    async def add_stream(
+        self, stream: StringT, identifier: Optional[StringT] = None
+    ) -> bool:
+        """
+        Adds a new stream identifier to this consumer
+
+        :param stream: The stream identifier
+        :return: ``True`` if the stream was added successfully, ``False`` otherwise
+        """
+        self.streams.add(stream)
+        self.state.setdefault(stream, {"identifier": identifier} if identifier else {})
+        await self.initialize(partial=True)
+        return stream in self._initialized_streams
 
     def __await__(self) -> Generator[Any, None, Consumer[AnyStr]]:
         return self.initialize().__await__()
@@ -221,6 +241,13 @@ class GroupConsumer(Consumer[AnyStr]):
          entries to appear on the streams the consumer is reading from.
         :param stream_parameters: Mapping of optional parameters to use
          by stream for the streams provided in :paramref:`streams`.
+
+
+        .. warning:: Providing an ``identifier`` in ``stream_parameters`` has a different
+           meaning for a group consumer. If the value is any valid identifier other than ``>``
+           the consumer will only access the history of pending messages. That is, the set of
+           messages that were delivered to this consumer (identified by :paramref:`consumer`)
+           and never acknowledged.
         """
         super().__init__(
             client,  # type: ignore[arg-type]
@@ -235,13 +262,15 @@ class GroupConsumer(Consumer[AnyStr]):
         self.auto_acknowledge = auto_acknowledge
         self.start_from_backlog = start_from_backlog
 
-    async def initialize(self) -> "GroupConsumer[AnyStr]":
-        if not self._initialized:
+    async def initialize(self, partial: bool = False) -> "GroupConsumer[AnyStr]":
+        if not self._initialized or partial:
             group_presence: Dict[KeyT, bool] = {
-                stream: False for stream in self.streams
+                stream: stream in self._initialized_streams for stream in self.streams
             }
             for stream in self.streams:
                 try:
+                    if self._initialized_streams.get(stream):
+                        continue
                     group_presence[stream] = (
                         len(
                             [
@@ -276,10 +305,26 @@ class GroupConsumer(Consumer[AnyStr]):
                         )
                     except StreamDuplicateConsumerGroupError:  # noqa
                         pass
+                self._initialized_streams[stream] = True
                 self.state[stream].setdefault("identifier", ">")
 
             self._initialized = True
         return self
+
+    @versionadded(version="4.12.0")
+    async def add_stream(
+        self, stream: StringT, identifier: Optional[StringT] = ">"
+    ) -> bool:
+        """
+        Adds a new stream identifier to this consumer
+
+        :param stream: The stream identifier
+        :param identifier: The identifier to start consuming from. For group
+         consumers this should almost always be ``>`` (the default).
+
+        :return: ``True`` if the stream was added successfully, ``False`` otherwise
+        """
+        return await super().add_stream(stream, identifier)
 
     def __await__(self) -> Generator[Any, None, GroupConsumer[AnyStr]]:
         return self.initialize().__await__()
