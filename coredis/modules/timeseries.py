@@ -54,6 +54,13 @@ def normalized_timestamp(ts: Union[int, datetime, StringT]) -> Union[StringT, in
 
 
 class TimeSeries(ModuleGroup[AnyStr]):
+    """
+    Implementation of commands exposed by the
+    `RedisTimeSeries <https://redis.io/docs/stack/timeseries/>`__ module.
+
+    .. versionadded:: 4.12
+    """
+
     MODULE = "timeseries"
 
     @module_command(
@@ -990,16 +997,18 @@ class TimeSeries(ModuleGroup[AnyStr]):
 
         :param filters: A list of filter expressions to match time series based on their labels
          and label values. Each filter expression has one of the following syntaxes:
-          - `label=value`, where `label` equals `value`
-          - `label!=value`, where `label` does not equal `value`
-          - `label=`, where `key` does not have label `label`
-          - `label!=`, where `key` has label `label`
-          - `label=(value1,value2,...)`, where `key` with label `label` equals one of
+
+          - ``label=value``, where ``label`` equals ``value``
+          - ``label!=value``, where ``label`` does not equal ``value``
+          - ``label=``, where ``key`` does not have label ``label``
+          - ``label!=``, where ``key`` has label ``label``
+          - ``label=(value1,value2,...)``, where ``key`` with label ``label`` equals one of
             the values in the list
-          - `label!=(value1,value2,...)`, where key with label `label` does not equal
+          - ``label!=(value1,value2,...)``, where key with label ``label`` does not equal
             any of the values in the list
-         At least one `label=value` filter is required. Filters are conjunctive. For example, the
-         FILTER `type=temperature room=study` means the a time series is a temperature time series
+
+         At least one ``label=value`` filter is required. Filters are conjunctive. For example, the
+         filter ``type=temperature room=study`` means the a time series is a temperature time series
          of a study room. Don't use whitespaces in the filter expression.
         :return: A set of time series keys matching the filter list. The set is empty if no time
          series matches the filter. An error is returned on invalid filter expression.

@@ -35,6 +35,13 @@ from .base import ModuleGroup, module_command
 
 
 class BloomFilter(ModuleGroup[AnyStr]):
+    """
+    Implementation of commands in the ``BF`` group of
+    the `RedisBloom <https://redis.io/docs/stack/bloom/>`__ module.
+
+    .. versionadded:: 4.12
+    """
+
     MODULE = "bf"
 
     @module_command(CommandName.BF_RESERVE, group=CommandGroup.BF, module="bf")
@@ -244,6 +251,13 @@ class BloomFilter(ModuleGroup[AnyStr]):
 
 
 class CuckooFilter(ModuleGroup[AnyStr]):
+    """
+    Implementation of commands in the ``CF`` group of
+    the `RedisBloom <https://redis.io/docs/stack/bloom/>`__ module.
+
+    .. versionadded:: 4.12
+    """
+
     MODULE = "bf"
 
     @module_command(CommandName.CF_RESERVE, group=CommandGroup.CF, module="bf")
@@ -471,6 +485,13 @@ class CuckooFilter(ModuleGroup[AnyStr]):
 
 
 class CountMinSketch(ModuleGroup[AnyStr]):
+    """
+    Implementation of commands in the ``CMS`` group of
+    the `RedisBloom <https://redis.io/docs/stack/bloom/>`__ module.
+
+    .. versionadded:: 4.12
+    """
+
     MODULE = "bf"
 
     @module_command(CommandName.CMS_INITBYDIM, group=CommandGroup.CMS, module="bf")
@@ -586,6 +607,13 @@ class CountMinSketch(ModuleGroup[AnyStr]):
 
 
 class TopK(ModuleGroup[AnyStr]):
+    """
+    Implementation of commands in the ``TOPK`` group of
+    the `RedisBloom <https://redis.io/docs/stack/bloom/>`__ module.
+
+    .. versionadded:: 4.12
+    """
+
     MODULE = "bf"
 
     @mutually_inclusive_parameters("width", "depth", "decay")
@@ -730,6 +758,13 @@ class TopK(ModuleGroup[AnyStr]):
 
 
 class TDigest(ModuleGroup[AnyStr]):
+    """
+    Implementation of commands in the ``TDIGEST`` group of
+    the `RedisBloom <https://redis.io/docs/stack/bloom/>`__ module.
+
+    .. versionadded:: 4.12
+    """
+
     MODULE = "bf"
 
     @module_command(CommandName.TDIGEST_CREATE, group=CommandGroup.TDIGEST, module="bf")

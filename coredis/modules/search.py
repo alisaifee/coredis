@@ -195,6 +195,13 @@ class Filter:
 
 
 class Search(ModuleGroup[AnyStr]):
+    """
+    Implementation of commands in the ``SEARCH`` group of
+    the `RedisSearch <https://redis.io/docs/stack/search/>`__ module.
+
+    .. versionadded:: 4.12
+    """
+
     MODULE = "search"
 
     @module_command(

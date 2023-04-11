@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from deprecated.sphinx import versionadded
-
 from .._json import json
 from ..commands._wrappers import CacheConfig
 from ..commands.constants import CommandFlag, CommandGroup, CommandName
@@ -30,11 +28,12 @@ from .response._callbacks.json import JsonCallback
 from .response.types import JsonType
 
 
-@versionadded(version="4.12.0")
 class Json(ModuleGroup[AnyStr]):
     """
     Implementation of commands exposed by the
-    `RedisJSON <https://redis.io/docs/stack/json/>`_ module.
+    `RedisJSON <https://redis.io/docs/stack/json/>`__ module.
+
+    .. versionadded:: 4.12
     """
 
     MODULE = "ReJSON"

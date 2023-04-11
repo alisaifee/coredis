@@ -11,6 +11,13 @@ from .response.types import AutocompleteSuggestion
 
 
 class Autocomplete(ModuleGroup[AnyStr]):
+    """
+    Implementation of commands in the ``SUGGESTION`` group of
+    the `RedisSearch <https://redis.io/docs/stack/search/>`__ module.
+
+    .. versionadded:: 4.12
+    """
+
     MODULE = "search"
 
     @module_command(

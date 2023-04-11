@@ -171,16 +171,49 @@ ReJSON
 
 RedisBloom
 ----------
+===========
+BloomFilter
+===========
 .. autoclass:: coredis.modules.filters.BloomFilter
+
+============
+CuckooFilter
+============
 .. autoclass:: coredis.modules.filters.CuckooFilter
+
+================
+Count Min Sketch
+================
 .. autoclass:: coredis.modules.filters.CountMinSketch
+
+=======
+TDigest
+=======
 .. autoclass:: coredis.modules.filters.TDigest
+
+====
+TopK
+====
 .. autoclass:: coredis.modules.filters.TopK
 
 RedisSearch
 -----------
-.. automodule:: coredis.modules.search
-.. automodule:: coredis.modules.autocomplete
+
+====================
+Search & Aggregation
+====================
+
+.. autoclass:: coredis.modules.search.Search
+.. autoclass:: coredis.modules.search.Field
+.. autoclass:: coredis.modules.search.Group
+.. autoclass:: coredis.modules.search.Reduce
+.. autoclass:: coredis.modules.search.Filter
+
+============
+Autocomplete
+============
+.. autoclass:: coredis.modules.autocomplete.Autocomplete
+
 
 TimeSeries
 ----------
