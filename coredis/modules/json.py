@@ -182,7 +182,7 @@ class Json(ModuleGroup[AnyStr]):
 
         :param keys: one or more keys to retrieve values from.
         :param path: JSONPath to specify.
-        :return: The values at :paramref:`path` for each of the keys in :paramref:`keys.
+        :return: The values at :paramref:`path` for each of the keys in :paramref:`keys`.
         """
         pieces: CommandArgList = [*keys, path]
         return await self.execute_module_command(
