@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import timedelta
+from platform import python_version
 
 import numpy
 import pytest
@@ -22,8 +23,13 @@ def query_vectors():
 @pytest.fixture
 async def city_index(client: Redis):
     data = json.loads(open("tests/modules/data/city_index.json").read())
-    pipeline = await client.pipeline()
-    await pipeline.search.create(
+    # TODO: figure out why large pipelines aren't working in 3.12
+    use_pipeline = True
+    if python_version() >= "3.12":
+        use_pipeline = False
+    if use_pipeline:
+        client = await client.pipeline()
+    await client.search.create(
         "{city}idx",
         [
             Field("name", PureToken.TEXT),
@@ -48,7 +54,7 @@ async def city_index(client: Redis):
         on=PureToken.HASH,
         prefixes=["{city}:"],
     )
-    await pipeline.search.create(
+    await client.search.create(
         "{jcity}idx",
         [
             Field("$.name", PureToken.TEXT, alias="name"),
@@ -75,7 +81,7 @@ async def city_index(client: Redis):
         prefixes=["{jcity}:"],
     )
     for name, city in data.items():
-        await pipeline.hset(
+        await client.hset(
             f"{{city}}:{name}",
             {
                 "name": city["name"],
@@ -89,7 +95,7 @@ async def city_index(client: Redis):
                 .tobytes(),
             },
         )
-        await pipeline.json.set(
+        await client.json.set(
             f"{{jcity}}:{name}",
             ".",
             {
@@ -102,7 +108,8 @@ async def city_index(client: Redis):
                 "summary_vector": city["summary_vector"],
             },
         )
-    await pipeline.execute()
+    if use_pipeline:
+        await client.execute()
     return data
 
 
