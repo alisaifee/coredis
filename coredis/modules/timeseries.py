@@ -64,7 +64,10 @@ class TimeSeries(ModuleGroup[AnyStr]):
     MODULE = "timeseries"
 
     @module_command(
-        CommandName.TS_CREATE, group=CommandGroup.TIMESERIES, module="timeseries"
+        CommandName.TS_CREATE,
+        group=CommandGroup.TIMESERIES,
+        version_introduced="1.0.0",
+        module="timeseries",
     )
     async def create(
         self,
@@ -121,7 +124,10 @@ class TimeSeries(ModuleGroup[AnyStr]):
         )
 
     @module_command(
-        CommandName.TS_DEL, group=CommandGroup.TIMESERIES, module="timeseries"
+        CommandName.TS_DEL,
+        group=CommandGroup.TIMESERIES,
+        version_introduced="1.6.0",
+        module="timeseries",
     )
     async def delete(
         self,
@@ -146,7 +152,10 @@ class TimeSeries(ModuleGroup[AnyStr]):
         )
 
     @module_command(
-        CommandName.TS_ALTER, group=CommandGroup.TIMESERIES, module="timeseries"
+        CommandName.TS_ALTER,
+        group=CommandGroup.TIMESERIES,
+        version_introduced="1.0.0",
+        module="timeseries",
     )
     async def alter(
         self,
@@ -196,7 +205,10 @@ class TimeSeries(ModuleGroup[AnyStr]):
         )
 
     @module_command(
-        CommandName.TS_ADD, group=CommandGroup.TIMESERIES, module="timeseries"
+        CommandName.TS_ADD,
+        group=CommandGroup.TIMESERIES,
+        version_introduced="1.0.0",
+        module="timeseries",
     )
     async def add(
         self,
@@ -262,6 +274,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
     @module_command(
         CommandName.TS_MADD,
         group=CommandGroup.TIMESERIES,
+        version_introduced="1.0.0",
         module="timeseries",
     )
     async def madd(
@@ -282,7 +295,10 @@ class TimeSeries(ModuleGroup[AnyStr]):
         )
 
     @module_command(
-        CommandName.TS_INCRBY, group=CommandGroup.TIMESERIES, module="timeseries"
+        CommandName.TS_INCRBY,
+        group=CommandGroup.TIMESERIES,
+        version_introduced="1.0.0",
+        module="timeseries",
     )
     async def incrby(
         self,
@@ -333,7 +349,10 @@ class TimeSeries(ModuleGroup[AnyStr]):
         )
 
     @module_command(
-        CommandName.TS_DECRBY, group=CommandGroup.TIMESERIES, module="timeseries"
+        CommandName.TS_DECRBY,
+        group=CommandGroup.TIMESERIES,
+        version_introduced="1.0.0",
+        module="timeseries",
     )
     async def decrby(
         self,
@@ -387,7 +406,11 @@ class TimeSeries(ModuleGroup[AnyStr]):
         )
 
     @module_command(
-        CommandName.TS_CREATERULE, group=CommandGroup.TIMESERIES, module="timeseries"
+        CommandName.TS_CREATERULE,
+        group=CommandGroup.TIMESERIES,
+        version_introduced="1.0.0",
+        arguments={"aligntimestamp": {"version_introduced": "1.8.0"}},
+        module="timeseries",
     )
     async def createrule(
         self,
@@ -432,7 +455,10 @@ class TimeSeries(ModuleGroup[AnyStr]):
         )
 
     @module_command(
-        CommandName.TS_DELETERULE, group=CommandGroup.TIMESERIES, module="timeseries"
+        CommandName.TS_DELETERULE,
+        group=CommandGroup.TIMESERIES,
+        version_introduced="1.0.0",
+        module="timeseries",
     )
     async def deleterule(self, source: KeyT, destination: KeyT) -> bool:
         """
@@ -453,7 +479,11 @@ class TimeSeries(ModuleGroup[AnyStr]):
     @mutually_inclusive_parameters("min_value", "max_value")
     @mutually_inclusive_parameters("aggregator", "bucketduration")
     @module_command(
-        CommandName.TS_RANGE, group=CommandGroup.TIMESERIES, module="timeseries"
+        CommandName.TS_RANGE,
+        group=CommandGroup.TIMESERIES,
+        version_introduced="1.0.0",
+        arguments={"latest": {"version_introduced": "1.8.0"}},
+        module="timeseries",
     )
     async def range(
         self,
@@ -542,7 +572,11 @@ class TimeSeries(ModuleGroup[AnyStr]):
     @mutually_inclusive_parameters("min_value", "max_value")
     @mutually_inclusive_parameters("aggregator", "bucketduration")
     @module_command(
-        CommandName.TS_REVRANGE, group=CommandGroup.TIMESERIES, module="timeseries"
+        CommandName.TS_REVRANGE,
+        group=CommandGroup.TIMESERIES,
+        version_introduced="1.4.0",
+        arguments={"latest": {"version_introduced": "1.8.0"}},
+        module="timeseries",
     )
     async def revrange(
         self,
@@ -632,6 +666,8 @@ class TimeSeries(ModuleGroup[AnyStr]):
     @module_command(
         CommandName.TS_MRANGE,
         group=CommandGroup.TIMESERIES,
+        version_introduced="1.0.0",
+        arguments={"latest": {"version_introduced": "1.8.0"}},
         module="timeseries",
         cluster=ClusterCommandConfig(
             route=NodeFlag.PRIMARIES,
@@ -770,6 +806,8 @@ class TimeSeries(ModuleGroup[AnyStr]):
     @module_command(
         CommandName.TS_MREVRANGE,
         group=CommandGroup.TIMESERIES,
+        version_introduced="1.4.0",
+        arguments={"latest": {"version_introduced": "1.8.0"}},
         module="timeseries",
         cluster=ClusterCommandConfig(
             route=NodeFlag.PRIMARIES, combine=ClusterMergeTimeSeries()
@@ -887,7 +925,11 @@ class TimeSeries(ModuleGroup[AnyStr]):
         )
 
     @module_command(
-        CommandName.TS_GET, group=CommandGroup.TIMESERIES, module="timeseries"
+        CommandName.TS_GET,
+        group=CommandGroup.TIMESERIES,
+        version_introduced="1.0.0",
+        arguments={"latest": {"version_introduced": "1.8.0"}},
+        module="timeseries",
     )
     async def get(
         self, key: KeyT, latest: Optional[bool] = None
@@ -914,6 +956,8 @@ class TimeSeries(ModuleGroup[AnyStr]):
     @module_command(
         CommandName.TS_MGET,
         group=CommandGroup.TIMESERIES,
+        version_introduced="1.0.0",
+        arguments={"latest": {"version_introduced": "1.8.0"}},
         module="timeseries",
         cluster=ClusterCommandConfig(
             route=NodeFlag.PRIMARIES,
@@ -963,7 +1007,10 @@ class TimeSeries(ModuleGroup[AnyStr]):
         )
 
     @module_command(
-        CommandName.TS_INFO, group=CommandGroup.TIMESERIES, module="timeseries"
+        CommandName.TS_INFO,
+        group=CommandGroup.TIMESERIES,
+        version_introduced="1.0.0",
+        module="timeseries",
     )
     async def info(
         self, key: KeyT, debug: Optional[bool] = None
@@ -985,6 +1032,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
     @module_command(
         CommandName.TS_QUERYINDEX,
         group=CommandGroup.TIMESERIES,
+        version_introduced="1.0.0",
         module="timeseries",
         cluster=ClusterCommandConfig(
             route=NodeFlag.PRIMARIES,
