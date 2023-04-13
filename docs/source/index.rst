@@ -71,6 +71,12 @@ Feature Summary
   * :ref:`handbook/scripting:lua scripts`
   * :ref:`handbook/scripting:library functions`
 
+* :ref:`handbook/modules:redis modules`
+
+  * :ref:`handbook/modules:RedisJSON`
+  * :ref:`handbook/modules:RediSearch`
+  * :ref:`handbook/modules:RedisBloom`
+
 * Miscellaneous
 
   * "Pretty complete" :ref:`handbook/typing:type annotations` for public API

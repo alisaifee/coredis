@@ -28,6 +28,11 @@ Glossary
      Redis scales horizontally with a deployment topology called Redis Cluster.
      To learn more please read `Redis Cluster 101 <https://redis.io/docs/manual/scaling/#redis-cluster-101>`__
 
+   Redis Modules
+     Redis modules make it possible to extend Redis functionality using external modules
+     that implement new Redis commands with features similar to what can be done inside
+     the core itself.
+
    RESP
      Redis clients use Redis serialization protocol (RESP) specification to communicate
      with the Redis server. For more detials see `RESP protocol spec <https://redis.io/docs/reference/protocol-spec/>`__

@@ -204,10 +204,12 @@ Search & Aggregation
 ====================
 
 .. autoclass:: coredis.modules.search.Search
+
 .. autoclass:: coredis.modules.search.Field
+.. autoclass:: coredis.modules.search.Filter
 .. autoclass:: coredis.modules.search.Group
 .. autoclass:: coredis.modules.search.Reduce
-.. autoclass:: coredis.modules.search.Filter
+.. autoclass:: coredis.modules.search.Apply
 
 ============
 Autocomplete

@@ -45,9 +45,6 @@ class Json(ModuleGroup[AnyStr]):
 
         :param key: The key of the JSON document.
         :param path: The JSONPath to specify.
-
-        Delete a value from a JSON document stored in Redis.
-
         :return: The number of paths deleted
         """
         pieces: CommandArgList = [key]
