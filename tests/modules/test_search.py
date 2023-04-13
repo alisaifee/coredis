@@ -52,6 +52,7 @@ async def city_index(client: Redis):
             ),
         ],
         on=PureToken.HASH,
+        payload_field="last_updated",
         prefixes=["{city}:"],
     )
     await client.search.create(
@@ -78,6 +79,7 @@ async def city_index(client: Redis):
             ),
         ],
         on=PureToken.JSON,
+        payload_field="$.last_updated",
         prefixes=["{jcity}:"],
     )
     for name, city in data.items():
@@ -93,6 +95,7 @@ async def city_index(client: Redis):
                 "summary_vector": numpy.asarray(city["summary_vector"])
                 .astype(numpy.float32)
                 .tobytes(),
+                "last_updated": "2012-12-12",
             },
         )
         await client.json.set(
@@ -106,6 +109,7 @@ async def city_index(client: Redis):
                 "location": f'{city["lng"]},{city["lat"]}',
                 "summary_text": city["summary"],
                 "summary_vector": city["summary_vector"],
+                "last_updated": "2012-12-12",
             },
         )
     if use_pipeline:
@@ -165,9 +169,9 @@ class TestSchema:
                 },
             },
         ],
-        ids=lambda val: str(val),
+        ids=lambda val: str([(str(k[0]), str(k[1])) for k in val.items()]),
     )
-    async def test_create_index(self, client: Redis, on, type_args, args):
+    async def test_field_type(self, client: Redis, on, type_args, args):
         name = "field" if on == PureToken.HASH else "$.field"
         assert await client.search.create(
             "idx",
@@ -185,9 +189,92 @@ class TestSchema:
         assert await client.search.alter(
             "idx",
             Field(f"{name}_new", **type_args),
+            skipinitialscan=True,
         )
         info = await client.search.info("idx")
         assert f"{name}_new" in info["attributes"][1]
+
+    @pytest.mark.parametrize("on", [PureToken.HASH, PureToken.JSON])
+    @pytest.mark.parametrize(
+        "schema_args",
+        [
+            {"filter_expression": "1==1"},
+            {"prefixes": ["a:", "b:"]},
+            {"language": "French"},
+            {"language": "French", "language_field": "field"},
+            {"score": 0.1},
+            {"score": 0.1, "score_field": "field"},
+            {"payload_field": "payload"},
+            {"maxtextfields": True},
+            {"nooffsets": True},
+            {"temporary": 1},
+            {"temporary": timedelta(microseconds=2)},
+            {"nohl": True},
+            {"nofields": True},
+            {"nofreqs": True},
+            {"stopwords": ["fu", "bar"]},
+            {"skipinitialscan": True},
+        ],
+        ids=lambda val: str(val),
+    )
+    async def test_index_options(self, client: Redis, on, schema_args):
+        fields = [
+            Field("field", PureToken.TEXT),
+        ]
+        assert await client.search.create("idx", fields, on=on, **schema_args)
+
+    @pytest.mark.parametrize("on", [PureToken.HASH, PureToken.JSON])
+    @pytest.mark.parametrize(
+        "schema_args, exception, matcher",
+        [
+            ({"filter_expression": "\\0/"}, ResponseError, "Syntax error at offset"),
+            ({"language": "Klingon"}, ResponseError, "Invalid language"),
+            ({"score": 2}, ResponseError, "Invalid score"),
+        ],
+        ids=lambda val: str(val),
+    )
+    async def test_invalid_index_options(
+        self, client: Redis, on, schema_args, exception, matcher
+    ):
+        fields = [
+            Field("field", PureToken.TEXT),
+        ]
+        with pytest.raises(exception, match=matcher):
+            await client.search.create("idx", fields, on=on, **schema_args)
+
+    @pytest.mark.parametrize("on", [PureToken.HASH, PureToken.JSON])
+    async def test_drop_index(self, client: Redis, on):
+        await client.search.create(
+            "idx", [Field("field", PureToken.TEXT)], on=on, prefixes=["doc:"]
+        )
+
+        assert await client.search.dropindex("idx")
+        with pytest.raises(ResponseError, match="Unknown Index name"):
+            await client.search.info("idx")
+
+    @pytest.mark.parametrize(
+        "on, setter",
+        [
+            (
+                PureToken.HASH,
+                lambda client: client.hset("doc{a}:1", {"field": "value"}),
+            ),
+            (
+                PureToken.JSON,
+                lambda client: client.json.set("doc{a}:1", ".", {"field": "value"}),
+            ),
+        ],
+    )
+    async def test_drop_index_cascade(self, client: Redis, on, setter):
+        await setter(client)
+        await client.search.create(
+            "idx{a}", [Field("field", PureToken.TEXT)], on=on, prefixes=["doc{a}:"]
+        )
+
+        assert await client.search.dropindex("idx{a}", delete_docs=True)
+        with pytest.raises(ResponseError, match="Unknown Index name"):
+            await client.search.info("idx{a}")
+        assert not await client.keys()
 
     @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
     async def test_alias(self, client: Redis, city_index, index_name):
@@ -214,18 +301,35 @@ class TestSchema:
         with pytest.raises(ResponseError):
             await client.search.search(f"{index_name}:alias", "*", nocontent=True)
 
+    async def test_search_config(self, client: Redis):
+        config_all = await client.search.config_get("*")
+        assert config_all["DEFAULT_DIALECT"] == 1
+        assert await client.search.config_set("DEFAULT_DIALECT", 2)
+        config_partial = await client.search.config_get("DEFAULT_DIALECT")
+        assert config_partial["DEFAULT_DIALECT"] == 2
+        assert await client.search.config_set("DEFAULT_DIALECT", 1)
+        with pytest.raises(ResponseError, match="Invalid option"):
+            assert await client.search.config_set("idk", 1)
+        with pytest.raises(
+            ResponseError, match="Default dialect version cannot be higher than"
+        ):
+            assert await client.search.config_set("DEFAULT_DIALECT", 42)
+
 
 @pytest.mark.min_module_version("search", "2.6.1")
 @targets("redis_stack", "redis_stack_cluster")
 class TestSearch:
+    @pytest.mark.parametrize("dialect", [1, 2, 3])
     @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
-    async def test_spellcheck(self, client: Redis, city_index, index_name):
+    async def test_spellcheck(self, client: Redis, city_index, index_name, dialect):
         assert not (await client.search.spellcheck(index_name, "menil"))["menil"]
         assert (
             "manila"
-            in (await client.search.spellcheck(index_name, "menil", distance=2))[
-                "menil"
-            ]
+            in (
+                await client.search.spellcheck(
+                    index_name, "menil", distance=2, dialect=dialect
+                )
+            )["menil"]
         )
 
         await client.search.dictadd("{city}custom", ["menila"])
@@ -233,7 +337,11 @@ class TestSearch:
             "menila"
             in (
                 await client.search.spellcheck(
-                    index_name, "menil", distance=2, include="{city}custom"
+                    index_name,
+                    "menil",
+                    distance=2,
+                    include="{city}custom",
+                    dialect=dialect,
                 )
             )["menil"]
         )
@@ -241,7 +349,11 @@ class TestSearch:
             "menila"
             not in (
                 await client.search.spellcheck(
-                    index_name, "menil", distance=2, exclude="{city}custom"
+                    index_name,
+                    "menil",
+                    distance=2,
+                    exclude="{city}custom",
+                    dialect=dialect,
                 )
             )["menil"]
         )
@@ -254,6 +366,7 @@ class TestSearch:
                     distance=2,
                     exclude="{city}custom",
                     include="{city}custom",
+                    dialect=dialect,
                 )
             )["menil"]
         )
@@ -264,7 +377,11 @@ class TestSearch:
             "menila"
             not in (
                 await client.search.spellcheck(
-                    index_name, "menil", distance=2, include="{city}custom"
+                    index_name,
+                    "menil",
+                    distance=2,
+                    include="{city}custom",
+                    dialect=dialect,
                 )
             )["menil"]
         )
@@ -306,16 +423,33 @@ class TestSearch:
     @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
     async def test_text_search(self, client: Redis, city_index, index_name):
         results = await client.search.search(
-            index_name, "@name:karachi", returns={"name": None}
+            index_name,
+            "@name:karachi",
+            returns={"name": None},
+            withscores=True,
+            withpayloads=True,
+            withsortkeys=True,
+            explainscore=True,
+            sortby="name",
+            sort_order=PureToken.DESC,
+            offset=0,
+            limit=1,
+            language="English",
+            timeout=timedelta(seconds=1),
+            payload="last_updated",
         )
         assert results.total == 1
         assert results.documents[0].properties["name"] == "karachi"
+        assert results.documents[0].score is not None
+        assert isinstance(results.documents[0].score_explanation, list)
 
         results = await client.search.search(
             index_name, "@name:karachi", returns={"name": "nom"}
         )
         assert results.total == 1
         assert results.documents[0].properties["nom"] == "karachi"
+        assert results.documents[0].score is None
+        assert results.documents[0].score_explanation is None
 
         results = await client.search.search(
             index_name, "@name:karachi", nocontent=True
@@ -339,9 +473,21 @@ class TestSearch:
         assert 1 == results.total
 
         results = await client.search.search(
+            index_name, "the Olympics", nostopwords=True
+        )
+        assert results.total == 0
+
+    @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
+    async def test_text_search_with_highlighting(
+        self, client: Redis, city_index, index_name
+    ):
+        results = await client.search.search(
             index_name,
             "Olympics",
             summarize_fields=["summary_text"],
+            summarize_frags=2,
+            summarize_length=10,
+            summarize_separator="{{truncate}}",
             highlight_fields=["summary_text"],
             highlight_tags=("<blink>", "</blink>"),
             returns={"summary_text": None},
@@ -350,6 +496,60 @@ class TestSearch:
             "Summer <blink>Olympics</blink>"
             in results.documents[0].properties["summary_text"]
         )
+
+        assert (
+            "2016 Summer{{truncate}}" in results.documents[0].properties["summary_text"]
+        )
+
+    @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
+    async def test_text_search_with_slop(self, client: Redis, city_index, index_name):
+        no_slop_results = await client.search.search(
+            index_name,
+            "Summer Olympics Games",
+            summarize_fields=["summary_text"],
+            returns={"summary_text": None},
+        )
+        slop_results = await client.search.search(
+            index_name,
+            "Summer Olympics Games",
+            slop=0,
+            summarize_fields=["summary_text"],
+            returns={"summary_text": None},
+        )
+
+        assert not all(
+            "Summer Olympic Games" in doc.properties["summary_text"]
+            for doc in no_slop_results.documents
+        )
+        assert all(
+            "Summer Olympic Games" in doc.properties["summary_text"]
+            for doc in slop_results.documents
+        )
+
+    @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
+    async def test_text_search_restricted(self, client: Redis, city_index, index_name):
+        key_prefix = index_name.replace("idx", "")
+        keys = [
+            k
+            for k in await client.keys()
+            if k.startswith(key_prefix) and "karachi" not in k
+        ]
+        results = await client.search.search(
+            index_name,
+            "karachi",
+            in_keys=keys,
+            returns={"name": None, "summary_text": None},
+        )
+        assert results.documents[0].properties["name"] == "lahore"
+
+        results = await client.search.search(
+            index_name,
+            "tokyo",
+            in_fields=["name"],
+            returns={"name": None},
+        )
+        assert results.total == 1
+        assert results.documents[0].properties["name"] == "tokyo"
 
     @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
     async def test_tags(self, client: Redis, city_index, index_name, query_vectors):
@@ -403,14 +603,24 @@ class TestSearch:
             await client.search.search(index_name, "@name:kolachi", nocontent=True)
         ).total
         assert await client.search.synupdate(
-            index_name, "karachi", ["karachi", "kolachi"]
+            index_name, "karachi", ["karachi", "kolachi"], skipinitialscan=True
         )
         assert ["karachi"] == (await client.search.syndump(index_name))["kolachi"]
         await wait_for_index(index_name, client)
         assert (
-            1
+            0
             == (
                 await client.search.search(index_name, "@name:kolachi", nocontent=True)
+            ).total
+        )
+
+        assert await client.search.synupdate(index_name, "karachi", ["karachi", "khi"])
+        assert ["karachi"] == (await client.search.syndump(index_name))["khi"]
+        await wait_for_index(index_name, client)
+        assert (
+            1
+            == (
+                await client.search.search(index_name, "@name:khi", nocontent=True)
             ).total
         )
 
@@ -446,6 +656,22 @@ class TestAggregation:
         assert [2] == [
             int(k["count"]) for k in results.results if k["country"] == "Pakistan"
         ]
+
+        results = await client.search.aggregate(
+            index_name,
+            "*",
+            load=["country", "population"],
+            transforms=[
+                Apply("floor(log(@population))", "population_log"),
+                Group(["@country", "@population_log"], [Reduce("count", [0], "count")]),
+            ],
+        )
+
+        assert {"17": "1", "16": "2"} == {
+            k["population_log"]: k["count"]
+            for k in results.results
+            if k["country"] == "Japan"
+        }
 
     @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
     async def test_multi_stage_transforms(self, client: Redis, city_index, index_name):

@@ -29,7 +29,7 @@ class SearchDocument(Generic[AnyStr]):
     score: Optional[float]
     #: Explanation of the score if the
     #:  :paramref:`~coredis.modules.search.Search.search.explainscore` option was used
-    score_explain: Optional[Any]
+    score_explanation: Optional[List[AnyStr]]
     #: Payload associated with the document if
     #:  :paramref:`~coredis.modules.search.Search.search.withpayloads` was used
     payload: Optional[StringT]

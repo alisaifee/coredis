@@ -10,6 +10,7 @@ from ..commands.constants import CommandGroup, CommandName, NodeFlag
 from ..response._callbacks import (
     AnyStrCallback,
     ClusterConcatenateTuples,
+    ClusterEnsureConsistent,
     DictCallback,
     IntCallback,
     SetCallback,
@@ -276,7 +277,7 @@ class Search(ModuleGroup[AnyStr]):
         if payload_field:
             pieces.extend([PrefixToken.PAYLOAD_FIELD, payload_field])
         if maxtextfields:
-            pieces.append(maxtextfields)
+            pieces.append(PureToken.MAXTEXTFIELDS)
         if temporary:
             pieces.extend([PrefixToken.TEMPORARY, normalized_seconds(temporary)])
         if nooffsets:
@@ -645,6 +646,10 @@ class Search(ModuleGroup[AnyStr]):
         module="search",
         version_introduced="1.0.0",
         group=CommandGroup.SEARCH,
+        cluster=ClusterCommandConfig(
+            route=NodeFlag.PRIMARIES,
+            combine=ClusterEnsureConsistent[bool](),
+        ),
     )
     async def config_set(self, option: StringT, value: ValueT) -> bool:
         """
@@ -660,6 +665,9 @@ class Search(ModuleGroup[AnyStr]):
         module="search",
         version_introduced="1.0.0",
         group=CommandGroup.SEARCH,
+        cluster=ClusterCommandConfig(
+            route=NodeFlag.RANDOM,
+        ),
     )
     async def config_get(self, option: StringT) -> Dict[AnyStr, ResponsePrimitive]:
         """
@@ -807,10 +815,10 @@ class Search(ModuleGroup[AnyStr]):
                 )
         if in_keys:
             _in_keys: List[StringT] = list(in_keys)
-            pieces.extend([PrefixToken.INKEYS, *_in_keys])
+            pieces.extend([PrefixToken.INKEYS, len(_in_keys), *_in_keys])
         if in_fields:
             _in_fields: List[StringT] = list(in_fields)
-            pieces.extend([PrefixToken.INFIELDS, *_in_fields])
+            pieces.extend([PrefixToken.INFIELDS, len(_in_fields), *_in_fields])
         if returns:
             return_items: CommandArgList = []
             for identifier, property in returns.items():
@@ -845,7 +853,7 @@ class Search(ModuleGroup[AnyStr]):
                 pieces.extend([PrefixToken.FIELDS, len(_fields), *_fields])
             if highlight_tags:
                 pieces.extend([PureToken.TAGS, highlight_tags[0], highlight_tags[1]])
-        if slop:
+        if slop is not None:
             pieces.extend([PrefixToken.SLOP, slop])
         if timeout:
             pieces.extend([PrefixToken.TIMEOUT, normalized_milliseconds(timeout)])
