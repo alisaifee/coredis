@@ -207,6 +207,7 @@ class BaseConnection(asyncio.BaseProtocol):
 
         self.average_response_time: float = 0
         self.requests_processed: int = 0
+        self._write_ready: asyncio.Event = asyncio.Event()
 
     def __repr__(self) -> str:
         return self.describe(self._description_args())
@@ -311,6 +312,7 @@ class BaseConnection(asyncio.BaseProtocol):
         :meta private:
         """
         self._transport = cast(asyncio.Transport, transport)
+        self._write_ready.set()
 
     def connection_lost(self, exc: Optional[BaseException]) -> None:
         """
@@ -321,15 +323,17 @@ class BaseConnection(asyncio.BaseProtocol):
 
         self.disconnect()
 
-    def pause_writing(self) -> None:  # noqa
+    def pause_writing(self) -> None:
         """
         :meta private:
         """
+        self._write_ready.clear()
 
-    def resume_writing(self) -> None:  # noqa
+    def resume_writing(self) -> None:
         """
         :meta private:
         """
+        self._write_ready.set()
 
     def data_received(self, data: bytes) -> None:
         """
@@ -549,12 +553,13 @@ class BaseConnection(asyncio.BaseProtocol):
             )
         return message
 
-    def _send_packed_command(self, command: List[bytes]) -> None:
+    async def _send_packed_command(self, command: List[bytes]) -> None:
         """
         Sends an already packed command to the Redis server
         """
 
         assert self._transport
+        await self._write_ready.wait()
         self._transport.writelines(command)
 
     async def send_command(
@@ -569,7 +574,7 @@ class BaseConnection(asyncio.BaseProtocol):
         if not self.is_connected:
             await self.connect()
 
-        self._send_packed_command(self.packer.pack_command(command, *args))
+        await self._send_packed_command(self.packer.pack_command(command, *args))
 
         self.last_active_at = time.time()
 
@@ -596,7 +601,7 @@ class BaseConnection(asyncio.BaseProtocol):
                 CommandName.CLIENT_REPLY, PureToken.SKIP
             )
         cmd_list.extend(self.packer.pack_command(command, *args))
-        self._send_packed_command(cmd_list)
+        await self._send_packed_command(cmd_list)
 
         self.last_active_at = time.time()
 
@@ -631,7 +636,7 @@ class BaseConnection(asyncio.BaseProtocol):
         if not self.is_connected:
             await self.connect()
 
-        self._send_packed_command(
+        await self._send_packed_command(
             self.packer.pack_commands(
                 list(itertools.chain((cmd.command, *cmd.args) for cmd in commands))
             )
