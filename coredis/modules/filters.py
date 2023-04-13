@@ -44,7 +44,12 @@ class BloomFilter(ModuleGroup[AnyStr]):
 
     MODULE = "bf"
 
-    @module_command(CommandName.BF_RESERVE, group=CommandGroup.BF, module="bf")
+    @module_command(
+        CommandName.BF_RESERVE,
+        group=CommandGroup.BF,
+        version_introduced="1.0.0",
+        module="bf",
+    )
     async def reserve(
         self,
         key: KeyT,
@@ -72,7 +77,12 @@ class BloomFilter(ModuleGroup[AnyStr]):
             CommandName.BF_RESERVE, *pieces, callback=SimpleStringCallback()
         )
 
-    @module_command(CommandName.BF_ADD, group=CommandGroup.BF, module="bf")
+    @module_command(
+        CommandName.BF_ADD,
+        group=CommandGroup.BF,
+        version_introduced="1.0.0",
+        module="bf",
+    )
     async def add(self, key: KeyT, item: ValueT) -> bool:
         """
         Adds an item to a Bloom Filter
@@ -86,7 +96,12 @@ class BloomFilter(ModuleGroup[AnyStr]):
             CommandName.BF_ADD, *pieces, callback=BoolCallback()
         )
 
-    @module_command(CommandName.BF_MADD, group=CommandGroup.BF, module="bf")
+    @module_command(
+        CommandName.BF_MADD,
+        group=CommandGroup.BF,
+        version_introduced="1.0.0",
+        module="bf",
+    )
     async def madd(self, key: KeyT, items: Parameters[ValueT]) -> Tuple[bool, ...]:
         """
         Adds one or more items to a Bloom Filter. A filter will be created if it does not exist
@@ -100,7 +115,12 @@ class BloomFilter(ModuleGroup[AnyStr]):
             CommandName.BF_MADD, *pieces, callback=BoolsCallback()
         )
 
-    @module_command(CommandName.BF_INSERT, group=CommandGroup.BF, module="bf")
+    @module_command(
+        CommandName.BF_INSERT,
+        group=CommandGroup.BF,
+        version_introduced="1.0.0",
+        module="bf",
+    )
     async def insert(
         self,
         key: KeyT,
@@ -142,7 +162,12 @@ class BloomFilter(ModuleGroup[AnyStr]):
             CommandName.BF_INSERT, *pieces, callback=BoolsCallback()
         )
 
-    @module_command(CommandName.BF_EXISTS, group=CommandGroup.BF, module="bf")
+    @module_command(
+        CommandName.BF_EXISTS,
+        group=CommandGroup.BF,
+        version_introduced="1.0.0",
+        module="bf",
+    )
     async def exists(self, key: KeyT, item: ValueT) -> bool:
         """
         Checks whether an item exists in a Bloom Filter
@@ -154,7 +179,12 @@ class BloomFilter(ModuleGroup[AnyStr]):
             CommandName.BF_EXISTS, key, item, callback=BoolCallback()
         )
 
-    @module_command(CommandName.BF_MEXISTS, group=CommandGroup.BF, module="bf")
+    @module_command(
+        CommandName.BF_MEXISTS,
+        group=CommandGroup.BF,
+        version_introduced="1.0.0",
+        module="bf",
+    )
     async def mexists(self, key: KeyT, items: Parameters[ValueT]) -> Tuple[bool, ...]:
         """
         Checks whether one or more items exist in a Bloom Filter
@@ -166,7 +196,12 @@ class BloomFilter(ModuleGroup[AnyStr]):
             CommandName.BF_MEXISTS, key, *items, callback=BoolsCallback()
         )
 
-    @module_command(CommandName.BF_SCANDUMP, group=CommandGroup.BF, module="bf")
+    @module_command(
+        CommandName.BF_SCANDUMP,
+        group=CommandGroup.BF,
+        version_introduced="1.0.0",
+        module="bf",
+    )
     async def scandump(self, key: KeyT, iterator: int) -> Tuple[int, Optional[bytes]]:
         """
         Begins an incremental save of the bloom filter
@@ -188,7 +223,12 @@ class BloomFilter(ModuleGroup[AnyStr]):
             decode=False,
         )
 
-    @module_command(CommandName.BF_LOADCHUNK, group=CommandGroup.BF, module="bf")
+    @module_command(
+        CommandName.BF_LOADCHUNK,
+        group=CommandGroup.BF,
+        version_introduced="1.0.0",
+        module="bf",
+    )
     async def loadchunk(self, key: KeyT, iterator: int, data: bytes) -> bool:
         """
         Restores a filter previously saved using :meth:`scandump`
@@ -203,7 +243,12 @@ class BloomFilter(ModuleGroup[AnyStr]):
             CommandName.BF_LOADCHUNK, *pieces, callback=SimpleStringCallback()
         )
 
-    @module_command(CommandName.BF_INFO, group=CommandGroup.BF, module="bf")
+    @module_command(
+        CommandName.BF_INFO,
+        group=CommandGroup.BF,
+        version_introduced="1.0.0",
+        module="bf",
+    )
     async def info(
         self,
         key: KeyT,
@@ -238,7 +283,12 @@ class BloomFilter(ModuleGroup[AnyStr]):
                 CommandName.BF_INFO, key, callback=DictCallback[AnyStr, int]()
             )
 
-    @module_command(CommandName.BF_CARD, group=CommandGroup.BF, module="bf")
+    @module_command(
+        CommandName.BF_CARD,
+        group=CommandGroup.BF,
+        version_introduced="2.4.4",
+        module="bf",
+    )
     async def card(self, key: KeyT) -> int:
         """
         Returns the cardinality of a Bloom filter
@@ -260,7 +310,12 @@ class CuckooFilter(ModuleGroup[AnyStr]):
 
     MODULE = "bf"
 
-    @module_command(CommandName.CF_RESERVE, group=CommandGroup.CF, module="bf")
+    @module_command(
+        CommandName.CF_RESERVE,
+        group=CommandGroup.CF,
+        version_introduced="1.0.0",
+        module="bf",
+    )
     async def reserve(
         self,
         key: KeyT,
@@ -291,7 +346,12 @@ class CuckooFilter(ModuleGroup[AnyStr]):
             CommandName.CF_RESERVE, *pieces, callback=SimpleStringCallback()
         )
 
-    @module_command(CommandName.CF_ADD, group=CommandGroup.CF, module="bf")
+    @module_command(
+        CommandName.CF_ADD,
+        group=CommandGroup.CF,
+        version_introduced="1.0.0",
+        module="bf",
+    )
     async def add(self, key: KeyT, item: ValueT) -> bool:
         """
         Adds an item to a Cuckoo Filter
@@ -305,7 +365,12 @@ class CuckooFilter(ModuleGroup[AnyStr]):
             CommandName.CF_ADD, *pieces, callback=BoolCallback()
         )
 
-    @module_command(CommandName.CF_ADDNX, group=CommandGroup.CF, module="bf")
+    @module_command(
+        CommandName.CF_ADDNX,
+        group=CommandGroup.CF,
+        version_introduced="1.0.0",
+        module="bf",
+    )
     async def addnx(self, key: KeyT, item: ValueT) -> bool:
         """
         Adds an item to a Cuckoo Filter if the item did not exist previously.
@@ -319,7 +384,12 @@ class CuckooFilter(ModuleGroup[AnyStr]):
             CommandName.CF_ADDNX, *pieces, callback=BoolCallback()
         )
 
-    @module_command(CommandName.CF_INSERT, group=CommandGroup.CF, module="bf")
+    @module_command(
+        CommandName.CF_INSERT,
+        group=CommandGroup.CF,
+        version_introduced="1.0.0",
+        module="bf",
+    )
     async def insert(
         self,
         key: KeyT,
@@ -350,7 +420,12 @@ class CuckooFilter(ModuleGroup[AnyStr]):
             CommandName.CF_INSERT, *pieces, callback=BoolsCallback()
         )
 
-    @module_command(CommandName.CF_INSERTNX, group=CommandGroup.CF, module="bf")
+    @module_command(
+        CommandName.CF_INSERTNX,
+        group=CommandGroup.CF,
+        version_introduced="1.0.0",
+        module="bf",
+    )
     async def insertnx(
         self,
         key: KeyT,
@@ -381,7 +456,12 @@ class CuckooFilter(ModuleGroup[AnyStr]):
             CommandName.CF_INSERTNX, *pieces, callback=BoolsCallback()
         )
 
-    @module_command(CommandName.CF_EXISTS, group=CommandGroup.CF, module="bf")
+    @module_command(
+        CommandName.CF_EXISTS,
+        group=CommandGroup.CF,
+        version_introduced="1.0.0",
+        module="bf",
+    )
     async def exists(self, key: KeyT, item: ValueT) -> bool:
         """
         Checks whether an item exist in a Cuckoo Filter
@@ -395,7 +475,12 @@ class CuckooFilter(ModuleGroup[AnyStr]):
             CommandName.CF_EXISTS, *pieces, callback=BoolCallback()
         )
 
-    @module_command(CommandName.CF_MEXISTS, group=CommandGroup.CF, module="bf")
+    @module_command(
+        CommandName.CF_MEXISTS,
+        group=CommandGroup.CF,
+        version_introduced="1.0.0",
+        module="bf",
+    )
     async def mexists(self, key: KeyT, items: Parameters[ValueT]) -> Tuple[bool, ...]:
         """
         Checks whether one or more items exist in a Cuckoo Filter
@@ -409,7 +494,12 @@ class CuckooFilter(ModuleGroup[AnyStr]):
             CommandName.CF_MEXISTS, *pieces, callback=BoolsCallback()
         )
 
-    @module_command(CommandName.CF_DEL, group=CommandGroup.CF, module="bf")
+    @module_command(
+        CommandName.CF_DEL,
+        group=CommandGroup.CF,
+        version_introduced="1.0.0",
+        module="bf",
+    )
     async def delete(self, key: KeyT, item: ValueT) -> bool:
         """
         Deletes an item from a Cuckoo Filter
@@ -423,7 +513,12 @@ class CuckooFilter(ModuleGroup[AnyStr]):
             CommandName.CF_DEL, *pieces, callback=BoolCallback()
         )
 
-    @module_command(CommandName.CF_COUNT, group=CommandGroup.CF, module="bf")
+    @module_command(
+        CommandName.CF_COUNT,
+        group=CommandGroup.CF,
+        version_introduced="1.0.0",
+        module="bf",
+    )
     async def count(self, key: KeyT, item: ValueT) -> int:
         """
         Return the number of times an item might be in a Cuckoo Filter
@@ -437,7 +532,12 @@ class CuckooFilter(ModuleGroup[AnyStr]):
             CommandName.CF_COUNT, *pieces, callback=IntCallback()
         )
 
-    @module_command(CommandName.CF_SCANDUMP, group=CommandGroup.CF, module="bf")
+    @module_command(
+        CommandName.CF_SCANDUMP,
+        group=CommandGroup.CF,
+        version_introduced="1.0.0",
+        module="bf",
+    )
     async def scandump(self, key: KeyT, iterator: int) -> Tuple[int, Optional[bytes]]:
         """
         Begins an incremental save of the bloom filter
@@ -455,7 +555,12 @@ class CuckooFilter(ModuleGroup[AnyStr]):
             callback=MixedTupleCallback[int, Optional[bytes]](),
         )
 
-    @module_command(CommandName.CF_LOADCHUNK, group=CommandGroup.CF, module="bf")
+    @module_command(
+        CommandName.CF_LOADCHUNK,
+        group=CommandGroup.CF,
+        version_introduced="1.0.0",
+        module="bf",
+    )
     async def loadchunk(self, key: KeyT, iterator: int, data: StringT) -> bool:
         """
         Restores a filter previously saved using SCANDUMP
@@ -471,7 +576,12 @@ class CuckooFilter(ModuleGroup[AnyStr]):
             CommandName.CF_LOADCHUNK, *pieces, callback=SimpleStringCallback()
         )
 
-    @module_command(CommandName.CF_INFO, group=CommandGroup.CF, module="bf")
+    @module_command(
+        CommandName.CF_INFO,
+        group=CommandGroup.CF,
+        version_introduced="1.0.0",
+        module="bf",
+    )
     async def info(self, key: KeyT) -> Dict[AnyStr, ResponsePrimitive]:
         """
         Returns information about a Cuckoo Filter
@@ -494,7 +604,12 @@ class CountMinSketch(ModuleGroup[AnyStr]):
 
     MODULE = "bf"
 
-    @module_command(CommandName.CMS_INITBYDIM, group=CommandGroup.CMS, module="bf")
+    @module_command(
+        CommandName.CMS_INITBYDIM,
+        group=CommandGroup.CMS,
+        version_introduced="2.0.0",
+        module="bf",
+    )
     async def initbydim(self, key: KeyT, width: int, depth: int) -> bool:
         """
         Initializes a Count-Min Sketch to dimensions specified by user
@@ -511,7 +626,12 @@ class CountMinSketch(ModuleGroup[AnyStr]):
             callback=SimpleStringCallback(),
         )
 
-    @module_command(CommandName.CMS_INITBYPROB, group=CommandGroup.CMS, module="bf")
+    @module_command(
+        CommandName.CMS_INITBYPROB,
+        group=CommandGroup.CMS,
+        version_introduced="2.0.0",
+        module="bf",
+    )
     async def initbyprob(
         self, key: KeyT, error: Union[int, float], probability: Union[int, float]
     ) -> bool:
@@ -531,7 +651,12 @@ class CountMinSketch(ModuleGroup[AnyStr]):
             callback=SimpleStringCallback(),
         )
 
-    @module_command(CommandName.CMS_INCRBY, group=CommandGroup.CMS, module="bf")
+    @module_command(
+        CommandName.CMS_INCRBY,
+        group=CommandGroup.CMS,
+        version_introduced="2.0.0",
+        module="bf",
+    )
     async def incrby(self, key: KeyT, items: Dict[AnyStr, int]) -> Tuple[int, ...]:
         """
         Increases the count of one or more items by increment
@@ -548,7 +673,12 @@ class CountMinSketch(ModuleGroup[AnyStr]):
             callback=TupleCallback[int](),
         )
 
-    @module_command(CommandName.CMS_QUERY, group=CommandGroup.CMS, module="bf")
+    @module_command(
+        CommandName.CMS_QUERY,
+        group=CommandGroup.CMS,
+        version_introduced="2.0.0",
+        module="bf",
+    )
     async def query(
         self,
         key: KeyT,
@@ -566,7 +696,12 @@ class CountMinSketch(ModuleGroup[AnyStr]):
             CommandName.CMS_QUERY, *pieces, callback=TupleCallback[int]()
         )
 
-    @module_command(CommandName.CMS_MERGE, group=CommandGroup.CMS, module="bf")
+    @module_command(
+        CommandName.CMS_MERGE,
+        group=CommandGroup.CMS,
+        version_introduced="2.0.0",
+        module="bf",
+    )
     async def merge(
         self,
         destination: KeyT,
@@ -590,7 +725,12 @@ class CountMinSketch(ModuleGroup[AnyStr]):
             CommandName.CMS_MERGE, *pieces, callback=SimpleStringCallback()
         )
 
-    @module_command(CommandName.CMS_INFO, group=CommandGroup.CMS, module="bf")
+    @module_command(
+        CommandName.CMS_INFO,
+        group=CommandGroup.CMS,
+        version_introduced="2.0.0",
+        module="bf",
+    )
     async def info(self, key: KeyT) -> Dict[AnyStr, int]:
         """
         Returns information about a sketch
@@ -617,7 +757,12 @@ class TopK(ModuleGroup[AnyStr]):
     MODULE = "bf"
 
     @mutually_inclusive_parameters("width", "depth", "decay")
-    @module_command(CommandName.TOPK_RESERVE, group=CommandGroup.TOPK, module="bf")
+    @module_command(
+        CommandName.TOPK_RESERVE,
+        group=CommandGroup.TOPK,
+        version_introduced="2.0.0",
+        module="bf",
+    )
     async def reserve(
         self,
         key: KeyT,
@@ -644,7 +789,12 @@ class TopK(ModuleGroup[AnyStr]):
             CommandName.TOPK_RESERVE, *pieces, callback=SimpleStringCallback()
         )
 
-    @module_command(CommandName.TOPK_ADD, group=CommandGroup.TOPK, module="bf")
+    @module_command(
+        CommandName.TOPK_ADD,
+        group=CommandGroup.TOPK,
+        version_introduced="2.0.0",
+        module="bf",
+    )
     async def add(
         self, key: KeyT, items: Parameters[AnyStr]
     ) -> Tuple[Optional[AnyStr], ...]:
@@ -662,7 +812,12 @@ class TopK(ModuleGroup[AnyStr]):
             callback=TupleCallback[Optional[AnyStr]](),
         )
 
-    @module_command(CommandName.TOPK_INCRBY, group=CommandGroup.TOPK, module="bf")
+    @module_command(
+        CommandName.TOPK_INCRBY,
+        group=CommandGroup.TOPK,
+        version_introduced="2.0.0",
+        module="bf",
+    )
     async def incrby(
         self, key: KeyT, items: Dict[AnyStr, int]
     ) -> Tuple[Optional[AnyStr], ...]:
@@ -679,7 +834,12 @@ class TopK(ModuleGroup[AnyStr]):
             callback=TupleCallback[Optional[AnyStr]](),
         )
 
-    @module_command(CommandName.TOPK_QUERY, group=CommandGroup.TOPK, module="bf")
+    @module_command(
+        CommandName.TOPK_QUERY,
+        group=CommandGroup.TOPK,
+        version_introduced="2.0.0",
+        module="bf",
+    )
     async def query(
         self,
         key: KeyT,
@@ -698,7 +858,12 @@ class TopK(ModuleGroup[AnyStr]):
             CommandName.TOPK_QUERY, *pieces, callback=BoolsCallback()
         )
 
-    @module_command(CommandName.TOPK_COUNT, group=CommandGroup.TOPK, module="bf")
+    @module_command(
+        CommandName.TOPK_COUNT,
+        group=CommandGroup.TOPK,
+        version_introduced="2.0.0",
+        module="bf",
+    )
     async def count(
         self,
         key: KeyT,
@@ -716,7 +881,12 @@ class TopK(ModuleGroup[AnyStr]):
             CommandName.TOPK_COUNT, *pieces, callback=TupleCallback[int]()
         )
 
-    @module_command(CommandName.TOPK_LIST, group=CommandGroup.TOPK, module="bf")
+    @module_command(
+        CommandName.TOPK_LIST,
+        group=CommandGroup.TOPK,
+        version_introduced="2.0.0",
+        module="bf",
+    )
     async def list(
         self, key: KeyT, withcount: Optional[bool] = None
     ) -> Union[Dict[AnyStr, int], Tuple[AnyStr, ...]]:
@@ -737,7 +907,12 @@ class TopK(ModuleGroup[AnyStr]):
                 CommandName.TOPK_LIST, *pieces, callback=TupleCallback[AnyStr]()
             )
 
-    @module_command(CommandName.TOPK_INFO, group=CommandGroup.TOPK, module="bf")
+    @module_command(
+        CommandName.TOPK_INFO,
+        group=CommandGroup.TOPK,
+        version_introduced="2.0.0",
+        module="bf",
+    )
     async def info(self, key: KeyT) -> Dict[AnyStr, int]:
         """
         Returns information about a sketch
@@ -767,7 +942,12 @@ class TDigest(ModuleGroup[AnyStr]):
 
     MODULE = "bf"
 
-    @module_command(CommandName.TDIGEST_CREATE, group=CommandGroup.TDIGEST, module="bf")
+    @module_command(
+        CommandName.TDIGEST_CREATE,
+        group=CommandGroup.TDIGEST,
+        version_introduced="2.4.0",
+        module="bf",
+    )
     async def create(self, key: KeyT, compression: Optional[int] = None) -> bool:
         """
         Allocates memory and initializes a new t-digest sketch
@@ -782,7 +962,12 @@ class TDigest(ModuleGroup[AnyStr]):
             CommandName.TDIGEST_CREATE, *pieces, callback=SimpleStringCallback()
         )
 
-    @module_command(CommandName.TDIGEST_RESET, group=CommandGroup.TDIGEST, module="bf")
+    @module_command(
+        CommandName.TDIGEST_RESET,
+        group=CommandGroup.TDIGEST,
+        version_introduced="2.4.0",
+        module="bf",
+    )
     async def reset(self, key: KeyT) -> bool:
         """
         Resets a t-digest sketch: empty the sketch and re-initializes it.
@@ -793,7 +978,12 @@ class TDigest(ModuleGroup[AnyStr]):
             CommandName.TDIGEST_RESET, key, callback=SimpleStringCallback()
         )
 
-    @module_command(CommandName.TDIGEST_ADD, group=CommandGroup.TDIGEST, module="bf")
+    @module_command(
+        CommandName.TDIGEST_ADD,
+        group=CommandGroup.TDIGEST,
+        version_introduced="2.4.0",
+        module="bf",
+    )
     async def add(
         self,
         key: KeyT,
@@ -811,7 +1001,12 @@ class TDigest(ModuleGroup[AnyStr]):
             CommandName.TDIGEST_ADD, *pieces, callback=SimpleStringCallback()
         )
 
-    @module_command(CommandName.TDIGEST_MERGE, group=CommandGroup.TDIGEST, module="bf")
+    @module_command(
+        CommandName.TDIGEST_MERGE,
+        group=CommandGroup.TDIGEST,
+        version_introduced="2.4.0",
+        module="bf",
+    )
     async def merge(
         self,
         destination_key: KeyT,
@@ -846,7 +1041,12 @@ class TDigest(ModuleGroup[AnyStr]):
             CommandName.TDIGEST_MERGE, *pieces, callback=SimpleStringCallback()
         )
 
-    @module_command(CommandName.TDIGEST_MIN, group=CommandGroup.TDIGEST, module="bf")
+    @module_command(
+        CommandName.TDIGEST_MIN,
+        group=CommandGroup.TDIGEST,
+        version_introduced="2.4.0",
+        module="bf",
+    )
     async def min(self, key: KeyT) -> float:
         """
         Returns the minimum observation value from a t-digest sketch
@@ -858,7 +1058,12 @@ class TDigest(ModuleGroup[AnyStr]):
             CommandName.TDIGEST_MIN, key, callback=FloatCallback()
         )
 
-    @module_command(CommandName.TDIGEST_MAX, group=CommandGroup.TDIGEST, module="bf")
+    @module_command(
+        CommandName.TDIGEST_MAX,
+        group=CommandGroup.TDIGEST,
+        version_introduced="2.4.0",
+        module="bf",
+    )
     async def max(self, key: KeyT) -> float:
         """
         Returns the maximum observation value from a t-digest sketch
@@ -871,7 +1076,10 @@ class TDigest(ModuleGroup[AnyStr]):
         )
 
     @module_command(
-        CommandName.TDIGEST_QUANTILE, group=CommandGroup.TDIGEST, module="bf"
+        CommandName.TDIGEST_QUANTILE,
+        group=CommandGroup.TDIGEST,
+        version_introduced="2.4.0",
+        module="bf",
     )
     async def quantile(
         self,
@@ -891,7 +1099,12 @@ class TDigest(ModuleGroup[AnyStr]):
             CommandName.TDIGEST_QUANTILE, *pieces, callback=FloatsCallback()
         )
 
-    @module_command(CommandName.TDIGEST_CDF, group=CommandGroup.TDIGEST, module="bf")
+    @module_command(
+        CommandName.TDIGEST_CDF,
+        group=CommandGroup.TDIGEST,
+        version_introduced="2.4.0",
+        module="bf",
+    )
     async def cdf(
         self,
         key: KeyT,
@@ -912,7 +1125,10 @@ class TDigest(ModuleGroup[AnyStr]):
         )
 
     @module_command(
-        CommandName.TDIGEST_TRIMMED_MEAN, group=CommandGroup.TDIGEST, module="bf"
+        CommandName.TDIGEST_TRIMMED_MEAN,
+        group=CommandGroup.TDIGEST,
+        version_introduced="2.4.0",
+        module="bf",
     )
     async def trimmed_mean(
         self,
@@ -937,7 +1153,12 @@ class TDigest(ModuleGroup[AnyStr]):
             CommandName.TDIGEST_TRIMMED_MEAN, *pieces, callback=FloatCallback()
         )
 
-    @module_command(CommandName.TDIGEST_RANK, group=CommandGroup.TDIGEST, module="bf")
+    @module_command(
+        CommandName.TDIGEST_RANK,
+        group=CommandGroup.TDIGEST,
+        version_introduced="2.4.0",
+        module="bf",
+    )
     async def rank(
         self,
         key: KeyT,
@@ -958,7 +1179,10 @@ class TDigest(ModuleGroup[AnyStr]):
         )
 
     @module_command(
-        CommandName.TDIGEST_REVRANK, group=CommandGroup.TDIGEST, module="bf"
+        CommandName.TDIGEST_REVRANK,
+        group=CommandGroup.TDIGEST,
+        version_introduced="2.4.0",
+        module="bf",
     )
     async def revrank(
         self,
@@ -979,7 +1203,12 @@ class TDigest(ModuleGroup[AnyStr]):
             CommandName.TDIGEST_REVRANK, *pieces, callback=TupleCallback[int]()
         )
 
-    @module_command(CommandName.TDIGEST_BYRANK, group=CommandGroup.TDIGEST, module="bf")
+    @module_command(
+        CommandName.TDIGEST_BYRANK,
+        group=CommandGroup.TDIGEST,
+        version_introduced="2.4.0",
+        module="bf",
+    )
     async def byrank(
         self,
         key: KeyT,
@@ -999,7 +1228,10 @@ class TDigest(ModuleGroup[AnyStr]):
         )
 
     @module_command(
-        CommandName.TDIGEST_BYREVRANK, group=CommandGroup.TDIGEST, module="bf"
+        CommandName.TDIGEST_BYREVRANK,
+        group=CommandGroup.TDIGEST,
+        version_introduced="2.4.0",
+        module="bf",
     )
     async def byrevrank(
         self,
@@ -1019,7 +1251,12 @@ class TDigest(ModuleGroup[AnyStr]):
             CommandName.TDIGEST_BYREVRANK, *pieces, callback=FloatsCallback()
         )
 
-    @module_command(CommandName.TDIGEST_INFO, group=CommandGroup.TDIGEST, module="bf")
+    @module_command(
+        CommandName.TDIGEST_INFO,
+        group=CommandGroup.TDIGEST,
+        version_introduced="2.4.0",
+        module="bf",
+    )
     async def info(self, key: KeyT) -> Dict[AnyStr, ResponsePrimitive]:
         """
         Returns information and statistics about a t-digest sketch
