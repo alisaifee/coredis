@@ -101,9 +101,17 @@ class AggregationResultCallback(
     def transform(
         self, response: List[ResponseType], **options: Optional[ValueT]
     ) -> SearchAggregationResult:
+        def try_json(value):
+            if not options.get("dialect", None) == 3:
+                return value
+            try:
+                return json.loads(value)
+            except ValueError:
+                return value
+
         return SearchAggregationResult[AnyStr](
             [
-                flat_pairs_to_dict(k)
+                flat_pairs_to_dict(k, try_json)
                 for k in (
                     response[1:] if not options.get("with_cursor") else response[0][1:]
                 )

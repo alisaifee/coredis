@@ -861,9 +861,9 @@ class Search(ModuleGroup[AnyStr]):
             pieces.append(PureToken.INORDER)
         if language:
             pieces.extend([PrefixToken.LANGUAGE, language])
-        if expander:
+        if expander:  # noqa
             pieces.extend([PrefixToken.EXPANDER, expander])
-        if scorer:
+        if scorer:  # noqa
             pieces.extend([PrefixToken.SCORER, scorer])
         if explainscore:
             pieces.append(PureToken.EXPLAINSCORE)
@@ -989,6 +989,7 @@ class Search(ModuleGroup[AnyStr]):
             *pieces,
             callback=AggregationResultCallback[AnyStr](),
             with_cursor=with_cursor,
+            dialect=dialect,
         )
 
     @module_command(

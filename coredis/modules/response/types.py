@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 from typing import Any
 
+from coredis._json import json
 from coredis.typing import (
     AnyStr,
     Dict,
@@ -60,6 +61,12 @@ class SearchAggregationResult(Generic[AnyStr]):
     results: List[Dict[StringT, ResponseType]]
     #: The cursor id if :paramref:`~coredis.modules.search.aggregate.with_cursor` was `True`
     cursor: Optional[int]
+
+    def __post_init__(self) -> None:
+        for idx, result in enumerate(self.results):
+            json_key = b"$" if b"$" in result else "$" if "$" in result else None
+            if json_key:
+                self.results[idx] = json.loads(result.pop(json_key))
 
 
 @dataclasses.dataclass

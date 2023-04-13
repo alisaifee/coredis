@@ -182,6 +182,12 @@ class Parser:
     def can_read(self) -> bool:
         return (self.bytes_written - self.bytes_read) > 0
 
+    def try_decode(self, data: bytes, encoding: str) -> Union[bytes, str]:
+        try:
+            return data.decode(encoding)
+        except ValueError:
+            return data
+
     def get_response(
         self,
         decode: bool,
@@ -237,7 +243,7 @@ class Parser:
             if marker == RESPDataType.SIMPLE_STRING:
                 response = chunk
                 if decode_bytes and encoding:
-                    response = response.decode(encoding)
+                    response = self.try_decode(response, encoding)
             elif marker == RESPDataType.BULK_STRING or marker == RESPDataType.VERBATIM:
                 length = int(chunk)
                 if length == -1:
@@ -256,7 +262,7 @@ class Parser:
                             )
                         response = response[4:]
                     if decode_bytes and encoding:
-                        response = response.decode(encoding)
+                        response = self.try_decode(response, encoding)
             elif marker == RESPDataType.INT:
                 response = int(chunk)
             elif marker == RESPDataType.DOUBLE:
