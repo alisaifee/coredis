@@ -107,7 +107,7 @@ class Field:
         if self.casesensitive:
             args += [b"CASESENSITIVE"]
         if self.withsuffixtrie:
-            args += [b"WITHSUFFIXTREE"]
+            args += [PureToken.WITHSUFFIXTRIE]
         return tuple(args)
 
 

@@ -139,8 +139,11 @@ class TestSchema:
             {"type": PureToken.TEXT, "phonetic": "dm:fr"},
             {"type": PureToken.TEXT, "nostem": True},
             {"type": PureToken.TEXT, "noindex": True},
+            {"type": PureToken.TEXT, "weight": 100},
+            {"type": PureToken.TEXT, "withsuffixtrie": True},
             {"type": PureToken.NUMERIC},
             {"type": PureToken.TAG},
+            {"type": PureToken.TAG, "withsuffixtrie": True},
             {"type": PureToken.TAG, "casesensitive": True},
             {"type": PureToken.GEO},
             {
@@ -162,6 +165,7 @@ class TestSchema:
                 },
             },
         ],
+        ids=lambda val: str(val),
     )
     async def test_create_index(self, client: Redis, on, type_args, args):
         name = "field" if on == PureToken.HASH else "$.field"
