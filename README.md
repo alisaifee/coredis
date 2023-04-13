@@ -37,13 +37,14 @@ coredis is an async redis client with support for redis server, cluster & sentin
 	- [Deployment topologies](#deployment-topologies)
 	- [Application patterns](#application-patterns)
 	- [Server side scripting](#server-side-scripting)
+	- [Redis Modules](#redis-modules)
 	- [Miscellaneous](#miscellaneous)
 - [Quick start](#quick-start)
-	- [Single Node client](#single-node-client)
-	- [Cluster client](#cluster-client)
+	- [Single Node or Cluster client](#single-node-or-cluster-client)
+	- [Sentinel](#sentinel)
 - [Compatibility](#compatibility)
 	- [Supported python versions](#supported-python-versions)
-	- [Redis-like Backends](#redis-like-backends)
+	- [Redis-like backends](#redis-like-backends)
 - [References](#references)
 
 <!-- /TOC -->
@@ -73,6 +74,12 @@ $ pip install coredis
 ### Server side scripting
 - [LUA Scripting](https://coredis.readthedocs.org/en/latest/handbook/scripting.html#lua_scripting)
 - [Redis Libraries and functions](https://coredis.readthedocs.org/en/latest/handbook/scripting.html#library-functions) [`>= Redis 7.0`]
+
+### Redis Modules
+- [RedisJson](https://coredis.readthedocs.org/en/latest/handbook/modules.html#redisjson)
+- [RediSearch](https://coredis.readthedocs.org/en/latest/handbook/modules.html#redisearch)
+- [RedisBloom](https://coredis.readthedocs.org/en/latest/handbook/modules.html#redisbloom)
+- [RedisTimeSeries](https://coredis.readthedocs.org/en/latest/handbook/modules.html#redistimeseries)
 
 ### Miscellaneous
 - Public API annotated with type annotations
