@@ -431,7 +431,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
             PureToken.VAR_P,
             PureToken.VAR_S,
         ],
-        bucketduration: int,
+        bucketduration: Union[int, timedelta],
         aligntimestamp: Optional[int] = None,
     ) -> bool:
         """
@@ -447,7 +447,13 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :return: True if executed correctly, False otherwise.
         """
         pieces: CommandArgList = [source, destination]
-        pieces.extend([PrefixToken.AGGREGATION, aggregation, bucketduration])
+        pieces.extend(
+            [
+                PrefixToken.AGGREGATION,
+                aggregation,
+                normalized_milliseconds(bucketduration),
+            ]
+        )
         if aligntimestamp is not None:
             pieces.append(aligntimestamp)
         return await self.execute_module_command(
@@ -492,7 +498,6 @@ class TimeSeries(ModuleGroup[AnyStr]):
         totimestamp: Union[datetime, int, StringT],
         *,
         filter_by_ts: Optional[Parameters[int]] = None,
-        latest: Optional[bool] = None,
         min_value: Optional[Union[int, float]] = None,
         max_value: Optional[Union[int, float]] = None,
         count: Optional[int] = None,
@@ -517,6 +522,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         align: Optional[Union[int, StringT]] = None,
         buckettimestamp: Optional[StringT] = None,
         empty: Optional[bool] = None,
+        latest: Optional[bool] = None,
     ) -> Union[Tuple[Tuple[int, float], ...], Tuple[()]]:
         """
         Query a range in forward direction.
@@ -527,9 +533,6 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param totimestamp: End timestamp for the range query (integer UNIX timestamp in
          milliseconds) or `+` to denote the timestamp of the latest sample in the time series.
         :param filter_by_ts: List of specific timestamps to filter samples by.
-        :param latest: Used when a time series is a compaction. When ``True``, the command also
-         reports the compacted value of the latest, possibly partial, bucket, given that
-         this bucket's start time falls within ``[fromtimestamp, totimestamp]``.
         :param min_value: Minimum value to filter samples by.
         :param max_value: Maximum value to filter samples by.
         :param count: Limits the number of returned samples.
@@ -539,6 +542,9 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param buckettimestamp: Timestamp of the first bucket.
         :param empty: If True, returns an empty list instead of raising an error when no data
          is available.
+        :param latest: Used when a time series is a compaction. When ``True``, the command also
+         reports the compacted value of the latest, possibly partial, bucket, given that
+         this bucket's start time falls within ``[fromtimestamp, totimestamp]``.
 
         :return: A tuple of samples, where each sample is a tuple of timestamp and value.
         """
@@ -585,7 +591,6 @@ class TimeSeries(ModuleGroup[AnyStr]):
         totimestamp: Union[int, datetime, StringT],
         *,
         filter_by_ts: Optional[Parameters[int]] = None,
-        latest: Optional[bool] = None,
         min_value: Optional[Union[int, float]] = None,
         max_value: Optional[Union[int, float]] = None,
         count: Optional[int] = None,
@@ -610,6 +615,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         align: Optional[Union[int, StringT]] = None,
         buckettimestamp: Optional[StringT] = None,
         empty: Optional[bool] = None,
+        latest: Optional[bool] = None,
     ) -> Union[Tuple[Tuple[int, float], ...], Tuple[()]]:
         """
         Query a range in reverse direction from a RedisTimeSeries key.
@@ -620,7 +626,6 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param totimestamp: End timestamp for the range query (integer UNIX timestamp in
          milliseconds) or `+` to denote the timestamp of the latest sample in the time series.
         :param filter_by_ts: List of specific timestamps to filter samples by.
-        :param latest: Report the compacted value of the latest, possibly partial, bucket.
         :param min_value: Minimum value to filter samples by.
         :param max_value: Maximum value to filter samples by.
         :param count: Limit the number of returned samples.
@@ -629,6 +634,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param align: Time bucket alignment control for :paramref:`aggregator`.
         :param buckettimestamp: Timestamp for the first bucket.
         :param empty: Return an empty list if no samples are found.
+        :param latest: Report the compacted value of the latest, possibly partial, bucket.
 
         :return: A tuple of timestamp-value pairs in reverse order.
         """
@@ -678,9 +684,8 @@ class TimeSeries(ModuleGroup[AnyStr]):
         self,
         fromtimestamp: Union[int, datetime, StringT],
         totimestamp: Union[int, datetime, StringT],
-        *,
-        latest: Optional[bool] = None,
         filters: Optional[Parameters[StringT]] = None,
+        *,
         filter_by_ts: Optional[Parameters[int]] = None,
         min_value: Optional[Union[int, float]] = None,
         max_value: Optional[Union[int, float]] = None,
@@ -725,6 +730,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
             ]
         ] = None,
         empty: Optional[bool] = None,
+        latest: Optional[bool] = None,
     ) -> Dict[
         AnyStr,
         Tuple[Dict[AnyStr, AnyStr], Union[Tuple[Tuple[int, float], ...], Tuple[()]]],
@@ -738,7 +744,6 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param totimestamp: End timestamp for the range query (integer UNIX timestamp in
          milliseconds) or `+` to denote the timestamp of the latest sample amongst all
          time series that passes the filters
-        :param latest: Report the compacted value of the latest, possibly partial, bucket.
         :param filters: Filter expressions to apply to the time series.
         :param filter_by_ts: Timestamps to filter the time series by.
         :param min_value: Minimum value to filter the time series by.
@@ -757,6 +762,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param groupby: Label to group the samples by
         :param reducer: Aggregation type to aggregate the results in each group
         :param empty: Optional boolean to include empty time series in the response.
+        :param latest: Report the compacted value of the latest, possibly partial, bucket.
 
         :return: A dictionary containing the time series data.
         """
@@ -817,9 +823,8 @@ class TimeSeries(ModuleGroup[AnyStr]):
         self,
         fromtimestamp: Union[int, datetime, StringT],
         totimestamp: Union[int, datetime, StringT],
-        *,
-        latest: Optional[bool] = None,
         filters: Optional[Parameters[StringT]] = None,
+        *,
         filter_by_ts: Optional[Parameters[int]] = None,
         min_value: Optional[Union[int, float]] = None,
         max_value: Optional[Union[int, float]] = None,
@@ -849,6 +854,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         groupby: Optional[StringT] = None,
         reducer: Optional[StringT] = None,
         empty: Optional[bool] = None,
+        latest: Optional[bool] = None,
     ) -> Dict[
         AnyStr,
         Tuple[Dict[AnyStr, AnyStr], Union[Tuple[Tuple[int, float], ...], Tuple[()]]],
@@ -862,7 +868,6 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param totimestamp: End timestamp for the range query (integer UNIX timestamp in
          milliseconds) or `+` to denote the timestamp of the latest sample amongst all
          time series that passes the filters
-        :param latest: Report the compacted value of the latest, possibly partial, bucket.
         :param filters: Filter expressions to apply to the time series.
         :param filter_by_ts: Timestamps to filter the time series by.
         :param min_value: Minimum value to filter the time series by.
@@ -881,6 +886,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param groupby: Label to group the samples by
         :param reducer: Aggregation type to aggregate the results in each group
         :param empty: Optional boolean to include empty time series in the response.
+        :param latest: Report the compacted value of the latest, possibly partial, bucket.
 
         :return: A dictionary containing the result of the query.
         """
@@ -967,20 +973,15 @@ class TimeSeries(ModuleGroup[AnyStr]):
     async def mget(
         self,
         filters: Parameters[StringT],
-        latest: Optional[bool] = None,
         withlabels: Optional[bool] = None,
         selected_labels: Optional[Parameters[StringT]] = None,
+        latest: Optional[bool] = None,
     ) -> Dict[AnyStr, Tuple[Dict[AnyStr, AnyStr], Tuple[int, float]]]:
         """
         Get the sample with the highest timestamp from each time series matching a specific filter.
 
         :param filters: Filters time series based on their labels and label values. At least one
          `label=value` filter is required.
-        :param latest: Used when a time series is a compaction. If ``True``, the command also
-         reports the compacted value of the latest possibly partial bucket, given that this
-         bucket's start time falls within `[fromTimestamp, toTimestamp]`. If ``False``,
-         the command does not report the latest possibly partial bucket. When a time series is
-         not a compaction, the argument is ignored
         :param withlabels: Includes in the reply all label-value pairs representing metadata labels
          of the time series. If :paramref:`withlabels` or :paramref:`selected_labels` are not
          specified, by default, an empty dictionary is reported as label-value pairs.
@@ -989,6 +990,11 @@ class TimeSeries(ModuleGroup[AnyStr]):
          the values of some of the labels are required. If :paramref:`withlabels` or
          :paramref:`selected_labels` are not specified, by default, an empty mapping is reported
          as label-value pairs.
+        :param latest: Used when a time series is a compaction. If ``True``, the command also
+         reports the compacted value of the latest possibly partial bucket, given that this
+         bucket's start time falls within `[fromTimestamp, toTimestamp]`. If ``False``,
+         the command does not report the latest possibly partial bucket. When a time series is
+         not a compaction, the argument is ignored
         :return: For each time series matching the specified filters, a dictionary is returned with
          the time series key name as the key and a tuple containing the label-value pairs and a
          single timestamp-value pair as the value.
