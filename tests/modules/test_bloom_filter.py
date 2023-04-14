@@ -46,6 +46,17 @@ class TestBloomFilter:
         assert (True, True, True) == await client.bf.insert(
             "filter_custom_noscale", [1, 2, 3], 3, 0.1, nonscaling=True
         )
+
+        assert (True, True, True) == await client.bf.insert(
+            "filter_custom_expansion", [1, 2, 3], 3, expansion=3
+        )
+        assert (True, True, True) == await client.bf.insert(
+            "filter_custom_expansion", [4, 5, 6], 3, expansion=3
+        )
+
+        info = await client.bf.info("filter_custom_expansion")
+        assert info["Capacity"] == 12
+
         with pytest.raises(ResponseError):
             await client.bf.insert("filter_missing", [1, 2, 3], nocreate=True)
 
