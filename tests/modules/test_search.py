@@ -82,6 +82,8 @@ async def city_index(client: Redis):
         payload_field="$.last_updated",
         prefixes=["{jcity}:"],
     )
+    if use_pipeline:
+        await client.execute()
     for name, city in data.items():
         await client.hset(
             f"{{city}}:{name}",
@@ -98,6 +100,9 @@ async def city_index(client: Redis):
                 "last_updated": "2012-12-12",
             },
         )
+    if use_pipeline:
+        await client.execute()
+    for name, city in data.items():
         await client.json.set(
             f"{{jcity}}:{name}",
             ".",
