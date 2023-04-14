@@ -488,7 +488,10 @@ class TimeSeries(ModuleGroup[AnyStr]):
         CommandName.TS_RANGE,
         group=CommandGroup.TIMESERIES,
         version_introduced="1.0.0",
-        arguments={"latest": {"version_introduced": "1.8.0"}},
+        arguments={
+            "latest": {"version_introduced": "1.8.0"},
+            "empty": {"version_introduced": "1.8.0"},
+        },
         module="timeseries",
     )
     async def range(
@@ -574,8 +577,8 @@ class TimeSeries(ModuleGroup[AnyStr]):
             )
             if buckettimestamp is not None:
                 pieces.extend([PureToken.BUCKETTIMESTAMP, buckettimestamp])
-                if empty is not None:
-                    pieces.append(PureToken.EMPTY)
+            if empty is not None:
+                pieces.append(PureToken.EMPTY)
 
         return await self.execute_module_command(
             CommandName.TS_RANGE, *pieces, callback=SamplesCallback()
@@ -587,7 +590,10 @@ class TimeSeries(ModuleGroup[AnyStr]):
         CommandName.TS_REVRANGE,
         group=CommandGroup.TIMESERIES,
         version_introduced="1.4.0",
-        arguments={"latest": {"version_introduced": "1.8.0"}},
+        arguments={
+            "latest": {"version_introduced": "1.8.0"},
+            "empty": {"version_introduced": "1.8.0"},
+        },
         module="timeseries",
     )
     async def revrange(
@@ -670,8 +676,8 @@ class TimeSeries(ModuleGroup[AnyStr]):
             )
             if buckettimestamp is not None:
                 pieces.extend([PureToken.BUCKETTIMESTAMP, buckettimestamp])
-                if empty is not None:
-                    pieces.append(PureToken.EMPTY)
+            if empty is not None:
+                pieces.append(PureToken.EMPTY)
 
         return await self.execute_module_command(
             CommandName.TS_REVRANGE, *pieces, callback=SamplesCallback()
@@ -685,7 +691,10 @@ class TimeSeries(ModuleGroup[AnyStr]):
         CommandName.TS_MRANGE,
         group=CommandGroup.TIMESERIES,
         version_introduced="1.0.0",
-        arguments={"latest": {"version_introduced": "1.8.0"}},
+        arguments={
+            "latest": {"version_introduced": "1.8.0"},
+            "empty": {"version_introduced": "1.8.0"},
+        },
         module="timeseries",
         cluster=ClusterCommandConfig(
             route=NodeFlag.PRIMARIES,
@@ -831,7 +840,10 @@ class TimeSeries(ModuleGroup[AnyStr]):
         CommandName.TS_MREVRANGE,
         group=CommandGroup.TIMESERIES,
         version_introduced="1.4.0",
-        arguments={"latest": {"version_introduced": "1.8.0"}},
+        arguments={
+            "latest": {"version_introduced": "1.8.0"},
+            "empty": {"version_introduced": "1.8.0"},
+        },
         module="timeseries",
         cluster=ClusterCommandConfig(
             route=NodeFlag.PRIMARIES, combine=ClusterMergeTimeSeries()

@@ -297,21 +297,24 @@ class TestTimeseries:
             "ts1", 0, 10, aggregator=PureToken.TWA, bucketduration=10
         )
 
-        assert (
-            10
-            == (
-                await client.timeseries.range(
-                    "ts1",
-                    0,
-                    500,
-                    count=10,
-                    aggregator=PureToken.AVG,
-                    bucketduration=10,
-                    buckettimestamp="+",
-                    empty=True,
-                )
-            )[0][0]
+    @pytest.mark.min_module_version("timeseries", "1.8.0")
+    async def test_range_empty_buckets(self, client: Redis):
+        for i in range(100):
+            await client.timeseries.add("ts1", i, i % 7)
+        for i in range(100):
+            await client.timeseries.add("ts1", i + 200, i % 7)
+
+        # test empty buckets
+        res = await client.timeseries.range(
+            "ts1",
+            0,
+            300,
+            aggregator=PureToken.AVG,
+            bucketduration=10,
+            empty=True,
         )
+
+        assert all(math.isnan(k[1]) for k in res[10:20])
 
     async def test_revrange(self, client: Redis):
         for i in range(100):
@@ -351,21 +354,24 @@ class TestTimeseries:
             "ts1", 0, 10, aggregator=PureToken.COUNT, bucketduration=10, align=1
         )
 
-        assert (
-            300
-            == (
-                await client.timeseries.revrange(
-                    "ts1",
-                    0,
-                    500,
-                    count=10,
-                    aggregator=PureToken.AVG,
-                    bucketduration=10,
-                    buckettimestamp="+",
-                    empty=True,
-                )
-            )[0][0]
+    @pytest.mark.min_module_version("timeseries", "1.8.0")
+    async def test_revrange_empty_buckets(self, client: Redis):
+        for i in range(100):
+            await client.timeseries.add("ts1", i, i % 7)
+        for i in range(100):
+            await client.timeseries.add("ts1", i + 200, i % 7)
+
+        # test empty buckets
+        res = await client.timeseries.revrange(
+            "ts1",
+            0,
+            300,
+            aggregator=PureToken.AVG,
+            bucketduration=10,
+            empty=True,
         )
+
+        assert all(math.isnan(k[1]) for k in res[10:20])
 
     async def test_mrange(self, client: Redis):
         await client.timeseries.create("ts1", labels={"Test": "This", "team": "ny"})
@@ -398,6 +404,20 @@ class TestTimeseries:
         assert 2 == len(res)
         assert 20 == len(res["ts1"][1])
 
+        # test withlabels
+        assert {} == res["ts1"][0]
+        res = await client.timeseries.mrange(
+            0, 200, filters=["Test=This"], withlabels=True
+        )
+        assert {"Test": "This", "team": "ny"} == res["ts1"][0]
+
+    @pytest.mark.min_module_version("timeseries", "1.8.0")
+    async def test_mrange_empty_buckets(self, client: Redis):
+        await client.timeseries.create("ts1", labels={"Test": "This", "team": "ny"})
+        for i in range(100):
+            await client.timeseries.add("ts1", i, i % 7)
+        for i in range(100):
+            await client.timeseries.add("ts1", i + 200, i % 7)
         # test empty buckets
         res = await client.timeseries.mrange(
             0,
@@ -409,13 +429,6 @@ class TestTimeseries:
         )
 
         assert all(math.isnan(k[1]) for k in res["ts1"][1][10:20])
-
-        # test withlabels
-        assert {} == res["ts1"][0]
-        res = await client.timeseries.mrange(
-            0, 200, filters=["Test=This"], withlabels=True
-        )
-        assert {"Test": "This", "team": "ny"} == res["ts1"][0]
 
     async def test_mrange_filter_align(self, client: Redis):
         await client.timeseries.create("ts1", labels={"Test": "This", "team": "ny"})
@@ -537,18 +550,6 @@ class TestTimeseries:
         assert 20 == len(res["ts1"][1])
         assert {} == res["ts1"][0]
 
-        # test empty buckets
-        res = await client.timeseries.mrevrange(
-            0,
-            300,
-            filters=["Test=This"],
-            aggregator=PureToken.AVG,
-            bucketduration=10,
-            empty=True,
-        )
-
-        assert all(math.isnan(k[1]) for k in res["ts1"][1][10:20])
-
         # test withlabels
         res = await client.timeseries.mrevrange(
             0, 200, filters=["Test=This"], withlabels=True
@@ -583,6 +584,26 @@ class TestTimeseries:
             align="-",
         )
         assert ((10, 1.0), (0, 10.0)) == res["ts1"][1]
+
+    @pytest.mark.min_module_version("timeseries", "1.8.0")
+    async def test_mrevrange_empty_buckets(self, client: Redis):
+        await client.timeseries.create("ts1", labels={"Test": "This", "team": "ny"})
+        for i in range(100):
+            await client.timeseries.add("ts1", i, i % 7)
+        for i in range(100):
+            await client.timeseries.add("ts1", i + 200, i % 7)
+
+        # test empty buckets
+        res = await client.timeseries.mrevrange(
+            0,
+            300,
+            filters=["Test=This"],
+            aggregator=PureToken.AVG,
+            bucketduration=10,
+            empty=True,
+        )
+
+        assert all(math.isnan(k[1]) for k in res["ts1"][1][10:20])
 
     @pytest.mark.nocluster
     async def test_mrevrange_grouped(self, client: Redis):
