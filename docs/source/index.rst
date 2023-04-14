@@ -76,6 +76,7 @@ Feature Summary
   * :ref:`handbook/modules:RedisJSON`
   * :ref:`handbook/modules:RediSearch`
   * :ref:`handbook/modules:RedisBloom`
+  * :ref:`handbook/modules:RedisTimeSeries`
 
 * Miscellaneous
 

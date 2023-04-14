@@ -499,3 +499,103 @@ TDigest
     assert (1.0, 3.0, 6.0) == await client.tdigest.quantile("digest", [0, 0.5, 1])
 
 For more details refer to the API documentation for :class:`~coredis.modules.filters.TDigest`
+
+RedisTimeSeries
+^^^^^^^^^^^^^^^
+`RedisTimeSeries` adds a time series data structure to Redis that allows ingesting
+and querying time series'.
+
+To access the commands exposed by the module use the :attr:`~Redis.timeseries` property
+or manually instantiate the :class:`~modules.timeseries.TimeSeries` class with an instance of
+:class:`~Redis` or  :class:`~RedisCluster`
+
+The below examples use random temperature data captured every few minutes
+for different rooms in a house.
+
+Create a few timeseries with different labels (:meth:`~modules.timeseries.TimeSeries.create`)::
+
+    import coredis
+    from datetime import datetime, timedelta
+
+    rooms = {"bedroom", "lounge", "bathroom"}
+    client = coredis.Redis(port=9379)
+
+    for room in rooms:
+        assert await client.timeseries.create(f"temp:{room}", labels={"room": room})
+
+Create compaction rules for hourly and daily averages (:meth:`~modules.timeseries.TimeSeries.createrule`)::
+
+    for room in rooms:
+        assert await client.timeseries.create(
+            f"temp:{room}:hourly:avg", labels={"room": room, "compaction": "hourly"}
+        )
+        assert wait client.timeseries.create(
+            f"temp:{room}:daily:avg", labels={"room": room, "compaction": "daily"}
+        )
+
+        assert wait client.timeseries.createrule(
+            f"temp:{room}", f"temp:{room}:hourly:avg",
+            coredis.PureToken.AVG, timedelta(hours=1)
+        )
+        assert await client.timeseries.createrule(
+            f"temp:{room}", f"temp:{room}:daily:avg",
+            coredis.PureToken.AVG, timedelta(hours=24)
+        )
+
+Populate a year of random sample data (:meth:`~modules.timeseries.TimeSeries.add`)::
+
+    import random
+    cur = datetime.fromtimestamp(0)
+    pipeline = await client.pipeline()
+    while cur < datetime(1971, 1, 1, 0, 0, 0):
+        cur += timedelta(minutes=random.randint(1, 60))
+        for room in rooms:
+            await pipeline.timeseries.add(f"temp:{room}", cur, random.randint(15, 30))
+
+    await pipeline.execute()
+
+Query for the latest temperature in each room (:meth:`~modules.timeseries.TimeSeries.get`)::
+
+    for room in rooms:
+        print(await client.timeseries.get(f"temp:{room}"))
+
+Query for latest temperature in all rooms (:meth:`~modules.timeseries.TimeSeries.mget`)::
+
+    print(await client.timeseries.mget(
+        filters=[f"room=({','.join(rooms)})", "compaction="])
+    )
+
+Query for daily averages by individual room (:meth:`~modules.timeseries.TimeSeries.range` & :meth:`~modules.timeseries.TimeSeries.mrange`)::
+
+    # using individual range queries on the compacted timeseries
+    for room in rooms:
+        print(await client.timeseries.range(
+            f"temp:{room}:daily:avg", 0, datetime(1971, 1, 1),
+        ))
+
+    # using individual range queries with an aggregation on the original timeseries
+    for room in rooms:
+        print(await client.timeseries.range(
+            f"temp:{room}", 0, datetime(1971, 1, 1),
+            aggregator=coredis.PureToken.AVG,
+            bucketduration=timedelta(hours=24),
+        ))
+
+    # using a multi range query on the compacted series
+    print(
+        await client.timeseries.mrange(
+            0, datetime(1971, 1, 1), filters=["compaction=daily"]
+        )
+    )
+
+    # using a multi range query with aggregation on the original series
+    print(
+        await client.timeseries.mrange(
+            0, datetime(1971, 1, 1),
+            aggregator=coredis.PureToken.AVG,
+            bucketduration=timedelta(hours=24),
+            filters=[f"room=({','.join(rooms)})", "compaction="]
+        )
+    )
+
+For more details refer to the API documentation for :class:`~coredis.modules.timeseries.TimeSeries`

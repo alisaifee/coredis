@@ -41,6 +41,13 @@ Server side scripting
 - :ref:`handbook/scripting:lua scripts`
 - :ref:`handbook/scripting:library functions`
 
+Modules
+-------
+- :ref:`handbook/modules:redisjson`
+- :ref:`handbook/modules:redisbloom`
+- :ref:`handbook/modules:redisearch`
+- :ref:`handbook/modules:redistimeseries`
+
 Performance
 -----------
 - :ref:`handbook/connections:connection pools`

@@ -518,7 +518,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
                 PureToken.VAR_S,
             ]
         ] = None,
-        bucketduration: Optional[int] = None,
+        bucketduration: Optional[Union[int, timedelta]] = None,
         align: Optional[Union[int, StringT]] = None,
         buckettimestamp: Optional[StringT] = None,
         empty: Optional[bool] = None,
@@ -565,7 +565,13 @@ class TimeSeries(ModuleGroup[AnyStr]):
         if aggregator and bucketduration is not None:
             if align is not None:
                 pieces.extend([PrefixToken.ALIGN, align])
-            pieces.extend([PrefixToken.AGGREGATION, aggregator, bucketduration])
+            pieces.extend(
+                [
+                    PrefixToken.AGGREGATION,
+                    aggregator,
+                    normalized_milliseconds(bucketduration),
+                ]
+            )
             if buckettimestamp is not None:
                 pieces.extend([PureToken.BUCKETTIMESTAMP, buckettimestamp])
                 if empty is not None:
@@ -611,7 +617,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
                 PureToken.VAR_S,
             ]
         ] = None,
-        bucketduration: Optional[int] = None,
+        bucketduration: Optional[Union[int, timedelta]] = None,
         align: Optional[Union[int, StringT]] = None,
         buckettimestamp: Optional[StringT] = None,
         empty: Optional[bool] = None,
@@ -655,7 +661,13 @@ class TimeSeries(ModuleGroup[AnyStr]):
         if aggregator and bucketduration is not None:
             if align is not None:
                 pieces.extend([PrefixToken.ALIGN, align])
-            pieces.extend([PrefixToken.AGGREGATION, aggregator, bucketduration])
+            pieces.extend(
+                [
+                    PrefixToken.AGGREGATION,
+                    aggregator,
+                    normalized_milliseconds(bucketduration),
+                ]
+            )
             if buckettimestamp is not None:
                 pieces.extend([PureToken.BUCKETTIMESTAMP, buckettimestamp])
                 if empty is not None:
@@ -710,7 +722,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
                 PureToken.VAR_S,
             ]
         ] = None,
-        bucketduration: Optional[int] = None,
+        bucketduration: Optional[Union[int, timedelta]] = None,
         buckettimestamp: Optional[StringT] = None,
         groupby: Optional[StringT] = None,
         reducer: Optional[
@@ -788,7 +800,13 @@ class TimeSeries(ModuleGroup[AnyStr]):
             if align is not None:
                 pieces.extend([PrefixToken.ALIGN, align])
             if aggregator and bucketduration is not None:
-                pieces.extend([PrefixToken.AGGREGATION, aggregator, bucketduration])
+                pieces.extend(
+                    [
+                        PrefixToken.AGGREGATION,
+                        aggregator,
+                        normalized_milliseconds(bucketduration),
+                    ]
+                )
             if buckettimestamp is not None:
                 pieces.extend([PureToken.BUCKETTIMESTAMP, buckettimestamp])
             if empty:
@@ -849,7 +867,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
                 PureToken.VAR_S,
             ]
         ] = None,
-        bucketduration: Optional[int] = None,
+        bucketduration: Optional[Union[int, timedelta]] = None,
         buckettimestamp: Optional[StringT] = None,
         groupby: Optional[StringT] = None,
         reducer: Optional[StringT] = None,
@@ -912,7 +930,13 @@ class TimeSeries(ModuleGroup[AnyStr]):
             if align is not None:
                 pieces.extend([PrefixToken.ALIGN, align])
             if aggregator and bucketduration is not None:
-                pieces.extend([PrefixToken.AGGREGATION, aggregator, bucketduration])
+                pieces.extend(
+                    [
+                        PrefixToken.AGGREGATION,
+                        aggregator,
+                        normalized_milliseconds(bucketduration),
+                    ]
+                )
             if buckettimestamp is not None:
                 pieces.extend([PureToken.BUCKETTIMESTAMP, buckettimestamp])
             if empty:
