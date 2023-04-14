@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import itertools
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List
 
 from coredis.typing import (
@@ -21,7 +21,7 @@ from coredis.typing import (
 )
 
 from .._utils import dict_to_flat_list
-from ..commands._utils import normalized_time_milliseconds
+from ..commands._utils import normalized_milliseconds, normalized_time_milliseconds
 from ..commands._validators import (
     mutually_exclusive_parameters,
     mutually_inclusive_parameters,
@@ -72,7 +72,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
     async def create(
         self,
         key: KeyT,
-        retention: Optional[int] = None,
+        retention: Optional[Union[int, timedelta]] = None,
         encoding: Optional[
             Literal[PureToken.COMPRESSED, PureToken.UNCOMPRESSED]
         ] = None,
@@ -105,7 +105,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         """
         pieces: CommandArgList = [key]
         if retention is not None:
-            pieces.extend([PrefixToken.RETENTION, retention])
+            pieces.extend([PrefixToken.RETENTION, normalized_milliseconds(retention)])
         if encoding:
             pieces.extend([PrefixToken.ENCODING, encoding])
         if chunk_size is not None:
@@ -306,7 +306,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         value: Union[int, float],
         labels: Optional[Dict[StringT, ValueT]] = None,
         timestamp: Optional[Union[datetime, int, StringT]] = None,
-        retention: Optional[int] = None,
+        retention: Optional[Union[int, timedelta]] = None,
         uncompressed: Optional[bool] = None,
         chunk_size: Optional[int] = None,
     ) -> int:
@@ -334,7 +334,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         if timestamp:
             pieces.extend([PrefixToken.TIMESTAMP, normalized_timestamp(timestamp)])
         if retention:
-            pieces.extend([PrefixToken.RETENTION, retention])
+            pieces.extend([PrefixToken.RETENTION, normalized_milliseconds(retention)])
         if uncompressed:
             pieces.append(PureToken.UNCOMPRESSED)
         if chunk_size:
@@ -360,7 +360,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         value: Union[int, float],
         labels: Optional[Dict[StringT, ValueT]] = None,
         timestamp: Optional[Union[datetime, int, StringT]] = None,
-        retention: Optional[int] = None,
+        retention: Optional[Union[int, timedelta]] = None,
         uncompressed: Optional[bool] = None,
         chunk_size: Optional[int] = None,
     ) -> int:
@@ -392,7 +392,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         if timestamp:
             pieces.extend([PrefixToken.TIMESTAMP, normalized_timestamp(timestamp)])
         if retention:
-            pieces.extend([PrefixToken.RETENTION, retention])
+            pieces.extend([PrefixToken.RETENTION, normalized_milliseconds(retention)])
         if uncompressed:
             pieces.append(PureToken.UNCOMPRESSED)
         if chunk_size:

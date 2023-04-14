@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import time
+from datetime import timedelta
 
 import pytest
 
@@ -25,8 +27,8 @@ class TestTimeseries:
         assert "Series" == info["labels"]["Time"]
 
         # Test for a chunk size of 128 Bytes
-        assert await client.timeseries.create("time-serie-1", chunk_size=128)
-        info = await client.timeseries.info("time-serie-1")
+        assert await client.timeseries.create("ts4", chunk_size=128)
+        info = await client.timeseries.info("ts4")
         assert 128, info["chunkSize"]
 
     @pytest.mark.parametrize(
@@ -42,7 +44,7 @@ class TestTimeseries:
     )
     async def test_create_duplicate_policy(self, client: Redis, duplicate_policy):
         # Test for duplicate policy
-        ts_name = f"time-serie-ooo-{duplicate_policy}"
+        ts_name = f"ts-{duplicate_policy}"
         assert await client.timeseries.create(
             ts_name, duplicate_policy=duplicate_policy
         )
@@ -63,6 +65,9 @@ class TestTimeseries:
         assert "Series" == res["labels"]["Time"]
         res = await client.timeseries.info("ts1")
         assert 10 == res["retentionTime"]
+        assert await client.timeseries.alter("ts1", chunk_size=8192)
+        res = await client.timeseries.info("ts1")
+        assert 8192 == res["chunkSize"]
 
     async def test_alter_diplicate_policy(self, client: Redis):
         assert await client.timeseries.create("ts1")
@@ -87,48 +92,54 @@ class TestTimeseries:
         assert "Labs" == info["labels"]["Redis"]
 
         # Test for a chunk size of 128 Bytes on TS.ADD
-        assert await client.timeseries.add("time-serie-1", 1, 10.0, chunk_size=128)
-        info = await client.timeseries.info("time-serie-1")
+        assert await client.timeseries.add("ts6", 1, 10.0, chunk_size=128)
+        info = await client.timeseries.info("ts6")
         assert 128 == info["chunkSize"]
+
+        assert await client.timeseries.add(
+            "ts7", 4, 10.0, encoding=PureToken.UNCOMPRESSED
+        )
+        info = await client.timeseries.info("ts7")
+        assert "uncompressed" == info["chunkType"]
 
     async def test_add_duplicate_policy(self, client: Redis):
         # Test for duplicate policy BLOCK
-        assert 1 == await client.timeseries.add("time-serie-add-ooo-block", 1, 5.0)
+        assert 1 == await client.timeseries.add("ts-add-block", 1, 5.0)
         with pytest.raises(Exception):
             await client.timeseries.add(
-                "time-serie-add-ooo-block", 1, 5.0, duplicate_policy=PureToken.BLOCK
+                "ts-add-block", 1, 5.0, duplicate_policy=PureToken.BLOCK
             )
 
         # Test for duplicate policy LAST
-        assert 1 == await client.timeseries.add("time-serie-add-ooo-last", 1, 5.0)
+        assert 1 == await client.timeseries.add("ts-add-last", 1, 5.0)
         assert 1 == await client.timeseries.add(
-            "time-serie-add-ooo-last", 1, 10.0, duplicate_policy=PureToken.LAST
+            "ts-add-last", 1, 10.0, duplicate_policy=PureToken.LAST
         )
-        res = await client.timeseries.get("time-serie-add-ooo-last")
+        res = await client.timeseries.get("ts-add-last")
         assert 10.0 == res[1]
 
         # Test for duplicate policy FIRST
-        assert 1 == await client.timeseries.add("time-serie-add-ooo-first", 1, 5.0)
+        assert 1 == await client.timeseries.add("ts-add-first", 1, 5.0)
         assert 1 == await client.timeseries.add(
-            "time-serie-add-ooo-first", 1, 10.0, duplicate_policy=PureToken.FIRST
+            "ts-add-first", 1, 10.0, duplicate_policy=PureToken.FIRST
         )
-        res = await client.timeseries.get("time-serie-add-ooo-first")
+        res = await client.timeseries.get("ts-add-first")
         assert 5.0 == res[1]
 
         # Test for duplicate policy MAX
-        assert 1 == await client.timeseries.add("time-serie-add-ooo-max", 1, 5.0)
+        assert 1 == await client.timeseries.add("ts-add-max", 1, 5.0)
         assert 1 == await client.timeseries.add(
-            "time-serie-add-ooo-max", 1, 10.0, duplicate_policy=PureToken.MAX
+            "ts-add-max", 1, 10.0, duplicate_policy=PureToken.MAX
         )
-        res = await client.timeseries.get("time-serie-add-ooo-max")
+        res = await client.timeseries.get("ts-add-max")
         assert 10.0 == res[1]
 
         # Test for duplicate policy MIN
-        assert 1 == await client.timeseries.add("time-serie-add-ooo-min", 1, 5.0)
+        assert 1 == await client.timeseries.add("ts-add-min", 1, 5.0)
         assert 1 == await client.timeseries.add(
-            "time-serie-add-ooo-min", 1, 10.0, duplicate_policy=PureToken.MIN
+            "ts-add-min", 1, 10.0, duplicate_policy=PureToken.MIN
         )
-        res = await client.timeseries.get("time-serie-add-ooo-min")
+        res = await client.timeseries.get("ts-add-min")
         assert 5.0 == res[1]
 
     async def test_madd(self, client: Redis):
@@ -137,49 +148,98 @@ class TestTimeseries:
             [("a", 1, 5), ("a", 2, 10), ("a", 3, 15)]
         )
 
-    async def test_incrby_decrby(self, client: Redis):
+    async def test_incrby(self, client: Redis):
         for _ in range(100):
             assert await client.timeseries.incrby("ts1", 1)
-            time.sleep(0.001)
+            await asyncio.sleep(0.001)
         assert 100 == (await client.timeseries.get("ts1"))[1]
-        for _ in range(100):
-            assert await client.timeseries.decrby("ts1", 1)
-            time.sleep(0.001)
-        assert 0 == (await client.timeseries.get("ts1"))[1]
 
         assert await client.timeseries.incrby("ts2", 1.5, timestamp=5)
         assert (5, 1.5) == await client.timeseries.get("ts2")
-        assert await client.timeseries.incrby("ts2", 2.25, timestamp=7)
-        assert (7, 3.75) == await client.timeseries.get("ts2")
-        assert await client.timeseries.decrby("ts2", 1.5, timestamp=15)
-        assert (15, 2.25) == await client.timeseries.get("ts2")
 
-        # Test for a chunk size of 128 Bytes on TS.INCRBY
-        assert await client.timeseries.incrby("time-serie-1", 10, chunk_size=128)
-        info = await client.timeseries.info("time-serie-1")
+        assert await client.timeseries.incrby("ts3", 10, chunk_size=128)
+        info = await client.timeseries.info("ts3")
         assert 128 == info["chunkSize"]
 
-        # Test for a chunk size of 128 Bytes on TS.DECRBY
-        assert await client.timeseries.decrby("time-serie-2", 10, chunk_size=128)
-        info = await client.timeseries.info("time-serie-2")
+        assert await client.timeseries.incrby(
+            "ts4",
+            10,
+            uncompressed=True,
+        )
+        info = await client.timeseries.info("ts4")
+        assert "uncompressed" == info["chunkType"]
+
+        assert await client.timeseries.incrby(
+            "ts5",
+            10,
+            retention=timedelta(seconds=120),
+        )
+        info = await client.timeseries.info("ts5")
+        assert 120 * 1000 == info["retentionTime"]
+
+        assert await client.timeseries.incrby("ts6", 10, labels={"fu": "bar"})
+        info = await client.timeseries.info("ts6")
+        assert {"fu": "bar"} == info["labels"]
+
+    async def test_decrby(self, client: Redis):
+        for _ in range(100):
+            assert await client.timeseries.decrby("ts1", 1)
+            await asyncio.sleep(0.001)
+        assert -100 == (await client.timeseries.get("ts1"))[1]
+
+        assert await client.timeseries.decrby("ts2", 1.5, timestamp=5)
+        assert (5, -1.5) == await client.timeseries.get("ts2")
+
+        assert await client.timeseries.decrby("ts3", 10, chunk_size=128)
+        info = await client.timeseries.info("ts3")
         assert 128 == info["chunkSize"]
+
+        assert await client.timeseries.decrby(
+            "ts4",
+            10,
+            uncompressed=True,
+        )
+        info = await client.timeseries.info("ts4")
+        assert "uncompressed" == info["chunkType"]
+
+        assert await client.timeseries.decrby(
+            "ts5",
+            10,
+            retention=timedelta(seconds=120),
+        )
+        info = await client.timeseries.info("ts5")
+        assert 120 * 1000 == info["retentionTime"]
+
+        assert await client.timeseries.decrby("ts6", 10, labels={"fu": "bar"})
+        info = await client.timeseries.info("ts6")
+        assert {"fu": "bar"} == info["labels"]
 
     async def test_create_and_delete_rule(self, client: Redis):
         # test rule creation
         time = 100
         await client.timeseries.create("ts1{a}")
         await client.timeseries.create("ts2{a}")
+        await client.timeseries.create("ts3{a}")
+
         await client.timeseries.createrule("ts1{a}", "ts2{a}", PureToken.AVG, 100)
+        await client.timeseries.createrule(
+            "ts1{a}", "ts3{a}", PureToken.AVG, 100, aligntimestamp=True
+        )
+
         for i in range(50):
             await client.timeseries.add("ts1{a}", time + i * 2, 1)
             await client.timeseries.add("ts1{a}", time + i * 2 + 1, 2)
         await client.timeseries.add("ts1{a}", time * 2, 1.5)
+
         assert round((await client.timeseries.get("ts2{a}"))[1], 5) == 1.5
+        assert round((await client.timeseries.get("ts3{a}"))[1], 5) == 1.0
+
         info = await client.timeseries.info("ts1{a}")
         assert info["rules"][0][1] == 100
 
         # test rule deletion
         await client.timeseries.deleterule("ts1{a}", "ts2{a}")
+        await client.timeseries.deleterule("ts1{a}", "ts3{a}")
         info = await client.timeseries.info("ts1{a}")
         assert not info["rules"]
 
@@ -208,7 +268,24 @@ class TestTimeseries:
                 "ts1", 0, 500, aggregator=PureToken.AVG, bucketduration=10
             )
         )
-        assert 10 == len(await client.timeseries.range("ts1", 0, 500, count=10))
+        assert 10 == len(
+            await client.timeseries.range("ts1", 0, 500, count=10, latest=True)
+        )
+        assert (
+            10
+            == (
+                await client.timeseries.range(
+                    "ts1",
+                    0,
+                    500,
+                    count=10,
+                    aggregator=PureToken.AVG,
+                    bucketduration=10,
+                    buckettimestamp="+",
+                    empty=True,
+                )
+            )[0][0]
+        )
 
     @pytest.mark.min_module_version("timeseries", "1.8.0")
     async def test_range_advanced(self, client: Redis):
@@ -236,7 +313,7 @@ class TestTimeseries:
             "ts1", 0, 10, aggregator=PureToken.TWA, bucketduration=10
         )
 
-    async def test_rev_range(self, client: Redis):
+    async def test_revrange(self, client: Redis):
         for i in range(100):
             await client.timeseries.add("ts1", i, i % 7)
         assert 100 == len(await client.timeseries.range("ts1", 0, 200))
@@ -249,7 +326,9 @@ class TestTimeseries:
                 "ts1", 0, 500, aggregator=PureToken.AVG, bucketduration=10
             )
         )
-        assert 10 == len(await client.timeseries.revrange("ts1", 0, 500, count=10))
+        assert 10 == len(
+            await client.timeseries.revrange("ts1", 0, 500, count=10, latest=True)
+        )
         assert 2 == len(
             await client.timeseries.revrange(
                 "ts1",
@@ -267,6 +346,22 @@ class TestTimeseries:
             "ts1", 0, 10, aggregator=PureToken.COUNT, bucketduration=10, align=1
         )
 
+        assert (
+            300
+            == (
+                await client.timeseries.revrange(
+                    "ts1",
+                    0,
+                    500,
+                    count=10,
+                    aggregator=PureToken.AVG,
+                    bucketduration=10,
+                    buckettimestamp="+",
+                    empty=True,
+                )
+            )[0][0]
+        )
+
     async def test_multi_range(self, client: Redis):
         await client.timeseries.create("ts1", labels={"Test": "This", "team": "ny"})
         await client.timeseries.create(
@@ -280,7 +375,9 @@ class TestTimeseries:
         assert 2 == len(res)
         assert 100 == len(res["ts1"][1])
 
-        res = await client.timeseries.mrange(0, 200, filters=["Test=This"], count=10)
+        res = await client.timeseries.mrange(
+            0, 200, filters=["Test=This"], count=10, latest=True
+        )
         assert 10 == len(res["ts1"][1])
 
         for i in range(100):
@@ -290,6 +387,18 @@ class TestTimeseries:
         )
         assert 2 == len(res)
         assert 20 == len(res["ts1"][1])
+
+        res = await client.timeseries.mrange(
+            0,
+            500,
+            filters=["Test=This"],
+            aggregator=PureToken.AVG,
+            bucketduration=10,
+            buckettimestamp="+",
+            empty=True,
+        )
+        assert 2 == len(res)
+        assert 30 == len(res["ts1"][1])
 
         # test withlabels
         assert {} == res["ts1"][0]
@@ -392,17 +501,26 @@ class TestTimeseries:
             await client.timeseries.add("ts1", i, i % 7)
             await client.timeseries.add("ts2", i, i % 11)
 
-        res = await client.timeseries.mrange(0, 200, filters=["Test=This"])
+        res = await client.timeseries.mrevrange(0, 200, filters=["Test=This"])
         assert 2 == len(res)
         assert 100 == len(res["ts1"][1])
 
-        res = await client.timeseries.mrange(0, 200, filters=["Test=This"], count=10)
+        res = await client.timeseries.mrevrange(
+            0,
+            200,
+            filters=["Test=This"],
+            count=10,
+        )
         assert 10 == len(res["ts1"][1])
 
         for i in range(100):
             await client.timeseries.add("ts1", i + 200, i % 7)
         res = await client.timeseries.mrevrange(
-            0, 500, filters=["Test=This"], aggregator=PureToken.AVG, bucketduration=10
+            0,
+            500,
+            filters=["Test=This"],
+            aggregator=PureToken.AVG,
+            bucketduration=10,
         )
         assert 2 == len(res)
         assert 20 == len(res["ts1"][1])
@@ -442,6 +560,7 @@ class TestTimeseries:
             align="-",
         )
         assert ((10, 1.0), (0, 10.0)) == res["ts1"][1]
+
         res = await client.timeseries.mrevrange(
             0,
             10,
@@ -451,6 +570,18 @@ class TestTimeseries:
             align=1,
         )
         assert ((1, 10.0), (0, 1.0)) == res["ts1"][1]
+
+        res = await client.timeseries.mrevrange(
+            0,
+            10,
+            filters=["team=ny"],
+            aggregator=PureToken.COUNT,
+            bucketduration=10,
+            buckettimestamp="+",
+            empty=True,
+            align=1,
+        )
+        assert ((11, 10.0), (10, 1.0)) == res["ts1"][1]
 
     @pytest.mark.nocluster
     async def test_multi_reverse_range_grouped(self, client: Redis):
@@ -526,8 +657,8 @@ class TestTimeseries:
         info = await client.timeseries.info("ts1")
         assert info["duplicatePolicy"] is None
 
-        await client.timeseries.create("time-serie-2", duplicate_policy=PureToken.MIN)
-        info = await client.timeseries.info("time-serie-2")
+        await client.timeseries.create("ts2", duplicate_policy=PureToken.MIN)
+        info = await client.timeseries.info("ts2")
         assert "min" == info["duplicatePolicy"]
 
     async def test_query_index(self, client: Redis):
