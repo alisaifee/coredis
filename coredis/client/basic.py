@@ -9,9 +9,10 @@ from ssl import SSLContext
 from typing import TYPE_CHECKING, Any, cast, overload
 
 from deprecated.sphinx import versionadded
+from packaging import version
 from packaging.version import InvalidVersion, Version
 
-from coredis._utils import nativestr
+from coredis._utils import EncodingInsensitiveDict, nativestr
 from coredis.cache import AbstractCache, SupportsClientTracking
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandFlag, CommandName
@@ -33,6 +34,7 @@ from coredis.exceptions import (
     RedisError,
     ReplicationError,
     TimeoutError,
+    UnknownCommandError,
     WatchError,
 )
 from coredis.globals import COMMAND_FLAGS, READONLY_COMMANDS
@@ -48,6 +50,7 @@ from coredis.typing import (
     Callable,
     ContextManager,
     Coroutine,
+    Dict,
     Generator,
     Generic,
     Iterator,
@@ -193,6 +196,7 @@ class Client(
             Optional[Tuple[int, int, int]]
         ] = contextvars.ContextVar("waitaof", default=None)
         self.retry_policy = retry_policy
+        self._module_info: Optional[Dict[str, version.Version]] = None
 
     @property
     def noreply(self) -> bool:
@@ -214,6 +218,10 @@ class Client(
         if not hasattr(self, "_waitaof_context") or not self._waitaof_context.get():
             return False
         return True
+
+    @property
+    def module_info(self) -> Dict[str, version.Version]:
+        return self._module_info or {}
 
     def _ensure_server_version(self, version: Optional[str]) -> None:
         if not self.verify_version or Config.optimized:
@@ -291,8 +299,28 @@ class Client(
             maybe_wait.set_result(None)
         return maybe_wait
 
+    async def _populate_module_versions(self) -> None:
+        if self.noreply:
+            return
+        try:
+            modules = await self.module_list()
+            self._module_info = {}
+            for module in modules:
+                mod = EncodingInsensitiveDict(module)
+                name = nativestr(mod["name"])
+                ver = mod["ver"]
+                patch = ver % 100
+                ver = int(str(ver)[:-2])
+                minor = ver % 100
+                major = int(str(ver)[:-2])
+                self._module_info[name] = version.Version(f"{major}.{minor}.{patch}")
+        except UnknownCommandError:
+            self._module_info = {}
+
     async def initialize(self: ClientT) -> ClientT:
         await self.connection_pool.initialize()
+        if self._module_info is None:
+            await self._populate_module_versions()
         return self
 
     def __await__(self: ClientT) -> Generator[Any, None, ClientT]:
@@ -621,14 +649,29 @@ class Redis(Client[AnyStr]):
         **kwargs: Any,
     ) -> None:
         """
-        Changes
 
+        Changes
           - .. versionadded:: 4.12.0
 
-            - Added :paramref:`retry_policy`
-            - Added :paramref:`noevict`
-            - Added :paramref:`notouch`
-            - Added the :meth:`Redis.ensure_persistence` context manager
+            - :paramref:`retry_policy`
+            - :paramref:`noevict`
+            - :paramref:`notouch`
+            - :meth:`Redis.ensure_persistence` context manager
+            - Redis Module support
+
+              - ReJSON: :attr:`Redis.json`
+              - RedisBloom:
+
+                - BloomFilter: :attr:`Redis.bf`
+                - CuckooFilter: :attr:`Redis.cf`
+                - CountMinSketch: :attr:`Redis.cms`
+                - TopK: :attr:`Redis.topk`
+                - TDigest: :attr:`Redis.tdigest`
+              - RedisTimeSeries: :attr:`Redis.timeseries`
+              - RediSearch:
+
+                - Search & Aggregation: :attr:`Redis.search`
+                - Autocomplete: Added :attr:`Redis.autocomplete`
 
           - .. versionchanged:: 4.12.0
 

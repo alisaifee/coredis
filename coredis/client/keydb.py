@@ -86,7 +86,7 @@ def keydb_command(
         group,
         version.Version(version_introduced) if version_introduced else None,
         version.Version(version_deprecated) if version_deprecated else None,
-        arguments or {},
+        arguments,
         cluster or ClusterCommandConfig(),
         None,
         flags or set(),
@@ -98,13 +98,12 @@ def keydb_command(
     ) -> Callable[P, Coroutine[Any, Any, R]]:
         @functools.wraps(func)
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
-            check_version(
+            await check_version(
                 args[0],  # type: ignore
-                command_name,
                 func.__name__,
-                command_details.version_introduced,
-                command_details.version_deprecated,
+                command_details,
                 deprecation_reason,
+                kwargs,
             )
             return await func(*args, **kwargs)
 

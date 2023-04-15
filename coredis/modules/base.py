@@ -4,7 +4,11 @@ import functools
 import textwrap
 import weakref
 from abc import ABCMeta
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
+
+from packaging import version
+
+from coredis.config import Config
 
 from .._protocols import AbstractExecutor
 from ..commands._utils import redis_command_link
@@ -15,6 +19,7 @@ from ..commands._wrappers import (
     CommandDetails,
 )
 from ..commands.constants import CommandFlag, CommandGroup, CommandName
+from ..exceptions import CommandSyntaxError, ModuleCommandNotSupportedError
 from ..globals import COMMAND_FLAGS, MODULE_GROUPS, READONLY_COMMANDS
 from ..response._callbacks import NoopCallback
 from ..typing import (
@@ -33,6 +38,51 @@ from ..typing import (
     add_runtime_checks,
 )
 
+if TYPE_CHECKING:
+    import coredis.client
+
+
+async def ensure_compatibility(
+    client: "coredis.client.Client[Any]",
+    module: str,
+    command_details: CommandDetails,
+    kwargs: Dict[str, Any],
+) -> None:
+    if (
+        Config.optimized
+        or not command_details.version_introduced
+        or not getattr(client, "verify_version", False)
+        or getattr(client, "noreply", False)
+    ):
+        return
+    if command_details.version_introduced:
+        await client.initialize()
+        if (
+            module in client.module_info
+            and command_details.version_introduced <= client.module_info[module]
+        ):
+            if command_details.arguments and set(
+                command_details.arguments.keys()
+            ).intersection(kwargs.keys()):
+                for argument, version_introduced in command_details.arguments.items():
+                    if (
+                        version_introduced
+                        and version_introduced > client.module_info[module]
+                    ):
+                        raise CommandSyntaxError(
+                            {argument},
+                            (
+                                f"{command_details.command.decode('latin-1')} with `{argument}` "
+                                f"is not supported in {module} version {client.module_info[module]}"
+                            ),
+                        )
+            return
+        raise ModuleCommandNotSupportedError(
+            command_details.command.decode("latin-1"),
+            module,
+            str(client.module_info.get(module, "")),
+        )
+
 
 def module_command(
     command_name: CommandName,
@@ -50,9 +100,9 @@ def module_command(
     command_details = CommandDetails(
         command_name,
         group,
+        version.Version(version_introduced) if version_introduced else None,
         None,
-        None,
-        {},
+        arguments,
         cluster or ClusterCommandConfig(),
         cache_config,
         flags or set(),
@@ -73,12 +123,13 @@ def module_command(
             from coredis.client import Redis, RedisCluster
 
             mg = cast(ModuleGroup[bytes], args[0])
-            client = mg.client
+            client: "coredis.client.Client[Any]" = mg.client
             is_regular_client = isinstance(client, (Redis, RedisCluster))
             runtime_checking = (
                 not getattr(client, "noreply", None) and is_regular_client
             )
             callable = runtime_checkable if runtime_checking else func
+            await ensure_compatibility(client, module, command_details, kwargs)
             async with command_cache(callable, *args, **kwargs) as response:
                 return response
 
@@ -89,10 +140,24 @@ def module_command(
 
 Redis {module} module command documentation: {redis_command_link(command_name)}
             """
+        if version_introduced or command_details.arguments:
+            wrapped.__doc__ += """
+Compatibility:
+"""
+
+        if version_introduced:
+            wrapped.__doc__ += f"""
+- New in {module} version: `{version_introduced}`
+"""
+        if command_details.arguments:
+            for argument, min_version in command_details.arguments.items():
+                wrapped.__doc__ += f"""
+- :paramref:`{argument}`: New in {module} version `{min_version}`
+"""
         if cache_config:
             wrapped.__doc__ += """
-Supports client side caching
-            """
+.. hint:: Supports client side caching
+"""
         setattr(wrapped, "__coredis_command", command_details)
         setattr(wrapped, "__coredis_module", module)
         return wrapped

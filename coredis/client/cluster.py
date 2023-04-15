@@ -289,10 +289,25 @@ class RedisCluster(
         Changes
           - .. versionadded:: 4.12.0
 
-            - Added :paramref:`retry_policy`
-            - Added :paramref:`noevict`
-            - Added :paramref:`notouch`
-            - Added the :meth:`RedisCluster.ensure_persistence` context manager
+            - :paramref:`retry_policy`
+            - :paramref:`noevict`
+            - :paramref:`notouch`
+            - :meth:`Redis.ensure_persistence` context manager
+            - Redis Module support
+
+              - ReJSON: :attr:`Redis.json`
+              - RedisBloom:
+
+                - BloomFilter: :attr:`Redis.bf`
+                - CuckooFilter: :attr:`Redis.cf`
+                - CountMinSketch: :attr:`Redis.cms`
+                - TopK: :attr:`Redis.topk`
+                - TDigest: :attr:`Redis.tdigest`
+              - RedisTimeSeries: :attr:`Redis.timeseries`
+              - RediSearch:
+
+                - Search & Aggregation: :attr:`Redis.search`
+                - Autocomplete: Added :attr:`Redis.autocomplete`
 
           - .. versionchanged:: 4.4.0
 

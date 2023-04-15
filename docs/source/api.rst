@@ -480,6 +480,8 @@ General Exceptions
    :no-inherited-members:
 .. autoexception:: coredis.exceptions.CommandNotSupportedError
    :no-inherited-members:
+.. autoexception:: coredis.exceptions.ModuleCommandNotSupportedError
+   :no-inherited-members:
 .. autoexception:: coredis.exceptions.ConnectionError
    :no-inherited-members:
 .. autoexception:: coredis.exceptions.DataError

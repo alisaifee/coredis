@@ -5,15 +5,14 @@ import time
 import warnings
 from typing import TYPE_CHECKING, Any
 
-from packaging import version
-
 from coredis.commands.constants import CommandName
 from coredis.config import Config
-from coredis.exceptions import CommandNotSupportedError
-from coredis.typing import Optional, Union
+from coredis.exceptions import CommandNotSupportedError, CommandSyntaxError
+from coredis.typing import Dict, Optional, Union
 
 if TYPE_CHECKING:
     import coredis.client
+    from coredis.commands._wrappers import CommandDetails
 
 
 def normalized_seconds(value: Union[int, datetime.timedelta]) -> int:
@@ -47,30 +46,59 @@ def normalized_time_milliseconds(value: Union[int, datetime.datetime]) -> int:
     return value
 
 
-def check_version(
+async def check_version(
     instance: coredis.client.Client[Any],
-    command: bytes,
     function_name: str,
-    min_version: Optional[version.Version],
-    deprecated_version: Optional[version.Version],
-    deprecation_reason: Optional[str],
+    command_details: "CommandDetails",
+    deprecation_reason: Optional[str] = None,
+    kwargs: Dict[str, Any] = {},
 ) -> None:
-    if Config.optimized or not any([min_version, deprecated_version]):
+    if Config.optimized or not any(
+        [
+            command_details.version_introduced,
+            command_details.version_deprecated,
+            command_details.arguments,
+        ]
+    ):
         return
-
-    if getattr(instance, "verify_version", False):
+    if getattr(instance, "verify_version", False) and not getattr(
+        instance, "noreply", False
+    ):
+        await instance.initialize()
         server_version = getattr(instance, "server_version", None)
         if not server_version:
             return
-        if min_version and server_version < min_version:
+        if (
+            command_details.version_introduced
+            and server_version < command_details.version_introduced
+        ):
             raise CommandNotSupportedError(
-                command.decode("latin-1"), str(instance.server_version)
+                command_details.command.decode("latin-1"),
+                str(instance.server_version),
             )
-        if deprecated_version and server_version >= deprecated_version:
+        elif command_details.arguments and set(
+            command_details.arguments.keys()
+        ).intersection(kwargs.keys()):
+            for argument, minimum_version in command_details.arguments.items():
+                if minimum_version and server_version < minimum_version:
+                    raise CommandSyntaxError(
+                        {argument},
+                        (
+                            f"{command_details.command.decode('latin-1')} with `{argument}` "
+                            f"is not supported in redis version {server_version}"
+                        ),
+                    )
+        elif (
+            command_details.version_deprecated
+            and server_version >= command_details.version_deprecated
+        ):
             warnings.warn(
                 deprecation_reason.strip()
                 if deprecation_reason
-                else f"{function_name}() is deprecated since redis version {deprecated_version}.",
+                else (
+                    f"{function_name}() is deprecated since redis version "
+                    "{command_details.version_deprecated}."
+                ),
                 category=DeprecationWarning,
                 stacklevel=3,
             )

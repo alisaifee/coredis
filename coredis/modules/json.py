@@ -38,7 +38,12 @@ class Json(ModuleGroup[AnyStr]):
 
     MODULE = "ReJSON"
 
-    @module_command(CommandName.JSON_DEL, group=CommandGroup.JSON, module="ReJSON")
+    @module_command(
+        CommandName.JSON_DEL,
+        group=CommandGroup.JSON,
+        version_introduced="1.0.0",
+        module="ReJSON",
+    )
     async def delete(self, key: KeyT, path: Optional[StringT] = None) -> int:
         """
         Delete a value from a JSON document.
@@ -58,6 +63,7 @@ class Json(ModuleGroup[AnyStr]):
     @module_command(
         CommandName.JSON_GET,
         group=CommandGroup.JSON,
+        version_introduced="1.0.0",
         module="ReJSON",
         cache_config=CacheConfig(lambda *a, **_: a[0]),
         flags={CommandFlag.READONLY},
@@ -82,7 +88,12 @@ class Json(ModuleGroup[AnyStr]):
             CommandName.JSON_GET, *pieces, callback=JsonCallback()
         )
 
-    @module_command(CommandName.JSON_FORGET, group=CommandGroup.JSON, module="ReJSON")
+    @module_command(
+        CommandName.JSON_FORGET,
+        group=CommandGroup.JSON,
+        version_introduced="1.0.0",
+        module="ReJSON",
+    )
     async def forget(self, key: KeyT, path: Optional[ValueT] = None) -> int:
         """
         Deletes an element from a path from a json object
@@ -99,7 +110,12 @@ class Json(ModuleGroup[AnyStr]):
             CommandName.JSON_FORGET, *pieces, callback=IntCallback()
         )
 
-    @module_command(CommandName.JSON_TOGGLE, group=CommandGroup.JSON, module="ReJSON")
+    @module_command(
+        CommandName.JSON_TOGGLE,
+        group=CommandGroup.JSON,
+        version_introduced="2.0.0",
+        module="ReJSON",
+    )
     async def toggle(self, key: KeyT, path: ValueT) -> JsonType:
         """
         Toggles a boolean value
@@ -117,7 +133,12 @@ class Json(ModuleGroup[AnyStr]):
             callback=JsonCallback(),
         )
 
-    @module_command(CommandName.JSON_CLEAR, group=CommandGroup.JSON, module="ReJSON")
+    @module_command(
+        CommandName.JSON_CLEAR,
+        group=CommandGroup.JSON,
+        version_introduced="2.0.0",
+        module="ReJSON",
+    )
     async def clear(self, key: KeyT, path: Optional[ValueT] = None) -> int:
         """
         Clears all values from an array or an object and sets numeric values to `0`
@@ -134,7 +155,12 @@ class Json(ModuleGroup[AnyStr]):
             CommandName.JSON_CLEAR, *pieces, callback=IntCallback()
         )
 
-    @module_command(CommandName.JSON_SET, group=CommandGroup.JSON, module="ReJSON")
+    @module_command(
+        CommandName.JSON_SET,
+        group=CommandGroup.JSON,
+        version_introduced="1.0.0",
+        module="ReJSON",
+    )
     async def set(
         self,
         key: KeyT,
@@ -170,6 +196,7 @@ class Json(ModuleGroup[AnyStr]):
     @module_command(
         CommandName.JSON_MGET,
         group=CommandGroup.JSON,
+        version_introduced="1.0.0",
         module="ReJSON",
         flags={CommandFlag.READONLY},
     )
@@ -190,7 +217,10 @@ class Json(ModuleGroup[AnyStr]):
         )
 
     @module_command(
-        CommandName.JSON_NUMINCRBY, group=CommandGroup.JSON, module="ReJSON"
+        CommandName.JSON_NUMINCRBY,
+        group=CommandGroup.JSON,
+        version_introduced="1.0.0",
+        module="ReJSON",
     )
     async def numincrby(
         self, key: KeyT, path: ValueT, value: Union[int, float]
@@ -209,7 +239,10 @@ class Json(ModuleGroup[AnyStr]):
         )
 
     @module_command(
-        CommandName.JSON_NUMMULTBY, group=CommandGroup.JSON, module="ReJSON"
+        CommandName.JSON_NUMMULTBY,
+        group=CommandGroup.JSON,
+        version_introduced="1.0.0",
+        module="ReJSON",
     )
     async def nummultby(
         self, key: KeyT, path: ValueT, value: Union[int, float]
@@ -228,7 +261,10 @@ class Json(ModuleGroup[AnyStr]):
         )
 
     @module_command(
-        CommandName.JSON_STRAPPEND, group=CommandGroup.JSON, module="ReJSON"
+        CommandName.JSON_STRAPPEND,
+        group=CommandGroup.JSON,
+        version_introduced="1.0.0",
+        module="ReJSON",
     )
     async def strappend(
         self,
@@ -256,6 +292,7 @@ class Json(ModuleGroup[AnyStr]):
     @module_command(
         CommandName.JSON_STRLEN,
         group=CommandGroup.JSON,
+        version_introduced="1.0.0",
         module="ReJSON",
         flags={CommandFlag.READONLY},
     )
@@ -281,7 +318,10 @@ class Json(ModuleGroup[AnyStr]):
         )
 
     @module_command(
-        CommandName.JSON_ARRAPPEND, group=CommandGroup.JSON, module="ReJSON"
+        CommandName.JSON_ARRAPPEND,
+        group=CommandGroup.JSON,
+        version_introduced="1.0.0",
+        module="ReJSON",
     )
     async def arrappend(
         self,
@@ -312,6 +352,7 @@ class Json(ModuleGroup[AnyStr]):
     @module_command(
         CommandName.JSON_ARRINDEX,
         group=CommandGroup.JSON,
+        version_introduced="1.0.0",
         module="ReJSON",
         flags={CommandFlag.READONLY},
     )
@@ -346,7 +387,10 @@ class Json(ModuleGroup[AnyStr]):
         )
 
     @module_command(
-        CommandName.JSON_ARRINSERT, group=CommandGroup.JSON, module="ReJSON"
+        CommandName.JSON_ARRINSERT,
+        group=CommandGroup.JSON,
+        version_introduced="1.0.0",
+        module="ReJSON",
     )
     async def arrinsert(
         self,
@@ -374,7 +418,12 @@ class Json(ModuleGroup[AnyStr]):
             CommandName.JSON_ARRINSERT, *pieces, callback=OneOrManyCallback[int]()
         )
 
-    @module_command(CommandName.JSON_ARRLEN, group=CommandGroup.JSON, module="ReJSON")
+    @module_command(
+        CommandName.JSON_ARRLEN,
+        group=CommandGroup.JSON,
+        version_introduced="1.0.0",
+        module="ReJSON",
+    )
     async def arrlen(
         self, key: KeyT, path: Optional[KeyT] = None
     ) -> Optional[Union[int, List[Optional[int]]]]:
@@ -396,7 +445,12 @@ class Json(ModuleGroup[AnyStr]):
             CommandName.JSON_ARRLEN, *pieces, callback=OneOrManyCallback[int]()
         )
 
-    @module_command(CommandName.JSON_ARRPOP, group=CommandGroup.JSON, module="ReJSON")
+    @module_command(
+        CommandName.JSON_ARRPOP,
+        group=CommandGroup.JSON,
+        version_introduced="1.0.0",
+        module="ReJSON",
+    )
     async def arrpop(
         self, key: KeyT, path: Optional[KeyT] = None, index: Optional[int] = None
     ) -> JsonType:
@@ -419,7 +473,12 @@ class Json(ModuleGroup[AnyStr]):
             CommandName.JSON_ARRPOP, *pieces, callback=JsonCallback()
         )
 
-    @module_command(CommandName.JSON_ARRTRIM, group=CommandGroup.JSON, module="ReJSON")
+    @module_command(
+        CommandName.JSON_ARRTRIM,
+        group=CommandGroup.JSON,
+        version_introduced="1.0.0",
+        module="ReJSON",
+    )
     async def arrtrim(
         self, key: KeyT, path: ValueT, start: int, stop: int
     ) -> Optional[Union[int, List[Optional[int]]]]:
@@ -440,7 +499,12 @@ class Json(ModuleGroup[AnyStr]):
             CommandName.JSON_ARRTRIM, *pieces, callback=OneOrManyCallback[int]()
         )
 
-    @module_command(CommandName.JSON_OBJKEYS, group=CommandGroup.JSON, module="ReJSON")
+    @module_command(
+        CommandName.JSON_OBJKEYS,
+        group=CommandGroup.JSON,
+        version_introduced="1.0.0",
+        module="ReJSON",
+    )
     async def objkeys(self, key: KeyT, path: Optional[StringT] = None) -> ResponseType:
         """
         Returns the JSON keys of the object at path
@@ -460,7 +524,12 @@ class Json(ModuleGroup[AnyStr]):
             CommandName.JSON_OBJKEYS, *pieces, callback=NoopCallback[ResponseType]()
         )
 
-    @module_command(CommandName.JSON_OBJLEN, group=CommandGroup.JSON, module="ReJSON")
+    @module_command(
+        CommandName.JSON_OBJLEN,
+        group=CommandGroup.JSON,
+        version_introduced="1.0.0",
+        module="ReJSON",
+    )
     async def objlen(
         self, key: KeyT, path: Optional[KeyT] = None
     ) -> Optional[Union[int, List[Optional[int]]]]:
@@ -484,6 +553,7 @@ class Json(ModuleGroup[AnyStr]):
     @module_command(
         CommandName.JSON_TYPE,
         group=CommandGroup.JSON,
+        version_introduced="1.0.0",
         module="ReJSON",
         flags={CommandFlag.READONLY},
     )
@@ -507,6 +577,7 @@ class Json(ModuleGroup[AnyStr]):
     @module_command(
         CommandName.JSON_RESP,
         group=CommandGroup.JSON,
+        version_introduced="1.0.0",
         module="ReJSON",
         flags={CommandFlag.READONLY},
     )
@@ -528,6 +599,7 @@ class Json(ModuleGroup[AnyStr]):
     @module_command(
         CommandName.JSON_DEBUG_MEMORY,
         group=CommandGroup.JSON,
+        version_introduced="1.0.0",
         module="ReJSON",
         flags={CommandFlag.READONLY},
     )

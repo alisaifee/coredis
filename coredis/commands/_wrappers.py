@@ -43,16 +43,27 @@ class RedirectUsage(NamedTuple):
     warn: bool
 
 
-class CommandDetails(NamedTuple):
+@dataclasses.dataclass
+class CommandDetails:
     command: bytes
     group: Optional[CommandGroup]
     version_introduced: Optional[version.Version]
     version_deprecated: Optional[version.Version]
-    arguments: Dict[str, Dict[str, str]]
+    _arguments: Optional[Dict[str, Dict[str, str]]]
     cluster: ClusterCommandConfig
     cache_config: Optional[CacheConfig]
     flags: Set[CommandFlag]
     redirect_usage: Optional[RedirectUsage]
+    arguments: Dict[str, version.Version] = dataclasses.field(
+        init=False, default_factory=lambda: {}
+    )
+
+    def __post_init__(self) -> None:
+        self.arguments = {
+            k: version.Version(v["version_introduced"])
+            for k, v in (self._arguments or {}).items()
+            if v.get("version_introduced")
+        }
 
 
 @dataclasses.dataclass
@@ -163,7 +174,7 @@ def redis_command(
         group,
         version.Version(version_introduced) if version_introduced else None,
         version.Version(version_deprecated) if version_deprecated else None,
-        arguments or {},
+        arguments,
         cluster or ClusterCommandConfig(),
         cache_config,
         flags or set(),
@@ -191,13 +202,12 @@ def redis_command(
                 else:
                     raise NotImplementedError(redirect_usage.reason)
             callable = runtime_checkable if runtime_checking else func
-            check_version(
+            await check_version(
                 client,  # type: ignore
-                command_name,
                 func.__name__,
-                command_details.version_introduced,
-                command_details.version_deprecated,
+                command_details,
                 deprecation_reason,
+                kwargs,
             )
             async with command_cache(callable, *args, **kwargs) as response:
                 return response
@@ -209,23 +219,33 @@ def redis_command(
 
 Redis command documentation: {redis_command_link(command_name)}
 """
+        if version_introduced or command_details.arguments:
+            wrapped.__doc__ += """
+Compatibility:
+"""
+
         if version_introduced:
             wrapped.__doc__ += f"""
-New in :redis-version:`{version_introduced}`
+- New in :redis-version:`{version_introduced}`
 """
         if version_deprecated and deprecation_reason:
             wrapped.__doc__ += f"""
-Deprecated in :redis-version:`{version_deprecated}`
-  {deprecation_reason.strip()}
-        """
+- Deprecated in :redis-version:`{version_deprecated}`
+      {deprecation_reason.strip()}
+"""
         elif version_deprecated:
             wrapped.__doc__ += f"""
-Deprecated in :redis-version:`{version_deprecated}`
-            """
+- Deprecated in :redis-version:`{version_deprecated}`
+"""
+        if command_details.arguments:
+            for argument, min_version in command_details.arguments.items():
+                wrapped.__doc__ += f"""
+- :paramref:`{argument}`: New in :redis-version:`{min_version}`
+"""
         if cache_config:
             wrapped.__doc__ += """
-Supports client side caching
-            """
+.. hint:: Supports client side caching
+"""
         if redirect_usage:
             if redirect_usage.warn:
                 preamble = f".. warning:: Using ``{func.__name__}`` directly is not recommended."

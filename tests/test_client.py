@@ -8,8 +8,10 @@ import pytest
 from packaging.version import Version
 
 import coredis
+from coredis import PureToken
 from coredis.exceptions import (
     CommandNotSupportedError,
+    CommandSyntaxError,
     ConnectionError,
     PersistenceError,
     ReplicationError,
@@ -58,6 +60,11 @@ class TestClient:
         await client.ping()
         with pytest.raises(CommandNotSupportedError):
             await client.function_list()
+
+    @pytest.mark.max_server_version("7.0.0")
+    async def test_unsupported_argument_7_x(self, client):
+        with pytest.raises(CommandSyntaxError):
+            await client.expire("test", 10, condition=PureToken.NX)
 
     async def test_unknown_command(self, client):
         with pytest.raises(UnknownCommandError):

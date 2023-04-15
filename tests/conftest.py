@@ -148,6 +148,12 @@ async def check_test_constraints(request, client, protocol=3):
             if not cur_ver or cur_ver < version.parse(ver):
                 return pytest.skip(f"Skipped for module {name} versions < {ver}")
 
+        if marker.name == "max_module_version" and marker.args:
+            name, ver = marker.args[0], marker.args[1]
+            cur_ver = MODULE_VERSIONS.get(str(client), {}).get(name)
+            if not cur_ver or cur_ver > version.parse(ver):
+                return pytest.skip(f"Skipped for module {name} versions > {ver}")
+
         if marker.name == "nocluster" and isinstance(client, coredis.RedisCluster):
             return pytest.skip("Skipped for redis cluster")
 
