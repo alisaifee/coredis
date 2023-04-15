@@ -78,7 +78,7 @@ class CommandDocCallback(
         for cmd, doc in cmd_mapping.items():
             cmd_mapping[cmd] = EncodingInsensitiveDict(flat_pairs_to_dict(doc))
             cmd_mapping[cmd]["arguments"] = [
-                flat_pairs_to_dict(arg) for arg in cmd_mapping[cmd]["arguments"]
+                flat_pairs_to_dict(arg) for arg in cmd_mapping[cmd].get("arguments", [])
             ]
         return cmd_mapping
 
