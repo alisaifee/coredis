@@ -4,6 +4,8 @@ import dataclasses
 import itertools
 from datetime import timedelta
 
+from deprecated.sphinx import versionadded
+
 from ..commands._utils import normalized_milliseconds, normalized_seconds
 from ..commands._wrappers import ClusterCommandConfig
 from ..commands.constants import CommandGroup, CommandName, NodeFlag
@@ -46,13 +48,13 @@ from .response._callbacks.search import (
 from .response.types import SearchAggregationResult, SearchResult
 
 
-class RediSearch(Module):
+class RediSearch(Module[AnyStr]):
     NAME = "search"
     FULL_NAME = "RediSearch"
     DESCRIPTION = """RedisSearch is a Redis module that enables querying, secondary 
-    indexing, and full-text search for Redis. These features enable multi-field queries, 
-    aggregation, exact phrase matching, numeric filtering, geo filtering and vector 
-    similarity semantic search on top of text queries."""
+indexing, and full-text search for Redis. These features enable multi-field queries, 
+aggregation, exact phrase matching, numeric filtering, geo filtering and vector 
+similarity semantic search on top of text queries."""
     DOCUMENTATION_URL = "https://redis.io/docs/stack/search"
 
 
@@ -205,21 +207,16 @@ class Filter:
         return [PrefixToken.FILTER, self.expression]
 
 
+@versionadded(version="4.12")
 class Search(ModuleGroup[AnyStr]):
-    """
-    Implementation of commands in the ``SEARCH`` group of
-    the `RedisSearch <https://redis.io/docs/stack/search/>`__ module.
-
-    .. versionadded:: 4.12
-    """
-
     MODULE = RediSearch
+    COMMAND_GROUP = CommandGroup.SEARCH
 
     @module_command(
         CommandName.FT_CREATE,
         module=MODULE,
         version_introduced="1.0.0",
-        group=CommandGroup.SEARCH,
+        group=COMMAND_GROUP,
     )
     async def create(
         self,
@@ -317,7 +314,7 @@ class Search(ModuleGroup[AnyStr]):
         CommandName.FT_INFO,
         module=MODULE,
         version_introduced="1.0.0",
-        group=CommandGroup.SEARCH,
+        group=COMMAND_GROUP,
     )
     async def info(self, index: KeyT) -> Dict[AnyStr, ResponseType]:
         """
@@ -342,7 +339,7 @@ class Search(ModuleGroup[AnyStr]):
         CommandName.FT_EXPLAIN,
         module=MODULE,
         version_introduced="1.0.0",
-        group=CommandGroup.SEARCH,
+        group=COMMAND_GROUP,
         arguments={"dialect": {"version_introduced": "2.4.3"}},
     )
     async def explain(
@@ -366,7 +363,7 @@ class Search(ModuleGroup[AnyStr]):
         CommandName.FT_ALTER,
         module=MODULE,
         version_introduced="1.0.0",
-        group=CommandGroup.SEARCH,
+        group=COMMAND_GROUP,
     )
     async def alter(
         self,
@@ -395,7 +392,7 @@ class Search(ModuleGroup[AnyStr]):
         CommandName.FT_DROPINDEX,
         module=MODULE,
         version_introduced="2.0.0",
-        group=CommandGroup.SEARCH,
+        group=COMMAND_GROUP,
     )
     async def dropindex(self, index: KeyT, delete_docs: Optional[bool] = None) -> bool:
         """
@@ -416,7 +413,7 @@ class Search(ModuleGroup[AnyStr]):
         CommandName.FT_ALIASADD,
         module=MODULE,
         version_introduced="1.0.0",
-        group=CommandGroup.SEARCH,
+        group=COMMAND_GROUP,
     )
     async def aliasadd(self, alias: StringT, index: KeyT) -> bool:
         """
@@ -434,7 +431,7 @@ class Search(ModuleGroup[AnyStr]):
         CommandName.FT_ALIASUPDATE,
         module=MODULE,
         version_introduced="1.0.0",
-        group=CommandGroup.SEARCH,
+        group=COMMAND_GROUP,
     )
     async def aliasupdate(self, alias: StringT, index: KeyT) -> bool:
         """
@@ -452,7 +449,7 @@ class Search(ModuleGroup[AnyStr]):
         CommandName.FT_ALIASDEL,
         module=MODULE,
         version_introduced="1.0.0",
-        group=CommandGroup.SEARCH,
+        group=COMMAND_GROUP,
     )
     async def aliasdel(self, alias: StringT) -> bool:
         """
@@ -469,7 +466,7 @@ class Search(ModuleGroup[AnyStr]):
         CommandName.FT_TAGVALS,
         module=MODULE,
         version_introduced="1.0.0",
-        group=CommandGroup.SEARCH,
+        group=COMMAND_GROUP,
     )
     async def tagvals(self, index: KeyT, field_name: StringT) -> Set[AnyStr]:
         """
@@ -487,7 +484,7 @@ class Search(ModuleGroup[AnyStr]):
         CommandName.FT_SYNUPDATE,
         module=MODULE,
         version_introduced="1.2.0",
-        group=CommandGroup.SEARCH,
+        group=COMMAND_GROUP,
     )
     async def synupdate(
         self,
@@ -518,7 +515,7 @@ class Search(ModuleGroup[AnyStr]):
         CommandName.FT_SYNDUMP,
         module=MODULE,
         version_introduced="1.2.0",
-        group=CommandGroup.SEARCH,
+        group=COMMAND_GROUP,
     )
     async def syndump(self, index: KeyT) -> Dict[AnyStr, List[AnyStr]]:
         """
@@ -535,7 +532,7 @@ class Search(ModuleGroup[AnyStr]):
         CommandName.FT_SPELLCHECK,
         module=MODULE,
         version_introduced="1.4.0",
-        group=CommandGroup.SEARCH,
+        group=COMMAND_GROUP,
         arguments={"dialect": {"version_introduced": "2.4.3"}},
     )
     async def spellcheck(
@@ -574,7 +571,7 @@ class Search(ModuleGroup[AnyStr]):
         CommandName.FT_DICTADD,
         module=MODULE,
         version_introduced="1.4.0",
-        group=CommandGroup.SEARCH,
+        group=COMMAND_GROUP,
     )
     async def dictadd(
         self,
@@ -597,7 +594,7 @@ class Search(ModuleGroup[AnyStr]):
         CommandName.FT_DICTDEL,
         module=MODULE,
         version_introduced="1.4.0",
-        group=CommandGroup.SEARCH,
+        group=COMMAND_GROUP,
     )
     async def dictdel(
         self,
@@ -620,7 +617,7 @@ class Search(ModuleGroup[AnyStr]):
         CommandName.FT_DICTDUMP,
         module=MODULE,
         version_introduced="1.4.0",
-        group=CommandGroup.SEARCH,
+        group=COMMAND_GROUP,
     )
     async def dictdump(self, name: StringT) -> Tuple[AnyStr, ...]:
         """
@@ -637,7 +634,7 @@ class Search(ModuleGroup[AnyStr]):
         CommandName.FT__LIST,
         module=MODULE,
         version_introduced="2.0.0",
-        group=CommandGroup.SEARCH,
+        group=COMMAND_GROUP,
         cluster=ClusterCommandConfig(
             route=NodeFlag.PRIMARIES,
             combine=ClusterConcatenateTuples[AnyStr](),
@@ -655,7 +652,7 @@ class Search(ModuleGroup[AnyStr]):
         CommandName.FT_CONFIG_SET,
         module=MODULE,
         version_introduced="1.0.0",
-        group=CommandGroup.SEARCH,
+        group=COMMAND_GROUP,
         cluster=ClusterCommandConfig(
             route=NodeFlag.PRIMARIES,
             combine=ClusterEnsureConsistent[bool](),
@@ -674,7 +671,7 @@ class Search(ModuleGroup[AnyStr]):
         CommandName.FT_CONFIG_GET,
         module=MODULE,
         version_introduced="1.0.0",
-        group=CommandGroup.SEARCH,
+        group=COMMAND_GROUP,
         cluster=ClusterCommandConfig(
             route=NodeFlag.RANDOM,
         ),
@@ -694,7 +691,7 @@ class Search(ModuleGroup[AnyStr]):
         CommandName.FT_SEARCH,
         module=MODULE,
         version_introduced="1.0.0",
-        group=CommandGroup.SEARCH,
+        group=COMMAND_GROUP,
         arguments={"dialect": {"version_introduced": "2.4.3"}},
     )
     async def search(
@@ -901,7 +898,7 @@ class Search(ModuleGroup[AnyStr]):
         CommandName.FT_AGGREGATE,
         module=MODULE,
         version_introduced="1.1.0",
-        group=CommandGroup.SEARCH,
+        group=COMMAND_GROUP,
         arguments={"dialect": {"version_introduced": "2.4.3"}},
     )
     async def aggregate(
@@ -1006,7 +1003,7 @@ class Search(ModuleGroup[AnyStr]):
         CommandName.FT_CURSOR_READ,
         module=MODULE,
         version_introduced="1.1.0",
-        group=CommandGroup.SEARCH,
+        group=COMMAND_GROUP,
     )
     async def cursor_read(
         self, index: KeyT, cursor_id: int, count: Optional[int] = None
@@ -1029,7 +1026,7 @@ class Search(ModuleGroup[AnyStr]):
         CommandName.FT_CURSOR_DEL,
         module=MODULE,
         version_introduced="1.1.0",
-        group=CommandGroup.SEARCH,
+        group=COMMAND_GROUP,
     )
     async def cursor_del(self, index: KeyT, cursor_id: int) -> bool:
         """

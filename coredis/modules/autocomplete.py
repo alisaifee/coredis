@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from deprecated.sphinx import versionadded
+
 from ..commands._wrappers import CacheConfig
 from ..commands.constants import CommandFlag, CommandGroup, CommandName
 from ..response._callbacks import BoolCallback, IntCallback
@@ -11,21 +13,16 @@ from .response.types import AutocompleteSuggestion
 from .search import RediSearch
 
 
+@versionadded(version="4.12")
 class Autocomplete(ModuleGroup[AnyStr]):
-    """
-    Implementation of commands in the ``SUGGESTION`` group of
-    the `RedisSearch <https://redis.io/docs/stack/search/>`__ module.
-
-    .. versionadded:: 4.12
-    """
-
     MODULE = RediSearch
+    COMMAND_GROUP = CommandGroup.SUGGESTION
 
     @module_command(
         CommandName.FT_SUGADD,
         module=MODULE,
         version_introduced="1.0.0",
-        group=CommandGroup.SUGGESTION,
+        group=COMMAND_GROUP,
     )
     async def sugadd(
         self,
@@ -60,7 +57,7 @@ class Autocomplete(ModuleGroup[AnyStr]):
         CommandName.FT_SUGGET,
         module=MODULE,
         version_introduced="1.0.0",
-        group=CommandGroup.SUGGESTION,
+        group=COMMAND_GROUP,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
         flags={CommandFlag.READONLY},
     )
@@ -108,7 +105,7 @@ class Autocomplete(ModuleGroup[AnyStr]):
         CommandName.FT_SUGDEL,
         module=MODULE,
         version_introduced="1.0.0",
-        group=CommandGroup.SUGGESTION,
+        group=COMMAND_GROUP,
     )
     async def sugdel(self, key: KeyT, string: StringT) -> bool:
         """
@@ -128,7 +125,7 @@ class Autocomplete(ModuleGroup[AnyStr]):
         CommandName.FT_SUGLEN,
         module=MODULE,
         version_introduced="1.0.0",
-        group=CommandGroup.SUGGESTION,
+        group=COMMAND_GROUP,
     )
     async def suglen(self, key: KeyT) -> int:
         """

@@ -164,46 +164,70 @@ Monitor
 
 Modules
 ^^^^^^^
+:mod:`coredis.modules`
+
+Redis module commands in :mod:`coredis` are exposed under properties
+of the :class:`~coredis.Redis` or :class:`~coredis.RedisCluster` clients
+such as :attr:`~coredis.Redis.json`, :attr:`~coredis.Redis.bf`. These properties
+in turn return instances of the module command group containers which are bound
+by a weak reference to the client itself.
+
+The module commands can also be accessed by instantiating instances
+of the module command group classes (listed in the sections below) directly.
+
+To access the :class:`~coredis.modules.Json` command group from the :class:`coredis.modules.ReJSON` module for example::
+
+    import coredis
+
+    client = coredis.Redis()
+
+    # through the client
+    await client.json.get("key", "$")
+    # or directly
+    json = coredis.modules.Json(client)
+    await json.get("key", "$")
+
+
 
 ReJSON
 ------
-.. autoclass:: coredis.modules.json.Json
+.. autoclass:: coredis.modules.Json
 
 RedisBloom
 ----------
+
 ===========
 BloomFilter
 ===========
-.. autoclass:: coredis.modules.filters.BloomFilter
+.. autoclass:: coredis.modules.BloomFilter
 
 ============
 CuckooFilter
 ============
-.. autoclass:: coredis.modules.filters.CuckooFilter
+.. autoclass:: coredis.modules.CuckooFilter
 
 ================
 Count Min Sketch
 ================
-.. autoclass:: coredis.modules.filters.CountMinSketch
+.. autoclass:: coredis.modules.CountMinSketch
 
 =======
 TDigest
 =======
-.. autoclass:: coredis.modules.filters.TDigest
+.. autoclass:: coredis.modules.TDigest
 
 ====
 TopK
 ====
-.. autoclass:: coredis.modules.filters.TopK
+.. autoclass:: coredis.modules.TopK
 
 RedisSearch
 -----------
-
 ====================
 Search & Aggregation
 ====================
 
-.. autoclass:: coredis.modules.search.Search
+.. autoclass:: coredis.modules.Search
 
 .. autoclass:: coredis.modules.search.Field
 .. autoclass:: coredis.modules.search.Filter
@@ -214,16 +238,27 @@ Search & Aggregation
 ============
 Autocomplete
 ============
-.. autoclass:: coredis.modules.autocomplete.Autocomplete
+.. autoclass:: coredis.modules.Autocomplete
 
 
 TimeSeries
 ----------
-.. autoclass:: coredis.modules.timeseries.TimeSeries
+.. autoclass:: coredis.modules.TimeSeries
+
+
+Module Containers
+-----------------
+.. autoclass:: coredis.modules.ReJSON
+.. autoclass:: coredis.modules.RedisBloom
+.. autoclass:: coredis.modules.RedisTimeSeries
+.. autoclass:: coredis.modules.RediSearch
 
 Connection Pools
 ^^^^^^^^^^^^^^^^
+.. currentmodule:: coredis
+
 :mod:`coredis`
+
 
 Connection Pool
 ---------------

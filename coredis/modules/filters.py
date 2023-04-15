@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from deprecated.sphinx import versionadded
+
 from .._utils import dict_to_flat_list
 from ..commands._validators import mutually_inclusive_parameters
 from ..commands._wrappers import CacheConfig
@@ -35,28 +37,23 @@ from ..typing import (
 from .base import Module, ModuleGroup, module_command
 
 
-class BF(Module):
+class RedisBloom(Module[AnyStr]):
     NAME = "bf"
     FULL_NAME = "RedisBloom"
     DESCRIPTION = """RedisBloom is a Redis module that implements various probabilistic
-    data structures such as BloomFilter.
+data structures such as BloomFilter.
     """
     DOCUMENTATION_URL = "https://redis.io/docs/stack/bloom/"
 
 
+@versionadded(version="4.12")
 class BloomFilter(ModuleGroup[AnyStr]):
-    MODULE = BF
-
-    """
-    Implementation of commands in the ``BF`` group of
-    the `RedisBloom <https://redis.io/docs/stack/bloom/>`__ module.
-
-    .. versionadded:: 4.12
-    """
+    MODULE = RedisBloom
+    COMMAND_GROUP = CommandGroup.BF
 
     @module_command(
         CommandName.BF_RESERVE,
-        group=CommandGroup.BF,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -89,7 +86,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.BF_ADD,
-        group=CommandGroup.BF,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -108,7 +105,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.BF_MADD,
-        group=CommandGroup.BF,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -127,7 +124,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.BF_INSERT,
-        group=CommandGroup.BF,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -174,7 +171,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.BF_EXISTS,
-        group=CommandGroup.BF,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -193,7 +190,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.BF_MEXISTS,
-        group=CommandGroup.BF,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -212,7 +209,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.BF_SCANDUMP,
-        group=CommandGroup.BF,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -239,7 +236,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.BF_LOADCHUNK,
-        group=CommandGroup.BF,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -259,7 +256,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.BF_INFO,
-        group=CommandGroup.BF,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -301,7 +298,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.BF_CARD,
-        group=CommandGroup.BF,
+        group=COMMAND_GROUP,
         version_introduced="2.4.4",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -318,19 +315,14 @@ class BloomFilter(ModuleGroup[AnyStr]):
         )
 
 
+@versionadded(version="4.12")
 class CuckooFilter(ModuleGroup[AnyStr]):
-    """
-    Implementation of commands in the ``CF`` group of
-    the `RedisBloom <https://redis.io/docs/stack/bloom/>`__ module.
-
-    .. versionadded:: 4.12
-    """
-
-    MODULE = BF
+    MODULE = RedisBloom
+    COMMAND_GROUP = CommandGroup.CF
 
     @module_command(
         CommandName.CF_RESERVE,
-        group=CommandGroup.CF,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -366,7 +358,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.CF_ADD,
-        group=CommandGroup.CF,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -385,7 +377,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.CF_ADDNX,
-        group=CommandGroup.CF,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -404,7 +396,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.CF_INSERT,
-        group=CommandGroup.CF,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -440,7 +432,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.CF_INSERTNX,
-        group=CommandGroup.CF,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -476,7 +468,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.CF_EXISTS,
-        group=CommandGroup.CF,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -497,7 +489,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.CF_MEXISTS,
-        group=CommandGroup.CF,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -518,7 +510,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.CF_DEL,
-        group=CommandGroup.CF,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -537,7 +529,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.CF_COUNT,
-        group=CommandGroup.CF,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -558,7 +550,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.CF_SCANDUMP,
-        group=CommandGroup.CF,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -581,7 +573,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.CF_LOADCHUNK,
-        group=CommandGroup.CF,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -602,7 +594,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.CF_INFO,
-        group=CommandGroup.CF,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -619,19 +611,14 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         )
 
 
+@versionadded(version="4.12")
 class CountMinSketch(ModuleGroup[AnyStr]):
-    """
-    Implementation of commands in the ``CMS`` group of
-    the `RedisBloom <https://redis.io/docs/stack/bloom/>`__ module.
-
-    .. versionadded:: 4.12
-    """
-
-    MODULE = BF
+    MODULE = RedisBloom
+    COMMAND_GROUP = CommandGroup.CMS
 
     @module_command(
         CommandName.CMS_INITBYDIM,
-        group=CommandGroup.CMS,
+        group=COMMAND_GROUP,
         version_introduced="2.0.0",
         module=MODULE,
     )
@@ -653,7 +640,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.CMS_INITBYPROB,
-        group=CommandGroup.CMS,
+        group=COMMAND_GROUP,
         version_introduced="2.0.0",
         module=MODULE,
     )
@@ -678,7 +665,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.CMS_INCRBY,
-        group=CommandGroup.CMS,
+        group=COMMAND_GROUP,
         version_introduced="2.0.0",
         module=MODULE,
     )
@@ -700,7 +687,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.CMS_QUERY,
-        group=CommandGroup.CMS,
+        group=COMMAND_GROUP,
         version_introduced="2.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -725,7 +712,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.CMS_MERGE,
-        group=CommandGroup.CMS,
+        group=COMMAND_GROUP,
         version_introduced="2.0.0",
         module=MODULE,
     )
@@ -754,7 +741,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.CMS_INFO,
-        group=CommandGroup.CMS,
+        group=COMMAND_GROUP,
         version_introduced="2.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -775,20 +762,15 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         )
 
 
+@versionadded(version="4.12")
 class TopK(ModuleGroup[AnyStr]):
-    """
-    Implementation of commands in the ``TOPK`` group of
-    the `RedisBloom <https://redis.io/docs/stack/bloom/>`__ module.
-
-    .. versionadded:: 4.12
-    """
-
-    MODULE = BF
+    MODULE = RedisBloom
+    COMMAND_GROUP = CommandGroup.TOPK
 
     @mutually_inclusive_parameters("width", "depth", "decay")
     @module_command(
         CommandName.TOPK_RESERVE,
-        group=CommandGroup.TOPK,
+        group=COMMAND_GROUP,
         version_introduced="2.0.0",
         module=MODULE,
     )
@@ -820,7 +802,7 @@ class TopK(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TOPK_ADD,
-        group=CommandGroup.TOPK,
+        group=COMMAND_GROUP,
         version_introduced="2.0.0",
         module=MODULE,
     )
@@ -843,7 +825,7 @@ class TopK(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TOPK_INCRBY,
-        group=CommandGroup.TOPK,
+        group=COMMAND_GROUP,
         version_introduced="2.0.0",
         module=MODULE,
     )
@@ -865,7 +847,7 @@ class TopK(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TOPK_QUERY,
-        group=CommandGroup.TOPK,
+        group=COMMAND_GROUP,
         version_introduced="2.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -891,7 +873,7 @@ class TopK(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TOPK_COUNT,
-        group=CommandGroup.TOPK,
+        group=COMMAND_GROUP,
         version_introduced="2.0.0",
         module=MODULE,
     )
@@ -914,7 +896,7 @@ class TopK(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TOPK_LIST,
-        group=CommandGroup.TOPK,
+        group=COMMAND_GROUP,
         version_introduced="2.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -942,7 +924,7 @@ class TopK(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TOPK_INFO,
-        group=CommandGroup.TOPK,
+        group=COMMAND_GROUP,
         version_introduced="2.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -967,19 +949,14 @@ class TopK(ModuleGroup[AnyStr]):
         )
 
 
+@versionadded(version="4.12")
 class TDigest(ModuleGroup[AnyStr]):
-    """
-    Implementation of commands in the ``TDIGEST`` group of
-    the `RedisBloom <https://redis.io/docs/stack/bloom/>`__ module.
-
-    .. versionadded:: 4.12
-    """
-
-    MODULE = BF
+    MODULE = RedisBloom
+    COMMAND_GROUP = CommandGroup.TDIGEST
 
     @module_command(
         CommandName.TDIGEST_CREATE,
-        group=CommandGroup.TDIGEST,
+        group=COMMAND_GROUP,
         version_introduced="2.4.0",
         module=MODULE,
     )
@@ -999,7 +976,7 @@ class TDigest(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TDIGEST_RESET,
-        group=CommandGroup.TDIGEST,
+        group=COMMAND_GROUP,
         version_introduced="2.4.0",
         module=MODULE,
     )
@@ -1015,7 +992,7 @@ class TDigest(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TDIGEST_ADD,
-        group=CommandGroup.TDIGEST,
+        group=COMMAND_GROUP,
         version_introduced="2.4.0",
         module=MODULE,
     )
@@ -1038,7 +1015,7 @@ class TDigest(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TDIGEST_MERGE,
-        group=CommandGroup.TDIGEST,
+        group=COMMAND_GROUP,
         version_introduced="2.4.0",
         module=MODULE,
     )
@@ -1078,7 +1055,7 @@ class TDigest(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TDIGEST_MIN,
-        group=CommandGroup.TDIGEST,
+        group=COMMAND_GROUP,
         version_introduced="2.4.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -1097,7 +1074,7 @@ class TDigest(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TDIGEST_MAX,
-        group=CommandGroup.TDIGEST,
+        group=COMMAND_GROUP,
         version_introduced="2.4.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -1116,7 +1093,7 @@ class TDigest(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TDIGEST_QUANTILE,
-        group=CommandGroup.TDIGEST,
+        group=COMMAND_GROUP,
         version_introduced="2.4.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -1142,7 +1119,7 @@ class TDigest(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TDIGEST_CDF,
-        group=CommandGroup.TDIGEST,
+        group=COMMAND_GROUP,
         version_introduced="2.4.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -1169,7 +1146,7 @@ class TDigest(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TDIGEST_TRIMMED_MEAN,
-        group=CommandGroup.TDIGEST,
+        group=COMMAND_GROUP,
         version_introduced="2.4.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -1200,7 +1177,7 @@ class TDigest(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TDIGEST_RANK,
-        group=CommandGroup.TDIGEST,
+        group=COMMAND_GROUP,
         version_introduced="2.4.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -1227,7 +1204,7 @@ class TDigest(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TDIGEST_REVRANK,
-        group=CommandGroup.TDIGEST,
+        group=COMMAND_GROUP,
         version_introduced="2.4.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -1254,7 +1231,7 @@ class TDigest(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TDIGEST_BYRANK,
-        group=CommandGroup.TDIGEST,
+        group=COMMAND_GROUP,
         version_introduced="2.4.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -1280,7 +1257,7 @@ class TDigest(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TDIGEST_BYREVRANK,
-        group=CommandGroup.TDIGEST,
+        group=COMMAND_GROUP,
         version_introduced="2.4.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -1306,7 +1283,7 @@ class TDigest(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TDIGEST_INFO,
-        group=CommandGroup.TDIGEST,
+        group=COMMAND_GROUP,
         version_introduced="2.4.0",
         module=MODULE,
         flags={CommandFlag.READONLY},

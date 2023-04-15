@@ -4,6 +4,8 @@ import itertools
 from datetime import datetime, timedelta
 from typing import List
 
+from deprecated.sphinx import versionadded
+
 from coredis.typing import (
     AnyStr,
     CommandArgList,
@@ -53,7 +55,7 @@ def normalized_timestamp(ts: Union[int, datetime, StringT]) -> Union[StringT, in
     return normalized_time_milliseconds(ts)
 
 
-class RedisTimeSeries(Module):
+class RedisTimeSeries(Module[AnyStr]):
     NAME = "timeseries"
     FULL_NAME = "RedisTimeSeries"
     DESCRIPTION = """RedisTimeSeries is a Redis module that implements a time series 
@@ -63,19 +65,14 @@ class RedisTimeSeries(Module):
     DOCUMENTATION_URL = "https://redis.io/docs/stack/timeseries/"
 
 
+@versionadded(version="4.12")
 class TimeSeries(ModuleGroup[AnyStr]):
-    """
-    Implementation of commands exposed by the
-    `RedisTimeSeries <https://redis.io/docs/stack/timeseries/>`__ module.
-
-    .. versionadded:: 4.12
-    """
-
     MODULE = RedisTimeSeries
+    COMMAND_GROUP = CommandGroup.TIMESERIES
 
     @module_command(
         CommandName.TS_CREATE,
-        group=CommandGroup.TIMESERIES,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -135,7 +132,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TS_DEL,
-        group=CommandGroup.TIMESERIES,
+        group=COMMAND_GROUP,
         version_introduced="1.6.0",
         module=MODULE,
     )
@@ -163,7 +160,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TS_ALTER,
-        group=CommandGroup.TIMESERIES,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -216,7 +213,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TS_ADD,
-        group=CommandGroup.TIMESERIES,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -283,7 +280,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TS_MADD,
-        group=CommandGroup.TIMESERIES,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -306,7 +303,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TS_INCRBY,
-        group=CommandGroup.TIMESERIES,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -360,7 +357,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TS_DECRBY,
-        group=CommandGroup.TIMESERIES,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -417,7 +414,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TS_CREATERULE,
-        group=CommandGroup.TIMESERIES,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         arguments={"aligntimestamp": {"version_introduced": "1.8.0"}},
         module=MODULE,
@@ -472,7 +469,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TS_DELETERULE,
-        group=CommandGroup.TIMESERIES,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -496,7 +493,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
     @mutually_inclusive_parameters("aggregator", "bucketduration")
     @module_command(
         CommandName.TS_RANGE,
-        group=CommandGroup.TIMESERIES,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         arguments={
             "latest": {"version_introduced": "1.8.0"},
@@ -600,7 +597,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
     @mutually_inclusive_parameters("aggregator", "bucketduration")
     @module_command(
         CommandName.TS_REVRANGE,
-        group=CommandGroup.TIMESERIES,
+        group=COMMAND_GROUP,
         version_introduced="1.4.0",
         arguments={
             "latest": {"version_introduced": "1.8.0"},
@@ -703,7 +700,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
     @mutually_inclusive_parameters("groupby", "reducer")
     @module_command(
         CommandName.TS_MRANGE,
-        group=CommandGroup.TIMESERIES,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         arguments={
             "latest": {"version_introduced": "1.8.0"},
@@ -853,7 +850,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
     @mutually_inclusive_parameters("groupby", "reducer")
     @module_command(
         CommandName.TS_MREVRANGE,
-        group=CommandGroup.TIMESERIES,
+        group=COMMAND_GROUP,
         version_introduced="1.4.0",
         arguments={
             "latest": {"version_introduced": "1.8.0"},
@@ -984,7 +981,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TS_GET,
-        group=CommandGroup.TIMESERIES,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         arguments={"latest": {"version_introduced": "1.8.0"}},
         module=MODULE,
@@ -1015,7 +1012,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
     @mutually_exclusive_parameters("withlabels", "selected_labels")
     @module_command(
         CommandName.TS_MGET,
-        group=CommandGroup.TIMESERIES,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         arguments={"latest": {"version_introduced": "1.8.0"}},
         module=MODULE,
@@ -1069,7 +1066,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TS_INFO,
-        group=CommandGroup.TIMESERIES,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -1092,7 +1089,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.TS_QUERYINDEX,
-        group=CommandGroup.TIMESERIES,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
         cluster=ClusterCommandConfig(

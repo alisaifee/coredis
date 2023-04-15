@@ -9,7 +9,7 @@ RedisJson
 `RedisJSON` adds native support for storing and retrieving JSON documents.
 
 To access the commands exposed by the module use the :attr:`~Redis.json` property
-or manually instantiate the :class:`~modules.json.Json` class with an instance of
+or manually instantiate the :class:`~modules.Json` class with an instance of
 :class:`~Redis` or  :class:`~RedisCluster`
 
 Get/set operations::
@@ -73,7 +73,7 @@ Array operations::
 
 
 
-For more details refer to the API documentation for :class:`~coredis.modules.json.Json`
+For more details refer to the API documentation for :class:`~coredis.modules.Json`
 
 .. note:: By default coredis uses the :mod:`json` module from the python standard library
    to serialize inputs and deserialize the responses to :class:`~coredis.modules.response.types.JsonType`.
@@ -88,16 +88,16 @@ search, aggregation, suggestion & autocompletion.
 Search & Aggregation
 ====================
 To access the search & aggregation related commands exposed by the module use the
-:attr:`~Redis.search` property or manually instantiate the :class:`~modules.search.Search`
+:attr:`~Redis.search` property or manually instantiate the :class:`~modules.Search`
 class with an instance of :class:`~Redis` or  :class:`~RedisCluster`
 
 ===============
 Create an Index
 ===============
 Since creating an index requires a non-trivial assembly of arguments that are sent to the
-:rediscommand:`FT.CREATE`, the coredis method :meth:`~coredis.modules.search.Search.create` accepts a
+:rediscommand:`FT.CREATE`, the coredis method :meth:`~coredis.modules.Search.create` accepts a
 collection of :class:`~coredis.modules.search.Field` instances as an argument to
-:paramref:`~coredis.modules.search.Search.create.schema`.
+:paramref:`~coredis.modules.Search.create.schema`.
 
 
 The example below creates two similar indices for json and hash data, that demonstrate
@@ -109,12 +109,12 @@ some common field definitions::
 
     # Create an index on json documents
     await client.search.create("json_index", on=coredis.PureToken.JSON, schema = [
-        coredis.modules.search.Field('$.name', coredis.PureToken.TEXT, alias='name'),
-        coredis.modules.search.Field('$.country', coredis.PureToken.TEXT, alias='country'),
-        coredis.modules.search.Field('$.population', coredis.PureToken.NUMERIC, alias='population'),
-        coredis.modules.search.Field("$.location", coredis.PureToken.GEO, alias='location'),
-        coredis.modules.search.Field('$.iso_tags', coredis.PureToken.TAG, alias='iso_tags'),
-        coredis.modules.search.Field('$.summary_vector', coredis.PureToken.VECTOR, alias='summary_vector',
+        coredis.modules.Field('$.name', coredis.PureToken.TEXT, alias='name'),
+        coredis.modules.Field('$.country', coredis.PureToken.TEXT, alias='country'),
+        coredis.modules.Field('$.population', coredis.PureToken.NUMERIC, alias='population'),
+        coredis.modules.Field("$.location", coredis.PureToken.GEO, alias='location'),
+        coredis.modules.Field('$.iso_tags', coredis.PureToken.TAG, alias='iso_tags'),
+        coredis.modules.Field('$.summary_vector', coredis.PureToken.VECTOR, alias='summary_vector',
             algorithm="FLAT",
             attributes={
                 "DIM": 768,
@@ -127,12 +127,12 @@ some common field definitions::
 
     # or on all hashes that start with a prefix ``city:``
     await client.search.create("hash_index", on=coredis.PureToken.HASH, schema = [
-        coredis.modules.search.Field('name', coredis.PureToken.TEXT),
-        coredis.modules.search.Field('country', coredis.PureToken.TEXT),
-        coredis.modules.search.Field('population', coredis.PureToken.NUMERIC),
-        coredis.modules.search.Field("location", coredis.PureToken.GEO),
-        coredis.modules.search.Field('iso_tags', coredis.PureToken.TAG, separator=","),
-        coredis.modules.search.Field('summary_vector', coredis.PureToken.VECTOR,
+        coredis.modules.Field('name', coredis.PureToken.TEXT),
+        coredis.modules.Field('country', coredis.PureToken.TEXT),
+        coredis.modules.Field('population', coredis.PureToken.NUMERIC),
+        coredis.modules.Field("location", coredis.PureToken.GEO),
+        coredis.modules.Field('iso_tags', coredis.PureToken.TAG, separator=","),
+        coredis.modules.Field('summary_vector', coredis.PureToken.VECTOR,
             algorithm="FLAT",
             attributes={
                 "DIM": 768,
@@ -194,9 +194,9 @@ Inspect the index information::
 Search
 ======
 
-Searching for documents is done through the :meth:`~coredis.modules.search.Search.search`
+Searching for documents is done through the :meth:`~coredis.modules.Search.search`
 function that provides the interface to the :rediscommand:`FT.SEARCH`. The returned
-search results are represented by the :class:`~coredis.modules.search.SearchResults` class.
+search results are represented by the :class:`~coredis.modules.response.types.SearchResult` class.
 
 
 Perform a simple text search::
@@ -244,15 +244,15 @@ Perform a vector similarity search::
    in the earlier example when populating the index).
 
 
-=========
-Aggregate
-=========
+===========
+Aggregation
+===========
 
-To perform aggregations use the :meth:`~coredis.modules.search.Search.aggregate`
+To perform aggregations use the :meth:`~coredis.modules.Search.aggregate`
 method that provides the interface to the :rediscommand:`FT.AGGREGATE`.
 
 To simplify construction of transformation steps in the aggregation pipeline a few helper
-dataclasses are provided to construct the pipeline steps for the :paramref:`~coredis.modules.search.Search.aggregate.transforms`
+dataclasses are provided to construct the pipeline steps for the :paramref:`~coredis.modules.Search.aggregate.transforms`
 parameter.
 
   - :class:`~coredis.modules.search.Filter`
@@ -260,7 +260,7 @@ parameter.
   - :class:`~coredis.modules.search.Reduce`
   - :class:`~coredis.modules.search.Apply`
 
-The results of the aggregation are represented by the :class:`~coredis.modules.search.SearchAggregationResult` class.
+The results of the aggregation are represented by the :class:`~coredis.modules.response.types.SearchAggregationResult` class.
 
 
 Group by country and count and sort by count desc::
@@ -271,9 +271,9 @@ Group by country and count and sort by count desc::
         load="*",
         transforms=[
             # group by country=>count
-            coredis.modules.search.Group(
+            coredis.modules.Group(
                 "@country", [
-                    coredis.modules.search.Reduce("count", [0], "city_count"),
+                    coredis.modules.Reduce("count", [0], "city_count"),
                  ]
             ),
         ],
@@ -292,25 +292,25 @@ Filter, Group->Reduce, Apply, Group::
         load="*",
         transforms=[
             # include only cities with population greater than 20 million
-            coredis.modules.search.Filter(
+            coredis.modules.Filter(
                 '@population > 20000000'
             ),
             # group by country=>{count, average_city_population}
-            coredis.modules.search.Group(
+            coredis.modules.Group(
                 "@country", [
-                    coredis.modules.search.Reduce("count", [0], "city_count"),
-                    coredis.modules.search.Reduce("avg", [1, '@population'], "average_city_population")
+                    coredis.modules.Reduce("count", [0], "city_count"),
+                    coredis.modules.Reduce("avg", [1, '@population'], "average_city_population")
                  ]
             ),
             # apply a transformation of average_city_population -> log10(average_city_population)
-            coredis.modules.search.Apply(
+            coredis.modules.Apply(
                 "floor(log(@average_city_population))",
                 "average_population_bucket"
             ),
             # group by average_population_bucket=>countries
-            coredis.modules.search.Group(
+            coredis.modules.Group(
                 "@average_population_bucket", [
-                    coredis.modules.search.Reduce("tolist", [1, "@country"], "countries"),
+                    coredis.modules.Reduce("tolist", [1, "@country"], "countries"),
                  ]
             ),
         ],
@@ -321,7 +321,7 @@ Filter, Group->Reduce, Apply, Group::
 
 
 
-For more details refer to the API documentation for :class:`~coredis.modules.search.Search`
+For more details refer to the API documentation for :class:`~coredis.modules.Search`
 
 Autocomplete
 ============
@@ -388,10 +388,10 @@ BloomFilter
   assert (True, False) == await client.bf.mexists("filter", [2,5])
 
   # or
-  assert await coredis.modules.filters.BloomFilter(client).exists("filter", 1)
+  assert await coredis.modules.BloomFilter(client).exists("filter", 1)
   ...
 
-For more details refer to the API documentation for :class:`~coredis.modules.filters.BloomFilter`
+For more details refer to the API documentation for :class:`~coredis.modules.BloomFilter`
 
 CuckooFilter
 ============
@@ -421,7 +421,7 @@ CuckooFilter
   assert not await client.cf.exists("filter", 1)
   assert 0 == await client.cf.count("filter", 1)
 
-For more details refer to the API documentation for :class:`~coredis.modules.filters.CuckooFilter`
+For more details refer to the API documentation for :class:`~coredis.modules.CuckooFilter`
 
 CountMinSketch
 ==============
@@ -442,7 +442,7 @@ CountMinSketch
   # query the count for multiple entries
   assert (1, 2, 0) == await client.cms.query("sketch", ["a", "b", "c"])
 
-For more details refer to the API documentation for :class:`~coredis.modules.filters.CountMinSketch`
+For more details refer to the API documentation for :class:`~coredis.modules.CountMinSketch`
 
 TopK
 ====
@@ -469,7 +469,7 @@ TopK
   # get top 3 letters
   assert (b'z', b'y', b'x') == await client.topk.list("top3")
 
-For more details refer to the API documentation for :class:`~coredis.modules.filters.TopK`
+For more details refer to the API documentation for :class:`~coredis.modules.TopK`
 
 TDigest
 =======
@@ -498,7 +498,7 @@ TDigest
     # get the quantiles
     assert (1.0, 3.0, 6.0) == await client.tdigest.quantile("digest", [0, 0.5, 1])
 
-For more details refer to the API documentation for :class:`~coredis.modules.filters.TDigest`
+For more details refer to the API documentation for :class:`~coredis.modules.TDigest`
 
 RedisTimeSeries
 ^^^^^^^^^^^^^^^

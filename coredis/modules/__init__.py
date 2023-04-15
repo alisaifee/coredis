@@ -6,10 +6,17 @@ from coredis.commands import CommandMixin
 from coredis.typing import AnyStr
 
 from .autocomplete import Autocomplete
-from .filters import BloomFilter, CountMinSketch, CuckooFilter, TDigest, TopK
-from .json import Json
-from .search import Search
-from .timeseries import TimeSeries
+from .filters import (
+    BloomFilter,
+    CountMinSketch,
+    CuckooFilter,
+    RedisBloom,
+    TDigest,
+    TopK,
+)
+from .json import Json, ReJSON
+from .search import RediSearch, Search
+from .timeseries import RedisTimeSeries, TimeSeries
 
 
 class ModuleMixin(CommandMixin[AnyStr]):
@@ -84,3 +91,18 @@ class ModuleMixin(CommandMixin[AnyStr]):
         Property to access :class:`~coredis.modules.autocomplete.Autocomplete` commands.
         """
         return Autocomplete(self)
+
+
+__all__ = [
+    "RediSearch",
+    "RedisBloom",
+    "ReJSON",
+    "RedisTimeSeries",
+    "Json",
+    "BloomFilter",
+    "CuckooFilter",
+    "CountMinSketch",
+    "TopK",
+    "TDigest",
+    "TimeSeries",
+]

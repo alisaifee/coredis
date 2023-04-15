@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from deprecated.sphinx import versionadded
+
 from .._json import json
 from ..commands._wrappers import CacheConfig
 from ..commands.constants import CommandFlag, CommandGroup, CommandName
@@ -28,27 +30,22 @@ from .response._callbacks.json import JsonCallback
 from .response.types import JsonType
 
 
-class ReJSON(Module):
+class ReJSON(Module[AnyStr]):
     NAME = "ReJSON"
     FULL_NAME = "RedisJSON"
     DESCRIPTION = """RedisJSON is a Redis module that implements a JSON data type 
-    and a set of commands to operate on it."""
+and a set of commands to operate on it."""
     DOCUMENTATION_URL = "https://redis.io/docs/stack/json/"
 
 
+@versionadded(version="4.12")
 class Json(ModuleGroup[AnyStr]):
-    """
-    Implementation of commands exposed by the
-    `RedisJSON <https://redis.io/docs/stack/json/>`__ module.
-
-    .. versionadded:: 4.12
-    """
-
     MODULE = ReJSON
+    COMMAND_GROUP = CommandGroup.JSON
 
     @module_command(
         CommandName.JSON_DEL,
-        group=CommandGroup.JSON,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -70,7 +67,7 @@ class Json(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.JSON_GET,
-        group=CommandGroup.JSON,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
@@ -98,7 +95,7 @@ class Json(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.JSON_FORGET,
-        group=CommandGroup.JSON,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -120,7 +117,7 @@ class Json(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.JSON_TOGGLE,
-        group=CommandGroup.JSON,
+        group=COMMAND_GROUP,
         version_introduced="2.0.0",
         module=MODULE,
     )
@@ -143,7 +140,7 @@ class Json(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.JSON_CLEAR,
-        group=CommandGroup.JSON,
+        group=COMMAND_GROUP,
         version_introduced="2.0.0",
         module=MODULE,
     )
@@ -165,7 +162,7 @@ class Json(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.JSON_SET,
-        group=CommandGroup.JSON,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -203,7 +200,7 @@ class Json(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.JSON_MGET,
-        group=CommandGroup.JSON,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -227,7 +224,7 @@ class Json(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.JSON_NUMINCRBY,
-        group=CommandGroup.JSON,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -249,7 +246,7 @@ class Json(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.JSON_NUMMULTBY,
-        group=CommandGroup.JSON,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -271,7 +268,7 @@ class Json(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.JSON_STRAPPEND,
-        group=CommandGroup.JSON,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -300,7 +297,7 @@ class Json(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.JSON_STRLEN,
-        group=CommandGroup.JSON,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -329,7 +326,7 @@ class Json(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.JSON_ARRAPPEND,
-        group=CommandGroup.JSON,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -361,7 +358,7 @@ class Json(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.JSON_ARRINDEX,
-        group=CommandGroup.JSON,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -399,7 +396,7 @@ class Json(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.JSON_ARRINSERT,
-        group=CommandGroup.JSON,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -431,7 +428,7 @@ class Json(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.JSON_ARRLEN,
-        group=CommandGroup.JSON,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -460,7 +457,7 @@ class Json(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.JSON_ARRPOP,
-        group=CommandGroup.JSON,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -488,7 +485,7 @@ class Json(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.JSON_ARRTRIM,
-        group=CommandGroup.JSON,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -514,7 +511,7 @@ class Json(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.JSON_OBJKEYS,
-        group=CommandGroup.JSON,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -539,7 +536,7 @@ class Json(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.JSON_OBJLEN,
-        group=CommandGroup.JSON,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
     )
@@ -565,7 +562,7 @@ class Json(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.JSON_TYPE,
-        group=CommandGroup.JSON,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -590,7 +587,7 @@ class Json(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.JSON_RESP,
-        group=CommandGroup.JSON,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
@@ -612,7 +609,7 @@ class Json(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.JSON_DEBUG_MEMORY,
-        group=CommandGroup.JSON,
+        group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
