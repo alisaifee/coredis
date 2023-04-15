@@ -5,6 +5,7 @@ import contextlib
 import contextvars
 import functools
 import warnings
+from collections import defaultdict
 from ssl import SSLContext
 from typing import TYPE_CHECKING, Any, cast, overload
 
@@ -219,9 +220,10 @@ class Client(
             return False
         return True
 
-    @property
-    def module_info(self) -> Dict[str, version.Version]:
-        return self._module_info or {}
+    async def get_server_module_version(self, module: str) -> Optional[version.Version]:
+        if self._module_info is None:
+            await self._populate_module_versions()
+        return (self._module_info or {}).get(module)
 
     def _ensure_server_version(self, version: Optional[str]) -> None:
         if not self.verify_version or Config.optimized:
@@ -304,7 +306,7 @@ class Client(
             return
         try:
             modules = await self.module_list()
-            self._module_info = {}
+            self._module_info = defaultdict(lambda: version.Version("0"))
             for module in modules:
                 mod = EncodingInsensitiveDict(module)
                 name = nativestr(mod["name"])
@@ -319,8 +321,6 @@ class Client(
 
     async def initialize(self: ClientT) -> ClientT:
         await self.connection_pool.initialize()
-        if self._module_info is None:
-            await self._populate_module_versions()
         return self
 
     def __await__(self: ClientT) -> Generator[Any, None, ClientT]:

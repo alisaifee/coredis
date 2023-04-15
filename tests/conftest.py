@@ -593,7 +593,6 @@ async def redis_stack_cached(redis_stack_server, request):
     await set_default_test_config(client)
 
     yield client
-    print(cache.stats)
     client.connection_pool.disconnect()
     cache.shutdown()
 

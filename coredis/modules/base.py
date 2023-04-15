@@ -56,31 +56,25 @@ async def ensure_compatibility(
     ):
         return
     if command_details.version_introduced:
-        await client.initialize()
-        if (
-            module in client.module_info
-            and command_details.version_introduced <= client.module_info[module]
-        ):
+        module_version = await client.get_server_module_version(module)
+        if module_version and command_details.version_introduced <= module_version:
             if command_details.arguments and set(
                 command_details.arguments.keys()
             ).intersection(kwargs.keys()):
                 for argument, version_introduced in command_details.arguments.items():
-                    if (
-                        version_introduced
-                        and version_introduced > client.module_info[module]
-                    ):
+                    if version_introduced and version_introduced > module_version:
                         raise CommandSyntaxError(
                             {argument},
                             (
                                 f"{command_details.command.decode('latin-1')} with `{argument}` "
-                                f"is not supported in {module} version {client.module_info[module]}"
+                                f"is not supported in {module} version {module_version}"
                             ),
                         )
             return
         raise ModuleCommandNotSupportedError(
             command_details.command.decode("latin-1"),
             module,
-            str(client.module_info.get(module, "")),
+            str(module_version),
         )
 
 
