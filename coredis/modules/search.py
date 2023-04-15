@@ -35,7 +35,7 @@ from ..typing import (
     Union,
     ValueT,
 )
-from .base import ModuleGroup, module_command
+from .base import Module, ModuleGroup, module_command
 from .response._callbacks.search import (
     AggregationResultCallback,
     SearchConfigCallback,
@@ -44,6 +44,16 @@ from .response._callbacks.search import (
     SpellCheckResult,
 )
 from .response.types import SearchAggregationResult, SearchResult
+
+
+class RediSearch(Module):
+    NAME = "search"
+    FULL_NAME = "RediSearch"
+    DESCRIPTION = """RedisSearch is a Redis module that enables querying, secondary 
+    indexing, and full-text search for Redis. These features enable multi-field queries, 
+    aggregation, exact phrase matching, numeric filtering, geo filtering and vector 
+    similarity semantic search on top of text queries."""
+    DOCUMENTATION_URL = "https://redis.io/docs/stack/search"
 
 
 @dataclasses.dataclass
@@ -203,11 +213,11 @@ class Search(ModuleGroup[AnyStr]):
     .. versionadded:: 4.12
     """
 
-    MODULE = "search"
+    MODULE = RediSearch
 
     @module_command(
         CommandName.FT_CREATE,
-        module="search",
+        module=MODULE,
         version_introduced="1.0.0",
         group=CommandGroup.SEARCH,
     )
@@ -305,7 +315,7 @@ class Search(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT_INFO,
-        module="search",
+        module=MODULE,
         version_introduced="1.0.0",
         group=CommandGroup.SEARCH,
     )
@@ -330,7 +340,7 @@ class Search(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT_EXPLAIN,
-        module="search",
+        module=MODULE,
         version_introduced="1.0.0",
         group=CommandGroup.SEARCH,
         arguments={"dialect": {"version_introduced": "2.4.3"}},
@@ -354,7 +364,7 @@ class Search(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT_ALTER,
-        module="search",
+        module=MODULE,
         version_introduced="1.0.0",
         group=CommandGroup.SEARCH,
     )
@@ -383,7 +393,7 @@ class Search(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT_DROPINDEX,
-        module="search",
+        module=MODULE,
         version_introduced="2.0.0",
         group=CommandGroup.SEARCH,
     )
@@ -404,7 +414,7 @@ class Search(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT_ALIASADD,
-        module="search",
+        module=MODULE,
         version_introduced="1.0.0",
         group=CommandGroup.SEARCH,
     )
@@ -422,7 +432,7 @@ class Search(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT_ALIASUPDATE,
-        module="search",
+        module=MODULE,
         version_introduced="1.0.0",
         group=CommandGroup.SEARCH,
     )
@@ -440,7 +450,7 @@ class Search(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT_ALIASDEL,
-        module="search",
+        module=MODULE,
         version_introduced="1.0.0",
         group=CommandGroup.SEARCH,
     )
@@ -457,7 +467,7 @@ class Search(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT_TAGVALS,
-        module="search",
+        module=MODULE,
         version_introduced="1.0.0",
         group=CommandGroup.SEARCH,
     )
@@ -475,7 +485,7 @@ class Search(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT_SYNUPDATE,
-        module="search",
+        module=MODULE,
         version_introduced="1.2.0",
         group=CommandGroup.SEARCH,
     )
@@ -506,7 +516,7 @@ class Search(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT_SYNDUMP,
-        module="search",
+        module=MODULE,
         version_introduced="1.2.0",
         group=CommandGroup.SEARCH,
     )
@@ -523,7 +533,7 @@ class Search(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT_SPELLCHECK,
-        module="search",
+        module=MODULE,
         version_introduced="1.4.0",
         group=CommandGroup.SEARCH,
         arguments={"dialect": {"version_introduced": "2.4.3"}},
@@ -562,7 +572,7 @@ class Search(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT_DICTADD,
-        module="search",
+        module=MODULE,
         version_introduced="1.4.0",
         group=CommandGroup.SEARCH,
     )
@@ -585,7 +595,7 @@ class Search(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT_DICTDEL,
-        module="search",
+        module=MODULE,
         version_introduced="1.4.0",
         group=CommandGroup.SEARCH,
     )
@@ -608,7 +618,7 @@ class Search(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT_DICTDUMP,
-        module="search",
+        module=MODULE,
         version_introduced="1.4.0",
         group=CommandGroup.SEARCH,
     )
@@ -625,7 +635,7 @@ class Search(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT__LIST,
-        module="search",
+        module=MODULE,
         version_introduced="2.0.0",
         group=CommandGroup.SEARCH,
         cluster=ClusterCommandConfig(
@@ -643,7 +653,7 @@ class Search(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT_CONFIG_SET,
-        module="search",
+        module=MODULE,
         version_introduced="1.0.0",
         group=CommandGroup.SEARCH,
         cluster=ClusterCommandConfig(
@@ -662,7 +672,7 @@ class Search(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT_CONFIG_GET,
-        module="search",
+        module=MODULE,
         version_introduced="1.0.0",
         group=CommandGroup.SEARCH,
         cluster=ClusterCommandConfig(
@@ -682,7 +692,7 @@ class Search(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT_SEARCH,
-        module="search",
+        module=MODULE,
         version_introduced="1.0.0",
         group=CommandGroup.SEARCH,
         arguments={"dialect": {"version_introduced": "2.4.3"}},
@@ -889,7 +899,7 @@ class Search(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT_AGGREGATE,
-        module="search",
+        module=MODULE,
         version_introduced="1.1.0",
         group=CommandGroup.SEARCH,
         arguments={"dialect": {"version_introduced": "2.4.3"}},
@@ -994,7 +1004,7 @@ class Search(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT_CURSOR_READ,
-        module="search",
+        module=MODULE,
         version_introduced="1.1.0",
         group=CommandGroup.SEARCH,
     )
@@ -1017,7 +1027,7 @@ class Search(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT_CURSOR_DEL,
-        module="search",
+        module=MODULE,
         version_introduced="1.1.0",
         group=CommandGroup.SEARCH,
     )

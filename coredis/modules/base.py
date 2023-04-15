@@ -20,7 +20,7 @@ from ..commands._wrappers import (
 )
 from ..commands.constants import CommandFlag, CommandGroup, CommandName
 from ..exceptions import CommandSyntaxError, ModuleCommandNotSupportedError
-from ..globals import COMMAND_FLAGS, MODULE_GROUPS, READONLY_COMMANDS
+from ..globals import COMMAND_FLAGS, MODULE_GROUPS, MODULES, READONLY_COMMANDS
 from ..response._callbacks import NoopCallback
 from ..typing import (
     AnyStr,
@@ -34,6 +34,7 @@ from ..typing import (
     R,
     Set,
     Tuple,
+    Type,
     ValueT,
     add_runtime_checks,
 )
@@ -80,7 +81,7 @@ async def ensure_compatibility(
 
 def module_command(
     command_name: CommandName,
-    module: str,
+    module: "Type[Module]",
     group: CommandGroup,
     flags: Optional[Set[CommandFlag]] = None,
     cluster: ClusterCommandConfig = ClusterCommandConfig(),
@@ -123,7 +124,7 @@ def module_command(
                 not getattr(client, "noreply", None) and is_regular_client
             )
             callable = runtime_checkable if runtime_checking else func
-            await ensure_compatibility(client, module, command_details, kwargs)
+            await ensure_compatibility(client, module.NAME, command_details, kwargs)
             async with command_cache(callable, *args, **kwargs) as response:
                 return response
 
@@ -132,7 +133,7 @@ def module_command(
             wrapped.__doc__ = f"""
 {wrapped.__doc__}
 
-Redis {module} module command documentation: {redis_command_link(command_name)}
+{module.FULL_NAME} command documentation: {redis_command_link(command_name)}
             """
         if version_introduced or command_details.arguments:
             wrapped.__doc__ += """
@@ -141,12 +142,12 @@ Compatibility:
 
         if version_introduced:
             wrapped.__doc__ += f"""
-- New in {module} version: `{version_introduced}`
+- New in {module.FULL_NAME} version: `{version_introduced}`
 """
         if command_details.arguments:
             for argument, min_version in command_details.arguments.items():
                 wrapped.__doc__ += f"""
-- :paramref:`{argument}`: New in {module} version `{min_version}`
+- :paramref:`{argument}`: New in {module.FULL_NAME} version `{min_version}`
 """
         if cache_config:
             wrapped.__doc__ += """
@@ -159,21 +160,46 @@ Compatibility:
     return wrapper
 
 
+class ModuleRegistry(ABCMeta):
+    NAME: str
+    DESCRIPTION: str
+
+    def __new__(
+        cls, name: str, bases: Tuple[type, ...], namespace: Dict[str, object]
+    ) -> ModuleRegistry:
+        kls = super().__new__(cls, name, bases, namespace)
+        if kls.NAME:
+            MODULES[kls.NAME] = kls
+        return kls
+
+
+class Module(metaclass=ModuleRegistry):
+    #: The name of the module as reported by ``MODULES LIST``
+    NAME = ""
+    #: The common name used to refer to the module if it differs from
+    #: the internal name
+    FULL_NAME = ""
+    #: A brief description of what the module does
+    DESCRIPTION = ""
+    #: A link to the module documentation
+    DOCUMENTATION_URL = ""
+
+
 class ModuleGroupRegistry(ABCMeta):
-    MODULE: Optional[str]
+    MODULE: Type[Module]
 
     def __new__(
         cls, name: str, bases: Tuple[type, ...], namespace: Dict[str, object]
     ) -> ModuleGroupRegistry:
         kls = super().__new__(cls, name, bases, namespace)
-        if kls.MODULE:
+        if getattr(kls, "MODULE", None):
             MODULE_GROUPS.add(kls)
         return kls
 
 
 class ModuleGroup(Generic[AnyStr], metaclass=ModuleGroupRegistry):
-    #: The name of the module as reported by ``MODULES LIST``
-    MODULE: ClassVar[Optional[str]] = None
+    #: The module to which this command group belongs to
+    MODULE: ClassVar[Type[Module]]
 
     def __init__(self, client: AbstractExecutor):
         self.client = weakref.proxy(client)

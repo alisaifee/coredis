@@ -32,10 +32,21 @@ from ..typing import (
     Union,
     ValueT,
 )
-from .base import ModuleGroup, module_command
+from .base import Module, ModuleGroup, module_command
+
+
+class BF(Module):
+    NAME = "bf"
+    FULL_NAME = "RedisBloom"
+    DESCRIPTION = """RedisBloom is a Redis module that implements various probabilistic
+    data structures such as BloomFilter.
+    """
+    DOCUMENTATION_URL = "https://redis.io/docs/stack/bloom/"
 
 
 class BloomFilter(ModuleGroup[AnyStr]):
+    MODULE = BF
+
     """
     Implementation of commands in the ``BF`` group of
     the `RedisBloom <https://redis.io/docs/stack/bloom/>`__ module.
@@ -43,13 +54,11 @@ class BloomFilter(ModuleGroup[AnyStr]):
     .. versionadded:: 4.12
     """
 
-    MODULE = "bf"
-
     @module_command(
         CommandName.BF_RESERVE,
         group=CommandGroup.BF,
         version_introduced="1.0.0",
-        module="bf",
+        module=MODULE,
     )
     async def reserve(
         self,
@@ -82,7 +91,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         CommandName.BF_ADD,
         group=CommandGroup.BF,
         version_introduced="1.0.0",
-        module="bf",
+        module=MODULE,
     )
     async def add(self, key: KeyT, item: ValueT) -> bool:
         """
@@ -101,7 +110,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         CommandName.BF_MADD,
         group=CommandGroup.BF,
         version_introduced="1.0.0",
-        module="bf",
+        module=MODULE,
     )
     async def madd(self, key: KeyT, items: Parameters[ValueT]) -> Tuple[bool, ...]:
         """
@@ -120,7 +129,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         CommandName.BF_INSERT,
         group=CommandGroup.BF,
         version_introduced="1.0.0",
-        module="bf",
+        module=MODULE,
     )
     async def insert(
         self,
@@ -167,7 +176,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         CommandName.BF_EXISTS,
         group=CommandGroup.BF,
         version_introduced="1.0.0",
-        module="bf",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -186,7 +195,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         CommandName.BF_MEXISTS,
         group=CommandGroup.BF,
         version_introduced="1.0.0",
-        module="bf",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -205,7 +214,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         CommandName.BF_SCANDUMP,
         group=CommandGroup.BF,
         version_introduced="1.0.0",
-        module="bf",
+        module=MODULE,
     )
     async def scandump(self, key: KeyT, iterator: int) -> Tuple[int, Optional[bytes]]:
         """
@@ -232,7 +241,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         CommandName.BF_LOADCHUNK,
         group=CommandGroup.BF,
         version_introduced="1.0.0",
-        module="bf",
+        module=MODULE,
     )
     async def loadchunk(self, key: KeyT, iterator: int, data: bytes) -> bool:
         """
@@ -252,7 +261,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         CommandName.BF_INFO,
         group=CommandGroup.BF,
         version_introduced="1.0.0",
-        module="bf",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -294,7 +303,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         CommandName.BF_CARD,
         group=CommandGroup.BF,
         version_introduced="2.4.4",
-        module="bf",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -317,13 +326,13 @@ class CuckooFilter(ModuleGroup[AnyStr]):
     .. versionadded:: 4.12
     """
 
-    MODULE = "bf"
+    MODULE = BF
 
     @module_command(
         CommandName.CF_RESERVE,
         group=CommandGroup.CF,
         version_introduced="1.0.0",
-        module="bf",
+        module=MODULE,
     )
     async def reserve(
         self,
@@ -359,7 +368,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         CommandName.CF_ADD,
         group=CommandGroup.CF,
         version_introduced="1.0.0",
-        module="bf",
+        module=MODULE,
     )
     async def add(self, key: KeyT, item: ValueT) -> bool:
         """
@@ -378,7 +387,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         CommandName.CF_ADDNX,
         group=CommandGroup.CF,
         version_introduced="1.0.0",
-        module="bf",
+        module=MODULE,
     )
     async def addnx(self, key: KeyT, item: ValueT) -> bool:
         """
@@ -397,7 +406,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         CommandName.CF_INSERT,
         group=CommandGroup.CF,
         version_introduced="1.0.0",
-        module="bf",
+        module=MODULE,
     )
     async def insert(
         self,
@@ -433,7 +442,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         CommandName.CF_INSERTNX,
         group=CommandGroup.CF,
         version_introduced="1.0.0",
-        module="bf",
+        module=MODULE,
     )
     async def insertnx(
         self,
@@ -469,7 +478,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         CommandName.CF_EXISTS,
         group=CommandGroup.CF,
         version_introduced="1.0.0",
-        module="bf",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -490,7 +499,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         CommandName.CF_MEXISTS,
         group=CommandGroup.CF,
         version_introduced="1.0.0",
-        module="bf",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -511,7 +520,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         CommandName.CF_DEL,
         group=CommandGroup.CF,
         version_introduced="1.0.0",
-        module="bf",
+        module=MODULE,
     )
     async def delete(self, key: KeyT, item: ValueT) -> bool:
         """
@@ -530,7 +539,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         CommandName.CF_COUNT,
         group=CommandGroup.CF,
         version_introduced="1.0.0",
-        module="bf",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -551,7 +560,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         CommandName.CF_SCANDUMP,
         group=CommandGroup.CF,
         version_introduced="1.0.0",
-        module="bf",
+        module=MODULE,
     )
     async def scandump(self, key: KeyT, iterator: int) -> Tuple[int, Optional[bytes]]:
         """
@@ -574,7 +583,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         CommandName.CF_LOADCHUNK,
         group=CommandGroup.CF,
         version_introduced="1.0.0",
-        module="bf",
+        module=MODULE,
     )
     async def loadchunk(self, key: KeyT, iterator: int, data: StringT) -> bool:
         """
@@ -595,7 +604,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         CommandName.CF_INFO,
         group=CommandGroup.CF,
         version_introduced="1.0.0",
-        module="bf",
+        module=MODULE,
         flags={CommandFlag.READONLY},
     )
     async def info(self, key: KeyT) -> Dict[AnyStr, ResponsePrimitive]:
@@ -618,13 +627,13 @@ class CountMinSketch(ModuleGroup[AnyStr]):
     .. versionadded:: 4.12
     """
 
-    MODULE = "bf"
+    MODULE = BF
 
     @module_command(
         CommandName.CMS_INITBYDIM,
         group=CommandGroup.CMS,
         version_introduced="2.0.0",
-        module="bf",
+        module=MODULE,
     )
     async def initbydim(self, key: KeyT, width: int, depth: int) -> bool:
         """
@@ -646,7 +655,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         CommandName.CMS_INITBYPROB,
         group=CommandGroup.CMS,
         version_introduced="2.0.0",
-        module="bf",
+        module=MODULE,
     )
     async def initbyprob(
         self, key: KeyT, error: Union[int, float], probability: Union[int, float]
@@ -671,7 +680,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         CommandName.CMS_INCRBY,
         group=CommandGroup.CMS,
         version_introduced="2.0.0",
-        module="bf",
+        module=MODULE,
     )
     async def incrby(self, key: KeyT, items: Dict[AnyStr, int]) -> Tuple[int, ...]:
         """
@@ -693,7 +702,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         CommandName.CMS_QUERY,
         group=CommandGroup.CMS,
         version_introduced="2.0.0",
-        module="bf",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -718,7 +727,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         CommandName.CMS_MERGE,
         group=CommandGroup.CMS,
         version_introduced="2.0.0",
-        module="bf",
+        module=MODULE,
     )
     async def merge(
         self,
@@ -747,7 +756,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         CommandName.CMS_INFO,
         group=CommandGroup.CMS,
         version_introduced="2.0.0",
-        module="bf",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -774,14 +783,14 @@ class TopK(ModuleGroup[AnyStr]):
     .. versionadded:: 4.12
     """
 
-    MODULE = "bf"
+    MODULE = BF
 
     @mutually_inclusive_parameters("width", "depth", "decay")
     @module_command(
         CommandName.TOPK_RESERVE,
         group=CommandGroup.TOPK,
         version_introduced="2.0.0",
-        module="bf",
+        module=MODULE,
     )
     async def reserve(
         self,
@@ -813,7 +822,7 @@ class TopK(ModuleGroup[AnyStr]):
         CommandName.TOPK_ADD,
         group=CommandGroup.TOPK,
         version_introduced="2.0.0",
-        module="bf",
+        module=MODULE,
     )
     async def add(
         self, key: KeyT, items: Parameters[AnyStr]
@@ -836,7 +845,7 @@ class TopK(ModuleGroup[AnyStr]):
         CommandName.TOPK_INCRBY,
         group=CommandGroup.TOPK,
         version_introduced="2.0.0",
-        module="bf",
+        module=MODULE,
     )
     async def incrby(
         self, key: KeyT, items: Dict[AnyStr, int]
@@ -858,7 +867,7 @@ class TopK(ModuleGroup[AnyStr]):
         CommandName.TOPK_QUERY,
         group=CommandGroup.TOPK,
         version_introduced="2.0.0",
-        module="bf",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -884,7 +893,7 @@ class TopK(ModuleGroup[AnyStr]):
         CommandName.TOPK_COUNT,
         group=CommandGroup.TOPK,
         version_introduced="2.0.0",
-        module="bf",
+        module=MODULE,
     )
     async def count(
         self,
@@ -907,7 +916,7 @@ class TopK(ModuleGroup[AnyStr]):
         CommandName.TOPK_LIST,
         group=CommandGroup.TOPK,
         version_introduced="2.0.0",
-        module="bf",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -935,7 +944,7 @@ class TopK(ModuleGroup[AnyStr]):
         CommandName.TOPK_INFO,
         group=CommandGroup.TOPK,
         version_introduced="2.0.0",
-        module="bf",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -966,13 +975,13 @@ class TDigest(ModuleGroup[AnyStr]):
     .. versionadded:: 4.12
     """
 
-    MODULE = "bf"
+    MODULE = BF
 
     @module_command(
         CommandName.TDIGEST_CREATE,
         group=CommandGroup.TDIGEST,
         version_introduced="2.4.0",
-        module="bf",
+        module=MODULE,
     )
     async def create(self, key: KeyT, compression: Optional[int] = None) -> bool:
         """
@@ -992,7 +1001,7 @@ class TDigest(ModuleGroup[AnyStr]):
         CommandName.TDIGEST_RESET,
         group=CommandGroup.TDIGEST,
         version_introduced="2.4.0",
-        module="bf",
+        module=MODULE,
     )
     async def reset(self, key: KeyT) -> bool:
         """
@@ -1008,7 +1017,7 @@ class TDigest(ModuleGroup[AnyStr]):
         CommandName.TDIGEST_ADD,
         group=CommandGroup.TDIGEST,
         version_introduced="2.4.0",
-        module="bf",
+        module=MODULE,
     )
     async def add(
         self,
@@ -1031,7 +1040,7 @@ class TDigest(ModuleGroup[AnyStr]):
         CommandName.TDIGEST_MERGE,
         group=CommandGroup.TDIGEST,
         version_introduced="2.4.0",
-        module="bf",
+        module=MODULE,
     )
     async def merge(
         self,
@@ -1071,7 +1080,7 @@ class TDigest(ModuleGroup[AnyStr]):
         CommandName.TDIGEST_MIN,
         group=CommandGroup.TDIGEST,
         version_introduced="2.4.0",
-        module="bf",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -1090,7 +1099,7 @@ class TDigest(ModuleGroup[AnyStr]):
         CommandName.TDIGEST_MAX,
         group=CommandGroup.TDIGEST,
         version_introduced="2.4.0",
-        module="bf",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -1109,7 +1118,7 @@ class TDigest(ModuleGroup[AnyStr]):
         CommandName.TDIGEST_QUANTILE,
         group=CommandGroup.TDIGEST,
         version_introduced="2.4.0",
-        module="bf",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -1135,7 +1144,7 @@ class TDigest(ModuleGroup[AnyStr]):
         CommandName.TDIGEST_CDF,
         group=CommandGroup.TDIGEST,
         version_introduced="2.4.0",
-        module="bf",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -1162,7 +1171,7 @@ class TDigest(ModuleGroup[AnyStr]):
         CommandName.TDIGEST_TRIMMED_MEAN,
         group=CommandGroup.TDIGEST,
         version_introduced="2.4.0",
-        module="bf",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -1193,7 +1202,7 @@ class TDigest(ModuleGroup[AnyStr]):
         CommandName.TDIGEST_RANK,
         group=CommandGroup.TDIGEST,
         version_introduced="2.4.0",
-        module="bf",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -1220,7 +1229,7 @@ class TDigest(ModuleGroup[AnyStr]):
         CommandName.TDIGEST_REVRANK,
         group=CommandGroup.TDIGEST,
         version_introduced="2.4.0",
-        module="bf",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -1247,7 +1256,7 @@ class TDigest(ModuleGroup[AnyStr]):
         CommandName.TDIGEST_BYRANK,
         group=CommandGroup.TDIGEST,
         version_introduced="2.4.0",
-        module="bf",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -1273,7 +1282,7 @@ class TDigest(ModuleGroup[AnyStr]):
         CommandName.TDIGEST_BYREVRANK,
         group=CommandGroup.TDIGEST,
         version_introduced="2.4.0",
-        module="bf",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -1299,7 +1308,7 @@ class TDigest(ModuleGroup[AnyStr]):
         CommandName.TDIGEST_INFO,
         group=CommandGroup.TDIGEST,
         version_introduced="2.4.0",
-        module="bf",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )

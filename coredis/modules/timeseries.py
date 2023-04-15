@@ -36,7 +36,7 @@ from ..response._callbacks import (
     TupleCallback,
 )
 from ..tokens import PrefixToken, PureToken
-from .base import ModuleGroup, module_command
+from .base import Module, ModuleGroup, module_command
 from .response._callbacks.timeseries import (
     ClusterMergeTimeSeries,
     SampleCallback,
@@ -53,6 +53,16 @@ def normalized_timestamp(ts: Union[int, datetime, StringT]) -> Union[StringT, in
     return normalized_time_milliseconds(ts)
 
 
+class RedisTimeSeries(Module):
+    NAME = "timeseries"
+    FULL_NAME = "RedisTimeSeries"
+    DESCRIPTION = """RedisTimeSeries is a Redis module that implements a time series 
+    data structure. It is designed to be used as a database for time series data, 
+    and is optimized for fast insertion and retrieval of time series data.
+    """
+    DOCUMENTATION_URL = "https://redis.io/docs/stack/timeseries/"
+
+
 class TimeSeries(ModuleGroup[AnyStr]):
     """
     Implementation of commands exposed by the
@@ -61,13 +71,13 @@ class TimeSeries(ModuleGroup[AnyStr]):
     .. versionadded:: 4.12
     """
 
-    MODULE = "timeseries"
+    MODULE = RedisTimeSeries
 
     @module_command(
         CommandName.TS_CREATE,
         group=CommandGroup.TIMESERIES,
         version_introduced="1.0.0",
-        module="timeseries",
+        module=MODULE,
     )
     async def create(
         self,
@@ -127,7 +137,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         CommandName.TS_DEL,
         group=CommandGroup.TIMESERIES,
         version_introduced="1.6.0",
-        module="timeseries",
+        module=MODULE,
     )
     async def delete(
         self,
@@ -155,7 +165,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         CommandName.TS_ALTER,
         group=CommandGroup.TIMESERIES,
         version_introduced="1.0.0",
-        module="timeseries",
+        module=MODULE,
     )
     async def alter(
         self,
@@ -208,7 +218,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         CommandName.TS_ADD,
         group=CommandGroup.TIMESERIES,
         version_introduced="1.0.0",
-        module="timeseries",
+        module=MODULE,
     )
     async def add(
         self,
@@ -275,7 +285,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         CommandName.TS_MADD,
         group=CommandGroup.TIMESERIES,
         version_introduced="1.0.0",
-        module="timeseries",
+        module=MODULE,
     )
     async def madd(
         self, ktvs: Parameters[Tuple[AnyStr, int, Union[int, float]]]
@@ -298,7 +308,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         CommandName.TS_INCRBY,
         group=CommandGroup.TIMESERIES,
         version_introduced="1.0.0",
-        module="timeseries",
+        module=MODULE,
     )
     async def incrby(
         self,
@@ -352,7 +362,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         CommandName.TS_DECRBY,
         group=CommandGroup.TIMESERIES,
         version_introduced="1.0.0",
-        module="timeseries",
+        module=MODULE,
     )
     async def decrby(
         self,
@@ -410,7 +420,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         group=CommandGroup.TIMESERIES,
         version_introduced="1.0.0",
         arguments={"aligntimestamp": {"version_introduced": "1.8.0"}},
-        module="timeseries",
+        module=MODULE,
     )
     async def createrule(
         self,
@@ -464,7 +474,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         CommandName.TS_DELETERULE,
         group=CommandGroup.TIMESERIES,
         version_introduced="1.0.0",
-        module="timeseries",
+        module=MODULE,
     )
     async def deleterule(self, source: KeyT, destination: KeyT) -> bool:
         """
@@ -492,7 +502,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
             "latest": {"version_introduced": "1.8.0"},
             "empty": {"version_introduced": "1.8.0"},
         },
-        module="timeseries",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -596,7 +606,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
             "latest": {"version_introduced": "1.8.0"},
             "empty": {"version_introduced": "1.8.0"},
         },
-        module="timeseries",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -699,7 +709,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
             "latest": {"version_introduced": "1.8.0"},
             "empty": {"version_introduced": "1.8.0"},
         },
-        module="timeseries",
+        module=MODULE,
         cluster=ClusterCommandConfig(
             route=NodeFlag.PRIMARIES,
             combine=ClusterMergeTimeSeries(),
@@ -849,7 +859,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
             "latest": {"version_introduced": "1.8.0"},
             "empty": {"version_introduced": "1.8.0"},
         },
-        module="timeseries",
+        module=MODULE,
         cluster=ClusterCommandConfig(
             route=NodeFlag.PRIMARIES, combine=ClusterMergeTimeSeries()
         ),
@@ -977,7 +987,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         group=CommandGroup.TIMESERIES,
         version_introduced="1.0.0",
         arguments={"latest": {"version_introduced": "1.8.0"}},
-        module="timeseries",
+        module=MODULE,
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
@@ -1008,7 +1018,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         group=CommandGroup.TIMESERIES,
         version_introduced="1.0.0",
         arguments={"latest": {"version_introduced": "1.8.0"}},
-        module="timeseries",
+        module=MODULE,
         cluster=ClusterCommandConfig(
             route=NodeFlag.PRIMARIES,
             combine=ClusterMergeTimeSeries(),
@@ -1061,7 +1071,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         CommandName.TS_INFO,
         group=CommandGroup.TIMESERIES,
         version_introduced="1.0.0",
-        module="timeseries",
+        module=MODULE,
     )
     async def info(
         self, key: KeyT, debug: Optional[bool] = None
@@ -1084,7 +1094,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         CommandName.TS_QUERYINDEX,
         group=CommandGroup.TIMESERIES,
         version_introduced="1.0.0",
-        module="timeseries",
+        module=MODULE,
         cluster=ClusterCommandConfig(
             route=NodeFlag.PRIMARIES,
             combine=ClusterMergeSets(),

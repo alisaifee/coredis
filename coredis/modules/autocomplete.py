@@ -8,6 +8,7 @@ from ..typing import AnyStr, CommandArgList, KeyT, Optional, StringT, Tuple, Uni
 from .base import ModuleGroup, module_command
 from .response._callbacks.autocomplete import AutocompleteCallback
 from .response.types import AutocompleteSuggestion
+from .search import RediSearch
 
 
 class Autocomplete(ModuleGroup[AnyStr]):
@@ -18,11 +19,11 @@ class Autocomplete(ModuleGroup[AnyStr]):
     .. versionadded:: 4.12
     """
 
-    MODULE = "search"
+    MODULE = RediSearch
 
     @module_command(
         CommandName.FT_SUGADD,
-        module="search",
+        module=MODULE,
         version_introduced="1.0.0",
         group=CommandGroup.SUGGESTION,
     )
@@ -57,7 +58,7 @@ class Autocomplete(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT_SUGGET,
-        module="search",
+        module=MODULE,
         version_introduced="1.0.0",
         group=CommandGroup.SUGGESTION,
         cache_config=CacheConfig(lambda *a, **_: a[0]),
@@ -105,7 +106,7 @@ class Autocomplete(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT_SUGDEL,
-        module="search",
+        module=MODULE,
         version_introduced="1.0.0",
         group=CommandGroup.SUGGESTION,
     )
@@ -125,7 +126,7 @@ class Autocomplete(ModuleGroup[AnyStr]):
 
     @module_command(
         CommandName.FT_SUGLEN,
-        module="search",
+        module=MODULE,
         version_introduced="1.0.0",
         group=CommandGroup.SUGGESTION,
     )
