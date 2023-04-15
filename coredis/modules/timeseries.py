@@ -474,7 +474,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param destination: Key name for the destination (compacted) time series.
         :return: True if the command executed correctly, False otherwise.
 
-        ..note:: This command does not delete the compacted series.
+        .. warning:: This command does not delete the compacted series.
         """
         pieces: CommandArgList = [source, destination]
 
