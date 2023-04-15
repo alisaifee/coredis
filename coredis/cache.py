@@ -177,14 +177,13 @@ class AbstractCache(ABC):
     def hashable_args(*args: Any) -> Tuple[Hashable, ...]:
         return tuple(
             (
-                k
-                if isinstance(k, Hashable)
-                else tuple(k)
-                if isinstance(k, list)
-                else tuple(k.items())
-                if isinstance(k, dict)
-                else None
-                for k in args
+                tuple(AbstractCache.hashable_args(v) for v in a)
+                if isinstance(a, (tuple, list))
+                else tuple((k, AbstractCache.hashable_args(v)) for k, v in a.items())
+                if isinstance(a, dict)
+                # this will fail downstream if `a` is not hashable
+                else a
+                for a in args
             )
         )
 
