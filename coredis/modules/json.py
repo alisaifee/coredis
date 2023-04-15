@@ -199,6 +199,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module="ReJSON",
         flags={CommandFlag.READONLY},
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def mget(self, keys: Parameters[KeyT], path: StringT) -> JsonType:
         """
@@ -295,6 +296,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module="ReJSON",
         flags={CommandFlag.READONLY},
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def strlen(
         self, key: KeyT, path: Optional[KeyT] = None
@@ -355,6 +357,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module="ReJSON",
         flags={CommandFlag.READONLY},
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def arrindex(
         self,
@@ -423,6 +426,8 @@ class Json(ModuleGroup[AnyStr]):
         group=CommandGroup.JSON,
         version_introduced="1.0.0",
         module="ReJSON",
+        flags={CommandFlag.READONLY},
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def arrlen(
         self, key: KeyT, path: Optional[KeyT] = None
@@ -556,6 +561,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module="ReJSON",
         flags={CommandFlag.READONLY},
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def type(
         self, key: KeyT, path: Optional[KeyT] = None

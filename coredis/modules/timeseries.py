@@ -26,8 +26,8 @@ from ..commands._validators import (
     mutually_exclusive_parameters,
     mutually_inclusive_parameters,
 )
-from ..commands._wrappers import ClusterCommandConfig
-from ..commands.constants import CommandGroup, CommandName, NodeFlag
+from ..commands._wrappers import CacheConfig, ClusterCommandConfig
+from ..commands.constants import CommandFlag, CommandGroup, CommandName, NodeFlag
 from ..response._callbacks import (
     ClusterMergeSets,
     IntCallback,
@@ -493,6 +493,8 @@ class TimeSeries(ModuleGroup[AnyStr]):
             "empty": {"version_introduced": "1.8.0"},
         },
         module="timeseries",
+        flags={CommandFlag.READONLY},
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def range(
         self,
@@ -595,6 +597,8 @@ class TimeSeries(ModuleGroup[AnyStr]):
             "empty": {"version_introduced": "1.8.0"},
         },
         module="timeseries",
+        flags={CommandFlag.READONLY},
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def revrange(
         self,
@@ -700,6 +704,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
             route=NodeFlag.PRIMARIES,
             combine=ClusterMergeTimeSeries(),
         ),
+        flags={CommandFlag.READONLY},
     )
     async def mrange(
         self,
@@ -848,6 +853,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         cluster=ClusterCommandConfig(
             route=NodeFlag.PRIMARIES, combine=ClusterMergeTimeSeries()
         ),
+        flags={CommandFlag.READONLY},
     )
     async def mrevrange(
         self,
@@ -972,6 +978,8 @@ class TimeSeries(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         arguments={"latest": {"version_introduced": "1.8.0"}},
         module="timeseries",
+        flags={CommandFlag.READONLY},
+        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def get(
         self, key: KeyT, latest: Optional[bool] = None
@@ -1005,6 +1013,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
             route=NodeFlag.PRIMARIES,
             combine=ClusterMergeTimeSeries(),
         ),
+        flags={CommandFlag.READONLY},
     )
     async def mget(
         self,
@@ -1080,6 +1089,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
             route=NodeFlag.PRIMARIES,
             combine=ClusterMergeSets(),
         ),
+        flags={CommandFlag.READONLY},
     )
     async def queryindex(self, filters: Parameters[StringT]) -> Set[AnyStr]:
         """

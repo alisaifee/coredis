@@ -579,6 +579,26 @@ async def redis_stack_resp2(redis_stack_server, request):
 
 
 @pytest.fixture
+async def redis_stack_cached(redis_stack_server, request):
+    cache = TrackingCache(max_size_bytes=-1)
+    client = coredis.Redis(
+        "localhost",
+        9379,
+        decode_responses=True,
+        cache=cache,
+        **get_client_test_args(request),
+    )
+    await check_test_constraints(request, client)
+    await client.flushall()
+    await set_default_test_config(client)
+
+    yield client
+    print(cache.stats)
+    client.connection_pool.disconnect()
+    cache.shutdown()
+
+
+@pytest.fixture
 async def redis_stack_raw_resp2(redis_stack_server, request):
     client = coredis.Redis(
         "localhost",
