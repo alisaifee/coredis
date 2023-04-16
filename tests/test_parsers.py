@@ -317,7 +317,6 @@ class TestPyParser:
             self.encoded_value(decode, b"re"): {1, 2, 3},
         }
 
-
     # edge cases with RESP3 where RESP3 structures can't be mapped 1:1
     # to python types
     def test_set_with_dict(self, parser, decode):
