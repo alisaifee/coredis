@@ -64,7 +64,6 @@ async def check_version(
     if getattr(instance, "verify_version", False) and not getattr(
         instance, "noreply", False
     ):
-        await instance.initialize()
         server_version = getattr(instance, "server_version", None)
         if not server_version:
             return
