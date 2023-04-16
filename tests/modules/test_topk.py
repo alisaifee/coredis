@@ -28,6 +28,16 @@ class TestTopK:
         assert (None, None, None) == await client.topk.add("topk", ["1", "2", "3"])
         assert ("1", "3", "4") == await client.topk.add("topk", ["4", "5", "6"])
 
+    async def test_incrby(self, client: Redis):
+        assert await client.topk.reserve("topk", 3)
+        assert (None, None, None) == await client.topk.add("topk", ["1", "2", "3"])
+        assert (None, None, None) == await client.topk.incrby(
+            "topk", {"1": 2, "2": 2, "3": 2}
+        )
+        assert (None, None, None) == await client.topk.add("topk", ["4", "5", "6"])
+        assert (None, None, None) == await client.topk.add("topk", ["4", "5", "6"])
+        assert ("1", "3", "4") == await client.topk.add("topk", ["4", "5", "6"])
+
     async def test_query(self, client: Redis):
         assert await client.topk.reserve("topk", 3)
         assert (None, None, None, "1", "3", "4") == await client.topk.add(

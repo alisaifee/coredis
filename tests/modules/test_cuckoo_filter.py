@@ -27,6 +27,13 @@ class TestCuckooFilter:
         assert info[0]["Bucket size"] == 2
         assert info[1]["Bucket size"] == 3
 
+        assert await client.cf.reserve("filter_custom_expansion", 4, 2, 1, 2)
+        [await client.cf.add("filter_expansion", i) for i in range(0, 4)]
+        info = await client.cf.info("filter_expansion")
+        assert info["Number of filters"] == 1
+        assert info["Max iterations"] == 1
+        assert info["Expansion rate"] == 2
+
     async def test_add(self, client: Redis):
         assert True is await client.cf.add("filter", 1)
         assert True is await client.cf.add("filter", 1)
