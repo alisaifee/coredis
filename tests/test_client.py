@@ -61,8 +61,9 @@ class TestClient:
         with pytest.raises(CommandNotSupportedError):
             await client.function_list()
 
-    @pytest.mark.max_server_version("7.0.0")
+    @pytest.mark.max_server_version("6.2.9")
     async def test_unsupported_argument_7_x(self, client):
+        await client.ping()
         with pytest.raises(CommandSyntaxError):
             await client.expire("test", 10, condition=PureToken.NX)
 
