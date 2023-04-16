@@ -9,7 +9,7 @@ from collections import Counter
 from typing import TYPE_CHECKING, Any
 
 from coredis._sidecar import Sidecar
-from coredis._utils import b
+from coredis._utils import b, make_hashable
 from coredis.commands import PubSub
 from coredis.connection import BaseConnection
 from coredis.typing import (
@@ -172,20 +172,6 @@ class AbstractCache(ABC):
         Explicitly shutdown the cache
         """
         ...
-
-    @staticmethod
-    def hashable_args(*args: Any) -> Tuple[Hashable, ...]:
-        return tuple(
-            (
-                tuple(AbstractCache.hashable_args(v) for v in a)
-                if isinstance(a, (tuple, list))
-                else tuple((k, AbstractCache.hashable_args(v)) for k, v in a.items())
-                if isinstance(a, dict)
-                # this will fail downstream if `a` is not hashable
-                else a
-                for a in args
-            )
-        )
 
 
 @runtime_checkable
@@ -417,9 +403,7 @@ class NodeTrackingCache(
 
     def get(self, command: bytes, key: bytes, *args: ValueT) -> ResponseType:
         try:
-            cached = (
-                self.__cache.get(b(key)).get(command).get(self.hashable_args(*args))
-            )
+            cached = self.__cache.get(b(key)).get(command).get(make_hashable(*args))
             self.__stats.hit(key)
 
             return cached
@@ -432,7 +416,7 @@ class NodeTrackingCache(
     ) -> None:
         self.__cache.setdefault(b(key), LRUCache()).setdefault(
             command, LRUCache()
-        ).insert(self.hashable_args(*args), value)
+        ).insert(make_hashable(*args), value)
 
     def invalidate(self, *keys: ValueT) -> None:
         for key in keys:
@@ -649,9 +633,7 @@ class ClusterTrackingCache(
 
     def get(self, command: bytes, key: bytes, *args: ValueT) -> ResponseType:
         try:
-            cached = (
-                self.__cache.get(b(key)).get(command).get(self.hashable_args(*args))
-            )
+            cached = self.__cache.get(b(key)).get(command).get(make_hashable(*args))
             self.__stats.hit(key)
 
             return cached
@@ -664,7 +646,7 @@ class ClusterTrackingCache(
     ) -> None:
         self.__cache.setdefault(b(key), LRUCache()).setdefault(
             command, LRUCache()
-        ).insert(self.hashable_args(*args), value)
+        ).insert(make_hashable(*args), value)
 
     def invalidate(self, *keys: ValueT) -> None:
         for key in keys:

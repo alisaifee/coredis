@@ -13,6 +13,7 @@ from typing import (
     ContextManager,
     Coroutine,
     Dict,
+    FrozenSet,
     Generator,
     Generic,
     Hashable,
@@ -60,6 +61,7 @@ try:
             AbstractSet,
             Deque,
             Dict,
+            FrozenSet,
             Iterable,
             Iterator,
             List,
@@ -177,8 +179,21 @@ if TYPE_CHECKING:
     ResponseType = Union[
         ResponsePrimitive,
         List["ResponseType"],
-        MutableSet[Union[ResponsePrimitive, Tuple[ResponsePrimitive, ...]]],
-        Dict[ResponsePrimitive, "ResponseType"],
+        MutableSet[
+            Union[
+                ResponsePrimitive,
+                Tuple[ResponsePrimitive, ...],
+                FrozenSet[ResponsePrimitive],
+            ]
+        ],
+        Dict[
+            Union[
+                ResponsePrimitive,
+                Tuple[ResponsePrimitive, ...],
+                FrozenSet[ResponsePrimitive],
+            ],
+            "ResponseType",
+        ],
         RedisError,  # response errors get mapped to exceptions.
     ]
 else:
@@ -187,8 +202,21 @@ else:
     ResponseType = Union[
         ResponsePrimitive,
         List[Any],
-        MutableSet[Union[ResponsePrimitive, Tuple[ResponsePrimitive, ...]]],
-        Dict[ResponsePrimitive, Any],
+        MutableSet[
+            Union[
+                ResponsePrimitive,
+                Tuple[ResponsePrimitive, ...],
+                FrozenSet[ResponsePrimitive],
+            ]
+        ],
+        Dict[
+            Union[
+                ResponsePrimitive,
+                Tuple[ResponsePrimitive, ...],
+                FrozenSet[ResponsePrimitive],
+            ],
+            Any,
+        ],
         RedisError,  # response errors get mapped to exceptions.
     ]
 __all__ = [
@@ -205,6 +233,7 @@ __all__ = [
     "Deque",
     "Dict",
     "Final",
+    "FrozenSet",
     "Generic",
     "Generator",
     "Hashable",

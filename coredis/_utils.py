@@ -6,6 +6,7 @@ from typing import Any
 from wrapt import ObjectProxy
 
 from coredis.typing import (
+    Hashable,
     Iterable,
     List,
     Mapping,
@@ -170,6 +171,22 @@ def dict_to_flat_list(
         ret.append(e2[idx])
 
     return ret
+
+
+def make_hashable(*args: Any) -> Tuple[Hashable, ...]:
+    return tuple(
+        (
+            tuple(make_hashable(v)[0] for v in a)
+            if isinstance(a, (tuple, list))
+            else frozenset(make_hashable(v)[0] for v in a)
+            if isinstance(a, set)
+            else tuple((k, make_hashable(v)[0]) for k, v in a.items())
+            if isinstance(a, dict)
+            # this will fail downstream if `a` is not hashable
+            else a
+            for a in args
+        )
+    )
 
 
 # ++++++++++ cluster utils ++++++++++++++

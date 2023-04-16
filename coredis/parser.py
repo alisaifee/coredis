@@ -5,7 +5,7 @@ from io import BytesIO
 from typing import Type, cast
 
 from coredis._protocols import ConnectionP
-from coredis._utils import b
+from coredis._utils import b, make_hashable
 from coredis.constants import SYM_CRLF, RESPDataType
 from coredis.exceptions import (
     AskError,
@@ -36,6 +36,7 @@ from coredis.exceptions import (
 from coredis.typing import (
     Dict,
     Final,
+    FrozenSet,
     List,
     MutableSet,
     NamedTuple,
@@ -58,14 +59,20 @@ NOT_ENOUGH_DATA: Final[NotEnoughData] = NotEnoughData()
 class RESPNode:
     __slots__ = ("depth", "key", "node_type")
     depth: int
-    key: ResponsePrimitive
+    key: Union[
+        ResponsePrimitive, Tuple[ResponsePrimitive, ...], FrozenSet[ResponsePrimitive]
+    ]
     node_type: int
 
     def __init__(
         self,
         depth: int,
         node_type: int,
-        key: ResponsePrimitive,
+        key: Union[
+            ResponsePrimitive,
+            Tuple[ResponsePrimitive, ...],
+            FrozenSet[ResponsePrimitive],
+        ],
     ):
         self.depth = depth
         self.node_type = node_type
@@ -91,13 +98,27 @@ class DictNode(RESPNode):
     __slots__ = ("container",)
 
     def __init__(self, depth: int) -> None:
-        self.container: Dict[ResponsePrimitive, ResponseType] = {}
+        self.container: Dict[
+            Union[
+                ResponsePrimitive,
+                Tuple[ResponsePrimitive, ...],
+                FrozenSet[ResponsePrimitive],
+            ],
+            ResponseType,
+        ] = {}
         super().__init__(depth * 2, RESPDataType.MAP, None)
 
     def append(self, item: ResponseType) -> None:
         self.depth -= 1
         if not self.key:
-            self.key = cast(ResponsePrimitive, item)
+            self.key = cast(
+                Union[
+                    ResponsePrimitive,
+                    Tuple[ResponsePrimitive, ...],
+                    FrozenSet[ResponsePrimitive],
+                ],
+                make_hashable(item)[0],
+            )
         else:
             self.container[self.key] = item
             self.key = None
@@ -108,7 +129,11 @@ class SetNode(RESPNode):
 
     def __init__(self, depth: int) -> None:
         self.container: MutableSet[
-            Union[ResponsePrimitive, Tuple[ResponsePrimitive, ...]]
+            Union[
+                ResponsePrimitive,
+                Tuple[ResponsePrimitive, ...],
+                FrozenSet[ResponsePrimitive],
+            ]
         ] = set()
         super().__init__(depth, RESPDataType.SET, None)
 
@@ -117,7 +142,16 @@ class SetNode(RESPNode):
         item: ResponseType,
     ) -> None:
         self.depth -= 1
-        self.container.add(cast(ResponsePrimitive, item))
+        self.container.add(
+            cast(
+                Union[
+                    ResponsePrimitive,
+                    Tuple[ResponsePrimitive, ...],
+                    FrozenSet[ResponsePrimitive],
+                ],
+                make_hashable(item)[0],
+            )
+        )
 
 
 class UnpackedResponse(NamedTuple):

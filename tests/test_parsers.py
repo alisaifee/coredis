@@ -317,13 +317,28 @@ class TestPyParser:
             self.encoded_value(decode, b"re"): {1, 2, 3},
         }
 
+
+    # edge cases with RESP3 where RESP3 structures can't be mapped 1:1
+    # to python types
     def test_set_with_dict(self, parser, decode):
-        # set containing a dict
-        # This specifically represents a minimal example of the response from
-        # ``COMMANDS INFO with RESP 3``
         parser.feed(b"~1\r\n%1\r\n:1\r\n:2\r\n")
-        with pytest.raises(TypeError):
-            parser.get_response(
-                decode=decode,
-                encoding="latin-1",
-            )
+        assert {((1, 2),)} == parser.get_response(
+            decode=decode,
+            encoding="latin-1",
+        )
+
+    def test_dict_with_set_key(self, parser, decode):
+        # dict with a set as a key
+        parser.feed(b"%1\r\n~1\r\n:1\r\n:2\r\n")
+        assert {frozenset([1]): 2} == parser.get_response(
+            decode=decode,
+            encoding="latin-1",
+        )
+
+    def test_dict_with_list_key(self, parser, decode):
+        # dict with a list as a key
+        parser.feed(b"%1\r\n*1\r\n:1\r\n:2\r\n")
+        assert {(1,): 2} == parser.get_response(
+            decode=decode,
+            encoding="latin-1",
+        )
