@@ -59,8 +59,8 @@ class RedisTimeSeries(Module[AnyStr]):
     NAME = "timeseries"
     FULL_NAME = "RedisTimeSeries"
     DESCRIPTION = """RedisTimeSeries is a Redis module that implements a time series 
-    data structure. It is designed to be used as a database for time series data, 
-    and is optimized for fast insertion and retrieval of time series data.
+data structure. It is designed to be used as a database for time series data, 
+and is optimized for fast insertion and retrieval of time series data.
     """
     DOCUMENTATION_URL = "https://redis.io/docs/stack/timeseries/"
 

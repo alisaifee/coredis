@@ -183,9 +183,9 @@ class ModuleRegistry(ABCMeta):
             MODULES[kls.NAME] = kls
             kls.__doc__ = textwrap.dedent(kls.__doc__ or "")
             kls.__doc__ += f"""
-Container for the `{kls.FULL_NAME} <{kls.DOCUMENTATION_URL}>`__ module.
-
-{kls.DESCRIPTION}
+Type representation of the `{kls.FULL_NAME} <{kls.DOCUMENTATION_URL}>`__ module.
+The class isn't meant to be used directly and exists as a convenient way to capture
+module attributes for documentation & internal use.
             """
         return kls
 
@@ -228,35 +228,25 @@ class Module(Generic[AnyStr], metaclass=ModuleRegistry):
     NAME: ClassVar[str]
     """
     The name of the module as reported by ``MODULES LIST``
-    
-    :meta private: 
     """
     FULL_NAME: ClassVar[str]
     """
     The common name used to refer to the module if it differs from
     the internal name
-    
-    :meta private: 
     """
     DESCRIPTION: ClassVar[str]
     """
     A brief description of what the module does
-    
-    :meta private: 
     """
     DOCUMENTATION_URL: ClassVar[str]
     """
     A link to the module documentation
-    
-    :meta private: 
     """
 
     COMMAND_GROUPS: ClassVar[Dict[CommandGroup, Type[ModuleGroup[Any]]]]
     """
     Mapping of command groups that implement this module. This is auto
     populated by the :class:`ModuleGroupRegistry` metaclass.
-    
-    :meta private: 
     """
 
 

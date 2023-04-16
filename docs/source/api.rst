@@ -246,13 +246,6 @@ TimeSeries
 .. autoclass:: coredis.modules.TimeSeries
 
 
-Module Containers
------------------
-.. autoclass:: coredis.modules.ReJSON
-.. autoclass:: coredis.modules.RedisBloom
-.. autoclass:: coredis.modules.RedisTimeSeries
-.. autoclass:: coredis.modules.RediSearch
-
 Connection Pools
 ^^^^^^^^^^^^^^^^
 .. currentmodule:: coredis
