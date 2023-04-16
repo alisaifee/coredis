@@ -292,22 +292,22 @@ class RedisCluster(
             - :paramref:`retry_policy`
             - :paramref:`noevict`
             - :paramref:`notouch`
-            - :meth:`Redis.ensure_persistence` context manager
+            - :meth:`RedisCluster.ensure_persistence` context manager
             - Redis Module support
 
-              - RedisJSON: :attr:`Redis.json`
+              - RedisJSON: :attr:`RedisCluster.json`
               - RedisBloom:
 
-                - BloomFilter: :attr:`Redis.bf`
-                - CuckooFilter: :attr:`Redis.cf`
-                - CountMinSketch: :attr:`Redis.cms`
-                - TopK: :attr:`Redis.topk`
-                - TDigest: :attr:`Redis.tdigest`
-              - RedisTimeSeries: :attr:`Redis.timeseries`
+                - BloomFilter: :attr:`RedisCluster.bf`
+                - CuckooFilter: :attr:`RedisCluster.cf`
+                - CountMinSketch: :attr:`RedisCluster.cms`
+                - TopK: :attr:`RedisCluster.topk`
+                - TDigest: :attr:`RedisCluster.tdigest`
+              - RedisTimeSeries: :attr:`RedisCluster.timeseries`
               - RediSearch:
 
-                - Search & Aggregation: :attr:`Redis.search`
-                - Autocomplete: Added :attr:`Redis.autocomplete`
+                - Search & Aggregation: :attr:`RedisCluster.search`
+                - Autocomplete: Added :attr:`RedisCluster.autocomplete`
 
           - .. versionchanged:: 4.4.0
 
