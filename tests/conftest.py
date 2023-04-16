@@ -90,10 +90,9 @@ async def get_module_versions(client):
             mod = EncodingInsensitiveDict(module)
             name = nativestr(mod["name"])
             ver = mod["ver"]
-            patch = ver % 100
-            ver = int(str(ver)[:-2])
-            minor = ver % 100
-            major = int(str(ver)[:-2])
+            ver, patch = divmod(ver, 100)
+            ver, minor = divmod(ver, 100)
+            ver, major = divmod(ver, 100)
             MODULE_VERSIONS.setdefault(str(client), {})[name] = version.Version(
                 f"{major}.{minor}.{patch}"
             )
