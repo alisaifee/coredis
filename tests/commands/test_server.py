@@ -40,7 +40,6 @@ class TestServer:
         assert await client.command_count() > 100  # :D
 
     @pytest.mark.min_server_version("7.0.0")
-    @pytest.mark.noresp3
     async def test_command_docs(self, client, _s):
         docs = await client.command_docs("geosearch")
         assert _s("summary") in docs[_s("geosearch")]
@@ -48,7 +47,6 @@ class TestServer:
         docs = await client.command_docs("get", "set")
         assert {_s("get"), _s("set")} & set(docs.keys())
 
-    @pytest.mark.noresp3
     async def test_commands_get(self, client, _s):
         commands = await client.command()
         assert commands["get"]
@@ -56,7 +54,6 @@ class TestServer:
         assert commands["get"]["name"] == _s("get")
         assert commands["get"]["arity"] == 2
 
-    @pytest.mark.noresp3
     async def test_command_info(self, client, _s):
         commands = await client.command_info("get")
         assert list(commands.keys()) == ["get"]
