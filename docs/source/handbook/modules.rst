@@ -4,7 +4,7 @@ Redis Modules
 
 coredis contains built in support for a few popular :term:`Redis Modules`.
 
-RedisJson
+RedisJSON
 ^^^^^^^^^
 `RedisJSON` adds native support for storing and retrieving JSON documents.
 

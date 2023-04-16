@@ -30,7 +30,7 @@ from .response._callbacks.json import JsonCallback
 from .response.types import JsonType
 
 
-class ReJSON(Module[AnyStr]):
+class RedisJSON(Module[AnyStr]):
     NAME = "ReJSON"
     FULL_NAME = "RedisJSON"
     DESCRIPTION = """RedisJSON is a Redis module that implements a JSON data type 
@@ -40,7 +40,7 @@ and a set of commands to operate on it."""
 
 @versionadded(version="4.12")
 class Json(ModuleGroup[AnyStr]):
-    MODULE = ReJSON
+    MODULE = RedisJSON
     COMMAND_GROUP = CommandGroup.JSON
 
     @module_command(

@@ -175,7 +175,7 @@ by a weak reference to the client itself.
 The module commands can also be accessed by instantiating instances
 of the module command group classes (listed in the sections below) directly.
 
-To access the :class:`~coredis.modules.Json` command group from the :class:`coredis.modules.ReJSON` module for example::
+To access the :class:`~coredis.modules.Json` command group from the :class:`coredis.modules.RedisJSON` module for example::
 
     import coredis
 
@@ -189,7 +189,7 @@ To access the :class:`~coredis.modules.Json` command group from the :class:`core
 
 
 
-ReJSON
+RedisJSON
 ------
 .. autoclass:: coredis.modules.Json
 

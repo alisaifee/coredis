@@ -32,11 +32,11 @@ MAX_SUPPORTED_VERSION = version.parse("7.999.999")
 MIN_SUPPORTED_VERSION = version.parse("5.999.999")
 
 MODULES = {
-    "ReJSON": {
+    "RedisJSON": {
         "repo": "https://github.com/RedisJSON/RedisJSON",
         "prefix": "json",
         "group": "json",
-        "module": "ReJSON",
+        "module": "RedisJSON",
     },
     "bloom": {
         "repo": "https://github.com/RedisBloom/RedisBloom",
@@ -2739,7 +2739,7 @@ def cluster_key_extraction(path):
     all["KEYDB.MEXISTS"] = ["args[1:]"]
     all["OBJECT LASTMODIFIED"] = ["(args[1],)"]
 
-    # ReJSON
+    # RedisJSON
     all["JSON.DEBUG MEMORY"] = fixed_args["first"]
     all["JSON.DEL"] = fixed_args["first"]
     all["JSON.FORGET"] = fixed_args["first"]

@@ -14,7 +14,7 @@ from .filters import (
     TDigest,
     TopK,
 )
-from .json import Json, ReJSON
+from .json import Json, RedisJSON
 from .search import RediSearch, Search
 from .timeseries import RedisTimeSeries, TimeSeries
 
@@ -96,7 +96,7 @@ class ModuleMixin(CommandMixin[AnyStr]):
 __all__ = [
     "RediSearch",
     "RedisBloom",
-    "ReJSON",
+    "RedisJSON",
     "RedisTimeSeries",
     "Json",
     "BloomFilter",

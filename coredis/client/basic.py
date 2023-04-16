@@ -659,7 +659,7 @@ class Redis(Client[AnyStr]):
             - :meth:`Redis.ensure_persistence` context manager
             - Redis Module support
 
-              - ReJSON: :attr:`Redis.json`
+              - RedisJSON: :attr:`Redis.json`
               - RedisBloom:
 
                 - BloomFilter: :attr:`Redis.bf`

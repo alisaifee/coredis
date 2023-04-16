@@ -76,7 +76,7 @@ $ pip install coredis
 - [Redis Libraries and functions](https://coredis.readthedocs.org/en/latest/handbook/scripting.html#library-functions) [`>= Redis 7.0`]
 
 ### Redis Modules
-- [RedisJson](https://coredis.readthedocs.org/en/latest/handbook/modules.html#redisjson)
+- [RedisJSON](https://coredis.readthedocs.org/en/latest/handbook/modules.html#redisjson)
 - [RediSearch](https://coredis.readthedocs.org/en/latest/handbook/modules.html#redisearch)
 - [RedisBloom](https://coredis.readthedocs.org/en/latest/handbook/modules.html#redisbloom)
 - [RedisTimeSeries](https://coredis.readthedocs.org/en/latest/handbook/modules.html#redistimeseries)
