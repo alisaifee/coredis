@@ -85,17 +85,20 @@ class UnparseableVersion:
 async def get_module_versions(client):
     if str(client) not in MODULE_VERSIONS:
         MODULE_VERSIONS[str(client)] = {}
-        module_list = await client.module_list()
-        for module in module_list:
-            mod = EncodingInsensitiveDict(module)
-            name = nativestr(mod["name"])
-            ver = mod["ver"]
-            ver, patch = divmod(ver, 100)
-            ver, minor = divmod(ver, 100)
-            ver, major = divmod(ver, 100)
-            MODULE_VERSIONS.setdefault(str(client), {})[name] = version.Version(
-                f"{major}.{minor}.{patch}"
-            )
+        try:
+            module_list = await client.module_list()
+            for module in module_list:
+                mod = EncodingInsensitiveDict(module)
+                name = nativestr(mod["name"])
+                ver = mod["ver"]
+                ver, patch = divmod(ver, 100)
+                ver, minor = divmod(ver, 100)
+                ver, major = divmod(ver, 100)
+                MODULE_VERSIONS.setdefault(str(client), {})[name] = version.Version(
+                    f"{major}.{minor}.{patch}"
+                )
+        except Exception:
+            pass
     return MODULE_VERSIONS[str(client)]
 
 
