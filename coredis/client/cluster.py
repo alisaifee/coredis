@@ -1061,6 +1061,7 @@ class RedisCluster(
         self,
         transaction: Optional[bool] = None,
         watches: Optional[Parameters[StringT]] = None,
+        timeout: Optional[float] = None,
     ) -> "coredis.pipeline.ClusterPipeline[AnyStr]":
         """
         Returns a new pipeline object that can queue multiple commands for
@@ -1077,6 +1078,8 @@ class RedisCluster(
         :param transaction: indicates whether all commands should be executed atomically.
         :param watches: If :paramref:`transaction` is True these keys are watched for external
          changes during the transaction.
+        :param timeout: If specified this value will take precedence over
+         :paramref:`RedisCluster.stream_timeout`
 
         """
         await self.connection_pool.initialize()
@@ -1088,6 +1091,7 @@ class RedisCluster(
             result_callbacks=self.result_callbacks,
             transaction=transaction,
             watches=watches,
+            timeout=timeout,
         )
 
     async def transaction(

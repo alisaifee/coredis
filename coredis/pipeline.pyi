@@ -38,6 +38,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         connection_pool: "ConnectionPool",
         transaction: "Optional[bool]",
         watches: "Optional[Parameters[KeyT]]" = ...,
+        timeout: "Optional[float]" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def copy(
         self,
@@ -1120,6 +1121,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         result_callbacks: "Optional[Dict[bytes, Callable[..., Any]]]" = ...,
         transaction: "Optional[bool]" = ...,
         watches: "Optional[Parameters[KeyT]]" = ...,
+        timeout: "Optional[float]" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def copy(
         self,

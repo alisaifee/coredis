@@ -1080,6 +1080,7 @@ class Redis(Client[AnyStr]):
         self,
         transaction: Optional[bool] = True,
         watches: Optional[Parameters[KeyT]] = None,
+        timeout: Optional[float] = None,
     ) -> "coredis.pipeline.Pipeline[AnyStr]":
         """
         Returns a new pipeline object that can queue multiple commands for
@@ -1088,10 +1089,14 @@ class Redis(Client[AnyStr]):
         :param transaction: indicates whether all commands should be executed atomically.
         :param watches: If :paramref:`transaction` is True these keys are watched for external
          changes during the transaction.
+        :param timeout: If specified this value will take precedence over
+         :paramref:`Redis.stream_timeout`
         """
         from coredis.pipeline import Pipeline
 
-        return Pipeline[AnyStr].proxy(self.connection_pool, transaction, watches)
+        return Pipeline[AnyStr].proxy(
+            self.connection_pool, transaction, watches, timeout
+        )
 
     async def transaction(
         self,

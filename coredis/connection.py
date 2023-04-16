@@ -553,13 +553,23 @@ class BaseConnection(asyncio.BaseProtocol):
             )
         return message
 
-    async def _send_packed_command(self, command: List[bytes]) -> None:
+    async def _send_packed_command(
+        self, command: List[bytes], timeout: Optional[float] = None
+    ) -> None:
         """
         Sends an already packed command to the Redis server
         """
 
         assert self._transport
-        await self._write_ready.wait()
+        try:
+            async with async_timeout.timeout(timeout):
+                await self._write_ready.wait()
+        except asyncio.TimeoutError:
+            if self._transport:
+                self.disconnect()
+            raise TimeoutError(
+                f"Unable to write after waiting for socket for {timeout} seconds"
+            )
         self._transport.writelines(command)
 
     async def send_command(
@@ -586,6 +596,7 @@ class BaseConnection(asyncio.BaseProtocol):
         decode: Optional[ValueT] = None,
         encoding: Optional[str] = None,
         raise_exceptions: bool = True,
+        timeout: Optional[float] = None,
     ) -> asyncio.Future[ResponseType]:
         """
         Send a command to the redis server
@@ -596,12 +607,13 @@ class BaseConnection(asyncio.BaseProtocol):
             await self.connect()
 
         cmd_list = []
+        request_timeout: Optional[float] = timeout or self._stream_timeout
         if self.is_connected and noreply and not self.noreply:
             cmd_list = self.packer.pack_command(
                 CommandName.CLIENT_REPLY, PureToken.SKIP
             )
         cmd_list.extend(self.packer.pack_command(command, *args))
-        await self._send_packed_command(cmd_list)
+        await self._send_packed_command(cmd_list, timeout=request_timeout)
 
         self.last_active_at = time.time()
 
@@ -613,10 +625,14 @@ class BaseConnection(asyncio.BaseProtocol):
                 raise_exceptions,
             )
             self._requests.append(request)
-            if self._stream_timeout is not None:
+
+            if request_timeout is not None:
                 asyncio.get_running_loop().call_later(
-                    self._stream_timeout,
-                    functools.partial(request.enforce_deadline, self._stream_timeout),
+                    request_timeout,
+                    functools.partial(
+                        request.enforce_deadline,
+                        request_timeout,
+                    ),
                 )
             return request.future
         else:
@@ -628,6 +644,7 @@ class BaseConnection(asyncio.BaseProtocol):
         self,
         commands: List[CommandInvocation],
         raise_exceptions: bool = True,
+        timeout: Optional[float] = None,
     ) -> List[asyncio.Future[ResponseType]]:
         """
         Send multiple commands to the redis server
@@ -639,7 +656,8 @@ class BaseConnection(asyncio.BaseProtocol):
         await self._send_packed_command(
             self.packer.pack_commands(
                 list(itertools.chain((cmd.command, *cmd.args) for cmd in commands))
-            )
+            ),
+            timeout=timeout,
         )
 
         self.last_active_at = time.time()

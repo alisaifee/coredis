@@ -125,10 +125,12 @@ class NodeCommands:
         self,
         connection: ClusterConnection,
         in_transaction: bool = False,
+        timeout: Optional[float] = None,
     ):
         self.connection = connection
         self.commands: List[ClusterPipelineCommand] = []
         self.in_transaction = in_transaction
+        self.timeout = timeout
 
     def extend(self, c: List[ClusterPipelineCommand]) -> None:
         self.commands.extend(c)
@@ -160,7 +162,8 @@ class NodeCommands:
                         None,
                     )
                     for cmd in commands
-                ]
+                ],
+                timeout=self.timeout,
             )
             for i, cmd in enumerate(commands):
                 cmd.request = requests[i]
@@ -278,6 +281,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         connection_pool: ConnectionPool,
         transaction: Optional[bool],
         watches: Optional[Parameters[KeyT]] = None,
+        timeout: Optional[float] = None,
     ) -> None:
         self.connection_pool = connection_pool
         self.connection = None
@@ -288,6 +292,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         self.cache = None  # not implemented.
         self.explicit_transaction = False
         self.scripts: Set[Script[AnyStr]] = set()
+        self.timeout = timeout
 
     async def __aenter__(self) -> "PipelineImpl[AnyStr]":
         return self
@@ -486,7 +491,8 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
                     None,
                 )
                 for cmd in cmds
-            ]
+            ],
+            timeout=self.timeout,
         )
         for i, cmd in enumerate(cmds):
             cmd.request = requests[i]
@@ -542,7 +548,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
             if self.connection:
                 self.connection.disconnect()
             raise ResponseError(
-                "Wrong number of response items from " "pipeline execution"
+                "Wrong number of response items from pipeline execution"
             )
 
         # find any errors in the response and raise if necessary
@@ -575,7 +581,8 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
                     None,
                 )
                 for cmd in commands
-            ]
+            ],
+            timeout=self.timeout,
         )
         for i, cmd in enumerate(commands):
             cmd.request = requests[i]
@@ -727,6 +734,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         result_callbacks: Optional[Dict[bytes, Callable[..., Any]]] = None,
         transaction: Optional[bool] = False,
         watches: Optional[Parameters[KeyT]] = None,
+        timeout: Optional[float] = None,
     ) -> None:
         self.command_stack = []
         self.refresh_table_asap = False
@@ -739,6 +747,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         self.watching = False
         self.explicit_transaction = False
         self.cache = None  # not implemented.
+        self.timeout = timeout
 
     async def watch(self, *keys: KeyT) -> bool:
         if self.explicit_transaction:
@@ -897,7 +906,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
         if self.watches:
             await self._watch(node, conn, self.watches)
-        node_commands = NodeCommands(conn, in_transaction=True)
+        node_commands = NodeCommands(conn, in_transaction=True, timeout=self.timeout)
         node_commands.append(ClusterPipelineCommand(CommandName.MULTI, ()))
         node_commands.extend(attempt)
         node_commands.append(ClusterPipelineCommand(CommandName.EXEC, ()))
@@ -959,6 +968,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
             if node.name not in nodes:
                 nodes[node.name] = NodeCommands(
                     await self.connection_pool.get_connection_by_node(node),
+                    timeout=self.timeout,
                 )
 
             nodes[node.name].append(c)
@@ -1196,12 +1206,14 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         connection_pool: ConnectionPool,
         transaction: Optional[bool] = None,
         watches: Optional[Parameters[KeyT]] = None,
+        timeout: Optional[float] = None,
     ) -> Pipeline[AnyStr]:
         return cls(
             PipelineImpl(
                 connection_pool,
                 transaction=transaction,
                 watches=watches,
+                timeout=timeout,
             )
         )
 
@@ -1273,6 +1285,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         result_callbacks: Optional[Dict[bytes, Callable[..., Any]]] = None,
         transaction: Optional[bool] = False,
         watches: Optional[Parameters[KeyT]] = None,
+        timeout: Optional[float] = None,
     ) -> ClusterPipeline[AnyStr]:
         return cls(
             ClusterPipelineImpl(
@@ -1280,6 +1293,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
                 result_callbacks=result_callbacks,
                 transaction=transaction,
                 watches=watches,
+                timeout=timeout,
             )
         )
 
