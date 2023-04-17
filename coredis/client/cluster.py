@@ -574,9 +574,8 @@ class RedisCluster(
             - ``redis://[:password]@localhost:6379``
             - ``rediss://[:password]@localhost:6379``
 
-        Any additional querystring arguments and keyword arguments will be
-        passed along to the :class:`ClusterConnectionPool` class's initializer.
-        In the case of conflicting arguments, querystring arguments always win.
+        :paramref:`url` and :paramref:`kwargs` are passed as is to
+        the :func:`coredis.ConnectionPool.from_url`.
         """
         if decode_responses:
             return cls(

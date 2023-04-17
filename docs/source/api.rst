@@ -255,24 +255,24 @@ Connection Pools
 
 Connection Pool
 ---------------
-.. autoclass:: coredis.pool.ConnectionPool
+.. autoclass:: coredis.ConnectionPool
    :class-doc-from: both
 
 Blocking Connection Pool
 ------------------------
-.. autoclass:: coredis.pool.BlockingConnectionPool
+.. autoclass:: coredis.BlockingConnectionPool
    :class-doc-from: both
    :show-inheritance:
 
 Cluster Connection Pool
 -----------------------
-.. autoclass:: coredis.pool.ClusterConnectionPool
+.. autoclass:: coredis.ClusterConnectionPool
    :class-doc-from: both
    :show-inheritance:
 
 Blocking Cluster Connection Pool
 --------------------------------
-.. autoclass:: coredis.pool.BlockingClusterConnectionPool
+.. autoclass:: coredis.BlockingClusterConnectionPool
    :class-doc-from: both
    :show-inheritance:
 

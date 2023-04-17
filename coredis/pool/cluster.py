@@ -16,13 +16,37 @@ from coredis.exceptions import ConnectionError, RedisClusterException
 from coredis.globals import READONLY_COMMANDS
 from coredis.pool.basic import ConnectionPool
 from coredis.pool.nodemanager import ManagedNode, NodeManager
-from coredis.typing import Dict, Iterable, Node, Optional, Set, StringT, Type, ValueT
+from coredis.typing import (
+    Callable,
+    ClassVar,
+    Dict,
+    Iterable,
+    Node,
+    Optional,
+    Set,
+    StringT,
+    Type,
+    Union,
+    ValueT,
+)
 
 
 class ClusterConnectionPool(ConnectionPool):
     """
     Custom connection pool for :class:`~coredis.RedisCluster` client
     """
+
+    #: Mapping of querystring arguments to their parser functions
+    URL_QUERY_ARGUMENT_PARSERS: ClassVar[
+        Dict[str, Callable[..., Optional[Union[int, float, bool, str]]]]
+    ] = {
+        **ConnectionPool.URL_QUERY_ARGUMENT_PARSERS,
+        "max_connections_per_node": bool,
+        "reinitialize_steps": int,
+        "skip_full_coverage_check": bool,
+        "read_from_replicas": bool,
+        "blocking": bool,
+    }
 
     nodes: NodeManager
     connection_class: Type[ClusterConnection]

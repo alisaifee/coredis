@@ -21,6 +21,7 @@ from coredis.connection import (
 from coredis.exceptions import ConnectionError
 from coredis.typing import (
     Callable,
+    ClassVar,
     Dict,
     List,
     Optional,
@@ -45,26 +46,27 @@ def to_bool(value: Optional[StringT]) -> Optional[bool]:
     return bool(value)
 
 
-URL_QUERY_ARGUMENT_PARSERS: Dict[
-    str, Callable[..., Optional[Union[int, float, bool, str]]]
-] = {
-    "client_name": str,
-    "stream_timeout": float,
-    "connect_timeout": float,
-    "max_connections": int,
-    "max_idle_time": int,
-    "protocol_version": int,
-    "idle_check_interval": int,
-    "noreply": bool,
-    "noevict": bool,
-    "notouch": bool,
-}
-
 _CPT = TypeVar("_CPT", bound="ConnectionPool")
 
 
 class ConnectionPool:
     """Generic connection pool"""
+
+    #: Mapping of querystring arguments to their parser functions
+    URL_QUERY_ARGUMENT_PARSERS: ClassVar[
+        Dict[str, Callable[..., Optional[Union[int, float, bool, str]]]]
+    ] = {
+        "client_name": str,
+        "stream_timeout": float,
+        "connect_timeout": float,
+        "max_connections": int,
+        "max_idle_time": int,
+        "protocol_version": int,
+        "idle_check_interval": int,
+        "noreply": bool,
+        "noevict": bool,
+        "notouch": bool,
+    }
 
     @classmethod
     def from_url(
@@ -93,21 +95,23 @@ class ConnectionPool:
 
         There are several ways to specify a database number. The parse function
         will return the first specified option:
-        1. A ``db`` querystring option, e.g. redis://localhost?db=0
-        2. If using the redis:// scheme, the path argument of the url, e.g.
-        redis://localhost/0
-        3. The ``db`` argument to this function.
 
-        If none of these options are specified, db=0 is used.
+        - A ``db`` querystring option, e.g. ``redis://localhost?db=0``
+        - If using the ``redis://`` scheme, the path argument of the url, e.g.
+          ``redis://localhost/0``
+        - The ``db`` argument to this function.
+
+        If none of these options are specified, ``db=0`` is used.
 
         The :paramref:`decode_components` argument allows this function to work with
         percent-encoded URLs. If this argument is set to ``True`` all ``%xx``
         escapes will be replaced by their single-character equivalents after
         the URL has been parsed. This only applies to the ``hostname``,
-        ``path``, and ``password`` components.
+        ``path``, and ``password`` components. See :attr:`URL_QUERY_ARGUMENT_PARSERS`
+        for a comprehensive mapping of querystring parameters to how they are parsed.
 
         Any additional querystring arguments and keyword arguments will be
-        passed along to the ConnectionPool class's initializer. The querystring
+        passed along to the class constructor. The querystring
         arguments ``connect_timeout`` and ``stream_timeout`` if supplied
         are parsed as float values.
 
@@ -122,7 +126,7 @@ class ConnectionPool:
         ] = {}
         for name, value in iter(parse_qs(qs).items()):
             if value and len(value) > 0:
-                parser = URL_QUERY_ARGUMENT_PARSERS.get(name)
+                parser = cls.URL_QUERY_ARGUMENT_PARSERS.get(name)
 
                 if parser:
                     try:
