@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import timedelta
 
@@ -264,9 +265,10 @@ class TestSchema:
         )
 
         assert await client.search.dropindex("idx{a}", delete_docs=True)
+        await asyncio.sleep(0.1)
+        assert not await client.keys()
         with pytest.raises(ResponseError, match="Unknown Index name"):
             await client.search.info("idx{a}")
-        assert not await client.keys()
 
     @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
     async def test_alias(self, client: Redis, city_index, index_name):
