@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from datetime import timedelta
-from platform import python_version
 
 import numpy
 import pytest
@@ -23,102 +22,90 @@ def query_vectors():
 @pytest.fixture
 async def city_index(client: Redis):
     data = json.loads(open("tests/modules/data/city_index.json").read())
-    # TODO: figure out why large pipelines aren't working in 3.12
-    use_pipeline = True
-    if python_version() >= "3.12":
-        use_pipeline = False
-    if use_pipeline:
-        client = await client.pipeline()
-    await client.search.create(
-        "{city}idx",
-        [
-            Field("name", PureToken.TEXT),
-            Field("country", PureToken.TEXT),
-            Field("tags", PureToken.TAG, separator=","),
-            Field("population", PureToken.NUMERIC),
-            Field("location", PureToken.GEO),
-            Field("summary_text", PureToken.TEXT),
-            Field(
-                "summary_vector",
-                PureToken.VECTOR,
-                algorithm="FLAT",
-                attributes={
-                    "TYPE": "FLOAT32",
-                    "DIM": 768,
-                    "DISTANCE_METRIC": "L2",
-                    "INITIAL_CAP": 10,
-                    "BLOCK_SIZE": 10,
-                },
-            ),
-        ],
-        on=PureToken.HASH,
-        payload_field="last_updated",
-        prefixes=["{city}:"],
-    )
-    await client.search.create(
-        "{jcity}idx",
-        [
-            Field("$.name", PureToken.TEXT, alias="name"),
-            Field("$.country", PureToken.TEXT, alias="country"),
-            Field("$.tags", PureToken.TAG, alias="tags"),
-            Field("$.population", PureToken.NUMERIC, alias="population"),
-            Field("$.location", PureToken.GEO, alias="location"),
-            Field("$.summary_text", PureToken.TEXT, alias="summary_text"),
-            Field(
-                "$.summary_vector",
-                PureToken.VECTOR,
-                algorithm="FLAT",
-                attributes={
-                    "TYPE": "FLOAT32",
-                    "DIM": 768,
-                    "DISTANCE_METRIC": "COSINE",
-                    "INITIAL_CAP": 10,
-                    "BLOCK_SIZE": 10,
-                },
-                alias="summary_vector",
-            ),
-        ],
-        on=PureToken.JSON,
-        payload_field="$.last_updated",
-        prefixes=["{jcity}:"],
-    )
-    if use_pipeline:
-        await client.execute()
-    for name, city in data.items():
-        await client.hset(
-            f"{{city}}:{name}",
-            {
-                "name": city["name"],
-                "country": city["country"],
-                "tags": ",".join(city["iso_tags"]),
-                "population": city["population"],
-                "location": f'{city["lng"]},{city["lat"]}',
-                "summary_text": city["summary"],
-                "summary_vector": numpy.asarray(city["summary_vector"])
-                .astype(numpy.float32)
-                .tobytes(),
-                "last_updated": "2012-12-12",
-            },
+    with client.ignore_replies():
+        await client.search.create(
+            "{city}idx",
+            [
+                Field("name", PureToken.TEXT),
+                Field("country", PureToken.TEXT),
+                Field("tags", PureToken.TAG, separator=","),
+                Field("population", PureToken.NUMERIC),
+                Field("location", PureToken.GEO),
+                Field("summary_text", PureToken.TEXT),
+                Field(
+                    "summary_vector",
+                    PureToken.VECTOR,
+                    algorithm="FLAT",
+                    attributes={
+                        "TYPE": "FLOAT32",
+                        "DIM": 768,
+                        "DISTANCE_METRIC": "L2",
+                        "INITIAL_CAP": 10,
+                        "BLOCK_SIZE": 10,
+                    },
+                ),
+            ],
+            on=PureToken.HASH,
+            payload_field="last_updated",
+            prefixes=["{city}:"],
         )
-    if use_pipeline:
-        await client.execute()
-    for name, city in data.items():
-        await client.json.set(
-            f"{{jcity}}:{name}",
-            ".",
-            {
-                "name": city["name"],
-                "country": city["country"],
-                "tags": city["iso_tags"],
-                "population": int(city["population"]),
-                "location": f'{city["lng"]},{city["lat"]}',
-                "summary_text": city["summary"],
-                "summary_vector": city["summary_vector"],
-                "last_updated": "2012-12-12",
-            },
+        await client.search.create(
+            "{jcity}idx",
+            [
+                Field("$.name", PureToken.TEXT, alias="name"),
+                Field("$.country", PureToken.TEXT, alias="country"),
+                Field("$.tags", PureToken.TAG, alias="tags"),
+                Field("$.population", PureToken.NUMERIC, alias="population"),
+                Field("$.location", PureToken.GEO, alias="location"),
+                Field("$.summary_text", PureToken.TEXT, alias="summary_text"),
+                Field(
+                    "$.summary_vector",
+                    PureToken.VECTOR,
+                    algorithm="FLAT",
+                    attributes={
+                        "TYPE": "FLOAT32",
+                        "DIM": 768,
+                        "DISTANCE_METRIC": "COSINE",
+                        "INITIAL_CAP": 10,
+                        "BLOCK_SIZE": 10,
+                    },
+                    alias="summary_vector",
+                ),
+            ],
+            on=PureToken.JSON,
+            payload_field="$.last_updated",
+            prefixes=["{jcity}:"],
         )
-    if use_pipeline:
-        await client.execute()
+        for name, city in data.items():
+            await client.hset(
+                f"{{city}}:{name}",
+                {
+                    "name": city["name"],
+                    "country": city["country"],
+                    "tags": ",".join(city["iso_tags"]),
+                    "population": city["population"],
+                    "location": f'{city["lng"]},{city["lat"]}',
+                    "summary_text": city["summary"],
+                    "summary_vector": numpy.asarray(city["summary_vector"])
+                    .astype(numpy.float32)
+                    .tobytes(),
+                    "last_updated": "2012-12-12",
+                },
+            )
+            await client.json.set(
+                f"{{jcity}}:{name}",
+                ".",
+                {
+                    "name": city["name"],
+                    "country": city["country"],
+                    "tags": city["iso_tags"],
+                    "population": int(city["population"]),
+                    "location": f'{city["lng"]},{city["lat"]}',
+                    "summary_text": city["summary"],
+                    "summary_vector": city["summary_vector"],
+                    "last_updated": "2012-12-12",
+                },
+            )
     return data
 
 
