@@ -176,6 +176,8 @@ class RedisCluster(
         port: Optional[int] = ...,
         *,
         startup_nodes: Optional[Iterable[Node]] = ...,
+        stream_timeout: Optional[float] = ...,
+        connect_timeout: Optional[float] = ...,
         ssl: bool = ...,
         ssl_context: Optional[SSLContext] = ...,
         ssl_keyfile: Optional[str] = ...,
@@ -212,6 +214,8 @@ class RedisCluster(
         port: Optional[int] = ...,
         *,
         startup_nodes: Optional[Iterable[Node]] = ...,
+        stream_timeout: Optional[float] = ...,
+        connect_timeout: Optional[float] = ...,
         ssl: bool = ...,
         ssl_context: Optional[SSLContext] = ...,
         ssl_keyfile: Optional[str] = ...,
@@ -247,6 +251,8 @@ class RedisCluster(
         port: Optional[int] = None,
         *,
         startup_nodes: Optional[Iterable[Node]] = None,
+        stream_timeout: Optional[float] = None,
+        connect_timeout: Optional[float] = None,
         ssl: bool = False,
         ssl_context: Optional[SSLContext] = None,
         ssl_keyfile: Optional[str] = None,
@@ -358,6 +364,8 @@ class RedisCluster(
         :param port: Can be used to point to a startup node
         :param startup_nodes: List of nodes that initial bootstrapping can be done
          from
+        :param stream_timeout: Timeout (seconds) when reading responses from the server
+        :param connect_timeout: Timeout (seconds) for establishing a connection to the server
         :param ssl: Whether to use an SSL connection
         :param ssl_context: If provided the :class:`ssl.SSLContext` will be used when
          establishing the connection. Otherwise either the default context (if no other
@@ -457,10 +465,14 @@ class RedisCluster(
                 noreply=noreply,
                 noevict=noevict,
                 notouch=notouch,
+                stream_timeout=stream_timeout,
+                connect_timeout=connect_timeout,
                 **kwargs,
             )
 
         super().__init__(
+            stream_timeout=stream_timeout,
+            connect_timeout=connect_timeout,
             connection_pool=pool,
             connection_pool_cls=connection_pool_cls,
             decode_responses=decode_responses,

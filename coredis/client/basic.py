@@ -101,8 +101,8 @@ class Client(
         db: int = 0,
         username: Optional[str] = None,
         password: Optional[str] = None,
-        stream_timeout: Optional[int] = None,
-        connect_timeout: Optional[int] = None,
+        stream_timeout: Optional[float] = None,
+        connect_timeout: Optional[float] = None,
         connection_pool: Optional[ConnectionPool] = None,
         connection_pool_cls: Type[ConnectionPool] = ConnectionPool,
         unix_socket_path: Optional[str] = None,
@@ -543,8 +543,8 @@ class Redis(Client[AnyStr]):
         *,
         username: Optional[str] = ...,
         password: Optional[str] = ...,
-        stream_timeout: Optional[int] = ...,
-        connect_timeout: Optional[int] = ...,
+        stream_timeout: Optional[float] = ...,
+        connect_timeout: Optional[float] = ...,
         connection_pool: Optional[ConnectionPool] = ...,
         connection_pool_cls: Type[ConnectionPool] = ...,
         unix_socket_path: Optional[str] = ...,
@@ -581,8 +581,8 @@ class Redis(Client[AnyStr]):
         *,
         username: Optional[str] = ...,
         password: Optional[str] = ...,
-        stream_timeout: Optional[int] = ...,
-        connect_timeout: Optional[int] = ...,
+        stream_timeout: Optional[float] = ...,
+        connect_timeout: Optional[float] = ...,
         connection_pool: Optional[ConnectionPool] = ...,
         connection_pool_cls: Type[ConnectionPool] = ...,
         unix_socket_path: Optional[str] = ...,
@@ -618,8 +618,8 @@ class Redis(Client[AnyStr]):
         *,
         username: Optional[str] = None,
         password: Optional[str] = None,
-        stream_timeout: Optional[int] = None,
-        connect_timeout: Optional[int] = None,
+        stream_timeout: Optional[float] = None,
+        connect_timeout: Optional[float] = None,
         connection_pool: Optional[ConnectionPool] = None,
         connection_pool_cls: Type[ConnectionPool] = ConnectionPool,
         unix_socket_path: Optional[str] = None,
@@ -711,8 +711,8 @@ class Redis(Client[AnyStr]):
         :param db: database number to switch to upon connection
         :param username: Username for authenticating with the redis server
         :param password: Password for authenticating with the redis server
-        :param stream_timeout: Timeout when reading responses from the server
-        :param connect_timeout: Timeout for establishing a connection to the server
+        :param stream_timeout: Timeout (seconds) when reading responses from the server
+        :param connect_timeout: Timeout (seconds) for establishing a connection to the server
         :param connection_pool: The connection pool instance to use. If not provided
          a new pool will be assigned to this client.
         :param connection_pool_cls: The connection pool class to use when constructing
@@ -743,7 +743,8 @@ class Redis(Client[AnyStr]):
          :paramref:`connection_pool` is not ``None``.
         :param max_idle_time: Maximum number of a seconds an unused connection is cached
          before it is disconnected.
-        :param idle_check_interval: Periodicity of idle checks to release idle connections.
+        :param idle_check_interval: Periodicity of idle checks (seconds) to release idle
+         connections.
         :param client_name: The client name to identifiy with the redis server
         :param protocol_version: Whether to use the RESP (``2``) or RESP3 (``3``)
          protocol for parsing responses from the server (Default ``3``).
