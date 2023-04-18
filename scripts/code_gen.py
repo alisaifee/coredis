@@ -42,49 +42,55 @@ MODULES = {
         "repo": "https://github.com/RedisBloom/RedisBloom",
         "prefix": "bf",
         "group": "bf",
-        "module": "bf"
+        "module": "bf",
     },
     "cuckoo": {
         "repo": "https://github.com/RedisBloom/RedisBloom",
         "prefix": "cf",
         "group": "cf",
-        "module": "bf"
+        "module": "bf",
     },
     "countmin": {
         "repo": "https://github.com/RedisBloom/RedisBloom",
         "prefix": "cms",
         "group": "cms",
-        "module": "bf"
+        "module": "bf",
     },
     "topk": {
         "repo": "https://github.com/RedisBloom/RedisBloom",
         "prefix": "topk",
         "group": "topk",
-        "module": "bf"
+        "module": "bf",
     },
     "tdigest": {
         "repo": "https://github.com/RedisBloom/RedisBloom",
         "prefix": "tdigest",
         "group": "tdigest",
-        "module": "bf"
+        "module": "bf",
     },
-    "timeseries":{
+    "timeseries": {
         "repo": "https://github.com/RedisTimeSeries/RedisTimeSeries/",
         "prefix": "ts",
         "group": "timeseries",
-        "module": "timeseries"
+        "module": "timeseries",
+    },
+    "graph": {
+        "repo": "https://github.com/RedisGraph/RedisGraph/",
+        "prefix": "graph",
+        "group": "graph",
+        "module": "graph",
     },
     "search": {
         "repo": "https://github.com/RediSearch/RediSearch/",
         "prefix": "ft",
         "group": "search",
-        "module": "search"
+        "module": "search",
     },
     "suggestion": {
         "repo": "https://github.com/RediSearch/RediSearch/",
         "prefix": "ft",
         "group": "suggestion",
-        "module": "search"
+        "module": "search",
     },
 }
 
@@ -474,7 +480,7 @@ def version_added_from_doc(doc):
 
 
 @functools.lru_cache
-def get_commands(name: str="commands.json"):
+def get_commands(name: str = "commands.json"):
     cur_dir = os.path.split(__file__)[0]
     return json.loads(open(os.path.join(cur_dir, name)).read())
 
@@ -530,21 +536,47 @@ def compare_signatures(s1, s2, eval_forward_annotations=True, with_return=True):
 
 
 def get_token_mapping():
-    pure_token_mapping = collections.OrderedDict()
-    prefix_token_mapping = collections.OrderedDict()
+    pure_token_mapping = collections.OrderedDict(
+        {
+            ("unique", "UNIQUE"): {"GRAPH.CONTRAINT DROP", "GRAPH.CONSTRAINT CREATE"},
+            ("mandatory", "MANDATORY"): {
+                "GRAPH.CONTRAINT DROP",
+                "GRAPH.CONSTRAINT CREATE",
+            },
+        }
+    )
+    prefix_token_mapping = collections.OrderedDict(
+        {
+            ("node", "NODE"): {"GRAPH.CONTRAINT DROP", "GRAPH.CONSTRAINT CREATE"},
+            ("relationship", "RELATIONSHIP"): {
+                "GRAPH.CONTRAINT DROP",
+                "GRAPH.CONSTRAINT CREATE",
+            },
+            ("properties", "PROPERTIES"): {
+                "GRAPH.CONTRAINT DROP",
+                "GRAPH.CONSTRAINT CREATE",
+            },
+        }
+    )
 
-    for name in ['commands', *MODULES.keys()]:
-        commands = get_commands(name+".json")
+    for name in ["commands", *MODULES.keys()]:
+        commands = get_commands(name + ".json")
         for command, details in commands.items():
             if name in MODULES and not details["group"] == MODULES[name]["group"]:
                 continue
+
             def _extract_pure_tokens(obj):
                 tokens = []
 
                 if args := obj.get("arguments"):
                     for arg in args:
                         if arg["type"] == "pure-token":
-                            tokens.append((sanitized(arg["name"], ignore_reserved_words=True), arg["token"].upper()))
+                            tokens.append(
+                                (
+                                    sanitized(arg["name"], ignore_reserved_words=True),
+                                    arg["token"].upper(),
+                                )
+                            )
 
                         if arg.get("arguments"):
                             tokens.extend(_extract_pure_tokens(arg))
@@ -557,14 +589,21 @@ def get_token_mapping():
                 if args := obj.get("arguments"):
                     for arg in args:
                         if arg["type"] != "pure-token" and arg.get("token"):
-                            tokens.append((sanitized(arg["token"], ignore_reserved_words=True), arg["token"].upper()))
+                            tokens.append(
+                                (
+                                    sanitized(arg["token"], ignore_reserved_words=True),
+                                    arg["token"].upper(),
+                                )
+                            )
 
                         if arg.get("arguments"):
                             tokens.extend(_extract_prefix_tokens(arg))
 
                 return tokens
 
-            for token in sorted(_extract_pure_tokens(details), key=lambda token: token[0]):
+            for token in sorted(
+                _extract_pure_tokens(details), key=lambda token: token[0]
+            ):
                 pure_token_mapping.setdefault(token, set()).add(command)
             for token in sorted(
                 _extract_prefix_tokens(details), key=lambda token: token[0]
@@ -580,7 +619,8 @@ def read_command_docs(command, group, module=None):
         ).read()
     else:
         doc = open(
-            f"/var/tmp/redis-module-{module}/docs/commands/%s.md" % command.lower().replace(" ", "-")
+            f"/var/tmp/redis-module-{module}/docs/commands/%s.md"
+            % command.lower().replace(" ", "-")
         ).read()
 
     return_description = re.compile(
@@ -836,16 +876,19 @@ def get_official_commands(group=None, include_skipped=False):
 
     return by_group if not group else by_group.get(group)
 
+
 @functools.lru_cache
 def get_module_commands(module: str):
-    response = get_commands(module+'.json')
+    response = get_commands(module + ".json")
     by_module = {}
     [
-        by_module.setdefault(command["group"], []).append({**command, **{"name": name, "module": MODULES[module]["module"]}})
-        for name, command in response.items() if command["group"] == MODULES[module]["group"]
+        by_module.setdefault(command["group"], []).append(
+            {**command, **{"name": name, "module": MODULES[module]["module"]}}
+        )
+        for name, command in response.items()
+        if command["group"] == MODULES[module]["group"]
     ]
     return by_module
-
 
 
 def find_method(kls, command_name):
@@ -920,7 +963,12 @@ def is_deprecated(command, kls):
 
 def sanitized(x, command=None, ignore_reserved_words=False):
     cleansed_name = (
-        x.lower().strip().replace("-", "_").replace(":", "_").replace(" ", "_").replace(".", "_")
+        x.lower()
+        .strip()
+        .replace("-", "_")
+        .replace(":", "_")
+        .replace(" ", "_")
+        .replace(".", "_")
     )
     cleansed_name = re.sub("[!=><\(\),]", "_", cleansed_name)
     if command:
@@ -935,7 +983,8 @@ def sanitized(x, command=None, ignore_reserved_words=False):
         return "identifier"
 
     if not ignore_reserved_words and cleansed_name in (
-        list(globals()["__builtins__"].__dict__.keys()) + ["async", "return", "if", "else", "for"]
+        list(globals()["__builtins__"].__dict__.keys())
+        + ["async", "return", "if", "else", "for"]
     ):
         cleansed_name = cleansed_name + "_"
 
@@ -1007,7 +1056,10 @@ def get_type_annotation(arg, command, parent=None, default=None):
     if arg["type"] == "oneof" and all(
         k["type"] == "pure-token" for k in arg["arguments"]
     ):
-        tokens = ["PureToken.%s" % sanitized(s["name"], ignore_reserved_words=True).upper() for s in arg["arguments"]]
+        tokens = [
+            "PureToken.%s" % sanitized(s["name"], ignore_reserved_words=True).upper()
+            for s in arg["arguments"]
+        ]
         literal_type = eval(f"Literal[{','.join(sorted(tokens))}]")
 
         if (
@@ -1043,7 +1095,7 @@ def get_argument(
             c.get("multiple") for c in arg.get("arguments", [])
         ):
             name = sanitized(arg["name"], command)
-            if not inflection_engine.singular_noun(name) or name == 'prefix':
+            if not inflection_engine.singular_noun(name) or name == "prefix":
                 name = inflection_engine.plural(name)
             forced_order = BLOCK_ARGUMENT_FORCED_ORDER.get(command["name"], {}).get(
                 name
@@ -1101,7 +1153,7 @@ def get_argument(
         else:
             plist_d = []
             children = sorted(
-                    arg["arguments"], key=lambda v: int(v.get("optional") == True)
+                arg["arguments"], key=lambda v: int(v.get("optional") == True)
             )
             for child in list(children):
                 if child["type"] == "pure-token" and not "optional" in child:
@@ -1116,7 +1168,7 @@ def get_argument(
                     a["name"] = arg["name"]
 
                 plist_p, declist, vmap = get_argument(
-                    a,  parent, command, arg_type, a.get("multiple", False)
+                    a, parent, command, arg_type, a.get("multiple", False)
                 )
                 param_list.extend(plist_p)
                 meta_mapping.update(vmap)
@@ -1304,7 +1356,11 @@ def get_command_spec(command):
     arguments = command.get("arguments", []) + REDIS_ARGUMENT_FORCED.get(
         command["name"], []
     )
-    arguments = [a for a in arguments if not (a['type'] == 'pure-token' and not {'optional', 'multiple'} & a.keys())]
+    arguments = [
+        a
+        for a in arguments
+        if not (a["type"] == "pure-token" and not {"optional", "multiple"} & a.keys())
+    ]
     recommended_signature = []
     decorators = []
     forced_order = REDIS_ARGUMENT_FORCED_ORDER.get(command["name"], [])
@@ -1507,7 +1563,7 @@ def generate_method_details(kls, method, module=None, debug=False):
         method["name"].strip().lower().replace(" ", "_").replace("-", "_"),
     )
     if module:
-        name = name.replace(MODULES[module].get("prefix", module)+".", "")
+        name = name.replace(MODULES[module].get("prefix", module) + ".", "")
     method_details["name"] = name
     method_details["redis_method"] = method
     method_details["located"] = find_method(kls, name)
@@ -1523,7 +1579,9 @@ def generate_method_details(kls, method, module=None, debug=False):
     return_summary = ""
 
     if debug and not method["name"] in SKIP_SPEC:
-        recommended_return = read_command_docs(method["name"], method["group"], module=module)
+        recommended_return = read_command_docs(
+            method["name"], method["group"], module=module
+        )
 
         if recommended_return:
             return_summary = recommended_return[1]
@@ -1555,7 +1613,9 @@ def generate_method_details(kls, method, module=None, debug=False):
             )
             method_details["rec_signature"] = rec_signature
         except:
-            import pdb; pdb.set_trace()
+            import pdb
+
+            pdb.set_trace()
             raise Exception(method["name"], [(k.name, k.kind) for k in rec_params])
 
         method_details["readonly"] = READONLY_OVERRIDES.get(
@@ -1901,7 +1961,9 @@ def generate_compatibility_section(
                     current_signature = [k for k in cur.parameters]
                     method_details["current_signature"] = cur
                     if command_details:
-                        method_details["redirect_usage"] = command_details.redirect_usage
+                        method_details[
+                            "redirect_usage"
+                        ] = command_details.redirect_usage
                     if debug:
                         if (
                             compare_signatures(
@@ -2090,7 +2152,10 @@ def code_gen(ctx, debug: bool, next_version: str):
                 )
             else:
                 os.system(f"cd /var/tmp/redis-module-{details['module']} && git pull")
-            shutil.copy(f"/var/tmp/redis-module-{details['module']}/commands.json", os.path.join(cur_dir, f"{module}.json"))
+            shutil.copy(
+                f"/var/tmp/redis-module-{details['module']}/commands.json",
+                os.path.join(cur_dir, f"{module}.json"),
+            )
 
     ctx.obj["DEBUG"] = debug
     ctx.obj["NEXT_VERSION"] = next_version
@@ -2127,6 +2192,7 @@ This document is generated by parsing the `official redis command documentation 
 @click.pass_context
 def token_enum(ctx, path):
     pure_tokens, prefix_tokens = get_token_mapping()
+
     env = Environment()
     env.globals.update(sorted=sorted)
     t = env.from_string(
@@ -2149,6 +2215,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     {{ token[0].upper().replace("-", "_").replace("/", "_").replace(":", "_") }} = b"{{token[1]}}"
 
     {% endfor %}
+    
 
 class PrefixToken(CaseAndEncodingInsensitiveEnum):
     \"\"\"
@@ -2456,9 +2523,12 @@ def implementation(ctx, command, group, module, expr, debug=False):
                 commands.extend([k for k in group_commands if k["name"] in command])
 
     for command in commands:
-        method_details = generate_method_details(kls, command, module=MODULES[module]["module"], debug=True)
+        method_details = generate_method_details(
+            kls, command, module=MODULES[module]["module"], debug=True
+        )
         if method_details.get("rec_signature"):
             print(method_template.render(method=method_details))
+
 
 @click.option("--path", default="coredis/pipeline.pyi")
 @code_gen.command()
@@ -2718,11 +2788,7 @@ def cluster_key_extraction(path):
                     )
 
     readonly = {}
-    fixed_args = {
-        "first": ["args[1],"],
-        "second": ["args[2],"],
-        "all": ["args[1:]"]
-    }
+    fixed_args = {"first": ["args[1],"], "second": ["args[2],"], "all": ["args[1:]"]}
     all = {"OBJECT": ["(args[2],)"], "DEBUG OBJECT": ["(args[1],)"]}
 
     for mode, commands in lookups.items():
