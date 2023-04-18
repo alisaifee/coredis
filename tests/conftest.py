@@ -37,7 +37,9 @@ DOCKER_TAG_MAPPING = {
         "stack": "6.2.2-v5",
     },
     "7.0": {"default": "7.0.0", "stack": "7.0.6-RC8"},
+    "latest": {"default": "latest", "stack": "edge"},
 }
+
 SERVER_DEFAULT_ARGS = {
     "6.0": "",
     "6.2": "",
