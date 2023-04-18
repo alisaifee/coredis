@@ -2922,6 +2922,16 @@ def cluster_key_extraction(path):
     all["FT.SUGGET"] = fixed_args["first"]
     all["FT.SUGLEN"] = fixed_args["first"]
 
+    # RedisGraph
+    all["GRAPH.QUERY"] = fixed_args["first"]
+    all["GRAPH.DELETE"] = fixed_args["first"]
+    all["GRAPH.EXPLAIN"] = fixed_args["first"]
+    all["GRAPH.PROFILE"] = fixed_args["first"]
+    all["GRAPH.SLOWLOG"] = fixed_args["first"]
+    all["GRAPH.CONSTRAINT CREATE"] = fixed_args["first"]
+    all["GRAPH.CONSTRAINT DROP"] = fixed_args["first"]
+    all["GRAPH.RO_QUERY"] = fixed_args["first"]
+
     key_spec_template = """
 from __future__ import annotations
 

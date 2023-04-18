@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any
+from typing import Any, NamedTuple
 
 from coredis._json import json
 from coredis.typing import (
@@ -10,6 +10,7 @@ from coredis.typing import (
     Generic,
     List,
     Optional,
+    ResponsePrimitive,
     ResponseType,
     StringT,
     Tuple,
@@ -87,3 +88,89 @@ class AutocompleteSuggestion(Generic[AnyStr]):
 
 #: Type alias for valid python types that can be represented as json
 JsonType = Union[str, int, float, bool, None, Dict[str, Any], List[Any]]
+
+
+@dataclasses.dataclass
+class GraphNode(Generic[AnyStr]):
+    """
+    Representation of a graph node
+    """
+
+    #: The node's internal ID
+    id: int
+    #: A list of labels associated with the node
+    labels: Tuple[AnyStr, ...]
+    #: Mapping of property names to values
+    properties: Dict[AnyStr, ResponseType]
+
+
+@dataclasses.dataclass
+class GraphRelation(Generic[AnyStr]):
+    """
+    Representation of a relation between two nodes
+    """
+
+    #: The relationship's internal ID
+    id: int
+    #: Relation type
+    type: AnyStr
+    #: Source node ID
+    src_node: int
+    #: Destination node ID
+    destination_node: int
+    #: Mapping of all properties the relation possesses
+    properties: Dict[AnyStr, ResponseType]
+
+
+@dataclasses.dataclass
+class GraphPath(Generic[AnyStr]):
+    """
+    Representation of a graph path
+    """
+
+    #: The nodes in the path
+    nodes: List[GraphNode[AnyStr]]
+    #: The relations in the path
+    relations: List[GraphRelation[AnyStr]]
+
+
+@dataclasses.dataclass
+class GraphQueryResult(Generic[AnyStr]):
+    """
+    Response from `GRAPH.QUERY <https://redis.io/commands/graph.query>`__
+    """
+
+    #: List of entries in the response header
+    header: Tuple[AnyStr, ...]
+    #: The result set from the query
+    result_set: Tuple[
+        Union[
+            ResponsePrimitive,
+            List[
+                Union[
+                    ResponsePrimitive,
+                    GraphNode[AnyStr],
+                    GraphRelation[AnyStr],
+                    GraphPath[AnyStr],
+                ]
+            ],
+        ],
+        ...,
+    ]
+    #: Mapping of query statistics
+    stats: Dict[str, ResponsePrimitive]
+
+
+class GraphSlowLogInfo(NamedTuple):
+    """
+    Response from `GRAPH.SLOWLOG <https://redis.io/commands/graph.slowlog>`__
+    """
+
+    #: The unix timestamp at which the logged command was processed.
+    start_time: int
+    #: The array composing the arguments of the command.
+    command: StringT
+    #: query name
+    query: StringT
+    #: The amount of time needed for its execution, in microseconds.
+    duration: float

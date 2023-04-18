@@ -9,7 +9,7 @@ from __future__ import annotations
 import datetime
 import itertools
 from abc import ABC, ABCMeta, abstractmethod
-from typing import cast
+from typing import TYPE_CHECKING, Any, cast
 
 from coredis._utils import b
 from coredis.exceptions import ClusterResponseError, ResponseError
@@ -25,6 +25,7 @@ from coredis.typing import (
     Mapping,
     Optional,
     ParamSpec,
+    Protocol,
     ResponsePrimitive,
     ResponseType,
     Sequence,
@@ -36,16 +37,21 @@ from coredis.typing import (
     Union,
     ValueT,
     add_runtime_checks,
+    runtime_checkable,
 )
 
 R = TypeVar("R")
 S = TypeVar("S")
+T = TypeVar("T")
 P = ParamSpec("P")
 CR_co = TypeVar("CR_co", covariant=True)
 CK_co = TypeVar("CK_co", covariant=True)
 
 RESP = TypeVar("RESP")
 RESP3 = TypeVar("RESP3")
+
+if TYPE_CHECKING:
+    from coredis.client import Client
 
 
 class ResponseCallbackMeta(ABCMeta):
@@ -95,6 +101,14 @@ class ResponseCallback(ABC, Generic[RESP, RESP3, R], metaclass=ResponseCallbackM
 
     def handle_exception(self, exc: BaseException) -> Optional[R]:
         return exc  # type: ignore
+
+
+@runtime_checkable
+class AsyncPreProcessingCallback(Protocol):
+    async def pre_process(
+        self, client: Client[Any], response: ResponseType, **options: Optional[ValueT]
+    ) -> None:
+        ...
 
 
 class NoopCallback(ResponseCallback[R, R, R]):
@@ -265,16 +279,16 @@ class SimpleStringCallback(
     ):
         self.raise_on_error = raise_on_error
         self.prefix_match = prefix_match
-        self.ok_values = ok_values | {b(v) for v in ok_values}
+        self.ok_values = {b(v) for v in ok_values}
 
     def transform(
         self, response: Optional[StringT], **options: Optional[ValueT]
     ) -> bool:
         if response:
             if not self.prefix_match:
-                success = response in self.ok_values
+                success = b(response) in self.ok_values
             else:
-                success = response[:2] in self.ok_values
+                success = any(b(response).startswith(ok) for ok in self.ok_values)
         else:
             success = False
         if not success and self.raise_on_error:
@@ -381,8 +395,10 @@ class DictCallback(
 ):
     def __init__(
         self,
+        flat: bool = True,
         recursive: Optional[List[str]] = None,
     ):
+        self.flat = flat
         self.recursive = recursive or []
 
     def transform(
@@ -391,11 +407,16 @@ class DictCallback(
         **options: Optional[ValueT],
     ) -> Dict[CK_co, CR_co]:
         if isinstance(response, list):
-            if self.recursive:
-                return cast(Dict[CK_co, CR_co], self.recursive_transformer(response))
+            if self.flat:
+                if self.recursive:
+                    return cast(
+                        Dict[CK_co, CR_co], self.recursive_transformer(response)
+                    )
+                else:
+                    it = iter(response)
+                    return cast(Dict[CK_co, CR_co], dict(zip(it, it)))
             else:
-                it = iter(response)
-                return cast(Dict[CK_co, CR_co], dict(zip(it, it)))
+                return dict(r for r in response)
         raise ValueError(f"Unable to map {response!r} to mapping")
 
     def transform_3(

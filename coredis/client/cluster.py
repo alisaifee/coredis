@@ -34,7 +34,7 @@ from coredis.exceptions import (
 from coredis.globals import MODULE_GROUPS, READONLY_COMMANDS
 from coredis.pool import ClusterConnectionPool
 from coredis.pool.nodemanager import ManagedNode
-from coredis.response._callbacks import NoopCallback
+from coredis.response._callbacks import AsyncPreProcessingCallback, NoopCallback
 from coredis.retry import CompositeRetryPolicy, ConstantRetryPolicy, RetryPolicy
 from coredis.typing import (
     AnyStr,
@@ -310,6 +310,7 @@ class RedisCluster(
                 - TopK: :attr:`RedisCluster.topk`
                 - TDigest: :attr:`RedisCluster.tdigest`
               - RedisTimeSeries: :attr:`RedisCluster.timeseries`
+              - RedisGraph: :attr:`RedisCluster.graph`
               - RediSearch:
 
                 - Search & Aggregation: :attr:`RedisCluster.search`
@@ -933,6 +934,10 @@ class RedisCluster(
                     await self._ensure_persistence(command, r),
                 ]
                 if not self.noreply:
+                    if isinstance(callback, AsyncPreProcessingCallback):
+                        await callback.pre_process(
+                            self, reply, version=self.protocol_version, **kwargs
+                        )  # pyright: reportGeneralTypeIssues=false
                     response = callback(
                         reply,
                         version=self.protocol_version,

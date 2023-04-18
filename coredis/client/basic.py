@@ -41,7 +41,11 @@ from coredis.exceptions import (
 from coredis.globals import COMMAND_FLAGS, READONLY_COMMANDS
 from coredis.modules import ModuleMixin
 from coredis.pool import ConnectionPool
-from coredis.response._callbacks import NoopCallback
+from coredis.response._callbacks import (
+    AsyncPreProcessingCallback,
+    NoopCallback,
+    ResponseCallback,
+)
 from coredis.response.types import ScoredMember
 from coredis.retry import ConstantRetryPolicy, NoRetryPolicy, RetryPolicy
 from coredis.typing import (
@@ -93,6 +97,7 @@ class Client(
     encoding: str
     protocol_version: Literal[2, 3]
     server_version: Optional[Version]
+    callback_storage: Dict[Type[ResponseCallback[Any, Any, Any]], Dict[str, Any]]
 
     def __init__(
         self,
@@ -198,6 +203,7 @@ class Client(
         ] = contextvars.ContextVar("waitaof", default=None)
         self.retry_policy = retry_policy
         self._module_info: Optional[Dict[str, version.Version]] = None
+        self.callback_storage = defaultdict(lambda: {})
 
     @property
     def noreply(self) -> bool:
@@ -667,6 +673,7 @@ class Redis(Client[AnyStr]):
                 - TopK: :attr:`Redis.topk`
                 - TDigest: :attr:`Redis.tdigest`
               - RedisTimeSeries: :attr:`Redis.timeseries`
+              - RedisGraph: :attr:`Redis.graph`
               - RediSearch:
 
                 - Search & Aggregation: :attr:`Redis.search`
@@ -974,6 +981,10 @@ class Redis(Client[AnyStr]):
             await asyncio.gather(*maybe_wait)
             if self.noreply:
                 return None  # type: ignore
+            if isinstance(callback, AsyncPreProcessingCallback):
+                await callback.pre_process(
+                    self, reply, version=self.protocol_version, **options
+                )  # pyright: reportGeneralTypeIssues=false
             return callback(
                 reply,
                 version=self.protocol_version,

@@ -14,6 +14,7 @@ from .filters import (
     TDigest,
     TopK,
 )
+from .graph import Graph
 from .json import Json, RedisJSON
 from .search import RediSearch, Search
 from .timeseries import RedisTimeSeries, TimeSeries
@@ -91,6 +92,14 @@ class ModuleMixin(CommandMixin[AnyStr]):
         Property to access :class:`~coredis.modules.autocomplete.Autocomplete` commands.
         """
         return Autocomplete(self)
+
+    @property
+    @versionadded(version="4.12.0")
+    def graph(self) -> Graph[AnyStr]:
+        """
+        Property to access :class:`~coredis.modules.autocomplete.Autocomplete` commands.
+        """
+        return Graph(self)
 
 
 __all__ = [
