@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import json
 from datetime import timedelta
 
@@ -245,30 +244,29 @@ class TestSchema:
         with pytest.raises(ResponseError, match="Unknown Index name"):
             await client.search.info("idx")
 
-    @pytest.mark.parametrize(
-        "on, setter",
-        [
-            (
-                PureToken.HASH,
-                lambda client: client.hset("doc{a}:1", {"field": "value"}),
-            ),
-            (
-                PureToken.JSON,
-                lambda client: client.json.set("doc{a}:1", ".", {"field": "value"}),
-            ),
-        ],
-    )
-    async def test_drop_index_cascade(self, client: Redis, on, setter):
-        await setter(client)
+    async def test_drop_index_cascade(self, client: Redis):
         await client.search.create(
-            "idx{a}", [Field("field", PureToken.TEXT)], on=on, prefixes=["doc{a}:"]
+            "idx{a}",
+            [Field("field", PureToken.TEXT)],
+            on=PureToken.HASH,
+            prefixes=["doc{a}:"],
         )
-
+        await client.search.create(
+            "jidx{a}",
+            [Field("field", PureToken.TEXT)],
+            on=PureToken.JSON,
+            prefixes=["jdoc{a}:"],
+        )
+        await client.hset("doc{a}:1", {"field": "value"})
+        await client.json.set("jdoc{a}:1", ".", {"field": "value"})
+        assert {"doc{a}:1", "jdoc{a}:1"} == await client.keys("*")
         assert await client.search.dropindex("idx{a}", delete_docs=True)
-        await asyncio.sleep(0.1)
+        assert await client.search.dropindex("jidx{a}", delete_docs=True)
         assert not await client.keys()
         with pytest.raises(ResponseError, match="Unknown Index name"):
             await client.search.info("idx{a}")
+        with pytest.raises(ResponseError, match="Unknown Index name"):
+            await client.search.info("jidx{a}")
 
     @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
     async def test_alias(self, client: Redis, city_index, index_name):
