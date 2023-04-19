@@ -78,9 +78,9 @@ class QueryCallback(
     async def pre_process(
         self, client: Client[Any], response: ResponseType, **options: Optional[ValueT]
     ) -> None:
+
         if not len(response) == 3:
             return
-
         result_set = response[1]
         max_label_id, max_relation_id, max_property_id = -1, -1, -1
 
