@@ -103,7 +103,6 @@ class QueryCallback(
         self, entity: Any, max_label_id: int, max_relation_id: int, max_property_id: int
     ) -> Tuple[int, int, int]:
         result_type = entity[0]
-        print(result_type)
         if result_type == ValueTypes.VALUE_NODE:
             for label_id in entity[1][1]:
                 max_label_id = max(max_label_id, label_id)
@@ -191,12 +190,12 @@ class QueryCallback(
         elif result_type == ValueTypes.VALUE_EDGE:
             return GraphRelation(
                 id=entity[1][0],
-                type=self.relationships.get(entity[1][1]),
+                type=self.relationships[entity[1][1]],
                 src_node=entity[1][2],
                 destination_node=entity[1][3],
                 properties=dict(
                     (
-                        self.properties.get(k[0], k[0]),
+                        self.properties[k[0]],
                         self.parse_entity((k[1], k[2])),
                     )
                     for k in entity[1][4]
@@ -205,10 +204,10 @@ class QueryCallback(
         elif result_type == ValueTypes.VALUE_NODE:
             return GraphNode(
                 id=entity[1][0],
-                labels=set(self.labels.get(k, k) for k in entity[1][1]),
+                labels=set(self.labels[k] for k in entity[1][1]),
                 properties=dict(
                     (
-                        self.properties.get(k[0], k[0]),
+                        self.properties[k[0]],
                         self.parse_entity((k[1], k[2])),
                     )
                     for k in entity[1][2]
