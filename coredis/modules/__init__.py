@@ -25,7 +25,7 @@ class ModuleMixin(CommandMixin[AnyStr]):
     @versionadded(version="4.12.0")
     def json(self) -> Json[AnyStr]:
         """
-        Property to access :class:`~coredis.modules.json.Json` commands.
+        Property to access :class:`~coredis.modules.Json` commands.
         """
         return Json(self)
 
@@ -33,7 +33,7 @@ class ModuleMixin(CommandMixin[AnyStr]):
     @versionadded(version="4.12.0")
     def bf(self) -> BloomFilter[AnyStr]:
         """
-        Property to access :class:`~coredis.modules.filters.BloomFilter` commands.
+        Property to access :class:`~coredis.modules.BloomFilter` commands.
         """
         return BloomFilter(self)
 
@@ -41,7 +41,7 @@ class ModuleMixin(CommandMixin[AnyStr]):
     @versionadded(version="4.12.0")
     def cf(self) -> CuckooFilter[AnyStr]:
         """
-        Property to access :class:`~coredis.modules.filters.CuckooFilter` commands.
+        Property to access :class:`~coredis.modules.CuckooFilter` commands.
         """
         return CuckooFilter(self)
 
@@ -49,7 +49,7 @@ class ModuleMixin(CommandMixin[AnyStr]):
     @versionadded(version="4.12.0")
     def cms(self) -> CountMinSketch[AnyStr]:
         """
-        Property to access :class:`~coredis.modules.filters.CountMinSketch` commands.
+        Property to access :class:`~coredis.modules.CountMinSketch` commands.
         """
         return CountMinSketch(self)
 
@@ -57,7 +57,7 @@ class ModuleMixin(CommandMixin[AnyStr]):
     @versionadded(version="4.12.0")
     def tdigest(self) -> TDigest[AnyStr]:
         """
-        Property to access :class:`~coredis.modules.filters.TDigest` commands.
+        Property to access :class:`~coredis.modules.TDigest` commands.
         """
         return TDigest(self)
 
@@ -65,7 +65,7 @@ class ModuleMixin(CommandMixin[AnyStr]):
     @versionadded(version="4.12.0")
     def topk(self) -> TopK[AnyStr]:
         """
-        Property to access :class:`~coredis.modules.filters.TopK` commands.
+        Property to access :class:`~coredis.modules.TopK` commands.
         """
         return TopK(self)
 
@@ -73,7 +73,7 @@ class ModuleMixin(CommandMixin[AnyStr]):
     @versionadded(version="4.12.0")
     def timeseries(self) -> TimeSeries[AnyStr]:
         """
-        Property to access :class:`~coredis.modules.timeseries.TimeSeries` commands.
+        Property to access :class:`~coredis.modules.TimeSeries` commands.
         """
         return TimeSeries(self)
 
@@ -81,7 +81,7 @@ class ModuleMixin(CommandMixin[AnyStr]):
     @versionadded(version="4.12.0")
     def search(self) -> Search[AnyStr]:
         """
-        Property to access :class:`~coredis.modules.search.Search` commands.
+        Property to access :class:`~coredis.modules.Search` commands.
         """
         return Search(self)
 
@@ -89,7 +89,7 @@ class ModuleMixin(CommandMixin[AnyStr]):
     @versionadded(version="4.12.0")
     def autocomplete(self) -> Autocomplete[AnyStr]:
         """
-        Property to access :class:`~coredis.modules.autocomplete.Autocomplete` commands.
+        Property to access :class:`~coredis.modules.Autocomplete` commands.
         """
         return Autocomplete(self)
 
@@ -97,7 +97,7 @@ class ModuleMixin(CommandMixin[AnyStr]):
     @versionadded(version="4.12.0")
     def graph(self) -> Graph[AnyStr]:
         """
-        Property to access :class:`~coredis.modules.autocomplete.Autocomplete` commands.
+        Property to access :class:`~coredis.modules.Graph` commands.
         """
         return Graph(self)
 
