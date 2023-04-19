@@ -61,9 +61,9 @@ class TestGraph:
             timeout=100,
         )
         result = await client.graph.query("graph", "MATCH (n) RETURN n")
-        assert result.result_set[0][0].labels == ("Node",)
+        assert result.result_set[0][0].labels == {"Node"}
         assert result.result_set[0][0].properties["name"] == "A"
-        assert result.result_set[1][0].labels == ("Node",)
+        assert result.result_set[1][0].labels == {"Node"}
         assert result.result_set[1][0].properties["name"] == "B"
 
     async def test_query_relations(self, client: Redis):
@@ -71,10 +71,10 @@ class TestGraph:
             "graph", "CREATE (:Node {name: 'A'})-[:EDGE]->(:Node {name: 'B'})"
         )
         result = await client.graph.query("graph", "MATCH (n)-[r]->(m) RETURN n, r, m")
-        assert result.result_set[0][0].labels == ("Node",)
+        assert result.result_set[0][0].labels == {"Node"}
         assert result.result_set[0][0].properties["name"] == "A"
         assert result.result_set[0][1].type == "EDGE"
-        assert result.result_set[0][2].labels == ("Node",)
+        assert result.result_set[0][2].labels == {"Node"}
         assert result.result_set[0][2].properties["name"] == "B"
         await client.graph.query(
             "graph",
@@ -93,7 +93,7 @@ class TestGraph:
         result = await client.graph.query(
             "graph", "MATCH (n {language: 'greek'})-[r]->(m) RETURN n, r, m"
         )
-        assert result.result_set[0][0].labels == ("Node",)
+        assert result.result_set[0][0].labels == {"Node"}
         assert result.result_set[0][0].properties["name"] == "α"
         assert result.result_set[0][0].properties["language"] == "greek"
         assert result.result_set[0][1].properties["distance"] == 1
