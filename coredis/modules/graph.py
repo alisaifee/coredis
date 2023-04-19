@@ -66,14 +66,16 @@ class Graph(ModuleGroup[AnyStr]):
         """
         Executes the given query against a specified graph
 
-        :param graph: The name of the RedisGraph to query.
+        :param graph: The name of the graph to query.
         :param query: The query to execute.
         :param timeout: The maximum amount of time (milliseconds) to wait for the query to complete
         :return: The result set of the executed query.
         """
         pieces: CommandArgList = [graph, query]
+
         if timeout is not None:
             pieces.extend([PrefixToken.TIMEOUT, normalized_milliseconds(timeout)])
+
         pieces.append(b"--compact")
         return await self.execute_module_command(
             CommandName.GRAPH_QUERY,
@@ -97,7 +99,7 @@ class Graph(ModuleGroup[AnyStr]):
         """
         Executes a given read only query against a specified graph
 
-        :param graph: The name of the RedisGraph to query.
+        :param graph: The name of the graph to query.
         :param query: The query to execute.
         :param timeout: The maximum amount of time (milliseconds) to wait for the query to complete.
         :return: The result set for the read-only query or an error if a write query was given.
@@ -150,7 +152,7 @@ class Graph(ModuleGroup[AnyStr]):
         :paramref:`query`, but does not execute it.
 
         :param graph: The name of the graph to execute the query on.
-        :param query: The Cypher query to construct the execution plan for.
+        :param query: The query to construct the execution plan for.
 
         :return: A list of strings representing the query execution plan.
         """
@@ -176,7 +178,7 @@ class Graph(ModuleGroup[AnyStr]):
         operation's execution
 
         :param graph: The name of the graph to execute the query on.
-        :param query: The query to execute.
+        :param query: The query to execute and return a profile for.
         :param timeout: Optional timeout for the query execution in milliseconds.
         :return: A string representation of a query execution plan, with details on results produced
          by and time spent in each operation.
