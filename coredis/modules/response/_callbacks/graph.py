@@ -78,7 +78,6 @@ class QueryCallback(
     async def pre_process(
         self, client: Client[Any], response: ResponseType, **options: Optional[ValueT]
     ) -> None:
-
         if not len(response) == 3:
             return
         result_set = response[1]
@@ -93,17 +92,18 @@ class QueryCallback(
                 max_label_id, max_relation_id, max_property_id = self.fetch_max_ids(
                     entity, max_label_id, max_relation_id, max_property_id
                 )
-
-        self.labels, self.relationships, self.properties = await asyncio.gather(
-            self.fetch_mapping(max_label_id, "labels", client),
-            self.fetch_mapping(max_relation_id, "relationships", client),
-            self.fetch_mapping(max_property_id, "properties", client),
-        )
+        if any(k != -1 for k in [max_label_id, max_relation_id, max_property_id]):
+            self.labels, self.relationships, self.properties = await asyncio.gather(
+                self.fetch_mapping(max_label_id, "labels", client),
+                self.fetch_mapping(max_relation_id, "relationships", client),
+                self.fetch_mapping(max_property_id, "properties", client),
+            )
 
     def fetch_max_ids(
         self, entity: Any, max_label_id: int, max_relation_id: int, max_property_id: int
     ) -> Tuple[int, int, int]:
         result_type = entity[0]
+        print(result_type)
         if result_type == ValueTypes.VALUE_NODE:
             for label_id in entity[1][1]:
                 max_label_id = max(max_label_id, label_id)
@@ -145,7 +145,6 @@ class QueryCallback(
                     ],
                 )
             )
-
         return cache[f"{self.graph}:{type}"]
 
     def transform(
