@@ -12,6 +12,7 @@ from coredis.typing import (
     Optional,
     ResponsePrimitive,
     ResponseType,
+    Set,
     StringT,
     Tuple,
     Union,
@@ -98,8 +99,8 @@ class GraphNode(Generic[AnyStr]):
 
     #: The node's internal ID
     id: int
-    #: A list of labels associated with the node
-    labels: Tuple[AnyStr, ...]
+    #: A set of labels associated with the node
+    labels: Set[AnyStr]
     #: Mapping of property names to values
     properties: Dict[AnyStr, ResponseType]
 
@@ -132,6 +133,23 @@ class GraphPath(Generic[AnyStr]):
     nodes: List[GraphNode[AnyStr]]
     #: The relations in the path
     relations: List[GraphRelation[AnyStr]]
+
+    NULL_NODE = GraphNode[AnyStr](0, set(), {})
+
+    @property
+    def path(self) -> Tuple[Union[GraphNode[AnyStr], GraphRelation[AnyStr]], ...]:
+        """
+        The path as a tuple of nodes and relations
+        """
+        if self.nodes and self.relations:
+            return tuple(
+                [
+                    item
+                    for pair in zip(self.nodes, self.relations + [self.NULL_NODE])
+                    for item in pair
+                ][:-1]
+            )
+        return ()
 
 
 @dataclasses.dataclass

@@ -110,20 +110,21 @@ class TestGraph:
 
         assert len(result.result_set) == 2
 
-        nodes = result.result_set[0][0].nodes
-        relation = result.result_set[0][0].relations[0]
+        p1 = result.result_set[0][0]
+        p2 = result.result_set[1][0]
+
+        assert p1.path == (p1.nodes[0], p1.relations[0], p1.nodes[1])
         assert ("A", "EDGE", "B") == (
-            nodes[0].properties["name"],
-            relation.type,
-            nodes[1].properties["name"],
+            p1.nodes[0].properties["name"],
+            p1.relations[0].type,
+            p1.nodes[1].properties["name"],
         )
 
-        nodes = result.result_set[1][0].nodes
-        relation = result.result_set[1][0].relations[0]
+        assert p2.path == (p2.nodes[0], p2.relations[0], p2.nodes[1])
         assert ("B", "EDGE", "C") == (
-            nodes[0].properties["name"],
-            relation.type,
-            nodes[1].properties["name"],
+            p2.nodes[0].properties["name"],
+            p2.relations[0].type,
+            p2.nodes[1].properties["name"],
         )
 
     @pytest.mark.parametrize(

@@ -206,7 +206,7 @@ class QueryCallback(
         elif result_type == ValueTypes.VALUE_NODE:
             return GraphNode(
                 id=entity[1][0],
-                labels=tuple(self.labels.get(k, k) for k in entity[1][1]),
+                labels=set(self.labels.get(k, k) for k in entity[1][1]),
                 properties=dict(
                     (
                         self.properties.get(k[0], k[0]),
