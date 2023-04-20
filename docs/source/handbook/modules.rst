@@ -427,16 +427,17 @@ we can create a graph with multiple nodes and relationships in one query::
 
 Querying the graph
 ==================
-
-Using the previous example, let's query for scalar properties::
+Using the previous example, let's query for a few scalar properties of the nodes::
 
     results = await client.graph.query("imdb", """
         MATCH (a:actor)-[:act]->(m:movie {
           title:"Straight Outta Compton"
         })
-        RETURN m.title, SUM(2020-a.birth_year), MAX(2020-a.birth_year), MIN(2020-a.birth_year), AVG(2020-a.birth_year)
+        RETURN a.name, m.title
     """)
-    assert ['Straight Outta Compton', 135.0, 40, 29, 33.75] == results.result_set[0]
+    assert len(results.result_set) == 4
+    assert ['Aldis Hodge', 'Straight Outta Compton'] == results.result_set[0]
+
 
 Perform the same query but this time return the nodes::
 
@@ -446,6 +447,8 @@ Perform the same query but this time return the nodes::
         })
         RETURN a, m
     """)
+
+    assert len(results.result_set) == 4
     actor = results.result_set[0][0]
     movie = results.result_set[0][1]
 
@@ -469,6 +472,17 @@ Fetch the entire matching path::
         path[1].type, # GraphRelation: act
         path[2].properties["title"] # GraphNode: movie
     ]
+
+Perform an aggregation using aggregate functions::
+
+    results = await client.graph.query("imdb", """
+        MATCH (a:actor)-[:act]->(m:movie {
+          title:"Straight Outta Compton"
+        })
+        RETURN m.title, SUM(2020-a.birth_year), MAX(2020-a.birth_year), MIN(2020-a.birth_year), AVG(2020-a.birth_year)
+    """)
+    assert ['Straight Outta Compton', 135.0, 40, 29, 33.75] == results.result_set[0]
+
 
 For more details about supported commands in the module refer to the API documentation
 for :class:`~coredis.modules.Graph`
