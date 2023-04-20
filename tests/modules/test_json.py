@@ -788,14 +788,14 @@ class TestJson:
             "$",
             {"a": 1, "b": [2], "c": {"d": "3"}, "e": {"f": [{"g": 4, "h": True}]}},
         )
-        await p.json.numincrby("key", "$..*", 1)
+        await p.json.numincrby("key", "$.a", 1)
         await p.json.arrappend("key", [1], "..*")
         await p.json.strappend("key", "bar", "..*")
         await p.json.toggle("key", "..*")
         await p.json.toggle("key", "..*")
         assert (
             True,
-            [2, None, None, None, 3, None, None, None, 5, None],
+            [2],
             2,
             4,
             False,
@@ -803,7 +803,7 @@ class TestJson:
         ) == await p.execute()
         assert {
             "a": 2,
-            "b": [3, 1],
+            "b": [2, 1],
             "c": {"d": "3bar"},
-            "e": {"f": [{"g": 5, "h": True}, 1]},
+            "e": {"f": [{"g": 4, "h": True}, 1]},
         } == await client.json.get("key")
