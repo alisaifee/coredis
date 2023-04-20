@@ -221,7 +221,7 @@ def get_client_test_args(request):
     if "client_arguments" in request.fixturenames:
         return request.getfixturevalue("client_arguments")
 
-    return {}
+    return {"stream_timeout": 5, "connect_timeout": 1}
 
 
 def get_remapped_slots(request):
@@ -794,7 +794,6 @@ async def redis_cluster(redis_cluster_server, request):
     cluster = coredis.RedisCluster(
         "localhost",
         7000,
-        stream_timeout=10,
         decode_responses=True,
         **get_client_test_args(request),
     )
@@ -817,7 +816,6 @@ async def redis_cluster_auth(redis_cluster_auth_server, request):
     cluster = coredis.RedisCluster(
         "localhost",
         8500,
-        stream_timeout=10,
         decode_responses=True,
         password="sekret",
         **get_client_test_args(request),
@@ -840,7 +838,6 @@ async def redis_cluster_auth(redis_cluster_auth_server, request):
 async def redis_cluster_blocking(redis_cluster_server, request):
     pool = coredis.BlockingClusterConnectionPool(
         startup_nodes=[{"host": "localhost", "port": 7000}],
-        stream_timeout=10,
         max_connections=32,
         decode_responses=True,
         **get_client_test_args(request),
@@ -869,7 +866,6 @@ async def redis_cluster_noreplica(redis_cluster_noreplica_server, request):
     cluster = coredis.RedisCluster(
         "localhost",
         8400,
-        stream_timeout=10,
         decode_responses=True,
         **get_client_test_args(request),
     )
@@ -917,7 +913,6 @@ async def redis_cluster_cached(redis_cluster_server, request):
     cluster = coredis.RedisCluster(
         "localhost",
         7000,
-        stream_timeout=10,
         decode_responses=True,
         cache=cache,
         **get_client_test_args(request),
@@ -940,7 +935,6 @@ async def redis_cluster_raw(redis_cluster_server, request):
     cluster = coredis.RedisCluster(
         "localhost",
         7000,
-        stream_timeout=10,
         **get_client_test_args(request),
     )
     await check_test_constraints(request, cluster)
@@ -960,7 +954,6 @@ async def redis_cluster_raw_resp2(redis_cluster_server, request):
     cluster = coredis.RedisCluster(
         "localhost",
         7000,
-        stream_timeout=10,
         decode_responses=False,
         protocol_version=2,
         **get_client_test_args(request),
@@ -982,7 +975,6 @@ async def redis_cluster_resp2(redis_cluster_server, request):
     cluster = coredis.RedisCluster(
         "localhost",
         7000,
-        stream_timeout=10,
         decode_responses=True,
         protocol_version=2,
         **get_client_test_args(request),
@@ -1004,7 +996,6 @@ async def redis_stack_cluster(redis_stack_cluster_server, request):
     cluster = coredis.RedisCluster(
         "localhost",
         9000,
-        stream_timeout=10,
         decode_responses=True,
         **get_client_test_args(request),
     )
@@ -1115,7 +1106,6 @@ async def keydb_cluster(keydb_cluster_server, request):
     cluster = coredis.experimental.KeyDBCluster(
         "localhost",
         8000,
-        stream_timeout=10,
         decode_responses=True,
         **get_client_test_args(request),
     )
