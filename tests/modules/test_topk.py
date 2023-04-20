@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
 from coredis import Redis
 from tests.conftest import targets
 
@@ -52,3 +54,11 @@ class TestTopK:
         assert {"4": 2, "5": 2, "6": 2} == await client.topk.list(
             "topk", withcount=True
         )
+
+    @pytest.mark.parametrize("transaction", [True, False])
+    async def test_pipeline(self, client: Redis, transaction: bool):
+        p = await client.pipeline(transaction=transaction)
+        await p.topk.reserve("topk", 3)
+        await p.topk.add("topk", ["1", "2", "3"])
+        await p.topk.query("topk", ["1", "2", "3"])
+        assert (True, (None, None, None), (True, True, True)) == await p.execute()

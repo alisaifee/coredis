@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from coredis import PureToken
+from coredis import PureToken, Redis
 from coredis.exceptions import ResponseError
 from tests.conftest import targets
 
@@ -48,7 +48,7 @@ async def seed(client):
     "redis_stack_cluster",
 )
 class TestJson:
-    async def test_get(self, client, seed):
+    async def test_get(self, client: Redis, seed):
         assert seed == await client.json.get("seed")
         assert seed["int"] == await client.json.get("seed", ".int")
         assert seed["string"] == await client.json.get("seed", ".string")
@@ -60,14 +60,14 @@ class TestJson:
             seed["object"]["mixedlist"],
         ] == await client.json.get("seed", "$..mixedlist")
 
-    async def test_forget(self, client, seed):
+    async def test_forget(self, client: Redis, seed):
         assert await client.json.forget("seed", "$.intlist") == 1
         assert await client.json.forget("seed", "$.intlist") == 0
         assert not await client.json.get("seed", "$.intlist")
         assert await client.json.forget("seed") == 1
         assert not await client.exists(["seed"])
 
-    async def test_set(self, client):
+    async def test_set(self, client: Redis):
         obj = {"foo": "bar"}
         assert await client.json.set("obj", ".", obj)
 
@@ -79,7 +79,7 @@ class TestJson:
         assert await client.json.set("obj", "foo", "baz", condition=PureToken.XX)
         assert await client.json.set("obj", "qaz", "baz", condition=PureToken.NX)
 
-    async def test_type(self, client):
+    async def test_type(self, client: Redis):
         await client.json.set("1", ".", 1)
         assert "integer" == await client.json.type("1", ".")
         assert "integer" == await client.json.type("1")
@@ -94,24 +94,24 @@ class TestJson:
         # Test missing key
         assert await client.json.type("non_existing_doc", "..a") is None
 
-    async def test_numincrby(self, client, seed):
+    async def test_numincrby(self, client: Redis, seed):
         assert 2 == await client.json.numincrby("seed", ".int", 1)
         assert 2.5 == await client.json.numincrby("seed", ".int", 0.5)
         assert 1.25 == await client.json.numincrby("seed", ".int", -1.25)
         assert [10001.25, 10002] == await client.json.numincrby("seed", "$..int", 10000)
 
-    async def test_nummultby(self, client, seed):
+    async def test_nummultby(self, client: Redis, seed):
         assert 2 == await client.json.nummultby("seed", ".int", 2)
         assert 5 == await client.json.nummultby("seed", ".int", 2.5)
         assert 2.5 == await client.json.nummultby("seed", ".int", 0.5)
         assert [5.0, 4] == await client.json.nummultby("seed", "$..int", 2)
 
-    async def test_arrindex(self, client):
+    async def test_arrindex(self, client: Redis):
         await client.json.set("arr", ".", [0, 1, 2, 3, 4])
         assert 1 == await client.json.arrindex("arr", ".", 1)
         assert -1 == await client.json.arrindex("arr", ".", 1, 2)
 
-    async def test_resp(self, client):
+    async def test_resp(self, client: Redis):
         obj = {"foo": "bar", "baz": 1, "qaz": True}
         await client.json.set("obj", ".", obj)
         assert "bar" == await client.json.resp("obj", "foo")
@@ -119,7 +119,7 @@ class TestJson:
         assert await client.json.resp("obj", "qaz")
         assert isinstance(await client.json.resp("obj"), list)
 
-    async def test_delete(self, client):
+    async def test_delete(self, client: Redis):
         doc1 = {"a": 1, "nested": {"a": 2, "b": 3}}
         assert await client.json.set("doc1", "$", doc1)
         assert await client.json.delete("doc1", "$..a") == 2
@@ -175,7 +175,7 @@ class TestJson:
         await client.json.delete("not_a_document", "..a")
 
     @pytest.mark.nocluster
-    async def test_mget(self, client):
+    async def test_mget(self, client: Redis):
         # Test mget with multi paths
         await client.json.set(
             "doc1",
@@ -203,7 +203,7 @@ class TestJson:
         res = await client.json.mget(["missing_doc1", "missing_doc2"], "$..a")
         assert res == [None, None]
 
-    async def test_incrby(self, client):
+    async def test_incrby(self, client: Redis):
         await client.json.set(
             "doc1", "$", {"a": "b", "b": [{"a": 2}, {"a": 5.0}, {"a": "c"}]}
         )
@@ -216,7 +216,7 @@ class TestJson:
         assert await client.json.numincrby("doc1", "$.b[2].a", 2) == [None]
         assert await client.json.numincrby("doc1", "$.b[1].a", 3.5) == [15.0]
 
-    async def test_strappend(self, client):
+    async def test_strappend(self, client: Redis):
         await client.json.set("jsonkey", ".", "foo")
         assert 6 == await client.json.strappend("jsonkey", "bar")
         assert "foobar" == await client.json.get("jsonkey", ".")
@@ -251,7 +251,7 @@ class TestJson:
         with pytest.raises(ResponseError):
             await client.json.strappend("doc1", "piu")
 
-    async def test_strlen(self, client):
+    async def test_strlen(self, client: Redis):
         await client.json.set("str", ".", "foo")
         assert 3 == await client.json.strlen("str", ".")
         await client.json.strappend("str", "bar", ".")
@@ -275,7 +275,7 @@ class TestJson:
         with pytest.raises(ResponseError):
             await client.json.strlen("non_existing_doc", "$..a")
 
-    async def test_arrappend(self, client):
+    async def test_arrappend(self, client: Redis):
         await client.json.set("arr", ".", [1])
         assert 2 == await client.json.arrappend("arr", [2], ".")
         assert 4 == await client.json.arrappend("arr", [3, 4], ".")
@@ -347,7 +347,7 @@ class TestJson:
         with pytest.raises(ResponseError):
             await client.json.arrappend("non_existing_doc", [], "$..a")
 
-    async def test_arrinsert(self, client):
+    async def test_arrinsert(self, client: Redis):
         await client.json.set("arr", ".", [0, 4])
         assert 5 - -await client.json.arrinsert(
             "arr",
@@ -399,7 +399,7 @@ class TestJson:
         with pytest.raises(ResponseError):
             await client.json.arrappend("non_existing_doc", [], "$..a")
 
-    async def test_arrlen(self, client):
+    async def test_arrlen(self, client: Redis):
         await client.json.set("arr", ".", [0, 1, 2, 3, 4])
         assert 5 == await client.json.arrlen("arr", ".")
         assert 5 == await client.json.arrlen("arr")
@@ -449,7 +449,7 @@ class TestJson:
         # Test missing key
         assert await client.json.arrlen("non_existing_doc", "..a") is None
 
-    async def test_arrpop(self, client):
+    async def test_arrpop(self, client: Redis):
         await client.json.set("arr", ".", [0, 1, 2, 3, 4])
         assert 4 == await client.json.arrpop("arr", ".", 4)
         assert 3 == await client.json.arrpop("arr", ".", -1)
@@ -506,7 +506,7 @@ class TestJson:
         with pytest.raises(ResponseError):
             await client.json.arrpop("non_existing_doc", "..a")
 
-    async def test_arrtrim(self, client):
+    async def test_arrtrim(self, client: Redis):
         await client.json.set("arr", ".", [0, 1, 2, 3, 4])
         assert 3 == await client.json.arrtrim("arr", ".", 1, 3)
         assert [1, 2, 3] == await client.json.get("arr")
@@ -580,7 +580,7 @@ class TestJson:
         with pytest.raises(ResponseError):
             await client.json.arrtrim("non_existing_doc", "..a", 1, 1)
 
-    async def test_objkeys(self, client):
+    async def test_objkeys(self, client: Redis):
         obj = {"foo": "bar", "baz": "qaz"}
         await client.json.set("obj", ".", obj)
         keys = await client.json.objkeys("obj", ".")
@@ -623,7 +623,7 @@ class TestJson:
         assert await client.json.objkeys("doc1", "$..nowhere") == []
 
     @pytest.mark.min_module_version("ReJSON", "2.4.0")
-    async def test_objlen(self, client):
+    async def test_objlen(self, client: Redis):
         obj = {"foo": "bar", "baz": "qaz"}
         await client.json.set("obj", ".", obj)
         assert len(obj) == await client.json.objlen("obj", ".")
@@ -683,7 +683,7 @@ class TestJson:
 
         return jdata, types
 
-    async def test_clear(self, client):
+    async def test_clear(self, client: Redis):
         await client.json.set("arr", ".", [0, 1, 2, 3, 4])
         assert 1 == await client.json.clear("arr", ".")
         assert [] == await client.json.get("arr")
@@ -739,7 +739,7 @@ class TestJson:
         with pytest.raises(ResponseError):
             await client.json.clear("non_existing_doc", "$..a")
 
-    async def test_toggle(self, client):
+    async def test_toggle(self, client: Redis):
         await client.json.set("bool", ".", False)
         assert await client.json.toggle("bool", ".") is True
         assert await client.json.toggle("bool", ".") is False
@@ -773,9 +773,37 @@ class TestJson:
             await client.json.toggle("non_existing_doc", "$..a")
 
     @pytest.mark.min_module_version("ReJSON", "2.4.0")
-    async def test_debug_memory(self, client, seed):
+    async def test_debug_memory(self, client: Redis, seed):
         assert 8 == await client.json.debug_memory("seed", ".int")
         assert 14 == await client.json.debug_memory("seed", ".string")
         assert 872 == await client.json.debug_memory("seed", ".object")
         assert [8, 8] == await client.json.debug_memory("seed", "$..int")
         assert 1772 == await client.json.debug_memory("seed")
+
+    @pytest.mark.parametrize("transaction", [True, False])
+    async def test_pipeline(self, client: Redis, transaction: bool):
+        p = await client.pipeline(transaction=transaction)
+        await p.json.set(
+            "key",
+            "$",
+            {"a": 1, "b": [2], "c": {"d": "3"}, "e": {"f": [{"g": 4, "h": True}]}},
+        )
+        await p.json.numincrby("key", "$..*", 1)
+        await p.json.arrappend("key", [1], "..*")
+        await p.json.strappend("key", "bar", "..*")
+        await p.json.toggle("key", "..*")
+        await p.json.toggle("key", "..*")
+        assert (
+            True,
+            [2, None, None, None, 3, None, None, None, 5, None],
+            2,
+            4,
+            False,
+            True,
+        ) == await p.execute()
+        assert {
+            "a": 2,
+            "b": [3, 1],
+            "c": {"d": "3bar"},
+            "e": {"f": [{"g": 5, "h": True}, 1]},
+        } == await client.json.get("key")

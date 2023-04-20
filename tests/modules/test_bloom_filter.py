@@ -92,3 +92,17 @@ class TestBloomFilter:
         for chunk in scanned:
             await client.bf.loadchunk("newfilter", *chunk)
         assert not await client.bf.add("newfilter", 1)
+
+    @pytest.mark.parametrize("transaction", [True, False])
+    async def test_pipeline(self, client: Redis, transaction: bool):
+        p = await client.pipeline(transaction=transaction)
+        await p.bf.add("filter", 1)
+        await p.bf.add("filter", 2)
+        await p.bf.exists("filter", 2)
+        await p.bf.mexists("filter", [1, 2, 3])
+        assert (
+            True,
+            True,
+            True,
+            (True, True, False),
+        ) == await p.execute()

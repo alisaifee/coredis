@@ -101,3 +101,12 @@ class TestCountMinSketch:
 
         assert (1, 3) == await client.cms.query("sketch{a}", ["fu", "bar"])
         assert (2, 4) == await client.cms.query("sketchweighed{a}", ["fu", "bar"])
+
+    @pytest.mark.parametrize("transaction", [True, False])
+    async def test_pipeline(self, client: Redis, transaction: bool):
+        p = await client.pipeline(transaction=transaction)
+        await p.cms.initbydim("sketch", 2, 50)
+        await p.cms.incrby("sketch", {"fu": 1, "bar": 2})
+        await p.cms.incrby("sketch", {"fu": 3})
+        await p.cms.query("sketch", ["fu", "bar"])
+        assert (True, (1, 2), (4,), (4, 2)) == await p.execute()

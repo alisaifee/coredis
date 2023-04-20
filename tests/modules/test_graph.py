@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from unittest.mock import ANY
+
 import pytest
 
 from coredis import PureToken, Redis
 from coredis.exceptions import ResponseError
+from coredis.modules.response.types import GraphNode, GraphQueryResult
 from tests.conftest import targets
 
 
@@ -237,3 +240,17 @@ class TestGraph:
 
         logs = await client.graph.slowlog("graph")
         assert len(logs) == 0
+
+    @pytest.mark.parametrize("transaction", [True, False])
+    async def test_pipeline(self, client: Redis, transaction):
+        p = await client.pipeline(transaction=transaction)
+        await p.graph.query("graph", "CREATE (:Node {name: 'A'})")
+        await p.graph.query("graph", "MATCH (n) return n")
+        assert (
+            GraphQueryResult((), (), stats=ANY),
+            GraphQueryResult(
+                ("n",),
+                ([GraphNode(id=0, labels={"Node"}, properties={"name": "A"})],),
+                stats=ANY,
+            ),
+        ) == await p.execute()

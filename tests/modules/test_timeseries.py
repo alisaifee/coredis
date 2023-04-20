@@ -758,3 +758,11 @@ class TestTimeseries:
         compressed_info = await client.timeseries.info("compressed")
         uncompressed_info = await client.timeseries.info("uncompressed")
         assert compressed_info["memoryUsage"] != uncompressed_info["memoryUsage"]
+
+    @pytest.mark.parametrize("transaction", [True, False])
+    async def test_pipeline(self, client: Redis, transaction: bool):
+        p = await client.pipeline(transaction=transaction)
+        await p.timeseries.create("ts")
+        await p.timeseries.add("ts", 1, 1)
+        await p.timeseries.get("ts")
+        assert (True, 1, (1, 1.0)) == await p.execute()

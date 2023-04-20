@@ -8,6 +8,11 @@ import pytest
 
 from coredis import PureToken, Redis
 from coredis.exceptions import ResponseError
+from coredis.modules.response.types import (
+    SearchAggregationResult,
+    SearchDocument,
+    SearchResult,
+)
 from coredis.modules.search import Apply, Field, Filter, Group, Reduce
 from coredis.retry import ConstantRetryPolicy, retryable
 from tests.conftest import targets
@@ -641,6 +646,37 @@ class TestSearch:
             await client.search.explain(index_name, "*", dialect=dialect)
         )
 
+    @pytest.mark.parametrize("transaction", [True, False])
+    async def test_pipeline(self, client: Redis, transaction: bool):
+        p = await client.pipeline(transaction=transaction)
+        await p.search.create(
+            "{search}:idx",
+            [
+                Field("name", PureToken.TEXT),
+            ],
+            on=PureToken.HASH,
+            prefixes=["{search}:"],
+        )
+        await p.hset("{search}:doc:1", {"name": "hello"})
+        await p.hset("{search}:doc:2", {"name": "world"})
+        await p.search.search(
+            "{search}:idx",
+            "@name:hello",
+        )
+        assert (
+            True,
+            1,
+            1,
+            SearchResult(
+                total=1,
+                documents=(
+                    SearchDocument(
+                        "{search}:doc:1", None, None, None, None, {"name": "hello"}
+                    ),
+                ),
+            ),
+        ) == await p.execute()
+
 
 @pytest.mark.min_module_version("search", "2.6.1")
 @targets("redis_stack", "redis_stack_cached", "redis_stack_cluster")
@@ -833,3 +869,31 @@ class TestAggregation:
 
         with pytest.raises(ResponseError):
             await client.search.cursor_read(index_name, cursor_results.cursor)
+
+    @pytest.mark.parametrize("transaction", [True, False])
+    async def test_pipeline(self, client: Redis, transaction: bool):
+        p = await client.pipeline(transaction=transaction)
+        await p.search.create(
+            "{search}:idx",
+            [
+                Field("name", PureToken.TEXT),
+            ],
+            on=PureToken.HASH,
+            prefixes=["{search}:"],
+        )
+        await p.hset("{search}:doc:1", {"name": "hello"})
+        await p.hset("{search}:doc:2", {"name": "world"})
+        await p.search.aggregate(
+            "{search}:idx",
+            "*",
+            transforms=[Group("@name", [Reduce("count", [0], "count")])],
+        )
+        assert (
+            True,
+            1,
+            1,
+            SearchAggregationResult(
+                [{"name": "hello", "count": "1"}, {"name": "world", "count": "1"}],
+                None,
+            ),
+        ) == await p.execute()

@@ -91,3 +91,14 @@ class TestTdigest:
             "digest{a}", ["digestA{a}", "digestB{a}"], compression=1, override=True
         )
         assert 1 == (await client.tdigest.info("digest{a}"))["Compression"]
+
+    @pytest.mark.parametrize("transaction", [True, False])
+    async def test_pipeline(self, client: Redis, transaction: bool):
+        p = await client.pipeline(transaction=transaction)
+        await p.tdigest.create("digest1{a}")
+        await p.tdigest.create("digest2{a}")
+        await p.tdigest.add("digest1{a}", [1, 2, 3])
+        await p.tdigest.add("digest2{a}", [4, 5, 6])
+        await p.tdigest.merge("digest1{a}", ["digest2{a}"])
+        await p.tdigest.quantile("digest1{a}", [0, 0.5, 1])
+        assert (True, True, True, True, True, (1.0, 4.0, 6.0)) == await p.execute()
