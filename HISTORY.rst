@@ -3,6 +3,34 @@
 Changelog
 =========
 
+v4.12.0rc1
+----------
+Release Date: 2023-04-19
+
+* Features
+
+  * Add support for RedisGraph module
+  * Allow overriding the default stream_timeout
+    when using a pipeline
+  * Check argument versions for compatibility and
+    raise appropriate errors if an argument is used
+    on an older server version which doesn't support it.
+
+* Bug Fix
+
+  * Handle pause/resume callbacks from Transport
+    and pause sending subsequent commands until
+    the transport buffer is resumed.
+  * Handle RESP3 response for :meth:`~coredis.Redis.command`
+  * Update :meth:`~coredis.ConnectionPool.from_url` &
+    :meth:`~coredis.ClusterConnectionPool.from_url` to support
+    all constructor arguments
+
+* Chores
+
+  * Add redis-stack@edge to compatibility matrix in CI
+
+
 v4.12.0b4
 ---------
 Release Date: 2023-04-10
@@ -1488,5 +1516,6 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
