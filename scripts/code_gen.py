@@ -2579,6 +2579,7 @@ from typing import Any
 from wrapt import ObjectProxy
 
 from coredis import PureToken
+from coredis.client import Client, Redis, RedisCluster
 from coredis.commands.script import Script
 from coredis.pool import ClusterConnectionPool, ConnectionPool
 from coredis.typing import (

@@ -15,7 +15,7 @@ from typing import Any, cast
 from wrapt import ObjectProxy  # type: ignore
 
 from coredis._utils import b, hash_slot
-from coredis.client import Client
+from coredis.client import Client, Redis, RedisCluster
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName, NodeFlag
 from coredis.commands.script import Script
@@ -39,6 +39,7 @@ from coredis.pool import ClusterConnectionPool, ConnectionPool
 from coredis.pool.nodemanager import ManagedNode
 from coredis.response._callbacks import (
     AnyStrCallback,
+    AsyncPreProcessingCallback,
     BoolCallback,
     BoolsCallback,
     NoopCallback,
@@ -123,10 +124,12 @@ class ClusterPipelineCommand(PipelineCommand):
 class NodeCommands:
     def __init__(
         self,
+        client: RedisCluster[AnyStr],
         connection: ClusterConnection,
         in_transaction: bool = False,
         timeout: Optional[float] = None,
     ):
+        self.client = client
         self.connection = connection
         self.commands: List[ClusterPipelineCommand] = []
         self.in_transaction = in_transaction
@@ -207,6 +210,10 @@ class NodeCommands:
                         if _c.command not in {CommandName.MULTI, CommandName.EXEC}
                     ]
                 ):
+                    if isinstance(c.callback, AsyncPreProcessingCallback):
+                        await c.callback.pre_process(
+                            self.client, transaction_result[idx], **c.options
+                        )  # pyright: reportGeneralTypeIssues=false
                     c.result = c.callback(
                         transaction_result[idx],
                         version=connection.protocol_version,
@@ -275,15 +282,17 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
     """
 
     command_stack: List[PipelineCommand]
+    connection_pool: ConnectionPool
 
     def __init__(
         self,
-        connection_pool: ConnectionPool,
+        client: Client[AnyStr],
         transaction: Optional[bool],
         watches: Optional[Parameters[KeyT]] = None,
         timeout: Optional[float] = None,
     ) -> None:
-        self.connection_pool = connection_pool
+        self.client = client
+        self.connection_pool = client.connection_pool
         self.connection = None
         self._transaction = transaction
         self.watching = False
@@ -559,6 +568,10 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         data: List[Any] = []
         for r, cmd in zip(response, commands):
             if not isinstance(r, Exception):
+                if isinstance(cmd.callback, AsyncPreProcessingCallback):
+                    await cmd.callback.pre_process(
+                        self.client, r, **cmd.options
+                    )  # pyright: reportGeneralTypeIssues=false
                 r = cmd.callback(r, version=connection.protocol_version, **cmd.options)
             data.append(r)
         return tuple(data)
@@ -591,9 +604,14 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
 
         for cmd in commands:
             try:
+                res = await cmd.request if cmd.request else None
+                if isinstance(cmd.callback, AsyncPreProcessingCallback):
+                    await cmd.callback.pre_process(
+                        self.client, res, **cmd.options
+                    )  # pyright: reportGeneralTypeIssues=false
                 response.append(
                     cmd.callback(
-                        await cmd.request if cmd.request else None,
+                        res,
                         **cmd.options,
                     )
                 )
@@ -722,6 +740,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
 
 
 class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
+    client: RedisCluster[AnyStr]
     connection_pool: ClusterConnectionPool
     command_stack: List[ClusterPipelineCommand]
 
@@ -730,16 +749,16 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
     def __init__(
         self,
-        connection_pool: ClusterConnectionPool,
-        result_callbacks: Optional[Dict[bytes, Callable[..., Any]]] = None,
+        client: RedisCluster[AnyStr],
         transaction: Optional[bool] = False,
         watches: Optional[Parameters[KeyT]] = None,
         timeout: Optional[float] = None,
     ) -> None:
         self.command_stack = []
         self.refresh_table_asap = False
-        self.connection_pool: ClusterConnectionPool = connection_pool
-        self.result_callbacks = result_callbacks
+        self.client = client
+        self.connection_pool = client.connection_pool
+        self.result_callbacks = client.result_callbacks
         self._transaction = transaction
         self._watched_node: Optional[ManagedNode] = None
         self._watched_connection: Optional[ClusterConnection] = None
@@ -906,7 +925,9 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
         if self.watches:
             await self._watch(node, conn, self.watches)
-        node_commands = NodeCommands(conn, in_transaction=True, timeout=self.timeout)
+        node_commands = NodeCommands(
+            self.client, conn, in_transaction=True, timeout=self.timeout
+        )
         node_commands.append(ClusterPipelineCommand(CommandName.MULTI, ()))
         node_commands.extend(attempt)
         node_commands.append(ClusterPipelineCommand(CommandName.EXEC, ()))
@@ -967,6 +988,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
             if node.name not in nodes:
                 nodes[node.name] = NodeCommands(
+                    self.client,
                     await self.connection_pool.get_connection_by_node(node),
                     timeout=self.timeout,
                 )
@@ -1043,15 +1065,18 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
         # turn the response back into a simple flat array that corresponds
         # to the sequence of commands issued in the stack in pipeline.execute()
-        response = tuple(
-            c.callback(c.result, version=protocol_version, **c.options)
-            for c in sorted(self.command_stack, key=lambda x: x.position)
-        )
+        response = []
+        for c in sorted(self.command_stack, key=lambda x: x.position):
+            if isinstance(c.callback, AsyncPreProcessingCallback):
+                await c.callback.pre_process(
+                    self.client, c.result, **c.options
+                )  # pyright: reportGeneralTypeIssues=false
+            response.append(c.callback(c.result, version=protocol_version, **c.options))
 
         if raise_on_error:
             self.raise_first_error()
 
-        return response
+        return tuple(response)
 
     def _determine_slot(self, command: bytes, *args: ValueT, **options: ValueT) -> int:
         """Figure out what slot based on command and args"""
@@ -1203,14 +1228,14 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     @classmethod
     def proxy(
         cls,
-        connection_pool: ConnectionPool,
+        client: Redis[AnyStr],
         transaction: Optional[bool] = None,
         watches: Optional[Parameters[KeyT]] = None,
         timeout: Optional[float] = None,
     ) -> Pipeline[AnyStr]:
         return cls(
             PipelineImpl(
-                connection_pool,
+                client,
                 transaction=transaction,
                 watches=watches,
                 timeout=timeout,
@@ -1281,16 +1306,14 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     @classmethod
     def proxy(
         cls,
-        connection_pool: ClusterConnectionPool,
-        result_callbacks: Optional[Dict[bytes, Callable[..., Any]]] = None,
+        client: RedisCluster[AnyStr],
         transaction: Optional[bool] = False,
         watches: Optional[Parameters[KeyT]] = None,
         timeout: Optional[float] = None,
     ) -> ClusterPipeline[AnyStr]:
         return cls(
             ClusterPipelineImpl(
-                connection_pool,
-                result_callbacks=result_callbacks,
+                client,
                 transaction=transaction,
                 watches=watches,
                 timeout=timeout,

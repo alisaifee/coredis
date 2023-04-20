@@ -1094,9 +1094,7 @@ class Redis(Client[AnyStr]):
         """
         from coredis.pipeline import Pipeline
 
-        return Pipeline[AnyStr].proxy(
-            self.connection_pool, transaction, watches, timeout
-        )
+        return Pipeline[AnyStr].proxy(self, transaction, watches, timeout)
 
     async def transaction(
         self,

@@ -1103,8 +1103,7 @@ class RedisCluster(
         from coredis.pipeline import ClusterPipeline
 
         return ClusterPipeline[AnyStr].proxy(
-            connection_pool=self.connection_pool,
-            result_callbacks=self.result_callbacks,
+            client=self,
             transaction=transaction,
             watches=watches,
             timeout=timeout,

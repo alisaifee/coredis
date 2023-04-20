@@ -7,6 +7,7 @@ from typing import Any
 from wrapt import ObjectProxy
 
 from coredis import PureToken
+from coredis.client import Client, Redis, RedisCluster
 from coredis.commands.script import Script
 from coredis.pool import ClusterConnectionPool, ConnectionPool
 from coredis.typing import (
@@ -35,7 +36,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     @classmethod
     def proxy(
         cls,
-        connection_pool: "ConnectionPool",
+        client: "Client[AnyStr]",
         transaction: "Optional[bool]",
         watches: "Optional[Parameters[KeyT]]" = ...,
         timeout: "Optional[float]" = ...,
@@ -1117,8 +1118,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     @classmethod
     def proxy(
         cls,
-        connection_pool: "ClusterConnectionPool",
-        result_callbacks: "Optional[Dict[bytes, Callable[..., Any]]]" = ...,
+        client: "RedisCluster[AnyStr]",
         transaction: "Optional[bool]" = ...,
         watches: "Optional[Parameters[KeyT]]" = ...,
         timeout: "Optional[float]" = ...,
