@@ -4,9 +4,49 @@ Redis Modules
 
 coredis contains built in support for a few popular :term:`Redis Modules`.
 
+The commands exposed by the individual modules follow the same API conventions
+as the core builtin commands and can be accessed via the appropriate
+command group property (such as :attr:`~Redis.json`, :attr:`~Redis.cf`, :attr:`~Redis.timeseries` etc...)
+of :class:`Redis` or :class:`RedisCluster`.
+
+For example::
+
+    client = coredis.Redis()
+    # RedisJSON
+    await client.json.get("key")
+    # RediSearch
+    await client.search.search("index", "*")
+    # RedisBloom:BloomFilter
+    await client.bf.reserve("bf", 0.001, 1000)
+    # RedisBloom:CuckooFilter
+    await client.cf.reserve("cf", 1000)
+    # RedisTimeSeries
+    await client.timeseries.add("ts", 1, 1)
+    # RedisGraph
+    await client.graph.query("graph", "CREATE (:Node {name: 'Node'})")
+
+
+Module commands can also be used in :ref:`handbook/pipelines:pipelines` (and transactions)
+by accessing them via the command group property in the same way as described above.
+
+For example::
+
+    pipeline = await client.pipeline()
+
+    await pipeline.json.get("key")
+    await pipeline.json.get("key")
+    await pipeline.search.search("index", "*")
+    await pipeline.bf.reserve("bf", 0.001, 1000)
+    await pipeline.cf.reserve("cf", 1000)
+    await pipeline.timeseries.add("ts", 1, 1)
+    await pipeline.graph.query("graph", "CREATE (:Node {name: 'Node'})")
+
+    await pipeline.execute()
+
+
 RedisJSON
 ^^^^^^^^^
-`RedisJSON` adds native support for storing and retrieving JSON documents.
+``RedisJSON`` adds native support for storing and retrieving JSON documents.
 
 To access the commands exposed by the module use the :attr:`~Redis.json` property
 or manually instantiate the :class:`~modules.Json` class with an instance of
@@ -489,8 +529,8 @@ for :class:`~coredis.modules.Graph`
 
 RedisBloom
 ^^^^^^^^^^
-The probabilistic datastructures exposed by `RedisBloom` can be accessed
-through coredis using the following properties (or explictely by instantiating
+The probabilistic datastructures exposed by ``RedisBloom`` can be accessed
+through coredis using the following properties (or explicitly by instantiating
 the associated module exposed by the property):
 
 BloomFilter
@@ -629,17 +669,17 @@ For more details refer to the API documentation for :class:`~coredis.modules.TDi
 
 RedisTimeSeries
 ^^^^^^^^^^^^^^^
-`RedisTimeSeries` adds a time series data structure to Redis that allows ingesting
+``RedisTimeSeries`` adds a time series data structure to Redis that allows ingesting
 and querying time series'.
 
 To access the commands exposed by the module use the :attr:`~Redis.timeseries` property
-or manually instantiate the :class:`~modules.timeseries.TimeSeries` class with an instance of
+or manually instantiate the :class:`~modules.TimeSeries` class with an instance of
 :class:`~Redis` or  :class:`~RedisCluster`
 
 The below examples use random temperature data captured every few minutes
 for different rooms in a house.
 
-Create a few timeseries with different labels (:meth:`~modules.timeseries.TimeSeries.create`)::
+Create a few timeseries with different labels (:meth:`~modules.TimeSeries.create`)::
 
     import coredis
     from datetime import datetime, timedelta
@@ -650,7 +690,7 @@ Create a few timeseries with different labels (:meth:`~modules.timeseries.TimeSe
     for room in rooms:
         assert await client.timeseries.create(f"temp:{room}", labels={"room": room})
 
-Create compaction rules for hourly and daily averages (:meth:`~modules.timeseries.TimeSeries.createrule`)::
+Create compaction rules for hourly and daily averages (:meth:`~modules.TimeSeries.createrule`)::
 
     for room in rooms:
         assert await client.timeseries.create(
@@ -669,7 +709,7 @@ Create compaction rules for hourly and daily averages (:meth:`~modules.timeserie
             coredis.PureToken.AVG, timedelta(hours=24)
         )
 
-Populate a year of random sample data (:meth:`~modules.timeseries.TimeSeries.add`)::
+Populate a year of random sample data (:meth:`~modules.TimeSeries.add`)::
 
     import random
     cur = datetime.fromtimestamp(0)
@@ -681,18 +721,18 @@ Populate a year of random sample data (:meth:`~modules.timeseries.TimeSeries.add
 
     await pipeline.execute()
 
-Query for the latest temperature in each room (:meth:`~modules.timeseries.TimeSeries.get`)::
+Query for the latest temperature in each room (:meth:`~modules.TimeSeries.get`)::
 
     for room in rooms:
         print(await client.timeseries.get(f"temp:{room}"))
 
-Query for latest temperature in all rooms (:meth:`~modules.timeseries.TimeSeries.mget`)::
+Query for latest temperature in all rooms (:meth:`~modules.TimeSeries.mget`)::
 
     print(await client.timeseries.mget(
         filters=[f"room=({','.join(rooms)})", "compaction="])
     )
 
-Query for daily averages by individual room (:meth:`~modules.timeseries.TimeSeries.range` & :meth:`~modules.timeseries.TimeSeries.mrange`)::
+Query for daily averages by individual room (:meth:`~modules.TimeSeries.range` & :meth:`~modules.TimeSeries.mrange`)::
 
     # using individual range queries on the compacted timeseries
     for room in rooms:
@@ -725,4 +765,4 @@ Query for daily averages by individual room (:meth:`~modules.timeseries.TimeSeri
         )
     )
 
-For more details refer to the API documentation for :class:`~coredis.modules.timeseries.TimeSeries`
+For more details refer to the API documentation for :class:`~coredis.modules.TimeSeries`

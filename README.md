@@ -136,6 +136,9 @@ To see a full list of supported redis commands refer to the [Command
 compatibility](https://coredis.readthedocs.io/en/latest/compatibility.html)
 documentation
 
+Details about supported Redis modules and their commands can be found 
+[here](https://coredis.readthedocs.io/en/latest/handbook/modules.html)
+
 ## Compatibility
 
 coredis is tested against redis versions `6.0.x`, `6.2.x`, `7.0.x` & `7.2-rc1`.
