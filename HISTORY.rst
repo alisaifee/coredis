@@ -3,6 +3,53 @@
 Changelog
 =========
 
+v4.12.0
+-------
+Release Date: 2023-04-21
+
+* Features
+
+  * Add support for RedisBloom module
+  * Add support for ReJSON module
+  * Add support for RedisSearch module
+  * Add support for RedisTimeSeries module
+  * Add support for RedisGraph module
+  * Check argument versions for compatibility and
+    raise appropriate errors if an argument is used
+    on an older server version which doesn't support it.
+  * Expose :paramref:`~coredis.Redis.retry_policy` to client constructors
+  * Expose :paramref:`~coredis.Redis.noevict` in client constructors
+  * Add initial support for redis 7.2
+
+    * Expose :paramref:`~coredis.Redis.notouch` in client constructors
+    * Add support for :meth:`~coredis.Redis.client_no_touch`
+    * Add support for :meth:`~coredis.Redis.client_setinfo`
+    * Add support for :meth:`~coredis.Redis.waitaof`
+    * Add new ``withscore`` argument for :meth:`~coredis.Redis.zrank` & :meth:`~coredis.Redis.zrevrank`
+    * Add new context manager :meth:`~coredis.Redis.ensure_persistence`
+  * Allow adding streams to stream consumers after initialization
+  * Improve cluster routing for commands that act on multiple
+    slots but are handled by the same node.
+  * Allow overriding the default stream_timeout
+    when using a pipeline
+
+* Bug Fix
+
+  * Ensure multiple properties returned from info command
+    are collapsed into an array
+  * Fix leaked connections when using :meth:`~coredis.Redis.ensure_replication`
+  * Improve handling of cancellation errors
+  * Improve handling of timeout errors
+  * Ensure cluster commands routed to random nodes use
+    primaries by default
+  * Handle pause/resume callbacks from Transport
+    and pause sending subsequent commands until
+    the transport buffer is resumed.
+  * Handle RESP3 response for :meth:`~coredis.Redis.command`
+  * Update :meth:`~coredis.ConnectionPool.from_url` &
+    :meth:`~coredis.ClusterConnectionPool.from_url` to support
+    all constructor arguments
+
 v4.12.0rc1
 ----------
 Release Date: 2023-04-19
@@ -1516,6 +1563,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
