@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import asyncio
 from io import BytesIO
-from typing import Type, cast
+from typing import Hashable, Type, cast
 
 from coredis._protocols import ConnectionP
-from coredis._utils import b, make_hashable
+from coredis._utils import b
 from coredis.constants import SYM_CRLF, RESPDataType
 from coredis.exceptions import (
     AskError,
@@ -81,6 +81,20 @@ class RESPNode:
     def append(self, item: ResponseType) -> None:
         ...
 
+    def ensure_hashable(self, item: ResponseType) -> Hashable:
+        if isinstance(item, (int, float, bool, str, bytes)):
+            return item
+        elif isinstance(item, set):
+            return frozenset(self.ensure_hashable(cast(ResponseType, i)) for i in item)
+        elif isinstance(item, list):
+            return tuple(self.ensure_hashable(i) for i in item)
+        elif isinstance(item, dict):
+            return tuple(
+                (cast(ResponsePrimitive, k), self.ensure_hashable(v))
+                for k, v in item.items()
+            )
+        return item
+
 
 class ListNode(RESPNode):
     __slots__ = ("container",)
@@ -117,7 +131,7 @@ class DictNode(RESPNode):
                     Tuple[ResponsePrimitive, ...],
                     FrozenSet[ResponsePrimitive],
                 ],
-                make_hashable(item)[0],
+                self.ensure_hashable(item),
             )
         else:
             self.container[self.key] = item
@@ -149,7 +163,7 @@ class SetNode(RESPNode):
                     Tuple[ResponsePrimitive, ...],
                     FrozenSet[ResponsePrimitive],
                 ],
-                make_hashable(item)[0],
+                self.ensure_hashable(item),
             )
         )
 
