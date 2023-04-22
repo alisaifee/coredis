@@ -4,6 +4,7 @@ import asyncio
 import ssl
 from ssl import SSLError
 
+import async_timeout
 import pytest
 from packaging.version import Version
 
@@ -113,6 +114,17 @@ class TestClient:
             assert b"A" == await client.get("fubar")
             with client.decoding(True, encoding="cp424"):
                 assert "א" == await client.get("fubar")
+
+    async def test_blocking_task_cancellation(self, client, _s):
+        task = asyncio.create_task(client.blpop(["nonexistent"], timeout=10))
+        await asyncio.sleep(0.5)
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        async with async_timeout.timeout(0.1):
+            assert _s("PONG") == await client.ping()
 
 
 @targets(
