@@ -9,6 +9,7 @@ import socket
 import ssl
 import time
 import warnings
+import weakref
 from collections import defaultdict, deque
 from typing import TYPE_CHECKING, Any, cast
 
@@ -50,6 +51,7 @@ if TYPE_CHECKING:
 
 @dataclasses.dataclass
 class Request:
+    connection: weakref.ProxyType[Connection]
     command: bytes
     decode: bool
     encoding: Optional[str] = None
@@ -58,6 +60,13 @@ class Request:
         default_factory=lambda: asyncio.get_running_loop().create_future()
     )
     created_at: float = dataclasses.field(default_factory=lambda: time.time())
+
+    def __post_init__(self) -> None:
+        self.future.add_done_callback(self.cleanup)
+
+    def cleanup(self, future: asyncio.Future[ResponseType]) -> None:
+        if future.cancelled() and self.connection and self.connection.is_connected:
+            self.connection.disconnect()
 
     def enforce_deadline(self) -> None:
         if not self.future.done():
@@ -571,6 +580,7 @@ class BaseConnection(asyncio.BaseProtocol):
 
         if not (self.noreply_set or noreply):
             request = Request(
+                weakref.proxy(self),
                 command,
                 bool(decode) if decode is not None else self.decode_responses,
                 encoding or self.encoding,
@@ -609,6 +619,7 @@ class BaseConnection(asyncio.BaseProtocol):
         requests: List[asyncio.Future[ResponseType]] = []
         for cmd in commands:
             request = Request(
+                weakref.proxy(self),
                 cmd.command,
                 bool(cmd.decode) if cmd.decode is not None else self.decode_responses,
                 cmd.encoding or self.encoding,
