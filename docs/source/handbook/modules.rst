@@ -696,11 +696,11 @@ Create compaction rules for hourly and daily averages (:meth:`~modules.TimeSerie
         assert await client.timeseries.create(
             f"temp:{room}:hourly:avg", labels={"room": room, "compaction": "hourly"}
         )
-        assert wait client.timeseries.create(
+        assert await client.timeseries.create(
             f"temp:{room}:daily:avg", labels={"room": room, "compaction": "daily"}
         )
 
-        assert wait client.timeseries.createrule(
+        assert await client.timeseries.createrule(
             f"temp:{room}", f"temp:{room}:hourly:avg",
             coredis.PureToken.AVG, timedelta(hours=1)
         )
