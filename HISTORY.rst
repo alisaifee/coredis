@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v4.11.6
+-------
+Release Date: 2023-04-22
+
+* Bug Fix
+
+  * Ensure task cancellation results in proper cleanup
+    of a connection that might be blocked
+
 v4.11.5
 -------
 Release Date: 2023-04-04
@@ -1422,6 +1431,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
