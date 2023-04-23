@@ -174,6 +174,15 @@ Release Date: 2023-03-26
   * Ensure cluster commands routed to random nodes use
     primaries by default
 
+v4.11.6
+-------
+Release Date: 2023-04-22
+
+* Bug Fix
+
+  * Ensure task cancellation results in proper cleanup
+    of a connection that might be blocked
+
 v4.11.5
 -------
 Release Date: 2023-04-04
@@ -1597,3 +1606,14 @@ v1.0.1
 
 
 
+<<<<<<< HEAD
+=======
+
+
+
+
+
+
+
+
+>>>>>>> 4.11.x
