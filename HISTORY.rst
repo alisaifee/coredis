@@ -59,10 +59,6 @@ Release Date: 2023-04-21
     :meth:`~coredis.ClusterConnectionPool.from_url` to support
     all constructor arguments
 
-v4.12.1
--------
-Release Date: 2023-04-22
-
 v4.12.0rc1
 ----------
 Release Date: 2023-04-19
@@ -91,10 +87,6 @@ Release Date: 2023-04-19
   * Add redis-stack@edge to compatibility matrix in CI
 
 
-v4.12.1
--------
-Release Date: 2023-04-22
-
 v4.12.0b4
 ---------
 Release Date: 2023-04-10
@@ -107,10 +99,6 @@ Release Date: 2023-04-10
 * Chores
 
   * Update mypy
-
-v4.12.1
--------
-Release Date: 2023-04-22
 
 v4.12.0b3
 ---------
@@ -129,10 +117,6 @@ Release Date: 2023-04-04
   * Ensure multiple properties returned from info command
     are collapsed into an array
 
-v4.12.1
--------
-Release Date: 2023-04-22
-
 v4.12.0b2
 ---------
 Release Date: 2023-03-27
@@ -143,10 +127,6 @@ Release Date: 2023-03-27
   * Improve docstrings & annotations for ensure_persistence
   * Add reruns for test failures in CI
   * Add python 3.12 to CI
-
-v4.12.1
--------
-Release Date: 2023-04-22
 
 v4.12.0b1
 ---------
