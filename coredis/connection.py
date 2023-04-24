@@ -175,7 +175,7 @@ class BaseConnection(asyncio.BaseProtocol):
         self.username: Optional[str] = None
         self.password: Optional[str] = ""
         self.db: Optional[int] = None
-        self.pid = os.getpid()
+        self.pid: int = os.getpid()
         self._description_args: Callable[
             ..., Dict[str, Optional[Union[str, int]]]
         ] = lambda: dict()
@@ -199,16 +199,16 @@ class BaseConnection(asyncio.BaseProtocol):
         self._transport: Optional[asyncio.Transport] = None
         self._parser = Parser()
         self._read_flag = asyncio.Event()
-        self.packer = Packer(self.encoding)
+        self.packer: Packer = Packer(self.encoding)
         self.push_messages: asyncio.Queue[ResponseType] = asyncio.Queue()
 
-        self.noreply = noreply
-        self.noreply_set = False
+        self.noreply: bool = noreply
+        self.noreply_set: bool = False
 
-        self.noevict = noevict
-        self.notouch = notouch
+        self.noevict: bool = noevict
+        self.notouch: bool = notouch
 
-        self.needs_handshake = True
+        self.needs_handshake: bool = True
         self._last_error: Optional[BaseException] = None
         self._connection_error: Optional[BaseException] = None
 

@@ -200,7 +200,7 @@ class Sentinel(Generic[AnyStr]):
         decode_responses: Literal[False] = ...,
         cache: Optional[AbstractCache] = None,
         **connection_kwargs: Any,
-    ):
+    ) -> None:
         ...
 
     @overload
@@ -212,7 +212,7 @@ class Sentinel(Generic[AnyStr]):
         decode_responses: Literal[True] = ...,
         cache: Optional[AbstractCache] = None,
         **connection_kwargs: Any,
-    ):
+    ) -> None:
         ...
 
     def __init__(
@@ -223,7 +223,7 @@ class Sentinel(Generic[AnyStr]):
         decode_responses: bool = False,
         cache: Optional[AbstractCache] = None,
         **connection_kwargs: Any,
-    ):
+    ) -> None:
         """
         Changes
           - .. versionadded:: 3.10.0

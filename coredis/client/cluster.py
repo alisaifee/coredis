@@ -204,7 +204,7 @@ class RedisCluster(
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         **kwargs: Any,
-    ):
+    ) -> None:
         ...
 
     @overload
@@ -242,7 +242,7 @@ class RedisCluster(
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         **kwargs: Any,
-    ):
+    ) -> None:
         ...
 
     def __init__(
@@ -289,7 +289,7 @@ class RedisCluster(
             ),
         ),
         **kwargs: Any,
-    ):
+    ) -> None:
         """
 
         Changes

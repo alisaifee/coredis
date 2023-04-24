@@ -210,9 +210,9 @@ class Parser:
 
     def __init__(self) -> None:
         self.push_messages: Optional[asyncio.Queue[ResponseType]] = None
-        self.localbuffer = BytesIO(b"")
-        self.bytes_read = 0
-        self.bytes_written = 0
+        self.localbuffer: BytesIO = BytesIO(b"")
+        self.bytes_read: int = 0
+        self.bytes_written: int = 0
         self.nodes: List[Union[ListNode, SetNode, DictNode]] = []
 
     def feed(self, data: bytes) -> None:
