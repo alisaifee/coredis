@@ -149,12 +149,12 @@ some common field definitions::
 
     # Create an index on json documents
     await client.search.create("json_index", on=coredis.PureToken.JSON, schema = [
-        coredis.modules.Field('$.name', coredis.PureToken.TEXT, alias='name'),
-        coredis.modules.Field('$.country', coredis.PureToken.TEXT, alias='country'),
-        coredis.modules.Field('$.population', coredis.PureToken.NUMERIC, alias='population'),
-        coredis.modules.Field("$.location", coredis.PureToken.GEO, alias='location'),
-        coredis.modules.Field('$.iso_tags', coredis.PureToken.TAG, alias='iso_tags'),
-        coredis.modules.Field('$.summary_vector', coredis.PureToken.VECTOR, alias='summary_vector',
+        coredis.modules.search.Field('$.name', coredis.PureToken.TEXT, alias='name'),
+        coredis.modules.search.Field('$.country', coredis.PureToken.TEXT, alias='country'),
+        coredis.modules.search.Field('$.population', coredis.PureToken.NUMERIC, alias='population'),
+        coredis.modules.search.Field("$.location", coredis.PureToken.GEO, alias='location'),
+        coredis.modules.search.Field('$.iso_tags', coredis.PureToken.TAG, alias='iso_tags'),
+        coredis.modules.search.Field('$.summary_vector', coredis.PureToken.VECTOR, alias='summary_vector',
             algorithm="FLAT",
             attributes={
                 "DIM": 768,
@@ -167,12 +167,12 @@ some common field definitions::
 
     # or on all hashes that start with a prefix ``city:``
     await client.search.create("hash_index", on=coredis.PureToken.HASH, schema = [
-        coredis.modules.Field('name', coredis.PureToken.TEXT),
-        coredis.modules.Field('country', coredis.PureToken.TEXT),
-        coredis.modules.Field('population', coredis.PureToken.NUMERIC),
-        coredis.modules.Field("location", coredis.PureToken.GEO),
-        coredis.modules.Field('iso_tags', coredis.PureToken.TAG, separator=","),
-        coredis.modules.Field('summary_vector', coredis.PureToken.VECTOR,
+        coredis.modules.search.Field('name', coredis.PureToken.TEXT),
+        coredis.modules.search.Field('country', coredis.PureToken.TEXT),
+        coredis.modules.search.Field('population', coredis.PureToken.NUMERIC),
+        coredis.modules.search.Field("location", coredis.PureToken.GEO),
+        coredis.modules.search.Field('iso_tags', coredis.PureToken.TAG, separator=","),
+        coredis.modules.search.Field('summary_vector', coredis.PureToken.VECTOR,
             algorithm="FLAT",
             attributes={
                 "DIM": 768,
@@ -311,9 +311,9 @@ Group by country and count and sort by count desc::
         load="*",
         transforms=[
             # group by country=>count
-            coredis.modules.Group(
+            coredis.modules.search.Group(
                 "@country", [
-                    coredis.modules.Reduce("count", [0], "city_count"),
+                    coredis.modules.search.Reduce("count", [0], "city_count"),
                  ]
             ),
         ],
@@ -332,25 +332,25 @@ Filter, Group->Reduce, Apply, Group::
         load="*",
         transforms=[
             # include only cities with population greater than 20 million
-            coredis.modules.Filter(
+            coredis.modules.search.Filter(
                 '@population > 20000000'
             ),
             # group by country=>{count, average_city_population}
-            coredis.modules.Group(
+            coredis.modules.search.Group(
                 "@country", [
-                    coredis.modules.Reduce("count", [0], "city_count"),
-                    coredis.modules.Reduce("avg", [1, '@population'], "average_city_population")
+                    coredis.modules.search.Reduce("count", [0], "city_count"),
+                    coredis.modules.search.Reduce("avg", [1, '@population'], "average_city_population")
                  ]
             ),
             # apply a transformation of average_city_population -> log10(average_city_population)
-            coredis.modules.Apply(
+            coredis.modules.search.Apply(
                 "floor(log(@average_city_population))",
                 "average_population_bucket"
             ),
             # group by average_population_bucket=>countries
-            coredis.modules.Group(
+            coredis.modules.search.Group(
                 "@average_population_bucket", [
-                    coredis.modules.Reduce("tolist", [1, "@country"], "countries"),
+                    coredis.modules.search.Reduce("tolist", [1, "@country"], "countries"),
                  ]
             ),
         ],

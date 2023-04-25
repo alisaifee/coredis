@@ -61,11 +61,17 @@ similarity semantic search on top of text queries."""
 @dataclasses.dataclass
 class Field:
     """
-    Field definition to be used in :meth:`Search.create` &
-    :meth:`Search.alter`
+    Field definition to be used in :meth:`~coredis.modules.Search.create` &
+    :meth:`~coredis.modules.Search.alter`
+
+    For more details refer to the documentation for
+    `FT.CREATE <https://redis.io/commands/ft.create/>`__
     """
 
+    #: Name of the field. For hashes, this is a field name within the hash.
+    #:  For JSON, this is a JSON Path expression.
     name: StringT
+    #: Type of field
     type: Literal[
         PureToken.TEXT,
         PureToken.TAG,
@@ -73,17 +79,47 @@ class Field:
         PureToken.GEO,
         PureToken.VECTOR,
     ]
+
+    #: Defines the alias associated to :paramref:`name`.
+    #: For example, you can use this feature to alias a complex
+    #: JSONPath expression with more memorable (and easier to type) name.
     alias: Optional[StringT] = None
+    #: Whether to optimize for sorting.
     sortable: Optional[bool] = None
+    #: Whether to use the unnormalized form of the field for sorting.
     unf: Optional[bool] = None
+    #: Whether to disable stemming for this field.
     nostem: Optional[bool] = None
+    #: Skip indexing this field
     noindex: Optional[bool] = None
+    #: Phonetic algorithm to use for this field.
     phonetic: Optional[StringT] = None
+    #: Weight of this field in the document's ranking. The default is 1.0.
     weight: Optional[Union[int, float]] = None
+    #: Separator to use for splitting tags if the field is of
+    #: type :attr:`~coredis.PureToken.TAG`.
     separator: Optional[StringT] = None
+    #: For fields of type :attr:`~coredis.PureToken.TAG`,
+    #: keeps the original letter cases of the tags. If not specified,
+    #: the characters are converted to lowercase.
     casesensitive: Optional[bool] = None
+    #: For fields of type :attr:`~coredis.PureToken.TAG` &
+    #: :attr:`~coredis.PureToken.TEXT`, keeps a suffix trie with all
+    #: terms which match the suffix. It is used to optimize contains ``(foo)``
+    #: and suffix ``(*foo)`` queries. Otherwise, a brute-force search on the trie
+    #: is performed. If suffix trie exists for some fields, these queries will
+    #: be disabled for other fields
     withsuffixtrie: Optional[bool] = None
+    #: The algorithm to use for indexing if the field is of type
+    #: :attr:`~coredis.PureToken.VECTOR`.
+    #: For more details refer to the
+    #: `Vector similarity <https://redis.io/docs/stack/search/reference/vectors/>`__
+    #: section of the RediSearch documentation.
     algorithm: Optional[Literal["FLAT", "HSNW"]] = None
+    #: A dictionary of attributes to be used with the :paramref:`algorithm` specified.
+    #: For more details refer to the
+    #: `Creation attributes per algorithm <https://redis.io/docs/stack/search/reference/vectors/#creation-attributes-per-algorithm>`__
+    #: section of the RediSearch documentation.
     attributes: Optional[Dict[StringT, ValueT]] = None
 
     @property
@@ -127,8 +163,11 @@ class Field:
 @dataclasses.dataclass
 class Reduce:
     """
-    Reduce definition to be used with :paramref:`Search.aggregate.transformations`
-    to define ``REDUCE`` steps in :meth:`Search.aggregate`
+    Reduce definition to be used with :paramref:`~coredis.modules.Search.aggregate.transformations`
+    to define ``REDUCE`` steps in :meth:`~coredis.modules.Search.aggregate`
+
+    For more details refer to `GroupBy Reducers <https://redis.io/docs/stack/search/reference/aggregations/#groupby-reducers>`__
+    in the RediSearch documentation.
     """
 
     #: The name of the reducer function
@@ -151,8 +190,12 @@ class Reduce:
 @dataclasses.dataclass
 class Group:
     """
-    Group definition to be used with :paramref:`Search.aggregate.transformations`
-    to specify ``GROUPBY`` steps in :meth:`Search.aggregate`
+    Group definition to be used with :paramref:`~coredis.modules.Search.aggregate.transformations`
+    to specify ``GROUPBY`` steps in :meth:`~coredis.modules.Search.aggregate`
+
+    For more details refer to
+    `Aggregations <https://redis.io/docs/stack/search/reference/aggregations>`__
+    in the RediSearch documentation.
     """
 
     #: The field to group by
@@ -178,8 +221,12 @@ class Group:
 @dataclasses.dataclass
 class Apply:
     """
-    Apply definition to be used with :paramref:`Search.aggregate.transformations`
-    to specify ``APPLY`` steps in :meth:`Search.aggregate`
+    Apply definition to be used with :paramref:`~coredis.modules.Search.aggregate.transformations`
+    to specify ``APPLY`` steps in :meth:`~coredis.modules.Search.aggregate`
+
+    For more details refer to
+    `APPLY expressions <https://redis.io/docs/stack/search/reference/aggregations/#apply-expressions>`__
+    in the RediSearch documentation.
     """
 
     #: The expression to apply
@@ -195,8 +242,12 @@ class Apply:
 @dataclasses.dataclass
 class Filter:
     """
-    Filter definition to be used with :paramref:`Search.aggregate.transformations`
-    to specify ``FILTER`` steps in :meth:`Search.aggregate`
+    Filter definition to be used with :paramref:`~coredis.modules.Search.aggregate.transformations`
+    to specify ``FILTER`` steps in :meth:`~coredis.modules.Search.aggregate`
+
+    For more details refer to
+    `FILTER expressions <https://redis.io/docs/stack/search/reference/aggregations/#filter-expressions>`__
+    in the RediSearch documentation.
     """
 
     #: The filter expression
