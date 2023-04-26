@@ -4,7 +4,7 @@ from types import ModuleType
 
 json: ModuleType
 try:
-    from orjson import json  # type: ignore
+    import orjson as json  # type: ignore
 except ImportError:
     import json
 

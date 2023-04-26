@@ -50,7 +50,7 @@ jobs:
           exit 1
         fi;
   test:
-    name: Test (Python ${{ matrix.python-version }}, Redis ${{ matrix.redis-version }}${{ matrix.uvloop == 'True' && ', uvloop' || ''}}${{ matrix.extensions == 'True' && ', compiled' || ''}}${{ matrix.label && format(', {0}', matrix.label) || '' }})
+    name: Test (Python ${{ matrix.python-version }}, Redis ${{ matrix.redis-version }}${{ matrix.uvloop == 'True' && ', uvloop' || ''}}${{ matrix.orjson == 'True' && ', orjson' || ''}}${{ matrix.extensions == 'True' && ', compiled' || ''}}${{ matrix.label && format(', {0}', matrix.label) || '' }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -59,6 +59,7 @@ jobs:
         redis-version: ["6.0", "7.0", "7.2-rc1", "latest"]
         test_params: ["-m '(not (keydb or dragonfly))'"]
         uvloop: ["True", "False"]
+        orjson: ["False"]
         runtime_type_checks: ["True"]
         extensions: ["True"]
         label: [""]
@@ -106,6 +107,10 @@ jobs:
       if: ${{ matrix.uvloop == 'True' }}
       run:
         pip install uvloop
+    - name: Install orjson
+      if: ${{ matrix.orjson == 'True' }}
+      run:
+        pip install orjson
     - name: Tests
       env:
         COREDIS_UVLOOP: ${{ matrix.uvloop }}
