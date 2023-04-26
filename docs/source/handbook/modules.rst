@@ -355,9 +355,14 @@ Filter, Group->Reduce, Apply, Group::
             ),
         ],
     )
-
-    print(aggregations)
-
+    assert aggregations.results[0] == {
+        'average_population_bucket': '16',
+        'countries': ['Brazil', 'South Korea', 'Egypt', 'Mexico']
+    }
+    assert aggregations.results[1] == {
+        'average_population_bucket': '17',
+        'countries': ['Japan', 'Indonesia', 'China', 'Philippines', 'India']
+    }
 
 
 
