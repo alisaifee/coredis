@@ -386,22 +386,18 @@ Add some terms, each with an associated score to a group::
 Fetch some suggestions::
 
     suggestions = await client.autocomplete.sugget("cities", "new")
-    print(len(suggestions))
-    # 5
-    print(suggestions[0].string)
-    # New Milton
+    assert 5 == len(suggestions)
+    assert "New Milton" == suggestions[0].string
 
     suggestions = await client.autocomplete.sugget("cities", "new po")
-    print(suggestions[0].string)
-    # New Port
+    assert "New Port" == suggestions[0].string
 
 Boost the score of a term::
 
     await client.autocomplete.sugadd("cities", "New York", 5.0, increment_score=True)
 
     suggestions = await client.autocomplete.sugget("cities", "new")
-    print(suggestions[0].string)
-    # New York
+    assert "New York" == suggestions[0].string
 
 For more details refer to the API documentation for :class:`~coredis.modules.autocomplete.Autocomplete`
 
