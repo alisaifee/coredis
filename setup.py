@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import sys
-
 import os
 import pathlib
 import platform
+import sys
 
 import versioneer
 
@@ -18,7 +17,9 @@ from setuptools.extension import Extension
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 PY_IMPLEMENTATION = platform.python_implementation()
-USE_MYPYC=False
+USE_MYPYC = False
+PURE_PYTHON = os.environ.get("PURE_PYTHON", PY_IMPLEMENTATION != "CPython")
+
 
 def get_requirements(req_file):
     requirements = []
@@ -81,11 +82,11 @@ _ROOT_DIR = pathlib.Path(__file__).parent
 with open(str(_ROOT_DIR / "README.md")) as f:
     long_description = f.read()
 
-if len(sys.argv) > 1 and '--use-mypyc' in sys.argv:
+if len(sys.argv) > 1 and "--use-mypyc" in sys.argv:
     sys.argv.remove("--use-mypyc")
     USE_MYPYC = True
 
-if PY_IMPLEMENTATION == "CPython":
+if not PURE_PYTHON:
     extensions = [
         Extension(
             name="coredis.speedups",
