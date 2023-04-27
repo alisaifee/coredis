@@ -506,7 +506,7 @@ class Client(
     ) -> Iterator[ClientT]:
         """
         Context manager to ensure that commands executed within the context
-        are are synced to AOF of :paramref:`local` host and/or :paramref:`replicas`
+        are synced to the AOF of a :paramref:`local` host and/or :paramref:`replicas`
         within :paramref:`timeout_ms` milliseconds.
 
         Internally this uses `WAITAOF <https://redis.io/commands/waitaof>`_ after
