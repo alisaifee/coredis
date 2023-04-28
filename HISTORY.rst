@@ -3,6 +3,20 @@
 Changelog
 =========
 
+v4.12.3
+-------
+Release Date: 2023-04-27
+
+* Feature
+
+  * Add pure python wheel to release process
+
+* Chores
+
+  * Improve redis module documentation
+  * Update CI to use python 3.11 as default
+  * Fix README formatting
+
 v4.12.2
 -------
 Release Date: 2023-04-22
@@ -1589,4 +1603,5 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
