@@ -117,12 +117,14 @@ async def city_index(client: Redis):
 @retryable(ConstantRetryPolicy((ValueError,), 5, 0.1))
 async def wait_for_index(index_name, client: Redis):
     info = await client.search.info(index_name)
-    if info["indexing"]:
+    if int(info["indexing"]):
         raise ValueError("Index not available")
 
 
 @pytest.mark.min_module_version("search", "2.6.1")
-@targets("redis_stack", "redis_stack_cached", "redis_stack_cluster")
+@targets(
+    "redis_stack", "redis_stack_resp2", "redis_stack_cached", "redis_stack_cluster"
+)
 class TestSchema:
     @pytest.mark.parametrize("on", [PureToken.HASH, PureToken.JSON])
     @pytest.mark.parametrize(
@@ -314,7 +316,9 @@ class TestSchema:
 
 
 @pytest.mark.min_module_version("search", "2.6.1")
-@targets("redis_stack", "redis_stack_cached", "redis_stack_cluster")
+@targets(
+    "redis_stack", "redis_stack_resp2", "redis_stack_cached", "redis_stack_cluster"
+)
 class TestSearch:
     @pytest.mark.parametrize("dialect", [1, 2, 3])
     @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
@@ -679,7 +683,9 @@ class TestSearch:
 
 
 @pytest.mark.min_module_version("search", "2.6.1")
-@targets("redis_stack", "redis_stack_cached", "redis_stack_cluster")
+@targets(
+    "redis_stack", "redis_stack_resp2", "redis_stack_cached", "redis_stack_cluster"
+)
 class TestAggregation:
     @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
     async def test_aggregation_no_transforms(

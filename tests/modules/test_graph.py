@@ -12,6 +12,7 @@ from tests.conftest import targets
 
 @targets(
     "redis_stack",
+    "redis_stack_resp2",
     "redis_stack_cluster",
 )
 class TestGraph:
