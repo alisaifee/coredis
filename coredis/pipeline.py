@@ -792,7 +792,8 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         return f"{type(self).__name__}"
 
     def __del__(self):
-        self.reset_pipeline()
+        if self._watched_connection:
+            self.connection_pool.release(self._watched_connection)
 
     def __len__(self):
         return len(self.command_stack)
@@ -809,7 +810,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         exc_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> None:
-        self.reset_pipeline()
+        await self.reset_pipeline()
 
     async def execute_command(
         self,
@@ -883,9 +884,9 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         try:
             return await execute(raise_on_error)
         finally:
-            self.reset_pipeline()
+            await self.reset_pipeline()
 
-    def reset_pipeline(self):
+    async def reset_pipeline(self):
         """Empties pipeline"""
         self.command_stack = []
 
@@ -1158,7 +1159,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
             except ConnectionError:
                 # the retry failed so cleanup.
                 conn.disconnect()
-                self.reset_pipeline()
+                await self.reset_pipeline()
                 raise
         finally:
             if command in UNWATCH_COMMANDS:
@@ -1353,9 +1354,9 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         # Only here for documentation purposes.
         return await self.__wrapped__.execute(raise_on_error=raise_on_error)
 
-    def reset(self) -> None:
+    async def reset(self) -> None:
         """
         Resets the command stack and releases any connections acquired from the
         pool
         """
-        self.__wrapped__.reset_pipeline()
+        await self.__wrapped__.reset_pipeline()

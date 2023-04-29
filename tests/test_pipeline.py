@@ -12,6 +12,17 @@ from tests.conftest import targets
     "redis_basic", "redis_basic_blocking", "redis_basic_resp2", "keydb", "dragonfly"
 )
 class TestPipeline:
+    async def test_empty_pipeline(self, client):
+        async with await client.pipeline() as pipe:
+            assert await pipe.execute() == ()
+
+    async def test_pipeline_reset(self, client):
+        pipe = await client.pipeline()
+        await pipe.get("a")
+        await pipe.reset()
+        await pipe.set("a", 1)
+        assert await pipe.execute() == (True,)
+
     async def test_pipeline(self, client):
         async with await client.pipeline() as pipe:
             await pipe.set("a", "a1")
@@ -59,20 +70,20 @@ class TestPipeline:
 
     @pytest.mark.nodragonfly
     async def test_pipeline_invalid_flow(self, client):
-        async with await client.pipeline(transaction=False) as pipe:
+        pipe = await client.pipeline(transaction=False)
+        pipe.multi()
+        with pytest.raises(RedisError):
             pipe.multi()
-            with pytest.raises(RedisError):
-                pipe.multi()
 
-        async with await client.pipeline(transaction=False) as pipe:
+        pipe = await client.pipeline(transaction=False)
+        pipe.multi()
+        with pytest.raises(RedisError):
+            await pipe.watch("test")
+
+        pipe = await client.pipeline(transaction=False)
+        await pipe.set("fubar", 1)
+        with pytest.raises(RedisError):
             pipe.multi()
-            with pytest.raises(RedisError):
-                await pipe.watch("test")
-
-        async with await client.pipeline(transaction=False) as pipe:
-            await pipe.set("fubar", 1)
-            with pytest.raises(RedisError):
-                pipe.multi()
 
     @pytest.mark.nodragonfly
     async def test_pipeline_no_permission(self, client, user_client):

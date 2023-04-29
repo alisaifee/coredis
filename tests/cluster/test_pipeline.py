@@ -18,6 +18,17 @@ from tests.conftest import targets
 
 @targets("redis_cluster", "redis_cluster_resp2")
 class TestPipeline:
+    async def test_empty_pipeline(self, client):
+        async with await client.pipeline() as pipe:
+            assert await pipe.execute() == ()
+
+    async def test_pipeline_reset(self, client):
+        pipe = await client.pipeline()
+        await pipe.get("a")
+        await pipe.reset()
+        await pipe.set("a", 1)
+        assert await pipe.execute() == (True,)
+
     async def test_pipeline(self, client):
         async with await client.pipeline() as pipe:
             await (
@@ -105,13 +116,13 @@ class TestPipeline:
             task.cancel()
 
     async def test_pipeline_transaction_with_watch(self, client):
-        async with await client.pipeline(transaction=False) as pipe:
-            await pipe.watch("a{fu}")
-            await pipe.watch("b{fu}")
-            pipe.multi()
-            await client.set("d{fu}", 1)
-            await pipe.set("a{fu}", 2)
-            assert (True,) == await pipe.execute()
+        pipe = await client.pipeline(transaction=False)
+        await pipe.watch("a{fu}")
+        await pipe.watch("b{fu}")
+        pipe.multi()
+        await client.set("d{fu}", 1)
+        await pipe.set("a{fu}", 2)
+        assert (True,) == await pipe.execute()
 
     async def test_pipeline_transaction_with_watch_inline_fail(self, client):
         async with await client.pipeline(transaction=False) as pipe:
