@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v4.12.4
+-------
+Release Date: 2023-04-29
+
+* Chores
+
+  * Expand coverage of modules tests to include RESP2
+  * Allow failures for "next" versions of redis in CI
+
 v4.12.3
 -------
 Release Date: 2023-04-27
@@ -1603,5 +1612,6 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
