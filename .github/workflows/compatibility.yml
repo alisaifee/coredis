@@ -58,11 +58,12 @@ jobs:
   test:
     name: Test (Python ${{ matrix.python-version }}, Redis ${{ matrix.redis-version }}${{ matrix.uvloop == 'True' && ', uvloop' || ''}}${{ matrix.orjson == 'True' && ', orjson' || ''}}${{ matrix.extensions == 'True' && ', compiled' || ''}}${{ matrix.label && format(', {0}', matrix.label) || '' }})
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.redis-version == 'next' }}
     strategy:
       fail-fast: false
       matrix:
         python-version: [3.7, 3.8, 3.9, "3.10", "3.11"]
-        redis-version: ["6.0", "6.2", "7.0", "7.2-rc1", "latest"]
+        redis-version: ["6.0", "6.2", "7.0", "latest", "next"]
         test_params: ["-m '(not (keydb or dragonfly))'"]
         orjson: ["False"]
         uvloop: ["True", "False"]

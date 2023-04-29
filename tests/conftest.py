@@ -37,7 +37,13 @@ DOCKER_TAG_MAPPING = {
         "stack": "6.2.2-v5",
     },
     "7.0": {"default": "7.0.0", "stack": "7.0.6-RC8"},
-    "latest": {"default": "latest", "stack": "edge"},
+    "latest": {"default": "latest", "stack": "latest"},
+    "next": {
+        "standalone": "7.2-rc1",
+        "ssl": "7.2-rc1",
+        "stack": "edge",
+        "default": "latest",
+    },
 }
 
 SERVER_DEFAULT_ARGS = {
@@ -89,6 +95,7 @@ async def get_module_versions(client):
         MODULE_VERSIONS[str(client)] = {}
         try:
             module_list = await client.module_list()
+
             for module in module_list:
                 mod = EncodingInsensitiveDict(module)
                 name = nativestr(mod["name"])
@@ -101,6 +108,7 @@ async def get_module_versions(client):
                 )
         except Exception:
             pass
+
     return MODULE_VERSIONS[str(client)]
 
 
@@ -117,6 +125,7 @@ async def get_version(client):
                 REDIS_VERSIONS[str(client)] = version.parse(version_string)
             else:
                 client_info = await client.info()
+
                 if "dfly_version" in client_info:
                     version_string = client_info["dfly_version"]
                 else:
@@ -149,12 +158,14 @@ async def check_test_constraints(request, client, protocol=3):
         if marker.name == "min_module_version" and marker.args:
             name, ver = marker.args[0], marker.args[1]
             cur_ver = MODULE_VERSIONS.get(str(client), {}).get(name)
+
             if not cur_ver or cur_ver < version.parse(ver):
                 return pytest.skip(f"Skipped for module {name} versions < {ver}")
 
         if marker.name == "max_module_version" and marker.args:
             name, ver = marker.args[0], marker.args[1]
             cur_ver = MODULE_VERSIONS.get(str(client), {}).get(name)
+
             if not cur_ver or cur_ver > version.parse(ver):
                 return pytest.skip(f"Skipped for module {name} versions > {ver}")
 
