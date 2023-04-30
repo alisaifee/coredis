@@ -903,5 +903,6 @@ class ClusterConnection(Connection):
 
         await super().on_connect()
         if self.read_from_replicas:
-            if await (await self.create_request(b"READONLY", decode=False)) != b"OK":
-                raise ConnectionError("READONLY command failed")
+            assert (
+                await (await self.create_request(b"READONLY", decode=False))
+            ) == b"OK"

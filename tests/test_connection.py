@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import socket
 
 import pytest
@@ -75,3 +76,21 @@ async def test_stream_timeout(redis_basic):
     req = await conn.create_request(b"debug", "sleep", 0.05)
     with pytest.raises(TimeoutError):
         await req
+
+
+async def test_lag(redis_basic):
+    connection = await redis_basic.connection_pool.get_connection(b"ping")
+    assert connection.lag == 0
+    ping_request = await connection.create_request(b"ping")
+    assert connection.lag != 0
+    await ping_request
+    assert connection.lag == 0
+
+
+async def test_estimated_time_to_idle(redis_basic):
+    connection = await redis_basic.connection_pool.get_connection(b"ping")
+    assert connection.estimated_time_to_idle == 0
+    requests = [await connection.create_request(b"ping") for _ in range(10)]
+    assert connection.estimated_time_to_idle > 0
+    await asyncio.gather(*requests)
+    assert connection.estimated_time_to_idle == 0

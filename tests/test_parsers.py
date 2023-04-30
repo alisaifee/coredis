@@ -3,8 +3,14 @@ from __future__ import annotations
 import pytest
 
 from coredis import BaseConnection
-from coredis.exceptions import InvalidResponse
-from coredis.parser import Parser
+from coredis._utils import b
+from coredis.exceptions import (
+    ConnectionError,
+    InvalidResponse,
+    ResponseError,
+    UnknownCommandError,
+)
+from coredis.parser import NOT_ENOUGH_DATA, Parser
 
 
 class DummyConnection(BaseConnection):
@@ -43,6 +49,29 @@ class TestPyParser:
             return value.decode("latin-1")
         return value
 
+    def test_incomplete_data(self, parser, decode):
+        parser.feed(b"$10")
+        assert (
+            parser.get_response(
+                decode=decode,
+                encoding="latin-1",
+            )
+            == NOT_ENOUGH_DATA
+        )
+        parser.feed(b"\r\nhello")
+        assert (
+            parser.get_response(
+                decode=decode,
+                encoding="latin-1",
+            )
+            == NOT_ENOUGH_DATA
+        )
+        parser.feed(b"world\r\n")
+        assert parser.get_response(
+            decode=decode,
+            encoding="latin-1",
+        ) == self.encoded_value(decode, b"helloworld")
+
     def test_none(self, parser, decode):
         parser.feed(b"_\r\n")
         assert (
@@ -80,6 +109,13 @@ class TestPyParser:
     def test_bulk_string_forced_raw(self, parser, decode):
         parser.feed(b"$5\r\nhello\r\n")
         assert parser.get_response(decode=False, encoding="latin-1") == b"hello"
+
+    def test_bulk_string_undecodable(self, parser, decode):
+        parser.feed(b"$6\r\n" + "世界".encode("utf-8") + b"\r\n")
+        assert (
+            parser.get_response(decode=True, encoding="big5")
+            == b"\xe4\xb8\x96\xe7\x95\x8c"
+        )
 
     def test_nil_verbatim_text(self, parser, decode):
         parser.feed(b"=-1\r\n")
@@ -135,14 +171,21 @@ class TestPyParser:
             )
             == 1
         )
-        parser.feed(b":2\r\n")
+        parser.feed(b":-2\r\n")
         assert (
             parser.get_response(
                 decode=decode,
                 encoding="latin-1",
             )
-            == 2
+            == -2
         )
+
+    def test_big_number(self, parser, decode):
+        parser.feed(b"(" + b(pow(2, 128)) + b"\r\n")
+        assert parser.get_response(
+            decode=decode,
+            encoding="latin-1",
+        ) == pow(2, 128)
 
     def test_double(self, parser, decode):
         parser.feed(b",3.142\r\n")
@@ -153,14 +196,6 @@ class TestPyParser:
             )
             == 3.142
         )
-
-    def test_bignumber(self, parser, decode):
-        parser.feed(b"(3.142\r\n")
-        with pytest.raises(InvalidResponse):
-            parser.get_response(
-                decode=decode,
-                encoding="latin-1",
-            )
 
     def test_nil_array(self, parser, decode):
         parser.feed(b"*-1\r\n")
@@ -341,3 +376,27 @@ class TestPyParser:
             decode=decode,
             encoding="latin-1",
         )
+
+    @pytest.mark.parametrize(
+        "err_string, expected_exception",
+        [
+            ("ERR max number of clients reached", ConnectionError),
+            ("ERR unknown command", UnknownCommandError),
+            ("Random bad thing", ResponseError),
+        ],
+    )
+    def test_parse_error(self, parser, decode, err_string, expected_exception):
+        parser.feed(b"-" + b(err_string) + b"\r\n")
+        err = parser.get_response(
+            decode=decode,
+            encoding="latin-1",
+        )
+        assert isinstance(err, expected_exception)
+
+    def test_invalid_marker(self, parser, decode):
+        parser.feed(b"a1\r\n1")
+        with pytest.raises(InvalidResponse):
+            parser.get_response(
+                decode=decode,
+                encoding="latin-1",
+            )

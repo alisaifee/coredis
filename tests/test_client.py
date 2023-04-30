@@ -11,6 +11,7 @@ from packaging.version import Version
 import coredis
 from coredis import PureToken
 from coredis.exceptions import (
+    AuthorizationError,
     CommandNotSupportedError,
     CommandSyntaxError,
     ConnectionError,
@@ -148,6 +149,14 @@ class TestClusterClient:
             assert not await client.get("fubar")
         assert await client.get("fubar") == _s(1)
 
+    async def test_ensure_replication_unavailable(self, client, _s, user_client):
+        no_perm_client = await user_client(
+            "testuser", "on", "allkeys", "+@all", "-WAIT"
+        )
+        with pytest.raises(AuthorizationError):
+            with no_perm_client.ensure_replication(1):
+                assert await no_perm_client.set("fubar", 1)
+
     async def test_ensure_replication(self, client, _s):
         with client.ensure_replication(1):
             assert await client.set("fubar", 1)
@@ -156,6 +165,15 @@ class TestClusterClient:
             with client.ensure_replication(2):
                 assert await client.set("fubar", 1)
         assert await client.set("fubar", 1)
+
+    @pytest.mark.min_server_version("7.1.240")
+    async def test_ensure_persistence_unavailable(self, client, _s, user_client):
+        no_perm_client = await user_client(
+            "testuser", "on", "allkeys", "+@all", "-WAITAOF"
+        )
+        with pytest.raises(AuthorizationError):
+            with no_perm_client.ensure_persistence(1, 1, 2000):
+                await no_perm_client.set("fubar", 1)
 
     @pytest.mark.min_server_version("7.1.240")
     async def test_ensure_persistence(self, client, _s):

@@ -16,7 +16,5 @@ exclude_lines =
     class .*\bProtocol\):
     @(abc\.)?abstractmethod
     __repr__
-    except ConnectionError
-    except \(ConnectionError
     raise ValueError\(.*?Unable to map
     assert False

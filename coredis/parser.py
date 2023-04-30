@@ -79,7 +79,7 @@ class RESPNode:
         self.key = key
 
     def append(self, item: ResponseType) -> None:
-        ...
+        raise NotImplementedError()
 
     def ensure_hashable(self, item: ResponseType) -> Hashable:
         if isinstance(item, (int, float, bool, str, bytes)):
@@ -93,7 +93,7 @@ class RESPNode:
                 (cast(ResponsePrimitive, k), self.ensure_hashable(v))
                 for k, v in item.items()
             )
-        return item
+        return item  # noqa
 
 
 class ListNode(RESPNode):
@@ -311,7 +311,7 @@ class Parser:
                         response = response[4:]
                     if decode_bytes and encoding:
                         response = self.try_decode(response, encoding)
-            elif marker == RESPDataType.INT:
+            elif marker in [RESPDataType.INT, RESPDataType.BIGNUMBER]:
                 response = int(chunk)
             elif marker == RESPDataType.DOUBLE:
                 response = float(chunk)
