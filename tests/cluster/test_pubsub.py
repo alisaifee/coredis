@@ -363,18 +363,29 @@ class TestPubSubMessages:
     async def test_published_message_to_sharded_channel(
         self, redis_cluster, pubsub_arguments
     ):
+        shards = {"a", "b", "c"}
         p = redis_cluster.sharded_pubsub(
             ignore_subscribe_messages=True, **pubsub_arguments
         )
-        await p.subscribe("foo")
+        for shard in shards:
+            await p.subscribe(f"foo{{{shard}}}")
 
         # no point checking the response since cluster publish only returns the
         # count for consumers listening on the same node.
-        await redis_cluster.spublish("foo", "test message")
-        message = await wait_for_message(p)
-        assert isinstance(message, dict)
-        assert message == make_message("message", "foo", "test message")
-
+        for shard in shards:
+            await redis_cluster.spublish(f"foo{{{shard}}}", "test message")
+        messages = []
+        for _ in range(3):
+            messages.append(await wait_for_message(p))
+        assert all(isinstance(message, dict) for message in messages), messages
+        assert set(m["channel"] for m in messages) == {
+            f"foo{{{shard}}}" for shard in shards
+        }
+        assert not await wait_for_message(p)
+        await redis_cluster.spublish("foo{a}", "test message")
+        assert await wait_for_message(p) == make_message(
+            "message", "foo{a}", "test message"
+        )
         # Cleanup pubsub connections
         p.close()
 
