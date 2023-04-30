@@ -79,6 +79,12 @@ jobs:
           - python-version: "3.11"
             redis-version: latest
             test_params: "-m '(not (keydb or dragonfly))'"
+            extensions: "False"
+            runtime_type_checks: "True"
+            label: ""
+          - python-version: "3.11"
+            redis-version: latest
+            test_params: "-m '(not (keydb or dragonfly))'"
             runtime_type_checks: "True"
             orjson: "True"
             label: ""
@@ -95,8 +101,6 @@ jobs:
           - python-version: "3.11"
             redis-version: 7.0
             test_params: "-m dragonfly"
-            runtime_type_checks: "False"
-            extensions: "False"
             label: "Dragonfly"
           - python-version: "pypy-3.7"
             redis-version: 7.0
