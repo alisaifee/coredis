@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import timedelta
 
 import numpy
@@ -248,7 +249,9 @@ class TestSchema:
         )
 
         assert await client.search.dropindex("idx")
-        with pytest.raises(ResponseError, match="Unknown Index name"):
+        with pytest.raises(
+            ResponseError, match=re.compile("unknown index name", re.IGNORECASE)
+        ):
             await client.search.info("idx")
 
     async def test_drop_index_cascade(self, client: Redis):
@@ -270,9 +273,13 @@ class TestSchema:
         assert await client.search.dropindex("idx{a}", delete_docs=True)
         assert await client.search.dropindex("jidx{a}", delete_docs=True)
         assert not await client.keys()
-        with pytest.raises(ResponseError, match="Unknown Index name"):
+        with pytest.raises(
+            ResponseError, match=re.compile("unknown index name", re.IGNORECASE)
+        ):
             await client.search.info("idx{a}")
-        with pytest.raises(ResponseError, match="Unknown Index name"):
+        with pytest.raises(
+            ResponseError, match=re.compile("unknown index name", re.IGNORECASE)
+        ):
             await client.search.info("jidx{a}")
 
     @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
