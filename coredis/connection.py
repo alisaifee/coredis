@@ -662,11 +662,13 @@ class BaseConnection(asyncio.BaseProtocol):
         if not self.is_connected:
             await self.connect()
 
+        request_timeout: Optional[float] = timeout or self._stream_timeout
+
         await self._send_packed_command(
             self.packer.pack_commands(
                 list(itertools.chain((cmd.command, *cmd.args) for cmd in commands))
             ),
-            timeout=timeout,
+            timeout=request_timeout,
         )
 
         self.last_active_at = time.time()
@@ -680,10 +682,10 @@ class BaseConnection(asyncio.BaseProtocol):
                 raise_exceptions,
             )
             self._requests.append(request)
-            if self._stream_timeout is not None:
+            if request_timeout is not None:
                 asyncio.get_running_loop().call_later(
-                    self._stream_timeout,
-                    functools.partial(request.enforce_deadline, self._stream_timeout),
+                    request_timeout,
+                    functools.partial(request.enforce_deadline, request_timeout),
                 )
             requests.append(request.future)
         return requests
