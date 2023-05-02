@@ -182,14 +182,9 @@ class NodeCommands:
                     c.result = await c.request if c.request else None
                 except ExecAbortError:
                     raise
-                except (ConnectionError, TimeoutError) as e:
+                except (ConnectionError, TimeoutError, RedisError) as e:
                     success = False
-                    for c in self.commands:
-                        c.result = e
-                    break
-                except RedisError:
-                    success = False
-                    c.result = sys.exc_info()[1]
+                    c.result = e
 
         if self.in_transaction:
             transaction_result = []
