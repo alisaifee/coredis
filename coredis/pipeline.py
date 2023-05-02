@@ -192,7 +192,6 @@ class NodeCommands:
                 except RedisError:
                     success = False
                     c.result = sys.exc_info()[1]
-                    break
 
         if self.in_transaction:
             transaction_result = []
@@ -941,7 +940,6 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
             if self.explicit_transaction:
                 request = await conn.create_request(CommandName.DISCARD)
                 await request
-
         # If at least one watched key is modified before the EXEC command,
         # the whole transaction aborts,
         # and EXEC returns a Null reply to notify that the transaction failed.
@@ -1024,7 +1022,6 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         for n in nodes.values():
             protocol_version = n.connection.protocol_version
             self.connection_pool.release(n.connection)
-
         # if the response isn't an exception it is a valid response from the node
         # we're all done with that command, YAY!
         # if we have more commands to attempt, we've run into problems.
@@ -1058,8 +1055,8 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
             for c in attempt:
                 try:
                     # send each command individually like we do in the main client.
-                    c.result = await super().execute_command(
-                        c.command, *c.args, callback=c.callback, **c.options
+                    c.result = await self.client.execute_command(
+                        c.command, *c.args, **c.options
                     )
                 except RedisError as e:
                     c.result = e
@@ -1068,11 +1065,14 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         # to the sequence of commands issued in the stack in pipeline.execute()
         response = []
         for c in sorted(self.command_stack, key=lambda x: x.position):
-            if isinstance(c.callback, AsyncPreProcessingCallback):
-                await c.callback.pre_process(
-                    self.client, c.result, **c.options
-                )  # pyright: reportGeneralTypeIssues=false
-            response.append(c.callback(c.result, version=protocol_version, **c.options))
+            r = c.result
+            if not isinstance(c.result, RedisError):
+                if isinstance(c.callback, AsyncPreProcessingCallback):
+                    await c.callback.pre_process(
+                        self.client, c.result, **c.options
+                    )  # pyright: reportGeneralTypeIssues=false
+                r = c.callback(c.result, version=protocol_version, **c.options)
+            response.append(r)
 
         if raise_on_error:
             self.raise_first_error()

@@ -4,7 +4,13 @@ import asyncio
 
 import pytest
 
-from coredis.exceptions import AuthorizationError, RedisError, ResponseError, WatchError
+from coredis.exceptions import (
+    AuthorizationError,
+    RedisError,
+    ResponseError,
+    TimeoutError,
+    WatchError,
+)
 from tests.conftest import targets
 
 
@@ -372,3 +378,15 @@ class TestPipeline:
                 await pipe.execute()
 
         assert await client.get(key) == "1"
+
+    async def test_pipeline_timeout(self, client, cloner):
+        await client.hset("hash", {i: bytes(i) for i in range(1024)})
+        timeout_client = await cloner(
+            client, connection_kwargs={"stream_timeout": 0.01}
+        )
+        await timeout_client.ping()
+        pipeline = await timeout_client.pipeline()
+        for i in range(10):
+            await pipeline.hgetall("hash")
+        with pytest.raises(TimeoutError):
+            await pipeline.execute()

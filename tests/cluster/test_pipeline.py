@@ -10,6 +10,7 @@ from coredis.exceptions import (
     ClusterTransactionError,
     RedisClusterException,
     ResponseError,
+    TimeoutError,
     WatchError,
 )
 from coredis.pipeline import ClusterPipelineImpl
@@ -244,6 +245,16 @@ class TestPipeline:
             assert await client.get("z") == "zzz"
 
     @pytest.mark.parametrize(
+        "cluster_remap_keyslots", [("a{fu}", "b{fu}", "c{bar}", "d{bar}")]
+    )
+    async def test_moved_error_retried(self, client, cluster_remap_keyslots, _s):
+        async with await client.pipeline() as pipe:
+            await pipe.set("a{fu}", 1)
+            await pipe.get("a{fu}")
+
+            assert (True, _s("1")) == await pipe.execute()
+
+    @pytest.mark.parametrize(
         "function, args, kwargs",
         [
             (ClusterPipelineImpl.bgrewriteaof, (), {}),
@@ -385,3 +396,13 @@ class TestPipeline:
             await client.transaction(
                 my_transaction, "a{fubar}", "b{fubar}", watch_delay=0.01
             )
+
+    async def test_pipeline_timeout(self, client, cloner):
+        await client.hset("hash", {i: bytes(i) for i in range(1024)})
+        timeout_client = await cloner(client, stream_timeout=0.01)
+        await timeout_client.ping()
+        pipeline = await timeout_client.pipeline()
+        for i in range(10):
+            await pipeline.hgetall("hash")
+        with pytest.raises(TimeoutError):
+            print(await pipeline.execute())
