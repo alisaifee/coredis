@@ -380,19 +380,17 @@ class TestPipeline:
         assert await client.get(key) == "1"
 
     @pytest.mark.nodragonfly
-    async def test_pipeline_timeout(self, client, cloner):
+    async def test_pipeline_timeout(self, client):
         await client.hset("hash", {i: i for i in range(4096)})
-        timeout_client = await cloner(
-            client, connection_kwargs={"stream_timeout": 0.01}
-        )
-        await timeout_client.ping()
-        pipeline = await timeout_client.pipeline()
+        await client.ping()
+        pipeline = await client.pipeline(timeout=0.01)
         for i in range(20):
             await pipeline.hgetall("hash")
         with pytest.raises(TimeoutError):
             await pipeline.execute()
 
-        pipeline = await timeout_client.pipeline(timeout=5)
+        await client.ping()
+        pipeline = await client.pipeline(timeout=5)
         for i in range(20):
             await pipeline.hgetall("hash")
         await pipeline.execute()
