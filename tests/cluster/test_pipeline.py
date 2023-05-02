@@ -398,11 +398,16 @@ class TestPipeline:
             )
 
     async def test_pipeline_timeout(self, client, cloner):
-        await client.hset("hash", {i: bytes(i) for i in range(1024)})
+        await client.hset("hash", {i: i for i in range(4096)})
         timeout_client = await cloner(client, stream_timeout=0.01)
         await timeout_client.ping()
         pipeline = await timeout_client.pipeline()
-        for i in range(10):
+        for i in range(20):
             await pipeline.hgetall("hash")
         with pytest.raises(TimeoutError):
             await pipeline.execute()
+
+        pipeline = await timeout_client.pipeline(timeout=5)
+        for i in range(20):
+            await pipeline.hgetall("hash")
+        await pipeline.execute()
