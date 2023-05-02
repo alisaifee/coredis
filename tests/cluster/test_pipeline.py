@@ -405,4 +405,4 @@ class TestPipeline:
         for i in range(10):
             await pipeline.hgetall("hash")
         with pytest.raises(TimeoutError):
-            print(await pipeline.execute())
+            await pipeline.execute()
