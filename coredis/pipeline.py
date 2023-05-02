@@ -72,8 +72,6 @@ R = TypeVar("R")
 T = TypeVar("T")
 
 ERRORS_ALLOW_RETRY = (
-    ConnectionError,
-    TimeoutError,
     MovedError,
     AskError,
     TryAgainError,
