@@ -41,8 +41,8 @@ the `Redis command documentation <https://redis.io/commands>`__ to define the AP
 - Responses are mapped as closely from :term:`RESP` <-> python types as possible.
 
 For higher level concepts such as :ref:`handbook/pipelines:pipelines`, :ref:`handbook/scripting:lua scripts`,
-:ref:`handbook/pubsub:pubsub` abstractions are provided to simplify interaction requires pre-defined
-sequencing of redis commands (see :ref:`api:command wrappers`) and the :ref:`handbook/index:handbook`.
+:ref:`handbook/pubsub:pubsub` abstractions are provided to encapsulate recommended patterns
+(see :ref:`api:command wrappers`) and the :ref:`handbook/index:handbook`.
 
 .. warning:: The command API does **NOT** mirror the official python :pypi:`redis` client.
    For details about the high level differences refer to :ref:`history:divergence from aredis & redis-py`

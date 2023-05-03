@@ -22,7 +22,7 @@ coredis is an async redis client with support for redis server, cluster & sentin
 - Responses are mapped as between RESP and python types as possible.
 
 - For higher level concepts such as Pipelines, LUA Scripts, PubSub & Streams
-  abstractions are provided to simplify interaction requires pre-defined sequencing of redis commands (see [Command Wrappers](https://coredis.readthedocs.io/en/latest/api.html#command-wrappers))
+  abstractions are provided to encapsulate recommended patterns (see [Command Wrappers](https://coredis.readthedocs.io/en/latest/api.html#command-wrappers))
   and the [Handbook](https://coredis.readthedocs.io/en/latest/handbook/index.html).
 
 > **Warning**
