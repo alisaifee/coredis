@@ -236,7 +236,7 @@ StreamInfo = TypedDict(
         "length": int,
         "radix-tree-keys": int,
         "radix-tree-nodes": int,
-        "groups": Union[int, Dict],  # type: ignore
+        "groups": Union[int, List[Dict]],  # type: ignore
         "last-generated-id": str,
         "max-deleted-entry-id": str,
         "recorded-first-entry-id": str,

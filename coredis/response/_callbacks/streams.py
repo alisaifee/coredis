@@ -163,7 +163,16 @@ class StreamInfoCallback(ResponseCallback[ResponseType, ResponseType, StreamInfo
         else:
             groups = res.get("groups")
             if groups:
-                res.update({"groups": flat_pairs_to_dict(groups)})
+                normalized_groups = []
+                for group in groups:
+                    g = EncodingInsensitiveDict(flat_pairs_to_dict(group))
+                    consumers = g["consumers"]
+                    normalized_consumers = []
+                    for consumer in consumers:
+                        normalized_consumers.append(flat_pairs_to_dict(consumer))
+                    g["consumers"] = normalized_consumers
+                    normalized_groups.append(g)
+                res["groups"] = normalized_groups
             res.update(
                 {
                     "entries": tuple(

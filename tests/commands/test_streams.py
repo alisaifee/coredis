@@ -511,10 +511,21 @@ class TestStreams:
         await client.xadd(
             "test_stream", field_values={"k1": "v2", "k2": "2"}, identifier="1-2"
         )
+        await client.xgroup_create("test_stream", "test_group", "$")
+        await client.xgroup_createconsumer("test_stream", "test_group", "test_consumer")
+
         xinfo_full = await client.xinfo_stream("test_stream", full=True)
         assert xinfo_full["entries"][0].identifier == _s("1-0")
         assert xinfo_full["entries"][1].identifier == _s("1-1")
         assert xinfo_full["entries"][2].identifier == _s("1-2")
+
+        assert len(xinfo_full["groups"]) == 1
+        assert xinfo_full["groups"][0][_s("name")] == _s("test_group")
+        assert len(xinfo_full["groups"][0][_s("consumers")]) == 1
+        assert xinfo_full["groups"][0][_s("consumers")][0][_s("name")] == _s(
+            "test_consumer"
+        )
+
         with pytest.raises(CommandSyntaxError):
             await client.xinfo_stream("test_stream", count=10)
         xinfo_full = await client.xinfo_stream("test_stream", full=True, count=2)
