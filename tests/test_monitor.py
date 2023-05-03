@@ -9,6 +9,7 @@ from tests.conftest import targets
 
 @targets("redis_basic", "redis_basic_blocking", "redis_basic_resp2")
 @pytest.mark.min_server_version("6.2.0")
+@pytest.mark.max_server_version("7.1")
 class TestMonitor:
     async def test_explicit_fetch(self, client):
         monitor = client.monitor()
