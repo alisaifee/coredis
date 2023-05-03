@@ -9,13 +9,14 @@ from tests.conftest import targets
 
 @targets("redis_basic", "redis_basic_blocking", "redis_basic_resp2")
 @pytest.mark.min_server_version("6.2.0")
-@pytest.mark.max_server_version("7.1")
 class TestMonitor:
-    async def test_explicit_fetch(self, client):
-        monitor = client.monitor()
-        response = await asyncio.gather(monitor.get_command(), client.get("test"))
-        assert response[0].command in ["HELLO", "GET"]
-        response = await asyncio.gather(monitor.get_command(), client.get("test2"))
+    async def test_explicit_fetch(self, client, cloner):
+        monitored = await cloner(client)
+        await monitored.ping()
+        monitor = await client.monitor()
+        response = await asyncio.gather(monitor.get_command(), monitored.get("test"))
+        assert response[0].command == "GET"
+        response = await asyncio.gather(monitor.get_command(), monitored.get("test2"))
         assert response[0].command == "GET"
 
     async def test_iterator(self, client):
@@ -34,7 +35,7 @@ class TestMonitor:
         assert results[1][0].command in ["HELLO", "GET"]
 
     async def test_threaded_listener(self, client, mocker):
-        monitor = client.monitor()
+        monitor = await client.monitor()
         thread = monitor.run_in_thread(lambda cmd: None)
         await asyncio.sleep(0.01)
         send_command = mocker.spy(monitor.connection, "create_request")

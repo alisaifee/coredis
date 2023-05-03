@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import threading
-import weakref
 from asyncio import AbstractEventLoop, CancelledError
 from concurrent.futures import Future
 from typing import TYPE_CHECKING, Any
@@ -10,11 +9,13 @@ from typing import TYPE_CHECKING, Any
 from coredis.commands.constants import CommandName
 from coredis.exceptions import RedisError
 from coredis.response.types import MonitorResult
-from coredis.typing import AnyStr, Callable, Generic, Optional
+from coredis.typing import AnyStr, Callable, Generator, Generic, Optional, TypeVar
 
 if TYPE_CHECKING:
     import coredis.client
     import coredis.connection
+
+MonitorT = TypeVar("MonitorT", bound="Monitor[Any]")
 
 
 class Monitor(Generic[AnyStr]):
@@ -36,18 +37,10 @@ class Monitor(Generic[AnyStr]):
     """
 
     def __init__(self, client: coredis.client.Client[AnyStr]):
-        self._client: weakref.ReferenceType[
-            coredis.client.Client[AnyStr]
-        ] = weakref.ref(client)
+        self.client: coredis.client.Client[AnyStr] = client
         self.encoding = client.encoding
         self.connection: Optional[coredis.connection.Connection] = None
         self.monitoring = False
-
-    @property
-    def client(self) -> coredis.client.Client[AnyStr]:
-        client = self._client()
-        assert client
-        return client
 
     def __aiter__(self) -> Monitor[AnyStr]:
         return self
@@ -59,13 +52,16 @@ class Monitor(Generic[AnyStr]):
         """
         return await self.get_command()
 
+    def __await__(self: MonitorT) -> Generator[Any, None, MonitorT]:
+        return self.__start_monitor().__await__()
+
     async def get_command(self) -> MonitorResult:
         """
         Wait for the next command issued and return the details
         """
         await self.__start_monitor()
         assert self.connection
-        response = await self.connection.fetch_push_message()
+        response = await self.connection.fetch_push_message(block=True)
         if isinstance(response, bytes):
             response = response.decode(self.encoding)
         assert isinstance(response, str)
@@ -101,9 +97,9 @@ class Monitor(Generic[AnyStr]):
         if self.connection is None:
             self.connection = await self.client.connection_pool.get_connection()
 
-    async def __start_monitor(self) -> None:
+    async def __start_monitor(self: MonitorT) -> MonitorT:
         if self.monitoring:
-            return
+            return self
         await self.__connect()
         assert self.connection
         request = await self.connection.create_request(
@@ -113,6 +109,7 @@ class Monitor(Generic[AnyStr]):
         if not response == b"OK":  # noqa
             raise RedisError(f"Failed to start MONITOR {response!r}")
         self.monitoring = True
+        return self
 
     async def __stop_monitoring(self) -> None:
         if self.connection:

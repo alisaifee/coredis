@@ -528,6 +528,7 @@ class BaseConnection(asyncio.BaseProtocol):
         self,
         decode: Optional[ValueT] = None,
         push_message_types: Optional[Set[bytes]] = None,
+        block: Optional[bool] = False,
     ) -> ResponseType:
         """
         Read the next pending response
@@ -551,7 +552,9 @@ class BaseConnection(asyncio.BaseProtocol):
         ):
             self._read_flag.clear()
             try:
-                async with async_timeout.timeout(self._stream_timeout):
+                async with async_timeout.timeout(
+                    self._stream_timeout if not block else None
+                ):
                     await self._read_flag.wait()
             except asyncio.TimeoutError:
                 raise TimeoutError
