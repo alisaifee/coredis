@@ -2,7 +2,7 @@
 -r dev.txt
 requests>2,<3
 furo==2023.3.27
-Sphinx==6.2.1
+Sphinx==7.0.0
 sphinx-copybutton==0.5.2
 sphinx-autobuild==2021.3.14
 sphinx-issues==3.0.1
