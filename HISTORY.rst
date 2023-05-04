@@ -3,6 +3,21 @@
 Changelog
 =========
 
+v4.13.0
+-------
+Release Date: 2023-05-03
+
+* Bug Fixes
+
+  * Fix incorrect explicit command execution on cluster
+    pipeline retries
+  * Fix inconsistent reset api signatures for pipeline
+    across standalone & cluster clients
+  * Ensure pipeline requests respect explicit timeout
+  * Fix incomplete xinfo_streams response for groups/consumers
+    details
+
+
 v4.12.4
 -------
 Release Date: 2023-04-29
@@ -1612,6 +1627,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
