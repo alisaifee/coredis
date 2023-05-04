@@ -3,6 +3,14 @@
 Changelog
 =========
 
+v4.13.1
+-------
+Release Date: 2023-05-03
+
+* Hack
+
+  * Downgrade sphinx back to 6.x for theme compatibility
+
 v4.13.0
 -------
 Release Date: 2023-05-03
@@ -1627,6 +1635,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
