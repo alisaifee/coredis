@@ -15,15 +15,17 @@ coredis is an async redis client with support for redis server, cluster & sentin
   - Arguments retain naming from redis as much as possible
   - Only optional variadic arguments are mapped to variadic positional or keyword arguments.
     When the variable length arguments are not optional (which is almost always the case) the expected argument
-    is an iterable of type [Parameters](https://coredis.readthedocs.io/en/latest/api.html#coredis.typing.Parameters) or `Mapping`.
+    is an iterable of type [Parameters](https://coredis.readthedocs.io/en/latest/api/typing.html#coredis.typing.Parameters) or `Mapping`.
   - Pure tokens used as flags are mapped to boolean arguments
-  - `One of` arguments accepting pure tokens are collapsed and accept a [PureToken](https://coredis.readthedocs.io/en/latest/api.html#coredis.tokens.PureToken)
+  - `One of` arguments accepting pure tokens are collapsed and accept a [PureToken](https://coredis.readthedocs.io/en/latest/api/utilities.html#coredis.tokens.PureToken)
 
 - Responses are mapped as between RESP and python types as possible.
 
 - For higher level concepts such as Pipelines, LUA Scripts, PubSub & Streams
-  abstractions are provided to encapsulate recommended patterns (see [Command Wrappers](https://coredis.readthedocs.io/en/latest/api.html#command-wrappers))
-  and the [Handbook](https://coredis.readthedocs.io/en/latest/handbook/index.html).
+  abstractions are provided to encapsulate recommended patterns.
+  See the [Handbook](https://coredis.readthedocs.io/en/latest/handbook/index.html)
+  and the [API Documentation](https://coredis.readthedocs.io/en/latest/api/index.html)
+  for more details.
 
 > **Warning**
 > The command API does NOT mirror the official python [redis client](https://github.com/redis/redis-py). For details about the high level differences refer to [Divergence from aredis & redis-py](https://coredis.readthedocs.io/en/latest/history.html#divergence-from-aredis-redis-py)
@@ -62,7 +64,7 @@ $ pip install coredis
 ### Deployment topologies
 
 - [Redis Cluster](https://coredis.readthedocs.org/en/latest/handbook/cluster.html#redis-cluster)
-- [Sentinel](https://coredis.readthedocs.org/en/latest/api.html#sentinel)
+- [Sentinel](https://coredis.readthedocs.org/en/latest/api/clients.html#sentinel)
 
 ### Application patterns
 
