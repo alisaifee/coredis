@@ -29,7 +29,7 @@ coredis
 coredis is an async redis client with support for redis server, cluster & sentinel.
 The client API uses the specifications in the Redis command documentation to define the API by using the following conventions:
 
-The coredis :ref:`api:clients` use the specifications in
+The coredis :ref:`api/clients:clients` use the specifications in
 the `Redis command documentation <https://redis.io/commands>`__ to define the API by using the following conventions:
 
 - Arguments retain naming from redis as much as possible
@@ -41,8 +41,7 @@ the `Redis command documentation <https://redis.io/commands>`__ to define the AP
 - Responses are mapped as closely from :term:`RESP` <-> python types as possible.
 
 For higher level concepts such as :ref:`handbook/pipelines:pipelines`, :ref:`handbook/scripting:lua scripts`,
-:ref:`handbook/pubsub:pubsub` abstractions are provided to encapsulate recommended patterns
-(see :ref:`api:command wrappers`) and the :ref:`handbook/index:handbook`.
+:ref:`handbook/pubsub:pubsub` abstractions are provided to encapsulate recommended patterns.
 
 .. warning:: The command API does **NOT** mirror the official python :pypi:`redis` client.
    For details about the high level differences refer to :ref:`history:divergence from aredis & redis-py`
@@ -217,7 +216,7 @@ continuous integration test matrix `here <https://github.com/alisaifee/coredis/a
 
     handbook/index
     compatibility
-    api
+    api/index
     recipes/index
     release_notes
     history
