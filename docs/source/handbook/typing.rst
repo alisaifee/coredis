@@ -83,7 +83,7 @@ As an example:
     $ COREDIS_RUNTIME_CHECKS=1 python -c "
     import coredis
     import asyncio
-    asyncio.new_event_loop().run_until_complete(coredis.Redis().set(1,1))
+    asyncio.run(coredis.Redis().set(1,1))
     """
     Traceback (most recent call last):
       File "<@beartype(coredis.commands.core.CoreCommands.set) at 0x10c403130>", line 33, in set
