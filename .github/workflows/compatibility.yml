@@ -172,4 +172,3 @@ jobs:
         pytest -q --reverse --reruns 2 --cov=coredis --cov-report=xml ${{ matrix.test_params }}
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2
-      if: ${{ matrix.coverage == 'True' }}
