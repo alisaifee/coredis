@@ -223,6 +223,27 @@ class Json(ModuleGroup[AnyStr]):
         )
 
     @module_command(
+        CommandName.JSON_MERGE,
+        group=COMMAND_GROUP,
+        version_introduced="2.6.0",
+        module=MODULE,
+    )
+    async def merge(self, key: KeyT, path: StringT, value: JsonType) -> bool:
+        """
+        Merge a JSON object into an existing Redis key at a specified path.
+
+        :param key: The Redis key to merge the JSON object into.
+        :param path: The JSONPath within the Redis key to merge the JSON object into.
+        :param value: The JSON object to merge into the Redis key.
+        :return: True if the merge was successful, False otherwise.
+        """
+        pieces: CommandArgList = [key, path, json.dumps(value)]
+
+        return await self.execute_module_command(
+            CommandName.JSON_MERGE, *pieces, callback=SimpleStringCallback()
+        )
+
+    @module_command(
         CommandName.JSON_NUMINCRBY,
         group=COMMAND_GROUP,
         version_introduced="1.0.0",

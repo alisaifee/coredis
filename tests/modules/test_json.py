@@ -80,6 +80,14 @@ class TestJson:
         assert await client.json.set("obj", "foo", "baz", condition=PureToken.XX)
         assert await client.json.set("obj", "qaz", "baz", condition=PureToken.NX)
 
+    @pytest.mark.min_module_version("ReJSON", "2.6.0")
+    async def test_merge(self, client: Redis):
+        await client.json.set("obj", "$", {"a": 1, "b": 2, "c": [1, 2, 3]})
+        await client.json.merge("obj", "$", {"d": 3})
+        assert await client.json.get("obj") == {"a": 1, "b": 2, "c": [1, 2, 3], "d": 3}
+        await client.json.merge("obj", "$", {"d": None})
+        assert await client.json.get("obj") == {"a": 1, "b": 2, "c": [1, 2, 3]}
+
     async def test_type(self, client: Redis):
         await client.json.set("1", ".", 1)
         assert "integer" == await client.json.type("1", ".")

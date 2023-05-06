@@ -444,6 +444,7 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     JSON_DEBUG_MEMORY = b"JSON.DEBUG MEMORY"  # Since RedisJSON: 1.0.0
     JSON_TOGGLE = b"JSON.TOGGLE"  # Since RedisJSON: 2.0.0
     JSON_CLEAR = b"JSON.CLEAR"  # Since RedisJSON: 2.0.0
+    JSON_MERGE = b"JSON.MERGE"  # Since RedisJSON: 2.6.0
     JSON_NUMMULTBY = b"JSON.NUMMULTBY"  # Deprecated in RedisJSON: 2.0
 
     #: Commands for bf
