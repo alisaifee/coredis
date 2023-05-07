@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import functools
 import textwrap
-import weakref
 from abc import ABCMeta
 from typing import TYPE_CHECKING, Any, cast
 
@@ -118,7 +117,7 @@ def module_command(
             from coredis.client import Redis, RedisCluster
 
             mg = cast(ModuleGroup[bytes], args[0])
-            client: "coredis.client.Client[Any]" = mg.client
+            client = cast("coredis.client.Client[Any]", mg.client)
             is_regular_client = isinstance(client, (Redis, RedisCluster))
             runtime_checking = (
                 not getattr(client, "noreply", None) and is_regular_client
@@ -269,7 +268,7 @@ class ModuleGroup(Generic[AnyStr], metaclass=ModuleGroupRegistry):
     """
 
     def __init__(self, client: AbstractExecutor):
-        self.client = weakref.proxy(client)
+        self.client = client
 
     async def execute_module_command(
         self,
