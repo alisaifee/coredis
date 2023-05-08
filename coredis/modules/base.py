@@ -74,7 +74,7 @@ async def ensure_compatibility(
         raise ModuleCommandNotSupportedError(
             command_details.command.decode("latin-1"),
             module,
-            str(module_version),
+            str(module_version) if module_version else "",
         )
 
 
