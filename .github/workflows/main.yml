@@ -128,7 +128,7 @@ jobs:
         echo "CI: $CI"
         pytest -q --reverse --reruns 2 --cov=coredis --cov-report=xml ${{ matrix.test_params }}
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v3
   generate_wheels_matrix:
     name: Generate wheels matrix
     runs-on: ubuntu-latest
