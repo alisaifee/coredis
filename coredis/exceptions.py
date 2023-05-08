@@ -29,9 +29,7 @@ class CommandNotSupportedError(RedisError):
     """
 
     def __init__(self, cmd: str, current_version: str) -> None:
-        super().__init__(
-            self, f"{cmd} is not supported on server version {current_version}"
-        )
+        super().__init__(f"{cmd} is not supported on server version {current_version}")
 
 
 class ModuleCommandNotSupportedError(CommandNotSupportedError):
@@ -318,7 +316,7 @@ class UnknownCommandError(ResponseError):
         command_match = self.ERROR_REGEX.findall(message)
         if command_match:
             self.command = command_match.pop()
-        super().__init__(self, message)
+        super().__init__(message)
 
 
 class StreamConsumerError(RedisError):
