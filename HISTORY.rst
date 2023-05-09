@@ -3,6 +3,18 @@
 Changelog
 =========
 
+v4.13.2
+-------
+Release Date: 2023-05-08
+
+* Feature
+
+  * Add ``json.merge`` command
+
+* Bug fix
+
+  * Fix exception message for unsupported commands
+
 v4.13.1
 -------
 Release Date: 2023-05-03
@@ -1635,6 +1647,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
