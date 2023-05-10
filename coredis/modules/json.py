@@ -204,7 +204,6 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def mget(self, keys: Parameters[KeyT], path: StringT) -> JsonType:
         """
