@@ -780,7 +780,6 @@ class RedisCluster(
         Sends a command to one or many nodes in the cluster
         """
         nodes = self.determine_node(command, **kwargs)
-
         if nodes and len(nodes) > 1:
             tasks: Dict[str, Coroutine[Any, Any, R]] = {}
             node_arg_mapping = self._split_args_over_nodes(nodes, command, *args)
@@ -958,6 +957,7 @@ class RedisCluster(
                 node = self.connection_pool.nodes.set_node(
                     e.host, e.port, server_type="primary"
                 )
+                try_random_node = False
                 self.connection_pool.nodes.slots[e.slot_id][0] = node
             except TryAgainError:
                 if remaining_attempts < self.MAX_RETRIES / 2:
