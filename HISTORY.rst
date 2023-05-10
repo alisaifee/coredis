@@ -3,6 +3,19 @@
 Changelog
 =========
 
+v4.13.3
+-------
+Release Date: 2023-05-10
+
+* Feature
+
+  * Add ``json.mset`` command
+
+* Bug Fix
+
+  * Remove caching for ``json.mget``
+  * Ensure hint from moved errors are used on next attempt
+
 v4.13.2
 -------
 Release Date: 2023-05-08
@@ -1647,6 +1660,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
