@@ -93,6 +93,18 @@ class TestJson:
             ["a{obj}", "b{obj}", "c{obj}"], "."
         )
 
+        await client.hset("d{obj}", {"d": 4})
+        await client.json.mset([("c{obj}", ".c", [3])])
+        assert [{"a": 1}, {"b": 2}, {"c": [3]}] == await client.json.mget(
+            ["a{obj}", "b{obj}", "c{obj}"], "."
+        )
+        with pytest.raises(ResponseError):
+            await client.json.mset([("c{obj}", ".c", 3), ("d{obj}", ".d", 5)])
+
+        assert [{"a": 1}, {"b": 2}, {"c": [3]}] == await client.json.mget(
+            ["a{obj}", "b{obj}", "c{obj}"], "."
+        )
+
     @pytest.mark.min_module_version("ReJSON", "2.6.0")
     async def test_merge(self, client: Redis):
         await client.json.set("obj", "$", {"a": 1, "b": 2, "c": [1, 2, 3]})
