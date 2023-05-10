@@ -17,7 +17,7 @@ Generic
 COPY
 ****
 
-Copy a key
+Copies the value of a key to a new key.
 
 - Documentation: `COPY <https://redis.io/commands/copy>`_
 - Implementation: :meth:`~coredis.Redis.copy`
@@ -35,7 +35,7 @@ Copy a key
 DEL
 ***
 
-Delete a key
+Deletes one or more keys.
 
 - Documentation: `DEL <https://redis.io/commands/del>`_
 - Implementation: :meth:`~coredis.Redis.delete`
@@ -49,7 +49,7 @@ Delete a key
 DUMP
 ****
 
-Return a serialized version of the value stored at the specified key.
+Returns a serialized representation of the value stored at a key.
 
 - Documentation: `DUMP <https://redis.io/commands/dump>`_
 - Implementation: :meth:`~coredis.Redis.dump`
@@ -63,7 +63,7 @@ Return a serialized version of the value stored at the specified key.
 EXISTS
 ******
 
-Determine if a key exists
+Determines whether one or more keys exist.
 
 - Documentation: `EXISTS <https://redis.io/commands/exists>`_
 - Implementation: :meth:`~coredis.Redis.exists`
@@ -77,7 +77,7 @@ Determine if a key exists
 EXPIRE
 ******
 
-Set a key's time to live in seconds
+Sets the expiration time of a key in seconds.
 
 - Documentation: `EXPIRE <https://redis.io/commands/expire>`_
 - Implementation: :meth:`~coredis.Redis.expire`
@@ -91,7 +91,7 @@ Set a key's time to live in seconds
 EXPIREAT
 ********
 
-Set the expiration for a key as a UNIX timestamp
+Sets the expiration time of a key to a Unix timestamp.
 
 - Documentation: `EXPIREAT <https://redis.io/commands/expireat>`_
 - Implementation: :meth:`~coredis.Redis.expireat`
@@ -105,7 +105,7 @@ Set the expiration for a key as a UNIX timestamp
 EXPIRETIME
 **********
 
-Get the expiration Unix timestamp for a key
+Returns the expiration time of a key as a Unix timestamp.
 
 - Documentation: `EXPIRETIME <https://redis.io/commands/expiretime>`_
 - Implementation: :meth:`~coredis.Redis.expiretime`
@@ -123,7 +123,7 @@ Get the expiration Unix timestamp for a key
 KEYS
 ****
 
-Find all keys matching the given pattern
+Returns all key names that match a pattern.
 
 - Documentation: `KEYS <https://redis.io/commands/keys>`_
 - Implementation: :meth:`~coredis.Redis.keys`
@@ -137,7 +137,7 @@ Find all keys matching the given pattern
 MIGRATE
 *******
 
-Atomically transfer a key from a Redis instance to another one.
+Atomically transfers a key from one Redis instance to another.
 
 - Documentation: `MIGRATE <https://redis.io/commands/migrate>`_
 - Implementation: :meth:`~coredis.Redis.migrate`
@@ -153,7 +153,7 @@ Atomically transfer a key from a Redis instance to another one.
 MOVE
 ****
 
-Move a key to another database
+Moves a key to another database.
 
 - Documentation: `MOVE <https://redis.io/commands/move>`_
 - Implementation: :meth:`~coredis.Redis.move`
@@ -167,7 +167,7 @@ Move a key to another database
 OBJECT ENCODING
 ***************
 
-Inspect the internal encoding of a Redis object
+Returns the internal encoding of a Redis object.
 
 - Documentation: `OBJECT ENCODING <https://redis.io/commands/object-encoding>`_
 - Implementation: :meth:`~coredis.Redis.object_encoding`
@@ -181,7 +181,7 @@ Inspect the internal encoding of a Redis object
 OBJECT FREQ
 ***********
 
-Get the logarithmic access frequency counter of a Redis object
+Returns the logarithmic access frequency counter of a Redis object.
 
 - Documentation: `OBJECT FREQ <https://redis.io/commands/object-freq>`_
 - Implementation: :meth:`~coredis.Redis.object_freq`
@@ -195,7 +195,7 @@ Get the logarithmic access frequency counter of a Redis object
 OBJECT IDLETIME
 ***************
 
-Get the time since a Redis object was last accessed
+Returns the time since the last access to a Redis object.
 
 - Documentation: `OBJECT IDLETIME <https://redis.io/commands/object-idletime>`_
 - Implementation: :meth:`~coredis.Redis.object_idletime`
@@ -209,7 +209,7 @@ Get the time since a Redis object was last accessed
 OBJECT REFCOUNT
 ***************
 
-Get the number of references to the value of the key
+Returns the reference count of a value of a key.
 
 - Documentation: `OBJECT REFCOUNT <https://redis.io/commands/object-refcount>`_
 - Implementation: :meth:`~coredis.Redis.object_refcount`
@@ -223,7 +223,7 @@ Get the number of references to the value of the key
 PERSIST
 *******
 
-Remove the expiration from a key
+Removes the expiration time of a key.
 
 - Documentation: `PERSIST <https://redis.io/commands/persist>`_
 - Implementation: :meth:`~coredis.Redis.persist`
@@ -237,7 +237,7 @@ Remove the expiration from a key
 PEXPIRE
 *******
 
-Set a key's time to live in milliseconds
+Sets the expiration time of a key in milliseconds.
 
 - Documentation: `PEXPIRE <https://redis.io/commands/pexpire>`_
 - Implementation: :meth:`~coredis.Redis.pexpire`
@@ -251,7 +251,7 @@ Set a key's time to live in milliseconds
 PEXPIREAT
 *********
 
-Set the expiration for a key as a UNIX timestamp specified in milliseconds
+Sets the expiration time of a key to a Unix milliseconds timestamp.
 
 - Documentation: `PEXPIREAT <https://redis.io/commands/pexpireat>`_
 - Implementation: :meth:`~coredis.Redis.pexpireat`
@@ -265,7 +265,7 @@ Set the expiration for a key as a UNIX timestamp specified in milliseconds
 PEXPIRETIME
 ***********
 
-Get the expiration Unix timestamp for a key in milliseconds
+Returns the expiration time of a key as a Unix milliseconds timestamp.
 
 - Documentation: `PEXPIRETIME <https://redis.io/commands/pexpiretime>`_
 - Implementation: :meth:`~coredis.Redis.pexpiretime`
@@ -283,7 +283,7 @@ Get the expiration Unix timestamp for a key in milliseconds
 PTTL
 ****
 
-Get the time to live for a key in milliseconds
+Returns the expiration time in milliseconds of a key.
 
 - Documentation: `PTTL <https://redis.io/commands/pttl>`_
 - Implementation: :meth:`~coredis.Redis.pttl`
@@ -297,7 +297,7 @@ Get the time to live for a key in milliseconds
 RANDOMKEY
 *********
 
-Return a random key from the keyspace
+Returns a random key name from the database.
 
 - Documentation: `RANDOMKEY <https://redis.io/commands/randomkey>`_
 - Implementation: :meth:`~coredis.Redis.randomkey`
@@ -311,7 +311,7 @@ Return a random key from the keyspace
 RENAME
 ******
 
-Rename a key
+Renames a key and overwrites the destination.
 
 - Documentation: `RENAME <https://redis.io/commands/rename>`_
 - Implementation: :meth:`~coredis.Redis.rename`
@@ -325,7 +325,7 @@ Rename a key
 RENAMENX
 ********
 
-Rename a key, only if the new key does not exist
+Renames a key only when the target key name doesn't exist.
 
 - Documentation: `RENAMENX <https://redis.io/commands/renamenx>`_
 - Implementation: :meth:`~coredis.Redis.renamenx`
@@ -339,7 +339,7 @@ Rename a key, only if the new key does not exist
 RESTORE
 *******
 
-Create a key using the provided serialized value, previously obtained using DUMP.
+Creates a key from the serialized representation of a value.
 
 - Documentation: `RESTORE <https://redis.io/commands/restore>`_
 - Implementation: :meth:`~coredis.Redis.restore`
@@ -353,7 +353,7 @@ Create a key using the provided serialized value, previously obtained using DUMP
 SCAN
 ****
 
-Incrementally iterate the keys space
+Iterates over the key names in the database.
 
 - Documentation: `SCAN <https://redis.io/commands/scan>`_
 - Implementation: :meth:`~coredis.Redis.scan`
@@ -367,7 +367,7 @@ Incrementally iterate the keys space
 SORT
 ****
 
-Sort the elements in a list, set or sorted set
+Sorts the elements in a list, a set, or a sorted set, optionally storing the result.
 
 - Documentation: `SORT <https://redis.io/commands/sort>`_
 - Implementation: :meth:`~coredis.Redis.sort`
@@ -381,7 +381,7 @@ Sort the elements in a list, set or sorted set
 SORT_RO
 *******
 
-Sort the elements in a list, set or sorted set. Read-only variant of SORT.
+Returns the sorted elements of a list, a set, or a sorted set.
 
 - Documentation: `SORT_RO <https://redis.io/commands/sort_ro>`_
 - Implementation: :meth:`~coredis.Redis.sort_ro`
@@ -399,7 +399,7 @@ Sort the elements in a list, set or sorted set. Read-only variant of SORT.
 TOUCH
 *****
 
-Alters the last access time of a key(s). Returns the number of existing keys specified.
+Returns the number of existing keys out of those specified after updating the time they were last accessed.
 
 - Documentation: `TOUCH <https://redis.io/commands/touch>`_
 - Implementation: :meth:`~coredis.Redis.touch`
@@ -413,7 +413,7 @@ Alters the last access time of a key(s). Returns the number of existing keys spe
 TTL
 ***
 
-Get the time to live for a key in seconds
+Returns the expiration time in seconds of a key.
 
 - Documentation: `TTL <https://redis.io/commands/ttl>`_
 - Implementation: :meth:`~coredis.Redis.ttl`
@@ -427,7 +427,7 @@ Get the time to live for a key in seconds
 TYPE
 ****
 
-Determine the type stored at key
+Determines the type of value stored at a key.
 
 - Documentation: `TYPE <https://redis.io/commands/type>`_
 - Implementation: :meth:`~coredis.Redis.type`
@@ -443,7 +443,7 @@ Determine the type stored at key
 UNLINK
 ******
 
-Delete a key asynchronously in another thread. Otherwise it is just as DEL, but non blocking.
+Asynchronously deletes one or more keys.
 
 - Documentation: `UNLINK <https://redis.io/commands/unlink>`_
 - Implementation: :meth:`~coredis.Redis.unlink`
@@ -457,11 +457,11 @@ Delete a key asynchronously in another thread. Otherwise it is just as DEL, but 
 WAIT
 ****
 
-Wait for the synchronous replication of all the write commands sent in the context of the current connection
+Blocks until the asynchronous replication of all preceding write commands sent by the connection is completed.
 
 - Documentation: `WAIT <https://redis.io/commands/wait>`_
 - Implementation: :meth:`~coredis.Redis.wait`
-  
+
   .. warning:: Using :meth:`~coredis.Redis.wait` directly is not recommended. Use the :meth:`Redis.ensure_replication`  or :meth:`RedisCluster.ensure_replication` context managers to ensure a command is replicated to the number of replicas
 
 
@@ -473,12 +473,12 @@ Wait for the synchronous replication of all the write commands sent in the conte
 WAITAOF
 *******
 
-Wait for all write commands sent in the context of the current connection to be synced to AOF of local host and/or replicas
+Blocks until all of the preceding write commands sent by the connection are written to the append-only file of the master and/or replicas.
 
 - Documentation: `WAITAOF <https://redis.io/commands/waitaof>`_
 - Implementation: :meth:`~coredis.Redis.waitaof`
-  
-  .. warning:: Using :meth:`~coredis.Redis.waitaof` directly is not recommended. Use the :meth:`Redis.ensure_persisted`  or :meth:`RedisCluster.ensure_persisted` context managers to ensure a command is synced to the AOF of the number of local hosts or replicas
+
+  .. warning:: Using :meth:`~coredis.Redis.waitaof` directly is not recommended. Use the :meth:`Redis.ensure_persistence`  or :meth:`RedisCluster.ensure_persistence` context managers to ensure a command is synced to the AOF of the number of local hosts or replicas
 
 - New in redis: 7.2.0
 
@@ -501,7 +501,7 @@ String
 APPEND
 ******
 
-Append a value to a key
+Appends a string to the value of a key. Creates the key if it doesn't exist.
 
 - Documentation: `APPEND <https://redis.io/commands/append>`_
 - Implementation: :meth:`~coredis.Redis.append`
@@ -515,7 +515,7 @@ Append a value to a key
 DECR
 ****
 
-Decrement the integer value of a key by one
+Decrements the integer value of a key by one. Uses 0 as initial value if the key doesn't exist.
 
 - Documentation: `DECR <https://redis.io/commands/decr>`_
 - Implementation: :meth:`~coredis.Redis.decr`
@@ -529,7 +529,7 @@ Decrement the integer value of a key by one
 DECRBY
 ******
 
-Decrement the integer value of a key by the given number
+Decrements a number from the integer value of a key. Uses 0 as initial value if the key doesn't exist.
 
 - Documentation: `DECRBY <https://redis.io/commands/decrby>`_
 - Implementation: :meth:`~coredis.Redis.decrby`
@@ -543,7 +543,7 @@ Decrement the integer value of a key by the given number
 GET
 ***
 
-Get the value of a key
+Returns the string value of a key.
 
 - Documentation: `GET <https://redis.io/commands/get>`_
 - Implementation: :meth:`~coredis.Redis.get`
@@ -559,7 +559,7 @@ Get the value of a key
 GETDEL
 ******
 
-Get the value of a key and delete the key
+Returns the string value of a key after deleting the key.
 
 - Documentation: `GETDEL <https://redis.io/commands/getdel>`_
 - Implementation: :meth:`~coredis.Redis.getdel`
@@ -575,7 +575,7 @@ Get the value of a key and delete the key
 GETEX
 *****
 
-Get the value of a key and optionally set its expiration
+Returns the string value of a key after setting its expiration time.
 
 - Documentation: `GETEX <https://redis.io/commands/getex>`_
 - Implementation: :meth:`~coredis.Redis.getex`
@@ -591,7 +591,7 @@ Get the value of a key and optionally set its expiration
 GETRANGE
 ********
 
-Get a substring of the string stored at a key
+Returns a substring of the string stored at a key.
 
 - Documentation: `GETRANGE <https://redis.io/commands/getrange>`_
 - Implementation: :meth:`~coredis.Redis.getrange`
@@ -607,13 +607,13 @@ Get a substring of the string stored at a key
 GETSET
 ******
 
-Set the string value of a key and return its old value
+Returns the previous string value of a key after setting it to a new value.
 
 - Documentation: `GETSET <https://redis.io/commands/getset>`_
 - Implementation: :meth:`~coredis.Redis.getset`
 
 
-- Deprecated in redis: 6.2.0. Use :meth:`~coredis.Redis.set` with the ``!get`` argument
+- Deprecated in redis: 6.2.0. Use :meth:`~coredis.Redis.set` with the ``_get`` argument
 
 
 
@@ -623,7 +623,7 @@ Set the string value of a key and return its old value
 INCR
 ****
 
-Increment the integer value of a key by one
+Increments the integer value of a key by one. Uses 0 as initial value if the key doesn't exist.
 
 - Documentation: `INCR <https://redis.io/commands/incr>`_
 - Implementation: :meth:`~coredis.Redis.incr`
@@ -637,7 +637,7 @@ Increment the integer value of a key by one
 INCRBY
 ******
 
-Increment the integer value of a key by the given amount
+Increments the integer value of a key by a number. Uses 0 as initial value if the key doesn't exist.
 
 - Documentation: `INCRBY <https://redis.io/commands/incrby>`_
 - Implementation: :meth:`~coredis.Redis.incrby`
@@ -651,7 +651,7 @@ Increment the integer value of a key by the given amount
 INCRBYFLOAT
 ***********
 
-Increment the float value of a key by the given amount
+Increment the floating point value of a key by a number. Uses 0 as initial value if the key doesn't exist.
 
 - Documentation: `INCRBYFLOAT <https://redis.io/commands/incrbyfloat>`_
 - Implementation: :meth:`~coredis.Redis.incrbyfloat`
@@ -665,7 +665,7 @@ Increment the float value of a key by the given amount
 LCS
 ***
 
-Find longest common substring
+Finds the longest common substring.
 
 - Documentation: `LCS <https://redis.io/commands/lcs>`_
 - Implementation: :meth:`~coredis.Redis.lcs`
@@ -683,7 +683,7 @@ Find longest common substring
 MGET
 ****
 
-Get the values of all the given keys
+Atomically returns the string values of one or more keys.
 
 - Documentation: `MGET <https://redis.io/commands/mget>`_
 - Implementation: :meth:`~coredis.Redis.mget`
@@ -697,7 +697,7 @@ Get the values of all the given keys
 MSET
 ****
 
-Set multiple keys to multiple values
+Atomically creates or modifies the string values of one or more keys.
 
 - Documentation: `MSET <https://redis.io/commands/mset>`_
 - Implementation: :meth:`~coredis.Redis.mset`
@@ -711,7 +711,7 @@ Set multiple keys to multiple values
 MSETNX
 ******
 
-Set multiple keys to multiple values, only if none of the keys exist
+Atomically modifies the string values of one or more keys only when all keys don't exist.
 
 - Documentation: `MSETNX <https://redis.io/commands/msetnx>`_
 - Implementation: :meth:`~coredis.Redis.msetnx`
@@ -725,7 +725,7 @@ Set multiple keys to multiple values, only if none of the keys exist
 PSETEX
 ******
 
-Set the value and expiration in milliseconds of a key
+Sets both string value and expiration time in milliseconds of a key. The key is created if it doesn't exist.
 
 - Documentation: `PSETEX <https://redis.io/commands/psetex>`_
 - Implementation: :meth:`~coredis.Redis.psetex`
@@ -741,7 +741,7 @@ Set the value and expiration in milliseconds of a key
 SET
 ***
 
-Set the string value of a key
+Sets the string value of a key, ignoring its type. The key is created if it doesn't exist.
 
 - Documentation: `SET <https://redis.io/commands/set>`_
 - Implementation: :meth:`~coredis.Redis.set`
@@ -755,7 +755,7 @@ Set the string value of a key
 SETEX
 *****
 
-Set the value and expiration of a key
+Sets the string value and expiration time of a key. Creates the key if it doesn't exist.
 
 - Documentation: `SETEX <https://redis.io/commands/setex>`_
 - Implementation: :meth:`~coredis.Redis.setex`
@@ -771,7 +771,7 @@ Set the value and expiration of a key
 SETNX
 *****
 
-Set the value of a key, only if the key does not exist
+Set the string value of a key only when the key doesn't exist.
 
 - Documentation: `SETNX <https://redis.io/commands/setnx>`_
 - Implementation: :meth:`~coredis.Redis.setnx`
@@ -787,7 +787,7 @@ Set the value of a key, only if the key does not exist
 SETRANGE
 ********
 
-Overwrite part of a string at key starting at the specified offset
+Overwrites a part of a string value with another by an offset. Creates the key if it doesn't exist.
 
 - Documentation: `SETRANGE <https://redis.io/commands/setrange>`_
 - Implementation: :meth:`~coredis.Redis.setrange`
@@ -801,7 +801,7 @@ Overwrite part of a string at key starting at the specified offset
 STRLEN
 ******
 
-Get the length of the value stored in a key
+Returns the length of a string value.
 
 - Documentation: `STRLEN <https://redis.io/commands/strlen>`_
 - Implementation: :meth:`~coredis.Redis.strlen`
@@ -817,7 +817,7 @@ Get the length of the value stored in a key
 SUBSTR
 ******
 
-Get a substring of the string stored at a key
+Returns a substring from a string value.
 
 - Documentation: `SUBSTR <https://redis.io/commands/substr>`_
 - Implementation: :meth:`~coredis.Redis.substr`
@@ -843,7 +843,7 @@ Bitmap
 BITCOUNT
 ********
 
-Count set bits in a string
+Counts the number of set bits (population counting) in a string.
 
 - Documentation: `BITCOUNT <https://redis.io/commands/bitcount>`_
 - Implementation: :meth:`~coredis.Redis.bitcount`
@@ -857,7 +857,7 @@ Count set bits in a string
 BITFIELD
 ********
 
-Perform arbitrary bitfield integer operations on strings
+Performs arbitrary bitfield integer operations on strings.
 
 - Documentation: `BITFIELD <https://redis.io/commands/bitfield>`_
 - Implementation: :meth:`~coredis.Redis.bitfield`
@@ -871,7 +871,7 @@ Perform arbitrary bitfield integer operations on strings
 BITFIELD_RO
 ***********
 
-Perform arbitrary bitfield integer operations on strings. Read-only variant of BITFIELD
+Performs arbitrary read-only bitfield integer operations on strings.
 
 - Documentation: `BITFIELD_RO <https://redis.io/commands/bitfield_ro>`_
 - Implementation: :meth:`~coredis.Redis.bitfield_ro`
@@ -887,7 +887,7 @@ Perform arbitrary bitfield integer operations on strings. Read-only variant of B
 BITOP
 *****
 
-Perform bitwise operations between strings
+Performs bitwise operations on multiple strings, and stores the result.
 
 - Documentation: `BITOP <https://redis.io/commands/bitop>`_
 - Implementation: :meth:`~coredis.Redis.bitop`
@@ -901,7 +901,7 @@ Perform bitwise operations between strings
 BITPOS
 ******
 
-Find first bit set or clear in a string
+Finds the first set (1) or clear (0) bit in a string.
 
 - Documentation: `BITPOS <https://redis.io/commands/bitpos>`_
 - Implementation: :meth:`~coredis.Redis.bitpos`
@@ -915,7 +915,7 @@ Find first bit set or clear in a string
 GETBIT
 ******
 
-Returns the bit value at offset in the string value stored at key
+Returns a bit value by offset.
 
 - Documentation: `GETBIT <https://redis.io/commands/getbit>`_
 - Implementation: :meth:`~coredis.Redis.getbit`
@@ -929,7 +929,7 @@ Returns the bit value at offset in the string value stored at key
 SETBIT
 ******
 
-Sets or clears the bit at offset in the string value stored at key
+Sets or clears the bit at offset of the string value. Creates the key if it doesn't exist.
 
 - Documentation: `SETBIT <https://redis.io/commands/setbit>`_
 - Implementation: :meth:`~coredis.Redis.setbit`
@@ -951,7 +951,7 @@ Hash
 HDEL
 ****
 
-Delete one or more hash fields
+Deletes one or more fields and their values from a hash. Deletes the hash if no fields remain.
 
 - Documentation: `HDEL <https://redis.io/commands/hdel>`_
 - Implementation: :meth:`~coredis.Redis.hdel`
@@ -965,7 +965,7 @@ Delete one or more hash fields
 HEXISTS
 *******
 
-Determine if a hash field exists
+Determines whether a field exists in a hash.
 
 - Documentation: `HEXISTS <https://redis.io/commands/hexists>`_
 - Implementation: :meth:`~coredis.Redis.hexists`
@@ -981,7 +981,7 @@ Determine if a hash field exists
 HGET
 ****
 
-Get the value of a hash field
+Returns the value of a field in a hash.
 
 - Documentation: `HGET <https://redis.io/commands/hget>`_
 - Implementation: :meth:`~coredis.Redis.hget`
@@ -997,7 +997,7 @@ Get the value of a hash field
 HGETALL
 *******
 
-Get all the fields and values in a hash
+Returns all fields and values in a hash.
 
 - Documentation: `HGETALL <https://redis.io/commands/hgetall>`_
 - Implementation: :meth:`~coredis.Redis.hgetall`
@@ -1013,7 +1013,7 @@ Get all the fields and values in a hash
 HINCRBY
 *******
 
-Increment the integer value of a hash field by the given number
+Increments the integer value of a field in a hash by a number. Uses 0 as initial value if the field doesn't exist.
 
 - Documentation: `HINCRBY <https://redis.io/commands/hincrby>`_
 - Implementation: :meth:`~coredis.Redis.hincrby`
@@ -1027,7 +1027,7 @@ Increment the integer value of a hash field by the given number
 HINCRBYFLOAT
 ************
 
-Increment the float value of a hash field by the given amount
+Increments the floating point value of a field by a number. Uses 0 as initial value if the field doesn't exist.
 
 - Documentation: `HINCRBYFLOAT <https://redis.io/commands/hincrbyfloat>`_
 - Implementation: :meth:`~coredis.Redis.hincrbyfloat`
@@ -1041,7 +1041,7 @@ Increment the float value of a hash field by the given amount
 HKEYS
 *****
 
-Get all the fields in a hash
+Returns all fields in a hash.
 
 - Documentation: `HKEYS <https://redis.io/commands/hkeys>`_
 - Implementation: :meth:`~coredis.Redis.hkeys`
@@ -1057,7 +1057,7 @@ Get all the fields in a hash
 HLEN
 ****
 
-Get the number of fields in a hash
+Returns the number of fields in a hash.
 
 - Documentation: `HLEN <https://redis.io/commands/hlen>`_
 - Implementation: :meth:`~coredis.Redis.hlen`
@@ -1073,7 +1073,7 @@ Get the number of fields in a hash
 HMGET
 *****
 
-Get the values of all the given hash fields
+Returns the values of all fields in a hash.
 
 - Documentation: `HMGET <https://redis.io/commands/hmget>`_
 - Implementation: :meth:`~coredis.Redis.hmget`
@@ -1089,7 +1089,7 @@ Get the values of all the given hash fields
 HMSET
 *****
 
-Set multiple hash fields to multiple values
+Sets the values of multiple fields.
 
 - Documentation: `HMSET <https://redis.io/commands/hmset>`_
 - Implementation: :meth:`~coredis.Redis.hmset`
@@ -1105,7 +1105,7 @@ Set multiple hash fields to multiple values
 HRANDFIELD
 **********
 
-Get one or multiple random fields from a hash
+Returns one or more random fields from a hash.
 
 - Documentation: `HRANDFIELD <https://redis.io/commands/hrandfield>`_
 - Implementation: :meth:`~coredis.Redis.hrandfield`
@@ -1121,7 +1121,7 @@ Get one or multiple random fields from a hash
 HSCAN
 *****
 
-Incrementally iterate hash fields and associated values
+Iterates over fields and values of a hash.
 
 - Documentation: `HSCAN <https://redis.io/commands/hscan>`_
 - Implementation: :meth:`~coredis.Redis.hscan`
@@ -1135,7 +1135,7 @@ Incrementally iterate hash fields and associated values
 HSET
 ****
 
-Set the string value of a hash field
+Creates or modifies the value of a field in a hash.
 
 - Documentation: `HSET <https://redis.io/commands/hset>`_
 - Implementation: :meth:`~coredis.Redis.hset`
@@ -1149,7 +1149,7 @@ Set the string value of a hash field
 HSETNX
 ******
 
-Set the value of a hash field, only if the field does not exist
+Sets the value of a field in a hash only when the field doesn't exist.
 
 - Documentation: `HSETNX <https://redis.io/commands/hsetnx>`_
 - Implementation: :meth:`~coredis.Redis.hsetnx`
@@ -1163,7 +1163,7 @@ Set the value of a hash field, only if the field does not exist
 HSTRLEN
 *******
 
-Get the length of the value of a hash field
+Returns the length of the value of a field.
 
 - Documentation: `HSTRLEN <https://redis.io/commands/hstrlen>`_
 - Implementation: :meth:`~coredis.Redis.hstrlen`
@@ -1179,7 +1179,7 @@ Get the length of the value of a hash field
 HVALS
 *****
 
-Get all the values in a hash
+Returns all values in a hash.
 
 - Documentation: `HVALS <https://redis.io/commands/hvals>`_
 - Implementation: :meth:`~coredis.Redis.hvals`
@@ -1203,7 +1203,7 @@ List
 BLMOVE
 ******
 
-Pop an element from a list, push it to another list and return it; or block until one is available
+Pops an element from a list, pushes it to another list and returns it. Blocks until an element is available otherwise. Deletes the list if the last element was moved.
 
 - Documentation: `BLMOVE <https://redis.io/commands/blmove>`_
 - Implementation: :meth:`~coredis.Redis.blmove`
@@ -1219,7 +1219,7 @@ Pop an element from a list, push it to another list and return it; or block unti
 BLMPOP
 ******
 
-Pop elements from a list, or block until one is available
+Pops the first element from one of multiple lists. Blocks until an element is available otherwise. Deletes the list if the last element was popped.
 
 - Documentation: `BLMPOP <https://redis.io/commands/blmpop>`_
 - Implementation: :meth:`~coredis.Redis.blmpop`
@@ -1237,7 +1237,7 @@ Pop elements from a list, or block until one is available
 BLPOP
 *****
 
-Remove and get the first element in a list, or block until one is available
+Removes and returns the first element in a list. Blocks until an element is available otherwise. Deletes the list if the last element was popped.
 
 - Documentation: `BLPOP <https://redis.io/commands/blpop>`_
 - Implementation: :meth:`~coredis.Redis.blpop`
@@ -1251,7 +1251,7 @@ Remove and get the first element in a list, or block until one is available
 BRPOP
 *****
 
-Remove and get the last element in a list, or block until one is available
+Removes and returns the last element in a list. Blocks until an element is available otherwise. Deletes the list if the last element was popped.
 
 - Documentation: `BRPOP <https://redis.io/commands/brpop>`_
 - Implementation: :meth:`~coredis.Redis.brpop`
@@ -1265,7 +1265,7 @@ Remove and get the last element in a list, or block until one is available
 BRPOPLPUSH
 **********
 
-Pop an element from a list, push it to another list and return it; or block until one is available
+Pops an element from a list, pushes it to another list and returns it. Block until an element is available otherwise. Deletes the list if the last element was popped.
 
 - Documentation: `BRPOPLPUSH <https://redis.io/commands/brpoplpush>`_
 - Implementation: :meth:`~coredis.Redis.brpoplpush`
@@ -1281,7 +1281,7 @@ Pop an element from a list, push it to another list and return it; or block unti
 LINDEX
 ******
 
-Get an element from a list by its index
+Returns an element from a list by its index.
 
 - Documentation: `LINDEX <https://redis.io/commands/lindex>`_
 - Implementation: :meth:`~coredis.Redis.lindex`
@@ -1297,7 +1297,7 @@ Get an element from a list by its index
 LINSERT
 *******
 
-Insert an element before or after another element in a list
+Inserts an element before or after another element in a list.
 
 - Documentation: `LINSERT <https://redis.io/commands/linsert>`_
 - Implementation: :meth:`~coredis.Redis.linsert`
@@ -1311,7 +1311,7 @@ Insert an element before or after another element in a list
 LLEN
 ****
 
-Get the length of a list
+Returns the length of a list.
 
 - Documentation: `LLEN <https://redis.io/commands/llen>`_
 - Implementation: :meth:`~coredis.Redis.llen`
@@ -1327,7 +1327,7 @@ Get the length of a list
 LMOVE
 *****
 
-Pop an element from a list, push it to another list and return it
+Returns an element after popping it from one list and pushing it to another. Deletes the list if the last element was moved.
 
 - Documentation: `LMOVE <https://redis.io/commands/lmove>`_
 - Implementation: :meth:`~coredis.Redis.lmove`
@@ -1343,7 +1343,7 @@ Pop an element from a list, push it to another list and return it
 LMPOP
 *****
 
-Pop elements from a list
+Returns multiple elements from a list after removing them. Deletes the list if the last element was popped.
 
 - Documentation: `LMPOP <https://redis.io/commands/lmpop>`_
 - Implementation: :meth:`~coredis.Redis.lmpop`
@@ -1361,7 +1361,7 @@ Pop elements from a list
 LPOP
 ****
 
-Remove and get the first elements in a list
+Returns the first elements in a list after removing it. Deletes the list if the last element was popped.
 
 - Documentation: `LPOP <https://redis.io/commands/lpop>`_
 - Implementation: :meth:`~coredis.Redis.lpop`
@@ -1375,7 +1375,7 @@ Remove and get the first elements in a list
 LPOS
 ****
 
-Return the index of matching elements on a list
+Returns the index of matching elements in a list.
 
 - Documentation: `LPOS <https://redis.io/commands/lpos>`_
 - Implementation: :meth:`~coredis.Redis.lpos`
@@ -1393,7 +1393,7 @@ Return the index of matching elements on a list
 LPUSH
 *****
 
-Prepend one or multiple elements to a list
+Prepends one or more elements to a list. Creates the key if it doesn't exist.
 
 - Documentation: `LPUSH <https://redis.io/commands/lpush>`_
 - Implementation: :meth:`~coredis.Redis.lpush`
@@ -1407,7 +1407,7 @@ Prepend one or multiple elements to a list
 LPUSHX
 ******
 
-Prepend an element to a list, only if the list exists
+Prepends one or more elements to a list only when the list exists.
 
 - Documentation: `LPUSHX <https://redis.io/commands/lpushx>`_
 - Implementation: :meth:`~coredis.Redis.lpushx`
@@ -1421,7 +1421,7 @@ Prepend an element to a list, only if the list exists
 LRANGE
 ******
 
-Get a range of elements from a list
+Returns a range of elements from a list.
 
 - Documentation: `LRANGE <https://redis.io/commands/lrange>`_
 - Implementation: :meth:`~coredis.Redis.lrange`
@@ -1437,7 +1437,7 @@ Get a range of elements from a list
 LREM
 ****
 
-Remove elements from a list
+Removes elements from a list. Deletes the list if the last element was removed.
 
 - Documentation: `LREM <https://redis.io/commands/lrem>`_
 - Implementation: :meth:`~coredis.Redis.lrem`
@@ -1451,7 +1451,7 @@ Remove elements from a list
 LSET
 ****
 
-Set the value of an element in a list by its index
+Sets the value of an element in a list by its index.
 
 - Documentation: `LSET <https://redis.io/commands/lset>`_
 - Implementation: :meth:`~coredis.Redis.lset`
@@ -1465,7 +1465,7 @@ Set the value of an element in a list by its index
 LTRIM
 *****
 
-Trim a list to the specified range
+Removes elements from both ends a list. Deletes the list if all elements were trimmed.
 
 - Documentation: `LTRIM <https://redis.io/commands/ltrim>`_
 - Implementation: :meth:`~coredis.Redis.ltrim`
@@ -1479,7 +1479,7 @@ Trim a list to the specified range
 RPOP
 ****
 
-Remove and get the last elements in a list
+Returns and removes the last elements of a list. Deletes the list if the last element was popped.
 
 - Documentation: `RPOP <https://redis.io/commands/rpop>`_
 - Implementation: :meth:`~coredis.Redis.rpop`
@@ -1493,7 +1493,7 @@ Remove and get the last elements in a list
 RPOPLPUSH
 *********
 
-Remove the last element in a list, prepend it to another list and return it
+Returns the last element of a list after removing and pushing it to another list. Deletes the list if the last element was popped.
 
 - Documentation: `RPOPLPUSH <https://redis.io/commands/rpoplpush>`_
 - Implementation: :meth:`~coredis.Redis.rpoplpush`
@@ -1509,7 +1509,7 @@ Remove the last element in a list, prepend it to another list and return it
 RPUSH
 *****
 
-Append one or multiple elements to a list
+Appends one or more elements to a list. Creates the key if it doesn't exist.
 
 - Documentation: `RPUSH <https://redis.io/commands/rpush>`_
 - Implementation: :meth:`~coredis.Redis.rpush`
@@ -1523,7 +1523,7 @@ Append one or multiple elements to a list
 RPUSHX
 ******
 
-Append an element to a list, only if the list exists
+Appends an element to a list only when the list exists.
 
 - Documentation: `RPUSHX <https://redis.io/commands/rpushx>`_
 - Implementation: :meth:`~coredis.Redis.rpushx`
@@ -1545,7 +1545,7 @@ Set
 SADD
 ****
 
-Add one or more members to a set
+Adds one or more members to a set. Creates the key if it doesn't exist.
 
 - Documentation: `SADD <https://redis.io/commands/sadd>`_
 - Implementation: :meth:`~coredis.Redis.sadd`
@@ -1559,7 +1559,7 @@ Add one or more members to a set
 SCARD
 *****
 
-Get the number of members in a set
+Returns the number of members in a set.
 
 - Documentation: `SCARD <https://redis.io/commands/scard>`_
 - Implementation: :meth:`~coredis.Redis.scard`
@@ -1575,7 +1575,7 @@ Get the number of members in a set
 SDIFF
 *****
 
-Subtract multiple sets
+Returns the difference of multiple sets.
 
 - Documentation: `SDIFF <https://redis.io/commands/sdiff>`_
 - Implementation: :meth:`~coredis.Redis.sdiff`
@@ -1589,7 +1589,7 @@ Subtract multiple sets
 SDIFFSTORE
 **********
 
-Subtract multiple sets and store the resulting set in a key
+Stores the difference of multiple sets in a key.
 
 - Documentation: `SDIFFSTORE <https://redis.io/commands/sdiffstore>`_
 - Implementation: :meth:`~coredis.Redis.sdiffstore`
@@ -1603,7 +1603,7 @@ Subtract multiple sets and store the resulting set in a key
 SINTER
 ******
 
-Intersect multiple sets
+Returns the intersect of multiple sets.
 
 - Documentation: `SINTER <https://redis.io/commands/sinter>`_
 - Implementation: :meth:`~coredis.Redis.sinter`
@@ -1617,7 +1617,7 @@ Intersect multiple sets
 SINTERCARD
 **********
 
-Intersect multiple sets and return the cardinality of the result
+Returns the number of members of the intersect of multiple sets.
 
 - Documentation: `SINTERCARD <https://redis.io/commands/sintercard>`_
 - Implementation: :meth:`~coredis.Redis.sintercard`
@@ -1635,7 +1635,7 @@ Intersect multiple sets and return the cardinality of the result
 SINTERSTORE
 ***********
 
-Intersect multiple sets and store the resulting set in a key
+Stores the intersect of multiple sets in a key.
 
 - Documentation: `SINTERSTORE <https://redis.io/commands/sinterstore>`_
 - Implementation: :meth:`~coredis.Redis.sinterstore`
@@ -1649,7 +1649,7 @@ Intersect multiple sets and store the resulting set in a key
 SISMEMBER
 *********
 
-Determine if a given value is a member of a set
+Determines whether a member belongs to a set.
 
 - Documentation: `SISMEMBER <https://redis.io/commands/sismember>`_
 - Implementation: :meth:`~coredis.Redis.sismember`
@@ -1665,7 +1665,7 @@ Determine if a given value is a member of a set
 SMEMBERS
 ********
 
-Get all the members in a set
+Returns all members of a set.
 
 - Documentation: `SMEMBERS <https://redis.io/commands/smembers>`_
 - Implementation: :meth:`~coredis.Redis.smembers`
@@ -1681,7 +1681,7 @@ Get all the members in a set
 SMISMEMBER
 **********
 
-Returns the membership associated with the given elements for a set
+Determines whether multiple members belong to a set.
 
 - Documentation: `SMISMEMBER <https://redis.io/commands/smismember>`_
 - Implementation: :meth:`~coredis.Redis.smismember`
@@ -1699,7 +1699,7 @@ Returns the membership associated with the given elements for a set
 SMOVE
 *****
 
-Move a member from one set to another
+Moves a member from one set to another.
 
 - Documentation: `SMOVE <https://redis.io/commands/smove>`_
 - Implementation: :meth:`~coredis.Redis.smove`
@@ -1713,7 +1713,7 @@ Move a member from one set to another
 SPOP
 ****
 
-Remove and return one or multiple random members from a set
+Returns one or more random members from a set after removing them. Deletes the set if the last member was popped.
 
 - Documentation: `SPOP <https://redis.io/commands/spop>`_
 - Implementation: :meth:`~coredis.Redis.spop`
@@ -1741,7 +1741,7 @@ Get one or multiple random members from a set
 SREM
 ****
 
-Remove one or more members from a set
+Removes one or more members from a set. Deletes the set if the last member was removed.
 
 - Documentation: `SREM <https://redis.io/commands/srem>`_
 - Implementation: :meth:`~coredis.Redis.srem`
@@ -1755,7 +1755,7 @@ Remove one or more members from a set
 SSCAN
 *****
 
-Incrementally iterate Set elements
+Iterates over members of a set.
 
 - Documentation: `SSCAN <https://redis.io/commands/sscan>`_
 - Implementation: :meth:`~coredis.Redis.sscan`
@@ -1769,7 +1769,7 @@ Incrementally iterate Set elements
 SUNION
 ******
 
-Add multiple sets
+Returns the union of multiple sets.
 
 - Documentation: `SUNION <https://redis.io/commands/sunion>`_
 - Implementation: :meth:`~coredis.Redis.sunion`
@@ -1783,7 +1783,7 @@ Add multiple sets
 SUNIONSTORE
 ***********
 
-Add multiple sets and store the resulting set in a key
+Stores the union of multiple sets in a key.
 
 - Documentation: `SUNIONSTORE <https://redis.io/commands/sunionstore>`_
 - Implementation: :meth:`~coredis.Redis.sunionstore`
@@ -1805,7 +1805,7 @@ Sorted-Set
 BZMPOP
 ******
 
-Remove and return members with scores in a sorted set or block until one is available
+Removes and returns a member by score from one or more sorted sets. Blocks until a member is available otherwise. Deletes the sorted set if the last element was popped.
 
 - Documentation: `BZMPOP <https://redis.io/commands/bzmpop>`_
 - Implementation: :meth:`~coredis.Redis.bzmpop`
@@ -1823,7 +1823,7 @@ Remove and return members with scores in a sorted set or block until one is avai
 BZPOPMAX
 ********
 
-Remove and return the member with the highest score from one or more sorted sets, or block until one is available
+Removes and returns the member with the highest score from one or more sorted sets. Blocks until a member available otherwise.  Deletes the sorted set if the last element was popped.
 
 - Documentation: `BZPOPMAX <https://redis.io/commands/bzpopmax>`_
 - Implementation: :meth:`~coredis.Redis.bzpopmax`
@@ -1837,7 +1837,7 @@ Remove and return the member with the highest score from one or more sorted sets
 BZPOPMIN
 ********
 
-Remove and return the member with the lowest score from one or more sorted sets, or block until one is available
+Removes and returns the member with the lowest score from one or more sorted sets. Blocks until a member is available otherwise. Deletes the sorted set if the last element was popped.
 
 - Documentation: `BZPOPMIN <https://redis.io/commands/bzpopmin>`_
 - Implementation: :meth:`~coredis.Redis.bzpopmin`
@@ -1851,7 +1851,7 @@ Remove and return the member with the lowest score from one or more sorted sets,
 ZADD
 ****
 
-Add one or more members to a sorted set, or update its score if it already exists
+Adds one or more members to a sorted set, or updates their scores. Creates the key if it doesn't exist.
 
 - Documentation: `ZADD <https://redis.io/commands/zadd>`_
 - Implementation: :meth:`~coredis.Redis.zadd`
@@ -1865,7 +1865,7 @@ Add one or more members to a sorted set, or update its score if it already exist
 ZCARD
 *****
 
-Get the number of members in a sorted set
+Returns the number of members in a sorted set.
 
 - Documentation: `ZCARD <https://redis.io/commands/zcard>`_
 - Implementation: :meth:`~coredis.Redis.zcard`
@@ -1879,7 +1879,7 @@ Get the number of members in a sorted set
 ZCOUNT
 ******
 
-Count the members in a sorted set with scores within the given values
+Returns the count of members in a sorted set that have scores within a range.
 
 - Documentation: `ZCOUNT <https://redis.io/commands/zcount>`_
 - Implementation: :meth:`~coredis.Redis.zcount`
@@ -1893,7 +1893,7 @@ Count the members in a sorted set with scores within the given values
 ZDIFF
 *****
 
-Subtract multiple sorted sets
+Returns the difference between multiple sorted sets.
 
 - Documentation: `ZDIFF <https://redis.io/commands/zdiff>`_
 - Implementation: :meth:`~coredis.Redis.zdiff`
@@ -1909,7 +1909,7 @@ Subtract multiple sorted sets
 ZDIFFSTORE
 **********
 
-Subtract multiple sorted sets and store the resulting sorted set in a new key
+Stores the difference of multiple sorted sets in a key.
 
 - Documentation: `ZDIFFSTORE <https://redis.io/commands/zdiffstore>`_
 - Implementation: :meth:`~coredis.Redis.zdiffstore`
@@ -1925,7 +1925,7 @@ Subtract multiple sorted sets and store the resulting sorted set in a new key
 ZINCRBY
 *******
 
-Increment the score of a member in a sorted set
+Increments the score of a member in a sorted set.
 
 - Documentation: `ZINCRBY <https://redis.io/commands/zincrby>`_
 - Implementation: :meth:`~coredis.Redis.zincrby`
@@ -1939,7 +1939,7 @@ Increment the score of a member in a sorted set
 ZINTER
 ******
 
-Intersect multiple sorted sets
+Returns the intersect of multiple sorted sets.
 
 - Documentation: `ZINTER <https://redis.io/commands/zinter>`_
 - Implementation: :meth:`~coredis.Redis.zinter`
@@ -1955,7 +1955,7 @@ Intersect multiple sorted sets
 ZINTERCARD
 **********
 
-Intersect multiple sorted sets and return the cardinality of the result
+Returns the number of members of the intersect of multiple sorted sets.
 
 - Documentation: `ZINTERCARD <https://redis.io/commands/zintercard>`_
 - Implementation: :meth:`~coredis.Redis.zintercard`
@@ -1973,7 +1973,7 @@ Intersect multiple sorted sets and return the cardinality of the result
 ZINTERSTORE
 ***********
 
-Intersect multiple sorted sets and store the resulting sorted set in a new key
+Stores the intersect of multiple sorted sets in a key.
 
 - Documentation: `ZINTERSTORE <https://redis.io/commands/zinterstore>`_
 - Implementation: :meth:`~coredis.Redis.zinterstore`
@@ -1987,7 +1987,7 @@ Intersect multiple sorted sets and store the resulting sorted set in a new key
 ZLEXCOUNT
 *********
 
-Count the number of members in a sorted set between a given lexicographical range
+Returns the number of members in a sorted set within a lexicographical range.
 
 - Documentation: `ZLEXCOUNT <https://redis.io/commands/zlexcount>`_
 - Implementation: :meth:`~coredis.Redis.zlexcount`
@@ -2003,7 +2003,7 @@ Count the number of members in a sorted set between a given lexicographical rang
 ZMPOP
 *****
 
-Remove and return members with scores in a sorted set
+Returns the highest- or lowest-scoring members from one or more sorted sets after removing them. Deletes the sorted set if the last member was popped.
 
 - Documentation: `ZMPOP <https://redis.io/commands/zmpop>`_
 - Implementation: :meth:`~coredis.Redis.zmpop`
@@ -2021,7 +2021,7 @@ Remove and return members with scores in a sorted set
 ZMSCORE
 *******
 
-Get the score associated with the given members in a sorted set
+Returns the score of one or more members in a sorted set.
 
 - Documentation: `ZMSCORE <https://redis.io/commands/zmscore>`_
 - Implementation: :meth:`~coredis.Redis.zmscore`
@@ -2039,7 +2039,7 @@ Get the score associated with the given members in a sorted set
 ZPOPMAX
 *******
 
-Remove and return members with the highest scores in a sorted set
+Returns the highest-scoring members from a sorted set after removing them. Deletes the sorted set if the last member was popped.
 
 - Documentation: `ZPOPMAX <https://redis.io/commands/zpopmax>`_
 - Implementation: :meth:`~coredis.Redis.zpopmax`
@@ -2053,7 +2053,7 @@ Remove and return members with the highest scores in a sorted set
 ZPOPMIN
 *******
 
-Remove and return members with the lowest scores in a sorted set
+Returns the lowest-scoring members from a sorted set after removing them. Deletes the sorted set if the last member was popped.
 
 - Documentation: `ZPOPMIN <https://redis.io/commands/zpopmin>`_
 - Implementation: :meth:`~coredis.Redis.zpopmin`
@@ -2067,7 +2067,7 @@ Remove and return members with the lowest scores in a sorted set
 ZRANDMEMBER
 ***********
 
-Get one or multiple random elements from a sorted set
+Returns one or more random members from a sorted set.
 
 - Documentation: `ZRANDMEMBER <https://redis.io/commands/zrandmember>`_
 - Implementation: :meth:`~coredis.Redis.zrandmember`
@@ -2083,7 +2083,7 @@ Get one or multiple random elements from a sorted set
 ZRANGE
 ******
 
-Return a range of members in a sorted set
+Returns members in a sorted set within a range of indexes.
 
 - Documentation: `ZRANGE <https://redis.io/commands/zrange>`_
 - Implementation: :meth:`~coredis.Redis.zrange`
@@ -2099,7 +2099,7 @@ Return a range of members in a sorted set
 ZRANGEBYLEX
 ***********
 
-Return a range of members in a sorted set, by lexicographical range
+Returns members in a sorted set within a lexicographical range.
 
 - Documentation: `ZRANGEBYLEX <https://redis.io/commands/zrangebylex>`_
 - Implementation: :meth:`~coredis.Redis.zrangebylex`
@@ -2117,7 +2117,7 @@ Return a range of members in a sorted set, by lexicographical range
 ZRANGEBYSCORE
 *************
 
-Return a range of members in a sorted set, by score
+Returns members in a sorted set within a range of scores.
 
 - Documentation: `ZRANGEBYSCORE <https://redis.io/commands/zrangebyscore>`_
 - Implementation: :meth:`~coredis.Redis.zrangebyscore`
@@ -2135,7 +2135,7 @@ Return a range of members in a sorted set, by score
 ZRANGESTORE
 ***********
 
-Store a range of members from sorted set into another key
+Stores a range of members from sorted set in a key.
 
 - Documentation: `ZRANGESTORE <https://redis.io/commands/zrangestore>`_
 - Implementation: :meth:`~coredis.Redis.zrangestore`
@@ -2151,7 +2151,7 @@ Store a range of members from sorted set into another key
 ZRANK
 *****
 
-Determine the index of a member in a sorted set
+Returns the index of a member in a sorted set ordered by ascending scores.
 
 - Documentation: `ZRANK <https://redis.io/commands/zrank>`_
 - Implementation: :meth:`~coredis.Redis.zrank`
@@ -2167,7 +2167,7 @@ Determine the index of a member in a sorted set
 ZREM
 ****
 
-Remove one or more members from a sorted set
+Removes one or more members from a sorted set. Deletes the sorted set if all members were removed.
 
 - Documentation: `ZREM <https://redis.io/commands/zrem>`_
 - Implementation: :meth:`~coredis.Redis.zrem`
@@ -2181,7 +2181,7 @@ Remove one or more members from a sorted set
 ZREMRANGEBYLEX
 **************
 
-Remove all members in a sorted set between the given lexicographical range
+Removes members in a sorted set within a lexicographical range. Deletes the sorted set if all members were removed.
 
 - Documentation: `ZREMRANGEBYLEX <https://redis.io/commands/zremrangebylex>`_
 - Implementation: :meth:`~coredis.Redis.zremrangebylex`
@@ -2195,7 +2195,7 @@ Remove all members in a sorted set between the given lexicographical range
 ZREMRANGEBYRANK
 ***************
 
-Remove all members in a sorted set within the given indexes
+Removes members in a sorted set within a range of indexes. Deletes the sorted set if all members were removed.
 
 - Documentation: `ZREMRANGEBYRANK <https://redis.io/commands/zremrangebyrank>`_
 - Implementation: :meth:`~coredis.Redis.zremrangebyrank`
@@ -2209,7 +2209,7 @@ Remove all members in a sorted set within the given indexes
 ZREMRANGEBYSCORE
 ****************
 
-Remove all members in a sorted set within the given scores
+Removes members in a sorted set within a range of scores. Deletes the sorted set if all members were removed.
 
 - Documentation: `ZREMRANGEBYSCORE <https://redis.io/commands/zremrangebyscore>`_
 - Implementation: :meth:`~coredis.Redis.zremrangebyscore`
@@ -2223,7 +2223,7 @@ Remove all members in a sorted set within the given scores
 ZREVRANGE
 *********
 
-Return a range of members in a sorted set, by index, with scores ordered from high to low
+Returns members in a sorted set within a range of indexes in reverse order.
 
 - Documentation: `ZREVRANGE <https://redis.io/commands/zrevrange>`_
 - Implementation: :meth:`~coredis.Redis.zrevrange`
@@ -2241,7 +2241,7 @@ Return a range of members in a sorted set, by index, with scores ordered from hi
 ZREVRANGEBYLEX
 **************
 
-Return a range of members in a sorted set, by lexicographical range, ordered from higher to lower strings.
+Returns members in a sorted set within a lexicographical range in reverse order.
 
 - Documentation: `ZREVRANGEBYLEX <https://redis.io/commands/zrevrangebylex>`_
 - Implementation: :meth:`~coredis.Redis.zrevrangebylex`
@@ -2259,7 +2259,7 @@ Return a range of members in a sorted set, by lexicographical range, ordered fro
 ZREVRANGEBYSCORE
 ****************
 
-Return a range of members in a sorted set, by score, with scores ordered from high to low
+Returns members in a sorted set within a range of scores in reverse order.
 
 - Documentation: `ZREVRANGEBYSCORE <https://redis.io/commands/zrevrangebyscore>`_
 - Implementation: :meth:`~coredis.Redis.zrevrangebyscore`
@@ -2277,7 +2277,7 @@ Return a range of members in a sorted set, by score, with scores ordered from hi
 ZREVRANK
 ********
 
-Determine the index of a member in a sorted set, with scores ordered from high to low
+Returns the index of a member in a sorted set ordered by descending scores.
 
 - Documentation: `ZREVRANK <https://redis.io/commands/zrevrank>`_
 - Implementation: :meth:`~coredis.Redis.zrevrank`
@@ -2293,7 +2293,7 @@ Determine the index of a member in a sorted set, with scores ordered from high t
 ZSCAN
 *****
 
-Incrementally iterate sorted sets elements and associated scores
+Iterates over members and scores of a sorted set.
 
 - Documentation: `ZSCAN <https://redis.io/commands/zscan>`_
 - Implementation: :meth:`~coredis.Redis.zscan`
@@ -2307,7 +2307,7 @@ Incrementally iterate sorted sets elements and associated scores
 ZSCORE
 ******
 
-Get the score associated with the given member in a sorted set
+Returns the score of a member in a sorted set.
 
 - Documentation: `ZSCORE <https://redis.io/commands/zscore>`_
 - Implementation: :meth:`~coredis.Redis.zscore`
@@ -2323,7 +2323,7 @@ Get the score associated with the given member in a sorted set
 ZUNION
 ******
 
-Add multiple sorted sets
+Returns the union of multiple sorted sets.
 
 - Documentation: `ZUNION <https://redis.io/commands/zunion>`_
 - Implementation: :meth:`~coredis.Redis.zunion`
@@ -2339,7 +2339,7 @@ Add multiple sorted sets
 ZUNIONSTORE
 ***********
 
-Add multiple sorted sets and store the resulting sorted set in a new key
+Stores the union of multiple sorted sets in a key.
 
 - Documentation: `ZUNIONSTORE <https://redis.io/commands/zunionstore>`_
 - Implementation: :meth:`~coredis.Redis.zunionstore`
@@ -2361,7 +2361,7 @@ Hyperloglog
 PFADD
 *****
 
-Adds the specified elements to the specified HyperLogLog.
+Adds elements to a HyperLogLog key. Creates the key if it doesn't exist.
 
 - Documentation: `PFADD <https://redis.io/commands/pfadd>`_
 - Implementation: :meth:`~coredis.Redis.pfadd`
@@ -2375,7 +2375,7 @@ Adds the specified elements to the specified HyperLogLog.
 PFCOUNT
 *******
 
-Return the approximated cardinality of the set(s) observed by the HyperLogLog at key(s).
+Returns the approximated cardinality of the set(s) observed by the HyperLogLog key(s).
 
 - Documentation: `PFCOUNT <https://redis.io/commands/pfcount>`_
 - Implementation: :meth:`~coredis.Redis.pfcount`
@@ -2389,7 +2389,7 @@ Return the approximated cardinality of the set(s) observed by the HyperLogLog at
 PFMERGE
 *******
 
-Merge N different HyperLogLogs into a single one.
+Merges one or more HyperLogLog values into a single key.
 
 - Documentation: `PFMERGE <https://redis.io/commands/pfmerge>`_
 - Implementation: :meth:`~coredis.Redis.pfmerge`
@@ -2411,7 +2411,7 @@ Geo
 GEOADD
 ******
 
-Add one or more geospatial items in the geospatial index represented using a sorted set
+Adds one or more members to a geospatial index. The key is created if it doesn't exist.
 
 - Documentation: `GEOADD <https://redis.io/commands/geoadd>`_
 - Implementation: :meth:`~coredis.Redis.geoadd`
@@ -2425,7 +2425,7 @@ Add one or more geospatial items in the geospatial index represented using a sor
 GEODIST
 *******
 
-Returns the distance between two members of a geospatial index
+Returns the distance between two members of a geospatial index.
 
 - Documentation: `GEODIST <https://redis.io/commands/geodist>`_
 - Implementation: :meth:`~coredis.Redis.geodist`
@@ -2439,7 +2439,7 @@ Returns the distance between two members of a geospatial index
 GEOHASH
 *******
 
-Returns members of a geospatial index as standard geohash strings
+Returns members from a geospatial index as geohash strings.
 
 - Documentation: `GEOHASH <https://redis.io/commands/geohash>`_
 - Implementation: :meth:`~coredis.Redis.geohash`
@@ -2453,7 +2453,7 @@ Returns members of a geospatial index as standard geohash strings
 GEOPOS
 ******
 
-Returns longitude and latitude of members of a geospatial index
+Returns the longitude and latitude of members from a geospatial index.
 
 - Documentation: `GEOPOS <https://redis.io/commands/geopos>`_
 - Implementation: :meth:`~coredis.Redis.geopos`
@@ -2467,7 +2467,7 @@ Returns longitude and latitude of members of a geospatial index
 GEORADIUS
 *********
 
-Query a sorted set representing a geospatial index to fetch members matching a given maximum distance from a point
+Queries a geospatial index for members within a distance from a coordinate, optionally stores the result.
 
 - Documentation: `GEORADIUS <https://redis.io/commands/georadius>`_
 - Implementation: :meth:`~coredis.Redis.georadius`
@@ -2483,7 +2483,7 @@ Query a sorted set representing a geospatial index to fetch members matching a g
 GEORADIUSBYMEMBER
 *****************
 
-Query a sorted set representing a geospatial index to fetch members matching a given maximum distance from a member
+Queries a geospatial index for members within a distance from a member, optionally stores the result.
 
 - Documentation: `GEORADIUSBYMEMBER <https://redis.io/commands/georadiusbymember>`_
 - Implementation: :meth:`~coredis.Redis.georadiusbymember`
@@ -2499,7 +2499,7 @@ Query a sorted set representing a geospatial index to fetch members matching a g
 GEOSEARCH
 *********
 
-Query a sorted set representing a geospatial index to fetch members inside an area of a box or a circle.
+Queries a geospatial index for members inside an area of a box or a circle.
 
 - Documentation: `GEOSEARCH <https://redis.io/commands/geosearch>`_
 - Implementation: :meth:`~coredis.Redis.geosearch`
@@ -2515,7 +2515,7 @@ Query a sorted set representing a geospatial index to fetch members inside an ar
 GEOSEARCHSTORE
 **************
 
-Query a sorted set representing a geospatial index to fetch members inside an area of a box or a circle, and store the result in another key.
+Queries a geospatial index for members inside an area of a box or a circle, optionally stores the result.
 
 - Documentation: `GEOSEARCHSTORE <https://redis.io/commands/geosearchstore>`_
 - Implementation: :meth:`~coredis.Redis.geosearchstore`
@@ -2539,7 +2539,7 @@ Stream
 XACK
 ****
 
-Marks a pending message as correctly processed, effectively removing it from the pending entries list of the consumer group. Return value of the command is the number of messages successfully acknowledged, that is, the IDs we were actually able to resolve in the PEL.
+Returns the number of messages that were successfully acknowledged by the consumer group member of a stream.
 
 - Documentation: `XACK <https://redis.io/commands/xack>`_
 - Implementation: :meth:`~coredis.Redis.xack`
@@ -2553,7 +2553,7 @@ Marks a pending message as correctly processed, effectively removing it from the
 XADD
 ****
 
-Appends a new entry to a stream
+Appends a new message to a stream. Creates the key if it doesn't exist.
 
 - Documentation: `XADD <https://redis.io/commands/xadd>`_
 - Implementation: :meth:`~coredis.Redis.xadd`
@@ -2567,7 +2567,7 @@ Appends a new entry to a stream
 XAUTOCLAIM
 **********
 
-Changes (or acquires) ownership of messages in a consumer group, as if the messages were delivered to the specified consumer.
+Changes, or acquires, ownership of messages in a consumer group, as if the messages were delivered to as consumer group member.
 
 - Documentation: `XAUTOCLAIM <https://redis.io/commands/xautoclaim>`_
 - Implementation: :meth:`~coredis.Redis.xautoclaim`
@@ -2585,7 +2585,7 @@ Changes (or acquires) ownership of messages in a consumer group, as if the messa
 XCLAIM
 ******
 
-Changes (or acquires) ownership of a message in a consumer group, as if the message was delivered to the specified consumer.
+Changes, or acquires, ownership of a message in a consumer group, as if the message was delivered a consumer group member.
 
 - Documentation: `XCLAIM <https://redis.io/commands/xclaim>`_
 - Implementation: :meth:`~coredis.Redis.xclaim`
@@ -2599,7 +2599,7 @@ Changes (or acquires) ownership of a message in a consumer group, as if the mess
 XDEL
 ****
 
-Removes the specified entries from the stream. Returns the number of items actually deleted, that may be different from the number of IDs passed in case certain IDs do not exist.
+Returns the number of messages after removing them from a stream.
 
 - Documentation: `XDEL <https://redis.io/commands/xdel>`_
 - Implementation: :meth:`~coredis.Redis.xdel`
@@ -2613,7 +2613,7 @@ Removes the specified entries from the stream. Returns the number of items actua
 XGROUP CREATE
 *************
 
-Create a consumer group.
+Creates a consumer group.
 
 - Documentation: `XGROUP CREATE <https://redis.io/commands/xgroup-create>`_
 - Implementation: :meth:`~coredis.Redis.xgroup_create`
@@ -2627,7 +2627,7 @@ Create a consumer group.
 XGROUP CREATECONSUMER
 *********************
 
-Create a consumer in a consumer group.
+Creates a consumer in a consumer group.
 
 - Documentation: `XGROUP CREATECONSUMER <https://redis.io/commands/xgroup-createconsumer>`_
 - Implementation: :meth:`~coredis.Redis.xgroup_createconsumer`
@@ -2645,7 +2645,7 @@ Create a consumer in a consumer group.
 XGROUP DELCONSUMER
 ******************
 
-Delete a consumer from a consumer group.
+Deletes a consumer from a consumer group.
 
 - Documentation: `XGROUP DELCONSUMER <https://redis.io/commands/xgroup-delconsumer>`_
 - Implementation: :meth:`~coredis.Redis.xgroup_delconsumer`
@@ -2661,7 +2661,7 @@ Delete a consumer from a consumer group.
 XGROUP DESTROY
 **************
 
-Destroy a consumer group.
+Destroys a consumer group.
 
 - Documentation: `XGROUP DESTROY <https://redis.io/commands/xgroup-destroy>`_
 - Implementation: :meth:`~coredis.Redis.xgroup_destroy`
@@ -2675,7 +2675,7 @@ Destroy a consumer group.
 XGROUP SETID
 ************
 
-Set a consumer group to an arbitrary last delivered ID value.
+Sets the last-delivered ID of a consumer group.
 
 - Documentation: `XGROUP SETID <https://redis.io/commands/xgroup-setid>`_
 - Implementation: :meth:`~coredis.Redis.xgroup_setid`
@@ -2691,7 +2691,7 @@ Set a consumer group to an arbitrary last delivered ID value.
 XINFO CONSUMERS
 ***************
 
-List the consumers in a consumer group
+Returns a list of the consumers in a consumer group.
 
 - Documentation: `XINFO CONSUMERS <https://redis.io/commands/xinfo-consumers>`_
 - Implementation: :meth:`~coredis.Redis.xinfo_consumers`
@@ -2705,7 +2705,7 @@ List the consumers in a consumer group
 XINFO GROUPS
 ************
 
-List the consumer groups of a stream
+Returns a list of the consumer groups of a stream.
 
 - Documentation: `XINFO GROUPS <https://redis.io/commands/xinfo-groups>`_
 - Implementation: :meth:`~coredis.Redis.xinfo_groups`
@@ -2719,7 +2719,7 @@ List the consumer groups of a stream
 XINFO STREAM
 ************
 
-Get information about a stream
+Returns information about a stream.
 
 - Documentation: `XINFO STREAM <https://redis.io/commands/xinfo-stream>`_
 - Implementation: :meth:`~coredis.Redis.xinfo_stream`
@@ -2733,7 +2733,7 @@ Get information about a stream
 XLEN
 ****
 
-Return the number of entries in a stream
+Return the number of messages in a stream.
 
 - Documentation: `XLEN <https://redis.io/commands/xlen>`_
 - Implementation: :meth:`~coredis.Redis.xlen`
@@ -2747,7 +2747,7 @@ Return the number of entries in a stream
 XPENDING
 ********
 
-Return information and entries from a stream consumer group pending entries list, that are messages fetched but never acknowledged.
+Returns the information and entries from a stream consumer group's pending entries list.
 
 - Documentation: `XPENDING <https://redis.io/commands/xpending>`_
 - Implementation: :meth:`~coredis.Redis.xpending`
@@ -2761,7 +2761,7 @@ Return information and entries from a stream consumer group pending entries list
 XRANGE
 ******
 
-Return a range of elements in a stream, with IDs matching the specified IDs interval
+Returns the messages from a stream within a range of IDs.
 
 - Documentation: `XRANGE <https://redis.io/commands/xrange>`_
 - Implementation: :meth:`~coredis.Redis.xrange`
@@ -2775,7 +2775,7 @@ Return a range of elements in a stream, with IDs matching the specified IDs inte
 XREAD
 *****
 
-Return never seen elements in multiple streams, with IDs greater than the ones reported by the caller for each stream. Can block.
+Returns messages from multiple streams with IDs greater than the ones requested. Blocks until a message is available otherwise.
 
 - Documentation: `XREAD <https://redis.io/commands/xread>`_
 - Implementation: :meth:`~coredis.Redis.xread`
@@ -2789,7 +2789,7 @@ Return never seen elements in multiple streams, with IDs greater than the ones r
 XREADGROUP
 **********
 
-Return new entries from a stream using a consumer group, or access the history of the pending entries for a given consumer. Can block.
+Returns new or historical messages from a stream for a consumer in agroup. Blocks until a message is available otherwise.
 
 - Documentation: `XREADGROUP <https://redis.io/commands/xreadgroup>`_
 - Implementation: :meth:`~coredis.Redis.xreadgroup`
@@ -2803,7 +2803,7 @@ Return new entries from a stream using a consumer group, or access the history o
 XREVRANGE
 *********
 
-Return a range of elements in a stream, with IDs matching the specified IDs interval, in reverse order (from greater to smaller IDs) compared to XRANGE
+Returns the messages from a stream within a range of IDs in reverse order.
 
 - Documentation: `XREVRANGE <https://redis.io/commands/xrevrange>`_
 - Implementation: :meth:`~coredis.Redis.xrevrange`
@@ -2817,7 +2817,7 @@ Return a range of elements in a stream, with IDs matching the specified IDs inte
 XTRIM
 *****
 
-Trims the stream to (approximately if '~' is passed) a certain size
+Deletes messages from the beginning of a stream.
 
 - Documentation: `XTRIM <https://redis.io/commands/xtrim>`_
 - Implementation: :meth:`~coredis.Redis.xtrim`
@@ -2839,7 +2839,7 @@ Scripting
 EVAL
 ****
 
-Execute a Lua script server side
+Executes a server-side Lua script.
 
 - Documentation: `EVAL <https://redis.io/commands/eval>`_
 - Implementation: :meth:`~coredis.Redis.eval`
@@ -2853,7 +2853,7 @@ Execute a Lua script server side
 EVALSHA
 *******
 
-Execute a Lua script server side
+Executes a server-side Lua script by SHA1 digest.
 
 - Documentation: `EVALSHA <https://redis.io/commands/evalsha>`_
 - Implementation: :meth:`~coredis.Redis.evalsha`
@@ -2867,7 +2867,7 @@ Execute a Lua script server side
 EVALSHA_RO
 **********
 
-Execute a read-only Lua script server side
+Executes a read-only server-side Lua script by SHA1 digest.
 
 - Documentation: `EVALSHA_RO <https://redis.io/commands/evalsha_ro>`_
 - Implementation: :meth:`~coredis.Redis.evalsha_ro`
@@ -2885,7 +2885,7 @@ Execute a read-only Lua script server side
 EVAL_RO
 *******
 
-Execute a read-only Lua script server side
+Executes a read-only server-side Lua script.
 
 - Documentation: `EVAL_RO <https://redis.io/commands/eval_ro>`_
 - Implementation: :meth:`~coredis.Redis.eval_ro`
@@ -2903,7 +2903,7 @@ Execute a read-only Lua script server side
 FCALL
 *****
 
-Invoke a function
+Invokes a function.
 
 - Documentation: `FCALL <https://redis.io/commands/fcall>`_
 - Implementation: :meth:`~coredis.Redis.fcall`
@@ -2921,7 +2921,7 @@ Invoke a function
 FCALL_RO
 ********
 
-Invoke a read-only function
+Invokes a read-only function.
 
 - Documentation: `FCALL_RO <https://redis.io/commands/fcall_ro>`_
 - Implementation: :meth:`~coredis.Redis.fcall_ro`
@@ -2939,7 +2939,7 @@ Invoke a read-only function
 FUNCTION DELETE
 ***************
 
-Delete a function by name
+Deletes a library and its functions.
 
 - Documentation: `FUNCTION DELETE <https://redis.io/commands/function-delete>`_
 - Implementation: :meth:`~coredis.Redis.function_delete`
@@ -2957,7 +2957,7 @@ Delete a function by name
 FUNCTION DUMP
 *************
 
-Dump all functions into a serialized binary payload
+Dumps all libraries into a serialized binary payload.
 
 - Documentation: `FUNCTION DUMP <https://redis.io/commands/function-dump>`_
 - Implementation: :meth:`~coredis.Redis.function_dump`
@@ -2975,7 +2975,7 @@ Dump all functions into a serialized binary payload
 FUNCTION FLUSH
 **************
 
-Deleting all functions
+Deletes all libraries and functions.
 
 - Documentation: `FUNCTION FLUSH <https://redis.io/commands/function-flush>`_
 - Implementation: :meth:`~coredis.Redis.function_flush`
@@ -2993,7 +2993,7 @@ Deleting all functions
 FUNCTION KILL
 *************
 
-Kill the function currently in execution.
+Terminates a function during execution.
 
 - Documentation: `FUNCTION KILL <https://redis.io/commands/function-kill>`_
 - Implementation: :meth:`~coredis.Redis.function_kill`
@@ -3011,7 +3011,7 @@ Kill the function currently in execution.
 FUNCTION LIST
 *************
 
-List information about all the functions
+Returns information about all libraries.
 
 - Documentation: `FUNCTION LIST <https://redis.io/commands/function-list>`_
 - Implementation: :meth:`~coredis.Redis.function_list`
@@ -3029,7 +3029,7 @@ List information about all the functions
 FUNCTION LOAD
 *************
 
-Create a function with the given arguments (name, code, description)
+Creates a library.
 
 - Documentation: `FUNCTION LOAD <https://redis.io/commands/function-load>`_
 - Implementation: :meth:`~coredis.Redis.function_load`
@@ -3047,7 +3047,7 @@ Create a function with the given arguments (name, code, description)
 FUNCTION RESTORE
 ****************
 
-Restore all the functions on the given payload
+Restores all libraries from a payload.
 
 - Documentation: `FUNCTION RESTORE <https://redis.io/commands/function-restore>`_
 - Implementation: :meth:`~coredis.Redis.function_restore`
@@ -3065,7 +3065,7 @@ Restore all the functions on the given payload
 FUNCTION STATS
 **************
 
-Return information about the function currently running (name, description, duration)
+Returns information about a function during execution.
 
 - Documentation: `FUNCTION STATS <https://redis.io/commands/function-stats>`_
 - Implementation: :meth:`~coredis.Redis.function_stats`
@@ -3083,7 +3083,7 @@ Return information about the function currently running (name, description, dura
 SCRIPT DEBUG
 ************
 
-Set the debug mode for executed scripts.
+Sets the debug mode of server-side Lua scripts.
 
 - Documentation: `SCRIPT DEBUG <https://redis.io/commands/script-debug>`_
 - Implementation: :meth:`~coredis.Redis.script_debug`
@@ -3099,7 +3099,7 @@ Set the debug mode for executed scripts.
 SCRIPT EXISTS
 *************
 
-Check existence of scripts in the script cache.
+Determines whether server-side Lua scripts exist in the script cache.
 
 - Documentation: `SCRIPT EXISTS <https://redis.io/commands/script-exists>`_
 - Implementation: :meth:`~coredis.Redis.script_exists`
@@ -3113,7 +3113,7 @@ Check existence of scripts in the script cache.
 SCRIPT FLUSH
 ************
 
-Remove all the scripts from the script cache.
+Removes all server-side Lua scripts from the script cache.
 
 - Documentation: `SCRIPT FLUSH <https://redis.io/commands/script-flush>`_
 - Implementation: :meth:`~coredis.Redis.script_flush`
@@ -3127,7 +3127,7 @@ Remove all the scripts from the script cache.
 SCRIPT KILL
 ***********
 
-Kill the script currently in execution.
+Terminates a server-side Lua script during execution.
 
 - Documentation: `SCRIPT KILL <https://redis.io/commands/script-kill>`_
 - Implementation: :meth:`~coredis.Redis.script_kill`
@@ -3141,7 +3141,7 @@ Kill the script currently in execution.
 SCRIPT LOAD
 ***********
 
-Load the specified Lua script into the script cache.
+Loads a server-side Lua script to the script cache.
 
 - Documentation: `SCRIPT LOAD <https://redis.io/commands/script-load>`_
 - Implementation: :meth:`~coredis.Redis.script_load`
@@ -3163,7 +3163,7 @@ Pubsub
 PUBLISH
 *******
 
-Post a message to a channel
+Posts a message to a channel.
 
 - Documentation: `PUBLISH <https://redis.io/commands/publish>`_
 - Implementation: :meth:`~coredis.Redis.publish`
@@ -3177,7 +3177,7 @@ Post a message to a channel
 PUBSUB CHANNELS
 ***************
 
-List active channels
+Returns the active channels.
 
 - Documentation: `PUBSUB CHANNELS <https://redis.io/commands/pubsub-channels>`_
 - Implementation: :meth:`~coredis.Redis.pubsub_channels`
@@ -3191,7 +3191,7 @@ List active channels
 PUBSUB NUMPAT
 *************
 
-Get the count of unique patterns pattern subscriptions
+Returns a count of unique pattern subscriptions.
 
 - Documentation: `PUBSUB NUMPAT <https://redis.io/commands/pubsub-numpat>`_
 - Implementation: :meth:`~coredis.Redis.pubsub_numpat`
@@ -3205,7 +3205,7 @@ Get the count of unique patterns pattern subscriptions
 PUBSUB NUMSUB
 *************
 
-Get the count of subscribers for channels
+Returns a count of subscribers to channels.
 
 - Documentation: `PUBSUB NUMSUB <https://redis.io/commands/pubsub-numsub>`_
 - Implementation: :meth:`~coredis.Redis.pubsub_numsub`
@@ -3219,7 +3219,7 @@ Get the count of subscribers for channels
 PUBSUB SHARDCHANNELS
 ********************
 
-List active shard channels
+Returns the active shard channels.
 
 - Documentation: `PUBSUB SHARDCHANNELS <https://redis.io/commands/pubsub-shardchannels>`_
 - Implementation: :meth:`~coredis.Redis.pubsub_shardchannels`
@@ -3237,7 +3237,7 @@ List active shard channels
 PUBSUB SHARDNUMSUB
 ******************
 
-Get the count of subscribers for shard channels
+Returns the count of subscribers of shard channels.
 
 - Documentation: `PUBSUB SHARDNUMSUB <https://redis.io/commands/pubsub-shardnumsub>`_
 - Implementation: :meth:`~coredis.Redis.pubsub_shardnumsub`
@@ -3271,7 +3271,7 @@ Post a message to a shard channel
 PSUBSCRIBE [X]
 **************
 
-Listen for messages published to channels matching the given patterns
+Listens for messages published to channels that match one or more patterns.
 
 - Documentation: `PSUBSCRIBE <https://redis.io/commands/psubscribe>`_
 
@@ -3281,7 +3281,7 @@ Listen for messages published to channels matching the given patterns
 PUNSUBSCRIBE [X]
 ****************
 
-Stop listening for messages posted to channels matching the given patterns
+Stops listening to messages published to channels that match one or more patterns.
 
 - Documentation: `PUNSUBSCRIBE <https://redis.io/commands/punsubscribe>`_
 
@@ -3291,7 +3291,7 @@ Stop listening for messages posted to channels matching the given patterns
 SSUBSCRIBE [X]
 **************
 
-Listen for messages published to the given shard channels
+Listens for messages published to shard channels.
 
 - Documentation: `SSUBSCRIBE <https://redis.io/commands/ssubscribe>`_
 
@@ -3301,7 +3301,7 @@ Listen for messages published to the given shard channels
 SUBSCRIBE [X]
 *************
 
-Listen for messages published to the given channels
+Listens for messages published to channels.
 
 - Documentation: `SUBSCRIBE <https://redis.io/commands/subscribe>`_
 
@@ -3311,7 +3311,7 @@ Listen for messages published to the given channels
 SUNSUBSCRIBE [X]
 ****************
 
-Stop listening for messages posted to the given shard channels
+Stops listening to messages posted to shard channels.
 
 - Documentation: `SUNSUBSCRIBE <https://redis.io/commands/sunsubscribe>`_
 
@@ -3321,7 +3321,7 @@ Stop listening for messages posted to the given shard channels
 UNSUBSCRIBE [X]
 ***************
 
-Stop listening for messages posted to the given channels
+Stops listening to messages posted to channels.
 
 - Documentation: `UNSUBSCRIBE <https://redis.io/commands/unsubscribe>`_
 
@@ -3339,7 +3339,7 @@ Transactions
 DISCARD [X]
 ***********
 
-Discard all commands issued after MULTI
+Discards a transaction.
 
 - Documentation: `DISCARD <https://redis.io/commands/discard>`_
 
@@ -3349,7 +3349,7 @@ Discard all commands issued after MULTI
 EXEC [X]
 ********
 
-Execute all commands issued after MULTI
+Executes all commands in a transaction.
 
 - Documentation: `EXEC <https://redis.io/commands/exec>`_
 
@@ -3359,7 +3359,7 @@ Execute all commands issued after MULTI
 MULTI [X]
 *********
 
-Mark the start of a transaction block
+Starts a transaction.
 
 - Documentation: `MULTI <https://redis.io/commands/multi>`_
 
@@ -3369,7 +3369,7 @@ Mark the start of a transaction block
 UNWATCH [X]
 ***********
 
-Forget about all watched keys
+Forgets about watched keys of a transaction.
 
 - Documentation: `UNWATCH <https://redis.io/commands/unwatch>`_
 
@@ -3379,7 +3379,7 @@ Forget about all watched keys
 WATCH [X]
 *********
 
-Watch the given keys to determine execution of the MULTI/EXEC block
+Monitors changes to keys to determine the execution of a transaction.
 
 - Documentation: `WATCH <https://redis.io/commands/watch>`_
 
@@ -3397,7 +3397,7 @@ Server
 ACL CAT
 *******
 
-List the ACL categories or the commands inside a category
+Lists the ACL categories, or the commands inside a category.
 
 - Documentation: `ACL CAT <https://redis.io/commands/acl-cat>`_
 - Implementation: :meth:`~coredis.Redis.acl_cat`
@@ -3415,7 +3415,7 @@ List the ACL categories or the commands inside a category
 ACL DELUSER
 ***********
 
-Remove the specified ACL users and the associated rules
+Deletes ACL users, and terminates their connections.
 
 - Documentation: `ACL DELUSER <https://redis.io/commands/acl-deluser>`_
 - Implementation: :meth:`~coredis.Redis.acl_deluser`
@@ -3433,7 +3433,7 @@ Remove the specified ACL users and the associated rules
 ACL DRYRUN
 **********
 
-Returns whether the user can execute the given command without executing the command.
+Simulates the execution of a command by a user, without executing the command.
 
 - Documentation: `ACL DRYRUN <https://redis.io/commands/acl-dryrun>`_
 - Implementation: :meth:`~coredis.Redis.acl_dryrun`
@@ -3451,7 +3451,7 @@ Returns whether the user can execute the given command without executing the com
 ACL GENPASS
 ***********
 
-Generate a pseudorandom secure password to use for ACL users
+Generates a pseudorandom, secure password that can be used to identify ACL users.
 
 - Documentation: `ACL GENPASS <https://redis.io/commands/acl-genpass>`_
 - Implementation: :meth:`~coredis.Redis.acl_genpass`
@@ -3469,7 +3469,7 @@ Generate a pseudorandom secure password to use for ACL users
 ACL GETUSER
 ***********
 
-Get the rules for a specific ACL user
+Lists the ACL rules of a user.
 
 - Documentation: `ACL GETUSER <https://redis.io/commands/acl-getuser>`_
 - Implementation: :meth:`~coredis.Redis.acl_getuser`
@@ -3487,7 +3487,7 @@ Get the rules for a specific ACL user
 ACL LIST
 ********
 
-List the current ACL rules in ACL config file format
+Dumps the effective rules in ACL file format.
 
 - Documentation: `ACL LIST <https://redis.io/commands/acl-list>`_
 - Implementation: :meth:`~coredis.Redis.acl_list`
@@ -3505,7 +3505,7 @@ List the current ACL rules in ACL config file format
 ACL LOAD
 ********
 
-Reload the ACLs from the configured ACL file
+Reloads the rules from the configured ACL file.
 
 - Documentation: `ACL LOAD <https://redis.io/commands/acl-load>`_
 - Implementation: :meth:`~coredis.Redis.acl_load`
@@ -3523,7 +3523,7 @@ Reload the ACLs from the configured ACL file
 ACL LOG
 *******
 
-List latest events denied because of ACLs in place
+Lists recent security events generated due to ACL rules.
 
 - Documentation: `ACL LOG <https://redis.io/commands/acl-log>`_
 - Implementation: :meth:`~coredis.Redis.acl_log`
@@ -3541,7 +3541,7 @@ List latest events denied because of ACLs in place
 ACL SAVE
 ********
 
-Save the current ACL rules in the configured ACL file
+Saves the effective ACL rules in the configured ACL file.
 
 - Documentation: `ACL SAVE <https://redis.io/commands/acl-save>`_
 - Implementation: :meth:`~coredis.Redis.acl_save`
@@ -3559,7 +3559,7 @@ Save the current ACL rules in the configured ACL file
 ACL SETUSER
 ***********
 
-Modify or create the rules for a specific ACL user
+Creates and modifies an ACL user and its rules.
 
 - Documentation: `ACL SETUSER <https://redis.io/commands/acl-setuser>`_
 - Implementation: :meth:`~coredis.Redis.acl_setuser`
@@ -3577,7 +3577,7 @@ Modify or create the rules for a specific ACL user
 ACL USERS
 *********
 
-List the username of all the configured ACL rules
+Lists all ACL users.
 
 - Documentation: `ACL USERS <https://redis.io/commands/acl-users>`_
 - Implementation: :meth:`~coredis.Redis.acl_users`
@@ -3595,7 +3595,7 @@ List the username of all the configured ACL rules
 ACL WHOAMI
 **********
 
-Return the name of the user associated to the current connection
+Returns the authenticated username of the current connection.
 
 - Documentation: `ACL WHOAMI <https://redis.io/commands/acl-whoami>`_
 - Implementation: :meth:`~coredis.Redis.acl_whoami`
@@ -3613,7 +3613,7 @@ Return the name of the user associated to the current connection
 BGREWRITEAOF
 ************
 
-Asynchronously rewrite the append-only file
+Asynchronously rewrites the append-only file to disk.
 
 - Documentation: `BGREWRITEAOF <https://redis.io/commands/bgrewriteaof>`_
 - Implementation: :meth:`~coredis.Redis.bgrewriteaof`
@@ -3627,7 +3627,7 @@ Asynchronously rewrite the append-only file
 BGSAVE
 ******
 
-Asynchronously save the dataset to disk
+Asynchronously saves the database(s) to disk.
 
 - Documentation: `BGSAVE <https://redis.io/commands/bgsave>`_
 - Implementation: :meth:`~coredis.Redis.bgsave`
@@ -3641,7 +3641,7 @@ Asynchronously save the dataset to disk
 COMMAND
 *******
 
-Get array of Redis command details
+Returns detailed information about all commands.
 
 - Documentation: `COMMAND <https://redis.io/commands/command>`_
 - Implementation: :meth:`~coredis.Redis.command`
@@ -3657,7 +3657,7 @@ Get array of Redis command details
 COMMAND COUNT
 *************
 
-Get total number of Redis commands
+Returns a count of commands.
 
 - Documentation: `COMMAND COUNT <https://redis.io/commands/command-count>`_
 - Implementation: :meth:`~coredis.Redis.command_count`
@@ -3673,7 +3673,7 @@ Get total number of Redis commands
 COMMAND DOCS
 ************
 
-Get array of specific Redis command documentation
+Returns documentary information about a command.
 
 - Documentation: `COMMAND DOCS <https://redis.io/commands/command-docs>`_
 - Implementation: :meth:`~coredis.Redis.command_docs`
@@ -3691,7 +3691,7 @@ Get array of specific Redis command documentation
 COMMAND GETKEYS
 ***************
 
-Extract keys given a full Redis command
+Extracts the key names from an arbitrary command.
 
 - Documentation: `COMMAND GETKEYS <https://redis.io/commands/command-getkeys>`_
 - Implementation: :meth:`~coredis.Redis.command_getkeys`
@@ -3707,7 +3707,7 @@ Extract keys given a full Redis command
 COMMAND GETKEYSANDFLAGS
 ***********************
 
-Extract keys and access flags given a full Redis command
+Extracts the key names and access flags for an arbitrary command.
 
 - Documentation: `COMMAND GETKEYSANDFLAGS <https://redis.io/commands/command-getkeysandflags>`_
 - Implementation: :meth:`~coredis.Redis.command_getkeysandflags`
@@ -3725,7 +3725,7 @@ Extract keys and access flags given a full Redis command
 COMMAND INFO
 ************
 
-Get array of specific Redis command details, or all when no argument is given.
+Returns information about one, multiple or all commands.
 
 - Documentation: `COMMAND INFO <https://redis.io/commands/command-info>`_
 - Implementation: :meth:`~coredis.Redis.command_info`
@@ -3741,7 +3741,7 @@ Get array of specific Redis command details, or all when no argument is given.
 COMMAND LIST
 ************
 
-Get an array of Redis command names
+Returns a list of command names.
 
 - Documentation: `COMMAND LIST <https://redis.io/commands/command-list>`_
 - Implementation: :meth:`~coredis.Redis.command_list`
@@ -3759,7 +3759,7 @@ Get an array of Redis command names
 CONFIG GET
 **********
 
-Get the values of configuration parameters
+Returns the effective values of configuration parameters.
 
 - Documentation: `CONFIG GET <https://redis.io/commands/config-get>`_
 - Implementation: :meth:`~coredis.Redis.config_get`
@@ -3773,7 +3773,7 @@ Get the values of configuration parameters
 CONFIG RESETSTAT
 ****************
 
-Reset the stats returned by INFO
+Resets the server's statistics.
 
 - Documentation: `CONFIG RESETSTAT <https://redis.io/commands/config-resetstat>`_
 - Implementation: :meth:`~coredis.Redis.config_resetstat`
@@ -3787,7 +3787,7 @@ Reset the stats returned by INFO
 CONFIG REWRITE
 **************
 
-Rewrite the configuration file with the in memory configuration
+Persists the effective configuration to file.
 
 - Documentation: `CONFIG REWRITE <https://redis.io/commands/config-rewrite>`_
 - Implementation: :meth:`~coredis.Redis.config_rewrite`
@@ -3801,7 +3801,7 @@ Rewrite the configuration file with the in memory configuration
 CONFIG SET
 **********
 
-Set configuration parameters to the given values
+Sets configuration parameters in-flight.
 
 - Documentation: `CONFIG SET <https://redis.io/commands/config-set>`_
 - Implementation: :meth:`~coredis.Redis.config_set`
@@ -3815,7 +3815,7 @@ Set configuration parameters to the given values
 DBSIZE
 ******
 
-Return the number of keys in the selected database
+Returns the number of keys in the database.
 
 - Documentation: `DBSIZE <https://redis.io/commands/dbsize>`_
 - Implementation: :meth:`~coredis.Redis.dbsize`
@@ -3829,7 +3829,7 @@ Return the number of keys in the selected database
 FAILOVER
 ********
 
-Start a coordinated failover between this server and one of its replicas.
+Starts a coordinated failover from a server to one of its replicas.
 
 - Documentation: `FAILOVER <https://redis.io/commands/failover>`_
 - Implementation: :meth:`~coredis.Redis.failover`
@@ -3847,7 +3847,7 @@ Start a coordinated failover between this server and one of its replicas.
 FLUSHALL
 ********
 
-Remove all keys from all databases
+Removes all keys from all databases.
 
 - Documentation: `FLUSHALL <https://redis.io/commands/flushall>`_
 - Implementation: :meth:`~coredis.Redis.flushall`
@@ -3861,7 +3861,7 @@ Remove all keys from all databases
 FLUSHDB
 *******
 
-Remove all keys from the current database
+Remove all keys from the current database.
 
 - Documentation: `FLUSHDB <https://redis.io/commands/flushdb>`_
 - Implementation: :meth:`~coredis.Redis.flushdb`
@@ -3875,7 +3875,7 @@ Remove all keys from the current database
 INFO
 ****
 
-Get information and statistics about the server
+Returns information and statistics about the server.
 
 - Documentation: `INFO <https://redis.io/commands/info>`_
 - Implementation: :meth:`~coredis.Redis.info`
@@ -3889,7 +3889,7 @@ Get information and statistics about the server
 LASTSAVE
 ********
 
-Get the UNIX time stamp of the last successful save to disk
+Returns the Unix timestamp of the last successful save to disk.
 
 - Documentation: `LASTSAVE <https://redis.io/commands/lastsave>`_
 - Implementation: :meth:`~coredis.Redis.lastsave`
@@ -3903,7 +3903,7 @@ Get the UNIX time stamp of the last successful save to disk
 LATENCY DOCTOR
 **************
 
-Return a human readable latency analysis report.
+Returns a human-readable latency analysis report.
 
 - Documentation: `LATENCY DOCTOR <https://redis.io/commands/latency-doctor>`_
 - Implementation: :meth:`~coredis.Redis.latency_doctor`
@@ -3919,7 +3919,7 @@ Return a human readable latency analysis report.
 LATENCY GRAPH
 *************
 
-Return a latency graph for the event.
+Returns a latency graph for an event.
 
 - Documentation: `LATENCY GRAPH <https://redis.io/commands/latency-graph>`_
 - Implementation: :meth:`~coredis.Redis.latency_graph`
@@ -3935,7 +3935,7 @@ Return a latency graph for the event.
 LATENCY HISTOGRAM
 *****************
 
-Return the cumulative distribution of latencies of a subset of commands or all.
+Returns the cumulative distribution of latencies of a subset or all commands.
 
 - Documentation: `LATENCY HISTOGRAM <https://redis.io/commands/latency-histogram>`_
 - Implementation: :meth:`~coredis.Redis.latency_histogram`
@@ -3953,7 +3953,7 @@ Return the cumulative distribution of latencies of a subset of commands or all.
 LATENCY HISTORY
 ***************
 
-Return timestamp-latency samples for the event.
+Returns timestamp-latency samples for an event.
 
 - Documentation: `LATENCY HISTORY <https://redis.io/commands/latency-history>`_
 - Implementation: :meth:`~coredis.Redis.latency_history`
@@ -3969,7 +3969,7 @@ Return timestamp-latency samples for the event.
 LATENCY LATEST
 **************
 
-Return the latest latency samples for all events.
+Returns the latest latency samples for all events.
 
 - Documentation: `LATENCY LATEST <https://redis.io/commands/latency-latest>`_
 - Implementation: :meth:`~coredis.Redis.latency_latest`
@@ -3985,7 +3985,7 @@ Return the latest latency samples for all events.
 LATENCY RESET
 *************
 
-Reset latency data for one or more events.
+Resets the latency data for one or more events.
 
 - Documentation: `LATENCY RESET <https://redis.io/commands/latency-reset>`_
 - Implementation: :meth:`~coredis.Redis.latency_reset`
@@ -4001,7 +4001,7 @@ Reset latency data for one or more events.
 LOLWUT
 ******
 
-Display some computer art and the Redis version
+Displays computer art and the Redis version
 
 - Documentation: `LOLWUT <https://redis.io/commands/lolwut>`_
 - Implementation: :meth:`~coredis.Redis.lolwut`
@@ -4015,7 +4015,7 @@ Display some computer art and the Redis version
 MEMORY DOCTOR
 *************
 
-Outputs memory problems report
+Outputs a memory problems report.
 
 - Documentation: `MEMORY DOCTOR <https://redis.io/commands/memory-doctor>`_
 - Implementation: :meth:`~coredis.Redis.memory_doctor`
@@ -4031,7 +4031,7 @@ Outputs memory problems report
 MEMORY MALLOC-STATS
 *******************
 
-Show allocator internal stats
+Returns the allocator statistics.
 
 - Documentation: `MEMORY MALLOC-STATS <https://redis.io/commands/memory-malloc-stats>`_
 - Implementation: :meth:`~coredis.Redis.memory_malloc_stats`
@@ -4047,7 +4047,7 @@ Show allocator internal stats
 MEMORY PURGE
 ************
 
-Ask the allocator to release memory
+Asks the allocator to release memory.
 
 - Documentation: `MEMORY PURGE <https://redis.io/commands/memory-purge>`_
 - Implementation: :meth:`~coredis.Redis.memory_purge`
@@ -4063,7 +4063,7 @@ Ask the allocator to release memory
 MEMORY STATS
 ************
 
-Show memory usage details
+Returns details about memory usage.
 
 - Documentation: `MEMORY STATS <https://redis.io/commands/memory-stats>`_
 - Implementation: :meth:`~coredis.Redis.memory_stats`
@@ -4079,7 +4079,7 @@ Show memory usage details
 MEMORY USAGE
 ************
 
-Estimate the memory usage of a key
+Estimates the memory usage of a key.
 
 - Documentation: `MEMORY USAGE <https://redis.io/commands/memory-usage>`_
 - Implementation: :meth:`~coredis.Redis.memory_usage`
@@ -4095,7 +4095,7 @@ Estimate the memory usage of a key
 MODULE LIST
 ***********
 
-List all modules loaded by the server
+Returns all loaded modules.
 
 - Documentation: `MODULE LIST <https://redis.io/commands/module-list>`_
 - Implementation: :meth:`~coredis.Redis.module_list`
@@ -4111,7 +4111,7 @@ List all modules loaded by the server
 MODULE LOAD
 ***********
 
-Load a module
+Loads a module.
 
 - Documentation: `MODULE LOAD <https://redis.io/commands/module-load>`_
 - Implementation: :meth:`~coredis.Redis.module_load`
@@ -4127,7 +4127,7 @@ Load a module
 MODULE LOADEX
 *************
 
-Load a module with extended parameters
+Loads a module using extended parameters.
 
 - Documentation: `MODULE LOADEX <https://redis.io/commands/module-loadex>`_
 - Implementation: :meth:`~coredis.Redis.module_loadex`
@@ -4145,7 +4145,7 @@ Load a module with extended parameters
 MODULE UNLOAD
 *************
 
-Unload a module
+Unloads a module.
 
 - Documentation: `MODULE UNLOAD <https://redis.io/commands/module-unload>`_
 - Implementation: :meth:`~coredis.Redis.module_unload`
@@ -4161,7 +4161,7 @@ Unload a module
 MONITOR
 *******
 
-Listen for all requests received by the server in real time
+Listens for all requests received by the server in real-time.
 
 - Documentation: `MONITOR <https://redis.io/commands/monitor>`_
 - Implementation: :meth:`~coredis.Redis.monitor`
@@ -4175,7 +4175,7 @@ Listen for all requests received by the server in real time
 REPLICAOF
 *********
 
-Make the server a replica of another instance, or promote it as master.
+Configures a server as replica of another, or promotes it to a master.
 
 - Documentation: `REPLICAOF <https://redis.io/commands/replicaof>`_
 - Implementation: :meth:`~coredis.Redis.replicaof`
@@ -4191,7 +4191,7 @@ Make the server a replica of another instance, or promote it as master.
 ROLE
 ****
 
-Return the role of the instance in the context of replication
+Returns the replication role.
 
 - Documentation: `ROLE <https://redis.io/commands/role>`_
 - Implementation: :meth:`~coredis.Redis.role`
@@ -4205,7 +4205,7 @@ Return the role of the instance in the context of replication
 SAVE
 ****
 
-Synchronously save the dataset to disk
+Synchronously saves the database(s) to disk.
 
 - Documentation: `SAVE <https://redis.io/commands/save>`_
 - Implementation: :meth:`~coredis.Redis.save`
@@ -4219,7 +4219,7 @@ Synchronously save the dataset to disk
 SHUTDOWN
 ********
 
-Synchronously save the dataset to disk and then shut down the server
+Synchronously saves the database(s) to disk and shuts down the Redis server.
 
 - Documentation: `SHUTDOWN <https://redis.io/commands/shutdown>`_
 - Implementation: :meth:`~coredis.Redis.shutdown`
@@ -4233,7 +4233,7 @@ Synchronously save the dataset to disk and then shut down the server
 SLAVEOF
 *******
 
-Make the server a replica of another instance, or promote it as master.
+Sets a Redis server as a replica of another, or promotes it to being a master.
 
 - Documentation: `SLAVEOF <https://redis.io/commands/slaveof>`_
 - Implementation: :meth:`~coredis.Redis.slaveof`
@@ -4249,7 +4249,7 @@ Make the server a replica of another instance, or promote it as master.
 SLOWLOG GET
 ***********
 
-Get the slow log's entries
+Returns the slow log's entries.
 
 - Documentation: `SLOWLOG GET <https://redis.io/commands/slowlog-get>`_
 - Implementation: :meth:`~coredis.Redis.slowlog_get`
@@ -4263,7 +4263,7 @@ Get the slow log's entries
 SLOWLOG LEN
 ***********
 
-Get the slow log's length
+Returns the number of entries in the slow log.
 
 - Documentation: `SLOWLOG LEN <https://redis.io/commands/slowlog-len>`_
 - Implementation: :meth:`~coredis.Redis.slowlog_len`
@@ -4277,7 +4277,7 @@ Get the slow log's length
 SLOWLOG RESET
 *************
 
-Clear all entries from the slow log
+Clears all entries from the slow log.
 
 - Documentation: `SLOWLOG RESET <https://redis.io/commands/slowlog-reset>`_
 - Implementation: :meth:`~coredis.Redis.slowlog_reset`
@@ -4291,7 +4291,7 @@ Clear all entries from the slow log
 SWAPDB
 ******
 
-Swaps two Redis databases
+Swaps two Redis databases.
 
 - Documentation: `SWAPDB <https://redis.io/commands/swapdb>`_
 - Implementation: :meth:`~coredis.Redis.swapdb`
@@ -4307,7 +4307,7 @@ Swaps two Redis databases
 TIME
 ****
 
-Return the current server time
+Returns the server time.
 
 - Documentation: `TIME <https://redis.io/commands/time>`_
 - Implementation: :meth:`~coredis.Redis.time`
@@ -4329,11 +4329,11 @@ Connection
 AUTH
 ****
 
-Authenticate to the server
+Authenticates the connection.
 
 - Documentation: `AUTH <https://redis.io/commands/auth>`_
 - Implementation: :meth:`~coredis.Redis.auth`
-  
+
   .. warning:: Using :meth:`~coredis.Redis.auth` directly is not recommended. Use the :paramref:`Redis.username` and :paramref:`Redis.password` arguments when initializing the client to ensure that all connections originating from this client are authenticated before being made available.
 
 
@@ -4347,7 +4347,7 @@ Authenticate to the server
 CLIENT CACHING
 **************
 
-Instruct the server about tracking or not keys in the next request
+Instructs the server whether to track the keys in the next request.
 
 - Documentation: `CLIENT CACHING <https://redis.io/commands/client-caching>`_
 - Implementation: :meth:`~coredis.Redis.client_caching`
@@ -4365,7 +4365,7 @@ Instruct the server about tracking or not keys in the next request
 CLIENT GETNAME
 **************
 
-Get the current connection name
+Returns the name of the connection.
 
 - Documentation: `CLIENT GETNAME <https://redis.io/commands/client-getname>`_
 - Implementation: :meth:`~coredis.Redis.client_getname`
@@ -4379,7 +4379,7 @@ Get the current connection name
 CLIENT GETREDIR
 ***************
 
-Get tracking notifications redirection client ID if any
+Returns the client ID to which the connection's tracking notifications are redirected.
 
 - Documentation: `CLIENT GETREDIR <https://redis.io/commands/client-getredir>`_
 - Implementation: :meth:`~coredis.Redis.client_getredir`
@@ -4397,7 +4397,7 @@ Get tracking notifications redirection client ID if any
 CLIENT ID
 *********
 
-Returns the client ID for the current connection
+Returns the unique client ID of the connection.
 
 - Documentation: `CLIENT ID <https://redis.io/commands/client-id>`_
 - Implementation: :meth:`~coredis.Redis.client_id`
@@ -4413,7 +4413,7 @@ Returns the client ID for the current connection
 CLIENT INFO
 ***********
 
-Returns information about the current client connection.
+Returns information about the connection.
 
 - Documentation: `CLIENT INFO <https://redis.io/commands/client-info>`_
 - Implementation: :meth:`~coredis.Redis.client_info`
@@ -4431,7 +4431,7 @@ Returns information about the current client connection.
 CLIENT KILL
 ***********
 
-Kill the connection of a client
+Terminates open connections.
 
 - Documentation: `CLIENT KILL <https://redis.io/commands/client-kill>`_
 - Implementation: :meth:`~coredis.Redis.client_kill`
@@ -4445,7 +4445,7 @@ Kill the connection of a client
 CLIENT LIST
 ***********
 
-Get the list of client connections
+Lists open connections.
 
 - Documentation: `CLIENT LIST <https://redis.io/commands/client-list>`_
 - Implementation: :meth:`~coredis.Redis.client_list`
@@ -4459,11 +4459,11 @@ Get the list of client connections
 CLIENT NO-EVICT
 ***************
 
-Set client eviction mode for the current connection
+Sets the client eviction mode of the connection.
 
 - Documentation: `CLIENT NO-EVICT <https://redis.io/commands/client-no-evict>`_
 - Implementation: :meth:`~coredis.Redis.client_no_evict`
-  
+
   .. warning:: Using :meth:`~coredis.Redis.client_no_evict` directly is not recommended. Use :paramref:`Redis.noevict` argument when initializing the client to ensure that all connections originating from this client use the desired mode
 
 - New in redis: 7.0.0
@@ -4479,11 +4479,11 @@ Set client eviction mode for the current connection
 CLIENT NO-TOUCH
 ***************
 
-Controls whether commands sent by the client will alter the LRU/LFU of the keys they access.
+Controls whether commands sent by the client affect the LRU/LFU of accessed keys.
 
 - Documentation: `CLIENT NO-TOUCH <https://redis.io/commands/client-no-touch>`_
 - Implementation: :meth:`~coredis.Redis.client_no_touch`
-  
+
   .. warning:: Using :meth:`~coredis.Redis.client_no_touch` directly is not recommended. Use :paramref:`Redis.notouch` argument when initializing the client to ensure that all connections originating from this client use the desired mode
 
 - New in redis: 7.2.0
@@ -4499,7 +4499,7 @@ Controls whether commands sent by the client will alter the LRU/LFU of the keys 
 CLIENT PAUSE
 ************
 
-Stop processing commands from clients for some time
+Suspends commands processing.
 
 - Documentation: `CLIENT PAUSE <https://redis.io/commands/client-pause>`_
 - Implementation: :meth:`~coredis.Redis.client_pause`
@@ -4513,7 +4513,7 @@ Stop processing commands from clients for some time
 CLIENT REPLY
 ************
 
-Instruct the server whether to reply to commands
+Instructs the server whether to reply to commands.
 
 - Documentation: `CLIENT REPLY <https://redis.io/commands/client-reply>`_
 - .. danger:: :meth:`~coredis.Redis.client_reply` intentionally raises an :exc:`NotImplemented` error. Use the :paramref:`Redis.noreply` argument when initializing the client to ensure that all connections originating from this client disable or enable replies. You can also use the :meth:`Redis.ignore_replies` context manager to selectively execute certain commands without waiting for a reply
@@ -4529,11 +4529,11 @@ Instruct the server whether to reply to commands
 CLIENT SETINFO
 **************
 
-Set client or connection specific info
+Sets information specific to the client or connection.
 
 - Documentation: `CLIENT SETINFO <https://redis.io/commands/client-setinfo>`_
 - Implementation: :meth:`~coredis.Redis.client_setinfo`
-  
+
   .. warning:: Using :meth:`~coredis.Redis.client_setinfo` directly is not recommended. Coredis sets the library name and version by default during the handshake phase.Explicitly calling this command will only apply to the connection from the pool that was used to send it and not for subsequent commands
 
 - New in redis: 7.2.0
@@ -4549,11 +4549,11 @@ Set client or connection specific info
 CLIENT SETNAME
 **************
 
-Set the current connection name
+Sets the connection name.
 
 - Documentation: `CLIENT SETNAME <https://redis.io/commands/client-setname>`_
 - Implementation: :meth:`~coredis.Redis.client_setname`
-  
+
   .. warning:: Using :meth:`~coredis.Redis.client_setname` directly is not recommended. Use the :paramref:`Redis.client_name` argument when initializing the client to ensure the client name is consistent across all connections originating from the client
 
 
@@ -4565,7 +4565,7 @@ Set the current connection name
 CLIENT TRACKING
 ***************
 
-Enable or disable server assisted client side caching support
+Controls server-assisted client-side caching for the connection.
 
 - Documentation: `CLIENT TRACKING <https://redis.io/commands/client-tracking>`_
 - Implementation: :meth:`~coredis.Redis.client_tracking`
@@ -4583,7 +4583,7 @@ Enable or disable server assisted client side caching support
 CLIENT TRACKINGINFO
 *******************
 
-Return information about server assisted client side caching for the current connection
+Returns information about server-assisted client-side caching for the connection.
 
 - Documentation: `CLIENT TRACKINGINFO <https://redis.io/commands/client-trackinginfo>`_
 - Implementation: :meth:`~coredis.Redis.client_trackinginfo`
@@ -4601,7 +4601,7 @@ Return information about server assisted client side caching for the current con
 CLIENT UNBLOCK
 **************
 
-Unblock a client blocked in a blocking command from a different connection
+Unblocks a client blocked by a blocking command from a different connection.
 
 - Documentation: `CLIENT UNBLOCK <https://redis.io/commands/client-unblock>`_
 - Implementation: :meth:`~coredis.Redis.client_unblock`
@@ -4617,7 +4617,7 @@ Unblock a client blocked in a blocking command from a different connection
 CLIENT UNPAUSE
 **************
 
-Resume processing of clients that were paused
+Resumes processing commands from paused clients.
 
 - Documentation: `CLIENT UNPAUSE <https://redis.io/commands/client-unpause>`_
 - Implementation: :meth:`~coredis.Redis.client_unpause`
@@ -4635,7 +4635,7 @@ Resume processing of clients that were paused
 ECHO
 ****
 
-Echo the given string
+Returns the given string.
 
 - Documentation: `ECHO <https://redis.io/commands/echo>`_
 - Implementation: :meth:`~coredis.Redis.echo`
@@ -4649,7 +4649,7 @@ Echo the given string
 HELLO
 *****
 
-Handshake with Redis
+Handshakes with the Redis server.
 
 - Documentation: `HELLO <https://redis.io/commands/hello>`_
 - Implementation: :meth:`~coredis.Redis.hello`
@@ -4667,7 +4667,7 @@ Handshake with Redis
 PING
 ****
 
-Ping the server
+Returns the server's liveliness response.
 
 - Documentation: `PING <https://redis.io/commands/ping>`_
 - Implementation: :meth:`~coredis.Redis.ping`
@@ -4681,7 +4681,7 @@ Ping the server
 QUIT
 ****
 
-Close the connection
+Closes the connection.
 
 - Documentation: `QUIT <https://redis.io/commands/quit>`_
 - Implementation: :meth:`~coredis.Redis.quit`
@@ -4697,7 +4697,7 @@ Close the connection
 RESET
 *****
 
-Reset the connection
+Resets the connection.
 
 - Documentation: `RESET <https://redis.io/commands/reset>`_
 - Implementation: :meth:`~coredis.Redis.reset`
@@ -4715,11 +4715,11 @@ Reset the connection
 SELECT
 ******
 
-Change the selected database for the current connection
+Changes the selected database.
 
 - Documentation: `SELECT <https://redis.io/commands/select>`_
 - Implementation: :meth:`~coredis.Redis.select`
-  
+
   .. warning:: Using :meth:`~coredis.Redis.select` directly is not recommended. Use the `db` argument when initializing the client to ensure that all connections originating from this client use the desired database number
 
 
@@ -4741,7 +4741,7 @@ Cluster
 ASKING
 ******
 
-Sent by cluster clients after an -ASK redirect
+Signals that a cluster client is following an -ASK redirect.
 
 - Documentation: `ASKING <https://redis.io/commands/asking>`_
 - Implementation: :meth:`~coredis.Redis.asking`
@@ -4757,7 +4757,7 @@ Sent by cluster clients after an -ASK redirect
 CLUSTER ADDSLOTS
 ****************
 
-Assign new hash slots to receiving node
+Assigns new hash slots to a node.
 
 - Documentation: `CLUSTER ADDSLOTS <https://redis.io/commands/cluster-addslots>`_
 - Implementation: :meth:`~coredis.Redis.cluster_addslots`
@@ -4771,7 +4771,7 @@ Assign new hash slots to receiving node
 CLUSTER ADDSLOTSRANGE
 *********************
 
-Assign new hash slots to receiving node
+Assigns new hash slot ranges to a node.
 
 - Documentation: `CLUSTER ADDSLOTSRANGE <https://redis.io/commands/cluster-addslotsrange>`_
 - Implementation: :meth:`~coredis.Redis.cluster_addslotsrange`
@@ -4789,7 +4789,7 @@ Assign new hash slots to receiving node
 CLUSTER BUMPEPOCH
 *****************
 
-Advance the cluster config epoch
+Advances the cluster config epoch.
 
 - Documentation: `CLUSTER BUMPEPOCH <https://redis.io/commands/cluster-bumpepoch>`_
 - Implementation: :meth:`~coredis.Redis.cluster_bumpepoch`
@@ -4805,7 +4805,7 @@ Advance the cluster config epoch
 CLUSTER COUNT-FAILURE-REPORTS
 *****************************
 
-Return the number of failure reports active for a given node
+Returns the number of active failure reports active for a node.
 
 - Documentation: `CLUSTER COUNT-FAILURE-REPORTS <https://redis.io/commands/cluster-count-failure-reports>`_
 - Implementation: :meth:`~coredis.Redis.cluster_count_failure_reports`
@@ -4819,7 +4819,7 @@ Return the number of failure reports active for a given node
 CLUSTER COUNTKEYSINSLOT
 ***********************
 
-Return the number of local keys in the specified hash slot
+Returns the number of keys in a hash slot.
 
 - Documentation: `CLUSTER COUNTKEYSINSLOT <https://redis.io/commands/cluster-countkeysinslot>`_
 - Implementation: :meth:`~coredis.Redis.cluster_countkeysinslot`
@@ -4833,7 +4833,7 @@ Return the number of local keys in the specified hash slot
 CLUSTER DELSLOTS
 ****************
 
-Set hash slots as unbound in receiving node
+Sets hash slots as unbound for a node.
 
 - Documentation: `CLUSTER DELSLOTS <https://redis.io/commands/cluster-delslots>`_
 - Implementation: :meth:`~coredis.Redis.cluster_delslots`
@@ -4847,7 +4847,7 @@ Set hash slots as unbound in receiving node
 CLUSTER DELSLOTSRANGE
 *********************
 
-Set hash slots as unbound in receiving node
+Sets hash slot ranges as unbound for a node.
 
 - Documentation: `CLUSTER DELSLOTSRANGE <https://redis.io/commands/cluster-delslotsrange>`_
 - Implementation: :meth:`~coredis.Redis.cluster_delslotsrange`
@@ -4879,7 +4879,7 @@ Forces a replica to perform a manual failover of its master.
 CLUSTER FLUSHSLOTS
 ******************
 
-Delete a node's own slots information
+Deletes all slots information from a node.
 
 - Documentation: `CLUSTER FLUSHSLOTS <https://redis.io/commands/cluster-flushslots>`_
 - Implementation: :meth:`~coredis.Redis.cluster_flushslots`
@@ -4895,7 +4895,7 @@ Delete a node's own slots information
 CLUSTER FORGET
 **************
 
-Remove a node from the nodes table
+Removes a node from the nodes table.
 
 - Documentation: `CLUSTER FORGET <https://redis.io/commands/cluster-forget>`_
 - Implementation: :meth:`~coredis.Redis.cluster_forget`
@@ -4909,7 +4909,7 @@ Remove a node from the nodes table
 CLUSTER GETKEYSINSLOT
 *********************
 
-Return local key names in the specified hash slot
+Returns the key names in a hash slot.
 
 - Documentation: `CLUSTER GETKEYSINSLOT <https://redis.io/commands/cluster-getkeysinslot>`_
 - Implementation: :meth:`~coredis.Redis.cluster_getkeysinslot`
@@ -4925,7 +4925,7 @@ Return local key names in the specified hash slot
 CLUSTER INFO
 ************
 
-Provides info about Redis Cluster node state
+Returns information about the state of a node.
 
 - Documentation: `CLUSTER INFO <https://redis.io/commands/cluster-info>`_
 - Implementation: :meth:`~coredis.Redis.cluster_info`
@@ -4939,7 +4939,7 @@ Provides info about Redis Cluster node state
 CLUSTER KEYSLOT
 ***************
 
-Returns the hash slot of the specified key
+Returns the hash slot for a key.
 
 - Documentation: `CLUSTER KEYSLOT <https://redis.io/commands/cluster-keyslot>`_
 - Implementation: :meth:`~coredis.Redis.cluster_keyslot`
@@ -4953,7 +4953,7 @@ Returns the hash slot of the specified key
 CLUSTER LINKS
 *************
 
-Returns a list of all TCP links to and from peer nodes in cluster
+Returns a list of all TCP links to and from peer nodes.
 
 - Documentation: `CLUSTER LINKS <https://redis.io/commands/cluster-links>`_
 - Implementation: :meth:`~coredis.Redis.cluster_links`
@@ -4971,7 +4971,7 @@ Returns a list of all TCP links to and from peer nodes in cluster
 CLUSTER MEET
 ************
 
-Force a node cluster to handshake with another node
+Forces a node to handshake with another node.
 
 - Documentation: `CLUSTER MEET <https://redis.io/commands/cluster-meet>`_
 - Implementation: :meth:`~coredis.Redis.cluster_meet`
@@ -4985,7 +4985,7 @@ Force a node cluster to handshake with another node
 CLUSTER MYID
 ************
 
-Return the node id
+Returns the ID of a node.
 
 - Documentation: `CLUSTER MYID <https://redis.io/commands/cluster-myid>`_
 - Implementation: :meth:`~coredis.Redis.cluster_myid`
@@ -5001,7 +5001,7 @@ Return the node id
 CLUSTER NODES
 *************
 
-Get Cluster config for the node
+Returns the cluster configuration for a node.
 
 - Documentation: `CLUSTER NODES <https://redis.io/commands/cluster-nodes>`_
 - Implementation: :meth:`~coredis.Redis.cluster_nodes`
@@ -5015,7 +5015,7 @@ Get Cluster config for the node
 CLUSTER REPLICAS
 ****************
 
-List replica nodes of the specified master node
+Lists the replica nodes of a master node.
 
 - Documentation: `CLUSTER REPLICAS <https://redis.io/commands/cluster-replicas>`_
 - Implementation: :meth:`~coredis.Redis.cluster_replicas`
@@ -5029,7 +5029,7 @@ List replica nodes of the specified master node
 CLUSTER REPLICATE
 *****************
 
-Reconfigure a node as a replica of the specified master node
+Configure a node as replica of a master node.
 
 - Documentation: `CLUSTER REPLICATE <https://redis.io/commands/cluster-replicate>`_
 - Implementation: :meth:`~coredis.Redis.cluster_replicate`
@@ -5043,7 +5043,7 @@ Reconfigure a node as a replica of the specified master node
 CLUSTER RESET
 *************
 
-Reset a Redis Cluster node
+Resets a node.
 
 - Documentation: `CLUSTER RESET <https://redis.io/commands/cluster-reset>`_
 - Implementation: :meth:`~coredis.Redis.cluster_reset`
@@ -5057,7 +5057,7 @@ Reset a Redis Cluster node
 CLUSTER SAVECONFIG
 ******************
 
-Forces the node to save cluster state on disk
+Forces a node to save the cluster configuration to disk.
 
 - Documentation: `CLUSTER SAVECONFIG <https://redis.io/commands/cluster-saveconfig>`_
 - Implementation: :meth:`~coredis.Redis.cluster_saveconfig`
@@ -5071,7 +5071,7 @@ Forces the node to save cluster state on disk
 CLUSTER SET-CONFIG-EPOCH
 ************************
 
-Set the configuration epoch in a new node
+Sets the configuration epoch for a new node.
 
 - Documentation: `CLUSTER SET-CONFIG-EPOCH <https://redis.io/commands/cluster-set-config-epoch>`_
 - Implementation: :meth:`~coredis.Redis.cluster_set_config_epoch`
@@ -5085,7 +5085,7 @@ Set the configuration epoch in a new node
 CLUSTER SETSLOT
 ***************
 
-Bind a hash slot to a specific node
+Binds a hash slot to a node.
 
 - Documentation: `CLUSTER SETSLOT <https://redis.io/commands/cluster-setslot>`_
 - Implementation: :meth:`~coredis.Redis.cluster_setslot`
@@ -5099,7 +5099,7 @@ Bind a hash slot to a specific node
 CLUSTER SHARDS
 **************
 
-Get array of cluster slots to node mappings
+Returns the mapping of cluster slots to shards.
 
 - Documentation: `CLUSTER SHARDS <https://redis.io/commands/cluster-shards>`_
 - Implementation: :meth:`~coredis.Redis.cluster_shards`
@@ -5117,7 +5117,7 @@ Get array of cluster slots to node mappings
 CLUSTER SLAVES
 **************
 
-List replica nodes of the specified master node
+Lists the replica nodes of a master node.
 
 - Documentation: `CLUSTER SLAVES <https://redis.io/commands/cluster-slaves>`_
 - Implementation: :meth:`~coredis.Redis.cluster_slaves`
@@ -5133,7 +5133,7 @@ List replica nodes of the specified master node
 CLUSTER SLOTS
 *************
 
-Get array of Cluster slot to node mappings
+Returns the mapping of cluster slots to nodes.
 
 - Documentation: `CLUSTER SLOTS <https://redis.io/commands/cluster-slots>`_
 - Implementation: :meth:`~coredis.Redis.cluster_slots`
@@ -5149,7 +5149,7 @@ Get array of Cluster slot to node mappings
 READONLY
 ********
 
-Enables read queries for a connection to a cluster replica node
+Enables read-only queries for a connection to a Redis Cluster replica node.
 
 - Documentation: `READONLY <https://redis.io/commands/readonly>`_
 - Implementation: :meth:`~coredis.Redis.readonly`
@@ -5165,7 +5165,7 @@ Enables read queries for a connection to a cluster replica node
 READWRITE
 *********
 
-Disables read queries for a connection to a cluster replica node
+Enables read-write queries for a connection to a Reids Cluster replica node.
 
 - Documentation: `READWRITE <https://redis.io/commands/readwrite>`_
 - Implementation: :meth:`~coredis.Redis.readwrite`
@@ -5181,7 +5181,7 @@ Disables read queries for a connection to a cluster replica node
 CLUSTER MYSHARDID [X]
 *********************
 
-Return the node shard id
+Returns the shard ID of a node.
 
 - Documentation: `CLUSTER MYSHARDID <https://redis.io/commands/cluster-myshardid>`_
 
