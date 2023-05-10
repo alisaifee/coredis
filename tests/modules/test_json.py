@@ -81,6 +81,19 @@ class TestJson:
         assert await client.json.set("obj", "qaz", "baz", condition=PureToken.NX)
 
     @pytest.mark.min_module_version("ReJSON", "2.6.0")
+    async def test_mset(self, client: Redis):
+        assert await client.json.mset(
+            [
+                ("a{obj}", ".", {"a": 1}),
+                ("b{obj}", ".", {"b": 2}),
+                ("c{obj}", ".", {"c": 3}),
+            ]
+        )
+        assert [{"a": 1}, {"b": 2}, {"c": 3}] == await client.json.mget(
+            ["a{obj}", "b{obj}", "c{obj}"], "."
+        )
+
+    @pytest.mark.min_module_version("ReJSON", "2.6.0")
     async def test_merge(self, client: Redis):
         await client.json.set("obj", "$", {"a": 1, "b": 2, "c": [1, 2, 3]})
         await client.json.merge("obj", "$", {"d": 3})

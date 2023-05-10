@@ -2828,6 +2828,8 @@ def cluster_key_extraction(path):
     all["JSON.TOGGLE"] = fixed_args["first"]
     all["JSON.CLEAR"] = fixed_args["first"]
     all["JSON.NUMMULTBY"] = fixed_args["first"]
+    all["JSON.MERGE"] = fixed_args["first"]
+    all["JSON.MSET"] = ["(args[1::3],)"]
 
     # bf
     all["BF.RESERVE"] = fixed_args["first"]

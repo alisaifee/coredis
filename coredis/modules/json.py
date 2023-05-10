@@ -22,6 +22,7 @@ from ..typing import (
     Parameters,
     ResponseType,
     StringT,
+    Tuple,
     Union,
     ValueT,
 )
@@ -219,6 +220,29 @@ class Json(ModuleGroup[AnyStr]):
             *pieces,
             callback=JsonCallback(),
             keys=keys,  # type: ignore
+        )
+
+    @module_command(
+        CommandName.JSON_MSET,
+        group=COMMAND_GROUP,
+        version_introduced="2.6.0",
+        module=MODULE,
+    )
+    async def mset(self, triplets: Parameters[Tuple[KeyT, StringT, JsonType]]) -> bool:
+        """
+        Sets or updates the JSON value of one or more keys
+
+        :param triplets: Collection of triplets containing (``key``, ``path``, ``value``)
+         to set.
+
+        :return: `True` if all the values were set successfully
+        """
+        pieces: CommandArgList = []
+        for key, path, value in triplets:
+            pieces.extend([key, path, json.dumps(value)])
+
+        return await self.execute_module_command(
+            CommandName.JSON_MSET, *pieces, callback=SimpleStringCallback()
         )
 
     @module_command(
