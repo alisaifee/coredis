@@ -7,10 +7,10 @@ Redis module commands in :mod:`coredis` are exposed under properties
 of the :class:`~coredis.Redis` or :class:`~coredis.RedisCluster` clients
 such as :attr:`~coredis.Redis.json`, :attr:`~coredis.Redis.bf`. These properties
 in turn return instances of the module command group containers which are bound
-by a weak reference to the client itself.
+to the client.
 
-The module commands can also be accessed by instantiating instances
-of the module command group classes (listed in the sections below) directly.
+The module commands can also be accessed by instantiating the module command group classes
+(listed in the sections below) directly.
 
 To access the :class:`~coredis.modules.Json` command group from the :class:`coredis.modules.RedisJSON` module for example::
 
