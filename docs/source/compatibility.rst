@@ -2789,7 +2789,7 @@ Returns messages from multiple streams with IDs greater than the ones requested.
 XREADGROUP
 **********
 
-Returns new or historical messages from a stream for a consumer in agroup. Blocks until a message is available otherwise.
+Returns new or historical messages from a stream for a consumer in a group. Blocks until a message is available otherwise.
 
 - Documentation: `XREADGROUP <https://redis.io/commands/xreadgroup>`_
 - Implementation: :meth:`~coredis.Redis.xreadgroup`
@@ -3673,7 +3673,7 @@ Returns a count of commands.
 COMMAND DOCS
 ************
 
-Returns documentary information about a command.
+Returns documentary information about one, multiple or all commands.
 
 - Documentation: `COMMAND DOCS <https://redis.io/commands/command-docs>`_
 - Implementation: :meth:`~coredis.Redis.command_docs`
