@@ -19,7 +19,7 @@ coredis is an async redis client with support for redis server, cluster & sentin
   - Pure tokens used as flags are mapped to boolean arguments
   - `One of` arguments accepting pure tokens are collapsed and accept a [PureToken](https://coredis.readthedocs.io/en/latest/api/utilities.html#coredis.tokens.PureToken)
 
-- Responses are mapped as between RESP and python types as possible.
+- Responses are mapped between RESP and python types as closely as possible.
 
 - For higher level concepts such as Pipelines, LUA Scripts, PubSub & Streams
   abstractions are provided to encapsulate recommended patterns.
