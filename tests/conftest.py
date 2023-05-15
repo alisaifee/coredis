@@ -39,8 +39,8 @@ DOCKER_TAG_MAPPING = {
     "7.0": {"default": "7.0.0", "stack": "7.0.6-RC8"},
     "latest": {"default": "latest", "stack": "latest"},
     "next": {
-        "standalone": "7.2-rc1",
-        "ssl": "7.2-rc1",
+        "standalone": "7.2-rc2",
+        "ssl": "7.2-rc2",
         "stack": "edge",
         "default": "latest",
     },
