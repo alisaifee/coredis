@@ -69,6 +69,9 @@ class TimeSeriesInfoCallback(DictCallback[AnyStr, ResponseType]):
             dct["labels"] = dict(dct["labels"])
         if "Chunks" in dct:
             dct["Chunks"] = [flat_pairs_to_dict(chunk) for chunk in dct["Chunks"]]
+        if "rules" in dct and not isinstance(dct["rules"], dict):
+            dct["rules"] = {rule[0]: rule[1:] for rule in dct["rules"]}
+
         return dict(dct)
 
 

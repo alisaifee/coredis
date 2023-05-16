@@ -239,7 +239,7 @@ class TestTimeseries:
         assert round((await client.timeseries.get("ts3{a}"))[1], 5) == 1.0
 
         info = await client.timeseries.info("ts1{a}")
-        assert info["rules"][0][1] == 100
+        assert info["rules"]["ts2{a}"][0] == 100
 
         # test rule deletion
         await client.timeseries.deleterule("ts1{a}", "ts2{a}")
