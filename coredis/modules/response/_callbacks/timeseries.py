@@ -85,10 +85,13 @@ class TimeSeriesCallback(
     def transform(
         self, response: ResponseType, **options: Optional[ValueT]
     ) -> Dict[AnyStr, Tuple[Dict[AnyStr, AnyStr], Tuple[int, float]]]:
-        return {
-            r[0]: (dict(r[1]), (r[2][0], float(r[2][1])) if r[2] else tuple())
-            for r in response
-        }
+        if isinstance(response, dict):
+            return {k: (v[0], tuple(v[1])) for k, v in response.items()}
+        else:
+            return {
+                r[0]: (dict(r[1]), (r[2][0], float(r[2][1])) if r[2] else tuple())
+                for r in response
+            }
 
 
 class TimeSeriesMultiCallback(
@@ -125,6 +128,32 @@ class TimeSeriesMultiCallback(
                 )
                 for r in cast(Any, response)
             }
+
+    def transform_3(
+        self, response: ResponseType, **options: Optional[ValueT]
+    ) -> Dict[
+        AnyStr,
+        Tuple[Dict[AnyStr, AnyStr], Union[Tuple[Tuple[int, float], ...], Tuple[()]]],
+    ]:
+        if isinstance(response, dict):
+            if options.get("grouped"):
+                return {
+                    k: (
+                        r[0],
+                        tuple(SampleCallback().transform(t) for t in r[-1]),
+                    )
+                    for k, r in response.items()
+                }
+            else:
+                return {
+                    k: (
+                        r[0],
+                        tuple(SampleCallback().transform(t) for t in r[-1]),
+                    )
+                    for k, r in response.items()
+                }
+        else:
+            return self.transform(response, **options)
 
 
 class ClusterMergeTimeSeries(ClusterMergeMapping[AnyStr, Tuple[Any, ...]]):
