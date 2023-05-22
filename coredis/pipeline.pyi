@@ -180,8 +180,8 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         withmatchlen: "Optional[bool]" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def mget(self, keys: "Parameters[KeyT]") -> Pipeline[AnyStr]: ...
-    async def mset(self, key_values: "Dict[KeyT, ValueT]") -> Pipeline[AnyStr]: ...
-    async def msetnx(self, key_values: "Dict[KeyT, ValueT]") -> Pipeline[AnyStr]: ...
+    async def mset(self, key_values: "Mapping[KeyT, ValueT]") -> Pipeline[AnyStr]: ...
+    async def msetnx(self, key_values: "Mapping[KeyT, ValueT]") -> Pipeline[AnyStr]: ...
     async def psetex(
         self,
         key: "KeyT",
@@ -251,7 +251,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self, key: "KeyT", fields: "Parameters[StringT]"
     ) -> Pipeline[AnyStr]: ...
     async def hmset(
-        self, key: "KeyT", field_values: "Dict[StringT, ValueT]"
+        self, key: "KeyT", field_values: "Mapping[StringT, ValueT]"
     ) -> Pipeline[AnyStr]: ...
     async def hrandfield(
         self,
@@ -267,7 +267,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         count: "Optional[int]" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def hset(
-        self, key: "KeyT", field_values: "Dict[StringT, ValueT]"
+        self, key: "KeyT", field_values: "Mapping[StringT, ValueT]"
     ) -> Pipeline[AnyStr]: ...
     async def hsetnx(
         self, key: "KeyT", field: "StringT", value: "ValueT"
@@ -420,7 +420,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def zadd(
         self,
         key: "KeyT",
-        member_scores: "Dict[StringT, float]",
+        member_scores: "Mapping[StringT, float]",
         condition: "Optional[Literal[PureToken.NX, PureToken.XX]]" = ...,
         comparison: "Optional[Literal[PureToken.GT, PureToken.LT]]" = ...,
         change: "Optional[bool]" = ...,
@@ -676,7 +676,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def xadd(
         self,
         key: "KeyT",
-        field_values: "Dict[StringT, ValueT]",
+        field_values: "Mapping[StringT, ValueT]",
         identifier: "Optional[ValueT]" = ...,
         nomkstream: "Optional[bool]" = ...,
         trim_strategy: "Optional[Literal[PureToken.MAXLEN, PureToken.MINID]]" = ...,
@@ -914,7 +914,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def config_resetstat(self) -> Pipeline[AnyStr]: ...
     async def config_rewrite(self) -> Pipeline[AnyStr]: ...
     async def config_set(
-        self, parameter_values: "Dict[StringT, ValueT]"
+        self, parameter_values: "Mapping[StringT, ValueT]"
     ) -> Pipeline[AnyStr]: ...
     async def dbsize(self) -> Pipeline[AnyStr]: ...
     async def failover(
@@ -1271,10 +1271,10 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> ClusterPipeline[AnyStr]: ...
     async def mget(self, keys: "Parameters[KeyT]") -> ClusterPipeline[AnyStr]: ...
     async def mset(
-        self, key_values: "Dict[KeyT, ValueT]"
+        self, key_values: "Mapping[KeyT, ValueT]"
     ) -> ClusterPipeline[AnyStr]: ...
     async def msetnx(
-        self, key_values: "Dict[KeyT, ValueT]"
+        self, key_values: "Mapping[KeyT, ValueT]"
     ) -> ClusterPipeline[AnyStr]: ...
     async def psetex(
         self,
@@ -1347,7 +1347,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self, key: "KeyT", fields: "Parameters[StringT]"
     ) -> ClusterPipeline[AnyStr]: ...
     async def hmset(
-        self, key: "KeyT", field_values: "Dict[StringT, ValueT]"
+        self, key: "KeyT", field_values: "Mapping[StringT, ValueT]"
     ) -> ClusterPipeline[AnyStr]: ...
     async def hrandfield(
         self,
@@ -1363,7 +1363,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         count: "Optional[int]" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def hset(
-        self, key: "KeyT", field_values: "Dict[StringT, ValueT]"
+        self, key: "KeyT", field_values: "Mapping[StringT, ValueT]"
     ) -> ClusterPipeline[AnyStr]: ...
     async def hsetnx(
         self, key: "KeyT", field: "StringT", value: "ValueT"
@@ -1520,7 +1520,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def zadd(
         self,
         key: "KeyT",
-        member_scores: "Dict[StringT, float]",
+        member_scores: "Mapping[StringT, float]",
         condition: "Optional[Literal[PureToken.NX, PureToken.XX]]" = ...,
         comparison: "Optional[Literal[PureToken.GT, PureToken.LT]]" = ...,
         change: "Optional[bool]" = ...,
@@ -1780,7 +1780,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def xadd(
         self,
         key: "KeyT",
-        field_values: "Dict[StringT, ValueT]",
+        field_values: "Mapping[StringT, ValueT]",
         identifier: "Optional[ValueT]" = ...,
         nomkstream: "Optional[bool]" = ...,
         trim_strategy: "Optional[Literal[PureToken.MAXLEN, PureToken.MINID]]" = ...,
@@ -2032,7 +2032,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def config_resetstat(self) -> ClusterPipeline[AnyStr]: ...
     async def config_rewrite(self) -> ClusterPipeline[AnyStr]: ...
     async def config_set(
-        self, parameter_values: "Dict[StringT, ValueT]"
+        self, parameter_values: "Mapping[StringT, ValueT]"
     ) -> ClusterPipeline[AnyStr]: ...
     async def dbsize(self) -> ClusterPipeline[AnyStr]: ...
     async def failover(
