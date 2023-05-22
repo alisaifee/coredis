@@ -12,6 +12,7 @@ from coredis.typing import (
     Dict,
     KeyT,
     Literal,
+    Mapping,
     Optional,
     Parameters,
     ResponseType,
@@ -94,7 +95,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
                 PureToken.SUM,
             ]
         ] = None,
-        labels: Optional[Dict[StringT, ValueT]] = None,
+        labels: Optional[Mapping[StringT, ValueT]] = None,
     ) -> bool:
         """
         Create a new time series with the given key.
@@ -167,7 +168,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
     async def alter(
         self,
         key: KeyT,
-        labels: Optional[Dict[StringT, StringT]] = None,
+        labels: Optional[Mapping[StringT, StringT]] = None,
         retention: Optional[int] = None,
         chunk_size: Optional[int] = None,
         duplicate_policy: Optional[
@@ -237,7 +238,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
                 PureToken.SUM,
             ]
         ] = None,
-        labels: Optional[Dict[StringT, ValueT]] = None,
+        labels: Optional[Mapping[StringT, ValueT]] = None,
     ) -> int:
         """
         Add a sample to a time series.
@@ -311,7 +312,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         value: Union[int, float],
-        labels: Optional[Dict[StringT, ValueT]] = None,
+        labels: Optional[Mapping[StringT, ValueT]] = None,
         timestamp: Optional[Union[datetime, int, StringT]] = None,
         retention: Optional[Union[int, timedelta]] = None,
         uncompressed: Optional[bool] = None,
@@ -365,7 +366,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         value: Union[int, float],
-        labels: Optional[Dict[StringT, ValueT]] = None,
+        labels: Optional[Mapping[StringT, ValueT]] = None,
         timestamp: Optional[Union[datetime, int, StringT]] = None,
         retention: Optional[Union[int, timedelta]] = None,
         uncompressed: Optional[bool] = None,

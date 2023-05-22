@@ -26,6 +26,7 @@ from ..typing import (
     KeyT,
     List,
     Literal,
+    Mapping,
     Optional,
     Parameters,
     ResponsePrimitive,
@@ -669,7 +670,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    async def incrby(self, key: KeyT, items: Dict[AnyStr, int]) -> Tuple[int, ...]:
+    async def incrby(self, key: KeyT, items: Mapping[AnyStr, int]) -> Tuple[int, ...]:
         """
         Increases the count of one or more items by increment
 
@@ -830,7 +831,7 @@ class TopK(ModuleGroup[AnyStr]):
         module=MODULE,
     )
     async def incrby(
-        self, key: KeyT, items: Dict[AnyStr, int]
+        self, key: KeyT, items: Mapping[AnyStr, int]
     ) -> Tuple[Optional[AnyStr], ...]:
         """
         Increases the count of one or more items by increment

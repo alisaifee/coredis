@@ -27,6 +27,7 @@ from ..typing import (
     KeyT,
     List,
     Literal,
+    Mapping,
     Optional,
     Parameters,
     ResponsePrimitive,
@@ -757,10 +758,12 @@ class Search(ModuleGroup[AnyStr]):
         withpayloads: Optional[bool] = None,
         withsortkeys: Optional[bool] = None,
         numeric_filters: Optional[
-            Dict[StringT, Tuple[Union[int, float, StringT], Union[int, float, StringT]]]
+            Mapping[
+                StringT, Tuple[Union[int, float, StringT], Union[int, float, StringT]]
+            ]
         ] = None,
         geo_filters: Optional[
-            Dict[
+            Mapping[
                 StringT,
                 Tuple[
                     Tuple[Union[int, float], Union[int, float]],
@@ -771,7 +774,7 @@ class Search(ModuleGroup[AnyStr]):
         ] = None,
         in_keys: Optional[Parameters[StringT]] = None,
         in_fields: Optional[Parameters[StringT]] = None,
-        returns: Optional[Dict[StringT, Optional[StringT]]] = None,
+        returns: Optional[Mapping[StringT, Optional[StringT]]] = None,
         summarize_fields: Optional[Parameters[StringT]] = None,
         summarize_frags: Optional[int] = None,
         summarize_length: Optional[int] = None,
@@ -790,7 +793,7 @@ class Search(ModuleGroup[AnyStr]):
         sort_order: Optional[Literal[PureToken.ASC, PureToken.DESC]] = None,
         offset: Optional[int] = 0,
         limit: Optional[int] = None,
-        parameters: Optional[Dict[StringT, ValueT]] = None,
+        parameters: Optional[Mapping[StringT, ValueT]] = None,
         dialect: Optional[int] = None,
     ) -> SearchResult[AnyStr]:
         """
@@ -963,14 +966,16 @@ class Search(ModuleGroup[AnyStr]):
         ] = None,
         timeout: Optional[Union[int, timedelta]] = None,
         transforms: Optional[Parameters[Union[Group, Apply, Filter]]] = None,
-        sortby: Optional[Dict[StringT, Literal[PureToken.ASC, PureToken.DESC]]] = None,
+        sortby: Optional[
+            Mapping[StringT, Literal[PureToken.ASC, PureToken.DESC]]
+        ] = None,
         sortby_max: Optional[int] = None,
         offset: Optional[int] = 0,
         limit: Optional[int] = None,
         with_cursor: Optional[bool] = None,
         cursor_read_size: Optional[int] = None,
         cursor_maxidle: Optional[Union[int, timedelta]] = None,
-        parameters: Optional[Dict[StringT, StringT]] = None,
+        parameters: Optional[Mapping[StringT, StringT]] = None,
         dialect: Optional[int] = None,
     ) -> SearchAggregationResult[AnyStr]:
         """
