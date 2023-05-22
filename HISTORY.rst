@@ -3,6 +3,28 @@
 Changelog
 =========
 
+v4.14.0
+-------
+Release Date: 2023-05-22
+
+* Features
+
+  * Improve parsing of ``TS.INFO`` response for
+    ``rules`` section
+  * Broaden input parameter type annotations when
+    expecting a mapping to use ``Mapping`` instead of
+    ``Dict``
+
+* Compatibility
+
+  * Update parsing of timeseries module responses
+    to be compatible with RESP3 responses
+
+* Chores
+
+  * Update CI to test against 7.2-rc2
+  * Update mypy dependency
+
 v4.13.3
 -------
 Release Date: 2023-05-10
@@ -1660,6 +1682,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
