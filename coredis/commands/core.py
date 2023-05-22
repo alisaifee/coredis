@@ -488,7 +488,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.MSET,
         group=CommandGroup.STRING,
     )
-    async def mset(self, key_values: Dict[KeyT, ValueT]) -> bool:
+    async def mset(self, key_values: Mapping[KeyT, ValueT]) -> bool:
         """
         Sets multiple keys to multiple values
         """
@@ -500,7 +500,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(CommandName.MSETNX, group=CommandGroup.STRING)
-    async def msetnx(self, key_values: Dict[KeyT, ValueT]) -> bool:
+    async def msetnx(self, key_values: Mapping[KeyT, ValueT]) -> bool:
         """
         Set multiple keys to multiple values, only if none of the keys exist
 
@@ -2092,7 +2092,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return await self.execute_command(CommandName.HLEN, key, callback=IntCallback())
 
     @redis_command(CommandName.HSET, group=CommandGroup.HASH, flags={CommandFlag.FAST})
-    async def hset(self, key: KeyT, field_values: Dict[StringT, ValueT]) -> int:
+    async def hset(self, key: KeyT, field_values: Mapping[StringT, ValueT]) -> int:
         """
         Sets ``field`` to ``value`` within hash :paramref:`key`
 
@@ -2128,7 +2128,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         deprecation_reason="Use :meth:`hset` with multiple field-value pairs",
         flags={CommandFlag.FAST},
     )
-    async def hmset(self, key: KeyT, field_values: Dict[StringT, ValueT]) -> bool:
+    async def hmset(self, key: KeyT, field_values: Mapping[StringT, ValueT]) -> bool:
         """
         Sets key to value within hash :paramref:`key` for each corresponding
         key and value from the ``field_items`` dict.
@@ -4061,7 +4061,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def zadd(
         self,
         key: KeyT,
-        member_scores: Dict[StringT, float],
+        member_scores: Mapping[StringT, float],
         condition: Optional[Literal[PureToken.NX, PureToken.XX]] = None,
         comparison: Optional[Literal[PureToken.GT, PureToken.LT]] = None,
         change: Optional[bool] = None,
@@ -5140,7 +5140,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def xadd(
         self,
         key: KeyT,
-        field_values: Dict[StringT, ValueT],
+        field_values: Mapping[StringT, ValueT],
         identifier: Optional[ValueT] = None,
         nomkstream: Optional[bool] = None,
         trim_strategy: Optional[Literal[PureToken.MAXLEN, PureToken.MINID]] = None,
@@ -7936,7 +7936,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             combine=ClusterBoolCombine(),
         ),
     )
-    async def config_set(self, parameter_values: Dict[StringT, ValueT]) -> bool:
+    async def config_set(self, parameter_values: Mapping[StringT, ValueT]) -> bool:
         """Sets configuration parameters to the given values"""
 
         return await self.execute_command(
