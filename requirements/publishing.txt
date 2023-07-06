@@ -1,6 +1,6 @@
 -r main.txt
 black==23.3.0
-click==8.1.2
+click==8.1.4
 inflect==6.0.0
 Jinja2==3.1.2
 
