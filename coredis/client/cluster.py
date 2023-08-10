@@ -71,7 +71,7 @@ if TYPE_CHECKING:
 class ClusterMeta(ABCMeta):
     ROUTING_FLAGS: Dict[bytes, NodeFlag]
     SPLIT_FLAGS: Dict[bytes, NodeFlag]
-    RESULT_CALLBACKS: Dict[str, Callable[..., ResponseType]]
+    RESULT_CALLBACKS: Dict[bytes, Callable[..., ResponseType]]
     NODE_FLAG_DOC_MAPPING = {
         NodeFlag.PRIMARIES: "all primaries",
         NodeFlag.REPLICAS: "all replicas",
