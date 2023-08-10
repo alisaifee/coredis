@@ -228,6 +228,7 @@ class TestPipeline:
             assert await pipe.execute() == (True,)
             assert await client.get("z") == "zzz"
 
+    @pytest.mark.nodragonfly
     async def test_parse_error_raised(self, client):
         async with await client.pipeline() as pipe:
             # the zrem is invalid because we don't pass any keys to it
@@ -242,6 +243,7 @@ class TestPipeline:
             assert await pipe.execute() == (True,)
             assert await client.get("z") == "zzz"
 
+    @pytest.mark.nodragonfly
     async def test_parse_error_raised_explicit_transaction(self, client):
         async with await client.pipeline(transaction=False) as pipe:
             pipe.multi()
