@@ -102,13 +102,6 @@ jobs:
             redis-version: 7.0
             test_params: "-m dragonfly"
             label: "Dragonfly"
-          - python-version: "pypy-3.7"
-            redis-version: 7.0
-            test_params: "-m '(not (keydb or dragonfly))' tests/commands tests/test_tracking_cache.py"
-            runtime_type_checks: "False"
-            extensions: "False"
-            uvloop: "False"
-            label: ""
           - python-version: "pypy-3.8"
             redis-version: 7.0
             test_params: "-m '(not (keydb or dragonfly))' tests/commands tests/test_tracking_cache.py"
