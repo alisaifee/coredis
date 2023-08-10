@@ -116,6 +116,7 @@ class TestHash:
         assert await client.hstrlen(key, "f3") == 4
 
     @pytest.mark.min_server_version("6.2.0")
+    @pytest.mark.nodragonfly
     async def test_hrandfield(self, client, _s):
         assert await client.hrandfield("key") is None
         await client.hset("key", {"a": 1, "b": 2, "c": 3, "d": 4, "e": 5})
