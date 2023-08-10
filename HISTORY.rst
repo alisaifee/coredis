@@ -3,6 +3,19 @@
 Changelog
 =========
 
+v4.15.1
+-------
+Release Date: 2023-08-10
+
+* Bug fix
+
+  * Handle edge case of clearing a closed socket buffer during
+    object destruction.
+
+* Chores
+
+  * Re-enable CI for dragonfly
+
 v4.15.0
 -------
 Release Date: 2023-08-09
@@ -1701,6 +1714,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
