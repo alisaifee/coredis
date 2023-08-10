@@ -3363,6 +3363,14 @@ class CoreCommands(CommandMixin[AnyStr]):
             callback=OptionalListCallback[AnyStr](),
         )
 
+    @overload
+    async def lpop(self, key: KeyT) -> Optional[AnyStr]:
+        ...
+
+    @overload
+    async def lpop(self, key: KeyT, count: int) -> Optional[List[AnyStr]]:
+        ...
+
     @redis_command(
         CommandName.LPOP,
         group=CommandGroup.LIST,
