@@ -221,10 +221,10 @@ async def set_default_test_config(client):
         if REDIS_VERSIONS[str(client)] >= version.parse("6.2.0"):
             await client.sentinels[0].sentinel_config_set("resolve-hostnames", "yes")
     else:
-        await client.config_set({"maxmemory-policy": "noeviction"})
-        await client.config_set({"latency-monitor-threshold": 10})
-
         if REDIS_VERSIONS[str(client)] >= version.parse("6.0.0"):
+            await client.config_set({"maxmemory-policy": "noeviction"})
+            await client.config_set({"latency-monitor-threshold": 10})
+
             await client.acl_log(reset=True)
 
 
