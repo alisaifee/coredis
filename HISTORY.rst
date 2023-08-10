@@ -3,6 +3,25 @@
 Changelog
 =========
 
+v4.15.0
+-------
+Release Date: 2023-08-09
+
+* Bug fix
+
+  * Improve cleanup on socket disconnect by clearing
+    internal response buffer
+
+* Chores
+
+  * Add typing overload for ``lpop`` method
+  * Remove python 3.7 from CI due to EOL.
+  * Temporarily disable pre-release python 3.12 from CI
+    due to dependency resolution issues.
+  * Update development dependencies
+
+
+
 v4.14.0
 -------
 Release Date: 2023-05-22
@@ -1682,6 +1701,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
