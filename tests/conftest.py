@@ -214,18 +214,19 @@ async def check_test_constraints(request, client, protocol=3):
             return pytest.skip("Skipped for !PyPy")
 
 
-async def set_default_test_config(client):
+async def set_default_test_config(client, variant=None):
     await get_version(client)
 
     if isinstance(client, coredis.sentinel.Sentinel):
         if REDIS_VERSIONS[str(client)] >= version.parse("6.2.0"):
             await client.sentinels[0].sentinel_config_set("resolve-hostnames", "yes")
     else:
-        await client.config_set({"maxmemory-policy": "noeviction"})
-        await client.config_set({"latency-monitor-threshold": 10})
+        if not variant:
+            await client.config_set({"maxmemory-policy": "noeviction"})
+            await client.config_set({"latency-monitor-threshold": 10})
 
-        if REDIS_VERSIONS[str(client)] >= version.parse("6.0.0"):
-            await client.acl_log(reset=True)
+            if REDIS_VERSIONS[str(client)] >= version.parse("6.0.0"):
+                await client.acl_log(reset=True)
 
 
 def get_client_test_args(request):
@@ -1082,7 +1083,7 @@ async def keydb(keydb_server, request):
     )
     await check_test_constraints(request, client)
     await client.flushall()
-    await set_default_test_config(client)
+    await set_default_test_config(client, variant="keydb")
 
     yield client
 
@@ -1105,7 +1106,7 @@ async def keydb_resp2(keydb_server, request):
         **get_client_test_args(request),
     )
     await client.flushall()
-    await set_default_test_config(client)
+    await set_default_test_config(client, variant="keydb")
 
     yield client
 
@@ -1126,7 +1127,7 @@ async def keydb_cluster(keydb_cluster_server, request):
     await cluster.flushdb()
 
     for primary in cluster.primaries:
-        await set_default_test_config(primary)
+        await set_default_test_config(primary, variant="keydb")
     yield cluster
 
     cluster.connection_pool.disconnect()
@@ -1199,7 +1200,7 @@ async def dragonfly(dragonfly_server, request):
     )
     await check_test_constraints(request, client, protocol=2)
     await client.flushall()
-    await set_default_test_config(client)
+    await set_default_test_config(client, variant="dragonfly")
 
     yield client
 
