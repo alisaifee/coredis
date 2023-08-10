@@ -24,6 +24,7 @@ from coredis.response._callbacks import NoopCallback
 from coredis.typing import RUNTIME_TYPECHECKS, Callable, Optional, R, ValueT
 
 REDIS_VERSIONS = {}
+SERVER_TYPES = {}
 MODULE_VERSIONS = {}
 PY_IMPLEMENTATION = platform.python_implementation()
 PY_VERSION = version.Version(platform.python_version())
@@ -126,10 +127,10 @@ async def get_version(client):
             else:
                 client_info = await client.info()
 
-                if "dfly_version" in client_info:
-                    version_string = client_info["dfly_version"]
-                else:
-                    version_string = client_info["redis_version"]
+                if "dragonfly_version" in client_info:
+                    SERVER_TYPES[str(client)] = "dragonfly"
+
+                version_string = client_info["redis_version"]
                 REDIS_VERSIONS[str(client)] = version.parse(version_string)
         except version.InvalidVersion:
             REDIS_VERSIONS[str(client)] = UnparseableVersion(version_string)
@@ -141,7 +142,6 @@ async def check_test_constraints(request, client, protocol=3):
     await get_version(client)
     await get_module_versions(client)
     client_version = REDIS_VERSIONS[str(client)]
-
     for marker in request.node.iter_markers():
         if marker.name == "min_python" and marker.args:
             if PY_VERSION < version.parse(marker.args[0]):
@@ -204,7 +204,10 @@ async def check_test_constraints(request, client, protocol=3):
         if marker.name == "nokeydb" and isinstance(client, coredis.experimental.KeyDB):
             return pytest.skip("Skipped for KeyDB")
 
-        if marker.name == "nodragonfly" and str(client_version).startswith("df"):
+        if (
+            marker.name == "nodragonfly"
+            and SERVER_TYPES.get(str(client)) == "dragonfly"
+        ):
             return pytest.skip("Skipped for Dragonfly")
 
         if marker.name == "nopypy" and PY_IMPLEMENTATION == "PyPy":
