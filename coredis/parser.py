@@ -226,6 +226,10 @@ class Parser:
 
     def on_disconnect(self) -> None:
         """Called when the stream disconnects"""
+        self.localbuffer.seek(0)
+        self.localbuffer.truncate()
+        self.bytes_read = self.bytes_written = 0
+        self.nodes.clear()
 
     def can_read(self) -> bool:
         return (self.bytes_written - self.bytes_read) > 0
