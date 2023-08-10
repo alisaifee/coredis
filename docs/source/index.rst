@@ -196,7 +196,7 @@ Support for Redis-"like" databases
     and :class:`~coredis.KeyDBCluster` clients respectively.
 
 `Dragonfly <https://dragonflydb.io/>`__
-    Dragonfly currently has compatibility with redis 2.8, though there is increasing support for commands from higher versions.
+    Dragonfly currently has compatibility with redis 6.2, though there is increasing support for commands from higher versions.
     For up to date details please refer to the `dragonfly api status documentation <https://www.dragonflydb.io/docs/command-reference/compatibility>`__.
 
     To see which functionality of **coredis** is tested against dragonfly, checkout a copy of **coredis** and run the
