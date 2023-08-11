@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v4.16.0rc1
+----------
+Release Date: 2023-08-11
+
+* Bug fix
+
+  * Fix intermittent errors due to mismatched responses when multiple
+    couroutines access a new connection pool.
+
 v4.15.1
 -------
 Release Date: 2023-08-10
@@ -1714,6 +1723,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
