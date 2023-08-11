@@ -217,6 +217,7 @@ class BaseConnection(asyncio.BaseProtocol):
         self.average_response_time: float = 0
         self.requests_processed: int = 0
         self._write_ready: asyncio.Event = asyncio.Event()
+        self._transport_lock: asyncio.Lock = asyncio.Lock()
 
     def __repr__(self) -> str:
         return self.describe(self._description_args())
@@ -774,37 +775,40 @@ class Connection(BaseConnection):
         )
 
     async def _connect(self) -> None:
-        if self.ssl_context:
-            connection = asyncio.get_running_loop().create_connection(
-                lambda: self, host=self.host, port=self.port, ssl=self.ssl_context
-            )
-        else:
-            connection = asyncio.get_running_loop().create_connection(
-                lambda: self, host=self.host, port=self.port
-            )
+        async with self._transport_lock:
+            if self._transport:
+                return
+            if self.ssl_context:
+                connection = asyncio.get_running_loop().create_connection(
+                    lambda: self, host=self.host, port=self.port, ssl=self.ssl_context
+                )
+            else:
+                connection = asyncio.get_running_loop().create_connection(
+                    lambda: self, host=self.host, port=self.port
+                )
 
-        try:
-            async with async_timeout.timeout(self._connect_timeout):
-                transport, _ = await connection
-        except asyncio.TimeoutError:
-            raise ConnectionError(
-                f"Unable to establish a connection within {self._connect_timeout} seconds"
-            )
-        sock = transport.get_extra_info("socket")
-        if sock is not None:
             try:
-                # TCP_KEEPALIVE
-                if self.socket_keepalive:
-                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+                async with async_timeout.timeout(self._connect_timeout):
+                    transport, _ = await connection
+            except asyncio.TimeoutError:
+                raise ConnectionError(
+                    f"Unable to establish a connection within {self._connect_timeout} seconds"
+                )
+            sock = transport.get_extra_info("socket")
+            if sock is not None:
+                try:
+                    # TCP_KEEPALIVE
+                    if self.socket_keepalive:
+                        sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
 
-                    for k, v in self.socket_keepalive_options.items():
-                        sock.setsockopt(socket.SOL_TCP, k, v)
-            except (OSError, TypeError):
-                # `socket_keepalive_options` might contain invalid options
-                # causing an error
-                transport.close()
-                raise
-        await self.on_connect()
+                        for k, v in self.socket_keepalive_options.items():
+                            sock.setsockopt(socket.SOL_TCP, k, v)
+                except (OSError, TypeError):
+                    # `socket_keepalive_options` might contain invalid options
+                    # causing an error
+                    transport.close()
+                    raise
+            await self.on_connect()
 
 
 class UnixDomainSocketConnection(BaseConnection):
