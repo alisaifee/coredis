@@ -288,7 +288,7 @@ class ConnectionPool:
         self.checkpid()
         try:
             connection = self._available_connections.pop()
-            if connection.needs_handshake:
+            if connection.is_connected and connection.needs_handshake:
                 await connection.perform_handshake()
         except IndexError:
             if self._created_connections >= self.max_connections:
@@ -436,7 +436,7 @@ class BlockingConnectionPool(ConnectionPool):
         try:
             async with async_timeout.timeout(self.timeout):
                 connection = await self._pool.get()
-            if connection and connection.needs_handshake:
+            if connection and connection.is_connected and connection.needs_handshake:
                 await connection.perform_handshake()
         except asyncio.TimeoutError:
             raise ConnectionError("No connection available.")

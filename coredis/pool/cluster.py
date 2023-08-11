@@ -241,7 +241,7 @@ class ClusterConnectionPool(ConnectionPool):
         if not connection:
             connection = self._make_node_connection(node)
         else:
-            if connection.needs_handshake:
+            if connection.is_connected and connection.needs_handshake:
                 await connection.perform_handshake()
 
         if acquire:
