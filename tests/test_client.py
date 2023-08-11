@@ -127,6 +127,16 @@ class TestClient:
         async with async_timeout.timeout(0.1):
             assert _s("PONG") == await client.ping()
 
+    async def test_concurrent_initialization(self, client, mocker):
+        assert await client.client_kill(skipme=False)
+        client.connection_pool.reset()
+        connection = await client.connection_pool.get_connection(b"set", acquire=False)
+        spy = mocker.spy(connection, "perform_handshake")
+        await asyncio.gather(
+            *[client.set(f"fubar{i}", bytes(2**16)) for i in range(10)]
+        )
+        assert spy.call_count == 1
+
 
 @targets(
     "redis_cluster",
