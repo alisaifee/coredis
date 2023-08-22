@@ -11,13 +11,12 @@ from ..commands._wrappers import ClusterCommandConfig
 from ..commands.constants import CommandGroup, CommandName, NodeFlag
 from ..response._callbacks import (
     AnyStrCallback,
-    ClusterConcatenateTuples,
     ClusterEnsureConsistent,
+    ClusterMergeSets,
     DictCallback,
     IntCallback,
     SetCallback,
     SimpleStringCallback,
-    TupleCallback,
 )
 from ..tokens import PrefixToken, PureToken
 from ..typing import (
@@ -379,6 +378,7 @@ class Search(ModuleGroup[AnyStr]):
             index,
             callback=DictCallback[AnyStr, ResponseType](
                 recursive=[
+                    "attributes",
                     "index_definition",
                     "gc_stats",
                     "cursor_stats",
@@ -671,7 +671,7 @@ class Search(ModuleGroup[AnyStr]):
         version_introduced="1.4.0",
         group=COMMAND_GROUP,
     )
-    async def dictdump(self, name: StringT) -> Tuple[AnyStr, ...]:
+    async def dictdump(self, name: StringT) -> Set[AnyStr]:
         """
         Dumps all terms in the given dictionary
 
@@ -679,7 +679,7 @@ class Search(ModuleGroup[AnyStr]):
         """
 
         return await self.execute_module_command(
-            CommandName.FT_DICTDUMP, name, callback=TupleCallback[AnyStr]()
+            CommandName.FT_DICTDUMP, name, callback=SetCallback[AnyStr]()
         )
 
     @module_command(
@@ -689,15 +689,15 @@ class Search(ModuleGroup[AnyStr]):
         group=COMMAND_GROUP,
         cluster=ClusterCommandConfig(
             route=NodeFlag.PRIMARIES,
-            combine=ClusterConcatenateTuples[AnyStr](),
+            combine=ClusterMergeSets[AnyStr](),
         ),
     )
-    async def list(self) -> Tuple[AnyStr, ...]:
+    async def list(self) -> Set[AnyStr]:
         """
         Returns a list of all existing indexes
         """
         return await self.execute_module_command(
-            CommandName.FT__LIST, callback=TupleCallback[AnyStr]()
+            CommandName.FT__LIST, callback=SetCallback[AnyStr]()
         )
 
     @module_command(
@@ -946,6 +946,7 @@ class Search(ModuleGroup[AnyStr]):
             withpayloads=withpayloads,
             withsortkeys=withsortkeys,
             explainscore=explainscore,
+            nocontent=nocontent,
         )
 
     @module_command(

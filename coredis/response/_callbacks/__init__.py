@@ -438,9 +438,9 @@ class DictCallback(
         Tuple[CR_co, ...],
     ]:
         if isinstance(item, (list, tuple)):
-            if len(item) % 2 == 0 and all(isinstance(k, Hashable) for k in item[::2]):
+            if all(isinstance(k, Hashable) for k in item[::2]):
                 dct = []
-                for i in range(0, len(item), 2):
+                for i in range(0, 2 * (len(item) // 2), 2):
                     key, value = item[i], item[i + 1]
                     value = (
                         self.recursive_transformer(value)

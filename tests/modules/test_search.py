@@ -53,7 +53,7 @@ async def city_index(client: Redis):
             ],
             on=PureToken.HASH,
             payload_field="last_updated",
-            prefixes=["{city}:"],
+            prefixes=["{city}idx:"],
         )
         await client.search.create(
             "{jcity}idx",
@@ -80,11 +80,11 @@ async def city_index(client: Redis):
             ],
             on=PureToken.JSON,
             payload_field="$.last_updated",
-            prefixes=["{jcity}:"],
+            prefixes=["{jcity}idx:"],
         )
         for name, city in data.items():
             await client.hset(
-                f"{{city}}:{name}",
+                f"{{city}}idx:{name}",
                 {
                     "name": city["name"],
                     "country": city["country"],
@@ -99,7 +99,7 @@ async def city_index(client: Redis):
                 },
             )
             await client.json.set(
-                f"{{jcity}}:{name}",
+                f"{{jcity}}idx:{name}",
                 ".",
                 {
                     "name": city["name"],
@@ -180,11 +180,12 @@ class TestSchema:
             ],
             on=on,
         )
-        assert ("idx",) == await client.search.list()
+        assert {"idx"} == await client.search.list()
         info = await client.search.info("idx")
         assert info["index_name"] == "idx"
         assert info["index_definition"]["key_type"] == str(on)
-        assert name in info["attributes"][0]
+
+        assert info["attributes"][0]["identifier"] == name
 
         assert await client.search.alter(
             "idx",
@@ -192,7 +193,7 @@ class TestSchema:
             skipinitialscan=True,
         )
         info = await client.search.info("idx")
-        assert f"{name}_new" in info["attributes"][1]
+        assert f"{name}_new" == info["attributes"][1]["identifier"]
 
     @pytest.mark.parametrize("on", [PureToken.HASH, PureToken.JSON])
     @pytest.mark.parametrize(
@@ -380,7 +381,7 @@ class TestSearch:
         )
 
         await client.search.dictdel("{city}custom", ["menila"])
-        assert () == await client.search.dictdump("{city}custom")
+        assert set() == await client.search.dictdump("{city}custom")
         assert (
             "menila"
             not in (
@@ -462,7 +463,10 @@ class TestSearch:
         results = await client.search.search(
             index_name, "@name:karachi", nocontent=True
         )
-        assert () == results.documents
+
+        assert (
+            SearchDocument(f"{index_name}:karachi", None, None, None, None, {}),
+        ) == results.documents
 
         results = await client.search.search(
             index_name,

@@ -604,6 +604,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
                 response.append(
                     cmd.callback(
                         res,
+                        version=connection.protocol_version,
                         **cmd.options,
                     )
                 )
