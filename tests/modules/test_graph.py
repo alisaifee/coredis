@@ -15,6 +15,7 @@ from tests.conftest import targets
     "redis_stack_resp2",
     "redis_stack_cluster",
 )
+@pytest.mark.max_server_version("7.0.0")
 class TestGraph:
     async def test_create_graph(self, client: Redis):
         result = await client.graph.query(
