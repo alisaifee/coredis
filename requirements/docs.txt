@@ -8,6 +8,6 @@ sphinx-autobuild==2021.3.14
 sphinx-issues==3.0.1
 sphinxext-opengraph==0.8.2
 sphinx-sitemap==2.5.0
-sphinx-paramlinks==0.5.4
+sphinx-paramlinks==0.6.0
 sphinxcontrib-programoutput==0.17
 
