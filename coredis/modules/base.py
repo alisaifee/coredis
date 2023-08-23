@@ -95,7 +95,7 @@ def module_command(
         command_name,
         group,
         version.Version(version_introduced) if version_introduced else None,
-        None,
+        version.Version(version_deprecated) if version_deprecated else None,
         arguments,
         cluster or ClusterCommandConfig(),
         cache_config,
@@ -135,8 +135,10 @@ def module_command(
 {module.FULL_NAME} command documentation: {redis_command_link(command_name)}
             """
         if (
-            version_introduced and version_introduced != "1.0.0"
-        ) or command_details.arguments:
+            (version_introduced and version_introduced != "1.0.0")
+            or version_deprecated
+            or command_details.arguments
+        ):
             wrapped.__doc__ += """
 Compatibility:
 """
@@ -145,6 +147,10 @@ Compatibility:
                 wrapped.__doc__ += f"""
 - New in {module.FULL_NAME} version: `{version_introduced}`
                 """
+            if version_deprecated:
+                wrapped.__doc__ += f"""
+- Deprecated in {module.FULL_NAME} version: `{version_deprecated}`
+        """
             if command_details.arguments:
                 for argument, min_version in command_details.arguments.items():
                     wrapped.__doc__ += f"""

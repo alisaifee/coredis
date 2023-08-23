@@ -633,6 +633,7 @@ class Json(ModuleGroup[AnyStr]):
         CommandName.JSON_RESP,
         group=COMMAND_GROUP,
         version_introduced="1.0.0",
+        version_deprecated="2.6.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
     )
