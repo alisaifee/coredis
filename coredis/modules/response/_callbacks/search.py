@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections import OrderedDict
+from collections import ChainMap, OrderedDict
 from functools import partial
 
 from coredis._json import json
@@ -235,11 +235,7 @@ class SpellCheckCallback(
         if isinstance(response, list):
             return self.transform(response, **options)
         else:
-            suggestions = {}
-            for key, result in response["results"].items():
-                ordered = OrderedDict()
-                for res in result:
-                    for sugg, score in res.items():
-                        ordered[sugg] = score
-                suggestions[key] = ordered
-            return suggestions
+            return {
+                key: OrderedDict(ChainMap(*result))
+                for key, result in response["results"].items()
+            }
