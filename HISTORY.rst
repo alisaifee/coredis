@@ -3,6 +3,23 @@
 Changelog
 =========
 
+v4.16.0
+-------
+Release Date: 2023-08-30
+
+* Bug fix
+
+  * Fix intermittent errors due to mismatched responses when multiple
+    couroutines access a new connection pool.
+
+* Compatibility
+
+  * Remove support for python 3.7
+  * Remove Redis 6.0 from CI
+  * Disable RedisGraph tests in CI as the module is now not part of Redis Stack
+  * Fix RESP3 compatibility for RedisSearch
+  * Mark `json.resp` as deprecated
+
 v4.16.0rc1
 ----------
 Release Date: 2023-08-11
@@ -1723,6 +1740,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
