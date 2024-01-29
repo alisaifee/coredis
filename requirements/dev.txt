@@ -1,6 +1,6 @@
 -r test.txt
 -r publishing.txt
-black==23.12.0
+black==24.1.1
 ruff
 isort==5.13.2;python_version>"3.7"
 isort<5.12.0;python_version<="3.7"
