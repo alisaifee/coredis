@@ -4,8 +4,8 @@ coverage
 lovely-pytest-docker
 mock
 numpy
-pytest
-pytest-asyncio
+pytest<8
+pytest-asyncio==0.21.1
 pytest-cov
 pytest-env
 pytest-lazy-fixture
