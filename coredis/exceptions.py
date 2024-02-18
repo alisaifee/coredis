@@ -41,9 +41,11 @@ class ModuleCommandNotSupportedError(CommandNotSupportedError):
     def __init__(self, cmd: str, module: str, current_version: str) -> None:
         RedisError.__init__(
             self,
-            f"{cmd} is not supported on {module} version {current_version}"
-            if current_version
-            else f"{cmd} is not supported since Module: {module} is not available",
+            (
+                f"{cmd} is not supported on {module} version {current_version}"
+                if current_version
+                else f"{cmd} is not supported since Module: {module} is not available"
+            ),
         )
 
 

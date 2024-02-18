@@ -72,8 +72,7 @@ class LuaLock(Generic[AnyStr]):
         client: Union[Redis[AnyStr], RedisCluster[AnyStr]],
         name: KeyT,
         expected_token: StringT,
-    ) -> int:
-        ...
+    ) -> int: ...
 
     @classmethod
     @EXTEND_SCRIPT.wraps(client_arg="client")
@@ -83,8 +82,7 @@ class LuaLock(Generic[AnyStr]):
         name: KeyT,
         expected_token: StringT,
         additional_time: int,
-    ) -> int:
-        ...
+    ) -> int: ...
 
     local: contextvars.ContextVar[Optional[StringT]]
 

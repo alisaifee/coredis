@@ -243,16 +243,20 @@ class Script(Generic[AnyStr]):
                 else [n for n, p in sig.parameters.items() if param_is_key(p)]
             )
             arg_fetch: Dict[str, Callable[..., Parameters[Any]]] = {
-                n: (lambda v: [v])
-                if p.kind
-                in {
-                    inspect.Parameter.POSITIONAL_ONLY,
-                    inspect.Parameter.KEYWORD_ONLY,
-                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                }
-                else (lambda v: list(itertools.chain.from_iterable(v.items())))
-                if p.kind == inspect.Parameter.VAR_KEYWORD
-                else lambda v: list(v)
+                n: (
+                    (lambda v: [v])
+                    if p.kind
+                    in {
+                        inspect.Parameter.POSITIONAL_ONLY,
+                        inspect.Parameter.KEYWORD_ONLY,
+                        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    }
+                    else (
+                        (lambda v: list(itertools.chain.from_iterable(v.items())))
+                        if p.kind == inspect.Parameter.VAR_KEYWORD
+                        else lambda v: list(v)
+                    )
+                )
                 for n, p in sig.parameters.items()
             }
             if first_arg in {"self", "cls"}:

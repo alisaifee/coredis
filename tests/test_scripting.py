@@ -168,8 +168,7 @@ class TestScripting:
         )
 
         @no_key_script.wraps()
-        def synth_no_key(*args: int) -> List[int]:
-            ...
+        def synth_no_key(*args: int) -> List[int]: ...
 
         assert await synth_no_key(1, 2, 3) == [1, 2, 3]
 
@@ -178,8 +177,7 @@ class TestScripting:
         await client.set("co", "redis")
 
         @no_key_script.wraps()
-        async def synth_key_only(key: KeyT) -> str:
-            ...
+        async def synth_key_only(key: KeyT) -> str: ...
 
         assert await synth_key_only(key="co") == "redis"
 
@@ -187,8 +185,7 @@ class TestScripting:
         script = client.register_script("return redis.call('GET', KEYS[1]) or ARGV[1]")
 
         @script.wraps()
-        async def default_get(key: KeyT, default: ValueT) -> ValueT:
-            ...
+        async def default_get(key: KeyT, default: ValueT) -> ValueT: ...
 
         await client.set("key", "redis")
         await default_get("key", "coredis") == "redis"
@@ -199,8 +196,7 @@ class TestScripting:
         script = client.register_script("return redis.call('GET', KEYS[1]) or ARGV[1]")
 
         @script.wraps(runtime_checks=True)
-        async def default_get(key: KeyT, default: str) -> str:
-            ...
+        async def default_get(key: KeyT, default: str) -> str: ...
 
         await client.set("key", "redis")
         await default_get("key", "coredis") == "redis"
@@ -220,8 +216,7 @@ class TestScripting:
                 client: Optional[Client[AnyStr]],
                 key: str,
                 default: str = "coredis",
-            ) -> str:
-                ...
+            ) -> str: ...
 
         await client.set("key", "redis")
         await Wrapper.default_get(client, "key", "coredis") == "redis"

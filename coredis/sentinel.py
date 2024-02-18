@@ -200,8 +200,7 @@ class Sentinel(Generic[AnyStr]):
         decode_responses: Literal[False] = ...,
         cache: Optional[AbstractCache] = None,
         **connection_kwargs: Any,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
     def __init__(
@@ -212,8 +211,7 @@ class Sentinel(Generic[AnyStr]):
         decode_responses: Literal[True] = ...,
         cache: Optional[AbstractCache] = None,
         **connection_kwargs: Any,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     def __init__(
         self,
@@ -364,8 +362,7 @@ class Sentinel(Generic[AnyStr]):
         redis_class: Type[Redis[bytes]] = ...,
         connection_pool_class: Type[SentinelConnectionPool] = ...,
         **kwargs: Any,
-    ) -> Redis[bytes]:
-        ...
+    ) -> Redis[bytes]: ...
 
     @overload
     def primary_for(
@@ -375,8 +372,7 @@ class Sentinel(Generic[AnyStr]):
         redis_class: Type[Redis[str]] = ...,
         connection_pool_class: Type[SentinelConnectionPool] = ...,
         **kwargs: Any,
-    ) -> Redis[str]:
-        ...
+    ) -> Redis[str]: ...
 
     def primary_for(
         self,
@@ -426,8 +422,7 @@ class Sentinel(Generic[AnyStr]):
         redis_class: Type[Redis[bytes]] = ...,
         connection_pool_class: Type[SentinelConnectionPool] = ...,
         **kwargs: Any,
-    ) -> Redis[bytes]:
-        ...
+    ) -> Redis[bytes]: ...
 
     @overload
     def replica_for(
@@ -436,8 +431,7 @@ class Sentinel(Generic[AnyStr]):
         redis_class: Type[Redis[str]] = ...,
         connection_pool_class: Type[SentinelConnectionPool] = ...,
         **kwargs: Any,
-    ) -> Redis[str]:
-        ...
+    ) -> Redis[str]: ...
 
     def replica_for(
         self,

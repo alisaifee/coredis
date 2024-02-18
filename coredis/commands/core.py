@@ -383,12 +383,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         self,
         key1: KeyT,
         key2: KeyT,
-    ) -> AnyStr:
-        ...
+    ) -> AnyStr: ...
 
     @overload
-    async def lcs(self, key1: KeyT, key2: KeyT, *, len_: Literal[True]) -> int:
-        ...
+    async def lcs(self, key1: KeyT, key2: KeyT, *, len_: Literal[True]) -> int: ...
 
     @overload
     async def lcs(
@@ -400,8 +398,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         len_: Optional[bool] = ...,
         minmatchlen: Optional[int] = ...,
         withmatchlen: Optional[bool] = ...,
-    ) -> LCSResult:
-        ...
+    ) -> LCSResult: ...
 
     @versionadded(version="3.0.0")
     @redis_command(
@@ -551,8 +548,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         exat: Optional[Union[int, datetime.datetime]] = ...,
         pxat: Optional[Union[int, datetime.datetime]] = ...,
         keepttl: Optional[bool] = ...,
-    ) -> bool:
-        ...
+    ) -> bool: ...
 
     @overload
     async def set(
@@ -567,8 +563,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         exat: Optional[Union[int, datetime.datetime]] = ...,
         pxat: Optional[Union[int, datetime.datetime]] = ...,
         keepttl: Optional[bool] = ...,
-    ) -> Optional[AnyStr]:
-        ...
+    ) -> Optional[AnyStr]: ...
 
     @mutually_exclusive_parameters("ex", "px", "exat", "pxat", "keepttl")
     @redis_command(
@@ -1509,8 +1504,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         latitude: Union[int, float],
         radius: Union[int, float],
         unit: Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI],
-    ) -> Tuple[AnyStr, ...]:
-        ...
+    ) -> Tuple[AnyStr, ...]: ...
 
     @overload
     async def georadius(
@@ -1524,8 +1518,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         withcoord: Literal[True],
         withdist: Optional[bool] = ...,
         withhash: Optional[bool] = ...,
-    ) -> Tuple[GeoSearchResult, ...]:
-        ...
+    ) -> Tuple[GeoSearchResult, ...]: ...
 
     @overload
     async def georadius(
@@ -1539,8 +1532,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         withcoord: Optional[bool] = ...,
         withdist: Literal[True],
         withhash: Optional[bool] = ...,
-    ) -> Tuple[GeoSearchResult, ...]:
-        ...
+    ) -> Tuple[GeoSearchResult, ...]: ...
 
     @overload
     async def georadius(
@@ -1554,8 +1546,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         withcoord: Optional[bool] = ...,
         withdist: Optional[bool] = ...,
         withhash: Literal[True],
-    ) -> Tuple[GeoSearchResult, ...]:
-        ...
+    ) -> Tuple[GeoSearchResult, ...]: ...
 
     @overload
     async def georadius(
@@ -1567,8 +1558,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         unit: Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI],
         *,
         store: KeyT,
-    ) -> int:
-        ...
+    ) -> int: ...
 
     @overload
     async def georadius(
@@ -1583,8 +1573,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         withdist: Optional[bool] = ...,
         withhash: Optional[bool] = ...,
         storedist: KeyT,
-    ) -> int:
-        ...
+    ) -> int: ...
 
     @redis_command(
         CommandName.GEORADIUS,
@@ -1898,8 +1887,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: Optional[int] = ...,
         any_: Optional[bool] = ...,
         **kwargs: Optional[ValueT],
-    ) -> Tuple[Union[AnyStr, GeoSearchResult], ...]:
-        ...
+    ) -> Tuple[Union[AnyStr, GeoSearchResult], ...]: ...
 
     @overload
     async def _geosearchgeneric(
@@ -1919,8 +1907,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: Optional[int] = ...,
         any_: Optional[bool] = ...,
         **kwargs: Optional[ValueT],
-    ) -> int:
-        ...
+    ) -> int: ...
 
     async def _geosearchgeneric(
         self,
@@ -2232,8 +2219,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         *,
         withvalues: Literal[True],
         count: int = ...,
-    ) -> Dict[AnyStr, AnyStr]:
-        ...
+    ) -> Dict[AnyStr, AnyStr]: ...
 
     @overload
     async def hrandfield(
@@ -2241,8 +2227,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         key: KeyT,
         *,
         count: int = ...,
-    ) -> Tuple[AnyStr, ...]:
-        ...
+    ) -> Tuple[AnyStr, ...]: ...
 
     @redis_command(
         CommandName.HRANDFIELD,
@@ -2835,9 +2820,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         params: CommandArgList = [
             key,
-            normalized_milliseconds(ttl)  # type: ignore
-            if not absttl
-            else normalized_time_milliseconds(ttl),  # type: ignore
+            (
+                normalized_milliseconds(ttl)  # type: ignore
+                if not absttl
+                else normalized_time_milliseconds(ttl)
+            ),  # type: ignore
             serialized_value,
         ]
 
@@ -3364,12 +3351,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @overload
-    async def lpop(self, key: KeyT) -> Optional[AnyStr]:
-        ...
+    async def lpop(self, key: KeyT) -> Optional[AnyStr]: ...
 
     @overload
-    async def lpop(self, key: KeyT, count: int) -> Optional[List[AnyStr]]:
-        ...
+    async def lpop(self, key: KeyT, count: int) -> Optional[List[AnyStr]]: ...
 
     @redis_command(
         CommandName.LPOP,
@@ -3542,12 +3527,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @overload
-    async def rpop(self, key: KeyT) -> Optional[AnyStr]:
-        ...
+    async def rpop(self, key: KeyT) -> Optional[AnyStr]: ...
 
     @overload
-    async def rpop(self, key: KeyT, count: int) -> Optional[List[AnyStr]]:
-        ...
+    async def rpop(self, key: KeyT, count: int) -> Optional[List[AnyStr]]: ...
 
     @redis_command(
         CommandName.RPOP,
@@ -4471,8 +4454,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         rev: Optional[bool] = None,
         offset: Optional[int] = None,
         count: Optional[int] = None,
-    ) -> Tuple[AnyStr, ...]:
-        ...
+    ) -> Tuple[AnyStr, ...]: ...
 
     @overload
     async def zrange(
@@ -4486,8 +4468,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: Optional[int] = None,
         *,
         withscores: Literal[True],
-    ) -> Tuple[ScoredMember, ...]:
-        ...
+    ) -> Tuple[ScoredMember, ...]: ...
 
     @mutually_inclusive_parameters("offset", "count")
     @redis_command(
@@ -4981,8 +4962,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         withscores: Optional[bool] = ...,
         offset: Optional[int] = ...,
         count: Optional[int] = ...,
-    ) -> int:
-        ...
+    ) -> int: ...
 
     @overload
     async def _zrange(
@@ -4997,8 +4977,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         withscores: Optional[bool] = ...,
         offset: Optional[int] = ...,
         count: Optional[int] = ...,
-    ) -> Tuple[Union[AnyStr, ScoredMember], ...]:
-        ...
+    ) -> Tuple[Union[AnyStr, ScoredMember], ...]: ...
 
     async def _zrange(
         self,
@@ -5053,8 +5032,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         weights: Optional[Parameters[int]] = ...,
         aggregate: Optional[PureToken] = ...,
         withscores: Optional[bool] = ...,
-    ) -> int:
-        ...
+    ) -> int: ...
 
     @overload
     async def _zaggregate(
@@ -5065,8 +5043,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         weights: Optional[Parameters[int]] = ...,
         aggregate: Optional[PureToken] = ...,
         withscores: Optional[bool] = ...,
-    ) -> Tuple[Union[AnyStr, ScoredMember], ...]:
-        ...
+    ) -> Tuple[Union[AnyStr, ScoredMember], ...]: ...
 
     async def _zaggregate(
         self,

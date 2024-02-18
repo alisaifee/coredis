@@ -192,12 +192,12 @@ class Client(
         self.server_version: Optional[Version] = None
         self.verify_version = verify_version
         self.__noreply = noreply
-        self._noreplycontext: contextvars.ContextVar[
-            Optional[bool]
-        ] = contextvars.ContextVar("noreply", default=None)
-        self._waitcontext: contextvars.ContextVar[
-            Optional[Tuple[int, int]]
-        ] = contextvars.ContextVar("wait", default=None)
+        self._noreplycontext: contextvars.ContextVar[Optional[bool]] = (
+            contextvars.ContextVar("noreply", default=None)
+        )
+        self._waitcontext: contextvars.ContextVar[Optional[Tuple[int, int]]] = (
+            contextvars.ContextVar("wait", default=None)
+        )
         self._waitaof_context: contextvars.ContextVar[
             Optional[Tuple[int, int, int]]
         ] = contextvars.ContextVar("waitaof", default=None)
@@ -575,8 +575,7 @@ class Redis(Client[AnyStr]):
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         **kwargs: Any,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
     def __init__(
@@ -613,8 +612,7 @@ class Redis(Client[AnyStr]):
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         **kwargs: Any,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     def __init__(
         self,
@@ -805,12 +803,12 @@ class Redis(Client[AnyStr]):
             **kwargs,
         )
         self.cache = cache
-        self._decodecontext: contextvars.ContextVar[
-            Optional[bool],
-        ] = contextvars.ContextVar("decode", default=None)
-        self._encodingcontext: contextvars.ContextVar[
-            Optional[str],
-        ] = contextvars.ContextVar("decode", default=None)
+        self._decodecontext: contextvars.ContextVar[Optional[bool],] = (
+            contextvars.ContextVar("decode", default=None)
+        )
+        self._encodingcontext: contextvars.ContextVar[Optional[str],] = (
+            contextvars.ContextVar("decode", default=None)
+        )
 
     @classmethod
     @overload
@@ -827,8 +825,7 @@ class Redis(Client[AnyStr]):
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         **kwargs: Any,
-    ) -> RedisBytesT:
-        ...
+    ) -> RedisBytesT: ...
 
     @classmethod
     @overload
@@ -845,8 +842,7 @@ class Redis(Client[AnyStr]):
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         **kwargs: Any,
-    ) -> RedisStringT:
-        ...
+    ) -> RedisStringT: ...
 
     @classmethod
     def from_url(
@@ -1001,14 +997,12 @@ class Redis(Client[AnyStr]):
     @overload
     def decoding(
         self, mode: Literal[False], encoding: Optional[str] = None
-    ) -> ContextManager[Redis[bytes]]:
-        ...
+    ) -> ContextManager[Redis[bytes]]: ...
 
     @overload
     def decoding(
         self, mode: Literal[True], encoding: Optional[str] = None
-    ) -> ContextManager[Redis[str]]:
-        ...
+    ) -> ContextManager[Redis[str]]: ...
 
     @contextlib.contextmanager
     @versionadded(version="4.8.0")

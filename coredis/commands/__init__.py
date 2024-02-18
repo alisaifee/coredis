@@ -4,6 +4,7 @@ coredis.commands
 Implementation of core redis commands and abstractions over high level
 core concepts such as pubsub, scripting and functions.
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

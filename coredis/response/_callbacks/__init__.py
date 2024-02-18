@@ -107,8 +107,7 @@ class ResponseCallback(ABC, Generic[RESP, RESP3, R], metaclass=ResponseCallbackM
 class AsyncPreProcessingCallback(Protocol):
     async def pre_process(
         self, client: Client[Any], response: ResponseType, **options: Optional[ValueT]
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 class NoopCallback(ResponseCallback[R, R, R]):
@@ -126,8 +125,7 @@ class ClusterMultiNodeCallback(ABC, Generic[R], metaclass=ClusterCallbackMeta):
 
     @property
     @abstractmethod
-    def response_policy(self) -> str:
-        ...
+    def response_policy(self) -> str: ...
 
     @abstractmethod
     def combine(self, responses: Mapping[str, R], **kwargs: Optional[ValueT]) -> R:

@@ -157,9 +157,11 @@ class NodeCommands:
                     CommandInvocation(
                         cmd.command,
                         cmd.args,
-                        bool(cmd.options.get("decode"))
-                        if cmd.options.get("decode")
-                        else None,
+                        (
+                            bool(cmd.options.get("decode"))
+                            if cmd.options.get("decode")
+                            else None
+                        ),
                         None,
                     )
                     for cmd in commands
@@ -486,9 +488,11 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
                 CommandInvocation(
                     cmd.command,
                     cmd.args,
-                    bool(cmd.options.get("decode"))
-                    if cmd.options.get("decode")
-                    else None,
+                    (
+                        bool(cmd.options.get("decode"))
+                        if cmd.options.get("decode")
+                        else None
+                    ),
                     None,
                 )
                 for cmd in cmds
@@ -580,9 +584,11 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
                 CommandInvocation(
                     cmd.command,
                     cmd.args,
-                    bool(cmd.options.get("decode"))
-                    if cmd.options.get("decode")
-                    else None,
+                    (
+                        bool(cmd.options.get("decode"))
+                        if cmd.options.get("decode")
+                        else None
+                    ),
                     None,
                 )
                 for cmd in commands

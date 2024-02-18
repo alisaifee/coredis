@@ -59,9 +59,7 @@ class AutoClaimCallback(
         ],
     ]
 ):
-    def transform(
-        self, response: ResponseType, **options: Optional[ValueT]
-    ) -> Union[
+    def transform(self, response: ResponseType, **options: Optional[ValueT]) -> Union[
         Tuple[AnyStr, Tuple[AnyStr, ...]],
         Tuple[AnyStr, Tuple[StreamEntry, ...], Tuple[AnyStr, ...]],
     ]:

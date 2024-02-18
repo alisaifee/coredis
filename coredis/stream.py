@@ -182,9 +182,11 @@ class Consumer(Generic[AnyStr]):
                     await self.client.xread(
                         chunk,
                         count=self.buffer_size + 1,
-                        block=self.timeout
-                        if (self.timeout and self.timeout > 0)
-                        else None,
+                        block=(
+                            self.timeout
+                            if (self.timeout and self.timeout > 0)
+                            else None
+                        ),
                     )
                     or {}
                 )
@@ -358,9 +360,11 @@ class GroupConsumer(Consumer[AnyStr]):
                         self.group,
                         self.consumer,
                         count=self.buffer_size + 1,
-                        block=self.timeout
-                        if (self.timeout and self.timeout > 0)
-                        else None,
+                        block=(
+                            self.timeout
+                            if (self.timeout and self.timeout > 0)
+                            else None
+                        ),
                         noack=self.auto_acknowledge,
                         streams=chunk,
                     )

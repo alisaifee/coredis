@@ -192,24 +192,21 @@ class TestLibrary:
                 super().__init__(client, "coredis")
 
             @Library.wraps("echo_key")
-            async def echo_key(self, key: KeyT) -> StringT:
-                ...
+            async def echo_key(self, key: KeyT) -> StringT: ...
 
             @Library.wraps("return_arg")
-            async def return_arg(self, value: ValueT) -> ValueT:
-                ...
+            async def return_arg(self, value: ValueT) -> ValueT: ...
 
             @Library.wraps("default_get")
-            async def default_get(self, key: KeyT, value: ValueT) -> ValueT:
-                ...
+            async def default_get(self, key: KeyT, value: ValueT) -> ValueT: ...
 
             @Library.wraps("default_get", key_spec=["quay"])
-            async def default_get_variadic(self, quay: str, *values: ValueT) -> ValueT:
-                ...
+            async def default_get_variadic(
+                self, quay: str, *values: ValueT
+            ) -> ValueT: ...
 
             @Library.wraps("hmmerge")
-            async def hmmerge(self, key: KeyT, **values: ValueT) -> List[ValueT]:
-                ...
+            async def hmmerge(self, key: KeyT, **values: ValueT) -> List[ValueT]: ...
 
         lib = await Coredis(client)
         assert await lib.echo_key("bar") == _s("bar")
@@ -237,8 +234,7 @@ class TestLibrary:
                 super().__init__(client, "coredis")
 
             @Library.wraps("echo_key")
-            async def echo_key(self, key: KeyT) -> StringT:
-                ...
+            async def echo_key(self, key: KeyT) -> StringT: ...
 
             @Library.wraps("return_arg")
             async def return_arg(self, value: ValueT) -> ValueT:
@@ -265,20 +261,16 @@ class TestLibrary:
                 super().__init__(client, "coredis")
 
             @Library.wraps("echo_key", readonly=False)
-            async def echo_key(self, key: KeyT) -> StringT:
-                ...
+            async def echo_key(self, key: KeyT) -> StringT: ...
 
             @Library.wraps("echo_key", readonly=True)
-            async def echo_key_ro(self, key: KeyT) -> StringT:
-                ...
+            async def echo_key_ro(self, key: KeyT) -> StringT: ...
 
             @Library.wraps("return_arg", readonly=False)
-            async def return_arg(self, value: ValueT) -> ValueT:
-                ...
+            async def return_arg(self, value: ValueT) -> ValueT: ...
 
             @Library.wraps("return_arg", readonly=True)
-            async def return_arg_ro(self, value: ValueT) -> ValueT:
-                ...
+            async def return_arg_ro(self, value: ValueT) -> ValueT: ...
 
         fcall = mocker.spy(client, "fcall")
         fcall_ro = mocker.spy(client, "fcall_ro")

@@ -79,9 +79,9 @@ class Library(Generic[AnyStr]):
          an exception will be raised if the library was already loaded in the target
          redis instance.
         """
-        self._client: weakref.ReferenceType[
-            coredis.client.Client[AnyStr]
-        ] = weakref.ref(client)
+        self._client: weakref.ReferenceType[coredis.client.Client[AnyStr]] = (
+            weakref.ref(client)
+        )
         self.name = nativestr(name or self.NAME)
         self.code = (code or self.CODE or "").lstrip()
         self._functions: EncodingInsensitiveDict = EncodingInsensitiveDict()
@@ -284,16 +284,20 @@ class Library(Generic[AnyStr]):
                 else [n for n, p in sig.parameters.items() if param_is_key(p)]
             )
             arg_fetch: Dict[str, Callable[..., Parameters[Any]]] = {
-                n: (lambda v: [v])
-                if p.kind
-                in {
-                    inspect.Parameter.POSITIONAL_ONLY,
-                    inspect.Parameter.KEYWORD_ONLY,
-                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                }
-                else (lambda v: list(itertools.chain.from_iterable(v.items())))
-                if p.kind == inspect.Parameter.VAR_KEYWORD
-                else lambda v: list(v)
+                n: (
+                    (lambda v: [v])
+                    if p.kind
+                    in {
+                        inspect.Parameter.POSITIONAL_ONLY,
+                        inspect.Parameter.KEYWORD_ONLY,
+                        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    }
+                    else (
+                        (lambda v: list(itertools.chain.from_iterable(v.items())))
+                        if p.kind == inspect.Parameter.VAR_KEYWORD
+                        else lambda v: list(v)
+                    )
+                )
                 for n, p in sig.parameters.items()
             }
 
@@ -365,9 +369,9 @@ class Function(Generic[AnyStr]):
             func = await Function(client, "mylib", "myfunc")
             response = await func(keys=["a"], args=[1])
         """
-        self._client: weakref.ReferenceType[
-            coredis.client.Client[AnyStr]
-        ] = weakref.ref(client)
+        self._client: weakref.ReferenceType[coredis.client.Client[AnyStr]] = (
+            weakref.ref(client)
+        )
         self.library: Library[AnyStr] = Library[AnyStr](client, library_name)
         self.name = name
         self.readonly = readonly

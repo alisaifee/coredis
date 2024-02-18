@@ -733,9 +733,11 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
             if self.channel_connection_mapping[channel] == connection:
                 await self.subscribe(
                     **{
-                        channel.decode(self.encoding)
-                        if isinstance(channel, bytes)
-                        else channel: handler
+                        (
+                            channel.decode(self.encoding)
+                            if isinstance(channel, bytes)
+                            else channel
+                        ): handler
                     }
                 )
 

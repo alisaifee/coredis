@@ -33,9 +33,11 @@ class GeoSearchCallback(
                     result.pop(0),
                     float(result.pop(0)) if options.get("withdist") else None,
                     result.pop(0) if options.get("withhash") else None,
-                    GeoCoordinates(*map(float, result.pop(0)))
-                    if options.get("withcoord")
-                    else None,
+                    (
+                        GeoCoordinates(*map(float, result.pop(0)))
+                        if options.get("withcoord")
+                        else None
+                    ),
                 )
             )
 

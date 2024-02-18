@@ -204,8 +204,7 @@ class RedisCluster(
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         **kwargs: Any,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
     def __init__(
@@ -242,8 +241,7 @@ class RedisCluster(
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         **kwargs: Any,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     def __init__(
         self,
@@ -489,17 +487,17 @@ class RedisCluster(
         self.refresh_table_asap: bool = False
         self.route_flags: Dict[bytes, NodeFlag] = self.__class__.ROUTING_FLAGS.copy()
         self.split_flags: Dict[bytes, NodeFlag] = self.__class__.SPLIT_FLAGS.copy()
-        self.result_callbacks: Dict[
-            bytes, Callable[..., Any]
-        ] = self.__class__.RESULT_CALLBACKS.copy()
+        self.result_callbacks: Dict[bytes, Callable[..., Any]] = (
+            self.__class__.RESULT_CALLBACKS.copy()
+        )
         self.non_atomic_cross_slot = non_atomic_cross_slot
         self.cache = cache
-        self._decodecontext: contextvars.ContextVar[
-            Optional[bool],
-        ] = contextvars.ContextVar("decode", default=None)
-        self._encodingcontext: contextvars.ContextVar[
-            Optional[str],
-        ] = contextvars.ContextVar("decode", default=None)
+        self._decodecontext: contextvars.ContextVar[Optional[bool],] = (
+            contextvars.ContextVar("decode", default=None)
+        )
+        self._encodingcontext: contextvars.ContextVar[Optional[str],] = (
+            contextvars.ContextVar("decode", default=None)
+        )
 
     @classmethod
     @overload
@@ -517,8 +515,7 @@ class RedisCluster(
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         **kwargs: Any,
-    ) -> RedisClusterBytesT:
-        ...
+    ) -> RedisClusterBytesT: ...
 
     @classmethod
     @overload
@@ -536,8 +533,7 @@ class RedisCluster(
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         **kwargs: Any,
-    ) -> RedisClusterStringT:
-        ...
+    ) -> RedisClusterStringT: ...
 
     @classmethod
     def from_url(
@@ -786,15 +782,15 @@ class RedisCluster(
             node_name_map = {n.name: n for n in nodes}
             for node_name in node_arg_mapping:
                 for portion, pargs in enumerate(node_arg_mapping[node_name]):
-                    tasks[
-                        f"{node_name}:{portion}"
-                    ] = self._execute_command_on_single_node(
-                        command,
-                        *pargs,
-                        callback=callback,
-                        node=node_name_map[node_name],
-                        slots=None,
-                        **kwargs,
+                    tasks[f"{node_name}:{portion}"] = (
+                        self._execute_command_on_single_node(
+                            command,
+                            *pargs,
+                            callback=callback,
+                            node=node_name_map[node_name],
+                            slots=None,
+                            **kwargs,
+                        )
                     )
 
             results = await asyncio.gather(*tasks.values(), return_exceptions=True)
@@ -974,14 +970,12 @@ class RedisCluster(
     @overload
     def decoding(
         self, mode: Literal[False], encoding: Optional[str] = None
-    ) -> ContextManager[RedisCluster[bytes]]:
-        ...
+    ) -> ContextManager[RedisCluster[bytes]]: ...
 
     @overload
     def decoding(
         self, mode: Literal[True], encoding: Optional[str] = None
-    ) -> ContextManager[RedisCluster[str]]:
-        ...
+    ) -> ContextManager[RedisCluster[str]]: ...
 
     @contextlib.contextmanager
     @versionadded(version="4.8.0")

@@ -106,9 +106,7 @@ class TimeSeriesMultiCallback(
         ],
     ]
 ):
-    def transform(
-        self, response: ResponseType, **options: Optional[ValueT]
-    ) -> Dict[
+    def transform(self, response: ResponseType, **options: Optional[ValueT]) -> Dict[
         AnyStr,
         Tuple[Dict[AnyStr, AnyStr], Union[Tuple[Tuple[int, float], ...], Tuple[()]]],
     ]:
@@ -129,9 +127,7 @@ class TimeSeriesMultiCallback(
                 for r in cast(Any, response)
             }
 
-    def transform_3(
-        self, response: ResponseType, **options: Optional[ValueT]
-    ) -> Dict[
+    def transform_3(self, response: ResponseType, **options: Optional[ValueT]) -> Dict[
         AnyStr,
         Tuple[Dict[AnyStr, AnyStr], Union[Tuple[Tuple[int, float], ...], Tuple[()]]],
     ]:

@@ -92,11 +92,13 @@ async def check_version(
             and server_version >= command_details.version_deprecated
         ):
             warnings.warn(
-                deprecation_reason.strip()
-                if deprecation_reason
-                else (
-                    f"{function_name}() is deprecated since redis version "
-                    "{command_details.version_deprecated}."
+                (
+                    deprecation_reason.strip()
+                    if deprecation_reason
+                    else (
+                        f"{function_name}() is deprecated since redis version "
+                        "{command_details.version_deprecated}."
+                    )
                 ),
                 category=DeprecationWarning,
                 stacklevel=3,

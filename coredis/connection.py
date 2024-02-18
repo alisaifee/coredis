@@ -127,9 +127,9 @@ class RedisSSLContext:
             if self.ca_certs:
                 self.context.load_verify_locations(
                     **{
-                        "capath"
-                        if os.path.isdir(self.ca_certs)
-                        else "cafile": self.ca_certs
+                        (
+                            "capath" if os.path.isdir(self.ca_certs) else "cafile"
+                        ): self.ca_certs
                     }
                 )
         assert self.context
@@ -176,9 +176,9 @@ class BaseConnection(asyncio.BaseProtocol):
         self.password: Optional[str] = ""
         self.db: Optional[int] = None
         self.pid: int = os.getpid()
-        self._description_args: Callable[
-            ..., Dict[str, Optional[Union[str, int]]]
-        ] = lambda: dict()
+        self._description_args: Callable[..., Dict[str, Optional[Union[str, int]]]] = (
+            lambda: dict()
+        )
         self._connect_callbacks: List[
             Union[
                 Callable[[BaseConnection], Awaitable[None]],
@@ -762,13 +762,13 @@ class Connection(BaseConnection):
         self.db: Optional[int] = db
         self.ssl_context = ssl_context
         self._connect_timeout = connect_timeout
-        self._description_args: Callable[
-            ..., Dict[str, Optional[Union[str, int]]]
-        ] = lambda: {
-            "host": self.host,
-            "port": self.port,
-            "db": self.db,
-        }
+        self._description_args: Callable[..., Dict[str, Optional[Union[str, int]]]] = (
+            lambda: {
+                "host": self.host,
+                "port": self.port,
+                "db": self.db,
+            }
+        )
         self.socket_keepalive = socket_keepalive
         self.socket_keepalive_options: Dict[int, Union[int, bytes]] = (
             socket_keepalive_options or {}

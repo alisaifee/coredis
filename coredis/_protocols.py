@@ -31,8 +31,7 @@ class AbstractExecutor(Protocol):
         *args: ValueT,
         callback: Callable[..., R] = ...,
         **options: Optional[ValueT],
-    ) -> R:
-        ...
+    ) -> R: ...
 
 
 @runtime_checkable
@@ -41,8 +40,7 @@ class SupportsPipeline(Protocol):  # noqa
         self,
         transaction: Optional[bool] = True,
         watches: Optional[Parameters[StringT]] = None,
-    ) -> SupportsWatch:
-        ...
+    ) -> SupportsWatch: ...
 
 
 @runtime_checkable
@@ -52,39 +50,32 @@ class SupportsScript(Protocol[T_co]):  # noqa
         sha1: StringT,
         keys: Optional[Parameters[KeyT]] = ...,
         args: Optional[Parameters[ValueT]] = ...,
-    ) -> ResponseType:
-        ...
+    ) -> ResponseType: ...
 
     async def evalsha_ro(
         self,
         sha1: StringT,
         keys: Optional[Parameters[KeyT]] = ...,
         args: Optional[Parameters[ValueT]] = ...,
-    ) -> ResponseType:
-        ...
+    ) -> ResponseType: ...
 
-    async def script_load(self, script: StringT) -> T_co:
-        ...
+    async def script_load(self, script: StringT) -> T_co: ...
 
 
 @runtime_checkable
 class SupportsWatch(Protocol):  # noqa
-    async def __aenter__(self) -> SupportsWatch:
-        ...
+    async def __aenter__(self) -> SupportsWatch: ...
 
     async def __aexit__(
         self,
         exc_type: Optional[Type[BaseException]],
         exc_value: Optional[BaseException],
         traceback: Optional[TracebackType],
-    ) -> Awaitable[Optional[bool]]:
-        ...
+    ) -> Awaitable[Optional[bool]]: ...
 
-    async def watch(self, *keys: KeyT) -> bool:
-        ...
+    async def watch(self, *keys: KeyT) -> bool: ...
 
-    async def execute(self, raise_on_error: bool = True) -> Tuple[object, ...]:
-        ...
+    async def execute(self, raise_on_error: bool = True) -> Tuple[object, ...]: ...
 
 
 @runtime_checkable
