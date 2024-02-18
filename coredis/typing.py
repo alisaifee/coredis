@@ -54,7 +54,7 @@ _runtime_checks = False
 _beartype_found = False
 
 try:
-    import beartype  # pyright: reportUnusedImport=false
+    import beartype
 
     if not TYPE_CHECKING:
         from beartype.typing import (  # noqa: F811

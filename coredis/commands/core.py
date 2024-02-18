@@ -2818,13 +2818,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Create a key using the provided serialized value, previously obtained using DUMP.
         """
+
         params: CommandArgList = [
             key,
             (
                 normalized_milliseconds(ttl)  # type: ignore
                 if not absttl
-                else normalized_time_milliseconds(ttl)
-            ),  # type: ignore
+                else normalized_time_milliseconds(ttl)  # type: ignore
+            ),
             serialized_value,
         ]
 

@@ -51,7 +51,7 @@ ignore_missing_imports = true
 [tool.ruff]
 line-length=100
 exclude = ["doc/**","_version.py","versioneer.py", "coredis/pipeline.pyi", "coredis/speedups.pyi"]
-typing-modules = ["coredis.typing"]
+lint.typing-modules = ["coredis.typing"]
 
 [tool.versioneer]
 VCS = "git"

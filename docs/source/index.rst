@@ -81,11 +81,6 @@ Feature Summary
 * Miscellaneous
 
   * "Pretty complete" :ref:`handbook/typing:type annotations` for public API
-
-    .. command-output:: PYTHONPATH=$(pwd) pyright --verifytypes=coredis 2>&1 | grep completeness
-       :shell:
-       :cwd: ../../
-
   * :ref:`handbook/typing:runtime type checking`
 
 Installation

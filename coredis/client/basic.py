@@ -980,7 +980,7 @@ class Redis(Client[AnyStr]):
             if isinstance(callback, AsyncPreProcessingCallback):
                 await callback.pre_process(
                     self, reply, version=self.protocol_version, **options
-                )  # pyright: reportGeneralTypeIssues=false
+                )
             return callback(
                 reply,
                 version=self.protocol_version,

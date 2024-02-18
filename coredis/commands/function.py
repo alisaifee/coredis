@@ -308,9 +308,7 @@ class Library(Generic[AnyStr]):
                 bound_arguments.apply_defaults()
                 arguments: Dict[str, Any] = bound_arguments.arguments
                 instance: Library[AnyStr] = arguments.pop(first_arg)
-                if not isinstance(
-                    instance, Library
-                ):  # pyright: reportUnnecessaryIsInstance=false
+                if not isinstance(instance, Library):
                     raise RuntimeError(
                         f"{instance.__class__.__name__} is not a subclass of"
                         " coredis.commands.function.Library therefore it's methods cannot be bound "
@@ -340,7 +338,7 @@ class Library(Generic[AnyStr]):
                         f"Library {instance.name} has no registered function {function_name}"
                     )
                 # TODO: atleast lie with a cast.
-                #  mypy doesn't like the cast. pyright is ok with it
+                #  mypy doesn't like the cast
                 return await func(keys, arguments, readonly=readonly)  # type: ignore
 
             return _inner

@@ -207,7 +207,7 @@ class NodeCommands:
                     if isinstance(c.callback, AsyncPreProcessingCallback):
                         await c.callback.pre_process(
                             self.client, transaction_result[idx], **c.options
-                        )  # pyright: reportGeneralTypeIssues=false
+                        )
                     c.result = c.callback(
                         transaction_result[idx],
                         version=connection.protocol_version,
@@ -565,9 +565,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         for r, cmd in zip(response, commands):
             if not isinstance(r, Exception):
                 if isinstance(cmd.callback, AsyncPreProcessingCallback):
-                    await cmd.callback.pre_process(
-                        self.client, r, **cmd.options
-                    )  # pyright: reportGeneralTypeIssues=false
+                    await cmd.callback.pre_process(self.client, r, **cmd.options)
                 r = cmd.callback(r, version=connection.protocol_version, **cmd.options)
             data.append(r)
         return tuple(data)
@@ -604,9 +602,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
             try:
                 res = await cmd.request if cmd.request else None
                 if isinstance(cmd.callback, AsyncPreProcessingCallback):
-                    await cmd.callback.pre_process(
-                        self.client, res, **cmd.options
-                    )  # pyright: reportGeneralTypeIssues=false
+                    await cmd.callback.pre_process(self.client, res, **cmd.options)
                 response.append(
                     cmd.callback(
                         res,
@@ -1068,9 +1064,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
             r = c.result
             if not isinstance(c.result, RedisError):
                 if isinstance(c.callback, AsyncPreProcessingCallback):
-                    await c.callback.pre_process(
-                        self.client, c.result, **c.options
-                    )  # pyright: reportGeneralTypeIssues=false
+                    await c.callback.pre_process(self.client, c.result, **c.options)
                 r = c.callback(c.result, version=protocol_version, **c.options)
             response.append(r)
 

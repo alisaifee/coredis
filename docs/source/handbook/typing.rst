@@ -4,7 +4,7 @@ Typing
 Type Annotations
 ^^^^^^^^^^^^^^^^
 **coredis** provides type annotations for the public API. These are tested using
-both :pypi:`mypy` and :pypi:`pyright`.
+:pypi:`mypy`.
 
 The :class:`~coredis.Redis` and :class:`~coredis.RedisCluster` clients are Generic types constrained
 by :class:`AnyStr`. The constructors and :meth:`~coredis.Redis.from_url` factory methods infer

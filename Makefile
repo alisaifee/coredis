@@ -1,7 +1,6 @@
 lint:
 	black --check coredis tests
 	ruff coredis tests
-	pyright coredis
 	mypy coredis
 
 lint-fix:

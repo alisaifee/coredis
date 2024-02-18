@@ -932,7 +932,7 @@ class RedisCluster(
                     if isinstance(callback, AsyncPreProcessingCallback):
                         await callback.pre_process(
                             self, reply, version=self.protocol_version, **kwargs
-                        )  # pyright: reportGeneralTypeIssues=false
+                        )
                     response = callback(
                         reply,
                         version=self.protocol_version,

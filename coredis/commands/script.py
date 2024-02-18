@@ -297,7 +297,7 @@ class Script(Generic[AnyStr]):
             ) -> R:
                 keys, arguments, client = split_args(sig.bind(*args, **kwargs))
                 # TODO: atleast lie with a cast.
-                #  mypy doesn't like the cast. pyright is ok with it
+                #  mypy doesn't like the cast
                 return await script_instance(keys, arguments, client, readonly)  # type: ignore
 
             return __inner
