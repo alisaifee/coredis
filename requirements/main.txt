@@ -1,6 +1,6 @@
 async_timeout>4,<5
 deprecated>=1.2
 typing_extensions>=4.3
-packaging>=21,<24
+packaging>=21,<25
 pympler>1,<2
 wrapt>=1.1.0,<2
