@@ -154,6 +154,14 @@ class LockError(RedisError, ValueError):
     # This was originally chosen to behave like threading.Lock.
 
 
+class LockReleaseError(LockError):
+    """Errors releasing a lock"""
+
+
+class LockExtensionError(LockError):
+    """Errors extending a lock"""
+
+
 class RedisClusterException(Exception):
     """Base exception for the RedisCluster client"""
 
@@ -316,6 +324,7 @@ class UnknownCommandError(ResponseError):
 
     def __init__(self, message: str) -> None:
         command_match = self.ERROR_REGEX.findall(message)
+
         if command_match:
             self.command = command_match.pop()
         super().__init__(message)

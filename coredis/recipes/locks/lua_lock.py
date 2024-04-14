@@ -12,7 +12,12 @@ from typing import cast
 
 from coredis.client import Redis, RedisCluster
 from coredis.commands import Script
-from coredis.exceptions import LockError, ReplicationError
+from coredis.exceptions import (
+    LockError,
+    LockExtensionError,
+    LockReleaseError,
+    ReplicationError,
+)
 from coredis.tokens import PureToken
 from coredis.typing import AnyStr, Generic, KeyT, Optional, StringT, Type, Union
 
@@ -121,6 +126,7 @@ class LuaLock(Generic[AnyStr]):
         self.blocking = blocking
         self.blocking_timeout = blocking_timeout
         self.local = contextvars.ContextVar[Optional[StringT]]("token", default=None)
+
         if self.timeout and self.sleep > self.timeout:
             raise LockError("'sleep' must be less than 'timeout'")
 
@@ -155,14 +161,19 @@ class LuaLock(Generic[AnyStr]):
         blocking = self.blocking
         blocking_timeout = self.blocking_timeout
         stop_trying_at = None
+
         if blocking_timeout is not None:
             stop_trying_at = time.time() + blocking_timeout
+
         while True:
             if await self.__acquire(token, stop_trying_at):
                 self.local.set(token)
+
                 return True
+
             if not blocking:
                 return False
+
             if stop_trying_at is not None and time.time() > stop_trying_at:
                 return False
             await asyncio.sleep(self.sleep)
@@ -174,6 +185,7 @@ class LuaLock(Generic[AnyStr]):
         :raises: :exc:`~coredis.exceptions.LockError`
         """
         expected_token = self.local.get()
+
         if expected_token is None:
             raise LockError("Cannot release an unlocked lock")
         self.local.set(None)
@@ -188,10 +200,13 @@ class LuaLock(Generic[AnyStr]):
 
         :raises: :exc:`~coredis.exceptions.LockError`
         """
+
         if self.local.get() is None:
-            raise LockError("Cannot extend an unlocked lock")
+            raise LockExtensionError("Cannot extend an unlocked lock")
+
         if self.timeout is None:
-            raise LockError("Cannot extend a lock with no timeout")
+            raise LockExtensionError("Cannot extend a lock with no timeout")
+
         return await self.__extend(additional_time)
 
     @property
@@ -200,8 +215,10 @@ class LuaLock(Generic[AnyStr]):
         Number of replicas the lock needs to replicate to, to be
         considered acquired.
         """
+
         if isinstance(self.client, RedisCluster):
             return math.ceil(self.client.num_replicas_per_shard / 2)
+
         return 0
 
     async def __acquire(self, token: StringT, stop_trying_at: Optional[float]) -> bool:
@@ -228,6 +245,7 @@ class LuaLock(Generic[AnyStr]):
                     category=RuntimeWarning,
                 )
                 await self.client.delete([self.name])
+
                 return False
         else:
             return await self.client.set(
@@ -245,12 +263,14 @@ class LuaLock(Generic[AnyStr]):
                 expected_token,
             )
         ):
-            raise LockError("Cannot release a lock that's no longer owned")
+            raise LockReleaseError("Cannot release a lock that's no longer owned")
 
     async def __extend(self, additional_time: float) -> bool:
         additional_time = int(additional_time * 1000)
+
         if additional_time < 0:
             return True
+
         if not bool(
             await self.lua_extend(
                 self.client,
@@ -259,5 +279,6 @@ class LuaLock(Generic[AnyStr]):
                 additional_time,
             )
         ):
-            raise LockError("Cannot extend a lock that's no longer owned")
+            raise LockExtensionError("Cannot extend a lock that's no longer owned")
+
         return True
