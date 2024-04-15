@@ -383,7 +383,7 @@ class TestPipeline:
 
     @pytest.mark.nodragonfly
     async def test_pipeline_timeout(self, client):
-        await client.hset("hash", {i: i for i in range(4096)})
+        await client.hset("hash", {str(i): i for i in range(4096)})
         await client.ping()
         pipeline = await client.pipeline(timeout=0.01)
         for i in range(20):
