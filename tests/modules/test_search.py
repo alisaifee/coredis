@@ -406,7 +406,7 @@ class TestSearch:
         results = await client.search.search(
             index_name,
             "*",
-            numeric_filters={"population": [35000000, "+inf"]},
+            numeric_filters={"population": (35000000, "+inf")},
             returns={"name": None},
         )
         assert results.total == 1
