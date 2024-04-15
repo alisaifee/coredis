@@ -7118,7 +7118,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.LATENCY_HISTORY,
         group=CommandGroup.SERVER,
     )
-    async def latency_history(self, event: StringT) -> Tuple[AnyStr, ...]:
+    async def latency_history(self, event: StringT) -> Tuple[List[int], ...]:
         """
         Return timestamp-latency samples for the event.
 
@@ -7131,7 +7131,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return await self.execute_command(
             CommandName.LATENCY_HISTORY,
             *command_arguments,
-            callback=TupleCallback[AnyStr](),
+            callback=TupleCallback[List[int]](),
         )
 
     @versionadded(version="3.0.0")
