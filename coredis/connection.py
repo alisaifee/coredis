@@ -455,8 +455,7 @@ class BaseConnection(asyncio.BaseProtocol):
                 resp = cast(List[ValueT], hello_resp)
                 self.server_version = nativestr(resp[3])
                 self.client_id = int(resp[7])
-            # TODO: change this to 7.2 once it is officially released?
-            if self.server_version > "7.1":
+            if self.server_version >= "7.2":
                 await asyncio.gather(
                     await self.create_request(
                         b"CLIENT SETINFO",
