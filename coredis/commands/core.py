@@ -7561,7 +7561,9 @@ class CoreCommands(CommandMixin[AnyStr]):
             route=NodeFlag.RANDOM,
         ),
     )
-    async def acl_getuser(self, username: StringT) -> Dict[AnyStr, List[AnyStr]]:
+    async def acl_getuser(
+        self, username: StringT
+    ) -> Dict[AnyStr, Union[List[AnyStr], Set[AnyStr]]]:
         """
         Get the rules for a specific ACL user
         """
@@ -7569,7 +7571,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return await self.execute_command(
             CommandName.ACL_GETUSER,
             username,
-            callback=DictCallback[AnyStr, List[AnyStr]](),
+            callback=DictCallback[AnyStr, Union[List[AnyStr], Set[AnyStr]]](),
         )
 
     @versionadded(version="3.0.0")
