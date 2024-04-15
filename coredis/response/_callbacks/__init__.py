@@ -116,7 +116,10 @@ class NoopCallback(ResponseCallback[R, R, R]):
 
 class ClusterMultiNodeCallback(ABC, Generic[R], metaclass=ClusterCallbackMeta):
     def __call__(
-        self, responses: Mapping[str, R], version: int = 2, **kwargs: Optional[ValueT]
+        self,
+        responses: Mapping[str, Union[R, ResponseError]],
+        version: int = 2,
+        **kwargs: Optional[ValueT],
     ) -> R:
         if version == 3:
             return self.combine_3(responses, **kwargs)
@@ -225,7 +228,11 @@ class ClusterMergeSets(ClusterMultiNodeCallback[Set[R]]):
 
 
 class ClusterSum(ClusterMultiNodeCallback[int]):
-    def combine(self, responses: Mapping[str, int], **kwargs: Optional[ValueT]) -> int:
+    def combine(
+        self,
+        responses: Mapping[str, Union[int, ResponseError]],
+        **kwargs: Optional[ValueT],
+    ) -> int:
         self.raise_any(responses.values())
         return sum(responses.values())
 
