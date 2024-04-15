@@ -575,7 +575,7 @@ class TestGeneric:
         await client.sadd("a", ["1"])
         assert await client.type("a") == _s("set")
         await client.delete(["a"])
-        await client.zadd("a", {"1": "1"})
+        await client.zadd("a", {"1": 1})
         assert await client.type("a") == _s("zset")
 
     async def test_touch(self, client, _s):
