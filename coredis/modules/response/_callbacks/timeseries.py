@@ -79,12 +79,12 @@ class TimeSeriesCallback(
     ResponseCallback[
         ResponseType,
         ResponseType,
-        Dict[AnyStr, Tuple[Dict[AnyStr, AnyStr], Tuple[int, float]]],
+        Dict[AnyStr, Tuple[Dict[AnyStr, AnyStr], Union[Tuple[int, float], Tuple[()]]]],
     ]
 ):
     def transform(
         self, response: ResponseType, **options: Optional[ValueT]
-    ) -> Dict[AnyStr, Tuple[Dict[AnyStr, AnyStr], Tuple[int, float]]]:
+    ) -> Dict[AnyStr, Tuple[Dict[AnyStr, AnyStr], Union[Tuple[int, float], Tuple[()]]]]:
         if isinstance(response, dict):
             return {k: (v[0], tuple(v[1])) for k, v in response.items()}
         else:

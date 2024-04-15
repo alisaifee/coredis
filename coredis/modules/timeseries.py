@@ -1029,7 +1029,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         withlabels: Optional[bool] = None,
         selected_labels: Optional[Parameters[StringT]] = None,
         latest: Optional[bool] = None,
-    ) -> Dict[AnyStr, Tuple[Dict[AnyStr, AnyStr], Tuple[int, float]]]:
+    ) -> Dict[AnyStr, Tuple[Dict[AnyStr, AnyStr], Union[Tuple[int, float], Tuple[()]]]]:
         """
         Get the sample with the highest timestamp from each time series matching a specific filter.
 
