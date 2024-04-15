@@ -4053,7 +4053,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def zadd(
         self,
         key: KeyT,
-        member_scores: Mapping[StringT, float],
+        member_scores: Mapping[StringT, Union[int, float]],
         condition: Optional[Literal[PureToken.NX, PureToken.XX]] = None,
         comparison: Optional[Literal[PureToken.GT, PureToken.LT]] = None,
         change: Optional[bool] = None,

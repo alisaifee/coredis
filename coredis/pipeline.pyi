@@ -420,7 +420,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def zadd(
         self,
         key: "KeyT",
-        member_scores: "Mapping[StringT, float]",
+        member_scores: "Mapping[StringT, Union[int, float]]",
         condition: "Optional[Literal[PureToken.NX, PureToken.XX]]" = ...,
         comparison: "Optional[Literal[PureToken.GT, PureToken.LT]]" = ...,
         change: "Optional[bool]" = ...,
@@ -1520,7 +1520,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def zadd(
         self,
         key: "KeyT",
-        member_scores: "Mapping[StringT, float]",
+        member_scores: "Mapping[StringT, Union[int, float]]",
         condition: "Optional[Literal[PureToken.NX, PureToken.XX]]" = ...,
         comparison: "Optional[Literal[PureToken.GT, PureToken.LT]]" = ...,
         change: "Optional[bool]" = ...,
