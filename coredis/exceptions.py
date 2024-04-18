@@ -154,6 +154,10 @@ class LockError(RedisError, ValueError):
     # This was originally chosen to behave like threading.Lock.
 
 
+class LockAcquisitionError(LockError):
+    """Errors acquiring a lock"""
+
+
 class LockReleaseError(LockError):
     """Errors releasing a lock"""
 
