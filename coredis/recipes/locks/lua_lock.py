@@ -13,6 +13,7 @@ from typing import cast
 from coredis.client import Redis, RedisCluster
 from coredis.commands import Script
 from coredis.exceptions import (
+    LockAcquisitionError,
     LockError,
     LockExtensionError,
     LockReleaseError,
@@ -135,7 +136,7 @@ class LuaLock(Generic[AnyStr]):
     ) -> LuaLock[AnyStr]:
         if await self.acquire():
             return self
-        raise LockError("Could not acquire lock")
+        raise LockAcquisitionError("Could not acquire lock")
 
     async def __aexit__(
         self,
@@ -182,12 +183,12 @@ class LuaLock(Generic[AnyStr]):
         """
         Releases the already acquired lock
 
-        :raises: :exc:`~coredis.exceptions.LockError`
+        :raises: :exc:`~coredis.exceptions.LockReleaseError`
         """
         expected_token = self.local.get()
 
         if expected_token is None:
-            raise LockError("Cannot release an unlocked lock")
+            raise LockReleaseError("Cannot release an unlocked lock")
         self.local.set(None)
         await self.__release(expected_token)
 
@@ -198,7 +199,7 @@ class LuaLock(Generic[AnyStr]):
         :param additional_time: can be specified as an integer or a float, both
          representing the number of seconds to add.
 
-        :raises: :exc:`~coredis.exceptions.LockError`
+        :raises: :exc:`~coredis.exceptions.LockExtensionError`
         """
 
         if self.local.get() is None:

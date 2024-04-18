@@ -80,6 +80,8 @@ General Exceptions
    :no-inherited-members:
 .. autoexception:: coredis.exceptions.LockError
    :no-inherited-members:
+.. autoexception:: coredis.exceptions.LockAcquisitionError
+   :no-inherited-members:
 .. autoexception:: coredis.exceptions.LockReleaseError
    :no-inherited-members:
 .. autoexception:: coredis.exceptions.LockExtensionError
