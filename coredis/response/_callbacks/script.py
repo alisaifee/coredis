@@ -21,12 +21,12 @@ from coredis.typing import (
 
 class FunctionListCallback(
     ResponseCallback[
-        List[ResponseType], List[ResponseType], Mapping[str, LibraryDefinition]
+        List[ResponseType], List[ResponseType], Mapping[AnyStr, LibraryDefinition]
     ]
 ):
     def transform(
         self, response: List[ResponseType], **options: Optional[ValueT]
-    ) -> Mapping[str, LibraryDefinition]:
+    ) -> Mapping[AnyStr, LibraryDefinition]:
         libraries = [
             EncodingInsensitiveDict(flat_pairs_to_dict(cast(List[ValueT], library)))
             for library in response

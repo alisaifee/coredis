@@ -6363,7 +6363,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def function_list(
         self, libraryname: Optional[StringT] = None, withcode: Optional[bool] = None
-    ) -> Mapping[str, LibraryDefinition]:
+    ) -> Mapping[AnyStr, LibraryDefinition]:
         """
         List information about the functions registered under
         :paramref:`libraryname`
@@ -6379,7 +6379,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return await self.execute_command(
             CommandName.FUNCTION_LIST,
             *command_arguments,
-            callback=FunctionListCallback(),
+            callback=FunctionListCallback[AnyStr](),
         )
 
     @versionadded(version="3.1.0")
