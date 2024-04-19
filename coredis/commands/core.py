@@ -3154,7 +3154,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         timeout: Union[int, float],
         where: Literal[PureToken.LEFT, PureToken.RIGHT],
         count: Optional[int] = None,
-    ) -> Optional[List[AnyStr]]:
+    ) -> Optional[List[Union[AnyStr, List[AnyStr]]]]:
         """
         Pop elements from the first non empty list, or block until one is available
 
@@ -3174,7 +3174,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return await self.execute_command(
             CommandName.BLMPOP,
             *command_arguments,
-            callback=OptionalListCallback[AnyStr](),
+            callback=OptionalListCallback[Union[AnyStr, List[AnyStr]]](),
         )
 
     @ensure_iterable_valid("keys")
@@ -3329,7 +3329,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         keys: Parameters[KeyT],
         where: Literal[PureToken.LEFT, PureToken.RIGHT],
         count: Optional[int] = None,
-    ) -> Optional[List[AnyStr]]:
+    ) -> Optional[List[Union[AnyStr, List[AnyStr]]]]:
         """
         Pop elements from the first non empty list
 
@@ -3348,7 +3348,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return await self.execute_command(
             CommandName.LMPOP,
             *command_arguments,
-            callback=OptionalListCallback[AnyStr](),
+            callback=OptionalListCallback[Union[AnyStr, List[AnyStr]]](),
         )
 
     @overload
