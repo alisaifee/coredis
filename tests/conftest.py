@@ -1222,7 +1222,7 @@ def docker_compose_files(pytestconfig):
 def targets(*targets):
     return pytest.mark.parametrize(
         "client",
-        [pytest.param(pytest.lazy_fixture(target)) for target in targets],
+        [pytest.param(pytest.lazy_fixtures(target)) for target in targets],
     )
 
 

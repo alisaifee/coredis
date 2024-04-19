@@ -4,11 +4,11 @@ coverage
 lovely-pytest-docker
 mock
 numpy
-pytest<8
-pytest-asyncio==0.21.1
+pytest
+pytest-asyncio
 pytest-cov
 pytest-env
-pytest-lazy-fixture
+pytest-lazy-fixtures
 pytest-mock
 pytest-reverse
 redis

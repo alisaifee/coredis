@@ -33,8 +33,8 @@ async def test_no_modules(client):
 @pytest.mark.parametrize(
     "redis",
     [
-        pytest.param(pytest.lazy_fixture("fake_redis")),
-        pytest.param(pytest.lazy_fixture("fake_redis_cluster")),
+        pytest.param(pytest.lazy_fixtures("fake_redis")),
+        pytest.param(pytest.lazy_fixtures("fake_redis_cluster")),
     ],
 )
 async def test_module_load(redis):
@@ -49,8 +49,8 @@ async def test_module_load(redis):
 @pytest.mark.parametrize(
     "redis",
     [
-        pytest.param(pytest.lazy_fixture("fake_redis")),
-        pytest.param(pytest.lazy_fixture("fake_redis_cluster")),
+        pytest.param(pytest.lazy_fixtures("fake_redis")),
+        pytest.param(pytest.lazy_fixtures("fake_redis_cluster")),
     ],
 )
 async def test_module_unload(redis):
@@ -61,8 +61,8 @@ async def test_module_unload(redis):
 @pytest.mark.parametrize(
     "redis",
     [
-        pytest.param(pytest.lazy_fixture("fake_redis")),
-        pytest.param(pytest.lazy_fixture("fake_redis_cluster")),
+        pytest.param(pytest.lazy_fixtures("fake_redis")),
+        pytest.param(pytest.lazy_fixtures("fake_redis_cluster")),
     ],
 )
 async def test_module_loadex(redis):
