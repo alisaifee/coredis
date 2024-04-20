@@ -23,6 +23,7 @@ from tests.conftest import server_deprecation_warning, targets
     "redis_cluster_cached",
     "keydb",
     "dragonfly",
+    "valkey",
 )
 class TestSortedSet:
     async def test_zadd(self, client, _s):

@@ -124,6 +124,8 @@ async def get_version(client):
 
                 if "dragonfly_version" in client_info:
                     SERVER_TYPES[str(client)] = "dragonfly"
+                if "valkey" == client_info.get("server_name"):
+                    SERVER_TYPES[str(client)] = "valkey"
 
                 version_string = client_info["redis_version"]
                 REDIS_VERSIONS[str(client)] = version.parse(version_string)
@@ -204,6 +206,9 @@ async def check_test_constraints(request, client, protocol=3):
             and SERVER_TYPES.get(str(client)) == "dragonfly"
         ):
             return pytest.skip("Skipped for Dragonfly")
+
+        if marker.name == "novalkey" and SERVER_TYPES.get(str(client)) == "valkey":
+            return pytest.skip("Skipped for Valkey")
 
         if marker.name == "nopypy" and PY_IMPLEMENTATION == "PyPy":
             return pytest.skip("Skipped for PyPy")
@@ -471,6 +476,13 @@ def dragonfly_server(docker_services):
     docker_services.start("dragonfly")
     docker_services.wait_for_service("dragonfly", 6379, ping_socket)
     yield ["localhost", 11379]
+
+
+@pytest.fixture(scope="session")
+def valkey_server(docker_services):
+    docker_services.start("valkey")
+    docker_services.wait_for_service("valkey", 6379, ping_socket)
+    yield ["localhost", 12379]
 
 
 @pytest.fixture(scope="session")
@@ -1205,6 +1217,23 @@ async def dragonfly(dragonfly_server, request):
     client.connection_pool.disconnect()
 
 
+@pytest.fixture
+async def valkey(valkey_server, request):
+    client = coredis.Redis(
+        "localhost",
+        12379,
+        decode_responses=True,
+        **get_client_test_args(request),
+    )
+    await client.flushall()
+    await check_test_constraints(request, client)
+    await set_default_test_config(client, variant="valkey")
+
+    yield client
+
+    client.connection_pool.disconnect()
+
+
 @pytest.fixture(scope="session")
 def docker_services_project_name():
     return "coredis"
@@ -1327,6 +1356,12 @@ def pytest_collection_modifyitems(items):
             elif client_name.startswith("dragonfly"):
                 item.add_marker(getattr(pytest.mark, "dragonfly"))
                 tokens = client_name.replace("dragonfly_", "").split("_")
+
+                for token in tokens:
+                    item.add_marker(getattr(pytest.mark, token))
+            elif client_name.startswith("valkey"):
+                item.add_marker(getattr(pytest.mark, "valkey"))
+                tokens = client_name.replace("valkey_", "").split("_")
 
                 for token in tokens:
                     item.add_marker(getattr(pytest.mark, token))

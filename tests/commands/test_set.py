@@ -19,6 +19,7 @@ from tests.conftest import targets
     "redis_cluster_cached",
     "keydb",
     "dragonfly",
+    "valkey",
 )
 class TestSet:
     async def test_sadd(self, client, _s):

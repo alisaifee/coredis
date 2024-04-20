@@ -22,6 +22,7 @@ from tests.conftest import server_deprecation_warning, targets
     "redis_cluster_cached",
     "keydb",
     "dragonfly",
+    "valkey",
 )
 class TestList:
     async def test_blpop(self, client, _s):

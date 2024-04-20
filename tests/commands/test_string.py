@@ -24,6 +24,7 @@ from tests.conftest import server_deprecation_warning, targets
     "keydb",
     "keydb_resp2",
     "dragonfly",
+    "valkey",
 )
 class TestString:
     async def test_append(self, client, _s):

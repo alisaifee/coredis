@@ -320,3 +320,7 @@ services:
       - '11379:6379'
     ulimits:
       memlock: -1
+  valkey:
+    image: "valkey/valkey:${VALKEY_VERSION:-unstable}"
+    ports:
+      - '12379:6379'
