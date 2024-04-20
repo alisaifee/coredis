@@ -23,6 +23,7 @@ from tests.conftest import targets
     "redis_cached_resp2",
     "redis_cluster_cached",
     "keydb",
+    "valkey",
 )
 class TestGeneric:
     async def test_sort_basic(self, client, _s):
@@ -186,6 +187,7 @@ class TestGeneric:
         assert await client.get("b{foo}") is None
 
     @pytest.mark.xfail
+    @pytest.mark.novalkey
     async def test_dump_and_restore_with_ttl(self, client, _s):
         await client.set("a", "foo")
         dumped = await client.dump("a")
@@ -216,6 +218,7 @@ class TestGeneric:
         freq_now = await client.object_freq("a")
         assert freq + 1 == freq_now
 
+    @pytest.mark.novalkey
     async def test_dump_and_restore_with_idle_time(self, client, _s):
         await client.set("a", "foo")
         idle = await client.object_idletime("a")
@@ -236,6 +239,7 @@ class TestGeneric:
         assert await client.get("a") == _s("bar")
 
     @pytest.mark.nocluster
+    @pytest.mark.novalkey
     async def test_migrate_single_key_with_auth(self, client, redis_auth, _s):
         auth_connection = await redis_auth.connection_pool.get_connection()
         await client.set("a", "1")
@@ -312,6 +316,7 @@ class TestGeneric:
             )
 
     @pytest.mark.nocluster
+    @pytest.mark.novalkey
     async def test_migrate_multiple_keys_with_auth(self, client, redis_auth, _s):
         auth_connection = await redis_auth.connection_pool.get_connection()
         await client.set("a", "1")
@@ -369,6 +374,7 @@ class TestGeneric:
         assert await client.object_encoding("a") == _s("embstr")
         assert await client.object_encoding("b") == _s("listpack")
 
+    @pytest.mark.novalkey
     async def test_object_freq(self, client, _s):
         await client.set("a", "foo")
         with pytest.raises(ResponseError):
@@ -376,6 +382,7 @@ class TestGeneric:
         await client.config_set({"maxmemory-policy": "allkeys-lfu"})
         assert isinstance(await client.object_freq("a"), int)
 
+    @pytest.mark.novalkey
     async def test_object_idletime(self, client, _s):
         await client.set("a", "foo")
         assert isinstance(await client.object_idletime("a"), int)

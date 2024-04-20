@@ -17,6 +17,7 @@ from tests.conftest import server_deprecation_warning, targets
     "redis_cluster_blocking",
     "redis_cluster_raw",
     "keydb",
+    "valkey",
 )
 class TestGeo:
     async def test_geoadd(self, client, _s):

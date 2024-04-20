@@ -17,6 +17,7 @@ from tests.conftest import targets
     "redis_cluster_blocking",
     "redis_cluster_raw",
     "keydb",
+    "valkey",
 )
 class TestBitmap:
     async def test_bitcount(self, client, _s):
