@@ -84,7 +84,6 @@ class TestList:
         await client.rpush("c{foo}", ["1"])
         assert await client.brpop(["c{foo}"], timeout=1) == [_s("c{foo}"), _s("1")]
 
-    @pytest.mark.nodragonfly
     async def test_brpoplpush(self, client, _s):
         await client.rpush("a{foo}", ["1", "2"])
         await client.rpush("b{foo}", ["3", "4"])
@@ -100,7 +99,6 @@ class TestList:
             _s("4"),
         ]
 
-    @pytest.mark.nodragonfly
     async def test_brpoplpush_empty_string(self, client, _s):
         await client.rpush("a{foo}", [""])
         with server_deprecation_warning("Use :meth:`blmove`", client, "6.2"):
@@ -148,7 +146,6 @@ class TestList:
         assert await client.lpush("a", ["3", "4"]) == 4
         assert await client.lrange("a", 0, -1) == [_s("4"), _s("3"), _s("2"), _s("1")]
 
-    @pytest.mark.nodragonfly
     async def test_lpushx(self, client, _s):
         assert await client.lpushx("a", ["1"]) == 0
         assert await client.lrange("a", 0, -1) == []
@@ -217,7 +214,6 @@ class TestList:
         assert await client.rpush("a", ["3", "4"]) == 4
         assert await client.lrange("a", 0, -1) == [_s("1"), _s("2"), _s("3"), _s("4")]
 
-    @pytest.mark.nodragonfly
     async def test_rpushx(self, client, _s):
         assert await client.rpushx("a", ["b"]) == 0
         assert await client.lrange("a", 0, -1) == []
