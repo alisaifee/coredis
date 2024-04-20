@@ -148,7 +148,6 @@ class TestSet:
         )
         assert await client.smembers("c{foo}") == {_s("1"), _s("2"), _s("3")}
 
-    @pytest.mark.nodragonfly
     async def test_sscan(self, client, _s):
         await client.sadd("a", ["1", "2", "3"])
         cursor, members = await client.sscan("a", count=10)
@@ -157,7 +156,6 @@ class TestSet:
         _, members = await client.sscan("a", match="1")
         assert set(members) == {_s("1")}
 
-    @pytest.mark.nodragonfly
     async def test_sscan_iter(self, client, _s):
         await client.sadd("a", ["1", "2", "3"])
         members = set()
