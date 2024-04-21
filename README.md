@@ -171,6 +171,8 @@ coredis is additionally tested against:
 
 - [KeyDB](https://docs.keydb.dev/)
 - [Dragonfly](https://dragonflydb.io/)
+- [Redict](https://redict.io/)
+- [Valkey](https://github.com/valkey-io/valkey)
 
 ## References
 
