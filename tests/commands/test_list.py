@@ -23,6 +23,7 @@ from tests.conftest import server_deprecation_warning, targets
     "keydb",
     "dragonfly",
     "valkey",
+    "redict",
 )
 class TestList:
     async def test_blpop(self, client, _s):

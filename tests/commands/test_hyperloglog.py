@@ -16,6 +16,7 @@ from tests.conftest import targets
     "redis_cluster_raw",
     "keydb",
     "valkey",
+    "redict",
 )
 class TestHyperLogLog:
     async def test_pfadd(self, client, _s):

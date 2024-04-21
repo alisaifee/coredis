@@ -24,6 +24,7 @@ from tests.conftest import server_deprecation_warning, targets
     "keydb",
     "dragonfly",
     "valkey",
+    "redict",
 )
 class TestSortedSet:
     async def test_zadd(self, client, _s):

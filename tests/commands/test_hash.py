@@ -20,6 +20,7 @@ from tests.conftest import server_deprecation_warning, targets
     "keydb",
     "dragonfly",
     "valkey",
+    "redict",
 )
 class TestHash:
     async def test_hget_and_hset(self, client, _s):

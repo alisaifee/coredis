@@ -24,6 +24,7 @@ async def teardown(client):
     "redis_cluster_raw",
     "keydb",
     "valkey",
+    "redict",
 )
 @pytest.mark.min_server_version("6.0.0")
 class TestACL:
