@@ -20,6 +20,7 @@ from tests.conftest import targets
     "keydb",
     "dragonfly",
     "valkey",
+    "redict",
 )
 class TestSet:
     async def test_sadd(self, client, _s):

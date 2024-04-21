@@ -63,7 +63,7 @@ jobs:
       matrix:
         python-version: [3.8, 3.9, "3.10", "3.11", "3.12"]
         redis-version: ["6.2", "7.0", "7.2", "latest"]
-        test_params: ["-m '(not (keydb or dragonfly or valkey))'"]
+        test_params: ["-m '(not (keydb or dragonfly or valkey or redict))'"]
         orjson: ["False"]
         uvloop: ["True", "False"]
         runtime_type_checks: ["True"]
@@ -72,24 +72,24 @@ jobs:
         include:
           - python-version: "3.11"
             redis-version: next
-            test_params: "-m '(not (keydb or dragonfly or valkey))'"
+            test_params: "-m '(not (keydb or dragonfly or valkey or redict))'"
             runtime_type_checks: "True"
             label: ""
           - python-version: "3.11"
             redis-version: latest
-            test_params: "-m '(not (keydb or dragonfly or valkey))'"
+            test_params: "-m '(not (keydb or dragonfly or valkey or redict))'"
             extensions: "False"
             runtime_type_checks: "True"
             label: ""
           - python-version: "3.11"
             redis-version: latest
-            test_params: "-m '(not (keydb or dragonfly or valkey))'"
+            test_params: "-m '(not (keydb or dragonfly or valkey or redict))'"
             runtime_type_checks: "True"
             orjson: "True"
             label: ""
           - python-version: "3.11"
             redis-version: 7.0
-            test_params: "-m '(not (keydb or dragonfly or valkey))'"
+            test_params: "-m '(not (keydb or dragonfly or valkey or redict))'"
             runtime_type_checks: "False"
             label: ""
           - python-version: "3.11"
@@ -105,16 +105,20 @@ jobs:
             redis-version: 7.0
             test_params: "-m valkey"
             label: "Valkey"
+          - python-version: "3.11"
+            redis-version: 7.0
+            test_params: "-m redict"
+            label: "Redict"
           - python-version: "pypy-3.8"
             redis-version: 7.0
-            test_params: "-m '(not (keydb or dragonfly or valkey))' tests/commands tests/test_tracking_cache.py"
+            test_params: "-m '(not (keydb or dragonfly or valkey or redict))' tests/commands tests/test_tracking_cache.py"
             runtime_type_checks: "False"
             extensions: "False"
             uvloop: "False"
             label: ""
           - python-version: "pypy-3.9"
             redis-version: 7.0
-            test_params: "-m '(not (keydb or dragonfly or valkey))' tests/commands tests/test_tracking_cache.py"
+            test_params: "-m '(not (keydb or dragonfly or valkey or redict))' tests/commands tests/test_tracking_cache.py"
             runtime_type_checks: "False"
             extensions: "False"
             uvloop: "False"

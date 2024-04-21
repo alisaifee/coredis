@@ -324,3 +324,7 @@ services:
     image: "valkey/valkey:${VALKEY_VERSION:-unstable}"
     ports:
       - '12379:6379'
+  redict:
+    image: "registry.redict.io/redict:${REDICT_VERSION:-latest}"
+    ports:
+      - '13379:6379'
