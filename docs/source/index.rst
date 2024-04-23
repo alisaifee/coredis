@@ -176,6 +176,7 @@ Supported python versions
 - 3.9
 - 3.10
 - 3.11
+- 3.12
 - PyPy 3.8
 - PyPy 3.9
 
