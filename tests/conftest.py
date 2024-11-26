@@ -11,6 +11,7 @@ from functools import total_ordering
 import pytest
 import redis
 from packaging import version
+from pytest_lazy_fixtures import lf
 
 import coredis
 import coredis.connection
@@ -1280,7 +1281,7 @@ def docker_compose_files(pytestconfig):
 def targets(*targets):
     return pytest.mark.parametrize(
         "client",
-        [pytest.param(pytest.lazy_fixtures(target)) for target in targets],
+        [pytest.param(lf(target)) for target in targets],
     )
 
 
