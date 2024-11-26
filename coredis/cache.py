@@ -18,6 +18,7 @@ from coredis.typing import (
     Hashable,
     List,
     Literal,
+    ModuleType,
     Optional,
     OrderedDict,
     Protocol,
@@ -29,11 +30,13 @@ from coredis.typing import (
     runtime_checkable,
 )
 
+asizeof: Optional[ModuleType] = None
+
 try:
     from pympler import asizeof
-# Not available in pypy
 except AttributeError:
-    asizeof = None
+    # Not available in pypy
+    pass
 
 if TYPE_CHECKING:
     import coredis.client

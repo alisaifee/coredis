@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from types import ModuleType
 from typing import (
     TYPE_CHECKING,
     AbstractSet,
@@ -243,6 +244,7 @@ __all__ = [
     "List",
     "Literal",
     "Mapping",
+    "ModuleType",
     "MutableMapping",
     "MutableSet",
     "MutableSequence",
