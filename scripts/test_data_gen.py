@@ -24,8 +24,7 @@ def generate_cities_index_data(
     ctx, csv_path: str, queries_path: str, output_json_path: str, sample_size: int
 ):
     model = SentenceTransformer(
-        "sentence-transformers/all-distilroberta-v1",
-        cache_folder="scripts/.cache"
+        "sentence-transformers/all-distilroberta-v1", cache_folder="scripts/.cache"
     )
     wikiapi = wikipediaapi.Wikipedia("en")
     cities = csv.DictReader(open(csv_path))

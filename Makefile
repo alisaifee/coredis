@@ -1,12 +1,12 @@
 lint:
 	black --check coredis tests
-	ruff coredis tests
+	ruff check coredis tests
 	mypy coredis
 
 lint-fix:
 	black coredis tests
 	isort -r --profile=black tests coredis
-	ruff --fix coredis tests
+	ruff check --fix coredis tests
 
 DEBUG := False
 NEXT_VERSION := 4.12.0

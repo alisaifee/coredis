@@ -945,9 +945,9 @@ def is_deprecated(command, kls):
 
         for token in replacement_tokens:
             if token[1] in all_commands:
-                replacement_string[
-                    token[0]
-                ] = f":meth:`~coredis.{kls.__name__}.{sanitized(token[1], None, ignore_reserved_words=True)}`"
+                replacement_string[token[0]] = (
+                    f":meth:`~coredis.{kls.__name__}.{sanitized(token[1], None, ignore_reserved_words=True)}`"
+                )
             else:
                 replacement_string[token[1]] = sanitized(
                     token[1], None, ignore_reserved_words=True
@@ -1243,9 +1243,11 @@ def get_argument(
                 )
     else:
         name = sanitized(
-            arg.get("token", arg["name"])
-            if not arg.get("type") == "pure-token"
-            else arg["name"],
+            (
+                arg.get("token", arg["name"])
+                if not arg.get("type") == "pure-token"
+                else arg["name"]
+            ),
             command,
         )
         type_annotation = get_type_annotation(
@@ -1420,25 +1422,37 @@ def get_command_spec(command):
     if forced_order:
         recommended_signature = sorted(
             recommended_signature,
-            key=lambda r: forced_order.index(r.name)
-            if r.name in forced_order
-            else recommended_signature.index(r),
+            key=lambda r: (
+                forced_order.index(r.name)
+                if r.name in forced_order
+                else recommended_signature.index(r)
+            ),
         )
 
     if not var_args and not forced_order:
         recommended_signature = sorted(
             recommended_signature,
-            key=lambda r: -5
-            if r.name in ["key", "keys"]
-            else -4
-            if r.name in ["arg", "args"]
-            else -3
-            if r.name == "weights"
-            else -2
-            if r.name == "start" and "end" in arg_names
-            else -1
-            if r.name == "end" and "start" in arg_names
-            else recommended_signature.index(r),
+            key=lambda r: (
+                -5
+                if r.name in ["key", "keys"]
+                else (
+                    -4
+                    if r.name in ["arg", "args"]
+                    else (
+                        -3
+                        if r.name == "weights"
+                        else (
+                            -2
+                            if r.name == "start" and "end" in arg_names
+                            else (
+                                -1
+                                if r.name == "end" and "start" in arg_names
+                                else recommended_signature.index(r)
+                            )
+                        )
+                    )
+                )
+            ),
         )
 
         for idx, k in enumerate(recommended_signature):
@@ -1516,9 +1530,11 @@ def get_command_spec(command):
     if not forced_order:
         remaining_signature = sorted(
             remaining_signature,
-            key=lambda s: -1
-            if s.name in ["identifier", "identifiers"]
-            else remaining_signature.index(s),
+            key=lambda s: (
+                -1
+                if s.name in ["identifier", "identifiers"]
+                else remaining_signature.index(s)
+            ),
         )
     recommended_signature.extend(remaining_signature)
 
@@ -1536,9 +1552,11 @@ def get_command_spec(command):
     if forced_order:
         recommended_signature = sorted(
             recommended_signature,
-            key=lambda r: forced_order.index(r.name)
-            if r.name in forced_order
-            else recommended_signature.index(r),
+            key=lambda r: (
+                forced_order.index(r.name)
+                if r.name in forced_order
+                else recommended_signature.index(r)
+            ),
         )
 
     mapping = OrderedDict(
@@ -1605,11 +1623,11 @@ def generate_method_details(kls, method, module=None, debug=False):
             rec_signature = inspect.Signature(
                 [inspect.Parameter("self", inspect.Parameter.POSITIONAL_OR_KEYWORD)]
                 + rec_params,
-                return_annotation=REDIS_RETURN_OVERRIDES.get(
-                    method["name"], recommended_return[0]
-                )
-                if recommended_return
-                else None,
+                return_annotation=(
+                    REDIS_RETURN_OVERRIDES.get(method["name"], recommended_return[0])
+                    if recommended_return
+                    else None
+                ),
             )
             method_details["rec_signature"] = rec_signature
         except:
@@ -1961,9 +1979,9 @@ def generate_compatibility_section(
                     current_signature = [k for k in cur.parameters]
                     method_details["current_signature"] = cur
                     if command_details:
-                        method_details[
-                            "redirect_usage"
-                        ] = command_details.redirect_usage
+                        method_details["redirect_usage"] = (
+                            command_details.redirect_usage
+                        )
                     if debug:
                         if (
                             compare_signatures(
@@ -2074,21 +2092,35 @@ def generate_compatibility_section(
                                 method_details["mismatch_reason"] = (
                                     "Command wrapper missing"
                                     if not command_details
-                                    else f"Incorrect version introduced {command_details.version_introduced} vs {method_details['redis_version_introduced']}"
-                                    if not version_introduced_valid
-                                    else f"Incorrect version deprecated"
-                                    if not version_deprecated_valid
-                                    else "Readonly flag mismatch"
-                                    if not readonly_valid
-                                    else "Argument version mismatch"
-                                    if not arg_version_valid
-                                    else "Routing mismatch"
-                                    if not routing_valid
-                                    else "Response merge mismatch"
-                                    if not merging_valid
-                                    else f"Flags mismatched {missing_command_flags}"
-                                    if missing_command_flags
-                                    else "unknown"
+                                    else (
+                                        f"Incorrect version introduced {command_details.version_introduced} vs {method_details['redis_version_introduced']}"
+                                        if not version_introduced_valid
+                                        else (
+                                            f"Incorrect version deprecated"
+                                            if not version_deprecated_valid
+                                            else (
+                                                "Readonly flag mismatch"
+                                                if not readonly_valid
+                                                else (
+                                                    "Argument version mismatch"
+                                                    if not arg_version_valid
+                                                    else (
+                                                        "Routing mismatch"
+                                                        if not routing_valid
+                                                        else (
+                                                            "Response merge mismatch"
+                                                            if not merging_valid
+                                                            else (
+                                                                f"Flags mismatched {missing_command_flags}"
+                                                                if missing_command_flags
+                                                                else "unknown"
+                                                            )
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
                                 )
                         elif compare_signatures(
                             cur, method_details["rec_signature"], with_return=False
@@ -2552,18 +2584,22 @@ def pipeline_stub(path):
                     "command_details": method.__coredis_command,
                     "pipeline": inspect.Signature(
                         parameters=[
-                            k.replace(default=Ellipsis)
-                            if k.default is not inspect._empty
-                            else k
+                            (
+                                k.replace(default=Ellipsis)
+                                if k.default is not inspect._empty
+                                else k
+                            )
                             for k in signature.parameters.values()
                         ],
                         return_annotation="Pipeline[AnyStr]",
                     ),
                     "cluster": inspect.Signature(
                         parameters=[
-                            k.replace(default=Ellipsis)
-                            if k.default is not inspect._empty
-                            else k
+                            (
+                                k.replace(default=Ellipsis)
+                                if k.default is not inspect._empty
+                                else k
+                            )
                             for k in cluster_signature.parameters.values()
                         ],
                         return_annotation="ClusterPipeline[AnyStr]",
@@ -2763,11 +2799,11 @@ def cluster_key_extraction(path):
             mode = (
                 "RO"
                 if spec.get("RO", False)
-                else "OW"
-                if spec.get("OW", False)
-                else "RW"
-                if spec.get("RW", False)
-                else "RM"
+                else (
+                    "OW"
+                    if spec.get("OW", False)
+                    else "RW" if spec.get("RW", False) else "RM"
+                )
             )
             begin_search = spec.get("begin_search", {})
             find_keys = spec.get("find_keys", {})
