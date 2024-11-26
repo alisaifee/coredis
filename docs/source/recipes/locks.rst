@@ -5,7 +5,7 @@ Locks
 Distributed lock with LUA Scripts
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The implementation is based on `the distributed locking pattern described in redis docs <https://redis.io/docs/reference/patterns/distributed-locks/#correct-implementation-with-a-single-instance>`__
+The implementation is based on `the distributed locking pattern described in redis docs <https://redis.io/docs/latest/develop/use/patterns/distributed-locks/>`__
 
 When used with a :class:`~coredis.RedisCluster` instance, acquiring the lock includes
 ensuring that the token set by the :meth:`~coredis.recipes.locks.LuaLock.acquire` method
