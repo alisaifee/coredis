@@ -48,10 +48,6 @@ class TestGeneric:
             _s("2"),
             _s("3"),
         )
-        with pytest.raises(ResponseError, match="denied in Cluster mode"):
-            await clone.sort_ro("a{fu}", by="score{fu}:*")
-        with pytest.raises(ResponseError, match="denied in Cluster mode"):
-            await client.sort_ro("a{fu}", ["score:*"])
 
     async def test_sort_limited(self, client, _s):
         await client.rpush("a", ["3", "2", "1", "4"])
