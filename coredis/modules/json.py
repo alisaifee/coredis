@@ -219,7 +219,6 @@ class Json(ModuleGroup[AnyStr]):
             CommandName.JSON_MGET,
             *pieces,
             callback=JsonCallback(),
-            keys=keys,  # type: ignore
         )
 
     @module_command(
