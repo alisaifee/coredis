@@ -110,7 +110,14 @@ jobs:
             test_params: "-m redict"
             label: "Redict"
           - python-version: "pypy-3.9"
-            redis-version: 7.0
+            redis-version: 7.4
+            test_params: "-m '(not (keydb or dragonfly or valkey or redict))' tests/commands tests/test_tracking_cache.py"
+            runtime_type_checks: "False"
+            extensions: "False"
+            uvloop: "False"
+            label: ""
+          - python-version: "pypy-3.10"
+            redis-version: 7.4
             test_params: "-m '(not (keydb or dragonfly or valkey or redict))' tests/commands tests/test_tracking_cache.py"
             runtime_type_checks: "False"
             extensions: "False"
