@@ -33,7 +33,7 @@ from coredis.typing import (
 asizeof: Optional[ModuleType] = None
 
 try:
-    from pympler import asizeof
+    from pympler import asizeof  # type:ignore[no-redef,unused-ignore]
 except (AttributeError, KeyError):
     # Not available in pypy
     pass
