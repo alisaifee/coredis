@@ -149,7 +149,7 @@ jobs:
           fetch-depth: 0
       - name: Install cibuildwheel and pypyp
         run: |
-          pipx install cibuildwheel==2.16.2
+          pipx install cibuildwheel==2.22.0
           pipx install pypyp==1
       - id: set-matrix
         run: |
@@ -183,7 +183,7 @@ jobs:
         if: runner.os == 'Linux'
         uses: docker/setup-qemu-action@v2
       - name: Build wheel
-        uses: pypa/cibuildwheel@v2.16.2
+        uses: pypa/cibuildwheel@v2.22.0
         with:
           only: ${{ matrix.only }}
         env:
