@@ -34,7 +34,7 @@ asizeof: Optional[ModuleType] = None
 
 try:
     from pympler import asizeof
-except AttributeError:
+except (AttributeError, KeyError):
     # Not available in pypy
     pass
 
