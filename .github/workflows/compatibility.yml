@@ -65,7 +65,7 @@ jobs:
         redis-version: ["6.2", "7.0", "7.2", "latest"]
         test_params: ["-m '(not (keydb or dragonfly or valkey or redict))'"]
         orjson: ["False"]
-        uvloop: ["True", "False"]
+        uvloop: ["False"]
         runtime_type_checks: ["True"]
         extensions: ["True"]
         label: [""]

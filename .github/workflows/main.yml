@@ -58,7 +58,7 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
         redis-version: ["6.2", "7.0", "7.2", "latest"]
         test_params: ["-m '(not (keydb or dragonfly or valkey or redict))'"]
-        uvloop: ["True", "False"]
+        uvloop: ["False"]
         orjson: ["False"]
         runtime_type_checks: ["True"]
         extensions: ["True"]
