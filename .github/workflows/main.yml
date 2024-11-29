@@ -232,7 +232,8 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: "*.whl"
+          pattern: "*wheels*"
+          merge_multiple: true
           path: dist
       - uses: actions/download-artifact@v4
         with:
@@ -251,7 +252,8 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: "*.whl"
+          pattern: "*wheels*"
+          merge_multiple: true
           path: dist
       - uses: actions/download-artifact@v4
         with:
