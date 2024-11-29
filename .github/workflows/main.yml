@@ -193,7 +193,7 @@ jobs:
           CIBW_TEST_COMMAND: "python -c 'import coredis'"
       - uses: actions/upload-artifact@v4
         with:
-          name: wheels
+          name: wheels-${{matrix.only}}
           path: ./wheelhouse/*.whl
   build_pure_wheel:
     needs: [lint]
@@ -232,11 +232,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: wheels
-          path: dist
-      - uses: actions/download-artifact@v4
-        with:
-          name: pure_wheels
+          pattern: "*.whl"
           path: dist
       - uses: actions/download-artifact@v4
         with:
@@ -255,11 +251,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: wheels
-          path: dist
-      - uses: actions/download-artifact@v4
-        with:
-          name: pure_wheels
+          pattern: "*.whl"
           path: dist
       - uses: actions/download-artifact@v4
         with:
