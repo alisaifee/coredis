@@ -1,4 +1,4 @@
-async_timeout>4,<5
+async_timeout>4,<6
 deprecated>=1.2
 typing_extensions>=4.3
 packaging>=21,<25
