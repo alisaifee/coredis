@@ -239,6 +239,8 @@ jobs:
         with:
           name: src_dist
           path: dist
+      - name: Show downloaded files
+        run: ls -R dist
       - uses: pypa/gh-action-pypi-publish@v1.4.2
         with:
           user: __token__
