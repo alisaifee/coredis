@@ -233,14 +233,12 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           pattern: "*wheels*"
-          merge_multiple: true
+          merge-multiple: true
           path: dist
       - uses: actions/download-artifact@v4
         with:
           name: src_dist
           path: dist
-      - name: Show downloaded files
-        run: ls -R dist
       - uses: pypa/gh-action-pypi-publish@v1.4.2
         with:
           user: __token__
@@ -255,7 +253,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           pattern: "*wheels*"
-          merge_multiple: true
+          merge-multiple: true
           path: dist
       - uses: actions/download-artifact@v4
         with:
