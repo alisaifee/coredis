@@ -258,8 +258,20 @@ class TestList:
     @pytest.mark.min_server_version("6.2.0")
     async def test_lmove(self, client, _s):
         await client.rpush("a{foo}", ["one", "two", "three", "four"])
-        assert await client.lmove("a{foo}", "b{foo}", PureToken.LEFT, PureToken.RIGHT)
-        assert await client.lmove("a{foo}", "b{foo}", PureToken.RIGHT, PureToken.LEFT)
+        assert _s("one") == await client.lmove(
+            "a{foo}", "b{foo}", PureToken.LEFT, PureToken.RIGHT
+        )
+        assert _s("four") == await client.lmove(
+            "a{foo}", "b{foo}", PureToken.RIGHT, PureToken.LEFT
+        )
+        assert (
+            await client.lmove("x{foo}", "b{foo}", PureToken.RIGHT, PureToken.LEFT)
+            is None
+        )
+        assert _s("three") == await client.lmove(
+            "a{foo}", "x{foo}", PureToken.RIGHT, PureToken.LEFT
+        )
+        assert 1 == await client.llen("x{foo}")
 
     @pytest.mark.min_server_version("7.0.0")
     @pytest.mark.nocluster
