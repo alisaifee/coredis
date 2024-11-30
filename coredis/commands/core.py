@@ -3307,7 +3307,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         destination: KeyT,
         wherefrom: Literal[PureToken.LEFT, PureToken.RIGHT],
         whereto: Literal[PureToken.LEFT, PureToken.RIGHT],
-    ) -> AnyStr:
+    ) -> Optional[AnyStr]:
         """
         Pop an element from a list, push it to another list and return it
 
@@ -3316,7 +3316,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         params = [source, destination, wherefrom, whereto]
 
         return await self.execute_command(
-            CommandName.LMOVE, *params, callback=AnyStrCallback[AnyStr]()
+            CommandName.LMOVE, *params, callback=OptionalAnyStrCallback[AnyStr]()
         )
 
     @versionadded(version="3.0.0")
