@@ -3,6 +3,25 @@
 Changelog
 =========
 
+v4.17.0
+-------
+Release Date: 2024-04-19
+
+Features
+
+* Add explicit exception types for locking recipe
+
+Bug fix
+
+* Fix incorrect use of `CLIENT SET-INFO` for `lib-name` & `lib-ver`
+  when redis version < 7.2
+* Fix various incorrect type annotations in return types
+
+Compatibility
+
+* Update documentation dependencies
+* Update test dependencies (related to pytest)
+
 v4.16.0
 -------
 Release Date: 2023-08-30
@@ -1740,6 +1759,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
