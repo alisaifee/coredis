@@ -9,6 +9,7 @@ from coredis import Redis
 from coredis._utils import nativestr
 from coredis.cache import AbstractCache
 from coredis.connection import Connection
+from coredis.credentials import AbstractCredentialProvider
 from coredis.exceptions import (
     ConnectionError,
     PrimaryNotFoundError,
@@ -33,6 +34,7 @@ from coredis.typing import (
 
 
 class SentinelManagedConnection(Connection, Generic[AnyStr]):
+
     def __init__(
         self,
         connection_pool: SentinelConnectionPool,
@@ -40,6 +42,7 @@ class SentinelManagedConnection(Connection, Generic[AnyStr]):
         port: int = 6379,
         username: Optional[str] = None,
         password: Optional[str] = None,
+        credential_provider: Optional[AbstractCredentialProvider] = None,
         db: int = 0,
         stream_timeout: Optional[float] = None,
         connect_timeout: Optional[float] = None,
@@ -58,6 +61,7 @@ class SentinelManagedConnection(Connection, Generic[AnyStr]):
             port=port,
             username=username,
             password=password,
+            credential_provider=credential_provider,
             db=db,
             stream_timeout=stream_timeout,
             connect_timeout=connect_timeout,

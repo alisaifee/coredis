@@ -64,6 +64,7 @@ Feature Summary
   * :ref:`handbook/streams:streams`
   * :ref:`handbook/pipelines:pipelines`
   * :ref:`handbook/caching:caching`
+  * :ref:`handbook/credentials:credential providers`
 
 * Server side scripting
 
