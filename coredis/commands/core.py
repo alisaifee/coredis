@@ -2260,6 +2260,44 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.HMGET, key, *fields, callback=TupleCallback[Optional[AnyStr]]()
         )
 
+    @versionadded(version="4.18.0")
+    @redis_command(
+        CommandName.HTTL, version_introduced="7.4.0", group=CommandGroup.HASH
+    )
+    async def httl(self, key: KeyT, fields: Parameters[StringT]) -> Tuple[int, ...]:
+        """
+        Returns the TTL in seconds of a hash field.
+        """
+        pieces: CommandArgList = []
+
+        pieces.append(key)
+        pieces.append(PrefixToken.FIELDS)
+        pieces.append(len(list(fields)))
+        pieces.extend(fields)
+
+        return await self.execute_command(
+            CommandName.HTTL, *pieces, callback=TupleCallback[int]()
+        )
+
+    @versionadded(version="4.18.0")
+    @redis_command(
+        CommandName.HPTTL, version_introduced="7.4.0", group=CommandGroup.HASH
+    )
+    async def hpttl(self, key: KeyT, fields: Parameters[StringT]) -> Tuple[int, ...]:
+        """
+        Returns the TTL in milliseconds of a hash field.
+        """
+        pieces: CommandArgList = []
+
+        pieces.append(key)
+        pieces.append(PrefixToken.FIELDS)
+        pieces.append(len(list(fields)))
+        pieces.extend(fields)
+
+        return await self.execute_command(
+            CommandName.HPTTL, *pieces, callback=TupleCallback[int]()
+        )
+
     @redis_command(
         CommandName.HVALS,
         group=CommandGroup.HASH,

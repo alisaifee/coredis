@@ -101,6 +101,14 @@ class TestHash:
         assert {_s("2"): _s("2")} == await client.hgetall(_s("a"))
 
     @pytest.mark.min_server_version("7.4.0")
+    async def test_httl(self, client, _s):
+        await client.hset("a", {"1": 1, "2": 2, "3": 3, "4": 4})
+        assert (-2,) == await client.httl("missing", ["1"])
+        assert (-1,) == await client.httl("a", ["1"])
+        await client.hexpire("a", 5, ["1"])
+        assert (5, -1, -2) == await client.httl("a", ["1", "2", "5"])
+
+    @pytest.mark.min_server_version("7.4.0")
     async def test_hpexpire(self, client, _s):
         await client.hset("a", {"1": 1, "2": 2, "3": 3, "4": 4})
         assert (1,) == await client.hpexpire("a", 5000, ["1"])
@@ -148,6 +156,14 @@ class TestHash:
         )
         await asyncio.sleep(1)
         assert {_s("2"): _s("2")} == await client.hgetall(_s("a"))
+
+    @pytest.mark.min_server_version("7.4.0")
+    async def test_hpttl(self, client, _s):
+        await client.hset("a", {"1": 1, "2": 2, "3": 3, "4": 4})
+        assert (-2,) == await client.hpttl("missing", ["1"])
+        assert (-1,) == await client.hpttl("a", ["1"])
+        await client.hpexpire("a", 5000, ["1"])
+        assert (pytest.approx(5000, abs=5), -1, -2) == await client.hpttl("a", ["1", "2", "5"])
 
     async def test_hgetall(self, client, _s):
         h = {_s("a1"): _s("1"), _s("a2"): _s("2"), _s("a3"): _s("3")}

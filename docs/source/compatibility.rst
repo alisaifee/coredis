@@ -1174,6 +1174,24 @@ Set expiry for hash field using an absolute Unix timestamp (milliseconds)
 
 
 
+HPTTL
+*****
+
+Returns the TTL in milliseconds of a hash field.
+
+- Documentation: `HPTTL <https://redis.io/commands/hpttl>`_
+- Implementation: :meth:`~coredis.Redis.hpttl`
+
+- New in redis: 7.4.0
+
+
+
+- .. versionadded:: 4.18.0
+
+
+
+
+
 HRANDFIELD
 **********
 
@@ -1248,6 +1266,24 @@ Returns the length of the value of a field.
 
 
 
+HTTL
+****
+
+Returns the TTL in seconds of a hash field.
+
+- Documentation: `HTTL <https://redis.io/commands/httl>`_
+- Implementation: :meth:`~coredis.Redis.httl`
+
+- New in redis: 7.4.0
+
+
+
+- .. versionadded:: 4.18.0
+
+
+
+
+
 HVALS
 *****
 
@@ -1290,26 +1326,6 @@ HPEXPIRETIME [X]
 Returns the expiration time of a hash field as a Unix timestamp, in msec.
 
 - Documentation: `HPEXPIRETIME <https://redis.io/commands/hpexpiretime>`_
-
-- Not Implemented
-
-
-HPTTL [X]
-*********
-
-Returns the TTL in milliseconds of a hash field.
-
-- Documentation: `HPTTL <https://redis.io/commands/hpttl>`_
-
-- Not Implemented
-
-
-HTTL [X]
-********
-
-Returns the TTL in seconds of a hash field.
-
-- Documentation: `HTTL <https://redis.io/commands/httl>`_
 
 - Not Implemented
 
