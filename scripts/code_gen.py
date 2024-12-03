@@ -908,10 +908,10 @@ def get_argument(
         else:
             plist_d = []
             children = sorted(
-                arg["arguments"], key=lambda v: int(v.get("optional") == True)
+                arg["arguments"], key=lambda v: int(v.get("optional") is True)
             )
             for child in list(children):
-                if child["type"] == "pure-token" and not "optional" in child:
+                if child["type"] == "pure-token" and "optional" not in child:
                     children.remove(child)
                 elif child["name"] == "count" and "token" in child:
                     children.remove(child)
@@ -1351,7 +1351,7 @@ def generate_method_details(kls, method, module=None, debug=False):
     method_details["summary"] = method["summary"]
     return_summary = ""
 
-    if debug and not method["name"] in SKIP_SPEC:
+    if debug and method["name"] not in SKIP_SPEC:
         recommended_return = read_command_docs(
             method["name"], method["group"], module=module
         )
@@ -1729,7 +1729,7 @@ def generate_compatibility_section(
                 method_details["version_added"] = version_added
 
                 command_details = getattr(located, "__coredis_command", None)
-                if not method["name"] in SKIP_SPEC:
+                if method["name"] not in SKIP_SPEC:
                     cur = inspect.signature(located)
                     current_signature = [k for k in cur.parameters]
                     method_details["current_signature"] = cur
@@ -1851,7 +1851,7 @@ def generate_compatibility_section(
                                         f"Incorrect version introduced {command_details.version_introduced} vs {method_details['redis_version_introduced']}"
                                         if not version_introduced_valid
                                         else (
-                                            f"Incorrect version deprecated"
+                                            "Incorrect version deprecated"
                                             if not version_deprecated_valid
                                             else (
                                                 "Readonly flag mismatch"
@@ -1885,7 +1885,7 @@ def generate_compatibility_section(
                             )
                             method_details["mismatch_reason"] = "Mismatched return type"
                             if recommended_return:
-                                new_sig = inspect.Signature(
+                                inspect.Signature(
                                     [
                                         inspect.Parameter(
                                             "self",
@@ -1952,7 +1952,7 @@ def code_gen(ctx, debug: bool, next_version: str):
 @click.option("--path", default="docs/source/compatibility.rst")
 @click.pass_context
 def coverage_doc(ctx, path: str):
-    output = f"""
+    output = """
 Command compatibility
 =====================
 
@@ -2038,7 +2038,8 @@ def command_constants(ctx, path):
     for module in MODULES:
         commands.update(get_module_commands(module))
 
-    sort_fn = lambda command: command.get("since")
+    def sort_fn(command):
+        return command.get("since")
     env = Environment()
     env.globals.update(sorted=sorted)
     t = env.from_string(
@@ -2206,13 +2207,13 @@ def changes():
 @click.option("--debug", default=False, help="Output debug")
 @click.pass_context
 def implementation(ctx, command, group, module, expr, debug=False):
-    cur_version = version.parse(coredis.__version__.split("+")[0])
+    version.parse(coredis.__version__.split("+")[0])
     kls = coredis.Redis
 
     method_template_str = """
     {% for decorator in method["rec_decorators"] %}
     {{decorator}}
-    {% endfor -%}
+    {%- endfor -%}
     {%- if not module %}
     @versionadded(version="{{next_version}}")
     @redis_command("{{method["command"]["name"]}}"
@@ -2267,7 +2268,56 @@ def implementation(ctx, command, group, module, expr, debug=False):
         {% endif %}
         \"\"\"
         pieces: CommandArgList = []
-         
+        {% for name, arg  in method["arg_mapping"].items() -%}
+
+        {% if len(arg[1]) > 0 -%}
+        {%- for param in arg[1] -%}
+        {%- if not arg[0].get("optional") %}
+        {%- if arg[0].get("multiple") %}
+        {%- if arg[0].get("token") %}
+        pieces.extend(*{{param.name}})
+        {%- else %}
+        pieces.extend(*{{param.name}})
+        {%- endif %}
+        {%- else %}
+        {%- if arg[0].get("token") %}
+        pieces.append("{{arg[0].get("token")}}")
+        pieces.append({{param.name}})
+        {%- else %}
+        pieces.append({{param.name}})
+        {%- endif %}
+        {%- endif %}
+        {%- else %}
+        {% if arg[0].get("multiple") -%}
+
+        if {{param.name}}:
+        {%- if arg[0].get("multiple_token") %}
+            for item in {{param.name}}:
+                pieces.append("{{arg[0].get("token")}}")
+                pieces.append(item)
+        {%- else %}
+            pieces.append("{{arg[0].get("token")}}")
+            pieces.extend({{param.name}})
+        {%- endif %}
+        {%- else %}
+
+        if {{param.name}}{% if arg[0].get("type") != "pure-token" %} is not None{%endif%}:
+        {%- if arg[0].get("token") and arg[0].get("type") != "pure-token" %}
+            pieces.append("{{arg[0].get("token")}}")
+            pieces.extend({{param.name}})
+        {%- else %}
+            {%- if arg[0].get("type") == "oneof" %}
+            pieces.append({{param.name}})
+            {%- else %}
+            pieces.append(PureToken.{{arg[0].get("token")}})
+            {% endif %}
+        {%- endif %}
+        {%- endif %}
+        {%- endif %}
+        {%- endfor %}
+        {%- endif %}
+        {%- endfor %}
+
         {% if module %}
         return await self.execute_module_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}, *pieces)
         {% else %} 
@@ -2311,7 +2361,7 @@ def implementation(ctx, command, group, module, expr, debug=False):
 
     for command in commands:
         method_details = generate_method_details(
-            kls, command, module=MODULES[module]["module"], debug=True
+            kls, command, module=MODULES[module]["module"] if module else None, debug=True
         )
         if method_details.get("rec_signature"):
             print(method_template.render(method=method_details))
@@ -2523,7 +2573,7 @@ def cluster_key_extraction(path):
             last_key = find_spec["spec"]["lastkey"]
             limit = find_spec["spec"]["limit"]
             keystep = find_spec["spec"]["keystep"]
-            finder = f"args[1+kwpos"
+            finder = "args[1+kwpos"
             if last_key == -1:
                 if limit > 0:
                     lim = f":len(args)-(len(args)-(kwpos+1))//{limit}"
@@ -2533,7 +2583,7 @@ def cluster_key_extraction(path):
             elif last_key == -2:
                 finder += ":len(args)-1"
             elif last_key == 0:
-                finder = f"(args[kwpos+1],)"
+                finder = "(args[kwpos+1],)"
             else:
                 raise RuntimeError("Unhandled last_key in keyword search")
             if keystep > 1:
