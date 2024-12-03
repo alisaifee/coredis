@@ -18,4 +18,5 @@ API Documentation
     typing
     utilities
     errors
+    credentials
 

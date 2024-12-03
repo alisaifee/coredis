@@ -29,6 +29,7 @@ from coredis.connection import (
     RedisSSLContext,
     UnixDomainSocketConnection,
 )
+from coredis.credentials import AbstractCredentialProvider
 from coredis.exceptions import (
     ConnectionError,
     PersistenceError,
@@ -106,6 +107,7 @@ class Client(
         db: int = 0,
         username: Optional[str] = None,
         password: Optional[str] = None,
+        credential_provider: Optional[AbstractCredentialProvider] = None,
         stream_timeout: Optional[float] = None,
         connect_timeout: Optional[float] = None,
         connection_pool: Optional[ConnectionPool] = None,
@@ -137,6 +139,7 @@ class Client(
                 "db": db,
                 "username": username,
                 "password": password,
+                "credential_provider": credential_provider,
                 "encoding": encoding,
                 "stream_timeout": stream_timeout,
                 "connect_timeout": connect_timeout,
@@ -549,6 +552,7 @@ class Redis(Client[AnyStr]):
         *,
         username: Optional[str] = ...,
         password: Optional[str] = ...,
+        credential_provider: Optional[AbstractCredentialProvider] = ...,
         stream_timeout: Optional[float] = ...,
         connect_timeout: Optional[float] = ...,
         connection_pool: Optional[ConnectionPool] = ...,
@@ -586,6 +590,7 @@ class Redis(Client[AnyStr]):
         *,
         username: Optional[str] = ...,
         password: Optional[str] = ...,
+        credential_provider: Optional[AbstractCredentialProvider] = ...,
         stream_timeout: Optional[float] = ...,
         connect_timeout: Optional[float] = ...,
         connection_pool: Optional[ConnectionPool] = ...,
@@ -622,6 +627,7 @@ class Redis(Client[AnyStr]):
         *,
         username: Optional[str] = None,
         password: Optional[str] = None,
+        credential_provider: Optional[AbstractCredentialProvider] = None,
         stream_timeout: Optional[float] = None,
         connect_timeout: Optional[float] = None,
         connection_pool: Optional[ConnectionPool] = None,
@@ -716,6 +722,7 @@ class Redis(Client[AnyStr]):
         :param db: database number to switch to upon connection
         :param username: Username for authenticating with the redis server
         :param password: Password for authenticating with the redis server
+        :param credential_provider: CredentialProvider to get authentication creds
         :param stream_timeout: Timeout (seconds) when reading responses from the server
         :param connect_timeout: Timeout (seconds) for establishing a connection to the server
         :param connection_pool: The connection pool instance to use. If not provided
@@ -776,6 +783,7 @@ class Redis(Client[AnyStr]):
             db=db,
             username=username,
             password=password,
+            credential_provider=credential_provider,
             stream_timeout=stream_timeout,
             connect_timeout=connect_timeout,
             connection_pool=connection_pool,
