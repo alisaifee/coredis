@@ -2033,6 +2033,42 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="4.18.0")
     @redis_command(
+        CommandName.HEXPIRETIME, version_introduced="7.4.0", group=CommandGroup.HASH
+    )
+    async def hexpiretime(
+        self, key: KeyT, fields: Parameters[StringT]
+    ) -> Tuple[int, ...]:
+        """
+        Returns the expiration time of a hash field as a Unix timestamp, in seconds.
+        """
+        pieces: CommandArgList = [key, PrefixToken.FIELDS, len(list(fields))]
+
+        pieces.extend(fields)
+
+        return await self.execute_command(
+            CommandName.HEXPIRETIME, *pieces, callback=TupleCallback[int]()
+        )
+
+    @versionadded(version="4.18.0")
+    @redis_command(
+        CommandName.HPEXPIRETIME, version_introduced="7.4.0", group=CommandGroup.HASH
+    )
+    async def hpexpiretime(
+        self, key: KeyT, fields: Parameters[StringT]
+    ) -> Tuple[int, ...]:
+        """
+        Returns the expiration time of a hash field as a Unix timestamp, in msec.
+        """
+        pieces: CommandArgList = [key, PrefixToken.FIELDS, len(list(fields))]
+
+        pieces.extend(fields)
+
+        return await self.execute_command(
+            CommandName.HPEXPIRETIME, *pieces, callback=TupleCallback[int]()
+        )
+
+    @versionadded(version="4.18.0")
+    @redis_command(
         CommandName.HPEXPIRE, version_introduced="7.4.0", group=CommandGroup.HASH
     )
     async def hpexpire(

@@ -1014,6 +1014,24 @@ Set expiry for hash field using an absolute Unix timestamp (seconds)
 
 
 
+HEXPIRETIME
+***********
+
+Returns the expiration time of a hash field as a Unix timestamp, in seconds.
+
+- Documentation: `HEXPIRETIME <https://redis.io/commands/hexpiretime>`_
+- Implementation: :meth:`~coredis.Redis.hexpiretime`
+
+- New in redis: 7.4.0
+
+
+
+- .. versionadded:: 4.18.0
+
+
+
+
+
 HGET
 ****
 
@@ -1174,6 +1192,24 @@ Set expiry for hash field using an absolute Unix timestamp (milliseconds)
 
 
 
+HPEXPIRETIME
+************
+
+Returns the expiration time of a hash field as a Unix timestamp, in msec.
+
+- Documentation: `HPEXPIRETIME <https://redis.io/commands/hpexpiretime>`_
+- Implementation: :meth:`~coredis.Redis.hpexpiretime`
+
+- New in redis: 7.4.0
+
+
+
+- .. versionadded:: 4.18.0
+
+
+
+
+
 HPTTL
 *****
 
@@ -1300,32 +1336,12 @@ Returns all values in a hash.
 
 
 
-HEXPIRETIME [X]
-***************
-
-Returns the expiration time of a hash field as a Unix timestamp, in seconds.
-
-- Documentation: `HEXPIRETIME <https://redis.io/commands/hexpiretime>`_
-
-- Not Implemented
-
-
 HPERSIST [X]
 ************
 
 Removes the expiration time for each specified field
 
 - Documentation: `HPERSIST <https://redis.io/commands/hpersist>`_
-
-- Not Implemented
-
-
-HPEXPIRETIME [X]
-****************
-
-Returns the expiration time of a hash field as a Unix timestamp, in msec.
-
-- Documentation: `HPEXPIRETIME <https://redis.io/commands/hpexpiretime>`_
 
 - Not Implemented
 
