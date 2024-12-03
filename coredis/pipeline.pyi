@@ -237,6 +237,23 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self, key: "KeyT", fields: "Parameters[StringT]"
     ) -> Pipeline[AnyStr]: ...
     async def hexists(self, key: "KeyT", field: "StringT") -> Pipeline[AnyStr]: ...
+    async def hexpire(
+        self,
+        key: "KeyT",
+        seconds: "Union[int, datetime.timedelta]",
+        fields: "Parameters[StringT]",
+        condition: "Optional[Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX]]" = ...,
+    ) -> Pipeline[AnyStr]: ...
+    async def hexpireat(
+        self,
+        key: "KeyT",
+        unix_time_seconds: "Union[int, datetime.datetime]",
+        fields: "Parameters[StringT]",
+        condition: "Optional[Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX]]" = ...,
+    ) -> Pipeline[AnyStr]: ...
+    async def hexpiretime(
+        self, key: "KeyT", fields: "Parameters[StringT]"
+    ) -> Pipeline[AnyStr]: ...
     async def hget(self, key: "KeyT", field: "StringT") -> Pipeline[AnyStr]: ...
     async def hgetall(self, key: "KeyT") -> Pipeline[AnyStr]: ...
     async def hincrby(
@@ -252,6 +269,26 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> Pipeline[AnyStr]: ...
     async def hmset(
         self, key: "KeyT", field_values: "Mapping[StringT, ValueT]"
+    ) -> Pipeline[AnyStr]: ...
+    async def hpexpire(
+        self,
+        key: "KeyT",
+        milliseconds: "Union[int, datetime.timedelta]",
+        fields: "Parameters[StringT]",
+        condition: "Optional[Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX]]" = ...,
+    ) -> Pipeline[AnyStr]: ...
+    async def hpexpireat(
+        self,
+        key: "KeyT",
+        unix_time_milliseconds: "Union[int, datetime.datetime]",
+        fields: "Parameters[StringT]",
+        condition: "Optional[Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX]]" = ...,
+    ) -> Pipeline[AnyStr]: ...
+    async def hpexpiretime(
+        self, key: "KeyT", fields: "Parameters[StringT]"
+    ) -> Pipeline[AnyStr]: ...
+    async def hpttl(
+        self, key: "KeyT", fields: "Parameters[StringT]"
     ) -> Pipeline[AnyStr]: ...
     async def hrandfield(
         self,
@@ -273,6 +310,9 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self, key: "KeyT", field: "StringT", value: "ValueT"
     ) -> Pipeline[AnyStr]: ...
     async def hstrlen(self, key: "KeyT", field: "StringT") -> Pipeline[AnyStr]: ...
+    async def httl(
+        self, key: "KeyT", fields: "Parameters[StringT]"
+    ) -> Pipeline[AnyStr]: ...
     async def hvals(self, key: "KeyT") -> Pipeline[AnyStr]: ...
     async def blmove(
         self,
@@ -1333,6 +1373,23 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def hexists(
         self, key: "KeyT", field: "StringT"
     ) -> ClusterPipeline[AnyStr]: ...
+    async def hexpire(
+        self,
+        key: "KeyT",
+        seconds: "Union[int, datetime.timedelta]",
+        fields: "Parameters[StringT]",
+        condition: "Optional[Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX]]" = ...,
+    ) -> ClusterPipeline[AnyStr]: ...
+    async def hexpireat(
+        self,
+        key: "KeyT",
+        unix_time_seconds: "Union[int, datetime.datetime]",
+        fields: "Parameters[StringT]",
+        condition: "Optional[Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX]]" = ...,
+    ) -> ClusterPipeline[AnyStr]: ...
+    async def hexpiretime(
+        self, key: "KeyT", fields: "Parameters[StringT]"
+    ) -> ClusterPipeline[AnyStr]: ...
     async def hget(self, key: "KeyT", field: "StringT") -> ClusterPipeline[AnyStr]: ...
     async def hgetall(self, key: "KeyT") -> ClusterPipeline[AnyStr]: ...
     async def hincrby(
@@ -1348,6 +1405,26 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> ClusterPipeline[AnyStr]: ...
     async def hmset(
         self, key: "KeyT", field_values: "Mapping[StringT, ValueT]"
+    ) -> ClusterPipeline[AnyStr]: ...
+    async def hpexpire(
+        self,
+        key: "KeyT",
+        milliseconds: "Union[int, datetime.timedelta]",
+        fields: "Parameters[StringT]",
+        condition: "Optional[Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX]]" = ...,
+    ) -> ClusterPipeline[AnyStr]: ...
+    async def hpexpireat(
+        self,
+        key: "KeyT",
+        unix_time_milliseconds: "Union[int, datetime.datetime]",
+        fields: "Parameters[StringT]",
+        condition: "Optional[Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX]]" = ...,
+    ) -> ClusterPipeline[AnyStr]: ...
+    async def hpexpiretime(
+        self, key: "KeyT", fields: "Parameters[StringT]"
+    ) -> ClusterPipeline[AnyStr]: ...
+    async def hpttl(
+        self, key: "KeyT", fields: "Parameters[StringT]"
     ) -> ClusterPipeline[AnyStr]: ...
     async def hrandfield(
         self,
@@ -1370,6 +1447,9 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> ClusterPipeline[AnyStr]: ...
     async def hstrlen(
         self, key: "KeyT", field: "StringT"
+    ) -> ClusterPipeline[AnyStr]: ...
+    async def httl(
+        self, key: "KeyT", fields: "Parameters[StringT]"
     ) -> ClusterPipeline[AnyStr]: ...
     async def hvals(self, key: "KeyT") -> ClusterPipeline[AnyStr]: ...
     async def blmove(
