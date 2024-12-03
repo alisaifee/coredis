@@ -2003,6 +2003,61 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.HEXISTS, key, field, callback=BoolCallback()
         )
 
+    @versionadded(version="4.18.0")
+    @redis_command(
+        CommandName.HEXPIRE, version_introduced="7.4.0", group=CommandGroup.HASH
+    )
+    async def hexpire(
+        self,
+        key: KeyT,
+        seconds: Union[int, datetime.timedelta],
+        fields: Parameters[StringT],
+        condition: Optional[
+            Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX]
+        ] = None,
+    ) -> Tuple[int, ...]:
+        """
+        Set expiry for hash field using relative time to expire (seconds)
+        """
+        pieces: CommandArgList = [key, normalized_seconds(seconds)]
+
+        if condition is not None:
+            pieces.append(condition)
+        pieces.append(PrefixToken.FIELDS)
+        pieces.append(len(list(fields)))
+        pieces.extend(fields)
+
+        return await self.execute_command(
+            CommandName.HEXPIRE, *pieces, callback=TupleCallback[int]()
+        )
+
+    @versionadded(version="4.18.0")
+    @redis_command(
+        CommandName.HEXPIREAT, version_introduced="7.4.0", group=CommandGroup.HASH
+    )
+    async def hexpireat(
+        self,
+        key: KeyT,
+        unix_time_seconds: Union[int, datetime.datetime],
+        fields: Parameters[StringT],
+        condition: Optional[
+            Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX]
+        ] = None,
+    ) -> Tuple[int, ...]:
+        """
+        Set expiry for hash field using an absolute Unix timestamp (seconds)
+        """
+        pieces: CommandArgList = [key, normalized_time_seconds(unix_time_seconds)]
+        if condition is not None:
+            pieces.append(condition)
+        pieces.append(PrefixToken.FIELDS)
+        pieces.append(len(list(fields)))
+        pieces.extend(fields)
+
+        return await self.execute_command(
+            CommandName.HEXPIREAT, *pieces, callback=TupleCallback[int]()
+        )
+
     @redis_command(
         CommandName.HGET,
         group=CommandGroup.HASH,

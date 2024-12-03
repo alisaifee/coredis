@@ -133,7 +133,9 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``CLIENT CACHING``
     #:  - ``CLIENT KILL``
+    #:  - ``REPLICAOF``
     #:  - ``SCRIPT DEBUG``
+    #:  - ``SLAVEOF``
     NO = b"NO"
 
     #: Used by:
@@ -275,6 +277,10 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``EXPIRE``
     #:  - ``EXPIREAT``
+    #:  - ``HEXPIRE``
+    #:  - ``HEXPIREAT``
+    #:  - ``HPEXPIRE``
+    #:  - ``HPEXPIREAT``
     #:  - ``PEXPIRE``
     #:  - ``PEXPIREAT``
     #:  - ``ZADD``
@@ -284,6 +290,10 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``EXPIRE``
     #:  - ``EXPIREAT``
+    #:  - ``HEXPIRE``
+    #:  - ``HEXPIREAT``
+    #:  - ``HPEXPIRE``
+    #:  - ``HPEXPIREAT``
     #:  - ``PEXPIRE``
     #:  - ``PEXPIREAT``
     #:  - ``ZADD``
@@ -294,6 +304,10 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``EXPIRE``
     #:  - ``EXPIREAT``
     #:  - ``GEOADD``
+    #:  - ``HEXPIRE``
+    #:  - ``HEXPIREAT``
+    #:  - ``HPEXPIRE``
+    #:  - ``HPEXPIREAT``
     #:  - ``JSON.SET``
     #:  - ``PEXPIRE``
     #:  - ``PEXPIREAT``
@@ -306,6 +320,10 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``EXPIRE``
     #:  - ``EXPIREAT``
     #:  - ``GEOADD``
+    #:  - ``HEXPIRE``
+    #:  - ``HEXPIREAT``
+    #:  - ``HPEXPIRE``
+    #:  - ``HPEXPIREAT``
     #:  - ``JSON.SET``
     #:  - ``PEXPIRE``
     #:  - ``PEXPIREAT``
@@ -487,6 +505,11 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``HSCAN``
+    NOVALUES = b"NOVALUES"
+
+    #: Used by:
+    #:
     #:  - ``LCS``
     IDX = b"IDX"
 
@@ -519,6 +542,12 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``MIGRATE``
     EMPTY_STRING = b""
+
+    #: Used by:
+    #:
+    #:  - ``REPLICAOF``
+    #:  - ``SLAVEOF``
+    ONE = b"ONE"
 
     #: Used by:
     #:
@@ -912,6 +941,16 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``FT.CREATE``
+    INDEXEMPTY = b"INDEXEMPTY"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    INDEXMISSING = b"INDEXMISSING"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
     JSON = b"JSON"
 
     #: Used by:
@@ -1214,6 +1253,11 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``CLIENT KILL``
+    MAXAGE = b"MAXAGE"
+
+    #: Used by:
+    #:
+    #:  - ``CLIENT KILL``
     SKIPME = b"SKIPME"
 
     #: Used by:
@@ -1375,6 +1419,20 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``HELLO``
     SETNAME = b"SETNAME"
+
+    #: Used by:
+    #:
+    #:  - ``FT.SEARCH``
+    #:  - ``HEXPIRE``
+    #:  - ``HEXPIREAT``
+    #:  - ``HEXPIRETIME``
+    #:  - ``HPERSIST``
+    #:  - ``HPEXPIRE``
+    #:  - ``HPEXPIREAT``
+    #:  - ``HPEXPIRETIME``
+    #:  - ``HPTTL``
+    #:  - ``HTTL``
+    FIELDS = b"FIELDS"
 
     #: Used by:
     #:
@@ -1738,11 +1796,6 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``FT.SEARCH``
     EXPANDER = b"EXPANDER"
-
-    #: Used by:
-    #:
-    #:  - ``FT.SEARCH``
-    FIELDS = b"FIELDS"
 
     #: Used by:
     #:
