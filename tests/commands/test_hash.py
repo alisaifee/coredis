@@ -195,6 +195,15 @@ class TestHash:
             "a", ["1", "2", "5"]
         )
 
+    @pytest.mark.min_server_version("7.4.0")
+    async def test_hpersist(self, client, _s):
+        await client.hset("a", {"1": 1, "2": 2, "3": 3, "4": 4})
+        assert (-2,) == await client.hpersist("missing", ["1"])
+        await client.hpexpire("a", 5000, ["1"])
+        assert (pytest.approx(5000, abs=1000),) == await client.hpttl("a", ["1"])
+        assert (1,) == await client.hpersist("a", ["1"])
+        assert (-1,) == await client.hpttl("a", ["1"])
+
     async def test_hgetall(self, client, _s):
         h = {_s("a1"): _s("1"), _s("a2"): _s("2"), _s("a3"): _s("3")}
         await client.hset("a", h)

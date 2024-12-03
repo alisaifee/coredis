@@ -270,6 +270,9 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def hmset(
         self, key: "KeyT", field_values: "Mapping[StringT, ValueT]"
     ) -> Pipeline[AnyStr]: ...
+    async def hpersist(
+        self, key: "KeyT", fields: "Parameters[StringT]"
+    ) -> Pipeline[AnyStr]: ...
     async def hpexpire(
         self,
         key: "KeyT",
@@ -1405,6 +1408,9 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> ClusterPipeline[AnyStr]: ...
     async def hmset(
         self, key: "KeyT", field_values: "Mapping[StringT, ValueT]"
+    ) -> ClusterPipeline[AnyStr]: ...
+    async def hpersist(
+        self, key: "KeyT", fields: "Parameters[StringT]"
     ) -> ClusterPipeline[AnyStr]: ...
     async def hpexpire(
         self,

@@ -2153,6 +2153,21 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.HPEXPIREAT, *pieces, callback=TupleCallback[int]()
         )
 
+    @versionadded(version="4.18.0")
+    @redis_command(
+        CommandName.HPERSIST, version_introduced="7.4.0", group=CommandGroup.HASH
+    )
+    async def hpersist(self, key: KeyT, fields: Parameters[StringT]) -> Tuple[int, ...]:
+        """
+        Removes the expiration time for each specified field
+        """
+        pieces: CommandArgList = [key, PrefixToken.FIELDS, len(list(fields))]
+        pieces.extend(fields)
+
+        return await self.execute_command(
+            CommandName.HPERSIST, *pieces, callback=TupleCallback[int]()
+        )
+
     @redis_command(
         CommandName.HGET,
         group=CommandGroup.HASH,
