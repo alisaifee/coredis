@@ -277,6 +277,10 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``EXPIRE``
     #:  - ``EXPIREAT``
+    #:  - ``HEXPIRE``
+    #:  - ``HEXPIREAT``
+    #:  - ``HPEXPIRE``
+    #:  - ``HPEXPIREAT``
     #:  - ``PEXPIRE``
     #:  - ``PEXPIREAT``
     #:  - ``ZADD``
@@ -286,6 +290,10 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``EXPIRE``
     #:  - ``EXPIREAT``
+    #:  - ``HEXPIRE``
+    #:  - ``HEXPIREAT``
+    #:  - ``HPEXPIRE``
+    #:  - ``HPEXPIREAT``
     #:  - ``PEXPIRE``
     #:  - ``PEXPIREAT``
     #:  - ``ZADD``
@@ -296,6 +304,10 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``EXPIRE``
     #:  - ``EXPIREAT``
     #:  - ``GEOADD``
+    #:  - ``HEXPIRE``
+    #:  - ``HEXPIREAT``
+    #:  - ``HPEXPIRE``
+    #:  - ``HPEXPIREAT``
     #:  - ``JSON.SET``
     #:  - ``PEXPIRE``
     #:  - ``PEXPIREAT``
@@ -308,6 +320,10 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``EXPIRE``
     #:  - ``EXPIREAT``
     #:  - ``GEOADD``
+    #:  - ``HEXPIRE``
+    #:  - ``HEXPIREAT``
+    #:  - ``HPEXPIRE``
+    #:  - ``HPEXPIREAT``
     #:  - ``JSON.SET``
     #:  - ``PEXPIRE``
     #:  - ``PEXPIREAT``
@@ -925,6 +941,16 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``FT.CREATE``
+    INDEXEMPTY = b"INDEXEMPTY"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    INDEXMISSING = b"INDEXMISSING"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
     JSON = b"JSON"
 
     #: Used by:
@@ -1396,6 +1422,20 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``FT.SEARCH``
+    #:  - ``HEXPIRE``
+    #:  - ``HEXPIREAT``
+    #:  - ``HEXPIRETIME``
+    #:  - ``HPERSIST``
+    #:  - ``HPEXPIRE``
+    #:  - ``HPEXPIREAT``
+    #:  - ``HPEXPIRETIME``
+    #:  - ``HPTTL``
+    #:  - ``HTTL``
+    FIELDS = b"FIELDS"
+
+    #: Used by:
+    #:
     #:  - ``HSCAN``
     #:  - ``SCAN``
     #:  - ``SSCAN``
@@ -1756,11 +1796,6 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``FT.SEARCH``
     EXPANDER = b"EXPANDER"
-
-    #: Used by:
-    #:
-    #:  - ``FT.SEARCH``
-    FIELDS = b"FIELDS"
 
     #: Used by:
     #:

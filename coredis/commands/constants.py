@@ -344,6 +344,15 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     HSCAN = b"HSCAN"  # Since redis: 2.8.0
     HSTRLEN = b"HSTRLEN"  # Since redis: 3.2.0
     HRANDFIELD = b"HRANDFIELD"  # Since redis: 6.2.0
+    HEXPIRE = b"HEXPIRE"  # Since redis: 7.4.0
+    HEXPIREAT = b"HEXPIREAT"  # Since redis: 7.4.0
+    HEXPIRETIME = b"HEXPIRETIME"  # Since redis: 7.4.0
+    HPERSIST = b"HPERSIST"  # Since redis: 7.4.0
+    HPEXPIRE = b"HPEXPIRE"  # Since redis: 7.4.0
+    HPEXPIREAT = b"HPEXPIREAT"  # Since redis: 7.4.0
+    HPEXPIRETIME = b"HPEXPIRETIME"  # Since redis: 7.4.0
+    HPTTL = b"HPTTL"  # Since redis: 7.4.0
+    HTTL = b"HTTL"  # Since redis: 7.4.0
     HMSET = b"HMSET"  # Deprecated in redis: 4.0.0
 
     #: Commands for hyperloglog
@@ -431,7 +440,6 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     JSON_OBJKEYS = b"JSON.OBJKEYS"  # Since RedisJSON: 1.0.0
     JSON_OBJLEN = b"JSON.OBJLEN"  # Since RedisJSON: 1.0.0
     JSON_TYPE = b"JSON.TYPE"  # Since RedisJSON: 1.0.0
-    JSON_RESP = b"JSON.RESP"  # Since RedisJSON: 1.0.0
     JSON_DEBUG = b"JSON.DEBUG"  # Since RedisJSON: 1.0.0
     JSON_DEBUG_HELP = b"JSON.DEBUG HELP"  # Since RedisJSON: 1.0.0
     JSON_DEBUG_MEMORY = b"JSON.DEBUG MEMORY"  # Since RedisJSON: 1.0.0
@@ -440,6 +448,7 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     JSON_MSET = b"JSON.MSET"  # Since RedisJSON: 2.6.0
     JSON_MERGE = b"JSON.MERGE"  # Since RedisJSON: 2.6.0
     JSON_NUMMULTBY = b"JSON.NUMMULTBY"  # Deprecated in RedisJSON: 2.0
+    JSON_RESP = b"JSON.RESP"  # Deprecated in RedisJSON: 2.6
 
     #: Commands for bf
     BF_RESERVE = b"BF.RESERVE"  # Since bf: 1.0.0

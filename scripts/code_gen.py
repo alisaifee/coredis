@@ -1931,7 +1931,7 @@ def code_gen(ctx, debug: bool, next_version: str):
             os.system("git clone git@github.com:redis/docs /var/tmp/redis-doc")
         else:
             os.system("cd /var/tmp/redis-doc && git pull")
-        shutil.copy("/var/tmp/redis-doc/data/commands.json", cur_dir)
+        shutil.copy("/var/tmp/redis-doc/data/commands_core.json", os.path.join(cur_dir, "commands.json"))
         for module, details in MODULES.items():
             if not os.path.isdir(f"/var/tmp/redis-module-{details['module']}"):
                 os.system(
