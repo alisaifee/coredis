@@ -29,6 +29,8 @@ warn_unused_ignores = true
 module = [
     "async_timeout",
     "beartype",
+    "botocore",
+    "cachetools",
     "deprecated",
     "pympler",
     "wrapt",
