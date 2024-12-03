@@ -5,7 +5,6 @@ Credential Providers
 
    ~coredis.credentials.AbstractCredentialProvider
    ~coredis.credentials.UserPassCredentialProvider
-   ~coredis.credentials.PassOnly
    ~coredis.credentials.UserPass
 
 
@@ -13,4 +12,7 @@ Credential Providers
    :class-doc-from: both
 
 .. autoclass:: coredis.credentials.UserPassCredentialProvider
+   :class-doc-from: both
+
+.. autoclass:: coredis.recipes.credentials.ElastiCacheIAMProvider
    :class-doc-from: both

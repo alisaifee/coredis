@@ -5,10 +5,6 @@ from abc import ABC, abstractmethod
 from coredis.typing import NamedTuple
 
 
-class PassOnly(NamedTuple):
-    password: str
-
-
 class UserPass(NamedTuple):
     username: str
     password: str
@@ -20,7 +16,7 @@ class AbstractCredentialProvider(ABC):
     """
 
     @abstractmethod
-    def get_credentials(self) -> PassOnly | UserPass:
+    async def get_credentials(self) -> UserPass:
         pass
 
 
@@ -37,9 +33,5 @@ class UserPassCredentialProvider(AbstractCredentialProvider):
         self.username = username or ""
         self.password = password or ""
 
-    def get_credentials(self) -> PassOnly | UserPass:
-        return (
-            PassOnly(self.password)
-            if not self.username
-            else UserPass(self.username, self.password)
-        )
+    async def get_credentials(self) -> UserPass:
+        return UserPass(self.username or "default", self.password)

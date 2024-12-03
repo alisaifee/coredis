@@ -34,3 +34,5 @@ For example::
 More complicated credential providers are also possible. For example, this pattern could be used
 to use IAM credentials to authenticate with an AWS Elasticache cluster or any other credential
 manager that requires programmatic access.
+
+An example of this is described in :ref:`recipes/credentials:credential providers`.

@@ -432,7 +432,7 @@ class BaseConnection(asyncio.BaseProtocol):
 
     async def try_legacy_auth(self) -> None:
         if self.credential_provider:
-            creds = self.credential_provider.get_credentials()
+            creds = await self.credential_provider.get_credentials()
             params = [creds.password]
             if isinstance(creds, UserPass):
                 params.insert(0, creds.username)
@@ -449,17 +449,21 @@ class BaseConnection(asyncio.BaseProtocol):
             return
 
         hello_command_args: List[Union[int, str, bytes]] = [self.protocol_version]
-        creds = None
-        if self.credential_provider:
-            creds = self.credential_provider.get_credentials()
-        elif self.username or self.password:
-            cred_provider = UserPassCredentialProvider(self.username, self.password)
-            creds = cred_provider.get_credentials()
-        if creds:
+        if creds := (
+            await self.credential_provider.get_credentials()
+            if self.credential_provider
+            else (
+                await UserPassCredentialProvider(
+                    self.username, self.password
+                ).get_credentials()
+                if (self.username or self.password)
+                else None
+            )
+        ):
             hello_command_args.extend(
                 [
                     "AUTH",
-                    creds.username if isinstance(creds, UserPass) else b"default",
+                    creds.username,
                     creds.password or b"",
                 ]
             )

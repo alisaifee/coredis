@@ -8,4 +8,5 @@ part of the library under the :mod:`coredis.recipes` namespace.
 .. toctree::
     :maxdepth: 3
 
+    credentials
     locks

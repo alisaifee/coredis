@@ -722,7 +722,7 @@ class Redis(Client[AnyStr]):
         :param db: database number to switch to upon connection
         :param username: Username for authenticating with the redis server
         :param password: Password for authenticating with the redis server
-        :param credential_provider: CredentialProvider to get authentication creds
+        :param credential_provider: CredentialProvider to get authentication credentials
         :param stream_timeout: Timeout (seconds) when reading responses from the server
         :param connect_timeout: Timeout (seconds) for establishing a connection to the server
         :param connection_pool: The connection pool instance to use. If not provided
