@@ -562,9 +562,11 @@ def get_token_mapping():
     for name in ["commands", *MODULES.keys()]:
         commands = get_commands(name + ".json")
         for command, details in commands.items():
+
             if name in MODULES and not details["group"] == MODULES[name]["group"]:
                 continue
-
+            elif version.parse(details["since"]) > MAX_SUPPORTED_VERSION:
+                continue
             def _extract_pure_tokens(obj):
                 tokens = []
 
@@ -613,252 +615,6 @@ def get_token_mapping():
 
 
 def read_command_docs(command, group, module=None):
-    if not module:
-        doc = open(
-            "/var/tmp/redis-doc/commands/%s.md" % command.lower().replace(" ", "-")
-        ).read()
-    else:
-        doc = open(
-            f"/var/tmp/redis-module-{module}/docs/commands/%s.md"
-            % command.lower().replace(" ", "-")
-        ).read()
-
-    return_description = re.compile(
-        r"(@(.*?)-reply[:,]*\s*(.*?)$)", re.MULTILINE
-    ).findall(doc)
-
-    def sanitize_description(desc):
-        if not desc:
-            return ""
-        return_description = (
-            desc.replace("a nil bulk reply", "``None``")
-            .replace("a null bulk reply", "``None``")
-            .replace(", specifically:", "")
-            .replace("specifically:", "")
-            .replace("represented as a string", "")
-        )
-        return_description = re.sub("`(.*?)`", "``\\1``", return_description)
-        return_description = return_description.replace("`nil`", "``None``")
-        return_description = re.sub("_(.*?)_", "``\\1``", return_description)
-        return_description = return_description.replace(
-            "````None````", "``None``"
-        )  # lol
-        return_description = return_description.replace("@examples", "")  # more lol
-        return_description = return_description.replace("@example", "")  # more more lol
-        return_description = re.sub(r"^\s*([^\w]+)", "", return_description)
-
-        return return_description
-
-    full_description = re.compile("@return(.*)@examples", re.DOTALL).findall(doc)
-
-    if not full_description:
-        full_description = re.compile("@return(.*)##", re.DOTALL).findall(doc)
-
-    if not full_description:
-        full_description = re.compile("@return(.*)$", re.DOTALL).findall(doc)
-
-    if full_description:
-        full_description = full_description[0].strip()
-
-    full_description = sanitize_description(full_description)
-
-    if full_description:
-        full_description = re.sub("((.*)-reply)", "", full_description)
-        full_description = full_description.split("\n")
-        full_description = [k.strip().lstrip(":") for k in full_description]
-        full_description = [k.strip() for k in full_description if k.strip()]
-    collection_type = Tuple
-    if return_description:
-        if len(return_description) > 0:
-            rtypes = {k[1]: k[2].replace("@examples", "") for k in return_description}
-            has_nil = False
-            has_bool = False
-
-            if "simple-string" in rtypes and (
-                True
-                or rtypes["simple-string"].find("OK") >= 0
-                or rtypes["simple-string"].find("an error") >= 0
-                or not rtypes["simple-string"].strip()
-            ):
-                has_bool = True
-                rtypes.pop("simple-string")
-
-            if "nil" in rtypes:
-                rtypes.pop("nil")
-                has_nil = True
-
-            for t, description in list(rtypes.items()):
-                if (
-                    "`nil`" in description
-                    or "`null`" in description
-                    or "`NULL`" in description
-                    or "`None`" in description
-                    or "`none`" in description
-                ) and "or" in description:
-                    has_nil = True
-                elif (
-                    "`nil`" in description
-                    or "`null`" in description
-                    or "`NULL`" in description
-                    or "`None`" in description
-                    or "`none`" in description
-                ):
-                    has_nil = True
-                    rtypes.pop(t)
-
-            full_description_joined = "\n".join(full_description)
-
-            if (
-                "`nil`" in full_description_joined
-                or "`null`" in full_description_joined
-                or "`NULL`" in full_description_joined
-                or "`None`" in full_description_joined
-                or "`none`" in full_description_joined
-            ):
-                has_nil = True
-
-            mapped_types = {
-                k: REDIS_RETURN_ARGUMENT_TYPE_MAPPING.get(k, "Any") for k in rtypes
-            }
-            # special handling for special types
-
-            if "array" in mapped_types:
-                if group == "list":
-                    collection_type = mapped_types["array"] = List
-
-                if group == "set":
-                    collection_type = mapped_types["array"] = Set
-
-            if has_bool:
-                mapped_types["bool"] = bool
-
-            if len(mapped_types) > 1:
-                if "array" in mapped_types:
-                    if (
-                        rtypes.get("bulk-string", "").find("floating point") >= 0
-                        or rtypes.get("bulk-string", "").find("double precision") >= 0
-                        or rtypes.get("bulk-string", "").find("a double") >= 0
-                    ):
-                        mapped_types["array"] = (
-                            Tuple[float, ...]
-                            if collection_type == Tuple
-                            else collection_type[float]
-                        )
-                    elif rtypes["array"].find("elements") >= 0:
-                        mapped_types["array"] = (
-                            Tuple[AnyStr, ...]
-                            if collection_type == Tuple
-                            else collection_type[AnyStr]
-                        )
-                    else:
-                        mapped_types["array"] = (
-                            Tuple[AnyStr, ...]
-                            if collection_type == Tuple
-                            else collection_type[AnyStr]
-                        )
-
-                if "bulk-string" in mapped_types:
-                    if (
-                        rtypes.get("bulk-string", "").find("floating point") >= 0
-                        or rtypes.get("bulk-string", "").find("double precision") >= 0
-                        or rtypes.get("bulk-string", "").find("a double") >= 0
-                    ):
-                        mapped_types["bulk-string"] = float
-
-                    if rtypes.get("bulk-string", "").lower().find("an error") >= 0:
-                        mapped_types.pop("bulk-string")
-                        rtypes.pop("bulk-string")
-
-                rtype = (
-                    Optional[Union[tuple(mapped_types.values())]]
-                    if has_nil
-                    else Union[tuple(mapped_types.values())]
-                )
-            else:
-                return_details = "\n".join(full_description)
-                sub_type = list(mapped_types.values())[0]
-
-                if "array" in rtypes:
-                    sub_type_nil = "nil" in rtypes["array"]
-
-                    if rtypes["array"].find("nested") >= 0:
-                        sub_type = sub_type[sub_type[Any]]
-                    else:
-                        if sub_type == Tuple:
-                            if rtypes["array"].find("integer") >= 0:
-                                sub_type = (
-                                    sub_type[int, ...]
-                                    if not sub_type_nil
-                                    else sub_type[Optional[int], ...]
-                                )
-                            elif rtypes["array"].find("and their") >= 0:
-                                sub_type = Dict[AnyStr, AnyStr]
-                            elif rtypes["array"].find("a double") >= 0:
-                                sub_type = (
-                                    sub_type[float, ...]
-                                    if not sub_type_nil
-                                    else sub_type[Optional[float], ...]
-                                )
-                            else:
-                                sub_type = (
-                                    sub_type[AnyStr, ...]
-                                    if not sub_type_nil
-                                    else sub_type[Optional[AnyStr], ...]
-                                )
-
-                            if sub_type_nil:
-                                has_nil = False
-                        else:
-                            if rtypes["array"].find("integer") >= 0:
-                                sub_type = (
-                                    sub_type[int]
-                                    if not sub_type_nil
-                                    else sub_type[Optional[int]]
-                                )
-                            elif rtypes["array"].find("and their") >= 0:
-                                sub_type = (
-                                    sub_type[Tuple[AnyStr, AnyStr]]
-                                    if not sub_type_nil
-                                    else sub_type[Tuple[AnyStr, AnyStr]]
-                                )
-                            elif rtypes["array"].find("a double") >= 0:
-                                sub_type = (
-                                    sub_type[float]
-                                    if not sub_type_nil
-                                    else sub_type[Optional[float]]
-                                )
-                            else:
-                                sub_type = (
-                                    sub_type[AnyStr]
-                                    if not sub_type_nil
-                                    else sub_type[Optional[AnyStr]]
-                                )
-
-                            if sub_type_nil:
-                                has_nil = False
-
-                if "integer" in rtypes:
-                    if (
-                        return_details.find("``0``") >= 0
-                        and return_details.find("``1``") >= 0
-                    ):
-                        sub_type = bool
-
-                if "simple-string" in rtypes:
-                    if rtypes["simple-string"].find("a double") >= 0:
-                        sub_type = float
-
-                if "bulk-string" in rtypes:
-                    if rtypes["bulk-string"].find("a double") >= 0:
-                        sub_type = float
-
-                rtype = Optional[sub_type] if has_nil else sub_type
-
-            rdesc = [sanitize_description(k[2]) for k in return_description]
-            rdesc = [k for k in rdesc if k.strip()]
-
-            return rtype, full_description
-
     return Any, ""
 
 
@@ -869,11 +625,10 @@ def get_official_commands(group=None, include_skipped=False):
     [
         by_group.setdefault(command["group"], []).append({**command, **{"name": name}})
         for name, command in response.items()
-        if version.parse(command["since"]) < MAX_SUPPORTED_VERSION
-        and include_skipped
-        or name not in SKIP_COMMANDS
+        if (version.parse(command["since"]) < MAX_SUPPORTED_VERSION
+        or include_skipped)
+        and name not in SKIP_COMMANDS
     ]
-
     return by_group if not group else by_group.get(group)
 
 
@@ -2173,10 +1928,10 @@ def code_gen(ctx, debug: bool, next_version: str):
     ctx.ensure_object(dict)
     if debug:
         if not os.path.isdir("/var/tmp/redis-doc"):
-            os.system("git clone git@github.com:redis/redis-doc /var/tmp/redis-doc")
+            os.system("git clone git@github.com:redis/docs /var/tmp/redis-doc")
         else:
             os.system("cd /var/tmp/redis-doc && git pull")
-        shutil.copy("/var/tmp/redis-doc/commands.json", cur_dir)
+        shutil.copy("/var/tmp/redis-doc/data/commands.json", cur_dir)
         for module, details in MODULES.items():
             if not os.path.isdir(f"/var/tmp/redis-module-{details['module']}"):
                 os.system(
@@ -2279,7 +2034,7 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
 @click.option("--path", default="coredis/commands/constants.py")
 @click.pass_context
 def command_constants(ctx, path):
-    commands = get_official_commands(include_skipped=True)
+    commands = get_official_commands(include_skipped=False)
     for module in MODULES:
         commands.update(get_module_commands(module))
 
@@ -2794,6 +2549,8 @@ def cluster_key_extraction(path):
             )
 
     for name, command in commands.items():
+        if version.parse(command["since"]) > MAX_SUPPORTED_VERSION:
+            continue
         key_specs = command.get("key_specs", [])
         for spec in key_specs:
             mode = (
