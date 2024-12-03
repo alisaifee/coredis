@@ -133,7 +133,9 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``CLIENT CACHING``
     #:  - ``CLIENT KILL``
+    #:  - ``REPLICAOF``
     #:  - ``SCRIPT DEBUG``
+    #:  - ``SLAVEOF``
     NO = b"NO"
 
     #: Used by:
@@ -487,6 +489,11 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``HSCAN``
+    NOVALUES = b"NOVALUES"
+
+    #: Used by:
+    #:
     #:  - ``LCS``
     IDX = b"IDX"
 
@@ -519,6 +526,12 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``MIGRATE``
     EMPTY_STRING = b""
+
+    #: Used by:
+    #:
+    #:  - ``REPLICAOF``
+    #:  - ``SLAVEOF``
+    ONE = b"ONE"
 
     #: Used by:
     #:
@@ -1210,6 +1223,11 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``CLIENT KILL``
     LADDR = b"LADDR"
+
+    #: Used by:
+    #:
+    #:  - ``CLIENT KILL``
+    MAXAGE = b"MAXAGE"
 
     #: Used by:
     #:

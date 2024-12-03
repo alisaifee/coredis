@@ -28,7 +28,6 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     MONITOR = b"MONITOR"  # Since redis: 1.0.0
     SAVE = b"SAVE"  # Since redis: 1.0.0
     SHUTDOWN = b"SHUTDOWN"  # Since redis: 1.0.0
-    SYNC = b"SYNC"  # Since redis: 1.0.0
     CONFIG = b"CONFIG"  # Since redis: 2.0.0
     CONFIG_GET = b"CONFIG GET"  # Since redis: 2.0.0
     CONFIG_RESETSTAT = b"CONFIG RESETSTAT"  # Since redis: 2.0.0
@@ -39,7 +38,6 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     SLOWLOG_RESET = b"SLOWLOG RESET"  # Since redis: 2.2.12
     TIME = b"TIME"  # Since redis: 2.6.0
     CONFIG_REWRITE = b"CONFIG REWRITE"  # Since redis: 2.8.0
-    PSYNC = b"PSYNC"  # Since redis: 2.8.0
     ROLE = b"ROLE"  # Since redis: 2.8.12
     COMMAND = b"COMMAND"  # Since redis: 2.8.13
     COMMAND_COUNT = b"COMMAND COUNT"  # Since redis: 2.8.13
@@ -52,8 +50,6 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     LATENCY_HISTORY = b"LATENCY HISTORY"  # Since redis: 2.8.13
     LATENCY_LATEST = b"LATENCY LATEST"  # Since redis: 2.8.13
     LATENCY_RESET = b"LATENCY RESET"  # Since redis: 2.8.13
-    REPLCONF = b"REPLCONF"  # Since redis: 3.0.0
-    RESTORE_ASKING = b"RESTORE-ASKING"  # Since redis: 3.0.0
     MEMORY = b"MEMORY"  # Since redis: 4.0.0
     MEMORY_DOCTOR = b"MEMORY DOCTOR"  # Since redis: 4.0.0
     MEMORY_HELP = b"MEMORY HELP"  # Since redis: 4.0.0
@@ -353,9 +349,7 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     #: Commands for hyperloglog
     PFADD = b"PFADD"  # Since redis: 2.8.9
     PFCOUNT = b"PFCOUNT"  # Since redis: 2.8.9
-    PFDEBUG = b"PFDEBUG"  # Since redis: 2.8.9
     PFMERGE = b"PFMERGE"  # Since redis: 2.8.9
-    PFSELFTEST = b"PFSELFTEST"  # Since redis: 2.8.9
 
     #: Commands for pubsub
     PSUBSCRIBE = b"PSUBSCRIBE"  # Since redis: 2.0.0
@@ -415,7 +409,6 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     XREAD = b"XREAD"  # Since redis: 5.0.0
     XREADGROUP = b"XREADGROUP"  # Since redis: 5.0.0
     XREVRANGE = b"XREVRANGE"  # Since redis: 5.0.0
-    XSETID = b"XSETID"  # Since redis: 5.0.0
     XTRIM = b"XTRIM"  # Since redis: 5.0.0
     XAUTOCLAIM = b"XAUTOCLAIM"  # Since redis: 6.2.0
     XGROUP_CREATECONSUMER = b"XGROUP CREATECONSUMER"  # Since redis: 6.2.0
