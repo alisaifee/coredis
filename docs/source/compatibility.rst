@@ -1138,6 +1138,42 @@ Sets the values of multiple fields.
 
 
 
+HPEXPIRE
+********
+
+Set expiry for hash field using relative time to expire (milliseconds)
+
+- Documentation: `HPEXPIRE <https://redis.io/commands/hpexpire>`_
+- Implementation: :meth:`~coredis.Redis.hpexpire`
+
+- New in redis: 7.4.0
+
+
+
+- .. versionadded:: 4.18.0
+
+
+
+
+
+HPEXPIREAT
+**********
+
+Set expiry for hash field using an absolute Unix timestamp (milliseconds)
+
+- Documentation: `HPEXPIREAT <https://redis.io/commands/hpexpireat>`_
+- Implementation: :meth:`~coredis.Redis.hpexpireat`
+
+- New in redis: 7.4.0
+
+
+
+- .. versionadded:: 4.18.0
+
+
+
+
+
 HRANDFIELD
 **********
 
@@ -1244,26 +1280,6 @@ HPERSIST [X]
 Removes the expiration time for each specified field
 
 - Documentation: `HPERSIST <https://redis.io/commands/hpersist>`_
-
-- Not Implemented
-
-
-HPEXPIRE [X]
-************
-
-Set expiry for hash field using relative time to expire (milliseconds)
-
-- Documentation: `HPEXPIRE <https://redis.io/commands/hpexpire>`_
-
-- Not Implemented
-
-
-HPEXPIREAT [X]
-**************
-
-Set expiry for hash field using an absolute Unix timestamp (milliseconds)
-
-- Documentation: `HPEXPIREAT <https://redis.io/commands/hpexpireat>`_
 
 - Not Implemented
 

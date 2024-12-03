@@ -2033,6 +2033,34 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="4.18.0")
     @redis_command(
+        CommandName.HPEXPIRE, version_introduced="7.4.0", group=CommandGroup.HASH
+    )
+    async def hpexpire(
+        self,
+        key: KeyT,
+        milliseconds: Union[int, datetime.timedelta],
+        fields: Parameters[StringT],
+        condition: Optional[
+            Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX]
+        ] = None,
+    ) -> Tuple[int, ...]:
+        """
+        Set expiry for hash field using relative time to expire (milliseconds)
+        """
+        pieces: CommandArgList = [key, normalized_milliseconds(milliseconds)]
+
+        if condition is not None:
+            pieces.append(condition)
+        pieces.append("FIELDS")
+        pieces.append(len(list(fields)))
+        pieces.extend(fields)
+
+        return await self.execute_command(
+            CommandName.HPEXPIRE, *pieces, callback=TupleCallback[int]()
+        )
+
+    @versionadded(version="4.18.0")
+    @redis_command(
         CommandName.HEXPIREAT, version_introduced="7.4.0", group=CommandGroup.HASH
     )
     async def hexpireat(
@@ -2056,6 +2084,37 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return await self.execute_command(
             CommandName.HEXPIREAT, *pieces, callback=TupleCallback[int]()
+        )
+
+    @versionadded(version="4.18.0")
+    @redis_command(
+        CommandName.HPEXPIREAT, version_introduced="7.4.0", group=CommandGroup.HASH
+    )
+    async def hpexpireat(
+        self,
+        key: KeyT,
+        unix_time_milliseconds: Union[int, datetime.datetime],
+        fields: Parameters[StringT],
+        condition: Optional[
+            Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX]
+        ] = None,
+    ) -> Tuple[int, ...]:
+        """
+        Set expiry for hash field using an absolute Unix timestamp (milliseconds)
+        """
+        pieces: CommandArgList = [
+            key,
+            normalized_time_milliseconds(unix_time_milliseconds),
+        ]
+
+        if condition is not None:
+            pieces.append(condition)
+        pieces.append(PrefixToken.FIELDS)
+        pieces.append(len(list(fields)))
+        pieces.extend(fields)
+
+        return await self.execute_command(
+            CommandName.HPEXPIREAT, *pieces, callback=TupleCallback[int]()
         )
 
     @redis_command(

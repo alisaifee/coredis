@@ -100,6 +100,55 @@ class TestHash:
         await asyncio.sleep(1)
         assert {_s("2"): _s("2")} == await client.hgetall(_s("a"))
 
+    @pytest.mark.min_server_version("7.4.0")
+    async def test_hpexpire(self, client, _s):
+        await client.hset("a", {"1": 1, "2": 2, "3": 3, "4": 4})
+        assert (1,) == await client.hpexpire("a", 5000, ["1"])
+        assert (-2,) == await client.hpexpire("missing", 1000, ["missing"])
+        assert (0, 1, -2) == await client.hpexpire(
+            "a", 5000, ["1", "3", "5"], PureToken.NX
+        )
+        assert (1, 1, -2) == await client.hpexpire(
+            "a", 5000, ["1", "3", "5"], PureToken.XX
+        )
+        assert (0, 0, -2) == await client.hpexpire(
+            "a", 1000, ["1", "3", "5"], PureToken.GT
+        )
+        assert (1, -2) == await client.hpexpire("a", 1000, ["4", "5"], PureToken.LT)
+        assert (2, 2, -2) == await client.hpexpire(
+            "a", datetime.timedelta(milliseconds=0), ["1", "3", "5"], PureToken.LT
+        )
+        await asyncio.sleep(1)
+        assert {_s("2"): _s("2")} == await client.hgetall(_s("a"))
+
+    @pytest.mark.min_server_version("7.4.0")
+    async def test_hpexpireat(self, client, _s, redis_server_time):
+        now = await redis_server_time(client)
+        now_ms = 1000 * int(time.mktime(now.timetuple()))
+        await client.hset("a", {"1": 1, "2": 2, "3": 3, "4": 4})
+        assert (1,) == await client.hpexpireat("a", now_ms + 5000, ["1"])
+        assert (-2,) == await client.hpexpireat("missing", now_ms + 1000, ["missing"])
+        assert (0, 1, -2) == await client.hpexpireat(
+            "a", now_ms + 5000, ["1", "3", "5"], PureToken.NX
+        )
+        assert (1, 1, -2) == await client.hpexpireat(
+            "a", now_ms + 5000, ["1", "3", "5"], PureToken.XX
+        )
+        assert (0, 0, -2) == await client.hpexpireat(
+            "a", now_ms + 1000, ["1", "3", "5"], PureToken.GT
+        )
+        assert (1, -2) == await client.hpexpireat(
+            "a", now_ms + 1000, ["4", "5"], PureToken.LT
+        )
+        assert (2, 2, -2) == await client.hpexpireat(
+            "a",
+            now - datetime.timedelta(milliseconds=1),
+            ["1", "3", "5"],
+            PureToken.LT,
+        )
+        await asyncio.sleep(1)
+        assert {_s("2"): _s("2")} == await client.hgetall(_s("a"))
+
     async def test_hgetall(self, client, _s):
         h = {_s("a1"): _s("1"), _s("a2"): _s("2"), _s("a3"): _s("3")}
         await client.hset("a", h)
