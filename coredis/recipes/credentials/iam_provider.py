@@ -33,7 +33,7 @@ class ElastiCacheIAMProvider(AbstractCredentialProvider):
             session.get_component("event_emitter"),
         )
 
-    @cached(cache=TTLCache(maxsize=128, ttl=900))
+    @cached(cache=TTLCache(maxsize=128, ttl=900))  # type: ignore[misc]
     async def get_credentials(self) -> UserPass:
         """
         Returns a short-lived token that can be used to connect to an

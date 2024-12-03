@@ -29,7 +29,7 @@ warn_unused_ignores = true
 module = [
     "async_timeout",
     "beartype",
-    "botocore",
+    "botocore.*",
     "cachetools",
     "deprecated",
     "pympler",
