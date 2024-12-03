@@ -978,6 +978,42 @@ Determines whether a field exists in a hash.
 
 
 
+HEXPIRE
+*******
+
+Set expiry for hash field using relative time to expire (seconds)
+
+- Documentation: `HEXPIRE <https://redis.io/commands/hexpire>`_
+- Implementation: :meth:`~coredis.Redis.hexpire`
+
+- New in redis: 7.4.0
+
+
+
+- .. versionadded:: 4.18.0
+
+
+
+
+
+HEXPIREAT
+*********
+
+Set expiry for hash field using an absolute Unix timestamp (seconds)
+
+- Documentation: `HEXPIREAT <https://redis.io/commands/hexpireat>`_
+- Implementation: :meth:`~coredis.Redis.hexpireat`
+
+- New in redis: 7.4.0
+
+
+
+- .. versionadded:: 4.18.0
+
+
+
+
+
 HGET
 ****
 
@@ -1190,26 +1226,6 @@ Returns all values in a hash.
 
 - Supports client caching: yes
 
-
-
-HEXPIRE [X]
-***********
-
-Set expiry for hash field using relative time to expire (seconds)
-
-- Documentation: `HEXPIRE <https://redis.io/commands/hexpire>`_
-
-- Not Implemented
-
-
-HEXPIREAT [X]
-*************
-
-Set expiry for hash field using an absolute Unix timestamp (seconds)
-
-- Documentation: `HEXPIREAT <https://redis.io/commands/hexpireat>`_
-
-- Not Implemented
 
 
 HEXPIRETIME [X]
