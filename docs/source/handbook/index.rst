@@ -7,6 +7,7 @@ Handbook
 
     cluster
     sentinel
+    credentials
     pubsub
     streams
     caching
@@ -21,7 +22,6 @@ Handbook
     typing
     development
 
-
 This section contains details on high level concepts
 of redis that are supported by **coredis**.
 
@@ -30,6 +30,10 @@ Deployment Topologies
 
 - :ref:`handbook/cluster:redis cluster`
 - :ref:`handbook/sentinel:sentinel support`
+
+Authentication
+--------------
+- :ref:`handbook/credentials:credential providers`
 
 Event Driven Architectures
 --------------------------

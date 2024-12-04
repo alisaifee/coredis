@@ -6,7 +6,13 @@ from coredis.typing import NamedTuple
 
 
 class UserPass(NamedTuple):
+    """
+    Username/password tuple.
+    """
+
+    #: Username
     username: str
+    #: Password
     password: str
 
 
@@ -17,6 +23,10 @@ class AbstractCredentialProvider(ABC):
 
     @abstractmethod
     async def get_credentials(self) -> UserPass:
+        """
+        Returns an instance of :class:`coredis.credentials.UserPass` for
+        establishing a connection to the redis server.
+        """
         pass
 
 
