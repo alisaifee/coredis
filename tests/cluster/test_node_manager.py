@@ -10,6 +10,7 @@ import pytest
 
 # rediscluster imports
 from coredis.client import Redis
+from coredis.credentials import UserPassCredentialProvider
 from coredis.exceptions import ConnectionError, RedisClusterException, RedisError
 from coredis.pool.nodemanager import HASH_SLOTS, ManagedNode, NodeManager
 
@@ -377,3 +378,13 @@ async def test_init_with_down_node(redis_cluster):
 async def test_cluster_initialization_fail(redis_cluster_auth, cloner):
     with pytest.raises(RedisClusterException, match="invalid username-password pair"):
         await cloner(redis_cluster_auth, password="wrong")
+
+
+async def test_cluster_initialization_credential_provider_fail(
+    redis_cluster_auth_cred_provider, cloner
+):
+    with pytest.raises(RedisClusterException, match="invalid username-password pair"):
+        await cloner(
+            redis_cluster_auth_cred_provider,
+            credential_provider=UserPassCredentialProvider(password="wrong"),
+        )

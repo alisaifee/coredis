@@ -19,6 +19,11 @@ import async_timeout
 import coredis
 from coredis._packer import Packer
 from coredis._utils import nativestr
+from coredis.credentials import (
+    AbstractCredentialProvider,
+    UserPass,
+    UserPassCredentialProvider,
+)
 from coredis.exceptions import (
     AuthenticationRequiredError,
     ConnectionError,
@@ -174,6 +179,7 @@ class BaseConnection(asyncio.BaseProtocol):
         self._stream_timeout = stream_timeout
         self.username: Optional[str] = None
         self.password: Optional[str] = ""
+        self.credential_provider: Optional[AbstractCredentialProvider] = None
         self.db: Optional[int] = None
         self.pid: int = os.getpid()
         self._description_args: Callable[..., Dict[str, Optional[Union[str, int]]]] = (
@@ -425,11 +431,17 @@ class BaseConnection(asyncio.BaseProtocol):
             return False
 
     async def try_legacy_auth(self) -> None:
-        if not self.password:
+        if self.credential_provider:
+            creds = await self.credential_provider.get_credentials()
+            params = [creds.password]
+            if isinstance(creds, UserPass):
+                params.insert(0, creds.username)
+        elif not self.password:
             return
-        params = [self.password]
-        if self.username:
-            params.insert(0, self.username)
+        else:
+            params = [self.password]
+            if self.username:
+                params.insert(0, self.username)
         await (await self.create_request(b"AUTH", *params, decode=False))
 
     async def perform_handshake(self) -> None:
@@ -437,9 +449,23 @@ class BaseConnection(asyncio.BaseProtocol):
             return
 
         hello_command_args: List[Union[int, str, bytes]] = [self.protocol_version]
-        if self.username or self.password:
+        if creds := (
+            await self.credential_provider.get_credentials()
+            if self.credential_provider
+            else (
+                await UserPassCredentialProvider(
+                    self.username, self.password
+                ).get_credentials()
+                if (self.username or self.password)
+                else None
+            )
+        ):
             hello_command_args.extend(
-                ["AUTH", self.username or b"default", self.password or b""]
+                [
+                    "AUTH",
+                    creds.username,
+                    creds.password or b"",
+                ]
             )
         try:
             hello_resp = await (
@@ -729,6 +755,7 @@ class Connection(BaseConnection):
         port: int = 6379,
         username: Optional[str] = None,
         password: Optional[str] = None,
+        credential_provider: Optional[AbstractCredentialProvider] = None,
         db: Optional[int] = 0,
         stream_timeout: Optional[float] = None,
         connect_timeout: Optional[float] = None,
@@ -758,6 +785,9 @@ class Connection(BaseConnection):
         self.port = port
         self.username: Optional[str] = username
         self.password: Optional[str] = password
+        self.credential_provider: Optional[AbstractCredentialProvider] = (
+            credential_provider
+        )
         self.db: Optional[int] = db
         self.ssl_context = ssl_context
         self._connect_timeout = connect_timeout
@@ -819,6 +849,7 @@ class UnixDomainSocketConnection(BaseConnection):
         path: str = "",
         username: Optional[str] = None,
         password: Optional[str] = None,
+        credential_provider: Optional[AbstractCredentialProvider] = None,
         db: int = 0,
         stream_timeout: Optional[float] = None,
         connect_timeout: Optional[float] = None,
@@ -840,6 +871,7 @@ class UnixDomainSocketConnection(BaseConnection):
         self.db = db
         self.username = username
         self.password = password
+        self.credential_provider = credential_provider
         self._connect_timeout = connect_timeout
         self._description_args = lambda: {"path": self.path, "db": self.db}
 
@@ -864,6 +896,7 @@ class ClusterConnection(Connection):
         port: int = 6379,
         username: Optional[str] = None,
         password: Optional[str] = None,
+        credential_provider: Optional[AbstractCredentialProvider] = None,
         db: Optional[int] = 0,
         stream_timeout: Optional[float] = None,
         connect_timeout: Optional[float] = None,
@@ -886,6 +919,7 @@ class ClusterConnection(Connection):
             port=port,
             username=username,
             password=password,
+            credential_provider=credential_provider,
             db=db,
             stream_timeout=stream_timeout,
             connect_timeout=connect_timeout,

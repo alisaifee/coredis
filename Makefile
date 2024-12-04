@@ -5,7 +5,7 @@ lint:
 
 lint-fix:
 	black coredis tests
-	isort -r --profile=black tests coredis
+	isort --profile=black tests coredis
 	ruff check --fix coredis tests
 
 DEBUG := False

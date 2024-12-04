@@ -6,6 +6,7 @@ import socket
 import pytest
 
 from coredis import Connection, UnixDomainSocketConnection
+from coredis.credentials import UserPassCredentialProvider
 from coredis.exceptions import TimeoutError
 
 pytest_marks = pytest.mark.asyncio
@@ -16,6 +17,23 @@ async def test_connect_tcp(redis_basic):
     assert conn.host == "127.0.0.1"
     assert conn.port == 6379
     assert str(conn) == "Connection<host=127.0.0.1,port=6379,db=0>"
+    request = await conn.create_request(b"PING")
+    res = await request
+    assert res == b"PONG"
+    assert conn._transport is not None
+    conn.disconnect()
+    assert conn._transport is None
+
+
+async def test_connect_cred_provider(redis_auth_cred_provider):
+    conn = Connection(
+        credential_provider=UserPassCredentialProvider(password="sekret"),
+        host="localhost",
+        port=6389,
+    )
+    assert conn.host == "localhost"
+    assert conn.port == 6389
+    assert str(conn) == "Connection<host=localhost,port=6389,db=0>"
     request = await conn.create_request(b"PING")
     res = await request
     assert res == b"PONG"

@@ -144,6 +144,7 @@ class NodeManager:
         allowed_keys = (
             "username",
             "password",
+            "credential_provider",
             "encoding",
             "decode_responses",
             "stream_timeout",

@@ -21,6 +21,7 @@ import coredis.sentinel
 from coredis import BlockingConnectionPool
 from coredis._utils import EncodingInsensitiveDict, b, hash_slot, nativestr
 from coredis.cache import TrackingCache
+from coredis.credentials import UserPassCredentialProvider
 from coredis.response._callbacks import NoopCallback
 from coredis.typing import RUNTIME_TYPECHECKS, Callable, Optional, R, ValueT
 
@@ -763,6 +764,24 @@ async def redis_auth(redis_auth_server, request):
 
 
 @pytest.fixture
+async def redis_auth_cred_provider(redis_auth_server, request):
+    client = coredis.Redis(
+        host=redis_auth_server[0],
+        port=redis_auth_server[1],
+        credential_provider=UserPassCredentialProvider(password="sekret"),
+        decode_responses=True,
+        **get_client_test_args(request),
+    )
+    await check_test_constraints(request, client)
+    await client.flushall()
+    await set_default_test_config(client)
+
+    yield client
+
+    client.connection_pool.disconnect()
+
+
+@pytest.fixture
 async def redis_uds(redis_uds_server, request):
     client = coredis.Redis(
         unix_socket_path=redis_uds_server,
@@ -853,6 +872,29 @@ async def redis_cluster_auth(redis_cluster_auth_server, request):
         8500,
         decode_responses=True,
         password="sekret",
+        **get_client_test_args(request),
+    )
+    await check_test_constraints(request, cluster)
+    await cluster
+    await cluster.flushall()
+    await cluster.flushdb()
+
+    for primary in cluster.primaries:
+        await set_default_test_config(primary)
+
+    async with remapped_slots(cluster, request):
+        yield cluster
+
+    cluster.connection_pool.disconnect()
+
+
+@pytest.fixture
+async def redis_cluster_auth_cred_provider(redis_cluster_auth_server, request):
+    cluster = coredis.RedisCluster(
+        "localhost",
+        8500,
+        decode_responses=True,
+        credential_provider=UserPassCredentialProvider(password="sekret"),
         **get_client_test_args(request),
     )
     await check_test_constraints(request, cluster)
@@ -1087,6 +1129,26 @@ async def redis_sentinel_auth(redis_sentinel_auth_server, request):
         [redis_sentinel_auth_server],
         sentinel_kwargs={"password": "sekret"},
         password="sekret",
+        decode_responses=True,
+        **get_client_test_args(request),
+    )
+    master = sentinel.primary_for("mymaster")
+    await check_test_constraints(request, master)
+    await set_default_test_config(sentinel)
+    await master.flushall()
+    await asyncio.sleep(0.1)
+
+    return sentinel
+
+
+@pytest.fixture
+async def redis_sentinel_auth_cred_provider(redis_sentinel_auth_server, request):
+    sentinel = coredis.sentinel.Sentinel(
+        [redis_sentinel_auth_server],
+        sentinel_kwargs={
+            "credential_provider": UserPassCredentialProvider(password="sekret")
+        },
+        credential_provider=UserPassCredentialProvider(password="sekret"),
         decode_responses=True,
         **get_client_test_args(request),
     )
