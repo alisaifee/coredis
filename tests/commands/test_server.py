@@ -280,6 +280,7 @@ class TestServer:
     @pytest.mark.nocluster
     @pytest.mark.nokeydb
     @pytest.mark.noredict
+    @pytest.mark.novalkey
     async def test_latency_all(self, client, _s):
         await client.execute_command(b"debug", "sleep", 0.05)
         history = await client.latency_history("command")
@@ -297,6 +298,7 @@ class TestServer:
     @pytest.mark.nocluster
     @pytest.mark.nokeydb
     @pytest.mark.noredict
+    @pytest.mark.novalkey
     async def test_latency_graph(self, client, _s):
         await client.execute_command(b"debug", "sleep", 0.05)
         graph = await client.latency_graph("command")

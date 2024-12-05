@@ -60,6 +60,8 @@ class TestACL:
 
     @pytest.mark.min_server_version("6.0.0")
     @pytest.mark.nokeydb
+    @pytest.mark.novalkey
+    @pytest.mark.noredict
     @pytest.mark.nocluster
     async def test_acl_log(self, client, _s):
         with pytest.warns(UserWarning):
