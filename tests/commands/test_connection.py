@@ -258,6 +258,7 @@ class TestConnection:
             assert await client.client_setname("redis_py_test")
             assert await client.client_getname() == _s("redis_py_test")
 
+    @pytest.mark.nokeydb
     async def test_client_pause(self, client, event_loop):
         key = "key_should_expire"
         another_client = coredis.Redis(loop=event_loop)

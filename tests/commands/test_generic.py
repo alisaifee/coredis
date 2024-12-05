@@ -216,6 +216,7 @@ class TestGeneric:
         freq_now = await client.object_freq("a")
         assert freq + 1 == freq_now
 
+    @pytest.mark.nokeydb
     @pytest.mark.novalkey
     @pytest.mark.noredict
     async def test_dump_and_restore_with_idle_time(self, client, _s):
@@ -375,6 +376,7 @@ class TestGeneric:
         assert await client.object_encoding("a") == _s("embstr")
         assert await client.object_encoding("b") == _s("listpack")
 
+    @pytest.mark.nokeydb
     @pytest.mark.novalkey
     @pytest.mark.noredict
     async def test_object_freq(self, client, _s):

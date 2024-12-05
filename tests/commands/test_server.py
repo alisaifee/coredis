@@ -246,9 +246,10 @@ class TestServer:
 
     @pytest.mark.min_server_version("6.0.0")
     @pytest.mark.nocluster
+    @pytest.mark.nokeydb
     async def test_lolwut(self, client, _s):
         lolwut = await client.lolwut(5)
-        assert _s("Redis ver.") in lolwut
+        assert _s("ver.") in lolwut
 
     @pytest.mark.nocluster
     async def test_memory_doctor(self, client, _s):
@@ -272,10 +273,13 @@ class TestServer:
         assert (await client.memory_usage(_s("key"), samples=1)) > 1024
 
     @pytest.mark.nocluster
+    @pytest.mark.nokeydb
     async def test_latency_doctor(self, client, _s):
         assert await client.latency_doctor()
 
     @pytest.mark.nocluster
+    @pytest.mark.nokeydb
+    @pytest.mark.noredict
     async def test_latency_all(self, client, _s):
         await client.execute_command(b"debug", "sleep", 0.05)
         history = await client.latency_history("command")
@@ -291,6 +295,8 @@ class TestServer:
         assert latest[_s("command")][2] == approx(50, 60)
 
     @pytest.mark.nocluster
+    @pytest.mark.nokeydb
+    @pytest.mark.noredict
     async def test_latency_graph(self, client, _s):
         await client.execute_command(b"debug", "sleep", 0.05)
         graph = await client.latency_graph("command")
