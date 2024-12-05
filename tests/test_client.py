@@ -30,6 +30,10 @@ from tests.conftest import targets
     "redis_basic_raw_resp2",
     "redis_ssl",
     "redis_ssl_resp2",
+    "keydb",
+    "dragonfly",
+    "valkey",
+    "redict",
 )
 class TestClient:
     @pytest.fixture(autouse=True)

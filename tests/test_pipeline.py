@@ -15,7 +15,13 @@ from tests.conftest import targets
 
 
 @targets(
-    "redis_basic", "redis_basic_blocking", "redis_basic_resp2", "keydb", "dragonfly"
+    "redis_basic",
+    "redis_basic_blocking",
+    "redis_basic_resp2",
+    "keydb",
+    "dragonfly",
+    "valkey",
+    "redict",
 )
 class TestPipeline:
     async def test_empty_pipeline(self, client):

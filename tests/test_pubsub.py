@@ -77,6 +77,8 @@ def make_subscribe_test_data(pubsub, encoder, type):
     "redis_basic_raw_resp2",
     "keydb",
     "dragonfly",
+    "valkey",
+    "redict",
 )
 class TestPubSubSubscribeUnsubscribe:
     async def _test_subscribe_unsubscribe(

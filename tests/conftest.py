@@ -343,12 +343,7 @@ def docker_tags():
         "VALKEY_VERSION": "valkey",
         "REDICT_VERSION": "valkey",
     }.items():
-        try:
-            os.environ.setdefault(env, mapping.get(key, mapping.get("default")))
-        except:
-            import pdb
-
-            pdb.set_trace()
+        os.environ.setdefault(env, mapping.get(key, mapping.get("default")))
 
     args = SERVER_DEFAULT_ARGS.get(redis_server_version, None)
 
@@ -1447,7 +1442,6 @@ def pytest_collection_modifyitems(items):
                     item.add_marker(getattr(pytest.mark, token))
             elif client_name.startswith("keydb"):
                 item.add_marker(getattr(pytest.mark, "keydb"))
-                item.add_marker(getattr(pytest.mark, "xfail"))
                 tokens = client_name.replace("keydb_", "").split("_")
 
                 for token in tokens:

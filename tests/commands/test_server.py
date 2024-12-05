@@ -21,6 +21,9 @@ from tests.conftest import targets
     "redis_cluster",
     "redis_cluster_blocking",
     "redis_cluster_resp2",
+    "keydb",
+    "valkey",
+    "redict",
 )
 class TestServer:
     async def slowlog(self, client, _s):

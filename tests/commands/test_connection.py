@@ -16,6 +16,9 @@ from tests.conftest import targets
     "redis_basic_raw",
     "redis_basic_resp2",
     "redis_basic_raw_resp2",
+    "keydb",
+    "valkey",
+    "redict",
 )
 class TestConnection:
     @pytest.mark.xfail
@@ -34,7 +37,7 @@ class TestConnection:
     @pytest.mark.min_server_version("6.2.0")
     async def test_hello_no_args(self, client, _s):
         resp = await client.hello()
-        assert resp[_s("server")] == _s("redis")
+        assert resp[_s("server")] is not None
 
     async def test_hello_extended(self, client, _s):
         resp = await client.hello(client.protocol_version)
