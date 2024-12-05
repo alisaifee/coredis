@@ -1040,6 +1040,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         addr: "Optional[StringT]" = ...,
         laddr: "Optional[StringT]" = ...,
         skipme: "Optional[bool]" = ...,
+        maxage: "Optional[int]" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def client_list(
         self,
@@ -2207,6 +2208,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         addr: "Optional[StringT]" = ...,
         laddr: "Optional[StringT]" = ...,
         skipme: "Optional[bool]" = ...,
+        maxage: "Optional[int]" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def client_list(
         self,

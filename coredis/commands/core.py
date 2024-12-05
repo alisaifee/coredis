@@ -2042,7 +2042,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         Returns the expiration time of a hash field as a Unix timestamp, in seconds.
         """
         pieces: CommandArgList = [key, PrefixToken.FIELDS, len(list(fields))]
-
         pieces.extend(fields)
 
         return await self.execute_command(
@@ -6721,7 +6720,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.CLIENT_KILL,
         group=CommandGroup.CONNECTION,
-        arguments={"laddr": {"version_introduced": "6.2.0"}},
+        arguments={
+            "laddr": {"version_introduced": "6.2.0"},
+            "maxage": {"version_introduced": "7.4.0"},
+        },
     )
     async def client_kill(
         self,
@@ -6740,6 +6742,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         addr: Optional[StringT] = None,
         laddr: Optional[StringT] = None,
         skipme: Optional[bool] = None,
+        maxage: Optional[int] = None,
     ) -> Union[int, bool]:
         """
         Disconnects the client at :paramref:`ip_port`
@@ -6754,22 +6757,24 @@ class CoreCommands(CommandMixin[AnyStr]):
             command_arguments.append(ip_port)
 
         if identifier:
-            command_arguments.extend(["ID", identifier])
+            command_arguments.extend([PrefixToken.IDENTIFIER, identifier])
 
         if type_:
-            command_arguments.extend(["TYPE", type_])
+            command_arguments.extend([PrefixToken.TYPE, type_])
 
         if user:
-            command_arguments.extend(["USER", user])
+            command_arguments.extend([PrefixToken.USER, user])
 
         if addr:
-            command_arguments.extend(["ADDR", addr])
+            command_arguments.extend([PrefixToken.ADDR, addr])
 
         if laddr:
-            command_arguments.extend(["LADDR", laddr])
+            command_arguments.extend([PrefixToken.LADDR, laddr])
 
+        if maxage:
+            command_arguments.extend([PrefixToken.MAXAGE, maxage])
         if skipme is not None:
-            command_arguments.extend(["SKIPME", skipme and "yes" or "no"])
+            command_arguments.extend([PrefixToken.SKIPME, skipme and "yes" or "no"])
 
         return await self.execute_command(
             CommandName.CLIENT_KILL,

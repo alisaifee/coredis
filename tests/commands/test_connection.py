@@ -220,6 +220,17 @@ class TestConnection:
         assert clone_id != (await clone.client_info())["id"]
         assert my_id == (await client.client_info())["id"]
 
+    @pytest.mark.min_server_version("7.4.0")
+    async def test_client_kill_filter_maxage(self, client, cloner, _s):
+        clone = await cloner(client)
+        my_id = (await client.client_info())["id"]
+        clone_id = (await clone.client_info())["id"]
+        await asyncio.sleep(1)
+        assert 0 == await client.client_kill(maxage=60, skipme=False)
+        assert await client.client_kill(maxage=1, skipme=False) >= 2
+        assert clone_id != (await clone.client_info())["id"]
+        assert my_id != (await client.client_info())["id"]
+
     async def test_client_list_after_client_setname(self, client, _s):
         with pytest.warns(UserWarning):
             await client.client_setname("cl=i=ent")
