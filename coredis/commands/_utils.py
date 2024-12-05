@@ -78,8 +78,16 @@ async def check_version(
         elif command_details.arguments and set(
             command_details.arguments.keys()
         ).intersection(kwargs.keys()):
-            for argument, minimum_version in command_details.arguments.items():
+            for argument, minimum_version in [
+                (arg, ver)
+                for (arg, ver) in command_details.arguments.items()
+                if arg in kwargs
+            ]:
                 if minimum_version and server_version < minimum_version:
+                    if command_details.command == b"CLIENT KILL":
+                        import pdb
+
+                        pdb.set_trace()
                     raise CommandSyntaxError(
                         {argument},
                         (
