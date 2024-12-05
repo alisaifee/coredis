@@ -32,15 +32,17 @@ PY_IMPLEMENTATION = platform.python_implementation()
 PY_VERSION = version.Version(platform.python_version())
 DOCKER_TAG_MAPPING = {
     "6.2": {
-        "default": "6.2.6",
+        "default": "6.2.16",
         "stack": "6.2.6-v9",
     },
-    "7.0": {"default": "7.0.12", "stack": "7.0.6-RC9"},
-    "7.2": {"default": "7.2.0", "stack": "7.2.0-v0"},
+    "7.0": {"default": "7", "stack": "7.0.6-RC9"},
+    "7.2": {"default": "7.2", "stack": "7.2.0-v13"},
+    "7.4": {"default": "7.4", "stack": "7.4.0-v1"},
+    "8.0": {"default": "latest", "valkey": "8"},
     "latest": {"default": "latest", "stack": "latest"},
     "next": {
-        "stack": "edge",
         "default": "latest",
+        "stack": "edge",
     },
 }
 
@@ -330,18 +332,23 @@ def host_ip_env(host_ip):
 def docker_tags():
     redis_server_version = os.environ.get("COREDIS_REDIS_VERSION", "latest")
     mapping = DOCKER_TAG_MAPPING.get(redis_server_version, {"default": "latest"})
-    os.environ.setdefault(
-        "REDIS_VERSION", mapping.get("standalone", mapping.get("default"))
-    )
-    os.environ.setdefault(
-        "REDIS_SENTINEL_VERSION", mapping.get("sentinel", mapping.get("default"))
-    )
-    os.environ.setdefault(
-        "REDIS_SSL_VERSION", mapping.get("ssl", mapping.get("default"))
-    )
-    os.environ.setdefault(
-        "REDIS_STACK_VERSION", mapping.get("stack", mapping.get("default"))
-    )
+
+    for env, key in {
+        "REDIS_VERSION": "standalone",
+        "REDIS_SENTINEL_VERSION": "sentinel",
+        "REDIS_SSL_VERSION": "ssl",
+        "REDIS_STACK_VERSION": "stack",
+        "KEYDB_VERSION": "keydb",
+        "DRAGONFLY_VERSION": "dragonfly",
+        "VALKEY_VERSION": "valkey",
+        "REDICT_VERSION": "valkey",
+    }.items():
+        try:
+            os.environ.setdefault(env, mapping.get(key, mapping.get("default")))
+        except:
+            import pdb
+
+            pdb.set_trace()
 
     args = SERVER_DEFAULT_ARGS.get(redis_server_version, None)
 

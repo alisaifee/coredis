@@ -106,6 +106,10 @@ jobs:
             test_params: "-m valkey"
             label: "Valkey"
           - python-version: "3.12"
+            redis-version: 8.0
+            test_params: "-m valkey"
+            label: "Valkey"
+          - python-version: "3.12"
             redis-version: 7.0
             test_params: "-m redict"
             label: "Redict"
