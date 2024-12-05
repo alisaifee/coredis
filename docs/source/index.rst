@@ -148,7 +148,7 @@ Sentinel
 Compatibility
 =============
 
-**coredis** is tested against redis versions ``6.2.x``, ``7.0.x`` & ``7.2.x``.
+**coredis** is tested against redis versions ``6.2.x``, ``7.0.x``, ``7.2.x`` & ``7.4.x``.
 The test matrix status can be reviewed `here <https://github.com/alisaifee/coredis/actions/workflows/main.yml>`__
 
 .. note:: Though **coredis** officially only supports :redis-version:`6.0.0` and above it is known to work with lower
@@ -179,17 +179,17 @@ Supported python versions
 - 3.12
 - 3.13
 - PyPy 3.9
+- PyPy 3.10
 
-Support for Redis-"like" databases
-----------------------------------
+Support for Redis API compatible databases
+------------------------------------------
 
 **coredis** is known to work with the following databases that have redis protocol compatibility:
 
-`KeyDB <https://docs.keydb.dev/>`__
+- `KeyDB <https://docs.keydb.dev/>`__
     KeyDB exposes a few commands that don't exist in redis and these are exposed by the :class:`~coredis.KeyDB`
     and :class:`~coredis.KeyDBCluster` clients respectively.
-
-`Dragonfly <https://dragonflydb.io/>`__
+- `Dragonfly <https://dragonflydb.io/>`__
     Dragonfly currently has compatibility with redis 6.2, though there is increasing support for commands from higher versions.
     For up to date details please refer to the `dragonfly api status documentation <https://www.dragonflydb.io/docs/command-reference/compatibility>`__.
 
@@ -200,6 +200,8 @@ Support for Redis-"like" databases
 
     .. warning:: Since dragonfly does not yet support RESP3 (which is the default protocol version
        for **coredis**) connecting to a dragonfly instance requires setting :paramref:`coredis.Redis.protocol_version` to ``2``.
+- `Valkey <https://valkey.io/>`__
+- `Redict <https://redict.io/>`__
 
 Compatibility tests for the above are included in the
 continuous integration test matrix `here <https://github.com/alisaifee/coredis/actions/workflows/main.yml>`__.

@@ -46,7 +46,7 @@ ______________________________________________________________________
   - [Sentinel](#sentinel)
 - [Compatibility](#compatibility)
   - [Supported python versions](#supported-python-versions)
-  - [Redis-like backends](#redis-like-backends)
+  - [Redis API compatible databases backends](#redis-api-compatible-databases)
 - [References](#references)
 
 <!-- /TOC -->
@@ -148,7 +148,7 @@ Details about supported Redis modules and their commands can be found
 
 ## Compatibility
 
-coredis is tested against redis versions `6.2.x`, `7.0.x` & `7.2.x`.
+coredis is tested against redis versions `6.2.x`, `7.0.x`, `7.2.x` & `7.4.x`
 The test matrix status can be reviewed
 [here](https://github.com/alisaifee/coredis/actions/workflows/main.yml)
 
@@ -164,8 +164,9 @@ coredis is additionally tested against:
 - 3.12
 - 3.13
 - PyPy 3.9
+- PyPy 3.10
 
-### Redis-like backends
+### Redis API compatible databases
 
 **coredis** is known to work with the following databases that have redis protocol compatibility:
 
