@@ -1,7 +1,6 @@
 [run]
 omit =
     /**/coredis/_version*
-    /**/coredis/recipes/**/*.py
     setup.py
     versioneer.py
 [report]
