@@ -1,5 +1,6 @@
 -r test.txt
 -r publishing.txt
+-r recipes.txt
 black==24.10.0
 ruff
 isort==5.13.2

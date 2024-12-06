@@ -12,3 +12,6 @@ pytest-lazy-fixtures
 pytest-mock
 pytest-reverse
 redis
+
+# Recipe test dependencies
+moto
