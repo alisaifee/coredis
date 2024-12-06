@@ -138,6 +138,7 @@ setup(
     },
     python_requires=">=3.9",
     install_requires=get_requirements("main.txt"),
+    extras_require={"recipes": get_requirements("recipes.txt")},
     cmdclass=versioneer.get_cmdclass(
         {
             "build_ext": coredis_build_ext,
