@@ -29,6 +29,7 @@ warn_unused_ignores = true
 module = [
     "async_timeout",
     "beartype",
+    "aiobotocore.*",
     "botocore.*",
     "cachetools",
     "deprecated",
