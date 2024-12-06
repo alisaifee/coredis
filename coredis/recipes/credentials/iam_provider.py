@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from urllib.parse import ParseResult, urlencode, urlunparse
 
-# botocore and cachetools will need to be installed in addition
-# to coredis' dependencies
-import botocore.session
+# aiobotocore, botocore and cachetools will need to be installed in addition
+# to coredis dependencies. These can also be requested by installing coredis
+# as coredis[recipes]
+import aiobotocore.session
+from aiobotocore.signers import AioRequestSigner
 from botocore.model import ServiceId
-from botocore.signers import RequestSigner
 from cachetools import TTLCache, cached
 
 from coredis.credentials import AbstractCredentialProvider, UserPass
@@ -23,15 +24,7 @@ class ElastiCacheIAMProvider(AbstractCredentialProvider):
         self.cluster_name: str = cluster_name
         self.region: str = region
 
-        session = botocore.session.get_session()
-        self.request_signer = RequestSigner(
-            ServiceId("elasticache"),
-            self.region,
-            "elasticache",
-            "v4",
-            session.get_credentials(),
-            session.get_component("event_emitter"),
-        )
+        self.session = aiobotocore.session.get_session()
 
     @cached(cache=TTLCache(maxsize=128, ttl=900))  # type: ignore[misc]
     async def get_credentials(self) -> UserPass:
@@ -40,6 +33,14 @@ class ElastiCacheIAMProvider(AbstractCredentialProvider):
         IAM enabled Elasticache instance. The token will be cached for
         its lifetime (15 minutes) to avoid unnecessary requests.
         """
+        request_signer = AioRequestSigner(
+            ServiceId("elasticache"),
+            self.region,
+            "elasticache",
+            "v4",
+            await self.session.get_credentials(),
+            self.session.get_component("event_emitter"),
+        )
         query_params = {"Action": "connect", "User": self.user}
         url = urlunparse(
             ParseResult(
@@ -51,12 +52,11 @@ class ElastiCacheIAMProvider(AbstractCredentialProvider):
                 fragment="",
             )
         )
-        signed_url = self.request_signer.generate_presigned_url(
+        signed_url = await request_signer.generate_presigned_url(
             {"method": "GET", "url": url, "body": {}, "headers": {}, "context": {}},
             operation_name="connect",
             expires_in=900,
             region_name=self.region,
         )
-
         # Need to strip the protocol so that Elasticache accepts it
         return UserPass(self.user, signed_url.removeprefix("https://"))

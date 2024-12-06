@@ -9,7 +9,7 @@ The implementation is based on `the Elasticache IAM provider described in redis 
 
 The :class:`~coredis.recipes.credentials.ElastiCacheIAMProvider` implements the
 :class:`~coredis.credentials.AbstractCredentialProvider` interface.
-It uses :pypi:`botocore` to generate a short-lived authentication token
+It uses :pypi:`aiobotocore` to generate a short-lived authentication token
 which can be used to authenticate with an IAM enabled Elasticache cluster.
 The token is cached for its lifetime of 15 minutes to reduce the number
 of unnecessary requests.
