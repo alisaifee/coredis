@@ -9,7 +9,7 @@ sphinx-issues==5.0.0
 sphinxext-opengraph==0.9.1
 sphinx-sitemap==2.5.1
 sphinx-paramlinks==0.6.0
-sphinxcontrib-programoutput==0.17
+sphinxcontrib-programoutput==0.18
 # For credentials recipe
 botocore
 cachetools
