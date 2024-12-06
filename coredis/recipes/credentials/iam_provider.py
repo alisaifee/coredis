@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from urllib.parse import ParseResult, urlencode, urlunparse
 
-# aiobotocore, botocore and cachetools will need to be installed in addition
+# aiobotocore, botocore, asyncache & cachetools will need to be installed in addition
 # to coredis dependencies. These can also be requested by installing coredis
 # as coredis[recipes]
 import aiobotocore.session
 from aiobotocore.signers import AioRequestSigner
+from asyncache import cached
 from botocore.model import ServiceId
-from cachetools import TTLCache, cached
+from cachetools import TTLCache
 
 from coredis.credentials import AbstractCredentialProvider, UserPass
 
