@@ -35,7 +35,12 @@ DOCKER_TAG_MAPPING = {
         "default": "6.2.16",
         "stack": "6.2.6-v9",
     },
-    "7.0": {"default": "7", "sentinel": "7.0.15", "stack": "7.0.6-RC9"},
+    "7.0": {
+        "default": "7",
+        "sentinel": "7.0.15",
+        "stack": "7.0.6-RC9",
+        "redict": "7-alpine",
+    },
     "7.2": {"default": "7.2", "stack": "7.2.0-v13"},
     "7.4": {"default": "7.4", "stack": "7.4.0-v1"},
     "8.0": {"default": "latest", "valkey": "8"},
@@ -341,7 +346,7 @@ def docker_tags():
         "KEYDB_VERSION": "keydb",
         "DRAGONFLY_VERSION": "dragonfly",
         "VALKEY_VERSION": "valkey",
-        "REDICT_VERSION": "valkey",
+        "REDICT_VERSION": "redict",
     }.items():
         os.environ.setdefault(env, mapping.get(key, mapping.get("default")))
 
