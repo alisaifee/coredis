@@ -288,12 +288,8 @@ jobs:
       - name: Download wheels
         uses: actions/download-artifact@v4
         with:
-          name: wheels
-          path: dist
-      - name: Download pure wheels
-        uses: actions/download-artifact@v4
-        with:
-          name: pure_wheels
+          pattern: "*wheels*"
+          merge-multiple: true
           path: dist
       - name: Download source dist
         uses: actions/download-artifact@v4
