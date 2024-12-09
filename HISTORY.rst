@@ -3,6 +3,14 @@
 Changelog
 =========
 
+v4.18.0rc2
+----------
+Release Date: 2024-12-08
+
+* Compatibility
+
+  * Update redict docker images to use alpine
+
 v4.18.0rc1
 ----------
 Release Date: 2024-12-07
@@ -1790,6 +1798,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
