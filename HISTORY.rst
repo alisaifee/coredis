@@ -3,6 +3,14 @@
 Changelog
 =========
 
+v4.18.0rc3
+----------
+Release Date: 2024-12-09
+
+* Chore
+
+  * Fix github release workflow
+
 v4.18.0rc2
 ----------
 Release Date: 2024-12-08
@@ -1798,6 +1806,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
