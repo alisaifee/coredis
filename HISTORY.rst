@@ -3,6 +3,37 @@
 Changelog
 =========
 
+v4.18.0
+-------
+Release Date: 2024-12-10
+
+* Features
+
+  * Added ability to use credential providers to supply
+    authentication details when establishing connections
+    to the server
+  * Added support for hash field expiry commands introduced
+    in redis 7.4:
+    * ``hexpire``
+    * ``hexpireat``
+    * ``hpexpire``
+    * ``hpexpireat``
+    * ``hpersist``
+    * ``hexpiretime``
+    * ``hpexpiretime``
+    * ``httl``
+  * Added support for ``maxage`` parameter in ``client_kill`` method.
+
+* Compatibility
+
+  * Added support for python 3.13 wheels
+  * Dropped support for python 3.8
+  * Dropped support for pypy 3.8
+  * Added test coverage for pypy 3.10
+  * Added test coverage for redis 7.4.x
+  * Added test coverage against redict servers
+  * Added test coverage for Valkey 7.0 & 8.0
+
 v4.18.0rc4
 ----------
 Release Date: 2024-12-09
@@ -1814,6 +1845,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
