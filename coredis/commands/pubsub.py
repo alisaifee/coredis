@@ -397,7 +397,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
                 subscribed_dict = self.patterns
             else:
                 subscribed_dict = self.channels
-            subscribed_dict.pop(message["channel"])
+            subscribed_dict.pop(message["channel"], None)
 
         if message_type in self.PUBLISH_MESSAGE_TYPES:
             handler = None
