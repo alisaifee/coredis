@@ -265,6 +265,16 @@ class TestPubSubSubscribeUnsubscribe:
             assert message is None
         assert p.subscribed is False
 
+    async def test_duplicate_unsubscribe(self, client, _s):
+        p = client.pubsub()
+
+        await p.subscribe("foo")
+        assert make_message("subscribe", _s("foo"), 1, None) == await p.get_message()
+        await p.unsubscribe("foo")
+        assert make_message("unsubscribe", _s("foo"), 0, None) == await p.get_message()
+        await p.unsubscribe("foo")
+        assert make_message("unsubscribe", _s("foo"), 0, None) == await p.get_message()
+
 
 @targets("redis_basic", "redis_basic_raw", "redis_basic_resp2", "redis_basic_raw_resp2")
 class TestPubSubMessages:
