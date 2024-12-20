@@ -265,6 +265,7 @@ class TestPubSubSubscribeUnsubscribe:
             assert message is None
         assert p.subscribed is False
 
+    @pytest.mark.novalkey
     async def test_duplicate_unsubscribe(self, client, _s):
         p = client.pubsub()
 
