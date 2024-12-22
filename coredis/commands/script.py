@@ -119,7 +119,7 @@ class Script(Generic[AnyStr]):
             # Maybe the client is pointed to a different server than the client
             # that created this instance?
             # Overwrite the sha just in case there was a discrepancy.
-            self.sha = cast(AnyStr, await client.script_load(self.script))
+            self.sha = await client.script_load(self.script)
             return cast(ResponseType, await method(self.sha, keys=keys, args=args))
 
     async def execute(
