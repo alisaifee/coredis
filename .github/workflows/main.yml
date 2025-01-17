@@ -161,7 +161,7 @@ jobs:
       - name: Install cibuildwheel and pypyp
         run: |
           pipx install cibuildwheel==2.22.0
-          pipx install pypyp==1
+          pipx install pypyp==1.3
       - id: set-matrix
         run: |
           MATRIX=$(
