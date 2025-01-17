@@ -20,7 +20,9 @@ from coredis.typing import (
 
 class HScanCallback(
     ResponseCallback[
-        List[ResponseType], List[ResponseType], Tuple[int, Dict[AnyStr, AnyStr]]
+        List[ResponseType],
+        List[ResponseType],
+        Tuple[int, Union[Dict[AnyStr, AnyStr], Tuple[AnyStr, ...]]],
     ]
 ):
     def guard(
@@ -30,10 +32,13 @@ class HScanCallback(
 
     def transform(
         self, response: List[ResponseType], **options: Optional[ValueT]
-    ) -> Tuple[int, Dict[AnyStr, AnyStr]]:
+    ) -> Tuple[int, Union[Dict[AnyStr, AnyStr], Tuple[AnyStr, ...]]]:
         assert self.guard(response)
         cursor, r = response
-        return int(cursor), flat_pairs_to_dict(r)
+        if options.get("novalues"):
+            return int(cursor), tuple(r)
+        else:
+            return int(cursor), flat_pairs_to_dict(r)
 
 
 class HRandFieldCallback(

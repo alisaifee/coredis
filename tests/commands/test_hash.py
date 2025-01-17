@@ -294,6 +294,18 @@ class TestHash:
         _, dic = await client.hscan("b", count=100)
         assert len(dic) < 1000
 
+    @pytest.mark.min_server_version("7.4.0")
+    async def test_hscan_novalues(self, client, _s):
+        await client.hset("a", {"a": 1, "b": 2, "c": 3})
+        await client.hset("b", {str(i): i for i in range(1000)})
+        cursor, fields = await client.hscan("a", novalues=True)
+        assert cursor == 0
+        assert fields == (_s("a"), _s("b"), _s("c"))
+        _, fields = await client.hscan("a", match="a", novalues=True)
+        assert fields == (_s("a"),)
+        _, fields = await client.hscan("b", count=100, novalues=True)
+        assert len(fields) < 1000
+
     async def test_hscan_iter(self, client, _s):
         await client.hset("a", {"a": 1, "b": 2, "c": 3})
         dic = dict()

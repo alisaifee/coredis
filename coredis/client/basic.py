@@ -70,6 +70,7 @@ from coredis.typing import (
     Tuple,
     Type,
     TypeVar,
+    Union,
     ValueT,
 )
 
@@ -377,25 +378,52 @@ class Client(
             for item in data:
                 yield item
 
+    @overload
+    def hscan_iter(
+        self,
+        key: KeyT,
+        match: Optional[StringT] = ...,
+        count: Optional[int] = ...,
+    ) -> AsyncGenerator[Tuple[AnyStr, AnyStr], None]: ...
+    @overload
+    def hscan_iter(
+        self,
+        key: KeyT,
+        match: Optional[StringT] = ...,
+        count: Optional[int] = ...,
+        *,
+        novalues: Literal[True],
+    ) -> AsyncGenerator[AnyStr, None]: ...
+
     async def hscan_iter(
         self,
         key: KeyT,
         match: Optional[StringT] = None,
         count: Optional[int] = None,
-    ) -> AsyncGenerator[Tuple[AnyStr, AnyStr], None]:
+        novalues: Optional[Literal[True]] = None,
+    ) -> Union[
+        AsyncGenerator[Tuple[AnyStr, AnyStr], None], AsyncGenerator[AnyStr, None]
+    ]:
         """
         Make an iterator using the HSCAN command so that the client doesn't
         need to remember the cursor position.
         """
-        cursor = None
-
+        cursor: Optional[int] = None
         while cursor != 0:
-            cursor, data = await self.hscan(
-                key, cursor=cursor, match=match, count=count
-            )
+            # TODO: find a better way to narrow the return type from hscan
+            if novalues:
+                cursor, fields = await self.hscan(
+                    key, cursor=cursor, match=match, count=count, novalues=novalues
+                )
+                for item in fields:
+                    yield item
+            else:
+                cursor, data = await self.hscan(
+                    key, cursor=cursor, match=match, count=count
+                )
 
-            for item in data.items():
-                yield item
+                for pair in data.items():
+                    yield pair
 
     async def zscan_iter(
         self,

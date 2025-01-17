@@ -305,6 +305,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         cursor: "Optional[int]" = ...,
         match: "Optional[StringT]" = ...,
         count: "Optional[int]" = ...,
+        novalues: "Optional[bool]" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def hset(
         self, key: "KeyT", field_values: "Mapping[StringT, ValueT]"
@@ -1445,6 +1446,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         cursor: "Optional[int]" = ...,
         match: "Optional[StringT]" = ...,
         count: "Optional[int]" = ...,
+        novalues: "Optional[bool]" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def hset(
         self, key: "KeyT", field_values: "Mapping[StringT, ValueT]"

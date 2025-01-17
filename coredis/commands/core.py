@@ -2365,24 +2365,46 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.HVALS, key, callback=TupleCallback[AnyStr]()
         )
 
+    @overload
+    async def hscan(
+        self,
+        key: KeyT,
+        cursor: Optional[int] = ...,
+        match: Optional[StringT] = ...,
+        count: Optional[int] = ...,
+        *,
+        novalues: Literal[True],
+    ) -> Tuple[int, Tuple[AnyStr, ...]]: ...
+
+    @overload
+    async def hscan(
+        self,
+        key: KeyT,
+        cursor: Optional[int] = None,
+        match: Optional[StringT] = None,
+        count: Optional[int] = None,
+    ) -> Tuple[int, Dict[AnyStr, AnyStr]]: ...
     @redis_command(
         CommandName.HSCAN,
         group=CommandGroup.HASH,
         flags={CommandFlag.READONLY},
+        arguments={"novalues": {"version_introduced": "7.4.0"}},
     )
     async def hscan(
         self,
         key: KeyT,
-        cursor: Optional[int] = 0,
+        cursor: Optional[int] = None,
         match: Optional[StringT] = None,
         count: Optional[int] = None,
-    ) -> Tuple[int, Dict[AnyStr, AnyStr]]:
+        novalues: Optional[bool] = None,
+    ) -> Tuple[int, Union[Dict[AnyStr, AnyStr], Tuple[AnyStr, ...]]]:
         """
-        Incrementallys return key/value slices in a hash. Also returns a
+        Incrementally return key/value slices in a hash. Also returns a
         cursor pointing to the scan position.
 
         :param match: allows for filtering the keys by pattern
         :param count: allows for hint the minimum number of returns
+        :param novalues: when True only the field names are returned
         """
         command_arguments: CommandArgList = [key, cursor or "0"]
 
@@ -2391,9 +2413,14 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         if count is not None:
             command_arguments.extend([PrefixToken.COUNT, count])
+        if novalues is not None:
+            command_arguments.append(PureToken.NOVALUES)
 
         return await self.execute_command(
-            CommandName.HSCAN, *command_arguments, callback=HScanCallback[AnyStr]()
+            CommandName.HSCAN,
+            *command_arguments,
+            novalues=novalues,
+            callback=HScanCallback[AnyStr](),
         )
 
     @redis_command(
