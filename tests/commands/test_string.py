@@ -120,6 +120,7 @@ class TestString:
             await client.getex("a", ex=1, px=1)
 
     @pytest.mark.min_server_version("7.0.0")
+    @pytest.mark.nodragonfly
     async def test_lcs(self, client, _s):
         await client.mset({"a{fu}": "abcdefg", "b{fu}": "abdefg"})
         assert await client.lcs("a{fu}", "b{fu}") == _s("abdefg")

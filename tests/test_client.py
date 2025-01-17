@@ -107,6 +107,7 @@ class TestClient:
         assert await client.get("fubar") == _s(1)
 
     @pytest.mark.min_server_version("7.1.240")
+    @pytest.mark.nodragonfly
     async def test_ensure_persistence(self, client, _s):
         with client.ensure_persistence(1, 0, 2000):
             assert await client.set("fubar", 1)
