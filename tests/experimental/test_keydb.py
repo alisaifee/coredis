@@ -96,7 +96,7 @@ class TestKeyDBCommands:
 
     async def test_expiremember_sorted_set(self, client, _s):
         await client.zadd("a", {"b": 1.0})
-        assert await client.zrandmember("a", count=1) == [_s("b")]
+        assert await client.zrandmember("a", count=1) == (_s("b"),)
         assert await client.expiremember("a", "b", 1, b"ms")
         await asyncio.sleep(0.2)
         assert not await client.zrandmember("a", count=1, withscores=True)
@@ -119,7 +119,7 @@ class TestKeyDBCommands:
 
     async def test_expirememberat_sorted_set(self, client, _s):
         await client.zadd("a", {"b": 1.0})
-        assert await client.zrandmember("a", count=1) == [_s("b")]
+        assert await client.zrandmember("a", count=1) == (_s("b"),)
         assert await client.expirememberat("a", "b", datetime.now())
         assert 0 == await client.ttl("a", "b")
         await asyncio.sleep(0.2)
@@ -147,7 +147,7 @@ class TestKeyDBCommands:
 
     async def test_pexpirememberat_sorted_set(self, client, _s):
         await client.zadd("a", {"b": 1.0})
-        assert await client.zrandmember("a", count=1) == [_s("b")]
+        assert await client.zrandmember("a", count=1) == (_s("b"),)
         assert await client.pexpirememberat(
             "a", "b", datetime.now() + timedelta(milliseconds=100)
         )
