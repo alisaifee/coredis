@@ -1,5 +1,5 @@
 -r main.txt
-beartype
+beartype==0.20rc0
 coverage
 lovely-pytest-docker
 mock
