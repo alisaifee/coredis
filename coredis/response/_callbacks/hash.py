@@ -43,13 +43,15 @@ class HScanCallback(
 
 class HRandFieldCallback(
     ResponseCallback[
-        Union[AnyStr, List[AnyStr]],
-        Union[AnyStr, List[List[AnyStr]]],
+        Optional[Union[AnyStr, List[AnyStr]]],
+        Optional[Union[AnyStr, List[AnyStr], List[List[AnyStr]]]],
         Optional[Union[AnyStr, Tuple[AnyStr, ...], Dict[AnyStr, AnyStr]]],
     ]
 ):
     def transform(
-        self, response: Union[AnyStr, List[AnyStr]], **options: Optional[ValueT]
+        self,
+        response: Optional[Union[AnyStr, List[AnyStr]]],
+        **options: Optional[ValueT],
     ) -> Optional[Union[AnyStr, Tuple[AnyStr, ...], Dict[AnyStr, AnyStr]]]:
         if not response:
             return None
@@ -63,7 +65,9 @@ class HRandFieldCallback(
         return response
 
     def transform_3(
-        self, response: Union[AnyStr, List[List[AnyStr]]], **options: Optional[ValueT]
+        self,
+        response: Optional[Union[AnyStr, List[AnyStr], List[List[AnyStr]]]],
+        **options: Optional[ValueT],
     ) -> Optional[Union[AnyStr, Tuple[AnyStr, ...], Dict[AnyStr, AnyStr]]]:
         if not response:
             return None
