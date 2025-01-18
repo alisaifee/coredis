@@ -6684,7 +6684,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     async def function_stats(
         self,
-    ) -> Dict[AnyStr, Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]]:
+    ) -> Dict[
+        AnyStr, Optional[Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]]
+    ]:
         """
         Return information about the function currently running
         """

@@ -59,15 +59,23 @@ class FunctionListCallback(
 class FunctionStatsCallback(
     ResponseCallback[
         List[ResponseType],
-        Dict[AnyStr, Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]],
-        Dict[AnyStr, Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]],
+        Dict[
+            AnyStr,
+            Optional[Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]],
+        ],
+        Dict[
+            AnyStr,
+            Optional[Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]],
+        ],
     ]
 ):
     def transform(
         self,
         response: List[ResponseType],
         **options: Optional[ValueT],
-    ) -> Dict[AnyStr, Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]]:
+    ) -> Dict[
+        AnyStr, Optional[Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]]
+    ]:
         transformed = flat_pairs_to_dict(response)
         key = cast(AnyStr, b"engines" if b"engines" in transformed else "engines")
         engines = flat_pairs_to_dict(cast(List[AnyStr], transformed.pop(key)))
@@ -83,8 +91,11 @@ class FunctionStatsCallback(
     def transform_3(
         self,
         response: Dict[
-            AnyStr, Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]
+            AnyStr,
+            Optional[Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]],
         ],
         **options: Optional[ValueT],
-    ) -> Dict[AnyStr, Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]]:
+    ) -> Dict[
+        AnyStr, Optional[Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]]
+    ]:
         return response
