@@ -4641,7 +4641,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         key: KeyT,
         count: Optional[int] = None,
         withscores: Optional[bool] = None,
-    ) -> Optional[Union[AnyStr, List[AnyStr], Tuple[ScoredMember, ...]]]:
+    ) -> Optional[Union[AnyStr, Tuple[AnyStr, ...], Tuple[ScoredMember, ...]]]:
         """
         Get one or multiple random elements from a sorted set
 

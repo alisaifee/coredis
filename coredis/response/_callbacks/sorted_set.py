@@ -163,28 +163,30 @@ class ZScanCallback(
 class ZRandMemberCallback(
     ResponseCallback[
         Optional[Union[AnyStr, List[ResponsePrimitive]]],
-        Optional[Union[AnyStr, List[ResponsePrimitive]]],
-        Optional[Union[AnyStr, ScoredMembers]],
+        Optional[Union[AnyStr, List[List[ResponsePrimitive]], List[ResponsePrimitive]]],
+        Optional[Union[AnyStr, Tuple[AnyStr, ...], ScoredMembers]],
     ]
 ):
     def transform(
         self,
         response: Optional[Union[AnyStr, List[ResponsePrimitive]]],
         **options: Optional[ValueT],
-    ) -> Optional[Union[AnyStr, ScoredMembers]]:
+    ) -> Optional[Union[AnyStr, Tuple[AnyStr, ...], ScoredMembers]]:
         if not (response and options.get("withscores")):
-            return response
+            return tuple(response) if isinstance(response, list) else response
 
         it = iter(response)
         return tuple(ScoredMember(*v) for v in zip(it, map(float, it)))
 
     def transform_3(
         self,
-        response: Optional[Union[AnyStr, List[ResponsePrimitive]]],
+        response: Optional[
+            Union[AnyStr, List[List[ResponsePrimitive]], List[ResponsePrimitive]]
+        ],
         **options: Optional[ValueT],
-    ) -> Optional[Union[AnyStr, ScoredMembers]]:
+    ) -> Optional[Union[AnyStr, Tuple[AnyStr, ...], ScoredMembers]]:
         if not (response and options.get("withscores")):
-            return response
+            return tuple(response) if isinstance(response, list) else response
 
         return tuple(ScoredMember(*v) for v in response)
 
