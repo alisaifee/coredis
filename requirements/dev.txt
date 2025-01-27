@@ -3,7 +3,7 @@
 -r recipes.txt
 black==24.10.0
 ruff
-isort==5.13.2
+isort==6.0.0
 mypy==1.14.1; implementation_name!='pypy'
 redis>=4.2.0
 twine
