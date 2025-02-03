@@ -90,7 +90,7 @@ class TestScripting:
         # 2 * 3 == 6
         assert await client.evalsha(sha, ["a"], [3]) == 6
 
-    @pytest.mark.parametrize("client_arguments", [({"read_from_replicas": True})])
+    @pytest.mark.parametrize("client_arguments", [{"read_from_replicas": True}])
     @pytest.mark.min_server_version("7.0")
     async def test_evalsha_ro(self, client, client_arguments, mocker):
         await client.set("a", 2)

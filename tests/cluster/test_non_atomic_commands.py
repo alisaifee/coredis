@@ -40,7 +40,7 @@ class TestCommandSplit:
         assert not await client.keys("*")
 
 
-@pytest.mark.parametrize("client_arguments", [({"non_atomic_cross_slot": False})])
+@pytest.mark.parametrize("client_arguments", [{"non_atomic_cross_slot": False}])
 @targets(
     "redis_cluster",
     "redis_cluster_cached",

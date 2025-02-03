@@ -56,7 +56,7 @@ def mutually_exclusive_parameters(
     secondary = [k for k in set(exclusive_params) - primary]
 
     def wrapper(
-        func: Callable[P, Coroutine[Any, Any, R]]
+        func: Callable[P, Coroutine[Any, Any, R]],
     ) -> Callable[P, Coroutine[Any, Any, R]]:
         sig = inspect.signature(func)
 
@@ -102,7 +102,7 @@ def mutually_inclusive_parameters(
     _inclusive_params = set(inclusive_params)
 
     def wrapper(
-        func: Callable[P, Coroutine[Any, Any, R]]
+        func: Callable[P, Coroutine[Any, Any, R]],
     ) -> Callable[P, Coroutine[Any, Any, R]]:
         sig = inspect.signature(func)
 
@@ -140,7 +140,7 @@ def ensure_iterable_valid(
         return isinstance(value, Iterable) and not isinstance(value, (str, bytes))
 
     def wrapper(
-        func: Callable[P, Coroutine[Any, Any, R]]
+        func: Callable[P, Coroutine[Any, Any, R]],
     ) -> Callable[P, Coroutine[Any, Any, R]]:
         sig = inspect.signature(func)
         expected_type = sig.parameters[argument].annotation

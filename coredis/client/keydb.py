@@ -94,7 +94,7 @@ def keydb_command(
     )
 
     def wrapper(
-        func: Callable[P, Coroutine[Any, Any, R]]
+        func: Callable[P, Coroutine[Any, Any, R]],
     ) -> Callable[P, Coroutine[Any, Any, R]]:
         @functools.wraps(func)
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:

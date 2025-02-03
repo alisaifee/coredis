@@ -315,7 +315,7 @@ async def test_write_to_replica(client):
 
 @targets("redis_sentinel", "redis_sentinel_resp2")
 @pytest.mark.parametrize(
-    "client_arguments", [({"cache": coredis.cache.TrackingCache(max_size_bytes=-1)})]
+    "client_arguments", [{"cache": coredis.cache.TrackingCache(max_size_bytes=-1)}]
 )
 async def test_sentinel_cache(client, client_arguments, mocker):
     await client.primary_for("mymaster").set("fubar", 1)

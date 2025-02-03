@@ -182,7 +182,7 @@ def redis_command(
     )
 
     def wrapper(
-        func: Callable[P, Coroutine[Any, Any, R]]
+        func: Callable[P, Coroutine[Any, Any, R]],
     ) -> Callable[P, Coroutine[Any, Any, R]]:
         command_cache = CommandCache(command_name, cache_config)
         runtime_checkable = add_runtime_checks(func)

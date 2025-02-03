@@ -811,7 +811,7 @@ class TestAggregation:
         results = await client.search.aggregate(
             index_name,
             "*",
-            transforms=[Group("@country", [(Reduce("count", [0], "count"))])],
+            transforms=[Group("@country", [Reduce("count", [0], "count")])],
         )
 
         assert [2] == [

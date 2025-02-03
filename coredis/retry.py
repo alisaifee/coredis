@@ -229,7 +229,7 @@ def retryable(
     """
 
     def inner(
-        func: Callable[P, Coroutine[Any, Any, R]]
+        func: Callable[P, Coroutine[Any, Any, R]],
     ) -> Callable[P, Coroutine[Any, Any, R]]:
         @wraps(func)
         async def _inner(*args: P.args, **kwargs: P.kwargs) -> R:

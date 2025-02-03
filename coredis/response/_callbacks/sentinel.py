@@ -59,7 +59,7 @@ def sentinel_state_typed(
 
 
 def add_flags(
-    result: Dict[str, Union[int, str, bool]]
+    result: Dict[str, Union[int, str, bool]],
 ) -> Dict[str, Union[int, str, bool]]:
     flags = set(nativestr(result["flags"]).split(","))
     for name, flag in (

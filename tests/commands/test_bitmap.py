@@ -54,7 +54,7 @@ class TestBitmap:
 
     @pytest.mark.nocluster
     async def test_bitop_not(self, client, _s):
-        test_str = b"\xAA\x00\xFF\x55"
+        test_str = b"\xaa\x00\xff\x55"
         correct = ~0xAA00FF55 & 0xFFFFFFFF
         await client.set("a", test_str)
         await client.bitop(["a"], operation="not", destkey="r")
@@ -62,7 +62,7 @@ class TestBitmap:
 
     @pytest.mark.nocluster
     async def test_bitop_not_in_place(self, client, _s):
-        test_str = b"\xAA\x00\xFF\x55"
+        test_str = b"\xaa\x00\xff\x55"
         correct = ~0xAA00FF55 & 0xFFFFFFFF
         await client.set("a", test_str)
         await client.bitop(["a"], operation="not", destkey="a")
@@ -70,7 +70,7 @@ class TestBitmap:
 
     @pytest.mark.nocluster
     async def test_bitop_single_string(self, client, _s):
-        test_str = "\x01\x02\xFF"
+        test_str = "\x01\x02\xff"
         await client.set("a", test_str)
         await client.bitop(["a"], operation="and", destkey="res1")
         await client.bitop(["a"], operation="or", destkey="res2")
@@ -81,8 +81,8 @@ class TestBitmap:
 
     @pytest.mark.nocluster
     async def test_bitop_string_operands(self, client, _s):
-        await client.set("a", b"\x01\x02\xFF\xFF")
-        await client.set("b", b"\x01\x02\xFF")
+        await client.set("a", b"\x01\x02\xff\xff")
+        await client.set("b", b"\x01\x02\xff")
         await client.bitop(["a", "b"], operation="and", destkey="res1")
         await client.bitop(["a", "b"], operation="or", destkey="res2")
         await client.bitop(["a", "b"], operation="xor", destkey="res3")
