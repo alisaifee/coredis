@@ -92,7 +92,7 @@ class TestFunctions:
 
     @pytest.mark.xfail
     @pytest.mark.clusteronly
-    @pytest.mark.parametrize("client_arguments", [({"read_from_replicas": True})])
+    @pytest.mark.parametrize("client_arguments", [{"read_from_replicas": True}])
     async def test_fcall_ro(self, client, simple_library, _s, client_arguments, mocker):
         get_primary_node_by_slot = mocker.spy(
             client.connection_pool, "get_primary_node_by_slot"
@@ -161,7 +161,7 @@ class TestLibrary:
         assert await library["echo_key"](args=(1, 2, 3), keys=["A"]) == _s("A")
         assert await library["return_arg"](args=(1.0, 2.0, 3.0), keys=["A"]) == 10
 
-    @pytest.mark.parametrize("client_arguments", [({"readonly": True})])
+    @pytest.mark.parametrize("client_arguments", [{"readonly": True}])
     @pytest.mark.clusteronly
     async def test_call_library_function_ro(
         self, client, simple_library, _s, client_arguments, mocker
@@ -225,7 +225,7 @@ class TestLibrary:
             _s("fubar"),
         ]
 
-    @pytest.mark.parametrize("client_arguments", [({"readonly": True})])
+    @pytest.mark.parametrize("client_arguments", [{"readonly": True}])
     @pytest.mark.clusteronly
     async def test_subclass_wrap_ro_defaults(
         selfself, client, simple_library, _s, client_arguments, mocker
@@ -252,7 +252,7 @@ class TestLibrary:
         assert fcall.call_count == 1
         assert fcall_ro.call_count == 1
 
-    @pytest.mark.parametrize("client_arguments", [({"readonly": True})])
+    @pytest.mark.parametrize("client_arguments", [{"readonly": True}])
     @pytest.mark.clusteronly
     async def test_subclass_wrap_ro_forced(
         selfself, client, simple_library, _s, client_arguments, mocker

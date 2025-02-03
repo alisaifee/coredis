@@ -104,7 +104,7 @@ def module_command(
     )
 
     def wrapper(
-        func: Callable[P, Coroutine[Any, Any, R]]
+        func: Callable[P, Coroutine[Any, Any, R]],
     ) -> Callable[P, Coroutine[Any, Any, R]]:
         runtime_checkable = add_runtime_checks(func)
         command_cache = CommandCache(command_name, cache_config)

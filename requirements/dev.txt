@@ -1,7 +1,7 @@
 -r test.txt
 -r publishing.txt
 -r recipes.txt
-black==24.10.0
+black==25.1.0
 ruff
 isort==6.0.0
 mypy==1.14.1; implementation_name!='pypy'

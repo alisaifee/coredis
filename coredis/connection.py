@@ -886,6 +886,7 @@ class UnixDomainSocketConnection(BaseConnection):
 
 class ClusterConnection(Connection):
     "Manages TCP communication to and from a Redis server"
+
     description: ClassVar[str] = "ClusterConnection<host={host},port={port}>"
     locator: ClassVar[str] = "host={host},port={port}"
     node: "ManagedNode"

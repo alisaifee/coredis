@@ -131,7 +131,7 @@ class ClusterMeta(ABCMeta):
                 if not getattr(method, "__coredis_module", None):
 
                     def __w(
-                        func: Callable[P, Awaitable[R]]
+                        func: Callable[P, Awaitable[R]],
                     ) -> Callable[P, Awaitable[R]]:
                         @functools.wraps(func)
                         async def _w(*a: P.args, **k: P.kwargs) -> R:
