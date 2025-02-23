@@ -58,6 +58,7 @@ class TestHash:
         assert not await client.hexists("a", "4")
 
     @pytest.mark.min_server_version("7.4.0")
+    @pytest.mark.nodragonfly
     async def test_hexpire(self, client, _s):
         await client.hset("a", {"1": 1, "2": 2, "3": 3, "4": 4})
         assert (1,) == await client.hexpire("a", 5, ["1"])
@@ -73,6 +74,7 @@ class TestHash:
         assert {_s("2"): _s("2")} == await client.hgetall(_s("a"))
 
     @pytest.mark.min_server_version("7.4.0")
+    @pytest.mark.nodragonfly
     async def test_hexpireat(self, client, _s, redis_server_time):
         now = await redis_server_time(client)
         now_int = int(time.mktime(now.timetuple()))
@@ -101,6 +103,7 @@ class TestHash:
         assert {_s("2"): _s("2")} == await client.hgetall(_s("a"))
 
     @pytest.mark.min_server_version("7.4.0")
+    @pytest.mark.nodragonfly
     async def test_hexpiretime(self, client, _s, redis_server_time):
         now = await redis_server_time(client)
         now_int = int(time.mktime(now.timetuple()))
@@ -113,6 +116,7 @@ class TestHash:
         )
 
     @pytest.mark.min_server_version("7.4.0")
+    @pytest.mark.nodragonfly
     async def test_httl(self, client, _s):
         await client.hset("a", {"1": 1, "2": 2, "3": 3, "4": 4})
         assert (-2,) == await client.httl("missing", ["1"])
@@ -123,6 +127,7 @@ class TestHash:
         )
 
     @pytest.mark.min_server_version("7.4.0")
+    @pytest.mark.nodragonfly
     async def test_hpexpire(self, client, _s):
         await client.hset("a", {"1": 1, "2": 2, "3": 3, "4": 4})
         assert (1,) == await client.hpexpire("a", 5000, ["1"])
@@ -144,6 +149,7 @@ class TestHash:
         assert {_s("2"): _s("2")} == await client.hgetall(_s("a"))
 
     @pytest.mark.min_server_version("7.4.0")
+    @pytest.mark.nodragonfly
     async def test_hpexpireat(self, client, _s, redis_server_time):
         now = await redis_server_time(client)
         now_ms = 1000 * int(time.mktime(now.timetuple()))
@@ -172,6 +178,7 @@ class TestHash:
         assert {_s("2"): _s("2")} == await client.hgetall(_s("a"))
 
     @pytest.mark.min_server_version("7.4.0")
+    @pytest.mark.nodragonfly
     async def test_hpexpiretime(self, client, _s, redis_server_time):
         await client.hset("a", {"1": 1, "2": 2, "3": 3, "4": 4})
         assert (-2,) == await client.hpexpiretime("missing", ["1"])
@@ -186,6 +193,7 @@ class TestHash:
         ) == await client.hpexpiretime("a", ["1", "2", "5"])
 
     @pytest.mark.min_server_version("7.4.0")
+    @pytest.mark.nodragonfly
     async def test_hpttl(self, client, _s):
         await client.hset("a", {"1": 1, "2": 2, "3": 3, "4": 4})
         assert (-2,) == await client.hpttl("missing", ["1"])
@@ -196,6 +204,7 @@ class TestHash:
         )
 
     @pytest.mark.min_server_version("7.4.0")
+    @pytest.mark.nodragonfly
     async def test_hpersist(self, client, _s):
         await client.hset("a", {"1": 1, "2": 2, "3": 3, "4": 4})
         assert (-2,) == await client.hpersist("missing", ["1"])
@@ -295,6 +304,7 @@ class TestHash:
         assert len(dic) < 1000
 
     @pytest.mark.min_server_version("7.4.0")
+    @pytest.mark.nodragonfly
     async def test_hscan_novalues(self, client, _s):
         await client.hset("a", {"a": 1, "b": 2, "c": 3})
         await client.hset("b", {str(i): i for i in range(1000)})
