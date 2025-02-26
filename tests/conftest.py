@@ -47,7 +47,6 @@ DOCKER_TAG_MAPPING = {
     "latest": {"default": "latest", "stack": "latest"},
     "next": {
         "default": "latest",
-        "stack": "edge",
     },
 }
 
