@@ -11,6 +11,7 @@ from coredis.typing import (
     AnyStr,
     ClassVar,
     Dict,
+    List,
     Optional,
     ResponsePrimitive,
     ResponseType,
@@ -21,9 +22,9 @@ from coredis.typing import (
 )
 
 
-class TimeCallback(ResponseCallback[ResponseType, ResponseType, datetime.datetime]):
+class TimeCallback(ResponseCallback[List[AnyStr], List[AnyStr], datetime.datetime]):
     def transform(
-        self, response: ResponseType, **options: Optional[ValueT]
+        self, response: List[AnyStr], **options: Optional[ValueT]
     ) -> datetime.datetime:
         return datetime.datetime.fromtimestamp(int(response[0])) + datetime.timedelta(
             microseconds=int(response[1]) / 1000.0

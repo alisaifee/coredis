@@ -7614,7 +7614,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         (seconds since epoch, microseconds into this second).
         """
 
-        return await self.execute_command(CommandName.TIME, callback=TimeCallback())
+        return await self.execute_command(
+            CommandName.TIME, callback=TimeCallback[AnyStr]()
+        )
 
     @versionadded(version="3.0.0")
     @redis_command(
