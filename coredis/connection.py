@@ -124,8 +124,8 @@ class RedisSSLContext:
             self.context = ssl.create_default_context(cafile=self.ca_certs)
         else:
             self.context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            self.context.verify_mode = self.cert_reqs
             self.context.check_hostname = self.check_hostname
+            self.context.verify_mode = self.cert_reqs
             self.context.load_cert_chain(
                 certfile=self.certfile, keyfile=self.keyfile  # type: ignore
             )

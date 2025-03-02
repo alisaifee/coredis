@@ -26,7 +26,6 @@ from coredis.typing import (
     List,
     Optional,
     Set,
-    StringT,
     Type,
     TypeVar,
     Union,
@@ -36,10 +35,11 @@ from coredis.typing import (
 FALSE_STRINGS = ("0", "F", "FALSE", "N", "NO")
 
 
-def to_bool(value: Optional[StringT]) -> Optional[bool]:
+def to_bool(value: Optional[Any]) -> Optional[bool]:
     if value is None or value == "":
         return None
-
+    if isinstance(value, bytes):
+        value = value.decode("utf-8")
     if isinstance(value, str) and value.upper() in FALSE_STRINGS:
         return False
 
@@ -185,9 +185,7 @@ class ConnectionPool:
             if parsed_url.scheme == "rediss":
                 keyfile = cast(Optional[str], url_options.pop("ssl_keyfile", None))
                 certfile = cast(Optional[str], url_options.pop("ssl_certfile", None))
-                check_hostname = cast(
-                    Optional[bool], url_options.pop("ssl_check_hostname", None)
-                )
+                check_hostname = to_bool(url_options.pop("ssl_check_hostname", None))
                 cert_reqs = cast(
                     Optional[Union[str, VerifyMode]],
                     url_options.pop("ssl_cert_reqs", None),
