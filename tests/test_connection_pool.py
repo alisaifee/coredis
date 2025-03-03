@@ -8,13 +8,13 @@ from collections import deque
 import pytest
 
 import coredis
+from coredis._utils import query_param_to_bool
 from coredis.exceptions import (
     BusyLoadingError,
     ConnectionError,
     ReadOnlyError,
     RedisError,
 )
-from coredis.pool.basic import to_bool
 
 
 class DummyConnection:
@@ -391,7 +391,7 @@ class TestConnectionPoolURLParsing:
             (True, "Y"),
             (True, "Yes"),
         ):
-            assert expected is to_bool(value)
+            assert expected is query_param_to_bool(value)
 
     def test_invalid_extra_typed_querystring_options(self):
         import warnings

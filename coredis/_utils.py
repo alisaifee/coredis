@@ -195,6 +195,19 @@ def make_hashable(*args: Any) -> Tuple[Hashable, ...]:
     )
 
 
+def query_param_to_bool(value: Optional[Any]) -> Optional[bool]:
+    if value is None or value in ("", b""):
+        return None
+    if isinstance(value, (int, float, bool, str, bytes)):
+        value = nativestr(value)
+        if value.upper() in ("0", "F", "FALSE", "N", "NO"):
+            return False
+        elif value.upper() in ("1", "T", "TRUE", "Y", "YES"):
+            return True
+
+    return bool(value)
+
+
 # ++++++++++ cluster utils ++++++++++++++
 
 try:
