@@ -3,6 +3,19 @@
 Changelog
 =========
 
+v4.19.0
+-------
+Release Date: 2025-03-02
+
+* Features
+
+  * Add ``novalues`` argument to ``hscan``
+
+* Bug Fix
+
+  * Improve handling of ssl parameters (especially from query string)
+    when dealing with self signed certificates.
+
 v4.18.0
 -------
 Release Date: 2024-12-10
@@ -34,6 +47,10 @@ Release Date: 2024-12-10
   * Added test coverage against redict servers
   * Added test coverage for Valkey 7.0 & 8.0
 
+v4.19.0
+-------
+Release Date: 2025-03-02
+
 v4.18.0rc4
 ----------
 Release Date: 2024-12-09
@@ -41,6 +58,10 @@ Release Date: 2024-12-09
 * Chore
 
   * Fix artifact download in github release workflow
+
+v4.19.0
+-------
+Release Date: 2025-03-02
 
 v4.18.0rc3
 ----------
@@ -50,6 +71,10 @@ Release Date: 2024-12-09
 
   * Fix github release workflow
 
+v4.19.0
+-------
+Release Date: 2025-03-02
+
 v4.18.0rc2
 ----------
 Release Date: 2024-12-08
@@ -57,6 +82,10 @@ Release Date: 2024-12-08
 * Compatibility
 
   * Update redict docker images to use alpine
+
+v4.19.0
+-------
+Release Date: 2025-03-02
 
 v4.18.0rc1
 ----------
@@ -1845,6 +1874,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
