@@ -116,19 +116,18 @@ class RedisSSLContext:
             }
 
             self.cert_reqs = CERT_REQS[cert_reqs]
+        else:
+            self.cert_reqs = cert_reqs
         self.ca_certs = ca_certs
         self.context = None
 
     def get(self) -> ssl.SSLContext:
-        if self.keyfile is None:
-            self.context = ssl.create_default_context(cafile=self.ca_certs)
-        else:
-            self.context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            self.context.check_hostname = self.check_hostname
-            self.context.verify_mode = self.cert_reqs
-            self.context.load_cert_chain(
-                certfile=self.certfile, keyfile=self.keyfile  # type: ignore
-            )
+        if not self.context:
+            self.context = ssl.create_default_context()
+            if self.certfile and self.keyfile:
+                self.context.load_cert_chain(
+                    certfile=self.certfile, keyfile=self.keyfile
+                )
             if self.ca_certs:
                 self.context.load_verify_locations(
                     **{
@@ -137,7 +136,8 @@ class RedisSSLContext:
                         ): self.ca_certs
                     }
                 )
-        assert self.context
+            self.context.check_hostname = self.check_hostname
+            self.context.verify_mode = self.cert_reqs
         return self.context
 
 

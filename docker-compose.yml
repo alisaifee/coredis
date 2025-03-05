@@ -255,6 +255,13 @@ services:
       - '8379:8379'
     volumes:
       - ./tests/tls:/tls
+  redis-ssl-no-client-auth:
+    image: "redis:${REDIS_SSL_VERSION:-latest}"
+    command: redis-server --port 0 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --tls-port 7379 --tls-cert-file /tls/redis.crt --tls-key-file /tls/redis.key --tls-ca-cert-file /tls/ca.crt --tls-auth-clients no
+    ports:
+      - '7379:7379'
+    volumes:
+      - ./tests/tls:/tls
   redis-uds:
     image: "redis:${REDIS_VERSION:-latest}"
     command: sh -c "test ${HOST_OS} = \"Darwin\" && exit || redis-server --port 0 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes --unixsocket /sockets/coredis.redis.sock --unixsocketperm 777"

@@ -388,6 +388,12 @@ def redis_ssl_server(docker_services):
 
 
 @pytest.fixture(scope="session")
+def redis_ssl_server_no_client_auth(docker_services):
+    docker_services.start("redis-ssl-no-client-auth")
+    yield ["localhost", 7379]
+
+
+@pytest.fixture(scope="session")
 def redis_cluster_server(docker_services):
     docker_services.start("redis-cluster-init")
     docker_services.wait_for_service("redis-cluster-6", 7005, check_redis_cluster_ready)
@@ -715,6 +721,21 @@ async def redis_ssl(redis_ssl_server, request):
         "&ssl_certfile=./tests/tls/client.crt"
         "&ssl_ca_certs=./tests/tls/ca.crt"
     )
+    client = coredis.Redis.from_url(
+        storage_url, decode_responses=True, **get_client_test_args(request)
+    )
+    await check_test_constraints(request, client)
+    await client.flushall()
+    await set_default_test_config(client)
+
+    yield client
+
+    client.connection_pool.disconnect()
+
+
+@pytest.fixture
+async def redis_ssl_no_client_auth(redis_ssl_server_no_client_auth, request):
+    storage_url = "rediss://localhost:7379/?ssl_cert_reqs=none"
     client = coredis.Redis.from_url(
         storage_url, decode_responses=True, **get_client_test_args(request)
     )

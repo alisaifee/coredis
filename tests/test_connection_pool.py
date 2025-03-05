@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 import re
+import ssl
 from collections import deque
 
 import pytest
@@ -559,29 +560,27 @@ class TestSSLConnectionURLParsing:
             "password": None,
         }
 
-    def test_cert_reqs_options(self):
-        import ssl
-
-        with pytest.raises(TypeError) as e:
-            pool = coredis.ConnectionPool.from_url(
-                "rediss://?ssl_cert_reqs=optional&ssl_keyfile=test"
-            )
-            assert e.message == "certfile should be a valid filesystem path"
-            assert pool.get_connection().ssl_context.verify_mode == ssl.CERT_OPTIONAL
-
-        with pytest.raises(TypeError) as e:
-            pool = coredis.ConnectionPool.from_url(
-                "rediss://?ssl_cert_reqs=optional&ssl_keyfile=test"
-            )
-            assert e.message == "certfile should be a valid filesystem path"
-            assert pool.get_connection().ssl_context.verify_mode == ssl.CERT_OPTIONAL
-
-        with pytest.raises(TypeError) as e:
-            pool = coredis.ConnectionPool.from_url(
-                "rediss://?ssl_cert_reqs=required&ssl_keyfile=test"
-            )
-            assert e.message == "certfile should be a valid filesystem path"
-            assert pool.get_connection().ssl_context.verify_mode == ssl.CERT_REQUIRED
+    @pytest.mark.parametrize(
+        "query_param, expected",
+        [
+            (
+                "none",
+                ssl.CERT_NONE,
+            ),
+            (
+                "optional",
+                ssl.CERT_OPTIONAL,
+            ),
+            ("required", ssl.CERT_REQUIRED),
+            (None, ssl.CERT_OPTIONAL),
+        ],
+    )
+    async def test_cert_reqs_options(self, query_param, expected):
+        uri = "rediss://?ssl_keyfile=./tests/tls/client.key&ssl_certfile=./tests/tls/client.crt"
+        if query_param:
+            uri += f"&ssl_cert_reqs={query_param}"
+        pool = coredis.ConnectionPool.from_url(uri)
+        assert (await pool.get_connection()).ssl_context.verify_mode == expected
 
 
 class TestConnection:

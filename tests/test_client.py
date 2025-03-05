@@ -30,6 +30,7 @@ from tests.conftest import targets
     "redis_basic_raw_resp2",
     "redis_ssl",
     "redis_ssl_resp2",
+    "redis_ssl_no_client_auth",
     "keydb",
     "dragonfly",
     "valkey",
@@ -274,8 +275,15 @@ class TestSSL:
             ssl_context=context,
         )
         with pytest.raises(ConnectionError, match="decrypt error") as exc_info:
-            await client.ping() == b"PONG"
+            await client.ping()
         assert isinstance(exc_info.value.__cause__, SSLError)
+
+    async def test_ssl_no_verify_client(self, redis_ssl_server_no_client_auth):
+        client = coredis.Redis(port=7379, ssl=True, ssl_cert_reqs="required")
+        with pytest.raises(ConnectionError, match="certificate verify failed"):
+            await client.ping()
+        client = coredis.Redis(port=7379, ssl=True, ssl_cert_reqs="none")
+        assert await client.ping() == b"PONG"
 
 
 class TestFromUrl:
