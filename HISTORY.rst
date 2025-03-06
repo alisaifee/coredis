@@ -3,6 +3,18 @@
 Changelog
 =========
 
+v4.20.0
+-------
+Release Date: 2025-03-05
+
+* Bug Fix
+
+  * Ensure ssl context is correctly setup with the
+    ``check_hostname`` & ``cert_reqs`` even when a keyfile / cert
+    are not provided. This allows clients to connect to a redis
+    instance that has ``tls-auth-client=no`` by simply setting
+    ``ssl_cert_reqs=none``
+
 v4.19.0
 -------
 Release Date: 2025-03-02
@@ -47,6 +59,10 @@ Release Date: 2024-12-10
   * Added test coverage against redict servers
   * Added test coverage for Valkey 7.0 & 8.0
 
+v4.20.0
+-------
+Release Date: 2025-03-05
+
 v4.19.0
 -------
 Release Date: 2025-03-02
@@ -58,6 +74,10 @@ Release Date: 2024-12-09
 * Chore
 
   * Fix artifact download in github release workflow
+
+v4.20.0
+-------
+Release Date: 2025-03-05
 
 v4.19.0
 -------
@@ -71,6 +91,10 @@ Release Date: 2024-12-09
 
   * Fix github release workflow
 
+v4.20.0
+-------
+Release Date: 2025-03-05
+
 v4.19.0
 -------
 Release Date: 2025-03-02
@@ -82,6 +106,10 @@ Release Date: 2024-12-08
 * Compatibility
 
   * Update redict docker images to use alpine
+
+v4.20.0
+-------
+Release Date: 2025-03-05
 
 v4.19.0
 -------
@@ -1874,6 +1902,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
