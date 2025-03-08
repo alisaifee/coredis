@@ -59,9 +59,7 @@ NOT_ENOUGH_DATA: Final[NotEnoughData] = NotEnoughData()
 class RESPNode:
     __slots__ = ("depth", "key", "node_type")
     depth: int
-    key: Union[
-        ResponsePrimitive, Tuple[ResponsePrimitive, ...], FrozenSet[ResponsePrimitive]
-    ]
+    key: Union[ResponsePrimitive, Tuple[ResponsePrimitive, ...], FrozenSet[ResponsePrimitive]]
     node_type: int
 
     def __init__(
@@ -90,8 +88,7 @@ class RESPNode:
             return tuple(self.ensure_hashable(i) for i in item)
         elif isinstance(item, dict):
             return tuple(
-                (cast(ResponsePrimitive, k), self.ensure_hashable(v))
-                for k, v in item.items()
+                (cast(ResponsePrimitive, k), self.ensure_hashable(v)) for k, v in item.items()
             )
         return item  # noqa
 
@@ -178,9 +175,7 @@ class Parser:
     Interface between a connection and Unpacker
     """
 
-    EXCEPTION_CLASSES: Dict[
-        str, Union[Type[RedisError], Dict[str, Type[RedisError]]]
-    ] = {
+    EXCEPTION_CLASSES: Dict[str, Union[Type[RedisError], Dict[str, Type[RedisError]]]] = {
         "ASK": AskError,
         "BUSYGROUP": StreamDuplicateConsumerGroupError,
         "CLUSTERDOWN": ClusterDownError,
@@ -266,10 +261,7 @@ class Parser:
                 if response and response.response_type == RESPDataType.PUSH:
                     assert isinstance(response.response, list)
                     assert self.push_messages
-                    if (
-                        not push_message_types
-                        or b(response.response[0]) not in push_message_types
-                    ):
+                    if not push_message_types or b(response.response[0]) not in push_message_types:
                         self.push_messages.put_nowait(response.response)
                         continue
                     else:
@@ -343,9 +335,7 @@ class Parser:
             elif marker == RESPDataType.ERROR:
                 response = cast(ResponseType, self.parse_error(bytes(chunk).decode()))
             else:
-                raise InvalidResponse(
-                    f"Protocol Error: {chr(marker)}, {bytes(chunk)!r}"
-                )
+                raise InvalidResponse(f"Protocol Error: {chr(marker)}, {bytes(chunk)!r}")
 
             if self.nodes:
                 if self.nodes[-1].depth > 0:

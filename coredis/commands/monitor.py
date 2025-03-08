@@ -87,9 +87,7 @@ class Monitor(Generic[AnyStr]):
         returned by this method.
 
         """
-        monitor_thread = MonitorThread(
-            self, loop or asyncio.get_event_loop(), response_handler
-        )
+        monitor_thread = MonitorThread(self, loop or asyncio.get_event_loop(), response_handler)
         monitor_thread.start()
         return monitor_thread
 
@@ -102,9 +100,7 @@ class Monitor(Generic[AnyStr]):
             return self
         await self.__connect()
         assert self.connection
-        request = await self.connection.create_request(
-            CommandName.MONITOR, decode=False
-        )
+        request = await self.connection.create_request(CommandName.MONITOR, decode=False)
         response = await request
         if not response == b"OK":  # noqa
             raise RedisError(f"Failed to start MONITOR {response!r}")
@@ -113,9 +109,7 @@ class Monitor(Generic[AnyStr]):
 
     async def __stop_monitoring(self) -> None:
         if self.connection:
-            request = await self.connection.create_request(
-                CommandName.RESET, decode=False
-            )
+            request = await self.connection.create_request(CommandName.RESET, decode=False)
             response = await request
             if not response == CommandName.RESET:  # noqa
                 raise RedisError("Failed to reset connection")

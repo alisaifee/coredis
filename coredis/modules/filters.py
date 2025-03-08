@@ -311,9 +311,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
 
         :param key: The key name for an existing Bloom filter.
         """
-        return await self.execute_module_command(
-            CommandName.BF_CARD, key, callback=IntCallback()
-        )
+        return await self.execute_module_command(CommandName.BF_CARD, key, callback=IntCallback())
 
 
 @versionadded(version="4.12")
@@ -807,9 +805,7 @@ class TopK(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    async def add(
-        self, key: KeyT, items: Parameters[AnyStr]
-    ) -> Tuple[Optional[AnyStr], ...]:
+    async def add(self, key: KeyT, items: Parameters[AnyStr]) -> Tuple[Optional[AnyStr], ...]:
         """
         Increases the count of one or more items by increment
 
@@ -830,9 +826,7 @@ class TopK(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    async def incrby(
-        self, key: KeyT, items: Mapping[AnyStr, int]
-    ) -> Tuple[Optional[AnyStr], ...]:
+    async def incrby(self, key: KeyT, items: Mapping[AnyStr, int]) -> Tuple[Optional[AnyStr], ...]:
         """
         Increases the count of one or more items by increment
 

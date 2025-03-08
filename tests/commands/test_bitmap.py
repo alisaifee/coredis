@@ -157,17 +157,11 @@ class TestBitmap:
         key = "key:bitfield:overflow"
         # nothing too happen
         assert not await client.bitfield(key).overflow().exc()
-        assert [-128] == await client.bitfield(key).overflow("WRAP").incrby(
-            "i8", 0, 128
-        ).exc()
+        assert [-128] == await client.bitfield(key).overflow("WRAP").incrby("i8", 0, 128).exc()
         await client.delete([key])
-        assert [127] == await client.bitfield(key).overflow("SAT").incrby(
-            "i8", 0, 128
-        ).exc()
+        assert [127] == await client.bitfield(key).overflow("SAT").incrby("i8", 0, 128).exc()
         await client.delete([key])
-        assert [None] == await client.bitfield(key).overflow("fail").incrby(
-            "i8", 0, 128
-        ).exc()
+        assert [None] == await client.bitfield(key).overflow("fail").incrby("i8", 0, 128).exc()
 
     async def test_get_set_bit(self, client, _s):
         # no value

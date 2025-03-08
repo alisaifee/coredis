@@ -85,9 +85,7 @@ class TestConnection:
         clone = await cloner(client)
         clone_connection = await clone.connection_pool.get_connection("tracking")
         clone_id = clone_connection.client_id
-        assert await client.client_tracking(
-            PureToken.ON, redirect=clone_id, noloop=True
-        )
+        assert await client.client_tracking(PureToken.ON, redirect=clone_id, noloop=True)
         assert clone_id == await client.client_getredir()
         assert await client.client_tracking(PureToken.OFF)
         assert -1 == await client.client_getredir()
@@ -114,14 +112,10 @@ class TestConnection:
         with pytest.raises(ResponseError, match="You can't switch"):
             await client.client_tracking(PureToken.ON, optout=True, redirect=clone_id)
         assert await client.client_tracking(PureToken.OFF)
-        assert await client.client_tracking(
-            PureToken.ON, optout=True, redirect=clone_id
-        )
+        assert await client.client_tracking(PureToken.ON, optout=True, redirect=clone_id)
         with pytest.raises(ResponseError, match="in OPTIN mode"):
             await client.client_caching(PureToken.YES)
-        assert await client.client_tracking(
-            PureToken.ON, optout=True, redirect=clone_id
-        )
+        assert await client.client_tracking(PureToken.ON, optout=True, redirect=clone_id)
         assert await client.client_caching(PureToken.NO)
 
     @pytest.mark.min_server_version("6.2.0")
@@ -246,9 +240,7 @@ class TestConnection:
             await client.client_setinfo(lib_name="lolwut")
             await client.client_setinfo(lib_ver="12.12.12")
         clients = await client.client_list()
-        assert ("lolwut", "12.12.12") in [
-            (c["lib-name"], c["lib-ver"]) for c in clients
-        ]
+        assert ("lolwut", "12.12.12") in [(c["lib-name"], c["lib-ver"]) for c in clients]
 
     async def test_client_getname(self, client, _s):
         assert await client.client_getname() is None

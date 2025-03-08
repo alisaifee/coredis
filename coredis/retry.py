@@ -16,9 +16,7 @@ class RetryPolicy(ABC):
     Abstract retry policy
     """
 
-    def __init__(
-        self, retries: int, retryable_exceptions: Tuple[Type[BaseException], ...]
-    ) -> None:
+    def __init__(self, retries: int, retryable_exceptions: Tuple[Type[BaseException], ...]) -> None:
         """
         :param retries: number of times to retry if a :paramref:`retryable_exception`
          is encountered.
@@ -221,9 +219,7 @@ class CompositeRetryPolicy(RetryPolicy):
 def retryable(
     policy: RetryPolicy,
     failure_hook: Optional[Callable[..., Coroutine[Any, Any, None]]] = None,
-) -> Callable[
-    [Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]
-]:
+) -> Callable[[Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]]:
     """
     Decorator to be used to apply a retry policy to a coroutine
     """

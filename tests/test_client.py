@@ -142,9 +142,7 @@ class TestClient:
         client.connection_pool.reset()
         connection = await client.connection_pool.get_connection(b"set", acquire=False)
         spy = mocker.spy(connection, "perform_handshake")
-        await asyncio.gather(
-            *[client.set(f"fubar{i}", bytes(2**16)) for i in range(10)]
-        )
+        await asyncio.gather(*[client.set(f"fubar{i}", bytes(2**16)) for i in range(10)])
         assert spy.call_count == 1
 
 
@@ -170,9 +168,7 @@ class TestClusterClient:
         assert await client.get("fubar") == _s(1)
 
     async def test_ensure_replication_unavailable(self, client, _s, user_client):
-        no_perm_client = await user_client(
-            "testuser", "on", "allkeys", "+@all", "-WAIT"
-        )
+        no_perm_client = await user_client("testuser", "on", "allkeys", "+@all", "-WAIT")
         with pytest.raises(AuthorizationError):
             with no_perm_client.ensure_replication(1):
                 assert await no_perm_client.set("fubar", 1)
@@ -188,9 +184,7 @@ class TestClusterClient:
 
     @pytest.mark.min_server_version("7.1.240")
     async def test_ensure_persistence_unavailable(self, client, _s, user_client):
-        no_perm_client = await user_client(
-            "testuser", "on", "allkeys", "+@all", "-WAITAOF"
-        )
+        no_perm_client = await user_client("testuser", "on", "allkeys", "+@all", "-WAITAOF")
         with pytest.raises(AuthorizationError):
             with no_perm_client.ensure_persistence(1, 1, 2000):
                 await no_perm_client.set("fubar", 1)
@@ -228,9 +222,7 @@ class TestSSL:
         context = ssl.create_default_context()
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
-        context.load_cert_chain(
-            certfile="./tests/tls/client.crt", keyfile="./tests/tls/client.key"
-        )
+        context.load_cert_chain(certfile="./tests/tls/client.crt", keyfile="./tests/tls/client.key")
         client = coredis.Redis(
             port=8379,
             ssl_context=context,
@@ -252,9 +244,7 @@ class TestSSL:
         context = ssl.create_default_context()
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
-        context.load_cert_chain(
-            certfile="./tests/tls/client.crt", keyfile="./tests/tls/client.key"
-        )
+        context.load_cert_chain(certfile="./tests/tls/client.crt", keyfile="./tests/tls/client.key")
         client = coredis.RedisCluster(
             "localhost",
             8301,
@@ -288,9 +278,7 @@ class TestSSL:
 
 class TestFromUrl:
     async def test_basic_client(self, redis_basic_server):
-        client = coredis.Redis.from_url(
-            f"redis://{redis_basic_server[0]}:{redis_basic_server[1]}"
-        )
+        client = coredis.Redis.from_url(f"redis://{redis_basic_server[0]}:{redis_basic_server[1]}")
         assert b"PONG" == await client.ping()
         client = coredis.Redis.from_url(
             f"redis://{redis_basic_server[0]}:{redis_basic_server[1]}",
@@ -301,9 +289,7 @@ class TestFromUrl:
     async def test_uds_client(self, redis_uds_server):
         client = coredis.Redis.from_url(f"redis://{redis_uds_server}")
         assert b"PONG" == await client.ping()
-        client = coredis.Redis.from_url(
-            f"redis://{redis_uds_server}", decode_responses=True
-        )
+        client = coredis.Redis.from_url(f"redis://{redis_uds_server}", decode_responses=True)
         assert "PONG" == await client.ping()
 
     @pytest.mark.parametrize(

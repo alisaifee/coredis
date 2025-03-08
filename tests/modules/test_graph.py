@@ -28,9 +28,7 @@ class TestGraph:
         assert {"graph"} == await client.graph.list()
 
     async def test_delete_graph(self, client: Redis):
-        await client.graph.query(
-            "graph", "CREATE (:Node {name: 'A'})-[:EDGE]->(:Node {name: 'B'})"
-        )
+        await client.graph.query("graph", "CREATE (:Node {name: 'A'})-[:EDGE]->(:Node {name: 'B'})")
         assert await client.graph.delete("graph")
         assert not await client.graph.list()
         with pytest.raises(ResponseError):
@@ -52,9 +50,7 @@ class TestGraph:
 
         assert 1 == len(
             (
-                await client.graph.ro_query(
-                    "graph", "MATCH (n)-[r]->(m) return n", timeout=100
-                )
+                await client.graph.ro_query("graph", "MATCH (n)-[r]->(m) return n", timeout=100)
             ).result_set
         )
 
@@ -71,9 +67,7 @@ class TestGraph:
         assert result.result_set[1][0].properties["name"] == "B"
 
     async def test_query_relations(self, client: Redis):
-        await client.graph.query(
-            "graph", "CREATE (:Node {name: 'A'})-[:EDGE]->(:Node {name: 'B'})"
-        )
+        await client.graph.query("graph", "CREATE (:Node {name: 'A'})-[:EDGE]->(:Node {name: 'B'})")
         result = await client.graph.query("graph", "MATCH (n)-[r]->(m) RETURN n, r, m")
         assert result.result_set[0][0].labels == {"Node"}
         assert result.result_set[0][0].properties["name"] == "A"
@@ -103,12 +97,8 @@ class TestGraph:
         assert result.result_set[0][1].properties["distance"] == 1
 
     async def test_query_paths(self, client: Redis):
-        await client.graph.query(
-            "graph", "CREATE (:Node {name: 'A'})-[:EDGE]->(:Node {name: 'B'})"
-        )
-        await client.graph.query(
-            "graph", "CREATE (:Node {name: 'B'})-[:EDGE]->(:Node {name: 'C'})"
-        )
+        await client.graph.query("graph", "CREATE (:Node {name: 'A'})-[:EDGE]->(:Node {name: 'B'})")
+        await client.graph.query("graph", "CREATE (:Node {name: 'B'})-[:EDGE]->(:Node {name: 'C'})")
 
         result = await client.graph.query("graph", "MATCH p = (n)-[r]->(m) return p")
 
@@ -200,9 +190,7 @@ class TestGraph:
         assert await client.graph.config_set("TIMEOUT", 1000)
 
     async def test_profile(self, client: Redis):
-        await client.graph.query(
-            "graph", "CREATE (:Node {name: 'A'})-[:EDGE]->(:Node {name: 'B'})"
-        )
+        await client.graph.query("graph", "CREATE (:Node {name: 'A'})-[:EDGE]->(:Node {name: 'B'})")
         profile = await client.graph.profile(
             "graph", "MATCH (n)-[r]->(m) RETURN n, r, m", timeout=100
         )
@@ -211,18 +199,12 @@ class TestGraph:
         assert "Records produced: 2" in profile[-1]
 
     async def test_explain(self, client: Redis):
-        await client.graph.query(
-            "graph", "CREATE (:Node {name: 'A'})-[:EDGE]->(:Node {name: 'B'})"
-        )
-        explain = await client.graph.explain(
-            "graph", "MATCH (n)-[r]->(m) RETURN n, r, m"
-        )
+        await client.graph.query("graph", "CREATE (:Node {name: 'A'})-[:EDGE]->(:Node {name: 'B'})")
+        explain = await client.graph.explain("graph", "MATCH (n)-[r]->(m) RETURN n, r, m")
         assert "All Node Scan" in explain[-1]
 
     async def test_slowlog(self, client: Redis):
-        await client.graph.query(
-            "graph", "CREATE (:Node {name: 'A'})-[:EDGE]->(:Node {name: 'B'})"
-        )
+        await client.graph.query("graph", "CREATE (:Node {name: 'A'})-[:EDGE]->(:Node {name: 'B'})")
         logs = await client.graph.slowlog("graph")
         assert len(logs) == 1
         await client.graph.query("graph", "MATCH (n)-[r]->(m) RETURN n, r, m")
@@ -231,9 +213,7 @@ class TestGraph:
 
     @pytest.mark.min_module_version("graph", "2.12.0")
     async def test_slowlog_reset(self, client: Redis):
-        await client.graph.query(
-            "graph", "CREATE (:Node {name: 'A'})-[:EDGE]->(:Node {name: 'B'})"
-        )
+        await client.graph.query("graph", "CREATE (:Node {name: 'A'})-[:EDGE]->(:Node {name: 'B'})")
         logs = await client.graph.slowlog("graph")
         assert len(logs) == 1
 

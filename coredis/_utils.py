@@ -62,30 +62,18 @@ class EncodingInsensitiveDict(ObjectProxy):  # type: ignore
     def __setitem__(self, item: StringT, value: object) -> None:
         if item in self.__wrapped__:
             self.__wrapped__[item] = value
-        elif (
-            isinstance(item, str)
-            and item.encode(self._self_encoding) in self.__wrapped__
-        ):
+        elif isinstance(item, str) and item.encode(self._self_encoding) in self.__wrapped__:
             self.__wrapped__[item.encode(self._self_encoding)] = value
-        elif (
-            isinstance(item, bytes)
-            and item.decode(self._self_encoding) in self.__wrapped__
-        ):
+        elif isinstance(item, bytes) and item.decode(self._self_encoding) in self.__wrapped__:
             self.__wrapped__[item.decode(self._self_encoding)] = value
         else:
             self.__wrapped__[item] = value
 
     def __contains__(self, key: StringT) -> bool:
         if isinstance(key, str):
-            return (
-                key in self.__wrapped__
-                or key.encode(self._self_encoding) in self.__wrapped__
-            )
+            return key in self.__wrapped__ or key.encode(self._self_encoding) in self.__wrapped__
         elif isinstance(key, bytes):
-            return (
-                key in self.__wrapped__
-                or key.decode(self._self_encoding) in self.__wrapped__
-            )
+            return key in self.__wrapped__ or key.decode(self._self_encoding) in self.__wrapped__
         return key in self.__wrapped__
 
     def __repr__(self) -> str:
@@ -155,9 +143,7 @@ def tuples_to_flat_list(nested_list: Iterable[Tuple[T, ...]]) -> List[T]:
     return [item for sublist in nested_list for item in sublist]
 
 
-def dict_to_flat_list(
-    mapping: Mapping[T, U], reverse: bool = False
-) -> List[Union[T, U]]:
+def dict_to_flat_list(mapping: Mapping[T, U], reverse: bool = False) -> List[Union[T, U]]:
     e1: List[Union[T, U]] = list(mapping.keys())
     e2: List[Union[T, U]] = list(mapping.values())
 
@@ -476,9 +462,7 @@ except ImportError:
         crc = 0
 
         for byte in data:
-            crc = ((crc << 8) & 0xFF00) ^ x_mode_m_crc16_lookup[
-                ((crc >> 8) & 0xFF) ^ byte
-            ]
+            crc = ((crc << 8) & 0xFF00) ^ x_mode_m_crc16_lookup[((crc >> 8) & 0xFF) ^ byte]
 
         return crc & 0xFFFF
 

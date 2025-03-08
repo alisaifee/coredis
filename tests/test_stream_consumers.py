@@ -36,9 +36,7 @@ class TestStreamConsumers:
         [await client.xadd("a", {"id": i}) for i in range(10)]
         [await client.xadd("b", {"id": i}) for i in range(10, 20)]
         consumed = await consume_entries(consumer, 20)
-        assert list(range(10)) == [
-            int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]
-        ]
+        assert list(range(10)) == [int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]]
         assert list(range(10, 20)) == [
             int(entry.field_values[_s("id")]) for entry in consumed[_s("b")]
         ]
@@ -47,9 +45,7 @@ class TestStreamConsumers:
         consumer = await Consumer(client, ["a", "b"])
         [await client.xadd("a", {"id": i}) for i in range(10)]
         consumed = await consume_entries(consumer, 20)
-        assert list(range(10)) == [
-            int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]
-        ]
+        assert list(range(10)) == [int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]]
 
         assert await consumer.add_stream("c")
         await client.xadd("c", {"id": 21})
@@ -97,9 +93,7 @@ class TestStreamConsumers:
 
     async def test_single_group_consumer(self, client, _s):
         with pytest.raises(StreamConsumerInitializationError):
-            await GroupConsumer(
-                client, ["a", "b"], "group-a", "consumer-a", auto_create=False
-            )
+            await GroupConsumer(client, ["a", "b"], "group-a", "consumer-a", auto_create=False)
         await client.xgroup_create("a", "group-a", "$", mkstream=True)
         await client.xgroup_create("b", "group-a", "$", mkstream=True)
 
@@ -109,9 +103,7 @@ class TestStreamConsumers:
         [await client.xadd("a", {"id": i}) for i in range(10)]
         [await client.xadd("b", {"id": i}) for i in range(10, 20)]
         consumed = await consume_entries(consumer, 20)
-        assert list(range(10)) == [
-            int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]
-        ]
+        assert list(range(10)) == [int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]]
         assert list(range(10, 20)) == [
             int(entry.field_values[_s("id")]) for entry in consumed[_s("b")]
         ]
@@ -129,9 +121,7 @@ class TestStreamConsumers:
 
         [await client.xadd("a", {"id": i}) for i in range(10)]
         consumed = await consume_entries(consumer, 10)
-        assert list(range(10)) == [
-            int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]
-        ]
+        assert list(range(10)) == [int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]]
 
         with pytest.raises(StreamConsumerInitializationError):
             await consumer.add_stream("c")
@@ -153,16 +143,12 @@ class TestStreamConsumers:
         [await client.xadd("a", {"id": i}) for i in range(10)]
         [await client.xadd("b", {"id": i}) for i in range(10, 20)]
         consumed = await consume_entries(consumer, 20)
-        assert list(range(10)) == [
-            int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]
-        ]
+        assert list(range(10)) == [int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]]
         assert list(range(10, 20)) == [
             int(entry.field_values[_s("id")]) for entry in consumed[_s("b")]
         ]
 
-    async def test_multiple_group_consumer_auto_create_group_stream(
-        self, client, cloner, _s
-    ):
+    async def test_multiple_group_consumer_auto_create_group_stream(self, client, cloner, _s):
         client_2 = await cloner(client)
         consumer_1 = await GroupConsumer(
             client, ["a", "b"], "group-a", "consumer-1", auto_create=True
@@ -174,9 +160,7 @@ class TestStreamConsumers:
         [await client.xadd("b", {"id": i}) for i in range(10, 20)]
         consumed = await consume_entries(consumer_1, 20)
         consumed = await consume_entries(consumer_2, 20, consumed)
-        assert list(range(10)) == [
-            int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]
-        ]
+        assert list(range(10)) == [int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]]
         assert list(range(10, 20)) == [
             int(entry.field_values[_s("id")]) for entry in consumed[_s("b")]
         ]

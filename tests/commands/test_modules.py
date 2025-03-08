@@ -84,7 +84,5 @@ async def test_module_loadex(redis):
 
     assert await redis.module_loadex("/var/tmp/module.so")
     assert await redis.module_loadex("/var/tmp/module.so", configs={"fu": "bar"})
-    assert await redis.module_loadex(
-        "/var/tmp/module.so", configs={"fu": "bar", "bar": "fu"}
-    )
+    assert await redis.module_loadex("/var/tmp/module.so", configs={"fu": "bar", "bar": "fu"})
     assert await redis.module_loadex("/var/tmp/module.so", args=["1"])

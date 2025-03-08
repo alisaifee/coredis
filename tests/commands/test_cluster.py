@@ -35,9 +35,7 @@ class TestCluster:
 
     async def test_asking(self, client, _s):
         node = client.connection_pool.get_primary_node_by_slot(1)
-        assert await client.connection_pool.nodes.get_redis_link(
-            node.host, node.port
-        ).asking()
+        assert await client.connection_pool.nodes.get_redis_link(node.host, node.port).asking()
 
     async def test_count_failure_reports(self, client, _s):
         node = client.connection_pool.get_primary_node_by_slot(1)
@@ -131,9 +129,7 @@ class TestCluster:
         for node in client.replicas:
             ids.append(node.cluster_myid())
         ids = await asyncio.gather(*ids)
-        known_nodes = (
-            _s(node.node_id) for node in client.connection_pool.nodes.all_nodes()
-        )
+        known_nodes = (_s(node.node_id) for node in client.connection_pool.nodes.all_nodes())
         assert set(ids) == set(known_nodes)
 
     @pytest.mark.min_server_version("7.0.0")

@@ -135,9 +135,7 @@ class TestString:
             ((0, 1), (0, 1), 2),
         )
         assert match.length == 6
-        match = await client.lcs(
-            "a{fu}", "b{fu}", idx=True, minmatchlen=4, withmatchlen=True
-        )
+        match = await client.lcs("a{fu}", "b{fu}", idx=True, minmatchlen=4, withmatchlen=True)
         assert match.matches == (((3, 6), (2, 5), 4),)
         assert match.length == 6
 

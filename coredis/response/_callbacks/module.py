@@ -27,8 +27,7 @@ class ModuleInfoCallback(
         self, response: List[List[ResponseType]], **options: Optional[ValueT]
     ) -> Tuple[Dict[AnyStr, ResponsePrimitive], ...]:
         return tuple(
-            cast(Dict[AnyStr, ResponsePrimitive], flat_pairs_to_dict(mod))
-            for mod in response
+            cast(Dict[AnyStr, ResponsePrimitive], flat_pairs_to_dict(mod)) for mod in response
         )
 
     def transform_3(

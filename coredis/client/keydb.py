@@ -47,9 +47,7 @@ from coredis.typing import (
 
 def _keydb_command_link(command: CommandName) -> str:
     canonical_command = str(command).lower().replace(" ", "-").replace(".", "")
-    return (
-        f"`{str(command)} <https://docs.keydb.dev/docs/commands#{canonical_command}>`_"
-    )
+    return f"`{str(command)} <https://docs.keydb.dev/docs/commands#{canonical_command}>`_"
 
 
 class CommandName(CaseAndEncodingInsensitiveEnum):
@@ -78,9 +76,7 @@ def keydb_command(
     arguments: Optional[Dict[str, Dict[str, str]]] = None,
     cluster: ClusterCommandConfig = ClusterCommandConfig(),
     flags: Optional[Set[CommandFlag]] = None,
-) -> Callable[
-    [Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]
-]:
+) -> Callable[[Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]]:
     command_details = CommandDetails(
         command_name,
         group,
@@ -140,9 +136,7 @@ class KeyDBCommands(CommandMixin[AnyStr]):
         pieces: CommandArgList = [operation, destkey, *keys]
         if value is not None:
             pieces.append(value)
-        return await self.execute_command(
-            CommandName.BITOP, *pieces, callback=IntCallback()
-        )
+        return await self.execute_command(CommandName.BITOP, *pieces, callback=IntCallback())
 
     @keydb_command(
         CommandName.CRON,
@@ -261,9 +255,7 @@ class KeyDBCommands(CommandMixin[AnyStr]):
         )
 
     @keydb_command(CommandName.HRENAME, group=CommandGroup.HASH)
-    async def hrename(
-        self, key: KeyT, source_field: ValueT, destination_field: ValueT
-    ) -> bool:
+    async def hrename(self, key: KeyT, source_field: ValueT, destination_field: ValueT) -> bool:
         """
         Rename a field :paramref:`source_field` to :paramref:`destination_field`
         in hash :paramref:`key`
@@ -277,18 +269,14 @@ class KeyDBCommands(CommandMixin[AnyStr]):
             callback=BoolCallback(),
         )
 
-    @keydb_command(
-        CommandName.MEXISTS, group=CommandGroup.GENERIC, flags={CommandFlag.READONLY}
-    )
+    @keydb_command(CommandName.MEXISTS, group=CommandGroup.GENERIC, flags={CommandFlag.READONLY})
     async def mexists(self, keys: Iterable[KeyT]) -> Tuple[bool, ...]:
         """
         Returns a tuple of bools in the same order as :paramref:`keys`
         denoting whether the keys exist
         """
 
-        return await self.execute_command(
-            CommandName.MEXISTS, *keys, callback=BoolsCallback()
-        )
+        return await self.execute_command(CommandName.MEXISTS, *keys, callback=BoolsCallback())
 
     @keydb_command(
         CommandName.OBJECT_LASTMODIFIED,
@@ -307,9 +295,7 @@ class KeyDBCommands(CommandMixin[AnyStr]):
             CommandName.OBJECT_LASTMODIFIED, key, callback=IntCallback()
         )
 
-    @keydb_command(
-        CommandName.PTTL, group=CommandGroup.GENERIC, flags={CommandFlag.READONLY}
-    )
+    @keydb_command(CommandName.PTTL, group=CommandGroup.GENERIC, flags={CommandFlag.READONLY})
     async def pttl(self, key: KeyT, subkey: Optional[ValueT] = None) -> int:
         """
         Returns the number of milliseconds until the key :paramref:`key` will expire.
@@ -321,13 +307,9 @@ class KeyDBCommands(CommandMixin[AnyStr]):
         if subkey is not None:
             pieces.append(subkey)
 
-        return await self.execute_command(
-            CommandName.PTTL, *pieces, callback=IntCallback()
-        )
+        return await self.execute_command(CommandName.PTTL, *pieces, callback=IntCallback())
 
-    @keydb_command(
-        CommandName.TTL, group=CommandGroup.GENERIC, flags={CommandFlag.READONLY}
-    )
+    @keydb_command(CommandName.TTL, group=CommandGroup.GENERIC, flags={CommandFlag.READONLY})
     async def ttl(self, key: KeyT, subkey: Optional[ValueT] = None) -> int:
         """
         Get the time to live for a key (or subkey) in seconds
@@ -338,9 +320,7 @@ class KeyDBCommands(CommandMixin[AnyStr]):
         pieces: CommandArgList = [key]
         if subkey is not None:
             pieces.append(subkey)
-        return await self.execute_command(
-            CommandName.TTL, *pieces, callback=IntCallback()
-        )
+        return await self.execute_command(CommandName.TTL, *pieces, callback=IntCallback())
 
 
 class KeyDB(KeyDBCommands[AnyStr], Redis[AnyStr]):

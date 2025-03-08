@@ -58,9 +58,9 @@ async def ensure_compatibility(
     if command_details.version_introduced:
         module_version = await client.get_server_module_version(module)
         if module_version and command_details.version_introduced <= module_version:
-            if command_details.arguments and set(
-                command_details.arguments.keys()
-            ).intersection(kwargs.keys()):
+            if command_details.arguments and set(command_details.arguments.keys()).intersection(
+                kwargs.keys()
+            ):
                 for argument, version_introduced in command_details.arguments.items():
                     if version_introduced and version_introduced > module_version:
                         raise CommandSyntaxError(
@@ -88,9 +88,7 @@ def module_command(
     version_introduced: Optional[str] = None,
     version_deprecated: Optional[str] = None,
     arguments: Optional[Dict[str, Dict[str, str]]] = None,
-) -> Callable[
-    [Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]
-]:
+) -> Callable[[Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]]:
     command_details = CommandDetails(
         command_name,
         group,
@@ -119,9 +117,7 @@ def module_command(
             mg = cast(ModuleGroup[bytes], args[0])
             client = cast("coredis.client.Client[Any]", mg.client)
             is_regular_client = isinstance(client, (Redis, RedisCluster))
-            runtime_checking = (
-                not getattr(client, "noreply", None) and is_regular_client
-            )
+            runtime_checking = not getattr(client, "noreply", None) and is_regular_client
             callable = runtime_checkable if runtime_checking else func
             await ensure_compatibility(client, module.NAME, command_details, kwargs)
             async with command_cache(callable, *args, **kwargs) as response:
@@ -209,9 +205,7 @@ class ModuleGroupRegistry(ABCMeta):
         kls = super().__new__(cls, name, bases, namespace)
         if getattr(kls, "MODULE", None):
             MODULE_GROUPS.add(kls)
-            kls.MODULE.COMMAND_GROUPS[kls.COMMAND_GROUP] = cast(
-                Type[ModuleGroup[Any]], kls
-            )
+            kls.MODULE.COMMAND_GROUPS[kls.COMMAND_GROUP] = cast(Type[ModuleGroup[Any]], kls)
             original_doc = textwrap.dedent(kls.__doc__ or "")
             kls.__doc__ = f"""
 Container for the commands in the ``{kls.COMMAND_GROUP.value}`` command group of the
@@ -285,7 +279,5 @@ class ModuleGroup(Generic[AnyStr], metaclass=ModuleGroupRegistry):
     ) -> R:
         return cast(
             R,
-            await self.client.execute_command(
-                command, *args, callback=callback, **options
-            ),
+            await self.client.execute_command(command, *args, callback=callback, **options),
         )

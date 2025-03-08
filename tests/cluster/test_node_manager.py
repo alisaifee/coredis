@@ -80,15 +80,11 @@ async def test_init_slots_cache_not_all_slots(s, redis_cluster):
         with pytest.raises(RedisClusterException) as ex:
             await s.connection_pool.initialize()
 
-        assert str(ex.value).startswith(
-            "Not all slots are covered after query all startup_nodes."
-        )
+        assert str(ex.value).startswith("Not all slots are covered after query all startup_nodes.")
 
 
 @pytest.mark.min_python("3.8")
-async def test_init_slots_cache_not_all_slots_not_require_full_coverage(
-    s, redis_cluster
-):
+async def test_init_slots_cache_not_all_slots_not_require_full_coverage(s, redis_cluster):
     """
     Test that if not all slots are covered it should raise an exception
     """
@@ -331,9 +327,7 @@ async def test_cluster_one_instance(redis_cluster):
 
             del n.nodes["127.0.0.1:7006"].node_id
             assert n.nodes == {
-                "127.0.0.1:7006": ManagedNode(
-                    host="127.0.0.1", port=7006, server_type="primary"
-                )
+                "127.0.0.1:7006": ManagedNode(host="127.0.0.1", port=7006, server_type="primary")
             }
             assert len(n.slots) == 16384
 

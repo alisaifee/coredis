@@ -70,9 +70,7 @@ class TestKeyDBCommands:
         redis.call("LPUSH", KEYS[1], value + tonumber(ARGV[1]))
         """
         await client.lpush("cr", [1])
-        assert await client.cron(
-            "repeat", True, delay=100, script=scrpt, keys=["cr"], args=[1]
-        )
+        assert await client.cron("repeat", True, delay=100, script=scrpt, keys=["cr"], args=[1])
         await asyncio.sleep(0.5)
         value = int((await client.lrange("cr", 0, -1))[0])
         assert value > 2, value
@@ -128,9 +126,7 @@ class TestKeyDBCommands:
     async def test_pexpirememberat_hash(self, client, _s):
         await client.hset("a", {"b": "1"})
         assert await client.hget("a", "b") == _s("1")
-        assert await client.pexpirememberat(
-            "a", "b", datetime.now() + timedelta(milliseconds=100)
-        )
+        assert await client.pexpirememberat("a", "b", datetime.now() + timedelta(milliseconds=100))
         assert 0 < await client.pttl("a", "b")
         await asyncio.sleep(0.2)
         assert not await client.hget("a", "b")
@@ -138,9 +134,7 @@ class TestKeyDBCommands:
     async def test_pexpirememberat_set(self, client, _s):
         await client.sadd("a", {"b"})
         assert await client.smembers("a") == {_s("b")}
-        assert await client.pexpirememberat(
-            "a", "b", datetime.now() + timedelta(milliseconds=100)
-        )
+        assert await client.pexpirememberat("a", "b", datetime.now() + timedelta(milliseconds=100))
         assert 0 < await client.pttl("a", "b")
         await asyncio.sleep(0.2)
         assert not await client.smembers("a")
@@ -148,9 +142,7 @@ class TestKeyDBCommands:
     async def test_pexpirememberat_sorted_set(self, client, _s):
         await client.zadd("a", {"b": 1.0})
         assert await client.zrandmember("a", count=1) == (_s("b"),)
-        assert await client.pexpirememberat(
-            "a", "b", datetime.now() + timedelta(milliseconds=100)
-        )
+        assert await client.pexpirememberat("a", "b", datetime.now() + timedelta(milliseconds=100))
         assert 0 < await client.pttl("a", "b")
         await asyncio.sleep(0.2)
         assert not await client.zrandmember("a", count=1, withscores=True)

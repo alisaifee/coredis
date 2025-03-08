@@ -147,9 +147,7 @@ class AbstractCache(ABC):
         ...
 
     @abstractmethod
-    def put(
-        self, command: bytes, key: bytes, *args: ValueT, value: ResponseType
-    ) -> None:
+    def put(self, command: bytes, key: bytes, *args: ValueT, value: ResponseType) -> None:
         """
         Cache the response for command/key/args combination
         """
@@ -252,9 +250,7 @@ class LRUCache(Generic[ET]):
         if self.max_bytes > 0 and asizeof is not None:
             self.max_bytes += asizeof.asizeof(self.__cache)
         elif self.max_bytes > 0:
-            raise RuntimeError(
-                "max_bytes not supported as dependency pympler not available"
-            )
+            raise RuntimeError("max_bytes not supported as dependency pympler not available")
 
     def get(self, key: Hashable) -> ET:
         if key not in self.__cache:
@@ -328,10 +324,7 @@ class LRUCache(Generic[ET]):
                 f"current_size_bytes={asizeof.asizeof(self)}>"
             )
         else:
-            return (
-                f"LruCache<max_items={self.max_items}, "
-                f"current_items={len(self.__cache)}, "
-            )
+            return f"LruCache<max_items={self.max_items}, current_items={len(self.__cache)}, "
 
     def __check_capacity(self) -> None:
         if len(self.__cache) == self.max_items:
@@ -414,12 +407,10 @@ class NodeTrackingCache(
             self.__stats.miss(key)
             raise
 
-    def put(
-        self, command: bytes, key: bytes, *args: ValueT, value: ResponseType
-    ) -> None:
-        self.__cache.setdefault(b(key), LRUCache()).setdefault(
-            command, LRUCache()
-        ).insert(make_hashable(*args), value)
+    def put(self, command: bytes, key: bytes, *args: ValueT, value: ResponseType) -> None:
+        self.__cache.setdefault(b(key), LRUCache()).setdefault(command, LRUCache()).insert(
+            make_hashable(*args), value
+        )
 
     def invalidate(self, *keys: ValueT) -> None:
         for key in keys:
@@ -523,9 +514,7 @@ class NodeTrackingCache(
                 break
 
 
-class ClusterTrackingCache(
-    AbstractCache, SupportsStats, SupportsSampling, SupportsClientTracking
-):
+class ClusterTrackingCache(AbstractCache, SupportsStats, SupportsSampling, SupportsClientTracking):
     """
     An LRU cache for redis cluster that uses server assisted client caching
     to ensure local cache entries are invalidated if any operations are performed
@@ -570,9 +559,7 @@ class ClusterTrackingCache(
         self.__confidence = self.__original_confidence = confidence
         self.__dynamic_confidence = dynamic_confidence
         self.__stats = stats or CacheStats()
-        self.__client: Optional[
-            weakref.ReferenceType["coredis.client.RedisCluster[Any]"]
-        ] = None
+        self.__client: Optional[weakref.ReferenceType["coredis.client.RedisCluster[Any]"]] = None
 
     async def initialize(
         self,
@@ -644,12 +631,10 @@ class ClusterTrackingCache(
             self.__stats.miss(key)
             raise
 
-    def put(
-        self, command: bytes, key: bytes, *args: ValueT, value: ResponseType
-    ) -> None:
-        self.__cache.setdefault(b(key), LRUCache()).setdefault(
-            command, LRUCache()
-        ).insert(make_hashable(*args), value)
+    def put(self, command: bytes, key: bytes, *args: ValueT, value: ResponseType) -> None:
+        self.__cache.setdefault(b(key), LRUCache()).setdefault(command, LRUCache()).insert(
+            make_hashable(*args), value
+        )
 
     def invalidate(self, *keys: ValueT) -> None:
         for key in keys:
@@ -683,9 +668,7 @@ class ClusterTrackingCache(
         self.shutdown()
 
 
-class TrackingCache(
-    AbstractCache, SupportsStats, SupportsSampling, SupportsClientTracking
-):
+class TrackingCache(AbstractCache, SupportsStats, SupportsSampling, SupportsClientTracking):
     """
     An LRU cache that uses server assisted client caching to ensure local cache entries
     are invalidated if any operations are performed on the keys by another client.
@@ -800,9 +783,7 @@ class TrackingCache(
 
         return self.instance.get(command, key, *args)
 
-    def put(
-        self, command: bytes, key: bytes, *args: ValueT, value: ResponseType
-    ) -> None:
+    def put(self, command: bytes, key: bytes, *args: ValueT, value: ResponseType) -> None:
         if self.instance:
             self.instance.put(command, key, *args, value=value)
 

@@ -200,16 +200,12 @@ class BasePubSub(Generic[AnyStr, PoolT]):
             self.connection = await self.connection_pool.get_connection()
             self.connection.register_connect_callback(self.on_connect)
         assert self.connection
-        return await self._execute(
-            self.connection, self.connection.send_command, command, *args
-        )
+        return await self._execute(self.connection, self.connection.send_command, command, *args)
 
     async def _execute(
         self,
         connection: BaseConnection,
-        command: Union[
-            Callable[..., Awaitable[None]], Callable[..., Awaitable[ResponseType]]
-        ],
+        command: Union[Callable[..., Awaitable[None]], Callable[..., Awaitable[ResponseType]]],
         *args: ValueT,
     ) -> Optional[ResponseType]:
         try:
@@ -233,15 +229,12 @@ class BasePubSub(Generic[AnyStr, PoolT]):
             self.connection,
             partial(
                 self.connection.fetch_push_message,
-                push_message_types=self.SUBUNSUB_MESSAGE_TYPES
-                | self.PUBLISH_MESSAGE_TYPES,
+                push_message_types=self.SUBUNSUB_MESSAGE_TYPES | self.PUBLISH_MESSAGE_TYPES,
             ),
         )
 
         try:
-            return await asyncio.wait_for(
-                coro, timeout if (timeout and timeout > 0) else None
-            )
+            return await asyncio.wait_for(coro, timeout if (timeout and timeout > 0) else None)
         except asyncio.TimeoutError:
             return None
 
@@ -476,9 +469,7 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
             await self.reset_connections(None)
 
         assert self.connection
-        return await self._execute(
-            self.connection, self.connection.send_command, command, *args
-        )
+        return await self._execute(self.connection, self.connection.send_command, command, *args)
 
     async def reset_connections(self, exc: Optional[BaseException] = None) -> None:
         if self.connection:
@@ -550,9 +541,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         for channel, handler in channel_handlers.items():
             new_channels[self.encode(channel)] = handler
         for new_channel in new_channels.keys():
-            await self.execute_command(
-                CommandName.SSUBSCRIBE, new_channel, sharded=True
-            )
+            await self.execute_command(CommandName.SSUBSCRIBE, new_channel, sharded=True)
         self.channels.update(new_channels)
 
     async def unsubscribe(self, *channels: StringT) -> None:
@@ -576,9 +565,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
         :meta private:
         """
-        raise NotImplementedError(
-            "Sharded PubSub does not support subscription by pattern"
-        )
+        raise NotImplementedError("Sharded PubSub does not support subscription by pattern")
 
     async def punsubscribe(self, *patterns: StringT) -> None:
         """
@@ -586,9 +573,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
         :meta private:
         """
-        raise NotImplementedError(
-            "Sharded PubSub does not support subscription by pattern"
-        )
+        raise NotImplementedError("Sharded PubSub does not support subscription by pattern")
 
     async def execute_command(
         self, command: bytes, *args: ValueT, **options: ValueT
@@ -657,8 +642,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
     ) -> ResponseType:
         if not self.shard_connections:
             raise RuntimeError(
-                "pubsub connection not set: "
-                "did you forget to call subscribe() or psubscribe()?"
+                "pubsub connection not set: did you forget to call subscribe() or psubscribe()?"
             )
         result = None
         # Check any stashed results first.
@@ -683,9 +667,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                             await task
         # If there were no pending results check the shards
         if not result:
-            broken_connections = [
-                c for c in self.shard_connections.values() if not c.is_connected
-            ]
+            broken_connections = [c for c in self.shard_connections.values() if not c.is_connected]
             if broken_connections:
                 for connection in broken_connections:
                     try:
@@ -734,9 +716,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                 await self.subscribe(
                     **{
                         (
-                            channel.decode(self.encoding)
-                            if isinstance(channel, bytes)
-                            else channel
+                            channel.decode(self.encoding) if isinstance(channel, bytes) else channel
                         ): handler
                     }
                 )
@@ -771,9 +751,7 @@ class PubSubWorkerThread(threading.Thread):
         pubsub = self._pubsub
         try:
             while pubsub.subscribed:
-                await pubsub.get_message(
-                    ignore_subscribe_messages=True, timeout=self._poll_timeout
-                )
+                await pubsub.get_message(ignore_subscribe_messages=True, timeout=self._poll_timeout)
         except CancelledError:
             await asyncio.gather(pubsub.unsubscribe(), pubsub.punsubscribe())
             pubsub.close()

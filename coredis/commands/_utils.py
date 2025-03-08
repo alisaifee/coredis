@@ -61,9 +61,7 @@ async def check_version(
         ]
     ):
         return
-    if getattr(instance, "verify_version", False) and not getattr(
-        instance, "noreply", False
-    ):
+    if getattr(instance, "verify_version", False) and not getattr(instance, "noreply", False):
         server_version = getattr(instance, "server_version", None)
         if not server_version:
             return
@@ -75,13 +73,11 @@ async def check_version(
                 command_details.command.decode("latin-1"),
                 str(instance.server_version),
             )
-        elif command_details.arguments and set(
-            command_details.arguments.keys()
-        ).intersection(kwargs.keys()):
+        elif command_details.arguments and set(command_details.arguments.keys()).intersection(
+            kwargs.keys()
+        ):
             for argument, minimum_version in [
-                (arg, ver)
-                for (arg, ver) in command_details.arguments.items()
-                if arg in kwargs
+                (arg, ver) for (arg, ver) in command_details.arguments.items() if arg in kwargs
             ]:
                 if minimum_version and server_version < minimum_version:
                     if command_details.command == b"CLIENT KILL":
@@ -114,4 +110,4 @@ async def check_version(
 
 
 def redis_command_link(command: CommandName) -> str:
-    return f'`{str(command)} <https://redis.io/commands/{str(command).lower().replace(" ", "-")}>`_'
+    return f"`{str(command)} <https://redis.io/commands/{str(command).lower().replace(' ', '-')}>`_"

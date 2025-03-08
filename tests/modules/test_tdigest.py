@@ -85,9 +85,7 @@ class TestTdigest:
 
         assert await client.tdigest.merge("digest{a}", ["digestA{a}", "digestB{a}"])
         assert 60 == (await client.tdigest.info("digest{a}"))["Compression"]
-        assert (1.0, 3.0, 6.0) == await client.tdigest.quantile(
-            "digest{a}", [0, 0.5, 1]
-        )
+        assert (1.0, 3.0, 6.0) == await client.tdigest.quantile("digest{a}", [0, 0.5, 1])
         assert await client.tdigest.merge(
             "digest{a}", ["digestA{a}", "digestB{a}"], compression=1, override=True
         )

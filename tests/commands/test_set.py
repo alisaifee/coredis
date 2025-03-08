@@ -40,14 +40,10 @@ class TestSet:
 
     async def test_sdiffstore(self, client, _s):
         await client.sadd("a{foo}", ["1", "2", "3"])
-        assert (
-            await client.sdiffstore(["a{foo}", "b{foo}"], destination=_s("c{foo}")) == 3
-        )
+        assert await client.sdiffstore(["a{foo}", "b{foo}"], destination=_s("c{foo}")) == 3
         assert await client.smembers("c{foo}") == {_s("1"), _s("2"), _s("3")}
         await client.sadd("b{foo}", ["2", "3"])
-        assert (
-            await client.sdiffstore(["a{foo}", "b{foo}"], destination=_s("c{foo}")) == 1
-        )
+        assert await client.sdiffstore(["a{foo}", "b{foo}"], destination=_s("c{foo}")) == 1
         assert await client.smembers("c{foo}") == {_s("1")}
 
     async def test_sinter(self, client, _s):
@@ -58,16 +54,10 @@ class TestSet:
 
     async def test_sinterstore(self, client, _s):
         await client.sadd("a{foo}", ["1", "2", "3"])
-        assert (
-            await client.sinterstore(["a{foo}", "b{foo}"], destination=_s("c{foo}"))
-            == 0
-        )
+        assert await client.sinterstore(["a{foo}", "b{foo}"], destination=_s("c{foo}")) == 0
         assert await client.smembers("c{foo}") == set()
         await client.sadd("b{foo}", ["2", "3"])
-        assert (
-            await client.sinterstore(["a{foo}", "b{foo}"], destination=_s("c{foo}"))
-            == 2
-        )
+        assert await client.sinterstore(["a{foo}", "b{foo}"], destination=_s("c{foo}")) == 2
         assert await client.smembers("c{foo}") == {_s("2"), _s("3")}
 
     @pytest.mark.min_server_version("7.0.0")
@@ -144,10 +134,7 @@ class TestSet:
     async def test_sunionstore(self, client, _s):
         await client.sadd("a{foo}", ["1", "2"])
         await client.sadd("b{foo}", ["2", "3"])
-        assert (
-            await client.sunionstore(["a{foo}", "b{foo}"], destination=_s("c{foo}"))
-            == 3
-        )
+        assert await client.sunionstore(["a{foo}", "b{foo}"], destination=_s("c{foo}")) == 3
         assert await client.smembers("c{foo}") == {_s("1"), _s("2"), _s("3")}
 
     async def test_sscan(self, client, _s):

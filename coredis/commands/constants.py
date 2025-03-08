@@ -119,9 +119,7 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     CLUSTER = b"CLUSTER"  # Since redis: 3.0.0
     CLUSTER_ADDSLOTS = b"CLUSTER ADDSLOTS"  # Since redis: 3.0.0
     CLUSTER_BUMPEPOCH = b"CLUSTER BUMPEPOCH"  # Since redis: 3.0.0
-    CLUSTER_COUNT_FAILURE_REPORTS = (
-        b"CLUSTER COUNT-FAILURE-REPORTS"  # Since redis: 3.0.0
-    )
+    CLUSTER_COUNT_FAILURE_REPORTS = b"CLUSTER COUNT-FAILURE-REPORTS"  # Since redis: 3.0.0
     CLUSTER_COUNTKEYSINSLOT = b"CLUSTER COUNTKEYSINSLOT"  # Since redis: 3.0.0
     CLUSTER_DELSLOTS = b"CLUSTER DELSLOTS"  # Since redis: 3.0.0
     CLUSTER_FAILOVER = b"CLUSTER FAILOVER"  # Since redis: 3.0.0

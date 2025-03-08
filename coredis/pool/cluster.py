@@ -103,9 +103,7 @@ class ClusterConnectionPool(ConnectionPool):
             if the cluster nodes move around alot.
         :param read_from_replicas: If ``True`` the client will route readonly commands to replicas
         """
-        super().__init__(
-            connection_class=connection_class, max_connections=max_connections
-        )
+        super().__init__(connection_class=connection_class, max_connections=max_connections)
         self.queue_class = queue_class
         # Special case to make from_url method compliant with cluster setting.
         # from_url method will send in the ip and port through a different variable then the
@@ -148,10 +146,7 @@ class ClusterConnectionPool(ConnectionPool):
         return "{}<{}>".format(
             type(self).__name__,
             ", ".join(
-                [
-                    self.connection_class.describe(node.__dict__)
-                    for node in self.nodes.startup_nodes
-                ]
+                [self.connection_class.describe(node.__dict__) for node in self.nodes.startup_nodes]
             ),
         )
 
@@ -160,15 +155,14 @@ class ClusterConnectionPool(ConnectionPool):
             async with self._init_lock:
                 if not self.initialized:
                     await self.nodes.initialize()
-                    if (
-                        not self.max_connections_per_node
-                        and self.max_connections < len(self.nodes.nodes)
+                    if not self.max_connections_per_node and self.max_connections < len(
+                        self.nodes.nodes
                     ):
                         warnings.warn(
                             f"The value of max_connections={self.max_connections} "
                             "should be atleast equal to the number of nodes "
                             f"({len(self.nodes.nodes)}) in the cluster and has been increased by "
-                            f"{len(self.nodes.nodes)-self.max_connections} connections."
+                            f"{len(self.nodes.nodes) - self.max_connections} connections."
                         )
                         self.max_connections = len(self.nodes.nodes)
                     await super().initialize()
@@ -217,9 +211,7 @@ class ClusterConnectionPool(ConnectionPool):
         # Only pubsub command/connection should be allowed here
 
         if command_name != b"pubsub":
-            raise RedisClusterException(
-                "Only 'pubsub' commands can use get_connection()"
-            )
+            raise RedisClusterException("Only 'pubsub' commands can use get_connection()")
 
         routing_key = options.pop("channel", None)
         node_type = options.pop("node_type", "primary")
@@ -377,9 +369,7 @@ class ClusterConnectionPool(ConnectionPool):
 
     async def get_connection_by_key(self, key: StringT) -> ClusterConnection:
         if not key:
-            raise RedisClusterException(
-                "No way to dispatch this command to Redis Cluster."
-            )
+            raise RedisClusterException("No way to dispatch this command to Redis Cluster.")
 
         return await self.get_connection_by_slot(hash_slot(b(key)))
 
@@ -438,27 +428,19 @@ class ClusterConnectionPool(ConnectionPool):
             slot = slots[0]
             if replica_only:
                 return random.choice(
-                    [
-                        node
-                        for node in self.nodes.slots[slot]
-                        if node.server_type != "primary"
-                    ]
+                    [node for node in self.nodes.slots[slot] if node.server_type != "primary"]
                 )
             else:
                 return random.choice(self.nodes.slots[slot])
         else:
             raise RedisClusterException(f"Unable to map slots {slots} to a single node")
 
-    def get_node_by_slot(
-        self, slot: int, command: Optional[bytes] = None
-    ) -> ManagedNode:
+    def get_node_by_slot(self, slot: int, command: Optional[bytes] = None) -> ManagedNode:
         if self.read_from_replicas and command in READONLY_COMMANDS:
             return self.get_replica_node_by_slot(slot)
         return self.get_primary_node_by_slot(slot)
 
-    def get_node_by_slots(
-        self, slots: List[int], command: Optional[bytes] = None
-    ) -> ManagedNode:
+    def get_node_by_slots(self, slots: List[int], command: Optional[bytes] = None) -> ManagedNode:
         if self.read_from_replicas and command in READONLY_COMMANDS:
             return self.get_replica_node_by_slots(slots)
         return self.get_primary_node_by_slots(slots)

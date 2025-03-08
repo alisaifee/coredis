@@ -94,9 +94,7 @@ class TestFunctions:
     @pytest.mark.clusteronly
     @pytest.mark.parametrize("client_arguments", [{"read_from_replicas": True}])
     async def test_fcall_ro(self, client, simple_library, _s, client_arguments, mocker):
-        get_primary_node_by_slot = mocker.spy(
-            client.connection_pool, "get_primary_node_by_slot"
-        )
+        get_primary_node_by_slot = mocker.spy(client.connection_pool, "get_primary_node_by_slot")
         await client.fcall_ro("echo_key", ["a"], []) == _s("a")
         with pytest.raises(ResponseError):
             await client.fcall_ro("return_arg", ["a"], [2])
@@ -120,9 +118,9 @@ class TestFunctions:
         assert await client.function_restore(dump, policy=PureToken.FLUSH)
         function_list = await client.function_list()
         assert len(function_list["coredis"]["functions"]) == 4
-        assert function_list[_s("coredis")][_s("functions")][_s("echo_key")][
-            _s("flags")
-        ] == {_s("no-writes")}
+        assert function_list[_s("coredis")][_s("functions")][_s("echo_key")][_s("flags")] == {
+            _s("no-writes")
+        }
 
 
 @targets(
@@ -202,9 +200,7 @@ class TestLibrary:
             async def default_get(self, key: KeyT, value: ValueT) -> ValueT: ...
 
             @Library.wraps("default_get", key_spec=["quay"])
-            async def default_get_variadic(
-                self, quay: str, *values: ValueT
-            ) -> ValueT: ...
+            async def default_get_variadic(self, quay: str, *values: ValueT) -> ValueT: ...
 
             @Library.wraps("hmmerge")
             async def hmmerge(self, key: KeyT, **values: ValueT) -> List[ValueT]: ...
@@ -213,9 +209,7 @@ class TestLibrary:
         assert await lib.echo_key("bar") == _s("bar")
         assert await lib.return_arg(1) == 10
         assert await lib.default_get("bar", "fu") == _s("fu")
-        assert await lib.default_get_variadic("bar", "fu", "bar", "baz") == _s(
-            "fubarbaz"
-        )
+        assert await lib.default_get_variadic("bar", "fu", "bar", "baz") == _s("fubarbaz")
         assert await client.set("bar", "fubar")
         assert await lib.default_get_variadic("bar", "fu", "bar", "baz") == _s("fubar")
         await client.hset("hbar", {"fu": "whut?"})

@@ -52,9 +52,7 @@ class SamplesCallback(
         **options: Optional[ValueT],
     ) -> Union[Tuple[Tuple[int, float], ...], Tuple[()]]:
         if response:
-            return tuple(
-                cast(Tuple[int, float], SampleCallback().transform(r)) for r in response
-            )
+            return tuple(cast(Tuple[int, float], SampleCallback().transform(r)) for r in response)
         return ()
 
 
@@ -89,8 +87,7 @@ class TimeSeriesCallback(
             return {k: (v[0], tuple(v[1])) for k, v in response.items()}
         else:
             return {
-                r[0]: (dict(r[1]), (r[2][0], float(r[2][1])) if r[2] else tuple())
-                for r in response
+                r[0]: (dict(r[1]), (r[2][0], float(r[2][1])) if r[2] else tuple()) for r in response
             }
 
 
@@ -100,13 +97,13 @@ class TimeSeriesMultiCallback(
         ResponseType,
         Dict[
             AnyStr,
-            Tuple[
-                Dict[AnyStr, AnyStr], Union[Tuple[Tuple[int, float], ...], Tuple[()]]
-            ],
+            Tuple[Dict[AnyStr, AnyStr], Union[Tuple[Tuple[int, float], ...], Tuple[()]]],
         ],
     ]
 ):
-    def transform(self, response: ResponseType, **options: Optional[ValueT]) -> Dict[
+    def transform(
+        self, response: ResponseType, **options: Optional[ValueT]
+    ) -> Dict[
         AnyStr,
         Tuple[Dict[AnyStr, AnyStr], Union[Tuple[Tuple[int, float], ...], Tuple[()]]],
     ]:
@@ -127,7 +124,9 @@ class TimeSeriesMultiCallback(
                 for r in cast(Any, response)
             }
 
-    def transform_3(self, response: ResponseType, **options: Optional[ValueT]) -> Dict[
+    def transform_3(
+        self, response: ResponseType, **options: Optional[ValueT]
+    ) -> Dict[
         AnyStr,
         Tuple[Dict[AnyStr, AnyStr], Union[Tuple[Tuple[int, float], ...], Tuple[()]]],
     ]:
@@ -167,9 +166,7 @@ class ClusterMergeTimeSeries(ClusterMergeMapping[AnyStr, Tuple[Any, ...]]):
             "Unable to merge response from multiple cluster nodes when used with grouping"
         )
 
-    def merge(
-        self, values: Any
-    ) -> Tuple[Dict[AnyStr, AnyStr], Tuple[Tuple[int, float], ...]]:
+    def merge(self, values: Any) -> Tuple[Dict[AnyStr, AnyStr], Tuple[Tuple[int, float], ...]]:
         merged_labels: Dict[AnyStr, AnyStr] = {}
         merged_series: Tuple[Tuple[int, float], ...] = ()
         for value in values:

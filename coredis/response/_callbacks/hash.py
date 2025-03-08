@@ -25,9 +25,7 @@ class HScanCallback(
         Tuple[int, Union[Dict[AnyStr, AnyStr], Tuple[AnyStr, ...]]],
     ]
 ):
-    def guard(
-        self, response: List[ResponseType]
-    ) -> TypeGuard[Tuple[StringT, List[AnyStr]]]:
+    def guard(self, response: List[ResponseType]) -> TypeGuard[Tuple[StringT, List[AnyStr]]]:
         return isinstance(response[0], (str, bytes)) and isinstance(response[1], list)
 
     def transform(
@@ -80,9 +78,7 @@ class HRandFieldCallback(
         return response
 
 
-class HGetAllCallback(
-    ResponseCallback[List[AnyStr], Dict[AnyStr, AnyStr], Dict[AnyStr, AnyStr]]
-):
+class HGetAllCallback(ResponseCallback[List[AnyStr], Dict[AnyStr, AnyStr], Dict[AnyStr, AnyStr]]):
     def transform(
         self, response: List[AnyStr], **options: Optional[ValueT]
     ) -> Dict[AnyStr, AnyStr]:

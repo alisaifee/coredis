@@ -20,9 +20,7 @@ from coredis.typing import (
 
 
 class FunctionListCallback(
-    ResponseCallback[
-        List[ResponseType], List[ResponseType], Mapping[AnyStr, LibraryDefinition]
-    ]
+    ResponseCallback[List[ResponseType], List[ResponseType], Mapping[AnyStr, LibraryDefinition]]
 ):
     def transform(
         self, response: List[ResponseType], **options: Optional[ValueT]
@@ -36,13 +34,9 @@ class FunctionListCallback(
             lib_name = library["library_name"]
             functions = EncodingInsensitiveDict({})
             for function in library.get("functions", []):
-                function_definition = EncodingInsensitiveDict(
-                    flat_pairs_to_dict(function)
-                )
+                function_definition = EncodingInsensitiveDict(flat_pairs_to_dict(function))
                 functions[function_definition["name"]] = function_definition
-                functions[function_definition["name"]]["flags"] = set(
-                    function_definition["flags"]
-                )
+                functions[function_definition["name"]]["flags"] = set(function_definition["flags"])
             library["functions"] = functions
             transformed[lib_name] = EncodingInsensitiveDict(
                 LibraryDefinition(
@@ -73,9 +67,7 @@ class FunctionStatsCallback(
         self,
         response: List[ResponseType],
         **options: Optional[ValueT],
-    ) -> Dict[
-        AnyStr, Optional[Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]]
-    ]:
+    ) -> Dict[AnyStr, Optional[Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]]]:
         transformed = flat_pairs_to_dict(response)
         key = cast(AnyStr, b"engines" if b"engines" in transformed else "engines")
         engines = flat_pairs_to_dict(cast(List[AnyStr], transformed.pop(key)))
@@ -95,7 +87,5 @@ class FunctionStatsCallback(
             Optional[Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]],
         ],
         **options: Optional[ValueT],
-    ) -> Dict[
-        AnyStr, Optional[Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]]
-    ]:
+    ) -> Dict[AnyStr, Optional[Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]]]:
         return response

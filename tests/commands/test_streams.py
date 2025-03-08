@@ -56,9 +56,7 @@ class TestStreams:
         )
 
     async def test_xadd_without_given_id(self, client, _s):
-        identifier = await client.xadd(
-            "test_stream", field_values={"k1": "v1", "k2": "1"}
-        )
+        identifier = await client.xadd("test_stream", field_values={"k1": "v1", "k2": "1"})
         assert len(identifier.split(_s("-"))) == 2
 
     async def test_xadd_with_given_id(self, client, _s):
@@ -181,14 +179,13 @@ class TestStreams:
 
         # reclaim the messages as consumer1, but use the justid argument
         # which only returns message ids
-        assert (await client.xautoclaim(stream, group, consumer1, 0, "0", justid=True))[
+        assert (await client.xautoclaim(stream, group, consumer1, 0, "0", justid=True))[1] == (
+            message_id1,
+            message_id2,
+        )
+        assert (await client.xautoclaim(stream, group, consumer1, 0, message_id2, justid=True))[
             1
-        ] == (message_id1, message_id2)
-        assert (
-            await client.xautoclaim(
-                stream, group, consumer1, 0, message_id2, justid=True
-            )
-        )[1] == (message_id2,)
+        ] == (message_id2,)
 
     async def test_xrange(self, client, _s):
         for idx in range(1, 10):
@@ -201,11 +198,7 @@ class TestStreams:
                 threshold=10,
             )
         entries = await client.xrange("test_stream", count=5)
-        assert (
-            len(entries) == 5
-            and isinstance(entries, tuple)
-            and isinstance(entries[0], tuple)
-        )
+        assert len(entries) == 5 and isinstance(entries, tuple) and isinstance(entries[0], tuple)
         entries = await client.xrange("test_stream", start="2", end="3", count=3)
         assert len(entries) == 2 and entries[0][0] == _s("2-0")
         assert entries[0][1] == {_s("k1"): _s("v1"), _s("k2"): _s("1")}
@@ -221,11 +214,7 @@ class TestStreams:
                 threshold=10,
             )
         entries = await client.xrevrange("test_stream", count=5)
-        assert (
-            len(entries) == 5
-            and isinstance(entries, tuple)
-            and isinstance(entries[0], tuple)
-        )
+        assert len(entries) == 5 and isinstance(entries, tuple) and isinstance(entries[0], tuple)
         entries = await client.xrevrange("test_stream", end="2", start="3", count=3)
         assert len(entries) == 0
         entries = await client.xrevrange("test_stream", end="3", start="2", count=3)
@@ -256,10 +245,7 @@ class TestStreams:
             field_values={"k1": "v1", "k2": "1"},
         )
         await client.xgroup_create("test_stream", "test_group", "0")
-        assert (
-            await client.xgroup_createconsumer("test_stream", "test_group", "consumer1")
-            is True
-        )
+        assert await client.xgroup_createconsumer("test_stream", "test_group", "consumer1") is True
 
     async def test_xreadgroup(self, client, _s):
         for idx in range(1, 11):
@@ -333,10 +319,7 @@ class TestStreams:
             "test_stream",
             field_values={"k1": "v1", "k2": "1"},
         )
-        assert (
-            await client.xgroup_create("test_stream", "test_group", "0", entriesread=0)
-            is True
-        )
+        assert await client.xgroup_create("test_stream", "test_group", "0", entriesread=0) is True
 
     async def test_xgroup_setid(self, client, _s):
         for idx in range(1, 10):
@@ -351,9 +334,7 @@ class TestStreams:
         group_info = await client.xinfo_groups("test_stream")
         assert group_info[0][_s("pending")] == 0
         assert await client.xgroup_setid("test_stream", "test_group", "0") is True
-        await client.xreadgroup(
-            "test_group", "consumer1", count=5, streams=dict(test_stream=">")
-        )
+        await client.xreadgroup("test_group", "consumer1", count=5, streams=dict(test_stream=">"))
         group_info = await client.xinfo_groups("test_stream")
         assert group_info[0][_s("pending")] == 5
 
@@ -370,13 +351,8 @@ class TestStreams:
         assert len(entries[_s("test_stream")]) == 0
         group_info = await client.xinfo_groups("test_stream")
         assert group_info[0][_s("pending")] == 0
-        assert (
-            await client.xgroup_setid("test_stream", "test_group", "0", entriesread=0)
-            is True
-        )
-        await client.xreadgroup(
-            "test_group", "consumer1", count=5, streams=dict(test_stream=">")
-        )
+        assert await client.xgroup_setid("test_stream", "test_group", "0", entriesread=0) is True
+        await client.xreadgroup("test_group", "consumer1", count=5, streams=dict(test_stream=">"))
         group_info = await client.xinfo_groups("test_stream")
         assert group_info[0][_s("pending")] == 5
 
@@ -393,9 +369,7 @@ class TestStreams:
     async def test_xgroup_delconsumer(self, client, _s):
         await client.xadd("test_stream", field_values={"k1": "v1", "k2": "1"})
         assert await client.xgroup_create("test_stream", "test_group") is True
-        await client.xreadgroup(
-            "test_group", "consumer1", count=5, streams=dict(test_stream="1")
-        )
+        await client.xreadgroup("test_group", "consumer1", count=5, streams=dict(test_stream="1"))
         group_info = await client.xinfo_groups("test_stream")
         assert len(group_info) == 1
         assert group_info[0][_s("consumers")] == 1
@@ -432,12 +406,8 @@ class TestStreams:
             == 0
         )
         assert await client.xgroup_setid("test_stream", "test_group", "0") is True
-        await client.xreadgroup(
-            "test_group", "consumer1", count=3, streams=dict(test_stream=">")
-        )
-        await client.xreadgroup(
-            "test_group", "consumer2", count=2, streams=dict(test_stream=">")
-        )
+        await client.xreadgroup("test_group", "consumer1", count=3, streams=dict(test_stream=">"))
+        await client.xreadgroup("test_group", "consumer2", count=2, streams=dict(test_stream=">"))
         group_info = await client.xinfo_groups("test_stream")
         assert group_info[0][_s("pending")] == 5
         assert (
@@ -504,15 +474,9 @@ class TestStreams:
 
     @pytest.mark.min_server_version("7.0.0")
     async def test_xinfo_stream_full(self, client, _s):
-        await client.xadd(
-            "test_stream", field_values={"k1": "v1", "k2": "1"}, identifier="1"
-        )
-        await client.xadd(
-            "test_stream", field_values={"k1": "v2", "k2": "2"}, identifier="1-1"
-        )
-        await client.xadd(
-            "test_stream", field_values={"k1": "v2", "k2": "2"}, identifier="1-2"
-        )
+        await client.xadd("test_stream", field_values={"k1": "v1", "k2": "1"}, identifier="1")
+        await client.xadd("test_stream", field_values={"k1": "v2", "k2": "2"}, identifier="1-1")
+        await client.xadd("test_stream", field_values={"k1": "v2", "k2": "2"}, identifier="1-2")
         await client.xgroup_create("test_stream", "test_group", "$")
         await client.xgroup_createconsumer("test_stream", "test_group", "test_consumer")
 
@@ -524,9 +488,7 @@ class TestStreams:
         assert len(xinfo_full["groups"]) == 1
         assert xinfo_full["groups"][0][_s("name")] == _s("test_group")
         assert len(xinfo_full["groups"][0][_s("consumers")]) == 1
-        assert xinfo_full["groups"][0][_s("consumers")][0][_s("name")] == _s(
-            "test_consumer"
-        )
+        assert xinfo_full["groups"][0][_s("consumers")][0][_s("name")] == _s("test_consumer")
 
         with pytest.raises(CommandSyntaxError):
             await client.xinfo_stream("test_stream", count=10)

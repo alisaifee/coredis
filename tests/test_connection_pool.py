@@ -399,13 +399,10 @@ class TestConnectionPoolURLParsing:
 
         with warnings.catch_warnings(record=True) as warning_log:
             coredis.ConnectionPool.from_url(
-                "redis://localhost/2?stream_timeout=_&" "connect_timeout=abc"
+                "redis://localhost/2?stream_timeout=_&connect_timeout=abc"
             )
         # Compare the message values
-        assert [
-            str(m.message)
-            for m in sorted(warning_log, key=lambda log: str(log.message))
-        ] == [
+        assert [str(m.message) for m in sorted(warning_log, key=lambda log: str(log.message))] == [
             "Invalid value for `connect_timeout` in connection URL.",
             "Invalid value for `stream_timeout` in connection URL.",
         ]
@@ -419,9 +416,7 @@ class TestConnectionPoolURLParsing:
         assert pool.max_idle_time == 5
 
     def test_idle_check_interval_querystring_option(self):
-        pool = coredis.ConnectionPool.from_url(
-            "redis://localhost?idle_check_interval=1"
-        )
+        pool = coredis.ConnectionPool.from_url("redis://localhost?idle_check_interval=1")
         assert pool.idle_check_interval == 1
 
     def test_extra_querystring_options(self):
@@ -529,9 +524,7 @@ class TestConnectionPoolUnixSocketURLParsing:
         assert pool.max_idle_time == 5
 
     def test_idle_check_interval_querystring_option(self):
-        pool = coredis.ConnectionPool.from_url(
-            "unix:///localhost?idle_check_interval=1"
-        )
+        pool = coredis.ConnectionPool.from_url("unix:///localhost?idle_check_interval=1")
         assert pool.idle_check_interval == 1
 
     def test_extra_querystring_options(self):
@@ -620,9 +613,7 @@ class TestConnection:
         client = coredis.Redis(loop=event_loop)
         pipe = await client.pipeline()
         with pytest.raises(BusyLoadingError):
-            await pipe.immediate_execute_command(
-                b"DEBUG", b"ERROR", b"LOADING fake message"
-            )
+            await pipe.immediate_execute_command(b"DEBUG", b"ERROR", b"LOADING fake message")
         pool = client.connection_pool
         assert not pipe.connection
         assert len(pool._available_connections) == 1

@@ -42,9 +42,7 @@ class TestBloomFilter:
 
     async def test_insert(self, client: Redis):
         assert (True, True, True) == await client.bf.insert("filter", [1, 2, 3])
-        assert (True, True, True) == await client.bf.insert(
-            "filter_custom", [1, 2, 3], 3, 0.1
-        )
+        assert (True, True, True) == await client.bf.insert("filter_custom", [1, 2, 3], 3, 0.1)
         assert (True, True, True) == await client.bf.insert(
             "filter_custom_noscale", [1, 2, 3], 3, 0.1, nonscaling=True
         )

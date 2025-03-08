@@ -6,7 +6,6 @@ from coredis.credentials import UserPassCredentialProvider
 
 
 class TestCredentialProviders:
-
     @pytest.mark.parametrize(
         "expected_creds",
         [

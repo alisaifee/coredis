@@ -37,9 +37,7 @@ class UserPassCredentialProvider(AbstractCredentialProvider):
     and/or :paramref:`UserPassCredentialProvider.username`.
     """
 
-    def __init__(
-        self, username: str | None = None, password: str | None = None
-    ) -> None:
+    def __init__(self, username: str | None = None, password: str | None = None) -> None:
         self.username = username or ""
         self.password = password or ""
 

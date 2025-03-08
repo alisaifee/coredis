@@ -34,7 +34,6 @@ from coredis.typing import (
 
 
 class SentinelManagedConnection(Connection, Generic[AnyStr]):
-
     def __init__(
         self,
         connection_pool: SentinelConnectionPool,
@@ -124,7 +123,8 @@ class SentinelConnectionPool(ConnectionPool):
         kwargs["connection_class"] = cast(
             Type[Connection],
             kwargs.get(
-                "connection_class", SentinelManagedConnection[AnyStr]  # type: ignore
+                "connection_class",
+                SentinelManagedConnection[AnyStr],  # type: ignore
             ),
         )
         super().__init__(**kwargs)
@@ -146,9 +146,7 @@ class SentinelConnectionPool(ConnectionPool):
         self.replica_counter = None
 
     async def get_primary_address(self) -> Tuple[str, int]:
-        primary_address = await self.sentinel_manager.discover_primary(
-            self.service_name
-        )
+        primary_address = await self.sentinel_manager.discover_primary(self.service_name)
 
         if self.is_primary:
             if self.primary_address is None:
@@ -268,13 +266,12 @@ class Sentinel(Generic[AnyStr]):
         self.min_other_sentinels = min_other_sentinels
         self.connection_kwargs = connection_kwargs
         self.__cache = cache
-        self.connection_kwargs["decode_responses"] = self.sentinel_kwargs[
-            "decode_responses"
-        ] = decode_responses
+        self.connection_kwargs["decode_responses"] = self.sentinel_kwargs["decode_responses"] = (
+            decode_responses
+        )
 
         self.sentinels = [
-            Redis(hostname, port, **self.sentinel_kwargs)
-            for hostname, port in sentinels
+            Redis(hostname, port, **self.sentinel_kwargs) for hostname, port in sentinels
         ]
 
     def __repr__(self) -> str:
@@ -288,9 +285,7 @@ class Sentinel(Generic[AnyStr]):
                 )
             )
 
-        return "{}<sentinels=[{}]>".format(
-            type(self).__name__, ",".join(sentinel_addresses)
-        )
+        return "{}<sentinels=[{}]>".format(type(self).__name__, ",".join(sentinel_addresses))
 
     def __check_primary_state(
         self,

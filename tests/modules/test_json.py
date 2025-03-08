@@ -489,9 +489,7 @@ class TestJson:
         )
         # Test multi (return result of last path)
         assert await client.json.arrlen("doc1", "$..a") == [1, 3, None]
-        assert (
-            await client.json.arrappend("doc1", ["non", "abba", "stanza"], "..a") == 6
-        )
+        assert await client.json.arrappend("doc1", ["non", "abba", "stanza"], "..a") == 6
 
         # Test single
         assert await client.json.arrlen("doc1", ".nested1.a") == 6

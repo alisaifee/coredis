@@ -78,9 +78,7 @@ class Request:
     def enforce_deadline(self, timeout: float) -> None:
         if not self.future.done():
             self.future.set_exception(
-                TimeoutError(
-                    f"command {nativestr(self.command)} timed out after {timeout} seconds"
-                )
+                TimeoutError(f"command {nativestr(self.command)} timed out after {timeout} seconds")
             )
 
 
@@ -125,16 +123,10 @@ class RedisSSLContext:
         if not self.context:
             self.context = ssl.create_default_context()
             if self.certfile and self.keyfile:
-                self.context.load_cert_chain(
-                    certfile=self.certfile, keyfile=self.keyfile
-                )
+                self.context.load_cert_chain(certfile=self.certfile, keyfile=self.keyfile)
             if self.ca_certs:
                 self.context.load_verify_locations(
-                    **{
-                        (
-                            "capath" if os.path.isdir(self.ca_certs) else "cafile"
-                        ): self.ca_certs
-                    }
+                    **{("capath" if os.path.isdir(self.ca_certs) else "cafile"): self.ca_certs}
                 )
             self.context.check_hostname = self.check_hostname
             self.context.verify_mode = self.cert_reqs
@@ -182,9 +174,7 @@ class BaseConnection(asyncio.BaseProtocol):
         self.credential_provider: Optional[AbstractCredentialProvider] = None
         self.db: Optional[int] = None
         self.pid: int = os.getpid()
-        self._description_args: Callable[..., Dict[str, Optional[Union[str, int]]]] = (
-            lambda: dict()
-        )
+        self._description_args: Callable[..., Dict[str, Optional[Union[str, int]]]] = lambda: dict()
         self._connect_callbacks: List[
             Union[
                 Callable[[BaseConnection], Awaitable[None]],
@@ -234,9 +224,7 @@ class BaseConnection(asyncio.BaseProtocol):
 
     @property
     def location(self) -> str:
-        return self.locator.format_map(
-            defaultdict(lambda: None, self._description_args())
-        )
+        return self.locator.format_map(defaultdict(lambda: None, self._description_args()))
 
     @property
     def estimated_time_to_idle(self) -> float:
@@ -377,8 +365,7 @@ class BaseConnection(asyncio.BaseProtocol):
             response_time = time.time() - request.created_at
 
             self.average_response_time = (
-                (self.average_response_time * (self.requests_processed - 1))
-                + response_time
+                (self.average_response_time * (self.requests_processed - 1)) + response_time
             ) / self.requests_processed
 
             try:
@@ -402,24 +389,18 @@ class BaseConnection(asyncio.BaseProtocol):
     async def _connect(self) -> None:
         raise NotImplementedError
 
-    async def update_tracking_client(
-        self, enabled: bool, client_id: Optional[int] = None
-    ) -> bool:
+    async def update_tracking_client(self, enabled: bool, client_id: Optional[int] = None) -> bool:
         """
         Associate this connection to :paramref:`client_id` to
         relay any tracking notifications to.
         """
         try:
             params: List[ValueT] = (
-                [b"ON", b"REDIRECT", client_id]
-                if (enabled and client_id is not None)
-                else [b"OFF"]
+                [b"ON", b"REDIRECT", client_id] if (enabled and client_id is not None) else [b"OFF"]
             )
 
             if (
-                await (
-                    await self.create_request(b"CLIENT TRACKING", *params, decode=False)
-                )
+                await (await self.create_request(b"CLIENT TRACKING", *params, decode=False))
                 != b"OK"
             ):
                 raise ConnectionError("Unable to toggle client tracking")
@@ -453,9 +434,7 @@ class BaseConnection(asyncio.BaseProtocol):
             await self.credential_provider.get_credentials()
             if self.credential_provider
             else (
-                await UserPassCredentialProvider(
-                    self.username, self.password
-                ).get_credentials()
+                await UserPassCredentialProvider(self.username, self.password).get_credentials()
                 if (self.username or self.password)
                 else None
             )
@@ -521,19 +500,12 @@ class BaseConnection(asyncio.BaseProtocol):
         await self.perform_handshake()
 
         if self.db:
-            if (
-                await (await self.create_request(b"SELECT", self.db, decode=False))
-                != b"OK"
-            ):
+            if await (await self.create_request(b"SELECT", self.db, decode=False)) != b"OK":
                 raise ConnectionError(f"Invalid Database {self.db}")
 
         if self.client_name is not None:
             if (
-                await (
-                    await self.create_request(
-                        b"CLIENT SETNAME", self.client_name, decode=False
-                    )
-                )
+                await (await self.create_request(b"CLIENT SETNAME", self.client_name, decode=False))
                 != b"OK"
             ):
                 raise ConnectionError(f"Failed to set client name: {self.client_name}")
@@ -578,9 +550,7 @@ class BaseConnection(asyncio.BaseProtocol):
         ):
             self._read_flag.clear()
             try:
-                async with async_timeout.timeout(
-                    self._stream_timeout if not block else None
-                ):
+                async with async_timeout.timeout(self._stream_timeout if not block else None):
                     await self._read_flag.wait()
             except asyncio.TimeoutError:
                 raise TimeoutError
@@ -605,9 +575,7 @@ class BaseConnection(asyncio.BaseProtocol):
         except asyncio.TimeoutError:
             if self._transport:
                 self.disconnect()
-            raise TimeoutError(
-                f"Unable to write after waiting for socket for {timeout} seconds"
-            )
+            raise TimeoutError(f"Unable to write after waiting for socket for {timeout} seconds")
         self._transport.writelines(command)
 
     async def send_command(
@@ -647,9 +615,7 @@ class BaseConnection(asyncio.BaseProtocol):
         cmd_list = []
         request_timeout: Optional[float] = timeout or self._stream_timeout
         if self.is_connected and noreply and not self.noreply:
-            cmd_list = self.packer.pack_command(
-                CommandName.CLIENT_REPLY, PureToken.SKIP
-            )
+            cmd_list = self.packer.pack_command(CommandName.CLIENT_REPLY, PureToken.SKIP)
         cmd_list.extend(self.packer.pack_command(command, *args))
         await self._send_packed_command(cmd_list, timeout=request_timeout)
 
@@ -785,23 +751,17 @@ class Connection(BaseConnection):
         self.port = port
         self.username: Optional[str] = username
         self.password: Optional[str] = password
-        self.credential_provider: Optional[AbstractCredentialProvider] = (
-            credential_provider
-        )
+        self.credential_provider: Optional[AbstractCredentialProvider] = credential_provider
         self.db: Optional[int] = db
         self.ssl_context = ssl_context
         self._connect_timeout = connect_timeout
-        self._description_args: Callable[..., Dict[str, Optional[Union[str, int]]]] = (
-            lambda: {
-                "host": self.host,
-                "port": self.port,
-                "db": self.db,
-            }
-        )
+        self._description_args: Callable[..., Dict[str, Optional[Union[str, int]]]] = lambda: {
+            "host": self.host,
+            "port": self.port,
+            "db": self.db,
+        }
         self.socket_keepalive = socket_keepalive
-        self.socket_keepalive_options: Dict[int, Union[int, bytes]] = (
-            socket_keepalive_options or {}
-        )
+        self.socket_keepalive_options: Dict[int, Union[int, bytes]] = socket_keepalive_options or {}
 
     async def _connect(self) -> None:
         async with self._transport_lock:
@@ -877,9 +837,7 @@ class UnixDomainSocketConnection(BaseConnection):
 
     async def _connect(self) -> None:
         async with async_timeout.timeout(self._connect_timeout):
-            await asyncio.get_running_loop().create_unix_connection(
-                lambda: self, path=self.path
-            )
+            await asyncio.get_running_loop().create_unix_connection(lambda: self, path=self.path)
 
         await self.on_connect()
 
@@ -946,6 +904,4 @@ class ClusterConnection(Connection):
 
         await super().on_connect()
         if self.read_from_replicas:
-            assert (
-                await (await self.create_request(b"READONLY", decode=False))
-            ) == b"OK"
+            assert (await (await self.create_request(b"READONLY", decode=False))) == b"OK"

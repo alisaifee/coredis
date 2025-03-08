@@ -53,9 +53,7 @@ class TestACL:
         assert len(await client.acl_genpass(4)) == 1
 
     async def test_acl_load(self, client):
-        with pytest.raises(
-            ResponseError, match="instance is not configured to use an ACL file"
-        ):
+        with pytest.raises(ResponseError, match="instance is not configured to use an ACL file"):
             await client.acl_load()
 
     @pytest.mark.min_server_version("6.0.0")

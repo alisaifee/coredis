@@ -41,9 +41,10 @@ class TestGeneric:
         await client.set("score{fu}:3", "5")
         assert await clone.sort_ro("a{fu}") == (_s("1"), _s("2"), _s("3"), _s("4"))
         assert await clone.sort_ro("a{fu}", offset=1, count=2) == (_s("2"), _s("3"))
-        assert await clone.sort_ro(
-            "a{fu}", order=PureToken.DESC, offset=1, count=2
-        ) == (_s("3"), _s("2"))
+        assert await clone.sort_ro("a{fu}", order=PureToken.DESC, offset=1, count=2) == (
+            _s("3"),
+            _s("2"),
+        )
         assert await clone.sort_ro("a{fu}", alpha=True, offset=1, count=2) == (
             _s("2"),
             _s("3"),
@@ -198,8 +199,7 @@ class TestGeneric:
         await client.delete(["a"])
         assert await client.restore(
             "a",
-            datetime.datetime.utcnow()
-            + datetime.timedelta(minutes=1, milliseconds=1000),
+            datetime.datetime.utcnow() + datetime.timedelta(minutes=1, milliseconds=1000),
             dumped,
             absttl=True,
         )
@@ -249,9 +249,7 @@ class TestGeneric:
             await client.migrate("172.17.0.1", auth_connection.port, 0, 100)
 
         assert not await client.migrate("172.17.0.1", auth_connection.port, 0, 100, "b")
-        assert await client.migrate(
-            "172.17.0.1", auth_connection.port, 0, 100, "a", auth="sekret"
-        )
+        assert await client.migrate("172.17.0.1", auth_connection.port, 0, 100, "a", auth="sekret")
         assert await redis_auth.get("a") == "1"
         await client.set("b", "2")
         assert await client.migrate(
@@ -323,9 +321,7 @@ class TestGeneric:
         auth_connection = await redis_auth.connection_pool.get_connection()
         await client.set("a", "1")
         await client.set("c", "2")
-        assert not await client.migrate(
-            "172.17.0.1", auth_connection.port, 0, 100, "d", "b"
-        )
+        assert not await client.migrate("172.17.0.1", auth_connection.port, 0, 100, "d", "b")
         assert await client.migrate(
             "172.17.0.1", auth_connection.port, 0, 100, "a", "c", auth="sekret"
         )
@@ -382,7 +378,7 @@ class TestGeneric:
     async def test_object_freq(self, client, _s):
         await client.set("a", "foo")
         with pytest.raises(ResponseError):
-            await client.object_freq("a"),
+            (await client.object_freq("a"),)
         await client.config_set({"maxmemory-policy": "allkeys-lfu"})
         assert isinstance(await client.object_freq("a"), int)
 
@@ -392,7 +388,7 @@ class TestGeneric:
         assert isinstance(await client.object_idletime("a"), int)
         await client.config_set({"maxmemory-policy": "allkeys-lfu"})
         with pytest.raises(ResponseError):
-            await client.object_idletime("a"),
+            (await client.object_idletime("a"),)
 
     async def test_object_refcount(self, client, _s):
         await client.set("a", "foo")
@@ -443,21 +439,11 @@ class TestGeneric:
     async def test_expireat_conditional(self, client, _s):
         at = datetime.datetime.utcnow()
         await client.set("a", "foo")
-        assert await client.expireat(
-            "a", at + datetime.timedelta(seconds=10), PureToken.NX
-        )
-        assert not await client.expireat(
-            "a", at + datetime.timedelta(seconds=10), PureToken.NX
-        )
-        assert await client.expireat(
-            "a", at + datetime.timedelta(seconds=20), PureToken.XX
-        )
-        assert not await client.expireat(
-            "a", at + datetime.timedelta(seconds=19), PureToken.GT
-        )
-        assert await client.expireat(
-            "a", at + datetime.timedelta(seconds=19), PureToken.LT
-        )
+        assert await client.expireat("a", at + datetime.timedelta(seconds=10), PureToken.NX)
+        assert not await client.expireat("a", at + datetime.timedelta(seconds=10), PureToken.NX)
+        assert await client.expireat("a", at + datetime.timedelta(seconds=20), PureToken.XX)
+        assert not await client.expireat("a", at + datetime.timedelta(seconds=19), PureToken.GT)
+        assert await client.expireat("a", at + datetime.timedelta(seconds=19), PureToken.LT)
 
     @pytest.mark.min_server_version("7.0.0")
     async def test_expiretime(self, client, _s):
@@ -481,9 +467,7 @@ class TestGeneric:
 
         for key in keys:
             await client.set(key, "1")
-        assert await client.keys(pattern=_s("test_*")) == {
-            _s(k) for k in keys_with_underscores
-        }
+        assert await client.keys(pattern=_s("test_*")) == {_s(k) for k in keys_with_underscores}
         assert await client.keys(pattern=_s("test*")) == {_s(k) for k in keys}
 
     async def test_pexpire(self, client, _s):
@@ -524,21 +508,11 @@ class TestGeneric:
     async def test_pexpireat_conditional(self, client, _s):
         at = datetime.datetime.utcnow()
         await client.set("a", "foo")
-        assert await client.pexpireat(
-            "a", at + datetime.timedelta(seconds=10), PureToken.NX
-        )
-        assert not await client.pexpireat(
-            "a", at + datetime.timedelta(seconds=10), PureToken.NX
-        )
-        assert await client.pexpireat(
-            "a", at + datetime.timedelta(seconds=20), PureToken.XX
-        )
-        assert not await client.pexpireat(
-            "a", at + datetime.timedelta(seconds=19), PureToken.GT
-        )
-        assert await client.pexpireat(
-            "a", at + datetime.timedelta(seconds=19), PureToken.LT
-        )
+        assert await client.pexpireat("a", at + datetime.timedelta(seconds=10), PureToken.NX)
+        assert not await client.pexpireat("a", at + datetime.timedelta(seconds=10), PureToken.NX)
+        assert await client.pexpireat("a", at + datetime.timedelta(seconds=20), PureToken.XX)
+        assert not await client.pexpireat("a", at + datetime.timedelta(seconds=19), PureToken.GT)
+        assert await client.pexpireat("a", at + datetime.timedelta(seconds=19), PureToken.LT)
 
     @pytest.mark.min_server_version("7.0.0")
     async def test_pexpiretime(self, client, _s):

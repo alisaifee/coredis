@@ -35,15 +35,11 @@ async def test_invalid_authentication(redis_auth, username, password):
         ["fubar", "fubar"],
     ),
 )
-async def test_invalid_authentication_cred_provider(
-    redis_auth_cred_provider, username, password
-):
+async def test_invalid_authentication_cred_provider(redis_auth_cred_provider, username, password):
     client = coredis.Redis(
         "localhost",
         6389,
-        credential_provider=UserPassCredentialProvider(
-            username=username, password=password
-        ),
+        credential_provider=UserPassCredentialProvider(username=username, password=password),
     )
     with pytest.raises(AuthenticationError):
         await client.ping()
@@ -86,9 +82,7 @@ async def test_legacy_authentication(redis_auth, mocker):
         else:
             return await original_request(self, command, *args)
 
-    mocker.patch.object(
-        coredis.connection.BaseConnection, "create_request", fake_request
-    )
+    mocker.patch.object(coredis.connection.BaseConnection, "create_request", fake_request)
 
     with pytest.warns(UserWarning, match="no support for the `HELLO` command"):
         with pytest.raises(ConnectionError):
@@ -104,9 +98,7 @@ async def test_legacy_authentication(redis_auth, mocker):
 
         assert (
             b"PONG"
-            == await coredis.Redis(
-                "localhost", 6389, password="sekret", protocol_version=2
-            ).ping()
+            == await coredis.Redis("localhost", 6389, password="sekret", protocol_version=2).ping()
         )
         assert (
             b"PONG"
@@ -131,9 +123,7 @@ async def test_legacy_authentication_cred_provider(redis_auth_cred_provider, moc
         else:
             return await original_request(self, command, *args)
 
-    mocker.patch.object(
-        coredis.connection.BaseConnection, "create_request", fake_request
-    )
+    mocker.patch.object(coredis.connection.BaseConnection, "create_request", fake_request)
 
     with pytest.warns(UserWarning, match="no support for the `HELLO` command"):
         with pytest.raises(ConnectionError):
@@ -146,9 +136,7 @@ async def test_legacy_authentication_cred_provider(redis_auth_cred_provider, moc
             await coredis.Redis(
                 "localhost",
                 6389,
-                credential_provider=UserPassCredentialProvider(
-                    username="bogus", password="sekret"
-                ),
+                credential_provider=UserPassCredentialProvider(username="bogus", password="sekret"),
                 protocol_version=2,
             ).ping()
 

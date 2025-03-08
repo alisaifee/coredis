@@ -75,9 +75,7 @@ class SearchResultCallback(
         if options.get("nocontent"):
             return SearchResult[AnyStr](
                 response[0],
-                tuple(
-                    SearchDocument(i, None, None, None, None, {}) for i in response[1:]
-                ),
+                tuple(SearchDocument(i, None, None, None, None, {}) for i in response[1:]),
             )
         step = 2
         results = []
@@ -162,9 +160,7 @@ class AggregationResultCallback(
         return SearchAggregationResult[AnyStr](
             [
                 flat_pairs_to_dict(k, partial(self.try_json, options))
-                for k in (
-                    response[1:] if not options.get("with_cursor") else response[0][1:]
-                )
+                for k in (response[1:] if not options.get("with_cursor") else response[0][1:])
             ],
             response[1] if options.get("with_cursor") else None,
         )
@@ -179,16 +175,11 @@ class AggregationResultCallback(
             and isinstance(response[0], dict)
             or isinstance(response, dict)
         ):
-            response, cursor = (
-                response if options.get("with_cursor") else (response, None)
-            )
+            response, cursor = response if options.get("with_cursor") else (response, None)
             response = EncodingInsensitiveDict(response)
             return SearchAggregationResult[AnyStr](
                 [
-                    {
-                        k: self.try_json(options, v)
-                        for k, v in k["extra_attributes"].items()
-                    }
+                    {k: self.try_json(options, v) for k, v in k["extra_attributes"].items()}
                     for k in (response["results"])
                 ],
                 cursor,
@@ -236,6 +227,5 @@ class SpellCheckCallback(
             return self.transform(response, **options)
         else:
             return {
-                key: OrderedDict(ChainMap(*result))
-                for key, result in response["results"].items()
+                key: OrderedDict(ChainMap(*result)) for key, result in response["results"].items()
             }

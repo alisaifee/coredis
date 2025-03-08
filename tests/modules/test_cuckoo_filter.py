@@ -55,13 +55,9 @@ class TestCuckooFilter:
 
     async def test_insert(self, client: Redis):
         assert (True, True, True) == await client.cf.insert("filter", [1, 2, 3])
-        assert (True, True, True) == await client.cf.insert(
-            "filter_custom", [1, 2, 3], 10
-        )
+        assert (True, True, True) == await client.cf.insert("filter_custom", [1, 2, 3], 10)
         assert (True, True, True) == await client.cf.insert("filter", [1, 2, 3], 10)
-        assert (False, False, False) == await client.cf.insertnx(
-            "filter", [1, 2, 3], 10
-        )
+        assert (False, False, False) == await client.cf.insertnx("filter", [1, 2, 3], 10)
         with pytest.raises(ResponseError):
             await client.cf.insert("filter_missing", [1, 2, 3], nocreate=True)
         with pytest.raises(ResponseError):

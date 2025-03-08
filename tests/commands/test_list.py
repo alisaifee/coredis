@@ -259,16 +259,9 @@ class TestList:
     @pytest.mark.min_server_version("6.2.0")
     async def test_lmove(self, client, _s):
         await client.rpush("a{foo}", ["one", "two", "three", "four"])
-        assert _s("one") == await client.lmove(
-            "a{foo}", "b{foo}", PureToken.LEFT, PureToken.RIGHT
-        )
-        assert _s("four") == await client.lmove(
-            "a{foo}", "b{foo}", PureToken.RIGHT, PureToken.LEFT
-        )
-        assert (
-            await client.lmove("x{foo}", "b{foo}", PureToken.RIGHT, PureToken.LEFT)
-            is None
-        )
+        assert _s("one") == await client.lmove("a{foo}", "b{foo}", PureToken.LEFT, PureToken.RIGHT)
+        assert _s("four") == await client.lmove("a{foo}", "b{foo}", PureToken.RIGHT, PureToken.LEFT)
+        assert await client.lmove("x{foo}", "b{foo}", PureToken.RIGHT, PureToken.LEFT) is None
         assert _s("three") == await client.lmove(
             "a{foo}", "x{foo}", PureToken.RIGHT, PureToken.LEFT
         )
@@ -295,20 +288,14 @@ class TestList:
             clone = await cloner(client)
             return await clone.rpush("a{foo}", ["42"])
 
-        result = await asyncio.gather(
-            client.blmpop(["a{foo}"], 1, PureToken.LEFT), _delayadd()
-        )
+        result = await asyncio.gather(client.blmpop(["a{foo}"], 1, PureToken.LEFT), _delayadd())
         assert result[0][1] == [_s("42")]
 
     @pytest.mark.min_server_version("6.2.0")
     async def test_blmove(self, client, _s):
         await client.rpush("a{foo}", ["one", "two", "three", "four"])
-        assert await client.blmove(
-            "a{foo}", "b{foo}", PureToken.LEFT, PureToken.RIGHT, timeout=5
-        )
-        assert await client.blmove(
-            "a{foo}", "b{foo}", PureToken.RIGHT, PureToken.LEFT, timeout=1
-        )
+        assert await client.blmove("a{foo}", "b{foo}", PureToken.LEFT, PureToken.RIGHT, timeout=5)
+        assert await client.blmove("a{foo}", "b{foo}", PureToken.RIGHT, PureToken.LEFT, timeout=1)
 
     async def test_binary_lists(self, client, _s):
         mapping = {
@@ -322,9 +309,7 @@ class TestList:
             await client.rpush(key, value)
 
         # check that KEYS returns all the keys as they are
-        assert sorted(await client.keys("*")) == [
-            _s(k) for k in sorted(list(iter(mapping.keys())))
-        ]
+        assert sorted(await client.keys("*")) == [_s(k) for k in sorted(list(iter(mapping.keys())))]
 
         # check that it is possible to get list content by key name
 

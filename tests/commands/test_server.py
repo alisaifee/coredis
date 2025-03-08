@@ -92,22 +92,16 @@ class TestServer:
 
     async def test_config_resetstat(self, client, _s):
         await client.ping()
-        prior_commands_processed = int(
-            (await client.info())["total_commands_processed"]
-        )
+        prior_commands_processed = int((await client.info())["total_commands_processed"])
         assert prior_commands_processed >= 1
         await client.config_resetstat()
-        reset_commands_processed = int(
-            (await client.info())["total_commands_processed"]
-        )
+        reset_commands_processed = int((await client.info())["total_commands_processed"])
         assert reset_commands_processed < prior_commands_processed
 
     @pytest.mark.nokeydb
     @pytest.mark.nocluster
     async def test_config_rewrite(self, client):
-        with pytest.raises(
-            ResponseError, match="The server is running without a config file"
-        ):
+        with pytest.raises(ResponseError, match="The server is running without a config file"):
             await client.config_rewrite()
 
     @pytest.mark.max_server_version("6.2.0")
@@ -189,9 +183,7 @@ class TestServer:
         # but if other clients are executing commands at the same time, there
         # could be commands, before, between, or after, so just check that
         # the two we care about are in the appropriate ordeclient.
-        assert commands.index(get_command) < commands.index(
-            [_s("SLOWLOG"), _s("RESET")]
-        )
+        assert commands.index(get_command) < commands.index([_s("SLOWLOG"), _s("RESET")])
 
         # make sure other attributes are typed correctly
         assert isinstance(slowlog[0].start_time, int)
@@ -324,9 +316,9 @@ class TestServer:
     @pytest.mark.nocluster
     async def test_save(self, client):
         assert await client.save()
-        assert (
-            await client.lastsave() - datetime.datetime.utcnow()
-        ) < datetime.timedelta(minutes=1)
+        assert (await client.lastsave() - datetime.datetime.utcnow()) < datetime.timedelta(
+            minutes=1
+        )
 
     @pytest.mark.nocluster
     async def test_replicaof(self, client, _s):
@@ -409,6 +401,4 @@ async def test_failover(fake_redis):
     assert await fake_redis.failover("target", 6379)
     assert await fake_redis.failover("target", 6379, force=True)
     assert await fake_redis.failover(abort=True)
-    assert await fake_redis.failover(
-        "target", 6379, timeout=datetime.timedelta(seconds=1)
-    )
+    assert await fake_redis.failover("target", 6379, timeout=datetime.timedelta(seconds=1))

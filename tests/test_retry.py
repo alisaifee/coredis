@@ -53,9 +53,7 @@ class TestRetryPolicies:
         before = unittest.mock.AsyncMock()
 
         with pytest.raises(ZeroDivisionError):
-            await policy.call_with_retries(
-                call, before_hook=before, failure_hook=failure
-            )
+            await policy.call_with_retries(call, before_hook=before, failure_hook=failure)
 
         assert before.await_count == 2
         assert call.await_count == 2

@@ -133,9 +133,7 @@ class Field:
 
             args += [self.algorithm]
             if self.attributes:
-                _attributes: List[ValueT] = list(
-                    itertools.chain(*self.attributes.items())
-                )
+                _attributes: List[ValueT] = list(itertools.chain(*self.attributes.items()))
                 args += [len(_attributes)]
                 args += _attributes
 
@@ -394,9 +392,7 @@ class Search(ModuleGroup[AnyStr]):
         group=COMMAND_GROUP,
         arguments={"dialect": {"version_introduced": "2.4.3"}},
     )
-    async def explain(
-        self, index: KeyT, query: StringT, dialect: Optional[int] = None
-    ) -> AnyStr:
+    async def explain(self, index: KeyT, query: StringT, dialect: Optional[int] = None) -> AnyStr:
         """
         Returns the execution plan for a complex query
 
@@ -758,9 +754,7 @@ class Search(ModuleGroup[AnyStr]):
         withpayloads: Optional[bool] = None,
         withsortkeys: Optional[bool] = None,
         numeric_filters: Optional[
-            Mapping[
-                StringT, Tuple[Union[int, float, StringT], Union[int, float, StringT]]
-            ]
+            Mapping[StringT, Tuple[Union[int, float, StringT], Union[int, float, StringT]]]
         ] = None,
         geo_filters: Optional[
             Mapping[
@@ -859,9 +853,7 @@ class Search(ModuleGroup[AnyStr]):
             pieces.append(PureToken.WITHSORTKEYS)
         if numeric_filters:
             for field, numeric_filter in numeric_filters.items():
-                pieces.extend(
-                    [PrefixToken.FILTER, field, numeric_filter[0], numeric_filter[1]]
-                )
+                pieces.extend([PrefixToken.FILTER, field, numeric_filter[0], numeric_filter[1]])
         if geo_filters:
             for field, gfilter in geo_filters.items():
                 pieces.extend(
@@ -891,12 +883,7 @@ class Search(ModuleGroup[AnyStr]):
             pieces.extend([PrefixToken.SORTBY, sortby])
             if sort_order:
                 pieces.append(sort_order)
-        if (
-            summarize_fields
-            or summarize_frags
-            or summarize_length
-            or summarize_separator
-        ):
+        if summarize_fields or summarize_frags or summarize_length or summarize_separator:
             pieces.append(PureToken.SUMMARIZE)
             if summarize_fields:
                 _fields: List[StringT] = list(summarize_fields)
@@ -967,9 +954,7 @@ class Search(ModuleGroup[AnyStr]):
         ] = None,
         timeout: Optional[Union[int, timedelta]] = None,
         transforms: Optional[Parameters[Union[Group, Apply, Filter]]] = None,
-        sortby: Optional[
-            Mapping[StringT, Literal[PureToken.ASC, PureToken.DESC]]
-        ] = None,
+        sortby: Optional[Mapping[StringT, Literal[PureToken.ASC, PureToken.DESC]]] = None,
         sortby_max: Optional[int] = None,
         offset: Optional[int] = 0,
         limit: Optional[int] = None,
@@ -1040,9 +1025,7 @@ class Search(ModuleGroup[AnyStr]):
             if cursor_read_size:
                 pieces.extend([PrefixToken.COUNT, cursor_read_size])
             if cursor_maxidle:
-                pieces.extend(
-                    [PrefixToken.MAXIDLE, normalized_milliseconds(cursor_maxidle)]
-                )
+                pieces.extend([PrefixToken.MAXIDLE, normalized_milliseconds(cursor_maxidle)])
         if parameters:
             _parameters: List[StringT] = list(itertools.chain(*parameters.items()))
             pieces.extend([PureToken.PARAMS, len(_parameters), *_parameters])

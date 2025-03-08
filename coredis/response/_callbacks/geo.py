@@ -18,11 +18,7 @@ class GeoSearchCallback(
         if options.get("store") or options.get("storedist"):
             return response
 
-        if not (
-            options.get("withdist")
-            or options.get("withcoord")
-            or options.get("withhash")
-        ):
+        if not (options.get("withdist") or options.get("withcoord") or options.get("withhash")):
             return tuple(list(response))
 
         results: List[GeoSearchResult] = []
@@ -52,11 +48,7 @@ class GeoCoordinatessCallback(
     ) -> Tuple[Optional[GeoCoordinates], ...]:
         return tuple(
             map(
-                lambda ll: (
-                    GeoCoordinates(float(ll[0]), float(ll[1]))
-                    if ll is not None
-                    else None
-                ),
+                lambda ll: (GeoCoordinates(float(ll[0]), float(ll[1])) if ll is not None else None),
                 response,
             )
         )

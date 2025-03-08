@@ -38,12 +38,8 @@ class BitFieldOperation(Generic[AnyStr]):
     Redis command documentation: `BITFIELD <https://redios.io/commands/bitfield>`__
     """
 
-    def __init__(
-        self, redis_client: AbstractExecutor, key: KeyT, readonly: bool = False
-    ) -> None:
-        self._command = (
-            CommandName.BITFIELD if not readonly else CommandName.BITFIELD_RO
-        )
+    def __init__(self, redis_client: AbstractExecutor, key: KeyT, readonly: bool = False) -> None:
+        self._command = CommandName.BITFIELD if not readonly else CommandName.BITFIELD_RO
         self._command_stack: CommandArgList = [key]
         self.redis = redis_client
         self.readonly = readonly
@@ -51,9 +47,7 @@ class BitFieldOperation(Generic[AnyStr]):
     def __del__(self) -> None:
         self._command_stack.clear()
 
-    def set(
-        self, encoding: str, offset: Union[int, str], value: int
-    ) -> BitFieldOperation[AnyStr]:
+    def set(self, encoding: str, offset: Union[int, str], value: int) -> BitFieldOperation[AnyStr]:
         """
         Set the specified bit field and returns its old value.
         """
@@ -85,17 +79,13 @@ class BitFieldOperation(Generic[AnyStr]):
         if self.readonly:
             raise ReadOnlyError()
 
-        self._command_stack.extend(
-            [BitFieldSubCommand.INCRBY, encoding, offset, increment]
-        )
+        self._command_stack.extend([BitFieldSubCommand.INCRBY, encoding, offset, increment])
 
         return self
 
     def overflow(
         self,
-        behavior: Literal[
-            PureToken.SAT, PureToken.WRAP, PureToken.FAIL
-        ] = PureToken.SAT,
+        behavior: Literal[PureToken.SAT, PureToken.WRAP, PureToken.FAIL] = PureToken.SAT,
     ) -> BitFieldOperation[AnyStr]:
         """
         fine-tune the behavior of the increment or decrement overflow,
@@ -112,6 +102,4 @@ class BitFieldOperation(Generic[AnyStr]):
     async def exc(self) -> ResponseType:
         """execute commands in command stack"""
 
-        return await self.redis.execute_command(
-            self._command, *self._command_stack, decode=False
-        )
+        return await self.redis.execute_command(self._command, *self._command_stack, decode=False)

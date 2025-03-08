@@ -10,9 +10,7 @@ class DummyCache(AbstractCache):
     def __init__(self, dummy={}):
         self.dummy = dummy
 
-    async def initialize(
-        self, client: "coredis.client.RedisConnection"
-    ) -> AbstractCache:
+    async def initialize(self, client: "coredis.client.RedisConnection") -> AbstractCache:
         return self
 
     @property
@@ -22,9 +20,7 @@ class DummyCache(AbstractCache):
     def get(self, command: bytes, key: bytes, *args: ValueT) -> ResponseType:
         return self.dummy[key]
 
-    def put(
-        self, command: bytes, key: bytes, *args: ValueT, value: ResponseType
-    ) -> None:
+    def put(self, command: bytes, key: bytes, *args: ValueT, value: ResponseType) -> None:
         self.dummy[key] = value
 
     def reset(self) -> None:

@@ -102,13 +102,9 @@ class ClusterMeta(ABCMeta):
                     aggregate_note = ""
                     if cmd.cluster.multi_node:
                         if cmd.cluster.combine:
-                            aggregate_note = (
-                                f"and return {cmd.cluster.combine.response_policy}"
-                            )
+                            aggregate_note = f"and return {cmd.cluster.combine.response_policy}"
                         else:
-                            aggregate_note = (
-                                "and a mapping of nodes to results will be returned"
-                            )
+                            aggregate_note = "and a mapping of nodes to results will be returned"
                     doc_addition = f"""
 .. admonition:: Cluster note
 
@@ -421,9 +417,7 @@ class RedisCluster(
         """
 
         if "db" in kwargs:  # noqa
-            raise RedisClusterException(
-                "Argument 'db' is not possible to use in cluster mode"
-            )
+            raise RedisClusterException("Argument 'db' is not possible to use in cluster mode")
 
         if connection_pool:
             pool = connection_pool
@@ -492,11 +486,11 @@ class RedisCluster(
         )
         self.non_atomic_cross_slot = non_atomic_cross_slot
         self.cache = cache
-        self._decodecontext: contextvars.ContextVar[Optional[bool],] = (
-            contextvars.ContextVar("decode", default=None)
+        self._decodecontext: contextvars.ContextVar[Optional[bool],] = contextvars.ContextVar(
+            "decode", default=None
         )
-        self._encodingcontext: contextvars.ContextVar[Optional[str],] = (
-            contextvars.ContextVar("decode", default=None)
+        self._encodingcontext: contextvars.ContextVar[Optional[str],] = contextvars.ContextVar(
+            "decode", default=None
         )
 
     @classmethod
@@ -705,9 +699,7 @@ class RedisCluster(
         assert command in self.result_callbacks
         return cast(
             R,
-            self.result_callbacks[command](
-                res, version=self.protocol_version, **kwargs
-            ),
+            self.result_callbacks[command](res, version=self.protocol_version, **kwargs),
         )
 
     def determine_node(
@@ -782,15 +774,13 @@ class RedisCluster(
             node_name_map = {n.name: n for n in nodes}
             for node_name in node_arg_mapping:
                 for portion, pargs in enumerate(node_arg_mapping[node_name]):
-                    tasks[f"{node_name}:{portion}"] = (
-                        self._execute_command_on_single_node(
-                            command,
-                            *pargs,
-                            callback=callback,
-                            node=node_name_map[node_name],
-                            slots=None,
-                            **kwargs,
-                        )
+                    tasks[f"{node_name}:{portion}"] = self._execute_command_on_single_node(
+                        command,
+                        *pargs,
+                        callback=callback,
+                        node=node_name_map[node_name],
+                        slots=None,
+                        **kwargs,
                     )
 
             results = await asyncio.gather(*tasks.values(), return_exceptions=True)
@@ -823,9 +813,9 @@ class RedisCluster(
             if keys:
                 key_start: int = args.index(keys[0])
                 key_end: int = args.index(keys[-1])
-                assert (
-                    args[key_start : 1 + key_end] == keys
-                ), f"Unable to map {command.decode('latin-1')} by keys {keys}"
+                assert args[key_start : 1 + key_end] == keys, (
+                    f"Unable to map {command.decode('latin-1')} by keys {keys}"
+                )
 
                 for (
                     node_name,
@@ -950,9 +940,7 @@ class RedisCluster(
                 self.refresh_table_asap = True
                 await self.connection_pool.nodes.increment_reinitialize_counter()
 
-                node = self.connection_pool.nodes.set_node(
-                    e.host, e.port, server_type="primary"
-                )
+                node = self.connection_pool.nodes.set_node(e.host, e.port, server_type="primary")
                 try_random_node = False
                 self.connection_pool.nodes.slots[e.slot_id][0] = node
             except TryAgainError:
@@ -979,9 +967,7 @@ class RedisCluster(
 
     @contextlib.contextmanager
     @versionadded(version="4.8.0")
-    def decoding(
-        self, mode: bool, encoding: Optional[str] = None
-    ) -> Iterator[RedisCluster[Any]]:
+    def decoding(self, mode: bool, encoding: Optional[str] = None) -> Iterator[RedisCluster[Any]]:
         """
         Context manager to temporarily change the decoding behavior
         of the client

@@ -114,12 +114,15 @@ class CommandCache:
                     cached = cast(
                         R,
                         cache.get(
-                            self.command, key, *args[1:], *kwargs.items()  # type: ignore
+                            self.command,
+                            key,
+                            *args[1:],  # type: ignore
+                            *kwargs.items(),  # type: ignore
                         ),
                     )
-                    if isinstance(
-                        cache, SupportsSampling
-                    ) and not random.random() * 100.0 < min(100.0, cache.confidence):
+                    if isinstance(cache, SupportsSampling) and not random.random() * 100.0 < min(
+                        100.0, cache.confidence
+                    ):
                         actual = await func(*args, **kwargs)
                         cache.feedback(
                             self.command,
@@ -154,18 +157,14 @@ def redis_command(
     flags: Optional[Set[CommandFlag]] = None,
     cluster: ClusterCommandConfig = ClusterCommandConfig(),
     cache_config: Optional[CacheConfig] = None,
-) -> Callable[
-    [Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]
-]:
+) -> Callable[[Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]]:
     readonly = False
     if flags and CommandFlag.READONLY in flags:
         READONLY_COMMANDS.add(command_name)
         readonly = True
 
     if not readonly and cache_config:  # noqa
-        raise RuntimeError(
-            f"Can't decorate non readonly command {command_name} with cache config"
-        )
+        raise RuntimeError(f"Can't decorate non readonly command {command_name} with cache config")
 
     COMMAND_FLAGS[command_name] = flags or set()
 
@@ -193,9 +192,7 @@ def redis_command(
 
             client = args[0]
             is_regular_client = isinstance(client, (Redis, RedisCluster))
-            runtime_checking = (
-                not getattr(client, "noreply", None) and is_regular_client
-            )
+            runtime_checking = not getattr(client, "noreply", None) and is_regular_client
             if redirect_usage and is_regular_client:
                 if redirect_usage.warn:
                     warnings.warn(redirect_usage.reason, UserWarning, stacklevel=2)
@@ -250,9 +247,7 @@ Compatibility:
             if redirect_usage.warn:
                 preamble = f".. warning:: Using ``{func.__name__}`` directly is not recommended."
             else:
-                preamble = (
-                    f".. danger:: Using ``{func.__name__}`` directly is not supported."
-                )
+                preamble = f".. danger:: Using ``{func.__name__}`` directly is not supported."
             wrapped.__doc__ += f"""
 {preamble} {redirect_usage.reason}
 """

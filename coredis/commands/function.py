@@ -79,17 +79,13 @@ class Library(Generic[AnyStr]):
          an exception will be raised if the library was already loaded in the target
          redis instance.
         """
-        self._client: weakref.ReferenceType[coredis.client.Client[AnyStr]] = (
-            weakref.ref(client)
-        )
+        self._client: weakref.ReferenceType[coredis.client.Client[AnyStr]] = weakref.ref(client)
         self.name = nativestr(name or self.NAME)
         self.code = (code or self.CODE or "").lstrip()
         self._functions: EncodingInsensitiveDict = EncodingInsensitiveDict()
         self.replace = replace
         if self.replace and not self.code:
-            raise RuntimeError(
-                "library code must be provided when the ``replace`` option is used"
-            )
+            raise RuntimeError("library code must be provided when the ``replace`` option is used")
 
     @property
     def client(self) -> coredis.client.Client[AnyStr]:
@@ -275,13 +271,9 @@ class Library(Generic[AnyStr]):
         def wrapper(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
             sig = inspect.signature(func)
             first_arg: str = list(sig.parameters.keys())[0]
-            runtime_check_wrapper = (
-                add_runtime_checks if not runtime_checks else safe_beartype
-            )
+            runtime_check_wrapper = add_runtime_checks if not runtime_checks else safe_beartype
             key_params = (
-                key_spec
-                if key_spec
-                else [n for n, p in sig.parameters.items() if param_is_key(p)]
+                key_spec if key_spec else [n for n, p in sig.parameters.items() if param_is_key(p)]
             )
             arg_fetch: Dict[str, Callable[..., Parameters[Any]]] = {
                 n: (
@@ -367,9 +359,7 @@ class Function(Generic[AnyStr]):
             func = await Function(client, "mylib", "myfunc")
             response = await func(keys=["a"], args=[1])
         """
-        self._client: weakref.ReferenceType[coredis.client.Client[AnyStr]] = (
-            weakref.ref(client)
-        )
+        self._client: weakref.ReferenceType[coredis.client.Client[AnyStr]] = weakref.ref(client)
         self.library: Library[AnyStr] = Library[AnyStr](client, library_name)
         self.name = name
         self.readonly = readonly

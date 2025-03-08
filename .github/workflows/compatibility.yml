@@ -35,13 +35,8 @@ jobs:
         python setup.py build
     - name: Lint with ruff
       run: |
+        ruff check --select I coredis tests
         ruff check coredis tests
-    - name: Lint with black
-      run: |
-        black --check coredis tests
-    - name: Check imports
-      run: |
-        isort -c --profile=black coredis tests
     - name: Check types
       run: |
         mypy coredis

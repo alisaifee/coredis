@@ -16,9 +16,7 @@ from coredis.typing import (
 )
 
 
-class CommandCallback(
-    ResponseCallback[List[ResponseType], List[ResponseType], Dict[str, Command]]
-):
+class CommandCallback(ResponseCallback[List[ResponseType], List[ResponseType], Dict[str, Command]]):
     def transform(
         self, response: List[ResponseType], **options: Optional[ValueT]
     ) -> Dict[str, Command]:

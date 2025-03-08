@@ -46,9 +46,7 @@ class Packer:
                 output.append(arg)
                 buff = SYM_CRLF
             else:
-                buff = SYM_EMPTY.join(
-                    (buff, SYM_DOLLAR, b"%d" % len(arg), SYM_CRLF, arg, SYM_CRLF)
-                )
+                buff = SYM_EMPTY.join((buff, SYM_DOLLAR, b"%d" % len(arg), SYM_CRLF, arg, SYM_CRLF))
         output.append(buff)
         return output
 

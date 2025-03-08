@@ -24,9 +24,7 @@ class Sidecar:
     def __init__(
         self, push_message_types: Set[bytes], health_check_interval_seconds: int = 5
     ) -> None:
-        self._client: Optional[weakref.ReferenceType["coredis.client.Client[Any]"]] = (
-            None
-        )
+        self._client: Optional[weakref.ReferenceType["coredis.client.Client[Any]"]] = None
         self.messages: asyncio.Queue[ResponseType] = asyncio.Queue()
         self.connection: Optional[Connection] = None
         self.client_id: Optional[int] = None

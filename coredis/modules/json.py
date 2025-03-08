@@ -271,9 +271,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def numincrby(
-        self, key: KeyT, path: ValueT, value: Union[int, float]
-    ) -> JsonType:
+    async def numincrby(self, key: KeyT, path: ValueT, value: Union[int, float]) -> JsonType:
         """
         Increments the numeric value at path by a value
 
@@ -293,9 +291,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def nummultby(
-        self, key: KeyT, path: ValueT, value: Union[int, float]
-    ) -> JsonType:
+    async def nummultby(self, key: KeyT, path: ValueT, value: Union[int, float]) -> JsonType:
         """
         Multiplies the numeric value at path by a value
 

@@ -191,15 +191,10 @@ async def check_test_constraints(request, client, protocol=3):
         if marker.name == "noruntimechecks" and RUNTIME_TYPECHECKS:
             return pytest.skip("Skipped with runtime checks enabled")
 
-        if marker.name == "clusteronly" and not isinstance(
-            client, coredis.RedisCluster
-        ):
+        if marker.name == "clusteronly" and not isinstance(client, coredis.RedisCluster):
             return pytest.skip("Skipped for non redis cluster")
 
-        if (
-            marker.name == "os"
-            and not marker.args[0].lower() == platform.system().lower()
-        ):
+        if marker.name == "os" and not marker.args[0].lower() == platform.system().lower():
             return pytest.skip(f"Skipped for {platform.system()}")
 
         if protocol == 3 and client_version < version.parse("6.0.0"):
@@ -211,10 +206,7 @@ async def check_test_constraints(request, client, protocol=3):
         if marker.name == "nokeydb" and isinstance(client, coredis.experimental.KeyDB):
             return pytest.skip("Skipped for KeyDB")
 
-        if (
-            marker.name == "nodragonfly"
-            and SERVER_TYPES.get(str(client)) == "dragonfly"
-        ):
+        if marker.name == "nodragonfly" and SERVER_TYPES.get(str(client)) == "dragonfly":
             return pytest.skip("Skipped for Dragonfly")
 
         if marker.name == "novalkey" and SERVER_TYPES.get(str(client)) == "valkey":
@@ -271,9 +263,7 @@ async def remapped_slots(client, request):
     for slot in slots:
         sources[slot] = client.connection_pool.nodes.node_from_slot(slot)
         destinations[slot] = [
-            k
-            for k in client.connection_pool.nodes.all_primaries()
-            if k != sources[slot]
+            k for k in client.connection_pool.nodes.all_primaries() if k != sources[slot]
         ][0]
         originals[slot] = sources[slot].node_id
         moves[slot] = destinations[slot].node_id
@@ -286,10 +276,7 @@ async def remapped_slots(client, request):
             await client.flushall()
 
             for slot in originals.keys():
-                [
-                    await p.cluster_setslot(slot, node=originals[slot])
-                    for p in client.primaries
-                ]
+                [await p.cluster_setslot(slot, node=originals[slot]) for p in client.primaries]
 
 
 def check_redis_cluster_ready(host, port):
@@ -418,9 +405,7 @@ def redis_cluster_auth_server(docker_services):
 @pytest.fixture(scope="session")
 def redis_cluster_noreplica_server(docker_services):
     docker_services.start("redis-cluster-noreplica-init")
-    docker_services.wait_for_service(
-        "redis-cluster-noreplica-3", 8402, check_redis_cluster_ready
-    )
+    docker_services.wait_for_service("redis-cluster-noreplica-3", 8402, check_redis_cluster_ready)
 
     if os.environ.get("CI") == "True":
         time.sleep(10)
@@ -442,9 +427,7 @@ def redis_ssl_cluster_server(docker_services):
 @pytest.fixture(scope="session")
 def redis_stack_cluster_server(docker_services):
     docker_services.start("redis-stack-cluster-init")
-    docker_services.wait_for_service(
-        "redis-stack-cluster-6", 9005, check_redis_cluster_ready
-    )
+    docker_services.wait_for_service("redis-stack-cluster-6", 9005, check_redis_cluster_ready)
 
     if os.environ.get("CI") == "True":
         time.sleep(10)
@@ -462,9 +445,7 @@ def redis_sentinel_server(docker_services):
 @pytest.fixture(scope="session")
 def redis_sentinel_auth_server(docker_services):
     docker_services.start("redis-sentinel-auth")
-    docker_services.wait_for_service(
-        "redis-sentinel-auth", 26379, check_sentinel_auth_ready
-    )
+    docker_services.wait_for_service("redis-sentinel-auth", 26379, check_sentinel_auth_ready)
     yield ["localhost", 36379]
 
 
@@ -1172,9 +1153,7 @@ async def redis_sentinel_auth(redis_sentinel_auth_server, request):
 async def redis_sentinel_auth_cred_provider(redis_sentinel_auth_server, request):
     sentinel = coredis.sentinel.Sentinel(
         [redis_sentinel_auth_server],
-        sentinel_kwargs={
-            "credential_provider": UserPassCredentialProvider(password="sekret")
-        },
+        sentinel_kwargs={"credential_provider": UserPassCredentialProvider(password="sekret")},
         credential_provider=UserPassCredentialProvider(password="sekret"),
         decode_responses=True,
         **get_client_test_args(request),

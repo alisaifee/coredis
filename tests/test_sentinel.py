@@ -211,9 +211,7 @@ async def test_replica_round_robin(cluster, sentinel):
 async def test_autodecode(redis_sentinel_server):
     sentinel = Sentinel(sentinels=[redis_sentinel_server], decode_responses=True)
     assert await sentinel.primary_for("mymaster").ping() == "PONG"
-    assert (
-        await sentinel.primary_for("mymaster", decode_responses=False).ping() == b"PONG"
-    )
+    assert await sentinel.primary_for("mymaster", decode_responses=False).ping() == b"PONG"
 
 
 @targets("redis_sentinel", "redis_sentinel_resp2")
@@ -238,18 +236,14 @@ async def test_sentinel_config_set(client):
 
 @targets("redis_sentinel", "redis_sentinel_resp2")
 async def test_master_address_by_name(client):
-    master_address = await client.sentinels[0].sentinel_get_master_addr_by_name(
-        "mymaster"
-    )
+    master_address = await client.sentinels[0].sentinel_get_master_addr_by_name("mymaster")
     assert master_address == await client.discover_primary("mymaster")
 
 
 @targets("redis_sentinel", "redis_sentinel_resp2")
 @pytest.mark.min_python("3.8")
 async def test_failover(client, mocker):
-    mock_exec = mocker.patch.object(
-        client.sentinels[0], "execute_command", autospec=True
-    )
+    mock_exec = mocker.patch.object(client.sentinels[0], "execute_command", autospec=True)
     mock_exec.return_value = True
     assert await client.sentinels[0].sentinel_failover("mymaster")
     assert mock_exec.call_args[0][1] == "mymaster"
@@ -288,10 +282,7 @@ async def test_sentinel_masters(client):
 @targets("redis_sentinel", "redis_sentinel_resp2")
 async def test_sentinel_replicas(client):
     assert not any(
-        [
-            k["is_master"]
-            for k in (await client.sentinels[0].sentinel_replicas("mymaster"))
-        ]
+        [k["is_master"] for k in (await client.sentinels[0].sentinel_replicas("mymaster"))]
     )
 
 

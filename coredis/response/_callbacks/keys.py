@@ -33,13 +33,9 @@ class SortCallback(
 
 
 class ScanCallback(
-    ResponseCallback[
-        List[ResponseType], List[ResponseType], Tuple[int, Tuple[AnyStr, ...]]
-    ]
+    ResponseCallback[List[ResponseType], List[ResponseType], Tuple[int, Tuple[AnyStr, ...]]]
 ):
-    def guard(
-        self, response: List[ResponseType]
-    ) -> TypeGuard[Tuple[StringT, List[AnyStr]]]:
+    def guard(self, response: List[ResponseType]) -> TypeGuard[Tuple[StringT, List[AnyStr]]]:
         return isinstance(response[0], (str, bytes)) and isinstance(response[1], list)
 
     def transform(

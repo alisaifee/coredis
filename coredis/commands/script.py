@@ -233,14 +233,10 @@ class Script(Generic[AnyStr]):
         def wrapper(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
             sig = inspect.signature(func)
             first_arg = list(sig.parameters.keys())[0]
-            runtime_check_wrapper = (
-                add_runtime_checks if not runtime_checks else safe_beartype
-            )
+            runtime_check_wrapper = add_runtime_checks if not runtime_checks else safe_beartype
             script_instance = self
             key_params = (
-                key_spec
-                if key_spec
-                else [n for n, p in sig.parameters.items() if param_is_key(p)]
+                key_spec if key_spec else [n for n, p in sig.parameters.items() if param_is_key(p)]
             )
             arg_fetch: Dict[str, Callable[..., Parameters[Any]]] = {
                 n: (

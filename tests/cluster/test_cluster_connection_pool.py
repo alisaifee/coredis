@@ -65,17 +65,11 @@ class TestConnectionPool:
         pool = ClusterConnectionPool(
             startup_nodes=[{"host": "foo", "port": 6379}, {"host": "bar", "port": 6379}]
         )
-        with pytest.raises(
-            RedisClusterException, match="Redis Cluster cannot be connected"
-        ):
+        with pytest.raises(RedisClusterException, match="Redis Cluster cannot be connected"):
             await pool.initialize()
-        with pytest.raises(
-            RedisClusterException, match="Cant reach a single startup node"
-        ):
+        with pytest.raises(RedisClusterException, match="Cant reach a single startup node"):
             await pool.get_connection_by_slot(1)
-        with pytest.raises(
-            RedisClusterException, match="Cant reach a single startup node"
-        ):
+        with pytest.raises(RedisClusterException, match="Cant reach a single startup node"):
             await pool.get_random_connection()
 
     async def test_in_use_not_exists(self, redis_cluster):
@@ -100,12 +94,8 @@ class TestConnectionPool:
 
     async def test_multiple_connections(self, redis_cluster):
         pool = await self.get_pool()
-        c1 = await pool.get_connection_by_node(
-            ManagedNode(**{"host": "127.0.0.1", "port": 7000})
-        )
-        c2 = await pool.get_connection_by_node(
-            ManagedNode(**{"host": "127.0.0.1", "port": 7001})
-        )
+        c1 = await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7000}))
+        c2 = await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7001}))
         assert c1 != c2
 
     async def test_max_connections_too_low(self, redis_cluster):
@@ -116,13 +106,9 @@ class TestConnectionPool:
     async def test_max_connections(self, redis_cluster):
         pool = await self.get_pool(max_connections=6)
         for port in range(7000, 7006):
-            await pool.get_connection_by_node(
-                ManagedNode(**{"host": "127.0.0.1", "port": port})
-            )
+            await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": port}))
         with pytest.raises(ConnectionError):
-            await pool.get_connection_by_node(
-                ManagedNode(**{"host": "127.0.0.1", "port": 7000})
-            )
+            await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7000}))
 
     async def test_max_connections_blocking(self, redis_cluster):
         pool = await self.get_pool(max_connections=6, blocking=True, timeout=1)
@@ -134,9 +120,7 @@ class TestConnectionPool:
                 )
             )
         with pytest.raises(ConnectionError):
-            await pool.get_connection_by_node(
-                ManagedNode(**{"host": "127.0.0.1", "port": 7000})
-            )
+            await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7000}))
         pool.release(connections[0])
         assert connections[0] == await pool.get_connection_by_node(
             ManagedNode(**{"host": "127.0.0.1", "port": 7000})
@@ -144,43 +128,23 @@ class TestConnectionPool:
 
     async def test_max_connections_per_node(self, redis_cluster):
         pool = await self.get_pool(max_connections=2, max_connections_per_node=True)
-        await pool.get_connection_by_node(
-            ManagedNode(**{"host": "127.0.0.1", "port": 7000})
-        )
-        await pool.get_connection_by_node(
-            ManagedNode(**{"host": "127.0.0.1", "port": 7001})
-        )
-        await pool.get_connection_by_node(
-            ManagedNode(**{"host": "127.0.0.1", "port": 7000})
-        )
-        await pool.get_connection_by_node(
-            ManagedNode(**{"host": "127.0.0.1", "port": 7001})
-        )
+        await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7000}))
+        await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7001}))
+        await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7000}))
+        await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7001}))
         with pytest.raises(ConnectionError):
-            await pool.get_connection_by_node(
-                ManagedNode(**{"host": "127.0.0.1", "port": 7000})
-            )
+            await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7000}))
 
     async def test_max_connections_per_node_blocking(self, redis_cluster):
         pool = await self.get_pool(
             max_connections=2, max_connections_per_node=True, blocking=True, timeout=1
         )
-        await pool.get_connection_by_node(
-            ManagedNode(**{"host": "127.0.0.1", "port": 7000})
-        )
-        await pool.get_connection_by_node(
-            ManagedNode(**{"host": "127.0.0.1", "port": 7001})
-        )
-        await pool.get_connection_by_node(
-            ManagedNode(**{"host": "127.0.0.1", "port": 7000})
-        )
-        await pool.get_connection_by_node(
-            ManagedNode(**{"host": "127.0.0.1", "port": 7001})
-        )
+        await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7000}))
+        await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7001}))
+        await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7000}))
+        await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7001}))
         with pytest.raises(ConnectionError):
-            await pool.get_connection_by_node(
-                ManagedNode(**{"host": "127.0.0.1", "port": 7000})
-            )
+            await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7000}))
 
     async def test_max_connections_default_setting(self):
         pool = await self.get_pool(max_connections=None)
@@ -188,15 +152,9 @@ class TestConnectionPool:
 
     async def test_pool_disconnect(self):
         pool = await self.get_pool()
-        c1 = await pool.get_connection_by_node(
-            ManagedNode(**{"host": "127.0.0.1", "port": 7000})
-        )
-        c2 = await pool.get_connection_by_node(
-            ManagedNode(**{"host": "127.0.0.1", "port": 7001})
-        )
-        c3 = await pool.get_connection_by_node(
-            ManagedNode(**{"host": "127.0.0.1", "port": 7000})
-        )
+        c1 = await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7000}))
+        c2 = await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7001}))
+        c3 = await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7000}))
         pool.release(c3)
         pool.disconnect()
         assert not c1.is_connected
@@ -205,13 +163,9 @@ class TestConnectionPool:
 
     async def test_reuse_previously_released_connection(self):
         pool = await self.get_pool()
-        c1 = await pool.get_connection_by_node(
-            ManagedNode(**{"host": "127.0.0.1", "port": 7000})
-        )
+        c1 = await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7000}))
         pool.release(c1)
-        c2 = await pool.get_connection_by_node(
-            ManagedNode(**{"host": "127.0.0.1", "port": 7000})
-        )
+        c2 = await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7000}))
         assert c1 == c2
 
     async def test_repr_contains_db_info_tcp(self, host_ip):
@@ -248,9 +202,7 @@ class TestConnectionPool:
 
         with pytest.raises(RedisClusterException) as ex:
             await pool.get_connection_by_key(None)
-        assert str(ex.value).startswith(
-            "No way to dispatch this command to Redis Cluster."
-        ), True
+        assert str(ex.value).startswith("No way to dispatch this command to Redis Cluster."), True
 
     async def test_get_connection_by_slot(self):
         """
@@ -296,9 +248,7 @@ class TestConnectionPool:
 
         with pytest.raises(RedisClusterException) as ex:
             await pool.get_connection("GET")
-        assert str(ex.value).startswith(
-            "Only 'pubsub' commands can use get_connection()"
-        )
+        assert str(ex.value).startswith("Only 'pubsub' commands can use get_connection()")
 
     async def test_master_node_by_slot(self):
         pool = await self.get_pool(connection_kwargs={})
@@ -347,9 +297,7 @@ class TestConnectionPool:
 
 
 class TestReadOnlyConnectionPool:
-    async def get_pool(
-        self, connection_kwargs=None, max_connections=None, startup_nodes=None
-    ):
+    async def get_pool(self, connection_kwargs=None, max_connections=None, startup_nodes=None):
         startup_nodes = startup_nodes or [{"host": "127.0.0.1", "port": 7000}]
         connection_kwargs = connection_kwargs or {}
         pool = ClusterConnectionPool(
@@ -379,13 +327,9 @@ class TestReadOnlyConnectionPool:
     async def test_max_connections(self):
         pool = await self.get_pool(max_connections=6)
         for port in range(7000, 7006):
-            await pool.get_connection_by_node(
-                ManagedNode(**{"host": "127.0.0.1", "port": port})
-            )
+            await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": port}))
         with pytest.raises(ConnectionError):
-            await pool.get_connection_by_node(
-                ManagedNode(**{"host": "127.0.0.1", "port": 7000})
-            )
+            await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7000}))
 
 
 class TestConnectionPoolURLParsing:
@@ -412,9 +356,7 @@ class TestConnectionPoolURLParsing:
         }
 
     def test_quoted_hostname(self):
-        pool = ConnectionPool.from_url(
-            "redis://my %2F host %2B%3D+", decode_components=True
-        )
+        pool = ConnectionPool.from_url("redis://my %2F host %2B%3D+", decode_components=True)
         assert pool.connection_class == Connection
         assert pool.connection_kwargs == {
             "host": "my / host +=+",

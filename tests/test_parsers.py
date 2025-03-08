@@ -112,10 +112,7 @@ class TestPyParser:
 
     def test_bulk_string_undecodable(self, parser, decode):
         parser.feed(b"$6\r\n" + "世界".encode("utf-8") + b"\r\n")
-        assert (
-            parser.get_response(decode=True, encoding="big5")
-            == b"\xe4\xb8\x96\xe7\x95\x8c"
-        )
+        assert parser.get_response(decode=True, encoding="big5") == b"\xe4\xb8\x96\xe7\x95\x8c"
 
     def test_nil_verbatim_text(self, parser, decode):
         parser.feed(b"=-1\r\n")
@@ -136,9 +133,7 @@ class TestPyParser:
 
     def test_unknown_verbatim_text_type(self, parser, decode):
         parser.feed(b"=9\r\nrst:hello\r\n")
-        with pytest.raises(
-            InvalidResponse, match="Unexpected verbatim string of type b'rst'"
-        ):
+        with pytest.raises(InvalidResponse, match="Unexpected verbatim string of type b'rst'"):
             parser.get_response(
                 decode=decode,
                 encoding="latin-1",
@@ -341,9 +336,7 @@ class TestPyParser:
 
     def test_multi_container(self, parser, decode):
         # dict containing list and set
-        parser.feed(
-            b"%2\r\n$2\r\nco\r\n*1\r\n:1\r\n$2\r\nre\r\n~3\r\n:1\r\n:2\r\n:3\r\n"
-        )
+        parser.feed(b"%2\r\n$2\r\nco\r\n*1\r\n:1\r\n$2\r\nre\r\n~3\r\n:1\r\n:2\r\n:3\r\n")
         assert parser.get_response(
             decode=decode,
             encoding="latin-1",

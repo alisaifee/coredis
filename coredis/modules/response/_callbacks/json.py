@@ -13,9 +13,7 @@ class JsonCallback(ResponseCallback[ResponseType, ResponseType, JsonType]):
         if isinstance(response, (bytes, str)):
             deser = json.loads(response)
         elif isinstance(response, list):
-            deser = [
-                json.loads(e) if isinstance(e, (bytes, str)) else e for e in response
-            ]
+            deser = [json.loads(e) if isinstance(e, (bytes, str)) else e for e in response]
         else:
             deser = response
         return cast(JsonType, deser)  # alas we lie.

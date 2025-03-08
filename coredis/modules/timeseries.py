@@ -81,9 +81,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         retention: Optional[Union[int, timedelta]] = None,
-        encoding: Optional[
-            Literal[PureToken.COMPRESSED, PureToken.UNCOMPRESSED]
-        ] = None,
+        encoding: Optional[Literal[PureToken.COMPRESSED, PureToken.UNCOMPRESSED]] = None,
         chunk_size: Optional[int] = None,
         duplicate_policy: Optional[
             Literal[
@@ -224,9 +222,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         timestamp: Union[int, datetime, StringT],
         value: Union[int, float],
         retention: Optional[int] = None,
-        encoding: Optional[
-            Literal[PureToken.COMPRESSED, PureToken.UNCOMPRESSED]
-        ] = None,
+        encoding: Optional[Literal[PureToken.COMPRESSED, PureToken.UNCOMPRESSED]] = None,
         chunk_size: Optional[int] = None,
         duplicate_policy: Optional[
             Literal[
@@ -858,9 +854,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
             "empty": {"version_introduced": "1.8.0"},
         },
         module=MODULE,
-        cluster=ClusterCommandConfig(
-            route=NodeFlag.PRIMARIES, combine=ClusterMergeTimeSeries()
-        ),
+        cluster=ClusterCommandConfig(route=NodeFlag.PRIMARIES, combine=ClusterMergeTimeSeries()),
         flags={CommandFlag.READONLY},
     )
     async def mrevrange(
@@ -1071,9 +1065,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def info(
-        self, key: KeyT, debug: Optional[bool] = None
-    ) -> Dict[AnyStr, ResponseType]:
+    async def info(self, key: KeyT, debug: Optional[bool] = None) -> Dict[AnyStr, ResponseType]:
         """
         Return information and statistics for a time series.
 

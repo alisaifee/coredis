@@ -120,9 +120,7 @@ class ConnectionPool:
                         url_options[name] = parser(value[0])
                     except (TypeError, ValueError):
                         warnings.warn(
-                            UserWarning(
-                                "Invalid value for `%s` in connection URL." % name
-                            )
+                            UserWarning("Invalid value for `%s` in connection URL." % name)
                         )
                 else:
                     url_options[name] = value[0]
@@ -172,9 +170,7 @@ class ConnectionPool:
             if parsed_url.scheme == "rediss":
                 keyfile = cast(Optional[str], url_options.pop("ssl_keyfile", None))
                 certfile = cast(Optional[str], url_options.pop("ssl_certfile", None))
-                check_hostname = query_param_to_bool(
-                    url_options.pop("ssl_check_hostname", None)
-                )
+                check_hostname = query_param_to_bool(url_options.pop("ssl_check_hostname", None))
                 cert_reqs = cast(
                     Optional[Union[str, VerifyMode]],
                     url_options.pop("ssl_cert_reqs", None),
@@ -391,9 +387,7 @@ class BlockingConnectionPool(ConnectionPool):
             await asyncio.sleep(self.idle_check_interval)
 
     def reset(self) -> None:
-        self._pool: asyncio.Queue[Optional[Connection]] = self.queue_class(
-            self.max_connections
-        )
+        self._pool: asyncio.Queue[Optional[Connection]] = self.queue_class(self.max_connections)
 
         while True:
             try:

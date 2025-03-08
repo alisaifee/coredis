@@ -8,13 +8,13 @@ import json
 import os
 import re  # noqa
 import shutil
+import subprocess
 import typing  # noqa
 from pathlib import Path
 from typing import *  # noqa
 
 import click
 import inflect
-from black import FileMode, WriteBack, format_file_in_place
 from jinja2 import Environment
 from packaging import version
 
@@ -402,6 +402,8 @@ MERGE_MAPPING = {
 
 inflection_engine = inflect.engine()
 
+def format_file_in_place(path: str) -> None:
+    subprocess.check_output(["ruff", "format", path])
 
 def command_enum(command_name) -> str:
     return "CommandName." + command_name.upper().replace(" ", "_").replace("-", "_")
@@ -2002,7 +2004,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     {{ token[0].upper().replace("-", "_").replace("/", "_").replace(":", "_") }} = b"{{token[1]}}"
 
     {% endfor %}
-    
+
 
 class PrefixToken(CaseAndEncodingInsensitiveEnum):
     \"\"\"
@@ -2024,9 +2026,7 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
 
     result = t.render(pure_tokens=pure_tokens, prefix_tokens=prefix_tokens)
     open(path, "w").write(result)
-    format_file_in_place(
-        Path(path), fast=False, mode=FileMode(), write_back=WriteBack.YES
-    )
+    format_file_in_place(path)
     print(f"Generated token enum at {path}")
 
 
@@ -2134,9 +2134,7 @@ class CommandFlag(enum.Enum):
 
     result = t.render(commands=commands, sort_fn=sort_fn)
     open(path, "w").write(result)
-    format_file_in_place(
-        Path(path), fast=False, mode=FileMode(), write_back=WriteBack.YES
-    )
+    format_file_in_place(path)
     print(f"Generated command enum at {path}")
 
 
@@ -2320,7 +2318,7 @@ def implementation(ctx, command, group, module, expr, debug=False):
 
         {% if module %}
         return await self.execute_module_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}, *pieces)
-        {% else %} 
+        {% else %}
         return await self.execute_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}, *pieces)
         {% endif %}
 """
@@ -2509,12 +2507,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     response = response.replace("coredis.nodemanager.", "")
     with open(path, "w") as file:
         file.write(response)
-    format_file_in_place(
-        Path(path),
-        fast=False,
-        mode=FileMode(),
-        write_back=WriteBack.YES,
-    )
+    format_file_in_place(path)
 
 
 @click.option("--path", default="coredis/commands/_key_spec.py")
@@ -2820,12 +2813,7 @@ class KeySpec:
     response = tmpl.render(all=all, readonly=readonly)
     with open(path, "w") as file:
         file.write(response)
-    format_file_in_place(
-        Path(path),
-        fast=False,
-        mode=FileMode(),
-        write_back=WriteBack.YES,
-    )
+    format_file_in_place(path)
 
 
 if __name__ == "__main__":

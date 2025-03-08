@@ -23,17 +23,13 @@ from coredis.typing import (
 
 
 class TimeCallback(ResponseCallback[List[AnyStr], List[AnyStr], datetime.datetime]):
-    def transform(
-        self, response: List[AnyStr], **options: Optional[ValueT]
-    ) -> datetime.datetime:
+    def transform(self, response: List[AnyStr], **options: Optional[ValueT]) -> datetime.datetime:
         return datetime.datetime.fromtimestamp(int(response[0])) + datetime.timedelta(
             microseconds=int(response[1]) / 1000.0
         )
 
 
-class SlowlogCallback(
-    ResponseCallback[ResponseType, ResponseType, Tuple[SlowLogInfo, ...]]
-):
+class SlowlogCallback(ResponseCallback[ResponseType, ResponseType, Tuple[SlowLogInfo, ...]]):
     def transform(
         self, response: ResponseType, **options: Optional[ValueT]
     ) -> Tuple[SlowLogInfo, ...]:
@@ -70,9 +66,7 @@ class ClientInfoCallback(ResponseCallback[ResponseType, ResponseType, ClientInfo
         "redir",
     }
 
-    def transform(
-        self, response: ResponseType, **options: Optional[ValueT]
-    ) -> ClientInfo:
+    def transform(self, response: ResponseType, **options: Optional[ValueT]) -> ClientInfo:
         decoded_response = nativestr(response)
         pairs = [pair.split("=", 1) for pair in decoded_response.strip().split(" ")]
 
@@ -85,18 +79,14 @@ class ClientInfoCallback(ResponseCallback[ResponseType, ResponseType, ClientInfo
         return info
 
 
-class ClientListCallback(
-    ResponseCallback[ResponseType, ResponseType, Tuple[ClientInfo, ...]]
-):
+class ClientListCallback(ResponseCallback[ResponseType, ResponseType, Tuple[ClientInfo, ...]]):
     def transform(
         self, response: ResponseType, **options: Optional[ValueT]
     ) -> Tuple[ClientInfo, ...]:
         return tuple(ClientInfoCallback()(c) for c in response.splitlines())
 
 
-class DebugCallback(
-    ResponseCallback[ResponseType, ResponseType, Dict[str, Union[str, int]]]
-):
+class DebugCallback(ResponseCallback[ResponseType, ResponseType, Dict[str, Union[str, int]]]):
     INT_FIELDS: ClassVar = {"refcount", "serializedlength", "lru", "lru_seconds_idle"}
 
     def transform(
@@ -127,9 +117,7 @@ class InfoCallback(
         Dict[str, ResponseType],
     ]
 ):
-    def transform(
-        self, response: StringT, **options: Optional[ValueT]
-    ) -> Dict[str, ResponseType]:
+    def transform(self, response: StringT, **options: Optional[ValueT]) -> Dict[str, ResponseType]:
         """Parses the result of Redis's INFO command into a Python dict"""
 
         info: Dict[str, Any] = {}
@@ -185,9 +173,7 @@ class InfoCallback(
 
 
 class RoleCallback(ResponseCallback[ResponseType, ResponseType, RoleInfo]):
-    def transform(
-        self, response: ResponseType, **options: Optional[ValueT]
-    ) -> RoleInfo:
+    def transform(self, response: ResponseType, **options: Optional[ValueT]) -> RoleInfo:
         role = nativestr(response[0])
 
         def _parse_master(response: Any) -> Any:
@@ -196,9 +182,7 @@ class RoleCallback(ResponseCallback[ResponseType, ResponseType, RoleInfo]):
 
             for replica in replicas:
                 host, port, offset = replica
-                res["slaves"].append(
-                    {"host": host, "port": int(port), "offset": int(offset)}
-                )
+                res["slaves"].append({"host": host, "port": int(port), "offset": int(offset)})
 
             return res
 
@@ -231,9 +215,7 @@ class LatencyHistogramCallback(
         histogram = flat_pairs_to_dict(response)
         for key, value in histogram.items():
             histogram[key] = EncodingInsensitiveDict(flat_pairs_to_dict(value))
-            histogram[key]["histogram_usec"] = flat_pairs_to_dict(
-                histogram[key]["histogram_usec"]
-            )
+            histogram[key]["histogram_usec"] = flat_pairs_to_dict(histogram[key]["histogram_usec"])
         return histogram
 
 

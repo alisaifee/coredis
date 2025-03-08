@@ -185,8 +185,7 @@ class Client(
             connection_pool.connection_kwargs.get("decode_responses", decode_responses)
         )
         connection_protocol_version = (
-            connection_pool.connection_kwargs.get("protocol_version")
-            or protocol_version
+            connection_pool.connection_kwargs.get("protocol_version") or protocol_version
         )
         assert connection_protocol_version in {
             2,
@@ -196,15 +195,15 @@ class Client(
         self.server_version: Optional[Version] = None
         self.verify_version = verify_version
         self.__noreply = noreply
-        self._noreplycontext: contextvars.ContextVar[Optional[bool]] = (
-            contextvars.ContextVar("noreply", default=None)
+        self._noreplycontext: contextvars.ContextVar[Optional[bool]] = contextvars.ContextVar(
+            "noreply", default=None
         )
         self._waitcontext: contextvars.ContextVar[Optional[Tuple[int, int]]] = (
             contextvars.ContextVar("wait", default=None)
         )
-        self._waitaof_context: contextvars.ContextVar[
-            Optional[Tuple[int, int, int]]
-        ] = contextvars.ContextVar("waitaof", default=None)
+        self._waitaof_context: contextvars.ContextVar[Optional[Tuple[int, int, int]]] = (
+            contextvars.ContextVar("waitaof", default=None)
+        )
         self.retry_policy = retry_policy
         self._module_info: Optional[Dict[str, version.Version]] = None
         self.callback_storage = defaultdict(lambda: {})
@@ -262,22 +261,16 @@ class Client(
         wait = self._waitcontext.get()
         if wait and wait[0] > 0:
 
-            def check_wait(
-                wait: Tuple[int, int], response: asyncio.Future[ResponseType]
-            ) -> None:
+            def check_wait(wait: Tuple[int, int], response: asyncio.Future[ResponseType]) -> None:
                 exc = response.exception()
                 if exc:
                     maybe_wait.set_exception(exc)
                 elif not cast(int, response.result()) >= wait[0]:
-                    maybe_wait.set_exception(
-                        ReplicationError(command, wait[0], wait[1])
-                    )
+                    maybe_wait.set_exception(ReplicationError(command, wait[0], wait[1]))
                 else:
                     maybe_wait.set_result(None)
 
-            request = await connection.create_request(
-                CommandName.WAIT, *wait, decode=False
-            )
+            request = await connection.create_request(CommandName.WAIT, *wait, decode=False)
             request.add_done_callback(functools.partial(check_wait, wait))
         else:
             maybe_wait.set_result(None)
@@ -303,9 +296,7 @@ class Client(
                     else:
                         maybe_wait.set_result(None)
 
-            request = await connection.create_request(
-                CommandName.WAITAOF, *waitaof, decode=False
-            )
+            request = await connection.create_request(CommandName.WAITAOF, *waitaof, decode=False)
             request.add_done_callback(functools.partial(check_wait, waitaof))
         else:
             maybe_wait.set_result(None)
@@ -351,9 +342,7 @@ class Client(
         cursor = None
 
         while cursor != 0:
-            cursor, data = await self.scan(
-                cursor=cursor, match=match, count=count, type_=type_
-            )
+            cursor, data = await self.scan(cursor=cursor, match=match, count=count, type_=type_)
 
             for item in data:
                 yield item
@@ -371,9 +360,7 @@ class Client(
         cursor = None
 
         while cursor != 0:
-            cursor, data = await self.sscan(
-                key, cursor=cursor, match=match, count=count
-            )
+            cursor, data = await self.sscan(key, cursor=cursor, match=match, count=count)
 
             for item in data:
                 yield item
@@ -401,9 +388,7 @@ class Client(
         match: Optional[StringT] = None,
         count: Optional[int] = None,
         novalues: Optional[Literal[True]] = None,
-    ) -> Union[
-        AsyncGenerator[Tuple[AnyStr, AnyStr], None], AsyncGenerator[AnyStr, None]
-    ]:
+    ) -> Union[AsyncGenerator[Tuple[AnyStr, AnyStr], None], AsyncGenerator[AnyStr, None]]:
         """
         Make an iterator using the HSCAN command so that the client doesn't
         need to remember the cursor position.
@@ -418,9 +403,7 @@ class Client(
                 for item in fields:
                     yield item
             else:
-                cursor, data = await self.hscan(
-                    key, cursor=cursor, match=match, count=count
-                )
+                cursor, data = await self.hscan(key, cursor=cursor, match=match, count=count)
 
                 for pair in data.items():
                     yield pair
@@ -680,9 +663,7 @@ class Redis(Client[AnyStr]):
         noreply: bool = False,
         noevict: bool = False,
         notouch: bool = False,
-        retry_policy: RetryPolicy = ConstantRetryPolicy(
-            (ConnectionError, TimeoutError), 2, 0.01
-        ),
+        retry_policy: RetryPolicy = ConstantRetryPolicy((ConnectionError, TimeoutError), 2, 0.01),
         **kwargs: Any,
     ) -> None:
         """
@@ -839,11 +820,11 @@ class Redis(Client[AnyStr]):
             **kwargs,
         )
         self.cache = cache
-        self._decodecontext: contextvars.ContextVar[Optional[bool],] = (
-            contextvars.ContextVar("decode", default=None)
+        self._decodecontext: contextvars.ContextVar[Optional[bool],] = contextvars.ContextVar(
+            "decode", default=None
         )
-        self._encodingcontext: contextvars.ContextVar[Optional[str],] = (
-            contextvars.ContextVar("decode", default=None)
+        self._encodingcontext: contextvars.ContextVar[Optional[str],] = contextvars.ContextVar(
+            "decode", default=None
         )
 
     @classmethod
@@ -892,9 +873,7 @@ class Redis(Client[AnyStr]):
         noreply: bool = False,
         noevict: bool = False,
         notouch: bool = False,
-        retry_policy: RetryPolicy = ConstantRetryPolicy(
-            (ConnectionError, TimeoutError), 2, 0.01
-        ),
+        retry_policy: RetryPolicy = ConstantRetryPolicy((ConnectionError, TimeoutError), 2, 0.01),
         **kwargs: Any,
     ) -> RedisT:
         """
@@ -992,9 +971,7 @@ class Redis(Client[AnyStr]):
             and connection.tracking_client_id != self.cache.get_client_id(connection)
         ):
             self.cache.reset()
-            await connection.update_tracking_client(
-                True, self.cache.get_client_id(connection)
-            )
+            await connection.update_tracking_client(True, self.cache.get_client_id(connection))
         try:
             if self.cache and command not in READONLY_COMMANDS:
                 self.cache.invalidate(*KeySpec.extract_keys(command, *args))
@@ -1014,9 +991,7 @@ class Redis(Client[AnyStr]):
             if self.noreply:
                 return None  # type: ignore
             if isinstance(callback, AsyncPreProcessingCallback):
-                await callback.pre_process(
-                    self, reply, version=self.protocol_version, **options
-                )
+                await callback.pre_process(self, reply, version=self.protocol_version, **options)
             return callback(
                 reply,
                 version=self.protocol_version,
@@ -1042,9 +1017,7 @@ class Redis(Client[AnyStr]):
 
     @contextlib.contextmanager
     @versionadded(version="4.8.0")
-    def decoding(
-        self, mode: bool, encoding: Optional[str] = None
-    ) -> Iterator[Redis[Any]]:
+    def decoding(self, mode: bool, encoding: Optional[str] = None) -> Iterator[Redis[Any]]:
         """
         Context manager to temporarily change the decoding behavior
         of the client

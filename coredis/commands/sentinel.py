@@ -117,9 +117,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SENTINEL_MASTER,
     )
-    async def sentinel_master(
-        self, service_name: StringT
-    ) -> Dict[str, Union[int, bool, str]]:
+    async def sentinel_master(self, service_name: StringT) -> Dict[str, Union[int, bool, str]]:
         """Returns a dictionary containing the specified masters state."""
 
         return await self.execute_command(
@@ -139,9 +137,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SENTINEL_MONITOR,
     )
-    async def sentinel_monitor(
-        self, name: ValueT, ip: ValueT, port: int, quorum: int
-    ) -> bool:
+    async def sentinel_monitor(self, name: ValueT, ip: ValueT, port: int, quorum: int) -> bool:
         """Adds a new master to Sentinel to be monitored"""
 
         return await self.execute_command(

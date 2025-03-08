@@ -109,9 +109,7 @@ async def assert_moved_redirection_on_slave(sr, connection_pool_cls, cluster_obj
             port=7000,
             server_type="primary",
         )
-        with patch.object(
-            connection_pool_cls, "get_primary_node_by_slots"
-        ) as return_master_mock:
+        with patch.object(connection_pool_cls, "get_primary_node_by_slots") as return_master_mock:
             return_master_mock.return_value = master_value
             assert await cluster_obj.get("foo16706") == "foo"
             assert return_slave_mock.call_count == 1
@@ -125,9 +123,7 @@ async def test_moved_redirection_on_slave_with_default_client(sr):
     await assert_moved_redirection_on_slave(
         sr,
         ClusterConnectionPool,
-        RedisCluster(
-            host="127.0.0.1", port=7000, reinitialize_steps=1, decode_responses=True
-        ),
+        RedisCluster(host="127.0.0.1", port=7000, reinitialize_steps=1, decode_responses=True),
     )
 
 
@@ -183,9 +179,7 @@ async def test_access_correct_slave_with_readonly_mode_client(sr):
             assert "foo" == await readonly_client.get("foo16706")
 
 
-@pytest.mark.parametrize(
-    "cluster_remap_keyslots", [("a{fu}", "b{fu}", "c{bar}", "d{bar}")]
-)
+@pytest.mark.parametrize("cluster_remap_keyslots", [("a{fu}", "b{fu}", "c{bar}", "d{bar}")])
 async def test_slot_moved_redirection(redis_cluster, cluster_remap_keyslots):
     await redis_cluster.set("a{fu}", 1)
     assert "1" == await redis_cluster.get("a{fu}")
@@ -196,12 +190,8 @@ async def test_slot_moved_redirection(redis_cluster, cluster_remap_keyslots):
     assert 0 == await redis_cluster.exists(["a{fu}", "b{fu}", "c{bar}", "d{bar}"])
 
 
-@pytest.mark.parametrize(
-    "cluster_remap_keyslots", [("a{fu}", "b{fu}", "c{bar}", "d{bar}")]
-)
-async def test_slot_moved_redirection_non_atomic_multi_node(
-    redis_cluster, cluster_remap_keyslots
-):
+@pytest.mark.parametrize("cluster_remap_keyslots", [("a{fu}", "b{fu}", "c{bar}", "d{bar}")])
+async def test_slot_moved_redirection_non_atomic_multi_node(redis_cluster, cluster_remap_keyslots):
     assert 0 == await redis_cluster.exists(["a{fu}", "b{fu}", "c{bar}", "d{bar}"])
     assert await redis_cluster.set("a{fu}", 1)
     assert 1 == await redis_cluster.exists(["a{fu}", "b{fu}", "c{bar}", "d{bar}"])

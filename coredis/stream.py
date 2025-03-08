@@ -90,17 +90,13 @@ class Consumer(Generic[AnyStr]):
 
         if isinstance(self.client, coredis.client.RedisCluster):
             return [
-                {
-                    stream: self.state[stream].get("identifier", None)
-                    or self.DEFAULT_START_ID
-                }
+                {stream: self.state[stream].get("identifier", None) or self.DEFAULT_START_ID}
                 for stream in self.streams
             ]
         else:
             return [
                 {
-                    stream: self.state[stream].get("identifier", None)
-                    or self.DEFAULT_START_ID
+                    stream: self.state[stream].get("identifier", None) or self.DEFAULT_START_ID
                     for stream in self.streams
                 }
             ]
@@ -117,18 +113,14 @@ class Consumer(Generic[AnyStr]):
                 if info:
                     last_entry = info["last-entry"]
                     if last_entry:
-                        self.state[stream].setdefault(
-                            "identifier", last_entry.identifier
-                        )
+                        self.state[stream].setdefault("identifier", last_entry.identifier)
             except ResponseError:
                 pass
             self._initialized_streams[stream] = True
         self._initialized = True
         return self
 
-    async def add_stream(
-        self, stream: StringT, identifier: Optional[StringT] = None
-    ) -> bool:
+    async def add_stream(self, stream: StringT, identifier: Optional[StringT] = None) -> bool:
         """
         Adds a new stream identifier to this consumer
 
@@ -182,11 +174,7 @@ class Consumer(Generic[AnyStr]):
                     await self.client.xread(
                         chunk,
                         count=self.buffer_size + 1,
-                        block=(
-                            self.timeout
-                            if (self.timeout and self.timeout > 0)
-                            else None
-                        ),
+                        block=(self.timeout if (self.timeout and self.timeout > 0) else None),
                     )
                     or {}
                 )
@@ -314,9 +302,7 @@ class GroupConsumer(Consumer[AnyStr]):
         return self
 
     @versionadded(version="4.12.0")
-    async def add_stream(
-        self, stream: StringT, identifier: Optional[StringT] = ">"
-    ) -> bool:
+    async def add_stream(self, stream: StringT, identifier: Optional[StringT] = ">") -> bool:
         """
         Adds a new stream identifier to this consumer
 
@@ -360,11 +346,7 @@ class GroupConsumer(Consumer[AnyStr]):
                         self.group,
                         self.consumer,
                         count=self.buffer_size + 1,
-                        block=(
-                            self.timeout
-                            if (self.timeout and self.timeout > 0)
-                            else None
-                        ),
+                        block=(self.timeout if (self.timeout and self.timeout > 0) else None),
                         noack=self.auto_acknowledge,
                         streams=chunk,
                     )

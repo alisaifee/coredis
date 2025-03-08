@@ -137,9 +137,7 @@ class QueryCallback(
                     [
                         k[0]
                         for k in (
-                            await client.graph.ro_query(
-                                self.graph, f"CALL {PROCEDURE_CALLS[type]}"
-                            )
+                            await client.graph.ro_query(self.graph, f"CALL {PROCEDURE_CALLS[type]}")
                         ).result_set
                     ],
                 )
@@ -221,16 +219,12 @@ class QueryCallback(
 
 
 class GraphSlowLogCallback(
-    ResponseCallback[
-        ResponseType, ResponseType, Union[Tuple[GraphSlowLogInfo, ...], bool]
-    ]
+    ResponseCallback[ResponseType, ResponseType, Union[Tuple[GraphSlowLogInfo, ...], bool]]
 ):
     def transform(
         self, response: ResponseType, **kwargs: Optional[ValueT]
     ) -> Union[Tuple[GraphSlowLogInfo, ...], bool]:
-        return tuple(
-            GraphSlowLogInfo(int(k[0]), k[1], k[2], float(k[3])) for k in response
-        )
+        return tuple(GraphSlowLogInfo(int(k[0]), k[1], k[2], float(k[3])) for k in response)
 
 
 class ConfigGetCallback(

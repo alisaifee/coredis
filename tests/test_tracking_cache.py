@@ -66,9 +66,7 @@ class CommonExamples:
             (90, 25),
         ],
     )
-    async def test_confidence(
-        self, client, cloner, mocker, _s, confidence, expectation
-    ):
+    async def test_confidence(self, client, cloner, mocker, _s, confidence, expectation):
         cache = self.cache(confidence=confidence, max_size_bytes=-1)
         cached = await cloner(client, cache=cache)
         [await client.set(f"fubar{i}", i) for i in range(100)]
@@ -215,15 +213,10 @@ class TestProxyInvalidatingCache(CommonExamples):
 class TestClusterProxyInvalidatingCache(CommonExamples):
     async def test_uninitialized_cache(self, client, cloner, _s):
         cache = self.cache(max_keys=1, max_size_bytes=-1)
-        assert not cache.get_client_id(
-            await client.connection_pool.get_random_connection()
-        )
+        assert not cache.get_client_id(await client.connection_pool.get_random_connection())
         assert cache.confidence == 100
         _ = await cloner(client, cache=cache)
-        assert (
-            cache.get_client_id(await client.connection_pool.get_random_connection())
-            > 0
-        )
+        assert cache.get_client_id(await client.connection_pool.get_random_connection()) > 0
 
     async def test_single_entry_cache_tracker_disconnected(self, client, cloner, _s):
         cache = self.cache(max_keys=1, max_size_bytes=-1)
@@ -233,10 +226,7 @@ class TestClusterProxyInvalidatingCache(CommonExamples):
         await asyncio.sleep(0.2)
         assert await cached.get("fubar") == _s("1")
         await client.incr("fubar")
-        [
-            ncache.connection.disconnect()
-            for ncache in cache.instance.node_caches.values()
-        ]
+        [ncache.connection.disconnect() for ncache in cache.instance.node_caches.values()]
         await asyncio.sleep(0.2)
         assert await cached.get("fubar") == _s("2")
 
@@ -294,15 +284,10 @@ class TestClusterInvalidatingCache(CommonExamples):
 
     async def test_uninitialized_cache(self, client, cloner, _s):
         cache = self.cache(max_keys=1, max_size_bytes=-1)
-        assert not cache.get_client_id(
-            await client.connection_pool.get_random_connection()
-        )
+        assert not cache.get_client_id(await client.connection_pool.get_random_connection())
         assert cache.confidence == 100
         _ = await cloner(client, cache=cache)
-        assert (
-            cache.get_client_id(await client.connection_pool.get_random_connection())
-            > 0
-        )
+        assert cache.get_client_id(await client.connection_pool.get_random_connection()) > 0
 
     async def test_single_entry_cache_tracker_disconnected(self, client, cloner, _s):
         cache = self.cache(max_keys=1, max_size_bytes=-1)

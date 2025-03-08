@@ -143,9 +143,7 @@ class SentinelsStateCallback(
     def transform(
         self, response: List[ResponseType], **options: Optional[ValueT]
     ) -> Tuple[Dict[str, Union[str, bool, int]], ...]:
-        return tuple(
-            parse_sentinel_state([nativestr(i) for i in item]) for item in response
-        )
+        return tuple(parse_sentinel_state([nativestr(i) for i in item]) for item in response)
 
     def transform_3(
         self, response: List[ResponseType], **options: Optional[ValueT]

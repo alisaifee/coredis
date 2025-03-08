@@ -134,9 +134,7 @@ class Graph(ModuleGroup[AnyStr]):
         return await self.execute_module_command(
             CommandName.GRAPH_DELETE,
             graph,
-            callback=SimpleStringCallback(
-                prefix_match=True, ok_values={"Graph removed"}
-            ),
+            callback=SimpleStringCallback(prefix_match=True, ok_values={"Graph removed"}),
         )
 
     @module_command(

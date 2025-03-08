@@ -81,18 +81,10 @@ class TestHash:
         await client.hset("a", {"1": 1, "2": 2, "3": 3, "4": 4})
         assert (1,) == await client.hexpireat("a", now_int + 5, ["1"])
         assert (-2,) == await client.hexpireat("missing", now_int + 1, ["missing"])
-        assert (0, 1, -2) == await client.hexpireat(
-            "a", now_int + 5, ["1", "3", "5"], PureToken.NX
-        )
-        assert (1, 1, -2) == await client.hexpireat(
-            "a", now_int + 5, ["1", "3", "5"], PureToken.XX
-        )
-        assert (0, 0, -2) == await client.hexpireat(
-            "a", now_int + 1, ["1", "3", "5"], PureToken.GT
-        )
-        assert (1, -2) == await client.hexpireat(
-            "a", now_int + 1, ["4", "5"], PureToken.LT
-        )
+        assert (0, 1, -2) == await client.hexpireat("a", now_int + 5, ["1", "3", "5"], PureToken.NX)
+        assert (1, 1, -2) == await client.hexpireat("a", now_int + 5, ["1", "3", "5"], PureToken.XX)
+        assert (0, 0, -2) == await client.hexpireat("a", now_int + 1, ["1", "3", "5"], PureToken.GT)
+        assert (1, -2) == await client.hexpireat("a", now_int + 1, ["4", "5"], PureToken.LT)
         assert (2, 2, -2) == await client.hexpireat(
             "a",
             now - datetime.timedelta(seconds=1),
@@ -122,9 +114,7 @@ class TestHash:
         assert (-2,) == await client.httl("missing", ["1"])
         assert (-1,) == await client.httl("a", ["1"])
         await client.hexpire("a", 5, ["1"])
-        assert (pytest.approx(5, abs=1), -1, -2) == await client.httl(
-            "a", ["1", "2", "5"]
-        )
+        assert (pytest.approx(5, abs=1), -1, -2) == await client.httl("a", ["1", "2", "5"])
 
     @pytest.mark.min_server_version("7.4.0")
     @pytest.mark.nodragonfly
@@ -132,15 +122,9 @@ class TestHash:
         await client.hset("a", {"1": 1, "2": 2, "3": 3, "4": 4})
         assert (1,) == await client.hpexpire("a", 5000, ["1"])
         assert (-2,) == await client.hpexpire("missing", 1000, ["missing"])
-        assert (0, 1, -2) == await client.hpexpire(
-            "a", 5000, ["1", "3", "5"], PureToken.NX
-        )
-        assert (1, 1, -2) == await client.hpexpire(
-            "a", 5000, ["1", "3", "5"], PureToken.XX
-        )
-        assert (0, 0, -2) == await client.hpexpire(
-            "a", 1000, ["1", "3", "5"], PureToken.GT
-        )
+        assert (0, 1, -2) == await client.hpexpire("a", 5000, ["1", "3", "5"], PureToken.NX)
+        assert (1, 1, -2) == await client.hpexpire("a", 5000, ["1", "3", "5"], PureToken.XX)
+        assert (0, 0, -2) == await client.hpexpire("a", 1000, ["1", "3", "5"], PureToken.GT)
         assert (1, -2) == await client.hpexpire("a", 1000, ["4", "5"], PureToken.LT)
         assert (2, 2, -2) == await client.hpexpire(
             "a", datetime.timedelta(milliseconds=0), ["1", "3", "5"], PureToken.LT
@@ -165,9 +149,7 @@ class TestHash:
         assert (0, 0, -2) == await client.hpexpireat(
             "a", now_ms + 1000, ["1", "3", "5"], PureToken.GT
         )
-        assert (1, -2) == await client.hpexpireat(
-            "a", now_ms + 1000, ["4", "5"], PureToken.LT
-        )
+        assert (1, -2) == await client.hpexpireat("a", now_ms + 1000, ["4", "5"], PureToken.LT)
         assert (2, 2, -2) == await client.hpexpireat(
             "a",
             now - datetime.timedelta(milliseconds=1),
@@ -199,9 +181,7 @@ class TestHash:
         assert (-2,) == await client.hpttl("missing", ["1"])
         assert (-1,) == await client.hpttl("a", ["1"])
         await client.hpexpire("a", 5000, ["1"])
-        assert (pytest.approx(5000, abs=1000), -1, -2) == await client.hpttl(
-            "a", ["1", "2", "5"]
-        )
+        assert (pytest.approx(5000, abs=1000), -1, -2) == await client.hpttl("a", ["1", "2", "5"])
 
     @pytest.mark.min_server_version("7.4.0")
     @pytest.mark.nodragonfly
