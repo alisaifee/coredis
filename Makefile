@@ -15,13 +15,13 @@ NEXT_VERSION := 4.12.0
 
 coverage-docs:
 	rm -rf docs/source/compatibility.rst
-	PYTHONPATH=${CURDIR} python scripts/code_gen.py --debug=${DEBUG} --next-version=${NEXT_VERSION} coverage-doc
+	PYTHONPATH=${CURDIR} python -m scripts.code_gen. --debug=${DEBUG} --next-version=${NEXT_VERSION} coverage-doc
 
 templated-sources:
-	PYTHONPATH=${CURDIR} python scripts/code_gen.py token-enum
-	PYTHONPATH=${CURDIR} python scripts/code_gen.py command-constants
-	PYTHONPATH=${CURDIR} python scripts/code_gen.py cluster-key-extraction
-	PYTHONPATH=${CURDIR} python scripts/code_gen.py pipeline-stub
+	PYTHONPATH=${CURDIR} python -m scripts.code_gen token-enum
+	PYTHONPATH=${CURDIR} python -m scripts.code_gen command-constants
+	PYTHONPATH=${CURDIR} python -m scripts.code_gen cluster-key-extraction
+	PYTHONPATH=${CURDIR} python -m scripts.code_gen pipeline-stub
 
 benchmark:
 	./scripts/benchmark.sh

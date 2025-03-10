@@ -404,6 +404,7 @@ inflection_engine = inflect.engine()
 
 def format_file_in_place(path: str) -> None:
     subprocess.check_output(["ruff", "format", path])
+    subprocess.check_output(["ruff", "check", "--fix", path])
 
 def command_enum(command_name) -> str:
     return "CommandName." + command_name.upper().replace(" ", "_").replace("-", "_")
@@ -2418,20 +2419,15 @@ from typing import Any
 from wrapt import ObjectProxy
 
 from coredis import PureToken
-from coredis.client import Client, Redis, RedisCluster
+from coredis.client import Client, RedisCluster
 from coredis.commands.script import Script
-from coredis.pool import ClusterConnectionPool, ConnectionPool
 from coredis.typing import (
     AnyStr,
-    Callable,
     Dict,
     Generic,
-    Iterable,
     KeyT,
-    List,
     Literal,
     Mapping,
-    Node,
     Optional,
     Parameters,
     Set,
