@@ -47,7 +47,7 @@ For example::
     regular_client = coredis.Redis()
 
     # or in cluster mode
-    # cached_client = coredis.RedisCluster("localhost", 7000, cache=InvalidatingCache())
+    # cached_client = coredis.RedisCluster("localhost", 7000, cache=TrackingCache())
     # regular_client = coredis.RedisCluster("localhost", 7000)
 
     async def test():
