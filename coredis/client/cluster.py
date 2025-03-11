@@ -508,6 +508,7 @@ class RedisCluster(
         noevict: bool = ...,
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
+        cache: Optional[AbstractCache] = ...,
         **kwargs: Any,
     ) -> RedisClusterBytesT: ...
 
@@ -526,6 +527,7 @@ class RedisCluster(
         noevict: bool = ...,
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
+        cache: Optional[AbstractCache] = ...,
         **kwargs: Any,
     ) -> RedisClusterStringT: ...
 
@@ -542,6 +544,7 @@ class RedisCluster(
         noreply: bool = False,
         noevict: bool = False,
         notouch: bool = False,
+        cache: Optional[AbstractCache] = None,
         retry_policy: RetryPolicy = CompositeRetryPolicy(
             ConstantRetryPolicy((ClusterDownError,), 2, 0.1),
             ConstantRetryPolicy(
@@ -575,6 +578,7 @@ class RedisCluster(
                 verify_version=verify_version,
                 noreply=noreply,
                 retry_policy=retry_policy,
+                cache=cache,
                 connection_pool=ClusterConnectionPool.from_url(
                     url,
                     db=db,
@@ -594,6 +598,7 @@ class RedisCluster(
                 verify_version=verify_version,
                 noreply=noreply,
                 retry_policy=retry_policy,
+                cache=cache,
                 connection_pool=ClusterConnectionPool.from_url(
                     url,
                     db=db,

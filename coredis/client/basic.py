@@ -841,6 +841,7 @@ class Redis(Client[AnyStr]):
         noevict: bool = ...,
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
+        cache: Optional[AbstractCache] = ...,
         **kwargs: Any,
     ) -> RedisBytesT: ...
 
@@ -858,6 +859,7 @@ class Redis(Client[AnyStr]):
         noevict: bool = ...,
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
+        cache: Optional[AbstractCache] = ...,
         **kwargs: Any,
     ) -> RedisStringT: ...
 
@@ -874,6 +876,7 @@ class Redis(Client[AnyStr]):
         noevict: bool = False,
         notouch: bool = False,
         retry_policy: RetryPolicy = ConstantRetryPolicy((ConnectionError, TimeoutError), 2, 0.01),
+        cache: Optional[AbstractCache] = None,
         **kwargs: Any,
     ) -> RedisT:
         """
@@ -898,6 +901,7 @@ class Redis(Client[AnyStr]):
                 verify_version=verify_version,
                 noreply=noreply,
                 retry_policy=retry_policy,
+                cache=cache,
                 connection_pool=ConnectionPool.from_url(
                     url,
                     db=db,
@@ -916,6 +920,7 @@ class Redis(Client[AnyStr]):
                 verify_version=verify_version,
                 noreply=noreply,
                 retry_policy=retry_policy,
+                cache=cache,
                 connection_pool=ConnectionPool.from_url(
                     url,
                     db=db,
