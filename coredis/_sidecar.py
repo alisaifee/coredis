@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from coredis.connection import BaseConnection, Connection
 from coredis.exceptions import ConnectionError
-from coredis.typing import Optional, ResponseType, Set, Tuple, TypeVar
+from coredis.typing import Optional, ResponseType, TypeVar
 
 if TYPE_CHECKING:
     import coredis.client
@@ -22,9 +22,9 @@ class Sidecar:
     """
 
     def __init__(
-        self, push_message_types: Set[bytes], health_check_interval_seconds: int = 5
+        self, push_message_types: set[bytes], health_check_interval_seconds: int = 5
     ) -> None:
-        self._client: Optional[weakref.ReferenceType["coredis.client.Client[Any]"]] = None
+        self._client: Optional[weakref.ReferenceType[coredis.client.Client[Any]]] = None
         self.messages: asyncio.Queue[ResponseType] = asyncio.Queue()
         self.connection: Optional[Connection] = None
         self.client_id: Optional[int] = None
@@ -35,12 +35,12 @@ class Sidecar:
         self.last_checkin: float = 0
 
     @property
-    def client(self) -> "Optional[coredis.client.Client[Any]]":
+    def client(self) -> Optional[coredis.client.Client[Any]]:
         if self._client:
             return self._client()
         return None  # noqa
 
-    async def start(self: SidecarT, client: "coredis.client.Client[Any]") -> SidecarT:
+    async def start(self: SidecarT, client: coredis.client.Client[Any]) -> SidecarT:
         self._client = weakref.ref(client, lambda *_: self.stop())
         if not self.connection and self.client:
             self.connection = await self.client.connection_pool.get_connection()
@@ -54,7 +54,7 @@ class Sidecar:
             self.health_check_task = asyncio.create_task(self.__health_check())
         return self
 
-    def process_message(self, message: ResponseType) -> Tuple[ResponseType, ...]:
+    def process_message(self, message: ResponseType) -> tuple[ResponseType, ...]:
         return (message,)  # noqa
 
     def stop(self) -> None:

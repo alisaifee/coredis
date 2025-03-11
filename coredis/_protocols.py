@@ -15,8 +15,6 @@ from coredis.typing import (
     R,
     ResponseType,
     StringT,
-    Tuple,
-    Type,
     TypeVar,
     ValueT,
 )
@@ -68,14 +66,14 @@ class SupportsWatch(Protocol):  # noqa
 
     async def __aexit__(
         self,
-        exc_type: Optional[Type[BaseException]],
+        exc_type: Optional[type[BaseException]],
         exc_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> Awaitable[Optional[bool]]: ...
 
     async def watch(self, *keys: KeyT) -> bool: ...
 
-    async def execute(self, raise_on_error: bool = True) -> Tuple[object, ...]: ...
+    async def execute(self, raise_on_error: bool = True) -> tuple[object, ...]: ...
 
 
 @runtime_checkable

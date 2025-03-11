@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 from coredis.commands.constants import CommandName
 from coredis.config import Config
 from coredis.exceptions import CommandNotSupportedError, CommandSyntaxError
-from coredis.typing import Dict, Optional, Union
+from coredis.typing import Optional, Union
 
 if TYPE_CHECKING:
     import coredis.client
@@ -49,9 +49,9 @@ def normalized_time_milliseconds(value: Union[int, datetime.datetime]) -> int:
 async def check_version(
     instance: coredis.client.Client[Any],
     function_name: str,
-    command_details: "CommandDetails",
+    command_details: CommandDetails,
     deprecation_reason: Optional[str] = None,
-    kwargs: Dict[str, Any] = {},
+    kwargs: dict[str, Any] = {},
 ) -> None:
     if Config.optimized or not any(
         [

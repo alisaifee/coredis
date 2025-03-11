@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Hashable
 from io import BytesIO
-from typing import Hashable, Type, cast
+from typing import cast
 
 from coredis._protocols import ConnectionP
 from coredis._utils import b
@@ -34,17 +35,13 @@ from coredis.exceptions import (
     WrongTypeError,
 )
 from coredis.typing import (
-    Dict,
     Final,
     FrozenSet,
-    List,
     MutableSet,
     NamedTuple,
     Optional,
     ResponsePrimitive,
     ResponseType,
-    Set,
-    Tuple,
     Union,
 )
 
@@ -59,7 +56,7 @@ NOT_ENOUGH_DATA: Final[NotEnoughData] = NotEnoughData()
 class RESPNode:
     __slots__ = ("depth", "key", "node_type")
     depth: int
-    key: Union[ResponsePrimitive, Tuple[ResponsePrimitive, ...], FrozenSet[ResponsePrimitive]]
+    key: Union[ResponsePrimitive, tuple[ResponsePrimitive, ...], FrozenSet[ResponsePrimitive]]
     node_type: int
 
     def __init__(
@@ -68,7 +65,7 @@ class RESPNode:
         node_type: int,
         key: Union[
             ResponsePrimitive,
-            Tuple[ResponsePrimitive, ...],
+            tuple[ResponsePrimitive, ...],
             FrozenSet[ResponsePrimitive],
         ],
     ):
@@ -97,7 +94,7 @@ class ListNode(RESPNode):
     __slots__ = ("container",)
 
     def __init__(self, depth: int, node_type: int) -> None:
-        self.container: List[ResponseType] = []
+        self.container: list[ResponseType] = []
         super().__init__(depth, node_type, None)
 
     def append(self, item: ResponseType) -> None:
@@ -109,10 +106,10 @@ class DictNode(RESPNode):
     __slots__ = ("container",)
 
     def __init__(self, depth: int) -> None:
-        self.container: Dict[
+        self.container: dict[
             Union[
                 ResponsePrimitive,
-                Tuple[ResponsePrimitive, ...],
+                tuple[ResponsePrimitive, ...],
                 FrozenSet[ResponsePrimitive],
             ],
             ResponseType,
@@ -125,7 +122,7 @@ class DictNode(RESPNode):
             self.key = cast(
                 Union[
                     ResponsePrimitive,
-                    Tuple[ResponsePrimitive, ...],
+                    tuple[ResponsePrimitive, ...],
                     FrozenSet[ResponsePrimitive],
                 ],
                 self.ensure_hashable(item),
@@ -142,7 +139,7 @@ class SetNode(RESPNode):
         self.container: MutableSet[
             Union[
                 ResponsePrimitive,
-                Tuple[ResponsePrimitive, ...],
+                tuple[ResponsePrimitive, ...],
                 FrozenSet[ResponsePrimitive],
             ]
         ] = set()
@@ -157,7 +154,7 @@ class SetNode(RESPNode):
             cast(
                 Union[
                     ResponsePrimitive,
-                    Tuple[ResponsePrimitive, ...],
+                    tuple[ResponsePrimitive, ...],
                     FrozenSet[ResponsePrimitive],
                 ],
                 self.ensure_hashable(item),
@@ -175,7 +172,7 @@ class Parser:
     Interface between a connection and Unpacker
     """
 
-    EXCEPTION_CLASSES: Dict[str, Union[Type[RedisError], Dict[str, Type[RedisError]]]] = {
+    EXCEPTION_CLASSES: dict[str, Union[type[RedisError], dict[str, type[RedisError]]]] = {
         "ASK": AskError,
         "BUSYGROUP": StreamDuplicateConsumerGroupError,
         "CLUSTERDOWN": ClusterDownError,
@@ -208,7 +205,7 @@ class Parser:
         self.localbuffer: BytesIO = BytesIO(b"")
         self.bytes_read: int = 0
         self.bytes_written: int = 0
-        self.nodes: List[Union[ListNode, SetNode, DictNode]] = []
+        self.nodes: list[Union[ListNode, SetNode, DictNode]] = []
 
     def feed(self, data: bytes) -> None:
         self.localbuffer.seek(self.bytes_written)
@@ -240,7 +237,7 @@ class Parser:
         self,
         decode: bool,
         encoding: Optional[str] = None,
-        push_message_types: Optional[Set[bytes]] = None,
+        push_message_types: Optional[set[bytes]] = None,
     ) -> Union[NotEnoughData, ResponseType]:
         """
 

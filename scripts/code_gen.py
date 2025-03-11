@@ -124,7 +124,7 @@ REDIS_RETURN_ARGUMENT_TYPE_MAPPING = {
         "simple-string": AnyStr,
         "bulk-string": AnyStr,
         "string": AnyStr,
-        "array": Tuple,
+        "array": tuple,
         "double": Union[int, float],
         "unix-time": "datetime.datetime",
         "pure-token": bool,
@@ -149,10 +149,10 @@ REDIS_ARGUMENT_TYPE_OVERRIDES = {
     "COMMAND GETKEYS": {"arguments": ValueT},
     "COMMAND GETKEYSANDFLAGS": {"arguments": ValueT},
     "FUNCTION RESTORE": {"serialized_value": bytes},
-    "MSET": {"key_values": Dict[KeyT, ValueT]},
-    "MSETNX": {"key_values": Dict[KeyT, ValueT]},
-    "HMSET": {"field_values": Dict[StringT, ValueT]},
-    "HSET": {"field_values": Dict[StringT, ValueT]},
+    "MSET": {"key_values": dict[KeyT, ValueT]},
+    "MSETNX": {"key_values": dict[KeyT, ValueT]},
+    "HMSET": {"field_values": dict[StringT, ValueT]},
+    "HSET": {"field_values": dict[StringT, ValueT]},
     "MIGRATE": {"port": int},
     "RESTORE": {
         "serialized_value": bytes,
@@ -160,7 +160,7 @@ REDIS_ARGUMENT_TYPE_OVERRIDES = {
     },
     "SORT": {"gets": KeyT},
     "SORT_RO": {"gets": KeyT},
-    "XADD": {"field_values": Dict[StringT, ValueT], "threshold": Optional[int]},
+    "XADD": {"field_values": dict[StringT, ValueT], "threshold": Optional[int]},
     "XAUTOCLAIM": {"min_idle_time": Union[int, datetime.timedelta]},
     "XCLAIM": {
         "min_idle_time": Union[int, datetime.timedelta],
@@ -169,7 +169,7 @@ REDIS_ARGUMENT_TYPE_OVERRIDES = {
     "XREAD": {"streams": Mapping[ValueT, ValueT]},
     "XREADGROUP": {"streams": Mapping[ValueT, ValueT]},
     "XTRIM": {"threshold": int},
-    "ZADD": {"member_scores": Dict[StringT, float]},
+    "ZADD": {"member_scores": dict[StringT, float]},
     "ZCOUNT": {"min": Union[ValueT, float], "max": Union[ValueT, float]},
     "ZREVRANGE": {"min": Union[int, ValueT], "max": Union[int, ValueT]},
     "ZRANGE": {"start": Union[int, ValueT], "stop": Union[int, ValueT]},
@@ -205,29 +205,29 @@ IGNORED_ARGUMENTS = {
     "TS.MREVRANGE": ["filterExpr"],
 }
 REDIS_RETURN_OVERRIDES = {
-    "ACL USERS": Tuple[AnyStr, ...],
-    "ACL GETUSER": Dict[AnyStr, List[AnyStr]],
-    "ACL LIST": Tuple[AnyStr, ...],
-    "ACL LOG": Union[bool, Tuple[Dict[AnyStr, AnyStr], ...]],
-    "BZPOPMAX": Optional[Tuple[AnyStr, AnyStr, float]],
-    "BZPOPMIN": Optional[Tuple[AnyStr, AnyStr, float]],
-    "BZMPOP": Optional[Tuple[AnyStr, ScoredMembers]],
-    "CLIENT LIST": Tuple[ClientInfo, ...],
+    "ACL USERS": tuple[AnyStr, ...],
+    "ACL GETUSER": dict[AnyStr, list[AnyStr]],
+    "ACL LIST": tuple[AnyStr, ...],
+    "ACL LOG": Union[bool, tuple[dict[AnyStr, AnyStr], ...]],
+    "BZPOPMAX": Optional[tuple[AnyStr, AnyStr, float]],
+    "BZPOPMIN": Optional[tuple[AnyStr, AnyStr, float]],
+    "BZMPOP": Optional[tuple[AnyStr, ScoredMembers]],
+    "CLIENT LIST": tuple[ClientInfo, ...],
     "CLIENT INFO": ClientInfo,
     "CLUSTER BUMPEPOCH": AnyStr,
-    "CLUSTER INFO": Dict[str, str],
-    "CLUSTER LINKS": List[Dict[AnyStr, ResponseType]],
-    "CLUSTER NODES": List[ClusterNodeDetail],
-    "CLUSTER REPLICAS": List[ClusterNodeDetail],
-    "CLUSTER SHARDS": List[Dict[AnyStr, Union[List[ValueT], Mapping[AnyStr, ValueT]]]],
-    "CLUSTER SLAVES": List[ClusterNodeDetail],
-    "CLUSTER SLOTS": Dict[Tuple[int, int], Tuple[ClusterNode, ...]],
-    "COMMAND": Dict[str, Command],
-    "COMMAND DOCS": Dict[AnyStr, Dict],
-    "COMMAND GETKEYSANDFLAGS": Dict[AnyStr, Set[AnyStr]],
-    "COMMAND INFO": Dict[str, Command],
-    "COMMAND LIST": Set[AnyStr],
-    "CONFIG GET": Dict[AnyStr, AnyStr],
+    "CLUSTER INFO": dict[str, str],
+    "CLUSTER LINKS": list[dict[AnyStr, ResponseType]],
+    "CLUSTER NODES": list[ClusterNodeDetail],
+    "CLUSTER REPLICAS": list[ClusterNodeDetail],
+    "CLUSTER SHARDS": list[dict[AnyStr, Union[list[ValueT], Mapping[AnyStr, ValueT]]]],
+    "CLUSTER SLAVES": list[ClusterNodeDetail],
+    "CLUSTER SLOTS": dict[tuple[int, int], tuple[ClusterNode, ...]],
+    "COMMAND": dict[str, Command],
+    "COMMAND DOCS": dict[AnyStr, dict],
+    "COMMAND GETKEYSANDFLAGS": dict[AnyStr, set[AnyStr]],
+    "COMMAND INFO": dict[str, Command],
+    "COMMAND LIST": set[AnyStr],
+    "CONFIG GET": dict[AnyStr, AnyStr],
     "DUMP": bytes,
     "EXPIRETIME": "datetime.datetime",
     "EVAL": ResponseType,
@@ -238,31 +238,31 @@ REDIS_RETURN_OVERRIDES = {
     "FCALL_RO": ResponseType,
     "FUNCTION DUMP": bytes,
     "FUNCTION LOAD": AnyStr,
-    "FUNCTION STATS": Dict[
-        AnyStr, Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]
+    "FUNCTION STATS": dict[
+        AnyStr, Union[AnyStr, dict[AnyStr, dict[AnyStr, ResponsePrimitive]]]
     ],
-    "FUNCTION LIST": Dict[str, LibraryDefinition],
+    "FUNCTION LIST": dict[str, LibraryDefinition],
     "GEODIST": Optional[float],
-    "GEOPOS": Tuple[Optional[GeoCoordinates], ...],
-    "GEOSEARCH": Union[int, Tuple[Union[AnyStr, GeoSearchResult], ...]],
-    "GEORADIUSBYMEMBER": Union[int, Tuple[Union[AnyStr, GeoSearchResult], ...]],
-    "GEORADIUS": Union[int, Tuple[Union[AnyStr, GeoSearchResult], ...]],
-    "HELLO": Dict[AnyStr, AnyStr],
+    "GEOPOS": tuple[Optional[GeoCoordinates], ...],
+    "GEOSEARCH": Union[int, tuple[Union[AnyStr, GeoSearchResult], ...]],
+    "GEORADIUSBYMEMBER": Union[int, tuple[Union[AnyStr, GeoSearchResult], ...]],
+    "GEORADIUS": Union[int, tuple[Union[AnyStr, GeoSearchResult], ...]],
+    "HELLO": dict[AnyStr, AnyStr],
     "HINCRBYFLOAT": float,
-    "HRANDFIELD": Union[AnyStr, Tuple[AnyStr, ...], Dict[AnyStr, AnyStr]],
-    "HMGET": Tuple[Optional[AnyStr], ...],
-    "HSCAN": Tuple[int, Dict[AnyStr, AnyStr]],
+    "HRANDFIELD": Union[AnyStr, tuple[AnyStr, ...], dict[AnyStr, AnyStr]],
+    "HMGET": tuple[Optional[AnyStr], ...],
+    "HSCAN": tuple[int, dict[AnyStr, AnyStr]],
     "INCRBYFLOAT": float,
-    "INFO": Dict[str, ResponseType],
-    "KEYS": "Set[AnyStr]",
+    "INFO": dict[str, ResponseType],
+    "KEYS": "set[AnyStr]",
     "LASTSAVE": "datetime.datetime",
-    "LATENCY LATEST": Dict[AnyStr, Tuple[int, int, int]],
-    "LATENCY HISTOGRAM": Dict[AnyStr, Dict[AnyStr, Any]],
+    "LATENCY LATEST": dict[AnyStr, tuple[int, int, int]],
+    "LATENCY HISTOGRAM": dict[AnyStr, dict[AnyStr, Any]],
     "LCS": Union[AnyStr, int, LCSResult],
-    "LPOS": Optional[Union[int, List[int]]],
-    "MEMORY STATS": Dict[AnyStr, Union[AnyStr, int, float]],
-    "MGET": Tuple[Optional[AnyStr], ...],
-    "MODULE LIST": Tuple[Dict, ...],
+    "LPOS": Optional[Union[int, list[int]]],
+    "MEMORY STATS": dict[AnyStr, Union[AnyStr, int, float]],
+    "MGET": tuple[Optional[AnyStr], ...],
+    "MODULE LIST": tuple[dict, ...],
     "MONITOR": Monitor,
     "PING": AnyStr,
     "PFADD": bool,
@@ -272,41 +272,41 @@ REDIS_RETURN_OVERRIDES = {
     "RPOPLPUSH": Optional[AnyStr],
     "RESET": None,
     "ROLE": RoleInfo,
-    "SCAN": Tuple[int, Tuple[AnyStr, ...]],
-    "SMISMEMBER": Tuple[bool, ...],
-    "SCRIPT EXISTS": Tuple[bool, ...],
-    "SLOWLOG GET": Tuple[SlowLogInfo, ...],
-    "SSCAN": Tuple[int, Set[AnyStr]],
+    "SCAN": tuple[int, tuple[AnyStr, ...]],
+    "SMISMEMBER": tuple[bool, ...],
+    "SCRIPT EXISTS": tuple[bool, ...],
+    "SLOWLOG GET": tuple[SlowLogInfo, ...],
+    "SSCAN": tuple[int, set[AnyStr]],
     "TIME": "datetime.datetime",
     "TYPE": Optional[AnyStr],
-    "XCLAIM": Union[Tuple[AnyStr, ...], Tuple[StreamEntry, ...]],
+    "XCLAIM": Union[tuple[AnyStr, ...], tuple[StreamEntry, ...]],
     "XAUTOCLAIM": Union[
-        Tuple[AnyStr, Tuple[AnyStr, ...]],
-        Tuple[AnyStr, Tuple[StreamEntry, ...], Tuple[AnyStr, ...]],
+        tuple[AnyStr, tuple[AnyStr, ...]],
+        tuple[AnyStr, tuple[StreamEntry, ...], tuple[AnyStr, ...]],
     ],
     "XGROUP CREATECONSUMER": bool,
-    "XINFO GROUPS": Tuple[Dict[AnyStr, AnyStr], ...],
-    "XINFO CONSUMERS": Tuple[Dict[AnyStr, AnyStr], ...],
+    "XINFO GROUPS": tuple[dict[AnyStr, AnyStr], ...],
+    "XINFO CONSUMERS": tuple[dict[AnyStr, AnyStr], ...],
     "XINFO STREAM": StreamInfo,
-    "XPENDING": Union[Tuple[StreamPendingExt, ...], StreamPending],
-    "XRANGE": Tuple[StreamEntry, ...],
-    "XREVRANGE": Tuple[StreamEntry, ...],
-    "XREADGROUP": Optional[Dict[AnyStr, Tuple[StreamEntry, ...]]],
-    "XREAD": Optional[Dict[AnyStr, Tuple[StreamEntry, ...]]],
-    "ZDIFF": Tuple[Union[AnyStr, ScoredMember], ...],
-    "ZINTER": Tuple[Union[AnyStr, ScoredMember], ...],
-    "ZMPOP": Optional[Tuple[AnyStr, ScoredMembers]],
+    "XPENDING": Union[tuple[StreamPendingExt, ...], StreamPending],
+    "XRANGE": tuple[StreamEntry, ...],
+    "XREVRANGE": tuple[StreamEntry, ...],
+    "XREADGROUP": Optional[dict[AnyStr, tuple[StreamEntry, ...]]],
+    "XREAD": Optional[dict[AnyStr, tuple[StreamEntry, ...]]],
+    "ZDIFF": tuple[Union[AnyStr, ScoredMember], ...],
+    "ZINTER": tuple[Union[AnyStr, ScoredMember], ...],
+    "ZMPOP": Optional[tuple[AnyStr, ScoredMembers]],
     "ZPOPMAX": Union[ScoredMember, ScoredMembers],
     "ZPOPMIN": Union[ScoredMember, ScoredMembers],
-    "ZRANDMEMBER": Optional[Union[AnyStr, List[AnyStr], ScoredMembers]],
-    "ZRANGE": Tuple[Union[AnyStr, ScoredMember], ...],
-    "ZRANGEBYSCORE": Tuple[Union[AnyStr, ScoredMember], ...],
-    "ZREVRANGEBYSCORE": Tuple[Union[AnyStr, ScoredMember], ...],
-    "ZREVRANGE": Tuple[Union[AnyStr, ScoredMember], ...],
-    "ZRANK": Optional[Union[int, Tuple[int, float]]],
-    "ZREVRANK": Optional[Union[int, Tuple[int, float]]],
-    "ZUNION": Tuple[Union[AnyStr, ScoredMember], ...],
-    "ZSCAN": Tuple[int, ScoredMembers],
+    "ZRANDMEMBER": Optional[Union[AnyStr, list[AnyStr], ScoredMembers]],
+    "ZRANGE": tuple[Union[AnyStr, ScoredMember], ...],
+    "ZRANGEBYSCORE": tuple[Union[AnyStr, ScoredMember], ...],
+    "ZREVRANGEBYSCORE": tuple[Union[AnyStr, ScoredMember], ...],
+    "ZREVRANGE": tuple[Union[AnyStr, ScoredMember], ...],
+    "ZRANK": Optional[Union[int, tuple[int, float]]],
+    "ZREVRANK": Optional[Union[int, tuple[int, float]]],
+    "ZUNION": tuple[Union[AnyStr, ScoredMember], ...],
+    "ZSCAN": tuple[int, ScoredMembers],
     "ZSCORE": Optional[float],
 }
 ARGUMENT_DEFAULTS = {
@@ -565,17 +565,15 @@ def get_token_mapping():
     for name in ["commands", *MODULES.keys()]:
         commands = get_commands(name + ".json")
         for command, details in commands.items():
-
             if name in MODULES and not details["group"] == MODULES[name]["group"]:
                 continue
             elif version.parse(details["since"]) > MAX_SUPPORTED_VERSION:
                 continue
             def _extract_pure_tokens(obj):
                 tokens = []
-
                 if args := obj.get("arguments"):
                     for arg in args:
-                        if arg["type"] == "pure-token":
+                        if arg.get("type", None) == "pure-token":
                             tokens.append(
                                 (
                                     sanitized(arg["name"], ignore_reserved_words=True),
@@ -583,7 +581,7 @@ def get_token_mapping():
                                 )
                             )
 
-                        if arg.get("arguments"):
+                        if arg.get("arguments", None):
                             tokens.extend(_extract_pure_tokens(arg))
 
                 return tokens
@@ -593,7 +591,7 @@ def get_token_mapping():
 
                 if args := obj.get("arguments"):
                     for arg in args:
-                        if arg["type"] != "pure-token" and arg.get("token"):
+                        if arg.get("type", None) != "pure-token" and arg.get("token"):
                             tokens.append(
                                 (
                                     sanitized(arg["token"], ignore_reserved_words=True),
@@ -601,7 +599,7 @@ def get_token_mapping():
                                 )
                             )
 
-                        if arg.get("arguments"):
+                        if arg.get("arguments", None):
                             tokens.extend(_extract_prefix_tokens(arg))
 
                 return tokens
@@ -880,7 +878,7 @@ def get_argument(
                 if len(child_types) == 1:
                     annotation = Parameters[child_types[0]]
                 elif len(child_types) == 2 and child_types[0] in [StringT, ValueT]:
-                    annotation = Dict[child_types[0], child_types[1]]
+                    annotation = dict[child_types[0], child_types[1]]
                 else:
                     child_types_repr = ",".join(
                         [
@@ -888,7 +886,7 @@ def get_argument(
                             for k in child_types
                         ]
                     )
-                    annotation = Parameters[eval(f"Tuple[{child_types_repr}]")]
+                    annotation = Parameters[eval(f"tuple[{child_types_repr}]")]
 
             extra = {}
 
@@ -2423,28 +2421,26 @@ from coredis.client import Client, RedisCluster
 from coredis.commands.script import Script
 from coredis.typing import (
     AnyStr,
-    Dict,
     Generic,
     KeyT,
     Literal,
     Mapping,
     Optional,
     Parameters,
-    Set,
     StringT,
-    Tuple,
-    Type,
     Union,
     ValueT,
 )
 
+# TODO: remove this once mypy can disambiguate class method names
+#  from builtin types. ``set`` is a redis commands with
+#  an associated method that clashes with the set[] type.
+_Set = set 
+
 class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
-    scripts: Set[Script[AnyStr]]
+    scripts: set[Script[AnyStr]]
     @classmethod
     def proxy{{render_signature(inspect.signature(pipeline_kls.__init__), skip_defaults=True) | replace("self", "cls") | replace("-> None", "-> Pipeline[AnyStr]") }}: ...
-    {% for name, signature in commands.items() -%}
-    async def {{signature["name"]}}{{render_signature(signature["pipeline"], skip_defaults=True)}}: ...
-    {% endfor %}
     async def watch{{render_signature(inspect.signature(pipeline_kls.watch), skip_defaults=True)}}: ...
     async def unwatch{{render_signature(inspect.signature(pipeline_kls.unwatch), skip_defaults=True)}}: ...
     def multi{{render_signature(inspect.signature(pipeline_kls.multi), skip_defaults=True)}}: ...
@@ -2452,17 +2448,17 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def __aenter__(self) -> "Pipeline[AnyStr]":...
     async def __aexit__(
         self,
-        exc_type: Optional[Type[BaseException]],
+        exc_type: Optional[type[BaseException]],
         exc_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> None: ...
+    {% for name, signature in commands.items() -%}
+    async def {{signature["name"]}}{{render_signature(signature["pipeline"], skip_defaults=True)}}: ...
+    {% endfor %}
 
 class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     @classmethod
     def proxy{{render_signature(inspect.signature(cluster_kls.__init__), skip_defaults=True) | replace("self", "cls") | replace("-> None", "-> ClusterPipeline[AnyStr]") }}: ...
-    {% for name, signature in commands.items() -%}
-    async def {{signature["name"]}}{{render_signature(signature["cluster"], skip_defaults=True)}}: ...
-    {% endfor %}
     async def watch{{render_signature(inspect.signature(cluster_kls.watch), skip_defaults=True)}}: ...
     async def unwatch{{render_signature(inspect.signature(cluster_kls.unwatch), skip_defaults=True)}}: ...
     def multi{{render_signature(inspect.signature(cluster_kls.multi), skip_defaults=True)}}: ...
@@ -2470,10 +2466,13 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def __aenter__(self) -> "ClusterPipeline[AnyStr]":...
     async def __aexit__(
         self,
-        exc_type: Optional[Type[BaseException]],
+        exc_type: Optional[type[BaseException]],
         exc_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> None: ...
+    {% for name, signature in commands.items() -%}
+    async def {{signature["name"]}}{{render_signature(signature["cluster"], skip_defaults=True)}}: ...
+    {% endfor %}
 """
     env = Environment()
     env.globals.update(
@@ -2771,22 +2770,22 @@ def cluster_key_extraction(path):
 from __future__ import annotations
 
 from coredis._utils import b
-from coredis.typing import Callable, ClassVar, Dict, Tuple, ValueT
+from coredis.typing import Callable, ClassVar, ValueT
 
 class KeySpec:
-    READONLY: ClassVar[Dict[bytes, Callable[[Tuple[ValueT, ...]], Tuple[ValueT, ...]]]] = {{ '{' }}
+    READONLY: ClassVar[dict[bytes, Callable[[tuple[ValueT, ...]], tuple[ValueT, ...]]]] = {{ '{' }}
     {% for command, exprs in readonly.items() %}
         b"{{command}}": lambda args: ({{exprs | join("+")}}),
     {% endfor %}
     {{ '}' }}
-    ALL: ClassVar[Dict[bytes, Callable[[Tuple[ValueT, ...]], Tuple[ValueT, ...]]]] = {{ '{' }}
+    ALL: ClassVar[dict[bytes, Callable[[tuple[ValueT, ...]], tuple[ValueT, ...]]]] = {{ '{' }}
     {% for command, exprs in all.items() %}
         b"{{command}}": lambda args: ({{exprs | join("+")}}) ,
     {% endfor %}
     {{ '}' }}
 
     @classmethod
-    def extract_keys(cls, *arguments: ValueT, readonly_command: bool = False) -> Tuple[ValueT, ...]:
+    def extract_keys(cls, *arguments: ValueT, readonly_command: bool = False) -> tuple[ValueT, ...]:
         if len(arguments) <= 1:
             return ()
 

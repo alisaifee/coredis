@@ -20,7 +20,7 @@ from coredis.exceptions import (
     ReplicationError,
 )
 from coredis.tokens import PureToken
-from coredis.typing import AnyStr, Generic, KeyT, Optional, StringT, Type, Union
+from coredis.typing import AnyStr, Generic, KeyT, Optional, StringT, Union
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", DeprecationWarning)
@@ -136,7 +136,7 @@ class LuaLock(Generic[AnyStr]):
 
     async def __aexit__(
         self,
-        exc_type: Optional[Type[BaseException]],
+        exc_type: Optional[type[BaseException]],
         exc_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> None:

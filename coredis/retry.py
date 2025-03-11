@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from functools import wraps
 from typing import Any
 
-from coredis.typing import Callable, Coroutine, Dict, Optional, P, R, Tuple, Type, Union
+from coredis.typing import Callable, Coroutine, Optional, P, R, Union
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ class RetryPolicy(ABC):
     Abstract retry policy
     """
 
-    def __init__(self, retries: int, retryable_exceptions: Tuple[Type[BaseException], ...]) -> None:
+    def __init__(self, retries: int, retryable_exceptions: tuple[type[BaseException], ...]) -> None:
         """
         :param retries: number of times to retry if a :paramref:`retryable_exception`
          is encountered.
@@ -36,7 +36,7 @@ class RetryPolicy(ABC):
         failure_hook: Optional[
             Union[
                 Callable[..., Coroutine[Any, Any, None]],
-                Dict[Type[BaseException], Callable[..., Coroutine[Any, Any, None]]],
+                dict[type[BaseException], Callable[..., Coroutine[Any, Any, None]]],
             ]
         ] = None,
     ) -> R:
@@ -104,7 +104,7 @@ class ConstantRetryPolicy(RetryPolicy):
 
     def __init__(
         self,
-        retryable_exceptions: Tuple[Type[BaseException], ...],
+        retryable_exceptions: tuple[type[BaseException], ...],
         retries: int,
         delay: float,
     ) -> None:
@@ -128,7 +128,7 @@ class ExponentialBackoffRetryPolicy(RetryPolicy):
 
     def __init__(
         self,
-        retryable_exceptions: Tuple[Type[BaseException], ...],
+        retryable_exceptions: tuple[type[BaseException], ...],
         retries: int,
         initial_delay: float,
     ) -> None:
@@ -167,7 +167,7 @@ class CompositeRetryPolicy(RetryPolicy):
         failure_hook: Optional[
             Union[
                 Callable[..., Coroutine[Any, Any, None]],
-                Dict[Type[BaseException], Callable[..., Coroutine[Any, Any, None]]],
+                dict[type[BaseException], Callable[..., Coroutine[Any, Any, None]]],
             ]
         ] = None,
     ) -> R:

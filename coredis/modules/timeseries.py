@@ -2,23 +2,19 @@ from __future__ import annotations
 
 import itertools
 from datetime import datetime, timedelta
-from typing import List
 
 from deprecated.sphinx import versionadded
 
 from coredis.typing import (
     AnyStr,
     CommandArgList,
-    Dict,
     KeyT,
     Literal,
     Mapping,
     Optional,
     Parameters,
     ResponseType,
-    Set,
     StringT,
-    Tuple,
     Union,
     ValueT,
 )
@@ -59,8 +55,8 @@ def normalized_timestamp(ts: Union[int, datetime, StringT]) -> Union[StringT, in
 class RedisTimeSeries(Module[AnyStr]):
     NAME = "timeseries"
     FULL_NAME = "RedisTimeSeries"
-    DESCRIPTION = """RedisTimeSeries is a Redis module that implements a time series 
-data structure. It is designed to be used as a database for time series data, 
+    DESCRIPTION = """RedisTimeSeries is a Redis module that implements a time series
+data structure. It is designed to be used as a database for time series data,
 and is optimized for fast insertion and retrieval of time series data.
     """
     DOCUMENTATION_URL = "https://redis.io/docs/stack/timeseries/"
@@ -282,8 +278,8 @@ class TimeSeries(ModuleGroup[AnyStr]):
         module=MODULE,
     )
     async def madd(
-        self, ktvs: Parameters[Tuple[AnyStr, int, Union[int, float]]]
-    ) -> Tuple[int, ...]:
+        self, ktvs: Parameters[tuple[AnyStr, int, Union[int, float]]]
+    ) -> tuple[int, ...]:
         """
         Append new samples to one or more time series.
 
@@ -532,7 +528,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         buckettimestamp: Optional[StringT] = None,
         empty: Optional[bool] = None,
         latest: Optional[bool] = None,
-    ) -> Union[Tuple[Tuple[int, float], ...], Tuple[()]]:
+    ) -> Union[tuple[tuple[int, float], ...], tuple[()]]:
         """
         Query a range in forward direction.
 
@@ -565,7 +561,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         if latest:
             pieces.append(b"LATEST")
         if filter_by_ts:
-            _ts: List[int] = list(filter_by_ts)
+            _ts: list[int] = list(filter_by_ts)
             pieces.extend([PrefixToken.FILTER_BY_TS, *_ts])
         if min_value is not None and max_value is not None:
             pieces.extend([PureToken.FILTER_BY_VALUE, min_value, max_value])
@@ -636,7 +632,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         buckettimestamp: Optional[StringT] = None,
         empty: Optional[bool] = None,
         latest: Optional[bool] = None,
-    ) -> Union[Tuple[Tuple[int, float], ...], Tuple[()]]:
+    ) -> Union[tuple[tuple[int, float], ...], tuple[()]]:
         """
         Query a range in reverse direction from a RedisTimeSeries key.
 
@@ -666,7 +662,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         if latest:
             pieces.append(b"LATEST")
         if filter_by_ts:
-            _ts: List[int] = list(filter_by_ts)
+            _ts: list[int] = list(filter_by_ts)
             pieces.extend([PrefixToken.FILTER_BY_TS, *_ts])
         if min_value is not None and max_value is not None:
             pieces.extend([PureToken.FILTER_BY_VALUE, min_value, max_value])
@@ -761,9 +757,9 @@ class TimeSeries(ModuleGroup[AnyStr]):
         ] = None,
         empty: Optional[bool] = None,
         latest: Optional[bool] = None,
-    ) -> Dict[
+    ) -> dict[
         AnyStr,
-        Tuple[Dict[AnyStr, AnyStr], Union[Tuple[Tuple[int, float], ...], Tuple[()]]],
+        tuple[dict[AnyStr, AnyStr], Union[tuple[tuple[int, float], ...], tuple[()]]],
     ]:
         """
         Query a range across multiple time series by filters in forward direction.
@@ -803,14 +799,14 @@ class TimeSeries(ModuleGroup[AnyStr]):
         if latest:
             pieces.append(b"LATEST")
         if filter_by_ts:
-            _ts: List[int] = list(filter_by_ts)
+            _ts: list[int] = list(filter_by_ts)
             pieces.extend([PrefixToken.FILTER_BY_TS, *_ts])
         if min_value is not None and max_value is not None:
             pieces.extend([PureToken.FILTER_BY_VALUE, min_value, max_value])
         if withlabels:
             pieces.append(PureToken.WITHLABELS)
         if selected_labels:
-            _labels: List[StringT] = list(selected_labels)
+            _labels: list[StringT] = list(selected_labels)
             pieces.extend([PureToken.SELECTED_LABELS, *_labels])
         if count is not None:
             pieces.extend([PrefixToken.COUNT, count])
@@ -830,7 +826,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
             if empty:
                 pieces.append(PureToken.EMPTY)
         if filters:
-            _filters: List[StringT] = list(filters)
+            _filters: list[StringT] = list(filters)
             pieces.extend([PrefixToken.FILTER, *_filters])
         if groupby and reducer:
             pieces.extend([PureToken.GROUPBY, groupby, b"REDUCE", reducer])
@@ -893,9 +889,9 @@ class TimeSeries(ModuleGroup[AnyStr]):
         reducer: Optional[StringT] = None,
         empty: Optional[bool] = None,
         latest: Optional[bool] = None,
-    ) -> Dict[
+    ) -> dict[
         AnyStr,
-        Tuple[Dict[AnyStr, AnyStr], Union[Tuple[Tuple[int, float], ...], Tuple[()]]],
+        tuple[dict[AnyStr, AnyStr], Union[tuple[tuple[int, float], ...], tuple[()]]],
     ]:
         """
         Query a range across multiple time series by filters in reverse direction.
@@ -935,14 +931,14 @@ class TimeSeries(ModuleGroup[AnyStr]):
         if latest:
             pieces.append(b"LATEST")
         if filter_by_ts:
-            _ts: List[int] = list(filter_by_ts)
+            _ts: list[int] = list(filter_by_ts)
             pieces.extend([PrefixToken.FILTER_BY_TS, *_ts])
         if min_value is not None and max_value is not None:
             pieces.extend([PureToken.FILTER_BY_VALUE, min_value, max_value])
         if withlabels:
             pieces.append(PureToken.WITHLABELS)
         if selected_labels:
-            _labels: List[StringT] = list(selected_labels)
+            _labels: list[StringT] = list(selected_labels)
             pieces.extend([PureToken.SELECTED_LABELS, *_labels])
         if count is not None:
             pieces.extend([PrefixToken.COUNT, count])
@@ -962,7 +958,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
             if empty:
                 pieces.append(PureToken.EMPTY)
         if filters:
-            _filters: List[StringT] = list(filters)
+            _filters: list[StringT] = list(filters)
             pieces.extend([PrefixToken.FILTER, *_filters])
         if groupby and reducer and reducer:
             pieces.extend([PureToken.GROUPBY, groupby, b"REDUCE", reducer])
@@ -985,7 +981,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
     )
     async def get(
         self, key: KeyT, latest: Optional[bool] = None
-    ) -> Union[Tuple[int, float], Tuple[()]]:
+    ) -> Union[tuple[int, float], tuple[()]]:
         """
         Get the sample with the highest timestamp from a given time series.
 
@@ -1023,7 +1019,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         withlabels: Optional[bool] = None,
         selected_labels: Optional[Parameters[StringT]] = None,
         latest: Optional[bool] = None,
-    ) -> Dict[AnyStr, Tuple[Dict[AnyStr, AnyStr], Union[Tuple[int, float], Tuple[()]]]]:
+    ) -> dict[AnyStr, tuple[dict[AnyStr, AnyStr], Union[tuple[int, float], tuple[()]]]]:
         """
         Get the sample with the highest timestamp from each time series matching a specific filter.
 
@@ -1052,7 +1048,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         if withlabels:
             pieces.append(PureToken.WITHLABELS)
         if selected_labels:
-            _labels: List[StringT] = list(selected_labels)
+            _labels: list[StringT] = list(selected_labels)
             pieces.extend([b"SELECTED_LABELS", *_labels])
         pieces.extend([PrefixToken.FILTER, *filters])
         return await self.execute_module_command(
@@ -1065,7 +1061,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def info(self, key: KeyT, debug: Optional[bool] = None) -> Dict[AnyStr, ResponseType]:
+    async def info(self, key: KeyT, debug: Optional[bool] = None) -> dict[AnyStr, ResponseType]:
         """
         Return information and statistics for a time series.
 
@@ -1091,7 +1087,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         ),
         flags={CommandFlag.READONLY},
     )
-    async def queryindex(self, filters: Parameters[StringT]) -> Set[AnyStr]:
+    async def queryindex(self, filters: Parameters[StringT]) -> set[AnyStr]:
         """
         Get all time series keys matching a filter list.
 

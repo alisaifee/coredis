@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from coredis._utils import b
-from coredis.typing import Callable, ClassVar, Dict, Tuple, ValueT
+from coredis.typing import Callable, ClassVar, ValueT
 
 
 class KeySpec:
-    READONLY: ClassVar[Dict[bytes, Callable[[Tuple[ValueT, ...]], Tuple[ValueT, ...]]]] = {
+    READONLY: ClassVar[dict[bytes, Callable[[tuple[ValueT, ...]], tuple[ValueT, ...]]]] = {
         b"BITCOUNT": lambda args: ((args[1],)),
         b"BITFIELD_RO": lambda args: ((args[1],)),
         b"BITOP": lambda args: (args[3 : (len(args))]),
@@ -123,7 +123,7 @@ class KeySpec:
         b"ZUNION": lambda args: (args[2 : 2 + int(args[1])]),
         b"ZUNIONSTORE": lambda args: (args[3 : 3 + int(args[2])]),
     }
-    ALL: ClassVar[Dict[bytes, Callable[[Tuple[ValueT, ...]], Tuple[ValueT, ...]]]] = {
+    ALL: ClassVar[dict[bytes, Callable[[tuple[ValueT, ...]], tuple[ValueT, ...]]]] = {
         b"OBJECT": lambda args: ((args[2],)),
         b"DEBUG OBJECT": lambda args: ((args[1],)),
         b"APPEND": lambda args: ((args[1],)),
@@ -499,7 +499,7 @@ class KeySpec:
     }
 
     @classmethod
-    def extract_keys(cls, *arguments: ValueT, readonly_command: bool = False) -> Tuple[ValueT, ...]:
+    def extract_keys(cls, *arguments: ValueT, readonly_command: bool = False) -> tuple[ValueT, ...]:
         if len(arguments) <= 1:
             return ()
 

@@ -15,11 +15,9 @@ from coredis.exceptions import ClusterResponseError, ResponseError
 from coredis.typing import (
     AnyStr,
     Callable,
-    Dict,
     Generic,
     Hashable,
     Iterable,
-    List,
     Literal,
     Mapping,
     Optional,
@@ -28,10 +26,7 @@ from coredis.typing import (
     ResponsePrimitive,
     ResponseType,
     Sequence,
-    Set,
     StringT,
-    Tuple,
-    Type,
     TypeVar,
     Union,
     ValueT,
@@ -55,7 +50,7 @@ if TYPE_CHECKING:
 
 class ResponseCallbackMeta(ABCMeta):
     def __new__(
-        cls, name: str, bases: Tuple[type, ...], namespace: Dict[str, str]
+        cls, name: str, bases: tuple[type, ...], namespace: dict[str, str]
     ) -> ResponseCallbackMeta:
         kls = super().__new__(cls, name, bases, namespace)
         setattr(kls, "transform", add_runtime_checks(getattr(kls, "transform")))
@@ -65,7 +60,7 @@ class ResponseCallbackMeta(ABCMeta):
 
 class ClusterCallbackMeta(ABCMeta):
     def __new__(
-        cls, name: str, bases: Tuple[type, ...], namespace: Dict[str, str]
+        cls, name: str, bases: tuple[type, ...], namespace: dict[str, str]
     ) -> ClusterCallbackMeta:
         kls = super().__new__(cls, name, bases, namespace)
         setattr(kls, "combine", add_runtime_checks(getattr(kls, "combine")))
@@ -162,10 +157,10 @@ class ClusterBoolCombine(ClusterMultiNodeCallback[bool]):
         )
 
 
-class ClusterAlignedBoolsCombine(ClusterMultiNodeCallback[Tuple[bool, ...]]):
+class ClusterAlignedBoolsCombine(ClusterMultiNodeCallback[tuple[bool, ...]]):
     def combine(
-        self, responses: Mapping[str, Tuple[bool, ...]], **kwargs: Optional[ValueT]
-    ) -> Tuple[bool, ...]:
+        self, responses: Mapping[str, tuple[bool, ...]], **kwargs: Optional[ValueT]
+    ) -> tuple[bool, ...]:
         return tuple(all(k) for k in zip(*responses.values()))
 
     @property
@@ -213,8 +208,8 @@ class ClusterFirstNonException(ClusterMultiNodeCallback[Optional[R]]):
         return "the first response that is not an error"
 
 
-class ClusterMergeSets(ClusterMultiNodeCallback[Set[R]]):
-    def combine(self, responses: Mapping[str, Set[R]], **kwargs: Optional[ValueT]) -> Set[R]:
+class ClusterMergeSets(ClusterMultiNodeCallback[set[R]]):
+    def combine(self, responses: Mapping[str, set[R]], **kwargs: Optional[ValueT]) -> set[R]:
         self.raise_any(responses.values())
         return set(itertools.chain(*responses.values()))
 
@@ -237,15 +232,15 @@ class ClusterSum(ClusterMultiNodeCallback[int]):
         return "the sum of results"
 
 
-class ClusterMergeMapping(ClusterMultiNodeCallback[Dict[CK_co, CR_co]]):
+class ClusterMergeMapping(ClusterMultiNodeCallback[dict[CK_co, CR_co]]):
     def __init__(self, value_combine: Callable[[Iterable[CR_co]], CR_co]) -> None:
         self.value_combine = value_combine
 
     def combine(
-        self, responses: Mapping[str, Dict[CK_co, CR_co]], **kwargs: Optional[ValueT]
-    ) -> Dict[CK_co, CR_co]:
+        self, responses: Mapping[str, dict[CK_co, CR_co]], **kwargs: Optional[ValueT]
+    ) -> dict[CK_co, CR_co]:
         self.raise_any(responses.values())
-        response: Dict[CK_co, CR_co] = {}
+        response: dict[CK_co, CR_co] = {}
         for key in set(itertools.chain(*responses.values())):
             values = list(responses[n][key] for n in responses if key in responses[n])
             response[key] = self.value_combine(values)
@@ -256,10 +251,10 @@ class ClusterMergeMapping(ClusterMultiNodeCallback[Dict[CK_co, CR_co]]):
         return "the merged mapping"
 
 
-class ClusterConcatenateTuples(ClusterMultiNodeCallback[Tuple[R, ...]]):
+class ClusterConcatenateTuples(ClusterMultiNodeCallback[tuple[R, ...]]):
     def combine(
-        self, responses: Mapping[str, Tuple[R, ...]], **kwargs: Optional[ValueT]
-    ) -> Tuple[R, ...]:
+        self, responses: Mapping[str, tuple[R, ...]], **kwargs: Optional[ValueT]
+    ) -> tuple[R, ...]:
         self.raise_any(responses.values())
         return tuple(itertools.chain(*responses.values()))
 
@@ -271,9 +266,9 @@ class ClusterConcatenateTuples(ClusterMultiNodeCallback[Tuple[R, ...]]):
 class SimpleStringCallback(ResponseCallback[Optional[StringT], Optional[StringT], bool]):
     def __init__(
         self,
-        raise_on_error: Optional[Type[Exception]] = None,
+        raise_on_error: Optional[type[Exception]] = None,
         prefix_match: bool = False,
-        ok_values: Set[str] = {"OK"},
+        ok_values: set[str] = {"OK"},
     ):
         self.raise_on_error = raise_on_error
         self.prefix_match = prefix_match
@@ -335,23 +330,23 @@ class SimpleStringOrIntCallback(ResponseCallback[ValueT, ValueT, Union[bool, int
         raise ValueError(f"Unable to map {response!r} to bool")
 
 
-class TupleCallback(ResponseCallback[List[ResponseType], List[ResponseType], Tuple[CR_co, ...]]):
-    def transform(self, response: ResponseType, **options: Optional[ValueT]) -> Tuple[CR_co, ...]:
-        if isinstance(response, List):
-            return cast(Tuple[CR_co, ...], tuple(response))
+class TupleCallback(ResponseCallback[list[ResponseType], list[ResponseType], tuple[CR_co, ...]]):
+    def transform(self, response: ResponseType, **options: Optional[ValueT]) -> tuple[CR_co, ...]:
+        if isinstance(response, list):
+            return cast(tuple[CR_co, ...], tuple(response))
         raise ValueError(f"Unable to map {response!r} to tuple")
 
 
-class MixedTupleCallback(ResponseCallback[List[ResponseType], List[ResponseType], Tuple[R, S]]):
-    def transform(self, response: ResponseType, **options: Optional[ValueT]) -> Tuple[R, S]:
-        if isinstance(response, List):
-            return cast(Tuple[R, S], tuple(response))
+class MixedTupleCallback(ResponseCallback[list[ResponseType], list[ResponseType], tuple[R, S]]):
+    def transform(self, response: ResponseType, **options: Optional[ValueT]) -> tuple[R, S]:
+        if isinstance(response, list):
+            return cast(tuple[R, S], tuple(response))
         raise ValueError(f"Unable to map {response!r} to tuple")
 
 
-class ListCallback(ResponseCallback[List[ResponseType], List[ResponseType], List[CR_co]]):
-    def transform(self, response: List[ResponseType], **options: Optional[ValueT]) -> List[CR_co]:
-        return cast(List[CR_co], response)
+class ListCallback(ResponseCallback[list[ResponseType], list[ResponseType], list[CR_co]]):
+    def transform(self, response: list[ResponseType], **options: Optional[ValueT]) -> list[CR_co]:
+        return cast(list[CR_co], response)
 
 
 class DateTimeCallback(ResponseCallback[Union[int, float], Union[int, float], datetime.datetime]):
@@ -366,52 +361,52 @@ class DateTimeCallback(ResponseCallback[Union[int, float], Union[int, float], da
 
 class DictCallback(
     ResponseCallback[
-        Union[Sequence[ResponseType], Dict[ResponsePrimitive, ResponseType]],
-        Union[Sequence[ResponseType], Dict[ResponsePrimitive, ResponseType]],
-        Dict[CK_co, CR_co],
+        Union[Sequence[ResponseType], dict[ResponsePrimitive, ResponseType]],
+        Union[Sequence[ResponseType], dict[ResponsePrimitive, ResponseType]],
+        dict[CK_co, CR_co],
     ]
 ):
     def __init__(
         self,
         flat: bool = True,
-        recursive: Optional[List[str]] = None,
+        recursive: Optional[list[str]] = None,
     ):
         self.flat = flat
         self.recursive = recursive or []
 
     def transform(
         self,
-        response: Union[Sequence[ResponseType], Dict[ResponsePrimitive, ResponseType]],
+        response: Union[Sequence[ResponseType], dict[ResponsePrimitive, ResponseType]],
         **options: Optional[ValueT],
-    ) -> Dict[CK_co, CR_co]:
+    ) -> dict[CK_co, CR_co]:
         if isinstance(response, list):
             if self.flat:
                 if self.recursive:
-                    return cast(Dict[CK_co, CR_co], self.recursive_transformer(response))
+                    return cast(dict[CK_co, CR_co], self.recursive_transformer(response))
                 else:
                     it = iter(response)
-                    return cast(Dict[CK_co, CR_co], dict(zip(it, it)))
+                    return cast(dict[CK_co, CR_co], dict(zip(it, it)))
             else:
                 return dict(r for r in response)
         raise ValueError(f"Unable to map {response!r} to mapping")
 
     def transform_3(
         self,
-        response: Union[Sequence[ResponseType], Dict[ResponsePrimitive, ResponseType]],
+        response: Union[Sequence[ResponseType], dict[ResponsePrimitive, ResponseType]],
         **options: Optional[ValueT],
-    ) -> Dict[CK_co, CR_co]:
-        if isinstance(response, Dict):
-            return cast(Dict[CK_co, CR_co], response)
+    ) -> dict[CK_co, CR_co]:
+        if isinstance(response, dict):
+            return cast(dict[CK_co, CR_co], response)
         return self.transform(response, **options)
 
     def recursive_transformer(
-        self, item: Union[Sequence[ResponseType], Dict[ResponsePrimitive, ResponseType]]
+        self, item: Union[Sequence[ResponseType], dict[ResponsePrimitive, ResponseType]]
     ) -> Union[
-        Dict[CK_co, CR_co],
-        List[CK_co],
-        List[CR_co],
-        Tuple[CK_co, ...],
-        Tuple[CR_co, ...],
+        dict[CK_co, CR_co],
+        list[CK_co],
+        list[CR_co],
+        tuple[CK_co, ...],
+        tuple[CR_co, ...],
     ]:
         if isinstance(item, (list, tuple)):
             if all(isinstance(k, Hashable) for k in item[::2]):
@@ -430,56 +425,56 @@ class DictCallback(
 
 class SetCallback(
     ResponseCallback[
-        List[ResponsePrimitive],
-        Set[ResponsePrimitive],
-        Set[CR_co],
+        list[ResponsePrimitive],
+        set[ResponsePrimitive],
+        set[CR_co],
     ]
 ):
     def transform(
         self,
-        response: Union[List[ResponsePrimitive], Set[ResponsePrimitive]],
+        response: Union[list[ResponsePrimitive], set[ResponsePrimitive]],
         **options: Optional[ValueT],
-    ) -> Set[CR_co]:
+    ) -> set[CR_co]:
         if isinstance(response, list):
-            return cast(Set[CR_co], set(response))
+            return cast(set[CR_co], set(response))
         raise ValueError(f"Unable to map {response} to set")
 
     def transform_3(
         self,
-        response: Union[List[ResponsePrimitive], Set[ResponsePrimitive]],
+        response: Union[list[ResponsePrimitive], set[ResponsePrimitive]],
         **options: Optional[ValueT],
-    ) -> Set[CR_co]:
+    ) -> set[CR_co]:
         if isinstance(response, set):
-            return cast(Set[CR_co], response)
+            return cast(set[CR_co], response)
         else:
             return self.transform(response)
 
 
 class OneOrManyCallback(
     ResponseCallback[
-        Optional[Union[CR_co, List[Optional[CR_co]]]],
-        Optional[Union[CR_co, List[Optional[CR_co]]]],
-        Optional[Union[CR_co, List[Optional[CR_co]]]],
+        Optional[Union[CR_co, list[Optional[CR_co]]]],
+        Optional[Union[CR_co, list[Optional[CR_co]]]],
+        Optional[Union[CR_co, list[Optional[CR_co]]]],
     ]
 ):
     def transform(
         self,
-        response: Optional[Union[CR_co, List[Optional[CR_co]]]],
+        response: Optional[Union[CR_co, list[Optional[CR_co]]]],
         **options: Optional[ValueT],
-    ) -> Optional[Union[CR_co, List[Optional[CR_co]]]]:
+    ) -> Optional[Union[CR_co, list[Optional[CR_co]]]]:
         return response
 
 
-class BoolsCallback(ResponseCallback[ResponseType, ResponseType, Tuple[bool, ...]]):
-    def transform(self, response: ResponseType, **options: Optional[ValueT]) -> Tuple[bool, ...]:
-        if isinstance(response, List):
+class BoolsCallback(ResponseCallback[ResponseType, ResponseType, tuple[bool, ...]]):
+    def transform(self, response: ResponseType, **options: Optional[ValueT]) -> tuple[bool, ...]:
+        if isinstance(response, list):
             return tuple(BoolCallback()(r) for r in response)
         return ()
 
 
-class FloatsCallback(ResponseCallback[ResponseType, ResponseType, Tuple[float, ...]]):
-    def transform(self, response: ResponseType, **options: Optional[ValueT]) -> Tuple[float, ...]:
-        if isinstance(response, List):
+class FloatsCallback(ResponseCallback[ResponseType, ResponseType, tuple[float, ...]]):
+    def transform(self, response: ResponseType, **options: Optional[ValueT]) -> tuple[float, ...]:
+        if isinstance(response, list):
             return tuple(FloatCallback()(r) for r in response)
         return ()
 
@@ -528,16 +523,16 @@ class OptionalAnyStrCallback(
 
 
 class OptionalListCallback(
-    ResponseCallback[List[ResponseType], List[ResponseType], Optional[List[CR_co]]]
+    ResponseCallback[list[ResponseType], list[ResponseType], Optional[list[CR_co]]]
 ):
     def transform(
         self, response: ResponseType, **options: Optional[ValueT]
-    ) -> Optional[List[CR_co]]:
-        return cast(List[CR_co], response)
+    ) -> Optional[list[CR_co]]:
+        return cast(list[CR_co], response)
 
 
-class FirstValueCallback(ResponseCallback[List[CR_co], List[CR_co], CR_co]):
-    def transform(self, response: List[CR_co], **options: Optional[ValueT]) -> CR_co:
+class FirstValueCallback(ResponseCallback[list[CR_co], list[CR_co], CR_co]):
+    def transform(self, response: list[CR_co], **options: Optional[ValueT]) -> CR_co:
         if response:
             return response[0]
         else:

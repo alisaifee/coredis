@@ -12,7 +12,6 @@ from coredis.typing import (
     Iterable,
     Optional,
     ParamSpec,
-    Set,
     TypeVar,
     Union,
 )
@@ -22,7 +21,7 @@ P = ParamSpec("P")
 
 
 class MutuallyExclusiveParametersError(CommandSyntaxError):
-    def __init__(self, arguments: Set[str], details: Optional[str]):
+    def __init__(self, arguments: set[str], details: Optional[str]):
         message = (
             f"The [{','.join(arguments)}] parameters are mutually exclusive."
             f"{' ' + details if details else ''}"
@@ -31,7 +30,7 @@ class MutuallyExclusiveParametersError(CommandSyntaxError):
 
 
 class MutuallyInclusiveParametersMissing(CommandSyntaxError):
-    def __init__(self, arguments: Set[str], leaders: Set[str], details: Optional[str]):
+    def __init__(self, arguments: set[str], leaders: set[str], details: Optional[str]):
         if leaders:
             message = (
                 f"The [{','.join(arguments)}] parameters(s)"

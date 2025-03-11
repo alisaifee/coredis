@@ -1,46 +1,43 @@
 from __future__ import annotations
 
 import warnings
+from collections.abc import (
+    AsyncGenerator,
+    AsyncIterator,
+    Awaitable,
+    Coroutine,
+    Generator,
+    Hashable,
+    Iterable,
+    Iterator,
+    Mapping,
+    MutableMapping,
+    MutableSequence,
+    MutableSet,
+    Sequence,
+    ValuesView,
+)
 from types import ModuleType
 from typing import (
     TYPE_CHECKING,
     AbstractSet,
     AnyStr,
-    AsyncGenerator,
-    AsyncIterator,
-    Awaitable,
     Callable,
     ClassVar,
     ContextManager,
-    Coroutine,
-    Dict,
+    Deque,
+    Final,
     FrozenSet,
-    Generator,
     Generic,
-    Hashable,
-    Iterable,
-    Iterator,
-    List,
-    Mapping,
-    MutableMapping,
-    MutableSequence,
-    MutableSet,
     NamedTuple,
     Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Type,
+    OrderedDict,
     TypeVar,
     Union,
-    ValuesView,
 )
 
 from typing_extensions import (
-    Deque,
-    Final,
     Literal,
-    OrderedDict,
     ParamSpec,
     Protocol,
     Self,
@@ -61,19 +58,15 @@ try:
         from beartype.typing import (  # noqa: F811
             AbstractSet,
             Deque,
-            Dict,
             FrozenSet,
             Iterable,
             Iterator,
-            List,
             Mapping,
             MutableMapping,
             MutableSequence,
             MutableSet,
             OrderedDict,
             Sequence,
-            Set,
-            Tuple,
             ValuesView,
         )
     _beartype_found = True
@@ -117,7 +110,7 @@ class RedisError(Exception):
     """
 
 
-CommandArgList = List[Union[str, bytes, int, float]]
+CommandArgList = list[Union[str, bytes, int, float]]
 
 
 class Node(TypedDict):
@@ -163,7 +156,7 @@ StringT = Union[str, bytes]
 #:     length("123")               # invalid
 #:     length(b"123")              # invalid
 Parameters = Union[
-    List[T_co], AbstractSet[T_co], Tuple[T_co, ...], ValuesView[T_co], Iterator[T_co]
+    list[T_co], AbstractSet[T_co], tuple[T_co, ...], ValuesView[T_co], Iterator[T_co]
 ]
 
 #: Mapping of primitives returned by redis
@@ -179,19 +172,19 @@ ResponsePrimitive = Optional[Union[StringT, int, float, bool]]
 if TYPE_CHECKING:
     ResponseType = Union[
         ResponsePrimitive,
-        List["ResponseType"],
+        list["ResponseType"],
         MutableSet[
             Union[
                 ResponsePrimitive,
-                Tuple[ResponsePrimitive, ...],
-                FrozenSet[ResponsePrimitive],
+                tuple[ResponsePrimitive, ...],
+                frozenset[ResponsePrimitive],
             ]
         ],
-        Dict[
+        dict[
             Union[
                 ResponsePrimitive,
-                Tuple[ResponsePrimitive, ...],
-                FrozenSet[ResponsePrimitive],
+                tuple[ResponsePrimitive, ...],
+                frozenset[ResponsePrimitive],
             ],
             "ResponseType",
         ],
@@ -202,19 +195,19 @@ else:
 
     ResponseType = Union[
         ResponsePrimitive,
-        List[Any],
+        list[Any],
         MutableSet[
             Union[
                 ResponsePrimitive,
-                Tuple[ResponsePrimitive, ...],
-                FrozenSet[ResponsePrimitive],
+                tuple[ResponsePrimitive, ...],
+                frozenset[ResponsePrimitive],
             ]
         ],
-        Dict[
+        dict[
             Union[
                 ResponsePrimitive,
-                Tuple[ResponsePrimitive, ...],
-                FrozenSet[ResponsePrimitive],
+                tuple[ResponsePrimitive, ...],
+                frozenset[ResponsePrimitive],
             ],
             Any,
         ],
@@ -232,7 +225,6 @@ __all__ = [
     "ContextManager",
     "Coroutine",
     "Deque",
-    "Dict",
     "Final",
     "FrozenSet",
     "Generic",
@@ -241,7 +233,6 @@ __all__ = [
     "Iterable",
     "Iterator",
     "KeyT",
-    "List",
     "Literal",
     "Mapping",
     "ModuleType",
@@ -260,10 +251,7 @@ __all__ = [
     "runtime_checkable",
     "Sequence",
     "Self",
-    "Set",
     "StringT",
-    "Tuple",
-    "Type",
     "TypeGuard",
     "TypedDict",
     "TypeVar",

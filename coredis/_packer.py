@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from coredis.constants import SYM_CRLF, SYM_DOLLAR, SYM_EMPTY, SYM_STAR
-from coredis.typing import List, Tuple, ValueT
+from coredis.typing import ValueT
 
 
 class Packer:
@@ -18,9 +18,9 @@ class Packer:
             return b"%.15g" % value
         return value
 
-    def pack_command(self, command: bytes, *args: ValueT) -> List[bytes]:
+    def pack_command(self, command: bytes, *args: ValueT) -> list[bytes]:
         "Pack a series of arguments into the Redis protocol"
-        output: List[bytes] = []
+        output: list[bytes] = []
         # the client might have included 1 or more literal arguments in
         # the command name, e.g., 'CONFIG GET'. The Redis server expects these
         # arguments to be sent separately, so split the first argument
@@ -50,9 +50,9 @@ class Packer:
         output.append(buff)
         return output
 
-    def pack_commands(self, commands: List[Tuple[ValueT, ...]]) -> List[bytes]:
-        output: List[bytes] = []
-        pieces: List[bytes] = []
+    def pack_commands(self, commands: list[tuple[ValueT, ...]]) -> list[bytes]:
+        output: list[bytes] = []
+        pieces: list[bytes] = []
         buffer_length = 0
 
         for cmd in commands:

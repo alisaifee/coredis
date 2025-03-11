@@ -8,8 +8,6 @@ from coredis.response._utils import flat_pairs_to_dict
 from coredis.response.types import LibraryDefinition
 from coredis.typing import (
     AnyStr,
-    Dict,
-    List,
     Mapping,
     Optional,
     ResponsePrimitive,
@@ -20,13 +18,13 @@ from coredis.typing import (
 
 
 class FunctionListCallback(
-    ResponseCallback[List[ResponseType], List[ResponseType], Mapping[AnyStr, LibraryDefinition]]
+    ResponseCallback[list[ResponseType], list[ResponseType], Mapping[AnyStr, LibraryDefinition]]
 ):
     def transform(
-        self, response: List[ResponseType], **options: Optional[ValueT]
+        self, response: list[ResponseType], **options: Optional[ValueT]
     ) -> Mapping[AnyStr, LibraryDefinition]:
         libraries = [
-            EncodingInsensitiveDict(flat_pairs_to_dict(cast(List[ValueT], library)))
+            EncodingInsensitiveDict(flat_pairs_to_dict(cast(list[ValueT], library)))
             for library in response
         ]
         transformed = EncodingInsensitiveDict()
@@ -52,40 +50,40 @@ class FunctionListCallback(
 
 class FunctionStatsCallback(
     ResponseCallback[
-        List[ResponseType],
-        Dict[
+        list[ResponseType],
+        dict[
             AnyStr,
-            Optional[Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]],
+            Optional[Union[AnyStr, dict[AnyStr, dict[AnyStr, ResponsePrimitive]]]],
         ],
-        Dict[
+        dict[
             AnyStr,
-            Optional[Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]],
+            Optional[Union[AnyStr, dict[AnyStr, dict[AnyStr, ResponsePrimitive]]]],
         ],
     ]
 ):
     def transform(
         self,
-        response: List[ResponseType],
+        response: list[ResponseType],
         **options: Optional[ValueT],
-    ) -> Dict[AnyStr, Optional[Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]]]:
+    ) -> dict[AnyStr, Optional[Union[AnyStr, dict[AnyStr, dict[AnyStr, ResponsePrimitive]]]]]:
         transformed = flat_pairs_to_dict(response)
         key = cast(AnyStr, b"engines" if b"engines" in transformed else "engines")
-        engines = flat_pairs_to_dict(cast(List[AnyStr], transformed.pop(key)))
+        engines = flat_pairs_to_dict(cast(list[AnyStr], transformed.pop(key)))
         engines_transformed = {}
         for engine, stats in engines.items():
-            engines_transformed[engine] = flat_pairs_to_dict(cast(List[AnyStr], stats))
+            engines_transformed[engine] = flat_pairs_to_dict(cast(list[AnyStr], stats))
         transformed[key] = engines_transformed  # type: ignore
         return cast(
-            Dict[AnyStr, Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]],
+            dict[AnyStr, Union[AnyStr, dict[AnyStr, dict[AnyStr, ResponsePrimitive]]]],
             transformed,
         )
 
     def transform_3(
         self,
-        response: Dict[
+        response: dict[
             AnyStr,
-            Optional[Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]],
+            Optional[Union[AnyStr, dict[AnyStr, dict[AnyStr, ResponsePrimitive]]]],
         ],
         **options: Optional[ValueT],
-    ) -> Dict[AnyStr, Optional[Union[AnyStr, Dict[AnyStr, Dict[AnyStr, ResponsePrimitive]]]]]:
+    ) -> dict[AnyStr, Optional[Union[AnyStr, dict[AnyStr, dict[AnyStr, ResponsePrimitive]]]]]:
         return response

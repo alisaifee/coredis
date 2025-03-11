@@ -15,14 +15,12 @@ from coredis.modules.response.types import (
 from coredis.response._callbacks import ResponseCallback
 from coredis.typing import (
     AnyStr,
-    Dict,
     Generic,
     Literal,
     Optional,
     ResponsePrimitive,
     ResponseType,
     StringT,
-    Tuple,
     Union,
     ValueT,
 )
@@ -65,9 +63,9 @@ class QueryCallback(
     ResponseCallback[ResponseType, ResponseType, GraphQueryResult[AnyStr]],
     Generic[AnyStr],
 ):
-    properties: Dict[int, StringT]
-    relationships: Dict[int, StringT]
-    labels: Dict[int, StringT]
+    properties: dict[int, StringT]
+    relationships: dict[int, StringT]
+    labels: dict[int, StringT]
 
     def __init__(self, graph: StringT):
         self.graph = graph
@@ -101,7 +99,7 @@ class QueryCallback(
 
     def fetch_max_ids(
         self, entity: Any, max_label_id: int, max_relation_id: int, max_property_id: int
-    ) -> Tuple[int, int, int]:
+    ) -> tuple[int, int, int]:
         result_type = entity[0]
         if result_type == ValueTypes.VALUE_NODE:
             for label_id in entity[1][1]:
@@ -129,7 +127,7 @@ class QueryCallback(
         max_id: int,
         type: Literal["labels", "properties", "relationships"],
         client: Client[Any],
-    ) -> Dict[int, StringT]:
+    ) -> dict[int, StringT]:
         cache = client.callback_storage[self.__class__]
         if max_id > max(cache[f"{self.graph}:{type}"] or [-1]):
             cache[f"{self.graph}:{type}"] = dict(
@@ -191,25 +189,17 @@ class QueryCallback(
                 type=self.relationships[entity[1][1]],
                 src_node=entity[1][2],
                 destination_node=entity[1][3],
-                properties=dict(
-                    (
-                        self.properties[k[0]],
-                        self.parse_entity((k[1], k[2])),
-                    )
-                    for k in entity[1][4]
-                ),
+                properties={
+                    self.properties[k[0]]: self.parse_entity((k[1], k[2])) for k in entity[1][4]
+                },
             )
         elif result_type == ValueTypes.VALUE_NODE:
             return GraphNode(
                 id=entity[1][0],
-                labels=set(self.labels[k] for k in entity[1][1]),
-                properties=dict(
-                    (
-                        self.properties[k[0]],
-                        self.parse_entity((k[1], k[2])),
-                    )
-                    for k in entity[1][2]
-                ),
+                labels={self.labels[k] for k in entity[1][1]},
+                properties={
+                    self.properties[k[0]]: self.parse_entity((k[1], k[2])) for k in entity[1][2]
+                },
             )
         elif result_type == ValueTypes.VALUE_PATH:
             nodes, relations = entity[1]
@@ -219,11 +209,11 @@ class QueryCallback(
 
 
 class GraphSlowLogCallback(
-    ResponseCallback[ResponseType, ResponseType, Union[Tuple[GraphSlowLogInfo, ...], bool]]
+    ResponseCallback[ResponseType, ResponseType, Union[tuple[GraphSlowLogInfo, ...], bool]]
 ):
     def transform(
         self, response: ResponseType, **kwargs: Optional[ValueT]
-    ) -> Union[Tuple[GraphSlowLogInfo, ...], bool]:
+    ) -> Union[tuple[GraphSlowLogInfo, ...], bool]:
         return tuple(GraphSlowLogInfo(int(k[0]), k[1], k[2], float(k[3])) for k in response)
 
 
@@ -231,12 +221,12 @@ class ConfigGetCallback(
     ResponseCallback[
         ResponseType,
         ResponseType,
-        Union[ResponsePrimitive, Dict[AnyStr, ResponsePrimitive]],
+        Union[ResponsePrimitive, dict[AnyStr, ResponsePrimitive]],
     ]
 ):
     def transform(
         self, response: ResponseType, **options: Optional[ValueT]
-    ) -> Union[ResponsePrimitive, Dict[AnyStr, ResponsePrimitive]]:
+    ) -> Union[ResponsePrimitive, dict[AnyStr, ResponsePrimitive]]:
         if isinstance(response, list):
             if isinstance(response[0], list):
                 return dict(response)

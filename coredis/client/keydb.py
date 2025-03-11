@@ -29,7 +29,6 @@ from coredis.typing import (
     Callable,
     CommandArgList,
     Coroutine,
-    Dict,
     Iterable,
     KeyT,
     Literal,
@@ -37,9 +36,7 @@ from coredis.typing import (
     P,
     Parameters,
     R,
-    Set,
     StringT,
-    Tuple,
     Union,
     ValueT,
 )
@@ -73,9 +70,9 @@ def keydb_command(
     version_introduced: Optional[str] = None,
     version_deprecated: Optional[str] = None,
     deprecation_reason: Optional[str] = None,
-    arguments: Optional[Dict[str, Dict[str, str]]] = None,
+    arguments: Optional[dict[str, dict[str, str]]] = None,
     cluster: ClusterCommandConfig = ClusterCommandConfig(),
-    flags: Optional[Set[CommandFlag]] = None,
+    flags: Optional[set[CommandFlag]] = None,
 ) -> Callable[[Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]]:
     command_details = CommandDetails(
         command_name,
@@ -270,7 +267,7 @@ class KeyDBCommands(CommandMixin[AnyStr]):
         )
 
     @keydb_command(CommandName.MEXISTS, group=CommandGroup.GENERIC, flags={CommandFlag.READONLY})
-    async def mexists(self, keys: Iterable[KeyT]) -> Tuple[bool, ...]:
+    async def mexists(self, keys: Iterable[KeyT]) -> tuple[bool, ...]:
         """
         Returns a tuple of bools in the same order as :paramref:`keys`
         denoting whether the keys exist

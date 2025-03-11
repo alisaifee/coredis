@@ -6,7 +6,7 @@ from ..commands._wrappers import CacheConfig
 from ..commands.constants import CommandFlag, CommandGroup, CommandName
 from ..response._callbacks import BoolCallback, IntCallback
 from ..tokens import PrefixToken, PureToken
-from ..typing import AnyStr, CommandArgList, KeyT, Optional, StringT, Tuple, Union
+from ..typing import AnyStr, CommandArgList, KeyT, Optional, StringT, Union
 from .base import ModuleGroup, module_command
 from .response._callbacks.autocomplete import AutocompleteCallback
 from .response.types import AutocompleteSuggestion
@@ -70,7 +70,7 @@ class Autocomplete(ModuleGroup[AnyStr]):
         withscores: Optional[bool] = None,
         withpayloads: Optional[bool] = None,
         max_suggestions: Optional[int] = None,
-    ) -> Union[Tuple[AutocompleteSuggestion[AnyStr], ...], Tuple[()]]:
+    ) -> Union[tuple[AutocompleteSuggestion[AnyStr], ...], tuple[()]]:
         """
         Gets completion suggestions for a prefix
 

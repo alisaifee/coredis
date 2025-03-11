@@ -50,19 +50,14 @@ from coredis.typing import (
     AnyStr,
     Callable,
     Coroutine,
-    Dict,
     Generic,
     Iterable,
     KeyT,
-    List,
     Optional,
     Parameters,
     ParamSpec,
     ResponseType,
-    Set,
     StringT,
-    Tuple,
-    Type,
     TypeVar,
     ValueT,
 )
@@ -106,9 +101,9 @@ and retrieve responses for the commands executed in the pipeline.
 @dataclass
 class PipelineCommand:
     command: bytes
-    args: Tuple[ValueT, ...]
+    args: tuple[ValueT, ...]
     callback: Callable[..., Any] = NoopCallback()  # type: ignore
-    options: Dict[str, Optional[ValueT]] = field(default_factory=dict)
+    options: dict[str, Optional[ValueT]] = field(default_factory=dict)
     request: Optional[asyncio.Future[ResponseType]] = None
 
 
@@ -129,11 +124,11 @@ class NodeCommands:
     ):
         self.client = client
         self.connection = connection
-        self.commands: List[ClusterPipelineCommand] = []
+        self.commands: list[ClusterPipelineCommand] = []
         self.in_transaction = in_transaction
         self.timeout = timeout
 
-    def extend(self, c: List[ClusterPipelineCommand]) -> None:
+    def extend(self, c: list[ClusterPipelineCommand]) -> None:
         self.commands.extend(c)
 
     def append(self, c: ClusterPipelineCommand) -> None:
@@ -190,7 +185,7 @@ class NodeCommands:
                 for c in self.commands:
                     if c.command == CommandName.EXEC:
                         if c.result:
-                            transaction_result = cast(List[ResponseType], c.result)
+                            transaction_result = cast(list[ResponseType], c.result)
                         else:
                             raise WatchError("Watched variable changed.")
                 for idx, c in enumerate(
@@ -214,10 +209,10 @@ class NodeCommands:
 
 
 class PipelineMeta(ABCMeta):
-    RESULT_CALLBACKS: Dict[str, Callable[..., Any]]
-    NODES_FLAGS: Dict[str, NodeFlag]
+    RESULT_CALLBACKS: dict[str, Callable[..., Any]]
+    NODES_FLAGS: dict[str, NodeFlag]
 
-    def __new__(cls, name: str, bases: Tuple[type, ...], namespace: Dict[str, object]):
+    def __new__(cls, name: str, bases: tuple[type, ...], namespace: dict[str, object]):
         kls = super().__new__(cls, name, bases, namespace)
 
         for name, method in PipelineMeta.get_methods(kls).items():
@@ -227,12 +222,12 @@ class PipelineMeta(ABCMeta):
         return kls
 
     @staticmethod
-    def get_methods(kls: PipelineMeta) -> Dict[str, Callable[..., Any]]:
+    def get_methods(kls: PipelineMeta) -> dict[str, Callable[..., Any]]:
         return dict(k for k in inspect.getmembers(kls) if inspect.isfunction(k[1]))
 
 
 class ClusterPipelineMeta(PipelineMeta):
-    def __new__(cls, name: str, bases: Tuple[type, ...], namespace: Dict[str, object]):
+    def __new__(cls, name: str, bases: tuple[type, ...], namespace: dict[str, object]):
         kls = super().__new__(cls, name, bases, namespace)
         for name, method in ClusterPipelineMeta.get_methods(kls).items():
             cmd = getattr(method, "__coredis_command", None)
@@ -269,7 +264,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
     on a key of a different datatype.
     """
 
-    command_stack: List[PipelineCommand]
+    command_stack: list[PipelineCommand]
     connection_pool: ConnectionPool
 
     def __init__(
@@ -288,15 +283,15 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         self.command_stack = []
         self.cache = None  # not implemented.
         self.explicit_transaction = False
-        self.scripts: Set[Script[AnyStr]] = set()
+        self.scripts: set[Script[AnyStr]] = set()
         self.timeout = timeout
 
-    async def __aenter__(self) -> "PipelineImpl[AnyStr]":
+    async def __aenter__(self) -> PipelineImpl[AnyStr]:
         return self
 
     async def __aexit__(
         self,
-        exc_type: Optional[Type[BaseException]],
+        exc_type: Optional[type[BaseException]],
         exc_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> None:
@@ -310,7 +305,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
 
     async def reset_pipeline(self) -> None:
         self.command_stack.clear()
-        self.scripts: Set[Script[AnyStr]] = set()
+        self.scripts: set[Script[AnyStr]] = set()
         # make sure to reset the connection state in the event that we were
         # watching something
 
@@ -438,9 +433,9 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
     async def _execute_transaction(
         self,
         connection: BaseConnection,
-        commands: List[PipelineCommand],
+        commands: list[PipelineCommand],
         raise_on_error: bool,
-    ) -> Tuple[Any, ...]:
+    ) -> tuple[Any, ...]:
         cmds = list(
             chain(
                 [
@@ -476,7 +471,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         for i, cmd in enumerate(cmds):
             cmd.request = requests[i]
 
-        errors: List[Tuple[int, Optional[RedisError]]] = []
+        errors: list[tuple[int, Optional[RedisError]]] = []
         multi_failed = False
 
         # parse off the response for MULTI
@@ -499,10 +494,10 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
                 self.annotate_exception(ex, i + 1, cmd.command, cmd.args)
                 errors.append((i, ex))
 
-        response: List[ResponseType]
+        response: list[ResponseType]
         try:
             response = cast(
-                List[ResponseType],
+                list[ResponseType],
                 await cmds[-1].request if cmds[-1].request else None,
             )
         except (ExecAbortError, ResponseError):
@@ -531,7 +526,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
             self.raise_first_error(commands, response)
 
         # We have to run response callbacks manually
-        data: List[Any] = []
+        data: list[Any] = []
         for r, cmd in zip(response, commands):
             if not isinstance(r, Exception):
                 if isinstance(cmd.callback, AsyncPreProcessingCallback):
@@ -543,9 +538,9 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
     async def _execute_pipeline(
         self,
         connection: BaseConnection,
-        commands: List[PipelineCommand],
+        commands: list[PipelineCommand],
         raise_on_error: bool,
-    ) -> Tuple[Any, ...]:
+    ) -> tuple[Any, ...]:
         # build up all commands into a single request to increase network perf
         requests = await connection.create_requests(
             [
@@ -562,7 +557,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         for i, cmd in enumerate(commands):
             cmd.request = requests[i]
 
-        response: List[Any] = []
+        response: list[Any] = []
 
         for cmd in commands:
             try:
@@ -584,7 +579,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
 
         return tuple(response)
 
-    def raise_first_error(self, commands: List[PipelineCommand], response: ResponseType) -> None:
+    def raise_first_error(self, commands: list[PipelineCommand], response: ResponseType) -> None:
         assert isinstance(response, list)
         for i, r in enumerate(response):
             if isinstance(r, RedisError):
@@ -627,7 +622,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
                         callback=AnyStrCallback[AnyStr](),
                     )
 
-    async def execute(self, raise_on_error: bool = True) -> Tuple[Any, ...]:
+    async def execute(self, raise_on_error: bool = True) -> tuple[Any, ...]:
         """Executes all the commands in the current pipeline"""
         stack = self.command_stack
 
@@ -697,10 +692,10 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
 class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
     client: RedisCluster[AnyStr]
     connection_pool: ClusterConnectionPool
-    command_stack: List[ClusterPipelineCommand]
+    command_stack: list[ClusterPipelineCommand]
 
-    RESULT_CALLBACKS: Dict[str, Callable[..., Any]] = {}
-    NODES_FLAGS: Dict[str, NodeFlag] = {}
+    RESULT_CALLBACKS: dict[str, Callable[..., Any]] = {}
+    NODES_FLAGS: dict[str, NodeFlag] = {}
 
     def __init__(
         self,
@@ -756,12 +751,12 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
     def __bool__(self) -> bool:
         return True
 
-    async def __aenter__(self) -> "ClusterPipelineImpl[AnyStr]":
+    async def __aenter__(self) -> ClusterPipelineImpl[AnyStr]:
         return self
 
     async def __aexit__(
         self,
-        exc_type: Optional[Type[BaseException]],
+        exc_type: Optional[type[BaseException]],
         exc_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> None:
@@ -822,7 +817,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
             )
             exception.args = (msg,) + exception.args[1:]
 
-    async def execute(self, raise_on_error: bool = True) -> Tuple[object, ...]:
+    async def execute(self, raise_on_error: bool = True) -> tuple[object, ...]:
         await self.connection_pool.initialize()
 
         if not self.command_stack:
@@ -841,7 +836,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         """Empties pipeline"""
         self.command_stack = []
 
-        self.scripts: Set[Script[AnyStr]] = set()
+        self.scripts: set[Script[AnyStr]] = set()
         # clean up the other instance attributes
         self.watching = False
         self.explicit_transaction = False
@@ -851,9 +846,9 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
             self._watched_connection = None
 
     @retryable(policy=ConstantRetryPolicy((ClusterDownError,), 3, 0.1))
-    async def send_cluster_transaction(self, raise_on_error: bool = True) -> Tuple[object, ...]:
+    async def send_cluster_transaction(self, raise_on_error: bool = True) -> tuple[object, ...]:
         attempt = sorted(self.command_stack, key=lambda x: x.position)
-        slots: Set[int] = set()
+        slots: set[int] = set()
         for c in attempt:
             slot = self._determine_slot(c.command, *c.args, **c.options)
             if slot:
@@ -908,7 +903,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
     @retryable(policy=ConstantRetryPolicy((ClusterDownError,), 3, 0.1))
     async def send_cluster_commands(
         self, raise_on_error: bool = True, allow_redirections: bool = True
-    ) -> Tuple[object, ...]:
+    ) -> tuple[object, ...]:
         """
         Sends a bunch of cluster commands to the redis cluster.
 
@@ -921,7 +916,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
         protocol_version: int = 3
         # build a list of node objects based on node names we need to
-        nodes: Dict[str, NodeCommands] = {}
+        nodes: dict[str, NodeCommands] = {}
         # as we move through each command that still needs to be processed,
         # we figure out the slot number that command maps to, then from the slot determine the node.
         for c in attempt:
@@ -1021,8 +1016,8 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
     def _determine_slot(self, command: bytes, *args: ValueT, **options: ValueT) -> int:
         """Figure out what slot based on command and args"""
 
-        keys: Tuple[ValueT, ...] = cast(
-            Tuple[ValueT, ...], options.get("keys")
+        keys: tuple[ValueT, ...] = cast(
+            tuple[ValueT, ...], options.get("keys")
         ) or KeySpec.extract_keys(command, *args)
 
         if not keys:
@@ -1144,7 +1139,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
 
     async def __aexit__(
         self,
-        exc_type: Optional[Type[BaseException]],
+        exc_type: Optional[type[BaseException]],
         exc_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> None:
@@ -1186,7 +1181,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         """
         return await self.__wrapped__.unwatch()  # Only here for documentation purposes.
 
-    async def execute(self, raise_on_error: bool = True) -> Tuple[object, ...]:
+    async def execute(self, raise_on_error: bool = True) -> tuple[object, ...]:
         """
         Executes all the commands in the current pipeline
         and return the results of the individual batched commands
@@ -1220,7 +1215,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
 
     async def __aexit__(
         self,
-        exc_type: Optional[Type[BaseException]],
+        exc_type: Optional[type[BaseException]],
         exc_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> None:
@@ -1266,7 +1261,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         """
         return await self.__wrapped__.unwatch()  # Only here for documentation purposes.
 
-    async def execute(self, raise_on_error: bool = True) -> Tuple[object, ...]:
+    async def execute(self, raise_on_error: bool = True) -> tuple[object, ...]:
         """
         Executes all the commands in the current pipeline
         and return the results of the individual batched commands

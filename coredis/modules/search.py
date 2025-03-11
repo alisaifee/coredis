@@ -22,18 +22,14 @@ from ..tokens import PrefixToken, PureToken
 from ..typing import (
     AnyStr,
     CommandArgList,
-    Dict,
     KeyT,
-    List,
     Literal,
     Mapping,
     Optional,
     Parameters,
     ResponsePrimitive,
     ResponseType,
-    Set,
     StringT,
-    Tuple,
     Union,
     ValueT,
 )
@@ -51,9 +47,9 @@ from .response.types import SearchAggregationResult, SearchResult
 class RediSearch(Module[AnyStr]):
     NAME = "search"
     FULL_NAME = "RediSearch"
-    DESCRIPTION = """RedisSearch is a Redis module that enables querying, secondary 
-indexing, and full-text search for Redis. These features enable multi-field queries, 
-aggregation, exact phrase matching, numeric filtering, geo filtering and vector 
+    DESCRIPTION = """RedisSearch is a Redis module that enables querying, secondary
+indexing, and full-text search for Redis. These features enable multi-field queries,
+aggregation, exact phrase matching, numeric filtering, geo filtering and vector
 similarity semantic search on top of text queries."""
     DOCUMENTATION_URL = "https://redis.io/docs/stack/search"
 
@@ -120,10 +116,10 @@ class Field:
     #: For more details refer to the
     #: `Creation attributes per algorithm <https://redis.io/docs/stack/search/reference/vectors/#creation-attributes-per-algorithm>`__
     #: section of the RediSearch documentation.
-    attributes: Optional[Dict[StringT, ValueT]] = None
+    attributes: Optional[dict[StringT, ValueT]] = None
 
     @property
-    def args(self) -> Tuple[ValueT, ...]:
+    def args(self) -> tuple[ValueT, ...]:
         args: CommandArgList = [self.name]
         if self.alias:
             args += [PrefixToken.AS, self.alias]
@@ -133,7 +129,7 @@ class Field:
 
             args += [self.algorithm]
             if self.attributes:
-                _attributes: List[ValueT] = list(itertools.chain(*self.attributes.items()))
+                _attributes: list[ValueT] = list(itertools.chain(*self.attributes.items()))
                 args += [len(_attributes)]
                 args += _attributes
 
@@ -207,7 +203,7 @@ class Group:
         if isinstance(self.by, (bytes, str)):
             args.extend([1, self.by])
         else:
-            bies: List[StringT] = list(self.by)
+            bies: list[StringT] = list(self.by)
             args.extend([len(bies), *bies])
         for reducer in self.reducers or []:
             args.append(PrefixToken.REDUCE)
@@ -318,7 +314,7 @@ class Search(ModuleGroup[AnyStr]):
             pieces.extend([PrefixToken.ON, on])
 
         if prefixes:
-            _prefixes: List[StringT] = list(prefixes)
+            _prefixes: list[StringT] = list(prefixes)
             pieces.extend([PrefixToken.PREFIX, len(_prefixes), *_prefixes])
         if filter_expression:
             pieces.extend([PrefixToken.FILTER, filter_expression])
@@ -345,7 +341,7 @@ class Search(ModuleGroup[AnyStr]):
         if nofreqs:
             pieces.append(PureToken.NOFREQS)
         if stopwords:
-            _stop: List[StringT] = list(stopwords)
+            _stop: list[StringT] = list(stopwords)
             pieces.extend([PrefixToken.STOPWORDS, len(_stop), *_stop])
         if skipinitialscan:
             pieces.append(PureToken.SKIPINITIALSCAN)
@@ -365,7 +361,7 @@ class Search(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         group=COMMAND_GROUP,
     )
-    async def info(self, index: KeyT) -> Dict[AnyStr, ResponseType]:
+    async def info(self, index: KeyT) -> dict[AnyStr, ResponseType]:
         """
         Returns information and statistics on the index
 
@@ -516,7 +512,7 @@ class Search(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         group=COMMAND_GROUP,
     )
-    async def tagvals(self, index: KeyT, field_name: StringT) -> Set[AnyStr]:
+    async def tagvals(self, index: KeyT, field_name: StringT) -> set[AnyStr]:
         """
         Returns the distinct tags indexed in a Tag field
 
@@ -565,7 +561,7 @@ class Search(ModuleGroup[AnyStr]):
         version_introduced="1.2.0",
         group=COMMAND_GROUP,
     )
-    async def syndump(self, index: KeyT) -> Dict[AnyStr, List[AnyStr]]:
+    async def syndump(self, index: KeyT) -> dict[AnyStr, list[AnyStr]]:
         """
         Dumps the contents of a synonym group
 
@@ -573,7 +569,7 @@ class Search(ModuleGroup[AnyStr]):
         """
 
         return await self.execute_module_command(
-            CommandName.FT_SYNDUMP, index, callback=DictCallback[AnyStr, List[AnyStr]]()
+            CommandName.FT_SYNDUMP, index, callback=DictCallback[AnyStr, list[AnyStr]]()
         )
 
     @module_command(
@@ -667,7 +663,7 @@ class Search(ModuleGroup[AnyStr]):
         version_introduced="1.4.0",
         group=COMMAND_GROUP,
     )
-    async def dictdump(self, name: StringT) -> Set[AnyStr]:
+    async def dictdump(self, name: StringT) -> set[AnyStr]:
         """
         Dumps all terms in the given dictionary
 
@@ -688,7 +684,7 @@ class Search(ModuleGroup[AnyStr]):
             combine=ClusterMergeSets[AnyStr](),
         ),
     )
-    async def list(self) -> Set[AnyStr]:
+    async def list(self) -> set[AnyStr]:
         """
         Returns a list of all existing indexes
         """
@@ -724,7 +720,7 @@ class Search(ModuleGroup[AnyStr]):
             route=NodeFlag.RANDOM,
         ),
     )
-    async def config_get(self, option: StringT) -> Dict[AnyStr, ResponsePrimitive]:
+    async def config_get(self, option: StringT) -> dict[AnyStr, ResponsePrimitive]:
         """
         Retrieves runtime configuration options
         """
@@ -754,13 +750,13 @@ class Search(ModuleGroup[AnyStr]):
         withpayloads: Optional[bool] = None,
         withsortkeys: Optional[bool] = None,
         numeric_filters: Optional[
-            Mapping[StringT, Tuple[Union[int, float, StringT], Union[int, float, StringT]]]
+            Mapping[StringT, tuple[Union[int, float, StringT], Union[int, float, StringT]]]
         ] = None,
         geo_filters: Optional[
             Mapping[
                 StringT,
-                Tuple[
-                    Tuple[Union[int, float], Union[int, float]],
+                tuple[
+                    tuple[Union[int, float], Union[int, float]],
                     Union[int, float],
                     Literal[PureToken.KM, PureToken.M, PureToken.MI, PureToken.FT],
                 ],
@@ -774,7 +770,7 @@ class Search(ModuleGroup[AnyStr]):
         summarize_length: Optional[int] = None,
         summarize_separator: Optional[StringT] = None,
         highlight_fields: Optional[Parameters[StringT]] = None,
-        highlight_tags: Optional[Tuple[StringT, StringT]] = None,
+        highlight_tags: Optional[tuple[StringT, StringT]] = None,
         slop: Optional[int] = None,
         timeout: Optional[Union[int, timedelta]] = None,
         inorder: Optional[bool] = None,
@@ -867,10 +863,10 @@ class Search(ModuleGroup[AnyStr]):
                     ]
                 )
         if in_keys:
-            _in_keys: List[StringT] = list(in_keys)
+            _in_keys: list[StringT] = list(in_keys)
             pieces.extend([PrefixToken.INKEYS, len(_in_keys), *_in_keys])
         if in_fields:
-            _in_fields: List[StringT] = list(in_fields)
+            _in_fields: list[StringT] = list(in_fields)
             pieces.extend([PrefixToken.INFIELDS, len(_in_fields), *_in_fields])
         if returns:
             return_items: CommandArgList = []
@@ -886,7 +882,7 @@ class Search(ModuleGroup[AnyStr]):
         if summarize_fields or summarize_frags or summarize_length or summarize_separator:
             pieces.append(PureToken.SUMMARIZE)
             if summarize_fields:
-                _fields: List[StringT] = list(summarize_fields)
+                _fields: list[StringT] = list(summarize_fields)
                 pieces.extend([PrefixToken.FIELDS, len(_fields), *_fields])
             if summarize_frags:
                 pieces.extend([PrefixToken.FRAGS, summarize_frags])
@@ -920,7 +916,7 @@ class Search(ModuleGroup[AnyStr]):
         if limit is not None:
             pieces.extend([PrefixToken.LIMIT, offset or 0, limit])
         if parameters:
-            _parameters: List[ValueT] = list(itertools.chain(*parameters.items()))
+            _parameters: list[ValueT] = list(itertools.chain(*parameters.items()))
             pieces.extend([PureToken.PARAMS, len(_parameters), *_parameters])
         if dialect:
             pieces.extend([PrefixToken.DIALECT, dialect])
@@ -950,7 +946,7 @@ class Search(ModuleGroup[AnyStr]):
         *,
         verbatim: Optional[bool] = None,
         load: Optional[
-            Union[Literal["*"], Parameters[Union[StringT, Tuple[StringT, StringT]]]]
+            Union[Literal["*"], Parameters[Union[StringT, tuple[StringT, StringT]]]]
         ] = None,
         timeout: Optional[Union[int, timedelta]] = None,
         transforms: Optional[Parameters[Union[Group, Apply, Filter]]] = None,
@@ -996,7 +992,7 @@ class Search(ModuleGroup[AnyStr]):
             if isinstance(load, (bytes, str)):
                 pieces.append(load)
             else:
-                _load_fields: List[StringT] = []
+                _load_fields: list[StringT] = []
                 for field in load:
                     if isinstance(field, (bytes, str)):
                         _load_fields.append(field)
@@ -1027,7 +1023,7 @@ class Search(ModuleGroup[AnyStr]):
             if cursor_maxidle:
                 pieces.extend([PrefixToken.MAXIDLE, normalized_milliseconds(cursor_maxidle)])
         if parameters:
-            _parameters: List[StringT] = list(itertools.chain(*parameters.items()))
+            _parameters: list[StringT] = list(itertools.chain(*parameters.items()))
             pieces.extend([PureToken.PARAMS, len(_parameters), *_parameters])
         if dialect:
             pieces.extend([PrefixToken.DIALECT, dialect])

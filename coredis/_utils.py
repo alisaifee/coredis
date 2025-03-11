@@ -8,13 +8,10 @@ from wrapt import ObjectProxy
 from coredis.typing import (
     Hashable,
     Iterable,
-    List,
     Mapping,
     Optional,
     ResponseType,
-    Set,
     StringT,
-    Tuple,
     TypeVar,
     Union,
 )
@@ -82,10 +79,10 @@ class EncodingInsensitiveDict(ObjectProxy):  # type: ignore
 
 @enum.unique
 class CaseAndEncodingInsensitiveEnum(bytes, enum.Enum):
-    __decoded: Set[StringT]
+    __decoded: set[StringT]
 
     @property
-    def variants(self) -> Set[StringT]:
+    def variants(self) -> set[StringT]:
         if not hasattr(self, "__decoded"):
             decoded = str(self)
             self.__decoded = {
@@ -139,15 +136,15 @@ def nativestr(x: ResponseType, encoding: str = "utf-8") -> str:
     raise ValueError(f"Unable to cast {x} to string")
 
 
-def tuples_to_flat_list(nested_list: Iterable[Tuple[T, ...]]) -> List[T]:
+def tuples_to_flat_list(nested_list: Iterable[tuple[T, ...]]) -> list[T]:
     return [item for sublist in nested_list for item in sublist]
 
 
-def dict_to_flat_list(mapping: Mapping[T, U], reverse: bool = False) -> List[Union[T, U]]:
-    e1: List[Union[T, U]] = list(mapping.keys())
-    e2: List[Union[T, U]] = list(mapping.values())
+def dict_to_flat_list(mapping: Mapping[T, U], reverse: bool = False) -> list[Union[T, U]]:
+    e1: list[Union[T, U]] = list(mapping.keys())
+    e2: list[Union[T, U]] = list(mapping.values())
 
-    ret: List[Union[T, U]] = []
+    ret: list[Union[T, U]] = []
 
     if reverse:
         e1, e2 = e2, e1
@@ -159,25 +156,23 @@ def dict_to_flat_list(mapping: Mapping[T, U], reverse: bool = False) -> List[Uni
     return ret
 
 
-def make_hashable(*args: Any) -> Tuple[Hashable, ...]:
+def make_hashable(*args: Any) -> tuple[Hashable, ...]:
     return tuple(
         (
-            (
-                tuple(make_hashable(v)[0] for v in a)
-                if isinstance(a, (tuple, list))
+            tuple(make_hashable(v)[0] for v in a)
+            if isinstance(a, (tuple, list))
+            else (
+                frozenset(make_hashable(v)[0] for v in a)
+                if isinstance(a, set)
                 else (
-                    frozenset(make_hashable(v)[0] for v in a)
-                    if isinstance(a, set)
-                    else (
-                        tuple((k, make_hashable(v)[0]) for k, v in a.items())
-                        if isinstance(a, dict)
-                        # this will fail downstream if `a` is not hashable
-                        else a
-                    )
+                    tuple((k, make_hashable(v)[0]) for k, v in a.items())
+                    if isinstance(a, dict)
+                    # this will fail downstream if `a` is not hashable
+                    else a
                 )
             )
-            for a in args
         )
+        for a in args
     )
 
 

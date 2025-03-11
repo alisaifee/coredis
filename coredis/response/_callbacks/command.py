@@ -6,21 +6,18 @@ from coredis.response._utils import flat_pairs_to_dict
 from coredis.response.types import Command
 from coredis.typing import (
     AnyStr,
-    Dict,
-    List,
     Optional,
     ResponsePrimitive,
     ResponseType,
-    Set,
     ValueT,
 )
 
 
-class CommandCallback(ResponseCallback[List[ResponseType], List[ResponseType], Dict[str, Command]]):
+class CommandCallback(ResponseCallback[list[ResponseType], list[ResponseType], dict[str, Command]]):
     def transform(
-        self, response: List[ResponseType], **options: Optional[ValueT]
-    ) -> Dict[str, Command]:
-        commands: Dict[str, Command] = {}
+        self, response: list[ResponseType], **options: Optional[ValueT]
+    ) -> dict[str, Command]:
+        commands: dict[str, Command] = {}
 
         for command in response:
             assert isinstance(command, list)
@@ -54,24 +51,24 @@ class CommandCallback(ResponseCallback[List[ResponseType], List[ResponseType], D
 
 
 class CommandKeyFlagCallback(
-    ResponseCallback[List[ResponseType], List[ResponseType], Dict[AnyStr, Set[AnyStr]]]
+    ResponseCallback[list[ResponseType], list[ResponseType], dict[AnyStr, set[AnyStr]]]
 ):
     def transform(
-        self, response: List[ResponseType], **options: Optional[ValueT]
-    ) -> Dict[AnyStr, Set[AnyStr]]:
+        self, response: list[ResponseType], **options: Optional[ValueT]
+    ) -> dict[AnyStr, set[AnyStr]]:
         return {k[0]: set(k[1]) for k in response}
 
 
 class CommandDocCallback(
     ResponseCallback[
-        List[ResponseType],
-        Dict[ResponsePrimitive, ResponseType],
-        Dict[AnyStr, Dict[AnyStr, ResponseType]],
+        list[ResponseType],
+        dict[ResponsePrimitive, ResponseType],
+        dict[AnyStr, dict[AnyStr, ResponseType]],
     ]
 ):
     def transform(
-        self, response: List[ResponseType], **options: Optional[ValueT]
-    ) -> Dict[AnyStr, Dict[AnyStr, ResponseType]]:
+        self, response: list[ResponseType], **options: Optional[ValueT]
+    ) -> dict[AnyStr, dict[AnyStr, ResponseType]]:
         cmd_mapping = flat_pairs_to_dict(response)
         for cmd, doc in cmd_mapping.items():
             cmd_mapping[cmd] = EncodingInsensitiveDict(flat_pairs_to_dict(doc))
@@ -82,7 +79,7 @@ class CommandDocCallback(
 
     def transform_3(
         self,
-        response: Dict[ResponsePrimitive, ResponseType],
+        response: dict[ResponsePrimitive, ResponseType],
         **options: Optional[ValueT],
-    ) -> Dict[AnyStr, Dict[AnyStr, ResponseType]]:
+    ) -> dict[AnyStr, dict[AnyStr, ResponseType]]:
         return response  # noqa

@@ -56,7 +56,6 @@ from coredis.typing import (
     Callable,
     ContextManager,
     Coroutine,
-    Dict,
     Generator,
     Generic,
     Iterator,
@@ -67,8 +66,6 @@ from coredis.typing import (
     ParamSpec,
     ResponseType,
     StringT,
-    Tuple,
-    Type,
     TypeVar,
     Union,
     ValueT,
@@ -99,7 +96,7 @@ class Client(
     encoding: str
     protocol_version: Literal[2, 3]
     server_version: Optional[Version]
-    callback_storage: Dict[Type[ResponseCallback[Any, Any, Any]], Dict[str, Any]]
+    callback_storage: dict[type[ResponseCallback[Any, Any, Any]], dict[str, Any]]
 
     def __init__(
         self,
@@ -112,7 +109,7 @@ class Client(
         stream_timeout: Optional[float] = None,
         connect_timeout: Optional[float] = None,
         connection_pool: Optional[ConnectionPool] = None,
-        connection_pool_cls: Type[ConnectionPool] = ConnectionPool,
+        connection_pool_cls: type[ConnectionPool] = ConnectionPool,
         unix_socket_path: Optional[str] = None,
         encoding: str = "utf-8",
         decode_responses: bool = False,
@@ -198,15 +195,15 @@ class Client(
         self._noreplycontext: contextvars.ContextVar[Optional[bool]] = contextvars.ContextVar(
             "noreply", default=None
         )
-        self._waitcontext: contextvars.ContextVar[Optional[Tuple[int, int]]] = (
+        self._waitcontext: contextvars.ContextVar[Optional[tuple[int, int]]] = (
             contextvars.ContextVar("wait", default=None)
         )
-        self._waitaof_context: contextvars.ContextVar[Optional[Tuple[int, int, int]]] = (
+        self._waitaof_context: contextvars.ContextVar[Optional[tuple[int, int, int]]] = (
             contextvars.ContextVar("waitaof", default=None)
         )
         self.retry_policy = retry_policy
-        self._module_info: Optional[Dict[str, version.Version]] = None
-        self.callback_storage = defaultdict(lambda: {})
+        self._module_info: Optional[dict[str, version.Version]] = None
+        self.callback_storage = defaultdict(dict)
 
     @property
     def noreply(self) -> bool:
@@ -261,7 +258,7 @@ class Client(
         wait = self._waitcontext.get()
         if wait and wait[0] > 0:
 
-            def check_wait(wait: Tuple[int, int], response: asyncio.Future[ResponseType]) -> None:
+            def check_wait(wait: tuple[int, int], response: asyncio.Future[ResponseType]) -> None:
                 exc = response.exception()
                 if exc:
                     maybe_wait.set_exception(exc)
@@ -284,13 +281,13 @@ class Client(
         if waitaof and waitaof[0] > 0:
 
             def check_wait(
-                waitaof: Tuple[int, int, int], response: asyncio.Future[ResponseType]
+                waitaof: tuple[int, int, int], response: asyncio.Future[ResponseType]
             ) -> None:
                 exc = response.exception()
                 if exc:
                     maybe_wait.set_exception(exc)
                 else:
-                    res = cast(Tuple[int, int], response.result())
+                    res = cast(tuple[int, int], response.result())
                     if not (res[0] >= waitaof[0] and res[1] >= waitaof[1]):
                         maybe_wait.set_exception(PersistenceError(command, *waitaof))
                     else:
@@ -371,7 +368,7 @@ class Client(
         key: KeyT,
         match: Optional[StringT] = ...,
         count: Optional[int] = ...,
-    ) -> AsyncGenerator[Tuple[AnyStr, AnyStr], None]: ...
+    ) -> AsyncGenerator[tuple[AnyStr, AnyStr], None]: ...
     @overload
     def hscan_iter(
         self,
@@ -388,7 +385,7 @@ class Client(
         match: Optional[StringT] = None,
         count: Optional[int] = None,
         novalues: Optional[Literal[True]] = None,
-    ) -> Union[AsyncGenerator[Tuple[AnyStr, AnyStr], None], AsyncGenerator[AnyStr, None]]:
+    ) -> Union[AsyncGenerator[tuple[AnyStr, AnyStr], None], AsyncGenerator[AnyStr, None]]:
         """
         Make an iterator using the HSCAN command so that the client doesn't
         need to remember the cursor position.
@@ -567,7 +564,7 @@ class Redis(Client[AnyStr]):
         stream_timeout: Optional[float] = ...,
         connect_timeout: Optional[float] = ...,
         connection_pool: Optional[ConnectionPool] = ...,
-        connection_pool_cls: Type[ConnectionPool] = ...,
+        connection_pool_cls: type[ConnectionPool] = ...,
         unix_socket_path: Optional[str] = ...,
         encoding: str = ...,
         decode_responses: Literal[False] = ...,
@@ -605,7 +602,7 @@ class Redis(Client[AnyStr]):
         stream_timeout: Optional[float] = ...,
         connect_timeout: Optional[float] = ...,
         connection_pool: Optional[ConnectionPool] = ...,
-        connection_pool_cls: Type[ConnectionPool] = ...,
+        connection_pool_cls: type[ConnectionPool] = ...,
         unix_socket_path: Optional[str] = ...,
         encoding: str = ...,
         decode_responses: Literal[True],
@@ -642,7 +639,7 @@ class Redis(Client[AnyStr]):
         stream_timeout: Optional[float] = None,
         connect_timeout: Optional[float] = None,
         connection_pool: Optional[ConnectionPool] = None,
-        connection_pool_cls: Type[ConnectionPool] = ConnectionPool,
+        connection_pool_cls: type[ConnectionPool] = ConnectionPool,
         unix_socket_path: Optional[str] = None,
         encoding: str = "utf-8",
         decode_responses: bool = False,
@@ -830,7 +827,7 @@ class Redis(Client[AnyStr]):
     @classmethod
     @overload
     def from_url(
-        cls: Type[RedisBytesT],
+        cls: type[RedisBytesT],
         url: str,
         db: Optional[int] = ...,
         *,
@@ -848,7 +845,7 @@ class Redis(Client[AnyStr]):
     @classmethod
     @overload
     def from_url(
-        cls: Type[RedisStringT],
+        cls: type[RedisStringT],
         url: str,
         db: Optional[int] = ...,
         *,
@@ -865,7 +862,7 @@ class Redis(Client[AnyStr]):
 
     @classmethod
     def from_url(
-        cls: Type[RedisT],
+        cls: type[RedisT],
         url: str,
         db: Optional[int] = None,
         *,
@@ -1089,7 +1086,7 @@ class Redis(Client[AnyStr]):
         transaction: Optional[bool] = True,
         watches: Optional[Parameters[KeyT]] = None,
         timeout: Optional[float] = None,
-    ) -> "coredis.pipeline.Pipeline[AnyStr]":
+    ) -> coredis.pipeline.Pipeline[AnyStr]:
         """
         Returns a new pipeline object that can queue multiple commands for
         batch execution.
@@ -1106,7 +1103,7 @@ class Redis(Client[AnyStr]):
 
     async def transaction(
         self,
-        func: Callable[["coredis.pipeline.Pipeline[AnyStr]"], Coroutine[Any, Any, Any]],
+        func: Callable[[coredis.pipeline.Pipeline[AnyStr]], Coroutine[Any, Any, Any]],
         *watches: KeyT,
         value_from_callable: bool = False,
         watch_delay: Optional[float] = None,

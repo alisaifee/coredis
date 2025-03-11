@@ -43,20 +43,15 @@ from coredis.typing import (
     Callable,
     ContextManager,
     Coroutine,
-    Dict,
     Iterable,
     Iterator,
-    List,
     Literal,
     Node,
     Optional,
     Parameters,
     ParamSpec,
     ResponseType,
-    Set,
     StringT,
-    Tuple,
-    Type,
     TypeVar,
     ValueT,
 )
@@ -69,9 +64,9 @@ if TYPE_CHECKING:
 
 
 class ClusterMeta(ABCMeta):
-    ROUTING_FLAGS: Dict[bytes, NodeFlag]
-    SPLIT_FLAGS: Dict[bytes, NodeFlag]
-    RESULT_CALLBACKS: Dict[bytes, Callable[..., ResponseType]]
+    ROUTING_FLAGS: dict[bytes, NodeFlag]
+    SPLIT_FLAGS: dict[bytes, NodeFlag]
+    RESULT_CALLBACKS: dict[bytes, Callable[..., ResponseType]]
     NODE_FLAG_DOC_MAPPING = {
         NodeFlag.PRIMARIES: "all primaries",
         NodeFlag.REPLICAS: "all replicas",
@@ -81,17 +76,17 @@ class ClusterMeta(ABCMeta):
     }
 
     def __new__(
-        cls, name: str, bases: Tuple[type, ...], namespace: Dict[str, object]
+        cls, name: str, bases: tuple[type, ...], namespace: dict[str, object]
     ) -> ClusterMeta:
         kls = super().__new__(cls, name, bases, namespace)
         methods = dict(k for k in inspect.getmembers(kls) if inspect.isfunction(k[1]))
         for module in MODULE_GROUPS:
             methods.update(
-                dict(
-                    (f"{module.MODULE}.{k[0]}", k[1])
+                {
+                    f"{module.MODULE}.{k[0]}": k[1]
                     for k in inspect.getmembers(module)
                     if inspect.isfunction(k[1])
-                )
+                }
             )
         for method_name, method in methods.items():
             doc_addition = ""
@@ -159,9 +154,9 @@ class RedisCluster(
     metaclass=ClusterMeta,
 ):
     MAX_RETRIES = 16
-    ROUTING_FLAGS: Dict[bytes, NodeFlag] = {}
-    SPLIT_FLAGS: Dict[bytes, NodeFlag] = {}
-    RESULT_CALLBACKS: Dict[bytes, Callable[..., Any]] = {}
+    ROUTING_FLAGS: dict[bytes, NodeFlag] = {}
+    SPLIT_FLAGS: dict[bytes, NodeFlag] = {}
+    RESULT_CALLBACKS: dict[bytes, Callable[..., Any]] = {}
 
     connection_pool: ClusterConnectionPool
 
@@ -190,7 +185,7 @@ class RedisCluster(
         nodemanager_follow_cluster: bool = ...,
         decode_responses: Literal[False] = ...,
         connection_pool: Optional[ClusterConnectionPool] = ...,
-        connection_pool_cls: Type[ClusterConnectionPool] = ...,
+        connection_pool_cls: type[ClusterConnectionPool] = ...,
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         non_atomic_cross_slot: bool = ...,
@@ -227,7 +222,7 @@ class RedisCluster(
         nodemanager_follow_cluster: bool = ...,
         decode_responses: Literal[True],
         connection_pool: Optional[ClusterConnectionPool] = ...,
-        connection_pool_cls: Type[ClusterConnectionPool] = ...,
+        connection_pool_cls: type[ClusterConnectionPool] = ...,
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         non_atomic_cross_slot: bool = ...,
@@ -263,7 +258,7 @@ class RedisCluster(
         nodemanager_follow_cluster: bool = True,
         decode_responses: bool = False,
         connection_pool: Optional[ClusterConnectionPool] = None,
-        connection_pool_cls: Type[ClusterConnectionPool] = ClusterConnectionPool,
+        connection_pool_cls: type[ClusterConnectionPool] = ClusterConnectionPool,
         protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
         non_atomic_cross_slot: bool = True,
@@ -479,9 +474,9 @@ class RedisCluster(
         )
 
         self.refresh_table_asap: bool = False
-        self.route_flags: Dict[bytes, NodeFlag] = self.__class__.ROUTING_FLAGS.copy()
-        self.split_flags: Dict[bytes, NodeFlag] = self.__class__.SPLIT_FLAGS.copy()
-        self.result_callbacks: Dict[bytes, Callable[..., Any]] = (
+        self.route_flags: dict[bytes, NodeFlag] = self.__class__.ROUTING_FLAGS.copy()
+        self.split_flags: dict[bytes, NodeFlag] = self.__class__.SPLIT_FLAGS.copy()
+        self.result_callbacks: dict[bytes, Callable[..., Any]] = (
             self.__class__.RESULT_CALLBACKS.copy()
         )
         self.non_atomic_cross_slot = non_atomic_cross_slot
@@ -496,7 +491,7 @@ class RedisCluster(
     @classmethod
     @overload
     def from_url(
-        cls: Type[RedisClusterBytesT],
+        cls: type[RedisClusterBytesT],
         url: str,
         *,
         db: Optional[int] = ...,
@@ -515,7 +510,7 @@ class RedisCluster(
     @classmethod
     @overload
     def from_url(
-        cls: Type[RedisClusterStringT],
+        cls: type[RedisClusterStringT],
         url: str,
         *,
         db: Optional[int] = ...,
@@ -533,7 +528,7 @@ class RedisCluster(
 
     @classmethod
     def from_url(
-        cls: Type[RedisClusterT],
+        cls: type[RedisClusterT],
         url: str,
         *,
         db: Optional[int] = None,
@@ -623,10 +618,7 @@ class RedisCluster(
 
     def __repr__(self) -> str:
         servers = list(
-            {
-                "{}:{}".format(info.host, info.port)
-                for info in self.connection_pool.nodes.startup_nodes
-            }
+            {f"{info.host}:{info.port}" for info in self.connection_pool.nodes.startup_nodes}
         )
         servers.sort()
 
@@ -673,9 +665,9 @@ class RedisCluster(
 
     def _determine_slots(
         self, command: bytes, *args: ValueT, **options: Optional[ValueT]
-    ) -> Set[int]:
+    ) -> set[int]:
         """Determines the slots the command and args would touch"""
-        keys = cast(Tuple[ValueT, ...], options.get("keys")) or KeySpec.extract_keys(
+        keys = cast(tuple[ValueT, ...], options.get("keys")) or KeySpec.extract_keys(
             command, *args, readonly_command=self.connection_pool.read_from_replicas
         )
         if (
@@ -698,7 +690,7 @@ class RedisCluster(
     def _merge_result(
         self,
         command: bytes,
-        res: Dict[str, R],
+        res: dict[str, R],
         **kwargs: Optional[ValueT],
     ) -> R:
         assert command in self.result_callbacks
@@ -709,7 +701,7 @@ class RedisCluster(
 
     def determine_node(
         self, command: bytes, **kwargs: Optional[ValueT]
-    ) -> Optional[List[ManagedNode]]:
+    ) -> Optional[list[ManagedNode]]:
         node_flag = self.route_flags.get(command)
         if command in self.split_flags and self.non_atomic_cross_slot:
             node_flag = self.split_flags[command]
@@ -774,7 +766,7 @@ class RedisCluster(
         """
         nodes = self.determine_node(command, **kwargs)
         if nodes and len(nodes) > 1:
-            tasks: Dict[str, Coroutine[Any, Any, R]] = {}
+            tasks: dict[str, Coroutine[Any, Any, R]] = {}
             node_arg_mapping = self._split_args_over_nodes(nodes, command, *args)
             node_name_map = {n.name: n for n in nodes}
             for node_name in node_arg_mapping:
@@ -808,13 +800,13 @@ class RedisCluster(
 
     def _split_args_over_nodes(
         self,
-        nodes: List[ManagedNode],
+        nodes: list[ManagedNode],
         command: bytes,
         *args: ValueT,
-    ) -> Dict[str, List[Tuple[ValueT, ...]]]:
+    ) -> dict[str, list[tuple[ValueT, ...]]]:
         if command in self.split_flags and self.non_atomic_cross_slot:
             keys = KeySpec.extract_keys(command, *args)
-            node_arg_mapping: Dict[str, List[Tuple[ValueT, ...]]] = {}
+            node_arg_mapping: dict[str, list[tuple[ValueT, ...]]] = {}
             if keys:
                 key_start: int = args.index(keys[0])
                 key_end: int = args.index(keys[-1])
@@ -848,7 +840,7 @@ class RedisCluster(
         *args: ValueT,
         callback: Callable[..., R] = NoopCallback(),
         node: Optional[ManagedNode] = None,
-        slots: Optional[List[int]] = None,
+        slots: Optional[list[int]] = None,
         **kwargs: Optional[ValueT],
     ) -> R:
         redirect_addr = None
@@ -1063,7 +1055,7 @@ class RedisCluster(
         transaction: Optional[bool] = None,
         watches: Optional[Parameters[StringT]] = None,
         timeout: Optional[float] = None,
-    ) -> "coredis.pipeline.ClusterPipeline[AnyStr]":
+    ) -> coredis.pipeline.ClusterPipeline[AnyStr]:
         """
         Returns a new pipeline object that can queue multiple commands for
         batch execution. Pipelines in cluster mode only provide a subset of the
@@ -1097,7 +1089,7 @@ class RedisCluster(
     async def transaction(
         self,
         func: Callable[
-            ["coredis.pipeline.ClusterPipeline[AnyStr]"],
+            [coredis.pipeline.ClusterPipeline[AnyStr]],
             Coroutine[Any, Any, Any],
         ],
         *watches: StringT,

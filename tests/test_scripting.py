@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import AnyStr, Optional
+from typing import AnyStr
 
 import pytest
 from beartype.roar import BeartypeCallHintParamViolation
@@ -9,7 +9,7 @@ from coredis import PureToken
 from coredis.client import Client
 from coredis.commands import Script
 from coredis.exceptions import NoScriptError, NotBusyError, ResponseError
-from coredis.typing import KeyT, List, ValueT
+from coredis.typing import KeyT, Optional, ValueT
 from tests.conftest import targets
 
 multiply_script = """
@@ -168,7 +168,7 @@ class TestScripting:
         )
 
         @no_key_script.wraps()
-        def synth_no_key(*args: int) -> List[int]: ...
+        def synth_no_key(*args: int) -> list[int]: ...
 
         assert await synth_no_key(1, 2, 3) == [1, 2, 3]
 

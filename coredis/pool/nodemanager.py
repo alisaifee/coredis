@@ -13,14 +13,11 @@ from coredis.exceptions import (
     ResponseError,
 )
 from coredis.typing import (
-    Dict,
     Iterable,
     Iterator,
-    List,
     Literal,
     Node,
     Optional,
-    Set,
     StringT,
     ValueT,
 )
@@ -74,9 +71,9 @@ class NodeManager:
         self.connection_kwargs = connection_kwargs
         self.connection_kwargs.update(decode_responses=decode_responses)
 
-        self.nodes: Dict[str, ManagedNode] = {}
-        self.slots: Dict[int, List[ManagedNode]] = {}
-        self.startup_nodes: List[ManagedNode] = (
+        self.nodes: dict[str, ManagedNode] = {}
+        self.slots: dict[int, list[ManagedNode]] = {}
+        self.startup_nodes: list[ManagedNode] = (
             []
             if startup_nodes is None
             else list(ManagedNode(n["host"], n["port"]) for n in startup_nodes if n)
@@ -89,8 +86,8 @@ class NodeManager:
         self.nodemanager_follow_cluster = nodemanager_follow_cluster
         self.replicas_per_shard = 0
 
-    def keys_to_nodes_by_slot(self, *keys: ValueT) -> Dict[str, Dict[int, List[ValueT]]]:
-        mapping: Dict[str, Dict[int, List[ValueT]]] = {}
+    def keys_to_nodes_by_slot(self, *keys: ValueT) -> dict[str, dict[int, list[ValueT]]]:
+        mapping: dict[str, dict[int, list[ValueT]]] = {}
         for k in keys:
             node = self.node_from_slot(hash_slot(b(k)))
             if node:
@@ -162,16 +159,16 @@ class NodeManager:
         Maybe it should stop to try after it have correctly covered all slots or when one node is
         reached and it could execute CLUSTER SLOTS command.
         """
-        nodes_cache: Dict[str, ManagedNode] = {}
-        tmp_slots: Dict[int, List[ManagedNode]] = {}
+        nodes_cache: dict[str, ManagedNode] = {}
+        tmp_slots: dict[int, list[ManagedNode]] = {}
 
         all_slots_covered = False
-        disagreements: List[str] = []
+        disagreements: list[str] = []
         self.startup_nodes_reachable = False
 
         nodes = self.orig_startup_nodes
-        replicas: Set[str] = set()
-        startup_node_errors: Dict[str, List[str]] = {}
+        replicas: set[str] = set()
+        startup_node_errors: dict[str, list[str]] = {}
 
         # With this option the client will attempt to connect to any of the previous set of nodes
         # instead of the original set of startup nodes
@@ -233,7 +230,7 @@ class NodeManager:
                         # Validate that 2 nodes want to use the same slot cache setup
                         if tmp_slots[i][0].name != node.name:
                             disagreements.append(
-                                "{} vs {} on slot: {}".format(tmp_slots[i][0].name, node.name, i),
+                                f"{tmp_slots[i][0].name} vs {node.name} on slot: {i}",
                             )
                             if len(disagreements) > 5:
                                 raise RedisClusterException(
@@ -296,7 +293,7 @@ class NodeManager:
             )
             return False
 
-    async def cluster_require_full_coverage(self, nodes_cache: Dict[str, ManagedNode]) -> bool:
+    async def cluster_require_full_coverage(self, nodes_cache: dict[str, ManagedNode]) -> bool:
         """
         If exists 'cluster-require-full-coverage no' config on redis servers,
         then even all slots are not covered, cluster still will be able to

@@ -15,17 +15,14 @@ from coredis.typing import (
     AnyStr,
     Awaitable,
     Callable,
-    Dict,
     Generic,
     KeyT,
-    List,
     Optional,
     P,
     Parameters,
     R,
     ResponseType,
     StringT,
-    Tuple,
     ValueT,
     add_runtime_checks,
     safe_beartype,
@@ -139,7 +136,7 @@ class Script(Generic[AnyStr]):
     @versionadded(version="3.5.0")
     def wraps(
         self,
-        key_spec: Optional[List[str]] = None,
+        key_spec: Optional[list[str]] = None,
         param_is_key: Callable[[inspect.Parameter], bool] = lambda p: (
             p.annotation in {"KeyT", KeyT}
         ),
@@ -238,7 +235,7 @@ class Script(Generic[AnyStr]):
             key_params = (
                 key_spec if key_spec else [n for n, p in sig.parameters.items() if param_is_key(p)]
             )
-            arg_fetch: Dict[str, Callable[..., Parameters[Any]]] = {
+            arg_fetch: dict[str, Callable[..., Parameters[Any]]] = {
                 n: (
                     (lambda v: [v])
                     if p.kind
@@ -262,15 +259,15 @@ class Script(Generic[AnyStr]):
 
             def split_args(
                 bound_arguments: inspect.BoundArguments,
-            ) -> Tuple[
+            ) -> tuple[
                 Parameters[KeyT],
                 Parameters[ValueT],
                 Optional[coredis.client.Client[AnyStr]],
             ]:
                 bound_arguments.apply_defaults()
                 arguments = bound_arguments.arguments
-                keys: List[KeyT] = []
-                args: List[ValueT] = []
+                keys: list[KeyT] = []
+                args: list[ValueT] = []
                 for name in sig.parameters:
                     if name not in arg_fetch:
                         continue

@@ -5,7 +5,7 @@ import pytest
 from coredis import PureToken
 from coredis.commands.function import Library
 from coredis.exceptions import NotBusyError, ResponseError
-from coredis.typing import KeyT, List, StringT, ValueT
+from coredis.typing import KeyT, StringT, ValueT
 from tests.conftest import targets
 
 library_definition = """#!lua name=coredis
@@ -203,7 +203,7 @@ class TestLibrary:
             async def default_get_variadic(self, quay: str, *values: ValueT) -> ValueT: ...
 
             @Library.wraps("hmmerge")
-            async def hmmerge(self, key: KeyT, **values: ValueT) -> List[ValueT]: ...
+            async def hmmerge(self, key: KeyT, **values: ValueT) -> list[ValueT]: ...
 
         lib = await Coredis(client)
         assert await lib.echo_key("bar") == _s("bar")

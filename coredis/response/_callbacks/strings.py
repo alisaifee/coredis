@@ -5,8 +5,6 @@ from coredis.response._callbacks import ResponseCallback, SimpleStringCallback
 from coredis.response.types import LCSMatch, LCSResult
 from coredis.typing import (
     AnyStr,
-    Dict,
-    List,
     Optional,
     ResponsePrimitive,
     ResponseType,
@@ -29,16 +27,16 @@ class StringSetCallback(
 
 class LCSCallback(
     ResponseCallback[
-        List[ResponseType],
-        Dict[ResponsePrimitive, ResponseType],
+        list[ResponseType],
+        dict[ResponsePrimitive, ResponseType],
         Union[AnyStr, int, LCSResult],
     ]
 ):
     def transform(
         self,
         response: Union[
-            List[ResponseType],
-            Dict[ResponsePrimitive, ResponseType],
+            list[ResponseType],
+            dict[ResponsePrimitive, ResponseType],
         ],
         **options: Optional[ValueT],
     ) -> LCSResult:
@@ -61,7 +59,7 @@ class LCSCallback(
 
     def transform_3(
         self,
-        response: Dict[ResponsePrimitive, ResponseType],
+        response: dict[ResponsePrimitive, ResponseType],
         **options: Optional[ValueT],
     ) -> LCSResult:
         proxy = EncodingInsensitiveDict(response)

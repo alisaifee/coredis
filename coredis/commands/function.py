@@ -15,18 +15,15 @@ from coredis.typing import (
     AnyStr,
     Awaitable,
     Callable,
-    Dict,
     Generator,
     Generic,
     KeyT,
-    List,
     Optional,
     P,
     Parameters,
     R,
     ResponseType,
     StringT,
-    Tuple,
     TypeVar,
     ValueT,
     add_runtime_checks,
@@ -94,7 +91,7 @@ class Library(Generic[AnyStr]):
         return c
 
     @property
-    def functions(self) -> Dict[str, Function[AnyStr]]:
+    def functions(self) -> dict[str, Function[AnyStr]]:
         """
         mapping of function names to :class:`~coredis.commands.function.Function`
         instances that can be directly called.
@@ -140,7 +137,7 @@ class Library(Generic[AnyStr]):
     def wraps(
         cls,
         function_name: str,
-        key_spec: Optional[List[KeyT]] = None,
+        key_spec: Optional[list[KeyT]] = None,
         param_is_key: Callable[[inspect.Parameter], bool] = lambda p: (
             p.annotation in {"KeyT", KeyT}
         ),
@@ -275,7 +272,7 @@ class Library(Generic[AnyStr]):
             key_params = (
                 key_spec if key_spec else [n for n, p in sig.parameters.items() if param_is_key(p)]
             )
-            arg_fetch: Dict[str, Callable[..., Parameters[Any]]] = {
+            arg_fetch: dict[str, Callable[..., Parameters[Any]]] = {
                 n: (
                     (lambda v: [v])
                     if p.kind
@@ -295,10 +292,10 @@ class Library(Generic[AnyStr]):
 
             def split_args(
                 *a: P.args, **k: P.kwargs
-            ) -> Tuple[Library[AnyStr], Parameters[KeyT], Parameters[ValueT]]:
+            ) -> tuple[Library[AnyStr], Parameters[KeyT], Parameters[ValueT]]:
                 bound_arguments = sig.bind(*a, **k)
                 bound_arguments.apply_defaults()
-                arguments: Dict[str, Any] = bound_arguments.arguments
+                arguments: dict[str, Any] = bound_arguments.arguments
                 instance: Library[AnyStr] = arguments.pop(first_arg)
                 if not isinstance(instance, Library):
                     raise RuntimeError(
@@ -308,8 +305,8 @@ class Library(Generic[AnyStr]):
                         " Please refer to the documentation at https://coredis.readthedocs.org/"
                         " for instructions on how to bind a class to a redis library."
                     )
-                keys: List[KeyT] = []
-                args: List[ValueT] = []
+                keys: list[KeyT] = []
+                args: list[ValueT] = []
                 for name in sig.parameters:
                     if name == first_arg:
                         continue

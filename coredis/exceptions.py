@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from coredis.typing import Optional, Set, Tuple, ValueT
+from coredis.typing import Optional, ValueT
 
 
 class RedisError(Exception):
@@ -17,8 +17,8 @@ class CommandSyntaxError(RedisError):
     Raised when a redis command is called with an invalid syntax
     """
 
-    def __init__(self, arguments: Set[str], message: str) -> None:
-        self.arguments: Set[str] = arguments
+    def __init__(self, arguments: set[str], message: str) -> None:
+        self.arguments: set[str] = arguments
         super().__init__(message)
 
 
@@ -184,7 +184,7 @@ class ClusterCrossSlotError(ResponseError):
         self,
         message: Optional[str] = None,
         command: Optional[bytes] = None,
-        keys: Optional[Tuple[ValueT, ...]] = None,
+        keys: Optional[tuple[ValueT, ...]] = None,
     ) -> None:
         super().__init__(message or "Keys in request don't hash to the same slot")
         self.command = command

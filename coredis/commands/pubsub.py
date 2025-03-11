@@ -26,9 +26,7 @@ from coredis.typing import (
     AnyStr,
     Awaitable,
     Callable,
-    Dict,
     Generic,
-    List,
     MutableMapping,
     Optional,
     ResponsePrimitive,
@@ -351,7 +349,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
 
         :meta private:
         """
-        r = cast(List[ResponsePrimitive], response)
+        r = cast(list[ResponsePrimitive], response)
         message_type = b(r[0])
         message_type_str = nativestr(r[0])
         message: PubSubMessage
@@ -514,9 +512,9 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         retry_policy: Optional[RetryPolicy] = None,
         read_from_replicas: bool = False,
     ):
-        self.shard_connections: Dict[str, Connection] = {}
-        self.channel_connection_mapping: Dict[StringT, Connection] = {}
-        self.pending_tasks: Dict[str, asyncio.Task[ResponseType]] = {}
+        self.shard_connections: dict[str, Connection] = {}
+        self.channel_connection_mapping: dict[StringT, Connection] = {}
+        self.pending_tasks: dict[str, asyncio.Task[ResponseType]] = {}
         self.read_from_replicas = read_from_replicas
         super().__init__(connection_pool, ignore_subscribe_messages, retry_policy)
 
@@ -674,7 +672,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                         await connection.connect()
                     except:  # noqa
                         raise ConnectionError("Shard connections not stable")
-            tasks: Dict[str, asyncio.Task[ResponseType]] = {
+            tasks: dict[str, asyncio.Task[ResponseType]] = {
                 node_id: asyncio.create_task(
                     self._execute(
                         connection,

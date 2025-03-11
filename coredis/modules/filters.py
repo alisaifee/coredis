@@ -22,16 +22,13 @@ from ..tokens import PrefixToken, PureToken
 from ..typing import (
     AnyStr,
     CommandArgList,
-    Dict,
     KeyT,
-    List,
     Literal,
     Mapping,
     Optional,
     Parameters,
     ResponsePrimitive,
     StringT,
-    Tuple,
     Union,
     ValueT,
 )
@@ -110,7 +107,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def madd(self, key: KeyT, items: Parameters[ValueT]) -> Tuple[bool, ...]:
+    async def madd(self, key: KeyT, items: Parameters[ValueT]) -> tuple[bool, ...]:
         """
         Adds one or more items to a Bloom Filter. A filter will be created if it does not exist
 
@@ -138,7 +135,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         expansion: Optional[int] = None,
         nocreate: Optional[bool] = None,
         nonscaling: Optional[bool] = None,
-    ) -> Tuple[bool, ...]:
+    ) -> tuple[bool, ...]:
         """
         Adds one or more items to a Bloom Filter. A filter will be created if it
         does not exist
@@ -197,7 +194,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
-    async def mexists(self, key: KeyT, items: Parameters[ValueT]) -> Tuple[bool, ...]:
+    async def mexists(self, key: KeyT, items: Parameters[ValueT]) -> tuple[bool, ...]:
         """
         Checks whether one or more items exist in a Bloom Filter
 
@@ -214,7 +211,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def scandump(self, key: KeyT, iterator: int) -> Tuple[int, Optional[bytes]]:
+    async def scandump(self, key: KeyT, iterator: int) -> tuple[int, Optional[bytes]]:
         """
         Begins an incremental save of the bloom filter
 
@@ -275,7 +272,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
                 PureToken.SIZE,
             ]
         ] = None,
-    ) -> Union[Dict[AnyStr, int], int]:
+    ) -> Union[dict[AnyStr, int], int]:
         """
         Returns information about a Bloom Filter
 
@@ -405,7 +402,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         items: Parameters[ValueT],
         capacity: Optional[int] = None,
         nocreate: Optional[bool] = None,
-    ) -> Tuple[bool, ...]:
+    ) -> tuple[bool, ...]:
         """
         Adds one or more items to a Cuckoo Filter. A filter will be created if it does not exist
 
@@ -441,7 +438,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         items: Parameters[ValueT],
         capacity: Optional[int] = None,
         nocreate: Optional[bool] = None,
-    ) -> Tuple[bool, ...]:
+    ) -> tuple[bool, ...]:
         """
         Adds one or more items to a Cuckoo Filter if the items did not exist previously.
         A filter will be created if it does not exist
@@ -494,7 +491,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
-    async def mexists(self, key: KeyT, items: Parameters[ValueT]) -> Tuple[bool, ...]:
+    async def mexists(self, key: KeyT, items: Parameters[ValueT]) -> tuple[bool, ...]:
         """
         Checks whether one or more items exist in a Cuckoo Filter
 
@@ -553,7 +550,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def scandump(self, key: KeyT, iterator: int) -> Tuple[int, Optional[bytes]]:
+    async def scandump(self, key: KeyT, iterator: int) -> tuple[int, Optional[bytes]]:
         """
         Begins an incremental save of the bloom filter
 
@@ -598,7 +595,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         module=MODULE,
         flags={CommandFlag.READONLY},
     )
-    async def info(self, key: KeyT) -> Dict[AnyStr, ResponsePrimitive]:
+    async def info(self, key: KeyT) -> dict[AnyStr, ResponsePrimitive]:
         """
         Returns information about a Cuckoo Filter
 
@@ -668,7 +665,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    async def incrby(self, key: KeyT, items: Mapping[AnyStr, int]) -> Tuple[int, ...]:
+    async def incrby(self, key: KeyT, items: Mapping[AnyStr, int]) -> tuple[int, ...]:
         """
         Increases the count of one or more items by increment
 
@@ -696,7 +693,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         items: Parameters[StringT],
-    ) -> Tuple[int, ...]:
+    ) -> tuple[int, ...]:
         """
         Returns the count for one or more items in a sketch
 
@@ -728,7 +725,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         :param sources: Names of the source sketches to be merged.
         :param weights: Multiples of each sketch. Default is 1.
         """
-        _sources: List[KeyT] = list(sources)
+        _sources: list[KeyT] = list(sources)
         pieces: CommandArgList = [destination, len(_sources), *_sources]
         if weights:
             pieces.append(PrefixToken.WEIGHTS)
@@ -746,7 +743,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
-    async def info(self, key: KeyT) -> Dict[AnyStr, int]:
+    async def info(self, key: KeyT) -> dict[AnyStr, int]:
         """
         Returns information about a sketch
 
@@ -805,7 +802,7 @@ class TopK(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    async def add(self, key: KeyT, items: Parameters[AnyStr]) -> Tuple[Optional[AnyStr], ...]:
+    async def add(self, key: KeyT, items: Parameters[AnyStr]) -> tuple[Optional[AnyStr], ...]:
         """
         Increases the count of one or more items by increment
 
@@ -826,7 +823,7 @@ class TopK(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    async def incrby(self, key: KeyT, items: Mapping[AnyStr, int]) -> Tuple[Optional[AnyStr], ...]:
+    async def incrby(self, key: KeyT, items: Mapping[AnyStr, int]) -> tuple[Optional[AnyStr], ...]:
         """
         Increases the count of one or more items by increment
 
@@ -852,7 +849,7 @@ class TopK(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         items: Parameters[StringT],
-    ) -> Tuple[bool, ...]:
+    ) -> tuple[bool, ...]:
         """
         Checks whether an item is one of Top-K items.
         Multiple items can be checked at once.
@@ -876,7 +873,7 @@ class TopK(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         items: Parameters[StringT],
-    ) -> Tuple[int, ...]:
+    ) -> tuple[int, ...]:
         """
         Return the count for one or more items are in a sketch
 
@@ -899,7 +896,7 @@ class TopK(ModuleGroup[AnyStr]):
     )
     async def list(
         self, key: KeyT, withcount: Optional[bool] = None
-    ) -> Union[Dict[AnyStr, int], Tuple[AnyStr, ...]]:
+    ) -> Union[dict[AnyStr, int], tuple[AnyStr, ...]]:
         """
         Return full list of items in Top K list
 
@@ -925,7 +922,7 @@ class TopK(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
-    async def info(self, key: KeyT) -> Dict[AnyStr, int]:
+    async def info(self, key: KeyT) -> dict[AnyStr, int]:
         """
         Returns information about a sketch
 
@@ -1034,7 +1031,7 @@ class TDigest(ModuleGroup[AnyStr]):
          it is overwritten.
 
         """
-        _source_keys: List[KeyT] = list(source_keys)
+        _source_keys: list[KeyT] = list(source_keys)
         pieces: CommandArgList = [
             destination_key,
             len(_source_keys),
@@ -1098,7 +1095,7 @@ class TDigest(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         quantiles: Parameters[Union[int, float]],
-    ) -> Tuple[float, ...]:
+    ) -> tuple[float, ...]:
         """
         Returns, for each input fraction, an estimation of the value (floating point)
         that is smaller than the given fraction of observations
@@ -1124,7 +1121,7 @@ class TDigest(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         values: Parameters[Union[int, float]],
-    ) -> Tuple[float, ...]:
+    ) -> tuple[float, ...]:
         """
         Returns, for each input value, an estimation of the fraction (floating-point)
         of (observations smaller than the given value + half the observations equal
@@ -1182,7 +1179,7 @@ class TDigest(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         values: Parameters[Union[int, float]],
-    ) -> Tuple[int, ...]:
+    ) -> tuple[int, ...]:
         """
         Returns, for each input value (floating-point), the estimated rank of
         the value (the number of observations in the sketch that are smaller
@@ -1209,7 +1206,7 @@ class TDigest(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         values: Parameters[Union[int, float]],
-    ) -> Tuple[int, ...]:
+    ) -> tuple[int, ...]:
         """
         Returns, for each input value (floating-point), the estimated reverse rank of
         the value (the number of observations in the sketch that are larger than
@@ -1236,7 +1233,7 @@ class TDigest(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         ranks: Parameters[Union[int, float]],
-    ) -> Tuple[float, ...]:
+    ) -> tuple[float, ...]:
         """
         Returns, for each input rank, an estimation of the value (floating-point) with
         that rank
@@ -1262,7 +1259,7 @@ class TDigest(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         reverse_ranks: Parameters[Union[int, float]],
-    ) -> Tuple[float, ...]:
+    ) -> tuple[float, ...]:
         """
         Returns, for each input reverse rank, an estimation of the value
         (floating-point) with that reverse rank
@@ -1284,7 +1281,7 @@ class TDigest(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
-    async def info(self, key: KeyT) -> Dict[AnyStr, ResponsePrimitive]:
+    async def info(self, key: KeyT) -> dict[AnyStr, ResponsePrimitive]:
         """
         Returns information and statistics about a t-digest sketch
 

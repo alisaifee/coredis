@@ -16,16 +16,12 @@ from ..tokens import PrefixToken, PureToken
 from ..typing import (
     AnyStr,
     CommandArgList,
-    Dict,
     KeyT,
-    List,
     Literal,
     Optional,
     Parameters,
     ResponsePrimitive,
-    Set,
     StringT,
-    Tuple,
     Union,
     ValueT,
 )
@@ -41,7 +37,7 @@ from .response.types import GraphQueryResult, GraphSlowLogInfo
 class RedisGraph(Module[AnyStr]):
     NAME = "graph"
     FULL_NAME = "RedisGraph"
-    DESCRIPTION = """RedisGraph is a queryable Property Graph database that uses sparse matrices 
+    DESCRIPTION = """RedisGraph is a queryable Property Graph database that uses sparse matrices
 to represent the adjacency matrix in graphs and linear algebra to query the graph.
     """
     DOCUMENTATION_URL = "https://redis.io/docs/stack/graph/"
@@ -143,7 +139,7 @@ class Graph(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         group=COMMAND_GROUP,
     )
-    async def explain(self, graph: KeyT, query: StringT) -> List[AnyStr]:
+    async def explain(self, graph: KeyT, query: StringT) -> list[AnyStr]:
         """
 
         Constructs a query execution plan for the given :paramref:`graph` and
@@ -170,7 +166,7 @@ class Graph(ModuleGroup[AnyStr]):
         graph: KeyT,
         query: StringT,
         timeout: Optional[Union[int, timedelta]] = None,
-    ) -> List[AnyStr]:
+    ) -> list[AnyStr]:
         """
         Executes a query and returns an execution plan augmented with metrics for each
         operation's execution
@@ -197,7 +193,7 @@ class Graph(ModuleGroup[AnyStr]):
     )
     async def slowlog(
         self, graph: KeyT, reset: bool = False
-    ) -> Union[Tuple[GraphSlowLogInfo, ...], bool]:
+    ) -> Union[tuple[GraphSlowLogInfo, ...], bool]:
         """
         Returns a list containing up to 10 of the slowest queries issued against the given graph
 
@@ -231,7 +227,7 @@ class Graph(ModuleGroup[AnyStr]):
     )
     async def config_get(
         self, name: StringT
-    ) -> Union[Dict[AnyStr, ResponsePrimitive], ResponsePrimitive]:
+    ) -> Union[dict[AnyStr, ResponsePrimitive], ResponsePrimitive]:
         """
         Retrieves a RedisGraph configuration
 
@@ -277,7 +273,7 @@ class Graph(ModuleGroup[AnyStr]):
             combine=ClusterMergeSets[AnyStr](),
         ),
     )
-    async def list(self) -> Set[AnyStr]:
+    async def list(self) -> set[AnyStr]:
         """
         Lists all graph keys in the keyspace
 
@@ -319,7 +315,7 @@ class Graph(ModuleGroup[AnyStr]):
         if relationship is not None:
             pieces.extend([PrefixToken.RELATIONSHIP, relationship])
         if properties:
-            _props: List[StringT] = list(properties)
+            _props: list[StringT] = list(properties)
             pieces.extend([PrefixToken.PROPERTIES, len(_props), *_props])
 
         return await self.execute_module_command(
@@ -360,7 +356,7 @@ class Graph(ModuleGroup[AnyStr]):
         if relationship is not None:
             pieces.extend([PrefixToken.RELATIONSHIP, relationship])
         if properties:
-            _props: List[StringT] = list(properties)
+            _props: list[StringT] = list(properties)
             pieces.extend([PrefixToken.PROPERTIES, len(_props), *_props])
         return await self.execute_module_command(
             CommandName.GRAPH_CONSTRAINT_CREATE,

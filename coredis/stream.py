@@ -16,16 +16,12 @@ from coredis.tokens import PureToken
 from coredis.typing import (
     AnyStr,
     ClassVar,
-    Dict,
     Generator,
     Generic,
     KeyT,
-    List,
     Optional,
     Parameters,
-    Set,
     StringT,
-    Tuple,
     TypedDict,
     ValueT,
 )
@@ -43,7 +39,7 @@ class State(TypedDict, total=False):
 
 
 class Consumer(Generic[AnyStr]):
-    state: Dict[KeyT, State]
+    state: dict[KeyT, State]
     DEFAULT_START_ID: ClassVar[bytes] = b"0-0"
 
     def __init__(
@@ -75,17 +71,17 @@ class Consumer(Generic[AnyStr]):
          by stream for the streams provided in :paramref:`streams`.
         """
         self.client: Client[AnyStr] = client
-        self.streams: Set[KeyT] = set(streams)
-        self.state: Dict[StringT, State] = EncodingInsensitiveDict(
+        self.streams: set[KeyT] = set(streams)
+        self.state: dict[StringT, State] = EncodingInsensitiveDict(
             {stream: stream_parameters.get(nativestr(stream), {}) for stream in streams}
         )
-        self.buffer: Dict[AnyStr, List[StreamEntry]] = EncodingInsensitiveDict({})
+        self.buffer: dict[AnyStr, list[StreamEntry]] = EncodingInsensitiveDict({})
         self.buffer_size = buffer_size
         self.timeout = timeout
         self._initialized = False
-        self._initialized_streams: Dict[StringT, bool] = {}
+        self._initialized_streams: dict[StringT, bool] = {}
 
-    def chunk_streams(self) -> List[Dict[ValueT, StringT]]:
+    def chunk_streams(self) -> list[dict[ValueT, StringT]]:
         import coredis.client
 
         if isinstance(self.client, coredis.client.RedisCluster):
@@ -101,7 +97,7 @@ class Consumer(Generic[AnyStr]):
                 }
             ]
 
-    async def initialize(self, partial: bool = False) -> "Consumer[AnyStr]":
+    async def initialize(self, partial: bool = False) -> Consumer[AnyStr]:
         if self._initialized and not partial:
             return self
 
@@ -141,7 +137,7 @@ class Consumer(Generic[AnyStr]):
         """
         return self
 
-    async def __anext__(self) -> Tuple[AnyStr, StreamEntry]:
+    async def __anext__(self) -> tuple[AnyStr, StreamEntry]:
         """
         Returns the next available stream entry available from any of
         :paramref:`Consumer.streams`.
@@ -153,7 +149,7 @@ class Consumer(Generic[AnyStr]):
             raise StopAsyncIteration()
         return stream, entry
 
-    async def get_entry(self) -> Tuple[Optional[AnyStr], Optional[StreamEntry]]:
+    async def get_entry(self) -> tuple[Optional[AnyStr], Optional[StreamEntry]]:
         """
         Fetches the next available entry from the streams specified in
         :paramref:`Consumer.streams`. If there were any entries
@@ -168,7 +164,7 @@ class Consumer(Generic[AnyStr]):
                 cur_stream, cur = stream, self.buffer[stream].pop(0)
                 break
         else:
-            consumed_entries: Dict[AnyStr, Tuple[StreamEntry, ...]] = {}
+            consumed_entries: dict[AnyStr, tuple[StreamEntry, ...]] = {}
             for chunk in self.chunk_streams():
                 consumed_entries.update(
                     await self.client.xread(
@@ -252,9 +248,9 @@ class GroupConsumer(Consumer[AnyStr]):
         self.auto_acknowledge = auto_acknowledge
         self.start_from_backlog = start_from_backlog
 
-    async def initialize(self, partial: bool = False) -> "GroupConsumer[AnyStr]":
+    async def initialize(self, partial: bool = False) -> GroupConsumer[AnyStr]:
         if not self._initialized or partial:
-            group_presence: Dict[KeyT, bool] = {
+            group_presence: dict[KeyT, bool] = {
                 stream: stream in self._initialized_streams for stream in self.streams
             }
             for stream in self.streams:
@@ -323,7 +319,7 @@ class GroupConsumer(Consumer[AnyStr]):
         """
         return self
 
-    async def get_entry(self) -> Tuple[Optional[AnyStr], Optional[StreamEntry]]:
+    async def get_entry(self) -> tuple[Optional[AnyStr], Optional[StreamEntry]]:
         """
         Fetches the next available entry from the streams specified in
         :paramref:`GroupConsumer.streams`. If there were any entries
@@ -339,7 +335,7 @@ class GroupConsumer(Consumer[AnyStr]):
                 cur_stream, cur = stream, self.buffer[stream].pop(0)
                 break
         else:
-            consumed_entries: Dict[AnyStr, Tuple[StreamEntry, ...]] = {}
+            consumed_entries: dict[AnyStr, tuple[StreamEntry, ...]] = {}
             for chunk in self.chunk_streams():
                 consumed_entries.update(
                     await self.client.xreadgroup(

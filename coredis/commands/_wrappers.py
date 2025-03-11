@@ -19,13 +19,11 @@ from coredis.typing import (
     AsyncIterator,
     Callable,
     Coroutine,
-    Dict,
     NamedTuple,
     Optional,
     P,
     R,
     ResponseType,
-    Set,
     add_runtime_checks,
 )
 
@@ -49,12 +47,12 @@ class CommandDetails:
     group: Optional[CommandGroup]
     version_introduced: Optional[version.Version]
     version_deprecated: Optional[version.Version]
-    _arguments: Optional[Dict[str, Dict[str, str]]]
+    _arguments: Optional[dict[str, dict[str, str]]]
     cluster: ClusterCommandConfig
     cache_config: Optional[CacheConfig]
-    flags: Set[CommandFlag]
+    flags: set[CommandFlag]
     redirect_usage: Optional[RedirectUsage]
-    arguments: Dict[str, version.Version] = dataclasses.field(
+    arguments: dict[str, version.Version] = dataclasses.field(
         init=False, default_factory=lambda: {}
     )
 
@@ -153,8 +151,8 @@ def redis_command(
     version_deprecated: Optional[str] = None,
     deprecation_reason: Optional[str] = None,
     redirect_usage: Optional[RedirectUsage] = None,
-    arguments: Optional[Dict[str, Dict[str, str]]] = None,
-    flags: Optional[Set[CommandFlag]] = None,
+    arguments: Optional[dict[str, dict[str, str]]] = None,
+    flags: Optional[set[CommandFlag]] = None,
     cluster: ClusterCommandConfig = ClusterCommandConfig(),
     cache_config: Optional[CacheConfig] = None,
 ) -> Callable[[Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]]:

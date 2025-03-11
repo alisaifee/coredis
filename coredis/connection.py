@@ -38,13 +38,9 @@ from coredis.typing import (
     Callable,
     ClassVar,
     Deque,
-    Dict,
-    List,
     Literal,
     Optional,
     ResponseType,
-    Set,
-    Tuple,
     TypeVar,
     Union,
     ValueT,
@@ -85,7 +81,7 @@ class Request:
 @dataclasses.dataclass
 class CommandInvocation:
     command: bytes
-    args: Tuple[ValueT, ...]
+    args: tuple[ValueT, ...]
     decode: Optional[bool]
     encoding: Optional[str]
 
@@ -174,8 +170,8 @@ class BaseConnection(asyncio.BaseProtocol):
         self.credential_provider: Optional[AbstractCredentialProvider] = None
         self.db: Optional[int] = None
         self.pid: int = os.getpid()
-        self._description_args: Callable[..., Dict[str, Optional[Union[str, int]]]] = lambda: dict()
-        self._connect_callbacks: List[
+        self._description_args: Callable[..., dict[str, Optional[Union[str, int]]]] = lambda: dict()
+        self._connect_callbacks: list[
             Union[
                 Callable[[BaseConnection], Awaitable[None]],
                 Callable[[BaseConnection], None],
@@ -219,7 +215,7 @@ class BaseConnection(asyncio.BaseProtocol):
         return self.describe(self._description_args())
 
     @classmethod
-    def describe(cls, description_args: Dict[str, Any]) -> str:
+    def describe(cls, description_args: dict[str, Any]) -> str:
         return cls.description.format_map(defaultdict(lambda: None, description_args))
 
     @property
@@ -395,7 +391,7 @@ class BaseConnection(asyncio.BaseProtocol):
         relay any tracking notifications to.
         """
         try:
-            params: List[ValueT] = (
+            params: list[ValueT] = (
                 [b"ON", b"REDIRECT", client_id] if (enabled and client_id is not None) else [b"OFF"]
             )
 
@@ -429,7 +425,7 @@ class BaseConnection(asyncio.BaseProtocol):
         if not self.needs_handshake:
             return
 
-        hello_command_args: List[Union[int, str, bytes]] = [self.protocol_version]
+        hello_command_args: list[Union[int, str, bytes]] = [self.protocol_version]
         if creds := (
             await self.credential_provider.get_credentials()
             if self.credential_provider
@@ -452,12 +448,12 @@ class BaseConnection(asyncio.BaseProtocol):
             )
             assert isinstance(hello_resp, (list, dict))
             if self.protocol_version == 3:
-                resp3 = cast(Dict[bytes, ValueT], hello_resp)
+                resp3 = cast(dict[bytes, ValueT], hello_resp)
                 assert resp3[b"proto"] == 3
                 self.server_version = nativestr(resp3[b"version"])
                 self.client_id = int(resp3[b"id"])
             else:
-                resp = cast(List[ValueT], hello_resp)
+                resp = cast(list[ValueT], hello_resp)
                 self.server_version = nativestr(resp[3])
                 self.client_id = int(resp[7])
             if self.server_version >= "7.2":
@@ -525,7 +521,7 @@ class BaseConnection(asyncio.BaseProtocol):
     async def fetch_push_message(
         self,
         decode: Optional[ValueT] = None,
-        push_message_types: Optional[Set[bytes]] = None,
+        push_message_types: Optional[set[bytes]] = None,
         block: Optional[bool] = False,
     ) -> ResponseType:
         """
@@ -562,7 +558,7 @@ class BaseConnection(asyncio.BaseProtocol):
         return message
 
     async def _send_packed_command(
-        self, command: List[bytes], timeout: Optional[float] = None
+        self, command: list[bytes], timeout: Optional[float] = None
     ) -> None:
         """
         Sends an already packed command to the Redis server
@@ -646,10 +642,10 @@ class BaseConnection(asyncio.BaseProtocol):
 
     async def create_requests(
         self,
-        commands: List[CommandInvocation],
+        commands: list[CommandInvocation],
         raise_exceptions: bool = True,
         timeout: Optional[float] = None,
-    ) -> List[asyncio.Future[ResponseType]]:
+    ) -> list[asyncio.Future[ResponseType]]:
         """
         Send multiple commands to the redis server
         """
@@ -667,7 +663,7 @@ class BaseConnection(asyncio.BaseProtocol):
         )
 
         self.last_active_at = time.time()
-        requests: List[asyncio.Future[ResponseType]] = []
+        requests: list[asyncio.Future[ResponseType]] = []
         for cmd in commands:
             request = Request(
                 weakref.proxy(self),
@@ -729,7 +725,7 @@ class Connection(BaseConnection):
         encoding: str = "utf-8",
         decode_responses: bool = False,
         socket_keepalive: Optional[bool] = None,
-        socket_keepalive_options: Optional[Dict[int, Union[int, bytes]]] = None,
+        socket_keepalive_options: Optional[dict[int, Union[int, bytes]]] = None,
         *,
         client_name: Optional[str] = None,
         protocol_version: Literal[2, 3] = 3,
@@ -755,13 +751,13 @@ class Connection(BaseConnection):
         self.db: Optional[int] = db
         self.ssl_context = ssl_context
         self._connect_timeout = connect_timeout
-        self._description_args: Callable[..., Dict[str, Optional[Union[str, int]]]] = lambda: {
+        self._description_args: Callable[..., dict[str, Optional[Union[str, int]]]] = lambda: {
             "host": self.host,
             "port": self.port,
             "db": self.db,
         }
         self.socket_keepalive = socket_keepalive
-        self.socket_keepalive_options: Dict[int, Union[int, bytes]] = socket_keepalive_options or {}
+        self.socket_keepalive_options: dict[int, Union[int, bytes]] = socket_keepalive_options or {}
 
     async def _connect(self) -> None:
         async with self._transport_lock:
@@ -847,7 +843,7 @@ class ClusterConnection(Connection):
 
     description: ClassVar[str] = "ClusterConnection<host={host},port={port}>"
     locator: ClassVar[str] = "host={host},port={port}"
-    node: "ManagedNode"
+    node: ManagedNode
 
     def __init__(
         self,
@@ -863,7 +859,7 @@ class ClusterConnection(Connection):
         encoding: str = "utf-8",
         decode_responses: bool = False,
         socket_keepalive: Optional[bool] = None,
-        socket_keepalive_options: Optional[Dict[int, Union[int, bytes]]] = None,
+        socket_keepalive_options: Optional[dict[int, Union[int, bytes]]] = None,
         *,
         client_name: Optional[str] = None,
         protocol_version: Literal[2, 3] = 3,

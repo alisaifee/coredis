@@ -23,11 +23,7 @@ from coredis.exceptions import ConnectionError
 from coredis.typing import (
     Callable,
     ClassVar,
-    Dict,
-    List,
     Optional,
-    Set,
-    Type,
     TypeVar,
     Union,
     ValueT,
@@ -41,7 +37,7 @@ class ConnectionPool:
 
     #: Mapping of querystring arguments to their parser functions
     URL_QUERY_ARGUMENT_PARSERS: ClassVar[
-        Dict[str, Callable[..., Optional[Union[int, float, bool, str]]]]
+        dict[str, Callable[..., Optional[Union[int, float, bool, str]]]]
     ] = {
         "client_name": str,
         "stream_timeout": float,
@@ -57,7 +53,7 @@ class ConnectionPool:
 
     @classmethod
     def from_url(
-        cls: Type[_CPT],
+        cls: type[_CPT],
         url: str,
         db: Optional[int] = None,
         decode_components: bool = False,
@@ -107,9 +103,9 @@ class ConnectionPool:
         parsed_url = urlparse(url)
         qs = parsed_url.query
 
-        url_options: Dict[
+        url_options: dict[
             str,
-            Optional[Union[int, float, bool, str, Type[BaseConnection], SSLContext]],
+            Optional[Union[int, float, bool, str, type[BaseConnection], SSLContext]],
         ] = {}
         for name, value in iter(parse_qs(qs).items()):
             if value and len(value) > 0:
@@ -193,7 +189,7 @@ class ConnectionPool:
     def __init__(
         self,
         *,
-        connection_class: Optional[Type[Connection]] = None,
+        connection_class: Optional[type[Connection]] = None,
         max_connections: Optional[int] = None,
         max_idle_time: int = 0,
         idle_check_interval: int = 1,
@@ -244,8 +240,8 @@ class ConnectionPool:
     def reset(self) -> None:
         self.pid = os.getpid()
         self._created_connections = 0
-        self._available_connections: List[Connection] = []
-        self._in_use_connections: Set[Connection] = set()
+        self._available_connections: list[Connection] = []
+        self._in_use_connections: set[Connection] = set()
         self._check_lock = threading.Lock()
 
     def checkpid(self) -> None:  # noqa
@@ -354,8 +350,8 @@ class BlockingConnectionPool(ConnectionPool):
 
     def __init__(
         self,
-        connection_class: Optional[Type[Connection]] = None,
-        queue_class: Type[asyncio.Queue[Optional[Connection]]] = asyncio.LifoQueue,
+        connection_class: Optional[type[Connection]] = None,
+        queue_class: type[asyncio.Queue[Optional[Connection]]] = asyncio.LifoQueue,
         max_connections: Optional[int] = None,
         timeout: int = 20,
         max_idle_time: int = 0,
@@ -446,7 +442,7 @@ class BlockingConnectionPool(ConnectionPool):
 
     def disconnect(self) -> None:
         """Closes all connections in the pool"""
-        pooled_connections: List[Optional[Connection]] = []
+        pooled_connections: list[Optional[Connection]] = []
 
         while True:
             try:

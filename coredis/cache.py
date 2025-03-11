@@ -13,17 +13,14 @@ from coredis._utils import b, make_hashable
 from coredis.commands import PubSub
 from coredis.connection import BaseConnection
 from coredis.typing import (
-    Dict,
     Generic,
     Hashable,
-    List,
     Literal,
     ModuleType,
     Optional,
     OrderedDict,
     Protocol,
     ResponseType,
-    Tuple,
     TypeVar,
     Union,
     ValueT,
@@ -91,7 +88,7 @@ class CacheStats:
         self.dirty[b(key)] += 1
 
     @property
-    def summary(self) -> Dict[str, int]:
+    def summary(self) -> dict[str, int]:
         """
         Aggregated totals of ``hits``, ``misses``, ``dirty_hits``
         and ``invalidations``
@@ -124,7 +121,7 @@ class AbstractCache(ABC):
     @abstractmethod
     async def initialize(
         self,
-        client: Union["coredis.client.Redis[Any]", "coredis.client.RedisCluster[Any]"],
+        client: Union[coredis.client.Redis[Any], coredis.client.RedisCluster[Any]],
     ) -> AbstractCache:
         """
         Associate and initialize this cache with the provided client
@@ -433,7 +430,7 @@ class NodeTrackingCache(
         self.__stats.compact()
         self.__confidence = self.__original_confidence
 
-    def process_message(self, message: ResponseType) -> Tuple[ResponseType, ...]:
+    def process_message(self, message: ResponseType) -> tuple[ResponseType, ...]:
         assert isinstance(message, list)
 
         if self.__protocol_version == 2:
@@ -454,7 +451,7 @@ class NodeTrackingCache(
 
     async def initialize(
         self,
-        client: Union["coredis.client.Redis[Any]", "coredis.client.RedisCluster[Any]"],
+        client: Union[coredis.client.Redis[Any], coredis.client.RedisCluster[Any]],
     ) -> NodeTrackingCache:
         self.__protocol_version = client.protocol_version
         await super().start(client)
@@ -549,21 +546,21 @@ class ClusterTrackingCache(AbstractCache, SupportsStats, SupportsSampling, Suppo
          confirmations of correct cached values will increase the confidence by 0.01%
          upto 100.
         """
-        self.node_caches: Dict[str, NodeTrackingCache] = {}
+        self.node_caches: dict[str, NodeTrackingCache] = {}
         self.__protocol_version: Optional[Literal[2, 3]] = None
         self.__cache: LRUCache[LRUCache[LRUCache[ResponseType]]] = cache or LRUCache(
             max_keys, max_size_bytes
         )
-        self.__nodes: List["coredis.client.Redis[Any]"] = []
+        self.__nodes: list[coredis.client.Redis[Any]] = []
         self.__max_idle_seconds = max_idle_seconds
         self.__confidence = self.__original_confidence = confidence
         self.__dynamic_confidence = dynamic_confidence
         self.__stats = stats or CacheStats()
-        self.__client: Optional[weakref.ReferenceType["coredis.client.RedisCluster[Any]"]] = None
+        self.__client: Optional[weakref.ReferenceType[coredis.client.RedisCluster[Any]]] = None
 
     async def initialize(
         self,
-        client: Union["coredis.client.Redis[Any]", "coredis.client.RedisCluster[Any]"],
+        client: Union[coredis.client.Redis[Any], coredis.client.RedisCluster[Any]],
     ) -> ClusterTrackingCache:
         import coredis.client
 
@@ -592,7 +589,7 @@ class ClusterTrackingCache(AbstractCache, SupportsStats, SupportsSampling, Suppo
         return self
 
     @property
-    def client(self) -> Optional["coredis.client.RedisCluster[Any]"]:
+    def client(self) -> Optional[coredis.client.RedisCluster[Any]]:
         if self.__client:
             return self.__client()
 
@@ -714,14 +711,14 @@ class TrackingCache(AbstractCache, SupportsStats, SupportsSampling, SupportsClie
         )
         self.__client: Optional[
             weakref.ReferenceType[
-                Union["coredis.client.Redis[Any]", "coredis.client.RedisCluster[Any]"],
+                Union[coredis.client.Redis[Any], coredis.client.RedisCluster[Any]],
             ]
         ] = None
         self.__stats = stats or CacheStats()
 
     async def initialize(
         self,
-        client: Union["coredis.client.Redis[Any]", "coredis.client.RedisCluster[Any]"],
+        client: Union[coredis.client.Redis[Any], coredis.client.RedisCluster[Any]],
     ) -> TrackingCache:
         import coredis.client
 

@@ -7,12 +7,9 @@ from coredis.response._callbacks import ResponseCallback
 from coredis.response._callbacks.server import InfoCallback
 from coredis.typing import (
     AnyStr,
-    Dict,
-    List,
     Optional,
     ResponsePrimitive,
     ResponseType,
-    Tuple,
     Union,
     ValueT,
 )
@@ -46,9 +43,9 @@ SENTINEL_STATE_INT_FIELDS = {
 
 def sentinel_state_typed(
     response: list[str],
-) -> Dict[str, Union[str, int, bool]]:
+) -> dict[str, Union[str, int, bool]]:
     it = iter(response)
-    result: Dict[str, Union[str, int, bool]] = {}
+    result: dict[str, Union[str, int, bool]] = {}
 
     for key, value in zip(it, it):
         if key in SENTINEL_STATE_INT_FIELDS:
@@ -59,8 +56,8 @@ def sentinel_state_typed(
 
 
 def add_flags(
-    result: Dict[str, Union[int, str, bool]],
-) -> Dict[str, Union[int, str, bool]]:
+    result: dict[str, Union[int, str, bool]],
+) -> dict[str, Union[int, str, bool]]:
     flags = set(nativestr(result["flags"]).split(","))
     for name, flag in (
         ("is_master", "master"),
@@ -76,8 +73,8 @@ def add_flags(
 
 
 def parse_sentinel_state(
-    item: List[ResponsePrimitive],
-) -> Dict[str, Union[int, str, bool]]:
+    item: list[ResponsePrimitive],
+) -> dict[str, Union[int, str, bool]]:
     result = sentinel_state_typed([nativestr(k) for k in item])
     result = add_flags(result)
     return result
@@ -86,36 +83,36 @@ def parse_sentinel_state(
 class PrimaryCallback(
     ResponseCallback[
         ResponseType,
-        Dict[ResponsePrimitive, ResponsePrimitive],
-        Dict[str, Union[str, int, bool]],
+        dict[ResponsePrimitive, ResponsePrimitive],
+        dict[str, Union[str, int, bool]],
     ]
 ):
     def transform(
         self, response: ResponseType, **options: Optional[ValueT]
-    ) -> Dict[str, Union[str, int, bool]]:
-        return parse_sentinel_state(cast(List[ResponsePrimitive], response))
+    ) -> dict[str, Union[str, int, bool]]:
+        return parse_sentinel_state(cast(list[ResponsePrimitive], response))
 
     def transform_3(
         self,
-        response: Dict[ResponsePrimitive, ResponsePrimitive],
+        response: dict[ResponsePrimitive, ResponsePrimitive],
         **options: Optional[ValueT],
-    ) -> Dict[str, Union[str, int, bool]]:
+    ) -> dict[str, Union[str, int, bool]]:
         return add_flags(EncodingInsensitiveDict(response))
 
 
 class PrimariesCallback(
     ResponseCallback[
-        List[ResponseType],
-        List[ResponseType],
-        Dict[str, Dict[str, Union[str, int, bool]]],
+        list[ResponseType],
+        list[ResponseType],
+        dict[str, dict[str, Union[str, int, bool]]],
     ]
 ):
     def transform(
         self,
-        response: Union[List[ResponseType], Dict[ResponsePrimitive, ResponsePrimitive]],
+        response: Union[list[ResponseType], dict[ResponsePrimitive, ResponsePrimitive]],
         **options: Optional[ValueT],
-    ) -> Dict[str, Dict[str, Union[str, int, bool]]]:
-        result: Dict[str, Dict[str, Union[str, int, bool]]] = {}
+    ) -> dict[str, dict[str, Union[str, int, bool]]]:
+        result: dict[str, dict[str, Union[str, int, bool]]] = {}
 
         for item in response:
             state = PrimaryCallback()(item)
@@ -124,9 +121,9 @@ class PrimariesCallback(
         return result
 
     def transform_3(
-        self, response: List[ResponseType], **options: Optional[ValueT]
-    ) -> Dict[str, Dict[str, Union[str, int, bool]]]:
-        states: Dict[str, Dict[str, Union[str, int, bool]]] = {}
+        self, response: list[ResponseType], **options: Optional[ValueT]
+    ) -> dict[str, dict[str, Union[str, int, bool]]]:
+        states: dict[str, dict[str, Union[str, int, bool]]] = {}
         for state in response:
             proxy = add_flags(EncodingInsensitiveDict(state))
             states[nativestr(proxy["name"])] = proxy
@@ -135,43 +132,43 @@ class PrimariesCallback(
 
 class SentinelsStateCallback(
     ResponseCallback[
-        List[ResponseType],
-        List[ResponseType],
-        Tuple[Dict[str, Union[str, bool, int]], ...],
+        list[ResponseType],
+        list[ResponseType],
+        tuple[dict[str, Union[str, bool, int]], ...],
     ]
 ):
     def transform(
-        self, response: List[ResponseType], **options: Optional[ValueT]
-    ) -> Tuple[Dict[str, Union[str, bool, int]], ...]:
+        self, response: list[ResponseType], **options: Optional[ValueT]
+    ) -> tuple[dict[str, Union[str, bool, int]], ...]:
         return tuple(parse_sentinel_state([nativestr(i) for i in item]) for item in response)
 
     def transform_3(
-        self, response: List[ResponseType], **options: Optional[ValueT]
-    ) -> Tuple[Dict[str, Union[str, bool, int]], ...]:
+        self, response: list[ResponseType], **options: Optional[ValueT]
+    ) -> tuple[dict[str, Union[str, bool, int]], ...]:
         return tuple(add_flags(EncodingInsensitiveDict(state)) for state in response)
 
 
 class GetPrimaryCallback(
     ResponseCallback[
-        List[ResponsePrimitive],
-        List[ResponsePrimitive],
-        Optional[Tuple[str, int]],
+        list[ResponsePrimitive],
+        list[ResponsePrimitive],
+        Optional[tuple[str, int]],
     ]
 ):
     def transform(
-        self, response: List[ResponsePrimitive], **options: Optional[ValueT]
-    ) -> Optional[Tuple[str, int]]:
+        self, response: list[ResponsePrimitive], **options: Optional[ValueT]
+    ) -> Optional[tuple[str, int]]:
         return nativestr(response[0]), int(response[1]) if response else None
 
 
 class SentinelInfoCallback(
     ResponseCallback[
-        List[ResponseType],
-        List[ResponseType],
-        Dict[AnyStr, Dict[int, Dict[str, ResponseType]]],
+        list[ResponseType],
+        list[ResponseType],
+        dict[AnyStr, dict[int, dict[str, ResponseType]]],
     ]
 ):
     def transform(
-        self, response: List[ResponseType], **options: Optional[ValueT]
-    ) -> Dict[AnyStr, Dict[int, Dict[str, ResponseType]]]:
+        self, response: list[ResponseType], **options: Optional[ValueT]
+    ) -> dict[AnyStr, dict[int, dict[str, ResponseType]]]:
         return {response[0]: {r[0]: InfoCallback()(r[1]) for r in response[1]}}

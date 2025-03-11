@@ -4,21 +4,17 @@ import dataclasses
 import datetime
 import re
 import shlex
-from typing import Pattern
+from re import Pattern
 
 from coredis.typing import (
     AbstractSet,
     ClassVar,
-    Dict,
-    List,
     Literal,
     Mapping,
     NamedTuple,
     Optional,
     OrderedDict,
-    Set,
     StringT,
-    Tuple,
     TypedDict,
     Union,
     ValueT,
@@ -106,7 +102,7 @@ class FunctionDefinition(TypedDict):
     #: the description of the function
     description: StringT
     #: function flags
-    flags: Set[ScriptFlag]
+    flags: set[ScriptFlag]
 
 
 class LibraryDefinition(TypedDict):
@@ -121,7 +117,7 @@ class LibraryDefinition(TypedDict):
     #: the library's description
     description: StringT
     #: Mapping of function names to functions in the library
-    functions: Dict[StringT, FunctionDefinition]
+    functions: dict[StringT, FunctionDefinition]
     #: The library's source code
     library_code: Optional[StringT]
 
@@ -148,7 +144,7 @@ class GeoCoordinates(NamedTuple):
     latitude: float
 
 
-ScoredMembers = Tuple[ScoredMember, ...]
+ScoredMembers = tuple[ScoredMember, ...]
 
 
 class GeoSearchResult(NamedTuple):
@@ -195,7 +191,7 @@ Command = TypedDict(
         "key-specifications": Optional[
             AbstractSet[Mapping[str, Union[int, str, Mapping]]]  # type: ignore
         ],
-        "sub-commands": Optional[Tuple[str, ...]],
+        "sub-commands": Optional[tuple[str, ...]],
     },
 )
 
@@ -212,9 +208,9 @@ class RoleInfo(NamedTuple):
     #:
     status: Optional[str] = None
     #:
-    slaves: Optional[Tuple[Dict[str, Union[str, int]], ...]] = None
+    slaves: Optional[tuple[dict[str, Union[str, int]], ...]] = None
     #:
-    masters: Optional[Tuple[str, ...]] = None
+    masters: Optional[tuple[str, ...]] = None
 
 
 class StreamEntry(NamedTuple):
@@ -236,13 +232,13 @@ StreamInfo = TypedDict(
         "length": int,
         "radix-tree-keys": int,
         "radix-tree-nodes": int,
-        "groups": Union[int, List[Dict]],  # type: ignore
+        "groups": Union[int, list[dict]],  # type: ignore
         "last-generated-id": str,
         "max-deleted-entry-id": str,
         "recorded-first-entry-id": str,
         "entries-added": int,
         "entries-read": int,
-        "entries": Optional[Tuple[StreamEntry, ...]],
+        "entries": Optional[tuple[StreamEntry, ...]],
     },
 )
 
@@ -280,9 +276,9 @@ class SlowLogInfo(NamedTuple):
     #: The amount of time needed for its execution, in microseconds.
     duration: int
     #: The array composing the arguments of the command.
-    command: Tuple[StringT, ...]
+    command: tuple[StringT, ...]
     #: Client IP address and port
-    client_addr: Tuple[StringT, int]
+    client_addr: tuple[StringT, int]
     #: Client name
     client_name: str
 
@@ -293,9 +289,9 @@ class LCSMatch(NamedTuple):
     """
 
     #: Start/end offset of the first string
-    first: Tuple[int, int]
+    first: tuple[int, int]
     #: Start/end offset of the second string
-    second: Tuple[int, int]
+    second: tuple[int, int]
     #: Length of the match
     length: Optional[int]
 
@@ -306,7 +302,7 @@ class LCSResult(NamedTuple):
     """
 
     #: matches
-    matches: Tuple[LCSMatch, ...]
+    matches: tuple[LCSMatch, ...]
     #: Length of longest match
     length: int
 
@@ -324,13 +320,13 @@ class MonitorResult:
     #: db number
     db: int
     #: (host, port) or path if the server is listening on a unix domain socket
-    client_addr: Optional[Union[Tuple[str, int], str]]
+    client_addr: Optional[Union[tuple[str, int], str]]
     #: The type of the client that send the command
     client_type: Literal["tcp", "unix", "lua"]
     #: The name of the command
     command: str
     #: Arguments passed to the command
-    args: Optional[Tuple[str, ...]]
+    args: Optional[tuple[str, ...]]
 
     EXPR: ClassVar[Pattern[str]] = re.compile(r"\[(\d+) (.*?)\] (.*)$")
 
@@ -371,15 +367,15 @@ class ClusterNode(TypedDict):
 
 class ClusterNodeDetail(TypedDict):
     id: str
-    flags: Tuple[str, ...]
+    flags: tuple[str, ...]
     host: str
     port: int
     master: Optional[str]
     ping_sent: int
     pong_recv: int
     link_state: str
-    slots: List[int]
-    migrations: List[Dict[str, ValueT]]
+    slots: list[int]
+    migrations: list[dict[str, ValueT]]
 
 
 class PubSubMessage(TypedDict):

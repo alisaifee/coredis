@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from coredis.typing import NamedTuple
+from coredis.typing import NamedTuple, Optional
 
 
 class UserPass(NamedTuple):
@@ -37,7 +37,7 @@ class UserPassCredentialProvider(AbstractCredentialProvider):
     and/or :paramref:`UserPassCredentialProvider.username`.
     """
 
-    def __init__(self, username: str | None = None, password: str | None = None) -> None:
+    def __init__(self, username: Optional[str] = None, password: Optional[str] = None) -> None:
         self.username = username or ""
         self.password = password or ""
 

@@ -26,14 +26,10 @@ from ..typing import (
     Callable,
     ClassVar,
     Coroutine,
-    Dict,
     Generic,
     Optional,
     P,
     R,
-    Set,
-    Tuple,
-    Type,
     ValueT,
     add_runtime_checks,
 )
@@ -43,10 +39,10 @@ if TYPE_CHECKING:
 
 
 async def ensure_compatibility(
-    client: "coredis.client.Client[Any]",
+    client: coredis.client.Client[Any],
     module: str,
     command_details: CommandDetails,
-    kwargs: Dict[str, Any],
+    kwargs: dict[str, Any],
 ) -> None:
     if (
         Config.optimized
@@ -80,14 +76,14 @@ async def ensure_compatibility(
 
 def module_command(
     command_name: CommandName,
-    module: "Type[Module[Any]]",
+    module: type[Module[Any]],
     group: CommandGroup,
-    flags: Optional[Set[CommandFlag]] = None,
+    flags: Optional[set[CommandFlag]] = None,
     cluster: ClusterCommandConfig = ClusterCommandConfig(),
     cache_config: Optional[CacheConfig] = None,
     version_introduced: Optional[str] = None,
     version_deprecated: Optional[str] = None,
-    arguments: Optional[Dict[str, Dict[str, str]]] = None,
+    arguments: Optional[dict[str, dict[str, str]]] = None,
 ) -> Callable[[Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]]:
     command_details = CommandDetails(
         command_name,
@@ -172,10 +168,10 @@ class ModuleRegistry(ABCMeta):
     FULL_NAME: str
     DESCRIPTION: str
     DOCUMENTATION_URL: str
-    COMMAND_GROUPS: Dict[CommandGroup, Type[ModuleGroup[Any]]]
+    COMMAND_GROUPS: dict[CommandGroup, type[ModuleGroup[Any]]]
 
     def __new__(
-        cls, name: str, bases: Tuple[type, ...], namespace: Dict[str, object]
+        cls, name: str, bases: tuple[type, ...], namespace: dict[str, object]
     ) -> ModuleRegistry:
         if "COMMAND_GROUPS" not in namespace:
             namespace["COMMAND_GROUPS"] = {}
@@ -196,16 +192,16 @@ class ModuleGroupRegistry(ABCMeta):
     :meta private:
     """
 
-    MODULE: Type[Module[Any]]
+    MODULE: type[Module[Any]]
     COMMAND_GROUP: CommandGroup
 
     def __new__(
-        cls, name: str, bases: Tuple[type, ...], namespace: Dict[str, object]
+        cls, name: str, bases: tuple[type, ...], namespace: dict[str, object]
     ) -> ModuleGroupRegistry:
         kls = super().__new__(cls, name, bases, namespace)
         if getattr(kls, "MODULE", None):
             MODULE_GROUPS.add(kls)
-            kls.MODULE.COMMAND_GROUPS[kls.COMMAND_GROUP] = cast(Type[ModuleGroup[Any]], kls)
+            kls.MODULE.COMMAND_GROUPS[kls.COMMAND_GROUP] = cast(type[ModuleGroup[Any]], kls)
             original_doc = textwrap.dedent(kls.__doc__ or "")
             kls.__doc__ = f"""
 Container for the commands in the ``{kls.COMMAND_GROUP.value}`` command group of the
@@ -242,7 +238,7 @@ class Module(Generic[AnyStr], metaclass=ModuleRegistry):
     A link to the module documentation
     """
 
-    COMMAND_GROUPS: ClassVar[Dict[CommandGroup, Type[ModuleGroup[Any]]]]
+    COMMAND_GROUPS: ClassVar[dict[CommandGroup, type[ModuleGroup[Any]]]]
     """
     Mapping of command groups that implement this module. This is auto
     populated by the :class:`ModuleGroupRegistry` metaclass.
@@ -254,17 +250,17 @@ class ModuleGroup(Generic[AnyStr], metaclass=ModuleGroupRegistry):
     Base class for Redis module command groups
     """
 
-    MODULE: ClassVar[Type[Module[Any]]]
+    MODULE: ClassVar[type[Module[Any]]]
     """
     The module to which this command group belongs to
-    
-    :meta private: 
+
+    :meta private:
     """
     COMMAND_GROUP: ClassVar[CommandGroup]
     """
     The command group this class implements
 
-    :meta private: 
+    :meta private:
     """
 
     def __init__(self, client: AbstractExecutor):

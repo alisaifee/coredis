@@ -16,13 +16,11 @@ from ..typing import (
     AnyStr,
     CommandArgList,
     KeyT,
-    List,
     Literal,
     Optional,
     Parameters,
     ResponseType,
     StringT,
-    Tuple,
     Union,
     ValueT,
 )
@@ -34,7 +32,7 @@ from .response.types import JsonType
 class RedisJSON(Module[AnyStr]):
     NAME = "ReJSON"
     FULL_NAME = "RedisJSON"
-    DESCRIPTION = """RedisJSON is a Redis module that implements a JSON data type 
+    DESCRIPTION = """RedisJSON is a Redis module that implements a JSON data type
 and a set of commands to operate on it."""
     DOCUMENTATION_URL = "https://redis.io/docs/stack/json/"
 
@@ -227,7 +225,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="2.6.0",
         module=MODULE,
     )
-    async def mset(self, triplets: Parameters[Tuple[KeyT, StringT, JsonType]]) -> bool:
+    async def mset(self, triplets: Parameters[tuple[KeyT, StringT, JsonType]]) -> bool:
         """
         Sets or updates the JSON value of one or more keys
 
@@ -316,7 +314,7 @@ class Json(ModuleGroup[AnyStr]):
         key: KeyT,
         value: Optional[Union[str, bytes, int, float]],
         path: Optional[KeyT] = None,
-    ) -> Optional[Union[int, List[Optional[int]]]]:
+    ) -> Optional[Union[int, list[Optional[int]]]]:
         """
         Appends a string to a JSON string value at path
 
@@ -344,7 +342,7 @@ class Json(ModuleGroup[AnyStr]):
     )
     async def strlen(
         self, key: KeyT, path: Optional[KeyT] = None
-    ) -> Optional[Union[int, List[Optional[int]]]]:
+    ) -> Optional[Union[int, list[Optional[int]]]]:
         """
         Returns the length of the JSON String at path in key
 
@@ -374,7 +372,7 @@ class Json(ModuleGroup[AnyStr]):
         key: KeyT,
         values: Parameters[JsonType],
         path: Optional[KeyT] = None,
-    ) -> Optional[Union[int, List[Optional[int]]]]:
+    ) -> Optional[Union[int, list[Optional[int]]]]:
         """
         Append one or more json values into the array at path after the last element in it.
 
@@ -410,7 +408,7 @@ class Json(ModuleGroup[AnyStr]):
         value: Union[str, bytes, int, float],
         start: Optional[int] = None,
         stop: Optional[int] = None,
-    ) -> Optional[Union[int, List[Optional[int]]]]:
+    ) -> Optional[Union[int, list[Optional[int]]]]:
         """
         Returns the index of the first occurrence of a JSON scalar value in the array at path
 
@@ -445,7 +443,7 @@ class Json(ModuleGroup[AnyStr]):
         path: ValueT,
         index: int,
         values: Parameters[JsonType],
-    ) -> Optional[Union[int, List[Optional[int]]]]:
+    ) -> Optional[Union[int, list[Optional[int]]]]:
         """
         Inserts the JSON scalar(s) value at the specified index in the array at path
 
@@ -475,7 +473,7 @@ class Json(ModuleGroup[AnyStr]):
     )
     async def arrlen(
         self, key: KeyT, path: Optional[KeyT] = None
-    ) -> Optional[Union[int, List[Optional[int]]]]:
+    ) -> Optional[Union[int, list[Optional[int]]]]:
         """
         Returns the length of the array at path
 
@@ -530,7 +528,7 @@ class Json(ModuleGroup[AnyStr]):
     )
     async def arrtrim(
         self, key: KeyT, path: ValueT, start: int, stop: int
-    ) -> Optional[Union[int, List[Optional[int]]]]:
+    ) -> Optional[Union[int, list[Optional[int]]]]:
         """
         Trims the array at path to contain only the specified inclusive range of indices
         from start to stop
@@ -581,7 +579,7 @@ class Json(ModuleGroup[AnyStr]):
     )
     async def objlen(
         self, key: KeyT, path: Optional[KeyT] = None
-    ) -> Optional[Union[int, List[Optional[int]]]]:
+    ) -> Optional[Union[int, list[Optional[int]]]]:
         """
         Returns the number of keys of the object at path
 
@@ -609,7 +607,7 @@ class Json(ModuleGroup[AnyStr]):
     )
     async def type(
         self, key: KeyT, path: Optional[KeyT] = None
-    ) -> Optional[Union[AnyStr, List[Optional[AnyStr]]]]:
+    ) -> Optional[Union[AnyStr, list[Optional[AnyStr]]]]:
         """
         Returns the type of the JSON value at path
 
@@ -656,7 +654,7 @@ class Json(ModuleGroup[AnyStr]):
     )
     async def debug_memory(
         self, key: KeyT, path: Optional[KeyT] = None
-    ) -> Optional[Union[int, List[Optional[int]]]]:
+    ) -> Optional[Union[int, list[Optional[int]]]]:
         """
         Reports the size in bytes of a key
         """
