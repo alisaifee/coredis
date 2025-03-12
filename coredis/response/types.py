@@ -4,10 +4,10 @@ import dataclasses
 import datetime
 import re
 import shlex
+from collections.abc import Set
 from re import Pattern
 
 from coredis.typing import (
-    AbstractSet,
     ClassVar,
     Literal,
     Mapping,
@@ -180,13 +180,13 @@ Command = TypedDict(
     {
         "name": str,
         "arity": int,
-        "flags": AbstractSet[str],
+        "flags": Set[str],
         "first-key": int,
         "last-key": int,
         "step": int,
-        "acl-categories": AbstractSet[str] | None,
-        "tips": AbstractSet[str] | None,
-        "key-specifications": AbstractSet[Mapping[str, int | str | Mapping]] | None,  # type: ignore
+        "acl-categories": Set[str] | None,
+        "tips": Set[str] | None,
+        "key-specifications": Set[Mapping[str, int | str | Mapping]] | None,  # type: ignore
         "sub-commands": tuple[str, ...] | None,
     },
 )

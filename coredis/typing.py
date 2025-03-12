@@ -17,12 +17,12 @@ from collections.abc import (
     MutableSequence,
     MutableSet,
     Sequence,
+    Set,
     ValuesView,
 )
 from types import ModuleType
 from typing import (
     TYPE_CHECKING,
-    AbstractSet,
     AnyStr,
     ClassVar,
     ContextManager,
@@ -50,7 +50,6 @@ try:
 
     if not TYPE_CHECKING:
         from beartype.typing import (  # noqa: F811
-            AbstractSet,
             Iterable,
             Iterator,
             Mapping,
@@ -147,7 +146,7 @@ StringT = str | bytes
 #:     length({"1": 2})            # invalid
 #:     length("123")               # invalid
 #:     length(b"123")              # invalid
-Parameters = list[T_co] | AbstractSet[T_co] | tuple[T_co, ...] | ValuesView[T_co] | Iterator[T_co]
+Parameters = list[T_co] | Set[T_co] | tuple[T_co, ...] | ValuesView[T_co] | Iterator[T_co]
 
 #: Mapping of primitives returned by redis
 ResponsePrimitive = StringT | int | float | bool | None
@@ -188,7 +187,6 @@ else:
         | RedisError  # response errors get mapped to exceptions.
     )
 __all__ = [
-    "AbstractSet",
     "AnyStr",
     "AsyncIterator",
     "AsyncGenerator",
