@@ -54,7 +54,6 @@ from coredis.typing import (
     AsyncGenerator,
     AsyncIterator,
     Callable,
-    ContextManager,
     Coroutine,
     Generator,
     Generic,
@@ -1008,12 +1007,12 @@ class Redis(Client[AnyStr]):
     @overload
     def decoding(
         self, mode: Literal[False], encoding: str | None = None
-    ) -> ContextManager[Redis[bytes]]: ...
+    ) -> contextlib.AbstractContextManager[Redis[bytes]]: ...
 
     @overload
     def decoding(
         self, mode: Literal[True], encoding: str | None = None
-    ) -> ContextManager[Redis[str]]: ...
+    ) -> contextlib.AbstractContextManager[Redis[str]]: ...
 
     @contextlib.contextmanager
     @versionadded(version="4.8.0")

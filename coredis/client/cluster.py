@@ -41,7 +41,6 @@ from coredis.typing import (
     AsyncIterator,
     Awaitable,
     Callable,
-    ContextManager,
     Coroutine,
     Iterable,
     Iterator,
@@ -950,12 +949,12 @@ class RedisCluster(
     @overload
     def decoding(
         self, mode: Literal[False], encoding: str | None = None
-    ) -> ContextManager[RedisCluster[bytes]]: ...
+    ) -> contextlib.AbstractContextManager[RedisCluster[bytes]]: ...
 
     @overload
     def decoding(
         self, mode: Literal[True], encoding: str | None = None
-    ) -> ContextManager[RedisCluster[str]]: ...
+    ) -> contextlib.AbstractContextManager[RedisCluster[str]]: ...
 
     @contextlib.contextmanager
     @versionadded(version="4.8.0")
