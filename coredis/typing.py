@@ -26,7 +26,6 @@ from typing import (
     AnyStr,
     ClassVar,
     ContextManager,
-    Deque,
     Final,
     Generic,
     Literal,
@@ -52,7 +51,6 @@ try:
     if not TYPE_CHECKING:
         from beartype.typing import (  # noqa: F811
             AbstractSet,
-            Deque,
             Iterable,
             Iterator,
             Mapping,
@@ -200,7 +198,6 @@ __all__ = [
     "CommandArgList",
     "ContextManager",
     "Coroutine",
-    "Deque",
     "Final",
     "Generic",
     "Generator",

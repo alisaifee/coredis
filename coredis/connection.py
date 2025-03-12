@@ -37,7 +37,6 @@ from coredis.typing import (
     Awaitable,
     Callable,
     ClassVar,
-    Deque,
     Literal,
     ResponseType,
     TypeVar,
@@ -199,7 +198,7 @@ class BaseConnection(asyncio.BaseProtocol):
         self._last_error: BaseException | None = None
         self._connection_error: BaseException | None = None
 
-        self._requests: Deque[Request] = deque()
+        self._requests: deque[Request] = deque()
 
         self.average_response_time: float = 0
         self.requests_processed: int = 0
