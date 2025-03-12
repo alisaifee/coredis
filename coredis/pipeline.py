@@ -595,12 +595,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         if exception:
             cmd = command.decode("latin-1")
             args = " ".join(map(str, args))
-            msg = "Command # {} ({} {}) of pipeline caused error: {}".format(
-                number,
-                cmd,
-                args,
-                str(exception.args[0]),
-            )
+            msg = f"Command # {number} ({cmd} {args}) of pipeline caused error: {str(exception.args[0])}"
             exception.args = (msg,) + exception.args[1:]
 
     async def load_scripts(self):
@@ -811,9 +806,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         if exception:
             cmd = command.decode("latin-1")
             args = " ".join(str(x) for x in args)
-            msg = "Command # {} ({} {}) of pipeline caused error: {}".format(
-                number, cmd, args, exception.args[0]
-            )
+            msg = f"Command # {number} ({cmd} {args}) of pipeline caused error: {exception.args[0]}"
             exception.args = (msg,) + exception.args[1:]
 
     async def execute(self, raise_on_error: bool = True) -> tuple[object, ...]:

@@ -108,9 +108,7 @@ class ConnectionPool:
                     try:
                         url_options[name] = parser(value[0])
                     except (TypeError, ValueError):
-                        warnings.warn(
-                            UserWarning("Invalid value for `%s` in connection URL." % name)
-                        )
+                        warnings.warn(UserWarning(f"Invalid value for `{name}` in connection URL."))
                 else:
                     url_options[name] = value[0]
 
@@ -210,9 +208,7 @@ class ConnectionPool:
         self.initialized = True
 
     def __repr__(self) -> str:
-        return "{}<{}>".format(
-            type(self).__name__, self.connection_class.describe(self.connection_kwargs)
-        )
+        return f"{type(self).__name__}<{self.connection_class.describe(self.connection_kwargs)}>"
 
     def __del__(self) -> None:
         self.disconnect()

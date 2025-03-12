@@ -170,7 +170,7 @@ class SentinelConnectionPool(ConnectionPool):
             return [await self.get_primary_address()]
         except PrimaryNotFoundError:
             pass
-        raise ReplicaNotFoundError("No replica found for %r" % (self.service_name))
+        raise ReplicaNotFoundError(f"No replica found for {self.service_name!r}")
 
 
 class Sentinel(Generic[AnyStr]):

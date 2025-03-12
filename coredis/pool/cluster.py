@@ -244,9 +244,7 @@ class ClusterConnectionPool(ConnectionPool):
         if self.count_all_num_connections(node) >= self.max_connections:
             if self.max_connections_per_node:
                 raise ConnectionError(
-                    "Too many connection ({}) for node: {}".format(
-                        self.count_all_num_connections(node), node.name
-                    )
+                    f"Too many connection ({self.count_all_num_connections(node)}) for node: {node.name}"
                 )
 
             raise ConnectionError("Too many connections")

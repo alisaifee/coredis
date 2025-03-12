@@ -263,7 +263,7 @@ class NodeManager:
         if not all_slots_covered:
             raise RedisClusterException(
                 "Not all slots are covered after query all startup_nodes. "
-                "{} of {} covered...".format(len(tmp_slots), HASH_SLOTS)
+                f"{len(tmp_slots)} of {HASH_SLOTS} covered..."
             )
 
         # Set the tmp variables to the real variables
