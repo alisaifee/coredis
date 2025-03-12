@@ -111,7 +111,7 @@ class TestPyParser:
         assert parser.get_response(decode=False, encoding="latin-1") == b"hello"
 
     def test_bulk_string_undecodable(self, parser, decode):
-        parser.feed(b"$6\r\n" + "世界".encode("utf-8") + b"\r\n")
+        parser.feed(b"$6\r\n" + "世界".encode() + b"\r\n")
         assert parser.get_response(decode=True, encoding="big5") == b"\xe4\xb8\x96\xe7\x95\x8c"
 
     def test_nil_verbatim_text(self, parser, decode):

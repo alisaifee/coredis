@@ -66,7 +66,7 @@ def make_subscribe_test_data(pubsub, encoder, type):
             "unsub_func": pubsub.punsubscribe,
             "keys": ["f*", "b*", "uni" + chr(56) + "*"],
         }
-    assert False, "invalid subscribe type: %s" % type
+    assert False, f"invalid subscribe type: {type}"
 
 
 @targets(

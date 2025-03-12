@@ -61,7 +61,7 @@ class TestString:
         assert await client.incrbyfloat("a", 1.0) == 1.0
         assert await client.get("a") == _s("1")
         assert await client.incrbyfloat("a", 1.1) == 2.1
-        assert float(await client.get("a")) == float(2.1)
+        assert float(await client.get("a")) == 2.1
 
     async def test_getrange(self, client, _s):
         await client.set("a", "foo")
