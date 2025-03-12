@@ -28,7 +28,6 @@ from typing import (
     ContextManager,
     Deque,
     Final,
-    FrozenSet,
     Generic,
     Literal,
     NamedTuple,
@@ -54,7 +53,6 @@ try:
         from beartype.typing import (  # noqa: F811
             AbstractSet,
             Deque,
-            FrozenSet,
             Iterable,
             Iterator,
             Mapping,
@@ -204,7 +202,6 @@ __all__ = [
     "Coroutine",
     "Deque",
     "Final",
-    "FrozenSet",
     "Generic",
     "Generator",
     "Hashable",
