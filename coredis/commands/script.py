@@ -17,7 +17,6 @@ from coredis.typing import (
     Callable,
     Generic,
     KeyT,
-    Optional,
     P,
     Parameters,
     R,
@@ -52,8 +51,8 @@ class Script(Generic[AnyStr]):
 
     def __init__(
         self,
-        registered_client: Optional[SupportsScript[AnyStr]] = None,
-        script: Optional[StringT] = None,
+        registered_client: SupportsScript[AnyStr] | None = None,
+        script: StringT | None = None,
         readonly: bool = False,
     ):
         """
@@ -65,7 +64,7 @@ class Script(Generic[AnyStr]):
         :param readonly: If ``True`` the script will be called with
          :meth:`coredis.Redis.evalsha_ro` instead of :meth:`coredis.Redis.evalsha`
         """
-        self.registered_client: Optional[SupportsScript[AnyStr]] = registered_client
+        self.registered_client: SupportsScript[AnyStr] | None = registered_client
         self.script: StringT
         if not script:
             raise RuntimeError("No script provided")
@@ -75,10 +74,10 @@ class Script(Generic[AnyStr]):
 
     async def __call__(
         self,
-        keys: Optional[Parameters[KeyT]] = None,
-        args: Optional[Parameters[ValueT]] = None,
-        client: Optional[SupportsScript[AnyStr]] = None,
-        readonly: Optional[bool] = None,
+        keys: Parameters[KeyT] | None = None,
+        args: Parameters[ValueT] | None = None,
+        client: SupportsScript[AnyStr] | None = None,
+        readonly: bool | None = None,
     ) -> ResponseType:
         """
         Executes the script registered in :paramref:`Script.script` using
@@ -121,10 +120,10 @@ class Script(Generic[AnyStr]):
 
     async def execute(
         self,
-        keys: Optional[Parameters[KeyT]] = None,
-        args: Optional[Parameters[ValueT]] = None,
-        client: Optional[SupportsScript[AnyStr]] = None,
-        readonly: Optional[bool] = None,
+        keys: Parameters[KeyT] | None = None,
+        args: Parameters[ValueT] | None = None,
+        client: SupportsScript[AnyStr] | None = None,
+        readonly: bool | None = None,
     ) -> ResponseType:
         """
         Executes the script registered in :paramref:`Script.script`
@@ -136,13 +135,13 @@ class Script(Generic[AnyStr]):
     @versionadded(version="3.5.0")
     def wraps(
         self,
-        key_spec: Optional[list[str]] = None,
+        key_spec: list[str] | None = None,
         param_is_key: Callable[[inspect.Parameter], bool] = lambda p: (
             p.annotation in {"KeyT", KeyT}
         ),
-        client_arg: Optional[str] = None,
+        client_arg: str | None = None,
         runtime_checks: bool = False,
-        readonly: Optional[bool] = None,
+        readonly: bool | None = None,
     ) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
         """
         Decorator for wrapping a regular python function, method or classmethod
@@ -262,7 +261,7 @@ class Script(Generic[AnyStr]):
             ) -> tuple[
                 Parameters[KeyT],
                 Parameters[ValueT],
-                Optional[coredis.client.Client[AnyStr]],
+                coredis.client.Client[AnyStr] | None,
             ]:
                 bound_arguments.apply_defaults()
                 arguments = bound_arguments.arguments

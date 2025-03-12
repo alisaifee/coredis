@@ -25,11 +25,9 @@ from ..typing import (
     KeyT,
     Literal,
     Mapping,
-    Optional,
     Parameters,
     ResponsePrimitive,
     StringT,
-    Union,
     ValueT,
 )
 from .base import Module, ModuleGroup, module_command
@@ -58,10 +56,10 @@ class BloomFilter(ModuleGroup[AnyStr]):
     async def reserve(
         self,
         key: KeyT,
-        error_rate: Union[int, float],
+        error_rate: int | float,
         capacity: int,
-        expansion: Optional[int] = None,
-        nonscaling: Optional[bool] = None,
+        expansion: int | None = None,
+        nonscaling: bool | None = None,
     ) -> bool:
         """
         Creates a new Bloom Filter
@@ -130,11 +128,11 @@ class BloomFilter(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         items: Parameters[ValueT],
-        capacity: Optional[int] = None,
-        error: Optional[Union[int, float]] = None,
-        expansion: Optional[int] = None,
-        nocreate: Optional[bool] = None,
-        nonscaling: Optional[bool] = None,
+        capacity: int | None = None,
+        error: int | float | None = None,
+        expansion: int | None = None,
+        nocreate: bool | None = None,
+        nonscaling: bool | None = None,
     ) -> tuple[bool, ...]:
         """
         Adds one or more items to a Bloom Filter. A filter will be created if it
@@ -211,7 +209,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def scandump(self, key: KeyT, iterator: int) -> tuple[int, Optional[bytes]]:
+    async def scandump(self, key: KeyT, iterator: int) -> tuple[int, bytes | None]:
         """
         Begins an incremental save of the bloom filter
 
@@ -228,7 +226,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
             CommandName.BF_SCANDUMP,
             key,
             iterator,
-            callback=MixedTupleCallback[int, Optional[bytes]](),
+            callback=MixedTupleCallback[int, bytes | None](),
             decode=False,
         )
 
@@ -263,7 +261,8 @@ class BloomFilter(ModuleGroup[AnyStr]):
     async def info(
         self,
         key: KeyT,
-        single_value: Optional[
+        single_value: None
+        | (
             Literal[
                 PureToken.CAPACITY,
                 PureToken.EXPANSION,
@@ -271,8 +270,8 @@ class BloomFilter(ModuleGroup[AnyStr]):
                 PureToken.ITEMS,
                 PureToken.SIZE,
             ]
-        ] = None,
-    ) -> Union[dict[AnyStr, int], int]:
+        ) = None,
+    ) -> dict[AnyStr, int] | int:
         """
         Returns information about a Bloom Filter
 
@@ -326,9 +325,9 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         capacity: int,
-        bucketsize: Optional[int] = None,
-        maxiterations: Optional[int] = None,
-        expansion: Optional[int] = None,
+        bucketsize: int | None = None,
+        maxiterations: int | None = None,
+        expansion: int | None = None,
     ) -> bool:
         """
         Creates a new Cuckoo Filter
@@ -400,8 +399,8 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         items: Parameters[ValueT],
-        capacity: Optional[int] = None,
-        nocreate: Optional[bool] = None,
+        capacity: int | None = None,
+        nocreate: bool | None = None,
     ) -> tuple[bool, ...]:
         """
         Adds one or more items to a Cuckoo Filter. A filter will be created if it does not exist
@@ -436,8 +435,8 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         items: Parameters[ValueT],
-        capacity: Optional[int] = None,
-        nocreate: Optional[bool] = None,
+        capacity: int | None = None,
+        nocreate: bool | None = None,
     ) -> tuple[bool, ...]:
         """
         Adds one or more items to a Cuckoo Filter if the items did not exist previously.
@@ -550,7 +549,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def scandump(self, key: KeyT, iterator: int) -> tuple[int, Optional[bytes]]:
+    async def scandump(self, key: KeyT, iterator: int) -> tuple[int, bytes | None]:
         """
         Begins an incremental save of the bloom filter
 
@@ -564,7 +563,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
             CommandName.CF_SCANDUMP,
             *pieces,
             decode=False,
-            callback=MixedTupleCallback[int, Optional[bytes]](),
+            callback=MixedTupleCallback[int, bytes | None](),
         )
 
     @module_command(
@@ -640,9 +639,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    async def initbyprob(
-        self, key: KeyT, error: Union[int, float], probability: Union[int, float]
-    ) -> bool:
+    async def initbyprob(self, key: KeyT, error: int | float, probability: int | float) -> bool:
         """
         Initializes a Count-Min Sketch to accommodate requested tolerances.
 
@@ -716,7 +713,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         self,
         destination: KeyT,
         sources: Parameters[KeyT],
-        weights: Optional[Parameters[Union[int, float]]] = None,
+        weights: Parameters[int | float] | None = None,
     ) -> bool:
         """
         Merges several sketches into one sketch
@@ -774,9 +771,9 @@ class TopK(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         topk: int,
-        width: Optional[int] = None,
-        depth: Optional[int] = None,
-        decay: Optional[Union[int, float]] = None,
+        width: int | None = None,
+        depth: int | None = None,
+        decay: int | float | None = None,
     ) -> bool:
         """
         Reserve a TopK sketch with specified parameters.
@@ -802,7 +799,7 @@ class TopK(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    async def add(self, key: KeyT, items: Parameters[AnyStr]) -> tuple[Optional[AnyStr], ...]:
+    async def add(self, key: KeyT, items: Parameters[AnyStr]) -> tuple[AnyStr | None, ...]:
         """
         Increases the count of one or more items by increment
 
@@ -814,7 +811,7 @@ class TopK(ModuleGroup[AnyStr]):
             CommandName.TOPK_ADD,
             key,
             *items,
-            callback=TupleCallback[Optional[AnyStr]](),
+            callback=TupleCallback[AnyStr | None](),
         )
 
     @module_command(
@@ -823,7 +820,7 @@ class TopK(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    async def incrby(self, key: KeyT, items: Mapping[AnyStr, int]) -> tuple[Optional[AnyStr], ...]:
+    async def incrby(self, key: KeyT, items: Mapping[AnyStr, int]) -> tuple[AnyStr | None, ...]:
         """
         Increases the count of one or more items by increment
 
@@ -834,7 +831,7 @@ class TopK(ModuleGroup[AnyStr]):
             CommandName.TOPK_INCRBY,
             key,
             *dict_to_flat_list(items),
-            callback=TupleCallback[Optional[AnyStr]](),
+            callback=TupleCallback[AnyStr | None](),
         )
 
     @module_command(
@@ -895,8 +892,8 @@ class TopK(ModuleGroup[AnyStr]):
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def list(
-        self, key: KeyT, withcount: Optional[bool] = None
-    ) -> Union[dict[AnyStr, int], tuple[AnyStr, ...]]:
+        self, key: KeyT, withcount: bool | None = None
+    ) -> dict[AnyStr, int] | tuple[AnyStr, ...]:
         """
         Return full list of items in Top K list
 
@@ -952,7 +949,7 @@ class TDigest(ModuleGroup[AnyStr]):
         version_introduced="2.4.0",
         module=MODULE,
     )
-    async def create(self, key: KeyT, compression: Optional[int] = None) -> bool:
+    async def create(self, key: KeyT, compression: int | None = None) -> bool:
         """
         Allocates memory and initializes a new t-digest sketch
 
@@ -991,7 +988,7 @@ class TDigest(ModuleGroup[AnyStr]):
     async def add(
         self,
         key: KeyT,
-        values: Parameters[Union[int, float]],
+        values: Parameters[int | float],
     ) -> bool:
         """
         Adds one or more observations to a t-digest sketch
@@ -1015,8 +1012,8 @@ class TDigest(ModuleGroup[AnyStr]):
         self,
         destination_key: KeyT,
         source_keys: Parameters[KeyT],
-        compression: Optional[int] = None,
-        override: Optional[bool] = None,
+        compression: int | None = None,
+        override: bool | None = None,
     ) -> bool:
         """
         Merges multiple t-digest sketches into a single sketch
@@ -1094,7 +1091,7 @@ class TDigest(ModuleGroup[AnyStr]):
     async def quantile(
         self,
         key: KeyT,
-        quantiles: Parameters[Union[int, float]],
+        quantiles: Parameters[int | float],
     ) -> tuple[float, ...]:
         """
         Returns, for each input fraction, an estimation of the value (floating point)
@@ -1120,7 +1117,7 @@ class TDigest(ModuleGroup[AnyStr]):
     async def cdf(
         self,
         key: KeyT,
-        values: Parameters[Union[int, float]],
+        values: Parameters[int | float],
     ) -> tuple[float, ...]:
         """
         Returns, for each input value, an estimation of the fraction (floating-point)
@@ -1147,8 +1144,8 @@ class TDigest(ModuleGroup[AnyStr]):
     async def trimmed_mean(
         self,
         key: KeyT,
-        low_cut_quantile: Union[int, float],
-        high_cut_quantile: Union[int, float],
+        low_cut_quantile: int | float,
+        high_cut_quantile: int | float,
     ) -> float:
         """
         Returns an estimation of the mean value from the sketch,
@@ -1178,7 +1175,7 @@ class TDigest(ModuleGroup[AnyStr]):
     async def rank(
         self,
         key: KeyT,
-        values: Parameters[Union[int, float]],
+        values: Parameters[int | float],
     ) -> tuple[int, ...]:
         """
         Returns, for each input value (floating-point), the estimated rank of
@@ -1205,7 +1202,7 @@ class TDigest(ModuleGroup[AnyStr]):
     async def revrank(
         self,
         key: KeyT,
-        values: Parameters[Union[int, float]],
+        values: Parameters[int | float],
     ) -> tuple[int, ...]:
         """
         Returns, for each input value (floating-point), the estimated reverse rank of
@@ -1232,7 +1229,7 @@ class TDigest(ModuleGroup[AnyStr]):
     async def byrank(
         self,
         key: KeyT,
-        ranks: Parameters[Union[int, float]],
+        ranks: Parameters[int | float],
     ) -> tuple[float, ...]:
         """
         Returns, for each input rank, an estimation of the value (floating-point) with
@@ -1258,7 +1255,7 @@ class TDigest(ModuleGroup[AnyStr]):
     async def byrevrank(
         self,
         key: KeyT,
-        reverse_ranks: Parameters[Union[int, float]],
+        reverse_ranks: Parameters[int | float],
     ) -> tuple[float, ...]:
         """
         Returns, for each input reverse rank, an estimation of the value

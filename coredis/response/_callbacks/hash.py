@@ -6,11 +6,9 @@ from coredis.response._callbacks import ResponseCallback
 from coredis.response._utils import flat_pairs_to_dict
 from coredis.typing import (
     AnyStr,
-    Optional,
     ResponseType,
     StringT,
     TypeGuard,
-    Union,
     ValueT,
 )
 
@@ -19,15 +17,15 @@ class HScanCallback(
     ResponseCallback[
         list[ResponseType],
         list[ResponseType],
-        tuple[int, Union[dict[AnyStr, AnyStr], tuple[AnyStr, ...]]],
+        tuple[int, dict[AnyStr, AnyStr] | tuple[AnyStr, ...]],
     ]
 ):
     def guard(self, response: list[ResponseType]) -> TypeGuard[tuple[StringT, list[AnyStr]]]:
         return isinstance(response[0], (str, bytes)) and isinstance(response[1], list)
 
     def transform(
-        self, response: list[ResponseType], **options: Optional[ValueT]
-    ) -> tuple[int, Union[dict[AnyStr, AnyStr], tuple[AnyStr, ...]]]:
+        self, response: list[ResponseType], **options: ValueT | None
+    ) -> tuple[int, dict[AnyStr, AnyStr] | tuple[AnyStr, ...]]:
         assert self.guard(response)
         cursor, r = response
         if options.get("novalues"):
@@ -38,16 +36,16 @@ class HScanCallback(
 
 class HRandFieldCallback(
     ResponseCallback[
-        Optional[Union[AnyStr, list[AnyStr]]],
-        Optional[Union[AnyStr, list[AnyStr], list[list[AnyStr]]]],
-        Optional[Union[AnyStr, tuple[AnyStr, ...], dict[AnyStr, AnyStr]]],
+        AnyStr | list[AnyStr] | None,
+        AnyStr | list[AnyStr] | list[list[AnyStr]] | None,
+        AnyStr | tuple[AnyStr, ...] | dict[AnyStr, AnyStr] | None,
     ]
 ):
     def transform(
         self,
-        response: Optional[Union[AnyStr, list[AnyStr]]],
-        **options: Optional[ValueT],
-    ) -> Optional[Union[AnyStr, tuple[AnyStr, ...], dict[AnyStr, AnyStr]]]:
+        response: AnyStr | list[AnyStr] | None,
+        **options: ValueT | None,
+    ) -> AnyStr | tuple[AnyStr, ...] | dict[AnyStr, AnyStr] | None:
         if not response:
             return None
         if options.get("count"):
@@ -61,9 +59,9 @@ class HRandFieldCallback(
 
     def transform_3(
         self,
-        response: Optional[Union[AnyStr, list[AnyStr], list[list[AnyStr]]]],
-        **options: Optional[ValueT],
-    ) -> Optional[Union[AnyStr, tuple[AnyStr, ...], dict[AnyStr, AnyStr]]]:
+        response: AnyStr | list[AnyStr] | list[list[AnyStr]] | None,
+        **options: ValueT | None,
+    ) -> AnyStr | tuple[AnyStr, ...] | dict[AnyStr, AnyStr] | None:
         if not response:
             return None
         if options.get("count"):
@@ -76,12 +74,10 @@ class HRandFieldCallback(
 
 
 class HGetAllCallback(ResponseCallback[list[AnyStr], dict[AnyStr, AnyStr], dict[AnyStr, AnyStr]]):
-    def transform(
-        self, response: list[AnyStr], **options: Optional[ValueT]
-    ) -> dict[AnyStr, AnyStr]:
+    def transform(self, response: list[AnyStr], **options: ValueT | None) -> dict[AnyStr, AnyStr]:
         return flat_pairs_to_dict(response) if response else {}
 
     def transform_3(
-        self, response: dict[AnyStr, AnyStr], **options: Optional[ValueT]
+        self, response: dict[AnyStr, AnyStr], **options: ValueT | None
     ) -> dict[AnyStr, AnyStr]:
         return response

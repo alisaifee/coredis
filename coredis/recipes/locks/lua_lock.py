@@ -20,7 +20,7 @@ from coredis.exceptions import (
     ReplicationError,
 )
 from coredis.tokens import PureToken
-from coredis.typing import AnyStr, Generic, KeyT, Optional, StringT, Union
+from coredis.typing import AnyStr, Generic, KeyT, StringT
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", DeprecationWarning)
@@ -71,7 +71,7 @@ class LuaLock(Generic[AnyStr]):
     @RELEASE_SCRIPT.wraps(client_arg="client")
     async def lua_release(  # type: ignore[empty-body]
         cls,
-        client: Union[Redis[AnyStr], RedisCluster[AnyStr]],
+        client: Redis[AnyStr] | RedisCluster[AnyStr],
         name: KeyT,
         expected_token: StringT,
     ) -> int: ...
@@ -80,22 +80,22 @@ class LuaLock(Generic[AnyStr]):
     @EXTEND_SCRIPT.wraps(client_arg="client")
     async def lua_extend(  # type: ignore[empty-body]
         cls,
-        client: Union[Redis[AnyStr], RedisCluster[AnyStr]],
+        client: Redis[AnyStr] | RedisCluster[AnyStr],
         name: KeyT,
         expected_token: StringT,
         additional_time: int,
     ) -> int: ...
 
-    local: contextvars.ContextVar[Optional[StringT]]
+    local: contextvars.ContextVar[StringT | None]
 
     def __init__(
         self,
-        client: Union[Redis[AnyStr], RedisCluster[AnyStr]],
+        client: Redis[AnyStr] | RedisCluster[AnyStr],
         name: StringT,
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
         sleep: float = 0.1,
         blocking: bool = True,
-        blocking_timeout: Optional[float] = None,
+        blocking_timeout: float | None = None,
     ):
         """
         :param timeout: indicates a maximum life for the lock.
@@ -116,13 +116,13 @@ class LuaLock(Generic[AnyStr]):
          continue trying forever. ``blocking_timeout`` can be specified as a
          :class:`float` or :class:`int`, both representing the number of seconds to wait.
         """
-        self.client: Union[Redis[AnyStr], RedisCluster[AnyStr]] = client
+        self.client: Redis[AnyStr] | RedisCluster[AnyStr] = client
         self.name = name
         self.timeout = timeout
         self.sleep = sleep
         self.blocking = blocking
         self.blocking_timeout = blocking_timeout
-        self.local = contextvars.ContextVar[Optional[StringT]]("token", default=None)
+        self.local = contextvars.ContextVar[StringT | None]("token", default=None)
 
         if self.timeout and self.sleep > self.timeout:
             raise LockError("'sleep' must be less than 'timeout'")
@@ -136,9 +136,9 @@ class LuaLock(Generic[AnyStr]):
 
     async def __aexit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_value: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None:
         await self.release()
 
@@ -218,7 +218,7 @@ class LuaLock(Generic[AnyStr]):
 
         return 0
 
-    async def __acquire(self, token: StringT, stop_trying_at: Optional[float]) -> bool:
+    async def __acquire(self, token: StringT, stop_trying_at: float | None) -> bool:
         if isinstance(self.client, RedisCluster):
             try:
                 replication_wait = (

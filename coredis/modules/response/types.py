@@ -7,11 +7,9 @@ from coredis._json import json
 from coredis.typing import (
     AnyStr,
     Generic,
-    Optional,
     ResponsePrimitive,
     ResponseType,
     StringT,
-    Union,
 )
 
 
@@ -25,14 +23,14 @@ class SearchDocument(Generic[AnyStr]):
     id: StringT
     #: Search score if the :paramref:`~coredis.modules.search.Search.search.withscores`
     #: option was used
-    score: Optional[float]
+    score: float | None
     #: Explanation of the score if the
     #:  :paramref:`~coredis.modules.search.Search.search.explainscore` option was used
-    score_explanation: Optional[list[AnyStr]]
+    score_explanation: list[AnyStr] | None
     #: Payload associated with the document if
     #:  :paramref:`~coredis.modules.search.Search.search.withpayloads` was used
-    payload: Optional[StringT]
-    sortkeys: Optional[StringT]
+    payload: StringT | None
+    sortkeys: StringT | None
     #: Mapping of properties returned for the document
     properties: dict[AnyStr, ResponseType]
 
@@ -58,7 +56,7 @@ class SearchAggregationResult(Generic[AnyStr]):
     #: The aggregation results
     results: list[dict[StringT, ResponseType]]
     #: The cursor id if :paramref:`~coredis.modules.search.aggregate.with_cursor` was `True`
-    cursor: Optional[int]
+    cursor: int | None
 
     def __post_init__(self) -> None:
         for idx, result in enumerate(self.results):
@@ -77,14 +75,14 @@ class AutocompleteSuggestion(Generic[AnyStr]):
     string: AnyStr
     #: the score of the suggestion if
     #:  :paramref:`~coredis.modules.autocomplete.Autocomplete.sugget.withscores` was used
-    score: Optional[float]
+    score: float | None
     #: the payload associated with the suggestion if
     #:  :paramref:`~coredis.modules.autocomplete.Autocomplete.sugget.withpayloads` was used
-    payload: Optional[AnyStr]
+    payload: AnyStr | None
 
 
 #: Type alias for valid python types that can be represented as json
-JsonType = Union[str, int, float, bool, None, dict[str, Any], list[Any]]
+JsonType = str | int | float | bool | dict[str, Any] | list[Any] | None
 
 
 @dataclasses.dataclass
@@ -133,7 +131,7 @@ class GraphPath(Generic[AnyStr]):
     NULL_NODE = GraphNode[AnyStr](0, set(), {})
 
     @property
-    def path(self) -> tuple[Union[GraphNode[AnyStr], GraphRelation[AnyStr]], ...]:
+    def path(self) -> tuple[GraphNode[AnyStr] | GraphRelation[AnyStr], ...]:
         """
         The path as a tuple of nodes and relations
         """
@@ -158,17 +156,12 @@ class GraphQueryResult(Generic[AnyStr]):
     header: tuple[AnyStr, ...]
     #: The result set from the query
     result_set: tuple[
-        Union[
-            ResponsePrimitive,
-            list[
-                Union[
-                    ResponsePrimitive,
-                    GraphNode[AnyStr],
-                    GraphRelation[AnyStr],
-                    GraphPath[AnyStr],
-                ]
-            ],
-        ],
+        (
+            ResponsePrimitive
+            | list[
+                (ResponsePrimitive | GraphNode[AnyStr] | GraphRelation[AnyStr] | GraphPath[AnyStr])
+            ]
+        ),
         ...,
     ]
     #: Mapping of query statistics

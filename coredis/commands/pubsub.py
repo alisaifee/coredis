@@ -28,12 +28,10 @@ from coredis.typing import (
     Callable,
     Generic,
     MutableMapping,
-    Optional,
     ResponsePrimitive,
     ResponseType,
     StringT,
     TypeVar,
-    Union,
     ValueT,
 )
 
@@ -49,9 +47,7 @@ PoolT = TypeVar("PoolT", bound="coredis.pool.ConnectionPool")
 
 #: Callables for message handler callbacks. The callbacks
 #:  can be sync or async.
-SubscriptionCallback = Union[
-    Callable[[PubSubMessage], Awaitable[None]], Callable[[PubSubMessage], None]
-]
+SubscriptionCallback = Callable[[PubSubMessage], Awaitable[None]] | Callable[[PubSubMessage], None]
 
 
 class PubSubMessageTypes(CaseAndEncodingInsensitiveEnum):
@@ -82,21 +78,21 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         PubSubMessageTypes.PUNSUBSCRIBE.value,
     }
 
-    channels: MutableMapping[StringT, Optional[SubscriptionCallback]]
-    patterns: MutableMapping[StringT, Optional[SubscriptionCallback]]
+    channels: MutableMapping[StringT, SubscriptionCallback | None]
+    patterns: MutableMapping[StringT, SubscriptionCallback | None]
 
     def __init__(
         self,
         connection_pool: PoolT,
         ignore_subscribe_messages: bool = False,
-        retry_policy: Optional[RetryPolicy] = CompositeRetryPolicy(
+        retry_policy: RetryPolicy | None = CompositeRetryPolicy(
             ConstantRetryPolicy((ConnectionError,), 3, 0.1),
             ConstantRetryPolicy((TimeoutError,), 2, 0.1),
         ),
     ):
         self.connection_pool = connection_pool
         self.ignore_subscribe_messages = ignore_subscribe_messages
-        self.connection: Optional[coredis.connection.Connection] = None
+        self.connection: coredis.connection.Connection | None = None
         self._retry_policy = retry_policy or NoRetryPolicy()
         self.reset()
 
@@ -132,7 +128,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
     def close(self) -> None:
         self.reset()
 
-    async def reset_connections(self, exc: Optional[BaseException] = None) -> None:
+    async def reset_connections(self, exc: BaseException | None = None) -> None:
         pass
 
     async def on_connect(self, connection: BaseConnection) -> None:
@@ -181,7 +177,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
 
     async def execute_command(
         self, command: bytes, *args: ValueT, **options: ValueT
-    ) -> Optional[ResponseType]:
+    ) -> ResponseType | None:
         """
         Executes a publish/subscribe command
 
@@ -203,9 +199,9 @@ class BasePubSub(Generic[AnyStr, PoolT]):
     async def _execute(
         self,
         connection: BaseConnection,
-        command: Union[Callable[..., Awaitable[None]], Callable[..., Awaitable[ResponseType]]],
+        command: Callable[..., Awaitable[None]] | Callable[..., Awaitable[ResponseType]],
         *args: ValueT,
-    ) -> Optional[ResponseType]:
+    ) -> ResponseType | None:
         try:
             return await command(*args)
         except asyncio.CancelledError:
@@ -215,7 +211,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
             raise
 
     async def parse_response(
-        self, block: bool = True, timeout: Optional[float] = None
+        self, block: bool = True, timeout: float | None = None
     ) -> ResponseType:
         """
         Parses the response from a publish/subscribe command
@@ -239,7 +235,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
     async def psubscribe(
         self,
         *patterns: StringT,
-        **pattern_handlers: Optional[SubscriptionCallback],
+        **pattern_handlers: SubscriptionCallback | None,
     ) -> None:
         """
         Subscribes to channel patterns. Patterns supplied as keyword arguments
@@ -250,7 +246,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         """
         await self._ensure_encoding()
 
-        new_patterns: MutableMapping[StringT, Optional[SubscriptionCallback]] = {}
+        new_patterns: MutableMapping[StringT, SubscriptionCallback | None] = {}
         new_patterns.update(dict.fromkeys(map(self.encode, patterns)))
 
         for pattern, handler in pattern_handlers.items():
@@ -272,7 +268,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
     async def subscribe(
         self,
         *channels: StringT,
-        **channel_handlers: Optional[SubscriptionCallback],
+        **channel_handlers: SubscriptionCallback | None,
     ) -> None:
         """
         Subscribes to channels. Channels supplied as keyword arguments expect
@@ -284,7 +280,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
 
         await self._ensure_encoding()
 
-        new_channels: MutableMapping[StringT, Optional[SubscriptionCallback]] = {}
+        new_channels: MutableMapping[StringT, SubscriptionCallback | None] = {}
         new_channels.update(dict.fromkeys(map(self.encode, channels)))
 
         for channel, handler in channel_handlers.items():
@@ -304,7 +300,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         await self._ensure_encoding()
         await self.execute_command(CommandName.UNSUBSCRIBE, *channels)
 
-    async def listen(self) -> Optional[PubSubMessage]:
+    async def listen(self) -> PubSubMessage | None:
         """
         Listens for messages on channels this client has been subscribed to
         """
@@ -318,8 +314,8 @@ class BasePubSub(Generic[AnyStr, PoolT]):
     async def get_message(
         self,
         ignore_subscribe_messages: bool = False,
-        timeout: Optional[Union[int, float]] = None,
-    ) -> Optional[PubSubMessage]:
+        timeout: int | float | None = None,
+    ) -> PubSubMessage | None:
         """
         Gets the next message if one is available, otherwise None.
 
@@ -341,7 +337,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
 
     async def handle_message(
         self, response: ResponseType, ignore_subscribe_messages: bool = False
-    ) -> Optional[PubSubMessage]:
+    ) -> PubSubMessage | None:
         """
         Parses a pub/sub message. If the channel or pattern was subscribed to
         with a message handler, the handler is invoked instead of a parsed
@@ -460,7 +456,7 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
     async def execute_command(
         self, command: bytes, *args: ValueT, **options: ValueT
-    ) -> Optional[ResponseType]:
+    ) -> ResponseType | None:
         await self.connection_pool.initialize()
 
         if self.connection is None:
@@ -469,7 +465,7 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         assert self.connection
         return await self._execute(self.connection, self.connection.send_command, command, *args)
 
-    async def reset_connections(self, exc: Optional[BaseException] = None) -> None:
+    async def reset_connections(self, exc: BaseException | None = None) -> None:
         if self.connection:
             self.connection.disconnect()
             self.connection_pool.initialized = False
@@ -509,7 +505,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         self,
         connection_pool: coredis.pool.ClusterConnectionPool,
         ignore_subscribe_messages: bool = False,
-        retry_policy: Optional[RetryPolicy] = None,
+        retry_policy: RetryPolicy | None = None,
         read_from_replicas: bool = False,
     ):
         self.shard_connections: dict[str, Connection] = {}
@@ -521,7 +517,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
     async def subscribe(
         self,
         *channels: StringT,
-        **channel_handlers: Optional[SubscriptionCallback],
+        **channel_handlers: SubscriptionCallback | None,
     ) -> None:
         """
         :param channels: The shard channels to subscribe to.
@@ -533,7 +529,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         """
 
         await self._ensure_encoding()
-        new_channels: MutableMapping[StringT, Optional[SubscriptionCallback]] = {}
+        new_channels: MutableMapping[StringT, SubscriptionCallback | None] = {}
         new_channels.update(dict.fromkeys(map(self.encode, channels)))
 
         for channel, handler in channel_handlers.items():
@@ -556,7 +552,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
     async def psubscribe(
         self,
         *patterns: StringT,
-        **pattern_handlers: Optional[SubscriptionCallback],
+        **pattern_handlers: SubscriptionCallback | None,
     ) -> None:
         """
         Not available in sharded pubsub
@@ -575,7 +571,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
     async def execute_command(
         self, command: bytes, *args: ValueT, **options: ValueT
-    ) -> Optional[ResponseType]:
+    ) -> ResponseType | None:
         await self.connection_pool.initialize()
 
         assert isinstance(args[0], (bytes, str))
@@ -604,7 +600,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
             )
         raise PubSubError(f"Unable to determine shard for channel {args[0]!r}")
 
-    async def reset_connections(self, exc: Optional[BaseException] = None) -> None:
+    async def reset_connections(self, exc: BaseException | None = None) -> None:
         for connection in self.shard_connections.values():
             connection.disconnect()
             connection.clear_connect_callbacks()
@@ -636,7 +632,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                 self.channel_connection_mapping[channel] = self.shard_connections[key]
 
     async def parse_response(
-        self, block: bool = True, timeout: Optional[float] = None
+        self, block: bool = True, timeout: float | None = None
     ) -> ResponseType:
         if not self.shard_connections:
             raise RuntimeError(
@@ -743,7 +739,7 @@ class PubSubWorkerThread(threading.Thread):
         self._poll_timeout = poll_timeout
         self._running = False
         self._loop = asyncio.get_running_loop()
-        self._future: Optional[Future[None]] = None
+        self._future: Future[None] | None = None
 
     async def _run(self) -> None:
         pubsub = self._pubsub

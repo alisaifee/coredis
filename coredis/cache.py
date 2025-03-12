@@ -17,17 +17,15 @@ from coredis.typing import (
     Hashable,
     Literal,
     ModuleType,
-    Optional,
     OrderedDict,
     Protocol,
     ResponseType,
     TypeVar,
-    Union,
     ValueT,
     runtime_checkable,
 )
 
-asizeof: Optional[ModuleType] = None
+asizeof: ModuleType | None = None
 
 try:
     from pympler import asizeof
@@ -121,7 +119,7 @@ class AbstractCache(ABC):
     @abstractmethod
     async def initialize(
         self,
-        client: Union[coredis.client.Redis[Any], coredis.client.RedisCluster[Any]],
+        client: coredis.client.Redis[Any] | coredis.client.RedisCluster[Any],
     ) -> AbstractCache:
         """
         Associate and initialize this cache with the provided client
@@ -226,7 +224,7 @@ class SupportsClientTracking(Protocol):
     """
 
     @abstractmethod
-    def get_client_id(self, connection: BaseConnection) -> Optional[int]:
+    def get_client_id(self, connection: BaseConnection) -> int | None:
         """
         If the cache supports receiving invalidation events from the server
         return the ``client_id`` that the :paramref:`connection` should send
@@ -348,8 +346,8 @@ class NodeTrackingCache(
         max_idle_seconds: int = 5,
         confidence: float = 100,
         dynamic_confidence: bool = False,
-        cache: Optional[LRUCache[LRUCache[LRUCache[ResponseType]]]] = None,
-        stats: Optional[CacheStats] = None,
+        cache: LRUCache[LRUCache[LRUCache[ResponseType]]] | None = None,
+        stats: CacheStats | None = None,
     ) -> None:
         """
         :param max_keys: maximum keys to cache. A negative value represents
@@ -367,9 +365,9 @@ class NodeTrackingCache(
          upto 100.
         """
         super().__init__({b"invalidate"}, max(1, max_idle_seconds - 1))
-        self.__protocol_version: Optional[Literal[2, 3]] = None
-        self.__invalidation_task: Optional[asyncio.Task[None]] = None
-        self.__compact_task: Optional[asyncio.Task[None]] = None
+        self.__protocol_version: Literal[2, 3] | None = None
+        self.__invalidation_task: asyncio.Task[None] | None = None
+        self.__compact_task: asyncio.Task[None] | None = None
         self.__max_idle_seconds = max_idle_seconds
         self.__confidence = self.__original_confidence = confidence
         self.__dynamic_confidence = dynamic_confidence
@@ -451,7 +449,7 @@ class NodeTrackingCache(
 
     async def initialize(
         self,
-        client: Union[coredis.client.Redis[Any], coredis.client.RedisCluster[Any]],
+        client: coredis.client.Redis[Any] | coredis.client.RedisCluster[Any],
     ) -> NodeTrackingCache:
         self.__protocol_version = client.protocol_version
         await super().start(client)
@@ -484,7 +482,7 @@ class NodeTrackingCache(
         except RuntimeError:
             pass
 
-    def get_client_id(self, client: BaseConnection) -> Optional[int]:
+    def get_client_id(self, client: BaseConnection) -> int | None:
         if self.connection and self.connection.is_connected:
             return self.client_id
 
@@ -528,8 +526,8 @@ class ClusterTrackingCache(AbstractCache, SupportsStats, SupportsSampling, Suppo
         max_idle_seconds: int = 5,
         confidence: float = 100,
         dynamic_confidence: bool = False,
-        cache: Optional[LRUCache[LRUCache[LRUCache[ResponseType]]]] = None,
-        stats: Optional[CacheStats] = None,
+        cache: LRUCache[LRUCache[LRUCache[ResponseType]]] | None = None,
+        stats: CacheStats | None = None,
     ) -> None:
         """
         :param max_keys: maximum keys to cache. A negative value represents
@@ -547,7 +545,7 @@ class ClusterTrackingCache(AbstractCache, SupportsStats, SupportsSampling, Suppo
          upto 100.
         """
         self.node_caches: dict[str, NodeTrackingCache] = {}
-        self.__protocol_version: Optional[Literal[2, 3]] = None
+        self.__protocol_version: Literal[2, 3] | None = None
         self.__cache: LRUCache[LRUCache[LRUCache[ResponseType]]] = cache or LRUCache(
             max_keys, max_size_bytes
         )
@@ -556,11 +554,11 @@ class ClusterTrackingCache(AbstractCache, SupportsStats, SupportsSampling, Suppo
         self.__confidence = self.__original_confidence = confidence
         self.__dynamic_confidence = dynamic_confidence
         self.__stats = stats or CacheStats()
-        self.__client: Optional[weakref.ReferenceType[coredis.client.RedisCluster[Any]]] = None
+        self.__client: weakref.ReferenceType[coredis.client.RedisCluster[Any]] | None = None
 
     async def initialize(
         self,
-        client: Union[coredis.client.Redis[Any], coredis.client.RedisCluster[Any]],
+        client: coredis.client.Redis[Any] | coredis.client.RedisCluster[Any],
     ) -> ClusterTrackingCache:
         import coredis.client
 
@@ -589,7 +587,7 @@ class ClusterTrackingCache(AbstractCache, SupportsStats, SupportsSampling, Suppo
         return self
 
     @property
-    def client(self) -> Optional[coredis.client.RedisCluster[Any]]:
+    def client(self) -> coredis.client.RedisCluster[Any] | None:
         if self.__client:
             return self.__client()
 
@@ -612,7 +610,7 @@ class ClusterTrackingCache(AbstractCache, SupportsStats, SupportsSampling, Suppo
     def stats(self) -> CacheStats:
         return self.__stats
 
-    def get_client_id(self, connection: BaseConnection) -> Optional[int]:
+    def get_client_id(self, connection: BaseConnection) -> int | None:
         try:
             return self.node_caches[connection.location].get_client_id(connection)
         except KeyError:
@@ -682,8 +680,8 @@ class TrackingCache(AbstractCache, SupportsStats, SupportsSampling, SupportsClie
         max_idle_seconds: int = 5,
         confidence: float = 100.0,
         dynamic_confidence: bool = False,
-        cache: Optional[LRUCache[LRUCache[LRUCache[ResponseType]]]] = None,
-        stats: Optional[CacheStats] = None,
+        cache: LRUCache[LRUCache[LRUCache[ResponseType]]] | None = None,
+        stats: CacheStats | None = None,
     ) -> None:
         """
         :param max_keys: maximum keys to cache. A negative value represents
@@ -700,7 +698,7 @@ class TrackingCache(AbstractCache, SupportsStats, SupportsSampling, SupportsClie
          confirmations of correct cached values will increase the confidence by 0.01%
          upto 100.
         """
-        self.instance: Optional[Union[ClusterTrackingCache, NodeTrackingCache]] = None
+        self.instance: ClusterTrackingCache | NodeTrackingCache | None = None
         self.__max_keys = max_keys
         self.__max_size_bytes = max_size_bytes
         self.__max_idle_seconds = max_idle_seconds
@@ -709,16 +707,15 @@ class TrackingCache(AbstractCache, SupportsStats, SupportsSampling, SupportsClie
         self.__cache: LRUCache[LRUCache[LRUCache[ResponseType]]] = cache or LRUCache(
             max_keys, max_size_bytes
         )
-        self.__client: Optional[
-            weakref.ReferenceType[
-                Union[coredis.client.Redis[Any], coredis.client.RedisCluster[Any]],
-            ]
-        ] = None
+        self.__client: (
+            None
+            | (weakref.ReferenceType[coredis.client.Redis[Any] | coredis.client.RedisCluster[Any],])
+        ) = None
         self.__stats = stats or CacheStats()
 
     async def initialize(
         self,
-        client: Union[coredis.client.Redis[Any], coredis.client.RedisCluster[Any]],
+        client: coredis.client.Redis[Any] | coredis.client.RedisCluster[Any],
     ) -> TrackingCache:
         import coredis.client
 
@@ -769,7 +766,7 @@ class TrackingCache(AbstractCache, SupportsStats, SupportsSampling, SupportsClie
     def stats(self) -> CacheStats:
         return self.__stats
 
-    def get_client_id(self, connection: BaseConnection) -> Optional[int]:
+    def get_client_id(self, connection: BaseConnection) -> int | None:
         if self.instance:
             return self.instance.get_client_id(connection)
 

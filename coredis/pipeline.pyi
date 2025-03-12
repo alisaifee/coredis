@@ -15,10 +15,8 @@ from coredis.typing import (
     KeyT,
     Literal,
     Mapping,
-    Optional,
     Parameters,
     StringT,
-    Union,
     ValueT,
 )
 
@@ -33,9 +31,9 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     def proxy(
         cls,
         client: "Client[AnyStr]",
-        transaction: "Optional[bool]",
-        watches: "Optional[Parameters[KeyT]]" = ...,
-        timeout: "Optional[float]" = ...,
+        transaction: "bool | None",
+        watches: "Parameters[KeyT] | None" = ...,
+        timeout: "float | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def watch(self, *keys: "KeyT") -> bool: ...
     async def unwatch(self) -> bool: ...
@@ -44,16 +42,16 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def __aenter__(self) -> "Pipeline[AnyStr]": ...
     async def __aexit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_value: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None: ...
     async def copy(
         self,
         source: "KeyT",
         destination: "KeyT",
-        db: "Optional[int]" = ...,
-        replace: "Optional[bool]" = ...,
+        db: "int | None" = ...,
+        replace: "bool | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def delete(self, keys: "Parameters[KeyT]") -> Pipeline[AnyStr]: ...
     async def dump(self, key: "KeyT") -> Pipeline[AnyStr]: ...
@@ -61,14 +59,14 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def expire(
         self,
         key: "KeyT",
-        seconds: "Union[int, datetime.timedelta]",
-        condition: "Optional[Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT]]" = ...,
+        seconds: "int | datetime.timedelta",
+        condition: "Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT] | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def expireat(
         self,
         key: "KeyT",
-        unix_time_seconds: "Union[int, datetime.datetime]",
-        condition: "Optional[Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT]]" = ...,
+        unix_time_seconds: "int | datetime.datetime",
+        condition: "Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT] | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def expiretime(self, key: "KeyT") -> Pipeline[AnyStr]: ...
     async def keys(self, pattern: "StringT" = ...) -> Pipeline[AnyStr]: ...
@@ -79,11 +77,11 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         destination_db: "int",
         timeout: "int",
         *keys: "KeyT",
-        copy: "Optional[bool]" = ...,
-        replace: "Optional[bool]" = ...,
-        auth: "Optional[StringT]" = ...,
-        username: "Optional[StringT]" = ...,
-        password: "Optional[StringT]" = ...,
+        copy: "bool | None" = ...,
+        replace: "bool | None" = ...,
+        auth: "StringT | None" = ...,
+        username: "StringT | None" = ...,
+        password: "StringT | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def move(self, key: "KeyT", db: "int") -> Pipeline[AnyStr]: ...
     async def object_encoding(self, key: "KeyT") -> Pipeline[AnyStr]: ...
@@ -94,14 +92,14 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def pexpire(
         self,
         key: "KeyT",
-        milliseconds: "Union[int, datetime.timedelta]",
-        condition: "Optional[Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT]]" = ...,
+        milliseconds: "int | datetime.timedelta",
+        condition: "Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT] | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def pexpireat(
         self,
         key: "KeyT",
-        unix_time_milliseconds: "Union[int, datetime.datetime]",
-        condition: "Optional[Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT]]" = ...,
+        unix_time_milliseconds: "int | datetime.datetime",
+        condition: "Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT] | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def pexpiretime(self, key: "KeyT") -> Pipeline[AnyStr]: ...
     async def pttl(self, key: "KeyT") -> Pipeline[AnyStr]: ...
@@ -111,40 +109,40 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def restore(
         self,
         key: "KeyT",
-        ttl: "Union[int, datetime.timedelta, datetime.datetime]",
+        ttl: "int | datetime.timedelta | datetime.datetime",
         serialized_value: "bytes",
-        replace: "Optional[bool]" = ...,
-        absttl: "Optional[bool]" = ...,
-        idletime: "Optional[Union[int, datetime.timedelta]]" = ...,
-        freq: "Optional[int]" = ...,
+        replace: "bool | None" = ...,
+        absttl: "bool | None" = ...,
+        idletime: "int | datetime.timedelta | None" = ...,
+        freq: "int | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def scan(
         self,
-        cursor: "Optional[int]" = ...,
-        match: "Optional[StringT]" = ...,
-        count: "Optional[int]" = ...,
-        type_: "Optional[StringT]" = ...,
+        cursor: "int | None" = ...,
+        match: "StringT | None" = ...,
+        count: "int | None" = ...,
+        type_: "StringT | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def sort(
         self,
         key: "KeyT",
-        gets: "Optional[Parameters[KeyT]]" = ...,
-        by: "Optional[StringT]" = ...,
-        offset: "Optional[int]" = ...,
-        count: "Optional[int]" = ...,
-        order: "Optional[Literal[PureToken.ASC, PureToken.DESC]]" = ...,
-        alpha: "Optional[bool]" = ...,
-        store: "Optional[KeyT]" = ...,
+        gets: "Parameters[KeyT] | None" = ...,
+        by: "StringT | None" = ...,
+        offset: "int | None" = ...,
+        count: "int | None" = ...,
+        order: "Literal[PureToken.ASC, PureToken.DESC] | None" = ...,
+        alpha: "bool | None" = ...,
+        store: "KeyT | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def sort_ro(
         self,
         key: "KeyT",
-        gets: "Optional[Parameters[KeyT]]" = ...,
-        by: "Optional[StringT]" = ...,
-        offset: "Optional[int]" = ...,
-        count: "Optional[int]" = ...,
-        order: "Optional[Literal[PureToken.ASC, PureToken.DESC]]" = ...,
-        alpha: "Optional[bool]" = ...,
+        gets: "Parameters[KeyT] | None" = ...,
+        by: "StringT | None" = ...,
+        offset: "int | None" = ...,
+        count: "int | None" = ...,
+        order: "Literal[PureToken.ASC, PureToken.DESC] | None" = ...,
+        alpha: "bool | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def touch(self, keys: "Parameters[KeyT]") -> Pipeline[AnyStr]: ...
     async def ttl(self, key: "KeyT") -> Pipeline[AnyStr]: ...
@@ -162,48 +160,46 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def getex(
         self,
         key: "KeyT",
-        ex: "Optional[Union[int, datetime.timedelta]]" = ...,
-        px: "Optional[Union[int, datetime.timedelta]]" = ...,
-        exat: "Optional[Union[int, datetime.datetime]]" = ...,
-        pxat: "Optional[Union[int, datetime.datetime]]" = ...,
-        persist: "Optional[bool]" = ...,
+        ex: "int | datetime.timedelta | None" = ...,
+        px: "int | datetime.timedelta | None" = ...,
+        exat: "int | datetime.datetime | None" = ...,
+        pxat: "int | datetime.datetime | None" = ...,
+        persist: "bool | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def getrange(self, key: "KeyT", start: "int", end: "int") -> Pipeline[AnyStr]: ...
     async def getset(self, key: "KeyT", value: "ValueT") -> Pipeline[AnyStr]: ...
     async def incr(self, key: "KeyT") -> Pipeline[AnyStr]: ...
     async def incrby(self, key: "KeyT", increment: "int") -> Pipeline[AnyStr]: ...
-    async def incrbyfloat(
-        self, key: "KeyT", increment: "Union[int, float]"
-    ) -> Pipeline[AnyStr]: ...
+    async def incrbyfloat(self, key: "KeyT", increment: "int | float") -> Pipeline[AnyStr]: ...
     async def lcs(
         self,
         key1: "KeyT",
         key2: "KeyT",
-        len_: "Optional[bool]" = ...,
-        idx: "Optional[bool]" = ...,
-        minmatchlen: "Optional[int]" = ...,
-        withmatchlen: "Optional[bool]" = ...,
+        len_: "bool | None" = ...,
+        idx: "bool | None" = ...,
+        minmatchlen: "int | None" = ...,
+        withmatchlen: "bool | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def mget(self, keys: "Parameters[KeyT]") -> Pipeline[AnyStr]: ...
     async def mset(self, key_values: "Mapping[KeyT, ValueT]") -> Pipeline[AnyStr]: ...
     async def msetnx(self, key_values: "Mapping[KeyT, ValueT]") -> Pipeline[AnyStr]: ...
     async def psetex(
-        self, key: "KeyT", milliseconds: "Union[int, datetime.timedelta]", value: "ValueT"
+        self, key: "KeyT", milliseconds: "int | datetime.timedelta", value: "ValueT"
     ) -> Pipeline[AnyStr]: ...
     async def set(
         self,
         key: "KeyT",
         value: "ValueT",
-        condition: "Optional[Literal[PureToken.NX, PureToken.XX]]" = ...,
-        get: "Optional[bool]" = ...,
-        ex: "Optional[Union[int, datetime.timedelta]]" = ...,
-        px: "Optional[Union[int, datetime.timedelta]]" = ...,
-        exat: "Optional[Union[int, datetime.datetime]]" = ...,
-        pxat: "Optional[Union[int, datetime.datetime]]" = ...,
-        keepttl: "Optional[bool]" = ...,
+        condition: "Literal[PureToken.NX, PureToken.XX] | None" = ...,
+        get: "bool | None" = ...,
+        ex: "int | datetime.timedelta | None" = ...,
+        px: "int | datetime.timedelta | None" = ...,
+        exat: "int | datetime.datetime | None" = ...,
+        pxat: "int | datetime.datetime | None" = ...,
+        keepttl: "bool | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def setex(
-        self, key: "KeyT", value: "ValueT", seconds: "Union[int, datetime.timedelta]"
+        self, key: "KeyT", value: "ValueT", seconds: "int | datetime.timedelta"
     ) -> Pipeline[AnyStr]: ...
     async def setnx(self, key: "KeyT", value: "ValueT") -> Pipeline[AnyStr]: ...
     async def setrange(self, key: "KeyT", offset: "int", value: "ValueT") -> Pipeline[AnyStr]: ...
@@ -212,9 +208,9 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def bitcount(
         self,
         key: "KeyT",
-        start: "Optional[int]" = ...,
-        end: "Optional[int]" = ...,
-        index_unit: "Optional[Literal[PureToken.BIT, PureToken.BYTE]]" = ...,
+        start: "int | None" = ...,
+        end: "int | None" = ...,
+        index_unit: "Literal[PureToken.BIT, PureToken.BYTE] | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def bitop(
         self, keys: "Parameters[KeyT]", operation: "StringT", destkey: "KeyT"
@@ -223,9 +219,9 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self,
         key: "KeyT",
         bit: "int",
-        start: "Optional[int]" = ...,
-        end: "Optional[int]" = ...,
-        index_unit: "Optional[Literal[PureToken.BIT, PureToken.BYTE]]" = ...,
+        start: "int | None" = ...,
+        end: "int | None" = ...,
+        index_unit: "Literal[PureToken.BIT, PureToken.BYTE] | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def getbit(self, key: "KeyT", offset: "int") -> Pipeline[AnyStr]: ...
     async def setbit(self, key: "KeyT", offset: "int", value: "int") -> Pipeline[AnyStr]: ...
@@ -234,16 +230,16 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def hexpire(
         self,
         key: "KeyT",
-        seconds: "Union[int, datetime.timedelta]",
+        seconds: "int | datetime.timedelta",
         fields: "Parameters[StringT]",
-        condition: "Optional[Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX]]" = ...,
+        condition: "Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX] | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def hexpireat(
         self,
         key: "KeyT",
-        unix_time_seconds: "Union[int, datetime.datetime]",
+        unix_time_seconds: "int | datetime.datetime",
         fields: "Parameters[StringT]",
-        condition: "Optional[Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX]]" = ...,
+        condition: "Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX] | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def hexpiretime(self, key: "KeyT", fields: "Parameters[StringT]") -> Pipeline[AnyStr]: ...
     async def hget(self, key: "KeyT", field: "StringT") -> Pipeline[AnyStr]: ...
@@ -252,7 +248,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self, key: "KeyT", field: "StringT", increment: "int"
     ) -> Pipeline[AnyStr]: ...
     async def hincrbyfloat(
-        self, key: "KeyT", field: "StringT", increment: "Union[int, float]"
+        self, key: "KeyT", field: "StringT", increment: "int | float"
     ) -> Pipeline[AnyStr]: ...
     async def hkeys(self, key: "KeyT") -> Pipeline[AnyStr]: ...
     async def hlen(self, key: "KeyT") -> Pipeline[AnyStr]: ...
@@ -264,31 +260,31 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def hpexpire(
         self,
         key: "KeyT",
-        milliseconds: "Union[int, datetime.timedelta]",
+        milliseconds: "int | datetime.timedelta",
         fields: "Parameters[StringT]",
-        condition: "Optional[Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX]]" = ...,
+        condition: "Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX] | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def hpexpireat(
         self,
         key: "KeyT",
-        unix_time_milliseconds: "Union[int, datetime.datetime]",
+        unix_time_milliseconds: "int | datetime.datetime",
         fields: "Parameters[StringT]",
-        condition: "Optional[Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX]]" = ...,
+        condition: "Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX] | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def hpexpiretime(
         self, key: "KeyT", fields: "Parameters[StringT]"
     ) -> Pipeline[AnyStr]: ...
     async def hpttl(self, key: "KeyT", fields: "Parameters[StringT]") -> Pipeline[AnyStr]: ...
     async def hrandfield(
-        self, key: "KeyT", count: "Optional[int]" = ..., withvalues: "Optional[bool]" = ...
+        self, key: "KeyT", count: "int | None" = ..., withvalues: "bool | None" = ...
     ) -> Pipeline[AnyStr]: ...
     async def hscan(
         self,
         key: "KeyT",
-        cursor: "Optional[int]" = ...,
-        match: "Optional[StringT]" = ...,
-        count: "Optional[int]" = ...,
-        novalues: "Optional[bool]" = ...,
+        cursor: "int | None" = ...,
+        match: "StringT | None" = ...,
+        count: "int | None" = ...,
+        novalues: "bool | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def hset(
         self, key: "KeyT", field_values: "Mapping[StringT, ValueT]"
@@ -303,23 +299,19 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         destination: "KeyT",
         wherefrom: "Literal[PureToken.LEFT, PureToken.RIGHT]",
         whereto: "Literal[PureToken.LEFT, PureToken.RIGHT]",
-        timeout: "Union[int, float]",
+        timeout: "int | float",
     ) -> Pipeline[AnyStr]: ...
     async def blmpop(
         self,
         keys: "Parameters[KeyT]",
-        timeout: "Union[int, float]",
+        timeout: "int | float",
         where: "Literal[PureToken.LEFT, PureToken.RIGHT]",
-        count: "Optional[int]" = ...,
+        count: "int | None" = ...,
     ) -> Pipeline[AnyStr]: ...
-    async def blpop(
-        self, keys: "Parameters[KeyT]", timeout: "Union[int, float]"
-    ) -> Pipeline[AnyStr]: ...
-    async def brpop(
-        self, keys: "Parameters[KeyT]", timeout: "Union[int, float]"
-    ) -> Pipeline[AnyStr]: ...
+    async def blpop(self, keys: "Parameters[KeyT]", timeout: "int | float") -> Pipeline[AnyStr]: ...
+    async def brpop(self, keys: "Parameters[KeyT]", timeout: "int | float") -> Pipeline[AnyStr]: ...
     async def brpoplpush(
-        self, source: "KeyT", destination: "KeyT", timeout: "Union[int, float]"
+        self, source: "KeyT", destination: "KeyT", timeout: "int | float"
     ) -> Pipeline[AnyStr]: ...
     async def lindex(self, key: "KeyT", index: "int") -> Pipeline[AnyStr]: ...
     async def linsert(
@@ -341,16 +333,16 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self,
         keys: "Parameters[KeyT]",
         where: "Literal[PureToken.LEFT, PureToken.RIGHT]",
-        count: "Optional[int]" = ...,
+        count: "int | None" = ...,
     ) -> Pipeline[AnyStr]: ...
-    async def lpop(self, key: "KeyT", count: "Optional[int]" = ...) -> Pipeline[AnyStr]: ...
+    async def lpop(self, key: "KeyT", count: "int | None" = ...) -> Pipeline[AnyStr]: ...
     async def lpos(
         self,
         key: "KeyT",
         element: "ValueT",
-        rank: "Optional[int]" = ...,
-        count: "Optional[int]" = ...,
-        maxlen: "Optional[int]" = ...,
+        rank: "int | None" = ...,
+        count: "int | None" = ...,
+        maxlen: "int | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def lpush(self, key: "KeyT", elements: "Parameters[ValueT]") -> Pipeline[AnyStr]: ...
     async def lpushx(self, key: "KeyT", elements: "Parameters[ValueT]") -> Pipeline[AnyStr]: ...
@@ -358,7 +350,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def lrem(self, key: "KeyT", count: "int", element: "ValueT") -> Pipeline[AnyStr]: ...
     async def lset(self, key: "KeyT", index: "int", element: "ValueT") -> Pipeline[AnyStr]: ...
     async def ltrim(self, key: "KeyT", start: "int", stop: "int") -> Pipeline[AnyStr]: ...
-    async def rpop(self, key: "KeyT", count: "Optional[int]" = ...) -> Pipeline[AnyStr]: ...
+    async def rpop(self, key: "KeyT", count: "int | None" = ...) -> Pipeline[AnyStr]: ...
     async def rpoplpush(self, source: "KeyT", destination: "KeyT") -> Pipeline[AnyStr]: ...
     async def rpush(self, key: "KeyT", elements: "Parameters[ValueT]") -> Pipeline[AnyStr]: ...
     async def rpushx(self, key: "KeyT", elements: "Parameters[ValueT]") -> Pipeline[AnyStr]: ...
@@ -370,7 +362,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> Pipeline[AnyStr]: ...
     async def sinter(self, keys: "Parameters[KeyT]") -> Pipeline[AnyStr]: ...
     async def sintercard(
-        self, keys: "Parameters[KeyT]", limit: "Optional[int]" = ...
+        self, keys: "Parameters[KeyT]", limit: "int | None" = ...
     ) -> Pipeline[AnyStr]: ...
     async def sinterstore(
         self, keys: "Parameters[KeyT]", destination: "KeyT"
@@ -381,15 +373,15 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def smove(
         self, source: "KeyT", destination: "KeyT", member: "ValueT"
     ) -> Pipeline[AnyStr]: ...
-    async def spop(self, key: "KeyT", count: "Optional[int]" = ...) -> Pipeline[AnyStr]: ...
-    async def srandmember(self, key: "KeyT", count: "Optional[int]" = ...) -> Pipeline[AnyStr]: ...
+    async def spop(self, key: "KeyT", count: "int | None" = ...) -> Pipeline[AnyStr]: ...
+    async def srandmember(self, key: "KeyT", count: "int | None" = ...) -> Pipeline[AnyStr]: ...
     async def srem(self, key: "KeyT", members: "Parameters[ValueT]") -> Pipeline[AnyStr]: ...
     async def sscan(
         self,
         key: "KeyT",
-        cursor: "Optional[int]" = ...,
-        match: "Optional[StringT]" = ...,
-        count: "Optional[int]" = ...,
+        cursor: "int | None" = ...,
+        match: "StringT | None" = ...,
+        count: "int | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def sunion(self, keys: "Parameters[KeyT]") -> Pipeline[AnyStr]: ...
     async def sunionstore(
@@ -398,29 +390,29 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def bzmpop(
         self,
         keys: "Parameters[KeyT]",
-        timeout: "Union[int, float]",
+        timeout: "int | float",
         where: "Literal[PureToken.MAX, PureToken.MIN]",
-        count: "Optional[int]" = ...,
+        count: "int | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def bzpopmax(
-        self, keys: "Parameters[KeyT]", timeout: "Union[int, float]"
+        self, keys: "Parameters[KeyT]", timeout: "int | float"
     ) -> Pipeline[AnyStr]: ...
     async def bzpopmin(
-        self, keys: "Parameters[KeyT]", timeout: "Union[int, float]"
+        self, keys: "Parameters[KeyT]", timeout: "int | float"
     ) -> Pipeline[AnyStr]: ...
     async def zadd(
         self,
         key: "KeyT",
-        member_scores: "Mapping[StringT, Union[int, float]]",
-        condition: "Optional[Literal[PureToken.NX, PureToken.XX]]" = ...,
-        comparison: "Optional[Literal[PureToken.GT, PureToken.LT]]" = ...,
-        change: "Optional[bool]" = ...,
-        increment: "Optional[bool]" = ...,
+        member_scores: "Mapping[StringT, int | float]",
+        condition: "Literal[PureToken.NX, PureToken.XX] | None" = ...,
+        comparison: "Literal[PureToken.GT, PureToken.LT] | None" = ...,
+        change: "bool | None" = ...,
+        increment: "bool | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def zcard(self, key: "KeyT") -> Pipeline[AnyStr]: ...
     async def zcount(self, key: "KeyT", min_: "ValueT", max_: "ValueT") -> Pipeline[AnyStr]: ...
     async def zdiff(
-        self, keys: "Parameters[KeyT]", withscores: "Optional[bool]" = ...
+        self, keys: "Parameters[KeyT]", withscores: "bool | None" = ...
     ) -> Pipeline[AnyStr]: ...
     async def zdiffstore(
         self, keys: "Parameters[KeyT]", destination: "KeyT"
@@ -431,74 +423,74 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def zinter(
         self,
         keys: "Parameters[KeyT]",
-        weights: "Optional[Parameters[int]]" = ...,
-        aggregate: "Optional[Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM]]" = ...,
-        withscores: "Optional[bool]" = ...,
+        weights: "Parameters[int] | None" = ...,
+        aggregate: "Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM] | None" = ...,
+        withscores: "bool | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def zintercard(
-        self, keys: "Parameters[KeyT]", limit: "Optional[int]" = ...
+        self, keys: "Parameters[KeyT]", limit: "int | None" = ...
     ) -> Pipeline[AnyStr]: ...
     async def zinterstore(
         self,
         keys: "Parameters[KeyT]",
         destination: "KeyT",
-        weights: "Optional[Parameters[int]]" = ...,
-        aggregate: "Optional[Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM]]" = ...,
+        weights: "Parameters[int] | None" = ...,
+        aggregate: "Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM] | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def zlexcount(self, key: "KeyT", min_: "ValueT", max_: "ValueT") -> Pipeline[AnyStr]: ...
     async def zmpop(
         self,
         keys: "Parameters[KeyT]",
         where: "Literal[PureToken.MAX, PureToken.MIN]",
-        count: "Optional[int]" = ...,
+        count: "int | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def zmscore(self, key: "KeyT", members: "Parameters[ValueT]") -> Pipeline[AnyStr]: ...
-    async def zpopmax(self, key: "KeyT", count: "Optional[int]" = ...) -> Pipeline[AnyStr]: ...
-    async def zpopmin(self, key: "KeyT", count: "Optional[int]" = ...) -> Pipeline[AnyStr]: ...
+    async def zpopmax(self, key: "KeyT", count: "int | None" = ...) -> Pipeline[AnyStr]: ...
+    async def zpopmin(self, key: "KeyT", count: "int | None" = ...) -> Pipeline[AnyStr]: ...
     async def zrandmember(
-        self, key: "KeyT", count: "Optional[int]" = ..., withscores: "Optional[bool]" = ...
+        self, key: "KeyT", count: "int | None" = ..., withscores: "bool | None" = ...
     ) -> Pipeline[AnyStr]: ...
     async def zrange(
         self,
         key: "KeyT",
-        min_: "Union[int, ValueT]",
-        max_: "Union[int, ValueT]",
-        sortby: "Optional[Literal[PureToken.BYSCORE, PureToken.BYLEX]]" = ...,
-        rev: "Optional[bool]" = ...,
-        offset: "Optional[int]" = ...,
-        count: "Optional[int]" = ...,
-        withscores: "Optional[bool]" = ...,
+        min_: "int | ValueT",
+        max_: "int | ValueT",
+        sortby: "Literal[PureToken.BYSCORE, PureToken.BYLEX] | None" = ...,
+        rev: "bool | None" = ...,
+        offset: "int | None" = ...,
+        count: "int | None" = ...,
+        withscores: "bool | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def zrangebylex(
         self,
         key: "KeyT",
         min_: "ValueT",
         max_: "ValueT",
-        offset: "Optional[int]" = ...,
-        count: "Optional[int]" = ...,
+        offset: "int | None" = ...,
+        count: "int | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def zrangebyscore(
         self,
         key: "KeyT",
-        min_: "Union[int, float]",
-        max_: "Union[int, float]",
-        withscores: "Optional[bool]" = ...,
-        offset: "Optional[int]" = ...,
-        count: "Optional[int]" = ...,
+        min_: "int | float",
+        max_: "int | float",
+        withscores: "bool | None" = ...,
+        offset: "int | None" = ...,
+        count: "int | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def zrangestore(
         self,
         dst: "KeyT",
         src: "KeyT",
-        min_: "Union[int, ValueT]",
-        max_: "Union[int, ValueT]",
-        sortby: "Optional[Literal[PureToken.BYSCORE, PureToken.BYLEX]]" = ...,
-        rev: "Optional[bool]" = ...,
-        offset: "Optional[int]" = ...,
-        count: "Optional[int]" = ...,
+        min_: "int | ValueT",
+        max_: "int | ValueT",
+        sortby: "Literal[PureToken.BYSCORE, PureToken.BYLEX] | None" = ...,
+        rev: "bool | None" = ...,
+        offset: "int | None" = ...,
+        count: "int | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def zrank(
-        self, key: "KeyT", member: "ValueT", withscore: "Optional[bool]" = ...
+        self, key: "KeyT", member: "ValueT", withscore: "bool | None" = ...
     ) -> Pipeline[AnyStr]: ...
     async def zrem(self, key: "KeyT", members: "Parameters[ValueT]") -> Pipeline[AnyStr]: ...
     async def zremrangebylex(
@@ -506,52 +498,52 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> Pipeline[AnyStr]: ...
     async def zremrangebyrank(self, key: "KeyT", start: "int", stop: "int") -> Pipeline[AnyStr]: ...
     async def zremrangebyscore(
-        self, key: "KeyT", min_: "Union[int, float]", max_: "Union[int, float]"
+        self, key: "KeyT", min_: "int | float", max_: "int | float"
     ) -> Pipeline[AnyStr]: ...
     async def zrevrange(
-        self, key: "KeyT", start: "int", stop: "int", withscores: "Optional[bool]" = ...
+        self, key: "KeyT", start: "int", stop: "int", withscores: "bool | None" = ...
     ) -> Pipeline[AnyStr]: ...
     async def zrevrangebylex(
         self,
         key: "KeyT",
         max_: "ValueT",
         min_: "ValueT",
-        offset: "Optional[int]" = ...,
-        count: "Optional[int]" = ...,
+        offset: "int | None" = ...,
+        count: "int | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def zrevrangebyscore(
         self,
         key: "KeyT",
-        max_: "Union[int, float]",
-        min_: "Union[int, float]",
-        withscores: "Optional[bool]" = ...,
-        offset: "Optional[int]" = ...,
-        count: "Optional[int]" = ...,
+        max_: "int | float",
+        min_: "int | float",
+        withscores: "bool | None" = ...,
+        offset: "int | None" = ...,
+        count: "int | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def zrevrank(
-        self, key: "KeyT", member: "ValueT", withscore: "Optional[bool]" = ...
+        self, key: "KeyT", member: "ValueT", withscore: "bool | None" = ...
     ) -> Pipeline[AnyStr]: ...
     async def zscan(
         self,
         key: "KeyT",
-        cursor: "Optional[int]" = ...,
-        match: "Optional[StringT]" = ...,
-        count: "Optional[int]" = ...,
+        cursor: "int | None" = ...,
+        match: "StringT | None" = ...,
+        count: "int | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def zscore(self, key: "KeyT", member: "ValueT") -> Pipeline[AnyStr]: ...
     async def zunion(
         self,
         keys: "Parameters[KeyT]",
-        weights: "Optional[Parameters[int]]" = ...,
-        aggregate: "Optional[Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX]]" = ...,
-        withscores: "Optional[bool]" = ...,
+        weights: "Parameters[int] | None" = ...,
+        aggregate: "Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX] | None" = ...,
+        withscores: "bool | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def zunionstore(
         self,
         keys: "Parameters[KeyT]",
         destination: "KeyT",
-        weights: "Optional[Parameters[int]]" = ...,
-        aggregate: "Optional[Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX]]" = ...,
+        weights: "Parameters[int] | None" = ...,
+        aggregate: "Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX] | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def pfadd(self, key: "KeyT", *elements: "ValueT") -> Pipeline[AnyStr]: ...
     async def pfcount(self, keys: "Parameters[KeyT]") -> Pipeline[AnyStr]: ...
@@ -561,84 +553,84 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def geoadd(
         self,
         key: "KeyT",
-        longitude_latitude_members: "Parameters[tuple[Union[int, float], Union[int, float], ValueT]]",
-        condition: "Optional[Literal[PureToken.NX, PureToken.XX]]" = ...,
-        change: "Optional[bool]" = ...,
+        longitude_latitude_members: "Parameters[tuple[int | float, int | float, ValueT]]",
+        condition: "Literal[PureToken.NX, PureToken.XX] | None" = ...,
+        change: "bool | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def geodist(
         self,
         key: "KeyT",
         member1: "StringT",
         member2: "StringT",
-        unit: "Optional[Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI]]" = ...,
+        unit: "Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI] | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def geohash(self, key: "KeyT", members: "Parameters[ValueT]") -> Pipeline[AnyStr]: ...
     async def geopos(self, key: "KeyT", members: "Parameters[ValueT]") -> Pipeline[AnyStr]: ...
     async def georadius(
         self,
         key: "KeyT",
-        longitude: "Union[int, float]",
-        latitude: "Union[int, float]",
-        radius: "Union[int, float]",
+        longitude: "int | float",
+        latitude: "int | float",
+        radius: "int | float",
         unit: "Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI]",
-        withcoord: "Optional[bool]" = ...,
-        withdist: "Optional[bool]" = ...,
-        withhash: "Optional[bool]" = ...,
-        count: "Optional[int]" = ...,
-        any_: "Optional[bool]" = ...,
-        order: "Optional[Literal[PureToken.ASC, PureToken.DESC]]" = ...,
-        store: "Optional[KeyT]" = ...,
-        storedist: "Optional[KeyT]" = ...,
+        withcoord: "bool | None" = ...,
+        withdist: "bool | None" = ...,
+        withhash: "bool | None" = ...,
+        count: "int | None" = ...,
+        any_: "bool | None" = ...,
+        order: "Literal[PureToken.ASC, PureToken.DESC] | None" = ...,
+        store: "KeyT | None" = ...,
+        storedist: "KeyT | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def georadiusbymember(
         self,
         key: "KeyT",
         member: "ValueT",
-        radius: "Union[int, float]",
+        radius: "int | float",
         unit: "Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI]",
-        withcoord: "Optional[bool]" = ...,
-        withdist: "Optional[bool]" = ...,
-        withhash: "Optional[bool]" = ...,
-        count: "Optional[int]" = ...,
-        any_: "Optional[bool]" = ...,
-        order: "Optional[Literal[PureToken.ASC, PureToken.DESC]]" = ...,
-        store: "Optional[KeyT]" = ...,
-        storedist: "Optional[KeyT]" = ...,
+        withcoord: "bool | None" = ...,
+        withdist: "bool | None" = ...,
+        withhash: "bool | None" = ...,
+        count: "int | None" = ...,
+        any_: "bool | None" = ...,
+        order: "Literal[PureToken.ASC, PureToken.DESC] | None" = ...,
+        store: "KeyT | None" = ...,
+        storedist: "KeyT | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def geosearch(
         self,
         key: "KeyT",
-        member: "Optional[ValueT]" = ...,
-        longitude: "Optional[Union[int, float]]" = ...,
-        latitude: "Optional[Union[int, float]]" = ...,
-        radius: "Optional[Union[int, float]]" = ...,
-        circle_unit: "Optional[Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI]]" = ...,
-        width: "Optional[Union[int, float]]" = ...,
-        height: "Optional[Union[int, float]]" = ...,
-        box_unit: "Optional[Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI]]" = ...,
-        order: "Optional[Literal[PureToken.ASC, PureToken.DESC]]" = ...,
-        count: "Optional[int]" = ...,
-        any_: "Optional[bool]" = ...,
-        withcoord: "Optional[bool]" = ...,
-        withdist: "Optional[bool]" = ...,
-        withhash: "Optional[bool]" = ...,
+        member: "ValueT | None" = ...,
+        longitude: "int | float | None" = ...,
+        latitude: "int | float | None" = ...,
+        radius: "int | float | None" = ...,
+        circle_unit: "None | Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI]" = ...,
+        width: "int | float | None" = ...,
+        height: "int | float | None" = ...,
+        box_unit: "Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI] | None" = ...,
+        order: "Literal[PureToken.ASC, PureToken.DESC] | None" = ...,
+        count: "int | None" = ...,
+        any_: "bool | None" = ...,
+        withcoord: "bool | None" = ...,
+        withdist: "bool | None" = ...,
+        withhash: "bool | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def geosearchstore(
         self,
         destination: "KeyT",
         source: "KeyT",
-        member: "Optional[ValueT]" = ...,
-        longitude: "Optional[Union[int, float]]" = ...,
-        latitude: "Optional[Union[int, float]]" = ...,
-        radius: "Optional[Union[int, float]]" = ...,
-        circle_unit: "Optional[Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI]]" = ...,
-        width: "Optional[Union[int, float]]" = ...,
-        height: "Optional[Union[int, float]]" = ...,
-        box_unit: "Optional[Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI]]" = ...,
-        order: "Optional[Literal[PureToken.ASC, PureToken.DESC]]" = ...,
-        count: "Optional[int]" = ...,
-        any_: "Optional[bool]" = ...,
-        storedist: "Optional[bool]" = ...,
+        member: "ValueT | None" = ...,
+        longitude: "int | float | None" = ...,
+        latitude: "int | float | None" = ...,
+        radius: "int | float | None" = ...,
+        circle_unit: "None | Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI]" = ...,
+        width: "int | float | None" = ...,
+        height: "int | float | None" = ...,
+        box_unit: "Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI] | None" = ...,
+        order: "Literal[PureToken.ASC, PureToken.DESC] | None" = ...,
+        count: "int | None" = ...,
+        any_: "bool | None" = ...,
+        storedist: "bool | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def xack(
         self, key: "KeyT", group: "StringT", identifiers: "Parameters[ValueT]"
@@ -647,45 +639,45 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self,
         key: "KeyT",
         field_values: "Mapping[StringT, ValueT]",
-        identifier: "Optional[ValueT]" = ...,
-        nomkstream: "Optional[bool]" = ...,
-        trim_strategy: "Optional[Literal[PureToken.MAXLEN, PureToken.MINID]]" = ...,
-        threshold: "Optional[int]" = ...,
-        trim_operator: "Optional[Literal[PureToken.EQUAL, PureToken.APPROXIMATELY]]" = ...,
-        limit: "Optional[int]" = ...,
+        identifier: "ValueT | None" = ...,
+        nomkstream: "bool | None" = ...,
+        trim_strategy: "Literal[PureToken.MAXLEN, PureToken.MINID] | None" = ...,
+        threshold: "int | None" = ...,
+        trim_operator: "Literal[PureToken.EQUAL, PureToken.APPROXIMATELY] | None" = ...,
+        limit: "int | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def xautoclaim(
         self,
         key: "KeyT",
         group: "StringT",
         consumer: "StringT",
-        min_idle_time: "Union[int, datetime.timedelta]",
+        min_idle_time: "int | datetime.timedelta",
         start: "ValueT",
-        count: "Optional[int]" = ...,
-        justid: "Optional[bool]" = ...,
+        count: "int | None" = ...,
+        justid: "bool | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def xclaim(
         self,
         key: "KeyT",
         group: "StringT",
         consumer: "StringT",
-        min_idle_time: "Union[int, datetime.timedelta]",
+        min_idle_time: "int | datetime.timedelta",
         identifiers: "Parameters[ValueT]",
-        idle: "Optional[Union[int, datetime.timedelta]]" = ...,
-        time: "Optional[Union[int, datetime.datetime]]" = ...,
-        retrycount: "Optional[int]" = ...,
-        force: "Optional[bool]" = ...,
-        justid: "Optional[bool]" = ...,
-        lastid: "Optional[ValueT]" = ...,
+        idle: "int | datetime.timedelta | None" = ...,
+        time: "int | datetime.datetime | None" = ...,
+        retrycount: "int | None" = ...,
+        force: "bool | None" = ...,
+        justid: "bool | None" = ...,
+        lastid: "ValueT | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def xdel(self, key: "KeyT", identifiers: "Parameters[ValueT]") -> Pipeline[AnyStr]: ...
     async def xgroup_create(
         self,
         key: "KeyT",
         groupname: "StringT",
-        identifier: "Optional[ValueT]" = ...,
-        mkstream: "Optional[bool]" = ...,
-        entriesread: "Optional[int]" = ...,
+        identifier: "ValueT | None" = ...,
+        mkstream: "bool | None" = ...,
+        entriesread: "int | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def xgroup_createconsumer(
         self, key: "KeyT", groupname: "StringT", consumername: "StringT"
@@ -698,114 +690,114 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self,
         key: "KeyT",
         groupname: "StringT",
-        identifier: "Optional[ValueT]" = ...,
-        entriesread: "Optional[int]" = ...,
+        identifier: "ValueT | None" = ...,
+        entriesread: "int | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def xinfo_consumers(self, key: "KeyT", groupname: "StringT") -> Pipeline[AnyStr]: ...
     async def xinfo_groups(self, key: "KeyT") -> Pipeline[AnyStr]: ...
     async def xinfo_stream(
-        self, key: "KeyT", full: "Optional[bool]" = ..., count: "Optional[int]" = ...
+        self, key: "KeyT", full: "bool | None" = ..., count: "int | None" = ...
     ) -> Pipeline[AnyStr]: ...
     async def xlen(self, key: "KeyT") -> Pipeline[AnyStr]: ...
     async def xpending(
         self,
         key: "KeyT",
         group: "StringT",
-        start: "Optional[ValueT]" = ...,
-        end: "Optional[ValueT]" = ...,
-        count: "Optional[int]" = ...,
-        idle: "Optional[int]" = ...,
-        consumer: "Optional[StringT]" = ...,
+        start: "ValueT | None" = ...,
+        end: "ValueT | None" = ...,
+        count: "int | None" = ...,
+        idle: "int | None" = ...,
+        consumer: "StringT | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def xrange(
         self,
         key: "KeyT",
-        start: "Optional[ValueT]" = ...,
-        end: "Optional[ValueT]" = ...,
-        count: "Optional[int]" = ...,
+        start: "ValueT | None" = ...,
+        end: "ValueT | None" = ...,
+        count: "int | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def xread(
         self,
         streams: "Mapping[ValueT, ValueT]",
-        count: "Optional[int]" = ...,
-        block: "Optional[Union[int, datetime.timedelta]]" = ...,
+        count: "int | None" = ...,
+        block: "int | datetime.timedelta | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def xreadgroup(
         self,
         group: "StringT",
         consumer: "StringT",
         streams: "Mapping[ValueT, ValueT]",
-        count: "Optional[int]" = ...,
-        block: "Optional[Union[int, datetime.timedelta]]" = ...,
-        noack: "Optional[bool]" = ...,
+        count: "int | None" = ...,
+        block: "int | datetime.timedelta | None" = ...,
+        noack: "bool | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def xrevrange(
         self,
         key: "KeyT",
-        end: "Optional[ValueT]" = ...,
-        start: "Optional[ValueT]" = ...,
-        count: "Optional[int]" = ...,
+        end: "ValueT | None" = ...,
+        start: "ValueT | None" = ...,
+        count: "int | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def xtrim(
         self,
         key: "KeyT",
         trim_strategy: "Literal[PureToken.MAXLEN, PureToken.MINID]",
         threshold: "int",
-        trim_operator: "Optional[Literal[PureToken.EQUAL, PureToken.APPROXIMATELY]]" = ...,
-        limit: "Optional[int]" = ...,
+        trim_operator: "Literal[PureToken.EQUAL, PureToken.APPROXIMATELY] | None" = ...,
+        limit: "int | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def eval(
         self,
         script: "StringT",
-        keys: "Optional[Parameters[KeyT]]" = ...,
-        args: "Optional[Parameters[ValueT]]" = ...,
+        keys: "Parameters[KeyT] | None" = ...,
+        args: "Parameters[ValueT] | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def evalsha(
         self,
         sha1: "StringT",
-        keys: "Optional[Parameters[KeyT]]" = ...,
-        args: "Optional[Parameters[ValueT]]" = ...,
+        keys: "Parameters[KeyT] | None" = ...,
+        args: "Parameters[ValueT] | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def evalsha_ro(
         self,
         sha1: "StringT",
-        keys: "Optional[Parameters[KeyT]]" = ...,
-        args: "Optional[Parameters[ValueT]]" = ...,
+        keys: "Parameters[KeyT] | None" = ...,
+        args: "Parameters[ValueT] | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def eval_ro(
         self,
         script: "StringT",
-        keys: "Optional[Parameters[KeyT]]" = ...,
-        args: "Optional[Parameters[ValueT]]" = ...,
+        keys: "Parameters[KeyT] | None" = ...,
+        args: "Parameters[ValueT] | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def fcall(
         self,
         function: "StringT",
-        keys: "Optional[Parameters[KeyT]]" = ...,
-        args: "Optional[Parameters[ValueT]]" = ...,
+        keys: "Parameters[KeyT] | None" = ...,
+        args: "Parameters[ValueT] | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def fcall_ro(
         self,
         function: "StringT",
-        keys: "Optional[Parameters[KeyT]]" = ...,
-        args: "Optional[Parameters[ValueT]]" = ...,
+        keys: "Parameters[KeyT] | None" = ...,
+        args: "Parameters[ValueT] | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def function_delete(self, library_name: "StringT") -> Pipeline[AnyStr]: ...
     async def function_dump(self) -> Pipeline[AnyStr]: ...
     async def function_flush(
-        self, async_: "Optional[Literal[PureToken.ASYNC, PureToken.SYNC]]" = ...
+        self, async_: "Literal[PureToken.ASYNC, PureToken.SYNC] | None" = ...
     ) -> Pipeline[AnyStr]: ...
     async def function_kill(self) -> Pipeline[AnyStr]: ...
     async def function_list(
-        self, libraryname: "Optional[StringT]" = ..., withcode: "Optional[bool]" = ...
+        self, libraryname: "StringT | None" = ..., withcode: "bool | None" = ...
     ) -> Pipeline[AnyStr]: ...
     async def function_load(
-        self, function_code: "StringT", replace: "Optional[bool]" = ...
+        self, function_code: "StringT", replace: "bool | None" = ...
     ) -> Pipeline[AnyStr]: ...
     async def function_restore(
         self,
         serialized_value: "bytes",
-        policy: "Optional[Literal[PureToken.FLUSH, PureToken.APPEND, PureToken.REPLACE]]" = ...,
+        policy: "Literal[PureToken.FLUSH, PureToken.APPEND, PureToken.REPLACE] | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def function_stats(self) -> Pipeline[AnyStr]: ...
     async def script_debug(
@@ -813,37 +805,35 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> Pipeline[AnyStr]: ...
     async def script_exists(self, sha1s: "Parameters[StringT]") -> Pipeline[AnyStr]: ...
     async def script_flush(
-        self, sync_type: "Optional[Literal[PureToken.ASYNC, PureToken.SYNC]]" = ...
+        self, sync_type: "Literal[PureToken.ASYNC, PureToken.SYNC] | None" = ...
     ) -> Pipeline[AnyStr]: ...
     async def script_kill(self) -> Pipeline[AnyStr]: ...
     async def script_load(self, script: "StringT") -> Pipeline[AnyStr]: ...
     async def publish(self, channel: "StringT", message: "ValueT") -> Pipeline[AnyStr]: ...
-    async def pubsub_channels(self, pattern: "Optional[StringT]" = ...) -> Pipeline[AnyStr]: ...
+    async def pubsub_channels(self, pattern: "StringT | None" = ...) -> Pipeline[AnyStr]: ...
     async def pubsub_numpat(self) -> Pipeline[AnyStr]: ...
     async def pubsub_numsub(self, *channels: "StringT") -> Pipeline[AnyStr]: ...
-    async def pubsub_shardchannels(
-        self, pattern: "Optional[StringT]" = ...
-    ) -> Pipeline[AnyStr]: ...
+    async def pubsub_shardchannels(self, pattern: "StringT | None" = ...) -> Pipeline[AnyStr]: ...
     async def pubsub_shardnumsub(self, *channels: "StringT") -> Pipeline[AnyStr]: ...
     async def spublish(self, channel: "StringT", message: "ValueT") -> Pipeline[AnyStr]: ...
-    async def acl_cat(self, categoryname: "Optional[StringT]" = ...) -> Pipeline[AnyStr]: ...
+    async def acl_cat(self, categoryname: "StringT | None" = ...) -> Pipeline[AnyStr]: ...
     async def acl_deluser(self, usernames: "Parameters[StringT]") -> Pipeline[AnyStr]: ...
     async def acl_dryrun(
         self, username: "StringT", command: "StringT", *args: "ValueT"
     ) -> Pipeline[AnyStr]: ...
-    async def acl_genpass(self, bits: "Optional[int]" = ...) -> Pipeline[AnyStr]: ...
+    async def acl_genpass(self, bits: "int | None" = ...) -> Pipeline[AnyStr]: ...
     async def acl_getuser(self, username: "StringT") -> Pipeline[AnyStr]: ...
     async def acl_list(self) -> Pipeline[AnyStr]: ...
     async def acl_load(self) -> Pipeline[AnyStr]: ...
     async def acl_log(
-        self, count: "Optional[int]" = ..., reset: "Optional[bool]" = ...
+        self, count: "int | None" = ..., reset: "bool | None" = ...
     ) -> Pipeline[AnyStr]: ...
     async def acl_save(self) -> Pipeline[AnyStr]: ...
     async def acl_setuser(self, username: "StringT", *rules: "StringT") -> Pipeline[AnyStr]: ...
     async def acl_users(self) -> Pipeline[AnyStr]: ...
     async def acl_whoami(self) -> Pipeline[AnyStr]: ...
     async def bgrewriteaof(self) -> Pipeline[AnyStr]: ...
-    async def bgsave(self, schedule: "Optional[bool]" = ...) -> Pipeline[AnyStr]: ...
+    async def bgsave(self, schedule: "bool | None" = ...) -> Pipeline[AnyStr]: ...
     async def command(self) -> Pipeline[AnyStr]: ...
     async def command_count(self) -> Pipeline[AnyStr]: ...
     async def command_docs(self, *command_names: "StringT") -> Pipeline[AnyStr]: ...
@@ -856,9 +846,9 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def command_info(self, *command_names: "StringT") -> Pipeline[AnyStr]: ...
     async def command_list(
         self,
-        module: "Optional[StringT]" = ...,
-        aclcat: "Optional[StringT]" = ...,
-        pattern: "Optional[StringT]" = ...,
+        module: "StringT | None" = ...,
+        aclcat: "StringT | None" = ...,
+        pattern: "StringT | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def config_get(self, parameters: "Parameters[StringT]") -> Pipeline[AnyStr]: ...
     async def config_resetstat(self) -> Pipeline[AnyStr]: ...
@@ -869,17 +859,17 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def dbsize(self) -> Pipeline[AnyStr]: ...
     async def failover(
         self,
-        host: "Optional[StringT]" = ...,
-        port: "Optional[int]" = ...,
-        force: "Optional[bool]" = ...,
-        abort: "Optional[bool]" = ...,
-        timeout: "Optional[Union[int, datetime.timedelta]]" = ...,
+        host: "StringT | None" = ...,
+        port: "int | None" = ...,
+        force: "bool | None" = ...,
+        abort: "bool | None" = ...,
+        timeout: "int | datetime.timedelta | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def flushall(
-        self, async_: "Optional[Literal[PureToken.ASYNC, PureToken.SYNC]]" = ...
+        self, async_: "Literal[PureToken.ASYNC, PureToken.SYNC] | None" = ...
     ) -> Pipeline[AnyStr]: ...
     async def flushdb(
-        self, async_: "Optional[Literal[PureToken.ASYNC, PureToken.SYNC]]" = ...
+        self, async_: "Literal[PureToken.ASYNC, PureToken.SYNC] | None" = ...
     ) -> Pipeline[AnyStr]: ...
     async def info(self, *sections: "StringT") -> Pipeline[AnyStr]: ...
     async def lastsave(self) -> Pipeline[AnyStr]: ...
@@ -889,47 +879,45 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def latency_history(self, event: "StringT") -> Pipeline[AnyStr]: ...
     async def latency_latest(self) -> Pipeline[AnyStr]: ...
     async def latency_reset(self, *events: "StringT") -> Pipeline[AnyStr]: ...
-    async def lolwut(self, version: "Optional[int]" = ...) -> Pipeline[AnyStr]: ...
+    async def lolwut(self, version: "int | None" = ...) -> Pipeline[AnyStr]: ...
     async def memory_doctor(self) -> Pipeline[AnyStr]: ...
     async def memory_malloc_stats(self) -> Pipeline[AnyStr]: ...
     async def memory_purge(self) -> Pipeline[AnyStr]: ...
     async def memory_stats(self) -> Pipeline[AnyStr]: ...
-    async def memory_usage(
-        self, key: "KeyT", samples: "Optional[int]" = ...
-    ) -> Pipeline[AnyStr]: ...
+    async def memory_usage(self, key: "KeyT", samples: "int | None" = ...) -> Pipeline[AnyStr]: ...
     async def module_list(self) -> Pipeline[AnyStr]: ...
     async def module_load(
-        self, path: "StringT", *args: "Union[str, bytes, int, float]"
+        self, path: "StringT", *args: "str | bytes | int | float"
     ) -> Pipeline[AnyStr]: ...
     async def module_loadex(
         self,
         path: "StringT",
-        configs: "Optional[dict[StringT, ValueT]]" = ...,
-        args: "Optional[Parameters[ValueT]]" = ...,
+        configs: "dict[StringT, ValueT] | None" = ...,
+        args: "Parameters[ValueT] | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def module_unload(self, name: "StringT") -> Pipeline[AnyStr]: ...
     async def replicaof(
-        self, host: "Optional[StringT]" = ..., port: "Optional[int]" = ...
+        self, host: "StringT | None" = ..., port: "int | None" = ...
     ) -> Pipeline[AnyStr]: ...
     async def role(self) -> Pipeline[AnyStr]: ...
     async def save(self) -> Pipeline[AnyStr]: ...
     async def shutdown(
         self,
-        nosave_save: "Optional[Literal[PureToken.NOSAVE, PureToken.SAVE]]" = ...,
-        now: "Optional[bool]" = ...,
-        force: "Optional[bool]" = ...,
-        abort: "Optional[bool]" = ...,
+        nosave_save: "Literal[PureToken.NOSAVE, PureToken.SAVE] | None" = ...,
+        now: "bool | None" = ...,
+        force: "bool | None" = ...,
+        abort: "bool | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def slaveof(
-        self, host: "Optional[StringT]" = ..., port: "Optional[int]" = ...
+        self, host: "StringT | None" = ..., port: "int | None" = ...
     ) -> Pipeline[AnyStr]: ...
-    async def slowlog_get(self, count: "Optional[int]" = ...) -> Pipeline[AnyStr]: ...
+    async def slowlog_get(self, count: "int | None" = ...) -> Pipeline[AnyStr]: ...
     async def slowlog_len(self) -> Pipeline[AnyStr]: ...
     async def slowlog_reset(self) -> Pipeline[AnyStr]: ...
     async def swapdb(self, index1: "int", index2: "int") -> Pipeline[AnyStr]: ...
     async def time(self) -> Pipeline[AnyStr]: ...
     async def auth(
-        self, password: "StringT", username: "Optional[StringT]" = ...
+        self, password: "StringT", username: "StringT | None" = ...
     ) -> Pipeline[AnyStr]: ...
     async def client_caching(
         self, mode: "Literal[PureToken.NO, PureToken.YES]"
@@ -940,19 +928,19 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def client_info(self) -> Pipeline[AnyStr]: ...
     async def client_kill(
         self,
-        ip_port: "Optional[StringT]" = ...,
-        identifier: "Optional[int]" = ...,
-        type_: "Optional[Literal[PureToken.NORMAL, PureToken.MASTER, PureToken.SLAVE, PureToken.REPLICA, PureToken.PUBSUB]]" = ...,
-        user: "Optional[StringT]" = ...,
-        addr: "Optional[StringT]" = ...,
-        laddr: "Optional[StringT]" = ...,
-        skipme: "Optional[bool]" = ...,
-        maxage: "Optional[int]" = ...,
+        ip_port: "StringT | None" = ...,
+        identifier: "int | None" = ...,
+        type_: "None | Literal[PureToken.NORMAL, PureToken.MASTER, PureToken.SLAVE, PureToken.REPLICA, PureToken.PUBSUB]" = ...,
+        user: "StringT | None" = ...,
+        addr: "StringT | None" = ...,
+        laddr: "StringT | None" = ...,
+        skipme: "bool | None" = ...,
+        maxage: "int | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def client_list(
         self,
-        type_: "Optional[Literal[PureToken.MASTER, PureToken.NORMAL, PureToken.PUBSUB, PureToken.REPLICA]]" = ...,
-        identifiers: "Optional[Parameters[int]]" = ...,
+        type_: "None | Literal[PureToken.MASTER, PureToken.NORMAL, PureToken.PUBSUB, PureToken.REPLICA]" = ...,
+        identifiers: "Parameters[int] | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def client_no_evict(
         self, enabled: "Literal[PureToken.ON, PureToken.OFF]"
@@ -961,41 +949,41 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self, enabled: "Literal[PureToken.OFF, PureToken.ON]"
     ) -> Pipeline[AnyStr]: ...
     async def client_pause(
-        self, timeout: "int", mode: "Optional[Literal[PureToken.WRITE, PureToken.ALL]]" = ...
+        self, timeout: "int", mode: "Literal[PureToken.WRITE, PureToken.ALL] | None" = ...
     ) -> Pipeline[AnyStr]: ...
     async def client_reply(
         self, mode: "Literal[PureToken.OFF, PureToken.ON, PureToken.SKIP]"
     ) -> Pipeline[AnyStr]: ...
     async def client_setinfo(
-        self, lib_name: "Optional[StringT]" = ..., lib_ver: "Optional[StringT]" = ...
+        self, lib_name: "StringT | None" = ..., lib_ver: "StringT | None" = ...
     ) -> Pipeline[AnyStr]: ...
     async def client_setname(self, connection_name: "StringT") -> Pipeline[AnyStr]: ...
     async def client_tracking(
         self,
         status: "Literal[PureToken.OFF, PureToken.ON]",
         *prefixes: "StringT",
-        redirect: "Optional[int]" = ...,
-        bcast: "Optional[bool]" = ...,
-        optin: "Optional[bool]" = ...,
-        optout: "Optional[bool]" = ...,
-        noloop: "Optional[bool]" = ...,
+        redirect: "int | None" = ...,
+        bcast: "bool | None" = ...,
+        optin: "bool | None" = ...,
+        optout: "bool | None" = ...,
+        noloop: "bool | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def client_trackinginfo(self) -> Pipeline[AnyStr]: ...
     async def client_unblock(
         self,
         client_id: "int",
-        timeout_error: "Optional[Literal[PureToken.TIMEOUT, PureToken.ERROR]]" = ...,
+        timeout_error: "Literal[PureToken.TIMEOUT, PureToken.ERROR] | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def client_unpause(self) -> Pipeline[AnyStr]: ...
     async def echo(self, message: "StringT") -> Pipeline[AnyStr]: ...
     async def hello(
         self,
-        protover: "Optional[int]" = ...,
-        username: "Optional[StringT]" = ...,
-        password: "Optional[StringT]" = ...,
-        setname: "Optional[StringT]" = ...,
+        protover: "int | None" = ...,
+        username: "StringT | None" = ...,
+        password: "StringT | None" = ...,
+        setname: "StringT | None" = ...,
     ) -> Pipeline[AnyStr]: ...
-    async def ping(self, message: "Optional[StringT]" = ...) -> Pipeline[AnyStr]: ...
+    async def ping(self, message: "StringT | None" = ...) -> Pipeline[AnyStr]: ...
     async def quit(self) -> Pipeline[AnyStr]: ...
     async def reset(self) -> Pipeline[AnyStr]: ...
     async def select(self, index: "int") -> Pipeline[AnyStr]: ...
@@ -1012,7 +1000,7 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self, slots: "Parameters[tuple[int, int]]"
     ) -> Pipeline[AnyStr]: ...
     async def cluster_failover(
-        self, options: "Optional[Literal[PureToken.FORCE, PureToken.TAKEOVER]]" = ...
+        self, options: "Literal[PureToken.FORCE, PureToken.TAKEOVER] | None" = ...
     ) -> Pipeline[AnyStr]: ...
     async def cluster_flushslots(self) -> Pipeline[AnyStr]: ...
     async def cluster_forget(self, node_id: "StringT") -> Pipeline[AnyStr]: ...
@@ -1021,24 +1009,24 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def cluster_keyslot(self, key: "KeyT") -> Pipeline[AnyStr]: ...
     async def cluster_links(self) -> Pipeline[AnyStr]: ...
     async def cluster_meet(
-        self, ip: "StringT", port: "int", cluster_bus_port: "Optional[int]" = ...
+        self, ip: "StringT", port: "int", cluster_bus_port: "int | None" = ...
     ) -> Pipeline[AnyStr]: ...
     async def cluster_myid(self) -> Pipeline[AnyStr]: ...
     async def cluster_nodes(self) -> Pipeline[AnyStr]: ...
     async def cluster_replicas(self, node_id: "StringT") -> Pipeline[AnyStr]: ...
     async def cluster_replicate(self, node_id: "StringT") -> Pipeline[AnyStr]: ...
     async def cluster_reset(
-        self, hard_soft: "Optional[Literal[PureToken.HARD, PureToken.SOFT]]" = ...
+        self, hard_soft: "Literal[PureToken.HARD, PureToken.SOFT] | None" = ...
     ) -> Pipeline[AnyStr]: ...
     async def cluster_saveconfig(self) -> Pipeline[AnyStr]: ...
     async def cluster_set_config_epoch(self, config_epoch: "int") -> Pipeline[AnyStr]: ...
     async def cluster_setslot(
         self,
         slot: "int",
-        importing: "Optional[StringT]" = ...,
-        migrating: "Optional[StringT]" = ...,
-        node: "Optional[StringT]" = ...,
-        stable: "Optional[bool]" = ...,
+        importing: "StringT | None" = ...,
+        migrating: "StringT | None" = ...,
+        node: "StringT | None" = ...,
+        stable: "bool | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def cluster_shards(self) -> Pipeline[AnyStr]: ...
     async def cluster_slaves(self, node_id: "StringT") -> Pipeline[AnyStr]: ...
@@ -1051,9 +1039,9 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     def proxy(
         cls,
         client: "RedisCluster[AnyStr]",
-        transaction: "Optional[bool]" = ...,
-        watches: "Optional[Parameters[KeyT]]" = ...,
-        timeout: "Optional[float]" = ...,
+        transaction: "bool | None" = ...,
+        watches: "Parameters[KeyT] | None" = ...,
+        timeout: "float | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def watch(self, *keys: "KeyT") -> bool: ...
     async def unwatch(self) -> bool: ...
@@ -1062,16 +1050,16 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def __aenter__(self) -> "ClusterPipeline[AnyStr]": ...
     async def __aexit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_value: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None: ...
     async def copy(
         self,
         source: "KeyT",
         destination: "KeyT",
-        db: "Optional[int]" = ...,
-        replace: "Optional[bool]" = ...,
+        db: "int | None" = ...,
+        replace: "bool | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def delete(self, keys: "Parameters[KeyT]") -> ClusterPipeline[AnyStr]: ...
     async def dump(self, key: "KeyT") -> ClusterPipeline[AnyStr]: ...
@@ -1079,14 +1067,14 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def expire(
         self,
         key: "KeyT",
-        seconds: "Union[int, datetime.timedelta]",
-        condition: "Optional[Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT]]" = ...,
+        seconds: "int | datetime.timedelta",
+        condition: "Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT] | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def expireat(
         self,
         key: "KeyT",
-        unix_time_seconds: "Union[int, datetime.datetime]",
-        condition: "Optional[Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT]]" = ...,
+        unix_time_seconds: "int | datetime.datetime",
+        condition: "Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT] | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def expiretime(self, key: "KeyT") -> ClusterPipeline[AnyStr]: ...
     async def keys(self, pattern: "StringT" = ...) -> ClusterPipeline[AnyStr]: ...
@@ -1097,11 +1085,11 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         destination_db: "int",
         timeout: "int",
         *keys: "KeyT",
-        copy: "Optional[bool]" = ...,
-        replace: "Optional[bool]" = ...,
-        auth: "Optional[StringT]" = ...,
-        username: "Optional[StringT]" = ...,
-        password: "Optional[StringT]" = ...,
+        copy: "bool | None" = ...,
+        replace: "bool | None" = ...,
+        auth: "StringT | None" = ...,
+        username: "StringT | None" = ...,
+        password: "StringT | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def move(self, key: "KeyT", db: "int") -> ClusterPipeline[AnyStr]: ...
     async def object_encoding(self, key: "KeyT") -> ClusterPipeline[AnyStr]: ...
@@ -1112,14 +1100,14 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def pexpire(
         self,
         key: "KeyT",
-        milliseconds: "Union[int, datetime.timedelta]",
-        condition: "Optional[Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT]]" = ...,
+        milliseconds: "int | datetime.timedelta",
+        condition: "Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT] | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def pexpireat(
         self,
         key: "KeyT",
-        unix_time_milliseconds: "Union[int, datetime.datetime]",
-        condition: "Optional[Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT]]" = ...,
+        unix_time_milliseconds: "int | datetime.datetime",
+        condition: "Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT] | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def pexpiretime(self, key: "KeyT") -> ClusterPipeline[AnyStr]: ...
     async def pttl(self, key: "KeyT") -> ClusterPipeline[AnyStr]: ...
@@ -1129,40 +1117,40 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def restore(
         self,
         key: "KeyT",
-        ttl: "Union[int, datetime.timedelta, datetime.datetime]",
+        ttl: "int | datetime.timedelta | datetime.datetime",
         serialized_value: "bytes",
-        replace: "Optional[bool]" = ...,
-        absttl: "Optional[bool]" = ...,
-        idletime: "Optional[Union[int, datetime.timedelta]]" = ...,
-        freq: "Optional[int]" = ...,
+        replace: "bool | None" = ...,
+        absttl: "bool | None" = ...,
+        idletime: "int | datetime.timedelta | None" = ...,
+        freq: "int | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def scan(
         self,
-        cursor: "Optional[int]" = ...,
-        match: "Optional[StringT]" = ...,
-        count: "Optional[int]" = ...,
-        type_: "Optional[StringT]" = ...,
+        cursor: "int | None" = ...,
+        match: "StringT | None" = ...,
+        count: "int | None" = ...,
+        type_: "StringT | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def sort(
         self,
         key: "KeyT",
-        gets: "Optional[Parameters[KeyT]]" = ...,
-        by: "Optional[StringT]" = ...,
-        offset: "Optional[int]" = ...,
-        count: "Optional[int]" = ...,
-        order: "Optional[Literal[PureToken.ASC, PureToken.DESC]]" = ...,
-        alpha: "Optional[bool]" = ...,
-        store: "Optional[KeyT]" = ...,
+        gets: "Parameters[KeyT] | None" = ...,
+        by: "StringT | None" = ...,
+        offset: "int | None" = ...,
+        count: "int | None" = ...,
+        order: "Literal[PureToken.ASC, PureToken.DESC] | None" = ...,
+        alpha: "bool | None" = ...,
+        store: "KeyT | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def sort_ro(
         self,
         key: "KeyT",
-        gets: "Optional[Parameters[KeyT]]" = ...,
-        by: "Optional[StringT]" = ...,
-        offset: "Optional[int]" = ...,
-        count: "Optional[int]" = ...,
-        order: "Optional[Literal[PureToken.ASC, PureToken.DESC]]" = ...,
-        alpha: "Optional[bool]" = ...,
+        gets: "Parameters[KeyT] | None" = ...,
+        by: "StringT | None" = ...,
+        offset: "int | None" = ...,
+        count: "int | None" = ...,
+        order: "Literal[PureToken.ASC, PureToken.DESC] | None" = ...,
+        alpha: "bool | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def touch(self, keys: "Parameters[KeyT]") -> ClusterPipeline[AnyStr]: ...
     async def ttl(self, key: "KeyT") -> ClusterPipeline[AnyStr]: ...
@@ -1180,48 +1168,48 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def getex(
         self,
         key: "KeyT",
-        ex: "Optional[Union[int, datetime.timedelta]]" = ...,
-        px: "Optional[Union[int, datetime.timedelta]]" = ...,
-        exat: "Optional[Union[int, datetime.datetime]]" = ...,
-        pxat: "Optional[Union[int, datetime.datetime]]" = ...,
-        persist: "Optional[bool]" = ...,
+        ex: "int | datetime.timedelta | None" = ...,
+        px: "int | datetime.timedelta | None" = ...,
+        exat: "int | datetime.datetime | None" = ...,
+        pxat: "int | datetime.datetime | None" = ...,
+        persist: "bool | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def getrange(self, key: "KeyT", start: "int", end: "int") -> ClusterPipeline[AnyStr]: ...
     async def getset(self, key: "KeyT", value: "ValueT") -> ClusterPipeline[AnyStr]: ...
     async def incr(self, key: "KeyT") -> ClusterPipeline[AnyStr]: ...
     async def incrby(self, key: "KeyT", increment: "int") -> ClusterPipeline[AnyStr]: ...
     async def incrbyfloat(
-        self, key: "KeyT", increment: "Union[int, float]"
+        self, key: "KeyT", increment: "int | float"
     ) -> ClusterPipeline[AnyStr]: ...
     async def lcs(
         self,
         key1: "KeyT",
         key2: "KeyT",
-        len_: "Optional[bool]" = ...,
-        idx: "Optional[bool]" = ...,
-        minmatchlen: "Optional[int]" = ...,
-        withmatchlen: "Optional[bool]" = ...,
+        len_: "bool | None" = ...,
+        idx: "bool | None" = ...,
+        minmatchlen: "int | None" = ...,
+        withmatchlen: "bool | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def mget(self, keys: "Parameters[KeyT]") -> ClusterPipeline[AnyStr]: ...
     async def mset(self, key_values: "Mapping[KeyT, ValueT]") -> ClusterPipeline[AnyStr]: ...
     async def msetnx(self, key_values: "Mapping[KeyT, ValueT]") -> ClusterPipeline[AnyStr]: ...
     async def psetex(
-        self, key: "KeyT", milliseconds: "Union[int, datetime.timedelta]", value: "ValueT"
+        self, key: "KeyT", milliseconds: "int | datetime.timedelta", value: "ValueT"
     ) -> ClusterPipeline[AnyStr]: ...
     async def set(
         self,
         key: "KeyT",
         value: "ValueT",
-        condition: "Optional[Literal[PureToken.NX, PureToken.XX]]" = ...,
-        get: "Optional[bool]" = ...,
-        ex: "Optional[Union[int, datetime.timedelta]]" = ...,
-        px: "Optional[Union[int, datetime.timedelta]]" = ...,
-        exat: "Optional[Union[int, datetime.datetime]]" = ...,
-        pxat: "Optional[Union[int, datetime.datetime]]" = ...,
-        keepttl: "Optional[bool]" = ...,
+        condition: "Literal[PureToken.NX, PureToken.XX] | None" = ...,
+        get: "bool | None" = ...,
+        ex: "int | datetime.timedelta | None" = ...,
+        px: "int | datetime.timedelta | None" = ...,
+        exat: "int | datetime.datetime | None" = ...,
+        pxat: "int | datetime.datetime | None" = ...,
+        keepttl: "bool | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def setex(
-        self, key: "KeyT", value: "ValueT", seconds: "Union[int, datetime.timedelta]"
+        self, key: "KeyT", value: "ValueT", seconds: "int | datetime.timedelta"
     ) -> ClusterPipeline[AnyStr]: ...
     async def setnx(self, key: "KeyT", value: "ValueT") -> ClusterPipeline[AnyStr]: ...
     async def setrange(
@@ -1232,9 +1220,9 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def bitcount(
         self,
         key: "KeyT",
-        start: "Optional[int]" = ...,
-        end: "Optional[int]" = ...,
-        index_unit: "Optional[Literal[PureToken.BIT, PureToken.BYTE]]" = ...,
+        start: "int | None" = ...,
+        end: "int | None" = ...,
+        index_unit: "Literal[PureToken.BIT, PureToken.BYTE] | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def bitop(
         self, keys: "Parameters[KeyT]", operation: "StringT", destkey: "KeyT"
@@ -1243,9 +1231,9 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self,
         key: "KeyT",
         bit: "int",
-        start: "Optional[int]" = ...,
-        end: "Optional[int]" = ...,
-        index_unit: "Optional[Literal[PureToken.BIT, PureToken.BYTE]]" = ...,
+        start: "int | None" = ...,
+        end: "int | None" = ...,
+        index_unit: "Literal[PureToken.BIT, PureToken.BYTE] | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def getbit(self, key: "KeyT", offset: "int") -> ClusterPipeline[AnyStr]: ...
     async def setbit(self, key: "KeyT", offset: "int", value: "int") -> ClusterPipeline[AnyStr]: ...
@@ -1254,16 +1242,16 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def hexpire(
         self,
         key: "KeyT",
-        seconds: "Union[int, datetime.timedelta]",
+        seconds: "int | datetime.timedelta",
         fields: "Parameters[StringT]",
-        condition: "Optional[Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX]]" = ...,
+        condition: "Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX] | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def hexpireat(
         self,
         key: "KeyT",
-        unix_time_seconds: "Union[int, datetime.datetime]",
+        unix_time_seconds: "int | datetime.datetime",
         fields: "Parameters[StringT]",
-        condition: "Optional[Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX]]" = ...,
+        condition: "Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX] | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def hexpiretime(
         self, key: "KeyT", fields: "Parameters[StringT]"
@@ -1274,7 +1262,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self, key: "KeyT", field: "StringT", increment: "int"
     ) -> ClusterPipeline[AnyStr]: ...
     async def hincrbyfloat(
-        self, key: "KeyT", field: "StringT", increment: "Union[int, float]"
+        self, key: "KeyT", field: "StringT", increment: "int | float"
     ) -> ClusterPipeline[AnyStr]: ...
     async def hkeys(self, key: "KeyT") -> ClusterPipeline[AnyStr]: ...
     async def hlen(self, key: "KeyT") -> ClusterPipeline[AnyStr]: ...
@@ -1290,16 +1278,16 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def hpexpire(
         self,
         key: "KeyT",
-        milliseconds: "Union[int, datetime.timedelta]",
+        milliseconds: "int | datetime.timedelta",
         fields: "Parameters[StringT]",
-        condition: "Optional[Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX]]" = ...,
+        condition: "Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX] | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def hpexpireat(
         self,
         key: "KeyT",
-        unix_time_milliseconds: "Union[int, datetime.datetime]",
+        unix_time_milliseconds: "int | datetime.datetime",
         fields: "Parameters[StringT]",
-        condition: "Optional[Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX]]" = ...,
+        condition: "Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX] | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def hpexpiretime(
         self, key: "KeyT", fields: "Parameters[StringT]"
@@ -1308,15 +1296,15 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self, key: "KeyT", fields: "Parameters[StringT]"
     ) -> ClusterPipeline[AnyStr]: ...
     async def hrandfield(
-        self, key: "KeyT", count: "Optional[int]" = ..., withvalues: "Optional[bool]" = ...
+        self, key: "KeyT", count: "int | None" = ..., withvalues: "bool | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def hscan(
         self,
         key: "KeyT",
-        cursor: "Optional[int]" = ...,
-        match: "Optional[StringT]" = ...,
-        count: "Optional[int]" = ...,
-        novalues: "Optional[bool]" = ...,
+        cursor: "int | None" = ...,
+        match: "StringT | None" = ...,
+        count: "int | None" = ...,
+        novalues: "bool | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def hset(
         self, key: "KeyT", field_values: "Mapping[StringT, ValueT]"
@@ -1333,23 +1321,23 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         destination: "KeyT",
         wherefrom: "Literal[PureToken.LEFT, PureToken.RIGHT]",
         whereto: "Literal[PureToken.LEFT, PureToken.RIGHT]",
-        timeout: "Union[int, float]",
+        timeout: "int | float",
     ) -> ClusterPipeline[AnyStr]: ...
     async def blmpop(
         self,
         keys: "Parameters[KeyT]",
-        timeout: "Union[int, float]",
+        timeout: "int | float",
         where: "Literal[PureToken.LEFT, PureToken.RIGHT]",
-        count: "Optional[int]" = ...,
+        count: "int | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def blpop(
-        self, keys: "Parameters[KeyT]", timeout: "Union[int, float]"
+        self, keys: "Parameters[KeyT]", timeout: "int | float"
     ) -> ClusterPipeline[AnyStr]: ...
     async def brpop(
-        self, keys: "Parameters[KeyT]", timeout: "Union[int, float]"
+        self, keys: "Parameters[KeyT]", timeout: "int | float"
     ) -> ClusterPipeline[AnyStr]: ...
     async def brpoplpush(
-        self, source: "KeyT", destination: "KeyT", timeout: "Union[int, float]"
+        self, source: "KeyT", destination: "KeyT", timeout: "int | float"
     ) -> ClusterPipeline[AnyStr]: ...
     async def lindex(self, key: "KeyT", index: "int") -> ClusterPipeline[AnyStr]: ...
     async def linsert(
@@ -1371,16 +1359,16 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self,
         keys: "Parameters[KeyT]",
         where: "Literal[PureToken.LEFT, PureToken.RIGHT]",
-        count: "Optional[int]" = ...,
+        count: "int | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
-    async def lpop(self, key: "KeyT", count: "Optional[int]" = ...) -> ClusterPipeline[AnyStr]: ...
+    async def lpop(self, key: "KeyT", count: "int | None" = ...) -> ClusterPipeline[AnyStr]: ...
     async def lpos(
         self,
         key: "KeyT",
         element: "ValueT",
-        rank: "Optional[int]" = ...,
-        count: "Optional[int]" = ...,
-        maxlen: "Optional[int]" = ...,
+        rank: "int | None" = ...,
+        count: "int | None" = ...,
+        maxlen: "int | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def lpush(
         self, key: "KeyT", elements: "Parameters[ValueT]"
@@ -1396,7 +1384,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self, key: "KeyT", index: "int", element: "ValueT"
     ) -> ClusterPipeline[AnyStr]: ...
     async def ltrim(self, key: "KeyT", start: "int", stop: "int") -> ClusterPipeline[AnyStr]: ...
-    async def rpop(self, key: "KeyT", count: "Optional[int]" = ...) -> ClusterPipeline[AnyStr]: ...
+    async def rpop(self, key: "KeyT", count: "int | None" = ...) -> ClusterPipeline[AnyStr]: ...
     async def rpoplpush(self, source: "KeyT", destination: "KeyT") -> ClusterPipeline[AnyStr]: ...
     async def rpush(
         self, key: "KeyT", elements: "Parameters[ValueT]"
@@ -1412,7 +1400,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> ClusterPipeline[AnyStr]: ...
     async def sinter(self, keys: "Parameters[KeyT]") -> ClusterPipeline[AnyStr]: ...
     async def sintercard(
-        self, keys: "Parameters[KeyT]", limit: "Optional[int]" = ...
+        self, keys: "Parameters[KeyT]", limit: "int | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def sinterstore(
         self, keys: "Parameters[KeyT]", destination: "KeyT"
@@ -1425,17 +1413,17 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def smove(
         self, source: "KeyT", destination: "KeyT", member: "ValueT"
     ) -> ClusterPipeline[AnyStr]: ...
-    async def spop(self, key: "KeyT", count: "Optional[int]" = ...) -> ClusterPipeline[AnyStr]: ...
+    async def spop(self, key: "KeyT", count: "int | None" = ...) -> ClusterPipeline[AnyStr]: ...
     async def srandmember(
-        self, key: "KeyT", count: "Optional[int]" = ...
+        self, key: "KeyT", count: "int | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def srem(self, key: "KeyT", members: "Parameters[ValueT]") -> ClusterPipeline[AnyStr]: ...
     async def sscan(
         self,
         key: "KeyT",
-        cursor: "Optional[int]" = ...,
-        match: "Optional[StringT]" = ...,
-        count: "Optional[int]" = ...,
+        cursor: "int | None" = ...,
+        match: "StringT | None" = ...,
+        count: "int | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def sunion(self, keys: "Parameters[KeyT]") -> ClusterPipeline[AnyStr]: ...
     async def sunionstore(
@@ -1444,31 +1432,31 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def bzmpop(
         self,
         keys: "Parameters[KeyT]",
-        timeout: "Union[int, float]",
+        timeout: "int | float",
         where: "Literal[PureToken.MAX, PureToken.MIN]",
-        count: "Optional[int]" = ...,
+        count: "int | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def bzpopmax(
-        self, keys: "Parameters[KeyT]", timeout: "Union[int, float]"
+        self, keys: "Parameters[KeyT]", timeout: "int | float"
     ) -> ClusterPipeline[AnyStr]: ...
     async def bzpopmin(
-        self, keys: "Parameters[KeyT]", timeout: "Union[int, float]"
+        self, keys: "Parameters[KeyT]", timeout: "int | float"
     ) -> ClusterPipeline[AnyStr]: ...
     async def zadd(
         self,
         key: "KeyT",
-        member_scores: "Mapping[StringT, Union[int, float]]",
-        condition: "Optional[Literal[PureToken.NX, PureToken.XX]]" = ...,
-        comparison: "Optional[Literal[PureToken.GT, PureToken.LT]]" = ...,
-        change: "Optional[bool]" = ...,
-        increment: "Optional[bool]" = ...,
+        member_scores: "Mapping[StringT, int | float]",
+        condition: "Literal[PureToken.NX, PureToken.XX] | None" = ...,
+        comparison: "Literal[PureToken.GT, PureToken.LT] | None" = ...,
+        change: "bool | None" = ...,
+        increment: "bool | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def zcard(self, key: "KeyT") -> ClusterPipeline[AnyStr]: ...
     async def zcount(
         self, key: "KeyT", min_: "ValueT", max_: "ValueT"
     ) -> ClusterPipeline[AnyStr]: ...
     async def zdiff(
-        self, keys: "Parameters[KeyT]", withscores: "Optional[bool]" = ...
+        self, keys: "Parameters[KeyT]", withscores: "bool | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def zdiffstore(
         self, keys: "Parameters[KeyT]", destination: "KeyT"
@@ -1479,19 +1467,19 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def zinter(
         self,
         keys: "Parameters[KeyT]",
-        weights: "Optional[Parameters[int]]" = ...,
-        aggregate: "Optional[Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM]]" = ...,
-        withscores: "Optional[bool]" = ...,
+        weights: "Parameters[int] | None" = ...,
+        aggregate: "Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM] | None" = ...,
+        withscores: "bool | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def zintercard(
-        self, keys: "Parameters[KeyT]", limit: "Optional[int]" = ...
+        self, keys: "Parameters[KeyT]", limit: "int | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def zinterstore(
         self,
         keys: "Parameters[KeyT]",
         destination: "KeyT",
-        weights: "Optional[Parameters[int]]" = ...,
-        aggregate: "Optional[Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM]]" = ...,
+        weights: "Parameters[int] | None" = ...,
+        aggregate: "Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM] | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def zlexcount(
         self, key: "KeyT", min_: "ValueT", max_: "ValueT"
@@ -1500,61 +1488,57 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self,
         keys: "Parameters[KeyT]",
         where: "Literal[PureToken.MAX, PureToken.MIN]",
-        count: "Optional[int]" = ...,
+        count: "int | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def zmscore(
         self, key: "KeyT", members: "Parameters[ValueT]"
     ) -> ClusterPipeline[AnyStr]: ...
-    async def zpopmax(
-        self, key: "KeyT", count: "Optional[int]" = ...
-    ) -> ClusterPipeline[AnyStr]: ...
-    async def zpopmin(
-        self, key: "KeyT", count: "Optional[int]" = ...
-    ) -> ClusterPipeline[AnyStr]: ...
+    async def zpopmax(self, key: "KeyT", count: "int | None" = ...) -> ClusterPipeline[AnyStr]: ...
+    async def zpopmin(self, key: "KeyT", count: "int | None" = ...) -> ClusterPipeline[AnyStr]: ...
     async def zrandmember(
-        self, key: "KeyT", count: "Optional[int]" = ..., withscores: "Optional[bool]" = ...
+        self, key: "KeyT", count: "int | None" = ..., withscores: "bool | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def zrange(
         self,
         key: "KeyT",
-        min_: "Union[int, ValueT]",
-        max_: "Union[int, ValueT]",
-        sortby: "Optional[Literal[PureToken.BYSCORE, PureToken.BYLEX]]" = ...,
-        rev: "Optional[bool]" = ...,
-        offset: "Optional[int]" = ...,
-        count: "Optional[int]" = ...,
-        withscores: "Optional[bool]" = ...,
+        min_: "int | ValueT",
+        max_: "int | ValueT",
+        sortby: "Literal[PureToken.BYSCORE, PureToken.BYLEX] | None" = ...,
+        rev: "bool | None" = ...,
+        offset: "int | None" = ...,
+        count: "int | None" = ...,
+        withscores: "bool | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def zrangebylex(
         self,
         key: "KeyT",
         min_: "ValueT",
         max_: "ValueT",
-        offset: "Optional[int]" = ...,
-        count: "Optional[int]" = ...,
+        offset: "int | None" = ...,
+        count: "int | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def zrangebyscore(
         self,
         key: "KeyT",
-        min_: "Union[int, float]",
-        max_: "Union[int, float]",
-        withscores: "Optional[bool]" = ...,
-        offset: "Optional[int]" = ...,
-        count: "Optional[int]" = ...,
+        min_: "int | float",
+        max_: "int | float",
+        withscores: "bool | None" = ...,
+        offset: "int | None" = ...,
+        count: "int | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def zrangestore(
         self,
         dst: "KeyT",
         src: "KeyT",
-        min_: "Union[int, ValueT]",
-        max_: "Union[int, ValueT]",
-        sortby: "Optional[Literal[PureToken.BYSCORE, PureToken.BYLEX]]" = ...,
-        rev: "Optional[bool]" = ...,
-        offset: "Optional[int]" = ...,
-        count: "Optional[int]" = ...,
+        min_: "int | ValueT",
+        max_: "int | ValueT",
+        sortby: "Literal[PureToken.BYSCORE, PureToken.BYLEX] | None" = ...,
+        rev: "bool | None" = ...,
+        offset: "int | None" = ...,
+        count: "int | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def zrank(
-        self, key: "KeyT", member: "ValueT", withscore: "Optional[bool]" = ...
+        self, key: "KeyT", member: "ValueT", withscore: "bool | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def zrem(self, key: "KeyT", members: "Parameters[ValueT]") -> ClusterPipeline[AnyStr]: ...
     async def zremrangebylex(
@@ -1564,52 +1548,52 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self, key: "KeyT", start: "int", stop: "int"
     ) -> ClusterPipeline[AnyStr]: ...
     async def zremrangebyscore(
-        self, key: "KeyT", min_: "Union[int, float]", max_: "Union[int, float]"
+        self, key: "KeyT", min_: "int | float", max_: "int | float"
     ) -> ClusterPipeline[AnyStr]: ...
     async def zrevrange(
-        self, key: "KeyT", start: "int", stop: "int", withscores: "Optional[bool]" = ...
+        self, key: "KeyT", start: "int", stop: "int", withscores: "bool | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def zrevrangebylex(
         self,
         key: "KeyT",
         max_: "ValueT",
         min_: "ValueT",
-        offset: "Optional[int]" = ...,
-        count: "Optional[int]" = ...,
+        offset: "int | None" = ...,
+        count: "int | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def zrevrangebyscore(
         self,
         key: "KeyT",
-        max_: "Union[int, float]",
-        min_: "Union[int, float]",
-        withscores: "Optional[bool]" = ...,
-        offset: "Optional[int]" = ...,
-        count: "Optional[int]" = ...,
+        max_: "int | float",
+        min_: "int | float",
+        withscores: "bool | None" = ...,
+        offset: "int | None" = ...,
+        count: "int | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def zrevrank(
-        self, key: "KeyT", member: "ValueT", withscore: "Optional[bool]" = ...
+        self, key: "KeyT", member: "ValueT", withscore: "bool | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def zscan(
         self,
         key: "KeyT",
-        cursor: "Optional[int]" = ...,
-        match: "Optional[StringT]" = ...,
-        count: "Optional[int]" = ...,
+        cursor: "int | None" = ...,
+        match: "StringT | None" = ...,
+        count: "int | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def zscore(self, key: "KeyT", member: "ValueT") -> ClusterPipeline[AnyStr]: ...
     async def zunion(
         self,
         keys: "Parameters[KeyT]",
-        weights: "Optional[Parameters[int]]" = ...,
-        aggregate: "Optional[Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX]]" = ...,
-        withscores: "Optional[bool]" = ...,
+        weights: "Parameters[int] | None" = ...,
+        aggregate: "Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX] | None" = ...,
+        withscores: "bool | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def zunionstore(
         self,
         keys: "Parameters[KeyT]",
         destination: "KeyT",
-        weights: "Optional[Parameters[int]]" = ...,
-        aggregate: "Optional[Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX]]" = ...,
+        weights: "Parameters[int] | None" = ...,
+        aggregate: "Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX] | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def pfadd(self, key: "KeyT", *elements: "ValueT") -> ClusterPipeline[AnyStr]: ...
     async def pfcount(self, keys: "Parameters[KeyT]") -> ClusterPipeline[AnyStr]: ...
@@ -1619,16 +1603,16 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def geoadd(
         self,
         key: "KeyT",
-        longitude_latitude_members: "Parameters[tuple[Union[int, float], Union[int, float], ValueT]]",
-        condition: "Optional[Literal[PureToken.NX, PureToken.XX]]" = ...,
-        change: "Optional[bool]" = ...,
+        longitude_latitude_members: "Parameters[tuple[int | float, int | float, ValueT]]",
+        condition: "Literal[PureToken.NX, PureToken.XX] | None" = ...,
+        change: "bool | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def geodist(
         self,
         key: "KeyT",
         member1: "StringT",
         member2: "StringT",
-        unit: "Optional[Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI]]" = ...,
+        unit: "Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI] | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def geohash(
         self, key: "KeyT", members: "Parameters[ValueT]"
@@ -1639,68 +1623,68 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def georadius(
         self,
         key: "KeyT",
-        longitude: "Union[int, float]",
-        latitude: "Union[int, float]",
-        radius: "Union[int, float]",
+        longitude: "int | float",
+        latitude: "int | float",
+        radius: "int | float",
         unit: "Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI]",
-        withcoord: "Optional[bool]" = ...,
-        withdist: "Optional[bool]" = ...,
-        withhash: "Optional[bool]" = ...,
-        count: "Optional[int]" = ...,
-        any_: "Optional[bool]" = ...,
-        order: "Optional[Literal[PureToken.ASC, PureToken.DESC]]" = ...,
-        store: "Optional[KeyT]" = ...,
-        storedist: "Optional[KeyT]" = ...,
+        withcoord: "bool | None" = ...,
+        withdist: "bool | None" = ...,
+        withhash: "bool | None" = ...,
+        count: "int | None" = ...,
+        any_: "bool | None" = ...,
+        order: "Literal[PureToken.ASC, PureToken.DESC] | None" = ...,
+        store: "KeyT | None" = ...,
+        storedist: "KeyT | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def georadiusbymember(
         self,
         key: "KeyT",
         member: "ValueT",
-        radius: "Union[int, float]",
+        radius: "int | float",
         unit: "Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI]",
-        withcoord: "Optional[bool]" = ...,
-        withdist: "Optional[bool]" = ...,
-        withhash: "Optional[bool]" = ...,
-        count: "Optional[int]" = ...,
-        any_: "Optional[bool]" = ...,
-        order: "Optional[Literal[PureToken.ASC, PureToken.DESC]]" = ...,
-        store: "Optional[KeyT]" = ...,
-        storedist: "Optional[KeyT]" = ...,
+        withcoord: "bool | None" = ...,
+        withdist: "bool | None" = ...,
+        withhash: "bool | None" = ...,
+        count: "int | None" = ...,
+        any_: "bool | None" = ...,
+        order: "Literal[PureToken.ASC, PureToken.DESC] | None" = ...,
+        store: "KeyT | None" = ...,
+        storedist: "KeyT | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def geosearch(
         self,
         key: "KeyT",
-        member: "Optional[ValueT]" = ...,
-        longitude: "Optional[Union[int, float]]" = ...,
-        latitude: "Optional[Union[int, float]]" = ...,
-        radius: "Optional[Union[int, float]]" = ...,
-        circle_unit: "Optional[Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI]]" = ...,
-        width: "Optional[Union[int, float]]" = ...,
-        height: "Optional[Union[int, float]]" = ...,
-        box_unit: "Optional[Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI]]" = ...,
-        order: "Optional[Literal[PureToken.ASC, PureToken.DESC]]" = ...,
-        count: "Optional[int]" = ...,
-        any_: "Optional[bool]" = ...,
-        withcoord: "Optional[bool]" = ...,
-        withdist: "Optional[bool]" = ...,
-        withhash: "Optional[bool]" = ...,
+        member: "ValueT | None" = ...,
+        longitude: "int | float | None" = ...,
+        latitude: "int | float | None" = ...,
+        radius: "int | float | None" = ...,
+        circle_unit: "None | Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI]" = ...,
+        width: "int | float | None" = ...,
+        height: "int | float | None" = ...,
+        box_unit: "Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI] | None" = ...,
+        order: "Literal[PureToken.ASC, PureToken.DESC] | None" = ...,
+        count: "int | None" = ...,
+        any_: "bool | None" = ...,
+        withcoord: "bool | None" = ...,
+        withdist: "bool | None" = ...,
+        withhash: "bool | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def geosearchstore(
         self,
         destination: "KeyT",
         source: "KeyT",
-        member: "Optional[ValueT]" = ...,
-        longitude: "Optional[Union[int, float]]" = ...,
-        latitude: "Optional[Union[int, float]]" = ...,
-        radius: "Optional[Union[int, float]]" = ...,
-        circle_unit: "Optional[Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI]]" = ...,
-        width: "Optional[Union[int, float]]" = ...,
-        height: "Optional[Union[int, float]]" = ...,
-        box_unit: "Optional[Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI]]" = ...,
-        order: "Optional[Literal[PureToken.ASC, PureToken.DESC]]" = ...,
-        count: "Optional[int]" = ...,
-        any_: "Optional[bool]" = ...,
-        storedist: "Optional[bool]" = ...,
+        member: "ValueT | None" = ...,
+        longitude: "int | float | None" = ...,
+        latitude: "int | float | None" = ...,
+        radius: "int | float | None" = ...,
+        circle_unit: "None | Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI]" = ...,
+        width: "int | float | None" = ...,
+        height: "int | float | None" = ...,
+        box_unit: "Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI] | None" = ...,
+        order: "Literal[PureToken.ASC, PureToken.DESC] | None" = ...,
+        count: "int | None" = ...,
+        any_: "bool | None" = ...,
+        storedist: "bool | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def xack(
         self, key: "KeyT", group: "StringT", identifiers: "Parameters[ValueT]"
@@ -1709,36 +1693,36 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self,
         key: "KeyT",
         field_values: "Mapping[StringT, ValueT]",
-        identifier: "Optional[ValueT]" = ...,
-        nomkstream: "Optional[bool]" = ...,
-        trim_strategy: "Optional[Literal[PureToken.MAXLEN, PureToken.MINID]]" = ...,
-        threshold: "Optional[int]" = ...,
-        trim_operator: "Optional[Literal[PureToken.EQUAL, PureToken.APPROXIMATELY]]" = ...,
-        limit: "Optional[int]" = ...,
+        identifier: "ValueT | None" = ...,
+        nomkstream: "bool | None" = ...,
+        trim_strategy: "Literal[PureToken.MAXLEN, PureToken.MINID] | None" = ...,
+        threshold: "int | None" = ...,
+        trim_operator: "Literal[PureToken.EQUAL, PureToken.APPROXIMATELY] | None" = ...,
+        limit: "int | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def xautoclaim(
         self,
         key: "KeyT",
         group: "StringT",
         consumer: "StringT",
-        min_idle_time: "Union[int, datetime.timedelta]",
+        min_idle_time: "int | datetime.timedelta",
         start: "ValueT",
-        count: "Optional[int]" = ...,
-        justid: "Optional[bool]" = ...,
+        count: "int | None" = ...,
+        justid: "bool | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def xclaim(
         self,
         key: "KeyT",
         group: "StringT",
         consumer: "StringT",
-        min_idle_time: "Union[int, datetime.timedelta]",
+        min_idle_time: "int | datetime.timedelta",
         identifiers: "Parameters[ValueT]",
-        idle: "Optional[Union[int, datetime.timedelta]]" = ...,
-        time: "Optional[Union[int, datetime.datetime]]" = ...,
-        retrycount: "Optional[int]" = ...,
-        force: "Optional[bool]" = ...,
-        justid: "Optional[bool]" = ...,
-        lastid: "Optional[ValueT]" = ...,
+        idle: "int | datetime.timedelta | None" = ...,
+        time: "int | datetime.datetime | None" = ...,
+        retrycount: "int | None" = ...,
+        force: "bool | None" = ...,
+        justid: "bool | None" = ...,
+        lastid: "ValueT | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def xdel(
         self, key: "KeyT", identifiers: "Parameters[ValueT]"
@@ -1747,9 +1731,9 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self,
         key: "KeyT",
         groupname: "StringT",
-        identifier: "Optional[ValueT]" = ...,
-        mkstream: "Optional[bool]" = ...,
-        entriesread: "Optional[int]" = ...,
+        identifier: "ValueT | None" = ...,
+        mkstream: "bool | None" = ...,
+        entriesread: "int | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def xgroup_createconsumer(
         self, key: "KeyT", groupname: "StringT", consumername: "StringT"
@@ -1764,116 +1748,116 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self,
         key: "KeyT",
         groupname: "StringT",
-        identifier: "Optional[ValueT]" = ...,
-        entriesread: "Optional[int]" = ...,
+        identifier: "ValueT | None" = ...,
+        entriesread: "int | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def xinfo_consumers(
         self, key: "KeyT", groupname: "StringT"
     ) -> ClusterPipeline[AnyStr]: ...
     async def xinfo_groups(self, key: "KeyT") -> ClusterPipeline[AnyStr]: ...
     async def xinfo_stream(
-        self, key: "KeyT", full: "Optional[bool]" = ..., count: "Optional[int]" = ...
+        self, key: "KeyT", full: "bool | None" = ..., count: "int | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def xlen(self, key: "KeyT") -> ClusterPipeline[AnyStr]: ...
     async def xpending(
         self,
         key: "KeyT",
         group: "StringT",
-        start: "Optional[ValueT]" = ...,
-        end: "Optional[ValueT]" = ...,
-        count: "Optional[int]" = ...,
-        idle: "Optional[int]" = ...,
-        consumer: "Optional[StringT]" = ...,
+        start: "ValueT | None" = ...,
+        end: "ValueT | None" = ...,
+        count: "int | None" = ...,
+        idle: "int | None" = ...,
+        consumer: "StringT | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def xrange(
         self,
         key: "KeyT",
-        start: "Optional[ValueT]" = ...,
-        end: "Optional[ValueT]" = ...,
-        count: "Optional[int]" = ...,
+        start: "ValueT | None" = ...,
+        end: "ValueT | None" = ...,
+        count: "int | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def xread(
         self,
         streams: "Mapping[ValueT, ValueT]",
-        count: "Optional[int]" = ...,
-        block: "Optional[Union[int, datetime.timedelta]]" = ...,
+        count: "int | None" = ...,
+        block: "int | datetime.timedelta | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def xreadgroup(
         self,
         group: "StringT",
         consumer: "StringT",
         streams: "Mapping[ValueT, ValueT]",
-        count: "Optional[int]" = ...,
-        block: "Optional[Union[int, datetime.timedelta]]" = ...,
-        noack: "Optional[bool]" = ...,
+        count: "int | None" = ...,
+        block: "int | datetime.timedelta | None" = ...,
+        noack: "bool | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def xrevrange(
         self,
         key: "KeyT",
-        end: "Optional[ValueT]" = ...,
-        start: "Optional[ValueT]" = ...,
-        count: "Optional[int]" = ...,
+        end: "ValueT | None" = ...,
+        start: "ValueT | None" = ...,
+        count: "int | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def xtrim(
         self,
         key: "KeyT",
         trim_strategy: "Literal[PureToken.MAXLEN, PureToken.MINID]",
         threshold: "int",
-        trim_operator: "Optional[Literal[PureToken.EQUAL, PureToken.APPROXIMATELY]]" = ...,
-        limit: "Optional[int]" = ...,
+        trim_operator: "Literal[PureToken.EQUAL, PureToken.APPROXIMATELY] | None" = ...,
+        limit: "int | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def eval(
         self,
         script: "StringT",
-        keys: "Optional[Parameters[KeyT]]" = ...,
-        args: "Optional[Parameters[ValueT]]" = ...,
+        keys: "Parameters[KeyT] | None" = ...,
+        args: "Parameters[ValueT] | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def evalsha(
         self,
         sha1: "StringT",
-        keys: "Optional[Parameters[KeyT]]" = ...,
-        args: "Optional[Parameters[ValueT]]" = ...,
+        keys: "Parameters[KeyT] | None" = ...,
+        args: "Parameters[ValueT] | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def evalsha_ro(
         self,
         sha1: "StringT",
-        keys: "Optional[Parameters[KeyT]]" = ...,
-        args: "Optional[Parameters[ValueT]]" = ...,
+        keys: "Parameters[KeyT] | None" = ...,
+        args: "Parameters[ValueT] | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def eval_ro(
         self,
         script: "StringT",
-        keys: "Optional[Parameters[KeyT]]" = ...,
-        args: "Optional[Parameters[ValueT]]" = ...,
+        keys: "Parameters[KeyT] | None" = ...,
+        args: "Parameters[ValueT] | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def fcall(
         self,
         function: "StringT",
-        keys: "Optional[Parameters[KeyT]]" = ...,
-        args: "Optional[Parameters[ValueT]]" = ...,
+        keys: "Parameters[KeyT] | None" = ...,
+        args: "Parameters[ValueT] | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def fcall_ro(
         self,
         function: "StringT",
-        keys: "Optional[Parameters[KeyT]]" = ...,
-        args: "Optional[Parameters[ValueT]]" = ...,
+        keys: "Parameters[KeyT] | None" = ...,
+        args: "Parameters[ValueT] | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def function_delete(self, library_name: "StringT") -> ClusterPipeline[AnyStr]: ...
     async def function_dump(self) -> ClusterPipeline[AnyStr]: ...
     async def function_flush(
-        self, async_: "Optional[Literal[PureToken.ASYNC, PureToken.SYNC]]" = ...
+        self, async_: "Literal[PureToken.ASYNC, PureToken.SYNC] | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def function_kill(self) -> ClusterPipeline[AnyStr]: ...
     async def function_list(
-        self, libraryname: "Optional[StringT]" = ..., withcode: "Optional[bool]" = ...
+        self, libraryname: "StringT | None" = ..., withcode: "bool | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def function_load(
-        self, function_code: "StringT", replace: "Optional[bool]" = ...
+        self, function_code: "StringT", replace: "bool | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def function_restore(
         self,
         serialized_value: "bytes",
-        policy: "Optional[Literal[PureToken.FLUSH, PureToken.APPEND, PureToken.REPLACE]]" = ...,
+        policy: "Literal[PureToken.FLUSH, PureToken.APPEND, PureToken.REPLACE] | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def function_stats(self) -> ClusterPipeline[AnyStr]: ...
     async def script_debug(
@@ -1881,32 +1865,30 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> ClusterPipeline[AnyStr]: ...
     async def script_exists(self, sha1s: "Parameters[StringT]") -> ClusterPipeline[AnyStr]: ...
     async def script_flush(
-        self, sync_type: "Optional[Literal[PureToken.ASYNC, PureToken.SYNC]]" = ...
+        self, sync_type: "Literal[PureToken.ASYNC, PureToken.SYNC] | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def script_kill(self) -> ClusterPipeline[AnyStr]: ...
     async def script_load(self, script: "StringT") -> ClusterPipeline[AnyStr]: ...
     async def publish(self, channel: "StringT", message: "ValueT") -> ClusterPipeline[AnyStr]: ...
-    async def pubsub_channels(
-        self, pattern: "Optional[StringT]" = ...
-    ) -> ClusterPipeline[AnyStr]: ...
+    async def pubsub_channels(self, pattern: "StringT | None" = ...) -> ClusterPipeline[AnyStr]: ...
     async def pubsub_numpat(self) -> ClusterPipeline[AnyStr]: ...
     async def pubsub_numsub(self, *channels: "StringT") -> ClusterPipeline[AnyStr]: ...
     async def pubsub_shardchannels(
-        self, pattern: "Optional[StringT]" = ...
+        self, pattern: "StringT | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def pubsub_shardnumsub(self, *channels: "StringT") -> ClusterPipeline[AnyStr]: ...
     async def spublish(self, channel: "StringT", message: "ValueT") -> ClusterPipeline[AnyStr]: ...
-    async def acl_cat(self, categoryname: "Optional[StringT]" = ...) -> ClusterPipeline[AnyStr]: ...
+    async def acl_cat(self, categoryname: "StringT | None" = ...) -> ClusterPipeline[AnyStr]: ...
     async def acl_deluser(self, usernames: "Parameters[StringT]") -> ClusterPipeline[AnyStr]: ...
     async def acl_dryrun(
         self, username: "StringT", command: "StringT", *args: "ValueT"
     ) -> ClusterPipeline[AnyStr]: ...
-    async def acl_genpass(self, bits: "Optional[int]" = ...) -> ClusterPipeline[AnyStr]: ...
+    async def acl_genpass(self, bits: "int | None" = ...) -> ClusterPipeline[AnyStr]: ...
     async def acl_getuser(self, username: "StringT") -> ClusterPipeline[AnyStr]: ...
     async def acl_list(self) -> ClusterPipeline[AnyStr]: ...
     async def acl_load(self) -> ClusterPipeline[AnyStr]: ...
     async def acl_log(
-        self, count: "Optional[int]" = ..., reset: "Optional[bool]" = ...
+        self, count: "int | None" = ..., reset: "bool | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def acl_save(self) -> ClusterPipeline[AnyStr]: ...
     async def acl_setuser(
@@ -1915,7 +1897,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def acl_users(self) -> ClusterPipeline[AnyStr]: ...
     async def acl_whoami(self) -> ClusterPipeline[AnyStr]: ...
     async def bgrewriteaof(self) -> ClusterPipeline[AnyStr]: ...
-    async def bgsave(self, schedule: "Optional[bool]" = ...) -> ClusterPipeline[AnyStr]: ...
+    async def bgsave(self, schedule: "bool | None" = ...) -> ClusterPipeline[AnyStr]: ...
     async def command(self) -> ClusterPipeline[AnyStr]: ...
     async def command_count(self) -> ClusterPipeline[AnyStr]: ...
     async def command_docs(self, *command_names: "StringT") -> ClusterPipeline[AnyStr]: ...
@@ -1928,9 +1910,9 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def command_info(self, *command_names: "StringT") -> ClusterPipeline[AnyStr]: ...
     async def command_list(
         self,
-        module: "Optional[StringT]" = ...,
-        aclcat: "Optional[StringT]" = ...,
-        pattern: "Optional[StringT]" = ...,
+        module: "StringT | None" = ...,
+        aclcat: "StringT | None" = ...,
+        pattern: "StringT | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def config_get(self, parameters: "Parameters[StringT]") -> ClusterPipeline[AnyStr]: ...
     async def config_resetstat(self) -> ClusterPipeline[AnyStr]: ...
@@ -1941,17 +1923,17 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def dbsize(self) -> ClusterPipeline[AnyStr]: ...
     async def failover(
         self,
-        host: "Optional[StringT]" = ...,
-        port: "Optional[int]" = ...,
-        force: "Optional[bool]" = ...,
-        abort: "Optional[bool]" = ...,
-        timeout: "Optional[Union[int, datetime.timedelta]]" = ...,
+        host: "StringT | None" = ...,
+        port: "int | None" = ...,
+        force: "bool | None" = ...,
+        abort: "bool | None" = ...,
+        timeout: "int | datetime.timedelta | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def flushall(
-        self, async_: "Optional[Literal[PureToken.ASYNC, PureToken.SYNC]]" = ...
+        self, async_: "Literal[PureToken.ASYNC, PureToken.SYNC] | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def flushdb(
-        self, async_: "Optional[Literal[PureToken.ASYNC, PureToken.SYNC]]" = ...
+        self, async_: "Literal[PureToken.ASYNC, PureToken.SYNC] | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def info(self, *sections: "StringT") -> ClusterPipeline[AnyStr]: ...
     async def lastsave(self) -> ClusterPipeline[AnyStr]: ...
@@ -1961,47 +1943,47 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def latency_history(self, event: "StringT") -> ClusterPipeline[AnyStr]: ...
     async def latency_latest(self) -> ClusterPipeline[AnyStr]: ...
     async def latency_reset(self, *events: "StringT") -> ClusterPipeline[AnyStr]: ...
-    async def lolwut(self, version: "Optional[int]" = ...) -> ClusterPipeline[AnyStr]: ...
+    async def lolwut(self, version: "int | None" = ...) -> ClusterPipeline[AnyStr]: ...
     async def memory_doctor(self) -> ClusterPipeline[AnyStr]: ...
     async def memory_malloc_stats(self) -> ClusterPipeline[AnyStr]: ...
     async def memory_purge(self) -> ClusterPipeline[AnyStr]: ...
     async def memory_stats(self) -> ClusterPipeline[AnyStr]: ...
     async def memory_usage(
-        self, key: "KeyT", samples: "Optional[int]" = ...
+        self, key: "KeyT", samples: "int | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def module_list(self) -> ClusterPipeline[AnyStr]: ...
     async def module_load(
-        self, path: "StringT", *args: "Union[str, bytes, int, float]"
+        self, path: "StringT", *args: "str | bytes | int | float"
     ) -> ClusterPipeline[AnyStr]: ...
     async def module_loadex(
         self,
         path: "StringT",
-        configs: "Optional[dict[StringT, ValueT]]" = ...,
-        args: "Optional[Parameters[ValueT]]" = ...,
+        configs: "dict[StringT, ValueT] | None" = ...,
+        args: "Parameters[ValueT] | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def module_unload(self, name: "StringT") -> ClusterPipeline[AnyStr]: ...
     async def replicaof(
-        self, host: "Optional[StringT]" = ..., port: "Optional[int]" = ...
+        self, host: "StringT | None" = ..., port: "int | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def role(self) -> ClusterPipeline[AnyStr]: ...
     async def save(self) -> ClusterPipeline[AnyStr]: ...
     async def shutdown(
         self,
-        nosave_save: "Optional[Literal[PureToken.NOSAVE, PureToken.SAVE]]" = ...,
-        now: "Optional[bool]" = ...,
-        force: "Optional[bool]" = ...,
-        abort: "Optional[bool]" = ...,
+        nosave_save: "Literal[PureToken.NOSAVE, PureToken.SAVE] | None" = ...,
+        now: "bool | None" = ...,
+        force: "bool | None" = ...,
+        abort: "bool | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def slaveof(
-        self, host: "Optional[StringT]" = ..., port: "Optional[int]" = ...
+        self, host: "StringT | None" = ..., port: "int | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
-    async def slowlog_get(self, count: "Optional[int]" = ...) -> ClusterPipeline[AnyStr]: ...
+    async def slowlog_get(self, count: "int | None" = ...) -> ClusterPipeline[AnyStr]: ...
     async def slowlog_len(self) -> ClusterPipeline[AnyStr]: ...
     async def slowlog_reset(self) -> ClusterPipeline[AnyStr]: ...
     async def swapdb(self, index1: "int", index2: "int") -> ClusterPipeline[AnyStr]: ...
     async def time(self) -> ClusterPipeline[AnyStr]: ...
     async def auth(
-        self, password: "StringT", username: "Optional[StringT]" = ...
+        self, password: "StringT", username: "StringT | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def client_caching(
         self, mode: "Literal[PureToken.NO, PureToken.YES]"
@@ -2012,19 +1994,19 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def client_info(self) -> ClusterPipeline[AnyStr]: ...
     async def client_kill(
         self,
-        ip_port: "Optional[StringT]" = ...,
-        identifier: "Optional[int]" = ...,
-        type_: "Optional[Literal[PureToken.NORMAL, PureToken.MASTER, PureToken.SLAVE, PureToken.REPLICA, PureToken.PUBSUB]]" = ...,
-        user: "Optional[StringT]" = ...,
-        addr: "Optional[StringT]" = ...,
-        laddr: "Optional[StringT]" = ...,
-        skipme: "Optional[bool]" = ...,
-        maxage: "Optional[int]" = ...,
+        ip_port: "StringT | None" = ...,
+        identifier: "int | None" = ...,
+        type_: "None | Literal[PureToken.NORMAL, PureToken.MASTER, PureToken.SLAVE, PureToken.REPLICA, PureToken.PUBSUB]" = ...,
+        user: "StringT | None" = ...,
+        addr: "StringT | None" = ...,
+        laddr: "StringT | None" = ...,
+        skipme: "bool | None" = ...,
+        maxage: "int | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def client_list(
         self,
-        type_: "Optional[Literal[PureToken.MASTER, PureToken.NORMAL, PureToken.PUBSUB, PureToken.REPLICA]]" = ...,
-        identifiers: "Optional[Parameters[int]]" = ...,
+        type_: "None | Literal[PureToken.MASTER, PureToken.NORMAL, PureToken.PUBSUB, PureToken.REPLICA]" = ...,
+        identifiers: "Parameters[int] | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def client_no_evict(
         self, enabled: "Literal[PureToken.ON, PureToken.OFF]"
@@ -2033,41 +2015,41 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self, enabled: "Literal[PureToken.OFF, PureToken.ON]"
     ) -> ClusterPipeline[AnyStr]: ...
     async def client_pause(
-        self, timeout: "int", mode: "Optional[Literal[PureToken.WRITE, PureToken.ALL]]" = ...
+        self, timeout: "int", mode: "Literal[PureToken.WRITE, PureToken.ALL] | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def client_reply(
         self, mode: "Literal[PureToken.OFF, PureToken.ON, PureToken.SKIP]"
     ) -> ClusterPipeline[AnyStr]: ...
     async def client_setinfo(
-        self, lib_name: "Optional[StringT]" = ..., lib_ver: "Optional[StringT]" = ...
+        self, lib_name: "StringT | None" = ..., lib_ver: "StringT | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def client_setname(self, connection_name: "StringT") -> ClusterPipeline[AnyStr]: ...
     async def client_tracking(
         self,
         status: "Literal[PureToken.OFF, PureToken.ON]",
         *prefixes: "StringT",
-        redirect: "Optional[int]" = ...,
-        bcast: "Optional[bool]" = ...,
-        optin: "Optional[bool]" = ...,
-        optout: "Optional[bool]" = ...,
-        noloop: "Optional[bool]" = ...,
+        redirect: "int | None" = ...,
+        bcast: "bool | None" = ...,
+        optin: "bool | None" = ...,
+        optout: "bool | None" = ...,
+        noloop: "bool | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def client_trackinginfo(self) -> ClusterPipeline[AnyStr]: ...
     async def client_unblock(
         self,
         client_id: "int",
-        timeout_error: "Optional[Literal[PureToken.TIMEOUT, PureToken.ERROR]]" = ...,
+        timeout_error: "Literal[PureToken.TIMEOUT, PureToken.ERROR] | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def client_unpause(self) -> ClusterPipeline[AnyStr]: ...
     async def echo(self, message: "StringT") -> ClusterPipeline[AnyStr]: ...
     async def hello(
         self,
-        protover: "Optional[int]" = ...,
-        username: "Optional[StringT]" = ...,
-        password: "Optional[StringT]" = ...,
-        setname: "Optional[StringT]" = ...,
+        protover: "int | None" = ...,
+        username: "StringT | None" = ...,
+        password: "StringT | None" = ...,
+        setname: "StringT | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
-    async def ping(self, message: "Optional[StringT]" = ...) -> ClusterPipeline[AnyStr]: ...
+    async def ping(self, message: "StringT | None" = ...) -> ClusterPipeline[AnyStr]: ...
     async def quit(self) -> ClusterPipeline[AnyStr]: ...
     async def reset(self) -> ClusterPipeline[AnyStr]: ...
     async def select(self, index: "int") -> ClusterPipeline[AnyStr]: ...
@@ -2086,7 +2068,7 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
         self, slots: "Parameters[tuple[int, int]]"
     ) -> ClusterPipeline[AnyStr]: ...
     async def cluster_failover(
-        self, options: "Optional[Literal[PureToken.FORCE, PureToken.TAKEOVER]]" = ...
+        self, options: "Literal[PureToken.FORCE, PureToken.TAKEOVER] | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def cluster_flushslots(self) -> ClusterPipeline[AnyStr]: ...
     async def cluster_forget(self, node_id: "StringT") -> ClusterPipeline[AnyStr]: ...
@@ -2095,24 +2077,24 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def cluster_keyslot(self, key: "KeyT") -> ClusterPipeline[AnyStr]: ...
     async def cluster_links(self) -> ClusterPipeline[AnyStr]: ...
     async def cluster_meet(
-        self, ip: "StringT", port: "int", cluster_bus_port: "Optional[int]" = ...
+        self, ip: "StringT", port: "int", cluster_bus_port: "int | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def cluster_myid(self) -> ClusterPipeline[AnyStr]: ...
     async def cluster_nodes(self) -> ClusterPipeline[AnyStr]: ...
     async def cluster_replicas(self, node_id: "StringT") -> ClusterPipeline[AnyStr]: ...
     async def cluster_replicate(self, node_id: "StringT") -> ClusterPipeline[AnyStr]: ...
     async def cluster_reset(
-        self, hard_soft: "Optional[Literal[PureToken.HARD, PureToken.SOFT]]" = ...
+        self, hard_soft: "Literal[PureToken.HARD, PureToken.SOFT] | None" = ...
     ) -> ClusterPipeline[AnyStr]: ...
     async def cluster_saveconfig(self) -> ClusterPipeline[AnyStr]: ...
     async def cluster_set_config_epoch(self, config_epoch: "int") -> ClusterPipeline[AnyStr]: ...
     async def cluster_setslot(
         self,
         slot: "int",
-        importing: "Optional[StringT]" = ...,
-        migrating: "Optional[StringT]" = ...,
-        node: "Optional[StringT]" = ...,
-        stable: "Optional[bool]" = ...,
+        importing: "StringT | None" = ...,
+        migrating: "StringT | None" = ...,
+        node: "StringT | None" = ...,
+        stable: "bool | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def cluster_shards(self) -> ClusterPipeline[AnyStr]: ...
     async def cluster_slaves(self, node_id: "StringT") -> ClusterPipeline[AnyStr]: ...

@@ -18,11 +18,9 @@ from ..typing import (
     CommandArgList,
     KeyT,
     Literal,
-    Optional,
     Parameters,
     ResponsePrimitive,
     StringT,
-    Union,
     ValueT,
 )
 from .base import Module, ModuleGroup, module_command
@@ -57,7 +55,7 @@ class Graph(ModuleGroup[AnyStr]):
         self,
         graph: KeyT,
         query: StringT,
-        timeout: Optional[Union[int, timedelta]] = None,
+        timeout: int | timedelta | None = None,
     ) -> GraphQueryResult[AnyStr]:
         """
         Executes the given query against a specified graph
@@ -90,7 +88,7 @@ class Graph(ModuleGroup[AnyStr]):
         self,
         graph: KeyT,
         query: StringT,
-        timeout: Optional[Union[int, timedelta]] = None,
+        timeout: int | timedelta | None = None,
     ) -> GraphQueryResult[AnyStr]:
         """
         Executes a given read only query against a specified graph
@@ -165,7 +163,7 @@ class Graph(ModuleGroup[AnyStr]):
         self,
         graph: KeyT,
         query: StringT,
-        timeout: Optional[Union[int, timedelta]] = None,
+        timeout: int | timedelta | None = None,
     ) -> list[AnyStr]:
         """
         Executes a query and returns an execution plan augmented with metrics for each
@@ -193,7 +191,7 @@ class Graph(ModuleGroup[AnyStr]):
     )
     async def slowlog(
         self, graph: KeyT, reset: bool = False
-    ) -> Union[tuple[GraphSlowLogInfo, ...], bool]:
+    ) -> tuple[GraphSlowLogInfo, ...] | bool:
         """
         Returns a list containing up to 10 of the slowest queries issued against the given graph
 
@@ -227,7 +225,7 @@ class Graph(ModuleGroup[AnyStr]):
     )
     async def config_get(
         self, name: StringT
-    ) -> Union[dict[AnyStr, ResponsePrimitive], ResponsePrimitive]:
+    ) -> dict[AnyStr, ResponsePrimitive] | ResponsePrimitive:
         """
         Retrieves a RedisGraph configuration
 
@@ -294,9 +292,9 @@ class Graph(ModuleGroup[AnyStr]):
         self,
         graph: KeyT,
         type: Literal[PureToken.MANDATORY, PureToken.UNIQUE],
-        node: Optional[StringT] = None,
-        relationship: Optional[StringT] = None,
-        properties: Optional[Parameters[StringT]] = None,
+        node: StringT | None = None,
+        relationship: StringT | None = None,
+        properties: Parameters[StringT] | None = None,
     ) -> bool:
         """
         Deletes a constraint from specified graph
@@ -334,9 +332,9 @@ class Graph(ModuleGroup[AnyStr]):
         self,
         graph: KeyT,
         type: Literal[PureToken.MANDATORY, PureToken.UNIQUE],
-        node: Optional[StringT] = None,
-        relationship: Optional[StringT] = None,
-        properties: Optional[Parameters[StringT]] = None,
+        node: StringT | None = None,
+        relationship: StringT | None = None,
+        properties: Parameters[StringT] | None = None,
     ) -> bool:
         """
         Creates a constraint on specified graph

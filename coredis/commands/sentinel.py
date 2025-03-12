@@ -15,10 +15,8 @@ from coredis.response._callbacks.sentinel import (
 )
 from coredis.typing import (
     AnyStr,
-    Optional,
     ResponseType,
     StringT,
-    Union,
     ValueT,
 )
 
@@ -67,7 +65,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     )
     async def sentinel_get_master_addr_by_name(
         self, service_name: StringT
-    ) -> Optional[tuple[str, int]]:
+    ) -> tuple[str, int] | None:
         """
         Returns a (host, port) pair for the given :paramref:`service_name`
         """
@@ -115,7 +113,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SENTINEL_MASTER,
     )
-    async def sentinel_master(self, service_name: StringT) -> dict[str, Union[int, bool, str]]:
+    async def sentinel_master(self, service_name: StringT) -> dict[str, int | bool | str]:
         """Returns a dictionary containing the specified masters state."""
 
         return await self.execute_command(
@@ -125,7 +123,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SENTINEL_MASTERS,
     )
-    async def sentinel_masters(self) -> dict[str, dict[str, Union[int, bool, str]]]:
+    async def sentinel_masters(self) -> dict[str, dict[str, int | bool | str]]:
         """Returns a list of dictionaries containing each master's state."""
 
         return await self.execute_command(
@@ -170,7 +168,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     )
     async def sentinel_sentinels(
         self, service_name: StringT
-    ) -> tuple[dict[str, Union[int, bool, str]], ...]:
+    ) -> tuple[dict[str, int | bool | str], ...]:
         """Returns a list of sentinels for :paramref:`service_name`"""
 
         return await self.execute_command(
@@ -198,7 +196,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     )
     async def sentinel_slaves(
         self, service_name: StringT
-    ) -> tuple[dict[str, Union[int, bool, str]], ...]:
+    ) -> tuple[dict[str, int | bool | str], ...]:
         """Returns a list of slaves for paramref:`service_name`"""
 
         return await self.execute_command(
@@ -210,7 +208,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     )
     async def sentinel_replicas(
         self, service_name: StringT
-    ) -> tuple[dict[str, Union[int, bool, str]], ...]:
+    ) -> tuple[dict[str, int | bool | str], ...]:
         """Returns a list of replicas for :paramref:`service_name`"""
 
         return await self.execute_command(

@@ -39,10 +39,8 @@ from coredis.typing import (
     ClassVar,
     Deque,
     Literal,
-    Optional,
     ResponseType,
     TypeVar,
-    Union,
     ValueT,
 )
 
@@ -57,7 +55,7 @@ class Request:
     connection: weakref.ProxyType[Connection]
     command: bytes
     decode: bool
-    encoding: Optional[str] = None
+    encoding: str | None = None
     raise_exceptions: bool = True
     future: asyncio.Future[ResponseType] = dataclasses.field(
         default_factory=lambda: asyncio.get_running_loop().create_future()
@@ -82,20 +80,20 @@ class Request:
 class CommandInvocation:
     command: bytes
     args: tuple[ValueT, ...]
-    decode: Optional[bool]
-    encoding: Optional[str]
+    decode: bool | None
+    encoding: str | None
 
 
 class RedisSSLContext:
-    context: Optional[ssl.SSLContext]
+    context: ssl.SSLContext | None
 
     def __init__(
         self,
-        keyfile: Optional[str],
-        certfile: Optional[str],
-        cert_reqs: Optional[Union[str, ssl.VerifyMode]] = None,
-        ca_certs: Optional[str] = None,
-        check_hostname: Optional[bool] = None,
+        keyfile: str | None,
+        certfile: str | None,
+        cert_reqs: str | ssl.VerifyMode | None = None,
+        ca_certs: str | None = None,
+        check_hostname: bool | None = None,
     ) -> None:
         self.keyfile = keyfile
         self.certfile = certfile
@@ -138,11 +136,11 @@ class BaseConnection(asyncio.BaseProtocol):
     """
 
     #: id for this connection as returned by the redis server
-    client_id: Optional[int]
+    client_id: int | None
     #: Queue that collects any unread push message types
     push_messages: asyncio.Queue[ResponseType]
     #: client id that the redis server should send any redirected notifications to
-    tracking_client_id: Optional[int]
+    tracking_client_id: int | None
     #: Whether the connection should use RESP or RESP3
     protocol_version: Literal[2, 3]
 
@@ -154,41 +152,38 @@ class BaseConnection(asyncio.BaseProtocol):
 
     def __init__(
         self,
-        stream_timeout: Optional[float] = None,
+        stream_timeout: float | None = None,
         encoding: str = "utf-8",
         decode_responses: bool = False,
         *,
-        client_name: Optional[str] = None,
+        client_name: str | None = None,
         protocol_version: Literal[2, 3] = 3,
         noreply: bool = False,
         noevict: bool = False,
         notouch: bool = False,
     ):
         self._stream_timeout = stream_timeout
-        self.username: Optional[str] = None
-        self.password: Optional[str] = ""
-        self.credential_provider: Optional[AbstractCredentialProvider] = None
-        self.db: Optional[int] = None
+        self.username: str | None = None
+        self.password: str | None = ""
+        self.credential_provider: AbstractCredentialProvider | None = None
+        self.db: int | None = None
         self.pid: int = os.getpid()
-        self._description_args: Callable[..., dict[str, Optional[Union[str, int]]]] = lambda: dict()
+        self._description_args: Callable[..., dict[str, str | int | None]] = lambda: dict()
         self._connect_callbacks: list[
-            Union[
-                Callable[[BaseConnection], Awaitable[None]],
-                Callable[[BaseConnection], None],
-            ]
+            (Callable[[BaseConnection], Awaitable[None]] | Callable[[BaseConnection], None])
         ] = list()
         self.encoding = encoding
         self.decode_responses = decode_responses
         self.protocol_version = protocol_version
-        self.server_version: Optional[str] = None
+        self.server_version: str | None = None
         self.client_name = client_name
         self.client_id = None
         self.tracking_client_id = None
 
         self.last_active_at: float = time.time()
-        self.last_request_processed_at: Optional[float] = None
+        self.last_request_processed_at: float | None = None
 
-        self._transport: Optional[asyncio.Transport] = None
+        self._transport: asyncio.Transport | None = None
         self._parser = Parser()
         self._read_flag = asyncio.Event()
         self.packer: Packer = Packer(self.encoding)
@@ -201,8 +196,8 @@ class BaseConnection(asyncio.BaseProtocol):
         self.notouch: bool = notouch
 
         self.needs_handshake: bool = True
-        self._last_error: Optional[BaseException] = None
-        self._connection_error: Optional[BaseException] = None
+        self._last_error: BaseException | None = None
+        self._connection_error: BaseException | None = None
 
         self._requests: Deque[Request] = deque()
 
@@ -266,10 +261,7 @@ class BaseConnection(asyncio.BaseProtocol):
 
     def register_connect_callback(
         self,
-        callback: Union[
-            Callable[[BaseConnection], None],
-            Callable[[BaseConnection], Awaitable[None]],
-        ],
+        callback: (Callable[[BaseConnection], None] | Callable[[BaseConnection], Awaitable[None]]),
     ) -> None:
         self._connect_callbacks.append(callback)
 
@@ -314,7 +306,7 @@ class BaseConnection(asyncio.BaseProtocol):
         self._transport = cast(asyncio.Transport, transport)
         self._write_ready.set()
 
-    def connection_lost(self, exc: Optional[BaseException]) -> None:
+    def connection_lost(self, exc: BaseException | None) -> None:
         """
         :meta private:
         """
@@ -385,7 +377,7 @@ class BaseConnection(asyncio.BaseProtocol):
     async def _connect(self) -> None:
         raise NotImplementedError
 
-    async def update_tracking_client(self, enabled: bool, client_id: Optional[int] = None) -> bool:
+    async def update_tracking_client(self, enabled: bool, client_id: int | None = None) -> bool:
         """
         Associate this connection to :paramref:`client_id` to
         relay any tracking notifications to.
@@ -425,7 +417,7 @@ class BaseConnection(asyncio.BaseProtocol):
         if not self.needs_handshake:
             return
 
-        hello_command_args: list[Union[int, str, bytes]] = [self.protocol_version]
+        hello_command_args: list[int | str | bytes] = [self.protocol_version]
         if creds := (
             await self.credential_provider.get_credentials()
             if self.credential_provider
@@ -520,9 +512,9 @@ class BaseConnection(asyncio.BaseProtocol):
 
     async def fetch_push_message(
         self,
-        decode: Optional[ValueT] = None,
-        push_message_types: Optional[set[bytes]] = None,
-        block: Optional[bool] = False,
+        decode: ValueT | None = None,
+        push_message_types: set[bytes] | None = None,
+        block: bool | None = False,
     ) -> ResponseType:
         """
         Read the next pending response
@@ -558,7 +550,7 @@ class BaseConnection(asyncio.BaseProtocol):
         return message
 
     async def _send_packed_command(
-        self, command: list[bytes], timeout: Optional[float] = None
+        self, command: list[bytes], timeout: float | None = None
     ) -> None:
         """
         Sends an already packed command to the Redis server
@@ -594,11 +586,11 @@ class BaseConnection(asyncio.BaseProtocol):
         self,
         command: bytes,
         *args: ValueT,
-        noreply: Optional[bool] = None,
-        decode: Optional[ValueT] = None,
-        encoding: Optional[str] = None,
+        noreply: bool | None = None,
+        decode: ValueT | None = None,
+        encoding: str | None = None,
         raise_exceptions: bool = True,
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
     ) -> asyncio.Future[ResponseType]:
         """
         Send a command to the redis server
@@ -609,7 +601,7 @@ class BaseConnection(asyncio.BaseProtocol):
             await self.connect()
 
         cmd_list = []
-        request_timeout: Optional[float] = timeout or self._stream_timeout
+        request_timeout: float | None = timeout or self._stream_timeout
         if self.is_connected and noreply and not self.noreply:
             cmd_list = self.packer.pack_command(CommandName.CLIENT_REPLY, PureToken.SKIP)
         cmd_list.extend(self.packer.pack_command(command, *args))
@@ -644,7 +636,7 @@ class BaseConnection(asyncio.BaseProtocol):
         self,
         commands: list[CommandInvocation],
         raise_exceptions: bool = True,
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
     ) -> list[asyncio.Future[ResponseType]]:
         """
         Send multiple commands to the redis server
@@ -653,7 +645,7 @@ class BaseConnection(asyncio.BaseProtocol):
         if not self.is_connected:
             await self.connect()
 
-        request_timeout: Optional[float] = timeout or self._stream_timeout
+        request_timeout: float | None = timeout or self._stream_timeout
 
         await self._send_packed_command(
             self.packer.pack_commands(
@@ -715,19 +707,19 @@ class Connection(BaseConnection):
         self,
         host: str = "127.0.0.1",
         port: int = 6379,
-        username: Optional[str] = None,
-        password: Optional[str] = None,
-        credential_provider: Optional[AbstractCredentialProvider] = None,
-        db: Optional[int] = 0,
-        stream_timeout: Optional[float] = None,
-        connect_timeout: Optional[float] = None,
-        ssl_context: Optional[ssl.SSLContext] = None,
+        username: str | None = None,
+        password: str | None = None,
+        credential_provider: AbstractCredentialProvider | None = None,
+        db: int | None = 0,
+        stream_timeout: float | None = None,
+        connect_timeout: float | None = None,
+        ssl_context: ssl.SSLContext | None = None,
         encoding: str = "utf-8",
         decode_responses: bool = False,
-        socket_keepalive: Optional[bool] = None,
-        socket_keepalive_options: Optional[dict[int, Union[int, bytes]]] = None,
+        socket_keepalive: bool | None = None,
+        socket_keepalive_options: dict[int, int | bytes] | None = None,
         *,
-        client_name: Optional[str] = None,
+        client_name: str | None = None,
         protocol_version: Literal[2, 3] = 3,
         noreply: bool = False,
         noevict: bool = False,
@@ -745,19 +737,19 @@ class Connection(BaseConnection):
         )
         self.host = host
         self.port = port
-        self.username: Optional[str] = username
-        self.password: Optional[str] = password
-        self.credential_provider: Optional[AbstractCredentialProvider] = credential_provider
-        self.db: Optional[int] = db
+        self.username: str | None = username
+        self.password: str | None = password
+        self.credential_provider: AbstractCredentialProvider | None = credential_provider
+        self.db: int | None = db
         self.ssl_context = ssl_context
         self._connect_timeout = connect_timeout
-        self._description_args: Callable[..., dict[str, Optional[Union[str, int]]]] = lambda: {
+        self._description_args: Callable[..., dict[str, str | int | None]] = lambda: {
             "host": self.host,
             "port": self.port,
             "db": self.db,
         }
         self.socket_keepalive = socket_keepalive
-        self.socket_keepalive_options: dict[int, Union[int, bytes]] = socket_keepalive_options or {}
+        self.socket_keepalive_options: dict[int, int | bytes] = socket_keepalive_options or {}
 
     async def _connect(self) -> None:
         async with self._transport_lock:
@@ -803,16 +795,16 @@ class UnixDomainSocketConnection(BaseConnection):
     def __init__(
         self,
         path: str = "",
-        username: Optional[str] = None,
-        password: Optional[str] = None,
-        credential_provider: Optional[AbstractCredentialProvider] = None,
+        username: str | None = None,
+        password: str | None = None,
+        credential_provider: AbstractCredentialProvider | None = None,
         db: int = 0,
-        stream_timeout: Optional[float] = None,
-        connect_timeout: Optional[float] = None,
+        stream_timeout: float | None = None,
+        connect_timeout: float | None = None,
         encoding: str = "utf-8",
         decode_responses: bool = False,
         *,
-        client_name: Optional[str] = None,
+        client_name: str | None = None,
         protocol_version: Literal[2, 3] = 3,
         **_: ValueT,
     ) -> None:
@@ -849,19 +841,19 @@ class ClusterConnection(Connection):
         self,
         host: str = "127.0.0.1",
         port: int = 6379,
-        username: Optional[str] = None,
-        password: Optional[str] = None,
-        credential_provider: Optional[AbstractCredentialProvider] = None,
-        db: Optional[int] = 0,
-        stream_timeout: Optional[float] = None,
-        connect_timeout: Optional[float] = None,
-        ssl_context: Optional[ssl.SSLContext] = None,
+        username: str | None = None,
+        password: str | None = None,
+        credential_provider: AbstractCredentialProvider | None = None,
+        db: int | None = 0,
+        stream_timeout: float | None = None,
+        connect_timeout: float | None = None,
+        ssl_context: ssl.SSLContext | None = None,
         encoding: str = "utf-8",
         decode_responses: bool = False,
-        socket_keepalive: Optional[bool] = None,
-        socket_keepalive_options: Optional[dict[int, Union[int, bytes]]] = None,
+        socket_keepalive: bool | None = None,
+        socket_keepalive_options: dict[int, int | bytes] | None = None,
         *,
-        client_name: Optional[str] = None,
+        client_name: str | None = None,
         protocol_version: Literal[2, 3] = 3,
         read_from_replicas: bool = False,
         noreply: bool = False,

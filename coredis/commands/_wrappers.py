@@ -20,7 +20,6 @@ from coredis.typing import (
     Callable,
     Coroutine,
     NamedTuple,
-    Optional,
     P,
     R,
     ResponseType,
@@ -44,14 +43,14 @@ class RedirectUsage(NamedTuple):
 @dataclasses.dataclass
 class CommandDetails:
     command: bytes
-    group: Optional[CommandGroup]
-    version_introduced: Optional[version.Version]
-    version_deprecated: Optional[version.Version]
-    _arguments: Optional[dict[str, dict[str, str]]]
+    group: CommandGroup | None
+    version_introduced: version.Version | None
+    version_deprecated: version.Version | None
+    _arguments: dict[str, dict[str, str]] | None
     cluster: ClusterCommandConfig
-    cache_config: Optional[CacheConfig]
+    cache_config: CacheConfig | None
     flags: set[CommandFlag]
-    redirect_usage: Optional[RedirectUsage]
+    redirect_usage: RedirectUsage | None
     arguments: dict[str, version.Version] = dataclasses.field(
         init=False, default_factory=lambda: {}
     )
@@ -67,9 +66,9 @@ class CommandDetails:
 @dataclasses.dataclass
 class ClusterCommandConfig:
     enabled: bool = True
-    combine: Optional[ClusterMultiNodeCallback] = None  # type: ignore
-    route: Optional[NodeFlag] = None
-    split: Optional[NodeFlag] = None
+    combine: ClusterMultiNodeCallback | None = None  # type: ignore
+    route: NodeFlag | None = None
+    split: NodeFlag | None = None
 
     @property
     def multi_node(self) -> bool:
@@ -83,7 +82,7 @@ class ClusterCommandConfig:
 @dataclasses.dataclass
 class CommandCache:
     command: bytes
-    cache_config: Optional[CacheConfig]
+    cache_config: CacheConfig | None
 
     @contextlib.asynccontextmanager
     async def __call__(
@@ -146,15 +145,15 @@ class CommandCache:
 
 def redis_command(
     command_name: CommandName,
-    group: Optional[CommandGroup] = None,
-    version_introduced: Optional[str] = None,
-    version_deprecated: Optional[str] = None,
-    deprecation_reason: Optional[str] = None,
-    redirect_usage: Optional[RedirectUsage] = None,
-    arguments: Optional[dict[str, dict[str, str]]] = None,
-    flags: Optional[set[CommandFlag]] = None,
+    group: CommandGroup | None = None,
+    version_introduced: str | None = None,
+    version_deprecated: str | None = None,
+    deprecation_reason: str | None = None,
+    redirect_usage: RedirectUsage | None = None,
+    arguments: dict[str, dict[str, str]] | None = None,
+    flags: set[CommandFlag] | None = None,
     cluster: ClusterCommandConfig = ClusterCommandConfig(),
-    cache_config: Optional[CacheConfig] = None,
+    cache_config: CacheConfig | None = None,
 ) -> Callable[[Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]]:
     readonly = False
     if flags and CommandFlag.READONLY in flags:

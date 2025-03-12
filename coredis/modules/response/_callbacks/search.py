@@ -14,12 +14,10 @@ from coredis.response._callbacks import ResponseCallback
 from coredis.response._utils import flat_pairs_to_dict
 from coredis.typing import (
     AnyStr,
-    Optional,
     ResponsePrimitive,
     ResponseType,
     StringT,
     TypedDict,
-    Union,
     ValueT,
 )
 
@@ -27,12 +25,12 @@ from coredis.typing import (
 class SearchConfigCallback(
     ResponseCallback[
         list[list[ResponsePrimitive]],
-        Union[dict[AnyStr, ResponseType], list[list[ResponsePrimitive]]],
+        dict[AnyStr, ResponseType] | list[list[ResponsePrimitive]],
         dict[AnyStr, ResponsePrimitive],
     ]
 ):
     def transform(
-        self, response: list[list[ResponsePrimitive]], **options: Optional[ValueT]
+        self, response: list[list[ResponsePrimitive]], **options: ValueT | None
     ) -> dict[AnyStr, ResponsePrimitive]:
         pieces = []
         for item in response:
@@ -45,8 +43,8 @@ class SearchConfigCallback(
 
     def transform_3(
         self,
-        response: Union[dict[AnyStr, ResponseType], list[list[ResponsePrimitive]]],
-        **options: Optional[ValueT],
+        response: dict[AnyStr, ResponseType] | list[list[ResponsePrimitive]],
+        **options: ValueT | None,
     ) -> dict[AnyStr, ResponsePrimitive]:
         if isinstance(response, list):
             return self.transform(response, **options)
@@ -63,12 +61,12 @@ class SearchConfigCallback(
 class SearchResultCallback(
     ResponseCallback[
         list[ResponseType],
-        Union[list[ResponseType], dict[AnyStr, ResponseType]],
+        list[ResponseType] | dict[AnyStr, ResponseType],
         SearchResult[AnyStr],
     ]
 ):
     def transform(
-        self, response: list[ResponseType], **options: Optional[ValueT]
+        self, response: list[ResponseType], **options: ValueT | None
     ) -> SearchResult[AnyStr]:
         if options.get("nocontent"):
             return SearchResult[AnyStr](
@@ -113,8 +111,8 @@ class SearchResultCallback(
 
     def transform_3(
         self,
-        response: Union[list[ResponseType], dict[AnyStr, ResponseType]],
-        **options: Optional[ValueT],
+        response: list[ResponseType] | dict[AnyStr, ResponseType],
+        **options: ValueT | None,
     ) -> SearchResult[AnyStr]:
         results = []
         if isinstance(response, list):
@@ -148,12 +146,12 @@ class SearchResultCallback(
 class AggregationResultCallback(
     ResponseCallback[
         list[ResponseType],
-        Union[dict[AnyStr, ResponseType], list[ResponseType]],
+        dict[AnyStr, ResponseType] | list[ResponseType],
         SearchAggregationResult[AnyStr],
     ]
 ):
     def transform(
-        self, response: list[ResponseType], **options: Optional[ValueT]
+        self, response: list[ResponseType], **options: ValueT | None
     ) -> SearchAggregationResult:
         return SearchAggregationResult[AnyStr](
             [
@@ -165,8 +163,8 @@ class AggregationResultCallback(
 
     def transform_3(
         self,
-        response: Union[dict[AnyStr, ResponseType], list[ResponseType]],
-        **options: Optional[ValueT],
+        response: dict[AnyStr, ResponseType] | list[ResponseType],
+        **options: ValueT | None,
     ) -> SearchAggregationResult:
         if (
             options.get("with_cursor")
@@ -203,13 +201,11 @@ class SpellCheckResult(TypedDict):
 class SpellCheckCallback(
     ResponseCallback[
         list[ResponseType],
-        Union[dict[AnyStr, ResponseType], list[ResponseType]],
+        dict[AnyStr, ResponseType] | list[ResponseType],
         SpellCheckResult,
     ]
 ):
-    def transform(
-        self, response: list[ResponseType], **options: Optional[ValueT]
-    ) -> SpellCheckResult:
+    def transform(self, response: list[ResponseType], **options: ValueT | None) -> SpellCheckResult:
         suggestions = {}
         for result in response:
             suggestions[result[1]] = OrderedDict((k[1], float(k[0])) for k in result[2])
@@ -218,8 +214,8 @@ class SpellCheckCallback(
 
     def transform_3(
         self,
-        response: Union[dict[AnyStr, ResponseType], list[ResponseType]],
-        **options: Optional[ValueT],
+        response: dict[AnyStr, ResponseType] | list[ResponseType],
+        **options: ValueT | None,
     ) -> SpellCheckResult:
         if isinstance(response, list):
             return self.transform(response, **options)

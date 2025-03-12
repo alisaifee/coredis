@@ -17,11 +17,9 @@ from coredis.typing import (
     AnyStr,
     Generic,
     Literal,
-    Optional,
     ResponsePrimitive,
     ResponseType,
     StringT,
-    Union,
     ValueT,
 )
 
@@ -74,7 +72,7 @@ class QueryCallback(
         self.labels = {}
 
     async def pre_process(
-        self, client: Client[Any], response: ResponseType, **options: Optional[ValueT]
+        self, client: Client[Any], response: ResponseType, **options: ValueT | None
     ) -> None:
         if not len(response) == 3:
             return
@@ -143,7 +141,7 @@ class QueryCallback(
         return cache[f"{self.graph}:{type}"]
 
     def transform(
-        self, response: ResponseType, **options: Optional[ValueT]
+        self, response: ResponseType, **options: ValueT | None
     ) -> GraphQueryResult[AnyStr]:
         result_set = []
         headers = []
@@ -209,11 +207,11 @@ class QueryCallback(
 
 
 class GraphSlowLogCallback(
-    ResponseCallback[ResponseType, ResponseType, Union[tuple[GraphSlowLogInfo, ...], bool]]
+    ResponseCallback[ResponseType, ResponseType, tuple[GraphSlowLogInfo, ...] | bool]
 ):
     def transform(
-        self, response: ResponseType, **kwargs: Optional[ValueT]
-    ) -> Union[tuple[GraphSlowLogInfo, ...], bool]:
+        self, response: ResponseType, **kwargs: ValueT | None
+    ) -> tuple[GraphSlowLogInfo, ...] | bool:
         return tuple(GraphSlowLogInfo(int(k[0]), k[1], k[2], float(k[3])) for k in response)
 
 
@@ -221,12 +219,12 @@ class ConfigGetCallback(
     ResponseCallback[
         ResponseType,
         ResponseType,
-        Union[ResponsePrimitive, dict[AnyStr, ResponsePrimitive]],
+        ResponsePrimitive | dict[AnyStr, ResponsePrimitive],
     ]
 ):
     def transform(
-        self, response: ResponseType, **options: Optional[ValueT]
-    ) -> Union[ResponsePrimitive, dict[AnyStr, ResponsePrimitive]]:
+        self, response: ResponseType, **options: ValueT | None
+    ) -> ResponsePrimitive | dict[AnyStr, ResponsePrimitive]:
         if isinstance(response, list):
             if isinstance(response[0], list):
                 return dict(response)

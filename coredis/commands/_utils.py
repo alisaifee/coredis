@@ -8,21 +8,20 @@ from typing import TYPE_CHECKING, Any
 from coredis.commands.constants import CommandName
 from coredis.config import Config
 from coredis.exceptions import CommandNotSupportedError, CommandSyntaxError
-from coredis.typing import Optional, Union
 
 if TYPE_CHECKING:
     import coredis.client
     from coredis.commands._wrappers import CommandDetails
 
 
-def normalized_seconds(value: Union[int, datetime.timedelta]) -> int:
+def normalized_seconds(value: int | datetime.timedelta) -> int:
     if isinstance(value, datetime.timedelta):
         value = value.seconds + value.days * 24 * 3600
 
     return value
 
 
-def normalized_milliseconds(value: Union[int, datetime.timedelta]) -> int:
+def normalized_milliseconds(value: int | datetime.timedelta) -> int:
     if isinstance(value, datetime.timedelta):
         ms = int(value.microseconds / 1000)
         value = (value.seconds + value.days * 24 * 3600) * 1000 + ms
@@ -30,7 +29,7 @@ def normalized_milliseconds(value: Union[int, datetime.timedelta]) -> int:
     return value
 
 
-def normalized_time_seconds(value: Union[int, datetime.datetime]) -> int:
+def normalized_time_seconds(value: int | datetime.datetime) -> int:
     if isinstance(value, datetime.datetime):
         s = int(value.microsecond / 1000000)
         value = int(time.mktime(value.timetuple())) + s
@@ -38,7 +37,7 @@ def normalized_time_seconds(value: Union[int, datetime.datetime]) -> int:
     return value
 
 
-def normalized_time_milliseconds(value: Union[int, datetime.datetime]) -> int:
+def normalized_time_milliseconds(value: int | datetime.datetime) -> int:
     if isinstance(value, datetime.datetime):
         ms = int(value.microsecond / 1000)
         value = int(time.mktime(value.timetuple())) * 1000 + ms
@@ -50,7 +49,7 @@ async def check_version(
     instance: coredis.client.Client[Any],
     function_name: str,
     command_details: CommandDetails,
-    deprecation_reason: Optional[str] = None,
+    deprecation_reason: str | None = None,
     kwargs: dict[str, Any] = {},
 ) -> None:
     if Config.optimized or not any(

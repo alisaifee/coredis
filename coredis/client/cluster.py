@@ -47,7 +47,6 @@ from coredis.typing import (
     Iterator,
     Literal,
     Node,
-    Optional,
     Parameters,
     ParamSpec,
     ResponseType,
@@ -163,33 +162,33 @@ class RedisCluster(
     @overload
     def __init__(
         self: RedisCluster[bytes],
-        host: Optional[str] = ...,
-        port: Optional[int] = ...,
+        host: str | None = ...,
+        port: int | None = ...,
         *,
-        startup_nodes: Optional[Iterable[Node]] = ...,
-        stream_timeout: Optional[float] = ...,
-        connect_timeout: Optional[float] = ...,
+        startup_nodes: Iterable[Node] | None = ...,
+        stream_timeout: float | None = ...,
+        connect_timeout: float | None = ...,
         ssl: bool = ...,
-        ssl_context: Optional[SSLContext] = ...,
-        ssl_keyfile: Optional[str] = ...,
-        ssl_certfile: Optional[str] = ...,
-        ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = ...,
-        ssl_check_hostname: Optional[bool] = ...,
-        ssl_ca_certs: Optional[str] = ...,
+        ssl_context: SSLContext | None = ...,
+        ssl_keyfile: str | None = ...,
+        ssl_certfile: str | None = ...,
+        ssl_cert_reqs: Literal["optional", "required", "none"] | None = ...,
+        ssl_check_hostname: bool | None = ...,
+        ssl_ca_certs: str | None = ...,
         max_connections: int = ...,
         max_connections_per_node: bool = ...,
         readonly: bool = ...,
         read_from_replicas: bool = ...,
-        reinitialize_steps: Optional[int] = ...,
+        reinitialize_steps: int | None = ...,
         skip_full_coverage_check: bool = ...,
         nodemanager_follow_cluster: bool = ...,
         decode_responses: Literal[False] = ...,
-        connection_pool: Optional[ClusterConnectionPool] = ...,
+        connection_pool: ClusterConnectionPool | None = ...,
         connection_pool_cls: type[ClusterConnectionPool] = ...,
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         non_atomic_cross_slot: bool = ...,
-        cache: Optional[AbstractCache] = ...,
+        cache: AbstractCache | None = ...,
         noreply: bool = ...,
         noevict: bool = ...,
         notouch: bool = ...,
@@ -200,33 +199,33 @@ class RedisCluster(
     @overload
     def __init__(
         self: RedisCluster[str],
-        host: Optional[str] = ...,
-        port: Optional[int] = ...,
+        host: str | None = ...,
+        port: int | None = ...,
         *,
-        startup_nodes: Optional[Iterable[Node]] = ...,
-        stream_timeout: Optional[float] = ...,
-        connect_timeout: Optional[float] = ...,
+        startup_nodes: Iterable[Node] | None = ...,
+        stream_timeout: float | None = ...,
+        connect_timeout: float | None = ...,
         ssl: bool = ...,
-        ssl_context: Optional[SSLContext] = ...,
-        ssl_keyfile: Optional[str] = ...,
-        ssl_certfile: Optional[str] = ...,
-        ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = ...,
-        ssl_check_hostname: Optional[bool] = ...,
-        ssl_ca_certs: Optional[str] = ...,
+        ssl_context: SSLContext | None = ...,
+        ssl_keyfile: str | None = ...,
+        ssl_certfile: str | None = ...,
+        ssl_cert_reqs: Literal["optional", "required", "none"] | None = ...,
+        ssl_check_hostname: bool | None = ...,
+        ssl_ca_certs: str | None = ...,
         max_connections: int = ...,
         max_connections_per_node: bool = ...,
         readonly: bool = ...,
         read_from_replicas: bool = ...,
-        reinitialize_steps: Optional[int] = ...,
+        reinitialize_steps: int | None = ...,
         skip_full_coverage_check: bool = ...,
         nodemanager_follow_cluster: bool = ...,
         decode_responses: Literal[True],
-        connection_pool: Optional[ClusterConnectionPool] = ...,
+        connection_pool: ClusterConnectionPool | None = ...,
         connection_pool_cls: type[ClusterConnectionPool] = ...,
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         non_atomic_cross_slot: bool = ...,
-        cache: Optional[AbstractCache] = ...,
+        cache: AbstractCache | None = ...,
         noreply: bool = ...,
         noevict: bool = ...,
         notouch: bool = ...,
@@ -236,33 +235,33 @@ class RedisCluster(
 
     def __init__(
         self,
-        host: Optional[str] = None,
-        port: Optional[int] = None,
+        host: str | None = None,
+        port: int | None = None,
         *,
-        startup_nodes: Optional[Iterable[Node]] = None,
-        stream_timeout: Optional[float] = None,
-        connect_timeout: Optional[float] = None,
+        startup_nodes: Iterable[Node] | None = None,
+        stream_timeout: float | None = None,
+        connect_timeout: float | None = None,
         ssl: bool = False,
-        ssl_context: Optional[SSLContext] = None,
-        ssl_keyfile: Optional[str] = None,
-        ssl_certfile: Optional[str] = None,
-        ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = None,
-        ssl_check_hostname: Optional[bool] = None,
-        ssl_ca_certs: Optional[str] = None,
+        ssl_context: SSLContext | None = None,
+        ssl_keyfile: str | None = None,
+        ssl_certfile: str | None = None,
+        ssl_cert_reqs: Literal["optional", "required", "none"] | None = None,
+        ssl_check_hostname: bool | None = None,
+        ssl_ca_certs: str | None = None,
         max_connections: int = 32,
         max_connections_per_node: bool = False,
         readonly: bool = False,
         read_from_replicas: bool = False,
-        reinitialize_steps: Optional[int] = None,
+        reinitialize_steps: int | None = None,
         skip_full_coverage_check: bool = False,
         nodemanager_follow_cluster: bool = True,
         decode_responses: bool = False,
-        connection_pool: Optional[ClusterConnectionPool] = None,
+        connection_pool: ClusterConnectionPool | None = None,
         connection_pool_cls: type[ClusterConnectionPool] = ClusterConnectionPool,
         protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
         non_atomic_cross_slot: bool = True,
-        cache: Optional[AbstractCache] = None,
+        cache: AbstractCache | None = None,
         noreply: bool = False,
         noevict: bool = False,
         notouch: bool = False,
@@ -481,10 +480,10 @@ class RedisCluster(
         )
         self.non_atomic_cross_slot = non_atomic_cross_slot
         self.cache = cache
-        self._decodecontext: contextvars.ContextVar[Optional[bool],] = contextvars.ContextVar(
+        self._decodecontext: contextvars.ContextVar[bool | None,] = contextvars.ContextVar(
             "decode", default=None
         )
-        self._encodingcontext: contextvars.ContextVar[Optional[str],] = contextvars.ContextVar(
+        self._encodingcontext: contextvars.ContextVar[str | None,] = contextvars.ContextVar(
             "decode", default=None
         )
 
@@ -494,7 +493,7 @@ class RedisCluster(
         cls: type[RedisClusterBytesT],
         url: str,
         *,
-        db: Optional[int] = ...,
+        db: int | None = ...,
         skip_full_coverage_check: bool = ...,
         decode_responses: Literal[False] = ...,
         protocol_version: Literal[2, 3] = ...,
@@ -503,7 +502,7 @@ class RedisCluster(
         noevict: bool = ...,
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
-        cache: Optional[AbstractCache] = ...,
+        cache: AbstractCache | None = ...,
         **kwargs: Any,
     ) -> RedisClusterBytesT: ...
 
@@ -513,7 +512,7 @@ class RedisCluster(
         cls: type[RedisClusterStringT],
         url: str,
         *,
-        db: Optional[int] = ...,
+        db: int | None = ...,
         skip_full_coverage_check: bool = ...,
         decode_responses: Literal[True],
         protocol_version: Literal[2, 3] = ...,
@@ -522,7 +521,7 @@ class RedisCluster(
         noevict: bool = ...,
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
-        cache: Optional[AbstractCache] = ...,
+        cache: AbstractCache | None = ...,
         **kwargs: Any,
     ) -> RedisClusterStringT: ...
 
@@ -531,7 +530,7 @@ class RedisCluster(
         cls: type[RedisClusterT],
         url: str,
         *,
-        db: Optional[int] = None,
+        db: int | None = None,
         skip_full_coverage_check: bool = False,
         decode_responses: bool = False,
         protocol_version: Literal[2, 3] = 3,
@@ -539,7 +538,7 @@ class RedisCluster(
         noreply: bool = False,
         noevict: bool = False,
         notouch: bool = False,
-        cache: Optional[AbstractCache] = None,
+        cache: AbstractCache | None = None,
         retry_policy: RetryPolicy = CompositeRetryPolicy(
             ConstantRetryPolicy((ClusterDownError,), 2, 0.1),
             ConstantRetryPolicy(
@@ -663,9 +662,7 @@ class RedisCluster(
         if not self.connection_pool.initialized or self.refresh_table_asap:
             await self
 
-    def _determine_slots(
-        self, command: bytes, *args: ValueT, **options: Optional[ValueT]
-    ) -> set[int]:
+    def _determine_slots(self, command: bytes, *args: ValueT, **options: ValueT | None) -> set[int]:
         """Determines the slots the command and args would touch"""
         keys = cast(tuple[ValueT, ...], options.get("keys")) or KeySpec.extract_keys(
             command, *args, readonly_command=self.connection_pool.read_from_replicas
@@ -691,7 +688,7 @@ class RedisCluster(
         self,
         command: bytes,
         res: dict[str, R],
-        **kwargs: Optional[ValueT],
+        **kwargs: ValueT | None,
     ) -> R:
         assert command in self.result_callbacks
         return cast(
@@ -699,9 +696,7 @@ class RedisCluster(
             self.result_callbacks[command](res, version=self.protocol_version, **kwargs),
         )
 
-    def determine_node(
-        self, command: bytes, **kwargs: Optional[ValueT]
-    ) -> Optional[list[ManagedNode]]:
+    def determine_node(self, command: bytes, **kwargs: ValueT | None) -> list[ManagedNode] | None:
         node_flag = self.route_flags.get(command)
         if command in self.split_flags and self.non_atomic_cross_slot:
             node_flag = self.split_flags[command]
@@ -713,7 +708,7 @@ class RedisCluster(
         elif node_flag == NodeFlag.ALL:
             return list(self.connection_pool.nodes.all_nodes())
         elif node_flag == NodeFlag.SLOT_ID:
-            slot_id: Optional[ValueT] = kwargs.get("slot_id")
+            slot_id: ValueT | None = kwargs.get("slot_id")
             node_from_slot = (
                 self.connection_pool.nodes.node_from_slot(int(slot_id))
                 if slot_id is not None
@@ -738,7 +733,7 @@ class RedisCluster(
         command: bytes,
         *args: ValueT,
         callback: Callable[..., R] = NoopCallback(),
-        **kwargs: Optional[ValueT],
+        **kwargs: ValueT | None,
     ) -> R:
         """
         Sends a command to one or many nodes in the cluster
@@ -759,7 +754,7 @@ class RedisCluster(
         command: bytes,
         *args: ValueT,
         callback: Callable[..., R] = NoopCallback(),
-        **kwargs: Optional[ValueT],
+        **kwargs: ValueT | None,
     ) -> R:
         """
         Sends a command to one or many nodes in the cluster
@@ -839,9 +834,9 @@ class RedisCluster(
         command: bytes,
         *args: ValueT,
         callback: Callable[..., R] = NoopCallback(),
-        node: Optional[ManagedNode] = None,
-        slots: Optional[list[int]] = None,
-        **kwargs: Optional[ValueT],
+        node: ManagedNode | None = None,
+        slots: list[int] | None = None,
+        **kwargs: ValueT | None,
     ) -> R:
         redirect_addr = None
 
@@ -954,17 +949,17 @@ class RedisCluster(
 
     @overload
     def decoding(
-        self, mode: Literal[False], encoding: Optional[str] = None
+        self, mode: Literal[False], encoding: str | None = None
     ) -> ContextManager[RedisCluster[bytes]]: ...
 
     @overload
     def decoding(
-        self, mode: Literal[True], encoding: Optional[str] = None
+        self, mode: Literal[True], encoding: str | None = None
     ) -> ContextManager[RedisCluster[str]]: ...
 
     @contextlib.contextmanager
     @versionadded(version="4.8.0")
-    def decoding(self, mode: bool, encoding: Optional[str] = None) -> Iterator[RedisCluster[Any]]:
+    def decoding(self, mode: bool, encoding: str | None = None) -> Iterator[RedisCluster[Any]]:
         """
         Context manager to temporarily change the decoding behavior
         of the client
@@ -998,7 +993,7 @@ class RedisCluster(
     def pubsub(
         self,
         ignore_subscribe_messages: bool = False,
-        retry_policy: Optional[RetryPolicy] = None,
+        retry_policy: RetryPolicy | None = None,
         **kwargs: Any,
     ) -> ClusterPubSub[AnyStr]:
         """
@@ -1021,7 +1016,7 @@ class RedisCluster(
         self,
         ignore_subscribe_messages: bool = False,
         read_from_replicas: bool = False,
-        retry_policy: Optional[RetryPolicy] = None,
+        retry_policy: RetryPolicy | None = None,
         **kwargs: Any,
     ) -> ShardedPubSub[AnyStr]:
         """
@@ -1052,9 +1047,9 @@ class RedisCluster(
 
     async def pipeline(
         self,
-        transaction: Optional[bool] = None,
-        watches: Optional[Parameters[StringT]] = None,
-        timeout: Optional[float] = None,
+        transaction: bool | None = None,
+        watches: Parameters[StringT] | None = None,
+        timeout: float | None = None,
     ) -> coredis.pipeline.ClusterPipeline[AnyStr]:
         """
         Returns a new pipeline object that can queue multiple commands for
@@ -1094,7 +1089,7 @@ class RedisCluster(
         ],
         *watches: StringT,
         value_from_callable: bool = False,
-        watch_delay: Optional[float] = None,
+        watch_delay: float | None = None,
         **kwargs: Any,
     ) -> Any:
         """
@@ -1135,9 +1130,9 @@ class RedisCluster(
 
     async def scan_iter(
         self,
-        match: Optional[StringT] = None,
-        count: Optional[int] = None,
-        type_: Optional[StringT] = None,
+        match: StringT | None = None,
+        count: int | None = None,
+        type_: StringT | None = None,
     ) -> AsyncIterator[AnyStr]:
         for node in self.primaries:
             cursor = None

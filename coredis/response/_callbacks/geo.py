@@ -2,19 +2,19 @@ from __future__ import annotations
 
 from coredis.response._callbacks import ResponseCallback
 from coredis.response.types import GeoCoordinates, GeoSearchResult
-from coredis.typing import AnyStr, Optional, ResponseType, Union, ValueT
+from coredis.typing import AnyStr, ResponseType, ValueT
 
 
 class GeoSearchCallback(
     ResponseCallback[
         ResponseType,
         ResponseType,
-        Union[int, tuple[Union[AnyStr, GeoSearchResult], ...]],
+        int | tuple[AnyStr | GeoSearchResult, ...],
     ]
 ):
     def transform(
-        self, response: ResponseType, **options: Optional[ValueT]
-    ) -> Union[int, tuple[Union[AnyStr, GeoSearchResult], ...]]:
+        self, response: ResponseType, **options: ValueT | None
+    ) -> int | tuple[AnyStr | GeoSearchResult, ...]:
         if options.get("store") or options.get("storedist"):
             return response
 
@@ -41,11 +41,11 @@ class GeoSearchCallback(
 
 
 class GeoCoordinatessCallback(
-    ResponseCallback[ResponseType, ResponseType, tuple[Optional[GeoCoordinates], ...]]
+    ResponseCallback[ResponseType, ResponseType, tuple[GeoCoordinates | None, ...]]
 ):
     def transform(
-        self, response: ResponseType, **options: Optional[ValueT]
-    ) -> tuple[Optional[GeoCoordinates], ...]:
+        self, response: ResponseType, **options: ValueT | None
+    ) -> tuple[GeoCoordinates | None, ...]:
         return tuple(
             map(
                 lambda ll: (GeoCoordinates(float(ll[0]), float(ll[1])) if ll is not None else None),

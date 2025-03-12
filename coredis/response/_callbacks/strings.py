@@ -5,20 +5,14 @@ from coredis.response._callbacks import ResponseCallback, SimpleStringCallback
 from coredis.response.types import LCSMatch, LCSResult
 from coredis.typing import (
     AnyStr,
-    Optional,
     ResponsePrimitive,
     ResponseType,
-    Union,
     ValueT,
 )
 
 
-class StringSetCallback(
-    ResponseCallback[Optional[AnyStr], Optional[AnyStr], Optional[Union[AnyStr, bool]]]
-):
-    def transform(
-        self, response: Optional[AnyStr], **options: Optional[ValueT]
-    ) -> Optional[Union[AnyStr, bool]]:
+class StringSetCallback(ResponseCallback[AnyStr | None, AnyStr | None, AnyStr | bool | None]):
+    def transform(self, response: AnyStr | None, **options: ValueT | None) -> AnyStr | bool | None:
         if options.get("get"):
             return response
         else:
@@ -29,22 +23,20 @@ class LCSCallback(
     ResponseCallback[
         list[ResponseType],
         dict[ResponsePrimitive, ResponseType],
-        Union[AnyStr, int, LCSResult],
+        AnyStr | int | LCSResult,
     ]
 ):
     def transform(
         self,
-        response: Union[
-            list[ResponseType],
-            dict[ResponsePrimitive, ResponseType],
-        ],
-        **options: Optional[ValueT],
+        response: (list[ResponseType] | dict[ResponsePrimitive, ResponseType]),
+        **options: ValueT | None,
     ) -> LCSResult:
         assert (
             isinstance(response, list)
             and isinstance(response[-1], int)
             and isinstance(response[1], list)
         )
+
         return LCSResult(
             tuple(
                 LCSMatch(
@@ -60,9 +52,10 @@ class LCSCallback(
     def transform_3(
         self,
         response: dict[ResponsePrimitive, ResponseType],
-        **options: Optional[ValueT],
+        **options: ValueT | None,
     ) -> LCSResult:
         proxy = EncodingInsensitiveDict(response)
+
         return LCSResult(
             tuple(
                 LCSMatch(

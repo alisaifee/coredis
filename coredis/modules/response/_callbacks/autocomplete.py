@@ -2,19 +2,19 @@ from __future__ import annotations
 
 from coredis.modules.response.types import AutocompleteSuggestion
 from coredis.response._callbacks import ResponseCallback
-from coredis.typing import AnyStr, Optional, ResponseType, Union, ValueT
+from coredis.typing import AnyStr, ResponseType, ValueT
 
 
 class AutocompleteCallback(
     ResponseCallback[
         list[ResponseType],
         list[ResponseType],
-        Union[tuple[AutocompleteSuggestion[AnyStr], ...], tuple[()]],
+        tuple[AutocompleteSuggestion[AnyStr], ...] | tuple[()],
     ]
 ):
     def transform(
-        self, response: list[ResponseType], **options: Optional[ValueT]
-    ) -> Union[tuple[AutocompleteSuggestion[AnyStr], ...], tuple[()]]:
+        self, response: list[ResponseType], **options: ValueT | None
+    ) -> tuple[AutocompleteSuggestion[AnyStr], ...] | tuple[()]:
         if not response:
             return ()
         step = 1

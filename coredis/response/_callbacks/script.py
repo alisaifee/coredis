@@ -9,10 +9,8 @@ from coredis.response.types import LibraryDefinition
 from coredis.typing import (
     AnyStr,
     Mapping,
-    Optional,
     ResponsePrimitive,
     ResponseType,
-    Union,
     ValueT,
 )
 
@@ -21,7 +19,7 @@ class FunctionListCallback(
     ResponseCallback[list[ResponseType], list[ResponseType], Mapping[AnyStr, LibraryDefinition]]
 ):
     def transform(
-        self, response: list[ResponseType], **options: Optional[ValueT]
+        self, response: list[ResponseType], **options: ValueT | None
     ) -> Mapping[AnyStr, LibraryDefinition]:
         libraries = [
             EncodingInsensitiveDict(flat_pairs_to_dict(cast(list[ValueT], library)))
@@ -53,19 +51,19 @@ class FunctionStatsCallback(
         list[ResponseType],
         dict[
             AnyStr,
-            Optional[Union[AnyStr, dict[AnyStr, dict[AnyStr, ResponsePrimitive]]]],
+            AnyStr | dict[AnyStr, dict[AnyStr, ResponsePrimitive]] | None,
         ],
         dict[
             AnyStr,
-            Optional[Union[AnyStr, dict[AnyStr, dict[AnyStr, ResponsePrimitive]]]],
+            AnyStr | dict[AnyStr, dict[AnyStr, ResponsePrimitive]] | None,
         ],
     ]
 ):
     def transform(
         self,
         response: list[ResponseType],
-        **options: Optional[ValueT],
-    ) -> dict[AnyStr, Optional[Union[AnyStr, dict[AnyStr, dict[AnyStr, ResponsePrimitive]]]]]:
+        **options: ValueT | None,
+    ) -> dict[AnyStr, AnyStr | dict[AnyStr, dict[AnyStr, ResponsePrimitive]] | None]:
         transformed = flat_pairs_to_dict(response)
         key = cast(AnyStr, b"engines" if b"engines" in transformed else "engines")
         engines = flat_pairs_to_dict(cast(list[AnyStr], transformed.pop(key)))
@@ -74,7 +72,7 @@ class FunctionStatsCallback(
             engines_transformed[engine] = flat_pairs_to_dict(cast(list[AnyStr], stats))
         transformed[key] = engines_transformed  # type: ignore
         return cast(
-            dict[AnyStr, Union[AnyStr, dict[AnyStr, dict[AnyStr, ResponsePrimitive]]]],
+            dict[AnyStr, AnyStr | dict[AnyStr, dict[AnyStr, ResponsePrimitive]]],
             transformed,
         )
 
@@ -82,8 +80,8 @@ class FunctionStatsCallback(
         self,
         response: dict[
             AnyStr,
-            Optional[Union[AnyStr, dict[AnyStr, dict[AnyStr, ResponsePrimitive]]]],
+            AnyStr | dict[AnyStr, dict[AnyStr, ResponsePrimitive]] | None,
         ],
-        **options: Optional[ValueT],
-    ) -> dict[AnyStr, Optional[Union[AnyStr, dict[AnyStr, dict[AnyStr, ResponsePrimitive]]]]]:
+        **options: ValueT | None,
+    ) -> dict[AnyStr, AnyStr | dict[AnyStr, dict[AnyStr, ResponsePrimitive]] | None]:
         return response

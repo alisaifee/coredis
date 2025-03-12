@@ -9,11 +9,9 @@ from coredis.typing import (
     Hashable,
     Iterable,
     Mapping,
-    Optional,
     ResponseType,
     StringT,
     TypeVar,
-    Union,
 )
 
 T = TypeVar("T")
@@ -23,7 +21,7 @@ U = TypeVar("U")
 class EncodingInsensitiveDict(ObjectProxy):  # type: ignore
     def __init__(
         self,
-        dict: Optional[Union[Mapping[Any, Any], ResponseType]] = None,
+        dict: Mapping[Any, Any] | ResponseType | None = None,
         encoding: str = "utf-8",
     ):
         d = dict or {}
@@ -41,10 +39,10 @@ class EncodingInsensitiveDict(ObjectProxy):  # type: ignore
             )
         return self.__wrapped__[item]
 
-    def get(self, item: StringT, default: Optional[object] = None) -> Any:
+    def get(self, item: StringT, default: object | None = None) -> Any:
         return self.__getitem__(item) or default
 
-    def pop(self, item: StringT, default: Optional[object] = None) -> Any:
+    def pop(self, item: StringT, default: object | None = None) -> Any:
         if item in self.__wrapped__:
             return self.__wrapped__.pop(item)
         if isinstance(item, str):
@@ -114,7 +112,7 @@ class CaseAndEncodingInsensitiveEnum(bytes, enum.Enum):
         return hash(self.value)
 
 
-def b(x: ResponseType, encoding: Optional[str] = None) -> bytes:
+def b(x: ResponseType, encoding: str | None = None) -> bytes:
     if isinstance(x, bytes):
         return x
     if not isinstance(x, str):
@@ -124,7 +122,7 @@ def b(x: ResponseType, encoding: Optional[str] = None) -> bytes:
     return _v.encode(encoding) if encoding else _v.encode()
 
 
-def defaultvalue(value: Optional[U], default: T) -> Union[U, T]:
+def defaultvalue(value: U | None, default: T) -> U | T:
     return default if value is None else value
 
 
@@ -140,11 +138,11 @@ def tuples_to_flat_list(nested_list: Iterable[tuple[T, ...]]) -> list[T]:
     return [item for sublist in nested_list for item in sublist]
 
 
-def dict_to_flat_list(mapping: Mapping[T, U], reverse: bool = False) -> list[Union[T, U]]:
-    e1: list[Union[T, U]] = list(mapping.keys())
-    e2: list[Union[T, U]] = list(mapping.values())
+def dict_to_flat_list(mapping: Mapping[T, U], reverse: bool = False) -> list[T | U]:
+    e1: list[T | U] = list(mapping.keys())
+    e2: list[T | U] = list(mapping.values())
 
-    ret: list[Union[T, U]] = []
+    ret: list[T | U] = []
 
     if reverse:
         e1, e2 = e2, e1
@@ -176,7 +174,7 @@ def make_hashable(*args: Any) -> tuple[Hashable, ...]:
     )
 
 
-def query_param_to_bool(value: Optional[Any]) -> Optional[bool]:
+def query_param_to_bool(value: Any | None) -> bool | None:
     if value is None or value in ("", b""):
         return None
     if isinstance(value, (int, float, bool, str, bytes)):

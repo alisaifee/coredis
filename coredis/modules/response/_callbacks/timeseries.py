@@ -12,11 +12,9 @@ from coredis.response._utils import flat_pairs_to_dict
 from coredis.typing import (
     AnyStr,
     Mapping,
-    Optional,
     ResponsePrimitive,
     ResponseType,
     Sequence,
-    Union,
     ValueT,
 )
 
@@ -25,29 +23,29 @@ class SampleCallback(
     ResponseCallback[
         list[ValueT],
         list[ValueT],
-        Union[tuple[int, float], tuple[()]],
+        tuple[int, float] | tuple[()],
     ]
 ):
     def transform(
         self,
         response: list[ValueT],
-        **options: Optional[ValueT],
-    ) -> Union[tuple[int, float], tuple[()]]:
+        **options: ValueT | None,
+    ) -> tuple[int, float] | tuple[()]:
         return (int(response[0]), float(response[1])) if response else ()
 
 
 class SamplesCallback(
     ResponseCallback[
-        Optional[list[list[ValueT]]],
-        Optional[list[list[ValueT]]],
-        Union[tuple[tuple[int, float], ...], tuple[()]],
+        list[list[ValueT]] | None,
+        list[list[ValueT]] | None,
+        tuple[tuple[int, float], ...] | tuple[()],
     ],
 ):
     def transform(
         self,
-        response: Optional[list[list[ValueT]]],
-        **options: Optional[ValueT],
-    ) -> Union[tuple[tuple[int, float], ...], tuple[()]]:
+        response: list[list[ValueT]] | None,
+        **options: ValueT | None,
+    ) -> tuple[tuple[int, float], ...] | tuple[()]:
         if response:
             return tuple(cast(tuple[int, float], SampleCallback().transform(r)) for r in response)
         return ()
@@ -56,8 +54,8 @@ class SamplesCallback(
 class TimeSeriesInfoCallback(DictCallback[AnyStr, ResponseType]):
     def transform(
         self,
-        response: Union[Sequence[ResponseType], dict[ResponsePrimitive, ResponseType]],
-        **options: Optional[ValueT],
+        response: Sequence[ResponseType] | dict[ResponsePrimitive, ResponseType],
+        **options: ValueT | None,
     ) -> dict[AnyStr, ResponseType]:
         dct = EncodingInsensitiveDict(super().transform(response, **options))
         if "labels" in dct:
@@ -74,12 +72,12 @@ class TimeSeriesCallback(
     ResponseCallback[
         ResponseType,
         ResponseType,
-        dict[AnyStr, tuple[dict[AnyStr, AnyStr], Union[tuple[int, float], tuple[()]]]],
+        dict[AnyStr, tuple[dict[AnyStr, AnyStr], tuple[int, float] | tuple[()]]],
     ]
 ):
     def transform(
-        self, response: ResponseType, **options: Optional[ValueT]
-    ) -> dict[AnyStr, tuple[dict[AnyStr, AnyStr], Union[tuple[int, float], tuple[()]]]]:
+        self, response: ResponseType, **options: ValueT | None
+    ) -> dict[AnyStr, tuple[dict[AnyStr, AnyStr], tuple[int, float] | tuple[()]]]:
         if isinstance(response, dict):
             return {k: (v[0], tuple(v[1])) for k, v in response.items()}
         else:
@@ -94,15 +92,15 @@ class TimeSeriesMultiCallback(
         ResponseType,
         dict[
             AnyStr,
-            tuple[dict[AnyStr, AnyStr], Union[tuple[tuple[int, float], ...], tuple[()]]],
+            tuple[dict[AnyStr, AnyStr], tuple[tuple[int, float], ...] | tuple[()]],
         ],
     ]
 ):
     def transform(
-        self, response: ResponseType, **options: Optional[ValueT]
+        self, response: ResponseType, **options: ValueT | None
     ) -> dict[
         AnyStr,
-        tuple[dict[AnyStr, AnyStr], Union[tuple[tuple[int, float], ...], tuple[()]]],
+        tuple[dict[AnyStr, AnyStr], tuple[tuple[int, float], ...] | tuple[()]],
     ]:
         if options.get("grouped"):
             return {
@@ -122,10 +120,10 @@ class TimeSeriesMultiCallback(
             }
 
     def transform_3(
-        self, response: ResponseType, **options: Optional[ValueT]
+        self, response: ResponseType, **options: ValueT | None
     ) -> dict[
         AnyStr,
-        tuple[dict[AnyStr, AnyStr], Union[tuple[tuple[int, float], ...], tuple[()]]],
+        tuple[dict[AnyStr, AnyStr], tuple[tuple[int, float], ...] | tuple[()]],
     ]:
         if isinstance(response, dict):
             if options.get("grouped"):
@@ -155,7 +153,7 @@ class ClusterMergeTimeSeries(ClusterMergeMapping[AnyStr, tuple[Any, ...]]):
     def combine(
         self,
         responses: Mapping[str, dict[AnyStr, tuple[Any, ...]]],
-        **kwargs: Optional[ValueT],
+        **kwargs: ValueT | None,
     ) -> dict[AnyStr, tuple[Any, ...]]:
         if not kwargs.get("grouped"):
             return super().combine(responses, **kwargs)

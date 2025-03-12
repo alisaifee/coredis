@@ -10,7 +10,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from coredis.response._callbacks import NoopCallback
-from coredis.typing import AnyStr, Callable, Generic, Optional, R, ValueT
+from coredis.typing import AnyStr, Callable, Generic, R, ValueT
 
 # Command wrappers
 from .bitfield import BitFieldOperation
@@ -27,7 +27,7 @@ class CommandMixin(Generic[AnyStr], ABC):
         command: bytes,
         *args: ValueT,
         callback: Callable[..., R] = NoopCallback(),
-        **options: Optional[ValueT],
+        **options: ValueT | None,
     ) -> R:
         pass
 

@@ -23,9 +23,7 @@ from coredis.typing import (
     Generic,
     Iterable,
     Literal,
-    Optional,
     StringT,
-    Union,
 )
 
 
@@ -35,19 +33,19 @@ class SentinelManagedConnection(Connection, Generic[AnyStr]):
         connection_pool: SentinelConnectionPool,
         host: str = "127.0.0.1",
         port: int = 6379,
-        username: Optional[str] = None,
-        password: Optional[str] = None,
-        credential_provider: Optional[AbstractCredentialProvider] = None,
+        username: str | None = None,
+        password: str | None = None,
+        credential_provider: AbstractCredentialProvider | None = None,
         db: int = 0,
-        stream_timeout: Optional[float] = None,
-        connect_timeout: Optional[float] = None,
-        ssl_context: Optional[ssl.SSLContext] = None,
+        stream_timeout: float | None = None,
+        connect_timeout: float | None = None,
+        ssl_context: ssl.SSLContext | None = None,
         encoding: str = "utf-8",
         decode_responses: bool = False,
-        socket_keepalive: Optional[bool] = None,
-        socket_keepalive_options: Optional[dict[int, Union[int, bytes]]] = None,
+        socket_keepalive: bool | None = None,
+        socket_keepalive_options: dict[int, int | bytes] | None = None,
         *,
-        client_name: Optional[str] = None,
+        client_name: str | None = None,
         protocol_version: Literal[2, 3] = 2,
     ):
         self.connection_pool: SentinelConnectionPool = weakref.proxy(connection_pool)
@@ -104,8 +102,8 @@ class SentinelConnectionPool(ConnectionPool):
     Sentinel backed connection pool.
     """
 
-    primary_address: Optional[tuple[str, int]]
-    replica_counter: Optional[int]
+    primary_address: tuple[str, int] | None
+    replica_counter: int | None
 
     def __init__(
         self,
@@ -194,9 +192,9 @@ class Sentinel(Generic[AnyStr]):
         self: Sentinel[bytes],
         sentinels: Iterable[tuple[str, int]],
         min_other_sentinels: int = ...,
-        sentinel_kwargs: Optional[dict[str, Any]] = ...,
+        sentinel_kwargs: dict[str, Any] | None = ...,
         decode_responses: Literal[False] = ...,
-        cache: Optional[AbstractCache] = None,
+        cache: AbstractCache | None = None,
         **connection_kwargs: Any,
     ) -> None: ...
 
@@ -205,9 +203,9 @@ class Sentinel(Generic[AnyStr]):
         self: Sentinel[str],
         sentinels: Iterable[tuple[str, int]],
         min_other_sentinels: int = ...,
-        sentinel_kwargs: Optional[dict[str, Any]] = ...,
+        sentinel_kwargs: dict[str, Any] | None = ...,
         decode_responses: Literal[True] = ...,
-        cache: Optional[AbstractCache] = None,
+        cache: AbstractCache | None = None,
         **connection_kwargs: Any,
     ) -> None: ...
 
@@ -215,9 +213,9 @@ class Sentinel(Generic[AnyStr]):
         self,
         sentinels: Iterable[tuple[str, int]],
         min_other_sentinels: int = 0,
-        sentinel_kwargs: Optional[dict[str, Any]] = None,
+        sentinel_kwargs: dict[str, Any] | None = None,
         decode_responses: bool = False,
-        cache: Optional[AbstractCache] = None,
+        cache: AbstractCache | None = None,
         **connection_kwargs: Any,
     ) -> None:
         """
@@ -285,7 +283,7 @@ class Sentinel(Generic[AnyStr]):
 
     def __check_primary_state(
         self,
-        state: dict[str, Union[int, bool, str]],
+        state: dict[str, int | bool | str],
     ) -> bool:
         if not state["is_master"] or state["is_sdown"] or state["is_odown"]:
             return False
@@ -296,7 +294,7 @@ class Sentinel(Generic[AnyStr]):
         return True
 
     def __filter_replicas(
-        self, replicas: Iterable[dict[str, Union[str, int, bool]]]
+        self, replicas: Iterable[dict[str, str | int | bool]]
     ) -> list[tuple[str, int]]:
         """Removes replicas that are in an ODOWN or SDOWN state"""
         replicas_alive: list[tuple[str, int]] = []
@@ -376,7 +374,7 @@ class Sentinel(Generic[AnyStr]):
         redis_class: type[Redis[Any]] = Redis[Any],
         connection_pool_class: type[SentinelConnectionPool] = SentinelConnectionPool,
         **kwargs: Any,
-    ) -> Union[Redis[bytes], Redis[str]]:
+    ) -> Redis[bytes] | Redis[str]:
         """
         Returns a redis client instance for the :paramref:`service_name` primary.
 
@@ -434,7 +432,7 @@ class Sentinel(Generic[AnyStr]):
         redis_class: type[Redis[Any]] = Redis[Any],
         connection_pool_class: type[SentinelConnectionPool] = SentinelConnectionPool,
         **kwargs: Any,
-    ) -> Union[Redis[bytes], Redis[str]]:
+    ) -> Redis[bytes] | Redis[str]:
         """
         Returns redis client instance for the :paramref:`service_name` replica(s).
 

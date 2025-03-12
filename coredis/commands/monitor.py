@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 from coredis.commands.constants import CommandName
 from coredis.exceptions import RedisError
 from coredis.response.types import MonitorResult
-from coredis.typing import AnyStr, Callable, Generator, Generic, Optional, TypeVar
+from coredis.typing import AnyStr, Callable, Generator, Generic, TypeVar
 
 if TYPE_CHECKING:
     import coredis.client
@@ -39,7 +39,7 @@ class Monitor(Generic[AnyStr]):
     def __init__(self, client: coredis.client.Client[AnyStr]):
         self.client: coredis.client.Client[AnyStr] = client
         self.encoding = client.encoding
-        self.connection: Optional[coredis.connection.Connection] = None
+        self.connection: coredis.connection.Connection | None = None
         self.monitoring = False
 
     def __aiter__(self) -> Monitor[AnyStr]:
@@ -77,7 +77,7 @@ class Monitor(Generic[AnyStr]):
     def run_in_thread(
         self,
         response_handler: Callable[[MonitorResult], None],
-        loop: Optional[AbstractEventLoop] = None,
+        loop: AbstractEventLoop | None = None,
     ) -> MonitorThread:
         """
         Runs the monitor in a :class:`MonitorThread` and invokes :paramref:`response_handler`
@@ -137,7 +137,7 @@ class MonitorThread(threading.Thread):
         self._monitor = monitor
         self._loop = loop
         self._response_handler = response_handler
-        self._future: Optional[Future[None]] = None
+        self._future: Future[None] | None = None
         super().__init__()
 
     def run(self) -> None:

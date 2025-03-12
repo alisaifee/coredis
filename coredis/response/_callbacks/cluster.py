@@ -7,10 +7,8 @@ from coredis.response.types import ClusterNode, ClusterNodeDetail
 from coredis.typing import (
     AnyStr,
     Mapping,
-    Optional,
     ResponsePrimitive,
     ResponseType,
-    Union,
     ValueT,
 )
 
@@ -19,7 +17,7 @@ class ClusterLinksCallback(
     ResponseCallback[ResponseType, ResponseType, list[dict[AnyStr, ResponsePrimitive]]]
 ):
     def transform(
-        self, response: ResponseType, **options: Optional[ValueT]
+        self, response: ResponseType, **options: ValueT | None
     ) -> list[dict[AnyStr, ResponsePrimitive]]:
         transformed: list[dict[AnyStr, ResponsePrimitive]] = []
 
@@ -28,13 +26,13 @@ class ClusterLinksCallback(
         return transformed
 
     def transform_3(
-        self, response: ResponseType, **options: Optional[ValueT]
+        self, response: ResponseType, **options: ValueT | None
     ) -> list[dict[AnyStr, ResponsePrimitive]]:
         return response
 
 
 class ClusterInfoCallback(ResponseCallback[ResponseType, ResponseType, dict[str, str]]):
-    def transform(self, response: ResponseType, **options: Optional[ValueT]) -> dict[str, str]:
+    def transform(self, response: ResponseType, **options: ValueT | None) -> dict[str, str]:
         response_str = nativestr(response)
         return dict([line.split(":") for line in response_str.splitlines() if line])
 
@@ -43,7 +41,7 @@ class ClusterSlotsCallback(
     ResponseCallback[ResponseType, ResponseType, dict[tuple[int, int], tuple[ClusterNode, ...]]]
 ):
     def transform(
-        self, response: ResponseType, **options: Optional[ValueT]
+        self, response: ResponseType, **options: ValueT | None
     ) -> dict[tuple[int, int], tuple[ClusterNode, ...]]:
         res: dict[tuple[int, int], tuple[ClusterNode, ...]] = {}
 
@@ -55,7 +53,7 @@ class ClusterSlotsCallback(
 
         return res
 
-    def parse_node(self, node: list[Union[int, str]]) -> ClusterNode:
+    def parse_node(self, node: list[int | str]) -> ClusterNode:
         return ClusterNode(
             host=nativestr(node[0]),
             port=int(node[1]),
@@ -66,9 +64,9 @@ class ClusterSlotsCallback(
 
 class ClusterNodesCallback(ResponseCallback[ResponseType, ResponseType, list[ClusterNodeDetail]]):
     def transform(
-        self, response: ResponseType, **options: Optional[ValueT]
+        self, response: ResponseType, **options: ValueT | None
     ) -> list[ClusterNodeDetail]:
-        resp: Union[list[str], str]
+        resp: list[str] | str
 
         if isinstance(response, list):
             resp = [nativestr(row) for row in response]
@@ -152,13 +150,13 @@ class ClusterShardsCallback(
     ResponseCallback[
         ResponseType,
         ResponseType,
-        list[dict[AnyStr, Union[list[ValueT], Mapping[AnyStr, ValueT]]]],
+        list[dict[AnyStr, list[ValueT] | Mapping[AnyStr, ValueT]]],
     ]
 ):
     def transform(
-        self, response: ResponseType, **options: Optional[ValueT]
-    ) -> list[dict[AnyStr, Union[list[ValueT], Mapping[AnyStr, ValueT]]]]:
-        shard_mapping: list[dict[AnyStr, Union[list[ValueT], Mapping[AnyStr, ValueT]]]] = []
+        self, response: ResponseType, **options: ValueT | None
+    ) -> list[dict[AnyStr, list[ValueT] | Mapping[AnyStr, ValueT]]]:
+        shard_mapping: list[dict[AnyStr, list[ValueT] | Mapping[AnyStr, ValueT]]] = []
 
         for shard in response:
             transformed = EncodingInsensitiveDict(flat_pairs_to_dict(shard))
@@ -171,6 +169,6 @@ class ClusterShardsCallback(
         return shard_mapping
 
     def transform_3(
-        self, response: ResponseType, **options: Optional[ValueT]
-    ) -> list[dict[AnyStr, Union[list[ValueT], Mapping[AnyStr, ValueT]]]]:
+        self, response: ResponseType, **options: ValueT | None
+    ) -> list[dict[AnyStr, list[ValueT] | Mapping[AnyStr, ValueT]]]:
         return response

@@ -61,13 +61,11 @@ from coredis.typing import (
     Iterator,
     KeyT,
     Literal,
-    Optional,
     Parameters,
     ParamSpec,
     ResponseType,
     StringT,
     TypeVar,
-    Union,
     ValueT,
 )
 
@@ -90,40 +88,40 @@ class Client(
     ModuleMixin[AnyStr],
     SentinelCommands[AnyStr],
 ):
-    cache: Optional[AbstractCache]
+    cache: AbstractCache | None
     connection_pool: ConnectionPool
     decode_responses: bool
     encoding: str
     protocol_version: Literal[2, 3]
-    server_version: Optional[Version]
+    server_version: Version | None
     callback_storage: dict[type[ResponseCallback[Any, Any, Any]], dict[str, Any]]
 
     def __init__(
         self,
-        host: Optional[str] = "localhost",
-        port: Optional[int] = 6379,
+        host: str | None = "localhost",
+        port: int | None = 6379,
         db: int = 0,
-        username: Optional[str] = None,
-        password: Optional[str] = None,
-        credential_provider: Optional[AbstractCredentialProvider] = None,
-        stream_timeout: Optional[float] = None,
-        connect_timeout: Optional[float] = None,
-        connection_pool: Optional[ConnectionPool] = None,
+        username: str | None = None,
+        password: str | None = None,
+        credential_provider: AbstractCredentialProvider | None = None,
+        stream_timeout: float | None = None,
+        connect_timeout: float | None = None,
+        connection_pool: ConnectionPool | None = None,
         connection_pool_cls: type[ConnectionPool] = ConnectionPool,
-        unix_socket_path: Optional[str] = None,
+        unix_socket_path: str | None = None,
         encoding: str = "utf-8",
         decode_responses: bool = False,
         ssl: bool = False,
-        ssl_context: Optional[SSLContext] = None,
-        ssl_keyfile: Optional[str] = None,
-        ssl_certfile: Optional[str] = None,
-        ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = None,
-        ssl_check_hostname: Optional[bool] = None,
-        ssl_ca_certs: Optional[str] = None,
-        max_connections: Optional[int] = None,
+        ssl_context: SSLContext | None = None,
+        ssl_keyfile: str | None = None,
+        ssl_certfile: str | None = None,
+        ssl_cert_reqs: Literal["optional", "required", "none"] | None = None,
+        ssl_check_hostname: bool | None = None,
+        ssl_ca_certs: str | None = None,
+        max_connections: int | None = None,
         max_idle_time: float = 0,
         idle_check_interval: float = 1,
-        client_name: Optional[str] = None,
+        client_name: str | None = None,
         protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
         noreply: bool = False,
@@ -189,20 +187,20 @@ class Client(
             3,
         }, "Protocol version can only be one of {2,3}"
         self.protocol_version = connection_protocol_version
-        self.server_version: Optional[Version] = None
+        self.server_version: Version | None = None
         self.verify_version = verify_version
         self.__noreply = noreply
-        self._noreplycontext: contextvars.ContextVar[Optional[bool]] = contextvars.ContextVar(
+        self._noreplycontext: contextvars.ContextVar[bool | None] = contextvars.ContextVar(
             "noreply", default=None
         )
-        self._waitcontext: contextvars.ContextVar[Optional[tuple[int, int]]] = (
-            contextvars.ContextVar("wait", default=None)
+        self._waitcontext: contextvars.ContextVar[tuple[int, int] | None] = contextvars.ContextVar(
+            "wait", default=None
         )
-        self._waitaof_context: contextvars.ContextVar[Optional[tuple[int, int, int]]] = (
+        self._waitaof_context: contextvars.ContextVar[tuple[int, int, int] | None] = (
             contextvars.ContextVar("waitaof", default=None)
         )
         self.retry_policy = retry_policy
-        self._module_info: Optional[dict[str, version.Version]] = None
+        self._module_info: dict[str, version.Version] | None = None
         self.callback_storage = defaultdict(dict)
 
     @property
@@ -226,12 +224,12 @@ class Client(
             return False
         return True
 
-    async def get_server_module_version(self, module: str) -> Optional[version.Version]:
+    async def get_server_module_version(self, module: str) -> version.Version | None:
         if self._module_info is None:
             await self._populate_module_versions()
         return (self._module_info or {}).get(module)
 
-    def _ensure_server_version(self, version: Optional[str]) -> None:
+    def _ensure_server_version(self, version: str | None) -> None:
         if not self.verify_version or Config.optimized:
             return
         if not version:
@@ -328,9 +326,9 @@ class Client(
 
     async def scan_iter(
         self,
-        match: Optional[StringT] = None,
-        count: Optional[int] = None,
-        type_: Optional[StringT] = None,
+        match: StringT | None = None,
+        count: int | None = None,
+        type_: StringT | None = None,
     ) -> AsyncIterator[AnyStr]:
         """
         Make an iterator using the SCAN command so that the client doesn't
@@ -347,8 +345,8 @@ class Client(
     async def sscan_iter(
         self,
         key: KeyT,
-        match: Optional[StringT] = None,
-        count: Optional[int] = None,
+        match: StringT | None = None,
+        count: int | None = None,
     ) -> AsyncIterator[AnyStr]:
         """
         Make an iterator using the SSCAN command so that the client doesn't
@@ -366,15 +364,15 @@ class Client(
     def hscan_iter(
         self,
         key: KeyT,
-        match: Optional[StringT] = ...,
-        count: Optional[int] = ...,
+        match: StringT | None = ...,
+        count: int | None = ...,
     ) -> AsyncGenerator[tuple[AnyStr, AnyStr], None]: ...
     @overload
     def hscan_iter(
         self,
         key: KeyT,
-        match: Optional[StringT] = ...,
-        count: Optional[int] = ...,
+        match: StringT | None = ...,
+        count: int | None = ...,
         *,
         novalues: Literal[True],
     ) -> AsyncGenerator[AnyStr, None]: ...
@@ -382,15 +380,15 @@ class Client(
     async def hscan_iter(
         self,
         key: KeyT,
-        match: Optional[StringT] = None,
-        count: Optional[int] = None,
-        novalues: Optional[Literal[True]] = None,
-    ) -> Union[AsyncGenerator[tuple[AnyStr, AnyStr], None], AsyncGenerator[AnyStr, None]]:
+        match: StringT | None = None,
+        count: int | None = None,
+        novalues: Literal[True] | None = None,
+    ) -> AsyncGenerator[tuple[AnyStr, AnyStr], None] | AsyncGenerator[AnyStr, None]:
         """
         Make an iterator using the HSCAN command so that the client doesn't
         need to remember the cursor position.
         """
-        cursor: Optional[int] = None
+        cursor: int | None = None
         while cursor != 0:
             # TODO: find a better way to narrow the return type from hscan
             if novalues:
@@ -408,8 +406,8 @@ class Client(
     async def zscan_iter(
         self,
         key: KeyT,
-        match: Optional[StringT] = None,
-        count: Optional[int] = None,
+        match: StringT | None = None,
+        count: int | None = None,
     ) -> AsyncIterator[ScoredMember]:
         """
         Make an iterator using the ZSCAN command so that the client doesn't
@@ -554,34 +552,34 @@ class Redis(Client[AnyStr]):
     @overload
     def __init__(
         self: Redis[bytes],
-        host: Optional[str] = ...,
-        port: Optional[int] = ...,
+        host: str | None = ...,
+        port: int | None = ...,
         db: int = ...,
         *,
-        username: Optional[str] = ...,
-        password: Optional[str] = ...,
-        credential_provider: Optional[AbstractCredentialProvider] = ...,
-        stream_timeout: Optional[float] = ...,
-        connect_timeout: Optional[float] = ...,
-        connection_pool: Optional[ConnectionPool] = ...,
+        username: str | None = ...,
+        password: str | None = ...,
+        credential_provider: AbstractCredentialProvider | None = ...,
+        stream_timeout: float | None = ...,
+        connect_timeout: float | None = ...,
+        connection_pool: ConnectionPool | None = ...,
         connection_pool_cls: type[ConnectionPool] = ...,
-        unix_socket_path: Optional[str] = ...,
+        unix_socket_path: str | None = ...,
         encoding: str = ...,
         decode_responses: Literal[False] = ...,
         ssl: bool = ...,
-        ssl_context: Optional[SSLContext] = ...,
-        ssl_keyfile: Optional[str] = ...,
-        ssl_certfile: Optional[str] = ...,
-        ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = ...,
-        ssl_check_hostname: Optional[bool] = ...,
-        ssl_ca_certs: Optional[str] = ...,
-        max_connections: Optional[int] = ...,
+        ssl_context: SSLContext | None = ...,
+        ssl_keyfile: str | None = ...,
+        ssl_certfile: str | None = ...,
+        ssl_cert_reqs: Literal["optional", "required", "none"] | None = ...,
+        ssl_check_hostname: bool | None = ...,
+        ssl_ca_certs: str | None = ...,
+        max_connections: int | None = ...,
         max_idle_time: float = ...,
         idle_check_interval: float = ...,
-        client_name: Optional[str] = ...,
+        client_name: str | None = ...,
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
-        cache: Optional[AbstractCache] = ...,
+        cache: AbstractCache | None = ...,
         noreply: bool = ...,
         noevict: bool = ...,
         notouch: bool = ...,
@@ -592,34 +590,34 @@ class Redis(Client[AnyStr]):
     @overload
     def __init__(
         self: Redis[str],
-        host: Optional[str] = ...,
-        port: Optional[int] = ...,
+        host: str | None = ...,
+        port: int | None = ...,
         db: int = ...,
         *,
-        username: Optional[str] = ...,
-        password: Optional[str] = ...,
-        credential_provider: Optional[AbstractCredentialProvider] = ...,
-        stream_timeout: Optional[float] = ...,
-        connect_timeout: Optional[float] = ...,
-        connection_pool: Optional[ConnectionPool] = ...,
+        username: str | None = ...,
+        password: str | None = ...,
+        credential_provider: AbstractCredentialProvider | None = ...,
+        stream_timeout: float | None = ...,
+        connect_timeout: float | None = ...,
+        connection_pool: ConnectionPool | None = ...,
         connection_pool_cls: type[ConnectionPool] = ...,
-        unix_socket_path: Optional[str] = ...,
+        unix_socket_path: str | None = ...,
         encoding: str = ...,
         decode_responses: Literal[True],
         ssl: bool = ...,
-        ssl_context: Optional[SSLContext] = ...,
-        ssl_keyfile: Optional[str] = ...,
-        ssl_certfile: Optional[str] = ...,
-        ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = ...,
-        ssl_check_hostname: Optional[bool] = ...,
-        ssl_ca_certs: Optional[str] = ...,
-        max_connections: Optional[int] = ...,
+        ssl_context: SSLContext | None = ...,
+        ssl_keyfile: str | None = ...,
+        ssl_certfile: str | None = ...,
+        ssl_cert_reqs: Literal["optional", "required", "none"] | None = ...,
+        ssl_check_hostname: bool | None = ...,
+        ssl_ca_certs: str | None = ...,
+        max_connections: int | None = ...,
         max_idle_time: float = ...,
         idle_check_interval: float = ...,
-        client_name: Optional[str] = ...,
+        client_name: str | None = ...,
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
-        cache: Optional[AbstractCache] = ...,
+        cache: AbstractCache | None = ...,
         noreply: bool = ...,
         noevict: bool = ...,
         notouch: bool = ...,
@@ -629,34 +627,34 @@ class Redis(Client[AnyStr]):
 
     def __init__(
         self,
-        host: Optional[str] = "localhost",
-        port: Optional[int] = 6379,
+        host: str | None = "localhost",
+        port: int | None = 6379,
         db: int = 0,
         *,
-        username: Optional[str] = None,
-        password: Optional[str] = None,
-        credential_provider: Optional[AbstractCredentialProvider] = None,
-        stream_timeout: Optional[float] = None,
-        connect_timeout: Optional[float] = None,
-        connection_pool: Optional[ConnectionPool] = None,
+        username: str | None = None,
+        password: str | None = None,
+        credential_provider: AbstractCredentialProvider | None = None,
+        stream_timeout: float | None = None,
+        connect_timeout: float | None = None,
+        connection_pool: ConnectionPool | None = None,
         connection_pool_cls: type[ConnectionPool] = ConnectionPool,
-        unix_socket_path: Optional[str] = None,
+        unix_socket_path: str | None = None,
         encoding: str = "utf-8",
         decode_responses: bool = False,
         ssl: bool = False,
-        ssl_context: Optional[SSLContext] = None,
-        ssl_keyfile: Optional[str] = None,
-        ssl_certfile: Optional[str] = None,
-        ssl_cert_reqs: Optional[Literal["optional", "required", "none"]] = None,
-        ssl_check_hostname: Optional[bool] = None,
-        ssl_ca_certs: Optional[str] = None,
-        max_connections: Optional[int] = None,
+        ssl_context: SSLContext | None = None,
+        ssl_keyfile: str | None = None,
+        ssl_certfile: str | None = None,
+        ssl_cert_reqs: Literal["optional", "required", "none"] | None = None,
+        ssl_check_hostname: bool | None = None,
+        ssl_ca_certs: str | None = None,
+        max_connections: int | None = None,
         max_idle_time: float = 0,
         idle_check_interval: float = 1,
-        client_name: Optional[str] = None,
+        client_name: str | None = None,
         protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
-        cache: Optional[AbstractCache] = None,
+        cache: AbstractCache | None = None,
         noreply: bool = False,
         noevict: bool = False,
         notouch: bool = False,
@@ -817,10 +815,10 @@ class Redis(Client[AnyStr]):
             **kwargs,
         )
         self.cache = cache
-        self._decodecontext: contextvars.ContextVar[Optional[bool],] = contextvars.ContextVar(
+        self._decodecontext: contextvars.ContextVar[bool | None,] = contextvars.ContextVar(
             "decode", default=None
         )
-        self._encodingcontext: contextvars.ContextVar[Optional[str],] = contextvars.ContextVar(
+        self._encodingcontext: contextvars.ContextVar[str | None,] = contextvars.ContextVar(
             "decode", default=None
         )
 
@@ -829,7 +827,7 @@ class Redis(Client[AnyStr]):
     def from_url(
         cls: type[RedisBytesT],
         url: str,
-        db: Optional[int] = ...,
+        db: int | None = ...,
         *,
         decode_responses: Literal[False] = ...,
         protocol_version: Literal[2, 3] = ...,
@@ -838,7 +836,7 @@ class Redis(Client[AnyStr]):
         noevict: bool = ...,
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
-        cache: Optional[AbstractCache] = ...,
+        cache: AbstractCache | None = ...,
         **kwargs: Any,
     ) -> RedisBytesT: ...
 
@@ -847,7 +845,7 @@ class Redis(Client[AnyStr]):
     def from_url(
         cls: type[RedisStringT],
         url: str,
-        db: Optional[int] = ...,
+        db: int | None = ...,
         *,
         decode_responses: Literal[True],
         protocol_version: Literal[2, 3] = ...,
@@ -856,7 +854,7 @@ class Redis(Client[AnyStr]):
         noevict: bool = ...,
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
-        cache: Optional[AbstractCache] = ...,
+        cache: AbstractCache | None = ...,
         **kwargs: Any,
     ) -> RedisStringT: ...
 
@@ -864,7 +862,7 @@ class Redis(Client[AnyStr]):
     def from_url(
         cls: type[RedisT],
         url: str,
-        db: Optional[int] = None,
+        db: int | None = None,
         *,
         decode_responses: bool = False,
         protocol_version: Literal[2, 3] = 3,
@@ -873,7 +871,7 @@ class Redis(Client[AnyStr]):
         noevict: bool = False,
         notouch: bool = False,
         retry_policy: RetryPolicy = ConstantRetryPolicy((ConnectionError, TimeoutError), 2, 0.01),
-        cache: Optional[AbstractCache] = None,
+        cache: AbstractCache | None = None,
         **kwargs: Any,
     ) -> RedisT:
         """
@@ -942,7 +940,7 @@ class Redis(Client[AnyStr]):
         command: bytes,
         *args: ValueT,
         callback: Callable[..., R] = NoopCallback(),
-        **options: Optional[ValueT],
+        **options: ValueT | None,
     ) -> R:
         """
         Executes a command with configured retries and returns
@@ -958,7 +956,7 @@ class Redis(Client[AnyStr]):
         command: bytes,
         *args: ValueT,
         callback: Callable[..., R] = NoopCallback(),
-        **options: Optional[ValueT],
+        **options: ValueT | None,
     ) -> R:
         pool = self.connection_pool
         quick_release = self.should_quick_release(command)
@@ -1009,17 +1007,17 @@ class Redis(Client[AnyStr]):
 
     @overload
     def decoding(
-        self, mode: Literal[False], encoding: Optional[str] = None
+        self, mode: Literal[False], encoding: str | None = None
     ) -> ContextManager[Redis[bytes]]: ...
 
     @overload
     def decoding(
-        self, mode: Literal[True], encoding: Optional[str] = None
+        self, mode: Literal[True], encoding: str | None = None
     ) -> ContextManager[Redis[str]]: ...
 
     @contextlib.contextmanager
     @versionadded(version="4.8.0")
-    def decoding(self, mode: bool, encoding: Optional[str] = None) -> Iterator[Redis[Any]]:
+    def decoding(self, mode: bool, encoding: str | None = None) -> Iterator[Redis[Any]]:
         """
         Context manager to temporarily change the decoding behavior
         of the client
@@ -1062,7 +1060,7 @@ class Redis(Client[AnyStr]):
     def pubsub(
         self,
         ignore_subscribe_messages: bool = False,
-        retry_policy: Optional[RetryPolicy] = None,
+        retry_policy: RetryPolicy | None = None,
         **kwargs: Any,
     ) -> PubSub[AnyStr]:
         """
@@ -1083,9 +1081,9 @@ class Redis(Client[AnyStr]):
 
     async def pipeline(
         self,
-        transaction: Optional[bool] = True,
-        watches: Optional[Parameters[KeyT]] = None,
-        timeout: Optional[float] = None,
+        transaction: bool | None = True,
+        watches: Parameters[KeyT] | None = None,
+        timeout: float | None = None,
     ) -> coredis.pipeline.Pipeline[AnyStr]:
         """
         Returns a new pipeline object that can queue multiple commands for
@@ -1106,9 +1104,9 @@ class Redis(Client[AnyStr]):
         func: Callable[[coredis.pipeline.Pipeline[AnyStr]], Coroutine[Any, Any, Any]],
         *watches: KeyT,
         value_from_callable: bool = False,
-        watch_delay: Optional[float] = None,
+        watch_delay: float | None = None,
         **kwargs: Any,
-    ) -> Optional[Any]:
+    ) -> Any | None:
         """
         Convenience method for executing the callable :paramref:`func` as a
         transaction while watching all keys specified in :paramref:`watches`.

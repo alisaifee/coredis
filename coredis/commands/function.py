@@ -18,7 +18,6 @@ from coredis.typing import (
     Generator,
     Generic,
     KeyT,
-    Optional,
     P,
     Parameters,
     R,
@@ -40,15 +39,15 @@ LibraryBytesT = TypeVar("LibraryBytesT", bound="Library[bytes]")
 
 class Library(Generic[AnyStr]):
     #: Class variable equivalent of the :paramref:`Library.name` argument.
-    NAME: ClassVar[Optional[StringT]] = None
+    NAME: ClassVar[StringT | None] = None
     #: Class variable equivalent of the :paramref:`Library.code` argument.
-    CODE: ClassVar[Optional[StringT]] = None
+    CODE: ClassVar[StringT | None] = None
 
     def __init__(
         self,
         client: coredis.client.Client[AnyStr],
-        name: Optional[StringT] = None,
-        code: Optional[StringT] = None,
+        name: StringT | None = None,
+        code: StringT | None = None,
         replace: bool = False,
     ) -> None:
         """
@@ -129,20 +128,20 @@ class Library(Generic[AnyStr]):
     def __await__(self: LibraryT) -> Generator[Any, None, LibraryT]:
         return self.initialize().__await__()
 
-    def __getitem__(self, function: str) -> Optional[Function[AnyStr]]:
-        return cast(Optional[Function[AnyStr]], self._functions.get(function))
+    def __getitem__(self, function: str) -> Function[AnyStr] | None:
+        return cast(Function[AnyStr] | None, self._functions.get(function))
 
     @classmethod
     @versionadded(version="3.5.0")
     def wraps(
         cls,
         function_name: str,
-        key_spec: Optional[list[KeyT]] = None,
+        key_spec: list[KeyT] | None = None,
         param_is_key: Callable[[inspect.Parameter], bool] = lambda p: (
             p.annotation in {"KeyT", KeyT}
         ),
         runtime_checks: bool = False,
-        readonly: Optional[bool] = None,
+        readonly: bool | None = None,
     ) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
         """
         Decorator for wrapping methods of subclasses of :class:`Library`
@@ -376,11 +375,11 @@ class Function(Generic[AnyStr]):
 
     async def __call__(
         self,
-        keys: Optional[Parameters[KeyT]] = None,
-        args: Optional[Parameters[ValueT]] = None,
+        keys: Parameters[KeyT] | None = None,
+        args: Parameters[ValueT] | None = None,
         *,
-        client: Optional[coredis.client.Client[AnyStr]] = None,
-        readonly: Optional[bool] = None,
+        client: coredis.client.Client[AnyStr] | None = None,
+        readonly: bool | None = None,
     ) -> ResponseType:
         """
         Wrapper to call :meth:`~coredis.Redis.fcall` with the

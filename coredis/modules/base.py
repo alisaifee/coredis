@@ -27,7 +27,6 @@ from ..typing import (
     ClassVar,
     Coroutine,
     Generic,
-    Optional,
     P,
     R,
     ValueT,
@@ -78,12 +77,12 @@ def module_command(
     command_name: CommandName,
     module: type[Module[Any]],
     group: CommandGroup,
-    flags: Optional[set[CommandFlag]] = None,
+    flags: set[CommandFlag] | None = None,
     cluster: ClusterCommandConfig = ClusterCommandConfig(),
-    cache_config: Optional[CacheConfig] = None,
-    version_introduced: Optional[str] = None,
-    version_deprecated: Optional[str] = None,
-    arguments: Optional[dict[str, dict[str, str]]] = None,
+    cache_config: CacheConfig | None = None,
+    version_introduced: str | None = None,
+    version_deprecated: str | None = None,
+    arguments: dict[str, dict[str, str]] | None = None,
 ) -> Callable[[Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]]:
     command_details = CommandDetails(
         command_name,
@@ -271,7 +270,7 @@ class ModuleGroup(Generic[AnyStr], metaclass=ModuleGroupRegistry):
         command: bytes,
         *args: ValueT,
         callback: Callable[..., R] = NoopCallback(),
-        **options: Optional[ValueT],
+        **options: ValueT | None,
     ) -> R:
         return cast(
             R,

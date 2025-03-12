@@ -17,11 +17,9 @@ from ..typing import (
     CommandArgList,
     KeyT,
     Literal,
-    Optional,
     Parameters,
     ResponseType,
     StringT,
-    Union,
     ValueT,
 )
 from .base import Module, ModuleGroup, module_command
@@ -48,7 +46,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def delete(self, key: KeyT, path: Optional[StringT] = None) -> int:
+    async def delete(self, key: KeyT, path: StringT | None = None) -> int:
         """
         Delete a value from a JSON document.
 
@@ -98,7 +96,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def forget(self, key: KeyT, path: Optional[ValueT] = None) -> int:
+    async def forget(self, key: KeyT, path: ValueT | None = None) -> int:
         """
         Deletes an element from a path from a json object
 
@@ -143,7 +141,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    async def clear(self, key: KeyT, path: Optional[ValueT] = None) -> int:
+    async def clear(self, key: KeyT, path: ValueT | None = None) -> int:
         """
         Clears all values from an array or an object and sets numeric values to `0`
 
@@ -170,7 +168,7 @@ class Json(ModuleGroup[AnyStr]):
         key: KeyT,
         path: ValueT,
         value: JsonType,
-        condition: Optional[Literal[PureToken.NX, PureToken.XX]] = None,
+        condition: Literal[PureToken.NX, PureToken.XX] | None = None,
     ) -> bool:
         """
         Sets or updates the JSON value at a path
@@ -269,7 +267,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def numincrby(self, key: KeyT, path: ValueT, value: Union[int, float]) -> JsonType:
+    async def numincrby(self, key: KeyT, path: ValueT, value: int | float) -> JsonType:
         """
         Increments the numeric value at path by a value
 
@@ -289,7 +287,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def nummultby(self, key: KeyT, path: ValueT, value: Union[int, float]) -> JsonType:
+    async def nummultby(self, key: KeyT, path: ValueT, value: int | float) -> JsonType:
         """
         Multiplies the numeric value at path by a value
 
@@ -312,9 +310,9 @@ class Json(ModuleGroup[AnyStr]):
     async def strappend(
         self,
         key: KeyT,
-        value: Optional[Union[str, bytes, int, float]],
-        path: Optional[KeyT] = None,
-    ) -> Optional[Union[int, list[Optional[int]]]]:
+        value: str | bytes | int | float | None,
+        path: KeyT | None = None,
+    ) -> int | list[int | None] | None:
         """
         Appends a string to a JSON string value at path
 
@@ -340,9 +338,7 @@ class Json(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
-    async def strlen(
-        self, key: KeyT, path: Optional[KeyT] = None
-    ) -> Optional[Union[int, list[Optional[int]]]]:
+    async def strlen(self, key: KeyT, path: KeyT | None = None) -> int | list[int | None] | None:
         """
         Returns the length of the JSON String at path in key
 
@@ -371,8 +367,8 @@ class Json(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         values: Parameters[JsonType],
-        path: Optional[KeyT] = None,
-    ) -> Optional[Union[int, list[Optional[int]]]]:
+        path: KeyT | None = None,
+    ) -> int | list[int | None] | None:
         """
         Append one or more json values into the array at path after the last element in it.
 
@@ -405,10 +401,10 @@ class Json(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         path: ValueT,
-        value: Union[str, bytes, int, float],
-        start: Optional[int] = None,
-        stop: Optional[int] = None,
-    ) -> Optional[Union[int, list[Optional[int]]]]:
+        value: str | bytes | int | float,
+        start: int | None = None,
+        stop: int | None = None,
+    ) -> int | list[int | None] | None:
         """
         Returns the index of the first occurrence of a JSON scalar value in the array at path
 
@@ -443,7 +439,7 @@ class Json(ModuleGroup[AnyStr]):
         path: ValueT,
         index: int,
         values: Parameters[JsonType],
-    ) -> Optional[Union[int, list[Optional[int]]]]:
+    ) -> int | list[int | None] | None:
         """
         Inserts the JSON scalar(s) value at the specified index in the array at path
 
@@ -471,9 +467,7 @@ class Json(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
-    async def arrlen(
-        self, key: KeyT, path: Optional[KeyT] = None
-    ) -> Optional[Union[int, list[Optional[int]]]]:
+    async def arrlen(self, key: KeyT, path: KeyT | None = None) -> int | list[int | None] | None:
         """
         Returns the length of the array at path
 
@@ -499,7 +493,7 @@ class Json(ModuleGroup[AnyStr]):
         module=MODULE,
     )
     async def arrpop(
-        self, key: KeyT, path: Optional[KeyT] = None, index: Optional[int] = None
+        self, key: KeyT, path: KeyT | None = None, index: int | None = None
     ) -> JsonType:
         """
         Removes and returns the element at the specified index in the array at path
@@ -528,7 +522,7 @@ class Json(ModuleGroup[AnyStr]):
     )
     async def arrtrim(
         self, key: KeyT, path: ValueT, start: int, stop: int
-    ) -> Optional[Union[int, list[Optional[int]]]]:
+    ) -> int | list[int | None] | None:
         """
         Trims the array at path to contain only the specified inclusive range of indices
         from start to stop
@@ -552,7 +546,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def objkeys(self, key: KeyT, path: Optional[StringT] = None) -> ResponseType:
+    async def objkeys(self, key: KeyT, path: StringT | None = None) -> ResponseType:
         """
         Returns the JSON keys of the object at path
 
@@ -577,9 +571,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def objlen(
-        self, key: KeyT, path: Optional[KeyT] = None
-    ) -> Optional[Union[int, list[Optional[int]]]]:
+    async def objlen(self, key: KeyT, path: KeyT | None = None) -> int | list[int | None] | None:
         """
         Returns the number of keys of the object at path
 
@@ -606,8 +598,8 @@ class Json(ModuleGroup[AnyStr]):
         cache_config=CacheConfig(lambda *a, **_: a[0]),
     )
     async def type(
-        self, key: KeyT, path: Optional[KeyT] = None
-    ) -> Optional[Union[AnyStr, list[Optional[AnyStr]]]]:
+        self, key: KeyT, path: KeyT | None = None
+    ) -> AnyStr | list[AnyStr | None] | None:
         """
         Returns the type of the JSON value at path
 
@@ -630,7 +622,7 @@ class Json(ModuleGroup[AnyStr]):
         module=MODULE,
         flags={CommandFlag.READONLY},
     )
-    async def resp(self, key: KeyT, path: Optional[KeyT] = None) -> ResponseType:
+    async def resp(self, key: KeyT, path: KeyT | None = None) -> ResponseType:
         """
         Returns the JSON value at path in Redis Serialization Protocol (RESP)
 
@@ -653,8 +645,8 @@ class Json(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
     )
     async def debug_memory(
-        self, key: KeyT, path: Optional[KeyT] = None
-    ) -> Optional[Union[int, list[Optional[int]]]]:
+        self, key: KeyT, path: KeyT | None = None
+    ) -> int | list[int | None] | None:
         """
         Reports the size in bytes of a key
         """

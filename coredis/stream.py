@@ -19,7 +19,6 @@ from coredis.typing import (
     Generator,
     Generic,
     KeyT,
-    Optional,
     Parameters,
     StringT,
     TypedDict,
@@ -34,8 +33,8 @@ class StreamParameters(TypedDict):
 
 
 class State(TypedDict, total=False):
-    identifier: Optional[StringT]
-    pending: Optional[bool]
+    identifier: StringT | None
+    pending: bool | None
 
 
 class Consumer(Generic[AnyStr]):
@@ -47,7 +46,7 @@ class Consumer(Generic[AnyStr]):
         client: Client[AnyStr],
         streams: Parameters[KeyT],
         buffer_size: int = 0,
-        timeout: Optional[int] = 0,
+        timeout: int | None = 0,
         **stream_parameters: StreamParameters,
     ):
         """
@@ -116,7 +115,7 @@ class Consumer(Generic[AnyStr]):
         self._initialized = True
         return self
 
-    async def add_stream(self, stream: StringT, identifier: Optional[StringT] = None) -> bool:
+    async def add_stream(self, stream: StringT, identifier: StringT | None = None) -> bool:
         """
         Adds a new stream identifier to this consumer
 
@@ -149,7 +148,7 @@ class Consumer(Generic[AnyStr]):
             raise StopAsyncIteration()
         return stream, entry
 
-    async def get_entry(self) -> tuple[Optional[AnyStr], Optional[StreamEntry]]:
+    async def get_entry(self) -> tuple[AnyStr | None, StreamEntry | None]:
         """
         Fetches the next available entry from the streams specified in
         :paramref:`Consumer.streams`. If there were any entries
@@ -201,7 +200,7 @@ class GroupConsumer(Consumer[AnyStr]):
         auto_create: bool = True,
         auto_acknowledge: bool = False,
         start_from_backlog: bool = False,
-        timeout: Optional[int] = None,
+        timeout: int | None = None,
         **stream_parameters: StreamParameters,
     ):
         """
@@ -298,7 +297,7 @@ class GroupConsumer(Consumer[AnyStr]):
         return self
 
     @versionadded(version="4.12.0")
-    async def add_stream(self, stream: StringT, identifier: Optional[StringT] = ">") -> bool:
+    async def add_stream(self, stream: StringT, identifier: StringT | None = ">") -> bool:
         """
         Adds a new stream identifier to this consumer
 
@@ -319,7 +318,7 @@ class GroupConsumer(Consumer[AnyStr]):
         """
         return self
 
-    async def get_entry(self) -> tuple[Optional[AnyStr], Optional[StreamEntry]]:
+    async def get_entry(self) -> tuple[AnyStr | None, StreamEntry | None]:
         """
         Fetches the next available entry from the streams specified in
         :paramref:`GroupConsumer.streams`. If there were any entries

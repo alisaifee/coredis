@@ -10,10 +10,8 @@ from coredis.typing import (
     Callable,
     Coroutine,
     Iterable,
-    Optional,
     ParamSpec,
     TypeVar,
-    Union,
 )
 
 R = TypeVar("R")
@@ -21,7 +19,7 @@ P = ParamSpec("P")
 
 
 class MutuallyExclusiveParametersError(CommandSyntaxError):
-    def __init__(self, arguments: set[str], details: Optional[str]):
+    def __init__(self, arguments: set[str], details: str | None):
         message = (
             f"The [{','.join(arguments)}] parameters are mutually exclusive."
             f"{' ' + details if details else ''}"
@@ -30,7 +28,7 @@ class MutuallyExclusiveParametersError(CommandSyntaxError):
 
 
 class MutuallyInclusiveParametersMissing(CommandSyntaxError):
-    def __init__(self, arguments: set[str], leaders: set[str], details: Optional[str]):
+    def __init__(self, arguments: set[str], leaders: set[str], details: str | None):
         if leaders:
             message = (
                 f"The [{','.join(arguments)}] parameters(s)"
@@ -47,7 +45,7 @@ class MutuallyInclusiveParametersMissing(CommandSyntaxError):
 
 
 def mutually_exclusive_parameters(
-    *exclusive_params: Union[str, Iterable[str]], details: Optional[str] = None
+    *exclusive_params: str | Iterable[str], details: str | None = None
 ) -> Callable[[Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]]:
     primary = {k for k in exclusive_params if isinstance(k, str)}
     secondary = [k for k in set(exclusive_params) - primary]
@@ -89,8 +87,8 @@ def mutually_exclusive_parameters(
 
 def mutually_inclusive_parameters(
     *inclusive_params: str,
-    leaders: Optional[Iterable[str]] = None,
-    details: Optional[str] = None,
+    leaders: Iterable[str] | None = None,
+    details: str | None = None,
 ) -> Callable[[Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]]:
     _leaders = set(leaders or [])
     _inclusive_params = set(inclusive_params)

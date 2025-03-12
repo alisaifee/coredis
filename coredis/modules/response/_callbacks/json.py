@@ -5,11 +5,11 @@ from typing import cast
 from coredis._json import json
 from coredis.modules.response.types import JsonType
 from coredis.response._callbacks import ResponseCallback
-from coredis.typing import Optional, ResponseType, ValueT
+from coredis.typing import ResponseType, ValueT
 
 
 class JsonCallback(ResponseCallback[ResponseType, ResponseType, JsonType]):
-    def transform(self, response: ResponseType, **kwargs: Optional[ValueT]) -> JsonType:
+    def transform(self, response: ResponseType, **kwargs: ValueT | None) -> JsonType:
         if isinstance(response, (bytes, str)):
             deser = json.loads(response)
         elif isinstance(response, list):

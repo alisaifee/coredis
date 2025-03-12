@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import AnyStr
-
 import pytest
 from beartype.roar import BeartypeCallHintParamViolation
 
@@ -9,7 +7,7 @@ from coredis import PureToken
 from coredis.client import Client
 from coredis.commands import Script
 from coredis.exceptions import NoScriptError, NotBusyError, ResponseError
-from coredis.typing import KeyT, Optional, ValueT
+from coredis.typing import AnyStr, KeyT, ValueT
 from tests.conftest import targets
 
 multiply_script = """
@@ -213,7 +211,7 @@ class TestScripting:
             @scrpt.wraps(key_spec=["key"], client_arg="client", runtime_checks=True)
             async def default_get(
                 cls,
-                client: Optional[Client[AnyStr]],
+                client: Client[AnyStr] | None,
                 key: str,
                 default: str = "coredis",
             ) -> str: ...

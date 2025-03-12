@@ -6,10 +6,8 @@ from coredis.response._callbacks import ResponseCallback
 from coredis.typing import (
     AnyStr,
     Iterable,
-    Optional,
     ResponsePrimitive,
     ResponseType,
-    Union,
     ValueT,
 )
 
@@ -18,7 +16,7 @@ class SScanCallback(
     ResponseCallback[list[ResponseType], list[ResponseType], tuple[int, set[AnyStr]]]
 ):
     def transform(
-        self, response: list[ResponseType], **options: Optional[ValueT]
+        self, response: list[ResponseType], **options: ValueT | None
     ) -> tuple[int, set[AnyStr]]:
         cursor, r = response
         assert isinstance(cursor, (bytes, str)) and isinstance(r, Iterable)
@@ -27,16 +25,16 @@ class SScanCallback(
 
 class ItemOrSetCallback(
     ResponseCallback[
-        Union[AnyStr, list[ResponsePrimitive], set[ResponsePrimitive]],
-        Union[AnyStr, set[ResponsePrimitive]],
-        Union[AnyStr, set[AnyStr]],
+        AnyStr | list[ResponsePrimitive] | set[ResponsePrimitive],
+        AnyStr | set[ResponsePrimitive],
+        AnyStr | set[AnyStr],
     ]
 ):
     def transform(
         self,
-        response: Union[AnyStr, list[ResponsePrimitive], set[ResponsePrimitive]],
-        **options: Optional[ValueT],
-    ) -> Union[AnyStr, set[AnyStr]]:
+        response: AnyStr | list[ResponsePrimitive] | set[ResponsePrimitive],
+        **options: ValueT | None,
+    ) -> AnyStr | set[AnyStr]:
         if options.get("count"):
             if isinstance(response, set):
                 return cast(set[AnyStr], response)

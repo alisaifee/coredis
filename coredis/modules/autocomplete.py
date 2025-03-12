@@ -6,7 +6,7 @@ from ..commands._wrappers import CacheConfig
 from ..commands.constants import CommandFlag, CommandGroup, CommandName
 from ..response._callbacks import BoolCallback, IntCallback
 from ..tokens import PrefixToken, PureToken
-from ..typing import AnyStr, CommandArgList, KeyT, Optional, StringT, Union
+from ..typing import AnyStr, CommandArgList, KeyT, StringT
 from .base import ModuleGroup, module_command
 from .response._callbacks.autocomplete import AutocompleteCallback
 from .response.types import AutocompleteSuggestion
@@ -28,9 +28,9 @@ class Autocomplete(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         string: StringT,
-        score: Union[int, float],
-        increment_score: Optional[bool] = None,
-        payload: Optional[StringT] = None,
+        score: int | float,
+        increment_score: bool | None = None,
+        payload: StringT | None = None,
     ) -> int:
         """
         Adds a suggestion string to an auto-complete suggestion dictionary
@@ -66,11 +66,11 @@ class Autocomplete(ModuleGroup[AnyStr]):
         key: KeyT,
         prefix: StringT,
         *,
-        fuzzy: Optional[bool] = None,
-        withscores: Optional[bool] = None,
-        withpayloads: Optional[bool] = None,
-        max_suggestions: Optional[int] = None,
-    ) -> Union[tuple[AutocompleteSuggestion[AnyStr], ...], tuple[()]]:
+        fuzzy: bool | None = None,
+        withscores: bool | None = None,
+        withpayloads: bool | None = None,
+        max_suggestions: int | None = None,
+    ) -> tuple[AutocompleteSuggestion[AnyStr], ...] | tuple[()]:
         """
         Gets completion suggestions for a prefix
 

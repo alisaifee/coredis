@@ -5,19 +5,17 @@ from typing import cast
 from coredis.typing import (
     Callable,
     Iterable,
-    Optional,
     OrderedDict,
     StringT,
     TypeVar,
-    Union,
 )
 
 T_co = TypeVar("T_co")
 
 
 def flat_pairs_to_dict(
-    response: Union[tuple[T_co, ...], list[T_co]],
-    value_transform: Optional[Callable[..., T_co]] = None,
+    response: tuple[T_co, ...] | list[T_co],
+    value_transform: Callable[..., T_co] | None = None,
 ) -> dict[T_co, T_co]:
     """Creates a dict given a flat list of key/value pairs"""
     if isinstance(response, dict):

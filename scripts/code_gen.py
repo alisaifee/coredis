@@ -10,7 +10,6 @@ import re  # noqa
 import shutil
 import subprocess
 import typing  # noqa
-from pathlib import Path
 from typing import *  # noqa
 
 import click
@@ -114,8 +113,8 @@ REDIS_ARGUMENT_TYPE_MAPPING = {
     "pattern": StringT,
     "key": KeyT,
     "integer": int,
-    "double": Union[int, float],
-    "unix-time": Union[int, datetime.datetime],
+    "double": int | float,
+    "unix-time": int | datetime.datetime,
     "pure-token": bool,
 }
 REDIS_RETURN_ARGUMENT_TYPE_MAPPING = {
@@ -125,7 +124,7 @@ REDIS_RETURN_ARGUMENT_TYPE_MAPPING = {
         "bulk-string": AnyStr,
         "string": AnyStr,
         "array": tuple,
-        "double": Union[int, float],
+        "double": int | float,
         "unix-time": "datetime.datetime",
         "pure-token": bool,
     },
@@ -156,24 +155,24 @@ REDIS_ARGUMENT_TYPE_OVERRIDES = {
     "MIGRATE": {"port": int},
     "RESTORE": {
         "serialized_value": bytes,
-        "ttl": Union[int, datetime.timedelta, datetime.datetime],
+        "ttl": int | datetime.timedelta | datetime.datetime,
     },
     "SORT": {"gets": KeyT},
     "SORT_RO": {"gets": KeyT},
     "XADD": {"field_values": dict[StringT, ValueT], "threshold": Optional[int]},
-    "XAUTOCLAIM": {"min_idle_time": Union[int, datetime.timedelta]},
+    "XAUTOCLAIM": {"min_idle_time": int | datetime.timedelta},
     "XCLAIM": {
-        "min_idle_time": Union[int, datetime.timedelta],
-        "ms": Optional[Union[int, datetime.timedelta]],
+        "min_idle_time": int | datetime.timedelta,
+        "ms": int | datetime.timedelta | None,
     },
     "XREAD": {"streams": Mapping[ValueT, ValueT]},
     "XREADGROUP": {"streams": Mapping[ValueT, ValueT]},
     "XTRIM": {"threshold": int},
     "ZADD": {"member_scores": dict[StringT, float]},
-    "ZCOUNT": {"min": Union[ValueT, float], "max": Union[ValueT, float]},
-    "ZREVRANGE": {"min": Union[int, ValueT], "max": Union[int, ValueT]},
-    "ZRANGE": {"start": Union[int, ValueT], "stop": Union[int, ValueT]},
-    "ZRANGESTORE": {"min": Union[int, ValueT], "max": Union[int, ValueT]},
+    "ZCOUNT": {"min": ValueT | float, "max": ValueT | float},
+    "ZREVRANGE": {"min": int | ValueT, "max": int | ValueT},
+    "ZRANGE": {"start": int | ValueT, "stop": int | ValueT},
+    "ZRANGESTORE": {"min": int | ValueT, "max": int | ValueT},
 }
 IGNORED_ARGUMENTS = {
     "FCALL": ["numkeys"],
@@ -208,7 +207,7 @@ REDIS_RETURN_OVERRIDES = {
     "ACL USERS": tuple[AnyStr, ...],
     "ACL GETUSER": dict[AnyStr, list[AnyStr]],
     "ACL LIST": tuple[AnyStr, ...],
-    "ACL LOG": Union[bool, tuple[dict[AnyStr, AnyStr], ...]],
+    "ACL LOG": bool | tuple[dict[AnyStr, AnyStr], ...],
     "BZPOPMAX": Optional[tuple[AnyStr, AnyStr, float]],
     "BZPOPMIN": Optional[tuple[AnyStr, AnyStr, float]],
     "BZMPOP": Optional[tuple[AnyStr, ScoredMembers]],
@@ -219,7 +218,7 @@ REDIS_RETURN_OVERRIDES = {
     "CLUSTER LINKS": list[dict[AnyStr, ResponseType]],
     "CLUSTER NODES": list[ClusterNodeDetail],
     "CLUSTER REPLICAS": list[ClusterNodeDetail],
-    "CLUSTER SHARDS": list[dict[AnyStr, Union[list[ValueT], Mapping[AnyStr, ValueT]]]],
+    "CLUSTER SHARDS": list[dict[AnyStr, list[ValueT] | Mapping[AnyStr, ValueT]]],
     "CLUSTER SLAVES": list[ClusterNodeDetail],
     "CLUSTER SLOTS": dict[tuple[int, int], tuple[ClusterNode, ...]],
     "COMMAND": dict[str, Command],
@@ -239,18 +238,18 @@ REDIS_RETURN_OVERRIDES = {
     "FUNCTION DUMP": bytes,
     "FUNCTION LOAD": AnyStr,
     "FUNCTION STATS": dict[
-        AnyStr, Union[AnyStr, dict[AnyStr, dict[AnyStr, ResponsePrimitive]]]
+        AnyStr, AnyStr | dict[AnyStr, dict[AnyStr, ResponsePrimitive]]
     ],
     "FUNCTION LIST": dict[str, LibraryDefinition],
-    "GEODIST": Optional[float],
+    "GEODIST": float | None,
     "GEOPOS": tuple[Optional[GeoCoordinates], ...],
-    "GEOSEARCH": Union[int, tuple[Union[AnyStr, GeoSearchResult], ...]],
-    "GEORADIUSBYMEMBER": Union[int, tuple[Union[AnyStr, GeoSearchResult], ...]],
-    "GEORADIUS": Union[int, tuple[Union[AnyStr, GeoSearchResult], ...]],
+    "GEOSEARCH": int | tuple[AnyStr |  GeoSearchResult, ...],
+    "GEORADIUSBYMEMBER": int | tuple[AnyStr | GeoSearchResult, ...],
+    "GEORADIUS": int | tuple[AnyStr | GeoSearchResult, ...],
     "HELLO": dict[AnyStr, AnyStr],
     "HINCRBYFLOAT": float,
-    "HRANDFIELD": Union[AnyStr, tuple[AnyStr, ...], dict[AnyStr, AnyStr]],
-    "HMGET": tuple[Optional[AnyStr], ...],
+    "HRANDFIELD": AnyStr | tuple[AnyStr, ...] | dict[AnyStr, AnyStr],
+    "HMGET": tuple[AnyStr | None, ...],
     "HSCAN": tuple[int, dict[AnyStr, AnyStr]],
     "INCRBYFLOAT": float,
     "INFO": dict[str, ResponseType],
@@ -258,10 +257,10 @@ REDIS_RETURN_OVERRIDES = {
     "LASTSAVE": "datetime.datetime",
     "LATENCY LATEST": dict[AnyStr, tuple[int, int, int]],
     "LATENCY HISTOGRAM": dict[AnyStr, dict[AnyStr, Any]],
-    "LCS": Union[AnyStr, int, LCSResult],
-    "LPOS": Optional[Union[int, list[int]]],
-    "MEMORY STATS": dict[AnyStr, Union[AnyStr, int, float]],
-    "MGET": tuple[Optional[AnyStr], ...],
+    "LCS": AnyStr | int | LCSResult,
+    "LPOS": int | list[int] | None,
+    "MEMORY STATS": dict[AnyStr, AnyStr | int | float],
+    "MGET": tuple[AnyStr | None, ...],
     "MODULE LIST": tuple[dict, ...],
     "MONITOR": Monitor,
     "PING": AnyStr,
@@ -279,35 +278,34 @@ REDIS_RETURN_OVERRIDES = {
     "SSCAN": tuple[int, set[AnyStr]],
     "TIME": "datetime.datetime",
     "TYPE": Optional[AnyStr],
-    "XCLAIM": Union[tuple[AnyStr, ...], tuple[StreamEntry, ...]],
-    "XAUTOCLAIM": Union[
-        tuple[AnyStr, tuple[AnyStr, ...]],
-        tuple[AnyStr, tuple[StreamEntry, ...], tuple[AnyStr, ...]],
-    ],
+    "XCLAIM": tuple[AnyStr, ...] | tuple[StreamEntry, ...],
+    "XAUTOCLAIM": (
+        tuple[AnyStr, tuple[AnyStr, ...]] | tuple[AnyStr, tuple[StreamEntry, ...], tuple[AnyStr, ...]],
+    ),
     "XGROUP CREATECONSUMER": bool,
     "XINFO GROUPS": tuple[dict[AnyStr, AnyStr], ...],
     "XINFO CONSUMERS": tuple[dict[AnyStr, AnyStr], ...],
     "XINFO STREAM": StreamInfo,
-    "XPENDING": Union[tuple[StreamPendingExt, ...], StreamPending],
+    "XPENDING": tuple[StreamPendingExt, ...] | StreamPending,
     "XRANGE": tuple[StreamEntry, ...],
     "XREVRANGE": tuple[StreamEntry, ...],
     "XREADGROUP": Optional[dict[AnyStr, tuple[StreamEntry, ...]]],
     "XREAD": Optional[dict[AnyStr, tuple[StreamEntry, ...]]],
-    "ZDIFF": tuple[Union[AnyStr, ScoredMember], ...],
-    "ZINTER": tuple[Union[AnyStr, ScoredMember], ...],
+    "ZDIFF": tuple[AnyStr | ScoredMember, ...],
+    "ZINTER": tuple[AnyStr | ScoredMember, ...],
     "ZMPOP": Optional[tuple[AnyStr, ScoredMembers]],
-    "ZPOPMAX": Union[ScoredMember, ScoredMembers],
-    "ZPOPMIN": Union[ScoredMember, ScoredMembers],
-    "ZRANDMEMBER": Optional[Union[AnyStr, list[AnyStr], ScoredMembers]],
-    "ZRANGE": tuple[Union[AnyStr, ScoredMember], ...],
-    "ZRANGEBYSCORE": tuple[Union[AnyStr, ScoredMember], ...],
-    "ZREVRANGEBYSCORE": tuple[Union[AnyStr, ScoredMember], ...],
-    "ZREVRANGE": tuple[Union[AnyStr, ScoredMember], ...],
-    "ZRANK": Optional[Union[int, tuple[int, float]]],
-    "ZREVRANK": Optional[Union[int, tuple[int, float]]],
-    "ZUNION": tuple[Union[AnyStr, ScoredMember], ...],
+    "ZPOPMAX": ScoredMember | ScoredMembers,
+    "ZPOPMIN": ScoredMember | ScoredMembers,
+    "ZRANDMEMBER": AnyStr | list[AnyStr] | ScoredMembers | None,
+    "ZRANGE": tuple[AnyStr | ScoredMember, ...],
+    "ZRANGEBYSCORE": tuple[AnyStr | ScoredMember, ...],
+    "ZREVRANGEBYSCORE": tuple[AnyStr  | ScoredMember, ...],
+    "ZREVRANGE": tuple[AnyStr |  ScoredMember, ...],
+    "ZRANK": int | tuple[int, float] | None,
+    "ZREVRANK": int | tuple[int, float] | None,
+    "ZUNION": tuple[AnyStr | ScoredMember, ...],
     "ZSCAN": tuple[int, ScoredMembers],
-    "ZSCORE": Optional[float],
+    "ZSCORE": float | None,
 }
 ARGUMENT_DEFAULTS = {
     "HSCAN": {"cursor": 0},
@@ -726,7 +724,7 @@ def sanitized(x, command=None, ignore_reserved_words=False):
         .replace(" ", "_")
         .replace(".", "_")
     )
-    cleansed_name = re.sub("[!=><\(\),]", "_", cleansed_name)
+    cleansed_name = re.sub(r"[!=><\(\),]", "_", cleansed_name)
     if command:
         override = REDIS_ARGUMENT_NAME_OVERRIDES.get(command["name"], {}).get(
             cleansed_name
@@ -1816,12 +1814,12 @@ def generate_compatibility_section(
                                     if k in [e.value for e in CommandFlag]
                                 ]
                             ):
-                                if set(flags) != set(
+                                if set(flags) != {
                                     k.value for k in command_details.flags
-                                ):
-                                    missing_command_flags = set(flags) - set(
-                                        [k.value for k in command_details.flags]
-                                    )
+                                }:
+                                    missing_command_flags = set(flags) - {
+                                        k.value for k in command_details.flags
+                                    }
                                 method_details["usable_flags"] = set(flags)
                             if (
                                 src.find("@redis_command") >= 0
@@ -2425,17 +2423,15 @@ from coredis.typing import (
     KeyT,
     Literal,
     Mapping,
-    Optional,
     Parameters,
     StringT,
-    Union,
     ValueT,
 )
 
 # TODO: remove this once mypy can disambiguate class method names
 #  from builtin types. ``set`` is a redis commands with
 #  an associated method that clashes with the set[] type.
-_Set = set 
+_Set = set
 
 class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     scripts: set[Script[AnyStr]]
@@ -2448,9 +2444,9 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def __aenter__(self) -> "Pipeline[AnyStr]":...
     async def __aexit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_value: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None: ...
     {% for name, signature in commands.items() -%}
     async def {{signature["name"]}}{{render_signature(signature["pipeline"], skip_defaults=True)}}: ...
@@ -2466,9 +2462,9 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def __aenter__(self) -> "ClusterPipeline[AnyStr]":...
     async def __aexit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_value: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None: ...
     {% for name, signature in commands.items() -%}
     async def {{signature["name"]}}{{render_signature(signature["cluster"], skip_defaults=True)}}: ...

@@ -21,9 +21,7 @@ from coredis.typing import (
     ClassVar,
     Iterable,
     Node,
-    Optional,
     StringT,
-    Union,
     ValueT,
 )
 
@@ -35,7 +33,7 @@ class ClusterConnectionPool(ConnectionPool):
 
     #: Mapping of querystring arguments to their parser functions
     URL_QUERY_ARGUMENT_PARSERS: ClassVar[
-        dict[str, Callable[..., Optional[Union[int, float, bool, str]]]]
+        dict[str, Callable[..., int | float | bool | str | None]]
     ] = {
         **ConnectionPool.URL_QUERY_ARGUMENT_PARSERS,
         "max_connections_per_node": bool,
@@ -49,17 +47,17 @@ class ClusterConnectionPool(ConnectionPool):
     connection_class: type[ClusterConnection]
 
     _created_connections_per_node: dict[str, int]
-    _cluster_available_connections: dict[str, asyncio.Queue[Optional[Connection]]]
+    _cluster_available_connections: dict[str, asyncio.Queue[Connection | None]]
     _cluster_in_use_connections: dict[str, set[Connection]]
 
     def __init__(
         self,
-        startup_nodes: Optional[Iterable[Node]] = None,
+        startup_nodes: Iterable[Node] | None = None,
         connection_class: type[ClusterConnection] = ClusterConnection,
-        queue_class: type[asyncio.Queue[Optional[Connection]]] = asyncio.LifoQueue,
-        max_connections: Optional[int] = None,
+        queue_class: type[asyncio.Queue[Connection | None]] = asyncio.LifoQueue,
+        max_connections: int | None = None,
         max_connections_per_node: bool = False,
-        reinitialize_steps: Optional[int] = None,
+        reinitialize_steps: int | None = None,
         skip_full_coverage_check: bool = False,
         nodemanager_follow_cluster: bool = True,
         readonly: bool = False,
@@ -68,7 +66,7 @@ class ClusterConnectionPool(ConnectionPool):
         idle_check_interval: int = 1,
         blocking: bool = False,
         timeout: int = 20,
-        **connection_kwargs: Optional[Any],
+        **connection_kwargs: Any | None,
     ):
         """
 
@@ -200,10 +198,10 @@ class ClusterConnectionPool(ConnectionPool):
 
     async def get_connection(
         self,
-        command_name: Optional[bytes] = None,
+        command_name: bytes | None = None,
         *keys: ValueT,
         acquire: bool = True,
-        **options: Optional[ValueT],
+        **options: ValueT | None,
     ) -> Connection:
         # Only pubsub command/connection should be allowed here
 
@@ -270,14 +268,14 @@ class ClusterConnectionPool(ConnectionPool):
 
         return connection
 
-    def __node_pool(self, node: str) -> asyncio.Queue[Optional[Connection]]:
+    def __node_pool(self, node: str) -> asyncio.Queue[Connection | None]:
         if not self._cluster_available_connections.get(node):
             self._cluster_available_connections[node] = self.__default_node_queue()
         return self._cluster_available_connections[node]
 
     def __default_node_queue(
         self,
-    ) -> asyncio.Queue[Optional[Connection]]:
+    ) -> asyncio.Queue[Connection | None]:
         q_size = max(
             1,
             int(
@@ -287,7 +285,7 @@ class ClusterConnectionPool(ConnectionPool):
             ),
         )
 
-        q: asyncio.Queue[Optional[Connection]] = self.queue_class(q_size)
+        q: asyncio.Queue[Connection | None] = self.queue_class(q_size)
 
         # If the queue is non-blocking, we don't need to pre-populate it
         if not self.blocking:
@@ -432,12 +430,12 @@ class ClusterConnectionPool(ConnectionPool):
         else:
             raise RedisClusterException(f"Unable to map slots {slots} to a single node")
 
-    def get_node_by_slot(self, slot: int, command: Optional[bytes] = None) -> ManagedNode:
+    def get_node_by_slot(self, slot: int, command: bytes | None = None) -> ManagedNode:
         if self.read_from_replicas and command in READONLY_COMMANDS:
             return self.get_replica_node_by_slot(slot)
         return self.get_primary_node_by_slot(slot)
 
-    def get_node_by_slots(self, slots: list[int], command: Optional[bytes] = None) -> ManagedNode:
+    def get_node_by_slots(self, slots: list[int], command: bytes | None = None) -> ManagedNode:
         if self.read_from_replicas and command in READONLY_COMMANDS:
             return self.get_replica_node_by_slots(slots)
         return self.get_primary_node_by_slots(slots)
@@ -455,12 +453,12 @@ class BlockingClusterConnectionPool(ClusterConnectionPool):
 
     def __init__(
         self,
-        startup_nodes: Optional[Iterable[Node]] = None,
+        startup_nodes: Iterable[Node] | None = None,
         connection_class: type[ClusterConnection] = ClusterConnection,
-        queue_class: type[asyncio.Queue[Optional[Connection]]] = asyncio.LifoQueue,
-        max_connections: Optional[int] = None,
+        queue_class: type[asyncio.Queue[Connection | None]] = asyncio.LifoQueue,
+        max_connections: int | None = None,
         max_connections_per_node: bool = False,
-        reinitialize_steps: Optional[int] = None,
+        reinitialize_steps: int | None = None,
         skip_full_coverage_check: bool = False,
         nodemanager_follow_cluster: bool = True,
         readonly: bool = False,
@@ -468,7 +466,7 @@ class BlockingClusterConnectionPool(ClusterConnectionPool):
         max_idle_time: int = 0,
         idle_check_interval: int = 1,
         timeout: int = 20,
-        **connection_kwargs: Optional[Any],
+        **connection_kwargs: Any | None,
     ):
         """
 

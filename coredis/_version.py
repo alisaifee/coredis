@@ -17,7 +17,8 @@ import os
 import re
 import subprocess
 import sys
-from typing import Callable, Dict
+from typing import Dict
+from collections.abc import Callable
 
 
 def get_keywords():
@@ -107,7 +108,7 @@ def run_command(commands, args, cwd=None, verbose=False, hide_stderr=False, env=
             return None, None
     else:
         if verbose:
-            print("unable to find command, tried {}".format(commands))
+            print(f"unable to find command, tried {commands}")
         return None, None
     stdout = process.communicate()[0].strip().decode()
     if process.returncode != 0:

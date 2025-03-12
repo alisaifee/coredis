@@ -53,7 +53,6 @@ from coredis.typing import (
     Generic,
     Iterable,
     KeyT,
-    Optional,
     Parameters,
     ParamSpec,
     ResponseType,
@@ -103,14 +102,14 @@ class PipelineCommand:
     command: bytes
     args: tuple[ValueT, ...]
     callback: Callable[..., Any] = NoopCallback()  # type: ignore
-    options: dict[str, Optional[ValueT]] = field(default_factory=dict)
-    request: Optional[asyncio.Future[ResponseType]] = None
+    options: dict[str, ValueT | None] = field(default_factory=dict)
+    request: asyncio.Future[ResponseType] | None = None
 
 
 @dataclass
 class ClusterPipelineCommand(PipelineCommand):
     position: int = 0
-    result: Optional[Any] = None  # type: ignore
+    result: Any | None = None  # type: ignore
     asking: bool = False
 
 
@@ -120,7 +119,7 @@ class NodeCommands:
         client: RedisCluster[AnyStr],
         connection: ClusterConnection,
         in_transaction: bool = False,
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
     ):
         self.client = client
         self.connection = connection
@@ -270,16 +269,16 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
     def __init__(
         self,
         client: Client[AnyStr],
-        transaction: Optional[bool],
-        watches: Optional[Parameters[KeyT]] = None,
-        timeout: Optional[float] = None,
+        transaction: bool | None,
+        watches: Parameters[KeyT] | None = None,
+        timeout: float | None = None,
     ) -> None:
         self.client = client
         self.connection_pool = client.connection_pool
         self.connection = None
         self._transaction = transaction
         self.watching = False
-        self.watches: Optional[Parameters[KeyT]] = watches or None
+        self.watches: Parameters[KeyT] | None = watches or None
         self.command_stack = []
         self.cache = None  # not implemented.
         self.explicit_transaction = False
@@ -291,9 +290,9 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
 
     async def __aexit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_value: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None:
         await self.reset_pipeline()
 
@@ -347,7 +346,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         command: bytes,
         *args: ValueT,
         callback: Callable[..., Any] = NoopCallback(),  # type: ignore
-        **options: Optional[ValueT],
+        **options: ValueT | None,
     ) -> PipelineImpl[AnyStr]:  # type: ignore
         if (self.watching or command == CommandName.WATCH) and not self.explicit_transaction:
             return await self.immediate_execute_command(
@@ -361,7 +360,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         command: bytes,
         *args: ValueT,
         callback: Callable[..., Any] = NoopCallback(),  # type: ignore
-        **kwargs: Optional[ValueT],
+        **kwargs: ValueT | None,
     ) -> Any:  # type: ignore
         """
         Executes a command immediately, but don't auto-retry on a
@@ -409,7 +408,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         command: bytes,
         *args: ValueT,
         callback: Callable[..., Any],
-        **options: Optional[ValueT],
+        **options: ValueT | None,
     ) -> PipelineImpl[AnyStr]:
         """
         Stages a command to be executed next execute() invocation
@@ -471,7 +470,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         for i, cmd in enumerate(cmds):
             cmd.request = requests[i]
 
-        errors: list[tuple[int, Optional[RedisError]]] = []
+        errors: list[tuple[int, RedisError | None]] = []
         multi_failed = False
 
         # parse off the response for MULTI
@@ -588,7 +587,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
 
     def annotate_exception(
         self,
-        exception: Optional[RedisError],
+        exception: RedisError | None,
         number: int,
         command: bytes,
         args: Iterable[ValueT],
@@ -700,9 +699,9 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
     def __init__(
         self,
         client: RedisCluster[AnyStr],
-        transaction: Optional[bool] = False,
-        watches: Optional[Parameters[KeyT]] = None,
-        timeout: Optional[float] = None,
+        transaction: bool | None = False,
+        watches: Parameters[KeyT] | None = None,
+        timeout: float | None = None,
     ) -> None:
         self.command_stack = []
         self.refresh_table_asap = False
@@ -710,9 +709,9 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         self.connection_pool = client.connection_pool
         self.result_callbacks = client.result_callbacks
         self._transaction = transaction
-        self._watched_node: Optional[ManagedNode] = None
-        self._watched_connection: Optional[ClusterConnection] = None
-        self.watches: Optional[Parameters[KeyT]] = watches or None
+        self._watched_node: ManagedNode | None = None
+        self._watched_connection: ClusterConnection | None = None
+        self.watches: Parameters[KeyT] | None = watches or None
         self.watching = False
         self.explicit_transaction = False
         self.cache = None  # not implemented.
@@ -756,9 +755,9 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
     async def __aexit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_value: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None:
         await self.reset_pipeline()
 
@@ -767,7 +766,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         command: bytes,
         *args: ValueT,
         callback: Callable[..., Any] = NoopCallback(),  # type: ignore
-        **options: Optional[ValueT],
+        **options: ValueT | None,
     ) -> ClusterPipelineImpl[AnyStr]:  # type: ignore
         if (self.watching or command == CommandName.WATCH) and not self.explicit_transaction:
             return await self.immediate_execute_command(
@@ -780,7 +779,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         command: bytes,
         *args: ValueT,
         callback: Callable[..., Any],
-        **options: Optional[ValueT],
+        **options: ValueT | None,
     ) -> ClusterPipelineImpl[AnyStr]:
         self.command_stack.append(
             ClusterPipelineCommand(
@@ -804,7 +803,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
     def annotate_exception(
         self,
-        exception: Optional[RedisError],
+        exception: RedisError | None,
         number: int,
         command: bytes,
         args: Iterable[ValueT],
@@ -1047,7 +1046,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         command: bytes,
         *args: ValueT,
         callback: Callable[..., Any] = NoopCallback(),
-        **kwargs: Optional[ValueT],
+        **kwargs: ValueT | None,
     ) -> Any:
         slot = self._determine_slot(command, *args)
         node = self.connection_pool.get_node_by_slot(slot)
@@ -1139,9 +1138,9 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
 
     async def __aexit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_value: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None:
         await self.__wrapped__.__aexit__(exc_type, exc_value, traceback)
 
@@ -1149,9 +1148,9 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     def proxy(
         cls,
         client: Redis[AnyStr],
-        transaction: Optional[bool] = None,
-        watches: Optional[Parameters[KeyT]] = None,
-        timeout: Optional[float] = None,
+        transaction: bool | None = None,
+        watches: Parameters[KeyT] | None = None,
+        timeout: float | None = None,
     ) -> Pipeline[AnyStr]:
         return cls(
             PipelineImpl(
@@ -1215,9 +1214,9 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
 
     async def __aexit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_value: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None:
         await self.__wrapped__.__aexit__(exc_type, exc_value, traceback)
 
@@ -1225,9 +1224,9 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     def proxy(
         cls,
         client: RedisCluster[AnyStr],
-        transaction: Optional[bool] = False,
-        watches: Optional[Parameters[KeyT]] = None,
-        timeout: Optional[float] = None,
+        transaction: bool | None = False,
+        watches: Parameters[KeyT] | None = None,
+        timeout: float | None = None,
     ) -> ClusterPipeline[AnyStr]:
         return cls(
             ClusterPipelineImpl(

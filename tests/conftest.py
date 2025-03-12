@@ -23,7 +23,7 @@ from coredis._utils import EncodingInsensitiveDict, b, hash_slot, nativestr
 from coredis.cache import TrackingCache
 from coredis.credentials import UserPassCredentialProvider
 from coredis.response._callbacks import NoopCallback
-from coredis.typing import RUNTIME_TYPECHECKS, Callable, Optional, R, ValueT
+from coredis.typing import RUNTIME_TYPECHECKS, Callable, R, ValueT
 
 REDIS_VERSIONS = {}
 SERVER_TYPES = {}
@@ -1240,7 +1240,7 @@ def fake_redis():
             command: bytes,
             *args: ValueT,
             callback: Callable[..., R] = NoopCallback(),
-            **options: Optional[ValueT],
+            **options: ValueT | None,
         ) -> R:
             resp = self.responses.get(command, {}).get(args)
 
@@ -1268,7 +1268,7 @@ def fake_redis_cluster():
             command: bytes,
             *args: ValueT,
             callback: Callable[..., R] = NoopCallback(),
-            **options: Optional[ValueT],
+            **options: ValueT | None,
         ) -> R:
             resp = self.responses.get(command, {}).get(args)
 

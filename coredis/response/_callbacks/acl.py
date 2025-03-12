@@ -3,7 +3,6 @@ from __future__ import annotations
 from coredis.response._callbacks import DictCallback, ResponseCallback
 from coredis.typing import (
     AnyStr,
-    Optional,
     ResponsePrimitive,
     Sequence,
     ValueT,
@@ -12,16 +11,16 @@ from coredis.typing import (
 
 class ACLLogCallback(
     ResponseCallback[
-        list[Optional[Sequence[ResponsePrimitive]]],
-        list[Optional[dict[AnyStr, ResponsePrimitive]]],
-        tuple[Optional[dict[AnyStr, ResponsePrimitive]], ...],
+        list[Sequence[ResponsePrimitive] | None],
+        list[dict[AnyStr, ResponsePrimitive] | None],
+        tuple[dict[AnyStr, ResponsePrimitive] | None, ...],
     ]
 ):
     def transform(
         self,
-        response: list[Optional[Sequence[ResponsePrimitive]]],
-        **options: Optional[ValueT],
-    ) -> tuple[Optional[dict[AnyStr, ResponsePrimitive]], ...]:
+        response: list[Sequence[ResponsePrimitive] | None],
+        **options: ValueT | None,
+    ) -> tuple[dict[AnyStr, ResponsePrimitive] | None, ...]:
         return tuple(
             DictCallback[AnyStr, ResponsePrimitive]()(r, version=self.version)
             for r in response
@@ -30,7 +29,7 @@ class ACLLogCallback(
 
     def transform_3(
         self,
-        response: list[Optional[dict[AnyStr, ResponsePrimitive]]],
-        **options: Optional[ValueT],
-    ) -> tuple[Optional[dict[AnyStr, ResponsePrimitive]], ...]:
+        response: list[dict[AnyStr, ResponsePrimitive] | None],
+        **options: ValueT | None,
+    ) -> tuple[dict[AnyStr, ResponsePrimitive] | None, ...]:
         return tuple(response)

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from coredis.connection import BaseConnection, Connection
 from coredis.exceptions import ConnectionError
-from coredis.typing import Optional, ResponseType, TypeVar
+from coredis.typing import ResponseType, TypeVar
 
 if TYPE_CHECKING:
     import coredis.client
@@ -24,18 +24,18 @@ class Sidecar:
     def __init__(
         self, push_message_types: set[bytes], health_check_interval_seconds: int = 5
     ) -> None:
-        self._client: Optional[weakref.ReferenceType[coredis.client.Client[Any]]] = None
+        self._client: weakref.ReferenceType[coredis.client.Client[Any]] | None = None
         self.messages: asyncio.Queue[ResponseType] = asyncio.Queue()
-        self.connection: Optional[Connection] = None
-        self.client_id: Optional[int] = None
-        self.read_task: Optional[asyncio.Task[None]] = None
+        self.connection: Connection | None = None
+        self.client_id: int | None = None
+        self.read_task: asyncio.Task[None] | None = None
         self.push_message_types = push_message_types
         self.health_check_interval = health_check_interval_seconds
-        self.health_check_task: Optional[asyncio.Task[None]] = None
+        self.health_check_task: asyncio.Task[None] | None = None
         self.last_checkin: float = 0
 
     @property
-    def client(self) -> Optional[coredis.client.Client[Any]]:
+    def client(self) -> coredis.client.Client[Any] | None:
         if self._client:
             return self._client()
         return None  # noqa

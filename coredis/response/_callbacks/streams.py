@@ -13,28 +13,26 @@ from coredis.response.types import (
 )
 from coredis.typing import (
     AnyStr,
-    Optional,
     OrderedDict,
     ResponseType,
     StringT,
-    Union,
     ValueT,
 )
 
 
 class StreamRangeCallback(ResponseCallback[ResponseType, ResponseType, tuple[StreamEntry, ...]]):
     def transform(
-        self, response: ResponseType, **options: Optional[ValueT]
+        self, response: ResponseType, **options: ValueT | None
     ) -> tuple[StreamEntry, ...]:
         return tuple(StreamEntry(r[0], flat_pairs_to_ordered_dict(r[1])) for r in response)
 
 
 class ClaimCallback(
-    ResponseCallback[ResponseType, ResponseType, Union[tuple[AnyStr, ...], tuple[StreamEntry, ...]]]
+    ResponseCallback[ResponseType, ResponseType, tuple[AnyStr, ...] | tuple[StreamEntry, ...]]
 ):
     def transform(
-        self, response: ResponseType, **options: Optional[ValueT]
-    ) -> Union[tuple[AnyStr, ...], tuple[StreamEntry, ...]]:
+        self, response: ResponseType, **options: ValueT | None
+    ) -> tuple[AnyStr, ...] | tuple[StreamEntry, ...]:
         if options.get("justid") is not None:
             return tuple(response)
         else:
@@ -45,18 +43,16 @@ class AutoClaimCallback(
     ResponseCallback[
         ResponseType,
         ResponseType,
-        Union[
-            tuple[AnyStr, tuple[AnyStr, ...]],
-            tuple[AnyStr, tuple[StreamEntry, ...], tuple[AnyStr, ...]],
-        ],
+        tuple[AnyStr, tuple[AnyStr, ...]]
+        | tuple[AnyStr, tuple[StreamEntry, ...], tuple[AnyStr, ...]],
     ]
 ):
     def transform(
-        self, response: ResponseType, **options: Optional[ValueT]
-    ) -> Union[
-        tuple[AnyStr, tuple[AnyStr, ...]],
-        tuple[AnyStr, tuple[StreamEntry, ...], tuple[AnyStr, ...]],
-    ]:
+        self, response: ResponseType, **options: ValueT | None
+    ) -> (
+        tuple[AnyStr, tuple[AnyStr, ...]]
+        | tuple[AnyStr, tuple[StreamEntry, ...], tuple[AnyStr, ...]]
+    ):
         if options.get("justid") is not None:
             return response[0], tuple(response[1])
         else:
@@ -68,11 +64,11 @@ class AutoClaimCallback(
 
 
 class MultiStreamRangeCallback(
-    ResponseCallback[ResponseType, ResponseType, Optional[dict[AnyStr, tuple[StreamEntry, ...]]]]
+    ResponseCallback[ResponseType, ResponseType, dict[AnyStr, tuple[StreamEntry, ...]] | None]
 ):
     def transform_3(
-        self, response: ResponseType, **options: Optional[ValueT]
-    ) -> Optional[dict[AnyStr, tuple[StreamEntry, ...]]]:
+        self, response: ResponseType, **options: ValueT | None
+    ) -> dict[AnyStr, tuple[StreamEntry, ...]] | None:
         if response:
             mapping: dict[AnyStr, tuple[StreamEntry, ...]] = {}
 
@@ -85,8 +81,8 @@ class MultiStreamRangeCallback(
         return None
 
     def transform(
-        self, response: ResponseType, **options: Optional[ValueT]
-    ) -> Optional[dict[AnyStr, tuple[StreamEntry, ...]]]:
+        self, response: ResponseType, **options: ValueT | None
+    ) -> dict[AnyStr, tuple[StreamEntry, ...]] | None:
         if response:
             mapping: dict[AnyStr, tuple[StreamEntry, ...]] = {}
 
@@ -100,11 +96,11 @@ class MultiStreamRangeCallback(
 
 
 class PendingCallback(
-    ResponseCallback[ResponseType, ResponseType, Union[StreamPending, tuple[StreamPendingExt, ...]]]
+    ResponseCallback[ResponseType, ResponseType, StreamPending | tuple[StreamPendingExt, ...]]
 ):
     def transform(
-        self, response: ResponseType, **options: Optional[ValueT]
-    ) -> Union[StreamPending, tuple[StreamPendingExt, ...]]:
+        self, response: ResponseType, **options: ValueT | None
+    ) -> StreamPending | tuple[StreamPendingExt, ...]:
         if not options.get("count"):
             return StreamPending(
                 response[0],
@@ -118,19 +114,19 @@ class PendingCallback(
 
 class XInfoCallback(ResponseCallback[ResponseType, ResponseType, tuple[dict[AnyStr, AnyStr], ...]]):
     def transform(
-        self, response: ResponseType, **options: Optional[ValueT]
+        self, response: ResponseType, **options: ValueT | None
     ) -> tuple[dict[AnyStr, AnyStr], ...]:
         return tuple(flat_pairs_to_dict(row) for row in response)
 
 
 class StreamInfoCallback(ResponseCallback[ResponseType, ResponseType, StreamInfo]):
-    def transform(self, response: ResponseType, **options: Optional[ValueT]) -> StreamInfo:
+    def transform(self, response: ResponseType, **options: ValueT | None) -> StreamInfo:
         res: dict[StringT, Any] = EncodingInsensitiveDict(flat_pairs_to_dict(response))
         if not options.get("full"):
             k1 = "first-entry"
             kn = "last-entry"
-            e1: Optional[StreamEntry] = None
-            en: Optional[StreamEntry] = None
+            e1: StreamEntry | None = None
+            en: StreamEntry | None = None
 
             if len(res.get(k1, [])) > 0:
                 v = res.get(k1)

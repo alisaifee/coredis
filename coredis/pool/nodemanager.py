@@ -17,7 +17,6 @@ from coredis.typing import (
     Iterator,
     Literal,
     Node,
-    Optional,
     StringT,
     ValueT,
 )
@@ -37,8 +36,8 @@ class ManagedNode:
 
     host: str
     port: int
-    server_type: Optional[Literal["primary", "replica"]] = None
-    node_id: Optional[str] = None
+    server_type: Literal["primary", "replica"] | None = None
+    node_id: str | None = None
 
     @property
     def name(self) -> str:
@@ -52,12 +51,12 @@ class NodeManager:
 
     def __init__(
         self,
-        startup_nodes: Optional[Iterable[Node]] = None,
-        reinitialize_steps: Optional[int] = None,
+        startup_nodes: Iterable[Node] | None = None,
+        reinitialize_steps: int | None = None,
         skip_full_coverage_check: bool = False,
         nodemanager_follow_cluster: bool = True,
         decode_responses: bool = False,
-        **connection_kwargs: Optional[Any],
+        **connection_kwargs: Any | None,
     ) -> None:
         """
         :skip_full_coverage_check:
@@ -94,7 +93,7 @@ class NodeManager:
                 mapping.setdefault(node.name, {}).setdefault(hash_slot(b(k)), []).append(k)
         return mapping
 
-    def node_from_slot(self, slot: int) -> Optional[ManagedNode]:
+    def node_from_slot(self, slot: int) -> ManagedNode | None:
         for node in self.slots[slot]:
             if node.server_type == "primary":
                 return node

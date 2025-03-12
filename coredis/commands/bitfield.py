@@ -13,7 +13,6 @@ from coredis.typing import (
     KeyT,
     Literal,
     ResponseType,
-    Union,
 )
 
 
@@ -47,7 +46,7 @@ class BitFieldOperation(Generic[AnyStr]):
     def __del__(self) -> None:
         self._command_stack.clear()
 
-    def set(self, encoding: str, offset: Union[int, str], value: int) -> BitFieldOperation[AnyStr]:
+    def set(self, encoding: str, offset: int | str, value: int) -> BitFieldOperation[AnyStr]:
         """
         Set the specified bit field and returns its old value.
         """
@@ -59,7 +58,7 @@ class BitFieldOperation(Generic[AnyStr]):
 
         return self
 
-    def get(self, encoding: str, offset: Union[int, str]) -> BitFieldOperation[AnyStr]:
+    def get(self, encoding: str, offset: int | str) -> BitFieldOperation[AnyStr]:
         """
         Returns the specified bit field.
         """
@@ -68,9 +67,7 @@ class BitFieldOperation(Generic[AnyStr]):
 
         return self
 
-    def incrby(
-        self, encoding: str, offset: Union[int, str], increment: int
-    ) -> BitFieldOperation[AnyStr]:
+    def incrby(self, encoding: str, offset: int | str, increment: int) -> BitFieldOperation[AnyStr]:
         """
         Increments or decrements (if a negative increment is given)
         the specified bit field and returns the new value.

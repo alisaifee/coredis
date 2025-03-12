@@ -36,13 +36,10 @@ from coredis.exceptions import (
 )
 from coredis.typing import (
     Final,
-    FrozenSet,
     MutableSet,
     NamedTuple,
-    Optional,
     ResponsePrimitive,
     ResponseType,
-    Union,
 )
 
 
@@ -56,18 +53,14 @@ NOT_ENOUGH_DATA: Final[NotEnoughData] = NotEnoughData()
 class RESPNode:
     __slots__ = ("depth", "key", "node_type")
     depth: int
-    key: Union[ResponsePrimitive, tuple[ResponsePrimitive, ...], FrozenSet[ResponsePrimitive]]
+    key: ResponsePrimitive | tuple[ResponsePrimitive, ...] | frozenset[ResponsePrimitive]
     node_type: int
 
     def __init__(
         self,
         depth: int,
         node_type: int,
-        key: Union[
-            ResponsePrimitive,
-            tuple[ResponsePrimitive, ...],
-            FrozenSet[ResponsePrimitive],
-        ],
+        key: (ResponsePrimitive | tuple[ResponsePrimitive, ...] | frozenset[ResponsePrimitive]),
     ):
         self.depth = depth
         self.node_type = node_type
@@ -107,11 +100,7 @@ class DictNode(RESPNode):
 
     def __init__(self, depth: int) -> None:
         self.container: dict[
-            Union[
-                ResponsePrimitive,
-                tuple[ResponsePrimitive, ...],
-                FrozenSet[ResponsePrimitive],
-            ],
+            (ResponsePrimitive | tuple[ResponsePrimitive, ...] | frozenset[ResponsePrimitive]),
             ResponseType,
         ] = {}
         super().__init__(depth * 2, RESPDataType.MAP, None)
@@ -120,11 +109,7 @@ class DictNode(RESPNode):
         self.depth -= 1
         if not self.key:
             self.key = cast(
-                Union[
-                    ResponsePrimitive,
-                    tuple[ResponsePrimitive, ...],
-                    FrozenSet[ResponsePrimitive],
-                ],
+                ResponsePrimitive | tuple[ResponsePrimitive, ...] | frozenset[ResponsePrimitive],
                 self.ensure_hashable(item),
             )
         else:
@@ -137,11 +122,7 @@ class SetNode(RESPNode):
 
     def __init__(self, depth: int) -> None:
         self.container: MutableSet[
-            Union[
-                ResponsePrimitive,
-                tuple[ResponsePrimitive, ...],
-                FrozenSet[ResponsePrimitive],
-            ]
+            (ResponsePrimitive | tuple[ResponsePrimitive, ...] | frozenset[ResponsePrimitive])
         ] = set()
         super().__init__(depth, RESPDataType.SET, None)
 
@@ -152,11 +133,7 @@ class SetNode(RESPNode):
         self.depth -= 1
         self.container.add(
             cast(
-                Union[
-                    ResponsePrimitive,
-                    tuple[ResponsePrimitive, ...],
-                    FrozenSet[ResponsePrimitive],
-                ],
+                ResponsePrimitive | tuple[ResponsePrimitive, ...] | frozenset[ResponsePrimitive],
                 self.ensure_hashable(item),
             )
         )
@@ -172,7 +149,7 @@ class Parser:
     Interface between a connection and Unpacker
     """
 
-    EXCEPTION_CLASSES: dict[str, Union[type[RedisError], dict[str, type[RedisError]]]] = {
+    EXCEPTION_CLASSES: dict[str, type[RedisError] | dict[str, type[RedisError]]] = {
         "ASK": AskError,
         "BUSYGROUP": StreamDuplicateConsumerGroupError,
         "CLUSTERDOWN": ClusterDownError,
@@ -201,11 +178,11 @@ class Parser:
     }
 
     def __init__(self) -> None:
-        self.push_messages: Optional[asyncio.Queue[ResponseType]] = None
+        self.push_messages: asyncio.Queue[ResponseType] | None = None
         self.localbuffer: BytesIO = BytesIO(b"")
         self.bytes_read: int = 0
         self.bytes_written: int = 0
-        self.nodes: list[Union[ListNode, SetNode, DictNode]] = []
+        self.nodes: list[ListNode | SetNode | DictNode] = []
 
     def feed(self, data: bytes) -> None:
         self.localbuffer.seek(self.bytes_written)
@@ -227,7 +204,7 @@ class Parser:
     def can_read(self) -> bool:
         return (self.bytes_written - self.bytes_read) > 0
 
-    def try_decode(self, data: bytes, encoding: str) -> Union[bytes, str]:
+    def try_decode(self, data: bytes, encoding: str) -> bytes | str:
         try:
             return data.decode(encoding)
         except ValueError:
@@ -236,9 +213,9 @@ class Parser:
     def get_response(
         self,
         decode: bool,
-        encoding: Optional[str] = None,
-        push_message_types: Optional[set[bytes]] = None,
-    ) -> Union[NotEnoughData, ResponseType]:
+        encoding: str | None = None,
+        push_message_types: set[bytes] | None = None,
+    ) -> NotEnoughData | ResponseType:
         """
 
         :param decode: Whether to decode simple or bulk strings
@@ -270,9 +247,9 @@ class Parser:
     def parse(
         self,
         decode_bytes: bool,
-        encoding: Optional[str],
-    ) -> Union[Optional[UnpackedResponse], NotEnoughData]:
-        parsed: Optional[UnpackedResponse] = None
+        encoding: str | None,
+    ) -> UnpackedResponse | None | NotEnoughData:
+        parsed: UnpackedResponse | None = None
 
         while True:
             data = self.localbuffer.readline()

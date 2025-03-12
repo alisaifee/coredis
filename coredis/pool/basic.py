@@ -20,14 +20,7 @@ from coredis.connection import (
     UnixDomainSocketConnection,
 )
 from coredis.exceptions import ConnectionError
-from coredis.typing import (
-    Callable,
-    ClassVar,
-    Optional,
-    TypeVar,
-    Union,
-    ValueT,
-)
+from coredis.typing import Callable, ClassVar, TypeVar, ValueT
 
 _CPT = TypeVar("_CPT", bound="ConnectionPool")
 
@@ -37,7 +30,7 @@ class ConnectionPool:
 
     #: Mapping of querystring arguments to their parser functions
     URL_QUERY_ARGUMENT_PARSERS: ClassVar[
-        dict[str, Callable[..., Optional[Union[int, float, bool, str]]]]
+        dict[str, Callable[..., int | float | bool | str | None]]
     ] = {
         "client_name": str,
         "stream_timeout": float,
@@ -55,7 +48,7 @@ class ConnectionPool:
     def from_url(
         cls: type[_CPT],
         url: str,
-        db: Optional[int] = None,
+        db: int | None = None,
         decode_components: bool = False,
         **kwargs: Any,
     ) -> _CPT:
@@ -105,7 +98,7 @@ class ConnectionPool:
 
         url_options: dict[
             str,
-            Optional[Union[int, float, bool, str, type[BaseConnection], SSLContext]],
+            int | float | bool | str | type[BaseConnection] | SSLContext | None,
         ] = {}
         for name, value in iter(parse_qs(qs).items()):
             if value and len(value) > 0:
@@ -121,10 +114,10 @@ class ConnectionPool:
                 else:
                     url_options[name] = value[0]
 
-        username: Optional[str] = parsed_url.username
-        password: Optional[str] = parsed_url.password
-        path: Optional[str] = parsed_url.path
-        hostname: Optional[str] = parsed_url.hostname
+        username: str | None = parsed_url.username
+        password: str | None = parsed_url.password
+        path: str | None = parsed_url.path
+        hostname: str | None = parsed_url.hostname
 
         if decode_components:
             username = unquote(username) if username else None
@@ -164,14 +157,14 @@ class ConnectionPool:
                     pass
 
             if parsed_url.scheme == "rediss":
-                keyfile = cast(Optional[str], url_options.pop("ssl_keyfile", None))
-                certfile = cast(Optional[str], url_options.pop("ssl_certfile", None))
+                keyfile = cast(str | None, url_options.pop("ssl_keyfile", None))
+                certfile = cast(str | None, url_options.pop("ssl_certfile", None))
                 check_hostname = query_param_to_bool(url_options.pop("ssl_check_hostname", None))
                 cert_reqs = cast(
-                    Optional[Union[str, VerifyMode]],
+                    str | VerifyMode | None,
                     url_options.pop("ssl_cert_reqs", None),
                 )
-                ca_certs = cast(Optional[str], url_options.pop("ssl_ca_certs", None))
+                ca_certs = cast(str | None, url_options.pop("ssl_ca_certs", None))
                 url_options["ssl_context"] = RedisSSLContext(
                     keyfile, certfile, cert_reqs, ca_certs, check_hostname
                 ).get()
@@ -189,11 +182,11 @@ class ConnectionPool:
     def __init__(
         self,
         *,
-        connection_class: Optional[type[Connection]] = None,
-        max_connections: Optional[int] = None,
+        connection_class: type[Connection] | None = None,
+        max_connections: int | None = None,
         max_idle_time: int = 0,
         idle_check_interval: int = 1,
-        **connection_kwargs: Optional[Any],
+        **connection_kwargs: Any | None,
     ) -> None:
         """
         Creates a connection pool. If :paramref:`max_connections` is set, then this
@@ -253,15 +246,15 @@ class ConnectionPool:
                 self.disconnect()
                 self.reset()
 
-    def peek_available(self) -> Optional[BaseConnection]:
+    def peek_available(self) -> BaseConnection | None:
         return self._available_connections[0] if self._available_connections else None
 
     async def get_connection(
         self,
-        command_name: Optional[bytes] = None,
+        command_name: bytes | None = None,
         *args: ValueT,
         acquire: bool = True,
-        **kwargs: Optional[ValueT],
+        **kwargs: ValueT | None,
     ) -> Connection:
         """Gets a connection from the pool"""
         self.checkpid()
@@ -299,7 +292,7 @@ class ConnectionPool:
             connection.disconnect()
             self._created_connections -= 1
 
-    def _make_connection(self, **options: Optional[ValueT]) -> Connection:
+    def _make_connection(self, **options: ValueT | None) -> Connection:
         """
         Creates a new connection
         """
@@ -350,13 +343,13 @@ class BlockingConnectionPool(ConnectionPool):
 
     def __init__(
         self,
-        connection_class: Optional[type[Connection]] = None,
-        queue_class: type[asyncio.Queue[Optional[Connection]]] = asyncio.LifoQueue,
-        max_connections: Optional[int] = None,
+        connection_class: type[Connection] | None = None,
+        queue_class: type[asyncio.Queue[Connection | None]] = asyncio.LifoQueue,
+        max_connections: int | None = None,
         timeout: int = 20,
         max_idle_time: int = 0,
         idle_check_interval: int = 1,
-        **connection_kwargs: Optional[ValueT],
+        **connection_kwargs: ValueT | None,
     ):
         self.timeout = timeout
         self.queue_class = queue_class
@@ -383,7 +376,7 @@ class BlockingConnectionPool(ConnectionPool):
             await asyncio.sleep(self.idle_check_interval)
 
     def reset(self) -> None:
-        self._pool: asyncio.Queue[Optional[Connection]] = self.queue_class(self.max_connections)
+        self._pool: asyncio.Queue[Connection | None] = self.queue_class(self.max_connections)
 
         while True:
             try:
@@ -393,7 +386,7 @@ class BlockingConnectionPool(ConnectionPool):
 
         super().reset()
 
-    def peek_available(self) -> Optional[BaseConnection]:
+    def peek_available(self) -> BaseConnection | None:
         return (
             self._pool._queue[-1]  # type: ignore
             if (self._pool and not self._pool.empty())
@@ -402,10 +395,10 @@ class BlockingConnectionPool(ConnectionPool):
 
     async def get_connection(
         self,
-        command_name: Optional[bytes] = None,
+        command_name: bytes | None = None,
         *args: ValueT,
         acquire: bool = True,
-        **kwargs: Optional[ValueT],
+        **kwargs: ValueT | None,
     ) -> Connection:
         """Gets a connection from the pool"""
         self.checkpid()
@@ -429,7 +422,7 @@ class BlockingConnectionPool(ConnectionPool):
 
     def release(self, connection: Connection) -> None:
         """Releases the connection back to the pool"""
-        _connection: Optional[Connection] = connection
+        _connection: Connection | None = connection
 
         self.checkpid()
 
@@ -442,7 +435,7 @@ class BlockingConnectionPool(ConnectionPool):
 
     def disconnect(self) -> None:
         """Closes all connections in the pool"""
-        pooled_connections: list[Optional[Connection]] = []
+        pooled_connections: list[Connection | None] = []
 
         while True:
             try:
