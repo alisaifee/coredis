@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9, "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
     - uses: actions/checkout@v3
     - name: Cache dependencies
@@ -56,7 +56,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.9, "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
         redis-version: ["6.2", "7.0", "7.2", "7.4", "latest"]
         test_params: ["-m '(not (keydb or dragonfly or valkey or redict))'"]
         orjson: ["False"]
@@ -108,13 +108,6 @@ jobs:
             redis-version: "7.0"
             test_params: "-m redict"
             label: "Redict"
-          - python-version: "pypy-3.9"
-            redis-version: 7.4
-            test_params: "-m '(not (keydb or dragonfly or valkey or redict))' tests/commands tests/test_tracking_cache.py"
-            runtime_type_checks: "False"
-            extensions: "False"
-            uvloop: "False"
-            label: ""
           - python-version: "pypy-3.10"
             redis-version: 7.4
             test_params: "-m '(not (keydb or dragonfly or valkey or redict))' tests/commands tests/test_tracking_cache.py"

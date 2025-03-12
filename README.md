@@ -158,12 +158,10 @@ coredis is additionally tested against:
 
 ### Supported python versions
 
-- 3.9
 - 3.10
 - 3.11
 - 3.12
 - 3.13
-- PyPy 3.9
 - PyPy 3.10
 
 ### Redis API compatible databases
