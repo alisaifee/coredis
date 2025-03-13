@@ -180,8 +180,6 @@ class CommonExamples:
     "redis_basic",
     "redis_basic_blocking",
     "redis_basic_raw",
-    "redis_basic_resp2",
-    "redis_basic_raw_resp2",
 )
 class TestProxyInvalidatingCache(CommonExamples):
     async def test_uninitialized_cache(self, client, cloner, _s):
@@ -207,8 +205,6 @@ class TestProxyInvalidatingCache(CommonExamples):
 @targets(
     "redis_cluster",
     "redis_cluster_raw",
-    "redis_cluster_resp2",
-    "redis_cluster_raw_resp2",
 )
 class TestClusterProxyInvalidatingCache(CommonExamples):
     async def test_uninitialized_cache(self, client, cloner, _s):
@@ -244,7 +240,10 @@ class TestClusterProxyInvalidatingCache(CommonExamples):
         assert pre != post
 
 
-@targets("redis_basic", "redis_basic_raw", "redis_basic_resp2", "redis_basic_raw_resp2")
+@targets(
+    "redis_basic",
+    "redis_basic_raw",
+)
 class TestNodeInvalidatingCache(CommonExamples):
     @property
     def cache(self):
@@ -274,8 +273,6 @@ class TestNodeInvalidatingCache(CommonExamples):
     "redis_cluster",
     "redis_cluster_blocking",
     "redis_cluster_raw",
-    "redis_cluster_resp2",
-    "redis_cluster_raw_resp2",
 )
 class TestClusterInvalidatingCache(CommonExamples):
     @property

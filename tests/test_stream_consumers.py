@@ -24,8 +24,6 @@ async def consume_entries(consumer, count, consumed=None):
     "redis_basic",
     "redis_basic_blocking",
     "redis_basic_raw",
-    "redis_basic_resp2",
-    "redis_basic_raw_resp2",
     "redis_cluster",
     "redis_cluster_raw",
     "keydb",

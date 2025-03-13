@@ -540,29 +540,6 @@ async def redis_basic_blocking(redis_basic_server, request):
 
 
 @pytest.fixture
-async def redis_basic_resp2(redis_basic_server, request):
-    client = coredis.Redis(
-        "localhost",
-        6379,
-        decode_responses=True,
-    )
-    await check_test_constraints(request, client, protocol=2)
-    client = coredis.Redis(
-        "localhost",
-        6379,
-        decode_responses=True,
-        protocol_version=2,
-        **get_client_test_args(request),
-    )
-    await client.flushall()
-    await set_default_test_config(client)
-
-    yield client
-
-    client.connection_pool.disconnect()
-
-
-@pytest.fixture
 async def redis_stack(redis_stack_server, request):
     client = coredis.Redis(
         "localhost", 9379, decode_responses=True, **get_client_test_args(request)
@@ -580,29 +557,6 @@ async def redis_stack(redis_stack_server, request):
 async def redis_stack_raw(redis_stack_server, request):
     client = coredis.Redis("localhost", 9379, **get_client_test_args(request))
     await check_test_constraints(request, client)
-    await client.flushall()
-    await set_default_test_config(client)
-
-    yield client
-
-    client.connection_pool.disconnect()
-
-
-@pytest.fixture
-async def redis_stack_resp2(redis_stack_server, request):
-    client = coredis.Redis(
-        "localhost",
-        9379,
-        decode_responses=True,
-    )
-    await check_test_constraints(request, client, protocol=2)
-    client = coredis.Redis(
-        "localhost",
-        9379,
-        decode_responses=True,
-        protocol_version=2,
-        **get_client_test_args(request),
-    )
     await client.flushall()
     await set_default_test_config(client)
 
@@ -631,28 +585,6 @@ async def redis_stack_cached(redis_stack_server, request):
 
 
 @pytest.fixture
-async def redis_stack_raw_resp2(redis_stack_server, request):
-    client = coredis.Redis(
-        "localhost",
-        9379,
-    )
-    await check_test_constraints(request, client, protocol=2)
-    client = coredis.Redis(
-        "localhost",
-        9379,
-        decode_responses=True,
-        protocol_version=2,
-        **get_client_test_args(request),
-    )
-    await client.flushall()
-    await set_default_test_config(client)
-
-    yield client
-
-    client.connection_pool.disconnect()
-
-
-@pytest.fixture
 async def redis_basic_raw(redis_basic_server, request):
     client = coredis.Redis(
         "localhost",
@@ -662,29 +594,6 @@ async def redis_basic_raw(redis_basic_server, request):
     await check_test_constraints(request, client)
     client = coredis.Redis(
         "localhost", 6379, decode_responses=False, **get_client_test_args(request)
-    )
-    await client.flushall()
-    await set_default_test_config(client)
-
-    yield client
-
-    client.connection_pool.disconnect()
-
-
-@pytest.fixture
-async def redis_basic_raw_resp2(redis_basic_server, request):
-    client = coredis.Redis(
-        "localhost",
-        6379,
-        decode_responses=False,
-    )
-    await check_test_constraints(request, client, protocol=2)
-    client = coredis.Redis(
-        "localhost",
-        6379,
-        decode_responses=False,
-        protocol_version=2,
-        **get_client_test_args(request),
     )
     await client.flushall()
     await set_default_test_config(client)
@@ -721,32 +630,6 @@ async def redis_ssl_no_client_auth(redis_ssl_server_no_client_auth, request):
         storage_url, decode_responses=True, **get_client_test_args(request)
     )
     await check_test_constraints(request, client)
-    await client.flushall()
-    await set_default_test_config(client)
-
-    yield client
-
-    client.connection_pool.disconnect()
-
-
-@pytest.fixture
-async def redis_ssl_resp2(redis_ssl_server, request):
-    storage_url = (
-        "rediss://localhost:8379/?ssl_cert_reqs=required"
-        "&ssl_keyfile=./tests/tls/client.key"
-        "&ssl_certfile=./tests/tls/client.crt"
-        "&ssl_ca_certs=./tests/tls/ca.crt"
-    )
-    client = coredis.Redis.from_url(
-        storage_url, decode_responses=True, **get_client_test_args(request)
-    )
-    await check_test_constraints(request, client, protocol=2)
-    client = coredis.Redis.from_url(
-        storage_url,
-        decode_responses=True,
-        protocol_version=2,
-        **get_client_test_args(request),
-    )
     await client.flushall()
     await set_default_test_config(client)
 
@@ -816,32 +699,6 @@ async def redis_cached(redis_basic_server, request):
         **get_client_test_args(request),
     )
     await check_test_constraints(request, client)
-    await client.flushall()
-    await set_default_test_config(client)
-
-    yield client
-
-    client.connection_pool.disconnect()
-    cache.shutdown()
-
-
-@pytest.fixture
-async def redis_cached_resp2(redis_basic_server, request):
-    cache = TrackingCache(max_size_bytes=-1)
-    client = coredis.Redis(
-        "localhost",
-        6379,
-        decode_responses=True,
-    )
-    await check_test_constraints(request, client, protocol=2)
-    client = coredis.Redis(
-        "localhost",
-        6379,
-        decode_responses=True,
-        protocol_version=2,
-        cache=cache,
-        **get_client_test_args(request),
-    )
     await client.flushall()
     await set_default_test_config(client)
 
@@ -1035,48 +892,6 @@ async def redis_cluster_raw(redis_cluster_server, request):
 
 
 @pytest.fixture
-async def redis_cluster_raw_resp2(redis_cluster_server, request):
-    cluster = coredis.RedisCluster(
-        "localhost",
-        7000,
-        decode_responses=False,
-        protocol_version=2,
-        **get_client_test_args(request),
-    )
-    await check_test_constraints(request, cluster, protocol=2)
-    await cluster
-    await cluster.flushall()
-    await cluster.flushdb()
-
-    for primary in cluster.primaries:
-        await set_default_test_config(primary)
-    yield cluster
-
-    cluster.connection_pool.disconnect()
-
-
-@pytest.fixture
-async def redis_cluster_resp2(redis_cluster_server, request):
-    cluster = coredis.RedisCluster(
-        "localhost",
-        7000,
-        decode_responses=True,
-        protocol_version=2,
-        **get_client_test_args(request),
-    )
-    await check_test_constraints(request, cluster, protocol=2)
-    await cluster
-    await cluster.flushall()
-    await cluster.flushdb()
-
-    for primary in cluster.primaries:
-        await set_default_test_config(primary)
-    yield cluster
-
-    cluster.connection_pool.disconnect()
-
-
-@pytest.fixture
 async def redis_stack_cluster(redis_stack_cluster_server, request):
     cluster = coredis.RedisCluster(
         "localhost",
@@ -1104,23 +919,6 @@ async def redis_sentinel(redis_sentinel_server, request):
         [redis_sentinel_server],
         sentinel_kwargs={},
         decode_responses=True,
-        **get_client_test_args(request),
-    )
-    master = sentinel.primary_for("mymaster")
-    await check_test_constraints(request, master)
-    await set_default_test_config(sentinel)
-    await master.flushall()
-
-    return sentinel
-
-
-@pytest.fixture
-async def redis_sentinel_resp2(redis_sentinel_server, request):
-    sentinel = coredis.sentinel.Sentinel(
-        [redis_sentinel_server],
-        sentinel_kwargs={},
-        decode_responses=True,
-        protocol_version=2,
         **get_client_test_args(request),
     )
     master = sentinel.primary_for("mymaster")
@@ -1173,29 +971,6 @@ async def keydb(keydb_server, request):
         "localhost", 10379, decode_responses=True, **get_client_test_args(request)
     )
     await check_test_constraints(request, client)
-    await client.flushall()
-    await set_default_test_config(client, variant="keydb")
-
-    yield client
-
-    client.connection_pool.disconnect()
-
-
-@pytest.fixture
-async def keydb_resp2(keydb_server, request):
-    client = coredis.experimental.KeyDB(
-        "localhost",
-        10379,
-        decode_responses=True,
-    )
-    await check_test_constraints(request, client, protocol=2)
-    client = coredis.experimental.KeyDB(
-        "localhost",
-        10379,
-        decode_responses=True,
-        protocol_version=2,
-        **get_client_test_args(request),
-    )
     await client.flushall()
     await set_default_test_config(client, variant="keydb")
 

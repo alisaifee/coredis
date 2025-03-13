@@ -11,7 +11,6 @@ from tests.conftest import targets
 
 @targets(
     "keydb",
-    "keydb_resp2",
     "keydb_cluster",
 )
 class TestKeyDBCommands:

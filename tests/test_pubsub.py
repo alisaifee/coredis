@@ -73,8 +73,6 @@ def make_subscribe_test_data(pubsub, encoder, type):
     "redis_basic",
     "redis_basic_blocking",
     "redis_basic_raw",
-    "redis_basic_resp2",
-    "redis_basic_raw_resp2",
     "keydb",
     "dragonfly",
     "valkey",
@@ -265,7 +263,7 @@ class TestPubSubSubscribeUnsubscribe:
         assert make_message("unsubscribe", _s("foo"), 0, None) == await p.get_message()
 
 
-@targets("redis_basic", "redis_basic_raw", "redis_basic_resp2", "redis_basic_raw_resp2")
+@targets("redis_basic", "redis_basic_raw")
 class TestPubSubMessages:
     def setup_method(self, method):
         self.message = None
@@ -447,7 +445,7 @@ class TestPubSubRedisDown:
             await p.subscribe("foo")
 
 
-@targets("redis_basic", "redis_basic_raw", "redis_basic_resp2", "redis_basic_raw_resp2")
+@targets("redis_basic", "redis_basic_raw")
 class TestPubSubPubSubSubcommands:
     async def test_pubsub_channels(self, client, _s):
         p = client.pubsub(ignore_subscribe_messages=True)

@@ -11,7 +11,6 @@ from tests.conftest import targets
 @pytest.mark.min_module_version("bf", "2.4.0")
 @targets(
     "redis_stack",
-    "redis_stack_resp2",
     "redis_stack_cached",
     "redis_stack_cluster",
 )

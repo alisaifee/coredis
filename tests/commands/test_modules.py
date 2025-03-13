@@ -10,8 +10,6 @@ from tests.conftest import targets
 @targets(
     "redis_stack",
     "redis_stack_raw",
-    "redis_stack_resp2",
-    "redis_stack_raw_resp2",
     "redis_stack_cluster",
 )
 async def test_modules_list(client, _s):
@@ -22,8 +20,6 @@ async def test_modules_list(client, _s):
 @targets(
     "redis_basic",
     "redis_basic_raw",
-    "redis_basic_resp2",
-    "redis_basic_raw_resp2",
     "redis_cluster",
 )
 async def test_no_modules(client):

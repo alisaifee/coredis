@@ -174,7 +174,7 @@ async def test_discover_replicas(cluster, sentinel):
     ]
 
 
-@targets("redis_sentinel", "redis_sentinel_resp2")
+@targets("redis_sentinel")
 async def test_primary_for(client, host_ip):
     primary = client.primary_for("mymaster")
     assert await primary.ping()
@@ -185,7 +185,7 @@ async def test_primary_for(client, host_ip):
     assert await primary.ping()
 
 
-@targets("redis_sentinel", "redis_sentinel_resp2")
+@targets("redis_sentinel")
 async def test_replica_for(client):
     replica = client.replica_for("mymaster")
     assert await replica.ping()
@@ -214,33 +214,33 @@ async def test_autodecode(redis_sentinel_server):
     assert await sentinel.primary_for("mymaster", decode_responses=False).ping() == b"PONG"
 
 
-@targets("redis_sentinel", "redis_sentinel_resp2")
+@targets("redis_sentinel")
 async def test_ckquorum(client):
     assert await client.sentinels[0].sentinel_ckquorum("mymaster")
 
 
 @pytest.mark.min_server_version("6.2.0")
-@targets("redis_sentinel", "redis_sentinel_resp2")
+@targets("redis_sentinel")
 async def test_sentinel_config_get(client):
     configs = await client.sentinels[0].sentinel_config_get("*")
     assert configs["resolve-hostnames"] == "yes"
 
 
 @pytest.mark.min_server_version("6.2.0")
-@targets("redis_sentinel", "redis_sentinel_resp2")
+@targets("redis_sentinel")
 async def test_sentinel_config_set(client):
     await client.sentinels[0].sentinel_config_set("resolve-hostnames", "no")
     configs = await client.sentinels[0].sentinel_config_get("*")
     assert configs["resolve-hostnames"] == "no"
 
 
-@targets("redis_sentinel", "redis_sentinel_resp2")
+@targets("redis_sentinel")
 async def test_master_address_by_name(client):
     master_address = await client.sentinels[0].sentinel_get_master_addr_by_name("mymaster")
     assert master_address == await client.discover_primary("mymaster")
 
 
-@targets("redis_sentinel", "redis_sentinel_resp2")
+@targets("redis_sentinel")
 @pytest.mark.min_python("3.8")
 async def test_failover(client, mocker):
     mock_exec = mocker.patch.object(client.sentinels[0], "execute_command", autospec=True)
@@ -249,19 +249,19 @@ async def test_failover(client, mocker):
     assert mock_exec.call_args[0][1] == "mymaster"
 
 
-@targets("redis_sentinel", "redis_sentinel_resp2")
+@targets("redis_sentinel")
 async def test_flush_config(client):
     assert await client.sentinels[0].sentinel_flushconfig()
 
 
-@targets("redis_sentinel", "redis_sentinel_resp2")
+@targets("redis_sentinel")
 async def test_role(client):
     assert (await client.sentinels[0].role()).role == "sentinel"
     assert (await client.primary_for("mymaster").role()).role == "master"
     assert (await client.replica_for("mymaster").role()).role == "slave"
 
 
-@targets("redis_sentinel", "redis_sentinel_resp2")
+@targets("redis_sentinel")
 async def test_infocache(client):
     assert await client.sentinels[0].sentinel_flushconfig()
     info_cache = await client.sentinels[0].sentinel_infocache("mymaster")
@@ -269,24 +269,24 @@ async def test_infocache(client):
     assert {"master", "slave"} & roles
 
 
-@targets("redis_sentinel", "redis_sentinel_resp2")
+@targets("redis_sentinel")
 async def test_sentinel_master(client):
     assert (await client.sentinels[0].sentinel_master("mymaster"))["is_master"]
 
 
-@targets("redis_sentinel", "redis_sentinel_resp2")
+@targets("redis_sentinel")
 async def test_sentinel_masters(client):
     assert (await client.sentinels[0].sentinel_masters())["mymaster"]["is_master"]
 
 
-@targets("redis_sentinel", "redis_sentinel_resp2")
+@targets("redis_sentinel")
 async def test_sentinel_replicas(client):
     assert not any(
         [k["is_master"] for k in (await client.sentinels[0].sentinel_replicas("mymaster"))]
     )
 
 
-@targets("redis_sentinel", "redis_sentinel_resp2")
+@targets("redis_sentinel")
 @pytest.mark.min_python("3.8")
 async def test_no_replicas(client, mocker):
     p = await client.replica_for("mymaster")
@@ -296,7 +296,7 @@ async def test_no_replicas(client, mocker):
         await p.ping()
 
 
-@targets("redis_sentinel", "redis_sentinel_resp2")
+@targets("redis_sentinel")
 async def test_write_to_replica(client):
     p = await client.replica_for("mymaster")
     await p.ping()
@@ -304,7 +304,7 @@ async def test_write_to_replica(client):
         await p.set("fubar", 1)
 
 
-@targets("redis_sentinel", "redis_sentinel_resp2")
+@targets("redis_sentinel")
 @pytest.mark.parametrize(
     "client_arguments", [{"cache": coredis.cache.TrackingCache(max_size_bytes=-1)}]
 )
@@ -335,7 +335,7 @@ async def test_sentinel_cache(client, client_arguments, mocker):
     assert replica_spy.call_count == 0
 
 
-@targets("redis_sentinel", "redis_sentinel_resp2")
+@targets("redis_sentinel")
 @pytest.mark.xfail
 async def test_replication(client):
     with client.primary_for("mymaster").ensure_replication(1) as primary:

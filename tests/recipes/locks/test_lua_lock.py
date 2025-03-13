@@ -19,11 +19,9 @@ def lock_name():
 @targets(
     "redis_basic",
     "redis_basic_raw",
-    "redis_basic_resp2",
     "redis_cluster",
     "redis_cluster_noreplica",
     "redis_cluster_raw",
-    "redis_cluster_resp2",
 )
 class TestLock:
     async def test_lock(self, client, _s, lock_name):

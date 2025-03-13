@@ -17,7 +17,7 @@ from coredis.pipeline import ClusterPipelineImpl
 from tests.conftest import targets
 
 
-@targets("redis_cluster", "redis_cluster_resp2")
+@targets("redis_cluster")
 class TestPipeline:
     async def test_empty_pipeline(self, client):
         async with await client.pipeline() as pipe:

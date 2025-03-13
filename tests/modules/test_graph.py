@@ -12,7 +12,6 @@ from tests.conftest import targets
 
 @targets(
     "redis_stack",
-    "redis_stack_resp2",
     "redis_stack_cluster",
 )
 @pytest.mark.max_server_version("7.0.0")

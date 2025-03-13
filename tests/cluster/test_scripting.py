@@ -33,7 +33,7 @@ return "hello " .. name
 """
 
 
-@targets("redis_cluster", "redis_cluster_resp2")
+@targets("redis_cluster")
 class TestScripting:
     async def reset_scripts(self, client):
         await client.script_flush()

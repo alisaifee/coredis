@@ -25,11 +25,8 @@ from tests.conftest import targets
 @targets(
     "redis_basic",
     "redis_basic_blocking",
-    "redis_basic_resp2",
     "redis_basic_raw",
-    "redis_basic_raw_resp2",
     "redis_ssl",
-    "redis_ssl_resp2",
     "redis_ssl_no_client_auth",
     "keydb",
     "dragonfly",
@@ -149,7 +146,6 @@ class TestClient:
 @targets(
     "redis_cluster",
     "redis_cluster_blocking",
-    "redis_cluster_resp2",
 )
 class TestClusterClient:
     async def test_noreply_client(self, client, cloner, _s):
