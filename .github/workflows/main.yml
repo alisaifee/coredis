@@ -51,7 +51,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
-        redis-version: ["7.0", "7.2", "7.4", "latest"]
+        redis-version: ["7.0", "7.1", "7.2", "7.4", "latest"]
         test_params: ["-m '(not (keydb or dragonfly or valkey or redict))'"]
         uvloop: ["False"]
         orjson: ["False"]
@@ -65,11 +65,11 @@ jobs:
             runtime_type_checks: "True"
             extensions: "False"
           - python-version: "3.12"
-            redis-version: "7.0"
+            redis-version: "latest"
             test_params: "-m keydb"
             label: "KeyDB"
           - python-version: "3.12"
-            redis-version: "7.0"
+            redis-version: "latest"
             test_params: "-m dragonfly"
             label: "Dragonfly"
           - python-version: "3.12"
