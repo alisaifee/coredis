@@ -148,7 +148,7 @@ Details about supported Redis modules and their commands can be found
 
 ## Compatibility
 
-coredis is tested against redis versions `6.2.x`, `7.0.x`, `7.2.x` & `7.4.x`
+coredis is tested against redis versions >= `6.4`
 The test matrix status can be reviewed
 [here](https://github.com/alisaifee/coredis/actions/workflows/main.yml)
 

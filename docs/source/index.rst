@@ -148,7 +148,7 @@ Sentinel
 Compatibility
 =============
 
-**coredis** is tested against redis versions ``6.2.x``, ``7.0.x``, ``7.2.x`` & ``7.4.x``.
+**coredis** is tested against redis versions >= ``6.4``
 The test matrix status can be reviewed `here <https://github.com/alisaifee/coredis/actions/workflows/main.yml>`__
 
 .. note:: Though **coredis** officially only supports :redis-version:`6.0.0` and above it is known to work with lower
