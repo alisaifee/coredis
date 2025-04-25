@@ -96,19 +96,6 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         self._retry_policy = retry_policy or NoRetryPolicy()
         self.reset()
 
-    async def _ensure_encoding(self) -> None:
-        if hasattr(self, "encoding"):
-            return
-
-        await self.connection_pool.initialize()
-        conn = await self.connection_pool.get_connection(b"pubsub")
-
-        try:
-            self.encoding = conn.encoding
-            self.decode_responses = conn.decode_responses
-        finally:
-            self.connection_pool.release(conn)
-
     def __del__(self) -> None:
         self.reset()
 
@@ -141,7 +128,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         if self.channels:
             await self.subscribe(
                 **{
-                    k.decode(self.encoding) if isinstance(k, bytes) else k: v
+                    k.decode(self.connection_pool.encoding) if isinstance(k, bytes) else k: v
                     for k, v in self.channels.items()
                 }
             )
@@ -149,7 +136,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         if self.patterns:
             await self.psubscribe(
                 **{
-                    k.decode(self.encoding) if isinstance(k, bytes) else k: v
+                    k.decode(self.connection_pool.encoding) if isinstance(k, bytes) else k: v
                     for k, v in self.patterns.items()
                 }
             )
@@ -162,10 +149,10 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         :meta private:
         """
 
-        if self.decode_responses and isinstance(value, bytes):
-            value = nativestr(value, self.encoding)
-        elif not self.decode_responses and isinstance(value, str):
-            value = b(value, self.encoding)
+        if self.connection_pool.decode_responses and isinstance(value, bytes):
+            value = nativestr(value, self.connection_pool.encoding)
+        elif not self.connection_pool.decode_responses and isinstance(value, str):
+            value = b(value, self.connection_pool.encoding)
 
         return value
 
@@ -187,8 +174,6 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         # NOTE: don't parse the response in this function -- it could pull a
         # legitimate message off the stack if the connection is already
         # subscribed to one or more channels
-
-        await self._ensure_encoding()
 
         if self.connection is None:
             self.connection = await self.connection_pool.get_connection()
@@ -244,8 +229,6 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         received on that pattern rather than producing a message via
         :meth:`listen`.
         """
-        await self._ensure_encoding()
-
         new_patterns: MutableMapping[StringT, SubscriptionCallback | None] = {}
         new_patterns.update(dict.fromkeys(map(self.encode, patterns)))
 
@@ -262,7 +245,6 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         Unsubscribes from the supplied patterns. If empy, unsubscribe from
         all patterns.
         """
-        await self._ensure_encoding()
         await self.execute_command(CommandName.PUNSUBSCRIBE, *patterns)
 
     async def subscribe(
@@ -277,8 +259,6 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         that channel rather than producing a message via :meth:`listen` or
         :meth:`get_message`.
         """
-
-        await self._ensure_encoding()
 
         new_channels: MutableMapping[StringT, SubscriptionCallback | None] = {}
         new_channels.update(dict.fromkeys(map(self.encode, channels)))
@@ -297,7 +277,6 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         all channels
         """
 
-        await self._ensure_encoding()
         await self.execute_command(CommandName.UNSUBSCRIBE, *channels)
 
     async def listen(self) -> PubSubMessage | None:
@@ -528,7 +507,6 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
          :meth:`get_message`.
         """
 
-        await self._ensure_encoding()
         new_channels: MutableMapping[StringT, SubscriptionCallback | None] = {}
         new_channels.update(dict.fromkeys(map(self.encode, channels)))
 
@@ -545,7 +523,6 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
          previously subscribed to.
         """
 
-        await self._ensure_encoding()
         for channel in channels or list(self.channels.keys()):
             await self.execute_command(CommandName.SUNSUBSCRIBE, channel, sharded=True)
 
@@ -710,7 +687,9 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                 await self.subscribe(
                     **{
                         (
-                            channel.decode(self.encoding) if isinstance(channel, bytes) else channel
+                            channel.decode(self.connection_pool.encoding)
+                            if isinstance(channel, bytes)
+                            else channel
                         ): handler
                     }
                 )
