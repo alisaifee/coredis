@@ -181,6 +181,7 @@ class RedisCluster(
         reinitialize_steps: int | None = ...,
         skip_full_coverage_check: bool = ...,
         nodemanager_follow_cluster: bool = ...,
+        encoding: str = ...,
         decode_responses: Literal[False] = ...,
         connection_pool: ClusterConnectionPool | None = ...,
         connection_pool_cls: type[ClusterConnectionPool] = ...,
@@ -218,6 +219,7 @@ class RedisCluster(
         reinitialize_steps: int | None = ...,
         skip_full_coverage_check: bool = ...,
         nodemanager_follow_cluster: bool = ...,
+        encoding: str = ...,
         decode_responses: Literal[True],
         connection_pool: ClusterConnectionPool | None = ...,
         connection_pool_cls: type[ClusterConnectionPool] = ...,
@@ -254,6 +256,7 @@ class RedisCluster(
         reinitialize_steps: int | None = None,
         skip_full_coverage_check: bool = False,
         nodemanager_follow_cluster: bool = True,
+        encoding: str = "utf-8",
         decode_responses: bool = False,
         connection_pool: ClusterConnectionPool | None = None,
         connection_pool_cls: type[ClusterConnectionPool] = ClusterConnectionPool,
@@ -379,6 +382,8 @@ class RedisCluster(
         :param nodemanager_follow_cluster: The node manager will during initialization try the
          last set of nodes that it was operating on. This will allow the client to drift along
          side the cluster if the cluster nodes move around alot.
+        :param encoding: The codec to use to encode strings transmitted to redis
+         and decode responses with. (See :ref:`handbook/encoding:encoding/decoding`)
         :param decode_responses: If ``True`` string responses from the server
          will be decoded using :paramref:`encoding` before being returned.
          (See :ref:`handbook/encoding:encoding/decoding`)
@@ -446,6 +451,7 @@ class RedisCluster(
                 skip_full_coverage_check=skip_full_coverage_check,
                 nodemanager_follow_cluster=nodemanager_follow_cluster,
                 read_from_replicas=readonly or read_from_replicas,
+                encoding=encoding,
                 decode_responses=decode_responses,
                 protocol_version=protocol_version,
                 noreply=noreply,
@@ -461,6 +467,7 @@ class RedisCluster(
             connect_timeout=connect_timeout,
             connection_pool=pool,
             connection_pool_cls=connection_pool_cls,
+            encoding=encoding,
             decode_responses=decode_responses,
             verify_version=verify_version,
             protocol_version=protocol_version,
