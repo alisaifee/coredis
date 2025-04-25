@@ -747,7 +747,11 @@ class PubSubWorkerThread(threading.Thread):
             while pubsub.subscribed:
                 await pubsub.get_message(ignore_subscribe_messages=True, timeout=self._poll_timeout)
         except CancelledError:
-            await asyncio.gather(pubsub.unsubscribe(), pubsub.punsubscribe())
+            if isinstance(pubsub, ShardedPubSub):
+                await pubsub.unsubscribe()
+            else:
+                await asyncio.gather(pubsub.unsubscribe(), pubsub.punsubscribe())
+
             pubsub.close()
             self._running = False
 
