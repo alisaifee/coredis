@@ -33,11 +33,9 @@ class RetryPolicy(ABC):
         self,
         func: Callable[..., Coroutine[Any, Any, R]],
         before_hook: Callable[..., Coroutine[Any, Any, Any]] | None = None,
-        failure_hook: None
-        | (
-            Callable[..., Coroutine[Any, Any, None]]
-            | dict[type[BaseException], Callable[..., Coroutine[Any, Any, None]]]
-        ) = None,
+        failure_hook: Callable[..., Coroutine[Any, Any, None]]
+        | dict[type[BaseException], Callable[..., Coroutine[Any, Any, None]]]
+        | None = None,
     ) -> R:
         """
         :param func: a function that should return the coroutine that will be
