@@ -98,7 +98,13 @@ class ClusterConnectionPool(ConnectionPool):
             if the cluster nodes move around alot.
         :param read_from_replicas: If ``True`` the client will route readonly commands to replicas
         """
-        super().__init__(connection_class=connection_class, max_connections=max_connections)
+        super().__init__(
+            connection_class=connection_class,
+            max_connections=max_connections,
+            max_idle_time=max_idle_time,
+            idle_check_interval=idle_check_interval,
+            **connection_kwargs,
+        )
         self.queue_class = queue_class
         # Special case to make from_url method compliant with cluster setting.
         # from_url method will send in the ip and port through a different variable then the

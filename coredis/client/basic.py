@@ -174,10 +174,8 @@ class Client(
             connection_pool = connection_pool_cls(**kwargs)
 
         self.connection_pool = connection_pool
-        self.encoding = str(connection_pool.connection_kwargs.get("encoding", encoding))
-        self.decode_responses = bool(
-            connection_pool.connection_kwargs.get("decode_responses", decode_responses)
-        )
+        self.encoding = connection_pool.encoding
+        self.decode_responses = connection_pool.decode_responses
         connection_protocol_version = (
             connection_pool.connection_kwargs.get("protocol_version") or protocol_version
         )

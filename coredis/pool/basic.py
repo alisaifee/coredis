@@ -203,6 +203,8 @@ class ConnectionPool:
         self.idle_check_interval = idle_check_interval
         self.initialized = False
         self.reset()
+        self.decode_responses = bool(self.connection_kwargs.get("decode_responses", False))
+        self.encoding = str(self.connection_kwargs.get("encoding", "utf-8"))
 
     async def initialize(self) -> None:
         self.initialized = True
