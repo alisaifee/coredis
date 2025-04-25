@@ -17,7 +17,7 @@ from coredis.cache import AbstractCache, SupportsClientTracking
 from coredis.client.basic import Client, Redis
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName, NodeFlag
-from coredis.commands.pubsub import ClusterPubSub, ShardedPubSub
+from coredis.commands.pubsub import ClusterPubSub, ShardedPubSub, SubscriptionCallback
 from coredis.connection import RedisSSLContext
 from coredis.exceptions import (
     AskError,
@@ -45,6 +45,7 @@ from coredis.typing import (
     Iterable,
     Iterator,
     Literal,
+    Mapping,
     Node,
     Parameters,
     ParamSpec,
@@ -1000,20 +1001,38 @@ class RedisCluster(
         self,
         ignore_subscribe_messages: bool = False,
         retry_policy: RetryPolicy | None = None,
+        channels: Parameters[StringT] | None = None,
+        channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
+        patterns: Parameters[StringT] | None = None,
+        pattern_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         **kwargs: Any,
     ) -> ClusterPubSub[AnyStr]:
         """
-        Return a Pub/Sub instance that can be used to subscribe to channels or
-        patterns in a redis cluster and receive messages that get published to them.
+        Return a Pub/Sub instance that can be used to consume messages that get
+        published to the subscribed channels or patterns.
 
         :param ignore_subscribe_messages: Whether to skip subscription
          acknowledgement messages
         :param retry_policy: An explicit retry policy to use in the subscriber.
+        :param channels: channels that the constructed Pubsub instance should
+         automatically subscribe to
+        :param channel_handlers: Mapping of channels to automatically subscribe to
+         and the associated handlers that will be invoked when a message is received
+         on the specific channel.
+        :param patterns: patterns that the constructed Pubsub instance should
+         automatically subscribe to
+        :param pattern_handlers: Mapping of patterns to automatically subscribe to
+         and the associated handlers that will be invoked when a message is received
+         on channel matching the pattern.
         """
         return ClusterPubSub[AnyStr](
             self.connection_pool,
             ignore_subscribe_messages=ignore_subscribe_messages,
             retry_policy=retry_policy,
+            channels=channels,
+            channel_handlers=channel_handlers,
+            patterns=patterns,
+            pattern_handlers=pattern_handlers,
             **kwargs,
         )
 
@@ -1023,12 +1042,15 @@ class RedisCluster(
         ignore_subscribe_messages: bool = False,
         read_from_replicas: bool = False,
         retry_policy: RetryPolicy | None = None,
+        channels: Parameters[StringT] | None = None,
+        channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         **kwargs: Any,
     ) -> ShardedPubSub[AnyStr]:
         """
-        Return a Pub/Sub instance that can be used to subscribe to channels
-        in a redis cluster and receive messages that get published to them. The
-        implementation returned differs from that returned by :meth:`pubsub`
+        Return a Pub/Sub instance that can be used to consume messages from
+        the subscribed channels in a redis cluster.
+
+        The implementation returned differs from that returned by :meth:`pubsub`
         as it uses the Sharded Pub/Sub implementation which routes messages
         to cluster nodes using the same algorithm used to assign keys to slots.
         This effectively restricts the propagation of messages to be within the
@@ -1039,6 +1061,11 @@ class RedisCluster(
          acknowledgement messages
         :param read_from_replicas: Whether to read messages from replica nodes
         :param retry_policy: An explicit retry policy to use in the subscriber.
+        :param channels: channels that the constructed Pubsub instance should
+         automatically subscribe to
+        :param channel_handlers: Mapping of channels to automatically subscribe to
+         and the associated handlers that will be invoked when a message is received
+         on the specific channel.
 
         New in :redis-version:`7.0.0`
         """
@@ -1048,6 +1075,8 @@ class RedisCluster(
             ignore_subscribe_messages=ignore_subscribe_messages,
             read_from_replicas=read_from_replicas,
             retry_policy=retry_policy,
+            channels=channels,
+            channel_handlers=channel_handlers,
             **kwargs,
         )
 

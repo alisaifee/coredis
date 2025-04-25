@@ -20,7 +20,7 @@ from coredis.commands.constants import CommandFlag, CommandName
 from coredis.commands.core import CoreCommands
 from coredis.commands.function import Library
 from coredis.commands.monitor import Monitor
-from coredis.commands.pubsub import PubSub
+from coredis.commands.pubsub import PubSub, SubscriptionCallback
 from coredis.commands.script import Script
 from coredis.commands.sentinel import SentinelCommands
 from coredis.config import Config
@@ -60,6 +60,7 @@ from coredis.typing import (
     Iterator,
     KeyT,
     Literal,
+    Mapping,
     Parameters,
     ParamSpec,
     ResponseType,
@@ -1058,6 +1059,10 @@ class Redis(Client[AnyStr]):
         self,
         ignore_subscribe_messages: bool = False,
         retry_policy: RetryPolicy | None = None,
+        channels: Parameters[StringT] | None = None,
+        channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
+        patterns: Parameters[StringT] | None = None,
+        pattern_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         **kwargs: Any,
     ) -> PubSub[AnyStr]:
         """
@@ -1067,12 +1072,27 @@ class Redis(Client[AnyStr]):
         :param ignore_subscribe_messages: Whether to skip subscription
          acknowledgement messages
         :param retry_policy: An explicit retry policy to use in the subscriber.
+        :param channels: channels that the constructed Pubsub instance should
+         automatically subscribe to
+        :param channel_handlers: Mapping of channels to automatically subscribe to
+         and the associated handlers that will be invoked when a message is received
+         on the specific channel.
+        :param patterns: patterns that the constructed Pubsub instance should
+         automatically subscribe to
+        :param pattern_handlers: Mapping of patterns to automatically subscribe to
+         and the associated handlers that will be invoked when a message is received
+         on channel matching the pattern.
+
         """
 
         return PubSub[AnyStr](
             self.connection_pool,
             ignore_subscribe_messages=ignore_subscribe_messages,
             retry_policy=retry_policy,
+            channels=channels,
+            channel_handlers=channel_handlers,
+            patterns=patterns,
+            pattern_handlers=pattern_handlers,
             **kwargs,
         )
 
