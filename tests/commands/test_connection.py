@@ -140,7 +140,7 @@ class TestConnection:
         assert await clone.set("fubar", 1)
 
     @pytest.mark.xfail
-    async def test_client_unblock(self, client, cloner, event_loop):
+    async def test_client_unblock(self, client, cloner):
         clone = await cloner(client)
         client_id = await clone.client_id()
 
@@ -251,9 +251,9 @@ class TestConnection:
     @pytest.mark.nokeydb
     @pytest.mark.novalkey
     @pytest.mark.noredict
-    async def test_client_pause(self, client, event_loop):
+    async def test_client_pause(self, client):
         key = "key_should_expire"
-        another_client = coredis.Redis(loop=event_loop)
+        another_client = coredis.Redis()
         await client.set(key, "1", px=100)
         assert await client.client_pause(100)
         res = await another_client.get(key)

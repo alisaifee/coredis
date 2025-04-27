@@ -65,7 +65,7 @@ async def test_connect_tcp_keepalive_options(redis_basic):
 
 
 @pytest.mark.parametrize("option", ["UNKNOWN", 999])
-async def test_connect_tcp_wrong_socket_opt_raises(event_loop, option, redis_basic):
+async def test_connect_tcp_wrong_socket_opt_raises(option, redis_basic):
     conn = Connection(socket_keepalive=True, socket_keepalive_options={option: 1})
     with pytest.raises((socket.error, TypeError)):
         await conn._connect()

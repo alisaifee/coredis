@@ -257,7 +257,7 @@ class TestConnectionPool:
         node = pool.get_primary_node_by_slot(12182)
         node.port = 7002
 
-    async def test_connection_idle_check(self, event_loop):
+    async def test_connection_idle_check(self):
         pool = ClusterConnectionPool(
             startup_nodes=[dict(host="127.0.0.1", port=7000)],
             max_idle_time=0.2,
