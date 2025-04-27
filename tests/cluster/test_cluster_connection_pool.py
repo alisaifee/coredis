@@ -30,6 +30,7 @@ class DummyConnection(ClusterConnection):
         self._last_error = None
         self._transport = None
         self._read_flag = asyncio.Event()
+        self._read_waiters = set()
         self._description_args = lambda: {}
         self._parse_task = None
         self._requests = deque()

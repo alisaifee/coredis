@@ -185,6 +185,7 @@ class BaseConnection(asyncio.BaseProtocol):
         self._transport: asyncio.Transport | None = None
         self._parser = Parser()
         self._read_flag = asyncio.Event()
+        self._read_waiters: set[asyncio.Task[bool]] = set()
         self.packer: Packer = Packer(self.encoding)
         self.push_messages: asyncio.Queue[ResponseType] = asyncio.Queue()
 
@@ -537,10 +538,19 @@ class BaseConnection(asyncio.BaseProtocol):
         ):
             self._read_flag.clear()
             try:
-                async with async_timeout.timeout(self._stream_timeout if not block else None):
-                    await self._read_flag.wait()
+                timeout = self._stream_timeout if not block else None
+                read_ready_task = asyncio.create_task(self._read_flag.wait())
+                read_ready_task.add_done_callback(
+                    lambda _: self._read_waiters.discard(read_ready_task)
+                )
+                self._read_waiters.add(read_ready_task)
+                await asyncio.wait_for(read_ready_task, timeout)
             except asyncio.TimeoutError:
                 raise TimeoutError
+            except asyncio.CancelledError as e:
+                if e.args and isinstance(e.args[0], ConnectionError):
+                    raise e.args[0]
+                raise
             message = self._parser.get_response(
                 bool(decode) if decode is not None else self.decode_responses,
                 self.encoding,
@@ -686,13 +696,16 @@ class BaseConnection(asyncio.BaseProtocol):
             except RuntimeError:  # noqa
                 pass
 
+        disconnect_exc = self._last_error or ConnectionError("connection lost")
+        while self._read_waiters:
+            waiter = self._read_waiters.pop()
+            if not waiter.done():
+                waiter.cancel(disconnect_exc)
         while True:
             try:
                 request = self._requests.popleft()
                 if not request.future.done():
-                    request.future.set_exception(
-                        self._last_error or ConnectionError("Connection lost")
-                    )
+                    request.future.set_exception(disconnect_exc)
             except IndexError:
                 break
         self._transport = None

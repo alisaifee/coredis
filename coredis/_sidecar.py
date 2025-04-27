@@ -108,4 +108,7 @@ class Sidecar:
                 self.connection = None
 
                 if self.client:
-                    await self.start(self.client)
+                    asyncio.get_running_loop().call_soon(
+                        asyncio.create_task, self.start(self.client)
+                    )
+                    break
