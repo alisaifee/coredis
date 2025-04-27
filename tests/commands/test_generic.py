@@ -196,7 +196,7 @@ class TestGeneric:
         await client.delete(["a"])
         assert await client.restore(
             "a",
-            datetime.datetime.utcnow() + datetime.timedelta(minutes=1, milliseconds=1000),
+            datetime.datetime.now(datetime.UTC) + datetime.timedelta(minutes=1, milliseconds=1000),
             dumped,
             absttl=True,
         )
@@ -434,7 +434,7 @@ class TestGeneric:
 
     @pytest.mark.min_server_version("7.0.0")
     async def test_expireat_conditional(self, client, _s):
-        at = datetime.datetime.utcnow()
+        at = datetime.datetime.now(datetime.UTC)
         await client.set("a", "foo")
         assert await client.expireat("a", at + datetime.timedelta(seconds=10), PureToken.NX)
         assert not await client.expireat("a", at + datetime.timedelta(seconds=10), PureToken.NX)
@@ -444,7 +444,7 @@ class TestGeneric:
 
     @pytest.mark.min_server_version("7.0.0")
     async def test_expiretime(self, client, _s):
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.UTC)
         await client.set("a", "foo")
         await client.set("b", "foo")
 
@@ -503,7 +503,7 @@ class TestGeneric:
 
     @pytest.mark.min_server_version("7.0.0")
     async def test_pexpireat_conditional(self, client, _s):
-        at = datetime.datetime.utcnow()
+        at = datetime.datetime.now(datetime.UTC)
         await client.set("a", "foo")
         assert await client.pexpireat("a", at + datetime.timedelta(seconds=10), PureToken.NX)
         assert not await client.pexpireat("a", at + datetime.timedelta(seconds=10), PureToken.NX)
@@ -513,7 +513,7 @@ class TestGeneric:
 
     @pytest.mark.min_server_version("7.0.0")
     async def test_pexpiretime(self, client, _s):
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.UTC)
         await client.set("a", "foo")
         await client.set("b", "foo")
 
