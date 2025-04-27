@@ -89,23 +89,24 @@ class TestPubSubSubscribeUnsubscribe:
         unsub_func,
         keys,
     ):
-        for key in keys:
-            assert await sub_func(key) is None
+        async with p:
+            for key in keys:
+                assert await sub_func(key) is None
 
-        # should be a message for each channel/pattern we just subscribed to
+            # should be a message for each channel/pattern we just subscribed to
 
-        for i, key in enumerate(keys):
-            assert await wait_for_message(p) == make_message(sub_type, encoder(key), i + 1)
+            for i, key in enumerate(keys):
+                assert await wait_for_message(p) == make_message(sub_type, encoder(key), i + 1)
 
-        for key in keys:
-            assert await unsub_func(key) is None
+            for key in keys:
+                assert await unsub_func(key) is None
 
-        # should be a message for each channel/pattern we just unsubscribed
-        # from
+            # should be a message for each channel/pattern we just unsubscribed
+            # from
 
-        for i, key in enumerate(keys):
-            i = len(keys) - 1 - i
-            assert await wait_for_message(p) == make_message(unsub_type, encoder(key), i)
+            for i, key in enumerate(keys):
+                i = len(keys) - 1 - i
+                assert await wait_for_message(p) == make_message(unsub_type, encoder(key), i)
 
     async def test_channel_subscribe_unsubscribe(self, client, _s):
         kwargs = make_subscribe_test_data(client.pubsub(), _s, "channel")
@@ -118,38 +119,37 @@ class TestPubSubSubscribeUnsubscribe:
     async def _test_resubscribe_on_reconnection(
         self, p, encoder, sub_type, unsub_type, sub_func, unsub_func, keys
     ):
-        for key in keys:
-            assert await sub_func(key) is None
-        # should be a message for each channel/pattern we just subscribed to
+        async with p:
+            for key in keys:
+                assert await sub_func(key) is None
+            # should be a message for each channel/pattern we just subscribed to
 
-        for i, key in enumerate(keys):
-            assert await wait_for_message(p) == make_message(sub_type, encoder(key), i + 1)
+            for i, key in enumerate(keys):
+                assert await wait_for_message(p) == make_message(sub_type, encoder(key), i + 1)
 
-        # manually disconnect
-        p.connection.disconnect()
+            # manually disconnect
+            p.connection.disconnect()
+            # calling get_message again reconnects and resubscribes
+            # note, we may not re-subscribe to channels in exactly the same order
+            # so we have to do some extra checks to make sure we got them all
+            messages = []
 
-        # calling get_message again reconnects and resubscribes
-        # note, we may not re-subscribe to channels in exactly the same order
-        # so we have to do some extra checks to make sure we got them all
-        messages = []
+            for i in range(len(keys)):
+                messages.append(await wait_for_message(p))
+            unique_channels = set()
+            assert len(messages) == len(keys)
 
-        for i in range(len(keys)):
-            messages.append(await wait_for_message(p))
+            for i, message in enumerate(messages):
+                assert message["type"] == sub_type
+                assert message["data"] == i + 1
+                channel = message["channel"]
+                unique_channels.add(channel)
 
-        unique_channels = set()
-        assert len(messages) == len(keys)
+            assert len(unique_channels) == len(keys)
 
-        for i, message in enumerate(messages):
-            assert message["type"] == sub_type
-            assert message["data"] == i + 1
-            channel = message["channel"]
-            unique_channels.add(channel)
-
-        assert len(unique_channels) == len(keys)
-
-        for channel in unique_channels:
-            assert channel in [encoder(k) for k in keys]
-        await unsub_func()
+            for channel in unique_channels:
+                assert channel in [encoder(k) for k in keys]
+            await unsub_func()
 
     async def test_resubscribe_to_channels_on_reconnection(self, client, _s):
         kwargs = make_subscribe_test_data(client.pubsub(), _s, "channel")
@@ -162,49 +162,50 @@ class TestPubSubSubscribeUnsubscribe:
     async def _test_subscribed_property(
         self, p, encoder, sub_type, unsub_type, sub_func, unsub_func, keys
     ):
-        assert p.subscribed is False
-        await sub_func(keys[0])
-        # we're now subscribed even though we haven't processed the
-        # reply from the server just yet
-        assert p.subscribed is True
-        assert await wait_for_message(p) == make_message(sub_type, encoder(keys[0]), 1)
-        # we're still subscribed
-        assert p.subscribed is True
+        async with p:
+            assert p.subscribed is False
+            await sub_func(keys[0])
+            # we're now subscribed even though we haven't processed the
+            # reply from the server just yet
+            assert p.subscribed is True
+            assert await wait_for_message(p) == make_message(sub_type, encoder(keys[0]), 1)
+            # we're still subscribed
+            assert p.subscribed is True
 
-        # unsubscribe from all channels
-        await unsub_func()
-        # we're still technically subscribed until we process the
-        # response messages from the server
-        assert p.subscribed is True
-        assert await wait_for_message(p) == make_message(unsub_type, encoder(keys[0]), 0)
-        # now we're no longer subscribed as no more messages can be delivered
-        # to any channels we were listening to
-        assert p.subscribed is False
+            # unsubscribe from all channels
+            await unsub_func()
+            # we're still technically subscribed until we process the
+            # response messages from the server
+            assert p.subscribed is True
+            assert await wait_for_message(p) == make_message(unsub_type, encoder(keys[0]), 0)
+            # now we're no longer subscribed as no more messages can be delivered
+            # to any channels we were listening to
+            assert p.subscribed is False
 
-        # subscribing again flips the flag back
-        await sub_func(keys[0])
-        assert p.subscribed is True
-        assert await wait_for_message(p) == make_message(sub_type, encoder(keys[0]), 1)
+            # subscribing again flips the flag back
+            await sub_func(keys[0])
+            assert p.subscribed is True
+            assert await wait_for_message(p) == make_message(sub_type, encoder(keys[0]), 1)
 
-        # unsubscribe again
-        await unsub_func()
-        assert p.subscribed is True
-        # subscribe to another channel before reading the unsubscribe response
-        await sub_func(keys[1])
-        assert p.subscribed is True
-        # read the unsubscribe for key1
-        assert await wait_for_message(p) == make_message(unsub_type, encoder(keys[0]), 0)
-        # we're still subscribed to key2, so subscribed should still be True
-        assert p.subscribed is True
-        # read the key2 subscribe message
-        assert await wait_for_message(p) == make_message(sub_type, encoder(keys[1]), 1)
-        await unsub_func()
-        # haven't read the message yet, so we're still subscribed
-        assert p.subscribed is True
-        assert await wait_for_message(p) == make_message(unsub_type, encoder(keys[1]), 0)
-        # now we're finally unsubscribed
-        assert p.subscribed is False
-        await p.unsubscribe()
+            # unsubscribe again
+            await unsub_func()
+            assert p.subscribed is True
+            # subscribe to another channel before reading the unsubscribe response
+            await sub_func(keys[1])
+            assert p.subscribed is True
+            # read the unsubscribe for key1
+            assert await wait_for_message(p) == make_message(unsub_type, encoder(keys[0]), 0)
+            # we're still subscribed to key2, so subscribed should still be True
+            assert p.subscribed is True
+            # read the key2 subscribe message
+            assert await wait_for_message(p) == make_message(sub_type, encoder(keys[1]), 1)
+            await unsub_func()
+            # haven't read the message yet, so we're still subscribed
+            assert p.subscribed is True
+            assert await wait_for_message(p) == make_message(unsub_type, encoder(keys[1]), 0)
+            # now we're finally unsubscribed
+            assert p.subscribed is False
+            await p.unsubscribe()
 
     async def test_subscribe_property_with_channels(self, client, _s):
         kwargs = make_subscribe_test_data(client.pubsub(), _s, "channel")
@@ -215,41 +216,59 @@ class TestPubSubSubscribeUnsubscribe:
         await self._test_subscribed_property(**kwargs)
 
     async def test_ignore_all_subscribe_messages(self, client):
-        p = client.pubsub(ignore_subscribe_messages=True)
+        async with client.pubsub(ignore_subscribe_messages=True) as p:
+            checks = (
+                (p.subscribe, "foo"),
+                (p.unsubscribe, "foo"),
+                (p.psubscribe, "f*"),
+                (p.punsubscribe, "f*"),
+            )
 
-        checks = (
-            (p.subscribe, "foo"),
-            (p.unsubscribe, "foo"),
-            (p.psubscribe, "f*"),
-            (p.punsubscribe, "f*"),
-        )
+            assert p.subscribed is False
 
-        assert p.subscribed is False
-
-        for func, channel in checks:
-            assert await func(channel) is None
-            assert p.subscribed is True
-            assert await wait_for_message(p) is None
-        assert p.subscribed is False
+            for func, channel in checks:
+                assert await func(channel) is None
+                assert p.subscribed is True
+                assert await wait_for_message(p) is None
+            assert p.subscribed is False
 
     async def test_ignore_individual_subscribe_messages(self, client):
-        p = client.pubsub()
+        async with client.pubsub() as p:
+            checks = (
+                (p.subscribe, "foo"),
+                (p.unsubscribe, "foo"),
+                (p.psubscribe, "f*"),
+                (p.punsubscribe, "f*"),
+            )
 
-        checks = (
-            (p.subscribe, "foo"),
-            (p.unsubscribe, "foo"),
-            (p.psubscribe, "f*"),
-            (p.punsubscribe, "f*"),
-        )
+            assert p.subscribed is False
 
-        assert p.subscribed is False
+            for func, channel in checks:
+                assert await func(channel) is None
+                assert p.subscribed is True
+                message = await wait_for_message(p, ignore_subscribe_messages=True)
+                assert message is None
+            assert p.subscribed is False
 
-        for func, channel in checks:
-            assert await func(channel) is None
-            assert p.subscribed is True
-            message = await wait_for_message(p, ignore_subscribe_messages=True)
-            assert message is None
-        assert p.subscribed is False
+    async def test_subscribe_on_construct(self, client, _s):
+        handled = []
+
+        def handle(message):
+            handled.append(message["data"])
+
+        async with client.pubsub(
+            ignore_subscribe_messages=True, channels=["foo"], channel_handlers={"bar": handle}
+        ) as pubsub:
+            assert pubsub.subscribed
+            await client.publish("foo", "bar")
+            await client.publish("bar", "foo")
+            assert (await wait_for_message(pubsub, ignore_subscribe_messages=True))["data"] == _s(
+                "bar"
+            )
+            assert await pubsub.get_message() is None
+
+        assert handled == [_s("foo")]
+        assert not pubsub.subscribed
 
 
 @targets("redis_basic", "redis_basic_raw")
@@ -264,166 +283,198 @@ class TestPubSubMessages:
         self.message = message
 
     async def test_published_message_to_channel(self, client, _s):
-        p = client.pubsub(ignore_subscribe_messages=True)
-        await p.subscribe("foo")
-        # if other tests failed, subscriber may not be cleared
-        assert await client.publish("foo", "test message") >= 1
+        async with client.pubsub(ignore_subscribe_messages=True) as p:
+            await p.subscribe("foo")
+            # if other tests failed, subscriber may not be cleared
+            assert await client.publish("foo", "test message") >= 1
 
-        message = await wait_for_message(p)
-        assert isinstance(message, dict)
-        assert message == make_message("message", _s("foo"), _s("test message"))
-        await p.unsubscribe()
+            message = await wait_for_message(p)
+            assert isinstance(message, dict)
+            assert message == make_message("message", _s("foo"), _s("test message"))
 
     async def test_published_message_to_pattern(self, client, _s):
-        p = client.pubsub(ignore_subscribe_messages=True)
-        await p.subscribe("foo")
-        await p.psubscribe("f*")
-        # 1 to pattern, 1 to channel
-        assert await client.publish("foo", "test message") >= 2
+        async with client.pubsub(ignore_subscribe_messages=True) as p:
+            await p.subscribe("foo")
+            await p.psubscribe("f*")
+            # 1 to pattern, 1 to channel
+            assert await client.publish("foo", "test message") >= 2
 
-        message1 = await wait_for_message(p)
-        message2 = await wait_for_message(p)
-        assert isinstance(message1, dict)
-        assert isinstance(message2, dict)
+            message1 = await wait_for_message(p)
+            message2 = await wait_for_message(p)
+            assert isinstance(message1, dict)
+            assert isinstance(message2, dict)
 
-        expected = [
-            make_message("message", _s("foo"), _s("test message")),
-            make_message("pmessage", _s("foo"), _s("test message"), pattern=_s("f*")),
-        ]
+            expected = [
+                make_message("message", _s("foo"), _s("test message")),
+                make_message("pmessage", _s("foo"), _s("test message"), pattern=_s("f*")),
+            ]
 
-        assert message1 in expected
-        assert message2 in expected
-        assert message1 != message2
-        await p.unsubscribe("foo")
+            assert message1 in expected
+            assert message2 in expected
+            assert message1 != message2
 
     async def test_published_pickled_obj_to_channel(self, client, _s):
-        p = client.pubsub(ignore_subscribe_messages=True)
-        await p.subscribe("foo")
-        msg = pickle.dumps(Exception(), protocol=0).decode("utf-8")
-        # if other tests failed, subscriber may not be cleared
-        assert await client.publish("foo", msg) >= 1
+        async with client.pubsub(ignore_subscribe_messages=True) as p:
+            await p.subscribe("foo")
+            msg = pickle.dumps(Exception(), protocol=0).decode("utf-8")
+            # if other tests failed, subscriber may not be cleared
+            assert await client.publish("foo", msg) >= 1
 
-        message = await wait_for_message(p)
-        assert isinstance(message, dict)
-        assert message == make_message("message", _s("foo"), _s(msg))
-        await p.unsubscribe()
+            message = await wait_for_message(p)
+            assert isinstance(message, dict)
+            assert message == make_message("message", _s("foo"), _s(msg))
 
     async def test_published_pickled_obj_to_pattern(self, client, _s):
-        p = client.pubsub(ignore_subscribe_messages=True)
-        await p.subscribe("foo")
-        await p.psubscribe("f*")
-        # 1 to pattern, 1 to channel
-        msg = pickle.dumps(Exception(), protocol=0).decode("utf-8")
-        assert await client.publish("foo", msg) >= 2
+        async with client.pubsub(ignore_subscribe_messages=True) as p:
+            await p.subscribe("foo")
+            await p.psubscribe("f*")
+            # 1 to pattern, 1 to channel
+            msg = pickle.dumps(Exception(), protocol=0).decode("utf-8")
+            assert await client.publish("foo", msg) >= 2
 
-        message1 = await wait_for_message(p)
-        message2 = await wait_for_message(p)
-        assert isinstance(message1, dict)
-        assert isinstance(message2, dict)
+            message1 = await wait_for_message(p)
+            message2 = await wait_for_message(p)
+            assert isinstance(message1, dict)
+            assert isinstance(message2, dict)
 
-        expected = [
-            make_message("message", _s("foo"), _s(msg)),
-            make_message("pmessage", _s("foo"), _s(msg), pattern=_s("f*")),
-        ]
+            expected = [
+                make_message("message", _s("foo"), _s(msg)),
+                make_message("pmessage", _s("foo"), _s(msg), pattern=_s("f*")),
+            ]
 
-        assert message1 in expected
-        assert message2 in expected
-        assert message1 != message2
-        await p.unsubscribe("foo")
+            assert message1 in expected
+            assert message2 in expected
+            assert message1 != message2
 
     async def test_channel_message_handler(self, client, _s):
-        p = client.pubsub(ignore_subscribe_messages=True)
-        await p.subscribe(foo=self.message_handler)
-        assert await client.publish("foo", "test message")
-        assert await wait_for_message(p) is None
-        assert self.message == make_message("message", _s("foo"), _s("test message"))
-        await p.unsubscribe("foo")
+        async with client.pubsub(ignore_subscribe_messages=True) as p:
+            await p.subscribe(foo=self.message_handler)
+            assert await client.publish("foo", "test message")
+            assert await wait_for_message(p) is None
+            assert self.message == make_message("message", _s("foo"), _s("test message"))
 
     async def test_channel_async_message_handler(self, client, _s):
-        p = client.pubsub(ignore_subscribe_messages=True)
-        await p.subscribe(foo=self.async_message_handler)
-        assert await client.publish("foo", "test message")
-        assert await wait_for_message(p) is None
-        assert self.message == make_message("message", _s("foo"), _s("test message"))
-        await p.unsubscribe("foo")
+        async with client.pubsub(ignore_subscribe_messages=True) as p:
+            await p.subscribe(foo=self.async_message_handler)
+            assert await client.publish("foo", "test message")
+            assert await wait_for_message(p) is None
+            assert self.message == make_message("message", _s("foo"), _s("test message"))
 
     async def test_pattern_message_handler(self, client, _s):
-        p = client.pubsub(ignore_subscribe_messages=True)
-        await p.psubscribe(**{"f*": self.message_handler})
-        assert await client.publish("foo", "test message")
-        assert await wait_for_message(p) is None
-        assert self.message == make_message(
-            "pmessage", _s("foo"), _s("test message"), pattern=_s("f*")
-        )
-        await p.unsubscribe("foo")
+        async with client.pubsub(ignore_subscribe_messages=True) as p:
+            await p.psubscribe(**{"f*": self.message_handler})
+            assert await client.publish("foo", "test message")
+            assert await wait_for_message(p) is None
+            assert self.message == make_message(
+                "pmessage", _s("foo"), _s("test message"), pattern=_s("f*")
+            )
 
     async def test_pattern_async_message_handler(self, client, _s):
-        p = client.pubsub(ignore_subscribe_messages=True)
-        await p.psubscribe(**{"f*": self.async_message_handler})
-        assert await client.publish("foo", "test message")
-        assert await wait_for_message(p) is None
-        assert self.message == make_message(
-            "pmessage", _s("foo"), _s("test message"), pattern=_s("f*")
-        )
-        await p.unsubscribe("foo")
+        async with client.pubsub(ignore_subscribe_messages=True) as p:
+            await p.psubscribe(**{"f*": self.async_message_handler})
+            assert await client.publish("foo", "test message")
+            assert await wait_for_message(p) is None
+            assert self.message == make_message(
+                "pmessage", _s("foo"), _s("test message"), pattern=_s("f*")
+            )
 
     async def test_unicode_channel_message_handler(self, client, _s):
-        p = client.pubsub(ignore_subscribe_messages=True)
-        channel = "uni" + chr(56) + "code"
-        channels = {channel: self.message_handler}
-        await p.subscribe(**channels)
-        assert await client.publish(channel, "test message") == 1
-        assert await wait_for_message(p) is None
-        assert self.message == make_message("message", _s(channel), _s("test message"))
-        await p.unsubscribe(channel)
+        async with client.pubsub(ignore_subscribe_messages=True) as p:
+            channel = "uni" + chr(56) + "code"
+            channels = {channel: self.message_handler}
+            await p.subscribe(**channels)
+            assert await client.publish(channel, "test message") == 1
+            assert await wait_for_message(p) is None
+            assert self.message == make_message("message", _s(channel), _s("test message"))
 
     async def test_unicode_pattern_message_handler(self, client, _s):
-        p = client.pubsub(ignore_subscribe_messages=True)
-        pattern = "uni" + chr(56) + "*"
-        channel = "uni" + chr(56) + "code"
-        await p.psubscribe(**{pattern: self.message_handler})
-        assert await client.publish(channel, "test message") == 1
-        assert await wait_for_message(p) is None
-        assert self.message == make_message(
-            "pmessage", _s(channel), _s("test message"), pattern=_s(pattern)
-        )
-        await p.unsubscribe(channel)
-        await p.punsubscribe(pattern)
+        async with client.pubsub(ignore_subscribe_messages=True) as p:
+            pattern = "uni" + chr(56) + "*"
+            channel = "uni" + chr(56) + "code"
+            await p.psubscribe(**{pattern: self.message_handler})
+            assert await client.publish(channel, "test message") == 1
+            assert await wait_for_message(p) is None
+            assert self.message == make_message(
+                "pmessage", _s(channel), _s("test message"), pattern=_s(pattern)
+            )
 
     async def test_pubsub_worker_thread_no_handler(self, client, _s):
-        p = client.pubsub()
-        await p.subscribe("fubar")
-        with pytest.raises(PubSubError, match="'fubar' has no handler"):
-            p.run_in_thread()
+        async with client.pubsub() as p:
+            with pytest.warns(DeprecationWarning):
+                await p.subscribe("fubar")
+                with pytest.raises(PubSubError, match="'fubar' has no handler"):
+                    p.run_in_thread()
+
+    async def test_pubsub_handlers(self, client, _s):
+        async with client.pubsub() as p:
+            messages = set()
+
+            def handler(message):
+                messages.add(message["data"])
+
+            await p.subscribe(fu=handler)
+            await p.psubscribe(**{"bar*": handler})
+
+            await client.publish("fu", "bar")
+            await client.publish("bar", "fu")
+
+            await asyncio.sleep(0.1)
+
+            assert messages == {_s("fu"), _s("bar")}
 
     async def test_pubsub_worker_thread_subscribe_channel(self, client, _s):
-        p = client.pubsub()
-        messages = []
+        async with client.pubsub() as p:
+            with pytest.warns(DeprecationWarning):
+                messages = []
 
-        def handler(message):
-            messages.append(message)
+                def handler(message):
+                    messages.append(message)
 
-        await p.subscribe(fubar=handler)
-        th = p.run_in_thread()
-        [await client.publish("fubar", str(i)) for i in range(10)]
-        await asyncio.sleep(0.5)
-        th.stop()
-        assert [m["data"] for m in messages] == [_s(i) for i in range(10)]
+                await p.subscribe(fubar=handler)
+                th = p.run_in_thread()
+                [await client.publish("fubar", str(i)) for i in range(10)]
+                await asyncio.sleep(0.5)
+                th.stop()
+                assert [m["data"] for m in messages] == [_s(i) for i in range(10)]
 
     async def test_pubsub_worker_thread_subscribe_pattern(self, client, _s):
-        p = client.pubsub()
-        messages = []
+        async with client.pubsub() as p:
+            with pytest.warns(DeprecationWarning):
+                messages = []
 
-        def handler(message):
-            messages.append(message)
+                def handler(message):
+                    messages.append(message)
 
-        await p.psubscribe(**{"fu*": handler})
-        th = p.run_in_thread()
-        [await client.publish("fubar", str(i)) for i in range(10)]
-        [await client.publish("fubaz", str(i)) for i in range(10, 20)]
-        await asyncio.sleep(0.5)
-        th.stop()
-        assert [m["data"] for m in messages] == [_s(i) for i in range(20)]
+                await p.psubscribe(**{"fu*": handler})
+                th = p.run_in_thread()
+                [await client.publish("fubar", str(i)) for i in range(10)]
+                [await client.publish("fubaz", str(i)) for i in range(10, 20)]
+                await asyncio.sleep(0.5)
+                th.stop()
+                assert [m["data"] for m in messages] == [_s(i) for i in range(20)]
+
+    async def test_pubsub_message_iterator(self, client, _s):
+        async with client.pubsub(ignore_subscribe_messages=True) as p:
+            messages = []
+            await p.psubscribe("fu*")
+            await p.subscribe("test")
+            [await client.publish("fubar", str(i)) for i in range(10)]
+            [await client.publish("test", str(i + 10)) for i in range(10)]
+
+            async def collect():
+                [messages.append(message) async for message in p]
+
+            async def unsubscribe():
+                await asyncio.sleep(0.1)
+                await p.punsubscribe("fu*")
+                await p.unsubscribe("test")
+
+            completed, pending = await asyncio.wait(
+                [asyncio.create_task(collect()), asyncio.create_task(unsubscribe())], timeout=1
+            )
+            assert all(task.done() for task in completed)
+            assert not pending
+            assert len(messages) == 20
 
 
 class TestPubSubRedisDown:
@@ -437,11 +488,10 @@ class TestPubSubRedisDown:
 @targets("redis_basic", "redis_basic_raw")
 class TestPubSubPubSubSubcommands:
     async def test_pubsub_channels(self, client, _s):
-        p = client.pubsub(ignore_subscribe_messages=True)
-        await p.subscribe("foo", "bar", "baz", "quux")
-        channels = set(await client.pubsub_channels())
-        assert set([_s("bar"), _s("baz"), _s("foo"), _s("quux")]).issubset(channels)
-        await p.unsubscribe()
+        async with client.pubsub(ignore_subscribe_messages=True) as p:
+            await p.subscribe("foo", "bar", "baz", "quux")
+            channels = set(await client.pubsub_channels())
+            assert set([_s("bar"), _s("baz"), _s("foo"), _s("quux")]).issubset(channels)
 
     async def test_pubsub_numsub(self, client, _s):
         p1 = client.pubsub(ignore_subscribe_messages=True)
@@ -456,10 +506,12 @@ class TestPubSubPubSubSubcommands:
         await p1.unsubscribe()
         await p2.unsubscribe()
         await p3.unsubscribe()
+        p1.close()
+        p2.close()
+        p3.close()
 
     async def test_pubsub_numpat(self, client):
         pubsub_count = await client.pubsub_numpat()
-        p = client.pubsub(ignore_subscribe_messages=True)
-        await p.psubscribe("*oo", "*ar", "b*z")
-        assert await client.pubsub_numpat() == 3 + pubsub_count
-        await p.unsubscribe()
+        async with client.pubsub(ignore_subscribe_messages=True) as p:
+            await p.psubscribe("*oo", "*ar", "b*z")
+            assert await client.pubsub_numpat() == 3 + pubsub_count
