@@ -136,7 +136,7 @@ class TestStreams:
             retrycount=1,
             force=True,
             idle=datetime.timedelta(minutes=1),
-            time=datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=1),
+            time=datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes=1),
         )
         assert response[0] == message
 

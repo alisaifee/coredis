@@ -314,8 +314,8 @@ class TestServer:
     async def test_save(self, client):
         assert await client.save()
         assert (
-            (await client.lastsave()).replace(tzinfo=datetime.UTC)
-            - datetime.datetime.now(datetime.UTC)
+            (await client.lastsave()).replace(tzinfo=datetime.timezone.utc)
+            - datetime.datetime.now(datetime.timezone.utc)
         ) < datetime.timedelta(minutes=1)
 
     @pytest.mark.nocluster
