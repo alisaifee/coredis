@@ -78,8 +78,6 @@ if TYPE_CHECKING:
 
 ClientT = TypeVar("ClientT", bound="Client[Any]")
 RedisT = TypeVar("RedisT", bound="Redis[Any]")
-RedisStringT = TypeVar("RedisStringT", bound="Redis[str]")
-RedisBytesT = TypeVar("RedisBytesT", bound="Redis[bytes]")
 
 
 class Client(
@@ -601,7 +599,7 @@ class Redis(Client[AnyStr]):
         connection_pool_cls: type[ConnectionPool] = ...,
         unix_socket_path: str | None = ...,
         encoding: str = ...,
-        decode_responses: Literal[True],
+        decode_responses: Literal[True] = ...,
         ssl: bool = ...,
         ssl_context: SSLContext | None = ...,
         ssl_keyfile: str | None = ...,
@@ -823,7 +821,7 @@ class Redis(Client[AnyStr]):
     @classmethod
     @overload
     def from_url(
-        cls: type[RedisBytesT],
+        cls,
         url: str,
         db: int | None = ...,
         *,
@@ -836,16 +834,16 @@ class Redis(Client[AnyStr]):
         retry_policy: RetryPolicy = ...,
         cache: AbstractCache | None = ...,
         **kwargs: Any,
-    ) -> RedisBytesT: ...
+    ) -> Redis[bytes]: ...
 
     @classmethod
     @overload
     def from_url(
-        cls: type[RedisStringT],
+        cls,
         url: str,
         db: int | None = ...,
         *,
-        decode_responses: Literal[True],
+        decode_responses: Literal[True] = ...,
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         noreply: bool = ...,
@@ -854,7 +852,7 @@ class Redis(Client[AnyStr]):
         retry_policy: RetryPolicy = ...,
         cache: AbstractCache | None = ...,
         **kwargs: Any,
-    ) -> RedisStringT: ...
+    ) -> Redis[str]: ...
 
     @classmethod
     def from_url(

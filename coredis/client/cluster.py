@@ -144,8 +144,6 @@ class ClusterMeta(ABCMeta):
 
 
 RedisClusterT = TypeVar("RedisClusterT", bound="RedisCluster[Any]")
-RedisClusterStringT = TypeVar("RedisClusterStringT", bound="RedisCluster[str]")
-RedisClusterBytesT = TypeVar("RedisClusterBytesT", bound="RedisCluster[bytes]")
 
 
 class RedisCluster(
@@ -221,7 +219,7 @@ class RedisCluster(
         skip_full_coverage_check: bool = ...,
         nodemanager_follow_cluster: bool = ...,
         encoding: str = ...,
-        decode_responses: Literal[True],
+        decode_responses: Literal[True] = ...,
         connection_pool: ClusterConnectionPool | None = ...,
         connection_pool_cls: type[ClusterConnectionPool] = ...,
         protocol_version: Literal[2, 3] = ...,
@@ -497,7 +495,7 @@ class RedisCluster(
     @classmethod
     @overload
     def from_url(
-        cls: type[RedisClusterBytesT],
+        cls: type[RedisCluster[bytes]],
         url: str,
         *,
         db: int | None = ...,
@@ -511,12 +509,12 @@ class RedisCluster(
         retry_policy: RetryPolicy = ...,
         cache: AbstractCache | None = ...,
         **kwargs: Any,
-    ) -> RedisClusterBytesT: ...
+    ) -> RedisCluster[bytes]: ...
 
     @classmethod
     @overload
     def from_url(
-        cls: type[RedisClusterStringT],
+        cls: type[RedisCluster[str]],
         url: str,
         *,
         db: int | None = ...,
@@ -530,7 +528,7 @@ class RedisCluster(
         retry_policy: RetryPolicy = ...,
         cache: AbstractCache | None = ...,
         **kwargs: Any,
-    ) -> RedisClusterStringT: ...
+    ) -> RedisCluster[str]: ...
 
     @classmethod
     def from_url(
