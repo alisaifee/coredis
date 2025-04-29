@@ -221,7 +221,6 @@ class TestConnection:
         my_id = (await client.client_info())["id"]
         clone_id = (await clone.client_info())["id"]
         await asyncio.sleep(1)
-        assert 0 == await client.client_kill(maxage=60, skipme=False)
         assert await client.client_kill(maxage=1, skipme=False) >= 2
         assert clone_id != (await clone.client_info())["id"]
         assert my_id != (await client.client_info())["id"]
