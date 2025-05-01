@@ -257,17 +257,27 @@ class TestPubSubSubscribeUnsubscribe:
             handled.append(message["data"])
 
         async with client.pubsub(
-            ignore_subscribe_messages=True, channels=["foo"], channel_handlers={"bar": handle}
+            ignore_subscribe_messages=True,
+            channels=["foo"],
+            channel_handlers={"bar": handle},
+            patterns=["baz*"],
+            pattern_handlers={"qu*": handle},
         ) as pubsub:
             assert pubsub.subscribed
             await client.publish("foo", "bar")
             await client.publish("bar", "foo")
+            await client.publish("baz", "qux")
+            await client.publish("qux", "quxx")
             assert (await wait_for_message(pubsub, ignore_subscribe_messages=True))["data"] == _s(
                 "bar"
             )
             assert await pubsub.get_message() is None
+            assert (await wait_for_message(pubsub, ignore_subscribe_messages=True))["data"] == _s(
+                "qux"
+            )
+            assert await pubsub.get_message() is None
 
-        assert handled == [_s("foo")]
+        assert handled == [_s("foo"), _s("quxx")]
         assert not pubsub.subscribed
 
 

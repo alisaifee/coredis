@@ -192,15 +192,24 @@ class TestPubSubSubscribeUnsubscribe:
             handled.append(message["data"])
 
         async with redis_cluster.pubsub(
-            ignore_subscribe_messages=True, channels=["foo"], channel_handlers={"bar": handle}
+            ignore_subscribe_messages=True,
+            channels=["foo"],
+            channel_handlers={"bar": handle},
+            patterns=["baz*"],
+            pattern_handlers={"qu*": handle},
         ) as pubsub:
             assert pubsub.subscribed
             await redis_cluster.publish("foo", "bar")
             await redis_cluster.publish("bar", "foo")
+            await redis_cluster.publish("baz", "qux")
+            await redis_cluster.publish("qux", "quxx")
             assert (await wait_for_message(pubsub, ignore_subscribe_messages=True))["data"] == "bar"
             assert await pubsub.get_message() is None
+            assert (await wait_for_message(pubsub, ignore_subscribe_messages=True))["data"] == "qux"
 
-        assert handled == ["foo"]
+            assert await pubsub.get_message() is None
+
+        assert handled == ["foo", "quxx"]
         assert not pubsub.subscribed
 
     async def test_sharded_subscribe_on_construct(self, redis_cluster):
