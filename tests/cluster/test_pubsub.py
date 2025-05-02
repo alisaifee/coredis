@@ -11,7 +11,6 @@ from contextlib import aclosing
 import pytest
 
 # rediscluster imports
-from coredis import RedisCluster
 from coredis._utils import b, hash_slot
 from tests.conftest import targets
 
@@ -621,36 +620,3 @@ class TestPubSubPubSubSubcommands:
         await p1.aclose()
         await p2.aclose()
         await p3.aclose()
-
-
-def test_pubsub_thread_publish():
-    """
-    This test will never fail but it will still show and be viable to use
-    and to test the threading capability of the connectionpool and the publish
-    mechanism.
-    """
-    startup_nodes = [{"host": "127.0.0.1", "port": "7000"}]
-
-    r = RedisCluster(
-        startup_nodes=startup_nodes,
-        max_connections=16,
-        max_connections_per_node=16,
-    )
-
-    async def t_run(rc):
-        for i in range(0, 50):
-            await rc.publish("foo", "bar")
-            await rc.publish("bar", "foo")
-            await rc.publish("asd", "dsa")
-            await rc.publish("dsa", "asd")
-            await rc.publish("qwe", "bar")
-            await rc.publish("ewq", "foo")
-            await rc.publish("wer", "dsa")
-            await rc.publish("rew", "asd")
-
-    try:
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(asyncio.gather(*(t_run(r) for _ in range(10))))
-    except Exception as e:
-        print(e)
-        print("Error: unable to start thread")
