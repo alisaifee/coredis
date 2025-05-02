@@ -11,9 +11,7 @@ Enums
 Monitor
 ^^^^^^^
 .. autoclass:: coredis.commands.Monitor
-.. autoclass:: coredis.commands.monitor.MonitorThread
-   :no-inherited-members:
-   :show-inheritance:
+   :class-doc-from: both
 
 Retries
 ^^^^^^^

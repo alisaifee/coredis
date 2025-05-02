@@ -2,14 +2,17 @@ from __future__ import annotations
 
 import asyncio
 import threading
-from asyncio import AbstractEventLoop, CancelledError
+from asyncio import AbstractEventLoop
 from concurrent.futures import Future
+from types import TracebackType
 from typing import TYPE_CHECKING, Any
 
+from deprecated.sphinx import deprecated
+
 from coredis.commands.constants import CommandName
-from coredis.exceptions import RedisError
+from coredis.exceptions import ConnectionError, RedisError
 from coredis.response.types import MonitorResult
-from coredis.typing import AnyStr, Callable, Generator, Generic, TypeVar
+from coredis.typing import AnyStr, Callable, Generator, Generic, Self, TypeVar
 
 if TYPE_CHECKING:
     import coredis.client
@@ -24,23 +27,44 @@ class Monitor(Generic[AnyStr]):
 
     It can be used as an infinite async iterator::
 
-        async for command in client.monitor():
-            print(command.time, command.client_type, command.command, command.args)
+        async with client.monitor() as monitor:
+            async for command in monitor:
+                print(command.time, command.client_type, command.command, command.args)
 
     Alternatively, each command can be fetched explicitly::
 
         monitor = client.monitor()
         command1 = await monitor.get_command()
         command2 = await monitor.get_command()
-        monitor.stop()
+        await monitor.aclose()
 
+    If you are only interested in triggering callbacks when a command is received
+    by the monitor::
+        def monitor_handler(result: MonitorResult) -> None:
+            ....
+
+        monitor = await client.monitor(response_handler=monitor_handler)
+        # when done
+        await monitor.aclose()
     """
 
-    def __init__(self, client: coredis.client.Client[AnyStr]):
+    def __init__(
+        self,
+        client: coredis.client.Client[AnyStr],
+        response_handler: Callable[[MonitorResult], None] | None = None,
+    ):
+        """
+        :param client: a Redis client
+        :param response_handler: optional callback to call whenever a
+         command is received by the monitor
+        """
         self.client: coredis.client.Client[AnyStr] = client
         self.encoding = client.encoding
         self.connection: coredis.connection.Connection | None = None
         self.monitoring = False
+        self._monitor_results: asyncio.Queue[MonitorResult] = asyncio.Queue()
+        self._monitor_task: asyncio.Task[None] | None = None
+        self._response_handler = response_handler
 
     def __aiter__(self) -> Monitor[AnyStr]:
         return self
@@ -55,25 +79,61 @@ class Monitor(Generic[AnyStr]):
     def __await__(self: MonitorT) -> Generator[Any, None, MonitorT]:
         return self.__start_monitor().__await__()
 
+    async def __aenter__(self) -> Self:
+        await self.__start_monitor()
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        await self.aclose()
+
     async def get_command(self) -> MonitorResult:
         """
         Wait for the next command issued and return the details
         """
         await self.__start_monitor()
-        assert self.connection
-        response = await self.connection.fetch_push_message(block=True)
-        if isinstance(response, bytes):
-            response = response.decode(self.encoding)
-        assert isinstance(response, str)
-        return MonitorResult.parse_response_string(response)
+        return await self._monitor_results.get()
 
-    async def stop(self) -> None:
+    async def aclose(self) -> None:
         """
         Stop monitoring by issuing a ``RESET`` command
         and release the connection.
         """
         return await self.__stop_monitoring()
 
+    @deprecated("Use :meth:`aclose` instead", version="4.21.0")
+    async def stop(self) -> None:
+        """
+        Stop monitoring by issuing a ``RESET`` command
+        and release the connection.
+        """
+        return await self.aclose()
+
+    @deprecated(
+        """
+        Running the monitor in a thread is no longer necessary
+        since the constructor for :class:`Monitor` will accept a callback
+        to be triggered when a command is received by the monitor and this will
+        automatically happen in a background async task that is started as soon 
+        as :class:`Monitor` is initialized.
+        
+        To achieve identical results simply await an instance of :class:`Monitor`
+        instantiated with :paramref:`Monitor.response_handler` and call :meth:`aclose` 
+        when done.
+        
+        
+        .. code:: python
+        
+            monitor = await client.monitor(response_handler=my_handler)
+            # when done
+            await pubsub.aclose() 
+        """,
+        version="4.21.0",
+    )
     def run_in_thread(
         self,
         response_handler: Callable[[MonitorResult], None],
@@ -104,6 +164,8 @@ class Monitor(Generic[AnyStr]):
         response = await request
         if not response == b"OK":  # noqa
             raise RedisError(f"Failed to start MONITOR {response!r}")
+        if not self._monitor_task or self._monitor_task.done():
+            self._monitor_task = asyncio.create_task(self._monitor())
         self.monitoring = True
         return self
 
@@ -119,8 +181,31 @@ class Monitor(Generic[AnyStr]):
         if self.connection:
             self.connection.disconnect()
             self.client.connection_pool.release(self.connection)
+        if self._monitor_task and not self._monitor_task.done():
+            try:
+                self._monitor_task.cancel()
+            except RuntimeError:  # noqa
+                pass
         self.monitoring = False
         self.connection = None
+
+    async def _monitor(self) -> None:
+        while self.connection:
+            try:
+                response = await self.connection.fetch_push_message(block=True)
+                if isinstance(response, bytes):
+                    response = response.decode(self.encoding)
+                assert isinstance(response, str)
+                result = MonitorResult.parse_response_string(response)
+                if self._response_handler:
+                    self._response_handler(result)
+                else:
+                    self._monitor_results.put_nowait(result)
+            except asyncio.CancelledError:
+                break
+            except ConnectionError:
+                break
+        self.__reset()
 
 
 class MonitorThread(threading.Thread):
@@ -144,11 +229,9 @@ class MonitorThread(threading.Thread):
         self._future = asyncio.run_coroutine_threadsafe(self._run(), self._loop)
 
     async def _run(self) -> None:
-        try:
+        async with self._monitor:
             async for command in self._monitor:
                 self._response_handler(command)
-        except CancelledError:
-            await self._monitor.stop()
 
     def stop(self) -> None:
         if self._future:

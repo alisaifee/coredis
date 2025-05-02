@@ -47,7 +47,7 @@ from coredis.response._callbacks import (
     NoopCallback,
     ResponseCallback,
 )
-from coredis.response.types import ScoredMember
+from coredis.response.types import MonitorResult, ScoredMember
 from coredis.retry import ConstantRetryPolicy, NoRetryPolicy, RetryPolicy
 from coredis.typing import (
     AnyStr,
@@ -1044,14 +1044,23 @@ class Redis(Client[AnyStr]):
             self._decodecontext.set(prev_decode)
             self._encodingcontext.set(prev_encoding)
 
-    def monitor(self) -> Monitor[AnyStr]:
+    def monitor(
+        self,
+        response_handler: Callable[[MonitorResult], None] | None = None,
+    ) -> Monitor[AnyStr]:
         """
+        :param response_handler: Optional callback to be triggered whenever
+         a command is received by this monitor.
+
         Return an instance of a :class:`~coredis.commands.monitor.Monitor`
 
         The monitor can be used as an async iterator or individual commands
         can be fetched via :meth:`~coredis.commands.monitor.Monitor.get_command`.
+        When a :paramref:`response_handler` is provided it will simply by called
+        for every command received.
+
         """
-        return Monitor[AnyStr](self)
+        return Monitor[AnyStr](self, response_handler)
 
     def pubsub(
         self,
