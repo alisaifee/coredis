@@ -547,9 +547,9 @@ class BaseConnection(asyncio.BaseProtocol):
                 await asyncio.wait_for(read_ready_task, timeout)
             except asyncio.TimeoutError:
                 raise TimeoutError
-            except asyncio.CancelledError as e:
-                if e.args and isinstance(e.args[0], ConnectionError):
-                    raise e.args[0]
+            except asyncio.CancelledError:
+                if not self.is_connected:
+                    raise ConnectionError("Connection lost")
                 raise
             message = self._parser.get_response(
                 bool(decode) if decode is not None else self.decode_responses,
@@ -700,7 +700,7 @@ class BaseConnection(asyncio.BaseProtocol):
         while self._read_waiters:
             waiter = self._read_waiters.pop()
             if not waiter.done():
-                waiter.cancel(disconnect_exc)
+                waiter.cancel()
         while True:
             try:
                 request = self._requests.popleft()
