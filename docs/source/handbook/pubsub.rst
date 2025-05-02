@@ -19,7 +19,7 @@ or :meth:`~coredis.commands.PubSub.psubscribe` methods.
 
 Upon instantiation::
 
-    pubsub = await client.pubsub(
+    consumer = await client.pubsub(
         channels=["my-first-channel", "my-second-channel"], patterns=["my-*"]
     )
 
@@ -31,17 +31,17 @@ Upon instantiation::
 
    For example::
 
-       pubsub = client.pubsub(
+       consumer = client.pubsub(
            channels=["my-first-channel", "my-second-channel"],
            patterns=["my-*"]
        )
-       assert not pubsub.subscribed
+       assert not consumer.subscribed
        # later in an async context
-       await pubsub
+       await consumer
        #  or
-       await pubsub.initialize()
+       await consumer.initialize()
        # or simply use the instance
-       await pubsub.get_message()
+       await consumer.get_message()
 
 
 or explicitly::
@@ -56,7 +56,7 @@ which automatically manages unsubscribing and connection cleanup on exit::
 
     async with client.pubsub(
         channels=["my-first-channel", "my-second-channel"], patterns=["my-*"]
-    ):
+    ) as consumer:
         async for message in consumer:
             print(message)
     # remaining subscriptions are unsubscribed and connection is released
