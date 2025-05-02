@@ -5,7 +5,6 @@ PubSub
    ~coredis.commands.PubSub
    ~coredis.commands.ClusterPubSub
    ~coredis.commands.ShardedPubSub
-   ~coredis.commands.pubsub.PubSubWorkerThread
    ~coredis.commands.pubsub.SubscriptionCallback
 
 .. autoclass:: coredis.commands.PubSub
@@ -16,10 +15,6 @@ PubSub
 
 .. autoclass:: coredis.commands.ShardedPubSub
    :class-doc-from: both
-
-.. autoclass:: coredis.commands.pubsub.PubSubWorkerThread
-   :no-inherited-members:
-   :show-inheritance:
 
 .. autodata:: coredis.commands.pubsub.SubscriptionCallback
 
