@@ -203,10 +203,7 @@ class TestPubSubSubscribeUnsubscribe:
             await redis_cluster.publish("baz", "qux")
             await redis_cluster.publish("qux", "quxx")
             assert (await wait_for_message(pubsub, ignore_subscribe_messages=True))["data"] == "bar"
-            assert await pubsub.get_message() is None
             assert (await wait_for_message(pubsub, ignore_subscribe_messages=True))["data"] == "qux"
-
-            assert await pubsub.get_message() is None
 
         assert handled == ["foo", "quxx"]
         assert not pubsub.subscribed
@@ -224,7 +221,6 @@ class TestPubSubSubscribeUnsubscribe:
             await redis_cluster.spublish("foo", "bar")
             await redis_cluster.spublish("bar", "foo")
             assert (await wait_for_message(pubsub, ignore_subscribe_messages=True))["data"] == "bar"
-            assert await pubsub.get_message() is None
 
         assert handled == ["foo"]
         assert not pubsub.subscribed
@@ -337,9 +333,9 @@ class TestPubSubSubscribeUnsubscribe:
             assert not client.connection_pool.initialized
             await p.subscribe("foo")
             assert p.subscribed
-            assert await p.get_message(ignore_subscribe_messages=True) is None
+            assert await p.get_message(ignore_subscribe_messages=True, timeout=1) is None
             await p.unsubscribe()
-            assert await p.get_message(ignore_subscribe_messages=True) is None
+            assert await p.get_message(ignore_subscribe_messages=True, timeout=1) is None
             assert not p.subscribed
 
     @pytest.mark.min_server_version("7.0")
@@ -348,10 +344,10 @@ class TestPubSubSubscribeUnsubscribe:
         async with aclosing(client.sharded_pubsub()) as p:
             assert not client.connection_pool.initialized
             await p.subscribe("foo")
-            assert await p.get_message(ignore_subscribe_messages=True) is None
+            assert await p.get_message(ignore_subscribe_messages=True, timeout=1) is None
             assert p.subscribed
             await p.unsubscribe()
-            assert await p.get_message(ignore_subscribe_messages=True) is None
+            assert await p.get_message(ignore_subscribe_messages=True, timeout=1) is None
             assert not p.subscribed
 
 

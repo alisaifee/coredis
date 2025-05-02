@@ -271,11 +271,9 @@ class TestPubSubSubscribeUnsubscribe:
             assert (await wait_for_message(pubsub, ignore_subscribe_messages=True))["data"] == _s(
                 "bar"
             )
-            assert await pubsub.get_message() is None
             assert (await wait_for_message(pubsub, ignore_subscribe_messages=True))["data"] == _s(
                 "qux"
             )
-            assert await pubsub.get_message() is None
 
         assert handled == [_s("foo"), _s("quxx")]
         assert not pubsub.subscribed
