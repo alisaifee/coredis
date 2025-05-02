@@ -17,28 +17,27 @@ Channels or patterns can either be subscribed to on initialization or after
 
 Upon initialization::
 
-    pubsub = await client.pubsub(channels=["my-first-channel"], patterns=["my-*"])
+    pubsub = await client.pubsub(
+        channels=["my-first-channel", "my-second-channel"], patterns=["my-*"]
+    )
 
 or explicitly::
 
     consumer = client.pubsub()
-    await consumer.subscribe('my-first-channel', 'my-second-channel', ...)
-    await consumer.psubscribe('my-*', ...)
+    await consumer.subscribe("my-first-channel", "my-second-channel", ...)
+    await consumer.psubscribe("my-*")
 
 
 The recommended way of using a pubsub instance is with the async context manager
 which automatically manages unsubscribing and connection cleanup on exit::
 
-    consumer = client.pubsub(ignore_subscribe_messages=True)
-    async with consumer:
-        await consumer.subscribe("my-first-channel")
-        await consumer.psubscribe("other-*")
-        await consumer.unsubscribe("my-first-channel")
+    async with client.pubsub(
+        channels=["my-first-channel", "my-second-channel"], patterns=["my-*"]
+    ):
         async for message in consumer:
             print(message)
-        ....
     # remaining subscriptions are unsubscribed and connection is released
-    # back to the connection pool
+    # back to the connection pool when the context manager exits.
 
 
 
