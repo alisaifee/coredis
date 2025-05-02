@@ -6,11 +6,11 @@ import time
 
 # 3rd party imports
 from collections import Counter
+from contextlib import aclosing
 
 import pytest
 
 # rediscluster imports
-from coredis import Redis, RedisCluster
 from coredis._utils import b, hash_slot
 from tests.conftest import targets
 
@@ -75,41 +75,42 @@ class TestPubSubSubscribeUnsubscribe:
     async def _test_subscribe_unsubscribe(
         self, p, sub_type, unsub_type, sub_func, unsub_func, keys, sharded=False
     ):
-        counter = Counter()
-        for key in keys:
-            assert await sub_func(key) is None
+        async with p:
+            counter = Counter()
+            for key in keys:
+                assert await sub_func(key) is None
 
-        # should be a message for each channel/pattern we just subscribed to
-        expected = set()
-        received = set()
+            # should be a message for each channel/pattern we just subscribed to
+            expected = set()
+            received = set()
 
-        for i, key in enumerate(keys):
-            if sharded:
-                node_key = p.connection_pool.nodes.node_from_slot(hash_slot(b(key)))["node_id"]
-            else:
-                node_key = "legacy"
-            counter[node_key] += 1
-            received.add(tuple((await wait_for_message(p)).items()))
-            expected.add(tuple(make_message(sub_type, key, counter[node_key]).items()))
+            for i, key in enumerate(keys):
+                if sharded:
+                    node_key = p.connection_pool.nodes.node_from_slot(hash_slot(b(key)))["node_id"]
+                else:
+                    node_key = "legacy"
+                counter[node_key] += 1
+                received.add(tuple((await wait_for_message(p)).items()))
+                expected.add(tuple(make_message(sub_type, key, counter[node_key]).items()))
 
-        assert expected == received
-        expected.clear()
-        received.clear()
-        for key in keys:
-            assert await unsub_func(key) is None
+            assert expected == received
+            expected.clear()
+            received.clear()
+            for key in keys:
+                assert await unsub_func(key) is None
 
-        # should be a message for each channel/pattern we just unsubscribed
-        # from
+            # should be a message for each channel/pattern we just unsubscribed
+            # from
 
-        for i, key in enumerate(keys):
-            if sharded:
-                node_key = p.connection_pool.nodes.node_from_slot(hash_slot(b(key)))["node_id"]
-            else:
-                node_key = "legacy"
-            counter[node_key] -= 1
-            received.add(tuple((await wait_for_message(p)).items()))
-            expected.add(tuple(make_message(unsub_type, key, counter[node_key]).items()))
-        assert expected == received
+            for i, key in enumerate(keys):
+                if sharded:
+                    node_key = p.connection_pool.nodes.node_from_slot(hash_slot(b(key)))["node_id"]
+                else:
+                    node_key = "legacy"
+                counter[node_key] -= 1
+                received.add(tuple((await wait_for_message(p)).items()))
+                expected.add(tuple(make_message(unsub_type, key, counter[node_key]).items()))
+            assert expected == received
 
     async def test_channel_subscribe_unsubscribe(self, redis_cluster):
         kwargs = make_subscribe_test_data(redis_cluster.pubsub(), "channel")
@@ -129,58 +130,100 @@ class TestPubSubSubscribeUnsubscribe:
     async def _test_resubscribe_on_reconnection(
         self, p, sub_type, sub_func, keys, *args, sharded=False, **kwargs
     ):
-        counter = Counter()
+        async with p:
+            counter = Counter()
 
-        for key in keys:
-            assert await sub_func(key) is None
+            for key in keys:
+                assert await sub_func(key) is None
 
-        # should be a message for each channel/pattern we just subscribed to
+            # should be a message for each channel/pattern we just subscribed to
 
-        expected = set()
-        received = set()
-        for i, key in enumerate(keys):
+            expected = set()
+            received = set()
+            for i, key in enumerate(keys):
+                if sharded:
+                    node_key = p.connection_pool.nodes.node_from_slot(hash_slot(b(key)))["node_id"]
+                else:
+                    node_key = "legacy"
+                counter[node_key] += 1
+                expected.add(tuple(make_message(sub_type, key, counter[node_key]).items()))
+                received.add(tuple((await wait_for_message(p)).items()))
+
+            assert expected == received
+
+            # manually disconnect
             if sharded:
-                node_key = p.connection_pool.nodes.node_from_slot(hash_slot(b(key)))["node_id"]
+                [c.disconnect() for c in p.shard_connections.values()]
             else:
-                node_key = "legacy"
-            counter[node_key] += 1
-            expected.add(tuple(make_message(sub_type, key, counter[node_key]).items()))
-            received.add(tuple((await wait_for_message(p)).items()))
+                p.connection.disconnect()
 
-        assert expected == received
+            # calling get_message again reconnects and resubscribes
+            # note, we may not re-subscribe to channels in exactly the same order
+            # so we have to do some extra checks to make sure we got them all
+            messages = []
 
-        # manually disconnect
-        if sharded:
-            [c.disconnect() for c in p.shard_connections.values()]
-        else:
-            p.connection.disconnect()
+            # we'll figure this out eventually
+            if sharded:
+                await asyncio.sleep(1)
 
-        # calling get_message again reconnects and resubscribes
-        # note, we may not re-subscribe to channels in exactly the same order
-        # so we have to do some extra checks to make sure we got them all
-        messages = []
+            for i, _ in enumerate(keys):
+                messages.append(await wait_for_message(p))
 
-        # we'll figure this out eventually
-        if sharded:
-            await asyncio.sleep(1)
+            unique_channels = set()
+            assert len(messages) == len(keys)
 
-        for i, _ in enumerate(keys):
-            messages.append(await wait_for_message(p))
+            for i, message in enumerate(messages):
+                assert message["type"] == sub_type
+                if not sharded:
+                    assert message["data"] == i + 1
+                channel = message["channel"]
+                unique_channels.add(channel)
 
-        unique_channels = set()
-        assert len(messages) == len(keys)
+            assert len(unique_channels) == len(keys)
 
-        for i, message in enumerate(messages):
-            assert message["type"] == sub_type
-            if not sharded:
-                assert message["data"] == i + 1
-            channel = message["channel"]
-            unique_channels.add(channel)
+            for channel in unique_channels:
+                assert channel in keys
 
-        assert len(unique_channels) == len(keys)
+    async def test_subscribe_on_construct(self, redis_cluster):
+        handled = []
 
-        for channel in unique_channels:
-            assert channel in keys
+        def handle(message):
+            handled.append(message["data"])
+
+        async with redis_cluster.pubsub(
+            ignore_subscribe_messages=True,
+            channels=["foo"],
+            channel_handlers={"bar": handle},
+            patterns=["baz*"],
+            pattern_handlers={"qu*": handle},
+        ) as pubsub:
+            assert pubsub.subscribed
+            await redis_cluster.publish("foo", "bar")
+            await redis_cluster.publish("bar", "foo")
+            await redis_cluster.publish("baz", "qux")
+            await redis_cluster.publish("qux", "quxx")
+            assert (await wait_for_message(pubsub, ignore_subscribe_messages=True))["data"] == "bar"
+            assert (await wait_for_message(pubsub, ignore_subscribe_messages=True))["data"] == "qux"
+
+        assert handled == ["foo", "quxx"]
+        assert not pubsub.subscribed
+
+    async def test_sharded_subscribe_on_construct(self, redis_cluster):
+        handled = []
+
+        def handle(message):
+            handled.append(message["data"])
+
+        async with redis_cluster.sharded_pubsub(
+            ignore_subscribe_messages=True, channels=["foo"], channel_handlers={"bar": handle}
+        ) as pubsub:
+            assert pubsub.subscribed
+            await redis_cluster.spublish("foo", "bar")
+            await redis_cluster.spublish("bar", "foo")
+            assert (await wait_for_message(pubsub, ignore_subscribe_messages=True))["data"] == "bar"
+
+        assert handled == ["foo"]
+        assert not pubsub.subscribed
 
     async def test_resubscribe_to_channels_on_reconnection(self, redis_cluster):
         kwargs = make_subscribe_test_data(redis_cluster.pubsub(), "channel")
@@ -197,48 +240,49 @@ class TestPubSubSubscribeUnsubscribe:
         await self._test_resubscribe_on_reconnection(**kwargs)
 
     async def _test_subscribed_property(self, p, sub_type, unsub_type, sub_func, unsub_func, keys):
-        assert p.subscribed is False
-        await sub_func(keys[0])
-        # we're now subscribed even though we haven't processed the
-        # reply from the server just yet
-        assert p.subscribed is True
-        assert await wait_for_message(p) == make_message(sub_type, keys[0], 1)
-        # we're still subscribed
-        assert p.subscribed is True
+        async with p:
+            assert p.subscribed is False
+            await sub_func(keys[0])
+            # we're now subscribed even though we haven't processed the
+            # reply from the server just yet
+            assert p.subscribed is True
+            assert await wait_for_message(p) == make_message(sub_type, keys[0], 1)
+            # we're still subscribed
+            assert p.subscribed is True
 
-        # unsubscribe from all channels
-        await unsub_func()
-        # we're still technically subscribed until we process the
-        # response messages from the server
-        assert p.subscribed is True
-        assert await wait_for_message(p) == make_message(unsub_type, keys[0], 0)
-        # now we're no longer subscribed as no more messages can be delivered
-        # to any channels we were listening to
-        assert p.subscribed is False
+            # unsubscribe from all channels
+            await unsub_func()
+            # we're still technically subscribed until we process the
+            # response messages from the server
+            assert p.subscribed is True
+            assert await wait_for_message(p) == make_message(unsub_type, keys[0], 0)
+            # now we're no longer subscribed as no more messages can be delivered
+            # to any channels we were listening to
+            assert p.subscribed is False
 
-        # subscribing again flips the flag back
-        await sub_func(keys[0])
-        assert p.subscribed is True
-        assert await wait_for_message(p) == make_message(sub_type, keys[0], 1)
+            # subscribing again flips the flag back
+            await sub_func(keys[0])
+            assert p.subscribed is True
+            assert await wait_for_message(p) == make_message(sub_type, keys[0], 1)
 
-        # unsubscribe again
-        await unsub_func()
-        assert p.subscribed is True
-        # subscribe to another channel before reading the unsubscribe response
-        await sub_func(keys[1])
-        assert p.subscribed is True
-        # read the unsubscribe for key1
-        assert await wait_for_message(p) == make_message(unsub_type, keys[0], 0)
-        # we're still subscribed to key2, so subscribed should still be True
-        assert p.subscribed is True
-        # read the key2 subscribe message
-        assert await wait_for_message(p) == make_message(sub_type, keys[1], 1)
-        await unsub_func()
-        # haven't read the message yet, so we're still subscribed
-        assert p.subscribed is True
-        assert await wait_for_message(p) == make_message(unsub_type, keys[1], 0)
-        # now we're finally unsubscribed
-        assert p.subscribed is False
+            # unsubscribe again
+            await unsub_func()
+            assert p.subscribed is True
+            # subscribe to another channel before reading the unsubscribe response
+            await sub_func(keys[1])
+            assert p.subscribed is True
+            # read the unsubscribe for key1
+            assert await wait_for_message(p) == make_message(unsub_type, keys[0], 0)
+            # we're still subscribed to key2, so subscribed should still be True
+            assert p.subscribed is True
+            # read the key2 subscribe message
+            assert await wait_for_message(p) == make_message(sub_type, keys[1], 1)
+            await unsub_func()
+            # haven't read the message yet, so we're still subscribed
+            assert p.subscribed is True
+            assert await wait_for_message(p) == make_message(unsub_type, keys[1], 0)
+            # now we're finally unsubscribed
+            assert p.subscribed is False
 
     async def test_subscribe_property_with_channels(self, redis_cluster):
         kwargs = make_subscribe_test_data(redis_cluster.pubsub(), "channel")
@@ -249,64 +293,62 @@ class TestPubSubSubscribeUnsubscribe:
         await self._test_subscribed_property(**kwargs)
 
     async def test_ignore_all_subscribe_messages(self, redis_cluster):
-        p = redis_cluster.pubsub(ignore_subscribe_messages=True)
+        async with redis_cluster.pubsub(ignore_subscribe_messages=True) as p:
+            checks = (
+                (p.subscribe, "foo"),
+                (p.unsubscribe, "foo"),
+                (p.psubscribe, "f*"),
+                (p.punsubscribe, "f*"),
+            )
 
-        checks = (
-            (p.subscribe, "foo"),
-            (p.unsubscribe, "foo"),
-            (p.psubscribe, "f*"),
-            (p.punsubscribe, "f*"),
-        )
+            assert p.subscribed is False
 
-        assert p.subscribed is False
-
-        for func, channel in checks:
-            assert await func(channel) is None
-            assert p.subscribed is True
-            assert await wait_for_message(p) is None
-        assert p.subscribed is False
+            for func, channel in checks:
+                assert await func(channel) is None
+                assert p.subscribed is True
+                assert await wait_for_message(p) is None
+            assert p.subscribed is False
 
     async def test_ignore_individual_subscribe_messages(self, redis_cluster):
-        p = redis_cluster.pubsub()
+        async with redis_cluster.pubsub() as p:
+            checks = (
+                (p.subscribe, "foo"),
+                (p.unsubscribe, "foo"),
+                (p.psubscribe, "f*"),
+                (p.punsubscribe, "f*"),
+            )
 
-        checks = (
-            (p.subscribe, "foo"),
-            (p.unsubscribe, "foo"),
-            (p.psubscribe, "f*"),
-            (p.punsubscribe, "f*"),
-        )
+            assert p.subscribed is False
 
-        assert p.subscribed is False
-
-        for func, channel in checks:
-            assert await func(channel) is None
-            assert p.subscribed is True
-            message = await wait_for_message(p, ignore_subscribe_messages=True)
-            assert message is None
-        assert p.subscribed is False
+            for func, channel in checks:
+                assert await func(channel) is None
+                assert p.subscribed is True
+                message = await wait_for_message(p, ignore_subscribe_messages=True)
+                assert message is None
+            assert p.subscribed is False
 
     async def test_uninitialized_client(self, redis_cluster, cloner):
         client = await cloner(redis_cluster, initialize=False)
-        p = client.pubsub()
-        assert not client.connection_pool.initialized
-        await p.subscribe("foo")
-        assert p.subscribed
-        assert await p.get_message(ignore_subscribe_messages=True) is None
-        await p.unsubscribe()
-        assert await p.get_message(ignore_subscribe_messages=True) is None
-        assert not p.subscribed
+        async with aclosing(client.pubsub()) as p:
+            assert not client.connection_pool.initialized
+            await p.subscribe("foo")
+            assert p.subscribed
+            assert await p.get_message(ignore_subscribe_messages=True, timeout=1) is None
+            await p.unsubscribe()
+            assert await p.get_message(ignore_subscribe_messages=True, timeout=1) is None
+            assert not p.subscribed
 
     @pytest.mark.min_server_version("7.0")
     async def test_sharded_pubsub_uninitialized_client(self, redis_cluster, cloner):
         client = await cloner(redis_cluster, initialize=False)
-        p = client.sharded_pubsub()
-        assert not client.connection_pool.initialized
-        await p.subscribe("foo")
-        assert await p.get_message(ignore_subscribe_messages=True) is None
-        assert p.subscribed
-        await p.unsubscribe()
-        assert await p.get_message(ignore_subscribe_messages=True) is None
-        assert not p.subscribed
+        async with aclosing(client.sharded_pubsub()) as p:
+            assert not client.connection_pool.initialized
+            await p.subscribe("foo")
+            assert await p.get_message(ignore_subscribe_messages=True, timeout=1) is None
+            assert p.subscribed
+            await p.unsubscribe()
+            assert await p.get_message(ignore_subscribe_messages=True, timeout=1) is None
+            assert not p.subscribed
 
 
 class TestPubSubMessages:
@@ -318,28 +360,19 @@ class TestPubSubMessages:
          are easier to work with.
     """
 
-    def get_strict_redis_node(self, port, host="127.0.0.1"):
-        return Redis(port=port, host=host, decode_responses=True)
-
     def setup_method(self, *args):
         self.message = None
 
     def message_handler(self, message):
         self.message = message
 
-    async def test_published_message_to_channel(self):
-        node = self.get_strict_redis_node(7000)
-        p = node.pubsub(ignore_subscribe_messages=True)
-        await p.subscribe("foo")
-
-        assert await node.publish("foo", "test message") == 1
-
-        message = await wait_for_message(p)
-        assert isinstance(message, dict)
-        assert message == make_message("message", "foo", "test message")
-
-        # Cleanup pubsub connections
-        p.close()
+    async def test_published_message_to_channel(self, redis_cluster):
+        async with redis_cluster.pubsub(ignore_subscribe_messages=True) as p:
+            await p.subscribe("foo")
+            assert p.subscribed
+            await redis_cluster.publish("foo", "test message")
+            message = await wait_for_message(p)
+            assert message == make_message("message", "foo", "test message")
 
     @pytest.mark.min_server_version("7.0")
     @pytest.mark.parametrize(
@@ -348,28 +381,27 @@ class TestPubSubMessages:
     )
     async def test_published_message_to_sharded_channel(self, redis_cluster, pubsub_arguments):
         shards = {"a", "b", "c"}
-        p = redis_cluster.sharded_pubsub(ignore_subscribe_messages=True, **pubsub_arguments)
-        for shard in shards:
-            await p.subscribe(f"foo{{{shard}}}")
+        async with redis_cluster.sharded_pubsub(
+            ignore_subscribe_messages=True, **pubsub_arguments
+        ) as p:
+            for shard in shards:
+                await p.subscribe(f"foo{{{shard}}}")
 
-        # no point checking the response since cluster publish only returns the
-        # count for consumers listening on the same node.
-        for shard in shards:
-            await redis_cluster.spublish(f"foo{{{shard}}}", "test message")
-        messages = []
-        for _ in range(3):
-            messages.append(await wait_for_message(p))
-        assert all(isinstance(message, dict) for message in messages), messages
-        assert set(m["channel"] for m in messages) == {f"foo{{{shard}}}" for shard in shards}
-        assert not await wait_for_message(p)
-        await redis_cluster.spublish("foo{a}", "test message")
-        assert await wait_for_message(p) == make_message("message", "foo{a}", "test message")
-        # Cleanup pubsub connections
-        p.close()
+            # no point checking the response since cluster publish only returns the
+            # count for consumers listening on the same node.
+            for shard in shards:
+                await redis_cluster.spublish(f"foo{{{shard}}}", "test message")
+            messages = []
+            for _ in range(3):
+                messages.append(await wait_for_message(p))
+            assert all(isinstance(message, dict) for message in messages), messages
+            assert set(m["channel"] for m in messages) == {f"foo{{{shard}}}" for shard in shards}
+            assert not await wait_for_message(p)
+            await redis_cluster.spublish("foo{a}", "test message")
+            assert await wait_for_message(p) == make_message("message", "foo{a}", "test message")
 
     async def test_published_message_to_pattern(self, redis_cluster):
-        p = redis_cluster.pubsub(ignore_subscribe_messages=True)
-        try:
+        async with redis_cluster.pubsub(ignore_subscribe_messages=True) as p:
             await p.subscribe("foo")
             await p.psubscribe("f*")
             # 1 to pattern, 1 to channel
@@ -388,108 +420,167 @@ class TestPubSubMessages:
             assert message1 in expected
             assert message2 in expected
             assert message1 != message2
-        finally:
-            await p.unsubscribe("foo")
-            await p.punsubscribe("f*")
 
     async def test_channel_message_handler(self, redis_cluster):
-        p = redis_cluster.pubsub(ignore_subscribe_messages=True)
-        try:
+        async with redis_cluster.pubsub(ignore_subscribe_messages=True) as p:
             await p.subscribe(foo=self.message_handler)
             await redis_cluster.publish("foo", "test message")
             assert await wait_for_message(p) is None
             assert self.message == make_message("message", "foo", "test message")
-        finally:
-            await p.unsubscribe("foo")
 
     async def test_pattern_message_handler(self, redis_cluster):
-        p = redis_cluster.pubsub(ignore_subscribe_messages=True)
-        await p.psubscribe(**{"f*": self.message_handler})
-        await redis_cluster.publish("foo", "test message")
-        assert await wait_for_message(p) is None
-        assert self.message == make_message("pmessage", "foo", "test message", pattern="f*")
+        async with redis_cluster.pubsub(ignore_subscribe_messages=True) as p:
+            await p.psubscribe(**{"f*": self.message_handler})
+            await redis_cluster.publish("foo", "test message")
+            assert await wait_for_message(p) is None
+            assert self.message == make_message("pmessage", "foo", "test message", pattern="f*")
 
     async def test_unicode_channel_message_handler(self, redis_cluster):
-        p = redis_cluster.pubsub(ignore_subscribe_messages=True)
-        channel = "uni" + chr(4456) + "code"
-        channels = {channel: self.message_handler}
-        await p.subscribe(**channels)
-        await redis_cluster.publish(channel, "test message")
-        assert await wait_for_message(p) is None
-        assert self.message == make_message("message", channel, "test message")
+        async with redis_cluster.pubsub(ignore_subscribe_messages=True) as p:
+            channel = "uni" + chr(4456) + "code"
+            channels = {channel: self.message_handler}
+            await p.subscribe(**channels)
+            await redis_cluster.publish(channel, "test message")
+            assert await wait_for_message(p) is None
+            assert self.message == make_message("message", channel, "test message")
 
     @pytest.mark.xfail
     async def test_unicode_pattern_message_handler(self, redis_cluster):
-        p = redis_cluster.pubsub(ignore_subscribe_messages=True)
-        pattern = "uni" + chr(4456) + "*"
-        channel = "uni" + chr(4456) + "code"
-        await p.psubscribe(**{pattern: self.message_handler})
-        await redis_cluster.publish(channel, "test message")
-        assert await wait_for_message(p) is None
-        assert self.message == make_message("pmessage", channel, "test message", pattern=pattern)
+        async with redis_cluster.pubsub(ignore_subscribe_messages=True) as p:
+            pattern = "uni" + chr(4456) + "*"
+            channel = "uni" + chr(4456) + "code"
+            await p.psubscribe(**{pattern: self.message_handler})
+            await redis_cluster.publish(channel, "test message")
+            assert await wait_for_message(p) is None
+            assert self.message == make_message(
+                "pmessage", channel, "test message", pattern=pattern
+            )
+
+    async def test_pubsub_message_iterator(self, redis_cluster):
+        async with redis_cluster.pubsub(ignore_subscribe_messages=True) as p:
+            messages = []
+            await p.psubscribe("fu*")
+            await p.subscribe("test")
+            [await redis_cluster.publish("fubar", str(i)) for i in range(10)]
+            [await redis_cluster.publish("test", str(i + 10)) for i in range(10)]
+
+            async def collect():
+                [messages.append(message) async for message in p]
+
+            async def unsubscribe():
+                await asyncio.sleep(0.1)
+                await p.punsubscribe("fu*")
+                await p.unsubscribe("test")
+
+            completed, pending = await asyncio.wait(
+                [asyncio.create_task(collect()), asyncio.create_task(unsubscribe())], timeout=1
+            )
+            assert all(task.done() for task in completed)
+            assert not pending
+            assert len(messages) == 20
+
+    async def test_sharded_pubsub_message_iterator(self, redis_cluster):
+        async with redis_cluster.sharded_pubsub(ignore_subscribe_messages=True) as p:
+            messages = []
+            await p.subscribe("test")
+            [await redis_cluster.spublish("test", str(i)) for i in range(10)]
+
+            async def collect():
+                [messages.append(message) async for message in p]
+
+            async def unsubscribe():
+                await asyncio.sleep(0.1)
+                await p.unsubscribe("test")
+
+            completed, pending = await asyncio.wait(
+                [asyncio.create_task(collect()), asyncio.create_task(unsubscribe())], timeout=1
+            )
+            assert all(task.done() for task in completed)
+            assert not pending
+            assert len(messages) == 10
+
+    async def test_pubsub_handlers(self, redis_cluster):
+        async with redis_cluster.pubsub() as p:
+            messages = set()
+
+            def handler(message):
+                messages.add(message["data"])
+
+            await p.subscribe(fu=handler)
+            await p.psubscribe(**{"bar*": handler})
+
+            await redis_cluster.publish("fu", "bar")
+            await redis_cluster.publish("bar", "fu")
+
+            await asyncio.sleep(0.1)
+
+            assert messages == {"fu", "bar"}
 
     async def test_pubsub_worker_thread_subscribe_channel(self, redis_cluster):
-        p = redis_cluster.pubsub()
-        messages = []
+        async with redis_cluster.pubsub() as p:
+            with pytest.warns(DeprecationWarning):
+                messages = []
 
-        def handler(message):
-            messages.append(message)
+                def handler(message):
+                    messages.append(message)
 
-        await p.subscribe(fubar=handler)
-        th = p.run_in_thread()
-        [await redis_cluster.publish("fubar", str(i)) for i in range(10)]
-        await asyncio.sleep(0.5)
-        th.stop()
-        assert set([m["data"] for m in messages]) == {str(i) for i in range(10)}
+                await p.subscribe(fubar=handler)
+                th = p.run_in_thread()
+                [await redis_cluster.publish("fubar", str(i)) for i in range(10)]
+                await asyncio.sleep(0.5)
+                th.stop()
+                assert set([m["data"] for m in messages]) == {str(i) for i in range(10)}
 
     @pytest.mark.xfail
     async def test_pubsub_worker_thread_subscribe_pattern(self, redis_cluster):
-        p = redis_cluster.pubsub()
-        messages = []
+        async with redis_cluster.pubsub() as p:
+            with pytest.warns(DeprecationWarning):
+                messages = []
 
-        def handler(message):
-            messages.append(message)
+                def handler(message):
+                    messages.append(message)
 
-        await p.psubscribe(**{"fu*": handler})
-        th = p.run_in_thread()
-        [await redis_cluster.publish("fubar", str(i)) for i in range(10)]
-        [await redis_cluster.publish("fubaz", str(i)) for i in range(10, 20)]
-        await asyncio.sleep(0.5)
-        th.stop()
-        assert [m["data"] for m in messages] == [str(i) for i in range(20)]
+                await p.psubscribe(**{"fu*": handler})
+                th = p.run_in_thread()
+                [await redis_cluster.publish("fubar", str(i)) for i in range(10)]
+                [await redis_cluster.publish("fubaz", str(i)) for i in range(10, 20)]
+                await asyncio.sleep(0.5)
+                th.stop()
+                assert [m["data"] for m in messages] == [str(i) for i in range(20)]
 
     @pytest.mark.min_server_version("7.0")
     async def test_pubsub_worker_thread_subscribe_sharded_channel(self, redis_cluster):
-        p = redis_cluster.sharded_pubsub()
-        messages = []
+        async with redis_cluster.sharded_pubsub() as p:
+            with pytest.warns(DeprecationWarning):
+                messages = []
 
-        def handler(message):
-            messages.append(message)
+                def handler(message):
+                    messages.append(message)
 
-        await p.subscribe(fubar=handler)
-        th = p.run_in_thread()
-        [await redis_cluster.spublish("fubar", str(i)) for i in range(10)]
-        await asyncio.sleep(0.5)
-        th.stop()
-        assert [m["data"] for m in messages] == [str(i) for i in range(10)]
+                await p.subscribe(fubar=handler)
+                th = p.run_in_thread()
+                [await redis_cluster.spublish("fubar", str(i)) for i in range(10)]
+                await asyncio.sleep(0.5)
+                th.stop()
+                assert [m["data"] for m in messages] == [str(i) for i in range(10)]
 
 
 @targets("redis_cluster", "redis_cluster_raw")
 class TestPubSubPubSubSubcommands:
     async def test_pubsub_channels(self, client, _s):
-        p = client.pubsub(ignore_subscribe_messages=True)
-        await p.subscribe("foo", "bar", "baz", "quux")
-        channels = set(await client.pubsub_channels())
-        assert set([_s("bar"), _s("baz"), _s("foo"), _s("quux")]).issubset(channels)
-        await p.unsubscribe()
+        async with client.pubsub(ignore_subscribe_messages=True) as p:
+            await p.subscribe("foo", "bar", "baz", "quux")
+            channels = set(await client.pubsub_channels())
+            assert set([_s("bar"), _s("baz"), _s("foo"), _s("quux")]).issubset(channels)
+            await p.unsubscribe()
 
     @pytest.mark.min_server_version("7.0.0")
     async def test_pubsub_shardchannels(self, client, _s):
-        p = client.sharded_pubsub(ignore_subscribe_messages=True)
-        await p.subscribe("foo", "bar", "baz", "quux")
-        channels = sorted(await client.pubsub_shardchannels())
-        assert channels == [_s("bar"), _s("baz"), _s("foo"), _s("quux")]
-        await p.unsubscribe()
+        async with client.sharded_pubsub(ignore_subscribe_messages=True) as p:
+            await p.subscribe("foo", "bar", "baz", "quux")
+            channels = sorted(await client.pubsub_shardchannels())
+            assert channels == [_s("bar"), _s("baz"), _s("foo"), _s("quux")]
+            await p.unsubscribe()
 
     @pytest.mark.min_server_version("7.0.0")
     async def test_pubsub_shardnumsub(self, client, _s):
@@ -505,6 +596,9 @@ class TestPubSubPubSubSubcommands:
         await p1.unsubscribe()
         await p2.unsubscribe()
         await p3.unsubscribe()
+        await p1.aclose()
+        await p2.aclose()
+        await p3.aclose()
 
     async def test_pubsub_numsub(self, client, _s):
         p1 = client.pubsub(ignore_subscribe_messages=True)
@@ -519,36 +613,6 @@ class TestPubSubPubSubSubcommands:
         await p1.unsubscribe()
         await p2.unsubscribe()
         await p3.unsubscribe()
-
-
-def test_pubsub_thread_publish():
-    """
-    This test will never fail but it will still show and be viable to use
-    and to test the threading capability of the connectionpool and the publish
-    mechanism.
-    """
-    startup_nodes = [{"host": "127.0.0.1", "port": "7000"}]
-
-    r = RedisCluster(
-        startup_nodes=startup_nodes,
-        max_connections=16,
-        max_connections_per_node=16,
-    )
-
-    async def t_run(rc):
-        for i in range(0, 50):
-            await rc.publish("foo", "bar")
-            await rc.publish("bar", "foo")
-            await rc.publish("asd", "dsa")
-            await rc.publish("dsa", "asd")
-            await rc.publish("qwe", "bar")
-            await rc.publish("ewq", "foo")
-            await rc.publish("wer", "dsa")
-            await rc.publish("rew", "asd")
-
-    try:
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(asyncio.gather(*(t_run(r) for _ in range(10))))
-    except Exception as e:
-        print(e)
-        print("Error: unable to start thread")
+        await p1.aclose()
+        await p2.aclose()
+        await p3.aclose()
