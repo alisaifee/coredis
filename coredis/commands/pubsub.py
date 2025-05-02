@@ -123,6 +123,22 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         return bool(self.channels or self.patterns)
 
     async def initialize(self) -> Self:
+        """
+        Ensures the pubsub instance is ready to consume messages
+        by establishing a connection to the redis server, setting up any
+        initial channel or pattern subscriptions that were specified during
+        instantiation and starting the consumer background task.
+
+        The method can be called multiple times without any
+        risk as it will skip initialization if the consumer is already
+        initialized.
+
+        .. important:: This method doesn't need to be called explicitly
+           as it will always be called internally before any relevant
+           documented interaction.
+
+        :return: the instance itself
+        """
         if not self.initialized:
             self.connection = await self.connection_pool.get_connection()
             self.initialized = True
@@ -639,6 +655,22 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         return await self._execute(self.connection, self.connection.send_command, command, *args)
 
     async def initialize(self) -> Self:
+        """
+        Ensures the pubsub instance is ready to consume messages
+        by establishing a connection to a random cluster node, setting up any
+        initial channel or pattern subscriptions that were specified during
+        instantiation and starting the consumer background task.
+
+        The method can be called multiple times without any
+        risk as it will skip initialization if the consumer is already
+        initialized.
+
+        .. important:: This method doesn't need to be called explicitly
+           as it will always be called internally before any relevant
+           documented interaction.
+
+        :return: the instance itself
+        """
         if not self.initialized:
             if self.connection is None:
                 await self.reset_connections(None)
@@ -800,6 +832,22 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         raise PubSubError(f"Unable to determine shard for channel {args[0]!r}")
 
     async def initialize(self) -> Self:
+        """
+        Ensures the sharded pubsub instance is ready to consume messages
+        by ensuring the connection pool is initialized, setting up any
+        initial channel subscriptions that were specified during
+        instantiation and starting the consumer background task.
+
+        The method can be called multiple times without any
+        risk as it will skip initialization if the consumer is already
+        initialized.
+
+        .. important:: This method doesn't need to be called explicitly
+           as it will always be called internally before any relevant
+           documented interaction.
+
+        :return: the instance itself
+        """
         if not self.initialized:
             await self.connection_pool.initialize()
             self.initialized = True

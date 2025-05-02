@@ -13,13 +13,36 @@ exposed by the client or directly via the specific constructors.
 Subscription management
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Channels or patterns can either be subscribed to on initialization or after
+Channels or patterns can either be subscribed to on instantiation through
+constructor parameters or explicitly through the :meth:`~coredis.commands.PubSub.subscribe`
+or :meth:`~coredis.commands.PubSub.psubscribe` methods.
 
-Upon initialization::
+Upon instantiation::
 
     pubsub = await client.pubsub(
         channels=["my-first-channel", "my-second-channel"], patterns=["my-*"]
     )
+
+.. note:: If the newly created pubsub instance can't be awaited because
+   it is done in a synchronous context, the initial subscriptions will occur
+   on the first async call to the instance. If explicit initialization is preferred
+   the instance can be awaited when the async context is available or through a call
+   to :meth:`~coredis.commands.PubSub.initialize`.
+
+   For example::
+
+       pubsub = client.pubsub(
+           channels=["my-first-channel", "my-second-channel"],
+           patterns=["my-*"]
+       )
+       assert not pubsub.subscribed
+       # later in an async context
+       await pubsub
+       #  or
+       await pubsub.initialize()
+       # or simply use the instance
+       await pubsub.get_message()
+
 
 or explicitly::
 
@@ -38,6 +61,26 @@ which automatically manages unsubscribing and connection cleanup on exit::
             print(message)
     # remaining subscriptions are unsubscribed and connection is released
     # back to the connection pool when the context manager exits.
+
+
+
+If desired unsubscription can also be done explicitly by calling
+:meth:`~coredis.commands.PubSub.unsubscribe` for channels
+and :meth:`~coredis.commands.PubSub.punsubscribe` for patterns.
+
+In the following example if any of the channels that the client was initially subscribed
+to contain a ``STOP`` message the consumer will unsubscribe from the channel and continue
+processing until there are no more subscriptions left (the async iterator will automatically
+exit when the consumer has no subscriptions)::
+
+    async with client.pubsub(
+        channels=[f"channel-{i}" for i in range(10)]
+    ) as consumer:
+        async for message in consumer:
+            if message["data"] == "STOP":
+                await consumer.unsubscribe(message["channel"])
+            else:
+                print(message["data"])
 
 
 
