@@ -3,6 +3,35 @@
 Changelog
 =========
 
+v4.21.0
+-------
+Release Date: 2025-05-02
+
+* Features
+
+  * Improve API for pubsub instances to:
+
+    * Be used as Async context manager for automatic cleanup
+    * Be iterated on with async for to consume messages
+    * Be awaited to ensure initialization
+    * subscribe on instantiation
+
+* Bug Fix
+
+  * Correct type narrowing when constructing client with
+    ``from_url`` class method
+
+* Compatibility
+
+  * Drop support for python 3.9
+  * Remove tests for RESP2
+
+* Deprecations
+
+  * Deprecate ``run_in_thread`` APIs for PubSub & Monitor
+  * Deprecate ``listen`` methods for PubSub instances
+
+
 v4.20.0
 -------
 Release Date: 2025-03-05
@@ -21,7 +50,7 @@ Release Date: 2025-03-02
 
 * Features
 
-  * Add ``novalues`` argument to ``hscan``
+* Add ``novalues`` argument to ``hscan``
 
 * Bug Fix
 
@@ -1870,3 +1899,4 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
