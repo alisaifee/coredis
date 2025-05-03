@@ -2181,7 +2181,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def hmset(self, key: KeyT, field_values: Mapping[StringT, ValueT]) -> bool:
         """
         Sets key to value within hash :paramref:`key` for each corresponding
-        key and value from the ``field_items`` dict.
+        key and value from the ``field_values`` dict.
         """
 
         command_arguments: CommandArgList = []
