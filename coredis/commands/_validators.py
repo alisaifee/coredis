@@ -18,6 +18,14 @@ R = TypeVar("R")
 P = ParamSpec("P")
 
 
+class RequiredParameterError(CommandSyntaxError):
+    def __init__(self, arguments: set[str], details: str | None):
+        message = (
+            f"One of [{','.join(arguments)}] must be provided.{' ' + details if details else ''}"
+        )
+        super().__init__(arguments, message)
+
+
 class MutuallyExclusiveParametersError(CommandSyntaxError):
     def __init__(self, arguments: set[str], details: str | None):
         message = (
@@ -45,7 +53,9 @@ class MutuallyInclusiveParametersMissing(CommandSyntaxError):
 
 
 def mutually_exclusive_parameters(
-    *exclusive_params: str | Iterable[str], details: str | None = None
+    *exclusive_params: str | Iterable[str],
+    details: str | None = None,
+    required: bool = False,
 ) -> Callable[[Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]]:
     primary = {k for k in exclusive_params if isinstance(k, str)}
     secondary = [k for k in set(exclusive_params) - primary]
@@ -77,6 +87,8 @@ def mutually_exclusive_parameters(
 
                 if len(params) > 1:
                     raise MutuallyExclusiveParametersError(params, details)
+                if len(params) == 0 and required:
+                    raise RequiredParameterError(primary, details)
 
             return await func(*args, **kwargs)
 

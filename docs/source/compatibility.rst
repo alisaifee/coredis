@@ -1064,6 +1064,42 @@ Returns all fields and values in a hash.
 
 
 
+HGETDEL
+*******
+
+Returns the value of a field and deletes it from the hash.
+
+- Documentation: `HGETDEL <https://redis.io/commands/hgetdel>`_
+- Implementation: :meth:`~coredis.Redis.hgetdel`
+
+- New in redis: 8.0.0
+
+
+
+- .. versionadded:: 5.0.0
+
+
+
+
+
+HGETEX
+******
+
+Get the value of one or more fields of a given hash key, and optionally set their expiration.
+
+- Documentation: `HGETEX <https://redis.io/commands/hgetex>`_
+- Implementation: :meth:`~coredis.Redis.hgetex`
+
+- New in redis: 8.0.0
+
+
+
+- .. versionadded:: 5.0.0
+
+
+
+
+
 HINCRBY
 *******
 
@@ -1285,6 +1321,24 @@ Creates or modifies the value of a field in a hash.
 - Implementation: :meth:`~coredis.Redis.hset`
 
 
+
+
+
+
+
+HSETEX
+******
+
+Set the value of one or more fields of a given hash key, and optionally set their expiration.
+
+- Documentation: `HSETEX <https://redis.io/commands/hsetex>`_
+- Implementation: :meth:`~coredis.Redis.hsetex`
+
+- New in redis: 8.0.0
+
+
+
+- .. versionadded:: 5.0.0
 
 
 

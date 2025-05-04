@@ -1927,6 +1927,18 @@
             [
                 "7.0.3",
                 "Added `ssub` field."
+            ],
+            [
+                "7.2.0",
+                "Added `lib-name` and `lib-ver` fields."
+            ],
+            [
+                "7.4.0",
+                "Added `watch` field."
+            ],
+            [
+                "8.0.0",
+                "Added `io-thread` field."
             ]
         ],
         "acl_categories": [
@@ -7061,7 +7073,6 @@
         ],
         "command_flags": [
             "write",
-            "denyoom",
             "fast"
         ]
     },
@@ -7160,7 +7171,6 @@
         ],
         "command_flags": [
             "write",
-            "denyoom",
             "fast"
         ]
     },
@@ -7319,6 +7329,170 @@
         ],
         "hints": [
             "nondeterministic_output_order"
+        ]
+    },
+    "HGETDEL": {
+        "summary": "Returns the value of a field and deletes it from the hash.",
+        "since": "8.0.0",
+        "group": "hash",
+        "complexity": "O(N) where N is the number of specified fields",
+        "acl_categories": [
+            "@write",
+            "@hash",
+            "@fast"
+        ],
+        "arity": -5,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RW": true,
+                "access": true,
+                "delete": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "fields",
+                "type": "block",
+                "token": "FIELDS",
+                "arguments": [
+                    {
+                        "name": "numfields",
+                        "type": "integer",
+                        "display_text": "numfields"
+                    },
+                    {
+                        "name": "field",
+                        "type": "string",
+                        "display_text": "field",
+                        "multiple": true
+                    }
+                ]
+            }
+        ],
+        "command_flags": [
+            "write",
+            "fast"
+        ]
+    },
+    "HGETEX": {
+        "summary": "Get the value of one or more fields of a given hash key, and optionally set their expiration.",
+        "since": "8.0.0",
+        "group": "hash",
+        "complexity": "O(N) where N is the number of specified fields",
+        "acl_categories": [
+            "@write",
+            "@hash",
+            "@fast"
+        ],
+        "arity": -5,
+        "key_specs": [
+            {
+                "notes": "RW and UPDATE because it changes the TTL",
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RW": true,
+                "access": true,
+                "update": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "expiration",
+                "type": "oneof",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "seconds",
+                        "type": "integer",
+                        "display_text": "seconds",
+                        "token": "EX"
+                    },
+                    {
+                        "name": "milliseconds",
+                        "type": "integer",
+                        "display_text": "milliseconds",
+                        "token": "PX"
+                    },
+                    {
+                        "name": "unix-time-seconds",
+                        "type": "unix-time",
+                        "display_text": "unix-time-seconds",
+                        "token": "EXAT"
+                    },
+                    {
+                        "name": "unix-time-milliseconds",
+                        "type": "unix-time",
+                        "display_text": "unix-time-milliseconds",
+                        "token": "PXAT"
+                    },
+                    {
+                        "name": "persist",
+                        "type": "pure-token",
+                        "display_text": "persist",
+                        "token": "PERSIST"
+                    }
+                ]
+            },
+            {
+                "name": "fields",
+                "type": "block",
+                "token": "FIELDS",
+                "arguments": [
+                    {
+                        "name": "numfields",
+                        "type": "integer",
+                        "display_text": "numfields"
+                    },
+                    {
+                        "name": "field",
+                        "type": "string",
+                        "display_text": "field",
+                        "multiple": true
+                    }
+                ]
+            }
+        ],
+        "command_flags": [
+            "write",
+            "fast"
         ]
     },
     "HINCRBY": {
@@ -7796,7 +7970,6 @@
         ],
         "command_flags": [
             "write",
-            "denyoom",
             "fast"
         ]
     },
@@ -7895,7 +8068,6 @@
         ],
         "command_flags": [
             "write",
-            "denyoom",
             "fast"
         ]
     },
@@ -8021,6 +8193,9 @@
         "command_flags": [
             "readonly",
             "fast"
+        ],
+        "hints": [
+            "nondeterministic_output"
         ]
     },
     "HRANDFIELD": {
@@ -8228,6 +8403,136 @@
             "fast"
         ]
     },
+    "HSETEX": {
+        "summary": "Set the value of one or more fields of a given hash key, and optionally set their expiration.",
+        "since": "8.0.0",
+        "group": "hash",
+        "complexity": "O(N) where N is the number of fields being set.",
+        "acl_categories": [
+            "@write",
+            "@hash",
+            "@fast"
+        ],
+        "arity": -6,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RW": true,
+                "update": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "condition",
+                "type": "oneof",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "fnx",
+                        "type": "pure-token",
+                        "display_text": "fnx",
+                        "token": "FNX"
+                    },
+                    {
+                        "name": "fxx",
+                        "type": "pure-token",
+                        "display_text": "fxx",
+                        "token": "FXX"
+                    }
+                ]
+            },
+            {
+                "name": "expiration",
+                "type": "oneof",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "seconds",
+                        "type": "integer",
+                        "display_text": "seconds",
+                        "token": "EX"
+                    },
+                    {
+                        "name": "milliseconds",
+                        "type": "integer",
+                        "display_text": "milliseconds",
+                        "token": "PX"
+                    },
+                    {
+                        "name": "unix-time-seconds",
+                        "type": "unix-time",
+                        "display_text": "unix-time-seconds",
+                        "token": "EXAT"
+                    },
+                    {
+                        "name": "unix-time-milliseconds",
+                        "type": "unix-time",
+                        "display_text": "unix-time-milliseconds",
+                        "token": "PXAT"
+                    },
+                    {
+                        "name": "keepttl",
+                        "type": "pure-token",
+                        "display_text": "keepttl",
+                        "token": "KEEPTTL"
+                    }
+                ]
+            },
+            {
+                "name": "fields",
+                "type": "block",
+                "token": "FIELDS",
+                "arguments": [
+                    {
+                        "name": "numfields",
+                        "type": "integer",
+                        "display_text": "numfields"
+                    },
+                    {
+                        "name": "data",
+                        "type": "block",
+                        "multiple": true,
+                        "arguments": [
+                            {
+                                "name": "field",
+                                "type": "string",
+                                "display_text": "field"
+                            },
+                            {
+                                "name": "value",
+                                "type": "string",
+                                "display_text": "value"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "command_flags": [
+            "write",
+            "denyoom",
+            "fast"
+        ]
+    },
     "HSETNX": {
         "summary": "Sets the value of a field in a hash only when the field doesn't exist.",
         "since": "2.0.0",
@@ -8391,6 +8696,9 @@
         "command_flags": [
             "readonly",
             "fast"
+        ],
+        "hints": [
+            "nondeterministic_output"
         ]
     },
     "HVALS": {
@@ -19076,6 +19384,387 @@
             "write",
             "denyoom",
             "movablekeys"
+        ]
+    },
+    "VADD": {
+        "summary": "Add one or more elements to a vector set, or update its vector if it already exists",
+        "complexity": "O(log(N)) for each element added, where N is the number of elements in the vector set.",
+        "group": "vector_set",
+        "since": "8.0.0",
+        "arity": -1,
+        "function": "vaddCommand",
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key"
+            },
+            {
+                "token": "REDUCE",
+                "name": "reduce",
+                "type": "pure-token",
+                "optional": true
+            },
+            {
+                "name": "dim",
+                "type": "integer",
+                "optional": true
+            },
+            {
+                "name": "format",
+                "type": "oneof",
+                "arguments": [
+                    {
+                        "name": "fp32",
+                        "type": "pure-token",
+                        "token": "FP32"
+                    },
+                    {
+                        "name": "values",
+                        "type": "pure-token",
+                        "token": "VALUES"
+                    }
+                ]
+            },
+            {
+                "name": "vector",
+                "type": "string"
+            },
+            {
+                "name": "element",
+                "type": "string"
+            },
+            {
+                "token": "CAS",
+                "name": "cas",
+                "type": "pure-token",
+                "optional": true
+            },
+            {
+                "name": "quant_type",
+                "type": "oneof",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "noquant",
+                        "type": "pure-token",
+                        "token": "NOQUANT"
+                    },
+                    {
+                        "name": "bin",
+                        "type": "pure-token",
+                        "token": "BIN"
+                    },
+                    {
+                        "name": "q8",
+                        "type": "pure-token",
+                        "token": "Q8"
+                    }
+                ]
+            },
+            {
+                "token": "EF",
+                "name": "build-exploration-factor",
+                "type": "integer",
+                "optional": true
+            },
+            {
+                "token": "SETATTR",
+                "name": "attributes",
+                "type": "string",
+                "optional": true
+            },
+            {
+                "token": "M",
+                "name": "numlinks",
+                "type": "integer",
+                "optional": true
+            }
+        ],
+        "command_flags": [
+            "WRITE",
+            "DENYOOM"
+        ]
+    },
+    "VREM": {
+        "summary": "Remove one or more elements from a vector set",
+        "complexity": "O(log(N)) for each element removed, where N is the number of elements in the vector set.",
+        "group": "vector_set",
+        "since": "8.0.0",
+        "arity": -2,
+        "function": "vremCommand",
+        "command_flags": [
+            "WRITE"
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key"
+            },
+            {
+                "name": "element",
+                "type": "string",
+                "multiple": true
+            }
+        ]
+    },
+    "VSIM": {
+        "summary": "Return elements by vector similarity",
+        "complexity": "O(log(N)) where N is the number of elements in the vector set.",
+        "group": "vector_set",
+        "since": "8.0.0",
+        "arity": -3,
+        "function": "vsimCommand",
+        "command_flags": [
+            "READONLY"
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key"
+            },
+            {
+                "name": "format",
+                "type": "oneof",
+                "arguments": [
+                    {
+                        "name": "ele",
+                        "type": "pure-token",
+                        "token": "ELE"
+                    },
+                    {
+                        "name": "fp32",
+                        "type": "pure-token",
+                        "token": "FP32"
+                    },
+                    {
+                        "name": "values",
+                        "type": "pure-token",
+                        "token": "VALUES"
+                    }
+                ]
+            },
+            {
+                "name": "vector_or_element",
+                "type": "string"
+            },
+            {
+                "token": "WITHSCORES",
+                "name": "withscores",
+                "type": "pure-token",
+                "optional": true
+            },
+            {
+                "token": "COUNT",
+                "name": "count",
+                "type": "integer",
+                "optional": true
+            },
+            {
+                "token": "EPSILON",
+                "name": "max_distance",
+                "type": "double",
+                "optional": true
+            },
+            {
+                "token": "EF",
+                "name": "search-exploration-factor",
+                "type": "integer",
+                "optional": true
+            },
+            {
+                "token": "FILTER",
+                "name": "expression",
+                "type": "string",
+                "optional": true
+            },
+            {
+                "token": "FILTER-EF",
+                "name": "max-filtering-effort",
+                "type": "integer",
+                "optional": true
+            },
+            {
+                "token": "TRUTH",
+                "name": "truth",
+                "type": "pure-token",
+                "optional": true
+            }
+        ]
+    },
+    "VDIM": {
+        "summary": "Return the dimension of vectors in the vector set",
+        "complexity": "O(1)",
+        "group": "vector_set",
+        "since": "8.0.0",
+        "arity": 2,
+        "function": "vdimCommand",
+        "command_flags": [
+            "READONLY",
+            "FAST"
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key"
+            }
+        ]
+    },
+    "VCARD": {
+        "summary": "Return the number of elements in a vector set",
+        "complexity": "O(1)",
+        "group": "vector_set",
+        "since": "8.0.0",
+        "arity": 2,
+        "function": "vcardCommand",
+        "command_flags": [
+            "READONLY",
+            "FAST"
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key"
+            }
+        ]
+    },
+    "VEMB": {
+        "summary": "Return the vector associated with an element",
+        "complexity": "O(1)",
+        "group": "vector_set",
+        "since": "8.0.0",
+        "arity": -3,
+        "function": "vembCommand",
+        "command_flags": [
+            "READONLY"
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key"
+            },
+            {
+                "name": "element",
+                "type": "string"
+            },
+            {
+                "token": "RAW",
+                "name": "raw",
+                "type": "pure-token",
+                "optional": true
+            }
+        ]
+    },
+    "VLINKS": {
+        "summary": "Return the neighbors of an element at each layer in the HNSW graph",
+        "complexity": "O(1)",
+        "group": "vector_set",
+        "since": "8.0.0",
+        "arity": -3,
+        "function": "vlinksCommand",
+        "command_flags": [
+            "READONLY"
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key"
+            },
+            {
+                "name": "element",
+                "type": "string"
+            },
+            {
+                "token": "WITHSCORES",
+                "name": "withscores",
+                "type": "pure-token",
+                "optional": true
+            }
+        ]
+    },
+    "VINFO": {
+        "summary": "Return information about a vector set",
+        "complexity": "O(1)",
+        "group": "vector_set",
+        "since": "8.0.0",
+        "arity": 2,
+        "function": "vinfoCommand",
+        "command_flags": [
+            "READONLY",
+            "FAST"
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key"
+            }
+        ]
+    },
+    "VSETATTR": {
+        "summary": "Associate or remove the JSON attributes of elements",
+        "complexity": "O(1)",
+        "group": "vector_set",
+        "since": "8.0.0",
+        "arity": 4,
+        "function": "vsetattrCommand",
+        "command_flags": [
+            "WRITE"
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key"
+            },
+            {
+                "name": "element",
+                "type": "string"
+            },
+            {
+                "name": "json",
+                "type": "string"
+            }
+        ]
+    },
+    "VGETATTR": {
+        "summary": "Retrieve the JSON attributes of elements",
+        "complexity": "O(1)",
+        "group": "vector_set",
+        "since": "8.0.0",
+        "arity": 3,
+        "function": "vgetattrCommand",
+        "command_flags": [
+            "READONLY"
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key"
+            },
+            {
+                "name": "element",
+                "type": "string"
+            }
+        ]
+    },
+    "VRANDMEMBER": {
+        "summary": "Return one or multiple random members from a vector set",
+        "complexity": "O(N) where N is the absolute value of the count argument.",
+        "group": "vector_set",
+        "since": "8.0.0",
+        "arity": -2,
+        "function": "vrandmemberCommand",
+        "command_flags": [
+            "READONLY"
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key"
+            },
+            {
+                "name": "count",
+                "type": "integer",
+                "optional": true
+            }
         ]
     }
 }

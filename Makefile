@@ -11,11 +11,10 @@ lint-fix:
 	mypy coredis
 
 DEBUG := False
-NEXT_VERSION := 4.12.0
 
 coverage-docs:
 	rm -rf docs/source/compatibility.rst
-	PYTHONPATH=${CURDIR} python -m scripts.code_gen --debug=${DEBUG} --next-version=${NEXT_VERSION} coverage-doc
+	PYTHONPATH=${CURDIR} python -m scripts.code_gen --debug=${DEBUG} coverage-doc
 
 templated-sources:
 	PYTHONPATH=${CURDIR} python -m scripts.code_gen token-enum

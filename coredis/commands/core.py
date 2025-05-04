@@ -2102,6 +2102,49 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.HGETALL, key, callback=HGetAllCallback[AnyStr]()
         )
 
+    @versionadded(version="5.0.0")
+    @mutually_exclusive_parameters("ex", "px", "exat", "pxat", "persist", required=True)
+    @redis_command(CommandName.HGETEX, version_introduced="7.9.0", group=CommandGroup.HASH)
+    async def hgetex(
+        self,
+        key: str | bytes,
+        fields: Parameters[KeyT],
+        ex: int | datetime.timedelta | None = None,
+        px: int | datetime.timedelta | None = None,
+        exat: int | datetime.datetime | None = None,
+        pxat: int | datetime.datetime | None = None,
+        persist: bool | None = None,
+    ) -> tuple[AnyStr | None, ...]:
+        command_arguments: CommandArgList = [key]
+        if ex is not None:
+            command_arguments.extend([PrefixToken.EX, normalized_seconds(ex)])
+        elif px is not None:
+            command_arguments.extend([PrefixToken.PX, normalized_milliseconds(px)])
+        if exat is not None:
+            command_arguments.extend([PrefixToken.EXAT, normalized_time_seconds(exat)])
+        elif pxat is not None:
+            command_arguments.extend([PrefixToken.PXAT, normalized_time_milliseconds(pxat)])
+
+        if persist is not None:
+            command_arguments.append(PureToken.PERSIST)
+
+        command_arguments.extend([PrefixToken.FIELDS, len(list(fields)), *fields])
+        return await self.execute_command(
+            CommandName.HGETEX, *command_arguments, callback=TupleCallback[AnyStr | None]()
+        )
+
+    @versionadded(version="5.0.0")
+    @redis_command(CommandName.HGETDEL, version_introduced="7.9.0", group=CommandGroup.HASH)
+    async def hgetdel(self, key: KeyT, fields: Parameters[StringT]) -> tuple[AnyStr | None, ...]:
+        return await self.execute_command(
+            CommandName.HGETDEL,
+            key,
+            PrefixToken.FIELDS,
+            len(list(fields)),
+            *fields,
+            callback=TupleCallback[AnyStr | None](),
+        )
+
     @redis_command(CommandName.HINCRBY, group=CommandGroup.HASH, flags={CommandFlag.FAST})
     async def hincrby(self, key: KeyT, field: StringT, increment: int) -> int:
         """Increments the value of ``field`` in hash :paramref:`key` by ``increment``"""
@@ -2156,6 +2199,44 @@ class CoreCommands(CommandMixin[AnyStr]):
             key,
             *dict_to_flat_list(field_values),
             callback=IntCallback(),
+        )
+
+    @versionadded(version="5.0.0")
+    @mutually_exclusive_parameters("ex", "px", "exat", "pxat", "keepttl", required=True)
+    @redis_command(CommandName.HSETEX, version_introduced="7.9.0", group=CommandGroup.HASH)
+    async def hsetex(
+        self,
+        key: KeyT,
+        field_values: Mapping[StringT, ValueT],
+        condition: Literal[PureToken.FNX, PureToken.FXX] | None = None,
+        ex: int | datetime.timedelta | None = None,
+        px: int | datetime.timedelta | None = None,
+        exat: int | datetime.datetime | None = None,
+        pxat: int | datetime.datetime | None = None,
+        keepttl: bool | None = None,
+    ) -> bool:
+        command_arguments: CommandArgList = [key]
+        if condition is not None:
+            command_arguments.append(condition)
+        if ex is not None:
+            command_arguments.extend([PrefixToken.EX, normalized_seconds(ex)])
+        elif px is not None:
+            command_arguments.extend([PrefixToken.PX, normalized_milliseconds(px)])
+        if exat is not None:
+            command_arguments.extend([PrefixToken.EXAT, normalized_time_seconds(exat)])
+        elif pxat is not None:
+            command_arguments.extend([PrefixToken.PXAT, normalized_time_milliseconds(pxat)])
+
+        if keepttl is not None:
+            command_arguments.append(PureToken.KEEPTTL)
+        command_arguments.extend(
+            [PrefixToken.FIELDS, len(field_values), *dict_to_flat_list(field_values)]
+        )
+
+        return await self.execute_command(
+            CommandName.HSETEX,
+            *command_arguments,
+            callback=BoolCallback(),
         )
 
     @redis_command(CommandName.HSETNX, group=CommandGroup.HASH, flags={CommandFlag.FAST})

@@ -498,6 +498,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``GETEX``
+    #:  - ``HGETEX``
     PERSIST = b"PERSIST"
 
     #: Used by:
@@ -509,6 +510,22 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``HSCAN``
     NOVALUES = b"NOVALUES"
+
+    #: Used by:
+    #:
+    #:  - ``HSETEX``
+    FNX = b"FNX"
+
+    #: Used by:
+    #:
+    #:  - ``HSETEX``
+    FXX = b"FXX"
+
+    #: Used by:
+    #:
+    #:  - ``HSETEX``
+    #:  - ``SET``
+    KEEPTTL = b"KEEPTTL"
 
     #: Used by:
     #:
@@ -561,11 +578,6 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``SET``
     GET = b"GET"
-
-    #: Used by:
-    #:
-    #:  - ``SET``
-    KEEPTTL = b"KEEPTTL"
 
     #: Used by:
     #:
@@ -658,6 +670,8 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``FT.SEARCH``
     #:  - ``FT.SUGGET``
+    #:  - ``VLINKS``
+    #:  - ``VSIM``
     #:  - ``ZDIFF``
     #:  - ``ZINTER``
     #:  - ``ZRANDMEMBER``
@@ -708,6 +722,59 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``ZRANK``
     #:  - ``ZREVRANK``
     WITHSCORE = b"WITHSCORE"
+
+    #: Used by:
+    #:
+    #:  - ``VADD``
+    BIN = b"BIN"
+
+    #: Used by:
+    #:
+    #:  - ``VADD``
+    CAS = b"CAS"
+
+    #: Used by:
+    #:
+    #:  - ``VADD``
+    #:  - ``VSIM``
+    FP32 = b"FP32"
+
+    #: Used by:
+    #:
+    #:  - ``VADD``
+    NOQUANT = b"NOQUANT"
+
+    #: Used by:
+    #:
+    #:  - ``VADD``
+    Q8 = b"Q8"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    #:  - ``VADD``
+    REDUCE = b"REDUCE"
+
+    #: Used by:
+    #:
+    #:  - ``VADD``
+    #:  - ``VSIM``
+    VALUES = b"VALUES"
+
+    #: Used by:
+    #:
+    #:  - ``VSIM``
+    ELE = b"ELE"
+
+    #: Used by:
+    #:
+    #:  - ``VSIM``
+    TRUTH = b"TRUTH"
+
+    #: Used by:
+    #:
+    #:  - ``VEMB``
+    RAW = b"RAW"
 
     #: Used by:
     #:
@@ -1153,11 +1220,6 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
-    REDUCE = b"REDUCE"
-
-    #: Used by:
-    #:
-    #:  - ``FT.AGGREGATE``
     STDDEV = b"STDDEV"
 
     #: Used by:
@@ -1269,6 +1331,7 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``TS.MREVRANGE``
     #:  - ``TS.RANGE``
     #:  - ``TS.REVRANGE``
+    #:  - ``VSIM``
     #:  - ``XAUTOCLAIM``
     #:  - ``XINFO STREAM``
     #:  - ``XRANGE``
@@ -1433,24 +1496,32 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``GETEX``
+    #:  - ``HGETEX``
+    #:  - ``HSETEX``
     #:  - ``SET``
     EX = b"EX"
 
     #: Used by:
     #:
     #:  - ``GETEX``
+    #:  - ``HGETEX``
+    #:  - ``HSETEX``
     #:  - ``SET``
     EXAT = b"EXAT"
 
     #: Used by:
     #:
     #:  - ``GETEX``
+    #:  - ``HGETEX``
+    #:  - ``HSETEX``
     #:  - ``SET``
     PX = b"PX"
 
     #: Used by:
     #:
     #:  - ``GETEX``
+    #:  - ``HGETEX``
+    #:  - ``HSETEX``
     #:  - ``SET``
     PXAT = b"PXAT"
 
@@ -1471,11 +1542,14 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``HEXPIRE``
     #:  - ``HEXPIREAT``
     #:  - ``HEXPIRETIME``
+    #:  - ``HGETDEL``
+    #:  - ``HGETEX``
     #:  - ``HPERSIST``
     #:  - ``HPEXPIRE``
     #:  - ``HPEXPIREAT``
     #:  - ``HPEXPIRETIME``
     #:  - ``HPTTL``
+    #:  - ``HSETEX``
     #:  - ``HTTL``
     FIELDS = b"FIELDS"
 
@@ -1638,6 +1712,43 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``VADD``
+    #:  - ``VSIM``
+    EF = b"EF"
+
+    #: Used by:
+    #:
+    #:  - ``VADD``
+    M = b"M"
+
+    #: Used by:
+    #:
+    #:  - ``VADD``
+    SETATTR = b"SETATTR"
+
+    #: Used by:
+    #:
+    #:  - ``VSIM``
+    EPSILON = b"EPSILON"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    #:  - ``FT.CREATE``
+    #:  - ``FT.SEARCH``
+    #:  - ``TS.MGET``
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    #:  - ``VSIM``
+    FILTER = b"FILTER"
+
+    #: Used by:
+    #:
+    #:  - ``VSIM``
+    FILTER_EF = b"FILTER-EF"
+
+    #: Used by:
+    #:
     #:  - ``JSON.GET``
     INDENT = b"INDENT"
 
@@ -1760,16 +1871,6 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``TS.RANGE``
     #:  - ``TS.REVRANGE``
     FILTER_BY_TS = b"FILTER_BY_TS"
-
-    #: Used by:
-    #:
-    #:  - ``FT.AGGREGATE``
-    #:  - ``FT.CREATE``
-    #:  - ``FT.SEARCH``
-    #:  - ``TS.MGET``
-    #:  - ``TS.MRANGE``
-    #:  - ``TS.MREVRANGE``
-    FILTER = b"FILTER"
 
     #: Used by:
     #:

@@ -27,7 +27,7 @@ from coredis.response.types import *  # noqa
 from coredis.tokens import PureToken  # noqa
 from coredis.typing import *  # noqa
 
-MAX_SUPPORTED_VERSION = version.parse("7.999.999")
+MAX_SUPPORTED_VERSION = version.parse("8.999.999")
 MIN_SUPPORTED_VERSION = version.parse("5.999.999")
 
 MODULES = {

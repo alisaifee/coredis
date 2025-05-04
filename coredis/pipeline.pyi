@@ -244,6 +244,17 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def hexpiretime(self, key: "KeyT", fields: "Parameters[StringT]") -> Pipeline[AnyStr]: ...
     async def hget(self, key: "KeyT", field: "StringT") -> Pipeline[AnyStr]: ...
     async def hgetall(self, key: "KeyT") -> Pipeline[AnyStr]: ...
+    async def hgetdel(self, key: "KeyT", fields: "Parameters[StringT]") -> Pipeline[AnyStr]: ...
+    async def hgetex(
+        self,
+        key: "str | bytes",
+        fields: "Parameters[KeyT]",
+        ex: "int | datetime.timedelta | None" = ...,
+        px: "int | datetime.timedelta | None" = ...,
+        exat: "int | datetime.datetime | None" = ...,
+        pxat: "int | datetime.datetime | None" = ...,
+        persist: "bool | None" = ...,
+    ) -> Pipeline[AnyStr]: ...
     async def hincrby(
         self, key: "KeyT", field: "StringT", increment: "int"
     ) -> Pipeline[AnyStr]: ...
@@ -288,6 +299,17 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> Pipeline[AnyStr]: ...
     async def hset(
         self, key: "KeyT", field_values: "Mapping[StringT, ValueT]"
+    ) -> Pipeline[AnyStr]: ...
+    async def hsetex(
+        self,
+        key: "KeyT",
+        field_values: "Mapping[StringT, ValueT]",
+        condition: "Literal[PureToken.FNX, PureToken.FXX] | None" = ...,
+        ex: "int | datetime.timedelta | None" = ...,
+        px: "int | datetime.timedelta | None" = ...,
+        exat: "int | datetime.datetime | None" = ...,
+        pxat: "int | datetime.datetime | None" = ...,
+        keepttl: "bool | None" = ...,
     ) -> Pipeline[AnyStr]: ...
     async def hsetnx(self, key: "KeyT", field: "StringT", value: "ValueT") -> Pipeline[AnyStr]: ...
     async def hstrlen(self, key: "KeyT", field: "StringT") -> Pipeline[AnyStr]: ...
@@ -1258,6 +1280,19 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> ClusterPipeline[AnyStr]: ...
     async def hget(self, key: "KeyT", field: "StringT") -> ClusterPipeline[AnyStr]: ...
     async def hgetall(self, key: "KeyT") -> ClusterPipeline[AnyStr]: ...
+    async def hgetdel(
+        self, key: "KeyT", fields: "Parameters[StringT]"
+    ) -> ClusterPipeline[AnyStr]: ...
+    async def hgetex(
+        self,
+        key: "str | bytes",
+        fields: "Parameters[KeyT]",
+        ex: "int | datetime.timedelta | None" = ...,
+        px: "int | datetime.timedelta | None" = ...,
+        exat: "int | datetime.datetime | None" = ...,
+        pxat: "int | datetime.datetime | None" = ...,
+        persist: "bool | None" = ...,
+    ) -> ClusterPipeline[AnyStr]: ...
     async def hincrby(
         self, key: "KeyT", field: "StringT", increment: "int"
     ) -> ClusterPipeline[AnyStr]: ...
@@ -1308,6 +1343,17 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> ClusterPipeline[AnyStr]: ...
     async def hset(
         self, key: "KeyT", field_values: "Mapping[StringT, ValueT]"
+    ) -> ClusterPipeline[AnyStr]: ...
+    async def hsetex(
+        self,
+        key: "KeyT",
+        field_values: "Mapping[StringT, ValueT]",
+        condition: "Literal[PureToken.FNX, PureToken.FXX] | None" = ...,
+        ex: "int | datetime.timedelta | None" = ...,
+        px: "int | datetime.timedelta | None" = ...,
+        exat: "int | datetime.datetime | None" = ...,
+        pxat: "int | datetime.datetime | None" = ...,
+        keepttl: "bool | None" = ...,
     ) -> ClusterPipeline[AnyStr]: ...
     async def hsetnx(
         self, key: "KeyT", field: "StringT", value: "ValueT"

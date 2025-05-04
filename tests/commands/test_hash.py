@@ -7,6 +7,7 @@ import time
 import pytest
 
 from coredis import PureToken
+from coredis.exceptions import CommandSyntaxError
 from tests.conftest import server_deprecation_warning, targets
 
 
@@ -48,6 +49,15 @@ class TestHash:
         assert await client.hget("a", "2") is None
         assert await client.hdel("a", ["1", "3"]) == 2
         assert await client.hlen("a") == 0
+
+    @pytest.mark.min_server_version("7.9.0")
+    async def test_hgetdel(self, client, _s):
+        await client.hset("a", {"1": 1, "2": 2, "3": 3})
+        assert (_s("1"),) == await client.hgetdel("a", ["1"])
+        assert (None,) == await client.hgetdel("a", ["1"])
+        assert await client.hlen("a") == 2
+        assert (None, _s("2"), _s("3")) == await client.hgetdel("a", ["1", "2", "3"])
+        assert 0 == await client.exists(["a"])
 
     async def test_hexists(self, client, _s):
         await client.hset("a", {"1": 1, "2": 2, "3": 3})
@@ -190,6 +200,29 @@ class TestHash:
         assert (1,) == await client.hpersist("a", ["1"])
         assert (-1,) == await client.hpttl("a", ["1"])
 
+    @pytest.mark.min_server_version("7.9.0")
+    async def test_hgetex(self, client, _s):
+        now = datetime.datetime.now()
+        await client.hset("a", {"1": 1, "2": 2, "3": 3})
+        assert (_s("1"),) == await client.hgetex("a", ["1"], ex=10)
+        assert 0 < (await client.httl("a", ["1"]))[0] <= 10
+        assert (_s("1"),) == await client.hgetex("a", ["1"], px=11000)
+        assert 0 < (await client.httl("a", ["1"]))[0] <= 11
+        assert (_s("1"),) == await client.hgetex(
+            "a", ["1"], exat=now + datetime.timedelta(seconds=12)
+        )
+        assert 0 < (await client.httl("a", ["1"]))[0] <= 12
+        assert (_s("1"),) == await client.hgetex(
+            "a", ["1"], exat=now + datetime.timedelta(milliseconds=12500)
+        )
+        assert 0 < (await client.httl("a", ["1"]))[0] <= 13
+        assert (_s("1"),) == await client.hgetex("a", ["1"], persist=True)
+        assert (-1,) == await client.httl("a", ["1"])
+        with pytest.raises(CommandSyntaxError):
+            await client.hgetex("a", ["1"])
+        with pytest.raises(CommandSyntaxError):
+            await client.hgetex("a", ["1"], ex=10, px=10000)
+
     async def test_hgetall(self, client, _s):
         h = {_s("a1"): _s("1"), _s("a2"): _s("2"), _s("a3"): _s("3")}
         await client.hset("a", h)
@@ -237,6 +270,27 @@ class TestHash:
         assert await client.hget("a", "1") == _s("1")
         assert not await client.hsetnx("a", "1", "2")
         assert await client.hget("a", "1") == _s("1")
+
+    @pytest.mark.min_server_version("7.9.0")
+    async def test_hsetex(self, client, _s):
+        now = datetime.datetime.now()
+        assert await client.hsetex("a", {"1": 1}, condition=PureToken.FNX, keepttl=True)
+        assert not await client.hsetex("a", {"1": 1}, condition=PureToken.FNX, keepttl=True)
+        assert await client.hsetex("a", {"1": 1}, condition=PureToken.FXX, keepttl=True)
+        assert not await client.hsetex("a", {"1": 1, "2": 2}, condition=PureToken.FXX, keepttl=True)
+        assert not await client.hsetex("a", {"1": 1, "2": 2}, condition=PureToken.FNX, keepttl=True)
+        assert await client.hsetex("a", {"1": 1}, condition=PureToken.FXX, ex=10)
+        assert 0 < (await client.httl("a", ["1"]))[0] <= 10
+        assert await client.hsetex("a", {"1": 1}, condition=PureToken.FXX, px=11000)
+        assert 0 < (await client.httl("a", ["1"]))[0] <= 11
+        assert await client.hsetex(
+            "a", {"1": 1}, condition=PureToken.FXX, exat=now + datetime.timedelta(seconds=12)
+        )
+        assert 0 < (await client.httl("a", ["1"]))[0] <= 12
+        with pytest.raises(CommandSyntaxError):
+            await client.hsetex("a", {"1": 1})
+        with pytest.raises(CommandSyntaxError):
+            await client.hsetex("a", {"1": 1}, ex=1, px=1000)
 
     async def test_hvals(self, client, _s):
         h = {"a1": "1", "a2": "2", "a3": "3"}
