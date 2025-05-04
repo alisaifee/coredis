@@ -31,10 +31,6 @@ MODULE_VERSIONS = {}
 PY_IMPLEMENTATION = platform.python_implementation()
 PY_VERSION = version.Version(platform.python_version())
 DOCKER_TAG_MAPPING = {
-    "6.2": {
-        "default": "6.2.16",
-        "stack": "6.2.6-v9",
-    },
     "7.0": {
         "default": "7",
         "sentinel": "7.0.15",
@@ -49,7 +45,6 @@ DOCKER_TAG_MAPPING = {
 }
 
 SERVER_DEFAULT_ARGS = {
-    "6.2": "",
     "7.0": None,
     "7.2": None,
 }
