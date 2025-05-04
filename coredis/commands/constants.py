@@ -549,9 +549,6 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     FT_ALIASUPDATE = b"FT.ALIASUPDATE"  # Since search: 1.0.0
     FT_ALIASDEL = b"FT.ALIASDEL"  # Since search: 1.0.0
     FT_TAGVALS = b"FT.TAGVALS"  # Since search: 1.0.0
-    FT_CONFIG_SET = b"FT.CONFIG SET"  # Since search: 1.0.0
-    FT_CONFIG_GET = b"FT.CONFIG GET"  # Since search: 1.0.0
-    FT_CONFIG_HELP = b"FT.CONFIG HELP"  # Since search: 1.0.0
     FT_SEARCH = b"FT.SEARCH"  # Since search: 1.0.0
     FT_AGGREGATE = b"FT.AGGREGATE"  # Since search: 1.1.0
     FT_CURSOR_READ = b"FT.CURSOR READ"  # Since search: 1.1.0
@@ -565,6 +562,9 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     FT_DROPINDEX = b"FT.DROPINDEX"  # Since search: 2.0.0
     FT__LIST = b"FT._LIST"  # Since search: 2.0.0
     FT_PROFILE = b"FT.PROFILE"  # Since search: 2.2.0
+    FT_CONFIG_SET = b"FT.CONFIG SET"  # Deprecated in search: 8.0.0
+    FT_CONFIG_GET = b"FT.CONFIG GET"  # Deprecated in search: 8.0.0
+    FT_CONFIG_HELP = b"FT.CONFIG HELP"  # Deprecated in search: 8.0.0
 
     #: Commands for suggestion
     FT_SUGADD = b"FT.SUGADD"  # Since search: 1.0.0

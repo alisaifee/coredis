@@ -96,6 +96,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``BZMPOP``
+    #:  - ``FT.AGGREGATE``
     #:  - ``TS.ADD``
     #:  - ``TS.ALTER``
     #:  - ``TS.CREATE``
@@ -114,6 +115,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``BZMPOP``
+    #:  - ``FT.AGGREGATE``
     #:  - ``TS.ADD``
     #:  - ``TS.ALTER``
     #:  - ``TS.CREATE``
@@ -668,6 +670,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``FT.AGGREGATE``
     #:  - ``TS.ADD``
     #:  - ``TS.ALTER``
     #:  - ``TS.CREATE``
@@ -814,6 +817,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``FT.AGGREGATE``
     #:  - ``TS.CREATERULE``
     #:  - ``TS.MRANGE``
     #:  - ``TS.MREVRANGE``
@@ -823,6 +827,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``FT.AGGREGATE``
     #:  - ``TS.CREATERULE``
     #:  - ``TS.MRANGE``
     #:  - ``TS.MREVRANGE``
@@ -1118,7 +1123,47 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    COUNT_DISTINCT = b"COUNT_DISTINCT"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    COUNT_DISTINCTISH = b"COUNT_DISTINCTISH"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    FIRST_VALUE = b"FIRST_VALUE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
     LOADALL = b"LOAD *"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    QUANTILE = b"QUANTILE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    RANDOM_SAMPLE = b"RANDOM_SAMPLE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    REDUCE = b"REDUCE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    STDDEV = b"STDDEV"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    TOLIST = b"TOLIST"
 
     #: Used by:
     #:
@@ -1686,6 +1731,7 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``FT.AGGREGATE``
     #:  - ``TS.DECRBY``
     #:  - ``TS.INCRBY``
     TIMESTAMP = b"TIMESTAMP"
@@ -1857,7 +1903,72 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    ABS = b"ABS"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
     APPLY = b"APPLY"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    CEIL = b"CEIL"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    CONTAINS = b"CONTAINS"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    DAY = b"DAY"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    DAYOFMONTH = b"DAYOFMONTH"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    DAYOFWEEK = b"DAYOFWEEK"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    DAYOFYEAR = b"DAYOFYEAR"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    EXISTS = b"EXISTS"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    EXP = b"EXP"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    FLOOR = b"FLOOR"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    FMT = b"FMT"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    FORMAT = b"FORMAT"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    GEODISTANCE = b"GEODISTANCE"
 
     #: Used by:
     #:
@@ -1867,7 +1978,32 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    HOUR = b"HOUR"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
     LOAD = b"LOAD"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    LOG = b"LOG"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    LOG2 = b"LOG2"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    LOWER = b"LOWER"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    MATCHED_TERMS = b"MATCHED_TERMS"
 
     #: Used by:
     #:
@@ -1878,9 +2014,99 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    MAX_TERMS_100 = b"MAX_TERMS=100"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
     MAXIDLE = b"MAXIDLE"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
-    REDUCE = b"REDUCE"
+    MINUTE = b"MINUTE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    MONTH = b"MONTH"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    MONTHOFYEAR = b"MONTHOFYEAR"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    OFFSET = b"OFFSET"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    PARSETIME = b"PARSETIME"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    S = b"S"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    S1 = b"S1"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    S2 = b"S2"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    SPLIT = b"SPLIT"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    SQRT = b"SQRT"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    STARTSWITH = b"STARTSWITH"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    STRLEN = b"STRLEN"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    SUBSTR = b"SUBSTR"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    TIMEFMT = b"TIMEFMT"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    TIMESHARING = b"TIMESHARING"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    UPPER = b"UPPER"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    X = b"X"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    YEAR = b"YEAR"

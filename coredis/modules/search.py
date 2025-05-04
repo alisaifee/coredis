@@ -204,7 +204,7 @@ class Group:
             bies: list[StringT] = list(self.by)
             args.extend([len(bies), *bies])
         for reducer in self.reducers or []:
-            args.append(PrefixToken.REDUCE)
+            args.append(PureToken.REDUCE)
             args.extend(reducer.args)
 
         return args
