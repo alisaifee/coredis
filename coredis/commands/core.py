@@ -2107,7 +2107,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.HGETEX, version_introduced="7.9.0", group=CommandGroup.HASH)
     async def hgetex(
         self,
-        key: str | bytes,
+        key: KeyT,
         fields: Parameters[KeyT],
         ex: int | datetime.timedelta | None = None,
         px: int | datetime.timedelta | None = None,
