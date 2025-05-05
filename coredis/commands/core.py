@@ -2108,13 +2108,27 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def hgetex(
         self,
         key: KeyT,
-        fields: Parameters[KeyT],
+        fields: Parameters[StringT],
         ex: int | datetime.timedelta | None = None,
         px: int | datetime.timedelta | None = None,
         exat: int | datetime.datetime | None = None,
         pxat: int | datetime.datetime | None = None,
         persist: bool | None = None,
     ) -> tuple[AnyStr | None, ...]:
+        """
+        Get the value of one or more fields of a given hash key and optionally set their
+        expiration time or time-to-live (TTL).
+
+        :param key:  The key of the hash
+        :param fields: The fields to get values for
+        :param ex: Set the expiry of the fields to ``ex`` seconds
+        :param px: Set the expiry of the fields to ``px`` milliseconds
+        :param exat: Set the expiry of the fields to the specified time (in seconds)
+        :param exat: Set the expiry of the fields to the specified time (in milliseconds)
+        :param persist: Remove TTL from the fields
+        :return: the values of each of the fields requested (Missing fields are returned
+         as ``None``)
+        """
         command_arguments: CommandArgList = [key]
         if ex is not None:
             command_arguments.extend([PrefixToken.EX, normalized_seconds(ex)])
@@ -2136,6 +2150,15 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="5.0.0")
     @redis_command(CommandName.HGETDEL, version_introduced="7.9.0", group=CommandGroup.HASH)
     async def hgetdel(self, key: KeyT, fields: Parameters[StringT]) -> tuple[AnyStr | None, ...]:
+        """
+        Get and delete the value of one or more fields of a given hash key. When the last field is deleted,
+        the key will also be deleted.
+
+        :param key: The key of the hash
+        :param fields: The fields to get and delete
+        :return: the values of the fields requested (Missing fields are returned
+         as ``None``)
+        """
         return await self.execute_command(
             CommandName.HGETDEL,
             key,
@@ -2215,6 +2238,21 @@ class CoreCommands(CommandMixin[AnyStr]):
         pxat: int | datetime.datetime | None = None,
         keepttl: bool | None = None,
     ) -> bool:
+        """
+        Set the value of one or more fields of a given hash key, and optionally set their
+        expiration time or time-to-live (TTL).
+
+        :param key: The key of the hash
+        :param field_values: Mapping of fields and the values to set
+        :param condition: If ``FNX`` only set the fields if **none** of them exist,
+         if ``FXX`` only set the fields if **all** of them already exists
+        :param ex: Set the expiry of the fields to ``ex`` seconds
+        :param px: Set the expiry of the fields to ``px`` milliseconds
+        :param exat: Set the expiry of the fields to the specified time (in seconds)
+        :param exat: Set the expiry of the fields to the specified time (in milliseconds)
+        :param keepttl: Retain the TTL already associated with the fields
+        :return: ``True`` if all the fields were successfully set
+        """
         command_arguments: CommandArgList = [key]
         if condition is not None:
             command_arguments.append(condition)

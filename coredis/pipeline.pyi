@@ -247,8 +247,8 @@ class Pipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     async def hgetdel(self, key: "KeyT", fields: "Parameters[StringT]") -> Pipeline[AnyStr]: ...
     async def hgetex(
         self,
-        key: "str | bytes",
-        fields: "Parameters[KeyT]",
+        key: "KeyT",
+        fields: "Parameters[StringT]",
         ex: "int | datetime.timedelta | None" = ...,
         px: "int | datetime.timedelta | None" = ...,
         exat: "int | datetime.datetime | None" = ...,
@@ -1285,8 +1285,8 @@ class ClusterPipeline(ObjectProxy, Generic[AnyStr]):  # type: ignore
     ) -> ClusterPipeline[AnyStr]: ...
     async def hgetex(
         self,
-        key: "str | bytes",
-        fields: "Parameters[KeyT]",
+        key: "KeyT",
+        fields: "Parameters[StringT]",
         ex: "int | datetime.timedelta | None" = ...,
         px: "int | datetime.timedelta | None" = ...,
         exat: "int | datetime.datetime | None" = ...,
