@@ -36,7 +36,7 @@ async def sample_data(client):
     "redis_cluster_raw",
     "redis_basic_resp2",
 )
-@pytest.mark.min_server_version("7.9.0")
+@pytest.mark.min_server_version("8.0.0")
 class TestVectorSets:
     @pytest.mark.parametrize("quantization", [None, PureToken.NOQUANT, PureToken.BIN, PureToken.Q8])
     async def test_vadd_new_set(self, client, _s, quantization):

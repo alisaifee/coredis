@@ -2115,7 +2115,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="5.0.0")
     @mutually_exclusive_parameters("ex", "px", "exat", "pxat", "persist", required=True)
-    @redis_command(CommandName.HGETEX, version_introduced="7.9.0", group=CommandGroup.HASH)
+    @redis_command(CommandName.HGETEX, version_introduced="8.0.0", group=CommandGroup.HASH)
     async def hgetex(
         self,
         key: KeyT,
@@ -2159,7 +2159,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @versionadded(version="5.0.0")
-    @redis_command(CommandName.HGETDEL, version_introduced="7.9.0", group=CommandGroup.HASH)
+    @redis_command(CommandName.HGETDEL, version_introduced="8.0.0", group=CommandGroup.HASH)
     async def hgetdel(self, key: KeyT, fields: Parameters[StringT]) -> tuple[AnyStr | None, ...]:
         """
         Get and delete the value of one or more fields of a given hash key. When the last field is deleted,
@@ -2237,7 +2237,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="5.0.0")
     @mutually_exclusive_parameters("ex", "px", "exat", "pxat", "keepttl", required=True)
-    @redis_command(CommandName.HSETEX, version_introduced="7.9.0", group=CommandGroup.HASH)
+    @redis_command(CommandName.HSETEX, version_introduced="8.0.0", group=CommandGroup.HASH)
     async def hsetex(
         self,
         key: KeyT,
@@ -8107,7 +8107,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @versionadded(version="5.0.0")
-    @redis_command(CommandName.VADD, version_introduced="7.9.0", group=CommandGroup.VECTOR_SET)
+    @redis_command(CommandName.VADD, version_introduced="8.0.0", group=CommandGroup.VECTOR_SET)
     async def vadd(
         self,
         key: KeyT,
@@ -8163,7 +8163,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @versionadded(version="5.0.0")
-    @redis_command(CommandName.VREM, version_introduced="7.9.0", group=CommandGroup.VECTOR_SET)
+    @redis_command(CommandName.VREM, version_introduced="8.0.0", group=CommandGroup.VECTOR_SET)
     async def vrem(self, key: KeyT, element: ValueT) -> bool:
         """
         Remove an element from a vector set.
@@ -8210,7 +8210,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @mutually_exclusive_parameters("values", "element", required=True)
     @redis_command(
         CommandName.VSIM,
-        version_introduced="7.9.0",
+        version_introduced="8.0.0",
         group=CommandGroup.VECTOR_SET,
     )
     async def vsim(
@@ -8276,7 +8276,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @versionadded(version="5.0.0")
-    @redis_command(CommandName.VDIM, version_introduced="7.9.0", group=CommandGroup.VECTOR_SET)
+    @redis_command(CommandName.VDIM, version_introduced="8.0.0", group=CommandGroup.VECTOR_SET)
     async def vdim(self, key: KeyT) -> int:
         """
         Return the dimension of vectors in the vector set
@@ -8287,7 +8287,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return await self.execute_command(CommandName.VDIM, key, callback=IntCallback())
 
     @versionadded(version="5.0.0")
-    @redis_command(CommandName.VCARD, version_introduced="7.9.0", group=CommandGroup.VECTOR_SET)
+    @redis_command(CommandName.VCARD, version_introduced="8.0.0", group=CommandGroup.VECTOR_SET)
     async def vcard(self, key: KeyT) -> int:
         """
         Return the number of elements in a vector set
@@ -8304,7 +8304,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def vemb(self, key: KeyT, element: StringT, raw: Literal[True]) -> VectorData | None: ...
 
     @versionadded(version="5.0.0")
-    @redis_command(CommandName.VEMB, version_introduced="7.9.0", group=CommandGroup.VECTOR_SET)
+    @redis_command(CommandName.VEMB, version_introduced="8.0.0", group=CommandGroup.VECTOR_SET)
     async def vemb(
         self, key: KeyT, element: StringT, raw: bool | None = None
     ) -> tuple[float, ...] | VectorData | None:
@@ -8336,7 +8336,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     ) -> tuple[dict[AnyStr, float], ...] | None: ...
 
     @versionadded(version="5.0.0")
-    @redis_command(CommandName.VLINKS, version_introduced="7.9.0", group=CommandGroup.VECTOR_SET)
+    @redis_command(CommandName.VLINKS, version_introduced="8.0.0", group=CommandGroup.VECTOR_SET)
     async def vlinks(
         self, key: KeyT, element: StringT, withscores: bool | None = None
     ) -> tuple[tuple[AnyStr, ...] | dict[AnyStr, float], ...] | None:
@@ -8365,7 +8365,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @versionadded(version="5.0.0")
-    @redis_command(CommandName.VINFO, version_introduced="7.9.0", group=CommandGroup.VECTOR_SET)
+    @redis_command(CommandName.VINFO, version_introduced="8.0.0", group=CommandGroup.VECTOR_SET)
     async def vinfo(self, key: KeyT) -> dict[AnyStr, AnyStr | int] | None:
         """
         Return information about a vector set
@@ -8377,7 +8377,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return await self.execute_command(CommandName.VINFO, key, callback=VInfoCallback[AnyStr]())
 
     @versionadded(version="5.0.0")
-    @redis_command(CommandName.VSETATTR, version_introduced="7.9.0", group=CommandGroup.VECTOR_SET)
+    @redis_command(CommandName.VSETATTR, version_introduced="8.0.0", group=CommandGroup.VECTOR_SET)
     async def vsetattr(self, key: KeyT, element: StringT, attributes: JsonType) -> bool:
         """
         Associate or remove the JSON attributes of elements
@@ -8397,7 +8397,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @versionadded(version="5.0.0")
-    @redis_command(CommandName.VGETATTR, version_introduced="7.9.0", group=CommandGroup.VECTOR_SET)
+    @redis_command(CommandName.VGETATTR, version_introduced="8.0.0", group=CommandGroup.VECTOR_SET)
     async def vgetattr(self, key: KeyT, element: StringT) -> JsonType:
         """
         Retrieve the JSON attributes of elements
@@ -8419,7 +8419,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     async def vrandmember(self, key: KeyT, count: int) -> tuple[AnyStr | None, ...]: ...
     @versionadded(version="5.0.0")
     @redis_command(
-        CommandName.VRANDMEMBER, version_introduced="7.9.0", group=CommandGroup.VECTOR_SET
+        CommandName.VRANDMEMBER, version_introduced="8.0.0", group=CommandGroup.VECTOR_SET
     )
     async def vrandmember(
         self, key: KeyT, count: int | None = None

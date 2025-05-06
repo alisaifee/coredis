@@ -50,7 +50,7 @@ class TestHash:
         assert await client.hdel("a", ["1", "3"]) == 2
         assert await client.hlen("a") == 0
 
-    @pytest.mark.min_server_version("7.9.0")
+    @pytest.mark.min_server_version("8.0.0")
     async def test_hgetdel(self, client, _s):
         await client.hset("a", {"1": 1, "2": 2, "3": 3})
         assert (_s("1"),) == await client.hgetdel("a", ["1"])
@@ -200,7 +200,7 @@ class TestHash:
         assert (1,) == await client.hpersist("a", ["1"])
         assert (-1,) == await client.hpttl("a", ["1"])
 
-    @pytest.mark.min_server_version("7.9.0")
+    @pytest.mark.min_server_version("8.0.0")
     async def test_hgetex(self, client, _s):
         now = datetime.datetime.now()
         await client.hset("a", {"1": 1, "2": 2, "3": 3})
@@ -271,7 +271,7 @@ class TestHash:
         assert not await client.hsetnx("a", "1", "2")
         assert await client.hget("a", "1") == _s("1")
 
-    @pytest.mark.min_server_version("7.9.0")
+    @pytest.mark.min_server_version("8.0.0")
     async def test_hsetex(self, client, _s):
         now = datetime.datetime.now()
         assert await client.hsetex("a", {"1": 1}, condition=PureToken.FNX, keepttl=True)
