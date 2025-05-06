@@ -60,6 +60,11 @@ jobs:
         label: [""]
         include:
           - python-version: "3.12"
+            redis-version: next
+            test_params: "-m '(not (keydb or dragonfly or valkey or redict))'"
+            runtime_type_checks: "True"
+            label: ""
+          - python-version: "3.12"
             redis-version: "latest"
             test_params: "-m '(not (keydb or dragonfly or valkey or redict))'"
             runtime_type_checks: "True"
