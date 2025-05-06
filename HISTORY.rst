@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v4.22.0
+-------
+Release Date: 2025-05-06
+
+* Bug Fix
+
+  * Disable incompatible ``scan`` method for redis cluster
+  * Fix use of ``scan_iter`` with redis cluster with uninitialized client
+
 v4.21.0
 -------
 Release Date: 2025-05-02
@@ -1899,4 +1908,5 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
