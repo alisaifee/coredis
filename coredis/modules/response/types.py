@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, NamedTuple
+from typing import NamedTuple
 
 from coredis._json import json
 from coredis.typing import (
@@ -79,10 +79,6 @@ class AutocompleteSuggestion(Generic[AnyStr]):
     #: the payload associated with the suggestion if
     #:  :paramref:`~coredis.modules.autocomplete.Autocomplete.sugget.withpayloads` was used
     payload: AnyStr | None
-
-
-#: Type alias for valid python types that can be represented as json
-JsonType = str | int | float | bool | dict[str, Any] | list[Any] | None
 
 
 @dataclasses.dataclass

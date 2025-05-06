@@ -3605,6 +3605,212 @@ Monitors changes to keys to determine the execution of a transaction.
 
 
 
+Vector_Set
+^^^^^^^^^^
+
+
+
+VADD
+****
+
+Add one or more elements to a vector set, or update its vector if it already exists
+
+- Documentation: `VADD <https://redis.io/commands/vadd>`_
+- Implementation: :meth:`~coredis.Redis.vadd`
+
+- New in redis: 8.0.0
+
+
+
+- .. versionadded:: 5.0.0
+
+
+
+
+
+VREM
+****
+
+Remove one or more elements from a vector set
+
+- Documentation: `VREM <https://redis.io/commands/vrem>`_
+- Implementation: :meth:`~coredis.Redis.vrem`
+
+- New in redis: 8.0.0
+
+
+
+- .. versionadded:: 5.0.0
+
+
+
+
+
+VSIM
+****
+
+Return elements by vector similarity
+
+- Documentation: `VSIM <https://redis.io/commands/vsim>`_
+- Implementation: :meth:`~coredis.Redis.vsim`
+
+- New in redis: 8.0.0
+
+
+
+- .. versionadded:: 5.0.0
+
+
+
+
+
+VDIM
+****
+
+Return the dimension of vectors in the vector set
+
+- Documentation: `VDIM <https://redis.io/commands/vdim>`_
+- Implementation: :meth:`~coredis.Redis.vdim`
+
+- New in redis: 8.0.0
+
+
+
+- .. versionadded:: 5.0.0
+
+
+
+
+
+VCARD
+*****
+
+Return the number of elements in a vector set
+
+- Documentation: `VCARD <https://redis.io/commands/vcard>`_
+- Implementation: :meth:`~coredis.Redis.vcard`
+
+- New in redis: 8.0.0
+
+
+
+- .. versionadded:: 5.0.0
+
+
+
+
+
+VEMB
+****
+
+Return the vector associated with an element
+
+- Documentation: `VEMB <https://redis.io/commands/vemb>`_
+- Implementation: :meth:`~coredis.Redis.vemb`
+
+- New in redis: 8.0.0
+
+
+
+- .. versionadded:: 5.0.0
+
+
+
+
+
+VLINKS
+******
+
+Return the neighbors of an element at each layer in the HNSW graph
+
+- Documentation: `VLINKS <https://redis.io/commands/vlinks>`_
+- Implementation: :meth:`~coredis.Redis.vlinks`
+
+- New in redis: 8.0.0
+
+
+
+- .. versionadded:: 5.0.0
+
+
+
+
+
+VINFO
+*****
+
+Return information about a vector set
+
+- Documentation: `VINFO <https://redis.io/commands/vinfo>`_
+- Implementation: :meth:`~coredis.Redis.vinfo`
+
+- New in redis: 8.0.0
+
+
+
+- .. versionadded:: 5.0.0
+
+
+
+
+
+VSETATTR
+********
+
+Associate or remove the JSON attributes of elements
+
+- Documentation: `VSETATTR <https://redis.io/commands/vsetattr>`_
+- Implementation: :meth:`~coredis.Redis.vsetattr`
+
+- New in redis: 8.0.0
+
+
+
+- .. versionadded:: 5.0.0
+
+
+
+
+
+VGETATTR
+********
+
+Retrieve the JSON attributes of elements
+
+- Documentation: `VGETATTR <https://redis.io/commands/vgetattr>`_
+- Implementation: :meth:`~coredis.Redis.vgetattr`
+
+- New in redis: 8.0.0
+
+
+
+- .. versionadded:: 5.0.0
+
+
+
+
+
+VRANDMEMBER
+***********
+
+Return one or multiple random members from a vector set
+
+- Documentation: `VRANDMEMBER <https://redis.io/commands/vrandmember>`_
+- Implementation: :meth:`~coredis.Redis.vrandmember`
+
+- New in redis: 8.0.0
+
+
+
+- .. versionadded:: 5.0.0
+
+
+
+
+
+
+
+
 Server
 ^^^^^^
 

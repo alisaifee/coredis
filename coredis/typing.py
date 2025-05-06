@@ -23,6 +23,7 @@ from collections.abc import (
 from types import ModuleType
 from typing import (
     TYPE_CHECKING,
+    Any,
     AnyStr,
     ClassVar,
     Final,
@@ -185,6 +186,10 @@ else:
         ]
         | RedisError  # response errors get mapped to exceptions.
     )
+
+#: Type alias for valid python types that can be represented as json
+JsonType = str | int | float | bool | dict[str, Any] | list[Any] | None
+
 __all__ = [
     "AnyStr",
     "AsyncIterator",
@@ -200,6 +205,7 @@ __all__ = [
     "Hashable",
     "Iterable",
     "Iterator",
+    "JsonType",
     "KeyT",
     "Literal",
     "Mapping",

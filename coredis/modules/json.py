@@ -15,6 +15,7 @@ from ..tokens import PureToken
 from ..typing import (
     AnyStr,
     CommandArgList,
+    JsonType,
     KeyT,
     Literal,
     Parameters,
@@ -24,7 +25,6 @@ from ..typing import (
 )
 from .base import Module, ModuleGroup, module_command
 from .response._callbacks.json import JsonCallback
-from .response.types import JsonType
 
 
 class RedisJSON(Module[AnyStr]):

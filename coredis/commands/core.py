@@ -6,6 +6,7 @@ from typing import overload
 
 from deprecated.sphinx import versionadded
 
+from coredis._json import json
 from coredis._utils import defaultvalue, dict_to_flat_list, tuples_to_flat_list
 from coredis.commands import CommandMixin
 from coredis.commands._utils import (
@@ -33,6 +34,7 @@ from coredis.exceptions import (
     DataError,
     RedisError,
 )
+from coredis.modules.response._callbacks.json import JsonCallback
 from coredis.response._callbacks import (
     AnyStrCallback,
     BoolCallback,
@@ -48,6 +50,7 @@ from coredis.response._callbacks import (
     DictCallback,
     FloatCallback,
     IntCallback,
+    ItemOrTupleCallback,
     ListCallback,
     NoopCallback,
     OptionalAnyStrCallback,
@@ -118,6 +121,12 @@ from coredis.response._callbacks.streams import (
     XInfoCallback,
 )
 from coredis.response._callbacks.strings import LCSCallback, StringSetCallback
+from coredis.response._callbacks.vector_sets import (
+    VEmbCallback,
+    VInfoCallback,
+    VLinksCallback,
+    VSimCallback,
+)
 from coredis.response.types import (
     ClientInfo,
     ClusterNode,
@@ -134,11 +143,13 @@ from coredis.response.types import (
     StreamInfo,
     StreamPending,
     StreamPendingExt,
+    VectorData,
 )
 from coredis.tokens import PrefixToken, PureToken
 from coredis.typing import (
     AnyStr,
     CommandArgList,
+    JsonType,
     KeyT,
     Literal,
     Mapping,
@@ -8093,4 +8104,343 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return await self.execute_command(
             CommandName.TYPE, key, callback=OptionalAnyStrCallback[AnyStr]()
+        )
+
+    @versionadded(version="5.0.0")
+    @redis_command(CommandName.VADD, version_introduced="7.9.0", group=CommandGroup.VECTOR_SET)
+    async def vadd(
+        self,
+        key: KeyT,
+        element: ValueT,
+        values: Parameters[float | int] | bytes,
+        reduce: int | None = None,
+        cas: bool | None = None,
+        quantization: Literal[PureToken.BIN, PureToken.NOQUANT, PureToken.Q8] | None = None,
+        ef: int | None = None,
+        attributes: JsonType | None = None,
+        numlinks: int | None = None,
+    ) -> bool:
+        """
+        Add a new element into the vector set specified by key
+
+        :param key: The key containing the vector set
+        :param element: The name of the element being added to the vector set
+        :param values: either a byte representation of a 32-bit floating point (FP32) blob of values
+         or a sequence of doubles representing the vector.
+        :param reduce: dimensions to reduce the vector values to
+        :param cas: whether to add using check-and-set
+        :param quantization: The quantization type to use
+        :param ef: exploration factor to use when connecting the element to the existing graph
+        :param attributes: json attributes to associate with the element
+        :param numlinks: maximum number of connections each node in the graph will have with other
+         nodes.
+
+        :return: ``True`` if the element was successfully added to the vector set
+        """
+        command_arguments: CommandArgList = [key]
+        if reduce is not None:
+            command_arguments.extend([PureToken.REDUCE, reduce])
+
+        if isinstance(values, bytes):
+            command_arguments.extend([PureToken.FP32, values])
+        else:
+            command_arguments.extend([PureToken.VALUES, len(list(values)), *values])
+
+        command_arguments.append(element)
+        if cas is not None:
+            command_arguments.append(PureToken.CAS)
+        if quantization is not None:
+            command_arguments.append(quantization)
+        if ef is not None:
+            command_arguments.extend([PrefixToken.EF, ef])
+        if attributes:
+            command_arguments.extend([PrefixToken.SETATTR, json.dumps(attributes)])
+        if numlinks:
+            command_arguments.extend([PrefixToken.M, numlinks])
+
+        return await self.execute_command(
+            CommandName.VADD, *command_arguments, callback=BoolCallback()
+        )
+
+    @versionadded(version="5.0.0")
+    @redis_command(CommandName.VREM, version_introduced="7.9.0", group=CommandGroup.VECTOR_SET)
+    async def vrem(self, key: KeyT, element: ValueT) -> bool:
+        """
+        Remove an element from a vector set.
+
+        :param key: The key containing the vector set
+        :param element: The element to remove
+
+        :return: ``True`` if the element was successfully deleted from the set
+        """
+
+        return await self.execute_command(CommandName.VREM, key, element, callback=BoolCallback())
+
+    @overload
+    async def vsim(
+        self,
+        key: KeyT,
+        *,
+        element: StringT | None = ...,
+        values: Parameters[float] | bytes | None = ...,
+        count: int | None = ...,
+        epsilon: int | float | None = ...,
+        ef: int | None = ...,
+        filter: StringT | None = ...,
+        filter_ef: int | None = ...,
+        truth: bool | None = ...,
+    ) -> tuple[AnyStr, ...]: ...
+    @overload
+    async def vsim(
+        self,
+        key: KeyT,
+        *,
+        element: StringT | None = ...,
+        values: Parameters[float] | bytes | None = ...,
+        withscores: Literal[True] = ...,
+        count: int | None = ...,
+        epsilon: int | float | None = ...,
+        ef: int | None = ...,
+        filter: StringT | None = ...,
+        filter_ef: int | None = ...,
+        truth: bool | None = ...,
+    ) -> dict[AnyStr, float]: ...
+
+    @versionadded(version="5.0.0")
+    @mutually_exclusive_parameters("values", "element", required=True)
+    @redis_command(
+        CommandName.VSIM,
+        version_introduced="7.9.0",
+        group=CommandGroup.VECTOR_SET,
+    )
+    async def vsim(
+        self,
+        key: KeyT,
+        *,
+        element: StringT | None = None,
+        values: Parameters[float] | bytes | None = None,
+        withscores: bool | None = None,
+        count: int | None = None,
+        epsilon: int | float | None = None,
+        ef: int | None = None,
+        filter: StringT | None = None,
+        filter_ef: int | None = None,
+        truth: bool | None = None,
+    ) -> tuple[AnyStr, ...] | dict[AnyStr, float]:
+        """
+        Return elements similar to a given vector or element
+
+        :param key: The key containing the vector set
+        :param element: An existing element to find similar elements for
+        :param values: either a byte representation of a 32-bit floating point (FP32) blob of values
+         or a sequence of doubles representing the vector to use as the similarity reference.
+        :param withscores: whether to return similarity scores for each result
+        :param count: number of results to limit to
+        :param epsilon:
+        :param ef: Search exploration factor
+        :param filter: Expression to restrict matching elements
+        :param filter_ef: limits the number of filtering attempts
+        :param truth: forces an exact linear scan of all elements bypassing the HSNW graph
+        :return: the matching elements or a mapping of the matching elements to their scores
+         if :paramref:`withscores` is ``True``
+        """
+        command_arguments: CommandArgList = [key]
+        if values is not None:
+            if isinstance(values, bytes):
+                command_arguments.extend([PureToken.FP32, values])
+            else:
+                _values: list[float] = list(values)
+                command_arguments.extend([PureToken.VALUES, len(_values), *_values])
+        if element:
+            command_arguments.extend([PureToken.ELE, element])
+
+        if withscores:
+            command_arguments.append(PureToken.WITHSCORES)
+        if count is not None:
+            command_arguments.extend([PrefixToken.COUNT, count])
+        if ef is not None:
+            command_arguments.extend([PrefixToken.EF, ef])
+        if epsilon is not None:
+            command_arguments.extend([PrefixToken.EPSILON, epsilon])
+        if filter is not None:
+            command_arguments.extend([PrefixToken.FILTER, filter])
+        if filter_ef is not None:
+            command_arguments.extend([PrefixToken.FILTER_EF, filter_ef])
+        if truth:
+            command_arguments.append(PureToken.TRUTH)
+        return await self.execute_command(
+            CommandName.VSIM,
+            *command_arguments,
+            withscores=withscores,
+            callback=VSimCallback[AnyStr](),
+        )
+
+    @versionadded(version="5.0.0")
+    @redis_command(CommandName.VDIM, version_introduced="7.9.0", group=CommandGroup.VECTOR_SET)
+    async def vdim(self, key: KeyT) -> int:
+        """
+        Return the dimension of vectors in the vector set
+
+        :param key: The key containing the vector set
+        :return: The dimensions of the vectors in the vector set
+        """
+        return await self.execute_command(CommandName.VDIM, key, callback=IntCallback())
+
+    @versionadded(version="5.0.0")
+    @redis_command(CommandName.VCARD, version_introduced="7.9.0", group=CommandGroup.VECTOR_SET)
+    async def vcard(self, key: KeyT) -> int:
+        """
+        Return the number of elements in a vector set
+
+        :param key: The key containing the vector set
+        :return: The number of elements in the vector set
+
+        """
+        return await self.execute_command(CommandName.VCARD, key, callback=IntCallback())
+
+    @overload
+    async def vemb(self, key: KeyT, element: StringT) -> tuple[float, ...] | None: ...
+    @overload
+    async def vemb(self, key: KeyT, element: StringT, raw: Literal[True]) -> VectorData | None: ...
+
+    @versionadded(version="5.0.0")
+    @redis_command(CommandName.VEMB, version_introduced="7.9.0", group=CommandGroup.VECTOR_SET)
+    async def vemb(
+        self, key: KeyT, element: StringT, raw: bool | None = None
+    ) -> tuple[float, ...] | VectorData | None:
+        """
+        Return the vector associated with an element
+
+        :param key: The key containing the vector set
+        :param element: The name of the vector to retrieve
+        :param raw: Whether to return the raw result
+
+        :return: A tuple of floating point values representing the vector.
+         if :paramref:`raw` is ``True`` the raw vector along with its metadata
+         will be returned as a :class:`~coredis.response.types.VectorData` mapping.
+        """
+        command_arguments: CommandArgList = [key, element]
+        if raw:
+            command_arguments.append(PureToken.RAW)
+        return await self.execute_command(
+            CommandName.VEMB, *command_arguments, decode=not raw, raw=raw, callback=VEmbCallback()
+        )
+
+    @overload
+    async def vlinks(
+        self, key: KeyT, element: StringT
+    ) -> tuple[tuple[AnyStr, ...], ...] | None: ...
+    @overload
+    async def vlinks(
+        self, key: KeyT, element: StringT, withscores: Literal[True]
+    ) -> tuple[dict[AnyStr, float], ...] | None: ...
+
+    @versionadded(version="5.0.0")
+    @redis_command(CommandName.VLINKS, version_introduced="7.9.0", group=CommandGroup.VECTOR_SET)
+    async def vlinks(
+        self, key: KeyT, element: StringT, withscores: bool | None = None
+    ) -> tuple[tuple[AnyStr, ...] | dict[AnyStr, float], ...] | None:
+        """
+        Return the neighbors of an element at each layer in the HNSW graph
+
+        :param key: The key containing the vector set
+        :param element: The element to find neighbours for
+        :param withscores: Whether to return scores with neighbours
+
+        :return: A tuple containing tuples of connected neighbours for each layer of the HSNW graph.
+         If :paramref:`withscores` is ``True`` each layer will instead be a mapping
+         of neighbours to scores. The last entry of the top level tuple is the lowest layer of
+         the HSNW graph.
+        """
+        command_arguments: CommandArgList = [key, element]
+
+        if withscores:
+            command_arguments.append(PureToken.WITHSCORES)
+
+        return await self.execute_command(
+            CommandName.VLINKS,
+            *command_arguments,
+            withscores=withscores,
+            callback=VLinksCallback[AnyStr](),
+        )
+
+    @versionadded(version="5.0.0")
+    @redis_command(CommandName.VINFO, version_introduced="7.9.0", group=CommandGroup.VECTOR_SET)
+    async def vinfo(self, key: KeyT) -> dict[AnyStr, AnyStr | int] | None:
+        """
+        Return information about a vector set
+
+        :param key: The key containing the vector set
+        :return: mapping of attributes and values describing the vector set
+
+        """
+        return await self.execute_command(CommandName.VINFO, key, callback=VInfoCallback[AnyStr]())
+
+    @versionadded(version="5.0.0")
+    @redis_command(CommandName.VSETATTR, version_introduced="7.9.0", group=CommandGroup.VECTOR_SET)
+    async def vsetattr(self, key: KeyT, element: StringT, attributes: JsonType) -> bool:
+        """
+        Associate or remove the JSON attributes of elements
+
+        :param key: The key containing the vector set
+        :param element: The element to set the attributes for
+        :param attributes: JSON serializable values to set as attributes
+
+
+        :return: ``True`` if the attributes were successfully set
+        """
+        command_arguments: CommandArgList = [key, element]
+        command_arguments.append(json.dumps(attributes))
+
+        return await self.execute_command(
+            CommandName.VSETATTR, *command_arguments, callback=BoolCallback()
+        )
+
+    @versionadded(version="5.0.0")
+    @redis_command(CommandName.VGETATTR, version_introduced="7.9.0", group=CommandGroup.VECTOR_SET)
+    async def vgetattr(self, key: KeyT, element: StringT) -> JsonType:
+        """
+        Retrieve the JSON attributes of elements
+
+        :param key: The key containing the vector set
+        :param element: The element to get the attributes for
+
+        :return: the attributes of the element or None if they don't
+         exist.
+        """
+        command_arguments: CommandArgList = [key, element]
+        return await self.execute_command(
+            CommandName.VGETATTR, *command_arguments, callback=JsonCallback()
+        )
+
+    @overload
+    async def vrandmember(self, key: KeyT) -> AnyStr | None: ...
+    @overload
+    async def vrandmember(self, key: KeyT, count: int) -> tuple[AnyStr | None, ...]: ...
+    @versionadded(version="5.0.0")
+    @redis_command(
+        CommandName.VRANDMEMBER, version_introduced="7.9.0", group=CommandGroup.VECTOR_SET
+    )
+    async def vrandmember(
+        self, key: KeyT, count: int | None = None
+    ) -> tuple[AnyStr | None, ...] | AnyStr | None:
+        """
+        Return one or multiple random members from a vector set
+
+        :param key: The key containing the vector set
+        :param count: The number of random elements to return
+
+
+        :return: A random element from the set or a list of
+         random elements if :paramref:`count` is specificied.
+         If :paramref:`count` is negative, duplicates may occur.
+        """
+        command_arguments: CommandArgList = [key]
+        if count is not None:
+            command_arguments.append(count)
+
+        return await self.execute_command(
+            CommandName.VRANDMEMBER,
+            *command_arguments,
+            callback=ItemOrTupleCallback[AnyStr | None](),
         )

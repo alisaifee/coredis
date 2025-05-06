@@ -405,3 +405,14 @@ class PubSubMessage(TypedDict):
     #:   this will be an :class:`int` corresponding to the  number of channels and patterns that the
     #:   connection is currently subscribed to.
     data: int | StringT
+
+
+class VectorData(TypedDict):
+    #: The quantization type as a string (``fp32``, ``bin`` or ``q8``)
+    quantization: str
+    #: Raw bytes representation of the vector
+    blob: bytes
+    #: The L2 norm of the vector before normalization
+    l2_norm: float
+    #: If the vector is quantized as q8, the quantization range
+    quantization_range: float

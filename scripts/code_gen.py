@@ -29,6 +29,7 @@ from coredis.typing import *  # noqa
 
 MAX_SUPPORTED_VERSION = version.parse("8.999.999")
 MIN_SUPPORTED_VERSION = version.parse("5.999.999")
+DEFAULT_VERSION = "8.0.0"
 
 MODULES = {
     "RedisJSON": {
@@ -237,13 +238,11 @@ REDIS_RETURN_OVERRIDES = {
     "FCALL_RO": ResponseType,
     "FUNCTION DUMP": bytes,
     "FUNCTION LOAD": AnyStr,
-    "FUNCTION STATS": dict[
-        AnyStr, AnyStr | dict[AnyStr, dict[AnyStr, ResponsePrimitive]]
-    ],
+    "FUNCTION STATS": dict[AnyStr, AnyStr | dict[AnyStr, dict[AnyStr, ResponsePrimitive]]],
     "FUNCTION LIST": dict[str, LibraryDefinition],
     "GEODIST": float | None,
     "GEOPOS": tuple[Optional[GeoCoordinates], ...],
-    "GEOSEARCH": int | tuple[AnyStr |  GeoSearchResult, ...],
+    "GEOSEARCH": int | tuple[AnyStr | GeoSearchResult, ...],
     "GEORADIUSBYMEMBER": int | tuple[AnyStr | GeoSearchResult, ...],
     "GEORADIUS": int | tuple[AnyStr | GeoSearchResult, ...],
     "HELLO": dict[AnyStr, AnyStr],
@@ -280,7 +279,8 @@ REDIS_RETURN_OVERRIDES = {
     "TYPE": Optional[AnyStr],
     "XCLAIM": tuple[AnyStr, ...] | tuple[StreamEntry, ...],
     "XAUTOCLAIM": (
-        tuple[AnyStr, tuple[AnyStr, ...]] | tuple[AnyStr, tuple[StreamEntry, ...], tuple[AnyStr, ...]],
+        tuple[AnyStr, tuple[AnyStr, ...]]
+        | tuple[AnyStr, tuple[StreamEntry, ...], tuple[AnyStr, ...]],
     ),
     "XGROUP CREATECONSUMER": bool,
     "XINFO GROUPS": tuple[dict[AnyStr, AnyStr], ...],
@@ -299,8 +299,8 @@ REDIS_RETURN_OVERRIDES = {
     "ZRANDMEMBER": AnyStr | list[AnyStr] | ScoredMembers | None,
     "ZRANGE": tuple[AnyStr | ScoredMember, ...],
     "ZRANGEBYSCORE": tuple[AnyStr | ScoredMember, ...],
-    "ZREVRANGEBYSCORE": tuple[AnyStr  | ScoredMember, ...],
-    "ZREVRANGE": tuple[AnyStr |  ScoredMember, ...],
+    "ZREVRANGEBYSCORE": tuple[AnyStr | ScoredMember, ...],
+    "ZREVRANGE": tuple[AnyStr | ScoredMember, ...],
     "ZRANK": int | tuple[int, float] | None,
     "ZREVRANK": int | tuple[int, float] | None,
     "ZUNION": tuple[AnyStr | ScoredMember, ...],
@@ -377,8 +377,8 @@ STD_GROUPS = [
     "scripting",
     "pubsub",
     "transactions",
+    "vector_set",
 ]
-
 VERSIONADDED_DOC = re.compile(r"(.. versionadded:: ([\d\.]+))", re.DOTALL)
 VERSIONCHANGED_DOC = re.compile(r"(.. versionchanged:: ([\d\.]+))", re.DOTALL)
 
@@ -400,9 +400,11 @@ MERGE_MAPPING = {
 
 inflection_engine = inflect.engine()
 
+
 def format_file_in_place(path: str) -> None:
     subprocess.check_output(["ruff", "format", path])
     subprocess.check_output(["ruff", "check", "--fix", path])
+
 
 def command_enum(command_name) -> str:
     return "CommandName." + command_name.upper().replace(" ", "_").replace("-", "_")
@@ -445,16 +447,12 @@ def render_annotation(annotation):
 
                     if none_seen:
                         if len(args) > 1:
-                            return sanitized_rendered_type(
-                                f"Optional[{Union[tuple(args)]}]"
-                            )
+                            return sanitized_rendered_type(f"Optional[{Union[tuple(args)]}]")
                         else:
                             return sanitized_rendered_type(f"Optiona[{args[0]}]")
 
                 else:
-                    sub_annotations = [
-                        render_annotation(arg) for arg in annotation.__args__
-                    ]
+                    sub_annotations = [render_annotation(arg) for arg in annotation.__args__]
                     sub = ", ".join([k for k in sub_annotations if k])
 
                     return sanitized_rendered_type(f"{annotation.__name__}[{sub}]")
@@ -497,20 +495,14 @@ def sanitize_parameter(p, eval_forward_annotations=True):
         and hasattr(p.annotation, "__args__")
     ):
         annotation_args = p.annotation.__args__
-        if any(
-            getattr(a, "__name__", "NotNoneType") == "NoneType" for a in annotation_args
-        ):
+        if any(getattr(a, "__name__", "NotNoneType") == "NoneType" for a in annotation_args):
             new_args = [
-                a
-                for a in annotation_args
-                if getattr(a, "__name__", "NotNoneType") != "NoneType"
+                a for a in annotation_args if getattr(a, "__name__", "NotNoneType") != "NoneType"
             ]
             if len(new_args) == 1:
                 v = re.sub(r"Union\[([\w,\s\[\]\.]+), NoneType\]", "Optional[\\1]", v)
             else:
-                v = re.sub(
-                    r"Union\[([\w,\s\[\]\.]+), NoneType\]", "Optional[Union[\\1]]", v
-                )
+                v = re.sub(r"Union\[([\w,\s\[\]\.]+), NoneType\]", "Optional[Union[\\1]]", v)
     return v
 
 
@@ -523,9 +515,7 @@ def render_signature(
             p = p.replace(default=Ellipsis)
         params.append(sanitize_parameter(p, eval_forward_annotations))
     if with_return and signature.return_annotation != inspect._empty:
-        return (
-            f"({', '.join(params)}) -> {render_annotation(signature.return_annotation)}"
-        )
+        return f"({', '.join(params)}) -> {render_annotation(signature.return_annotation)}"
     else:
         return f"({', '.join(params)})"
 
@@ -565,8 +555,9 @@ def get_token_mapping():
         for command, details in commands.items():
             if name in MODULES and not details["group"] == MODULES[name]["group"]:
                 continue
-            elif version.parse(details["since"]) > MAX_SUPPORTED_VERSION:
+            elif version.parse(details["since"] or DEFAULT_VERSION) > MAX_SUPPORTED_VERSION:
                 continue
+
             def _extract_pure_tokens(obj):
                 tokens = []
                 if args := obj.get("arguments"):
@@ -602,13 +593,9 @@ def get_token_mapping():
 
                 return tokens
 
-            for token in sorted(
-                _extract_pure_tokens(details), key=lambda token: token[0]
-            ):
+            for token in sorted(_extract_pure_tokens(details), key=lambda token: token[0]):
                 pure_token_mapping.setdefault(token, set()).add(command)
-            for token in sorted(
-                _extract_prefix_tokens(details), key=lambda token: token[0]
-            ):
+            for token in sorted(_extract_prefix_tokens(details), key=lambda token: token[0]):
                 prefix_token_mapping.setdefault(token, set()).add(command)
     return pure_token_mapping, prefix_token_mapping
 
@@ -624,9 +611,12 @@ def get_official_commands(group=None, include_skipped=False):
     [
         by_group.setdefault(command["group"], []).append({**command, **{"name": name}})
         for name, command in response.items()
-        if (version.parse(command["since"]) < MAX_SUPPORTED_VERSION
-        or include_skipped)
+        if (
+            version.parse(command.get("since") or DEFAULT_VERSION) < MAX_SUPPORTED_VERSION
+            or include_skipped
+        )
         and name not in SKIP_COMMANDS
+        and not command.get("module")
     ]
     return by_group if not group else by_group.get(group)
 
@@ -647,11 +637,7 @@ def get_module_commands(module: str):
 
 def find_method(kls, command_name):
     members = inspect.getmembers(kls)
-    mapping = {
-        k[0]: k[1]
-        for k in members
-        if inspect.ismethod(k[1]) or inspect.isfunction(k[1])
-    }
+    mapping = {k[0]: k[1] for k in members if inspect.ismethod(k[1]) or inspect.isfunction(k[1])}
 
     return mapping.get(command_name)
 
@@ -674,15 +660,14 @@ def compare_methods(l, r):
 
 
 def redis_command_link(command):
-    return (
-        f'`{command} <https://redis.io/commands/{command.lower().replace(" ", "-")}>`_'
-    )
+    return f"`{command} <https://redis.io/commands/{command.lower().replace(' ', '-')}>`_"
 
 
 def skip_command(command):
     if (
         command["name"].find(" HELP") >= 0
-        or command["summary"].find("container for") >= 0
+        or command["summary"]
+        and command["summary"].find("container for") >= 0
     ):
         return True
 
@@ -703,9 +688,7 @@ def is_deprecated(command, kls):
                     f":meth:`~coredis.{kls.__name__}.{sanitized(token[1], None, ignore_reserved_words=True)}`"
                 )
             else:
-                replacement_string[token[1]] = sanitized(
-                    token[1], None, ignore_reserved_words=True
-                )
+                replacement_string[token[1]] = sanitized(token[1], None, ignore_reserved_words=True)
 
         for token, mapped in replacement_string.items():
             replacement = replacement.replace(token, mapped)
@@ -717,18 +700,11 @@ def is_deprecated(command, kls):
 
 def sanitized(x, command=None, ignore_reserved_words=False):
     cleansed_name = (
-        x.lower()
-        .strip()
-        .replace("-", "_")
-        .replace(":", "_")
-        .replace(" ", "_")
-        .replace(".", "_")
+        x.lower().strip().replace("-", "_").replace(":", "_").replace(" ", "_").replace(".", "_")
     )
     cleansed_name = re.sub(r"[!=><\(\),]", "_", cleansed_name)
     if command:
-        override = REDIS_ARGUMENT_NAME_OVERRIDES.get(command["name"], {}).get(
-            cleansed_name
-        )
+        override = REDIS_ARGUMENT_NAME_OVERRIDES.get(command["name"], {}).get(cleansed_name)
 
         if override:
             cleansed_name = override
@@ -737,8 +713,7 @@ def sanitized(x, command=None, ignore_reserved_words=False):
         return "identifier"
 
     if not ignore_reserved_words and cleansed_name in (
-        list(globals()["__builtins__"].__dict__.keys())
-        + ["async", "return", "if", "else", "for"]
+        list(globals()["__builtins__"].__dict__.keys()) + ["async", "return", "if", "else", "for"]
     ):
         cleansed_name = cleansed_name + "_"
 
@@ -778,7 +753,7 @@ def get_type(arg, command):
         return arg_type_override
 
     if arg["name"] in ["seconds", "milliseconds"] and inferred_type == int:
-        return Union[int, datetime.timedelta]
+        return int | datetime.timedelta
 
     if arg["name"] == "yes/no" and inferred_type in [StringT, ValueT]:
         return bool
@@ -807,9 +782,7 @@ def get_type(arg, command):
 
 
 def get_type_annotation(arg, command, parent=None, default=None):
-    if arg["type"] == "oneof" and all(
-        k["type"] == "pure-token" for k in arg["arguments"]
-    ):
+    if arg["type"] == "oneof" and all(k["type"] == "pure-token" for k in arg["arguments"]):
         tokens = [
             "PureToken.%s" % sanitized(s["name"], ignore_reserved_words=True).upper()
             for s in arg["arguments"]
@@ -845,32 +818,24 @@ def get_argument(
     meta_mapping = {}
 
     if arg["type"] == "block":
-        if arg.get("multiple") or all(
-            c.get("multiple") for c in arg.get("arguments", [])
-        ):
+        if arg.get("multiple") or all(c.get("multiple") for c in arg.get("arguments", [])):
             name = sanitized(arg["name"], command)
             if not inflection_engine.singular_noun(name) or name == "prefix":
                 name = inflection_engine.plural(name)
-            forced_order = BLOCK_ARGUMENT_FORCED_ORDER.get(command["name"], {}).get(
-                name
-            )
+            forced_order = BLOCK_ARGUMENT_FORCED_ORDER.get(command["name"], {}).get(name)
             if forced_order:
-                child_args = sorted(
-                    arg["arguments"], key=lambda a: forced_order.index(a["name"])
-                )
+                child_args = sorted(arg["arguments"], key=lambda a: forced_order.index(a["name"]))
             else:
                 child_args = arg["arguments"]
             child_types = [get_type(child, command) for child in child_args]
 
             for c in child_args:
                 if relevant_min_version(c.get("since", None)):
-                    meta_mapping.setdefault(c["name"], {})["version"] = c.get(
-                        "since", None
-                    )
+                    meta_mapping.setdefault(c["name"], {})["version"] = c.get("since", None)
 
-            if arg_type_override := REDIS_ARGUMENT_TYPE_OVERRIDES.get(
-                command["name"], {}
-            ).get(name):
+            if arg_type_override := REDIS_ARGUMENT_TYPE_OVERRIDES.get(command["name"], {}).get(
+                name
+            ):
                 annotation = arg_type_override
             else:
                 if len(child_types) == 1:
@@ -880,7 +845,7 @@ def get_argument(
                 else:
                     child_types_repr = ",".join(
                         [
-                            "%s" % k if hasattr(k, "_name") else k.__name__
+                            "%s" % k if hasattr(k, "_name") else getattr(k, "__name__", str(k))
                             for k in child_types
                         ]
                     )
@@ -897,18 +862,14 @@ def get_argument(
 
                 if extra.get("default") is None:
                     annotation = Optional[annotation]
-            param_list.append(
-                inspect.Parameter(name, arg_type, annotation=annotation, **extra)
-            )
+            param_list.append(inspect.Parameter(name, arg_type, annotation=annotation, **extra))
 
             if relevant_min_version(arg.get("since", None)):
                 meta_mapping.setdefault(name, {})["version"] = arg.get("since", None)
 
         else:
             plist_d = []
-            children = sorted(
-                arg["arguments"], key=lambda v: int(v.get("optional") is True)
-            )
+            children = sorted(arg["arguments"], key=lambda v: int(v.get("optional") is True))
             for child in list(children):
                 if child["type"] == "pure-token" and "optional" not in child:
                     children.remove(child)
@@ -938,12 +899,8 @@ def get_argument(
                     plist_d.extend(plist)
 
             if len(plist_d) > 1:
-                mutually_inclusive_params = ",".join(
-                    ["'%s'" % child.name for child in plist_d]
-                )
-                decorators.append(
-                    f"@mutually_inclusive_parameters({mutually_inclusive_params})"
-                )
+                mutually_inclusive_params = ",".join(["'%s'" % child.name for child in plist_d])
+                decorators.append(f"@mutually_inclusive_parameters({mutually_inclusive_params})")
 
     elif arg["type"] == "oneof":
         extra_params = {}
@@ -961,9 +918,7 @@ def get_argument(
                 or parent
                 and parent.get("partof") == "oneof"
             ):
-                extra_params["default"] = ARGUMENT_DEFAULTS.get(
-                    command["name"], {}
-                ).get(syn_name)
+                extra_params["default"] = ARGUMENT_DEFAULTS.get(command["name"], {}).get(syn_name)
             param_list.append(
                 inspect.Parameter(
                     syn_name,
@@ -976,9 +931,7 @@ def get_argument(
             )
 
             if relevant_min_version(arg.get("since", None)):
-                meta_mapping.setdefault(syn_name, {})["version"] = arg.get(
-                    "since", None
-                )
+                meta_mapping.setdefault(syn_name, {})["version"] = arg.get("since", None)
         else:
             plist_d = []
 
@@ -992,16 +945,10 @@ def get_argument(
 
             if len(plist_d) > 1:
                 mutually_exclusive_params = ",".join(["'%s'" % p.name for p in plist_d])
-                decorators.append(
-                    f"@mutually_exclusive_parameters({mutually_exclusive_params})"
-                )
+                decorators.append(f"@mutually_exclusive_parameters({mutually_exclusive_params})")
     else:
         name = sanitized(
-            (
-                arg.get("token", arg["name"])
-                if not arg.get("type") == "pure-token"
-                else arg["name"]
-            ),
+            (arg.get("token", arg["name"]) if not arg.get("type") == "pure-token" else arg["name"]),
             command,
         )
         type_annotation = get_type_annotation(
@@ -1036,23 +983,16 @@ def get_argument(
             if not inflection_engine.singular_noun(name):
                 name = inflection_engine.plural(name)
             is_variadic = arg.get("optional") and num_multiples <= 1
-            forced_variadicity = ARGUMENT_VARIADICITY.get(command["name"], {}).get(
-                name, None
-            )
+            forced_variadicity = ARGUMENT_VARIADICITY.get(command["name"], {}).get(name, None)
 
             if forced_variadicity is not None:
                 is_variadic = forced_variadicity
 
             if not is_variadic:
-                if (
-                    default := ARGUMENT_DEFAULTS.get(command["name"], {}).get(name)
-                ) is not None:
+                if (default := ARGUMENT_DEFAULTS.get(command["name"], {}).get(name)) is not None:
                     type_annotation = Parameters[type_annotation]
                     extra_params["default"] = default
-                elif (
-                    is_arg_optional(arg, command, parent)
-                    and extra_params.get("default") is None
-                ):
+                elif is_arg_optional(arg, command, parent) and extra_params.get("default") is None:
                     type_annotation = Optional[Parameters[type_annotation]]
                     extra_params["default"] = None
                 else:
@@ -1074,19 +1014,13 @@ def get_argument(
 
         if not multiple:
             if parent and parent.get("token"):
-                meta_mapping.setdefault(name, {}).update(
-                    {"prefix_token": parent.get("token")}
-                )
+                meta_mapping.setdefault(name, {}).update({"prefix_token": parent.get("token")})
         else:
             if arg.get("token"):
-                meta_mapping.setdefault(name, {}).update(
-                    {"prefix_token": arg.get("token")}
-                )
+                meta_mapping.setdefault(name, {}).update({"prefix_token": arg.get("token")})
 
         param_list.append(
-            inspect.Parameter(
-                name, arg_type, annotation=type_annotation, **extra_params
-            )
+            inspect.Parameter(name, arg_type, annotation=type_annotation, **extra_params)
         )
 
     return [param_list, decorators, meta_mapping]
@@ -1109,9 +1043,7 @@ def is_arg_optional(arg, command, parent=None):
 
 
 def get_command_spec(command):
-    arguments = command.get("arguments", []) + REDIS_ARGUMENT_FORCED.get(
-        command["name"], []
-    )
+    arguments = command.get("arguments", []) + REDIS_ARGUMENT_FORCED.get(command["name"], [])
     arguments = [
         a
         for a in arguments
@@ -1167,11 +1099,7 @@ def get_command_spec(command):
             decorators.extend(dlist)
             meta_mapping.update(vmap)
 
-    var_args = [
-        k.name
-        for k in recommended_signature
-        if k.kind == inspect.Parameter.VAR_POSITIONAL
-    ]
+    var_args = [k.name for k in recommended_signature if k.kind == inspect.Parameter.VAR_POSITIONAL]
 
     if forced_order:
         recommended_signature = sorted(
@@ -1267,9 +1195,7 @@ def get_command_spec(command):
             decorators.extend(dlist)
             meta_mapping.update(vmap)
 
-    remaining = [
-        k for k in arguments if is_arg_optional(k, command) and not k.get("multiple")
-    ]
+    remaining = [k for k in arguments if is_arg_optional(k, command) and not k.get("multiple")]
     remaining_signature = []
 
     for k in remaining:
@@ -1285,9 +1211,7 @@ def get_command_spec(command):
         remaining_signature = sorted(
             remaining_signature,
             key=lambda s: (
-                -1
-                if s.name in ["identifier", "identifiers"]
-                else remaining_signature.index(s)
+                -1 if s.name in ["identifier", "identifiers"] else remaining_signature.index(s)
             ),
         )
     recommended_signature.extend(remaining_signature)
@@ -1314,12 +1238,7 @@ def get_command_spec(command):
         )
 
     mapping = OrderedDict(
-        {
-            k: v
-            for k, v in sorted(
-                mapping.items(), key=lambda tup: initial_order.index(tup[0])
-            )
-        }
+        {k: v for k, v in sorted(mapping.items(), key=lambda tup: initial_order.index(tup[0]))}
     )
 
     return recommended_signature, decorators, mapping, meta_mapping
@@ -1341,7 +1260,7 @@ def generate_method_details(kls, method, module=None, debug=False):
     method_details["located"] = find_method(kls, name)
     method_details["deprecation_info"] = is_deprecated(method, kls)
 
-    version_introduced = version.parse(method["since"])
+    version_introduced = version.parse(method["since"] or DEFAULT_VERSION)
 
     if version_introduced > MIN_SUPPORTED_VERSION or module:
         method_details["redis_version_introduced"] = version_introduced
@@ -1351,9 +1270,7 @@ def generate_method_details(kls, method, module=None, debug=False):
     return_summary = ""
 
     if debug and method["name"] not in SKIP_SPEC:
-        recommended_return = read_command_docs(
-            method["name"], method["group"], module=module
-        )
+        recommended_return = read_command_docs(method["name"], method["group"], module=module)
 
         if recommended_return:
             return_summary = recommended_return[1]
@@ -1369,14 +1286,10 @@ def generate_method_details(kls, method, module=None, debug=False):
         method_details["rec_decorators"] = rec_decorators
         method_details["rec_params"] = rec_params
         try:
-            if (
-                REDIS_RETURN_OVERRIDES.get(method["name"], None)
-                == recommended_return[0]
-            ):
+            if REDIS_RETURN_OVERRIDES.get(method["name"], None) == recommended_return[0]:
                 print(f"{method['name']} doesn't need a return override")
             rec_signature = inspect.Signature(
-                [inspect.Parameter("self", inspect.Parameter.POSITIONAL_OR_KEYWORD)]
-                + rec_params,
+                [inspect.Parameter("self", inspect.Parameter.POSITIONAL_OR_KEYWORD)] + rec_params,
                 return_annotation=(
                     REDIS_RETURN_OVERRIDES.get(method["name"], recommended_return[0])
                     if recommended_return
@@ -1403,7 +1316,6 @@ def generate_compatibility_section(
     parent_kls,
     groups,
     debug=False,
-    next_version="6.6.6",
 ):
     env = Environment()
     section_template_str = """
@@ -1589,7 +1501,7 @@ def generate_compatibility_section(
      {% for decorator in method["rec_decorators"] %}
      {{decorator}}
      {% endfor -%}
-     @versionadded(version="{{next_version}}")
+     @versionadded(version="9.9.9")
      @redis_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}
      {%- if method["redis_version_introduced"] and method["redis_version_introduced"] > MIN_SUPPORTED_VERSION -%}
      , version_introduced="{{method["command"].get("since")}}"
@@ -1664,7 +1576,7 @@ def generate_compatibility_section(
          {% endif -%}
          {% endfor -%}
 
-         return await self.execute_command(CommandName.({{sanitized(method["command"]["name"]).upper()}}, *pieces)
+         return await self.execute_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}, *pieces)
          {% else -%}
 
         return await self.execute_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}")
@@ -1690,7 +1602,6 @@ def generate_compatibility_section(
         find_method=find_method,
         kls=kls,
         render_signature=render_signature,
-        next_version=next_version,
         debug=debug,
         sanitized=sanitized,
         getattr=getattr,
@@ -1712,9 +1623,7 @@ def generate_compatibility_section(
             if (
                 parent_kls
                 and located
-                and compare_methods(
-                    find_method(parent_kls, sanitized(method["name"])), located
-                )
+                and compare_methods(find_method(parent_kls, sanitized(method["name"])), located)
             ):
                 continue
             if located:
@@ -1733,9 +1642,7 @@ def generate_compatibility_section(
                     current_signature = [k for k in cur.parameters]
                     method_details["current_signature"] = cur
                     if command_details:
-                        method_details["redirect_usage"] = (
-                            command_details.redirect_usage
-                        )
+                        method_details["redirect_usage"] = command_details.redirect_usage
                     if debug:
                         if (
                             compare_signatures(
@@ -1764,9 +1671,7 @@ def generate_compatibility_section(
                                 [
                                     k
                                     for k in method_details["arg_meta_mapping"]
-                                    if method_details["arg_meta_mapping"]
-                                    .get(k, {})
-                                    .get("version")
+                                    if method_details["arg_meta_mapping"].get(k, {}).get("version")
                                 ]
                             )
                             missing_command_flags = []
@@ -1783,12 +1688,9 @@ def generate_compatibility_section(
                                     for hint in hints
                                     if "response_policy" in hint
                                 ]
-                                if request_policy and (
-                                    route := command_details.cluster.route
-                                ):
+                                if request_policy and (route := command_details.cluster.route):
                                     routing_valid = (
-                                        ROUTE_MAPPING.get(request_policy[0], "")
-                                        == route
+                                        ROUTE_MAPPING.get(request_policy[0], "") == route
                                     )
                                     if not routing_valid:
                                         print(
@@ -1800,9 +1702,7 @@ def generate_compatibility_section(
                                 if (
                                     response_policy
                                     and command_details.cluster.combine
-                                    and (
-                                        combine := command_details.cluster.combine.response_policy
-                                    )
+                                    and (combine := command_details.cluster.combine.response_policy)
                                 ):
                                     merging_valid = combine in MERGE_MAPPING.get(
                                         response_policy[0], []
@@ -1814,9 +1714,7 @@ def generate_compatibility_section(
                                     if k in [e.value for e in CommandFlag]
                                 ]
                             ):
-                                if set(flags) != {
-                                    k.value for k in command_details.flags
-                                }:
+                                if set(flags) != {k.value for k in command_details.flags}:
                                     missing_command_flags = set(flags) - {
                                         k.value for k in command_details.flags
                                     }
@@ -1879,28 +1777,25 @@ def generate_compatibility_section(
                         elif compare_signatures(
                             cur, method_details["rec_signature"], with_return=False
                         ):
-                            recommended_return = read_command_docs(
-                                method["name"], method["group"]
-                            )
-                            method_details["mismatch_reason"] = "Mismatched return type"
-                            if recommended_return:
-                                inspect.Signature(
-                                    [
-                                        inspect.Parameter(
-                                            "self",
-                                            inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                                        )
-                                    ]
-                                    + method_details["rec_params"],
-                                    return_annotation=recommended_return[0],
-                                )
+                            method_details["full_match"] = True
+                            # recommended_return = read_command_docs(method["name"], method["group"])
+                            # method_details["mismatch_reason"] = "Mismatched return type"
+                            # if recommended_return:
+                            #    inspect.Signature(
+                            #        [
+                            #            inspect.Parameter(
+                            #                "self",
+                            #                inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                            #            )
+                            #        ]
+                            #        + method_details["rec_params"],
+                            #        return_annotation=recommended_return[0],
+                            #    )
                         else:
                             method_details["mismatch_reason"] = "Arg mismatch"
                             diff_minus = [
                                 str(k)
-                                for k, v in method_details[
-                                    "rec_signature"
-                                ].parameters.items()
+                                for k, v in method_details["rec_signature"].parameters.items()
                                 if k not in current_signature
                             ]
                             diff_plus = [
@@ -1920,9 +1815,8 @@ def generate_compatibility_section(
 
 @click.group()
 @click.option("--debug", default=False, help="Output debug")
-@click.option("--next-version", default="6.6.6", help="Next version")
 @click.pass_context
-def code_gen(ctx, debug: bool, next_version: str):
+def code_gen(ctx, debug: bool):
     cur_dir = os.path.split(__file__)[0]
     ctx.ensure_object(dict)
     if debug:
@@ -1930,12 +1824,40 @@ def code_gen(ctx, debug: bool, next_version: str):
             os.system("git clone git@github.com:redis/docs /var/tmp/redis-doc")
         else:
             os.system("cd /var/tmp/redis-doc && git pull")
-        shutil.copy("/var/tmp/redis-doc/data/commands_core.json", os.path.join(cur_dir, "commands.json"))
+        if not os.path.isdir("/var/tmp/redis"):
+            os.system("git clone git@github.com:redis/redis /var/tmp/redis")
+        else:
+            os.system("cd /var/tmp/redis && git stash && git pull && git stash pop")
+
+        core_command_file = os.path.join(cur_dir, "commands.json")
+        os.system("docker-compose down --remove-orphans")
+        os.system("REDIS_VERSION=8.0-rc1 docker-compose up redis-basic -d")
+        script = open("/var/tmp/redis/utils/generate-commands-json.py").read()
+        script = script.replace("docs.pop('summary')", "docs.pop('summary', None)")
+        script = script.replace("docs.pop('since')", "docs.pop('since', None)")
+        open("/var/tmp/redis/utils/generate-commands-json.py", "w").write(script)
+        os.system(
+            "python /var/tmp/redis/utils/generate-commands-json.py --cli redis-cli | jq > /var/tmp/commands.json"
+        )
+        shutil.copy("/var/tmp/commands.json", core_command_file)
+        vsets = json.loads(open("/var/tmp/redis/modules/vector-sets/commands.json").read())
+        [
+            command.update({"since": DEFAULT_VERSION})
+            for command in vsets.values()
+            if command["since"] == "1.0.0"
+        ]
+        main = {
+            k: v
+            for k, v in json.load(open("/var/tmp/commands.json")).items()
+            if not v.get("group") == "module"
+        }
+        main.update(vsets)
+        open("/var/tmp/commands.json", "w").write(json.dumps(main, indent=4))
+        shutil.copy("/var/tmp/commands.json", core_command_file)
+
         for module, details in MODULES.items():
             if not os.path.isdir(f"/var/tmp/redis-module-{details['module']}"):
-                os.system(
-                    f"git clone {details['repo']} /var/tmp/redis-module-{details['module']}"
-                )
+                os.system(f"git clone {details['repo']} /var/tmp/redis-module-{details['module']}")
             else:
                 os.system(f"cd /var/tmp/redis-module-{details['module']} && git pull")
             shutil.copy(
@@ -1944,7 +1866,6 @@ def code_gen(ctx, debug: bool, next_version: str):
             )
 
     ctx.obj["DEBUG"] = debug
-    ctx.obj["NEXT_VERSION"] = next_version
 
 
 @code_gen.command()
@@ -1967,7 +1888,6 @@ This document is generated by parsing the `official redis command documentation 
         None,
         STD_GROUPS + ["server", "connection", "cluster"],
         debug=ctx.obj["DEBUG"],
-        next_version=ctx.obj["NEXT_VERSION"],
     )
     open(path, "w").write(output)
     print(f"Generated coverage doc at {path}")
@@ -2036,7 +1956,8 @@ def command_constants(ctx, path):
         commands.update(get_module_commands(module))
 
     def sort_fn(command):
-        return command.get("since")
+        return command.get("since") or DEFAULT_VERSION
+
     env = Environment()
     env.globals.update(sorted=sorted)
     t = env.from_string(
@@ -2174,9 +2095,7 @@ def changes():
         print()
         for new_method in sorted(methods, key=lambda m: m.__name__):
             print(f"        * ``{kls.__name__}.{new_method.__name__}``")
-        for new_method in sorted(
-            new_cluster_methods.get(group, []), key=lambda m: m.__name__
-        ):
+        for new_method in sorted(new_cluster_methods.get(group, []), key=lambda m: m.__name__):
             print(f"        * ``{cluster_kls.__name__}.{new_method.__name__}``")
         print()
     print()
@@ -2210,7 +2129,7 @@ def implementation(ctx, command, group, module, expr, debug=False):
     {{decorator}}
     {%- endfor -%}
     {%- if not module %}
-    @versionadded(version="{{next_version}}")
+    @versionadded(version=DEFAULT_VERSION)
     @redis_command("{{method["command"]["name"]}}"
     {%- if method["redis_version_introduced"] and method["redis_version_introduced"] > MIN_SUPPORTED_VERSION -%}
     , version_introduced="{{method["command"].get("since")}}"
@@ -2333,7 +2252,6 @@ def implementation(ctx, command, group, module, expr, debug=False):
         find_method=find_method,
         kls=kls,
         render_signature=render_signature,
-        next_version=ctx.obj["NEXT_VERSION"],
         module=MODULES[module] if module else None,
         sanitized=sanitized,
         debug=True,
@@ -2384,22 +2302,14 @@ def pipeline_stub(path):
                     "command_details": method.__coredis_command,
                     "pipeline": inspect.Signature(
                         parameters=[
-                            (
-                                k.replace(default=Ellipsis)
-                                if k.default is not inspect._empty
-                                else k
-                            )
+                            (k.replace(default=Ellipsis) if k.default is not inspect._empty else k)
                             for k in signature.parameters.values()
                         ],
                         return_annotation="Pipeline[AnyStr]",
                     ),
                     "cluster": inspect.Signature(
                         parameters=[
-                            (
-                                k.replace(default=Ellipsis)
-                                if k.default is not inspect._empty
-                                else k
-                            )
+                            (k.replace(default=Ellipsis) if k.default is not inspect._empty else k)
                             for k in cluster_signature.parameters.values()
                         ],
                         return_annotation="ClusterPipeline[AnyStr]",
@@ -2420,6 +2330,7 @@ from coredis.commands.script import Script
 from coredis.typing import (
     AnyStr,
     Generic,
+    JsonType,
     KeyT,
     Literal,
     Mapping,
@@ -2526,7 +2437,7 @@ def cluster_key_extraction(path):
                 else:
                     if start_index == start_index + last_key:
                         return f"(args[{start_index}],)"
-                    finder = f"args[{start_index}:{start_index+last_key}"
+                    finder = f"args[{start_index}:{start_index + last_key}"
                 if keystep > 1:
                     finder += f":{keystep}]"
                 else:
@@ -2535,11 +2446,9 @@ def cluster_key_extraction(path):
             elif find_spec["type"] == "keynum":
                 first_key = find_spec["spec"]["firstkey"]
                 keynumidx = find_spec["spec"]["keynumidx"]
-                return f"args[{start_index+first_key}: {start_index+first_key}+int(args[{keynumidx+start_index}])]"
+                return f"args[{start_index + first_key}: {start_index + first_key}+int(args[{keynumidx + start_index}])]"
             else:
-                raise RuntimeError(
-                    f"Don't know how to handle {search_spec} with {find_spec}"
-                )
+                raise RuntimeError(f"Don't know how to handle {search_spec} with {find_spec}")
 
     def _kw_finder(command, search_spec, find_spec):
         kw = search_spec["spec"]["keyword"]
@@ -2550,9 +2459,7 @@ def cluster_key_extraction(path):
         if startfrom >= 0:
             kw_expr = f"args.index({token}, {startfrom})"
         else:
-            kw_expr = (
-                f"len(args)-list(reversed(args)).index({token}, {abs(startfrom+1)})-1"
-            )
+            kw_expr = f"len(args)-list(reversed(args)).index({token}, {abs(startfrom + 1)})-1"
         if find_spec["type"] == "range":
             last_key = find_spec["spec"]["lastkey"]
             limit = find_spec["spec"]["limit"]
@@ -2578,23 +2485,17 @@ def cluster_key_extraction(path):
             lamb = f"((lambda kwpos: tuple({finder}))({kw_expr}) if {token} in args else ())"
             return lamb
         else:
-            raise RuntimeError(
-                f"Don't know how to handle {search_spec} with {find_spec}"
-            )
+            raise RuntimeError(f"Don't know how to handle {search_spec} with {find_spec}")
 
     for name, command in commands.items():
-        if version.parse(command["since"]) > MAX_SUPPORTED_VERSION:
+        if version.parse(command["since"] or DEFAULT_VERSION) > MAX_SUPPORTED_VERSION:
             continue
         key_specs = command.get("key_specs", [])
         for spec in key_specs:
             mode = (
                 "RO"
                 if spec.get("RO", False)
-                else (
-                    "OW"
-                    if spec.get("OW", False)
-                    else "RW" if spec.get("RW", False) else "RM"
-                )
+                else ("OW" if spec.get("OW", False) else "RW" if spec.get("RW", False) else "RM")
             )
             begin_search = spec.get("begin_search", {})
             find_keys = spec.get("find_keys", {})

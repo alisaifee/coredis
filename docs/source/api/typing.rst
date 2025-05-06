@@ -11,6 +11,7 @@ for parameters to redis command wrappers.
 .. autodata:: coredis.typing.KeyT
 .. autodata:: coredis.typing.ValueT
 .. autodata:: coredis.typing.StringT
+.. autodata:: coredis.typing.JsonType
 
 For methods that accept non optional variable number of keys or values, coredis does **NOT**
 use **positional** or **keyword varargs** and expects a "container" to be passed in for the argument.

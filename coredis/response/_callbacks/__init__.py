@@ -329,6 +329,21 @@ class TupleCallback(ResponseCallback[list[ResponseType], list[ResponseType], tup
         raise ValueError(f"Unable to map {response!r} to tuple")
 
 
+class ItemOrTupleCallback(
+    ResponseCallback[
+        list[ResponseType] | ResponsePrimitive,
+        list[ResponseType] | ResponsePrimitive,
+        tuple[CR_co, ...] | CR_co,
+    ]
+):
+    def transform(
+        self, response: list[ResponseType] | ResponsePrimitive, **options: ValueT | None
+    ) -> tuple[CR_co, ...] | CR_co:
+        if isinstance(response, list):
+            return cast(tuple[CR_co, ...], tuple(response))
+        return cast(CR_co, response)
+
+
 class MixedTupleCallback(ResponseCallback[list[ResponseType], list[ResponseType], tuple[R, S]]):
     def transform(self, response: ResponseType, **options: ValueT | None) -> tuple[R, S]:
         if isinstance(response, list):
