@@ -91,22 +91,29 @@ class ClusterMeta(ABCMeta):
             doc_addition = ""
             cmd = getattr(method, "__coredis_command", None)
             if cmd:
-                if cmd.cluster.route:
-                    kls.ROUTING_FLAGS[cmd.command] = cmd.cluster.route
-                    aggregate_note = ""
-                    if cmd.cluster.multi_node:
-                        if cmd.cluster.combine:
-                            aggregate_note = f"and return {cmd.cluster.combine.response_policy}"
-                        else:
-                            aggregate_note = "and a mapping of nodes to results will be returned"
-                    doc_addition = f"""
+                if not cmd.cluster.enabled:
+                    doc_addition = """
+.. warning:: Not supported in cluster mode
+                    """
+                else:
+                    if cmd.cluster.route:
+                        kls.ROUTING_FLAGS[cmd.command] = cmd.cluster.route
+                        aggregate_note = ""
+                        if cmd.cluster.multi_node:
+                            if cmd.cluster.combine:
+                                aggregate_note = f"and return {cmd.cluster.combine.response_policy}"
+                            else:
+                                aggregate_note = (
+                                    "and a mapping of nodes to results will be returned"
+                                )
+                        doc_addition = f"""
 .. admonition:: Cluster note
 
    The command will be run on **{cls.NODE_FLAG_DOC_MAPPING[cmd.cluster.route]}** {aggregate_note}
-                    """
-                elif cmd.cluster.split and cmd.cluster.combine:
-                    kls.SPLIT_FLAGS[cmd.command] = cmd.cluster.split
-                    doc_addition = f"""
+                        """
+                    elif cmd.cluster.split and cmd.cluster.combine:
+                        kls.SPLIT_FLAGS[cmd.command] = cmd.cluster.split
+                        doc_addition = f"""
 .. admonition:: Cluster note
 
    The command will be run on **{cls.NODE_FLAG_DOC_MAPPING[cmd.cluster.split]}**
@@ -114,17 +121,21 @@ class ClusterMeta(ABCMeta):
    {cmd.cluster.combine.response_policy}.
 
    To disable this behavior set :paramref:`RedisCluster.non_atomic_cross_slot` to ``False``
-                """
-                if cmd.cluster.multi_node:
-                    kls.RESULT_CALLBACKS[cmd.command] = cmd.cluster.combine
+                    """
+                    if cmd.cluster.multi_node:
+                        kls.RESULT_CALLBACKS[cmd.command] = cmd.cluster.combine
             if doc_addition and not hasattr(method, "__cluster_docs"):
                 if not getattr(method, "__coredis_module", None):
 
                     def __w(
-                        func: Callable[P, Awaitable[R]],
+                        func: Callable[P, Awaitable[R]], enabled: bool
                     ) -> Callable[P, Awaitable[R]]:
                         @functools.wraps(func)
                         async def _w(*a: P.args, **k: P.kwargs) -> R:
+                            if not enabled:
+                                raise NotImplementedError(
+                                    f"{func.__name__} is disabled for cluster client"
+                                )
                             return await func(*a, **k)
 
                         _w.__doc__ = f"""{textwrap.dedent(method.__doc__ or "")}
@@ -132,7 +143,7 @@ class ClusterMeta(ABCMeta):
                     """
                         return _w
 
-                    wrapped = __w(method)
+                    wrapped = __w(method, cmd.cluster.enabled if cmd else True)
                     setattr(wrapped, "__cluster_docs", doc_addition)
                     setattr(kls, method_name, wrapped)
                 else:

@@ -3263,7 +3263,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SCAN,
         group=CommandGroup.GENERIC,
-        cluster=ClusterCommandConfig(route=NodeFlag.PRIMARIES),
+        cluster=ClusterCommandConfig(enabled=False),
         flags={CommandFlag.READONLY},
     )
     async def scan(

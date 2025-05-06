@@ -16,6 +16,7 @@ async def test_modules_list(client, _s):
     module_info = await client.module_list()
     assert {_s("args"), _s("name"), _s("path"), _s("ver")} & module_info[0].keys()
 
+
 @pytest.mark.parametrize(
     "redis",
     [
