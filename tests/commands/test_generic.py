@@ -217,6 +217,7 @@ class TestGeneric:
     @pytest.mark.nokeydb
     @pytest.mark.novalkey
     @pytest.mark.noredict
+    @pytest.mark.max_server_version("7.4.0")
     async def test_dump_and_restore_with_idle_time(self, client, _s):
         await client.set("a", "foo")
         idle = await client.object_idletime("a")
