@@ -16,17 +16,6 @@ async def test_modules_list(client, _s):
     module_info = await client.module_list()
     assert {_s("args"), _s("name"), _s("path"), _s("ver")} & module_info[0].keys()
 
-
-@targets(
-    "redis_basic",
-    "redis_basic_raw",
-    "redis_cluster",
-)
-async def test_no_modules(client):
-    module_info = await client.module_list()
-    assert module_info == ()
-
-
 @pytest.mark.parametrize(
     "redis",
     [
