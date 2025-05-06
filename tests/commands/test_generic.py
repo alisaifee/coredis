@@ -594,6 +594,12 @@ class TestGeneric:
         _, keys = await client.scan(type_="hash")
         assert set(keys) == {_s("d")}
 
+    @pytest.mark.clusteronly
+    async def test_scan_cluster(self, client, _s):
+        await client.set("a", "1")
+        with pytest.raises(NotImplementedError, match="scan is disabled for cluster client"):
+            await client.scan()
+
     async def test_scan_iter(self, client, _s):
         await client.set("a", "1")
         await client.set("b", "2")
