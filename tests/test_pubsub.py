@@ -7,7 +7,7 @@ import time
 import pytest
 
 import coredis
-from coredis.exceptions import ConnectionError, PubSubError
+from coredis.exceptions import ConnectionError
 from tests.conftest import targets
 
 
@@ -406,13 +406,6 @@ class TestPubSubMessages:
                 "pmessage", _s(channel), _s("test message"), pattern=_s(pattern)
             )
 
-    async def test_pubsub_worker_thread_no_handler(self, client, _s):
-        async with client.pubsub() as p:
-            with pytest.warns(DeprecationWarning):
-                await p.subscribe("fubar")
-                with pytest.raises(PubSubError, match="'fubar' has no handler"):
-                    p.run_in_thread()
-
     async def test_pubsub_handlers(self, client, _s):
         async with client.pubsub() as p:
             messages = set()
@@ -429,37 +422,6 @@ class TestPubSubMessages:
             await asyncio.sleep(0.1)
 
             assert messages == {_s("fu"), _s("bar")}
-
-    async def test_pubsub_worker_thread_subscribe_channel(self, client, _s):
-        async with client.pubsub() as p:
-            with pytest.warns(DeprecationWarning):
-                messages = []
-
-                def handler(message):
-                    messages.append(message)
-
-                await p.subscribe(fubar=handler)
-                th = p.run_in_thread()
-                [await client.publish("fubar", str(i)) for i in range(10)]
-                await asyncio.sleep(0.5)
-                th.stop()
-                assert [m["data"] for m in messages] == [_s(i) for i in range(10)]
-
-    async def test_pubsub_worker_thread_subscribe_pattern(self, client, _s):
-        async with client.pubsub() as p:
-            with pytest.warns(DeprecationWarning):
-                messages = []
-
-                def handler(message):
-                    messages.append(message)
-
-                await p.psubscribe(**{"fu*": handler})
-                th = p.run_in_thread()
-                [await client.publish("fubar", str(i)) for i in range(10)]
-                [await client.publish("fubaz", str(i)) for i in range(10, 20)]
-                await asyncio.sleep(0.5)
-                th.stop()
-                assert [m["data"] for m in messages] == [_s(i) for i in range(20)]
 
     async def test_pubsub_message_iterator(self, client, _s):
         async with client.pubsub(ignore_subscribe_messages=True) as p:

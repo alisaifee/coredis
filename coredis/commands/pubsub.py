@@ -2,16 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-import threading
 from asyncio import CancelledError
-from concurrent.futures import Future
-from contextlib import aclosing, suppress
+from contextlib import suppress
 from functools import partial
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, cast
 
 import async_timeout
-from deprecated.sphinx import deprecated, versionadded
+from deprecated.sphinx import versionadded
 
 from coredis._utils import CaseAndEncodingInsensitiveEnum, b, hash_slot, nativestr
 from coredis.commands.constants import CommandName
@@ -213,61 +211,6 @@ class BasePubSub(Generic[AnyStr, PoolT]):
 
         await self.execute_command(CommandName.UNSUBSCRIBE, *channels)
 
-    @deprecated(
-        """
-        Use :meth:`get_message` with :paramref:`get_message.timeout` as `None`
-        or the instance itself as an async iterator to infinitely consume messages
-        
-        .. code:: python
-        
-            pubsub = client.pubsub()
-            
-            # instead of 
-            while True:
-                message = await pubsub.listen()
-                
-            # do 
-            async for message in pubsub:
-                ....
-            # or 
-            while True:
-                message = await pubsub.get_message(timeout=None)
-        
-        If you were using this method to simply pull messages and/or
-        ensure callbacks were being triggered when the message arrives
-        this isn't necessary anymore and simply creating a pubsub instance
-        and registering the handlers is sufficient to ensure the messages
-        are fetched and callbacks are triggered.
-        
-        .. code:: python
-        
-           # instead of
-           pubsub = client.pubsub()
-           await pubsub.subscribe(**{"topic-a": topic_a_handler})
-           while True:
-               await pubsub.listen()
-               
-           # do
-           pubsub = await client.pubsub(
-             channel_handlers={"topic-a": topic_a_handler}
-           )
-           # when done 
-           await pubsub.aclose()
-           
-               
-        """,
-        version="4.21.0",
-    )
-    async def listen(self) -> PubSubMessage | None:
-        """
-        Listens for messages on channels this client has been subscribed to
-        """
-
-        await self.initialize()
-        if self.subscribed:
-            return self._filter_ignored_messages(await self._message_queue.get())
-        return None
-
     async def get_message(
         self,
         ignore_subscribe_messages: bool = False,
@@ -433,44 +376,6 @@ class BasePubSub(Generic[AnyStr, PoolT]):
                     await handler_response
                 return None
         return message
-
-    @deprecated(
-        """
-        Registered handlers are called in a background async task automatically 
-        as soon as this pubsub instance is initialized. To achieve identical results 
-        just subscribe to the channels or patterns with the appropriate handlers
-        and call :meth:`aclose` when done.
-        
-        
-        .. code:: python
-        
-            pubsub = client.pubsub()
-            await client.subscribe(topic=topic_handler)
-            await client.psubscribe(topic=pattern_handler)
-            # when done
-            await pubsub.aclose() 
-        """,
-        version="4.21.0",
-    )
-    def run_in_thread(self, poll_timeout: float = 1.0) -> PubSubWorkerThread:
-        """
-        Run the listeners in a thread. For each message received on a
-        subscribed channel or pattern the registered handlers will be invoked.
-
-        To stop listening invoke :meth:`~coredis.commands.pubsub.PubSubWorkerThread.stop`
-        on the returned instance
-        """
-        for channel, handler in self.channels.items():
-            if handler is None:
-                raise PubSubError(f"Channel: {channel!r} has no handler registered")
-
-        for pattern, handler in self.patterns.items():
-            if handler is None:
-                raise PubSubError(f"Pattern: {pattern!r} has no handler registered")
-        thread = PubSubWorkerThread(self, poll_timeout=poll_timeout)
-        thread.start()
-
-        return thread
 
     async def _consumer(self) -> None:
         while True:
@@ -990,43 +895,3 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         if self.shard_connections:
             await self.unsubscribe()
         self.close()
-
-
-class PubSubWorkerThread(threading.Thread):
-    def __init__(
-        self,
-        pubsub: BasePubSub[Any, Any],
-        poll_timeout: float = 1.0,
-    ):
-        super().__init__()
-        self._pubsub = pubsub
-        self._poll_timeout = poll_timeout
-        self._running = False
-        self._loop = asyncio.get_running_loop()
-        self._future: Future[None] | None = None
-
-    async def _run(self) -> None:
-        async with aclosing(self._pubsub) as pubsub:
-            try:
-                while pubsub.subscribed:
-                    await pubsub.get_message(
-                        ignore_subscribe_messages=True, timeout=self._poll_timeout
-                    )
-            except CancelledError:
-                self._running = False
-
-    def run(self) -> None:
-        """
-        :meta private:
-        """
-        if self._running:
-            return
-        self._running = True
-        self._future = asyncio.run_coroutine_threadsafe(self._run(), self._loop)
-
-    def stop(self) -> None:
-        """
-        Stop the worker thread from processing any more messages
-        """
-        if self._future:
-            self._future.cancel()
