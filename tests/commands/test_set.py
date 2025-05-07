@@ -15,7 +15,6 @@ from tests.conftest import targets
     "redis_cluster_raw",
     "redis_cached",
     "redis_cluster_cached",
-    "keydb",
     "dragonfly",
     "valkey",
     "redict",

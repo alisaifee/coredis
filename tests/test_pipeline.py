@@ -17,7 +17,6 @@ from tests.conftest import targets
 @targets(
     "redis_basic",
     "redis_basic_blocking",
-    "keydb",
     "dragonfly",
     "valkey",
     "redict",

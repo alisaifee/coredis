@@ -66,7 +66,6 @@ async def simple_library(client):
     "redis_cluster",
     "redis_cluster_blocking",
     "redis_cluster_raw",
-    "keydb",
     "valkey",
 )
 @pytest.mark.min_server_version("7.0.0")

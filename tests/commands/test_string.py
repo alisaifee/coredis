@@ -19,7 +19,6 @@ from tests.conftest import server_deprecation_warning, targets
     "redis_cluster_raw",
     "redis_cached",
     "redis_cluster_cached",
-    "keydb",
     "dragonfly",
     "valkey",
     "redict",

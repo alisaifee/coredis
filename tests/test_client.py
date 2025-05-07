@@ -28,7 +28,6 @@ from tests.conftest import targets
     "redis_basic_raw",
     "redis_ssl",
     "redis_ssl_no_client_auth",
-    "keydb",
     "dragonfly",
     "valkey",
     "redict",

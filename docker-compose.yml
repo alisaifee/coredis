@@ -273,54 +273,6 @@ services:
     image: "redis/redis-stack:${REDIS_STACK_VERSION:-latest}"
     ports:
       - '9379:6379'
-  keydb:
-    image: "eqalpha/keydb"
-    ports:
-      - '10379:6379'
-  # keydb cluster
-  keydb-cluster-1:
-    image: "eqalpha/keydb"
-    command: keydb-server --port 8000 --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
-    ports:
-      - '8000:8000'
-      - '18000:18000'
-  keydb-cluster-2:
-    image: "eqalpha/keydb"
-    command: keydb-server --port 8001 --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
-    depends_on: [keydb-cluster-1]
-    ports:
-      - '8001:8001'
-      - '18001:18001'
-  keydb-cluster-3:
-    image: "eqalpha/keydb"
-    command: keydb-server --port 8002 --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
-    ports:
-      - '8002:8002'
-      - '18002:18002'
-  keydb-cluster-4:
-    image: "eqalpha/keydb"
-    command: keydb-server --port 8003 --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
-    depends_on: [keydb-cluster-3]
-    ports:
-      - '8003:8003'
-      - '18003:18003'
-  keydb-cluster-5:
-    image: "eqalpha/keydb"
-    command: keydb-server --port 8004 --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
-    ports:
-      - '8004:8004'
-      - '18004:18004'
-  keydb-cluster-6:
-    image: "eqalpha/keydb"
-    command: keydb-server --port 8005 --protected-mode no --cluster-enabled yes --loglevel verbose --cluster-announce-ip ${HOST_IP}
-    depends_on: [keydb-cluster-5]
-    ports:
-      - '8005:8005'
-      - '18005:18005'
-  keydb-cluster-init:
-    image: "eqalpha/keydb"
-    command: bash -c "echo yes | keydb-cli --cluster create --cluster-replicas 1 ${HOST_IP}:8000 ${HOST_IP}:8001 ${HOST_IP}:8002 ${HOST_IP}:8003 ${HOST_IP}:8004 ${HOST_IP}:8005"
-    depends_on: [keydb-cluster-1, keydb-cluster-2, keydb-cluster-3, keydb-cluster-4, keydb-cluster-5, keydb-cluster-6]
   dragonfly:
     image: "docker.dragonflydb.io/dragonflydb/dragonfly:latest"
     ports:

@@ -22,7 +22,6 @@ async def teardown(client):
     "redis_cluster",
     "redis_cluster_blocking",
     "redis_cluster_raw",
-    "keydb",
     "valkey",
     "redict",
 )
@@ -56,7 +55,6 @@ class TestACL:
             await client.acl_load()
 
     @pytest.mark.min_server_version("6.0.0")
-    @pytest.mark.nokeydb
     @pytest.mark.novalkey
     @pytest.mark.noredict
     @pytest.mark.nocluster

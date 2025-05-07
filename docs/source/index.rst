@@ -184,9 +184,6 @@ Support for Redis API compatible databases
 
 **coredis** is known to work with the following databases that have redis protocol compatibility:
 
-- `KeyDB <https://docs.keydb.dev/>`__
-    KeyDB exposes a few commands that don't exist in redis and these are exposed by the :class:`~coredis.KeyDB`
-    and :class:`~coredis.KeyDBCluster` clients respectively.
 - `Dragonfly <https://dragonflydb.io/>`__
     Dragonfly currently has compatibility with redis 6.2, though there is increasing support for commands from higher versions.
     For up to date details please refer to the `dragonfly api status documentation <https://www.dragonflydb.io/docs/command-reference/compatibility>`__.

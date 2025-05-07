@@ -26,7 +26,6 @@ async def consume_entries(consumer, count, consumed=None):
     "redis_basic_raw",
     "redis_cluster",
     "redis_cluster_raw",
-    "keydb",
 )
 class TestStreamConsumers:
     async def test_single_consumer(self, client, _s):

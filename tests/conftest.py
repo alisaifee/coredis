@@ -196,9 +196,6 @@ async def check_test_constraints(request, client, protocol=3):
         if marker.name == "noresp3" and protocol == 3:
             return pytest.skip("Skipped for RESP3")
 
-        if marker.name == "nokeydb" and isinstance(client, coredis.experimental.KeyDB):
-            return pytest.skip("Skipped for KeyDB")
-
         if marker.name == "nodragonfly" and SERVER_TYPES.get(str(client)) == "dragonfly":
             return pytest.skip("Skipped for Dragonfly")
 
@@ -322,7 +319,6 @@ def docker_tags():
         "REDIS_SENTINEL_VERSION": "sentinel",
         "REDIS_SSL_VERSION": "ssl",
         "REDIS_STACK_VERSION": "stack",
-        "KEYDB_VERSION": "keydb",
         "DRAGONFLY_VERSION": "dragonfly",
         "VALKEY_VERSION": "valkey",
         "REDICT_VERSION": "redict",
@@ -455,16 +451,6 @@ def redis_stack_server(docker_services):
 
 
 @pytest.fixture(scope="session")
-def keydb_server(docker_services):
-    docker_services.start("keydb")
-    docker_services.wait_for_service("keydb", 6379, ping_socket)
-
-    if os.environ.get("CI") == "True":
-        time.sleep(10)
-    yield ["localhost", 10379]
-
-
-@pytest.fixture(scope="session")
 def dragonfly_server(docker_services):
     docker_services.start("dragonfly")
     docker_services.wait_for_service("dragonfly", 6379, ping_socket)
@@ -483,16 +469,6 @@ def redict_server(docker_services):
     docker_services.start("redict")
     docker_services.wait_for_service("redict", 6379, ping_socket)
     yield ["localhost", 13379]
-
-
-@pytest.fixture(scope="session")
-def keydb_cluster_server(docker_services):
-    docker_services.start("keydb-cluster-init")
-    docker_services.wait_for_service("keydb-cluster-6", 8005, check_redis_cluster_ready)
-
-    if os.environ.get("CI") == "True":
-        time.sleep(10)
-    yield
 
 
 @pytest.fixture
@@ -994,40 +970,6 @@ async def redis_sentinel_auth_cred_provider(redis_sentinel_auth_server, request)
 
 
 @pytest.fixture
-async def keydb(keydb_server, request):
-    client = coredis.experimental.KeyDB(
-        "localhost", 10379, decode_responses=True, **get_client_test_args(request)
-    )
-    await check_test_constraints(request, client)
-    await client.flushall()
-    await set_default_test_config(client, variant="keydb")
-
-    yield client
-
-    client.connection_pool.disconnect()
-
-
-@pytest.fixture
-async def keydb_cluster(keydb_cluster_server, request):
-    cluster = coredis.experimental.KeyDBCluster(
-        "localhost",
-        8000,
-        decode_responses=True,
-        **get_client_test_args(request),
-    )
-    await check_test_constraints(request, cluster)
-    await cluster
-    await cluster.flushall()
-    await cluster.flushdb()
-
-    for primary in cluster.primaries:
-        await set_default_test_config(primary, variant="keydb")
-    yield cluster
-
-    cluster.connection_pool.disconnect()
-
-
-@pytest.fixture
 def fake_redis():
     class _(coredis.client.Redis):
         responses = {}
@@ -1244,12 +1186,6 @@ def pytest_collection_modifyitems(items):
 
             if client_name.startswith("redis_"):
                 tokens = client_name.replace("redis_", "").split("_")
-
-                for token in tokens:
-                    item.add_marker(getattr(pytest.mark, token))
-            elif client_name.startswith("keydb"):
-                item.add_marker(getattr(pytest.mark, "keydb"))
-                tokens = client_name.replace("keydb_", "").split("_")
 
                 for token in tokens:
                     item.add_marker(getattr(pytest.mark, token))

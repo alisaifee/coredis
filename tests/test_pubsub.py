@@ -73,7 +73,6 @@ def make_subscribe_test_data(pubsub, encoder, type):
     "redis_basic",
     "redis_basic_blocking",
     "redis_basic_raw",
-    "keydb",
     "dragonfly",
     "valkey",
     "redict",

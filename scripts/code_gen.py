@@ -2526,14 +2526,6 @@ def cluster_key_extraction(path):
                 readonly[command] = exprs
             all.setdefault(command, []).extend(exprs)
 
-    # KeyDB custom commands
-    all["EXPIREMEMBER"] = all["EXPIRE"]
-    all["EXPIREMEMBERAT"] = all["EXPIREAT"]
-    all["PEXPIREMEMBERAT"] = all["PEXPIREAT"]
-    all["KEYDB.HRENAME"] = ["(args[1],)"]
-    all["KEYDB.MEXISTS"] = ["args[1:]"]
-    all["OBJECT LASTMODIFIED"] = ["(args[1],)"]
-
     # RedisJSON
     all["JSON.DEBUG MEMORY"] = fixed_args["first"]
     all["JSON.DEL"] = fixed_args["first"]

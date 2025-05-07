@@ -20,7 +20,6 @@ from tests.conftest import targets
     "redis_cluster_raw",
     "redis_cached",
     "redis_cluster_cached",
-    "keydb",
     "valkey",
     "redict",
 )
@@ -215,7 +214,6 @@ class TestGeneric:
         freq_now = await client.object_freq("a")
         assert freq + 1 == freq_now
 
-    @pytest.mark.nokeydb
     @pytest.mark.novalkey
     @pytest.mark.noredict
     @pytest.mark.max_server_version("7.4.0")
@@ -372,7 +370,6 @@ class TestGeneric:
         assert await client.object_encoding("a") == _s("embstr")
         assert await client.object_encoding("b") == _s("listpack")
 
-    @pytest.mark.nokeydb
     @pytest.mark.novalkey
     @pytest.mark.noredict
     async def test_object_freq(self, client, _s):

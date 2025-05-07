@@ -19,7 +19,6 @@ from tests.conftest import targets
     "redis_basic_raw",
     "redis_cluster",
     "redis_cluster_blocking",
-    "keydb",
     "valkey",
     "redict",
 )
@@ -96,7 +95,6 @@ class TestServer:
         reset_commands_processed = int((await client.info())["total_commands_processed"])
         assert reset_commands_processed < prior_commands_processed
 
-    @pytest.mark.nokeydb
     @pytest.mark.nocluster
     async def test_config_rewrite(self, client):
         with pytest.raises(ResponseError, match="The server is running without a config file"):
@@ -236,7 +234,6 @@ class TestServer:
 
     @pytest.mark.min_server_version("6.0.0")
     @pytest.mark.nocluster
-    @pytest.mark.nokeydb
     async def test_lolwut(self, client, _s):
         lolwut = await client.lolwut(5)
         assert _s("ver.") in lolwut
@@ -263,12 +260,10 @@ class TestServer:
         assert (await client.memory_usage(_s("key"), samples=1)) > 1024
 
     @pytest.mark.nocluster
-    @pytest.mark.nokeydb
     async def test_latency_doctor(self, client, _s):
         assert await client.latency_doctor()
 
     @pytest.mark.nocluster
-    @pytest.mark.nokeydb
     @pytest.mark.noredict
     @pytest.mark.novalkey
     async def test_latency_all(self, client, _s):
@@ -286,7 +281,6 @@ class TestServer:
         assert latest[_s("command")][2] == approx(50, 60)
 
     @pytest.mark.nocluster
-    @pytest.mark.nokeydb
     @pytest.mark.noredict
     @pytest.mark.novalkey
     async def test_latency_graph(self, client, _s):
@@ -342,7 +336,6 @@ class TestServer:
                 # reset to replica of self
                 await client.slaveof()
 
-    @pytest.mark.nokeydb
     @pytest.mark.nocluster
     async def test_swapdb(self, client, _s):
         await client.set("fubar", 1)

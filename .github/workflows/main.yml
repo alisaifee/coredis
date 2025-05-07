@@ -52,7 +52,7 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
         redis-version: ["7.0", "7.2", "7.4", "8.0", "latest"]
-        test_params: ["-m '(not (keydb or dragonfly or valkey or redict))'"]
+        test_params: ["-m '(not (dragonfly or valkey or redict))'"]
         uvloop: ["False"]
         orjson: ["False"]
         runtime_type_checks: ["True"]
@@ -61,18 +61,14 @@ jobs:
         include:
           - python-version: "3.12"
             redis-version: next
-            test_params: "-m '(not (keydb or dragonfly or valkey or redict))'"
+            test_params: "-m '(not (dragonfly or valkey or redict))'"
             runtime_type_checks: "True"
             label: ""
           - python-version: "3.12"
             redis-version: "latest"
-            test_params: "-m '(not (keydb or dragonfly or valkey or redict))'"
+            test_params: "-m '(not (dragonfly or valkey or redict))'"
             runtime_type_checks: "True"
             extensions: "False"
-          - python-version: "3.12"
-            redis-version: "latest"
-            test_params: "-m keydb"
-            label: "KeyDB"
           - python-version: "3.12"
             redis-version: "latest"
             test_params: "-m dragonfly"
@@ -91,7 +87,7 @@ jobs:
             label: "Redict"
           - python-version: "pypy-3.10"
             redis-version: "7.0"
-            test_params: "-m '(not (keydb or dragonfly or valkey or redict))' tests/commands tests/test_tracking_cache.py"
+            test_params: "-m '(not (dragonfly or valkey or redict))' tests/commands tests/test_tracking_cache.py"
             runtime_type_checks: "False"
             extensions: "False"
             uvloop: "False"

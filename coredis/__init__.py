@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import cast
 
-from coredis.client import KeyDB, KeyDBCluster, Redis, RedisCluster
+from coredis.client import Redis, RedisCluster
 from coredis.config import Config
 from coredis.connection import (
     BaseConnection,
@@ -30,8 +30,6 @@ from . import _version
 
 __all__ = [
     "Config",
-    "KeyDB",
-    "KeyDBCluster",
     "Redis",
     "RedisCluster",
     "BaseConnection",

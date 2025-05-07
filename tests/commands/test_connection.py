@@ -15,7 +15,6 @@ from tests.conftest import targets
     "redis_basic_resp2",
     "redis_basic_blocking",
     "redis_basic_raw",
-    "keydb",
     "valkey",
     "redict",
 )
@@ -248,7 +247,6 @@ class TestConnection:
             assert await client.client_setname("redis_py_test")
             assert await client.client_getname() == _s("redis_py_test")
 
-    @pytest.mark.nokeydb
     @pytest.mark.novalkey
     @pytest.mark.noredict
     async def test_client_pause(self, client):
