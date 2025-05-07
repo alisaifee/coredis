@@ -1,9 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import threading
-from asyncio import AbstractEventLoop
-from concurrent.futures import Future
 from types import TracebackType
 from typing import TYPE_CHECKING, Any
 
@@ -113,44 +110,6 @@ class Monitor(Generic[AnyStr]):
         """
         return await self.aclose()
 
-    @deprecated(
-        """
-        Running the monitor in a thread is no longer necessary
-        since the constructor for :class:`Monitor` will accept a callback
-        to be triggered when a command is received by the monitor and this will
-        automatically happen in a background async task that is started as soon 
-        as :class:`Monitor` is initialized.
-        
-        To achieve identical results simply await an instance of :class:`Monitor`
-        instantiated with :paramref:`Monitor.response_handler` and call :meth:`aclose` 
-        when done.
-        
-        
-        .. code:: python
-        
-            monitor = await client.monitor(response_handler=my_handler)
-            # when done
-            await pubsub.aclose() 
-        """,
-        version="4.21.0",
-    )
-    def run_in_thread(
-        self,
-        response_handler: Callable[[MonitorResult], None],
-        loop: AbstractEventLoop | None = None,
-    ) -> MonitorThread:
-        """
-        Runs the monitor in a :class:`MonitorThread` and invokes :paramref:`response_handler`
-        for every command received.
-
-        To stop the processing call :meth:`MonitorThread.stop` on the instance
-        returned by this method.
-
-        """
-        monitor_thread = MonitorThread(self, loop or asyncio.get_event_loop(), response_handler)
-        monitor_thread.start()
-        return monitor_thread
-
     async def __connect(self) -> None:
         if self.connection is None:
             self.connection = await self.client.connection_pool.get_connection()
@@ -206,33 +165,3 @@ class Monitor(Generic[AnyStr]):
             except ConnectionError:
                 break
         self.__reset()
-
-
-class MonitorThread(threading.Thread):
-    """
-    Thread to be used to run monitor
-    """
-
-    def __init__(
-        self,
-        monitor: Monitor[Any],
-        loop: asyncio.events.AbstractEventLoop,
-        response_handler: Callable[[MonitorResult], None],
-    ):
-        self._monitor = monitor
-        self._loop = loop
-        self._response_handler = response_handler
-        self._future: Future[None] | None = None
-        super().__init__()
-
-    def run(self) -> None:
-        self._future = asyncio.run_coroutine_threadsafe(self._run(), self._loop)
-
-    async def _run(self) -> None:
-        async with self._monitor:
-            async for command in self._monitor:
-                self._response_handler(command)
-
-    def stop(self) -> None:
-        if self._future:
-            self._future.cancel()

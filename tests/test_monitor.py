@@ -35,20 +35,6 @@ class TestMonitor:
         results = await asyncio.gather(delayed(), collect())
         assert results[1][0].command in ["HELLO", "GET"]
 
-    async def test_threaded_listener(self, client, mocker):
-        monitor = await client.monitor()
-        cmds = set()
-        with pytest.warns(DeprecationWarning):
-            thread = monitor.run_in_thread(lambda cmd: cmds.add(cmd.command))
-            await asyncio.sleep(0.01)
-            await client.ping()
-            await asyncio.sleep(0.01)
-            send_command = mocker.spy(monitor.connection, "create_request")
-            thread.stop()
-            await asyncio.sleep(0.01)
-            send_command.assert_called_with(b"RESET", decode=False)
-            assert "PING" in cmds
-
     async def test_monitor_request_handler(self, client, mocker):
         cmds = set()
 
