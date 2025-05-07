@@ -215,12 +215,10 @@ class TestSentinelCommand:
     async def test_ckquorum(self, client):
         assert await client.sentinels[0].sentinel_ckquorum("mymaster")
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_sentinel_config_get(self, client):
         configs = await client.sentinels[0].sentinel_config_get("*")
         assert configs["resolve-hostnames"] == "yes"
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_sentinel_config_set(self, client):
         await client.sentinels[0].sentinel_config_set("resolve-hostnames", "no")
         configs = await client.sentinels[0].sentinel_config_get("*")

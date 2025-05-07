@@ -52,7 +52,6 @@ class TestSortedSet:
         await client.zadd("a{foo}", dict(a3=1), increment=True)
         assert int(await client.zscore("a{foo}", "a3")) == 2
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_zadd_options_comparison(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1))
         assert (
@@ -78,14 +77,12 @@ class TestSortedSet:
         assert await client.zcount("a{foo}", 1, 2) == 2
         assert await client.zcount("a{foo}", 10, 20) == 0
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_zdiff(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3))
         await client.zadd("b{foo}", dict(a1=1, a2=2))
         assert (await client.zdiff(["a{foo}", "b{foo}"])) == (_s("a3"),)
         assert (await client.zdiff(["a{foo}", "b{foo}"], withscores=True)) == ((_s("a3"), 3.0),)
 
-    @pytest.mark.min_server_version("6.2.0")
     @pytest.mark.nodragonfly
     async def test_zdiffstore(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3))
@@ -106,7 +103,6 @@ class TestSortedSet:
         assert await client.zlexcount("a{foo}", "-", "+") == 7
         assert await client.zlexcount("a{foo}", "[b", "[f") == 5
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_zinter_sum(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=1, a3=1))
         await client.zadd("b{foo}", dict(a1=2, a2=2, a3=2))
@@ -120,7 +116,6 @@ class TestSortedSet:
             (_s("a1"), 9),
         )
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_zinter_max(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=1, a3=1))
         await client.zadd("b{foo}", dict(a1=2, a2=2, a3=2))
@@ -223,7 +218,6 @@ class TestSortedSet:
             (_s("a3"), 3),
         )
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_zrandmember(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3, a4=4, a5=5))
         assert (await client.zrandmember("a{foo}")) is not None
@@ -323,7 +317,6 @@ class TestSortedSet:
             (_s("a2"), 2),
         )
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_zrange_options(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3))
         assert await client.zrange("a{foo}", 0, 1) == (_s("a1"), _s("a2"))
@@ -359,7 +352,6 @@ class TestSortedSet:
         with pytest.raises(CommandSyntaxError):
             await client.zrange("a{foo}", 0, 1, offset=1)
 
-    @pytest.mark.min_server_version("6.2.0")
     @pytest.mark.nodragonfly
     async def test_zrangestore(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3))
@@ -601,7 +593,6 @@ class TestSortedSet:
         assert await client.zscore("a{foo}", "a2") == 2.0
         assert await client.zscore("a{foo}", "a4") is None
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_zunion_sum(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=1, a3=1))
         await client.zadd("b{foo}", dict(a1=2, a2=2, a3=2))
@@ -726,7 +717,6 @@ class TestSortedSet:
         result = await asyncio.gather(client.bzmpop(["a{foo}"], 1, PureToken.MIN), _delayadd())
         assert result[0][1] == ((_s("a1"), 42.0),)
 
-    @pytest.mark.min_server_version("6.1.240")
     @pytest.mark.nodragonfly
     async def test_zmscore(self, client, _s):
         with pytest.raises(DataError):

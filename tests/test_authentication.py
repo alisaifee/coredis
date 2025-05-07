@@ -9,7 +9,6 @@ from coredis.credentials import UserPassCredentialProvider
 from coredis.exceptions import AuthenticationError, ConnectionError, UnknownCommandError
 
 
-@pytest.mark.min_server_version("6.0.0")
 @pytest.mark.parametrize(
     "username, password",
     (
@@ -25,7 +24,6 @@ async def test_invalid_authentication(redis_auth, username, password):
         await client.ping()
 
 
-@pytest.mark.min_server_version("6.0.0")
 @pytest.mark.parametrize(
     "username, password",
     (
@@ -45,13 +43,11 @@ async def test_invalid_authentication_cred_provider(redis_auth_cred_provider, us
         await client.ping()
 
 
-@pytest.mark.min_server_version("6.0.0")
 async def test_valid_authentication(redis_auth):
     client = coredis.Redis("localhost", 6389, password="sekret")
     assert await client.ping()
 
 
-@pytest.mark.min_server_version("6.0.0")
 async def test_valid_authentication_cred_provider(redis_auth_cred_provider):
     client = coredis.Redis(
         "localhost",
@@ -61,7 +57,6 @@ async def test_valid_authentication_cred_provider(redis_auth_cred_provider):
     assert await client.ping()
 
 
-@pytest.mark.min_server_version("6.0.0")
 async def test_valid_authentication_delayed(redis_auth):
     client = coredis.Redis("localhost", 6389)
     assert client.server_version is None

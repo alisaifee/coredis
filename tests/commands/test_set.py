@@ -77,7 +77,6 @@ class TestSet:
         await client.sadd("a", ["1", "2", "3"])
         assert await client.smembers("a") == {_s("1"), _s("2"), _s("3")}
 
-    @pytest.mark.min_server_version("6.2.0")
     @pytest.mark.nodragonfly
     async def test_smismember(self, client, _s):
         await client.sadd("a", ["1", "2", "3"])

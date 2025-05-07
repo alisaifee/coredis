@@ -135,7 +135,6 @@ class TestList:
         assert await client.lpop("a") == _s("3")
         assert await client.lpop("a") is None
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_lpop_count(self, client, _s):
         await client.rpush("a", ["1", "2", "3"])
         assert await client.lpop("a", 3) == [_s("1"), _s("2"), _s("3")]
@@ -190,7 +189,6 @@ class TestList:
         assert await client.rpop("a") == _s("1")
         assert await client.rpop("a") is None
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_rpop_count(self, client, _s):
         await client.rpush("a", ["1", "2", "3"])
         assert await client.rpop("a", 3) == [_s("3"), _s("2"), _s("1")]
@@ -221,7 +219,6 @@ class TestList:
         assert await client.rpushx("a", ["4"]) == 4
         assert await client.lrange("a", 0, -1) == [_s("1"), _s("2"), _s("3"), _s("4")]
 
-    @pytest.mark.min_server_version("6.0.6")
     async def test_lpos(self, client, _s):
         assert await client.rpush("a", ["a", "b", "c", "1", "2", "3", "c", "c"]) == 8
         assert await client.lpos("a", "a") == 0
@@ -253,7 +250,6 @@ class TestList:
         assert await client.lpos("a", "c", count=0, maxlen=3, rank=-1) == [7, 6]
         assert await client.lpos("a", "c", count=0, maxlen=7, rank=2) == [6]
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_lmove(self, client, _s):
         await client.rpush("a{foo}", ["one", "two", "three", "four"])
         assert _s("one") == await client.lmove("a{foo}", "b{foo}", PureToken.LEFT, PureToken.RIGHT)
@@ -288,7 +284,6 @@ class TestList:
         result = await asyncio.gather(client.blmpop(["a{foo}"], 1, PureToken.LEFT), _delayadd())
         assert result[0][1] == [_s("42")]
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_blmove(self, client, _s):
         await client.rpush("a{foo}", ["one", "two", "three", "four"])
         assert await client.blmove("a{foo}", "b{foo}", PureToken.LEFT, PureToken.RIGHT, timeout=5)

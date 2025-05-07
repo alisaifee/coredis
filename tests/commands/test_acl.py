@@ -25,7 +25,6 @@ async def teardown(client):
     "valkey",
     "redict",
 )
-@pytest.mark.min_server_version("6.0.0")
 class TestACL:
     async def test_acl_cat(self, client, _s):
         assert {_s("keyspace")} & set(await client.acl_cat())
@@ -54,7 +53,6 @@ class TestACL:
         with pytest.raises(ResponseError, match="instance is not configured to use an ACL file"):
             await client.acl_load()
 
-    @pytest.mark.min_server_version("6.0.0")
     @pytest.mark.novalkey
     @pytest.mark.noredict
     @pytest.mark.nocluster

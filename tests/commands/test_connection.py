@@ -32,7 +32,6 @@ class TestConnection:
         resp = await client.ping()
         assert resp == _s("PONG")
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_hello_no_args(self, client, _s):
         resp = await client.hello()
         assert resp[_s("server")] is not None
@@ -56,7 +55,6 @@ class TestConnection:
         id_ = await client.client_id()
         assert isinstance(id_, int)
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_client_info(self, client, _s):
         info = await client.client_info()
         assert isinstance(info, dict)
@@ -78,7 +76,6 @@ class TestConnection:
             assert await client.client_no_touch(PureToken.ON)
             assert await client.client_no_touch(PureToken.OFF)
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_client_tracking(self, client, _s, cloner):
         clone = await cloner(client)
         clone_connection = await clone.connection_pool.get_connection("tracking")
@@ -116,7 +113,6 @@ class TestConnection:
         assert await client.client_tracking(PureToken.ON, optout=True, redirect=clone_id)
         assert await client.client_caching(PureToken.NO)
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_client_getredir(self, client, _s, cloner):
         assert await client.client_getredir() == -1
         clone = await cloner(client)
@@ -124,7 +120,6 @@ class TestConnection:
         assert await client.client_tracking(PureToken.ON, redirect=clone_id)
         assert await client.client_getredir() == clone_id
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_client_pause_unpause(self, client, _s, cloner):
         clone = await cloner(client)
         assert await clone.client_pause(1000)
@@ -161,12 +156,10 @@ class TestConnection:
         assert unblocker.result()
         assert not await client.client_unblock(client_id, PureToken.ERROR)
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_client_trackinginfo_no_tracking(self, client, _s):
         info = await client.client_trackinginfo()
         assert info[_s("flags")] == {_s("off")}
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_client_trackinginfo_tracking_set(self, client, _s):
         resp = await client.client_tracking(PureToken.ON)
         assert resp
@@ -180,7 +173,6 @@ class TestConnection:
         clients = await client.client_list(type_=PureToken.NORMAL)
         assert isinstance(clients[0], dict)
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_client_list_with_specific_ids(self, client, _s):
         clients = await client.client_list()
         ids = [c["id"] for c in clients]
@@ -192,7 +184,6 @@ class TestConnection:
         with pytest.raises(ResponseError):
             await client.client_kill(ip_port="1.1.1.1:9999")
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_client_kill_filter(self, client, cloner, _s):
         clone = await cloner(client)
         clone_id = (await clone.client_info())["id"]
@@ -203,7 +194,6 @@ class TestConnection:
         clone_addr = (await clone.client_info())["addr"]
         assert await client.client_kill(addr=clone_addr) == 1
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_client_kill_filter_skip_me(self, client, cloner, _s):
         clone = await cloner(client)
         my_id = (await client.client_info())["id"]
@@ -257,14 +247,12 @@ class TestConnection:
         res = await another_client.get(key)
         assert not res
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_select(self, client, _s):
         assert (await client.client_info())["db"] == 0
         with pytest.warns(UserWarning):
             assert await client.select(1)
         assert (await client.client_info())["db"] == 1
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_reset(self, client, _s):
         assert (await client.client_info())["db"] == 0
         with pytest.warns(UserWarning):

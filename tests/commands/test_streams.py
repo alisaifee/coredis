@@ -45,7 +45,6 @@ class TestStreams:
                 threshold=10,
             )
 
-    @pytest.mark.min_server_version("6.2")
     async def test_xadd_nomkstream(self, client, _s):
         assert not await client.xadd(
             "test_stream",
@@ -94,7 +93,6 @@ class TestStreams:
         length = await client.xlen("test_stream")
         assert length == 10
 
-    @pytest.mark.min_server_version("6.2")
     async def test_xadd_with_maxlen_approximately_limit(self, client, _s):
         for idx in range(10):
             await client.xadd(
@@ -151,7 +149,6 @@ class TestStreams:
             justid=True,
         ) == (message_id,)
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_xautoclaim(self, client, _s):
         stream = "stream"
         group = "group"
@@ -234,7 +231,6 @@ class TestStreams:
             {_s("k1"): _s("v1"), _s("k2"): _s("1")},
         )
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_xgroup_createconsumer(self, client, _s):
         with pytest.raises(ResponseError):
             await client.xgroup_createconsumer("test_stream", "test_group", "consumer1")
@@ -493,7 +489,6 @@ class TestStreams:
         xinfo_full = await client.xinfo_stream("test_stream", full=True, count=2)
         assert len(xinfo_full["entries"]) == 2
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_xtrim(self, client, _s):
         for i in range(10):
             await client.xadd(

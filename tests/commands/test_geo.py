@@ -32,7 +32,6 @@ class TestGeo:
         assert await client.geoadd("barcelona", values) == 2
         assert await client.zcard("barcelona") == 2
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_geoadd_conditional(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
@@ -143,7 +142,6 @@ class TestGeo:
         assert locations[0].longitude == 2.1909382939338684
         assert locations[0].latitude == 41.4337902818408352
 
-    @pytest.mark.min_server_version("6.2.0")
     @pytest.mark.nocluster
     async def test_geosearch(self, client, _s):
         values = [
@@ -196,7 +194,6 @@ class TestGeo:
             )
         )[0] in (_s("place1"), _s("place3"), _s("上海市"))
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_geosearch_member(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
@@ -241,7 +238,6 @@ class TestGeo:
             ),
         )
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_geosearch_sort(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
@@ -269,7 +265,6 @@ class TestGeo:
             order=PureToken.DESC,
         ) == (_s("place2"), _s("place1"))
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_geosearch_with(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
@@ -340,7 +335,6 @@ class TestGeo:
             == ()
         )
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_geosearch_negative(self, client, _s):
         # not specifying member nor longitude and latitude
         with pytest.raises(DataError):
@@ -387,7 +381,6 @@ class TestGeo:
                 any_=True,
             )
 
-    @pytest.mark.min_server_version("6.2.0")
     @pytest.mark.nocluster
     async def test_geosearchstore(self, client, _s):
         values = [
@@ -409,7 +402,6 @@ class TestGeo:
         )
         assert await client.zrange("places_barcelona", 0, -1) == (_s("place1"),)
 
-    @pytest.mark.min_server_version("6.2.0")
     @pytest.mark.nocluster
     async def test_geosearchstoredist(self, client, _s):
         values = [
@@ -600,7 +592,6 @@ class TestGeo:
                 "barcelona", 2.191, 41.433, 3000, count=1, unit=PureToken.M
             ) == (_s("place1"),)
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_georadius_count_any(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),

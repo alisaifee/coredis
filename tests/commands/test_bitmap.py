@@ -125,19 +125,16 @@ class TestBitmap:
         await client.set(key, b"\x00d")
         assert [100] == await client.bitfield(key).get("i8", "#1").exc()
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_bitfield_ro_get(self, client, _s):
         key = "key:bitfield_ro:get"
         await client.set(key, b"\x00d")
         assert [100] == await client.bitfield_ro(key).get("i8", "#1").exc()
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_bitfield_ro_set(self, client, _s):
         key = "key:bitfield_ro:set"
         with pytest.raises(ReadOnlyError):
             await client.bitfield_ro(key).set("i4", "#1", 100).exc()
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_bitfield_ro_incrby(self, client, _s):
         key = "key:bitfield_ro:set"
         with pytest.raises(ReadOnlyError):

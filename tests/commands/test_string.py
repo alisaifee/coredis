@@ -84,14 +84,12 @@ class TestString:
         assert await client.get("integer") == _s(integer)
         assert await client.get("unicode_string") == _s(unicode_string)
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_getdel(self, client, _s):
         assert await client.getdel("a") is None
         await client.set("a", "1")
         assert await client.getdel("a") == _s("1")
         assert await client.getdel("a") is None
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_getex(self, client, redis_server_time, _s):
         await client.set("a", "1")
         assert await client.getex("a") == _s("1")
@@ -209,19 +207,16 @@ class TestString:
         assert await client.set("a", "1", ex=expire_at)
         assert 0 < await client.ttl("a") <= 60
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_set_exat(self, client, redis_server_time, _s):
         expire_at = await redis_server_time(client) + datetime.timedelta(minutes=1)
         assert await client.set("a", "1", exat=expire_at)
         assert 0 < await client.ttl("a") <= 61
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_set_pxat(self, client, redis_server_time, _s):
         expire_at = await redis_server_time(client) + datetime.timedelta(minutes=1)
         assert await client.set("a", "1", pxat=expire_at)
         assert 0 < await client.ttl("a") <= 61
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_set_get(self, client, _s):
         assert await client.set("a", "1", get=True) is None
         assert await client.set("a", "2", get=True) == _s("1")
@@ -233,7 +228,6 @@ class TestString:
         assert await client.set("a", "2", condition=PureToken.NX, get=True) == _s("1")
         assert await client.get("a") == _s("1")
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_set_keepttl(self, client, _s):
         assert await client.set("a", "1")
         assert await client.pttl("a") == -1

@@ -335,7 +335,6 @@ class TestGeneric:
         assert not await client.get("foo")
         assert await clone.get("foo") == _s(1)
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_copy(self, client, _s):
         await client.set("a{foo}", "foo")
         await client.set("c{foo}", "bar")
@@ -347,7 +346,6 @@ class TestGeneric:
         assert True is await client.copy(_s("a{foo}"), "c{foo}", replace=True)
         assert await client.get("c{foo}") == _s("foo")
 
-    @pytest.mark.min_server_version("6.2.0")
     @pytest.mark.nocluster
     async def test_copy_different_db(self, client, cloner, _s):
         clone = await cloner(client, connection_kwargs={"db": 1})

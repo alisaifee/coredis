@@ -81,7 +81,6 @@ class TestScripting:
         await client.script_load(multiply_script)
         assert await client.script_exists([sha]) == (True,)
 
-    @pytest.mark.min_server_version("6.2.0")
     async def test_script_flush_sync_mode(self, client):
         sha = await client.script_load(multiply_script)
         assert await client.script_flush(sync_type=PureToken.SYNC)

@@ -9,11 +9,8 @@ import pytest
 from packaging.version import Version
 
 import coredis
-from coredis import PureToken
 from coredis.exceptions import (
     AuthorizationError,
-    CommandNotSupportedError,
-    CommandSyntaxError,
     ConnectionError,
     PersistenceError,
     ReplicationError,
@@ -38,50 +35,21 @@ class TestClient:
         client.verify_version = True
         await client.ping()
 
-    @pytest.mark.min_server_version("6.0.0")
     async def test_server_version(self, client):
         assert isinstance(client.server_version, Version)
         await client.ping()
         assert isinstance(client.server_version, Version)
-
-    @pytest.mark.max_server_version("6.0.0")
-    async def test_server_version_not_found(self, client):
-        assert client.server_version is None
-        await client.ping()
-        assert client.server_version is None
-
-    @pytest.mark.min_server_version("6.0.0")
-    @pytest.mark.max_server_version("6.2.0")
-    async def test_unsupported_command_6_0_x(self, client):
-        await client.ping()
-        with pytest.raises(CommandNotSupportedError):
-            await client.getex("test")
-
-    @pytest.mark.min_server_version("6.2.0")
-    @pytest.mark.max_server_version("6.2.9")
-    async def test_unsupported_command_6_2_x(self, client):
-        await client.ping()
-        with pytest.raises(CommandNotSupportedError):
-            await client.function_list()
-
-    @pytest.mark.max_server_version("6.2.9")
-    async def test_unsupported_argument_7_x(self, client):
-        await client.ping()
-        with pytest.raises(CommandSyntaxError):
-            await client.expire("test", 10, condition=PureToken.NX)
 
     async def test_unknown_command(self, client):
         with pytest.raises(UnknownCommandError):
             await client.execute_command(b"BOGUS")
 
     @pytest.mark.nodragonfly
-    @pytest.mark.min_server_version("6.2.0")
     @pytest.mark.parametrize("client_arguments", [{"db": 1}])
     async def test_select_database(self, client, client_arguments):
         assert (await client.client_info())["db"] == 1
 
     @pytest.mark.nodragonfly
-    @pytest.mark.min_server_version("6.2.0")
     @pytest.mark.parametrize("client_arguments", [{"client_name": "coredis"}])
     async def test_set_client_name(self, client, client_arguments):
         assert (await client.client_info())["name"] == "coredis"

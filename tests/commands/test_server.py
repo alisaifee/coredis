@@ -125,7 +125,6 @@ class TestServer:
         assert object_info["type"] == "Value"
         assert object_info["encoding"] == "int"
 
-    @pytest.mark.min_server_version("6.2.0")
     @pytest.mark.parametrize(
         "mode",
         [
@@ -147,7 +146,6 @@ class TestServer:
         assert len(await client.keys()) == 0
         assert len(await db1.keys()) == 0
 
-    @pytest.mark.min_server_version("6.2.0")
     @pytest.mark.parametrize(
         "mode",
         [
@@ -232,7 +230,6 @@ class TestServer:
     async def test_lastsave(self, client, _s):
         assert isinstance(await client.lastsave(), datetime.datetime)
 
-    @pytest.mark.min_server_version("6.0.0")
     @pytest.mark.nocluster
     async def test_lolwut(self, client, _s):
         lolwut = await client.lolwut(5)
