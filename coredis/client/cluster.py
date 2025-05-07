@@ -1178,7 +1178,7 @@ class RedisCluster(
         count: int | None = None,
         type_: StringT | None = None,
     ) -> AsyncIterator[AnyStr]:
-        await self.initialize()
+        await self._ensure_initialized()
         for node in self.primaries:
             cursor = None
             while cursor != 0:
