@@ -26,7 +26,7 @@ class TestAutocomplete:
         assert not await client.autocomplete.sugdel("suggest", "hello world")
         assert 1 == await client.autocomplete.suglen("suggest")
 
-    async def test_suggestions(self, client: Redis):
+    async def test_suggestions(self, client: Redis, _s):
         assert 1 == await client.autocomplete.sugadd("suggest", "hello", 1, payload="goodbye")
         assert 2 == await client.autocomplete.sugadd("suggest", "hello world", 1)
         assert 3 == await client.autocomplete.sugadd(
@@ -35,17 +35,18 @@ class TestAutocomplete:
 
         assert 3 == len(await client.autocomplete.sugget("suggest", "hel"))
         assert 1 == len(await client.autocomplete.sugget("suggest", "hel", max_suggestions=1))
-        assert "help" == (await client.autocomplete.sugget("suggest", "hel"))[0].string
-        assert "hello" == (await client.autocomplete.sugget("suggest", "hell"))[0].string
+        assert _s("help") == (await client.autocomplete.sugget("suggest", "hel"))[0].string
+        assert _s("hello") == (await client.autocomplete.sugget("suggest", "hell"))[0].string
         assert not (await client.autocomplete.sugget("suggest", "hall"))
         assert (
-            "hello" == (await client.autocomplete.sugget("suggest", "hall", fuzzy=True))[0].string
+            _s("hello")
+            == (await client.autocomplete.sugget("suggest", "hall", fuzzy=True))[0].string
         )
         assert (await client.autocomplete.sugget("suggest", "hel", withscores=True))[
             0
         ].score is not None
         assert (
-            "not just anybody"
+            _s("not just anybody")
             == (
                 await client.autocomplete.sugget(
                     "suggest", "hel", withscores=True, withpayloads=True
@@ -55,12 +56,12 @@ class TestAutocomplete:
 
         assert 3 == await client.autocomplete.sugadd("suggest", "hello", 100, increment_score=True)
         assert (
-            "goodbye"
+            _s("goodbye")
             == (await client.autocomplete.sugget("suggest", "hel", withpayloads=True))[0].payload
         )
 
     @pytest.mark.parametrize("transaction", [True, False])
-    async def test_pipeline(self, client: Redis, transaction: bool):
+    async def test_pipeline(self, client: Redis, transaction: bool, _s):
         p = await client.pipeline(transaction=transaction)
         await p.autocomplete.sugadd("suggest", "hello", 1)
         await p.autocomplete.sugadd("suggest", "hello world", 1)
@@ -74,8 +75,8 @@ class TestAutocomplete:
             2,
             2,
             (
-                AutocompleteSuggestion("hello", ANY, ANY),
-                AutocompleteSuggestion("hello world", ANY, ANY),
+                AutocompleteSuggestion(_s("hello"), ANY, ANY),
+                AutocompleteSuggestion(_s("hello world"), ANY, ANY),
             ),
             1,
             1,
