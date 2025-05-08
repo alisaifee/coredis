@@ -11,24 +11,24 @@ from tests.conftest import module_targets
 @pytest.mark.min_module_version("bf", "2.4.0")
 @module_targets()
 class TestTdigest:
-    async def test_create(self, client: Redis):
+    async def test_create(self, client: Redis, _s):
         await client.tdigest.create("digest")
         await client.tdigest.create("digest_lowcompress", 1)
         info = await asyncio.gather(
             client.tdigest.info("digest"),
             client.tdigest.info("digest_lowcompress"),
         )
-        assert info[0]["Compression"] == 100
-        assert info[1]["Compression"] == 1
+        assert info[0][_s("Compression")] == 100
+        assert info[1][_s("Compression")] == 1
 
-    async def test_reset(self, client: Redis):
+    async def test_reset(self, client: Redis, _s):
         await client.tdigest.create("digest")
         await client.tdigest.add("digest", [1, 2, 3, 4])
         info = await client.tdigest.info("digest")
-        assert 4 == (info["Merged nodes"] + info["Unmerged nodes"])
+        assert 4 == (info[_s("Merged nodes")] + info[_s("Unmerged nodes")])
         await client.tdigest.reset("digest")
         info = await client.tdigest.info("digest")
-        assert 0 == (info["Merged nodes"] + info["Unmerged nodes"])
+        assert 0 == (info[_s("Merged nodes")] + info[_s("Unmerged nodes")])
 
     async def test_add(self, client: Redis):
         await client.tdigest.create("digest")
@@ -72,19 +72,19 @@ class TestTdigest:
 
         assert (1.0, 3.0, 6.0) == await client.tdigest.quantile("digest", [0, 0.5, 1])
 
-    async def test_merge(self, client: Redis):
+    async def test_merge(self, client: Redis, _s):
         await client.tdigest.create("digestA{a}", compression=60)
         await client.tdigest.create("digestB{a}", compression=50)
         assert await client.tdigest.add("digestA{a}", [1, 2, 3])
         assert await client.tdigest.add("digestB{a}", [1, 2, 3, 4, 5, 6])
 
         assert await client.tdigest.merge("digest{a}", ["digestA{a}", "digestB{a}"])
-        assert 60 == (await client.tdigest.info("digest{a}"))["Compression"]
+        assert 60 == (await client.tdigest.info("digest{a}"))[_s("Compression")]
         assert (1.0, 3.0, 6.0) == await client.tdigest.quantile("digest{a}", [0, 0.5, 1])
         assert await client.tdigest.merge(
             "digest{a}", ["digestA{a}", "digestB{a}"], compression=1, override=True
         )
-        assert 1 == (await client.tdigest.info("digest{a}"))["Compression"]
+        assert 1 == (await client.tdigest.info("digest{a}"))[_s("Compression")]
 
     @pytest.mark.parametrize("transaction", [True, False])
     async def test_pipeline(self, client: Redis, transaction: bool):
