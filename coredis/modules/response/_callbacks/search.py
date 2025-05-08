@@ -16,8 +16,6 @@ from coredis.typing import (
     AnyStr,
     ResponsePrimitive,
     ResponseType,
-    StringT,
-    TypedDict,
     ValueT,
 )
 
@@ -175,8 +173,11 @@ class AggregationResultCallback(
             response = EncodingInsensitiveDict(response)
             return SearchAggregationResult[AnyStr](
                 [
-                    {k: self.try_json(options, v) for k, v in k["extra_attributes"].items()}
-                    for k in (response["results"])
+                    {
+                        r: self.try_json(options, v)
+                        for r, v in EncodingInsensitiveDict(k)["extra_attributes"].items()
+                    }
+                    for k in (EncodingInsensitiveDict(response["results"]))
                 ],
                 cursor,
             )
@@ -193,19 +194,16 @@ class AggregationResultCallback(
             return value
 
 
-class SpellCheckResult(TypedDict):
-    term: StringT
-    suggestions: OrderedDict[StringT, int]
-
-
 class SpellCheckCallback(
     ResponseCallback[
         list[ResponseType],
         dict[AnyStr, ResponseType] | list[ResponseType],
-        SpellCheckResult,
+        dict[AnyStr, OrderedDict[AnyStr, float]],
     ]
 ):
-    def transform(self, response: list[ResponseType], **options: ValueT | None) -> SpellCheckResult:
+    def transform(
+        self, response: list[ResponseType], **options: ValueT | None
+    ) -> dict[AnyStr, OrderedDict[AnyStr, float]]:
         suggestions = {}
         for result in response:
             suggestions[result[1]] = OrderedDict((k[1], float(k[0])) for k in result[2])
@@ -216,10 +214,11 @@ class SpellCheckCallback(
         self,
         response: dict[AnyStr, ResponseType] | list[ResponseType],
         **options: ValueT | None,
-    ) -> SpellCheckResult:
+    ) -> dict[AnyStr, OrderedDict[AnyStr, float]]:
         if isinstance(response, list):
             return self.transform(response, **options)
         else:
+            response = EncodingInsensitiveDict(response)
             return {
                 key: OrderedDict(ChainMap(*result)) for key, result in response["results"].items()
             }

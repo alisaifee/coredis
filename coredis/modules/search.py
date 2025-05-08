@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import itertools
+from collections import OrderedDict
 from datetime import timedelta
 
 from deprecated.sphinx import versionadded
@@ -37,7 +38,6 @@ from .response._callbacks.search import (
     SearchConfigCallback,
     SearchResultCallback,
     SpellCheckCallback,
-    SpellCheckResult,
 )
 from .response.types import SearchAggregationResult, SearchResult
 
@@ -585,7 +585,7 @@ class Search(ModuleGroup[AnyStr]):
         include: StringT | None = None,
         exclude: StringT | None = None,
         dialect: int | None = None,
-    ) -> SpellCheckResult:
+    ) -> dict[AnyStr, OrderedDict[AnyStr, float]]:
         """
         Performs spelling correction on a query, returning suggestions for misspelled terms
 
@@ -606,7 +606,7 @@ class Search(ModuleGroup[AnyStr]):
         if dialect:
             pieces.extend([PrefixToken.DIALECT, dialect])
         return await self.execute_module_command(
-            CommandName.FT_SPELLCHECK, *pieces, callback=SpellCheckCallback()
+            CommandName.FT_SPELLCHECK, *pieces, callback=SpellCheckCallback[AnyStr]()
         )
 
     @module_command(
