@@ -11,7 +11,7 @@ from tests.conftest import module_targets
 
 @module_targets()
 class TestCuckooFilter:
-    async def test_reserve(self, client: Redis):
+    async def test_reserve(self, client: Redis, _s):
         assert await client.cf.reserve("filter", 1000)
         with pytest.raises(ResponseError):
             await client.cf.reserve("filter", 1000)
@@ -20,15 +20,15 @@ class TestCuckooFilter:
             client.cf.info("filter"),
             client.cf.info("filter_bucket"),
         )
-        assert info[0]["Bucket size"] == 2
-        assert info[1]["Bucket size"] == 3
+        assert info[0][_s("Bucket size")] == 2
+        assert info[1][_s("Bucket size")] == 3
 
         assert await client.cf.reserve("filter_custom_expansion", 4, 2, 1, 2)
         [await client.cf.add("filter_custom_expansion", i) for i in range(0, 4)]
         info = await client.cf.info("filter_custom_expansion")
-        assert info["Number of filters"] == 1
-        assert info["Max iterations"] == 1
-        assert info["Expansion rate"] == 2
+        assert info[_s("Number of filters")] == 1
+        assert info[_s("Max iterations")] == 1
+        assert info[_s("Expansion rate")] == 2
 
     async def test_add(self, client: Redis):
         assert True is await client.cf.add("filter", 1)
