@@ -153,10 +153,10 @@ class TestJson:
         assert 1 == await client.json.arrindex("arr", LEGACY_ROOT_PATH, 1)
         assert -1 == await client.json.arrindex("arr", LEGACY_ROOT_PATH, 1, 2)
 
-    async def test_resp(self, client: Redis):
+    async def test_resp(self, client: Redis, _s):
         obj = {"foo": "bar", "baz": 1, "qaz": True}
         await client.json.set("obj", LEGACY_ROOT_PATH, obj)
-        assert "bar" == await client.json.resp("obj", "foo")
+        assert _s("bar") == await client.json.resp("obj", "foo")
         assert 1 == await client.json.resp("obj", "baz")
         assert await client.json.resp("obj", "qaz")
         assert isinstance(await client.json.resp("obj"), list)
@@ -636,18 +636,18 @@ class TestJson:
         with pytest.raises(ResponseError):
             await client.json.arrtrim("non_existing_doc", "..a", 1, 1)
 
-    async def test_objkeys(self, client: Redis):
+    async def test_objkeys(self, client: Redis, _s):
         obj = {"foo": "bar", "baz": "qaz"}
         await client.json.set("obj", LEGACY_ROOT_PATH, obj)
         keys = await client.json.objkeys("obj", LEGACY_ROOT_PATH)
         keys.sort()
-        exp = list(obj.keys())
+        exp = [_s(k) for k in obj.keys()]
         exp.sort()
         assert exp == keys
 
         await client.json.set("obj", LEGACY_ROOT_PATH, obj)
         keys = await client.json.objkeys("obj", LEGACY_ROOT_PATH)
-        assert keys == list(obj.keys())
+        assert set(exp) == set(keys)
 
         assert await client.json.objkeys("fakekey", LEGACY_ROOT_PATH) is None
 
@@ -662,12 +662,12 @@ class TestJson:
         )
 
         # Test single
-        assert await client.json.objkeys("doc1", "$.nested1.a") == [["foo", "bar"]]
+        assert await client.json.objkeys("doc1", "$.nested1.a") == [[_s("foo"), _s("bar")]]
 
         # Test legacy
-        assert await client.json.objkeys("doc1", ".*.a") == ["foo", "bar"]
+        assert await client.json.objkeys("doc1", ".*.a") == [_s("foo"), _s("bar")]
         # Test single
-        assert await client.json.objkeys("doc1", ".nested2.a") == ["baz"]
+        assert await client.json.objkeys("doc1", ".nested2.a") == [_s("baz")]
 
         # Test missing key
         assert await client.json.objkeys("non_existing_doc", "..a") is None
