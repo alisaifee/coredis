@@ -4,7 +4,7 @@ import pytest
 
 from coredis import PureToken, Redis
 from coredis.exceptions import ResponseError
-from tests.conftest import targets
+from tests.conftest import module_targets
 
 LEGACY_ROOT_PATH = "."
 
@@ -44,11 +44,7 @@ async def seed(client):
     return json_object
 
 
-@targets(
-    "redis_stack",
-    "redis_stack_cached",
-    "redis_stack_cluster",
-)
+@module_targets()
 class TestJson:
     async def test_get(self, client: Redis, seed):
         assert seed == await client.json.get("seed", LEGACY_ROOT_PATH)

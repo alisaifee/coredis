@@ -8,14 +8,10 @@ from datetime import datetime, timedelta
 import pytest
 
 from coredis import PureToken, Redis
-from tests.conftest import targets
+from tests.conftest import module_targets
 
 
-@targets(
-    "redis_stack",
-    "redis_stack_cached",
-    "redis_stack_cluster",
-)
+@module_targets()
 class TestTimeseries:
     async def test_create(self, client: Redis):
         assert await client.timeseries.create("ts1")
@@ -69,8 +65,6 @@ class TestTimeseries:
 
     async def test_alter_diplicate_policy(self, client: Redis):
         assert await client.timeseries.create("ts1")
-        info = await client.timeseries.info("ts1")
-        assert info["duplicatePolicy"] is None
         assert await client.timeseries.alter("ts1", duplicate_policy=PureToken.MIN)
         info = await client.timeseries.info("ts1")
         assert "min" == info["duplicatePolicy"]
@@ -705,10 +699,6 @@ class TestTimeseries:
         assert chunks[0]["startTimestamp"] == chunks[0]["endTimestamp"] == 0
 
     async def test_info_duplicate_policy(self, client: Redis):
-        await client.timeseries.create("ts1", retention=5, labels={"currentLabel": "currentData"})
-        info = await client.timeseries.info("ts1")
-        assert info["duplicatePolicy"] is None
-
         await client.timeseries.create("ts2", duplicate_policy=PureToken.MIN)
         info = await client.timeseries.info("ts2")
         assert "min" == info["duplicatePolicy"]

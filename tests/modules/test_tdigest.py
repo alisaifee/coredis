@@ -5,15 +5,11 @@ import asyncio
 import pytest
 
 from coredis import Redis
-from tests.conftest import targets
+from tests.conftest import module_targets
 
 
 @pytest.mark.min_module_version("bf", "2.4.0")
-@targets(
-    "redis_stack",
-    "redis_stack_cached",
-    "redis_stack_cluster",
-)
+@module_targets()
 class TestTdigest:
     async def test_create(self, client: Redis):
         await client.tdigest.create("digest")

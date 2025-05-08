@@ -6,14 +6,10 @@ import pytest
 
 from coredis import Redis
 from coredis.modules.response.types import AutocompleteSuggestion
-from tests.conftest import targets
+from tests.conftest import module_targets
 
 
-@targets(
-    "redis_stack",
-    "redis_stack_cached",
-    "redis_stack_cluster",
-)
+@module_targets()
 class TestAutocomplete:
     async def test_add_suggestions(self, client: Redis):
         assert 1 == await client.autocomplete.sugadd("suggest", "hello", 1)

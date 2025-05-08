@@ -6,14 +6,10 @@ import pytest
 
 from coredis import Redis
 from coredis.exceptions import ResponseError
-from tests.conftest import targets
+from tests.conftest import module_targets
 
 
-@targets(
-    "redis_stack",
-    "redis_stack_cached",
-    "redis_stack_cluster",
-)
+@module_targets()
 class TestCuckooFilter:
     async def test_reserve(self, client: Redis):
         assert await client.cf.reserve("filter", 1000)

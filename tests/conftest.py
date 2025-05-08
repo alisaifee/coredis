@@ -529,7 +529,7 @@ async def redis_basic_blocking(redis_basic_server, request):
 @pytest.fixture
 async def redis_stack(redis_stack_server, request):
     client = coredis.Redis(
-        "localhost", 9379, decode_responses=True, **get_client_test_args(request)
+        *redis_stack_server, decode_responses=True, **get_client_test_args(request)
     )
     await check_test_constraints(request, client)
     await client.flushall()
@@ -542,7 +542,7 @@ async def redis_stack(redis_stack_server, request):
 
 @pytest.fixture
 async def redis_stack_raw(redis_stack_server, request):
-    client = coredis.Redis("localhost", 9379, **get_client_test_args(request))
+    client = coredis.Redis(*redis_stack_server, **get_client_test_args(request))
     await check_test_constraints(request, client)
     await client.flushall()
     await set_default_test_config(client)
@@ -556,8 +556,7 @@ async def redis_stack_raw(redis_stack_server, request):
 async def redis_stack_cached(redis_stack_server, request):
     cache = TrackingCache(max_size_bytes=-1)
     client = coredis.Redis(
-        "localhost",
-        9379,
+        *redis_stack_server,
         decode_responses=True,
         cache=cache,
         **get_client_test_args(request),
@@ -881,8 +880,7 @@ async def redis_cluster_raw(redis_cluster_server, request):
 @pytest.fixture
 async def redis_stack_cluster(redis_stack_cluster_server, request):
     cluster = coredis.RedisCluster(
-        "localhost",
-        9000,
+        *redis_stack_cluster_server,
         decode_responses=True,
         **get_client_test_args(request),
     )
@@ -1092,6 +1090,21 @@ def docker_compose_files(pytestconfig):
 
 
 def targets(*targets):
+    return pytest.mark.parametrize(
+        "client",
+        [pytest.param(lf(target)) for target in targets],
+    )
+
+
+def module_targets():
+    redis_server_version = os.environ.get("COREDIS_REDIS_VERSION", "latest")
+    if redis_server_version in ["latest", "next"] or version.parse(
+        redis_server_version
+    ) >= version.parse("8.0.0"):
+        targets = ["redis_basic", "redis_basic_raw", "redis_cached", "redis_cluster"]
+    else:
+        targets = ["redis_stack", "redis_stack_raw", "redis_stack_cached", "redis_stack_cluster"]
+
     return pytest.mark.parametrize(
         "client",
         [pytest.param(lf(target)) for target in targets],

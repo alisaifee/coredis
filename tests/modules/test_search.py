@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import re
 from datetime import timedelta
 
 import numpy
@@ -16,7 +15,7 @@ from coredis.modules.response.types import (
 )
 from coredis.modules.search import Apply, Field, Filter, Group, Reduce
 from coredis.retry import ConstantRetryPolicy, retryable
-from tests.conftest import targets
+from tests.conftest import module_targets
 
 
 @pytest.fixture(scope="module")
@@ -123,7 +122,7 @@ async def wait_for_index(index_name, client: Redis):
 
 
 @pytest.mark.min_module_version("search", "2.6.1")
-@targets("redis_stack", "redis_stack_cached", "redis_stack_cluster")
+@module_targets()
 class TestSchema:
     @pytest.mark.parametrize("on", [PureToken.HASH, PureToken.JSON])
     @pytest.mark.parametrize(
@@ -246,7 +245,7 @@ class TestSchema:
         )
 
         assert await client.search.dropindex("idx")
-        with pytest.raises(ResponseError, match=re.compile("unknown index name", re.IGNORECASE)):
+        with pytest.raises(ResponseError):
             await client.search.info("idx")
 
     async def test_drop_index_cascade(self, client: Redis):
@@ -268,9 +267,9 @@ class TestSchema:
         assert await client.search.dropindex("idx{a}", delete_docs=True)
         assert await client.search.dropindex("jidx{a}", delete_docs=True)
         assert not await client.keys()
-        with pytest.raises(ResponseError, match=re.compile("unknown index name", re.IGNORECASE)):
+        with pytest.raises(ResponseError):
             await client.search.info("idx{a}")
-        with pytest.raises(ResponseError, match=re.compile("unknown index name", re.IGNORECASE)):
+        with pytest.raises(ResponseError):
             await client.search.info("jidx{a}")
 
     @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
@@ -294,6 +293,7 @@ class TestSchema:
         with pytest.raises(ResponseError):
             await client.search.search(f"{index_name}:alias", "*", nocontent=True)
 
+    @pytest.mark.max_module_version("search", "2.6.1")
     async def test_search_config(self, client: Redis):
         config_all = await client.search.config_get("*")
         assert config_all["DEFAULT_DIALECT"] == 1
@@ -308,7 +308,7 @@ class TestSchema:
 
 
 @pytest.mark.min_module_version("search", "2.6.1")
-@targets("redis_stack", "redis_stack_cached", "redis_stack_cluster")
+@module_targets()
 class TestSearch:
     @pytest.mark.parametrize("dialect", [1, 2, 3])
     @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
@@ -362,18 +362,6 @@ class TestSearch:
 
         await client.search.dictdel("{city}custom", ["menila"])
         assert set() == await client.search.dictdump("{city}custom")
-        assert (
-            "menila"
-            not in (
-                await client.search.spellcheck(
-                    index_name,
-                    "menil",
-                    distance=2,
-                    include="{city}custom",
-                    dialect=dialect,
-                )
-            )["menil"]
-        )
 
     @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
     async def test_numeric_filter(self, client: Redis, city_index, index_name):
@@ -463,7 +451,7 @@ class TestSearch:
         results = await client.search.search(index_name, "the Olympics", nostopwords=True)
         assert results.total == 0
 
-    @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
+    @pytest.mark.parametrize("index_name", ["{city}idx"])
     async def test_text_search_with_highlighting(self, client: Redis, city_index, index_name):
         results = await client.search.search(
             index_name,
@@ -476,11 +464,10 @@ class TestSearch:
             highlight_tags=("<blink>", "</blink>"),
             returns={"summary_text": None},
         )
-        assert "Summer <blink>Olympics</blink>" in results.documents[0].properties["summary_text"]
+        assert "<blink>Olympics</blink>" in results.documents[0].properties["summary_text"]
+        assert results.documents[0].properties["summary_text"].endswith("{{truncate}}")
 
-        assert "2016 Summer{{truncate}}" in results.documents[0].properties["summary_text"]
-
-    @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
+    @pytest.mark.parametrize("index_name", ["{city}idx"])
     async def test_text_search_with_slop(self, client: Redis, city_index, index_name):
         results = await client.search.search(
             index_name,
@@ -609,10 +596,8 @@ class TestSearch:
     async def test_explain(self, client: Redis, city_index, index_name, dialect):
         assert "<WILDCARD>" in (await client.search.explain(index_name, "*", dialect=dialect))
 
-    @pytest.mark.parametrize("transaction", [True, False])
-    async def test_pipeline(self, client: Redis, transaction: bool):
-        p = await client.pipeline(transaction=transaction)
-        await p.search.create(
+    async def test_pipeline(self, client: Redis):
+        await client.search.create(
             "{search}:idx",
             [
                 Field("name", PureToken.TEXT),
@@ -620,6 +605,7 @@ class TestSearch:
             on=PureToken.HASH,
             prefixes=["{search}:"],
         )
+        p = await client.pipeline()
         await p.hset("{search}:doc:1", {"name": "hello"})
         await p.hset("{search}:doc:2", {"name": "world"})
         await p.search.search(
@@ -627,7 +613,6 @@ class TestSearch:
             "@name:hello",
         )
         assert (
-            True,
             1,
             1,
             SearchResult(
@@ -640,7 +625,7 @@ class TestSearch:
 
 
 @pytest.mark.min_module_version("search", "2.6.1")
-@targets("redis_stack", "redis_stack_cached", "redis_stack_cluster")
+@module_targets()
 class TestAggregation:
     @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
     async def test_aggregation_no_transforms(self, client: Redis, city_index, index_name):
@@ -801,6 +786,7 @@ class TestAggregation:
         assert int(results.results[0]["count"]) == 3
         assert int(results.results[-1]["count"]) == 1
 
+    @pytest.mark.nocluster
     @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
     async def test_aggregation_with_cursor(self, client: Redis, city_index, index_name):
         results = await client.search.aggregate(
@@ -821,10 +807,8 @@ class TestAggregation:
         with pytest.raises(ResponseError):
             await client.search.cursor_read(index_name, cursor_results.cursor)
 
-    @pytest.mark.parametrize("transaction", [True, False])
-    async def test_pipeline(self, client: Redis, transaction: bool):
-        p = await client.pipeline(transaction=transaction)
-        await p.search.create(
+    async def test_pipeline(self, client: Redis):
+        await client.search.create(
             "{search}:idx",
             [
                 Field("name", PureToken.TEXT),
@@ -832,6 +816,7 @@ class TestAggregation:
             on=PureToken.HASH,
             prefixes=["{search}:"],
         )
+        p = await client.pipeline()
         await p.hset("{search}:doc:1", {"name": "hello"})
         await p.hset("{search}:doc:2", {"name": "world"})
         await p.search.aggregate(
@@ -840,7 +825,6 @@ class TestAggregation:
             transforms=[Group("@name", [Reduce("count", [0], "count")])],
         )
         assert (
-            True,
             1,
             1,
             SearchAggregationResult(

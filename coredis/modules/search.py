@@ -694,6 +694,7 @@ class Search(ModuleGroup[AnyStr]):
         CommandName.FT_CONFIG_SET,
         module=MODULE,
         version_introduced="1.0.0",
+        version_deprecated="8.0.0",
         group=COMMAND_GROUP,
         cluster=ClusterCommandConfig(
             route=NodeFlag.PRIMARIES,
@@ -713,6 +714,7 @@ class Search(ModuleGroup[AnyStr]):
         CommandName.FT_CONFIG_GET,
         module=MODULE,
         version_introduced="1.0.0",
+        version_deprecated="8.0.0",
         group=COMMAND_GROUP,
         cluster=ClusterCommandConfig(
             route=NodeFlag.RANDOM,
