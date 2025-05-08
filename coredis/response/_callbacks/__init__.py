@@ -10,7 +10,7 @@ import itertools
 from abc import ABC, ABCMeta, abstractmethod
 from typing import TYPE_CHECKING, Any, cast
 
-from coredis._utils import b
+from coredis._utils import b, nativestr
 from coredis.exceptions import ClusterResponseError, ResponseError
 from coredis.typing import (
     AnyStr,
@@ -412,7 +412,11 @@ class DictCallback(
                 dct = []
                 for i in range(0, 2 * (len(item) // 2), 2):
                     key, value = item[i], item[i + 1]
-                    value = self.recursive_transformer(value) if (key in self.recursive) else value
+                    value = (
+                        self.recursive_transformer(value)
+                        if (nativestr(key) in self.recursive)
+                        else value
+                    )
                     dct.append((key, value))
                 return dict(dct)
             else:
