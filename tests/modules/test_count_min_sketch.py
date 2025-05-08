@@ -11,14 +11,14 @@ from tests.conftest import module_targets
 
 @module_targets()
 class TestCountMinSketch:
-    async def test_init(self, client: Redis):
+    async def test_init(self, client: Redis, _s):
         assert await client.cms.initbydim("sketch", 2, 50)
         assert await client.cms.initbyprob("sketchprob", 0.042, 0.42)
         infos = await asyncio.gather(client.cms.info("sketch"), client.cms.info("sketchprob"))
-        assert infos[0]["width"] == 2
-        assert infos[0]["depth"] == 50
-        assert infos[1]["width"] == 48
-        assert infos[1]["depth"] == 2
+        assert infos[0][_s("width")] == 2
+        assert infos[0][_s("depth")] == 50
+        assert infos[1][_s("width")] == 48
+        assert infos[1][_s("depth")] == 2
 
     async def test_incrby(self, client: Redis):
         assert await client.cms.initbydim("sketch", 2, 50)
