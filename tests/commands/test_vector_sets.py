@@ -16,8 +16,8 @@ async def sample_data(client):
         "a2": {"group": "a", "data": [0.99, 0.1, 0.0]},
         "a3": {"group": "a", "data": [0.95, 0.1, 0.0]},
         "b1": {"group": "b", "data": [0.0, 1.0, 0.0]},
-        "b2": {"group": "b", "data": [0.1, 0.99, 0.0]},
-        "b3": {"group": "b", "data": [0.1, 0.95, 0.0]},
+        "b2": {"group": "b", "data": [0.0, 0.99, 0.1]},
+        "b3": {"group": "b", "data": [0.0, 0.95, 0.1]},
         "c1": {"group": "c", "data": [0.0, 0.0, 1.0]},
         "c2": {"group": "c", "data": [0.0, 0.1, 0.99]},
         "c3": {"group": "c", "data": [0.0, 0.1, 0.95]},
@@ -115,6 +115,18 @@ class TestVectorSets:
             )
         assert len(await client.vsim("sample", element="a1", filter=".group=='a'")) == 3
         assert len(await client.vsim("sample", element="a1", filter=".group=='a'", filter_ef=1)) < 3
+
+        assert (_s("a1"), _s("a2"), _s("a3")) == await client.vsim(
+            "sample", values=sample_data["a1"]["data"], count=10, epsilon=0.2
+        )
+        assert (_s("a1"),) == await client.vsim(
+            "sample", values=sample_data["a1"]["data"], count=10, epsilon=0.001
+        )
+
+        assert (_s("c1"), _s("c2"), _s("c3")) != (await client.vsim("sample", element="a1"))[-3:]
+        assert (_s("c1"), _s("c2"), _s("c3")) == (
+            await client.vsim("sample", element="a1", truth=True)
+        )[-3:]
 
     async def test_attributes(self, client, _s):
         attributes = {"a": 1, "b": [1, 2, 3], "c": {"4": 5, "6": 7}}

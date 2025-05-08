@@ -8236,7 +8236,8 @@ class CoreCommands(CommandMixin[AnyStr]):
          or a sequence of doubles representing the vector to use as the similarity reference.
         :param withscores: whether to return similarity scores for each result
         :param count: number of results to limit to
-        :param epsilon:
+        :param epsilon: distance threshold; results with distance greater than this are
+         excluded.
         :param ef: Search exploration factor
         :param filter: Expression to restrict matching elements
         :param filter_ef: limits the number of filtering attempts
