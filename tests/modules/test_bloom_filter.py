@@ -11,7 +11,7 @@ from tests.conftest import module_targets
 
 @module_targets()
 class TestBloomFilter:
-    async def test_reserve(self, client: Redis):
+    async def test_reserve(self, client: Redis, _s):
         assert await client.bf.reserve("filter", 0.1, 1000)
         with pytest.raises(ResponseError):
             await client.bf.reserve("filter", 0.1, 1000)
@@ -20,8 +20,8 @@ class TestBloomFilter:
             client.bf.info("filter"),
             client.bf.info("filter_ex"),
         )
-        assert info[0]["Expansion rate"] == 2
-        assert info[1]["Expansion rate"] == 3
+        assert info[0][_s("Expansion rate")] == 2
+        assert info[1][_s("Expansion rate")] == 3
 
     async def test_reserve_non_scaling(self, client: Redis):
         assert await client.bf.reserve("filter_nonscaling", 0.1, 1, nonscaling=True)
@@ -35,7 +35,7 @@ class TestBloomFilter:
         assert (False, True, True) == await client.bf.madd("filter", [1, 2, 3])
         assert (False, False, False) == await client.bf.madd("filter", [1, 2, 3])
 
-    async def test_insert(self, client: Redis):
+    async def test_insert(self, client: Redis, _s):
         assert (True, True, True) == await client.bf.insert("filter", [1, 2, 3])
         assert (True, True, True) == await client.bf.insert("filter_custom", [1, 2, 3], 3, 0.1)
         assert (True, True, True) == await client.bf.insert(
@@ -50,7 +50,7 @@ class TestBloomFilter:
         )
 
         info = await client.bf.info("filter_custom_expansion")
-        assert info["Capacity"] == 12
+        assert info[_s("Capacity")] == 12
 
         with pytest.raises(ResponseError):
             await client.bf.insert("filter_missing", [1, 2, 3], nocreate=True)
