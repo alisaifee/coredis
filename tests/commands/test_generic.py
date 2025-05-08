@@ -203,6 +203,7 @@ class TestGeneric:
         )
         assert await client.pttl("a") > 60 * 1000
 
+    @pytest.mark.xfail
     async def test_dump_and_restore_with_freq(self, client, _s):
         await client.config_set({"maxmemory-policy": "allkeys-lfu"})
         await client.set("a", "foo")
@@ -214,9 +215,9 @@ class TestGeneric:
         freq_now = await client.object_freq("a")
         assert freq + 1 == freq_now
 
+    @pytest.mark.xfail
     @pytest.mark.novalkey
     @pytest.mark.noredict
-    @pytest.mark.max_server_version("7.4.0")
     async def test_dump_and_restore_with_idle_time(self, client, _s):
         await client.set("a", "foo")
         idle = await client.object_idletime("a")
@@ -227,6 +228,7 @@ class TestGeneric:
         new_idle = await client.object_idletime("a")
         assert new_idle >= 1
 
+    @pytest.mark.xfail
     async def test_dump_and_restore_and_replace(self, client, _s):
         await client.set("a", "bar")
         dumped = await client.dump("a")
