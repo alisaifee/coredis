@@ -1101,7 +1101,13 @@ def module_targets():
     if redis_server_version in ["latest", "next"] or version.parse(
         redis_server_version
     ) >= version.parse("8.0.0"):
-        targets = ["redis_basic", "redis_basic_raw", "redis_cached", "redis_cluster"]
+        targets = [
+            "redis_basic",
+            "redis_basic_resp2",
+            "redis_basic_raw",
+            "redis_cached",
+            "redis_cluster",
+        ]
     else:
         targets = ["redis_stack", "redis_stack_raw", "redis_stack_cached", "redis_stack_cluster"]
 

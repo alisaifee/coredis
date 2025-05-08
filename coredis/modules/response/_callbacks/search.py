@@ -204,21 +204,20 @@ class SpellCheckCallback(
     def transform(
         self, response: list[ResponseType], **options: ValueT | None
     ) -> dict[AnyStr, OrderedDict[AnyStr, float]]:
-        suggestions = {}
-        for result in response:
-            suggestions[result[1]] = OrderedDict((k[1], float(k[0])) for k in result[2])
-
-        return suggestions
+        return {
+            result[1]: OrderedDict(
+                (suggestion[1], float(suggestion[0])) for suggestion in result[2]
+            )
+            for result in response
+        }
 
     def transform_3(
         self,
         response: dict[AnyStr, ResponseType] | list[ResponseType],
         **options: ValueT | None,
     ) -> dict[AnyStr, OrderedDict[AnyStr, float]]:
+        # For older versions of redis search that didn't support RESP3
         if isinstance(response, list):
-            return self.transform(response, **options)
-        else:
-            response = EncodingInsensitiveDict(response)
-            return {
-                key: OrderedDict(ChainMap(*result)) for key, result in response["results"].items()
-            }
+            return self.transform(response)
+        response = EncodingInsensitiveDict(response)
+        return {key: OrderedDict(ChainMap(*result)) for key, result in response["results"].items()}
