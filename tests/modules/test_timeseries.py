@@ -13,19 +13,19 @@ from tests.conftest import module_targets
 
 @module_targets()
 class TestTimeseries:
-    async def test_create(self, client: Redis):
+    async def test_create(self, client: Redis, _s):
         assert await client.timeseries.create("ts1")
         assert await client.timeseries.create("ts2", retention=5)
         assert await client.timeseries.create("ts3", labels={"Redis": "Labs"})
         assert await client.timeseries.create("4", retention=20, labels={"Time": "Series"})
         info = await client.timeseries.info("4")
-        assert 20 == info["retentionTime"]
-        assert "Series" == info["labels"]["Time"]
+        assert 20 == info[_s("retentionTime")]
+        assert _s("Series") == info[_s("labels")][_s("Time")]
 
         # Test for a chunk size of 128 Bytes
         assert await client.timeseries.create("ts4", chunk_size=128)
         info = await client.timeseries.info("ts4")
-        assert 128, info["chunkSize"]
+        assert 128, info[_s("chunkSize")]
 
     @pytest.mark.parametrize(
         "duplicate_policy",
@@ -38,38 +38,38 @@ class TestTimeseries:
             PureToken.SUM,
         ],
     )
-    async def test_create_duplicate_policy(self, client: Redis, duplicate_policy):
+    async def test_create_duplicate_policy(self, client: Redis, duplicate_policy, _s):
         # Test for duplicate policy
         ts_name = f"ts-{duplicate_policy}"
         assert await client.timeseries.create(ts_name, duplicate_policy=duplicate_policy)
         info = await client.timeseries.info(ts_name)
-        assert duplicate_policy == info["duplicatePolicy"]
+        assert duplicate_policy == info[_s("duplicatePolicy")]
 
-    async def test_alter(self, client: Redis):
+    async def test_alter(self, client: Redis, _s):
         assert await client.timeseries.create("ts1")
         res = await client.timeseries.info("ts1")
-        assert 0 == res["retentionTime"]
+        assert 0 == res[_s("retentionTime")]
         assert await client.timeseries.alter("ts1", retention=10)
         res = await client.timeseries.info("ts1")
-        assert {} == res["labels"]
+        assert {} == res[_s("labels")]
         res = await client.timeseries.info("ts1")
-        assert 10 == res["retentionTime"]
+        assert 10 == res[_s("retentionTime")]
         assert await client.timeseries.alter("ts1", labels={"Time": "Series"})
         res = await client.timeseries.info("ts1")
-        assert "Series" == res["labels"]["Time"]
+        assert _s("Series") == res[_s("labels")][_s("Time")]
         res = await client.timeseries.info("ts1")
-        assert 10 == res["retentionTime"]
+        assert 10 == res[_s("retentionTime")]
         assert await client.timeseries.alter("ts1", chunk_size=8192)
         res = await client.timeseries.info("ts1")
-        assert 8192 == res["chunkSize"]
+        assert 8192 == res[_s("chunkSize")]
 
-    async def test_alter_diplicate_policy(self, client: Redis):
+    async def test_alter_duplicate_policy(self, client: Redis, _s):
         assert await client.timeseries.create("ts1")
         assert await client.timeseries.alter("ts1", duplicate_policy=PureToken.MIN)
         info = await client.timeseries.info("ts1")
-        assert "min" == info["duplicatePolicy"]
+        assert _s("min") == info[_s("duplicatePolicy")]
 
-    async def test_add(self, client: Redis):
+    async def test_add(self, client: Redis, _s):
         assert 1 == await client.timeseries.add("ts1", 1, 1)
         assert 2 == await client.timeseries.add("ts2", 2, 3, retention=10)
         assert 3 == await client.timeseries.add("ts3", 3, 2, labels={"Redis": "Labs"})
@@ -80,17 +80,17 @@ class TestTimeseries:
         assert abs(time.time() - round(float(res) / 1000)) < 1.0
 
         info = await client.timeseries.info("4")
-        assert 10 == info["retentionTime"]
-        assert "Labs" == info["labels"]["Redis"]
+        assert 10 == info[_s("retentionTime")]
+        assert _s("Labs") == info[_s("labels")][_s("Redis")]
 
         # Test for a chunk size of 128 Bytes on TS.ADD
         assert await client.timeseries.add("ts6", 1, 10.0, chunk_size=128)
         info = await client.timeseries.info("ts6")
-        assert 128 == info["chunkSize"]
+        assert 128 == info[_s("chunkSize")]
 
         assert await client.timeseries.add("ts7", 4, 10.0, encoding=PureToken.UNCOMPRESSED)
         info = await client.timeseries.info("ts7")
-        assert "uncompressed" == info["chunkType"]
+        assert _s("uncompressed") == info[_s("chunkType")]
 
     async def test_add_duplicate_policy(self, client: Redis):
         # Test for duplicate policy BLOCK
@@ -134,7 +134,7 @@ class TestTimeseries:
         await client.timeseries.create("a")
         assert (1, 2, 3) == await client.timeseries.madd([("a", 1, 5), ("a", 2, 10), ("a", 3, 15)])
 
-    async def test_incrby(self, client: Redis):
+    async def test_incrby(self, client: Redis, _s):
         for _ in range(100):
             assert await client.timeseries.incrby("ts1", 1)
             await asyncio.sleep(0.001)
@@ -145,7 +145,7 @@ class TestTimeseries:
 
         assert await client.timeseries.incrby("ts3", 10, chunk_size=128)
         info = await client.timeseries.info("ts3")
-        assert 128 == info["chunkSize"]
+        assert 128 == info[_s("chunkSize")]
 
         assert await client.timeseries.incrby(
             "ts4",
@@ -153,7 +153,7 @@ class TestTimeseries:
             uncompressed=True,
         )
         info = await client.timeseries.info("ts4")
-        assert "uncompressed" == info["chunkType"]
+        assert _s("uncompressed") == info[_s("chunkType")]
 
         assert await client.timeseries.incrby(
             "ts5",
@@ -161,13 +161,13 @@ class TestTimeseries:
             retention=timedelta(seconds=120),
         )
         info = await client.timeseries.info("ts5")
-        assert 120 * 1000 == info["retentionTime"]
+        assert 120 * 1000 == info[_s("retentionTime")]
 
         assert await client.timeseries.incrby("ts6", 10, labels={"fu": "bar"})
         info = await client.timeseries.info("ts6")
-        assert {"fu": "bar"} == info["labels"]
+        assert {_s("fu"): _s("bar")} == info[_s("labels")]
 
-    async def test_decrby(self, client: Redis):
+    async def test_decrby(self, client: Redis, _s):
         for _ in range(100):
             assert await client.timeseries.decrby("ts1", 1)
             await asyncio.sleep(0.001)
@@ -178,7 +178,7 @@ class TestTimeseries:
 
         assert await client.timeseries.decrby("ts3", 10, chunk_size=128)
         info = await client.timeseries.info("ts3")
-        assert 128 == info["chunkSize"]
+        assert 128 == info[_s("chunkSize")]
 
         assert await client.timeseries.decrby(
             "ts4",
@@ -186,7 +186,7 @@ class TestTimeseries:
             uncompressed=True,
         )
         info = await client.timeseries.info("ts4")
-        assert "uncompressed" == info["chunkType"]
+        assert _s("uncompressed") == info[_s("chunkType")]
 
         assert await client.timeseries.decrby(
             "ts5",
@@ -194,14 +194,14 @@ class TestTimeseries:
             retention=timedelta(seconds=120),
         )
         info = await client.timeseries.info("ts5")
-        assert 120 * 1000 == info["retentionTime"]
+        assert 120 * 1000 == info[_s("retentionTime")]
 
         assert await client.timeseries.decrby("ts6", 10, labels={"fu": "bar"})
         info = await client.timeseries.info("ts6")
-        assert {"fu": "bar"} == info["labels"]
+        assert {_s("fu"): _s("bar")} == info[_s("labels")]
 
     @pytest.mark.min_module_version("timeseries", "1.8.0")
-    async def test_create_and_delete_rule(self, client: Redis):
+    async def test_create_and_delete_rule(self, client: Redis, _s):
         # test rule creation
         time = 100
         await client.timeseries.create("ts1{a}")
@@ -222,13 +222,13 @@ class TestTimeseries:
         assert round((await client.timeseries.get("ts3{a}"))[1], 5) == 1.0
 
         info = await client.timeseries.info("ts1{a}")
-        assert info["rules"]["ts2{a}"][0] == 100
+        assert info[_s("rules")][_s("ts2{a}")][0] == 100
 
         # test rule deletion
         await client.timeseries.deleterule("ts1{a}", "ts2{a}")
         await client.timeseries.deleterule("ts1{a}", "ts3{a}")
         info = await client.timeseries.info("ts1{a}")
-        assert not info["rules"]
+        assert not info[_s("rules")]
 
     async def test_del_range(self, client: Redis):
         try:
@@ -358,7 +358,7 @@ class TestTimeseries:
 
         assert all(math.isnan(k[1]) for k in res[10:20])
 
-    async def test_mrange(self, client: Redis):
+    async def test_mrange(self, client: Redis, _s):
         await client.timeseries.create("ts1", labels={"Test": "This", "team": "ny"})
         await client.timeseries.create(
             "ts2", labels={"Test": "This", "Taste": "That", "team": "sf"}
@@ -369,11 +369,11 @@ class TestTimeseries:
 
         res = await client.timeseries.mrange(0, 200, filters=["Test=This"])
         assert 2 == len(res)
-        assert 100 == len(res["ts1"][1])
+        assert 100 == len(res[_s("ts1")][1])
 
         res = await client.timeseries.mrange(0, 200, filters=["Test=This"], count=10)
         assert 2 == len(res)
-        assert 10 == len(res["ts1"][1])
+        assert 10 == len(res[_s("ts1")][1])
 
         for i in range(100):
             await client.timeseries.add("ts1", i + 200, i % 7)
@@ -387,15 +387,15 @@ class TestTimeseries:
             buckettimestamp="-",
         )
         assert 2 == len(res)
-        assert 20 == len(res["ts1"][1])
+        assert 20 == len(res[_s("ts1")][1])
 
         # test withlabels
-        assert {} == res["ts1"][0]
+        assert {} == res[_s("ts1")][0]
         res = await client.timeseries.mrange(0, 200, filters=["Test=This"], withlabels=True)
-        assert {"Test": "This", "team": "ny"} == res["ts1"][0]
+        assert {_s("Test"): _s("This"), _s("team"): _s("ny")} == res[_s("ts1")][0]
 
     @pytest.mark.min_module_version("timeseries", "1.8.0")
-    async def test_mrange_empty_buckets(self, client: Redis):
+    async def test_mrange_empty_buckets(self, client: Redis, _s):
         await client.timeseries.create("ts1", labels={"Test": "This", "team": "ny"})
         for i in range(100):
             await client.timeseries.add("ts1", i, i % 7)
@@ -411,9 +411,9 @@ class TestTimeseries:
             empty=True,
         )
 
-        assert all(math.isnan(k[1]) for k in res["ts1"][1][10:20])
+        assert all(math.isnan(k[1]) for k in res[_s("ts1")][1][10:20])
 
-    async def test_mrange_filter_align(self, client: Redis):
+    async def test_mrange_filter_align(self, client: Redis, _s):
         await client.timeseries.create("ts1", labels={"Test": "This", "team": "ny"})
         await client.timeseries.create(
             "ts2", labels={"Test": "This", "Taste": "That", "team": "sf"}
@@ -426,8 +426,8 @@ class TestTimeseries:
         res = await client.timeseries.mrange(
             0, 200, filters=["Test=This"], selected_labels=["team"]
         )
-        assert {"team": "ny"} == res["ts1"][0]
-        assert {"team": "sf"} == res["ts2"][0]
+        assert {_s("team"): _s("ny")} == res[_s("ts1")][0]
+        assert {_s("team"): _s("sf")} == res[_s("ts2")][0]
 
         # test with filterby
         res = await client.timeseries.mrange(
@@ -438,7 +438,7 @@ class TestTimeseries:
             min_value=1,
             max_value=2,
         )
-        assert ((15, 1.0), (16, 2.0)) == res["ts1"][1]
+        assert ((15, 1.0), (16, 2.0)) == res[_s("ts1")][1]
 
         # test align
         res = await client.timeseries.mrange(
@@ -449,7 +449,7 @@ class TestTimeseries:
             bucketduration=10,
             align="-",
         )
-        assert ((0, 10.0), (10, 1.0)) == res["ts1"][1]
+        assert ((0, 10.0), (10, 1.0)) == res[_s("ts1")][1]
         res = await client.timeseries.mrange(
             0,
             10,
@@ -458,10 +458,10 @@ class TestTimeseries:
             bucketduration=10,
             align=5,
         )
-        assert ((0, 5.0), (5, 6.0)) == res["ts1"][1]
+        assert ((0, 5.0), (5, 6.0)) == res[_s("ts1")][1]
 
     @pytest.mark.nocluster
-    async def test_mrange_grouped(self, client: Redis):
+    async def test_mrange_grouped(self, client: Redis, _s):
         await client.timeseries.create("ts1", labels={"Test": "This", "team": "ny"})
         await client.timeseries.create(
             "ts2", labels={"Test": "This", "Taste": "That", "team": "sf"}
@@ -478,7 +478,7 @@ class TestTimeseries:
             groupby="Test",
             reducer=PureToken.SUM,
         )
-        assert ((0, 0.0), (1, 2.0), (2, 4.0), (3, 6.0)) == res["Test=This"][1]
+        assert ((0, 0.0), (1, 2.0), (2, 4.0), (3, 6.0)) == res[_s("Test=This")][1]
         res = await client.timeseries.mrange(
             0,
             3,
@@ -486,7 +486,7 @@ class TestTimeseries:
             groupby="Test",
             reducer=PureToken.MAX,
         )
-        assert ((0, 0.0), (1, 1.0), (2, 2.0), (3, 3.0)) == res["Test=This"][1]
+        assert ((0, 0.0), (1, 1.0), (2, 2.0), (3, 3.0)) == res[_s("Test=This")][1]
         res = await client.timeseries.mrange(
             0,
             3,
@@ -495,10 +495,10 @@ class TestTimeseries:
             reducer=PureToken.MIN,
         )
         assert 2 == len(res)
-        assert ((0, 0.0), (1, 1.0), (2, 2.0), (3, 3.0)) == res["team=ny"][1]
-        assert ((0, 0.0), (1, 1.0), (2, 2.0), (3, 3.0)) == res["team=sf"][1]
+        assert ((0, 0.0), (1, 1.0), (2, 2.0), (3, 3.0)) == res[_s("team=ny")][1]
+        assert ((0, 0.0), (1, 1.0), (2, 2.0), (3, 3.0)) == res[_s("team=sf")][1]
 
-    async def test_mrevrange(self, client: Redis):
+    async def test_mrevrange(self, client: Redis, _s):
         await client.timeseries.create("ts1", labels={"Test": "This", "team": "ny"})
         await client.timeseries.create(
             "ts2", labels={"Test": "This", "Taste": "That", "team": "sf"}
@@ -509,7 +509,7 @@ class TestTimeseries:
 
         res = await client.timeseries.mrevrange(0, 200, filters=["Test=This"])
         assert 2 == len(res)
-        assert 100 == len(res["ts1"][1])
+        assert 100 == len(res[_s("ts1")][1])
 
         res = await client.timeseries.mrevrange(
             0,
@@ -517,7 +517,7 @@ class TestTimeseries:
             filters=["Test=This"],
             count=10,
         )
-        assert 10 == len(res["ts1"][1])
+        assert 10 == len(res[_s("ts1")][1])
 
         for i in range(100):
             await client.timeseries.add("ts1", i + 200, i % 7)
@@ -530,19 +530,19 @@ class TestTimeseries:
             buckettimestamp="-",
         )
         assert 2 == len(res)
-        assert 20 == len(res["ts1"][1])
-        assert {} == res["ts1"][0]
+        assert 20 == len(res[_s("ts1")][1])
+        assert {} == res[_s("ts1")][0]
 
         # test withlabels
         res = await client.timeseries.mrevrange(0, 200, filters=["Test=This"], withlabels=True)
-        assert {"Test": "This", "team": "ny"} == res["ts1"][0]
+        assert {_s("Test"): _s("This"), _s("team"): _s("ny")} == res[_s("ts1")][0]
 
         # test with selected labels
         res = await client.timeseries.mrevrange(
             0, 200, filters=["Test=This"], selected_labels=["team"]
         )
-        assert {"team": "ny"} == res["ts1"][0]
-        assert {"team": "sf"} == res["ts2"][0]
+        assert {_s("team"): _s("ny")} == res[_s("ts1")][0]
+        assert {_s("team"): _s("sf")} == res[_s("ts2")][0]
 
         # test filterby
         res = await client.timeseries.mrevrange(
@@ -553,7 +553,7 @@ class TestTimeseries:
             min_value=1,
             max_value=2,
         )
-        assert ((16, 2.0), (15, 1.0)) == res["ts1"][1]
+        assert ((16, 2.0), (15, 1.0)) == res[_s("ts1")][1]
 
         # test align
         res = await client.timeseries.mrevrange(
@@ -564,10 +564,10 @@ class TestTimeseries:
             bucketduration=10,
             align="-",
         )
-        assert ((10, 1.0), (0, 10.0)) == res["ts1"][1]
+        assert ((10, 1.0), (0, 10.0)) == res[_s("ts1")][1]
 
     @pytest.mark.min_module_version("timeseries", "1.8.0")
-    async def test_mrevrange_empty_buckets(self, client: Redis):
+    async def test_mrevrange_empty_buckets(self, client: Redis, _s):
         await client.timeseries.create("ts1", labels={"Test": "This", "team": "ny"})
         for i in range(100):
             await client.timeseries.add("ts1", i, i % 7)
@@ -584,10 +584,10 @@ class TestTimeseries:
             empty=True,
         )
 
-        assert all(math.isnan(k[1]) for k in res["ts1"][1][10:20])
+        assert all(math.isnan(k[1]) for k in res[_s("ts1")][1][10:20])
 
     @pytest.mark.nocluster
-    async def test_mrevrange_grouped(self, client: Redis):
+    async def test_mrevrange_grouped(self, client: Redis, _s):
         await client.timeseries.create("ts1", labels={"Test": "This", "team": "ny"})
         await client.timeseries.create(
             "ts2", labels={"Test": "This", "Taste": "That", "team": "sf"}
@@ -600,17 +600,17 @@ class TestTimeseries:
         res = await client.timeseries.mrevrange(
             0, 3, filters=["Test=This"], groupby="Test", reducer=PureToken.SUM
         )
-        assert ((3, 6.0), (2, 4.0), (1, 2.0), (0, 0.0)) == res["Test=This"][1]
+        assert ((3, 6.0), (2, 4.0), (1, 2.0), (0, 0.0)) == res[_s("Test=This")][1]
         res = await client.timeseries.mrevrange(
             0, 3, filters=["Test=This"], groupby="Test", reducer=PureToken.MAX
         )
-        assert ((3, 3.0), (2, 2.0), (1, 1.0), (0, 0.0)) == res["Test=This"][1]
+        assert ((3, 3.0), (2, 2.0), (1, 1.0), (0, 0.0)) == res[_s("Test=This")][1]
         res = await client.timeseries.mrevrange(
             0, 3, filters=["Test=This"], groupby="team", reducer=PureToken.MIN
         )
         assert 2 == len(res)
-        assert ((3, 3.0), (2, 2.0), (1, 1.0), (0, 0.0)) == res["team=ny"][1]
-        assert ((3, 3.0), (2, 2.0), (1, 1.0), (0, 0.0)) == res["team=sf"][1]
+        assert ((3, 3.0), (2, 2.0), (1, 1.0), (0, 0.0)) == res[_s("team=ny")][1]
+        assert ((3, 3.0), (2, 2.0), (1, 1.0), (0, 0.0)) == res[_s("team=sf")][1]
 
     async def test_get(self, client: Redis):
         name = "test"
@@ -621,30 +621,30 @@ class TestTimeseries:
         await client.timeseries.add(name, 3, 4.1)
         assert (3, 4.1) == (await client.timeseries.get(name))
 
-    async def test_mget(self, client: Redis):
+    async def test_mget(self, client: Redis, _s):
         await client.timeseries.create("ts1", labels={"Test": "This"})
         await client.timeseries.create("ts2", labels={"Test": "This", "Taste": "That"})
         act_res = await client.timeseries.mget(["Test=This"])
-        exp_res = {"ts1": ({}, ()), "ts2": ({}, ())}
+        exp_res = {_s("ts1"): ({}, ()), _s("ts2"): ({}, ())}
         assert act_res == exp_res
         await client.timeseries.add("ts1", "*", 15)
         await client.timeseries.add("ts2", "*", 25)
         res = await client.timeseries.mget(["Test=This"])
-        assert 15 == res["ts1"][1][1]
-        assert 25 == res["ts2"][1][1]
+        assert 15 == res[_s("ts1")][1][1]
+        assert 25 == res[_s("ts2")][1][1]
         res = await client.timeseries.mget(["Taste=That"])
-        assert 25 == res["ts2"][1][1]
+        assert 25 == res[_s("ts2")][1][1]
 
         # test withlabels
-        assert {} == res["ts2"][0]
+        assert {} == res[_s("ts2")][0]
         res = await client.timeseries.mget(["Taste=That"], withlabels=True)
-        assert {"Taste": "That", "Test": "This"} == res["ts2"][0]
+        assert {_s("Taste"): _s("That"), _s("Test"): _s("This")} == res[_s("ts2")][0]
 
         res = await client.timeseries.mget(["Taste=That"], selected_labels=["Test"])
-        assert {"Test": "This"} == res["ts2"][0]
+        assert {_s("Test"): _s("This")} == res[_s("ts2")][0]
 
     @pytest.mark.min_module_version("timeseries", "1.8.0")
-    async def test_compaction_latest(self, client: Redis):
+    async def test_compaction_latest(self, client: Redis, _s):
         await client.timeseries.create("ts1{a}")
         await client.timeseries.create("ts1{a}-avg", labels={"fu": "bar"})
         await client.timeseries.createrule(
@@ -660,9 +660,9 @@ class TestTimeseries:
         sample_latest = await client.timeseries.get("ts1{a}-avg", latest=True)
         assert sample_latest[0] == 120000
 
-        sample = (await client.timeseries.mget(["fu=bar"]))["ts1{a}-avg"][1]
+        sample = (await client.timeseries.mget(["fu=bar"]))[_s("ts1{a}-avg")][1]
         assert sample[0] == 60000
-        sample_latest = (await client.timeseries.mget(["fu=bar"], latest=True))["ts1{a}-avg"][1]
+        sample_latest = (await client.timeseries.mget(["fu=bar"], latest=True))[_s("ts1{a}-avg")][1]
         assert sample_latest[0] == 120000
 
         assert 2 == len(await client.timeseries.range("ts1{a}-avg", 0, 140000))
@@ -671,51 +671,51 @@ class TestTimeseries:
         assert 3 == len(await client.timeseries.revrange("ts1{a}-avg", 0, 140000, latest=True))
 
         assert 2 == len(
-            (await client.timeseries.mrange(0, 140000, filters=["fu=bar"]))["ts1{a}-avg"][1]
+            (await client.timeseries.mrange(0, 140000, filters=["fu=bar"]))[_s("ts1{a}-avg")][1]
         )
         assert 2 == len(
-            (await client.timeseries.mrevrange(0, 140000, filters=["fu=bar"]))["ts1{a}-avg"][1]
+            (await client.timeseries.mrevrange(0, 140000, filters=["fu=bar"]))[_s("ts1{a}-avg")][1]
         )
         assert 3 == len(
             (await client.timeseries.mrange(0, 140000, filters=["fu=bar"], latest=True))[
-                "ts1{a}-avg"
+                _s("ts1{a}-avg")
             ][1]
         )
         assert 3 == len(
             (await client.timeseries.mrevrange(0, 140000, filters=["fu=bar"], latest=True))[
-                "ts1{a}-avg"
+                _s("ts1{a}-avg")
             ][1]
         )
 
-    async def test_info(self, client: Redis):
+    async def test_info(self, client: Redis, _s):
         await client.timeseries.create("ts1", retention=5, labels={"currentLabel": "currentData"})
         info = await client.timeseries.info("ts1")
-        assert 5 == info["retentionTime"]
-        assert info["labels"]["currentLabel"] == "currentData"
+        assert 5 == info[_s("retentionTime")]
+        assert info[_s("labels")][_s("currentLabel")] == _s("currentData")
         await client.timeseries.add("ts1", 0, 1)
 
         info = await client.timeseries.info("ts1", debug=True)
-        chunks = info["Chunks"]
-        assert chunks[0]["startTimestamp"] == chunks[0]["endTimestamp"] == 0
+        chunks = info[_s("Chunks")]
+        assert chunks[0][_s("startTimestamp")] == chunks[0][_s("endTimestamp")] == 0
 
-    async def test_info_duplicate_policy(self, client: Redis):
+    async def test_info_duplicate_policy(self, client: Redis, _s):
         await client.timeseries.create("ts2", duplicate_policy=PureToken.MIN)
         info = await client.timeseries.info("ts2")
-        assert "min" == info["duplicatePolicy"]
+        assert _s("min") == info[_s("duplicatePolicy")]
 
-    async def test_query_index(self, client: Redis):
+    async def test_query_index(self, client: Redis, _s):
         await client.timeseries.create("ts1", labels={"Test": "This"})
         await client.timeseries.create("ts2", labels={"Test": "This", "Taste": "That"})
         assert 2 == len(await client.timeseries.queryindex(["Test=This"]))
         assert 1 == len(await client.timeseries.queryindex(["Taste=That"]))
-        assert {"ts2"} == await client.timeseries.queryindex(["Taste=That"])
+        assert {_s("ts2")} == await client.timeseries.queryindex(["Taste=That"])
 
-    async def test_uncompressed(self, client: Redis):
+    async def test_uncompressed(self, client: Redis, _s):
         await client.timeseries.create("compressed")
         await client.timeseries.create("uncompressed", encoding=PureToken.UNCOMPRESSED)
         compressed_info = await client.timeseries.info("compressed")
         uncompressed_info = await client.timeseries.info("uncompressed")
-        assert compressed_info["memoryUsage"] != uncompressed_info["memoryUsage"]
+        assert compressed_info[_s("memoryUsage")] != uncompressed_info[_s("memoryUsage")]
 
     @pytest.mark.parametrize("transaction", [True, False])
     async def test_pipeline(self, client: Redis, transaction: bool):
