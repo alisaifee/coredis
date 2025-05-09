@@ -30,14 +30,14 @@ class SearchConfigCallback(
     def transform(
         self, response: list[list[ResponsePrimitive]], **options: ValueT | None
     ) -> dict[AnyStr, ResponsePrimitive]:
-        pieces = []
+        command_arguments = []
         for item in response:
             try:
                 v = (item[0], json.loads(item[1]))
             except (ValueError, TypeError):
                 v = item
-            pieces.append(v)
-        return dict(pieces)
+            command_arguments.append(v)
+        return dict(command_arguments)
 
     def transform_3(
         self,

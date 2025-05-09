@@ -52,20 +52,20 @@ class Packer:
 
     def pack_commands(self, commands: list[tuple[ValueT, ...]]) -> list[bytes]:
         output: list[bytes] = []
-        pieces: list[bytes] = []
+        command_arguments: list[bytes] = []
         buffer_length = 0
 
         for cmd in commands:
             for chunk in self.pack_command(self.encode(cmd[0]), *cmd[1:]):
-                pieces.append(chunk)
+                command_arguments.append(chunk)
                 buffer_length += len(chunk)
 
             if buffer_length > 6000:
-                output.append(SYM_EMPTY.join(pieces))
+                output.append(SYM_EMPTY.join(command_arguments))
                 buffer_length = 0
-                pieces = []
+                command_arguments = []
 
-        if pieces:
-            output.append(SYM_EMPTY.join(pieces))
+        if command_arguments:
+            output.append(SYM_EMPTY.join(command_arguments))
 
         return output

@@ -70,14 +70,14 @@ class BloomFilter(ModuleGroup[AnyStr]):
         :param expansion: The size of the new sub-filter when `capacity` is reached.
         :param nonscaling: Prevents the filter from creating additional sub-filters.
         """
-        pieces: CommandArgList = [key, error_rate, capacity]
+        command_arguments: CommandArgList = [key, error_rate, capacity]
         if expansion is not None:
-            pieces.extend([PrefixToken.EXPANSION, expansion])
+            command_arguments.extend([PrefixToken.EXPANSION, expansion])
         if nonscaling:
-            pieces.append(PureToken.NONSCALING)
+            command_arguments.append(PureToken.NONSCALING)
 
         return await self.execute_module_command(
-            CommandName.BF_RESERVE, *pieces, callback=SimpleStringCallback()
+            CommandName.BF_RESERVE, *command_arguments, callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -93,10 +93,10 @@ class BloomFilter(ModuleGroup[AnyStr]):
         :param key: The key under which the filter is found.
         :param item: The item to add to the filter.
         """
-        pieces: CommandArgList = [key, item]
+        command_arguments: CommandArgList = [key, item]
 
         return await self.execute_module_command(
-            CommandName.BF_ADD, *pieces, callback=BoolCallback()
+            CommandName.BF_ADD, *command_arguments, callback=BoolCallback()
         )
 
     @module_command(
@@ -112,10 +112,10 @@ class BloomFilter(ModuleGroup[AnyStr]):
         :param key: The key under which the filter is found.
         :param items: One or more items to add.
         """
-        pieces: CommandArgList = [key, *items]
+        command_arguments: CommandArgList = [key, *items]
 
         return await self.execute_module_command(
-            CommandName.BF_MADD, *pieces, callback=BoolsCallback()
+            CommandName.BF_MADD, *command_arguments, callback=BoolsCallback()
         )
 
     @module_command(
@@ -148,21 +148,21 @@ class BloomFilter(ModuleGroup[AnyStr]):
         :param nonscaling: Prevents the filter from creating additional sub-filters
          if initial capacity is reached.
         """
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
         if capacity is not None:
-            pieces.extend([PrefixToken.CAPACITY, capacity])
+            command_arguments.extend([PrefixToken.CAPACITY, capacity])
         if error is not None:
-            pieces.extend([PrefixToken.ERROR, error])
+            command_arguments.extend([PrefixToken.ERROR, error])
         if expansion is not None:
-            pieces.extend([PrefixToken.EXPANSION, expansion])
+            command_arguments.extend([PrefixToken.EXPANSION, expansion])
         if nocreate:
-            pieces.append(PureToken.NOCREATE)
+            command_arguments.append(PureToken.NOCREATE)
         if nonscaling:
-            pieces.append(PureToken.NONSCALING)
-        pieces.append(PureToken.ITEMS)
-        pieces.extend(items)
+            command_arguments.append(PureToken.NONSCALING)
+        command_arguments.append(PureToken.ITEMS)
+        command_arguments.extend(items)
         return await self.execute_module_command(
-            CommandName.BF_INSERT, *pieces, callback=BoolsCallback()
+            CommandName.BF_INSERT, *command_arguments, callback=BoolsCallback()
         )
 
     @module_command(
@@ -244,10 +244,10 @@ class BloomFilter(ModuleGroup[AnyStr]):
         :param iterator: Iterator value associated with the data chunk.
         :param data: Current data chunk.
         """
-        pieces: CommandArgList = [key, iterator, data]
+        command_arguments: CommandArgList = [key, iterator, data]
 
         return await self.execute_module_command(
-            CommandName.BF_LOADCHUNK, *pieces, callback=SimpleStringCallback()
+            CommandName.BF_LOADCHUNK, *command_arguments, callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -340,15 +340,15 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         :param expansion: When a new filter is created, its size is the size of the
          current filter multiplied by ``expansion``.
         """
-        pieces: CommandArgList = [key, capacity]
+        command_arguments: CommandArgList = [key, capacity]
         if bucketsize is not None:
-            pieces.extend([PrefixToken.BUCKETSIZE, bucketsize])
+            command_arguments.extend([PrefixToken.BUCKETSIZE, bucketsize])
         if maxiterations is not None:
-            pieces.extend([PrefixToken.MAXITERATIONS, maxiterations])
+            command_arguments.extend([PrefixToken.MAXITERATIONS, maxiterations])
         if expansion is not None:
-            pieces.extend([PrefixToken.EXPANSION, expansion])
+            command_arguments.extend([PrefixToken.EXPANSION, expansion])
         return await self.execute_module_command(
-            CommandName.CF_RESERVE, *pieces, callback=SimpleStringCallback()
+            CommandName.CF_RESERVE, *command_arguments, callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -364,10 +364,10 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         :param key: The name of the filter.
         :param item: The item to add.
         """
-        pieces: CommandArgList = [key, item]
+        command_arguments: CommandArgList = [key, item]
 
         return await self.execute_module_command(
-            CommandName.CF_ADD, *pieces, callback=BoolCallback()
+            CommandName.CF_ADD, *command_arguments, callback=BoolCallback()
         )
 
     @module_command(
@@ -383,10 +383,10 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         :param key: The name of the filter.
         :param item: The item to add.
         """
-        pieces: CommandArgList = [key, item]
+        command_arguments: CommandArgList = [key, item]
 
         return await self.execute_module_command(
-            CommandName.CF_ADDNX, *pieces, callback=BoolCallback()
+            CommandName.CF_ADDNX, *command_arguments, callback=BoolCallback()
         )
 
     @module_command(
@@ -413,16 +413,16 @@ class CuckooFilter(ModuleGroup[AnyStr]):
          does not exist.
         :return: A tuple of boolean values indicating if the command was executed correctly.
         """
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
         if capacity is not None:
-            pieces.extend([PrefixToken.CAPACITY, capacity])
+            command_arguments.extend([PrefixToken.CAPACITY, capacity])
         if nocreate is not None:
-            pieces.append(PureToken.NOCREATE)
-        pieces.append(PureToken.ITEMS)
-        pieces.extend(items)
+            command_arguments.append(PureToken.NOCREATE)
+        command_arguments.append(PureToken.ITEMS)
+        command_arguments.extend(items)
 
         return await self.execute_module_command(
-            CommandName.CF_INSERT, *pieces, callback=BoolsCallback()
+            CommandName.CF_INSERT, *command_arguments, callback=BoolsCallback()
         )
 
     @module_command(
@@ -449,16 +449,16 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         :param nocreate: If specified, prevents automatic filter creation
          if the filter does not exist.
         """
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
         if capacity is not None:
-            pieces.extend([PrefixToken.CAPACITY, capacity])
+            command_arguments.extend([PrefixToken.CAPACITY, capacity])
         if nocreate is not None:
-            pieces.append(PureToken.NOCREATE)
-        pieces.append(PureToken.ITEMS)
-        pieces.extend(items)
+            command_arguments.append(PureToken.NOCREATE)
+        command_arguments.append(PureToken.ITEMS)
+        command_arguments.extend(items)
 
         return await self.execute_module_command(
-            CommandName.CF_INSERTNX, *pieces, callback=BoolsCallback()
+            CommandName.CF_INSERTNX, *command_arguments, callback=BoolsCallback()
         )
 
     @module_command(
@@ -476,10 +476,10 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         :param key: The name of the filter.
         :param item: The item to check for.
         """
-        pieces: CommandArgList = [key, item]
+        command_arguments: CommandArgList = [key, item]
 
         return await self.execute_module_command(
-            CommandName.CF_EXISTS, *pieces, callback=BoolCallback()
+            CommandName.CF_EXISTS, *command_arguments, callback=BoolCallback()
         )
 
     @module_command(
@@ -497,10 +497,10 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         :param key: The name of the filter.
         :param items: The item(s) to check for.
         """
-        pieces: CommandArgList = [key, *items]
+        command_arguments: CommandArgList = [key, *items]
 
         return await self.execute_module_command(
-            CommandName.CF_MEXISTS, *pieces, callback=BoolsCallback()
+            CommandName.CF_MEXISTS, *command_arguments, callback=BoolsCallback()
         )
 
     @module_command(
@@ -516,10 +516,10 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         :param key: The name of the filter.
         :param item: The item to delete from the filter.
         """
-        pieces: CommandArgList = [key, item]
+        command_arguments: CommandArgList = [key, item]
 
         return await self.execute_module_command(
-            CommandName.CF_DEL, *pieces, callback=BoolCallback()
+            CommandName.CF_DEL, *command_arguments, callback=BoolCallback()
         )
 
     @module_command(
@@ -537,10 +537,10 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         :param key: The name of the filter.
         :param item: The item to count.
         """
-        pieces: CommandArgList = [key, item]
+        command_arguments: CommandArgList = [key, item]
 
         return await self.execute_module_command(
-            CommandName.CF_COUNT, *pieces, callback=IntCallback()
+            CommandName.CF_COUNT, *command_arguments, callback=IntCallback()
         )
 
     @module_command(
@@ -557,11 +557,11 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         :param iterator: Iterator value. This is either 0, or the iterator from a
          previous invocation of this command.
         """
-        pieces: CommandArgList = [key, iterator]
+        command_arguments: CommandArgList = [key, iterator]
 
         return await self.execute_module_command(
             CommandName.CF_SCANDUMP,
-            *pieces,
+            *command_arguments,
             decode=False,
             callback=MixedTupleCallback[int, bytes | None](),
         )
@@ -581,10 +581,10 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         :param data: Current data chunk (returned by :meth:`scandump`).
 
         """
-        pieces: CommandArgList = [key, iterator, data]
+        command_arguments: CommandArgList = [key, iterator, data]
 
         return await self.execute_module_command(
-            CommandName.CF_LOADCHUNK, *pieces, callback=SimpleStringCallback()
+            CommandName.CF_LOADCHUNK, *command_arguments, callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -697,10 +697,10 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         :param key: The name of the Count-Min Sketch.
         :param items: One or more items for which to return the count.
         """
-        pieces: CommandArgList = [key, *items]
+        command_arguments: CommandArgList = [key, *items]
 
         return await self.execute_module_command(
-            CommandName.CMS_QUERY, *pieces, callback=TupleCallback[int]()
+            CommandName.CMS_QUERY, *command_arguments, callback=TupleCallback[int]()
         )
 
     @module_command(
@@ -723,13 +723,13 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         :param weights: Multiples of each sketch. Default is 1.
         """
         _sources: list[KeyT] = list(sources)
-        pieces: CommandArgList = [destination, len(_sources), *_sources]
+        command_arguments: CommandArgList = [destination, len(_sources), *_sources]
         if weights:
-            pieces.append(PrefixToken.WEIGHTS)
-            pieces.extend(weights)
+            command_arguments.append(PrefixToken.WEIGHTS)
+            command_arguments.extend(weights)
 
         return await self.execute_module_command(
-            CommandName.CMS_MERGE, *pieces, callback=SimpleStringCallback()
+            CommandName.CMS_MERGE, *command_arguments, callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -786,11 +786,11 @@ class TopK(ModuleGroup[AnyStr]):
          It is raised to power of it's counter (``decay ^ bucket[i].counter``).
          Therefore, as the counter gets higher, the chance of a reduction is being reduced.
         """
-        pieces: CommandArgList = [key, topk]
+        command_arguments: CommandArgList = [key, topk]
         if width is not None and depth is not None and decay is not None:
-            pieces.extend([width, depth, decay])
+            command_arguments.extend([width, depth, decay])
         return await self.execute_module_command(
-            CommandName.TOPK_RESERVE, *pieces, callback=SimpleStringCallback()
+            CommandName.TOPK_RESERVE, *command_arguments, callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -854,10 +854,10 @@ class TopK(ModuleGroup[AnyStr]):
         :param key: Name of the TOP-K sketch.
         :param items: Item(s) to be queried.
         """
-        pieces: CommandArgList = [key, *items]
+        command_arguments: CommandArgList = [key, *items]
 
         return await self.execute_module_command(
-            CommandName.TOPK_QUERY, *pieces, callback=BoolsCallback()
+            CommandName.TOPK_QUERY, *command_arguments, callback=BoolsCallback()
         )
 
     @module_command(
@@ -877,10 +877,10 @@ class TopK(ModuleGroup[AnyStr]):
         :param key: The name of the TOP-K sketch.
         :param items: One or more items to count.
         """
-        pieces: CommandArgList = [key, *items]
+        command_arguments: CommandArgList = [key, *items]
 
         return await self.execute_module_command(
-            CommandName.TOPK_COUNT, *pieces, callback=TupleCallback[int]()
+            CommandName.TOPK_COUNT, *command_arguments, callback=TupleCallback[int]()
         )
 
     @module_command(
@@ -900,15 +900,15 @@ class TopK(ModuleGroup[AnyStr]):
         :param key: Name of the TOP-K sketch.
         :param withcount: Whether to include counts of each element.
         """
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
         if withcount:
-            pieces.append(PureToken.WITHCOUNT)
+            command_arguments.append(PureToken.WITHCOUNT)
             return await self.execute_module_command(
-                CommandName.TOPK_LIST, *pieces, callback=DictCallback[AnyStr, int]()
+                CommandName.TOPK_LIST, *command_arguments, callback=DictCallback[AnyStr, int]()
             )
         else:
             return await self.execute_module_command(
-                CommandName.TOPK_LIST, *pieces, callback=TupleCallback[AnyStr]()
+                CommandName.TOPK_LIST, *command_arguments, callback=TupleCallback[AnyStr]()
             )
 
     @module_command(
@@ -956,11 +956,11 @@ class TDigest(ModuleGroup[AnyStr]):
         :param key: The key name for the new t-digest sketch.
         :param compression: A controllable tradeoff between accuracy and memory consumption.
         """
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
         if compression is not None:
-            pieces.extend([PrefixToken.COMPRESSION, compression])
+            command_arguments.extend([PrefixToken.COMPRESSION, compression])
         return await self.execute_module_command(
-            CommandName.TDIGEST_CREATE, *pieces, callback=SimpleStringCallback()
+            CommandName.TDIGEST_CREATE, *command_arguments, callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -996,10 +996,10 @@ class TDigest(ModuleGroup[AnyStr]):
         :param key: Key name for an existing t-digest sketch.
         :param values: value(s) of observation(s)
         """
-        pieces: CommandArgList = [key, *values]
+        command_arguments: CommandArgList = [key, *values]
 
         return await self.execute_module_command(
-            CommandName.TDIGEST_ADD, *pieces, callback=SimpleStringCallback()
+            CommandName.TDIGEST_ADD, *command_arguments, callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -1029,17 +1029,17 @@ class TDigest(ModuleGroup[AnyStr]):
 
         """
         _source_keys: list[KeyT] = list(source_keys)
-        pieces: CommandArgList = [
+        command_arguments: CommandArgList = [
             destination_key,
             len(_source_keys),
             *_source_keys,
         ]
         if compression is not None:
-            pieces.extend([PrefixToken.COMPRESSION, compression])
+            command_arguments.extend([PrefixToken.COMPRESSION, compression])
         if override is not None:
-            pieces.append(PureToken.OVERRIDE)
+            command_arguments.append(PureToken.OVERRIDE)
         return await self.execute_module_command(
-            CommandName.TDIGEST_MERGE, *pieces, callback=SimpleStringCallback()
+            CommandName.TDIGEST_MERGE, *command_arguments, callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -1100,10 +1100,10 @@ class TDigest(ModuleGroup[AnyStr]):
         :param key: Key name for an existing t-digest sketch.
         :param quantiles: Input fractions (between 0 and 1 inclusively).
         """
-        pieces: CommandArgList = [key, *quantiles]
+        command_arguments: CommandArgList = [key, *quantiles]
 
         return await self.execute_module_command(
-            CommandName.TDIGEST_QUANTILE, *pieces, callback=FloatsCallback()
+            CommandName.TDIGEST_QUANTILE, *command_arguments, callback=FloatsCallback()
         )
 
     @module_command(
@@ -1127,10 +1127,10 @@ class TDigest(ModuleGroup[AnyStr]):
         :param key: The key name for an existing t-digest sketch.
         :param values: The values for which the CDF should be retrieved.
         """
-        pieces: CommandArgList = [key, *values]
+        command_arguments: CommandArgList = [key, *values]
 
         return await self.execute_module_command(
-            CommandName.TDIGEST_CDF, *pieces, callback=FloatsCallback()
+            CommandName.TDIGEST_CDF, *command_arguments, callback=FloatsCallback()
         )
 
     @module_command(
@@ -1158,10 +1158,10 @@ class TDigest(ModuleGroup[AnyStr]):
          should be higher than `low_cut_quantile`.
 
         """
-        pieces: CommandArgList = [key, low_cut_quantile, high_cut_quantile]
+        command_arguments: CommandArgList = [key, low_cut_quantile, high_cut_quantile]
 
         return await self.execute_module_command(
-            CommandName.TDIGEST_TRIMMED_MEAN, *pieces, callback=FloatCallback()
+            CommandName.TDIGEST_TRIMMED_MEAN, *command_arguments, callback=FloatCallback()
         )
 
     @module_command(
@@ -1185,10 +1185,10 @@ class TDigest(ModuleGroup[AnyStr]):
         :param key: The key name for an existing t-digest sketch.
         :param values: Input values for which the rank should be estimated.
         """
-        pieces: CommandArgList = [key, *values]
+        command_arguments: CommandArgList = [key, *values]
 
         return await self.execute_module_command(
-            CommandName.TDIGEST_RANK, *pieces, callback=TupleCallback[int]()
+            CommandName.TDIGEST_RANK, *command_arguments, callback=TupleCallback[int]()
         )
 
     @module_command(
@@ -1212,10 +1212,10 @@ class TDigest(ModuleGroup[AnyStr]):
         :param key: The name of an existing t-digest sketch.
         :param values: The input values for which the reverse rank should be estimated.
         """
-        pieces: CommandArgList = [key, *values]
+        command_arguments: CommandArgList = [key, *values]
 
         return await self.execute_module_command(
-            CommandName.TDIGEST_REVRANK, *pieces, callback=TupleCallback[int]()
+            CommandName.TDIGEST_REVRANK, *command_arguments, callback=TupleCallback[int]()
         )
 
     @module_command(
@@ -1238,10 +1238,10 @@ class TDigest(ModuleGroup[AnyStr]):
         :param key: The key name for an existing t-digest sketch.
         :param ranks: The ranks for which the estimated values should be retrieved.
         """
-        pieces: CommandArgList = [key, *ranks]
+        command_arguments: CommandArgList = [key, *ranks]
 
         return await self.execute_module_command(
-            CommandName.TDIGEST_BYRANK, *pieces, callback=FloatsCallback()
+            CommandName.TDIGEST_BYRANK, *command_arguments, callback=FloatsCallback()
         )
 
     @module_command(
@@ -1264,10 +1264,10 @@ class TDigest(ModuleGroup[AnyStr]):
         :param key: The key name for an existing t-digest sketch.
         :param reverse_ranks: The reverse ranks for which the values should be retrieved.
         """
-        pieces: CommandArgList = [key, *reverse_ranks]
+        command_arguments: CommandArgList = [key, *reverse_ranks]
 
         return await self.execute_module_command(
-            CommandName.TDIGEST_BYREVRANK, *pieces, callback=FloatsCallback()
+            CommandName.TDIGEST_BYREVRANK, *command_arguments, callback=FloatsCallback()
         )
 
     @module_command(

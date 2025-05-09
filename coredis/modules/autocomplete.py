@@ -43,14 +43,14 @@ class Autocomplete(ModuleGroup[AnyStr]):
         :param payload: Saves an extra payload with the suggestion, that can be
          fetched when calling :meth:`sugget` by using :paramref:`sugget.withpayloads`
         """
-        pieces: CommandArgList = [key, string, score]
+        command_arguments: CommandArgList = [key, string, score]
         if increment_score:
-            pieces.append(PureToken.INCREMENT)
+            command_arguments.append(PureToken.INCREMENT)
         if payload:
-            pieces.extend([PrefixToken.PAYLOAD, payload])
+            command_arguments.extend([PrefixToken.PAYLOAD, payload])
 
         return await self.execute_module_command(
-            CommandName.FT_SUGADD, *pieces, callback=IntCallback()
+            CommandName.FT_SUGADD, *command_arguments, callback=IntCallback()
         )
 
     @module_command(
@@ -82,20 +82,20 @@ class Autocomplete(ModuleGroup[AnyStr]):
         :param withpayloads: If True, returns optional payloads saved along with the suggestions.
         :param max_suggestions: Limits the results to a maximum of ``max_suggestions``
         """
-        pieces: CommandArgList = [key, prefix]
+        command_arguments: CommandArgList = [key, prefix]
         if fuzzy:
-            pieces.append(PureToken.FUZZY)
+            command_arguments.append(PureToken.FUZZY)
         if withscores:
-            pieces.append(PureToken.WITHSCORES)
+            command_arguments.append(PureToken.WITHSCORES)
         if withpayloads:
-            pieces.append(PureToken.WITHPAYLOADS)
+            command_arguments.append(PureToken.WITHPAYLOADS)
         if max_suggestions is not None:
-            pieces.append(PureToken.MAX)
-            pieces.append(max_suggestions)
+            command_arguments.append(PureToken.MAX)
+            command_arguments.append(max_suggestions)
 
         return await self.execute_module_command(
             CommandName.FT_SUGGET,
-            *pieces,
+            *command_arguments,
             callback=AutocompleteCallback[AnyStr](),
             withscores=withscores,
             withpayloads=withpayloads,
@@ -115,10 +115,10 @@ class Autocomplete(ModuleGroup[AnyStr]):
         :param string: The suggestion string to index.
 
         """
-        pieces: CommandArgList = [key, string]
+        command_arguments: CommandArgList = [key, string]
 
         return await self.execute_module_command(
-            CommandName.FT_SUGDEL, *pieces, callback=BoolCallback()
+            CommandName.FT_SUGDEL, *command_arguments, callback=BoolCallback()
         )
 
     @module_command(
@@ -133,8 +133,8 @@ class Autocomplete(ModuleGroup[AnyStr]):
 
         :param key: The key of the suggestion dictionary.
         """
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
 
         return await self.execute_module_command(
-            CommandName.FT_SUGLEN, *pieces, callback=IntCallback()
+            CommandName.FT_SUGLEN, *command_arguments, callback=IntCallback()
         )

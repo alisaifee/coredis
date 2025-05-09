@@ -1961,16 +1961,16 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Set expiry for hash field using relative time to expire (seconds)
         """
-        pieces: CommandArgList = [key, normalized_seconds(seconds)]
+        command_arguments: CommandArgList = [key, normalized_seconds(seconds)]
 
         if condition is not None:
-            pieces.append(condition)
-        pieces.append(PrefixToken.FIELDS)
-        pieces.append(len(list(fields)))
-        pieces.extend(fields)
+            command_arguments.append(condition)
+        command_arguments.append(PrefixToken.FIELDS)
+        command_arguments.append(len(list(fields)))
+        command_arguments.extend(fields)
 
         return await self.execute_command(
-            CommandName.HEXPIRE, *pieces, callback=TupleCallback[int]()
+            CommandName.HEXPIRE, *command_arguments, callback=TupleCallback[int]()
         )
 
     @versionadded(version="4.18.0")
@@ -1979,11 +1979,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Returns the expiration time of a hash field as a Unix timestamp, in seconds.
         """
-        pieces: CommandArgList = [key, PrefixToken.FIELDS, len(list(fields))]
-        pieces.extend(fields)
+        command_arguments: CommandArgList = [key, PrefixToken.FIELDS, len(list(fields))]
+        command_arguments.extend(fields)
 
         return await self.execute_command(
-            CommandName.HEXPIRETIME, *pieces, callback=TupleCallback[int]()
+            CommandName.HEXPIRETIME, *command_arguments, callback=TupleCallback[int]()
         )
 
     @versionadded(version="4.18.0")
@@ -1992,12 +1992,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Returns the expiration time of a hash field as a Unix timestamp, in msec.
         """
-        pieces: CommandArgList = [key, PrefixToken.FIELDS, len(list(fields))]
+        command_arguments: CommandArgList = [key, PrefixToken.FIELDS, len(list(fields))]
 
-        pieces.extend(fields)
+        command_arguments.extend(fields)
 
         return await self.execute_command(
-            CommandName.HPEXPIRETIME, *pieces, callback=TupleCallback[int]()
+            CommandName.HPEXPIRETIME, *command_arguments, callback=TupleCallback[int]()
         )
 
     @versionadded(version="4.18.0")
@@ -2012,16 +2012,16 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Set expiry for hash field using relative time to expire (milliseconds)
         """
-        pieces: CommandArgList = [key, normalized_milliseconds(milliseconds)]
+        command_arguments: CommandArgList = [key, normalized_milliseconds(milliseconds)]
 
         if condition is not None:
-            pieces.append(condition)
-        pieces.append("FIELDS")
-        pieces.append(len(list(fields)))
-        pieces.extend(fields)
+            command_arguments.append(condition)
+        command_arguments.append("FIELDS")
+        command_arguments.append(len(list(fields)))
+        command_arguments.extend(fields)
 
         return await self.execute_command(
-            CommandName.HPEXPIRE, *pieces, callback=TupleCallback[int]()
+            CommandName.HPEXPIRE, *command_arguments, callback=TupleCallback[int]()
         )
 
     @versionadded(version="4.18.0")
@@ -2036,15 +2036,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Set expiry for hash field using an absolute Unix timestamp (seconds)
         """
-        pieces: CommandArgList = [key, normalized_time_seconds(unix_time_seconds)]
+        command_arguments: CommandArgList = [key, normalized_time_seconds(unix_time_seconds)]
         if condition is not None:
-            pieces.append(condition)
-        pieces.append(PrefixToken.FIELDS)
-        pieces.append(len(list(fields)))
-        pieces.extend(fields)
+            command_arguments.append(condition)
+        command_arguments.append(PrefixToken.FIELDS)
+        command_arguments.append(len(list(fields)))
+        command_arguments.extend(fields)
 
         return await self.execute_command(
-            CommandName.HEXPIREAT, *pieces, callback=TupleCallback[int]()
+            CommandName.HEXPIREAT, *command_arguments, callback=TupleCallback[int]()
         )
 
     @versionadded(version="4.18.0")
@@ -2059,19 +2059,19 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Set expiry for hash field using an absolute Unix timestamp (milliseconds)
         """
-        pieces: CommandArgList = [
+        command_arguments: CommandArgList = [
             key,
             normalized_time_milliseconds(unix_time_milliseconds),
         ]
 
         if condition is not None:
-            pieces.append(condition)
-        pieces.append(PrefixToken.FIELDS)
-        pieces.append(len(list(fields)))
-        pieces.extend(fields)
+            command_arguments.append(condition)
+        command_arguments.append(PrefixToken.FIELDS)
+        command_arguments.append(len(list(fields)))
+        command_arguments.extend(fields)
 
         return await self.execute_command(
-            CommandName.HPEXPIREAT, *pieces, callback=TupleCallback[int]()
+            CommandName.HPEXPIREAT, *command_arguments, callback=TupleCallback[int]()
         )
 
     @versionadded(version="4.18.0")
@@ -2080,11 +2080,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Removes the expiration time for each specified field
         """
-        pieces: CommandArgList = [key, PrefixToken.FIELDS, len(list(fields))]
-        pieces.extend(fields)
+        command_arguments: CommandArgList = [key, PrefixToken.FIELDS, len(list(fields))]
+        command_arguments.extend(fields)
 
         return await self.execute_command(
-            CommandName.HPERSIST, *pieces, callback=TupleCallback[int]()
+            CommandName.HPERSIST, *command_arguments, callback=TupleCallback[int]()
         )
 
     @redis_command(
@@ -2343,14 +2343,16 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Returns the TTL in seconds of a hash field.
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
-        pieces.append(key)
-        pieces.append(PrefixToken.FIELDS)
-        pieces.append(len(list(fields)))
-        pieces.extend(fields)
+        command_arguments.append(key)
+        command_arguments.append(PrefixToken.FIELDS)
+        command_arguments.append(len(list(fields)))
+        command_arguments.extend(fields)
 
-        return await self.execute_command(CommandName.HTTL, *pieces, callback=TupleCallback[int]())
+        return await self.execute_command(
+            CommandName.HTTL, *command_arguments, callback=TupleCallback[int]()
+        )
 
     @versionadded(version="4.18.0")
     @redis_command(CommandName.HPTTL, version_introduced="7.4.0", group=CommandGroup.HASH)
@@ -2358,14 +2360,16 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Returns the TTL in milliseconds of a hash field.
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
 
-        pieces.append(key)
-        pieces.append(PrefixToken.FIELDS)
-        pieces.append(len(list(fields)))
-        pieces.extend(fields)
+        command_arguments.append(key)
+        command_arguments.append(PrefixToken.FIELDS)
+        command_arguments.append(len(list(fields)))
+        command_arguments.extend(fields)
 
-        return await self.execute_command(CommandName.HPTTL, *pieces, callback=TupleCallback[int]())
+        return await self.execute_command(
+            CommandName.HPTTL, *command_arguments, callback=TupleCallback[int]()
+        )
 
     @redis_command(
         CommandName.HVALS,
@@ -2498,20 +2502,19 @@ class CoreCommands(CommandMixin[AnyStr]):
          their values from the hash.
 
         """
-        params: CommandArgList = []
+        command_arguments: CommandArgList = [key]
         options = {"withvalues": withvalues, "count": count}
 
         if count is not None:
-            params.append(count)
+            command_arguments.append(count)
 
         if withvalues:
-            params.append(PureToken.WITHVALUES)
+            command_arguments.append(PureToken.WITHVALUES)
             options["withvalues"] = True
 
         return await self.execute_command(
             CommandName.HRANDFIELD,
-            key,
-            *params,
+            *command_arguments,
             **options,
             callback=HRandFieldCallback[AnyStr](),
         )
@@ -3027,7 +3030,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         Create a key using the provided serialized value, previously obtained using DUMP.
         """
 
-        params: CommandArgList = [
+        command_arguments: CommandArgList = [
             key,
             (
                 normalized_milliseconds(ttl)  # type: ignore
@@ -3038,19 +3041,19 @@ class CoreCommands(CommandMixin[AnyStr]):
         ]
 
         if replace:
-            params.append(PureToken.REPLACE)
+            command_arguments.append(PureToken.REPLACE)
 
         if absttl:
-            params.append(PureToken.ABSTTL)
+            command_arguments.append(PureToken.ABSTTL)
 
         if idletime is not None:
-            params.extend(["IDLETIME", normalized_milliseconds(idletime)])
+            command_arguments.extend(["IDLETIME", normalized_milliseconds(idletime)])
 
         if freq:
-            params.extend(["FREQ", freq])
+            command_arguments.extend(["FREQ", freq])
 
         return await self.execute_command(
-            CommandName.RESTORE, *params, callback=SimpleStringCallback()
+            CommandName.RESTORE, *command_arguments, callback=SimpleStringCallback()
         )
 
     @mutually_inclusive_parameters("offset", "count")
@@ -3313,7 +3316,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: the element being popped from :paramref:`source` and pushed to
          :paramref:`destination`
         """
-        params: CommandArgList = [
+        command_arguments: CommandArgList = [
             source,
             destination,
             wherefrom,
@@ -3322,7 +3325,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         ]
 
         return await self.execute_command(
-            CommandName.BLMOVE, *params, callback=OptionalAnyStrCallback[AnyStr]()
+            CommandName.BLMOVE, *command_arguments, callback=OptionalAnyStrCallback[AnyStr]()
         )
 
     @versionadded(version="3.0.0")
@@ -3488,10 +3491,10 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :return: the element being popped and pushed.
         """
-        params = [source, destination, wherefrom, whereto]
+        command_arguments: CommandArgList = [source, destination, wherefrom, whereto]
 
         return await self.execute_command(
-            CommandName.LMOVE, *params, callback=OptionalAnyStrCallback[AnyStr]()
+            CommandName.LMOVE, *command_arguments, callback=OptionalAnyStrCallback[AnyStr]()
         )
 
     @versionadded(version="3.0.0")
@@ -4155,12 +4158,10 @@ class CoreCommands(CommandMixin[AnyStr]):
          where a member was popped, the second element is the popped member itself,
          and the third element is the score of the popped element.
         """
-        params: CommandArgList = []
-        params.extend(keys)
-        params.append(timeout)
+        command_arguments: CommandArgList = [*keys, timeout]
 
         return await self.execute_command(
-            CommandName.BZPOPMAX, *params, callback=BZPopCallback[AnyStr]()
+            CommandName.BZPOPMAX, *command_arguments, callback=BZPopCallback[AnyStr]()
         )
 
     @ensure_iterable_valid("keys")
@@ -4181,12 +4182,10 @@ class CoreCommands(CommandMixin[AnyStr]):
          and the third element is the score of the popped element.
         """
 
-        params: CommandArgList = []
-        params.extend(keys)
-        params.append(timeout)
+        command_arguments: CommandArgList = [*keys, timeout]
 
         return await self.execute_command(
-            CommandName.BZPOPMIN, *params, callback=BZPopCallback[AnyStr]()
+            CommandName.BZPOPMIN, *command_arguments, callback=BZPopCallback[AnyStr]()
         )
 
     @redis_command(
@@ -4561,21 +4560,20 @@ class CoreCommands(CommandMixin[AnyStr]):
          If :paramref:`withscores` argument is used, the return is a list elements
          and their scores from the sorted set.
         """
-        params: CommandArgList = []
+        command_arguments: CommandArgList = [key]
         options = {}
 
         if count is not None:
-            params.append(count)
+            command_arguments.append(count)
             options["count"] = count
 
         if withscores:
-            params.append(PureToken.WITHSCORES)
+            command_arguments.append(PureToken.WITHSCORES)
             options["withscores"] = True
 
         return await self.execute_command(
             CommandName.ZRANDMEMBER,
-            key,
-            *params,
+            *command_arguments,
             callback=ZRandMemberCallback[AnyStr](),
             **options,
         )
@@ -5838,16 +5836,18 @@ class CoreCommands(CommandMixin[AnyStr]):
         :paramref:`start` and :paramref:`end` parameters indicate which bytes to consider
 
         """
-        params: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
 
         if start is not None and end is not None:
-            params.append(start)
-            params.append(end)
+            command_arguments.append(start)
+            command_arguments.append(end)
 
         if index_unit is not None:
-            params.append(index_unit)
+            command_arguments.append(index_unit)
 
-        return await self.execute_command(CommandName.BITCOUNT, *params, callback=IntCallback())
+        return await self.execute_command(
+            CommandName.BITCOUNT, *command_arguments, callback=IntCallback()
+        )
 
     def bitfield(self, key: KeyT) -> BitFieldOperation[AnyStr]:
         """
@@ -5930,18 +5930,20 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         if bit not in (0, 1):
             raise RedisError("bit must be 0 or 1")
-        params: CommandArgList = [key, bit]
+        command_arguments: CommandArgList = [key, bit]
 
         if start is not None:
-            params.append(start)
+            command_arguments.append(start)
 
         if start is not None and end is not None:
-            params.append(end)
+            command_arguments.append(end)
 
         if index_unit is not None:
-            params.append(index_unit)
+            command_arguments.append(index_unit)
 
-        return await self.execute_command(CommandName.BITPOS, *params, callback=IntCallback())
+        return await self.execute_command(
+            CommandName.BITPOS, *command_arguments, callback=IntCallback()
+        )
 
     @redis_command(
         CommandName.GETBIT,
@@ -6771,14 +6773,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param lib_name: name of the library
         :param lib_ver: version of the library
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
         if lib_name:
-            pieces.extend([PrefixToken.LIB_NAME, lib_name])
+            command_arguments.extend([PrefixToken.LIB_NAME, lib_name])
         if lib_ver:
-            pieces.extend([PrefixToken.LIB_VER, lib_ver])
+            command_arguments.extend([PrefixToken.LIB_VER, lib_ver])
 
         return await self.execute_command(
-            CommandName.CLIENT_SETINFO, *pieces, callback=SimpleStringCallback()
+            CommandName.CLIENT_SETINFO, *command_arguments, callback=SimpleStringCallback()
         )
 
     @redis_command(

@@ -65,15 +65,15 @@ class Graph(ModuleGroup[AnyStr]):
         :param timeout: The maximum amount of time (milliseconds) to wait for the query to complete
         :return: The result set of the executed query.
         """
-        pieces: CommandArgList = [graph, query]
+        command_arguments: CommandArgList = [graph, query]
 
         if timeout is not None:
-            pieces.extend([PrefixToken.TIMEOUT, normalized_milliseconds(timeout)])
+            command_arguments.extend([PrefixToken.TIMEOUT, normalized_milliseconds(timeout)])
 
-        pieces.append(b"--compact")
+        command_arguments.append(b"--compact")
         return await self.execute_module_command(
             CommandName.GRAPH_QUERY,
-            *pieces,
+            *command_arguments,
             callback=QueryCallback[AnyStr](graph),
             query=query,
         )
@@ -98,14 +98,14 @@ class Graph(ModuleGroup[AnyStr]):
         :param timeout: The maximum amount of time (milliseconds) to wait for the query to complete.
         :return: The result set for the read-only query or an error if a write query was given.
         """
-        pieces: CommandArgList = [graph, query]
+        command_arguments: CommandArgList = [graph, query]
         if timeout is not None:
-            pieces.extend([PrefixToken.TIMEOUT, normalized_milliseconds(timeout)])
-        pieces.append(b"--compact")
+            command_arguments.extend([PrefixToken.TIMEOUT, normalized_milliseconds(timeout)])
+        command_arguments.append(b"--compact")
 
         return await self.execute_module_command(
             CommandName.GRAPH_RO_QUERY,
-            *pieces,
+            *command_arguments,
             callback=QueryCallback[AnyStr](graph),
             query=query,
         )
@@ -175,11 +175,11 @@ class Graph(ModuleGroup[AnyStr]):
         :return: A string representation of a query execution plan, with details on results produced
          by and time spent in each operation.
         """
-        pieces: CommandArgList = [graph, query]
+        command_arguments: CommandArgList = [graph, query]
         if timeout is not None:
-            pieces.extend([PrefixToken.TIMEOUT, normalized_milliseconds(timeout)])
+            command_arguments.extend([PrefixToken.TIMEOUT, normalized_milliseconds(timeout)])
         return await self.execute_module_command(
-            CommandName.GRAPH_PROFILE, *pieces, callback=ListCallback[AnyStr]()
+            CommandName.GRAPH_PROFILE, *command_arguments, callback=ListCallback[AnyStr]()
         )
 
     @module_command(
@@ -199,18 +199,18 @@ class Graph(ModuleGroup[AnyStr]):
         :param reset: If ``True``, the slowlog will be reset
         :return: The slowlog for the given graph or ``True`` if the slowlog was reset
         """
-        pieces: CommandArgList = [graph]
+        command_arguments: CommandArgList = [graph]
         if reset:
-            pieces.append(PureToken.RESET)
+            command_arguments.append(PureToken.RESET)
             return await self.execute_module_command(
                 CommandName.GRAPH_SLOWLOG,
-                *pieces,
+                *command_arguments,
                 callback=SimpleStringCallback(),
             )
         else:
             return await self.execute_module_command(
                 CommandName.GRAPH_SLOWLOG,
-                *pieces,
+                *command_arguments,
                 callback=GraphSlowLogCallback(),
             )
 
@@ -307,18 +307,18 @@ class Graph(ModuleGroup[AnyStr]):
 
         :return: True if the constraint was successfully dropped, False otherwise.
         """
-        pieces: CommandArgList = [graph, type]
+        command_arguments: CommandArgList = [graph, type]
         if node is not None:
-            pieces.extend([PrefixToken.NODE, node])
+            command_arguments.extend([PrefixToken.NODE, node])
         if relationship is not None:
-            pieces.extend([PrefixToken.RELATIONSHIP, relationship])
+            command_arguments.extend([PrefixToken.RELATIONSHIP, relationship])
         if properties:
             _props: list[StringT] = list(properties)
-            pieces.extend([PrefixToken.PROPERTIES, len(_props), *_props])
+            command_arguments.extend([PrefixToken.PROPERTIES, len(_props), *_props])
 
         return await self.execute_module_command(
             CommandName.GRAPH_CONSTRAINT_DROP,
-            *pieces,
+            *command_arguments,
             callback=SimpleStringCallback(),
         )
 
@@ -347,17 +347,17 @@ class Graph(ModuleGroup[AnyStr]):
         :param properties: The properties to apply the constraint to.
         :return: True if the constraint was created successfully, False otherwise.
         """
-        pieces: CommandArgList = [graph, type]
+        command_arguments: CommandArgList = [graph, type]
 
         if node is not None:
-            pieces.extend([PrefixToken.NODE, node])
+            command_arguments.extend([PrefixToken.NODE, node])
         if relationship is not None:
-            pieces.extend([PrefixToken.RELATIONSHIP, relationship])
+            command_arguments.extend([PrefixToken.RELATIONSHIP, relationship])
         if properties:
             _props: list[StringT] = list(properties)
-            pieces.extend([PrefixToken.PROPERTIES, len(_props), *_props])
+            command_arguments.extend([PrefixToken.PROPERTIES, len(_props), *_props])
         return await self.execute_module_command(
             CommandName.GRAPH_CONSTRAINT_CREATE,
-            *pieces,
+            *command_arguments,
             callback=SimpleStringCallback(ok_values={"PENDING"}),
         )

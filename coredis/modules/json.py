@@ -54,12 +54,12 @@ class Json(ModuleGroup[AnyStr]):
         :param path: The JSONPath to specify.
         :return: The number of paths deleted
         """
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
         if path:
-            pieces.append(path)
+            command_arguments.append(path)
 
         return await self.execute_module_command(
-            CommandName.JSON_DEL, *pieces, callback=IntCallback()
+            CommandName.JSON_DEL, *command_arguments, callback=IntCallback()
         )
 
     @module_command(
@@ -82,12 +82,12 @@ class Json(ModuleGroup[AnyStr]):
         :param paths: JSONPath(s) to get values from.
         :return: The value at :paramref:`path`
         """
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
         if paths:
-            pieces.extend(paths)
+            command_arguments.extend(paths)
 
         return await self.execute_module_command(
-            CommandName.JSON_GET, *pieces, callback=JsonCallback()
+            CommandName.JSON_GET, *command_arguments, callback=JsonCallback()
         )
 
     @module_command(
@@ -105,11 +105,11 @@ class Json(ModuleGroup[AnyStr]):
 
         :return: The number of deleted elements.
         """
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
         if path:
-            pieces.append(path)
+            command_arguments.append(path)
         return await self.execute_module_command(
-            CommandName.JSON_FORGET, *pieces, callback=IntCallback()
+            CommandName.JSON_FORGET, *command_arguments, callback=IntCallback()
         )
 
     @module_command(
@@ -128,10 +128,10 @@ class Json(ModuleGroup[AnyStr]):
          (`0` if `false` or `1` if `true`), or ``None`` for JSON values matching
          the path that are not Boolean.
         """
-        pieces: CommandArgList = [key, path]
+        command_arguments: CommandArgList = [key, path]
         return await self.execute_module_command(
             CommandName.JSON_TOGGLE,
-            *pieces,
+            *command_arguments,
             callback=JsonCallback(),
         )
 
@@ -149,12 +149,12 @@ class Json(ModuleGroup[AnyStr]):
         :param path: The JSONPath to specify.
         :return: The number of values cleared.
         """
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
         if path:
-            pieces.append(path)
+            command_arguments.append(path)
 
         return await self.execute_module_command(
-            CommandName.JSON_CLEAR, *pieces, callback=IntCallback()
+            CommandName.JSON_CLEAR, *command_arguments, callback=IntCallback()
         )
 
     @module_command(
@@ -188,11 +188,11 @@ class Json(ModuleGroup[AnyStr]):
          if it already exists.
         :return: `True` if the value was set successfully, `False` otherwise.
         """
-        pieces: CommandArgList = [key, path, json.dumps(value)]
+        command_arguments: CommandArgList = [key, path, json.dumps(value)]
         if condition:
-            pieces.append(condition)
+            command_arguments.append(condition)
         return await self.execute_module_command(
-            CommandName.JSON_SET, *pieces, callback=SimpleStringCallback()
+            CommandName.JSON_SET, *command_arguments, callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -210,10 +210,10 @@ class Json(ModuleGroup[AnyStr]):
         :param path: JSONPath to specify.
         :return: The values at :paramref:`path` for each of the keys in :paramref:`keys`.
         """
-        pieces: CommandArgList = [*keys, path]
+        command_arguments: CommandArgList = [*keys, path]
         return await self.execute_module_command(
             CommandName.JSON_MGET,
-            *pieces,
+            *command_arguments,
             callback=JsonCallback(),
         )
 
@@ -232,12 +232,12 @@ class Json(ModuleGroup[AnyStr]):
 
         :return: `True` if all the values were set successfully
         """
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
         for key, path, value in triplets:
-            pieces.extend([key, path, json.dumps(value)])
+            command_arguments.extend([key, path, json.dumps(value)])
 
         return await self.execute_module_command(
-            CommandName.JSON_MSET, *pieces, callback=SimpleStringCallback()
+            CommandName.JSON_MSET, *command_arguments, callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -255,10 +255,10 @@ class Json(ModuleGroup[AnyStr]):
         :param value: The JSON object to merge into the Redis key.
         :return: True if the merge was successful, False otherwise.
         """
-        pieces: CommandArgList = [key, path, json.dumps(value)]
+        command_arguments: CommandArgList = [key, path, json.dumps(value)]
 
         return await self.execute_module_command(
-            CommandName.JSON_MERGE, *pieces, callback=SimpleStringCallback()
+            CommandName.JSON_MERGE, *command_arguments, callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -275,10 +275,10 @@ class Json(ModuleGroup[AnyStr]):
         :param path: The JSONPath to specify.
         :param value: The number value to increment.
         """
-        pieces: CommandArgList = [key, path, value]
+        command_arguments: CommandArgList = [key, path, value]
 
         return await self.execute_module_command(
-            CommandName.JSON_NUMINCRBY, *pieces, callback=JsonCallback()
+            CommandName.JSON_NUMINCRBY, *command_arguments, callback=JsonCallback()
         )
 
     @module_command(
@@ -295,10 +295,10 @@ class Json(ModuleGroup[AnyStr]):
         :param path: JSONPath to specify.
         :param value: Number value to multiply.
         """
-        pieces: CommandArgList = [key, path, value]
+        command_arguments: CommandArgList = [key, path, value]
 
         return await self.execute_module_command(
-            CommandName.JSON_NUMMULTBY, *pieces, callback=JsonCallback()
+            CommandName.JSON_NUMMULTBY, *command_arguments, callback=JsonCallback()
         )
 
     @module_command(
@@ -322,12 +322,12 @@ class Json(ModuleGroup[AnyStr]):
         :return: A list of integer replies for each path, the string's new length,
          or ``None`` if the matching JSON value is not a string.
         """
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
         if path is not None:
-            pieces.append(path)
-        pieces.append(json.dumps(value))
+            command_arguments.append(path)
+        command_arguments.append(json.dumps(value))
         return await self.execute_module_command(
-            CommandName.JSON_STRAPPEND, *pieces, callback=OneOrManyCallback[int]()
+            CommandName.JSON_STRAPPEND, *command_arguments, callback=OneOrManyCallback[int]()
         )
 
     @module_command(
@@ -349,12 +349,12 @@ class Json(ModuleGroup[AnyStr]):
 
 
         """
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
         if path is not None:
-            pieces.append(path)
+            command_arguments.append(path)
 
         return await self.execute_module_command(
-            CommandName.JSON_STRLEN, *pieces, callback=OneOrManyCallback[int]()
+            CommandName.JSON_STRLEN, *command_arguments, callback=OneOrManyCallback[int]()
         )
 
     @module_command(
@@ -379,13 +379,13 @@ class Json(ModuleGroup[AnyStr]):
          or `None` if the matching JSON value is not an array.
 
         """
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
         if path:
-            pieces.append(path)
-        pieces.extend([json.dumps(value) for value in values])
+            command_arguments.append(path)
+        command_arguments.extend([json.dumps(value) for value in values])
         return await self.execute_module_command(
             CommandName.JSON_ARRAPPEND,
-            *pieces,
+            *command_arguments,
             callback=OneOrManyCallback[int](),
         )
 
@@ -417,14 +417,14 @@ class Json(ModuleGroup[AnyStr]):
         :return: The index of the first occurrence of the value in the array,
          or a list of indices if the value is found in multiple arrays.
         """
-        pieces: CommandArgList = [key, path, json.dumps(value)]
+        command_arguments: CommandArgList = [key, path, json.dumps(value)]
         if start is not None:
-            pieces.append(start)
+            command_arguments.append(start)
         if stop is not None:
-            pieces.append(stop)
+            command_arguments.append(stop)
 
         return await self.execute_module_command(
-            CommandName.JSON_ARRINDEX, *pieces, callback=OneOrManyCallback[int]()
+            CommandName.JSON_ARRINDEX, *command_arguments, callback=OneOrManyCallback[int]()
         )
 
     @module_command(
@@ -452,11 +452,11 @@ class Json(ModuleGroup[AnyStr]):
         :returns: The length of the array after the insert operation or a list of lengths of
          the arrays after the insert operation if the path matches multiple arrays
         """
-        pieces: CommandArgList = [key, path, index]
-        pieces.extend([json.dumps(value) for value in values])
+        command_arguments: CommandArgList = [key, path, index]
+        command_arguments.extend([json.dumps(value) for value in values])
 
         return await self.execute_module_command(
-            CommandName.JSON_ARRINSERT, *pieces, callback=OneOrManyCallback[int]()
+            CommandName.JSON_ARRINSERT, *command_arguments, callback=OneOrManyCallback[int]()
         )
 
     @module_command(
@@ -478,12 +478,12 @@ class Json(ModuleGroup[AnyStr]):
          multiple matching values are arrays. Returns ``None`` if the :paramref:`key` or
          :paramref:`path` do not exist.
         """
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
         if path:
-            pieces.append(path)
+            command_arguments.append(path)
 
         return await self.execute_module_command(
-            CommandName.JSON_ARRLEN, *pieces, callback=OneOrManyCallback[int]()
+            CommandName.JSON_ARRLEN, *command_arguments, callback=OneOrManyCallback[int]()
         )
 
     @module_command(
@@ -504,14 +504,14 @@ class Json(ModuleGroup[AnyStr]):
          round to their respective array ends.
         :return: The popped value, or ``None`` if the matching JSON value is not an array.
         """
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
         if path:
-            pieces.append(path)
+            command_arguments.append(path)
         if index is not None:
-            pieces.append(index)
+            command_arguments.append(index)
 
         return await self.execute_module_command(
-            CommandName.JSON_ARRPOP, *pieces, callback=JsonCallback()
+            CommandName.JSON_ARRPOP, *command_arguments, callback=JsonCallback()
         )
 
     @module_command(
@@ -534,10 +534,10 @@ class Json(ModuleGroup[AnyStr]):
          including the last element. Negative values are interpreted as starting from the end.
         :return: The number of elements removed or a list if multiple matching values are arrays.
         """
-        pieces: CommandArgList = [key, path, start, stop]
+        command_arguments: CommandArgList = [key, path, start, stop]
 
         return await self.execute_module_command(
-            CommandName.JSON_ARRTRIM, *pieces, callback=OneOrManyCallback[int]()
+            CommandName.JSON_ARRTRIM, *command_arguments, callback=OneOrManyCallback[int]()
         )
 
     @module_command(
@@ -557,12 +557,12 @@ class Json(ModuleGroup[AnyStr]):
          match the :paramref:`path`, or `None` if the matching value is not an object.
 
         """
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
         if path:
-            pieces.append(path)
+            command_arguments.append(path)
 
         return await self.execute_module_command(
-            CommandName.JSON_OBJKEYS, *pieces, callback=NoopCallback[ResponseType]()
+            CommandName.JSON_OBJKEYS, *command_arguments, callback=NoopCallback[ResponseType]()
         )
 
     @module_command(
@@ -581,12 +581,12 @@ class Json(ModuleGroup[AnyStr]):
          replies for each path specified as the number of keys in the object or ``None``,
          if the matching JSON value is not an object.
         """
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
         if path:
-            pieces.append(path)
+            command_arguments.append(path)
 
         return await self.execute_module_command(
-            CommandName.JSON_OBJLEN, *pieces, callback=OneOrManyCallback[int]()
+            CommandName.JSON_OBJLEN, *command_arguments, callback=OneOrManyCallback[int]()
         )
 
     @module_command(
@@ -606,12 +606,12 @@ class Json(ModuleGroup[AnyStr]):
         :param key: The key to parse.
         :param path: The JSONPath to specify.
         """
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
         if path is not None:
-            pieces.append(path)
+            command_arguments.append(path)
 
         return await self.execute_module_command(
-            CommandName.JSON_TYPE, *pieces, callback=OneOrManyCallback[AnyStr]()
+            CommandName.JSON_TYPE, *command_arguments, callback=OneOrManyCallback[AnyStr]()
         )
 
     @module_command(
@@ -629,12 +629,12 @@ class Json(ModuleGroup[AnyStr]):
         :param key: The key to parse.
         :param path: The JSONPath to specify.
         """
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
         if path:
-            pieces.append(path)
+            command_arguments.append(path)
 
         return await self.execute_module_command(
-            CommandName.JSON_RESP, *pieces, callback=NoopCallback[ResponseType]()
+            CommandName.JSON_RESP, *command_arguments, callback=NoopCallback[ResponseType]()
         )
 
     @module_command(
@@ -650,10 +650,10 @@ class Json(ModuleGroup[AnyStr]):
         """
         Reports the size in bytes of a key
         """
-        pieces: CommandArgList = [key]
+        command_arguments: CommandArgList = [key]
         if path:
-            pieces.append(path)
+            command_arguments.append(path)
 
         return await self.execute_module_command(
-            CommandName.JSON_DEBUG_MEMORY, *pieces, callback=OneOrManyCallback[int]()
+            CommandName.JSON_DEBUG_MEMORY, *command_arguments, callback=OneOrManyCallback[int]()
         )

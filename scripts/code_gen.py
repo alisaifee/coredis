@@ -1426,7 +1426,7 @@ def generate_compatibility_section(
          \"\"\"
          {% if "execute_command" not in inspect.getclosurevars(implementation).unbound -%}
          {% if len(method["arg_mapping"]) > 0 -%}
-         pieces: CommandArgList = []
+         command_arguments: CommandArgList = []
          {% for name, arg  in method["arg_mapping"].items() -%}
 
          {% if len(arg[1]) > 0 -%}
@@ -1434,16 +1434,16 @@ def generate_compatibility_section(
          {%- if not arg[0].get("optional") %}
          {%- if arg[0].get("multiple") %}
          {%- if arg[0].get("token") %}
-         pieces.extend(*{{param.name}})
+         command_arguments.extend(*{{param.name}})
          {%- else %}
-         pieces.extend(*{{param.name}})
+         command_arguments.extend(*{{param.name}})
          {%- endif %}
          {%- else %}
          {%- if arg[0].get("token") %}
-         pieces.append("{{arg[0].get("token")}}")
-         pieces.append({{param.name}})
+         command_arguments.append("{{arg[0].get("token")}}")
+         command_arguments.append({{param.name}})
          {%- else %}
-         pieces.append({{param.name}})
+         command_arguments.append({{param.name}})
          {%- endif %}
          {%- endif %}
          {%- else %}
@@ -1452,23 +1452,23 @@ def generate_compatibility_section(
          if {{param.name}}:
          {%- if arg[0].get("multiple_token") %}
              for item in {{param.name}}:
-                 pieces.append("{{arg[0].get("token")}}")
-                 pieces.append(item)
+                 command_arguments.append("{{arg[0].get("token")}}")
+                 command_arguments.append(item)
          {%- else %}
-             pieces.append("{{arg[0].get("token")}}")
-             pieces.extend({{param.name}})
+             command_arguments.append("{{arg[0].get("token")}}")
+             command_arguments.extend({{param.name}})
          {%- endif %}
          {%- else %}
 
          if {{param.name}}{% if arg[0].get("type") != "pure-token" %} is not None{%endif%}:
          {%- if arg[0].get("token") and arg[0].get("type") != "pure-token" %}
-             pieces.append("{{arg[0].get("token")}}")
-             pieces.extend({{param.name}})
+             command_arguments.append("{{arg[0].get("token")}}")
+             command_arguments.extend({{param.name}})
          {%- else %}
              {%- if arg[0].get("type") == "oneof" %}
-             pieces.append({{param.name}})
+             command_arguments.append({{param.name}})
              {%- else %}
-             pieces.append(PureToken.{{arg[0].get("token")}})
+             command_arguments.append(PureToken.{{arg[0].get("token")}})
              {% endif %}
          {%- endif %}
          {%- endif %}
@@ -1477,7 +1477,7 @@ def generate_compatibility_section(
          {%- endif %}
          {%- endfor %}
 
-         return await self.execute_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}, *pieces)
+         return await self.execute_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}, *command_arguments)
          {% else -%}
 
          return await self.execute_command(CommandName.{{sanitized(method["command"]["name"]).upper()}})
@@ -1537,7 +1537,7 @@ def generate_compatibility_section(
          {% endif %}
          \"\"\"
          {% if len(method["arg_mapping"]) > 0 -%}
-         pieces = []
+         command_arguments = []
          {%- for name, arg  in method["arg_mapping"].items() %}
          # Handle {{name}}
          {% if len(arg[1]) > 0 -%}
@@ -1545,30 +1545,30 @@ def generate_compatibility_section(
          {% if not arg[0].get("optional") -%}
          {% if arg[0].get("multiple") -%}
          {% if arg[0].get("token") -%}
-         pieces.extend(*{{param.name}})
+         command_arguments.extend(*{{param.name}})
          {% else -%}
-         pieces.extend(*{{param.name}})
+         command_arguments.extend(*{{param.name}})
          {% endif -%}
          {% else -%}
          {%- if arg[0].get("token") %}
-         pieces.append("{{arg[0].get("token")}}")
-         pieces.append({{param.name}})
+         command_arguments.append("{{arg[0].get("token")}}")
+         command_arguments.append({{param.name}})
          {% else -%}
-         pieces.append({{param.name}})
+         command_arguments.append({{param.name}})
          {% endif -%}
          {% endif -%}
          {% else -%}
          {% if arg[0].get("multiple") %}
 
          if {{arg[1][0].name}}:
-            pieces.extend({{param.name}})
+            command_arguments.extend({{param.name}})
          {% else %}
 
          if {{param.name}}{% if arg[0].get("type") != "pure-token" %} is not None{%endif%}:
          {%- if arg[0].get("token")  and arg[0].get("type") == "oneof" %}
-            pieces.append({{param.name}}.value)
+            command_arguments.append({{param.name}}.value)
          {%- else %}
-            pieces.extend(["{{arg[0].get("token")}}", {{param.name}}])
+            command_arguments.extend(["{{arg[0].get("token")}}", {{param.name}}])
          {% endif -%}
          {% endif -%}
          {% endif %}
@@ -1576,7 +1576,7 @@ def generate_compatibility_section(
          {% endif -%}
          {% endfor -%}
 
-         return await self.execute_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}, *pieces)
+         return await self.execute_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}, *command_arguments)
          {% else -%}
 
         return await self.execute_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}")
@@ -2181,7 +2181,7 @@ def implementation(ctx, command, group, module, expr, debug=False):
         {%- endfor %}
         {% endif %}
         \"\"\"
-        pieces: CommandArgList = []
+        command_arguments: CommandArgList = []
         {% for name, arg  in method["arg_mapping"].items() -%}
 
         {% if len(arg[1]) > 0 -%}
@@ -2189,16 +2189,16 @@ def implementation(ctx, command, group, module, expr, debug=False):
         {%- if not arg[0].get("optional") %}
         {%- if arg[0].get("multiple") %}
         {%- if arg[0].get("token") %}
-        pieces.extend(*{{param.name}})
+        command_arguments.extend(*{{param.name}})
         {%- else %}
-        pieces.extend(*{{param.name}})
+        command_arguments.extend(*{{param.name}})
         {%- endif %}
         {%- else %}
         {%- if arg[0].get("token") %}
-        pieces.append("{{arg[0].get("token")}}")
-        pieces.append({{param.name}})
+        command_arguments.append("{{arg[0].get("token")}}")
+        command_arguments.append({{param.name}})
         {%- else %}
-        pieces.append({{param.name}})
+        command_arguments.append({{param.name}})
         {%- endif %}
         {%- endif %}
         {%- else %}
@@ -2207,23 +2207,23 @@ def implementation(ctx, command, group, module, expr, debug=False):
         if {{param.name}}:
         {%- if arg[0].get("multiple_token") %}
             for item in {{param.name}}:
-                pieces.append("{{arg[0].get("token")}}")
-                pieces.append(item)
+                command_arguments.append("{{arg[0].get("token")}}")
+                command_arguments.append(item)
         {%- else %}
-            pieces.append("{{arg[0].get("token")}}")
-            pieces.extend({{param.name}})
+            command_arguments.append("{{arg[0].get("token")}}")
+            command_arguments.extend({{param.name}})
         {%- endif %}
         {%- else %}
 
         if {{param.name}}{% if arg[0].get("type") != "pure-token" %} is not None{%endif%}:
         {%- if arg[0].get("token") and arg[0].get("type") != "pure-token" %}
-            pieces.append("{{arg[0].get("token")}}")
-            pieces.extend({{param.name}})
+            command_arguments.append("{{arg[0].get("token")}}")
+            command_arguments.extend({{param.name}})
         {%- else %}
             {%- if arg[0].get("type") == "oneof" %}
-            pieces.append({{param.name}})
+            command_arguments.append({{param.name}})
             {%- else %}
-            pieces.append(PureToken.{{arg[0].get("token")}})
+            command_arguments.append(PureToken.{{arg[0].get("token")}})
             {% endif %}
         {%- endif %}
         {%- endif %}
@@ -2233,9 +2233,9 @@ def implementation(ctx, command, group, module, expr, debug=False):
         {%- endfor %}
 
         {% if module %}
-        return await self.execute_module_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}, *pieces)
+        return await self.execute_module_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}, *command_arguments)
         {% else %}
-        return await self.execute_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}, *pieces)
+        return await self.execute_command(CommandName.{{sanitized(method["command"]["name"]).upper()}}, *command_arguments)
         {% endif %}
 """
     env = Environment()
