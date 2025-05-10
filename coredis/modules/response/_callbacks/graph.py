@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import enum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from coredis._utils import b, nativestr
 from coredis.modules.response.types import (
@@ -14,13 +14,13 @@ from coredis.modules.response.types import (
 )
 from coredis.response._callbacks import ResponseCallback
 from coredis.typing import (
+    Any,
     AnyStr,
     Generic,
     Literal,
     ResponsePrimitive,
     ResponseType,
     StringT,
-    ValueT,
 )
 
 if TYPE_CHECKING:
@@ -72,7 +72,7 @@ class QueryCallback(
         self.labels = {}
 
     async def pre_process(
-        self, client: Client[Any], response: ResponseType, **options: ValueT | None
+        self, client: Client[Any], response: ResponseType, **options: Any
     ) -> None:
         if not len(response) == 3:
             return
@@ -140,9 +140,7 @@ class QueryCallback(
             )
         return cache[f"{self.graph}:{type}"]
 
-    def transform(
-        self, response: ResponseType, **options: ValueT | None
-    ) -> GraphQueryResult[AnyStr]:
+    def transform(self, response: ResponseType, **options: Any) -> GraphQueryResult[AnyStr]:
         result_set = []
         headers = []
         if len(response) == 3:
@@ -210,7 +208,7 @@ class GraphSlowLogCallback(
     ResponseCallback[ResponseType, ResponseType, tuple[GraphSlowLogInfo, ...] | bool]
 ):
     def transform(
-        self, response: ResponseType, **kwargs: ValueT | None
+        self, response: ResponseType, **options: Any
     ) -> tuple[GraphSlowLogInfo, ...] | bool:
         return tuple(GraphSlowLogInfo(int(k[0]), k[1], k[2], float(k[3])) for k in response)
 
@@ -223,7 +221,7 @@ class ConfigGetCallback(
     ]
 ):
     def transform(
-        self, response: ResponseType, **options: ValueT | None
+        self, response: ResponseType, **options: Any
     ) -> ResponsePrimitive | dict[AnyStr, ResponsePrimitive]:
         if isinstance(response, list):
             if isinstance(response[0], list):

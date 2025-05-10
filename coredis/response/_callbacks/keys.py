@@ -5,11 +5,11 @@ from datetime import datetime
 from coredis.exceptions import DataError, NoKeyError, RedisError
 from coredis.response._callbacks import DateTimeCallback, ResponseCallback
 from coredis.typing import (
+    Any,
     AnyStr,
     ResponseType,
     StringT,
     TypeGuard,
-    ValueT,
 )
 
 
@@ -20,9 +20,7 @@ class SortCallback(
         int | tuple[AnyStr, ...],
     ]
 ):
-    def transform(
-        self, response: int | list[AnyStr], **options: ValueT | None
-    ) -> int | tuple[AnyStr, ...]:
+    def transform(self, response: int | list[AnyStr], **options: Any) -> int | tuple[AnyStr, ...]:
         if isinstance(response, list):
             return tuple(response)
         return response
@@ -35,7 +33,7 @@ class ScanCallback(
         return isinstance(response[0], (str, bytes)) and isinstance(response[1], list)
 
     def transform(
-        self, response: list[ResponseType], **options: ValueT | None
+        self, response: list[ResponseType], **options: Any
     ) -> tuple[int, tuple[AnyStr, ...]]:
         assert self.guard(response)
         cursor, r = response
@@ -43,7 +41,7 @@ class ScanCallback(
 
 
 class ExpiryCallback(DateTimeCallback):
-    def transform(self, response: int, **options: ValueT | None) -> datetime:
+    def transform(self, response: int, **options: Any) -> datetime:
         if response > 0:
             return super().transform(response, **options)
         else:

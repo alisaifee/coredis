@@ -7,6 +7,7 @@ from coredis.response._callbacks import ResponseCallback
 from coredis.response._utils import flat_pairs_to_dict
 from coredis.response.types import LibraryDefinition
 from coredis.typing import (
+    Any,
     AnyStr,
     Mapping,
     ResponsePrimitive,
@@ -19,7 +20,7 @@ class FunctionListCallback(
     ResponseCallback[list[ResponseType], list[ResponseType], Mapping[AnyStr, LibraryDefinition]]
 ):
     def transform(
-        self, response: list[ResponseType], **options: ValueT | None
+        self, response: list[ResponseType], **options: Any
     ) -> Mapping[AnyStr, LibraryDefinition]:
         libraries = [
             EncodingInsensitiveDict(flat_pairs_to_dict(cast(list[ValueT], library)))
@@ -62,7 +63,7 @@ class FunctionStatsCallback(
     def transform(
         self,
         response: list[ResponseType],
-        **options: ValueT | None,
+        **options: Any,
     ) -> dict[AnyStr, AnyStr | dict[AnyStr, dict[AnyStr, ResponsePrimitive]] | None]:
         transformed = flat_pairs_to_dict(response)
         key = cast(AnyStr, b"engines" if b"engines" in transformed else "engines")
@@ -82,6 +83,6 @@ class FunctionStatsCallback(
             AnyStr,
             AnyStr | dict[AnyStr, dict[AnyStr, ResponsePrimitive]] | None,
         ],
-        **options: ValueT | None,
+        **options: Any,
     ) -> dict[AnyStr, AnyStr | dict[AnyStr, dict[AnyStr, ResponsePrimitive]] | None]:
         return response

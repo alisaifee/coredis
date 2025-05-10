@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import datetime
-from typing import Any
 
 from coredis._utils import EncodingInsensitiveDict, nativestr
 from coredis.response._callbacks import ResponseCallback
 from coredis.response._utils import flat_pairs_to_dict
 from coredis.response.types import ClientInfo, RoleInfo, SlowLogInfo
 from coredis.typing import (
+    Any,
     AnyStr,
     ClassVar,
     ResponsePrimitive,
@@ -18,16 +18,14 @@ from coredis.typing import (
 
 
 class TimeCallback(ResponseCallback[list[AnyStr], list[AnyStr], datetime.datetime]):
-    def transform(self, response: list[AnyStr], **options: ValueT | None) -> datetime.datetime:
+    def transform(self, response: list[AnyStr], **options: Any) -> datetime.datetime:
         return datetime.datetime.fromtimestamp(int(response[0])) + datetime.timedelta(
             microseconds=int(response[1]) / 1000.0
         )
 
 
 class SlowlogCallback(ResponseCallback[ResponseType, ResponseType, tuple[SlowLogInfo, ...]]):
-    def transform(
-        self, response: ResponseType, **options: ValueT | None
-    ) -> tuple[SlowLogInfo, ...]:
+    def transform(self, response: ResponseType, **options: Any) -> tuple[SlowLogInfo, ...]:
         return tuple(
             SlowLogInfo(
                 id=item[0],
@@ -61,7 +59,7 @@ class ClientInfoCallback(ResponseCallback[ResponseType, ResponseType, ClientInfo
         "redir",
     }
 
-    def transform(self, response: ResponseType, **options: ValueT | None) -> ClientInfo:
+    def transform(self, response: ResponseType, **options: Any) -> ClientInfo:
         decoded_response = nativestr(response)
         pairs = [pair.split("=", 1) for pair in decoded_response.strip().split(" ")]
 
@@ -75,14 +73,14 @@ class ClientInfoCallback(ResponseCallback[ResponseType, ResponseType, ClientInfo
 
 
 class ClientListCallback(ResponseCallback[ResponseType, ResponseType, tuple[ClientInfo, ...]]):
-    def transform(self, response: ResponseType, **options: ValueT | None) -> tuple[ClientInfo, ...]:
+    def transform(self, response: ResponseType, **options: Any) -> tuple[ClientInfo, ...]:
         return tuple(ClientInfoCallback()(c) for c in response.splitlines())
 
 
 class DebugCallback(ResponseCallback[ResponseType, ResponseType, dict[str, str | int]]):
     INT_FIELDS: ClassVar = {"refcount", "serializedlength", "lru", "lru_seconds_idle"}
 
-    def transform(self, response: ResponseType, **options: ValueT | None) -> dict[str, str | int]:
+    def transform(self, response: ResponseType, **options: Any) -> dict[str, str | int]:
         # The 'type' of the object is the first item in the response, but isn't
         # prefixed with a name
 
@@ -108,7 +106,7 @@ class InfoCallback(
         dict[str, ResponseType],
     ]
 ):
-    def transform(self, response: StringT, **options: ValueT | None) -> dict[str, ResponseType]:
+    def transform(self, response: StringT, **options: Any) -> dict[str, ResponseType]:
         """Parses the result of Redis's INFO command into a Python dict"""
 
         info: dict[str, Any] = {}
@@ -164,7 +162,7 @@ class InfoCallback(
 
 
 class RoleCallback(ResponseCallback[ResponseType, ResponseType, RoleInfo]):
-    def transform(self, response: ResponseType, **options: ValueT | None) -> RoleInfo:
+    def transform(self, response: ResponseType, **options: Any) -> RoleInfo:
         role = nativestr(response[0])
 
         def _parse_master(response: Any) -> Any:
@@ -201,7 +199,7 @@ class LatencyHistogramCallback(
     ResponseCallback[ResponseType, ResponseType, dict[AnyStr, dict[AnyStr, ValueT]]]
 ):
     def transform(
-        self, response: ResponseType, **options: ValueT | None
+        self, response: ResponseType, **options: Any
     ) -> dict[AnyStr, dict[AnyStr, ValueT]]:
         histogram = flat_pairs_to_dict(response)
         for key, value in histogram.items():
@@ -214,6 +212,6 @@ class LatencyCallback(
     ResponseCallback[ResponseType, ResponseType, dict[AnyStr, tuple[int, int, int]]]
 ):
     def transform(
-        self, response: ResponseType, **options: ValueT | None
+        self, response: ResponseType, **options: Any
     ) -> dict[AnyStr, tuple[int, int, int]]:
         return {k[0]: (k[1], k[2], k[3]) for k in response}

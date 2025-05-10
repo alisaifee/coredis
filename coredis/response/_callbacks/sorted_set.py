@@ -5,11 +5,11 @@ from typing import SupportsFloat, cast
 from coredis.response._callbacks import ResponseCallback
 from coredis.response.types import ScoredMember, ScoredMembers
 from coredis.typing import (
+    Any,
     AnyStr,
     Generic,
     ResponsePrimitive,
     ResponseType,
-    ValueT,
 )
 
 
@@ -23,7 +23,7 @@ class ZRankCallback(
     def transform(
         self,
         response: int | list[ResponsePrimitive] | None,
-        **options: ValueT | None,
+        **options: Any,
     ) -> int | tuple[int, float] | None:
         if options.get("withscore"):
             return (response[0], float(response[1])) if response else None
@@ -33,7 +33,7 @@ class ZRankCallback(
     def transform_3(
         self,
         response: int | list[ResponsePrimitive] | None,
-        **options: ValueT | None,
+        **options: Any,
     ) -> int | tuple[int, float] | None:
         if options.get("withscore"):
             return (response[0], response[1]) if response else None
@@ -51,7 +51,7 @@ class ZMembersOrScoredMembers(
     def transform(
         self,
         response: list[AnyStr | list[ResponsePrimitive]],
-        **options: ValueT | None,
+        **options: Any,
     ) -> tuple[AnyStr | ScoredMember, ...]:
         if not response:
             return ()
@@ -64,7 +64,7 @@ class ZMembersOrScoredMembers(
     def transform_3(
         self,
         response: list[AnyStr | list[ResponsePrimitive]],
-        **options: ValueT | None,
+        **options: Any,
     ) -> tuple[AnyStr | ScoredMember, ...]:
         if options.get("withscores"):
             return tuple(ScoredMember(*v) for v in cast(list[tuple[AnyStr, float]], response))
@@ -81,7 +81,7 @@ class ZSetScorePairCallback(
     Generic[AnyStr],
 ):
     def transform(
-        self, response: list[ResponsePrimitive] | None, **options: ValueT | None
+        self, response: list[ResponsePrimitive] | None, **options: Any
     ) -> ScoredMember | ScoredMembers | None:
         if not response:
             return None
@@ -95,7 +95,7 @@ class ZSetScorePairCallback(
     def transform_3(
         self,
         response: list[ResponsePrimitive | list[ResponsePrimitive]] | None,
-        **options: ValueT | None,
+        **options: Any,
     ) -> ScoredMember | ScoredMembers | None:
         if not response:
             return None
@@ -115,7 +115,7 @@ class ZMPopCallback(
     Generic[AnyStr],
 ):
     def transform(
-        self, response: list[ResponseType] | None, **options: ValueT | None
+        self, response: list[ResponseType] | None, **options: Any
     ) -> tuple[AnyStr, ScoredMembers] | None:
         r = cast(tuple[AnyStr, list[tuple[AnyStr, int]]], response)
         if r:
@@ -128,7 +128,7 @@ class ZMScoreCallback(
     ResponseCallback[list[ResponsePrimitive], list[ResponsePrimitive], tuple[float | None, ...]]
 ):
     def transform(
-        self, response: list[ResponsePrimitive], **options: ValueT | None
+        self, response: list[ResponsePrimitive], **options: Any
     ) -> tuple[float | None, ...]:
         return tuple(score if score is None else float(score) for score in response)
 
@@ -137,9 +137,7 @@ class ZScanCallback(
     ResponseCallback[list[ResponseType], list[ResponseType], tuple[int, ScoredMembers]],
     Generic[AnyStr],
 ):
-    def transform(
-        self, response: list[ResponseType], **options: ValueT | None
-    ) -> tuple[int, ScoredMembers]:
+    def transform(self, response: list[ResponseType], **options: Any) -> tuple[int, ScoredMembers]:
         cursor, r = cast(tuple[int, list[AnyStr]], response)
         it = iter(r)
         return int(cursor), tuple(
@@ -157,7 +155,7 @@ class ZRandMemberCallback(
     def transform(
         self,
         response: AnyStr | list[ResponsePrimitive] | None,
-        **options: ValueT | None,
+        **options: Any,
     ) -> AnyStr | tuple[AnyStr, ...] | ScoredMembers | None:
         if not (response and options.get("withscores")):
             return tuple(response) if isinstance(response, list) else response
@@ -168,7 +166,7 @@ class ZRandMemberCallback(
     def transform_3(
         self,
         response: AnyStr | list[list[ResponsePrimitive]] | list[ResponsePrimitive] | None,
-        **options: ValueT | None,
+        **options: Any,
     ) -> AnyStr | tuple[AnyStr, ...] | ScoredMembers | None:
         if not (response and options.get("withscores")):
             return tuple(response) if isinstance(response, list) else response
@@ -184,7 +182,7 @@ class BZPopCallback(
     ]
 ):
     def transform(
-        self, response: list[ResponsePrimitive] | None, **options: ValueT | None
+        self, response: list[ResponsePrimitive] | None, **options: Any
     ) -> tuple[AnyStr, AnyStr, float] | None:
         if response:
             return response[0], response[1], float(response[2])
@@ -192,10 +190,10 @@ class BZPopCallback(
 
 
 class ZAddCallback(ResponseCallback[ResponsePrimitive, int | float, int | float]):
-    def transform(self, response: ResponsePrimitive, **options: ValueT | None) -> int | float:
+    def transform(self, response: ResponsePrimitive, **options: Any) -> int | float:
         if options.get("condition"):
             return float(response)
         return int(response)
 
-    def transform_3(self, response: int | float, **options: ValueT | None) -> int | float:
+    def transform_3(self, response: int | float, **options: Any) -> int | float:
         return response

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from coredis.modules.response.types import AutocompleteSuggestion
 from coredis.response._callbacks import ResponseCallback
-from coredis.typing import AnyStr, ResponseType, ValueT
+from coredis.typing import Any, AnyStr, ResponseType
 
 
 class AutocompleteCallback(
@@ -13,7 +13,7 @@ class AutocompleteCallback(
     ]
 ):
     def transform(
-        self, response: list[ResponseType], **options: ValueT | None
+        self, response: list[ResponseType], **options: Any
     ) -> tuple[AutocompleteSuggestion[AnyStr], ...] | tuple[()]:
         if not response:
             return ()

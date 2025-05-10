@@ -6,7 +6,7 @@ from coredis._utils import nativestr
 from coredis.response._callbacks import ResponseCallback
 from coredis.response._utils import flat_pairs_to_dict
 from coredis.response.types import VectorData
-from coredis.typing import AnyStr, ResponsePrimitive, ValueT
+from coredis.typing import Any, AnyStr, ResponsePrimitive
 
 
 class VSimCallback(
@@ -19,7 +19,7 @@ class VSimCallback(
     def transform(
         self,
         response: list[AnyStr | None],
-        **options: ValueT | None,
+        **options: Any,
     ) -> tuple[AnyStr, ...] | dict[AnyStr, float]:
         if options.get("withscores"):
             it = iter(cast(list[AnyStr], response))
@@ -28,7 +28,7 @@ class VSimCallback(
             return tuple(response)
 
     def transform_3(
-        self, response: list[AnyStr] | dict[AnyStr, float], **options: ValueT | None
+        self, response: list[AnyStr] | dict[AnyStr, float], **options: Any
     ) -> tuple[AnyStr, ...] | dict[AnyStr, float]:
         if options.get("withscores"):
             return response
@@ -46,7 +46,7 @@ class VLinksCallback(
     def transform(
         self,
         response: list[list[ResponsePrimitive]] | None,
-        **options: ValueT | None,
+        **options: Any,
     ) -> tuple[tuple[AnyStr, ...] | dict[AnyStr, float], ...] | None:
         if response:
             if options.get("withscores"):
@@ -60,7 +60,7 @@ class VLinksCallback(
     def transform_3(
         self,
         response: list[list[ResponsePrimitive] | dict[AnyStr, float]] | None,
-        **options: ValueT | None,
+        **options: Any,
     ) -> tuple[tuple[AnyStr, ...] | dict[AnyStr, float], ...] | None:
         if response:
             if options.get("withscores"):
@@ -77,7 +77,7 @@ class VEmbCallback(
     ]
 ):
     def transform(
-        self, response: list[AnyStr] | list[ResponsePrimitive] | None, **options: ValueT | None
+        self, response: list[AnyStr] | list[ResponsePrimitive] | None, **options: Any
     ) -> tuple[float, ...] | VectorData | None:
         if response:
             if options.get("raw"):
@@ -91,7 +91,7 @@ class VEmbCallback(
                 return tuple(map(float, response))
 
     def transform_3(
-        self, response: list[float] | list[ResponsePrimitive] | None, **options: ValueT | None
+        self, response: list[float] | list[ResponsePrimitive] | None, **options: Any
     ) -> tuple[float, ...] | VectorData | None:
         if response:
             if options.get("raw"):
@@ -113,11 +113,11 @@ class VInfoCallback(
     ]
 ):
     def transform(
-        self, response: list[ResponsePrimitive] | None, **options: ValueT | None
+        self, response: list[ResponsePrimitive] | None, **options: Any
     ) -> dict[AnyStr, AnyStr | int] | None:
         return flat_pairs_to_dict(response) if response else None
 
     def transform_3(
-        self, response: dict[AnyStr, AnyStr | int] | None, **options: ValueT | None
+        self, response: dict[AnyStr, AnyStr | int] | None, **options: Any
     ) -> dict[AnyStr, AnyStr | int] | None:
         return response

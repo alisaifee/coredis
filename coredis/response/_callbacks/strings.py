@@ -4,15 +4,15 @@ from coredis._utils import EncodingInsensitiveDict
 from coredis.response._callbacks import ResponseCallback, SimpleStringCallback
 from coredis.response.types import LCSMatch, LCSResult
 from coredis.typing import (
+    Any,
     AnyStr,
     ResponsePrimitive,
     ResponseType,
-    ValueT,
 )
 
 
 class StringSetCallback(ResponseCallback[AnyStr | None, AnyStr | None, AnyStr | bool | None]):
-    def transform(self, response: AnyStr | None, **options: ValueT | None) -> AnyStr | bool | None:
+    def transform(self, response: AnyStr | None, **options: Any) -> AnyStr | bool | None:
         if options.get("get"):
             return response
         else:
@@ -29,7 +29,7 @@ class LCSCallback(
     def transform(
         self,
         response: (list[ResponseType] | dict[ResponsePrimitive, ResponseType]),
-        **options: ValueT | None,
+        **options: Any,
     ) -> LCSResult:
         assert (
             isinstance(response, list)
@@ -52,7 +52,7 @@ class LCSCallback(
     def transform_3(
         self,
         response: dict[ResponsePrimitive, ResponseType],
-        **options: ValueT | None,
+        **options: Any,
     ) -> LCSResult:
         proxy = EncodingInsensitiveDict(response)
 

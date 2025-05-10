@@ -13,10 +13,10 @@ from coredis.modules.response.types import (
 from coredis.response._callbacks import ResponseCallback
 from coredis.response._utils import flat_pairs_to_dict
 from coredis.typing import (
+    Any,
     AnyStr,
     ResponsePrimitive,
     ResponseType,
-    ValueT,
 )
 
 
@@ -28,7 +28,7 @@ class SearchConfigCallback(
     ]
 ):
     def transform(
-        self, response: list[list[ResponsePrimitive]], **options: ValueT | None
+        self, response: list[list[ResponsePrimitive]], **options: Any
     ) -> dict[AnyStr, ResponsePrimitive]:
         command_arguments = []
         for item in response:
@@ -42,7 +42,7 @@ class SearchConfigCallback(
     def transform_3(
         self,
         response: dict[AnyStr, ResponseType] | list[list[ResponsePrimitive]],
-        **options: ValueT | None,
+        **options: Any,
     ) -> dict[AnyStr, ResponsePrimitive]:
         if isinstance(response, list):
             return self.transform(response, **options)
@@ -63,9 +63,7 @@ class SearchResultCallback(
         SearchResult[AnyStr],
     ]
 ):
-    def transform(
-        self, response: list[ResponseType], **options: ValueT | None
-    ) -> SearchResult[AnyStr]:
+    def transform(self, response: list[ResponseType], **options: Any) -> SearchResult[AnyStr]:
         if options.get("nocontent"):
             return SearchResult[AnyStr](
                 response[0],
@@ -110,7 +108,7 @@ class SearchResultCallback(
     def transform_3(
         self,
         response: list[ResponseType] | dict[AnyStr, ResponseType],
-        **options: ValueT | None,
+        **options: Any,
     ) -> SearchResult[AnyStr]:
         results = []
         if isinstance(response, list):
@@ -148,9 +146,7 @@ class AggregationResultCallback(
         SearchAggregationResult[AnyStr],
     ]
 ):
-    def transform(
-        self, response: list[ResponseType], **options: ValueT | None
-    ) -> SearchAggregationResult:
+    def transform(self, response: list[ResponseType], **options: Any) -> SearchAggregationResult:
         return SearchAggregationResult[AnyStr](
             [
                 flat_pairs_to_dict(k, partial(self.try_json, options))
@@ -162,7 +158,7 @@ class AggregationResultCallback(
     def transform_3(
         self,
         response: dict[AnyStr, ResponseType] | list[ResponseType],
-        **options: ValueT | None,
+        **options: Any,
     ) -> SearchAggregationResult:
         if (
             options.get("with_cursor")
@@ -202,7 +198,7 @@ class SpellCheckCallback(
     ]
 ):
     def transform(
-        self, response: list[ResponseType], **options: ValueT | None
+        self, response: list[ResponseType], **options: Any
     ) -> dict[AnyStr, OrderedDict[AnyStr, float]]:
         return {
             result[1]: OrderedDict(
@@ -214,7 +210,7 @@ class SpellCheckCallback(
     def transform_3(
         self,
         response: dict[AnyStr, ResponseType] | list[ResponseType],
-        **options: ValueT | None,
+        **options: Any,
     ) -> dict[AnyStr, OrderedDict[AnyStr, float]]:
         # For older versions of redis search that didn't support RESP3
         if isinstance(response, list):

@@ -4,20 +4,18 @@ from typing import cast
 
 from coredis.response._callbacks import ResponseCallback
 from coredis.typing import (
+    Any,
     AnyStr,
     Iterable,
     ResponsePrimitive,
     ResponseType,
-    ValueT,
 )
 
 
 class SScanCallback(
     ResponseCallback[list[ResponseType], list[ResponseType], tuple[int, set[AnyStr]]]
 ):
-    def transform(
-        self, response: list[ResponseType], **options: ValueT | None
-    ) -> tuple[int, set[AnyStr]]:
+    def transform(self, response: list[ResponseType], **options: Any) -> tuple[int, set[AnyStr]]:
         cursor, r = response
         assert isinstance(cursor, (bytes, str)) and isinstance(r, Iterable)
         return int(cursor), set(cast(Iterable[AnyStr], r))
@@ -33,7 +31,7 @@ class ItemOrSetCallback(
     def transform(
         self,
         response: AnyStr | list[ResponsePrimitive] | set[ResponsePrimitive],
-        **options: ValueT | None,
+        **options: Any,
     ) -> AnyStr | set[AnyStr]:
         if options.get("count"):
             if isinstance(response, set):
