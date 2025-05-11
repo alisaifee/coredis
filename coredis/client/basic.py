@@ -14,7 +14,7 @@ from packaging import version
 from packaging.version import InvalidVersion, Version
 
 from coredis._utils import EncodingInsensitiveDict, nativestr
-from coredis.cache import AbstractCache, SupportsClientTracking
+from coredis.cache import AbstractCache
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandFlag, CommandName
 from coredis.commands.core import CoreCommands
@@ -961,11 +961,7 @@ class Redis(Client[AnyStr]):
             *args,
             acquire=not quick_release or self.requires_wait or self.requires_waitaof,
         )
-        if (
-            self.cache
-            and isinstance(self.cache, SupportsClientTracking)
-            and connection.tracking_client_id != self.cache.get_client_id(connection)
-        ):
+        if self.cache and connection.tracking_client_id != self.cache.get_client_id(connection):
             self.cache.reset()
             await connection.update_tracking_client(True, self.cache.get_client_id(connection))
         try:

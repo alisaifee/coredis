@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import coredis.client
-from coredis.cache import AbstractCache
+from coredis import BaseConnection
+from coredis.cache import AbstractCache, CacheStats
 from coredis.typing import ResponseType, ValueT
 from tests.conftest import targets
 
@@ -10,7 +11,7 @@ class DummyCache(AbstractCache):
     def __init__(self, dummy={}):
         self.dummy = dummy
 
-    async def initialize(self, client: coredis.client.RedisConnection) -> AbstractCache:
+    async def initialize(self, client: coredis.client.Client) -> AbstractCache:
         return self
 
     @property
@@ -28,7 +29,21 @@ class DummyCache(AbstractCache):
 
     def invalidate(self, *keys: ValueT) -> None:
         for key in keys:
-            self.dummy.pop(key)
+            self.dummy.pop(key, None)
+
+    @property
+    def stats(self) -> CacheStats:
+        return CacheStats()
+
+    @property
+    def confidence(self) -> float:
+        return 100
+
+    def feedback(self, command: bytes, key: bytes, *args: ValueT, match: bool) -> None:
+        pass
+
+    def get_client_id(self, connection: BaseConnection) -> int | None:
+        return connection.tracking_client_id
 
     def shutdown(self) -> None:
         self.reset()

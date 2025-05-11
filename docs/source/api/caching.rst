@@ -20,13 +20,5 @@ All caches accepted by :class:`~coredis.Redis` or :class:`~coredis.RedisCluster`
 must implement :class:`~coredis.cache.AbstractCache`
 
 .. autoclass:: coredis.cache.AbstractCache
-
-Additionally, caches can opt in to additional features by implementing any of the
-following protocols:
-
-.. autoclass:: coredis.cache.SupportsClientTracking
-.. autoclass:: coredis.cache.SupportsStats
-.. autoclass:: coredis.cache.SupportsSampling
-
 .. autoclass:: coredis.cache.CacheStats
 

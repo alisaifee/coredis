@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from packaging import version
 
-from coredis.cache import AbstractCache, SupportsSampling
+from coredis.cache import AbstractCache
 from coredis.commands._utils import check_version, redis_command_link
 from coredis.commands.constants import CommandFlag, CommandGroup, CommandName, NodeFlag
 from coredis.globals import COMMAND_FLAGS, READONLY_COMMANDS
@@ -117,9 +117,7 @@ class CommandCache:
                             *kwargs.items(),  # type: ignore
                         ),
                     )
-                    if isinstance(cache, SupportsSampling) and not random.random() * 100.0 < min(
-                        100.0, cache.confidence
-                    ):
+                    if not random.random() * 100.0 < min(100.0, cache.confidence):
                         actual = await func(*args, **kwargs)
                         cache.feedback(
                             self.command,

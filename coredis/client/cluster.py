@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, cast, overload
 from deprecated.sphinx import versionadded
 
 from coredis._utils import b, hash_slot
-from coredis.cache import AbstractCache, SupportsClientTracking
+from coredis.cache import AbstractCache
 from coredis.client.basic import Client, Redis
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName, NodeFlag
@@ -900,11 +900,9 @@ class RedisCluster(
                     await request
                     asking = False
 
-                if (
-                    isinstance(self.cache, AbstractCache)
-                    and isinstance(self.cache, SupportsClientTracking)
-                    and r.tracking_client_id != self.cache.get_client_id(r)
-                ):
+                if isinstance(
+                    self.cache, AbstractCache
+                ) and r.tracking_client_id != self.cache.get_client_id(r):
                     self.cache.reset()
                     await r.update_tracking_client(True, self.cache.get_client_id(r))
                 if self.cache and command not in READONLY_COMMANDS:
