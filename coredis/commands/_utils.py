@@ -79,10 +79,6 @@ async def check_version(
                 (arg, ver) for (arg, ver) in command_details.arguments.items() if arg in kwargs
             ]:
                 if minimum_version and server_version < minimum_version:
-                    if command_details.command == b"CLIENT KILL":
-                        import pdb
-
-                        pdb.set_trace()
                     raise CommandSyntaxError(
                         {argument},
                         (
