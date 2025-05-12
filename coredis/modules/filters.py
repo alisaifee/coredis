@@ -4,7 +4,6 @@ from deprecated.sphinx import versionadded
 
 from .._utils import dict_to_flat_list
 from ..commands._validators import mutually_inclusive_parameters
-from ..commands._wrappers import CacheConfig
 from ..commands.constants import CommandFlag, CommandGroup, CommandName
 from ..response._callbacks import (
     BoolCallback,
@@ -171,7 +170,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def exists(self, key: KeyT, item: ValueT) -> bool:
         """
@@ -190,7 +189,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def mexists(self, key: KeyT, items: Parameters[ValueT]) -> tuple[bool, ...]:
         """
@@ -256,7 +255,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def info(
         self,
@@ -299,7 +298,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         version_introduced="2.4.4",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def card(self, key: KeyT) -> int:
         """
@@ -467,7 +466,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def exists(self, key: KeyT, item: ValueT) -> bool:
         """
@@ -488,7 +487,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def mexists(self, key: KeyT, items: Parameters[ValueT]) -> tuple[bool, ...]:
         """
@@ -528,7 +527,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def count(self, key: KeyT, item: ValueT) -> int:
         """
@@ -684,7 +683,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def query(
         self,
@@ -738,7 +737,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def info(self, key: KeyT) -> dict[AnyStr, int]:
         """
@@ -840,7 +839,7 @@ class TopK(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def query(
         self,
@@ -889,7 +888,7 @@ class TopK(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def list(
         self, key: KeyT, withcount: bool | None = None
@@ -917,7 +916,7 @@ class TopK(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def info(self, key: KeyT) -> dict[AnyStr, int]:
         """
@@ -1048,7 +1047,7 @@ class TDigest(ModuleGroup[AnyStr]):
         version_introduced="2.4.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def min(self, key: KeyT) -> float:
         """
@@ -1067,7 +1066,7 @@ class TDigest(ModuleGroup[AnyStr]):
         version_introduced="2.4.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def max(self, key: KeyT) -> float:
         """
@@ -1086,7 +1085,7 @@ class TDigest(ModuleGroup[AnyStr]):
         version_introduced="2.4.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def quantile(
         self,
@@ -1112,7 +1111,7 @@ class TDigest(ModuleGroup[AnyStr]):
         version_introduced="2.4.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def cdf(
         self,
@@ -1139,7 +1138,7 @@ class TDigest(ModuleGroup[AnyStr]):
         version_introduced="2.4.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def trimmed_mean(
         self,
@@ -1170,7 +1169,7 @@ class TDigest(ModuleGroup[AnyStr]):
         version_introduced="2.4.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def rank(
         self,
@@ -1197,7 +1196,7 @@ class TDigest(ModuleGroup[AnyStr]):
         version_introduced="2.4.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def revrank(
         self,
@@ -1224,7 +1223,7 @@ class TDigest(ModuleGroup[AnyStr]):
         version_introduced="2.4.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def byrank(
         self,
@@ -1250,7 +1249,7 @@ class TDigest(ModuleGroup[AnyStr]):
         version_introduced="2.4.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def byrevrank(
         self,
@@ -1276,7 +1275,7 @@ class TDigest(ModuleGroup[AnyStr]):
         version_introduced="2.4.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def info(self, key: KeyT) -> dict[AnyStr, ResponsePrimitive]:
         """

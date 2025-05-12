@@ -23,7 +23,7 @@ from ..commands._validators import (
     mutually_exclusive_parameters,
     mutually_inclusive_parameters,
 )
-from ..commands._wrappers import CacheConfig, ClusterCommandConfig
+from ..commands._wrappers import ClusterCommandConfig
 from ..commands.constants import CommandFlag, CommandGroup, CommandName, NodeFlag
 from ..response._callbacks import (
     ClusterMergeSets,
@@ -493,7 +493,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         },
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def range(
         self,
@@ -598,7 +598,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         },
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def revrange(
         self,
@@ -981,7 +981,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         arguments={"latest": {"version_introduced": "1.8.0"}},
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def get(self, key: KeyT, latest: bool | None = None) -> tuple[int, float] | tuple[()]:
         """

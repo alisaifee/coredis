@@ -289,8 +289,7 @@ class TestSentinelCommand:
         await new_primary.ping()
         await new_replica.ping()
 
-        primary_spy = mocker.spy(new_primary, "execute_command")
-        replica_spy = mocker.spy(new_replica, "execute_command")
+        replica_spy = mocker.spy(coredis.BaseConnection, "create_request")
 
         assert new_primary.cache.healthy
         assert new_replica.cache.healthy
@@ -298,8 +297,7 @@ class TestSentinelCommand:
         assert await new_primary.get("fubar") == "1"
         assert await new_replica.get("fubar") == "1"
 
-        assert primary_spy.call_count == 1
-        assert replica_spy.call_count == 0
+        assert replica_spy.call_count == 1
 
     @pytest.mark.xfail
     async def test_replication(self, client):

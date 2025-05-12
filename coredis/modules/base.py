@@ -12,14 +12,12 @@ from coredis.config import Config
 from .._protocols import AbstractExecutor
 from ..commands._utils import redis_command_link
 from ..commands._wrappers import (
-    CacheConfig,
     ClusterCommandConfig,
-    CommandCache,
     CommandDetails,
 )
 from ..commands.constants import CommandFlag, CommandGroup, CommandName
 from ..exceptions import CommandSyntaxError, ModuleCommandNotSupportedError
-from ..globals import COMMAND_FLAGS, MODULE_GROUPS, MODULES, READONLY_COMMANDS
+from ..globals import CACHEABLE_COMMANDS, COMMAND_FLAGS, MODULE_GROUPS, MODULES, READONLY_COMMANDS
 from ..response._callbacks import NoopCallback
 from ..typing import (
     AnyStr,
@@ -79,7 +77,7 @@ def module_command(
     group: CommandGroup,
     flags: set[CommandFlag] | None = None,
     cluster: ClusterCommandConfig = ClusterCommandConfig(),
-    cache_config: CacheConfig | None = None,
+    cacheable: bool | None = None,
     version_introduced: str | None = None,
     version_deprecated: str | None = None,
     arguments: dict[str, dict[str, str]] | None = None,
@@ -91,7 +89,6 @@ def module_command(
         version.Version(version_deprecated) if version_deprecated else None,
         arguments,
         cluster or ClusterCommandConfig(),
-        cache_config,
         flags or set(),
         None,
     )
@@ -100,9 +97,10 @@ def module_command(
         func: Callable[P, Coroutine[Any, Any, R]],
     ) -> Callable[P, Coroutine[Any, Any, R]]:
         runtime_checkable = add_runtime_checks(func)
-        command_cache = CommandCache(command_name, cache_config)
         if flags and CommandFlag.READONLY in flags:
             READONLY_COMMANDS.add(command_name)
+        if cacheable:
+            CACHEABLE_COMMANDS.add(command_name)
         COMMAND_FLAGS[command_name] = flags or set()
 
         @functools.wraps(func)
@@ -115,8 +113,7 @@ def module_command(
             runtime_checking = not getattr(client, "noreply", None) and is_regular_client
             callable = runtime_checkable if runtime_checking else func
             await ensure_compatibility(client, module.NAME, command_details, kwargs)
-            async with command_cache(callable, *args, **kwargs) as response:
-                return response
+            return await callable(*args, **kwargs)
 
         wrapped.__doc__ = textwrap.dedent(wrapped.__doc__ or "")
         if group:
@@ -147,7 +144,7 @@ Compatibility:
                     wrapped.__doc__ += f"""
 - :paramref:`{argument}`: New in {module.FULL_NAME} version `{min_version}`
                     """
-        if cache_config:
+        if cacheable:
             wrapped.__doc__ += """
 .. hint:: Supports client side caching
 """
