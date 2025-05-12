@@ -3,7 +3,6 @@ from __future__ import annotations
 from deprecated.sphinx import versionadded
 
 from .._json import json
-from ..commands._wrappers import CacheConfig
 from ..commands.constants import CommandFlag, CommandGroup, CommandName
 from ..response._callbacks import (
     IntCallback,
@@ -67,7 +66,7 @@ class Json(ModuleGroup[AnyStr]):
         group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY},
     )
     async def get(
@@ -336,7 +335,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def strlen(self, key: KeyT, path: KeyT | None = None) -> int | list[int | None] | None:
         """
@@ -395,7 +394,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def arrindex(
         self,
@@ -465,7 +464,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def arrlen(self, key: KeyT, path: KeyT | None = None) -> int | list[int | None] | None:
         """
@@ -595,7 +594,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
     )
     async def type(
         self, key: KeyT, path: KeyT | None = None

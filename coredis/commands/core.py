@@ -21,7 +21,6 @@ from coredis.commands._validators import (
     mutually_inclusive_parameters,
 )
 from coredis.commands._wrappers import (
-    CacheConfig,
     ClusterCommandConfig,
     RedirectUsage,
     redis_command,
@@ -202,7 +201,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.GET,
         group=CommandGroup.STRING,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.FAST, CommandFlag.READONLY},
     )
     async def get(self, key: KeyT) -> AnyStr | None:
@@ -303,7 +302,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.GETRANGE,
         group=CommandGroup.STRING,
-        cache_config=CacheConfig(lambda *a, **k: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY},
     )
     async def getrange(self, key: KeyT, start: int, end: int) -> AnyStr:
@@ -686,7 +685,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.STRLEN,
         group=CommandGroup.STRING,
-        cache_config=CacheConfig(lambda *a: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def strlen(self, key: KeyT) -> int:
@@ -703,7 +702,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.STRING,
         version_deprecated="2.0.0",
         deprecation_reason="Use :meth:`getrange`",
-        cache_config=CacheConfig(lambda *a: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY},
     )
     async def substr(self, key: KeyT, start: int, end: int) -> AnyStr:
@@ -1939,7 +1938,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.HEXISTS,
         group=CommandGroup.HASH,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def hexists(self, key: KeyT, field: StringT) -> bool:
@@ -2090,7 +2089,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.HGET,
         group=CommandGroup.HASH,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def hget(self, key: KeyT, field: StringT) -> AnyStr | None:
@@ -2103,7 +2102,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.HGETALL,
         group=CommandGroup.HASH,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY},
     )
     async def hgetall(self, key: KeyT) -> dict[AnyStr, AnyStr]:
@@ -2201,7 +2200,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.HKEYS,
         group=CommandGroup.HASH,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY},
     )
     async def hkeys(self, key: KeyT) -> tuple[AnyStr, ...]:
@@ -2212,7 +2211,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.HLEN,
         group=CommandGroup.HASH,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def hlen(self, key: KeyT) -> int:
@@ -2327,7 +2326,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.HMGET,
         group=CommandGroup.HASH,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def hmget(self, key: KeyT, fields: Parameters[StringT]) -> tuple[AnyStr | None, ...]:
@@ -2374,7 +2373,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.HVALS,
         group=CommandGroup.HASH,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY},
     )
     async def hvals(self, key: KeyT) -> tuple[AnyStr, ...]:
@@ -2447,7 +2446,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.HSTRLEN,
         group=CommandGroup.HASH,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def hstrlen(self, key: KeyT, field: StringT) -> int:
@@ -3430,7 +3429,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.LINDEX,
         group=CommandGroup.LIST,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY},
     )
     async def lindex(self, key: KeyT, index: int) -> AnyStr | None:
@@ -3468,7 +3467,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.LLEN,
         group=CommandGroup.LIST,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def llen(self, key: KeyT) -> int:
@@ -3570,7 +3569,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.LPOS,
         version_introduced="6.0.6",
         group=CommandGroup.LIST,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY},
     )
     async def lpos(
@@ -3637,7 +3636,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.LRANGE,
         group=CommandGroup.LIST,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY},
     )
     async def lrange(self, key: KeyT, start: int, stop: int) -> list[AnyStr]:
@@ -3810,7 +3809,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SCARD,
         group=CommandGroup.SET,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def scard(self, key: KeyT) -> int:
@@ -3910,7 +3909,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SISMEMBER,
         group=CommandGroup.SET,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def sismember(self, key: KeyT, member: ValueT) -> bool:
@@ -3927,7 +3926,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SMEMBERS,
         group=CommandGroup.SET,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY},
     )
     async def smembers(self, key: KeyT) -> _Set[AnyStr]:
@@ -3940,7 +3939,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.SMISMEMBER,
         version_introduced="6.2.0",
         group=CommandGroup.SET,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def smismember(self, key: KeyT, members: Parameters[ValueT]) -> tuple[bool, ...]:
@@ -4423,7 +4422,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.ZLEXCOUNT,
         group=CommandGroup.SORTED_SET,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def zlexcount(self, key: KeyT, min_: ValueT, max_: ValueT) -> int:
@@ -4470,7 +4469,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ZMSCORE,
         version_introduced="6.2.0",
         group=CommandGroup.SORTED_SET,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def zmscore(self, key: KeyT, members: Parameters[ValueT]) -> tuple[float | None, ...]:
@@ -4614,7 +4613,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             "offset": {"version_introduced": "6.2.0"},
             "count": {"version_introduced": "6.2.0"},
         },
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY},
     )
     async def zrange(
@@ -4654,7 +4653,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_deprecated="6.2.0",
         deprecation_reason=" Use :meth:`zrange` with the sortby=BYLEX argument",
         group=CommandGroup.SORTED_SET,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY},
     )
     @mutually_inclusive_parameters("offset", "count")
@@ -4689,7 +4688,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_deprecated="6.2.0",
         deprecation_reason=" Use :meth:`zrange` with the sortby=BYSCORE argument",
         group=CommandGroup.SORTED_SET,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY},
     )
     @mutually_inclusive_parameters("offset", "count")
@@ -4765,7 +4764,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ZRANK,
         arguments={"withscore": {"version_introduced": "7.1.240"}},
         group=CommandGroup.SORTED_SET,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def zrank(
@@ -4846,7 +4845,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_deprecated="6.2.0",
         deprecation_reason="Use :meth:`zrange` with the rev argument",
         group=CommandGroup.SORTED_SET,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY},
     )
     async def zrevrange(
@@ -4881,7 +4880,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_deprecated="6.2.0",
         deprecation_reason="Use :meth:`zrange` with the rev and sort=BYLEX arguments",
         group=CommandGroup.SORTED_SET,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY},
     )
     @mutually_inclusive_parameters("offset", "count")
@@ -4917,7 +4916,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_deprecated="6.2.0",
         deprecation_reason="Use :meth:`zrange` with the rev and sort=BYSCORE arguments",
         group=CommandGroup.SORTED_SET,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY},
     )
     @mutually_inclusive_parameters("offset", "count")
@@ -4957,7 +4956,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ZREVRANK,
         arguments={"withscore": {"version_introduced": "7.1.240"}},
         group=CommandGroup.SORTED_SET,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def zrevrank(
@@ -5010,7 +5009,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.ZSCORE,
         group=CommandGroup.SORTED_SET,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     async def zscore(self, key: KeyT, member: ValueT) -> float | None:
@@ -8094,7 +8093,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.TYPE,
         group=CommandGroup.GENERIC,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.FAST, CommandFlag.READONLY},
     )
     async def type(self, key: KeyT) -> AnyStr | None:

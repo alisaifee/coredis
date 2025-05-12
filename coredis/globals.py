@@ -13,6 +13,9 @@ READONLY_COMMANDS: set[bytes] = set()
 #: Populated by the @redis_command wrapper
 COMMAND_FLAGS: dict[bytes, set[CommandFlag]] = defaultdict(set)
 
+#: Populated by the @redis_command wrapper
+CACHEABLE_COMMANDS: set[bytes] = set()
+
 #: Populated by ModuleGroupRegistry
 MODULE_GROUPS: set[ModuleGroupRegistry] = set()
 

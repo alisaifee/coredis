@@ -70,11 +70,11 @@ class CommonExamples:
         cache = self.cache(confidence=confidence, max_size_bytes=-1)
         cached = await cloner(client, cache=cache)
         [await client.set(f"fubar{i}", i) for i in range(100)]
-        execute_command = mocker.spy(cached, "execute_command")
+        create_request = mocker.spy(cached.connection_pool.connection_class, "create_request")
         [await cached.get(f"fubar{i}") for i in range(100)]
-        assert execute_command.call_count == 100
+        assert create_request.call_count == 100
         [await cached.get(f"fubar{i}") for i in range(100)]
-        assert execute_command.call_count < 100 + expectation
+        assert create_request.call_count < 100 + expectation
 
     async def test_feedback(self, client, cloner, mocker, _s):
         cache = self.cache(confidence=0, max_size_bytes=-1)
@@ -116,14 +116,18 @@ class CommonExamples:
     async def test_shared_cache(self, client, cloner, mocker, _s):
         cache = self.cache(max_size_bytes=-1)
         cached = await cloner(client, cache=cache)
-
         clones = [await cloner(client, cache=cache) for _ in range(5)]
-
+        [await clone.ping() for clone in clones]
         await client.set("fubar", "test")
         await cached.get("fubar")
-        spies = [mocker.spy(clone, "execute_command") for clone in clones]
+        spy = mocker.spy(clones[0].connection_pool.connection_class, "create_request")
         assert set([await clone.get("fubar") for clone in clones]) == set([_s("test")])
-        assert all(spy.call_count == 0 for spy in spies)
+        assert spy.call_count == 0, spy.call_args
+
+        await client.set("fubar", "fubar")
+        await asyncio.sleep(0.1)
+        assert set([await clone.get("fubar") for clone in clones]) == set([_s("fubar")])
+        assert spy.call_count < 5, spy.call_args
 
     async def test_stats(self, client, cloner, mocker, _s):
         cache = self.cache(confidence=0, max_size_bytes=-1)

@@ -59,17 +59,17 @@ class DummyCache(AbstractCache):
 )
 class TestBasicCache:
     async def test_cache_hit(self, client, cloner, _s):
-        cache = DummyCache({"fubar": 1})
+        cache = DummyCache({"fubar": _s("1")})
         cached = await cloner(client, cache=cache)
-        assert 1 == await cached.get("fubar")
+        assert _s("1") == await cached.get("fubar")
 
     async def test_cache_with_no_reply(self, client, cloner, _s):
-        cache = DummyCache({"fubar": 1})
+        cache = DummyCache({"fubar": _s("1")})
         cached = await cloner(client, cache=cache)
-        assert 1 == await cached.get("fubar")
+        assert _s("1") == await cached.get("fubar")
         with cached.ignore_replies():
             assert await cached.get("fubar") is None
-        assert 1 == await cached.get("fubar")
+        assert _s("1") == await cached.get("fubar")
 
     async def test_cache_miss(self, client, cloner, _s):
         cache = DummyCache({})
@@ -77,4 +77,4 @@ class TestBasicCache:
         assert not await cached.get("fubar")
         assert not await cached.get("fubar")
         await cached.set("fubar", 1)
-        assert _s(1) == await cached.get("fubar")
+        assert _s("1") == await cached.get("fubar")

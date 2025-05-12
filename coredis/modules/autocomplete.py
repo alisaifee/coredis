@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from deprecated.sphinx import versionadded
 
-from ..commands._wrappers import CacheConfig
 from ..commands.constants import CommandFlag, CommandGroup, CommandName
 from ..response._callbacks import BoolCallback, IntCallback
 from ..tokens import PrefixToken, PureToken
@@ -58,7 +57,7 @@ class Autocomplete(ModuleGroup[AnyStr]):
         module=MODULE,
         version_introduced="1.0.0",
         group=COMMAND_GROUP,
-        cache_config=CacheConfig(lambda *a, **_: a[0]),
+        cacheable=True,
         flags={CommandFlag.READONLY},
     )
     async def sugget(

@@ -5,6 +5,7 @@ import contextlib
 import contextvars
 import functools
 import inspect
+import random
 import textwrap
 from abc import ABCMeta
 from ssl import SSLContext
@@ -31,7 +32,7 @@ from coredis.exceptions import (
     TryAgainError,
     WatchError,
 )
-from coredis.globals import MODULE_GROUPS, READONLY_COMMANDS
+from coredis.globals import CACHEABLE_COMMANDS, MODULE_GROUPS, READONLY_COMMANDS
 from coredis.pool import ClusterConnectionPool
 from coredis.pool.nodemanager import ManagedNode
 from coredis.response._callbacks import AsyncPreProcessingCallback, NoopCallback
@@ -899,43 +900,71 @@ class RedisCluster(
                     )
                     await request
                     asking = False
-
-                if isinstance(
-                    self.cache, AbstractCache
-                ) and r.tracking_client_id != self.cache.get_client_id(r):
-                    self.cache.reset()
-                    await r.update_tracking_client(True, self.cache.get_client_id(r))
-                if self.cache and command not in READONLY_COMMANDS:
-                    self.cache.invalidate(*KeySpec.extract_keys(command, *args))
-                request = await r.create_request(
-                    command,
-                    *args,
-                    noreply=self.noreply,
-                    decode=kwargs.get("decode", self._decodecontext.get()),
-                    encoding=self._encodingcontext.get(),
+                keys = KeySpec.extract_keys(command, *args)
+                cacheable = (
+                    self.cache
+                    and command in CACHEABLE_COMMANDS
+                    and len(keys) == 1
+                    and not self.noreply
                 )
-                if quick_release and not (self.requires_wait or self.requires_waitaof):
-                    released = True
-                    self.connection_pool.release(r)
+                cached = None
+                use_cached = False
+                if self.cache:
+                    if r.tracking_client_id != self.cache.get_client_id(r):
+                        self.cache.reset()
+                        await r.update_tracking_client(True, self.cache.get_client_id(r))
+                    if command not in READONLY_COMMANDS:
+                        self.cache.invalidate(*KeySpec.extract_keys(command, *args))
+                    elif cacheable:
+                        try:
+                            cached = cast(
+                                R,
+                                self.cache.get(
+                                    command,
+                                    keys[0],
+                                    *args,
+                                ),
+                            )
+                            use_cached = random.random() * 100.0 < min(100.0, self.cache.confidence)
+                        except KeyError:
+                            cached = None
 
-                reply = await request
-                response = None
-                maybe_wait = [
-                    await self._ensure_wait(command, r),
-                    await self._ensure_persistence(command, r),
-                ]
-                if not self.noreply:
-                    if isinstance(callback, AsyncPreProcessingCallback):
-                        await callback.pre_process(
-                            self, reply, version=self.protocol_version, **kwargs
-                        )
-                    response = callback(
-                        reply,
-                        version=self.protocol_version,
-                        **kwargs,
+                if use_cached and cached:
+                    return cached
+                else:
+                    request = await r.create_request(
+                        command,
+                        *args,
+                        noreply=self.noreply,
+                        decode=kwargs.get("decode", self._decodecontext.get()),
+                        encoding=self._encodingcontext.get(),
                     )
-                await asyncio.gather(*maybe_wait)
-                return response  # type: ignore
+                    if quick_release and not (self.requires_wait or self.requires_waitaof):
+                        released = True
+                        self.connection_pool.release(r)
+
+                    reply = await request
+                    response = None
+                    maybe_wait = [
+                        await self._ensure_wait(command, r),
+                        await self._ensure_persistence(command, r),
+                    ]
+                    if not self.noreply:
+                        if isinstance(callback, AsyncPreProcessingCallback):
+                            await callback.pre_process(
+                                self, reply, version=self.protocol_version, **kwargs
+                            )
+                        response = callback(
+                            reply,
+                            version=self.protocol_version,
+                            **kwargs,
+                        )
+                    await asyncio.gather(*maybe_wait)
+                    if self.cache and cacheable:
+                        if cached:
+                            self.cache.feedback(command, keys[0], *args, match=cached == response)
+                        self.cache.put(command, keys[0], *args, value=cast(ResponseType, response))
+                    return response  # type: ignore
             except (RedisClusterException, BusyLoadingError, asyncio.CancelledError):
                 raise
             except MovedError as e:
