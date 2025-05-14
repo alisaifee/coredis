@@ -11,37 +11,37 @@ from coredis.response._callbacks import (
 from coredis.response._utils import flat_pairs_to_dict
 from coredis.typing import (
     AnyStr,
+    RedisValueT,
     ResponsePrimitive,
     ResponseType,
     Sequence,
-    ValueT,
 )
 
 
 class SampleCallback(
     ResponseCallback[
-        list[ValueT],
-        list[ValueT],
+        list[RedisValueT],
+        list[RedisValueT],
         tuple[int, float] | tuple[()],
     ]
 ):
     def transform(
         self,
-        response: list[ValueT],
+        response: list[RedisValueT],
     ) -> tuple[int, float] | tuple[()]:
         return (int(response[0]), float(response[1])) if response else ()
 
 
 class SamplesCallback(
     ResponseCallback[
-        list[list[ValueT]] | None,
-        list[list[ValueT]] | None,
+        list[list[RedisValueT]] | None,
+        list[list[RedisValueT]] | None,
         tuple[tuple[int, float], ...] | tuple[()],
     ],
 ):
     def transform(
         self,
-        response: list[list[ValueT]] | None,
+        response: list[list[RedisValueT]] | None,
     ) -> tuple[tuple[int, float], ...] | tuple[()]:
         if response:
             return tuple(cast(tuple[int, float], SampleCallback().transform(r)) for r in response)

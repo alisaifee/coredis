@@ -31,12 +31,12 @@ from coredis.typing import (
     Mapping,
     MutableMapping,
     Parameters,
+    RedisValueT,
     ResponsePrimitive,
     ResponseType,
     Self,
     StringT,
     TypeVar,
-    ValueT,
 )
 
 if TYPE_CHECKING:
@@ -273,7 +273,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         return value
 
     async def execute_command(
-        self, command: bytes, *args: ValueT, **options: ValueT
+        self, command: bytes, *args: RedisValueT, **options: RedisValueT
     ) -> ResponseType | None:
         """
         Executes a publish/subscribe command
@@ -410,7 +410,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         self,
         connection: BaseConnection,
         command: Callable[..., Awaitable[None]] | Callable[..., Awaitable[ResponseType]],
-        *args: ValueT,
+        *args: RedisValueT,
     ) -> ResponseType | None:
         try:
             return await command(*args)
@@ -553,7 +553,7 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
     """
 
     async def execute_command(
-        self, command: bytes, *args: ValueT, **options: ValueT
+        self, command: bytes, *args: RedisValueT, **options: RedisValueT
     ) -> ResponseType | None:
         await self.initialize()
         assert self.connection
@@ -706,7 +706,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         raise NotImplementedError("Sharded PubSub does not support subscription by pattern")
 
     async def execute_command(
-        self, command: bytes, *args: ValueT, **options: ValueT
+        self, command: bytes, *args: RedisValueT, **options: RedisValueT
     ) -> ResponseType | None:
         await self.initialize()
 
