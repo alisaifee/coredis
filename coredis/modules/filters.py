@@ -5,6 +5,7 @@ from deprecated.sphinx import versionadded
 from .._utils import dict_to_flat_list
 from ..commands._validators import mutually_inclusive_parameters
 from ..commands.constants import CommandFlag, CommandGroup, CommandName
+from ..commands.task import CommandTask
 from ..response._callbacks import (
     BoolCallback,
     BoolsCallback,
@@ -52,14 +53,14 @@ class BloomFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def reserve(
+    def reserve(
         self,
         key: KeyT,
         error_rate: int | float,
         capacity: int,
         expansion: int | None = None,
         nonscaling: bool | None = None,
-    ) -> bool:
+    ) -> CommandTask[bool]:
         """
         Creates a new Bloom Filter
 
@@ -75,8 +76,8 @@ class BloomFilter(ModuleGroup[AnyStr]):
         if nonscaling:
             command_arguments.append(PureToken.NONSCALING)
 
-        return await self.execute_module_command(
-            CommandName.BF_RESERVE, *command_arguments, callback=SimpleStringCallback()
+        return CommandTask(
+            self.client, CommandName.BF_RESERVE, *command_arguments, callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -85,7 +86,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def add(self, key: KeyT, item: ValueT) -> bool:
+    def add(self, key: KeyT, item: ValueT) -> CommandTask[bool]:
         """
         Adds an item to a Bloom Filter
 
@@ -94,8 +95,8 @@ class BloomFilter(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, item]
 
-        return await self.execute_module_command(
-            CommandName.BF_ADD, *command_arguments, callback=BoolCallback()
+        return CommandTask(
+            self.client, CommandName.BF_ADD, *command_arguments, callback=BoolCallback()
         )
 
     @module_command(
@@ -104,7 +105,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def madd(self, key: KeyT, items: Parameters[ValueT]) -> tuple[bool, ...]:
+    def madd(self, key: KeyT, items: Parameters[ValueT]) -> CommandTask[tuple[bool, ...]]:
         """
         Adds one or more items to a Bloom Filter. A filter will be created if it does not exist
 
@@ -113,8 +114,8 @@ class BloomFilter(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, *items]
 
-        return await self.execute_module_command(
-            CommandName.BF_MADD, *command_arguments, callback=BoolsCallback()
+        return CommandTask(
+            self.client, CommandName.BF_MADD, *command_arguments, callback=BoolsCallback()
         )
 
     @module_command(
@@ -123,7 +124,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def insert(
+    def insert(
         self,
         key: KeyT,
         items: Parameters[ValueT],
@@ -132,7 +133,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         expansion: int | None = None,
         nocreate: bool | None = None,
         nonscaling: bool | None = None,
-    ) -> tuple[bool, ...]:
+    ) -> CommandTask[tuple[bool, ...]]:
         """
         Adds one or more items to a Bloom Filter. A filter will be created if it
         does not exist
@@ -160,8 +161,8 @@ class BloomFilter(ModuleGroup[AnyStr]):
             command_arguments.append(PureToken.NONSCALING)
         command_arguments.append(PureToken.ITEMS)
         command_arguments.extend(items)
-        return await self.execute_module_command(
-            CommandName.BF_INSERT, *command_arguments, callback=BoolsCallback()
+        return CommandTask(
+            self.client, CommandName.BF_INSERT, *command_arguments, callback=BoolsCallback()
         )
 
     @module_command(
@@ -172,16 +173,14 @@ class BloomFilter(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def exists(self, key: KeyT, item: ValueT) -> bool:
+    def exists(self, key: KeyT, item: ValueT) -> CommandTask[bool]:
         """
         Checks whether an item exists in a Bloom Filter
 
         :param key: The key under which the filter is found.
         :param item: The item to check for existence.
         """
-        return await self.execute_module_command(
-            CommandName.BF_EXISTS, key, item, callback=BoolCallback()
-        )
+        return CommandTask(self.client, CommandName.BF_EXISTS, key, item, callback=BoolCallback())
 
     @module_command(
         CommandName.BF_MEXISTS,
@@ -191,15 +190,15 @@ class BloomFilter(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def mexists(self, key: KeyT, items: Parameters[ValueT]) -> tuple[bool, ...]:
+    def mexists(self, key: KeyT, items: Parameters[ValueT]) -> CommandTask[tuple[bool, ...]]:
         """
         Checks whether one or more items exist in a Bloom Filter
 
         :param key: The key under which the filter is found.
         :param items: One or more items to check.
         """
-        return await self.execute_module_command(
-            CommandName.BF_MEXISTS, key, *items, callback=BoolsCallback()
+        return CommandTask(
+            self.client, CommandName.BF_MEXISTS, key, *items, callback=BoolsCallback()
         )
 
     @module_command(
@@ -208,7 +207,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def scandump(self, key: KeyT, iterator: int) -> tuple[int, bytes | None]:
+    def scandump(self, key: KeyT, iterator: int) -> CommandTask[tuple[int, bytes | None]]:
         """
         Begins an incremental save of the bloom filter
 
@@ -221,12 +220,13 @@ class BloomFilter(ModuleGroup[AnyStr]):
          restoring the filter.
         """
 
-        return await self.execute_module_command(
+        return CommandTask(
+            self.client,
             CommandName.BF_SCANDUMP,
             key,
             iterator,
             callback=MixedTupleCallback[int, bytes | None](),
-            decode=False,
+            execution_parameters={"decode": False},
         )
 
     @module_command(
@@ -235,7 +235,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def loadchunk(self, key: KeyT, iterator: int, data: bytes) -> bool:
+    def loadchunk(self, key: KeyT, iterator: int, data: bytes) -> CommandTask[bool]:
         """
         Restores a filter previously saved using :meth:`scandump`
 
@@ -245,8 +245,11 @@ class BloomFilter(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, iterator, data]
 
-        return await self.execute_module_command(
-            CommandName.BF_LOADCHUNK, *command_arguments, callback=SimpleStringCallback()
+        return CommandTask(
+            self.client,
+            CommandName.BF_LOADCHUNK,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )
 
     @module_command(
@@ -257,7 +260,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def info(
+    def info(
         self,
         key: KeyT,
         single_value: None
@@ -270,7 +273,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
                 PureToken.SIZE,
             ]
         ) = None,
-    ) -> dict[AnyStr, int] | int:
+    ) -> CommandTask[int] | CommandTask[dict[AnyStr, int]]:
         """
         Returns information about a Bloom Filter
 
@@ -281,15 +284,16 @@ class BloomFilter(ModuleGroup[AnyStr]):
          is not specified, or an integer representing the value of the specified field.
         """
         if single_value:
-            return await self.execute_module_command(
+            return CommandTask(
+                self.client,
                 CommandName.BF_INFO,
                 key,
                 single_value,
                 callback=FirstValueCallback[int](),
             )
         else:
-            return await self.execute_module_command(
-                CommandName.BF_INFO, key, callback=DictCallback[AnyStr, int]()
+            return CommandTask(
+                self.client, CommandName.BF_INFO, key, callback=DictCallback[AnyStr, int]()
             )
 
     @module_command(
@@ -300,13 +304,13 @@ class BloomFilter(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def card(self, key: KeyT) -> int:
+    def card(self, key: KeyT) -> CommandTask[int]:
         """
         Returns the cardinality of a Bloom filter
 
         :param key: The key name for an existing Bloom filter.
         """
-        return await self.execute_module_command(CommandName.BF_CARD, key, callback=IntCallback())
+        return CommandTask(self.client, CommandName.BF_CARD, key, callback=IntCallback())
 
 
 @versionadded(version="4.12")
@@ -320,14 +324,14 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def reserve(
+    def reserve(
         self,
         key: KeyT,
         capacity: int,
         bucketsize: int | None = None,
         maxiterations: int | None = None,
         expansion: int | None = None,
-    ) -> bool:
+    ) -> CommandTask[bool]:
         """
         Creates a new Cuckoo Filter
 
@@ -346,8 +350,8 @@ class CuckooFilter(ModuleGroup[AnyStr]):
             command_arguments.extend([PrefixToken.MAXITERATIONS, maxiterations])
         if expansion is not None:
             command_arguments.extend([PrefixToken.EXPANSION, expansion])
-        return await self.execute_module_command(
-            CommandName.CF_RESERVE, *command_arguments, callback=SimpleStringCallback()
+        return CommandTask(
+            self.client, CommandName.CF_RESERVE, *command_arguments, callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -356,7 +360,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def add(self, key: KeyT, item: ValueT) -> bool:
+    def add(self, key: KeyT, item: ValueT) -> CommandTask[bool]:
         """
         Adds an item to a Cuckoo Filter
 
@@ -365,8 +369,8 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, item]
 
-        return await self.execute_module_command(
-            CommandName.CF_ADD, *command_arguments, callback=BoolCallback()
+        return CommandTask(
+            self.client, CommandName.CF_ADD, *command_arguments, callback=BoolCallback()
         )
 
     @module_command(
@@ -375,7 +379,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def addnx(self, key: KeyT, item: ValueT) -> bool:
+    def addnx(self, key: KeyT, item: ValueT) -> CommandTask[bool]:
         """
         Adds an item to a Cuckoo Filter if the item did not exist previously.
 
@@ -384,8 +388,8 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, item]
 
-        return await self.execute_module_command(
-            CommandName.CF_ADDNX, *command_arguments, callback=BoolCallback()
+        return CommandTask(
+            self.client, CommandName.CF_ADDNX, *command_arguments, callback=BoolCallback()
         )
 
     @module_command(
@@ -394,13 +398,13 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def insert(
+    def insert(
         self,
         key: KeyT,
         items: Parameters[ValueT],
         capacity: int | None = None,
         nocreate: bool | None = None,
-    ) -> tuple[bool, ...]:
+    ) -> CommandTask[tuple[bool, ...]]:
         """
         Adds one or more items to a Cuckoo Filter. A filter will be created if it does not exist
 
@@ -420,8 +424,8 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         command_arguments.append(PureToken.ITEMS)
         command_arguments.extend(items)
 
-        return await self.execute_module_command(
-            CommandName.CF_INSERT, *command_arguments, callback=BoolsCallback()
+        return CommandTask(
+            self.client, CommandName.CF_INSERT, *command_arguments, callback=BoolsCallback()
         )
 
     @module_command(
@@ -430,13 +434,13 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def insertnx(
+    def insertnx(
         self,
         key: KeyT,
         items: Parameters[ValueT],
         capacity: int | None = None,
         nocreate: bool | None = None,
-    ) -> tuple[bool, ...]:
+    ) -> CommandTask[tuple[bool, ...]]:
         """
         Adds one or more items to a Cuckoo Filter if the items did not exist previously.
         A filter will be created if it does not exist
@@ -456,8 +460,8 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         command_arguments.append(PureToken.ITEMS)
         command_arguments.extend(items)
 
-        return await self.execute_module_command(
-            CommandName.CF_INSERTNX, *command_arguments, callback=BoolsCallback()
+        return CommandTask(
+            self.client, CommandName.CF_INSERTNX, *command_arguments, callback=BoolsCallback()
         )
 
     @module_command(
@@ -468,7 +472,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def exists(self, key: KeyT, item: ValueT) -> bool:
+    def exists(self, key: KeyT, item: ValueT) -> CommandTask[bool]:
         """
         Checks whether an item exist in a Cuckoo Filter
 
@@ -477,8 +481,8 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, item]
 
-        return await self.execute_module_command(
-            CommandName.CF_EXISTS, *command_arguments, callback=BoolCallback()
+        return CommandTask(
+            self.client, CommandName.CF_EXISTS, *command_arguments, callback=BoolCallback()
         )
 
     @module_command(
@@ -489,7 +493,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def mexists(self, key: KeyT, items: Parameters[ValueT]) -> tuple[bool, ...]:
+    def mexists(self, key: KeyT, items: Parameters[ValueT]) -> CommandTask[tuple[bool, ...]]:
         """
         Checks whether one or more items exist in a Cuckoo Filter
 
@@ -498,8 +502,8 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, *items]
 
-        return await self.execute_module_command(
-            CommandName.CF_MEXISTS, *command_arguments, callback=BoolsCallback()
+        return CommandTask(
+            self.client, CommandName.CF_MEXISTS, *command_arguments, callback=BoolsCallback()
         )
 
     @module_command(
@@ -508,7 +512,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def delete(self, key: KeyT, item: ValueT) -> bool:
+    def delete(self, key: KeyT, item: ValueT) -> CommandTask[bool]:
         """
         Deletes an item from a Cuckoo Filter
 
@@ -517,8 +521,8 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, item]
 
-        return await self.execute_module_command(
-            CommandName.CF_DEL, *command_arguments, callback=BoolCallback()
+        return CommandTask(
+            self.client, CommandName.CF_DEL, *command_arguments, callback=BoolCallback()
         )
 
     @module_command(
@@ -529,7 +533,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def count(self, key: KeyT, item: ValueT) -> int:
+    def count(self, key: KeyT, item: ValueT) -> CommandTask[int]:
         """
         Return the number of times an item might be in a Cuckoo Filter
 
@@ -538,8 +542,8 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, item]
 
-        return await self.execute_module_command(
-            CommandName.CF_COUNT, *command_arguments, callback=IntCallback()
+        return CommandTask(
+            self.client, CommandName.CF_COUNT, *command_arguments, callback=IntCallback()
         )
 
     @module_command(
@@ -548,7 +552,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def scandump(self, key: KeyT, iterator: int) -> tuple[int, bytes | None]:
+    def scandump(self, key: KeyT, iterator: int) -> CommandTask[tuple[int, bytes | None]]:
         """
         Begins an incremental save of the bloom filter
 
@@ -558,10 +562,11 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, iterator]
 
-        return await self.execute_module_command(
+        return CommandTask(
+            self.client,
             CommandName.CF_SCANDUMP,
             *command_arguments,
-            decode=False,
+            execution_parameters={"decode": False},
             callback=MixedTupleCallback[int, bytes | None](),
         )
 
@@ -571,7 +576,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def loadchunk(self, key: KeyT, iterator: int, data: StringT) -> bool:
+    def loadchunk(self, key: KeyT, iterator: int, data: StringT) -> CommandTask[bool]:
         """
         Restores a filter previously saved using SCANDUMP
 
@@ -582,8 +587,11 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, iterator, data]
 
-        return await self.execute_module_command(
-            CommandName.CF_LOADCHUNK, *command_arguments, callback=SimpleStringCallback()
+        return CommandTask(
+            self.client,
+            CommandName.CF_LOADCHUNK,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )
 
     @module_command(
@@ -593,15 +601,18 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         module=MODULE,
         flags={CommandFlag.READONLY},
     )
-    async def info(self, key: KeyT) -> dict[AnyStr, ResponsePrimitive]:
+    def info(self, key: KeyT) -> CommandTask[dict[AnyStr, ResponsePrimitive]]:
         """
         Returns information about a Cuckoo Filter
 
         :param key: The name of the filter.
         """
 
-        return await self.execute_module_command(
-            CommandName.CF_INFO, key, callback=DictCallback[AnyStr, ResponsePrimitive]()
+        return CommandTask(
+            self.client,
+            CommandName.CF_INFO,
+            key,
+            callback=DictCallback[AnyStr, ResponsePrimitive](),
         )
 
 
@@ -616,7 +627,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    async def initbydim(self, key: KeyT, width: int, depth: int) -> bool:
+    def initbydim(self, key: KeyT, width: int, depth: int) -> CommandTask[bool]:
         """
         Initializes a Count-Min Sketch to dimensions specified by user
 
@@ -624,7 +635,8 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         :param width: Number of counters in each array. Reduces error size.
         :param depth: Number of counter-arrays. Reduces error probability.
         """
-        return await self.execute_module_command(
+        return CommandTask(
+            self.client,
             CommandName.CMS_INITBYDIM,
             key,
             width,
@@ -638,7 +650,9 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    async def initbyprob(self, key: KeyT, error: int | float, probability: int | float) -> bool:
+    def initbyprob(
+        self, key: KeyT, error: int | float, probability: int | float
+    ) -> CommandTask[bool]:
         """
         Initializes a Count-Min Sketch to accommodate requested tolerances.
 
@@ -647,7 +661,8 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         :param probability: Desired probability for inflated count as a decimal value
          between 0 and 1.
         """
-        return await self.execute_module_command(
+        return CommandTask(
+            self.client,
             CommandName.CMS_INITBYPROB,
             key,
             error,
@@ -661,7 +676,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    async def incrby(self, key: KeyT, items: Mapping[AnyStr, int]) -> tuple[int, ...]:
+    def incrby(self, key: KeyT, items: Mapping[AnyStr, int]) -> CommandTask[tuple[int, ...]]:
         """
         Increases the count of one or more items by increment
 
@@ -670,7 +685,8 @@ class CountMinSketch(ModuleGroup[AnyStr]):
          their respective increments.
         """
 
-        return await self.execute_module_command(
+        return CommandTask(
+            self.client,
             CommandName.CMS_INCRBY,
             key,
             *dict_to_flat_list(items),
@@ -685,11 +701,11 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def query(
+    def query(
         self,
         key: KeyT,
         items: Parameters[StringT],
-    ) -> tuple[int, ...]:
+    ) -> CommandTask[tuple[int, ...]]:
         """
         Returns the count for one or more items in a sketch
 
@@ -698,8 +714,8 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, *items]
 
-        return await self.execute_module_command(
-            CommandName.CMS_QUERY, *command_arguments, callback=TupleCallback[int]()
+        return CommandTask(
+            self.client, CommandName.CMS_QUERY, *command_arguments, callback=TupleCallback[int]()
         )
 
     @module_command(
@@ -708,12 +724,12 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    async def merge(
+    def merge(
         self,
         destination: KeyT,
         sources: Parameters[KeyT],
         weights: Parameters[int | float] | None = None,
-    ) -> bool:
+    ) -> CommandTask[bool]:
         """
         Merges several sketches into one sketch
 
@@ -727,8 +743,8 @@ class CountMinSketch(ModuleGroup[AnyStr]):
             command_arguments.append(PrefixToken.WEIGHTS)
             command_arguments.extend(weights)
 
-        return await self.execute_module_command(
-            CommandName.CMS_MERGE, *command_arguments, callback=SimpleStringCallback()
+        return CommandTask(
+            self.client, CommandName.CMS_MERGE, *command_arguments, callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -739,7 +755,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def info(self, key: KeyT) -> dict[AnyStr, int]:
+    def info(self, key: KeyT) -> CommandTask[dict[AnyStr, int]]:
         """
         Returns information about a sketch
 
@@ -747,7 +763,8 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         :return: A dictionary containing the width, depth, and total count of the sketch.
         """
 
-        return await self.execute_module_command(
+        return CommandTask(
+            self.client,
             CommandName.CMS_INFO,
             key,
             callback=DictCallback[AnyStr, int](),
@@ -766,14 +783,14 @@ class TopK(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    async def reserve(
+    def reserve(
         self,
         key: KeyT,
         topk: int,
         width: int | None = None,
         depth: int | None = None,
         decay: int | float | None = None,
-    ) -> bool:
+    ) -> CommandTask[bool]:
         """
         Reserve a TopK sketch with specified parameters.
 
@@ -788,8 +805,11 @@ class TopK(ModuleGroup[AnyStr]):
         command_arguments: CommandArgList = [key, topk]
         if width is not None and depth is not None and decay is not None:
             command_arguments.extend([width, depth, decay])
-        return await self.execute_module_command(
-            CommandName.TOPK_RESERVE, *command_arguments, callback=SimpleStringCallback()
+        return CommandTask(
+            self.client,
+            CommandName.TOPK_RESERVE,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )
 
     @module_command(
@@ -798,7 +818,7 @@ class TopK(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    async def add(self, key: KeyT, items: Parameters[AnyStr]) -> tuple[AnyStr | None, ...]:
+    def add(self, key: KeyT, items: Parameters[AnyStr]) -> CommandTask[tuple[AnyStr | None, ...]]:
         """
         Increases the count of one or more items by increment
 
@@ -806,7 +826,8 @@ class TopK(ModuleGroup[AnyStr]):
         :param items: Item(s) to be added.
 
         """
-        return await self.execute_module_command(
+        return CommandTask(
+            self.client,
             CommandName.TOPK_ADD,
             key,
             *items,
@@ -819,14 +840,17 @@ class TopK(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    async def incrby(self, key: KeyT, items: Mapping[AnyStr, int]) -> tuple[AnyStr | None, ...]:
+    def incrby(
+        self, key: KeyT, items: Mapping[AnyStr, int]
+    ) -> CommandTask[tuple[AnyStr | None, ...]]:
         """
         Increases the count of one or more items by increment
 
         :param key: Name of the TOP-K sketch.
         :param items: Dictionary of items and their corresponding increment values.
         """
-        return await self.execute_module_command(
+        return CommandTask(
+            self.client,
             CommandName.TOPK_INCRBY,
             key,
             *dict_to_flat_list(items),
@@ -841,11 +865,11 @@ class TopK(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def query(
+    def query(
         self,
         key: KeyT,
         items: Parameters[StringT],
-    ) -> tuple[bool, ...]:
+    ) -> CommandTask[tuple[bool, ...]]:
         """
         Checks whether an item is one of Top-K items.
         Multiple items can be checked at once.
@@ -855,8 +879,8 @@ class TopK(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, *items]
 
-        return await self.execute_module_command(
-            CommandName.TOPK_QUERY, *command_arguments, callback=BoolsCallback()
+        return CommandTask(
+            self.client, CommandName.TOPK_QUERY, *command_arguments, callback=BoolsCallback()
         )
 
     @module_command(
@@ -865,11 +889,11 @@ class TopK(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    async def count(
+    def count(
         self,
         key: KeyT,
         items: Parameters[StringT],
-    ) -> tuple[int, ...]:
+    ) -> CommandTask[tuple[int, ...]]:
         """
         Return the count for one or more items are in a sketch
 
@@ -878,8 +902,8 @@ class TopK(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, *items]
 
-        return await self.execute_module_command(
-            CommandName.TOPK_COUNT, *command_arguments, callback=TupleCallback[int]()
+        return CommandTask(
+            self.client, CommandName.TOPK_COUNT, *command_arguments, callback=TupleCallback[int]()
         )
 
     @module_command(
@@ -890,9 +914,9 @@ class TopK(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def list(
+    def list(
         self, key: KeyT, withcount: bool | None = None
-    ) -> dict[AnyStr, int] | tuple[AnyStr, ...]:
+    ) -> CommandTask[dict[AnyStr, int]] | CommandTask[tuple[AnyStr, ...]]:
         """
         Return full list of items in Top K list
 
@@ -902,12 +926,18 @@ class TopK(ModuleGroup[AnyStr]):
         command_arguments: CommandArgList = [key]
         if withcount:
             command_arguments.append(PureToken.WITHCOUNT)
-            return await self.execute_module_command(
-                CommandName.TOPK_LIST, *command_arguments, callback=DictCallback[AnyStr, int]()
+            return CommandTask(
+                self.client,
+                CommandName.TOPK_LIST,
+                *command_arguments,
+                callback=DictCallback[AnyStr, int](),
             )
         else:
-            return await self.execute_module_command(
-                CommandName.TOPK_LIST, *command_arguments, callback=TupleCallback[AnyStr]()
+            return CommandTask(
+                self.client,
+                CommandName.TOPK_LIST,
+                *command_arguments,
+                callback=TupleCallback[AnyStr](),
             )
 
     @module_command(
@@ -918,7 +948,7 @@ class TopK(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def info(self, key: KeyT) -> dict[AnyStr, int]:
+    def info(self, key: KeyT) -> CommandTask[dict[AnyStr, int]]:
         """
         Returns information about a sketch
 
@@ -930,7 +960,8 @@ class TopK(ModuleGroup[AnyStr]):
          - ``decay``: The decay factor used by the sketch.
         """
 
-        return await self.execute_module_command(
+        return CommandTask(
+            self.client,
             CommandName.TOPK_INFO,
             key,
             callback=DictCallback[AnyStr, int](),
@@ -948,7 +979,7 @@ class TDigest(ModuleGroup[AnyStr]):
         version_introduced="2.4.0",
         module=MODULE,
     )
-    async def create(self, key: KeyT, compression: int | None = None) -> bool:
+    def create(self, key: KeyT, compression: int | None = None) -> CommandTask[bool]:
         """
         Allocates memory and initializes a new t-digest sketch
 
@@ -958,8 +989,11 @@ class TDigest(ModuleGroup[AnyStr]):
         command_arguments: CommandArgList = [key]
         if compression is not None:
             command_arguments.extend([PrefixToken.COMPRESSION, compression])
-        return await self.execute_module_command(
-            CommandName.TDIGEST_CREATE, *command_arguments, callback=SimpleStringCallback()
+        return CommandTask(
+            self.client,
+            CommandName.TDIGEST_CREATE,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )
 
     @module_command(
@@ -968,14 +1002,14 @@ class TDigest(ModuleGroup[AnyStr]):
         version_introduced="2.4.0",
         module=MODULE,
     )
-    async def reset(self, key: KeyT) -> bool:
+    def reset(self, key: KeyT) -> CommandTask[bool]:
         """
         Resets a t-digest sketch: empty the sketch and re-initializes it.
 
         :param key: The key name for an existing t-digest sketch.
         """
-        return await self.execute_module_command(
-            CommandName.TDIGEST_RESET, key, callback=SimpleStringCallback()
+        return CommandTask(
+            self.client, CommandName.TDIGEST_RESET, key, callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -984,11 +1018,11 @@ class TDigest(ModuleGroup[AnyStr]):
         version_introduced="2.4.0",
         module=MODULE,
     )
-    async def add(
+    def add(
         self,
         key: KeyT,
         values: Parameters[int | float],
-    ) -> bool:
+    ) -> CommandTask[bool]:
         """
         Adds one or more observations to a t-digest sketch
 
@@ -997,8 +1031,11 @@ class TDigest(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, *values]
 
-        return await self.execute_module_command(
-            CommandName.TDIGEST_ADD, *command_arguments, callback=SimpleStringCallback()
+        return CommandTask(
+            self.client,
+            CommandName.TDIGEST_ADD,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )
 
     @module_command(
@@ -1007,13 +1044,13 @@ class TDigest(ModuleGroup[AnyStr]):
         version_introduced="2.4.0",
         module=MODULE,
     )
-    async def merge(
+    def merge(
         self,
         destination_key: KeyT,
         source_keys: Parameters[KeyT],
         compression: int | None = None,
         override: bool | None = None,
-    ) -> bool:
+    ) -> CommandTask[bool]:
         """
         Merges multiple t-digest sketches into a single sketch
 
@@ -1037,8 +1074,11 @@ class TDigest(ModuleGroup[AnyStr]):
             command_arguments.extend([PrefixToken.COMPRESSION, compression])
         if override is not None:
             command_arguments.append(PureToken.OVERRIDE)
-        return await self.execute_module_command(
-            CommandName.TDIGEST_MERGE, *command_arguments, callback=SimpleStringCallback()
+        return CommandTask(
+            self.client,
+            CommandName.TDIGEST_MERGE,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )
 
     @module_command(
@@ -1049,16 +1089,14 @@ class TDigest(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def min(self, key: KeyT) -> float:
+    def min(self, key: KeyT) -> CommandTask[float]:
         """
         Returns the minimum observation value from a t-digest sketch
 
         :param key: The key name for an existing t-digest sketch.
         """
 
-        return await self.execute_module_command(
-            CommandName.TDIGEST_MIN, key, callback=FloatCallback()
-        )
+        return CommandTask(self.client, CommandName.TDIGEST_MIN, key, callback=FloatCallback())
 
     @module_command(
         CommandName.TDIGEST_MAX,
@@ -1068,16 +1106,14 @@ class TDigest(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def max(self, key: KeyT) -> float:
+    def max(self, key: KeyT) -> CommandTask[float]:
         """
         Returns the maximum observation value from a t-digest sketch
 
         :param key: The key name for an existing t-digest sketch.
         """
 
-        return await self.execute_module_command(
-            CommandName.TDIGEST_MAX, key, callback=FloatCallback()
-        )
+        return CommandTask(self.client, CommandName.TDIGEST_MAX, key, callback=FloatCallback())
 
     @module_command(
         CommandName.TDIGEST_QUANTILE,
@@ -1087,11 +1123,11 @@ class TDigest(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def quantile(
+    def quantile(
         self,
         key: KeyT,
         quantiles: Parameters[int | float],
-    ) -> tuple[float, ...]:
+    ) -> CommandTask[tuple[float, ...]]:
         """
         Returns, for each input fraction, an estimation of the value (floating point)
         that is smaller than the given fraction of observations
@@ -1101,8 +1137,8 @@ class TDigest(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, *quantiles]
 
-        return await self.execute_module_command(
-            CommandName.TDIGEST_QUANTILE, *command_arguments, callback=FloatsCallback()
+        return CommandTask(
+            self.client, CommandName.TDIGEST_QUANTILE, *command_arguments, callback=FloatsCallback()
         )
 
     @module_command(
@@ -1113,11 +1149,11 @@ class TDigest(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def cdf(
+    def cdf(
         self,
         key: KeyT,
         values: Parameters[int | float],
-    ) -> tuple[float, ...]:
+    ) -> CommandTask[tuple[float, ...]]:
         """
         Returns, for each input value, an estimation of the fraction (floating-point)
         of (observations smaller than the given value + half the observations equal
@@ -1128,8 +1164,8 @@ class TDigest(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, *values]
 
-        return await self.execute_module_command(
-            CommandName.TDIGEST_CDF, *command_arguments, callback=FloatsCallback()
+        return CommandTask(
+            self.client, CommandName.TDIGEST_CDF, *command_arguments, callback=FloatsCallback()
         )
 
     @module_command(
@@ -1140,12 +1176,12 @@ class TDigest(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def trimmed_mean(
+    def trimmed_mean(
         self,
         key: KeyT,
         low_cut_quantile: int | float,
         high_cut_quantile: int | float,
-    ) -> float:
+    ) -> CommandTask[float]:
         """
         Returns an estimation of the mean value from the sketch,
         excluding observation values outside the low and high cutoff quantiles
@@ -1159,8 +1195,11 @@ class TDigest(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, low_cut_quantile, high_cut_quantile]
 
-        return await self.execute_module_command(
-            CommandName.TDIGEST_TRIMMED_MEAN, *command_arguments, callback=FloatCallback()
+        return CommandTask(
+            self.client,
+            CommandName.TDIGEST_TRIMMED_MEAN,
+            *command_arguments,
+            callback=FloatCallback(),
         )
 
     @module_command(
@@ -1171,11 +1210,11 @@ class TDigest(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def rank(
+    def rank(
         self,
         key: KeyT,
         values: Parameters[int | float],
-    ) -> tuple[int, ...]:
+    ) -> CommandTask[tuple[int, ...]]:
         """
         Returns, for each input value (floating-point), the estimated rank of
         the value (the number of observations in the sketch that are smaller
@@ -1186,8 +1225,8 @@ class TDigest(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, *values]
 
-        return await self.execute_module_command(
-            CommandName.TDIGEST_RANK, *command_arguments, callback=TupleCallback[int]()
+        return CommandTask(
+            self.client, CommandName.TDIGEST_RANK, *command_arguments, callback=TupleCallback[int]()
         )
 
     @module_command(
@@ -1198,11 +1237,11 @@ class TDigest(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def revrank(
+    def revrank(
         self,
         key: KeyT,
         values: Parameters[int | float],
-    ) -> tuple[int, ...]:
+    ) -> CommandTask[tuple[int, ...]]:
         """
         Returns, for each input value (floating-point), the estimated reverse rank of
         the value (the number of observations in the sketch that are larger than
@@ -1213,8 +1252,11 @@ class TDigest(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, *values]
 
-        return await self.execute_module_command(
-            CommandName.TDIGEST_REVRANK, *command_arguments, callback=TupleCallback[int]()
+        return CommandTask(
+            self.client,
+            CommandName.TDIGEST_REVRANK,
+            *command_arguments,
+            callback=TupleCallback[int](),
         )
 
     @module_command(
@@ -1225,11 +1267,11 @@ class TDigest(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def byrank(
+    def byrank(
         self,
         key: KeyT,
         ranks: Parameters[int | float],
-    ) -> tuple[float, ...]:
+    ) -> CommandTask[tuple[float, ...]]:
         """
         Returns, for each input rank, an estimation of the value (floating-point) with
         that rank
@@ -1239,8 +1281,8 @@ class TDigest(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, *ranks]
 
-        return await self.execute_module_command(
-            CommandName.TDIGEST_BYRANK, *command_arguments, callback=FloatsCallback()
+        return CommandTask(
+            self.client, CommandName.TDIGEST_BYRANK, *command_arguments, callback=FloatsCallback()
         )
 
     @module_command(
@@ -1251,11 +1293,11 @@ class TDigest(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def byrevrank(
+    def byrevrank(
         self,
         key: KeyT,
         reverse_ranks: Parameters[int | float],
-    ) -> tuple[float, ...]:
+    ) -> CommandTask[tuple[float, ...]]:
         """
         Returns, for each input reverse rank, an estimation of the value
         (floating-point) with that reverse rank
@@ -1265,8 +1307,11 @@ class TDigest(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, *reverse_ranks]
 
-        return await self.execute_module_command(
-            CommandName.TDIGEST_BYREVRANK, *command_arguments, callback=FloatsCallback()
+        return CommandTask(
+            self.client,
+            CommandName.TDIGEST_BYREVRANK,
+            *command_arguments,
+            callback=FloatsCallback(),
         )
 
     @module_command(
@@ -1277,7 +1322,7 @@ class TDigest(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def info(self, key: KeyT) -> dict[AnyStr, ResponsePrimitive]:
+    def info(self, key: KeyT) -> CommandTask[dict[AnyStr, ResponsePrimitive]]:
         """
         Returns information and statistics about a t-digest sketch
 
@@ -1287,7 +1332,8 @@ class TDigest(ModuleGroup[AnyStr]):
          number of observations, total compressions, and memory usage.
         """
 
-        return await self.execute_module_command(
+        return CommandTask(
+            self.client,
             CommandName.TDIGEST_INFO,
             key,
             callback=DictCallback[AnyStr, ResponsePrimitive](),

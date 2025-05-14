@@ -232,7 +232,8 @@ class TestSentinelCommand:
         mock_exec = mocker.patch.object(client.sentinels[0], "execute_command", autospec=True)
         mock_exec.return_value = True
         assert await client.sentinels[0].sentinel_failover("mymaster")
-        assert mock_exec.call_args[0][1] == "mymaster"
+        print(mock_exec.call_args)
+        assert mock_exec.call_args[0][0].arguments[0] == "mymaster"
 
     async def test_flush_config(self, client):
         assert await client.sentinels[0].sentinel_flushconfig()
@@ -260,7 +261,7 @@ class TestSentinelCommand:
         )
 
     async def test_no_replicas(self, client, mocker):
-        p = await client.replica_for("mymaster")
+        p = client.replica_for("mymaster")
         replica_rotate = mocker.patch.object(p.connection_pool, "rotate_replicas")
         replica_rotate.return_value = []
         with pytest.raises(ReplicaNotFoundError):
@@ -297,7 +298,7 @@ class TestSentinelCommand:
         assert await new_primary.get("fubar") == "1"
         assert await new_replica.get("fubar") == "1"
 
-        assert replica_spy.call_count == 1
+        assert replica_spy.call_count == 0
 
     @pytest.mark.xfail
     async def test_replication(self, client):

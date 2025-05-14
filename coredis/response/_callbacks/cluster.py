@@ -5,7 +5,6 @@ from coredis.response._callbacks import ResponseCallback
 from coredis.response._utils import flat_pairs_to_dict
 from coredis.response.types import ClusterNode, ClusterNodeDetail
 from coredis.typing import (
-    Any,
     AnyStr,
     Mapping,
     ResponsePrimitive,
@@ -18,7 +17,8 @@ class ClusterLinksCallback(
     ResponseCallback[ResponseType, ResponseType, list[dict[AnyStr, ResponsePrimitive]]]
 ):
     def transform(
-        self, response: ResponseType, **options: Any
+        self,
+        response: ResponseType,
     ) -> list[dict[AnyStr, ResponsePrimitive]]:
         transformed: list[dict[AnyStr, ResponsePrimitive]] = []
 
@@ -27,13 +27,17 @@ class ClusterLinksCallback(
         return transformed
 
     def transform_3(
-        self, response: ResponseType, **options: Any
+        self,
+        response: ResponseType,
     ) -> list[dict[AnyStr, ResponsePrimitive]]:
         return response
 
 
 class ClusterInfoCallback(ResponseCallback[ResponseType, ResponseType, dict[str, str]]):
-    def transform(self, response: ResponseType, **options: Any) -> dict[str, str]:
+    def transform(
+        self,
+        response: ResponseType,
+    ) -> dict[str, str]:
         response_str = nativestr(response)
         return dict([line.split(":") for line in response_str.splitlines() if line])
 
@@ -42,7 +46,8 @@ class ClusterSlotsCallback(
     ResponseCallback[ResponseType, ResponseType, dict[tuple[int, int], tuple[ClusterNode, ...]]]
 ):
     def transform(
-        self, response: ResponseType, **options: Any
+        self,
+        response: ResponseType,
     ) -> dict[tuple[int, int], tuple[ClusterNode, ...]]:
         res: dict[tuple[int, int], tuple[ClusterNode, ...]] = {}
 
@@ -64,14 +69,17 @@ class ClusterSlotsCallback(
 
 
 class ClusterNodesCallback(ResponseCallback[ResponseType, ResponseType, list[ClusterNodeDetail]]):
-    def transform(self, response: ResponseType, **options: Any) -> list[ClusterNodeDetail]:
+    def transform(
+        self,
+        response: ResponseType,
+    ) -> list[ClusterNodeDetail]:
         resp: list[str] | str
 
         if isinstance(response, list):
             resp = [nativestr(row) for row in response]
         else:
             resp = nativestr(response)
-        current_host = nativestr(options.get("current_host", ""))
+        current_host = nativestr(self.options.get("current_host", ""))
 
         def parse_slots(s: str) -> tuple[list[int], list[dict[str, ValueT]]]:
             slots: list[int] = []
@@ -153,7 +161,8 @@ class ClusterShardsCallback(
     ]
 ):
     def transform(
-        self, response: ResponseType, **options: Any
+        self,
+        response: ResponseType,
     ) -> list[dict[AnyStr, list[ValueT] | Mapping[AnyStr, ValueT]]]:
         shard_mapping: list[dict[AnyStr, list[ValueT] | Mapping[AnyStr, ValueT]]] = []
 
@@ -168,6 +177,7 @@ class ClusterShardsCallback(
         return shard_mapping
 
     def transform_3(
-        self, response: ResponseType, **options: Any
+        self,
+        response: ResponseType,
     ) -> list[dict[AnyStr, list[ValueT] | Mapping[AnyStr, ValueT]]]:
         return response

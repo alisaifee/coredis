@@ -10,7 +10,9 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from coredis.response._callbacks import NoopCallback
-from coredis.typing import AnyStr, Callable, Generic, R, ValueT
+from coredis.typing import AnyStr, Callable, ExecutionParameters, Generic, R, Unpack
+
+from .._protocols import RedisCommandP
 
 # Command wrappers
 from .bitfield import BitFieldOperation
@@ -24,10 +26,9 @@ class CommandMixin(Generic[AnyStr], ABC):
     @abstractmethod
     async def execute_command(
         self,
-        command: bytes,
-        *args: ValueT,
+        command: RedisCommandP,
         callback: Callable[..., R] = NoopCallback(),
-        **options: ValueT | None,
+        **options: Unpack[ExecutionParameters],
     ) -> R:
         pass
 

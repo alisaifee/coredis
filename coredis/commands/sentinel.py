@@ -23,37 +23,41 @@ from coredis.typing import (
 from . import CommandMixin
 from ._wrappers import redis_command
 from .constants import CommandName
+from .task import CommandTask
 
 
 class SentinelCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SENTINEL_CKQUORUM,
     )
-    async def sentinel_ckquorum(self, service_name: StringT) -> bool:
-        return await self.execute_command(
+    def sentinel_ckquorum(self, service_name: StringT) -> CommandTask[bool]:
+        return CommandTask(
+            self,
             CommandName.SENTINEL_CKQUORUM,
             service_name,
             callback=SimpleStringCallback(prefix_match=True),
         )
 
     @redis_command(CommandName.SENTINEL_CONFIG_GET, version_introduced="6.2.0")
-    async def sentinel_config_get(self, name: ValueT) -> dict[AnyStr, AnyStr]:
+    def sentinel_config_get(self, name: ValueT) -> CommandTask[dict[AnyStr, AnyStr]]:
         """
         Get the current value of a global Sentinel configuration parameter.
         The specified name may be a wildcard, similar to :meth:`config_get`
         """
-        return await self.execute_command(
+        return CommandTask(
+            self,
             CommandName.SENTINEL_CONFIG_GET,
             name,
             callback=DictCallback[AnyStr, AnyStr](),
         )
 
     @redis_command(CommandName.SENTINEL_CONFIG_SET, version_introduced="6.2")
-    async def sentinel_config_set(self, name: ValueT, value: ValueT) -> bool:
+    def sentinel_config_set(self, name: ValueT, value: ValueT) -> CommandTask[bool]:
         """
         Set the value of a global Sentinel configuration parameter
         """
-        return await self.execute_command(
+        return CommandTask(
+            self,
             CommandName.SENTINEL_CONFIG_SET,
             name,
             value,
@@ -63,14 +67,15 @@ class SentinelCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SENTINEL_GET_MASTER_ADDR_BY_NAME,
     )
-    async def sentinel_get_master_addr_by_name(
+    def sentinel_get_master_addr_by_name(
         self, service_name: StringT
-    ) -> tuple[str, int] | None:
+    ) -> CommandTask[tuple[str, int] | None]:
         """
         Returns a (host, port) pair for the given :paramref:`service_name`
         """
 
-        return await self.execute_command(
+        return CommandTask(
+            self,
             CommandName.SENTINEL_GET_MASTER_ADDR_BY_NAME,
             service_name,
             callback=GetPrimaryCallback(),
@@ -79,32 +84,31 @@ class SentinelCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SENTINEL_FAILOVER,
     )
-    async def sentinel_failover(self, service_name: StringT) -> bool:
+    def sentinel_failover(self, service_name: StringT) -> CommandTask[bool]:
         """
         Force a failover as if the master was not reachable, and without asking
         for agreement to other Sentinels
         """
-        return await self.execute_command(
-            CommandName.SENTINEL_FAILOVER, service_name, callback=SimpleStringCallback()
+        return CommandTask(
+            self, CommandName.SENTINEL_FAILOVER, service_name, callback=SimpleStringCallback()
         )
 
     @redis_command(CommandName.SENTINEL_FLUSHCONFIG)
-    async def sentinel_flushconfig(self) -> bool:
+    def sentinel_flushconfig(self) -> CommandTask[bool]:
         """
         Force Sentinel to rewrite its configuration on disk, including the current Sentinel state.
         """
-        return await self.execute_command(
-            CommandName.SENTINEL_FLUSHCONFIG, callback=SimpleStringCallback()
-        )
+        return CommandTask(self, CommandName.SENTINEL_FLUSHCONFIG, callback=SimpleStringCallback())
 
     @redis_command(CommandName.SENTINEL_INFO_CACHE)
-    async def sentinel_infocache(
+    def sentinel_infocache(
         self, *nodenames: StringT
-    ) -> dict[AnyStr, dict[int, dict[str, ResponseType]]]:
+    ) -> CommandTask[dict[AnyStr, dict[int, dict[str, ResponseType]]]]:
         """
         Return cached INFO output from masters and replicas.
         """
-        return await self.execute_command(
+        return CommandTask(
+            self,
             CommandName.SENTINEL_INFO_CACHE,
             *nodenames,
             callback=SentinelInfoCallback[AnyStr](),
@@ -113,30 +117,31 @@ class SentinelCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SENTINEL_MASTER,
     )
-    async def sentinel_master(self, service_name: StringT) -> dict[str, int | bool | str]:
+    def sentinel_master(self, service_name: StringT) -> CommandTask[dict[str, int | bool | str]]:
         """Returns a dictionary containing the specified masters state."""
 
-        return await self.execute_command(
-            CommandName.SENTINEL_MASTER, service_name, callback=PrimaryCallback()
+        return CommandTask(
+            self, CommandName.SENTINEL_MASTER, service_name, callback=PrimaryCallback()
         )
 
     @redis_command(
         CommandName.SENTINEL_MASTERS,
     )
-    async def sentinel_masters(self) -> dict[str, dict[str, int | bool | str]]:
+    def sentinel_masters(self) -> CommandTask[dict[str, dict[str, int | bool | str]]]:
         """Returns a list of dictionaries containing each master's state."""
 
-        return await self.execute_command(
-            CommandName.SENTINEL_MASTERS, callback=PrimariesCallback()
-        )
+        return CommandTask(self, CommandName.SENTINEL_MASTERS, callback=PrimariesCallback())
 
     @redis_command(
         CommandName.SENTINEL_MONITOR,
     )
-    async def sentinel_monitor(self, name: ValueT, ip: ValueT, port: int, quorum: int) -> bool:
+    def sentinel_monitor(
+        self, name: ValueT, ip: ValueT, port: int, quorum: int
+    ) -> CommandTask[bool]:
         """Adds a new master to Sentinel to be monitored"""
 
-        return await self.execute_command(
+        return CommandTask(
+            self,
             CommandName.SENTINEL_MONITOR,
             name,
             ip,
@@ -146,32 +151,29 @@ class SentinelCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(CommandName.SENTINEL_MYID, version_introduced="6.2.0")
-    async def sentinel_myid(self) -> AnyStr:
+    def sentinel_myid(self) -> CommandTask[AnyStr]:
         """Return the ID of the Sentinel instance"""
 
-        return await self.execute_command(
-            CommandName.SENTINEL_MYID, callback=AnyStrCallback[AnyStr]()
-        )
+        return CommandTask(self, CommandName.SENTINEL_MYID, callback=AnyStrCallback[AnyStr]())
 
     @redis_command(
         CommandName.SENTINEL_REMOVE,
     )
-    async def sentinel_remove(self, name: ValueT) -> bool:
+    def sentinel_remove(self, name: ValueT) -> CommandTask[bool]:
         """Removes a master from Sentinel's monitoring"""
 
-        return await self.execute_command(
-            CommandName.SENTINEL_REMOVE, name, callback=SimpleStringCallback()
-        )
+        return CommandTask(self, CommandName.SENTINEL_REMOVE, name, callback=SimpleStringCallback())
 
     @redis_command(
         CommandName.SENTINEL_SENTINELS,
     )
-    async def sentinel_sentinels(
+    def sentinel_sentinels(
         self, service_name: StringT
-    ) -> tuple[dict[str, int | bool | str], ...]:
+    ) -> CommandTask[tuple[dict[str, int | bool | str], ...]]:
         """Returns a list of sentinels for :paramref:`service_name`"""
 
-        return await self.execute_command(
+        return CommandTask(
+            self,
             CommandName.SENTINEL_SENTINELS,
             service_name,
             callback=SentinelsStateCallback(),
@@ -180,10 +182,11 @@ class SentinelCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SENTINEL_SET,
     )
-    async def sentinel_set(self, name: ValueT, option: ValueT, value: ValueT) -> bool:
+    def sentinel_set(self, name: ValueT, option: ValueT, value: ValueT) -> CommandTask[bool]:
         """Sets Sentinel monitoring parameters for a given master"""
 
-        return await self.execute_command(
+        return CommandTask(
+            self,
             CommandName.SENTINEL_SET,
             name,
             option,
@@ -194,31 +197,32 @@ class SentinelCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SENTINEL_SLAVES,
     )
-    async def sentinel_slaves(
+    def sentinel_slaves(
         self, service_name: StringT
-    ) -> tuple[dict[str, int | bool | str], ...]:
+    ) -> CommandTask[tuple[dict[str, int | bool | str], ...]]:
         """Returns a list of slaves for paramref:`service_name`"""
 
-        return await self.execute_command(
-            CommandName.SENTINEL_SLAVES, service_name, callback=SentinelsStateCallback()
+        return CommandTask(
+            self, CommandName.SENTINEL_SLAVES, service_name, callback=SentinelsStateCallback()
         )
 
     @redis_command(
         CommandName.SENTINEL_REPLICAS,
     )
-    async def sentinel_replicas(
+    def sentinel_replicas(
         self, service_name: StringT
-    ) -> tuple[dict[str, int | bool | str], ...]:
+    ) -> CommandTask[tuple[dict[str, int | bool | str], ...]]:
         """Returns a list of replicas for :paramref:`service_name`"""
 
-        return await self.execute_command(
+        return CommandTask(
+            self,
             CommandName.SENTINEL_REPLICAS,
             service_name,
             callback=SentinelsStateCallback(),
         )
 
     @redis_command(CommandName.SENTINEL_RESET)
-    async def sentinel_reset(self, pattern: StringT) -> int:
+    def sentinel_reset(self, pattern: StringT) -> CommandTask[int]:
         """
         Reset all the masters with matching name.
         The pattern argument is a glob-style pattern.
@@ -226,7 +230,8 @@ class SentinelCommands(CommandMixin[AnyStr]):
         failover in progress), and removes every replica and sentinel already
         discovered and associated with the master.
         """
-        return await self.execute_command(
+        return CommandTask(
+            self,
             CommandName.SENTINEL_RESET,
             pattern,
             callback=IntCallback(),

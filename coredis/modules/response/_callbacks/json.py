@@ -4,11 +4,14 @@ from typing import cast
 
 from coredis._json import json
 from coredis.response._callbacks import ResponseCallback
-from coredis.typing import Any, JsonType, ResponseType
+from coredis.typing import JsonType, ResponseType
 
 
 class JsonCallback(ResponseCallback[ResponseType, ResponseType, JsonType]):
-    def transform(self, response: ResponseType, **options: Any) -> JsonType:
+    def transform(
+        self,
+        response: ResponseType,
+    ) -> JsonType:
         if isinstance(response, (bytes, str)):
             deser = json.loads(response)
         elif isinstance(response, list):

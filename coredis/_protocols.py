@@ -5,9 +5,11 @@ from types import TracebackType
 
 from typing_extensions import runtime_checkable
 
+from coredis.response._callbacks import NoopCallback
 from coredis.typing import (
     Awaitable,
     Callable,
+    ExecutionParameters,
     KeyT,
     Parameters,
     Protocol,
@@ -15,19 +17,24 @@ from coredis.typing import (
     ResponseType,
     StringT,
     TypeVar,
+    Unpack,
     ValueT,
 )
 
 T_co = TypeVar("T_co", covariant=True)
 
 
+class RedisCommandP(Protocol):
+    name: bytes
+    arguments: tuple[ValueT, ...]
+
+
 class AbstractExecutor(Protocol):
     async def execute_command(
         self,
-        command: bytes,
-        *args: ValueT,
-        callback: Callable[..., R] = ...,
-        **options: ValueT | None,
+        command: RedisCommandP,
+        callback: Callable[..., R] = NoopCallback(),
+        **options: Unpack[ExecutionParameters],
     ) -> R: ...
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import warnings
 from collections import OrderedDict
 from collections.abc import (
@@ -38,7 +39,7 @@ from typing import (
     runtime_checkable,
 )
 
-from typing_extensions import Self
+from typing_extensions import NotRequired, Self, Unpack
 
 from coredis.config import Config
 
@@ -89,9 +90,6 @@ class RedisError(Exception):
     """
 
 
-CommandArgList = list[str | bytes | int | float]
-
-
 class Node(TypedDict):
     """
     Definition of a cluster node
@@ -113,6 +111,9 @@ ValueT = str | bytes | int | float
 #: The canonical type used for input parameters that represent "strings"
 #: that are transmitted to redis.
 StringT = str | bytes
+
+CommandArgList = list[ValueT]
+
 
 #: Restricted union of container types accepted as arguments to apis
 #: that accept a variable number values for an argument (such as keys, values).
@@ -178,6 +179,18 @@ else:
 #: Type alias for valid python types that can be represented as json
 JsonType = str | int | float | bool | dict[str, Any] | list[Any] | None
 
+
+class ExecutionParameters(TypedDict):
+    """
+    Extra parameters that can be passed to :meth:`~coredis.Redis.execute_command`
+    """
+
+    #: Whether to decode the response
+    #: (ignoring the value of :paramref:`~coredis.Redis.decode_responses`)
+    decode: NotRequired[bool]
+    slot_arguments_range: NotRequired[tuple[int, int]]
+
+
 __all__ = [
     "AnyStr",
     "AsyncIterator",
@@ -203,6 +216,7 @@ __all__ = [
     "MutableSequence",
     "NamedTuple",
     "Node",
+    "NotRequired",
     "OrderedDict",
     "Parameters",
     "ParamSpec",
@@ -216,8 +230,15 @@ __all__ = [
     "TypeGuard",
     "TypedDict",
     "TypeVar",
+    "Unpack",
     "ValueT",
     "ValuesView",
     "TYPE_CHECKING",
     "RUNTIME_TYPECHECKS",
 ]
+
+
+@dataclasses.dataclass
+class RedisCommand:
+    name: bytes
+    arguments: tuple[ValueT, ...]

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from coredis.response._callbacks import DictCallback, ResponseCallback
 from coredis.typing import (
-    Any,
     AnyStr,
     ResponsePrimitive,
     Sequence,
@@ -19,7 +18,6 @@ class ACLLogCallback(
     def transform(
         self,
         response: list[Sequence[ResponsePrimitive] | None],
-        **options: Any,
     ) -> tuple[dict[AnyStr, ResponsePrimitive] | None, ...]:
         return tuple(
             DictCallback[AnyStr, ResponsePrimitive]()(r, version=self.version)
@@ -30,6 +28,5 @@ class ACLLogCallback(
     def transform_3(
         self,
         response: list[dict[AnyStr, ResponsePrimitive] | None],
-        **options: Any,
     ) -> tuple[dict[AnyStr, ResponsePrimitive] | None, ...]:
         return tuple(response)
