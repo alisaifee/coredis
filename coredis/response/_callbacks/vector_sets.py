@@ -6,7 +6,7 @@ from coredis._utils import nativestr
 from coredis.response._callbacks import ResponseCallback
 from coredis.response._utils import flat_pairs_to_dict
 from coredis.response.types import VectorData
-from coredis.typing import Any, AnyStr, ResponsePrimitive
+from coredis.typing import Any, AnyStr, ResponsePrimitive, StringT
 
 
 class VSimCallback(
@@ -71,13 +71,13 @@ class VLinksCallback(
 
 class VEmbCallback(
     ResponseCallback[
-        list[AnyStr] | list[ResponsePrimitive],
+        list[StringT] | list[ResponsePrimitive],
         list[float] | list[ResponsePrimitive],
-        tuple[float, ...] | VectorData,
+        tuple[float, ...] | VectorData | None,
     ]
 ):
     def transform(
-        self, response: list[AnyStr] | list[ResponsePrimitive] | None, **options: Any
+        self, response: list[StringT] | list[ResponsePrimitive] | None, **options: Any
     ) -> tuple[float, ...] | VectorData | None:
         if response:
             if options.get("raw"):

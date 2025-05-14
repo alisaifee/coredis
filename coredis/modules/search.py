@@ -8,7 +8,7 @@ from datetime import timedelta
 from deprecated.sphinx import versionadded
 
 from ..commands._utils import normalized_milliseconds, normalized_seconds
-from ..commands._wrappers import ClusterCommandConfig
+from ..commands._wrappers import ClusterCommandConfig, CommandTask
 from ..commands.constants import CommandGroup, CommandName, NodeFlag
 from ..response._callbacks import (
     AnyStrCallback,
@@ -261,7 +261,7 @@ class Search(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         group=COMMAND_GROUP,
     )
-    async def create(
+    def create(
         self,
         index: KeyT,
         schema: Parameters[Field],
@@ -282,7 +282,7 @@ class Search(ModuleGroup[AnyStr]):
         nofreqs: bool | None = None,
         stopwords: Parameters[StringT] | None = None,
         skipinitialscan: bool | None = None,
-    ) -> bool:
+    ) -> CommandTask[bool]:
         """
         Creates an index with the given spec
 
@@ -349,8 +349,8 @@ class Search(ModuleGroup[AnyStr]):
             field_args.extend(field.args)
         command_arguments.extend(field_args)
 
-        return await self.execute_module_command(
-            CommandName.FT_CREATE, *command_arguments, callback=SimpleStringCallback()
+        return CommandTask(
+            self.client, CommandName.FT_CREATE, *command_arguments, callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -359,13 +359,14 @@ class Search(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         group=COMMAND_GROUP,
     )
-    async def info(self, index: KeyT) -> dict[AnyStr, ResponseType]:
+    def info(self, index: KeyT) -> CommandTask[dict[AnyStr, ResponseType]]:
         """
         Returns information and statistics on the index
 
         :param index: The name of the index.
         """
-        return await self.execute_module_command(
+        return CommandTask(
+            self.client,
             CommandName.FT_INFO,
             index,
             callback=DictCallback[AnyStr, ResponseType](
@@ -386,7 +387,9 @@ class Search(ModuleGroup[AnyStr]):
         group=COMMAND_GROUP,
         arguments={"dialect": {"version_introduced": "2.4.3"}},
     )
-    async def explain(self, index: KeyT, query: StringT, dialect: int | None = None) -> AnyStr:
+    def explain(
+        self, index: KeyT, query: StringT, dialect: int | None = None
+    ) -> CommandTask[AnyStr]:
         """
         Returns the execution plan for a complex query
 
@@ -397,8 +400,11 @@ class Search(ModuleGroup[AnyStr]):
         command_arguments: CommandArgList = [index, query]
         if dialect:
             command_arguments.extend([PrefixToken.DIALECT, dialect])
-        return await self.execute_module_command(
-            CommandName.FT_EXPLAIN, *command_arguments, callback=AnyStrCallback[AnyStr]()
+        return CommandTask(
+            self.client,
+            CommandName.FT_EXPLAIN,
+            *command_arguments,
+            callback=AnyStrCallback[AnyStr](),
         )
 
     @module_command(
@@ -407,12 +413,12 @@ class Search(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         group=COMMAND_GROUP,
     )
-    async def alter(
+    def alter(
         self,
         index: KeyT,
         field: Field,
         skipinitialscan: bool | None = None,
-    ) -> bool:
+    ) -> CommandTask[bool]:
         """
         Adds a new field to the index
 
@@ -426,8 +432,8 @@ class Search(ModuleGroup[AnyStr]):
             command_arguments.append(PureToken.SKIPINITIALSCAN)
         command_arguments.extend([PureToken.SCHEMA, PureToken.ADD, *field.args])
 
-        return await self.execute_module_command(
-            CommandName.FT_ALTER, *command_arguments, callback=SimpleStringCallback()
+        return CommandTask(
+            self.client, CommandName.FT_ALTER, *command_arguments, callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -436,7 +442,7 @@ class Search(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         group=COMMAND_GROUP,
     )
-    async def dropindex(self, index: KeyT, delete_docs: bool | None = None) -> bool:
+    def dropindex(self, index: KeyT, delete_docs: bool | None = None) -> CommandTask[bool]:
         """
         Deletes the index
 
@@ -447,8 +453,11 @@ class Search(ModuleGroup[AnyStr]):
         if delete_docs:
             command_arguments.append(PureToken.DELETE_DOCS)
 
-        return await self.execute_module_command(
-            CommandName.FT_DROPINDEX, *command_arguments, callback=SimpleStringCallback()
+        return CommandTask(
+            self.client,
+            CommandName.FT_DROPINDEX,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )
 
     @module_command(
@@ -457,7 +466,7 @@ class Search(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         group=COMMAND_GROUP,
     )
-    async def aliasadd(self, alias: StringT, index: KeyT) -> bool:
+    def aliasadd(self, alias: StringT, index: KeyT) -> CommandTask[bool]:
         """
         Adds an alias to the index
 
@@ -465,8 +474,8 @@ class Search(ModuleGroup[AnyStr]):
         :param index: The index to which the alias will be added.
         """
 
-        return await self.execute_module_command(
-            CommandName.FT_ALIASADD, alias, index, callback=SimpleStringCallback()
+        return CommandTask(
+            self.client, CommandName.FT_ALIASADD, alias, index, callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -475,7 +484,7 @@ class Search(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         group=COMMAND_GROUP,
     )
-    async def aliasupdate(self, alias: StringT, index: KeyT) -> bool:
+    def aliasupdate(self, alias: StringT, index: KeyT) -> CommandTask[bool]:
         """
         Adds or updates an alias to the index
 
@@ -483,8 +492,8 @@ class Search(ModuleGroup[AnyStr]):
         :param index: The index to which the alias will be added.
         """
 
-        return await self.execute_module_command(
-            CommandName.FT_ALIASUPDATE, alias, index, callback=SimpleStringCallback()
+        return CommandTask(
+            self.client, CommandName.FT_ALIASUPDATE, alias, index, callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -493,15 +502,15 @@ class Search(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         group=COMMAND_GROUP,
     )
-    async def aliasdel(self, alias: StringT) -> bool:
+    def aliasdel(self, alias: StringT) -> CommandTask[bool]:
         """
         Deletes an alias from the index
 
         :param alias: The index alias to be removed.
         """
 
-        return await self.execute_module_command(
-            CommandName.FT_ALIASDEL, alias, callback=SimpleStringCallback()
+        return CommandTask(
+            self.client, CommandName.FT_ALIASDEL, alias, callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -510,7 +519,7 @@ class Search(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         group=COMMAND_GROUP,
     )
-    async def tagvals(self, index: KeyT, field_name: StringT) -> set[AnyStr]:
+    def tagvals(self, index: KeyT, field_name: StringT) -> CommandTask[set[AnyStr]]:
         """
         Returns the distinct tags indexed in a Tag field
 
@@ -518,8 +527,8 @@ class Search(ModuleGroup[AnyStr]):
         :param field_name: Name of a Tag field defined in the schema.
         """
 
-        return await self.execute_module_command(
-            CommandName.FT_TAGVALS, index, field_name, callback=SetCallback[AnyStr]()
+        return CommandTask(
+            self.client, CommandName.FT_TAGVALS, index, field_name, callback=SetCallback[AnyStr]()
         )
 
     @module_command(
@@ -528,13 +537,13 @@ class Search(ModuleGroup[AnyStr]):
         version_introduced="1.2.0",
         group=COMMAND_GROUP,
     )
-    async def synupdate(
+    def synupdate(
         self,
         index: KeyT,
         synonym_group: StringT,
         terms: Parameters[StringT],
         skipinitialscan: bool | None = None,
-    ) -> bool:
+    ) -> CommandTask[bool]:
         """
         Creates or updates a synonym group with additional terms
 
@@ -549,8 +558,11 @@ class Search(ModuleGroup[AnyStr]):
         if skipinitialscan:
             command_arguments.append(PureToken.SKIPINITIALSCAN)
         command_arguments.extend(terms)
-        return await self.execute_module_command(
-            CommandName.FT_SYNUPDATE, *command_arguments, callback=SimpleStringCallback()
+        return CommandTask(
+            self.client,
+            CommandName.FT_SYNUPDATE,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )
 
     @module_command(
@@ -559,15 +571,18 @@ class Search(ModuleGroup[AnyStr]):
         version_introduced="1.2.0",
         group=COMMAND_GROUP,
     )
-    async def syndump(self, index: KeyT) -> dict[AnyStr, list[AnyStr]]:
+    def syndump(self, index: KeyT) -> CommandTask[dict[AnyStr, list[AnyStr]]]:
         """
         Dumps the contents of a synonym group
 
         :param index: The name of the index.
         """
 
-        return await self.execute_module_command(
-            CommandName.FT_SYNDUMP, index, callback=DictCallback[AnyStr, list[AnyStr]]()
+        return CommandTask(
+            self.client,
+            CommandName.FT_SYNDUMP,
+            index,
+            callback=DictCallback[AnyStr, list[AnyStr]](),
         )
 
     @module_command(
@@ -577,7 +592,7 @@ class Search(ModuleGroup[AnyStr]):
         group=COMMAND_GROUP,
         arguments={"dialect": {"version_introduced": "2.4.3"}},
     )
-    async def spellcheck(
+    def spellcheck(
         self,
         index: KeyT,
         query: StringT,
@@ -585,7 +600,7 @@ class Search(ModuleGroup[AnyStr]):
         include: StringT | None = None,
         exclude: StringT | None = None,
         dialect: int | None = None,
-    ) -> dict[AnyStr, OrderedDict[AnyStr, float]]:
+    ) -> CommandTask[dict[AnyStr, OrderedDict[AnyStr, float]]]:
         """
         Performs spelling correction on a query, returning suggestions for misspelled terms
 
@@ -605,8 +620,11 @@ class Search(ModuleGroup[AnyStr]):
             command_arguments.extend([PrefixToken.TERMS, PureToken.INCLUDE, include])
         if dialect:
             command_arguments.extend([PrefixToken.DIALECT, dialect])
-        return await self.execute_module_command(
-            CommandName.FT_SPELLCHECK, *command_arguments, callback=SpellCheckCallback[AnyStr]()
+        return CommandTask(
+            self.client,
+            CommandName.FT_SPELLCHECK,
+            *command_arguments,
+            callback=SpellCheckCallback[AnyStr](),
         )
 
     @module_command(
@@ -615,11 +633,11 @@ class Search(ModuleGroup[AnyStr]):
         version_introduced="1.4.0",
         group=COMMAND_GROUP,
     )
-    async def dictadd(
+    def dictadd(
         self,
         name: StringT,
         terms: Parameters[StringT],
-    ) -> int:
+    ) -> CommandTask[int]:
         """
         Adds terms to a dictionary
 
@@ -628,8 +646,8 @@ class Search(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [name, *terms]
 
-        return await self.execute_module_command(
-            CommandName.FT_DICTADD, *command_arguments, callback=IntCallback()
+        return CommandTask(
+            self.client, CommandName.FT_DICTADD, *command_arguments, callback=IntCallback()
         )
 
     @module_command(
@@ -638,11 +656,11 @@ class Search(ModuleGroup[AnyStr]):
         version_introduced="1.4.0",
         group=COMMAND_GROUP,
     )
-    async def dictdel(
+    def dictdel(
         self,
         name: StringT,
         terms: Parameters[StringT],
-    ) -> int:
+    ) -> CommandTask[int]:
         """
         Deletes terms from a dictionary
 
@@ -651,8 +669,8 @@ class Search(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [name, *terms]
 
-        return await self.execute_module_command(
-            CommandName.FT_DICTDEL, *command_arguments, callback=IntCallback()
+        return CommandTask(
+            self.client, CommandName.FT_DICTDEL, *command_arguments, callback=IntCallback()
         )
 
     @module_command(
@@ -661,15 +679,15 @@ class Search(ModuleGroup[AnyStr]):
         version_introduced="1.4.0",
         group=COMMAND_GROUP,
     )
-    async def dictdump(self, name: StringT) -> set[AnyStr]:
+    def dictdump(self, name: StringT) -> CommandTask[set[AnyStr]]:
         """
         Dumps all terms in the given dictionary
 
         :param name: The name of the dictionary to dump.
         """
 
-        return await self.execute_module_command(
-            CommandName.FT_DICTDUMP, name, callback=SetCallback[AnyStr]()
+        return CommandTask(
+            self.client, CommandName.FT_DICTDUMP, name, callback=SetCallback[AnyStr]()
         )
 
     @module_command(
@@ -682,13 +700,11 @@ class Search(ModuleGroup[AnyStr]):
             combine=ClusterMergeSets[AnyStr](),
         ),
     )
-    async def list(self) -> set[AnyStr]:
+    def list(self) -> CommandTask[set[AnyStr]]:
         """
         Returns a list of all existing indexes
         """
-        return await self.execute_module_command(
-            CommandName.FT__LIST, callback=SetCallback[AnyStr]()
-        )
+        return CommandTask(self.client, CommandName.FT__LIST, callback=SetCallback[AnyStr]())
 
     @module_command(
         CommandName.FT_CONFIG_SET,
@@ -701,13 +717,13 @@ class Search(ModuleGroup[AnyStr]):
             combine=ClusterEnsureConsistent[bool](),
         ),
     )
-    async def config_set(self, option: StringT, value: ValueT) -> bool:
+    def config_set(self, option: StringT, value: ValueT) -> CommandTask[bool]:
         """
         Sets runtime configuration options
         """
 
-        return await self.execute_module_command(
-            CommandName.FT_CONFIG_SET, option, value, callback=SimpleStringCallback()
+        return CommandTask(
+            self.client, CommandName.FT_CONFIG_SET, option, value, callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -720,12 +736,13 @@ class Search(ModuleGroup[AnyStr]):
             route=NodeFlag.RANDOM,
         ),
     )
-    async def config_get(self, option: StringT) -> dict[AnyStr, ResponsePrimitive]:
+    def config_get(self, option: StringT) -> CommandTask[dict[AnyStr, ResponsePrimitive]]:
         """
         Retrieves runtime configuration options
         """
 
-        return await self.execute_module_command(
+        return CommandTask(
+            self.client,
             CommandName.FT_CONFIG_GET,
             option,
             callback=SearchConfigCallback[AnyStr](),
@@ -738,7 +755,7 @@ class Search(ModuleGroup[AnyStr]):
         group=COMMAND_GROUP,
         arguments={"dialect": {"version_introduced": "2.4.3"}},
     )
-    async def search(
+    def search(
         self,
         index: KeyT,
         query: StringT,
@@ -785,7 +802,7 @@ class Search(ModuleGroup[AnyStr]):
         limit: int | None = None,
         parameters: Mapping[StringT, ValueT] | None = None,
         dialect: int | None = None,
-    ) -> SearchResult[AnyStr]:
+    ) -> CommandTask[SearchResult[AnyStr]]:
         """
         Searches the index with a textual query, returning either documents or just ids
 
@@ -923,15 +940,18 @@ class Search(ModuleGroup[AnyStr]):
         if dialect:
             command_arguments.extend([PrefixToken.DIALECT, dialect])
 
-        return await self.execute_module_command(
+        return CommandTask(
+            self.client,
             CommandName.FT_SEARCH,
             *command_arguments,
             callback=SearchResultCallback[AnyStr](),
-            withscores=withscores,
-            withpayloads=withpayloads,
-            withsortkeys=withsortkeys,
-            explainscore=explainscore,
-            nocontent=nocontent,
+            callback_options=dict(
+                withscores=withscores,
+                withpayloads=withpayloads,
+                withsortkeys=withsortkeys,
+                explainscore=explainscore,
+                nocontent=nocontent,
+            ),
         )
 
     @module_command(
@@ -941,7 +961,7 @@ class Search(ModuleGroup[AnyStr]):
         group=COMMAND_GROUP,
         arguments={"dialect": {"version_introduced": "2.4.3"}},
     )
-    async def aggregate(
+    def aggregate(
         self,
         index: KeyT,
         query: StringT,
@@ -959,7 +979,7 @@ class Search(ModuleGroup[AnyStr]):
         cursor_maxidle: int | timedelta | None = None,
         parameters: Mapping[StringT, StringT] | None = None,
         dialect: int | None = None,
-    ) -> SearchAggregationResult[AnyStr]:
+    ) -> CommandTask[SearchAggregationResult[AnyStr]]:
         """
         Perform aggregate transformations on search results from a Redis index.
 
@@ -1029,12 +1049,12 @@ class Search(ModuleGroup[AnyStr]):
             command_arguments.extend([PureToken.PARAMS, len(_parameters), *_parameters])
         if dialect:
             command_arguments.extend([PrefixToken.DIALECT, dialect])
-        return await self.execute_module_command(
+        return CommandTask(
+            self.client,
             CommandName.FT_AGGREGATE,
             *command_arguments,
             callback=AggregationResultCallback[AnyStr](),
-            with_cursor=with_cursor,
-            dialect=dialect,
+            callback_options=dict(with_cursor=with_cursor, dialect=dialect),
         )
 
     @module_command(
@@ -1043,9 +1063,9 @@ class Search(ModuleGroup[AnyStr]):
         version_introduced="1.1.0",
         group=COMMAND_GROUP,
     )
-    async def cursor_read(
+    def cursor_read(
         self, index: KeyT, cursor_id: int, count: int | None = None
-    ) -> SearchAggregationResult[AnyStr]:
+    ) -> CommandTask[SearchAggregationResult[AnyStr]]:
         """
         Reads from a cursor
         """
@@ -1053,11 +1073,12 @@ class Search(ModuleGroup[AnyStr]):
         if count:
             command_arguments.extend([PrefixToken.COUNT, count])
 
-        return await self.execute_module_command(
+        return CommandTask(
+            self.client,
             CommandName.FT_CURSOR_READ,
             *command_arguments,
             callback=AggregationResultCallback[AnyStr](),
-            with_cursor=True,
+            callback_options={"with_cursor": True},
         )
 
     @module_command(
@@ -1066,13 +1087,16 @@ class Search(ModuleGroup[AnyStr]):
         version_introduced="1.1.0",
         group=COMMAND_GROUP,
     )
-    async def cursor_del(self, index: KeyT, cursor_id: int) -> bool:
+    def cursor_del(self, index: KeyT, cursor_id: int) -> CommandTask[bool]:
         """
         Deletes a cursor
 
         """
         command_arguments: CommandArgList = [index, cursor_id]
 
-        return await self.execute_module_command(
-            CommandName.FT_CURSOR_DEL, *command_arguments, callback=SimpleStringCallback()
+        return CommandTask(
+            self.client,
+            CommandName.FT_CURSOR_DEL,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )

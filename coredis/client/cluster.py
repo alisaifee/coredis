@@ -713,7 +713,9 @@ class RedisCluster(
             self.result_callbacks[command](res, version=self.protocol_version, **kwargs),
         )
 
-    def determine_node(self, command: bytes, **kwargs: ValueT | None) -> list[ManagedNode] | None:
+    def determine_node(
+        self, command: bytes, *args: ValueT, **kwargs: ValueT | None
+    ) -> list[ManagedNode] | None:
         node_flag = self.route_flags.get(command)
         if command in self.split_flags and self.non_atomic_cross_slot:
             node_flag = self.split_flags[command]
@@ -725,14 +727,16 @@ class RedisCluster(
         elif node_flag == NodeFlag.ALL:
             return list(self.connection_pool.nodes.all_nodes())
         elif node_flag == NodeFlag.SLOT_ID:
-            slot_id: ValueT | None = kwargs.get("slot_id")
-            node_from_slot = (
-                self.connection_pool.nodes.node_from_slot(int(slot_id))
-                if slot_id is not None
-                else None
+            slot_start, slot_end = (
+                cast(int, kwargs.get("slot_start", 0)),
+                cast(int, kwargs.get("slot_end", 0)),
             )
-            if node_from_slot:
-                return [node_from_slot]
+            nodes = list(
+                self.connection_pool.nodes.nodes_from_slots(
+                    *cast(tuple[int, ...], args[slot_start:slot_end])
+                ).keys()
+            )
+            return [self.connection_pool.nodes.nodes[k] for k in nodes]
         return None
 
     async def on_connection_error(self, _: BaseException) -> None:
@@ -776,10 +780,10 @@ class RedisCluster(
         """
         Sends a command to one or many nodes in the cluster
         """
-        nodes = self.determine_node(command, **kwargs)
+        nodes = self.determine_node(command, *args, **kwargs)
         if nodes and len(nodes) > 1:
             tasks: dict[str, Coroutine[Any, Any, R]] = {}
-            node_arg_mapping = self._split_args_over_nodes(nodes, command, *args)
+            node_arg_mapping = self._split_args_over_nodes(nodes, command, *args, **kwargs)
             node_name_map = {n.name: n for n in nodes}
             for node_name in node_arg_mapping:
                 for portion, pargs in enumerate(node_arg_mapping[node_name]):
@@ -815,10 +819,12 @@ class RedisCluster(
         nodes: list[ManagedNode],
         command: bytes,
         *args: ValueT,
+        **kwargs: ValueT | None,
     ) -> dict[str, list[tuple[ValueT, ...]]]:
+        node_flag = self.route_flags.get(command)
+        node_arg_mapping: dict[str, list[tuple[ValueT, ...]]] = {}
         if command in self.split_flags and self.non_atomic_cross_slot:
             keys = KeySpec.extract_keys(command, *args)
-            node_arg_mapping: dict[str, list[tuple[ValueT, ...]]] = {}
             if keys:
                 key_start: int = args.index(keys[0])
                 key_end: int = args.index(keys[-1])
@@ -840,11 +846,20 @@ class RedisCluster(
                         )
             if self.cache and command not in READONLY_COMMANDS:
                 self.cache.invalidate(*keys)
-            return node_arg_mapping
+        elif node_flag == NodeFlag.SLOT_ID:
+            # TODO: fix this nonsense put in place just to support a few cluster commands
+            # related to slot management in cluster client which really no one needs to be calling
+            # through the cluster client.
+            slot_start = kwargs.get("slot_start", 0) or 0
+            slot_end = kwargs.get("slot_end", 0) or 0
+            all_slots = [int(k) for k in args[int(slot_start) : int(slot_end)] if k is not None]
+            for node, slots in self.connection_pool.nodes.nodes_from_slots(*all_slots).items():
+                node_arg_mapping[node] = [(*slots, *args[slot_end:])]  # type: ignore
         else:
             # This command is not meant to be split across nodes and each node
             # should be called with the same arguments
-            return {node.name: [args] for node in nodes}
+            node_arg_mapping = {node.name: [args] for node in nodes}
+        return node_arg_mapping
 
     async def _execute_command_on_single_node(
         self,

@@ -90,7 +90,7 @@ class TestClient:
                 assert "א" == await client.get("fubar")
 
     async def test_blocking_task_cancellation(self, client, _s):
-        task = asyncio.create_task(client.blpop(["nonexistent"], timeout=10))
+        task = client.blpop(["nonexistent"], timeout=10)
         await asyncio.sleep(0.5)
         task.cancel()
         try:

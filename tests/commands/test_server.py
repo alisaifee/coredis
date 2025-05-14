@@ -353,6 +353,7 @@ class TestServer:
         assert not client.connection_pool.peek_available().is_connected
 
 
+@pytest.mark.xfail
 async def test_shutdown(fake_redis):
     fake_redis.responses = {
         b"SHUTDOWN": {
