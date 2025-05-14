@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import sys
 import warnings
 from collections import OrderedDict
@@ -38,7 +39,7 @@ from typing import (
     runtime_checkable,
 )
 
-from typing_extensions import Self
+from typing_extensions import NotRequired, Self, Unpack
 
 from coredis.config import Config
 
@@ -89,9 +90,6 @@ class RedisError(Exception):
     """
 
 
-CommandArgList = list[str | bytes | int | float]
-
-
 class Node(TypedDict):
     """
     Definition of a cluster node
@@ -99,6 +97,42 @@ class Node(TypedDict):
 
     host: str
     port: int
+
+
+class RedisCommandP(Protocol):
+    """
+    Protocol of a redis command with all associated arguments
+    converted into the shape expected by the redis server.
+    Used by :meth:`~coredis.Redis.execute_command`
+    """
+
+    #: The name of the redis command
+    name: bytes
+    #: All arguments to be passed to the command
+    arguments: tuple[ValueT, ...]
+
+
+@dataclasses.dataclass
+class RedisCommand:
+    """
+    Convenience data class that conforms to :class:`~coredis.typing.RedisCommandP`
+    """
+
+    #: The name of the redis command
+    name: bytes
+    #: All arguments to be passed to the command
+    arguments: tuple[ValueT, ...]
+
+
+class ExecutionParameters(TypedDict):
+    """
+    Extra parameters that can be passed to :meth:`~coredis.Redis.execute_command`
+    """
+
+    #: Whether to decode the response
+    #: (ignoring the value of :paramref:`~coredis.Redis.decode_responses`)
+    decode: NotRequired[bool]
+    slot_arguments_range: NotRequired[tuple[int, int]]
 
 
 #: Represents the acceptable types of a redis key
@@ -113,6 +147,9 @@ ValueT = str | bytes | int | float
 #: The canonical type used for input parameters that represent "strings"
 #: that are transmitted to redis.
 StringT = str | bytes
+
+CommandArgList = list[ValueT]
+
 
 #: Restricted union of container types accepted as arguments to apis
 #: that accept a variable number values for an argument (such as keys, values).
@@ -144,6 +181,7 @@ if sys.version_info >= (3, 12):
 else:
     from ._py_311_typing import HashableResponseType, JsonType, ResponseType
 
+
 __all__ = [
     "AnyStr",
     "AsyncIterator",
@@ -170,10 +208,14 @@ __all__ = [
     "MutableSequence",
     "NamedTuple",
     "Node",
+    "NotRequired",
     "OrderedDict",
     "Parameters",
     "ParamSpec",
     "Protocol",
+    "RedisCommand",
+    "RedisCommandP",
+    "ExecutionParameters",
     "ResponsePrimitive",
     "ResponseType",
     "runtime_checkable",
@@ -183,6 +225,7 @@ __all__ = [
     "TypeGuard",
     "TypedDict",
     "TypeVar",
+    "Unpack",
     "ValueT",
     "ValuesView",
     "TYPE_CHECKING",

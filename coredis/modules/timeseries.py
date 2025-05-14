@@ -25,6 +25,7 @@ from ..commands._validators import (
 )
 from ..commands._wrappers import ClusterCommandConfig
 from ..commands.constants import CommandFlag, CommandGroup, CommandName, NodeFlag
+from ..commands.request import CommandRequest
 from ..response._callbacks import (
     ClusterMergeSets,
     IntCallback,
@@ -71,7 +72,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def create(
+    def create(
         self,
         key: KeyT,
         retention: int | timedelta | None = None,
@@ -89,7 +90,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
             ]
         ) = None,
         labels: Mapping[StringT, ValueT] | None = None,
-    ) -> bool:
+    ) -> CommandRequest[bool]:
         """
         Create a new time series with the given key.
 
@@ -120,7 +121,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
                     *dict_to_flat_list(labels),  # type: ignore
                 ]
             )
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.TS_CREATE, *command_arguments, callback=SimpleStringCallback()
         )
 
@@ -130,12 +131,12 @@ class TimeSeries(ModuleGroup[AnyStr]):
         version_introduced="1.6.0",
         module=MODULE,
     )
-    async def delete(
+    def delete(
         self,
         key: KeyT,
         fromtimestamp: int | datetime | StringT,
         totimestamp: int | datetime | StringT,
-    ) -> int:
+    ) -> CommandRequest[int]:
         """
         Delete all samples between two timestamps for a given time series.
 
@@ -144,7 +145,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param totimestamp: End timestamp for the range deletion.
         :return: The number of samples that were deleted, or an error reply.
         """
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.TS_DEL,
             key,
             normalized_timestamp(fromtimestamp),
@@ -158,7 +159,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def alter(
+    def alter(
         self,
         key: KeyT,
         labels: Mapping[StringT, StringT] | None = None,
@@ -175,7 +176,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
                 PureToken.SUM,
             ]
         ) = None,
-    ) -> bool:
+    ) -> CommandRequest[bool]:
         """
         Update the retention, chunk size, duplicate policy, and labels of an existing time series.
 
@@ -202,7 +203,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
             command_arguments.extend([PrefixToken.CHUNK_SIZE, chunk_size])
         if duplicate_policy:
             command_arguments.extend([PrefixToken.DUPLICATE_POLICY, duplicate_policy])
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.TS_ALTER, *command_arguments, callback=SimpleStringCallback()
         )
 
@@ -212,7 +213,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def add(
+    def add(
         self,
         key: KeyT,
         timestamp: int | datetime | StringT,
@@ -232,7 +233,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
             ]
         ) = None,
         labels: Mapping[StringT, ValueT] | None = None,
-    ) -> int:
+    ) -> CommandRequest[int]:
         """
         Add a sample to a time series.
 
@@ -268,7 +269,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
                     *dict_to_flat_list(labels),  # type: ignore
                 ]
             )
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.TS_ADD, *command_arguments, callback=IntCallback()
         )
 
@@ -278,7 +279,9 @@ class TimeSeries(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def madd(self, ktvs: Parameters[tuple[AnyStr, int, int | float]]) -> tuple[int, ...]:
+    def madd(
+        self, ktvs: Parameters[tuple[AnyStr, int, int | float]]
+    ) -> CommandRequest[tuple[int, ...]]:
         """
         Append new samples to one or more time series.
 
@@ -289,7 +292,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = list(itertools.chain(*ktvs))
 
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.TS_MADD, *command_arguments, callback=TupleCallback[int]()
         )
 
@@ -299,7 +302,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def incrby(
+    def incrby(
         self,
         key: KeyT,
         value: int | float,
@@ -308,7 +311,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         retention: int | timedelta | None = None,
         uncompressed: bool | None = None,
         chunk_size: int | None = None,
-    ) -> int:
+    ) -> CommandRequest[int]:
         """
         Increments the value of the sample with the maximum existing timestamp, or creates
         a new sample with a value equal to the value of the sample with the maximum existing
@@ -343,7 +346,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
                 [PrefixToken.LABELS, *dict_to_flat_list(labels)]  # type: ignore
             )
 
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.TS_INCRBY, *command_arguments, callback=IntCallback()
         )
 
@@ -353,7 +356,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def decrby(
+    def decrby(
         self,
         key: KeyT,
         value: int | float,
@@ -362,7 +365,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         retention: int | timedelta | None = None,
         uncompressed: bool | None = None,
         chunk_size: int | None = None,
-    ) -> int:
+    ) -> CommandRequest[int]:
         """
         Decrease the value of the sample with the maximum existing timestamp, or create a new
         sample with a value equal to the value of the sample with the maximum existing timestamp
@@ -400,7 +403,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
             command_arguments.extend(
                 [PrefixToken.LABELS, *dict_to_flat_list(labels)]  # type: ignore
             )
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.TS_DECRBY, *command_arguments, callback=IntCallback()
         )
 
@@ -411,7 +414,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         arguments={"aligntimestamp": {"version_introduced": "1.8.0"}},
         module=MODULE,
     )
-    async def createrule(
+    def createrule(
         self,
         source: KeyT,
         destination: KeyT,
@@ -432,7 +435,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         ],
         bucketduration: int | timedelta,
         aligntimestamp: int | None = None,
-    ) -> bool:
+    ) -> CommandRequest[bool]:
         """
         Create a compaction rule
 
@@ -455,8 +458,10 @@ class TimeSeries(ModuleGroup[AnyStr]):
         )
         if aligntimestamp is not None:
             command_arguments.append(aligntimestamp)
-        return await self.execute_module_command(
-            CommandName.TS_CREATERULE, *command_arguments, callback=SimpleStringCallback()
+        return self.client.create_request(
+            CommandName.TS_CREATERULE,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )
 
     @module_command(
@@ -465,7 +470,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def deleterule(self, source: KeyT, destination: KeyT) -> bool:
+    def deleterule(self, source: KeyT, destination: KeyT) -> CommandRequest[bool]:
         """
         Delete a compaction rule from a RedisTimeSeries sourceKey to a destinationKey.
 
@@ -477,8 +482,10 @@ class TimeSeries(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [source, destination]
 
-        return await self.execute_module_command(
-            CommandName.TS_DELETERULE, *command_arguments, callback=SimpleStringCallback()
+        return self.client.create_request(
+            CommandName.TS_DELETERULE,
+            *command_arguments,
+            callback=SimpleStringCallback(),
         )
 
     @mutually_inclusive_parameters("min_value", "max_value")
@@ -495,7 +502,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def range(
+    def range(
         self,
         key: KeyT,
         fromtimestamp: datetime | int | StringT,
@@ -528,7 +535,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         buckettimestamp: StringT | None = None,
         empty: bool | None = None,
         latest: bool | None = None,
-    ) -> tuple[tuple[int, float], ...] | tuple[()]:
+    ) -> CommandRequest[tuple[tuple[int, float], ...] | tuple[()]]:
         """
         Query a range in forward direction.
 
@@ -582,7 +589,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
             if empty is not None:
                 command_arguments.append(PureToken.EMPTY)
 
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.TS_RANGE, *command_arguments, callback=SamplesCallback()
         )
 
@@ -600,7 +607,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def revrange(
+    def revrange(
         self,
         key: KeyT,
         fromtimestamp: int | datetime | StringT,
@@ -633,7 +640,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         buckettimestamp: StringT | None = None,
         empty: bool | None = None,
         latest: bool | None = None,
-    ) -> tuple[tuple[int, float], ...] | tuple[()]:
+    ) -> CommandRequest[tuple[tuple[int, float], ...] | tuple[()]]:
         """
         Query a range in reverse direction from a RedisTimeSeries key.
 
@@ -684,7 +691,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
             if empty is not None:
                 command_arguments.append(PureToken.EMPTY)
 
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.TS_REVRANGE, *command_arguments, callback=SamplesCallback()
         )
 
@@ -707,7 +714,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         ),
         flags={CommandFlag.READONLY},
     )
-    async def mrange(
+    def mrange(
         self,
         fromtimestamp: int | datetime | StringT,
         totimestamp: int | datetime | StringT,
@@ -760,9 +767,11 @@ class TimeSeries(ModuleGroup[AnyStr]):
         ) = None,
         empty: bool | None = None,
         latest: bool | None = None,
-    ) -> dict[
-        AnyStr,
-        tuple[dict[AnyStr, AnyStr], tuple[tuple[int, float], ...] | tuple[()]],
+    ) -> CommandRequest[
+        dict[
+            AnyStr,
+            tuple[dict[AnyStr, AnyStr], tuple[tuple[int, float], ...] | tuple[()]],
+        ]
     ]:
         """
         Query a range across multiple time series by filters in forward direction.
@@ -833,11 +842,10 @@ class TimeSeries(ModuleGroup[AnyStr]):
             command_arguments.extend([PrefixToken.FILTER, *_filters])
         if groupby and reducer:
             command_arguments.extend([PureToken.GROUPBY, groupby, b"REDUCE", reducer])
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.TS_MRANGE,
             *command_arguments,
-            callback=TimeSeriesMultiCallback[AnyStr](),
-            grouped=groupby is not None,
+            callback=TimeSeriesMultiCallback[AnyStr](grouped=groupby is not None),
         )
 
     @mutually_inclusive_parameters("min_value", "max_value")
@@ -856,7 +864,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         cluster=ClusterCommandConfig(route=NodeFlag.PRIMARIES, combine=ClusterMergeTimeSeries()),
         flags={CommandFlag.READONLY},
     )
-    async def mrevrange(
+    def mrevrange(
         self,
         fromtimestamp: int | datetime | StringT,
         totimestamp: int | datetime | StringT,
@@ -893,9 +901,11 @@ class TimeSeries(ModuleGroup[AnyStr]):
         reducer: StringT | None = None,
         empty: bool | None = None,
         latest: bool | None = None,
-    ) -> dict[
-        AnyStr,
-        tuple[dict[AnyStr, AnyStr], tuple[tuple[int, float], ...] | tuple[()]],
+    ) -> CommandRequest[
+        dict[
+            AnyStr,
+            tuple[dict[AnyStr, AnyStr], tuple[tuple[int, float], ...] | tuple[()]],
+        ]
     ]:
         """
         Query a range across multiple time series by filters in reverse direction.
@@ -967,11 +977,10 @@ class TimeSeries(ModuleGroup[AnyStr]):
         if groupby and reducer and reducer:
             command_arguments.extend([PureToken.GROUPBY, groupby, b"REDUCE", reducer])
 
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.TS_MREVRANGE,
             *command_arguments,
-            callback=TimeSeriesMultiCallback[AnyStr](),
-            grouped=groupby is not None,
+            callback=TimeSeriesMultiCallback[AnyStr](grouped=groupby is not None),
         )
 
     @module_command(
@@ -983,7 +992,9 @@ class TimeSeries(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def get(self, key: KeyT, latest: bool | None = None) -> tuple[int, float] | tuple[()]:
+    def get(
+        self, key: KeyT, latest: bool | None = None
+    ) -> CommandRequest[tuple[int, float] | tuple[()]]:
         """
         Get the sample with the highest timestamp from a given time series.
 
@@ -998,7 +1009,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         command_arguments: CommandArgList = [key]
         if latest:
             command_arguments.append(b"LATEST")
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.TS_GET, *command_arguments, callback=SampleCallback()
         )
 
@@ -1015,13 +1026,13 @@ class TimeSeries(ModuleGroup[AnyStr]):
         ),
         flags={CommandFlag.READONLY},
     )
-    async def mget(
+    def mget(
         self,
         filters: Parameters[StringT],
         withlabels: bool | None = None,
         selected_labels: Parameters[StringT] | None = None,
         latest: bool | None = None,
-    ) -> dict[AnyStr, tuple[dict[AnyStr, AnyStr], tuple[int, float] | tuple[()]]]:
+    ) -> CommandRequest[dict[AnyStr, tuple[dict[AnyStr, AnyStr], tuple[int, float] | tuple[()]]]]:
         """
         Get the sample with the highest timestamp from each time series matching a specific filter.
 
@@ -1053,8 +1064,10 @@ class TimeSeries(ModuleGroup[AnyStr]):
             _labels: list[StringT] = list(selected_labels)
             command_arguments.extend([b"SELECTED_LABELS", *_labels])
         command_arguments.extend([PrefixToken.FILTER, *filters])
-        return await self.execute_module_command(
-            CommandName.TS_MGET, *command_arguments, callback=TimeSeriesCallback[AnyStr]()
+        return self.client.create_request(
+            CommandName.TS_MGET,
+            *command_arguments,
+            callback=TimeSeriesCallback[AnyStr](),
         )
 
     @module_command(
@@ -1063,7 +1076,9 @@ class TimeSeries(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def info(self, key: KeyT, debug: bool | None = None) -> dict[AnyStr, ResponseType]:
+    def info(
+        self, key: KeyT, debug: bool | None = None
+    ) -> CommandRequest[dict[AnyStr, ResponseType]]:
         """
         Return information and statistics for a time series.
 
@@ -1074,8 +1089,10 @@ class TimeSeries(ModuleGroup[AnyStr]):
         command_arguments: CommandArgList = [key]
         if debug:
             command_arguments.append(b"DEBUG")
-        return await self.execute_module_command(
-            CommandName.TS_INFO, *command_arguments, callback=TimeSeriesInfoCallback[AnyStr]()
+        return self.client.create_request(
+            CommandName.TS_INFO,
+            *command_arguments,
+            callback=TimeSeriesInfoCallback[AnyStr](),
         )
 
     @module_command(
@@ -1089,7 +1106,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         ),
         flags={CommandFlag.READONLY},
     )
-    async def queryindex(self, filters: Parameters[StringT]) -> set[AnyStr]:
+    def queryindex(self, filters: Parameters[StringT]) -> CommandRequest[set[AnyStr]]:
         """
         Get all time series keys matching a filter list.
 
@@ -1114,6 +1131,8 @@ class TimeSeries(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [*filters]
 
-        return await self.execute_module_command(
-            CommandName.TS_QUERYINDEX, *command_arguments, callback=SetCallback[AnyStr]()
+        return self.client.create_request(
+            CommandName.TS_QUERYINDEX,
+            *command_arguments,
+            callback=SetCallback[AnyStr](),
         )

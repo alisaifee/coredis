@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from coredis._utils import EncodingInsensitiveDict, nativestr
 from coredis.response._callbacks import ResponseCallback
 from coredis.response._utils import flat_pairs_to_dict
@@ -14,7 +12,10 @@ from coredis.typing import (
 
 
 class CommandCallback(ResponseCallback[list[ResponseType], list[ResponseType], dict[str, Command]]):
-    def transform(self, response: list[ResponseType], **options: Any) -> dict[str, Command]:
+    def transform(
+        self,
+        response: list[ResponseType],
+    ) -> dict[str, Command]:
         commands: dict[str, Command] = {}
 
         for command in response:
@@ -51,7 +52,10 @@ class CommandCallback(ResponseCallback[list[ResponseType], list[ResponseType], d
 class CommandKeyFlagCallback(
     ResponseCallback[list[ResponseType], list[ResponseType], dict[AnyStr, set[AnyStr]]]
 ):
-    def transform(self, response: list[ResponseType], **options: Any) -> dict[AnyStr, set[AnyStr]]:
+    def transform(
+        self,
+        response: list[ResponseType],
+    ) -> dict[AnyStr, set[AnyStr]]:
         return {k[0]: set(k[1]) for k in response}
 
 
@@ -63,7 +67,8 @@ class CommandDocCallback(
     ]
 ):
     def transform(
-        self, response: list[ResponseType], **options: Any
+        self,
+        response: list[ResponseType],
     ) -> dict[AnyStr, dict[AnyStr, ResponseType]]:
         cmd_mapping = flat_pairs_to_dict(response)
         for cmd, doc in cmd_mapping.items():
@@ -76,6 +81,5 @@ class CommandDocCallback(
     def transform_3(
         self,
         response: dict[ResponsePrimitive, ResponseType],
-        **options: Any,
     ) -> dict[AnyStr, dict[AnyStr, ResponseType]]:
         return response  # noqa

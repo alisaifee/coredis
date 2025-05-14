@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
 
 from coredis.exceptions import DataError, NoKeyError, RedisError
 from coredis.response._callbacks import DateTimeCallback, ResponseCallback
@@ -20,7 +19,10 @@ class SortCallback(
         int | tuple[AnyStr, ...],
     ]
 ):
-    def transform(self, response: int | list[AnyStr], **options: Any) -> int | tuple[AnyStr, ...]:
+    def transform(
+        self,
+        response: int | list[AnyStr],
+    ) -> int | tuple[AnyStr, ...]:
         if isinstance(response, list):
             return tuple(response)
         return response
@@ -33,7 +35,8 @@ class ScanCallback(
         return isinstance(response[0], (str, bytes)) and isinstance(response[1], list)
 
     def transform(
-        self, response: list[ResponseType], **options: Any
+        self,
+        response: list[ResponseType],
     ) -> tuple[int, tuple[AnyStr, ...]]:
         assert self.guard(response)
         cursor, r = response
@@ -41,9 +44,12 @@ class ScanCallback(
 
 
 class ExpiryCallback(DateTimeCallback):
-    def transform(self, response: int, **options: Any) -> datetime:
+    def transform(
+        self,
+        response: int,
+    ) -> datetime:
         if response > 0:
-            return super().transform(response, **options)
+            return super().transform(response)
         else:
             if response == -2:
                 raise NoKeyError()

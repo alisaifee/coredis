@@ -9,6 +9,7 @@ from typing import Any, ClassVar, cast
 from deprecated.sphinx import versionadded
 
 from coredis._utils import EncodingInsensitiveDict, nativestr
+from coredis.commands.request import CommandRequest
 from coredis.exceptions import FunctionError
 from coredis.typing import (
     TYPE_CHECKING,
@@ -142,7 +143,7 @@ class Library(Generic[AnyStr]):
         ),
         runtime_checks: bool = False,
         readonly: bool | None = None,
-    ) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
+    ) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, CommandRequest[R]]]:
         """
         Decorator for wrapping methods of subclasses of :class:`Library`
         as entry points to the functions contained in the library. This allows
@@ -213,22 +214,23 @@ class Library(Generic[AnyStr]):
                 \"\"\"
 
                 @Library.wraps("echo")
-                async def echo(self, value: ValueT) -> ValueT: ...
+                def echo(self, value: ValueT) -> CommandRequest[ValueT]: ...
 
                 @Library.wraps("ping")
-                async def ping(self) -> str: ...
+                def ping(self) -> CommandRequest[str]: ...
 
                 @Library.wraps("get")
-                async def get(self, key: KeyT) -> ValueT: ...
+                def get(self, key: KeyT) -> CommandRequest[ValueT]: ...
 
                 @Library.wraps("hmmget")
-                async def hmmget(self, *keys: KeyT, **fields_with_values: ValueT): ...
+                def hmmget(self, *keys: KeyT, **fields_with_values: ValueT):
                 \"\"\"
                 Return values of ``fields_with_values`` on a first come first serve
                 basis from the hashes at ``keys``. Since ``fields_with_values`` is a mapping
                 the keys are mapped to hash fields and the values are used
                 as defaults if they are not found in any of the hashes at ``keys``
                 \"\"\"
+                ...
 
             client = coredis.Redis()
             lib = await MyAwesomeLibrary(client, replace=True)
@@ -264,7 +266,7 @@ class Library(Generic[AnyStr]):
         :return: A function that has a signature mirroring the decorated function.
         """
 
-        def wrapper(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
+        def wrapper(func: Callable[P, Awaitable[R]]) -> Callable[P, CommandRequest[R]]:
             sig = inspect.signature(func)
             first_arg: str = list(sig.parameters.keys())[0]
             runtime_check_wrapper = add_runtime_checks if not runtime_checks else safe_beartype
@@ -318,16 +320,14 @@ class Library(Generic[AnyStr]):
 
             @runtime_check_wrapper
             @functools.wraps(func)
-            async def _inner(*args: P.args, **kwargs: P.kwargs) -> R:
+            def _inner(*args: P.args, **kwargs: P.kwargs) -> CommandRequest[R]:
                 instance, keys, arguments = split_args(*args, **kwargs)
                 func = instance.functions[function_name]
                 if not func:
                     raise AttributeError(
                         f"Library {instance.name} has no registered function {function_name}"
                     )
-                # TODO: atleast lie with a cast.
-                #  mypy doesn't like the cast
-                return await func(keys, arguments, readonly=readonly)  # type: ignore
+                return cast(CommandRequest[R], func(keys, arguments, readonly=readonly))
 
             return _inner
 
@@ -373,14 +373,14 @@ class Function(Generic[AnyStr]):
     def __await__(self) -> Generator[Any, None, Function[AnyStr]]:
         return self.initialize().__await__()
 
-    async def __call__(
+    def __call__(
         self,
         keys: Parameters[KeyT] | None = None,
         args: Parameters[ValueT] | None = None,
         *,
         client: coredis.client.Client[AnyStr] | None = None,
         readonly: bool | None = None,
-    ) -> ResponseType:
+    ) -> CommandRequest[ResponseType]:
         """
         Wrapper to call :meth:`~coredis.Redis.fcall` with the
         function named :paramref:`Function.name` registered under
@@ -396,6 +396,6 @@ class Function(Generic[AnyStr]):
             readonly = self.readonly
 
         if readonly:
-            return await client.fcall_ro(self.name, keys or [], args or [])
+            return client.fcall_ro(self.name, keys or [], args or [])
         else:
-            return await client.fcall(self.name, keys or [], args or [])
+            return client.fcall(self.name, keys or [], args or [])

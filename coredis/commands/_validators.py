@@ -8,7 +8,6 @@ from coredis.config import Config
 from coredis.exceptions import CommandSyntaxError
 from coredis.typing import (
     Callable,
-    Coroutine,
     Iterable,
     ParamSpec,
     TypeVar,
@@ -56,17 +55,17 @@ def mutually_exclusive_parameters(
     *exclusive_params: str | Iterable[str],
     details: str | None = None,
     required: bool = False,
-) -> Callable[[Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]]:
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
     primary = {k for k in exclusive_params if isinstance(k, str)}
     secondary = [k for k in set(exclusive_params) - primary]
 
     def wrapper(
-        func: Callable[P, Coroutine[Any, Any, R]],
-    ) -> Callable[P, Coroutine[Any, Any, R]]:
+        func: Callable[P, R],
+    ) -> Callable[P, R]:
         sig = inspect.signature(func)
 
         @functools.wraps(func)
-        async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
+        def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
             if not Config.optimized:
                 call_args = sig.bind_partial(*args, **kwargs)
                 params = {
@@ -90,7 +89,7 @@ def mutually_exclusive_parameters(
                 if len(params) == 0 and required:
                     raise RequiredParameterError(primary, details)
 
-            return await func(*args, **kwargs)
+            return func(*args, **kwargs)
 
         return wrapped if not Config.optimized else func
 
@@ -101,17 +100,17 @@ def mutually_inclusive_parameters(
     *inclusive_params: str,
     leaders: Iterable[str] | None = None,
     details: str | None = None,
-) -> Callable[[Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]]:
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
     _leaders = set(leaders or [])
     _inclusive_params = set(inclusive_params)
 
     def wrapper(
-        func: Callable[P, Coroutine[Any, Any, R]],
-    ) -> Callable[P, Coroutine[Any, Any, R]]:
+        func: Callable[P, R],
+    ) -> Callable[P, R]:
         sig = inspect.signature(func)
 
         @functools.wraps(func)
-        async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
+        def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
             if not Config.optimized:
                 call_args = sig.bind_partial(*args, **kwargs)
                 params = {
@@ -123,7 +122,7 @@ def mutually_inclusive_parameters(
                     raise MutuallyInclusiveParametersMissing(_inclusive_params, _leaders, details)
                 elif not _leaders and params and len(params) != len(_inclusive_params):
                     raise MutuallyInclusiveParametersMissing(_inclusive_params, _leaders, details)
-            return await func(*args, **kwargs)
+            return func(*args, **kwargs)
 
         return wrapped if not Config.optimized else func
 
@@ -132,29 +131,28 @@ def mutually_inclusive_parameters(
 
 def ensure_iterable_valid(
     argument: str,
-) -> Callable[[Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]]:
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
     def iterable_valid(value: Any) -> bool:
         return isinstance(value, Iterable) and not isinstance(value, (str, bytes))
 
     def wrapper(
-        func: Callable[P, Coroutine[Any, Any, R]],
-    ) -> Callable[P, Coroutine[Any, Any, R]]:
+        func: Callable[P, R],
+    ) -> Callable[P, R]:
         sig = inspect.signature(func)
         expected_type = sig.parameters[argument].annotation
 
         @functools.wraps(func)
-        async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
+        def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
             if Config.optimized:
-                return await func(*args, **kwargs)
+                return func(*args, **kwargs)
             bound = sig.bind_partial(*args, **kwargs)
             value = bound.arguments.get(argument)
             if not iterable_valid(value):
                 raise TypeError(
-                    f"{func.__name__} parameter {argument}={value!r} "
-                    f"violates expected iterable of type {expected_type}"
+                    f"{func.__name__} parameter {argument}={value!r} violates expected iterable of type {expected_type}"
                 )
 
-            return await func(*args, **kwargs)
+            return func(*args, **kwargs)
 
         return wrapped if not Config.optimized else func
 

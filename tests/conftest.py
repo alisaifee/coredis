@@ -23,7 +23,14 @@ from coredis._utils import EncodingInsensitiveDict, b, hash_slot, nativestr
 from coredis.cache import TrackingCache
 from coredis.credentials import UserPassCredentialProvider
 from coredis.response._callbacks import NoopCallback
-from coredis.typing import RUNTIME_TYPECHECKS, Callable, R, ValueT
+from coredis.typing import (
+    RUNTIME_TYPECHECKS,
+    Callable,
+    ExecutionParameters,
+    R,
+    RedisCommandP,
+    Unpack,
+)
 
 REDIS_VERSIONS = {}
 SERVER_TYPES = {}
@@ -980,17 +987,16 @@ def fake_redis():
 
         async def execute_command(
             self,
-            command: bytes,
-            *args: ValueT,
+            command: RedisCommandP,
             callback: Callable[..., R] = NoopCallback(),
-            **options: ValueT | None,
+            **options: Unpack[ExecutionParameters],
         ) -> R:
-            resp = self.responses.get(command, {}).get(args)
+            resp = self.responses.get(command.name, {}).get(command.arguments)
 
             if isinstance(resp, Exception):
                 raise resp
 
-            return callback(resp, **options)
+            return callback(resp)
 
     return _()
 
@@ -1008,17 +1014,16 @@ def fake_redis_cluster():
 
         async def execute_command(
             self,
-            command: bytes,
-            *args: ValueT,
+            command: RedisCommandP,
             callback: Callable[..., R] = NoopCallback(),
-            **options: ValueT | None,
+            **options: Unpack[ExecutionParameters],
         ) -> R:
-            resp = self.responses.get(command, {}).get(args)
+            resp = self.responses.get(command.name, {}).get(command.arguments)
 
             if isinstance(resp, Exception):
                 raise resp
 
-            return callback(resp, **options)
+            return callback(resp)
 
     return _()
 
