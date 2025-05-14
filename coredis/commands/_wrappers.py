@@ -4,25 +4,21 @@ import dataclasses
 import functools
 import textwrap
 import warnings
-from typing import TYPE_CHECKING, Any
 
 from packaging import version
 
 from coredis.commands._utils import check_version, redis_command_link
 from coredis.commands.constants import CommandFlag, CommandGroup, CommandName, NodeFlag
+from coredis.commands.request import CommandRequest
 from coredis.globals import CACHEABLE_COMMANDS, COMMAND_FLAGS, READONLY_COMMANDS
 from coredis.response._callbacks import ClusterMultiNodeCallback
 from coredis.typing import (
     Callable,
-    Coroutine,
     NamedTuple,
     P,
     R,
     add_runtime_checks,
 )
-
-if TYPE_CHECKING:
-    pass
 
 
 class RedirectUsage(NamedTuple):
@@ -65,11 +61,13 @@ class ClusterCommandConfig:
             NodeFlag.ALL,
             NodeFlag.PRIMARIES,
             NodeFlag.REPLICAS,
+            NodeFlag.SLOT_ID,
         ]
 
 
 def redis_command(
     command_name: CommandName,
+    *,
     group: CommandGroup | None = None,
     version_introduced: str | None = None,
     version_deprecated: str | None = None,
@@ -79,7 +77,7 @@ def redis_command(
     flags: set[CommandFlag] | None = None,
     cluster: ClusterCommandConfig = ClusterCommandConfig(),
     cacheable: bool | None = None,
-) -> Callable[[Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]]:
+) -> Callable[[Callable[P, CommandRequest[R]]], Callable[P, CommandRequest[R]]]:
     readonly = False
     if flags and CommandFlag.READONLY in flags:
         READONLY_COMMANDS.add(command_name)
@@ -89,6 +87,7 @@ def redis_command(
         raise RuntimeError(f"Can't decorate non readonly command {command_name} with cache config")
     if cacheable:
         CACHEABLE_COMMANDS.add(command_name)
+
     COMMAND_FLAGS[command_name] = flags or set()
 
     command_details = CommandDetails(
@@ -103,31 +102,29 @@ def redis_command(
     )
 
     def wrapper(
-        func: Callable[P, Coroutine[Any, Any, R]],
-    ) -> Callable[P, Coroutine[Any, Any, R]]:
+        func: Callable[P, CommandRequest[R]],
+    ) -> Callable[P, CommandRequest[R]]:
         runtime_checkable = add_runtime_checks(func)
 
         @functools.wraps(func)
-        async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
-            from coredis.client import Redis, RedisCluster
+        def wrapped(*args: P.args, **kwargs: P.kwargs) -> CommandRequest[R]:
+            from coredis import Redis, RedisCluster
 
-            client = args[0]
-            is_regular_client = isinstance(client, (Redis, RedisCluster))
-            runtime_checking = not getattr(client, "noreply", None) and is_regular_client
+            is_regular_client = isinstance(args[0], (Redis, RedisCluster))
             if redirect_usage and is_regular_client:
                 if redirect_usage.warn:
                     warnings.warn(redirect_usage.reason, UserWarning, stacklevel=2)
                 else:
                     raise NotImplementedError(redirect_usage.reason)
-            callable = runtime_checkable if runtime_checking else func
-            await check_version(
-                client,  # type: ignore
+            runtime_checking = not getattr(args[0], "noreply", None) and is_regular_client
+            check_version(
+                args[0],  # type: ignore
                 func.__name__,
                 command_details,
                 deprecation_reason,
                 kwargs,
             )
-            return await callable(*args, **kwargs)
+            return (func if not runtime_checking else runtime_checkable)(*args, **kwargs)
 
         wrapped.__doc__ = textwrap.dedent(wrapped.__doc__ or "")
         if group:

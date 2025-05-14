@@ -4,6 +4,7 @@ from deprecated.sphinx import versionadded
 
 from .._json import json
 from ..commands.constants import CommandFlag, CommandGroup, CommandName
+from ..commands.request import CommandRequest
 from ..response._callbacks import (
     IntCallback,
     NoopCallback,
@@ -45,7 +46,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def delete(self, key: KeyT, path: StringT | None = None) -> int:
+    def delete(self, key: KeyT, path: StringT | None = None) -> CommandRequest[int]:
         """
         Delete a value from a JSON document.
 
@@ -57,7 +58,7 @@ class Json(ModuleGroup[AnyStr]):
         if path:
             command_arguments.append(path)
 
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.JSON_DEL, *command_arguments, callback=IntCallback()
         )
 
@@ -69,11 +70,11 @@ class Json(ModuleGroup[AnyStr]):
         cacheable=True,
         flags={CommandFlag.READONLY},
     )
-    async def get(
+    def get(
         self,
         key: KeyT,
         *paths: StringT,
-    ) -> JsonType:
+    ) -> CommandRequest[JsonType]:
         """
         Gets the value at one or more paths
 
@@ -85,7 +86,7 @@ class Json(ModuleGroup[AnyStr]):
         if paths:
             command_arguments.extend(paths)
 
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.JSON_GET, *command_arguments, callback=JsonCallback()
         )
 
@@ -95,7 +96,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def forget(self, key: KeyT, path: ValueT | None = None) -> int:
+    def forget(self, key: KeyT, path: ValueT | None = None) -> CommandRequest[int]:
         """
         Deletes an element from a path from a json object
 
@@ -107,7 +108,7 @@ class Json(ModuleGroup[AnyStr]):
         command_arguments: CommandArgList = [key]
         if path:
             command_arguments.append(path)
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.JSON_FORGET, *command_arguments, callback=IntCallback()
         )
 
@@ -117,7 +118,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    async def toggle(self, key: KeyT, path: ValueT) -> JsonType:
+    def toggle(self, key: KeyT, path: ValueT) -> CommandRequest[JsonType]:
         """
         Toggles a boolean value
 
@@ -128,7 +129,7 @@ class Json(ModuleGroup[AnyStr]):
          the path that are not Boolean.
         """
         command_arguments: CommandArgList = [key, path]
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.JSON_TOGGLE,
             *command_arguments,
             callback=JsonCallback(),
@@ -140,7 +141,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    async def clear(self, key: KeyT, path: ValueT | None = None) -> int:
+    def clear(self, key: KeyT, path: ValueT | None = None) -> CommandRequest[int]:
         """
         Clears all values from an array or an object and sets numeric values to `0`
 
@@ -152,7 +153,7 @@ class Json(ModuleGroup[AnyStr]):
         if path:
             command_arguments.append(path)
 
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.JSON_CLEAR, *command_arguments, callback=IntCallback()
         )
 
@@ -162,13 +163,13 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def set(
+    def set(
         self,
         key: KeyT,
         path: ValueT,
         value: JsonType,
         condition: Literal[PureToken.NX, PureToken.XX] | None = None,
-    ) -> bool:
+    ) -> CommandRequest[bool]:
         """
         Sets or updates the JSON value at a path
 
@@ -190,7 +191,7 @@ class Json(ModuleGroup[AnyStr]):
         command_arguments: CommandArgList = [key, path, json.dumps(value)]
         if condition:
             command_arguments.append(condition)
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.JSON_SET, *command_arguments, callback=SimpleStringCallback()
         )
 
@@ -201,7 +202,7 @@ class Json(ModuleGroup[AnyStr]):
         module=MODULE,
         flags={CommandFlag.READONLY},
     )
-    async def mget(self, keys: Parameters[KeyT], path: StringT) -> JsonType:
+    def mget(self, keys: Parameters[KeyT], path: StringT) -> CommandRequest[JsonType]:
         """
         Returns the values at a path from one or more keys
 
@@ -210,7 +211,7 @@ class Json(ModuleGroup[AnyStr]):
         :return: The values at :paramref:`path` for each of the keys in :paramref:`keys`.
         """
         command_arguments: CommandArgList = [*keys, path]
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.JSON_MGET,
             *command_arguments,
             callback=JsonCallback(),
@@ -222,7 +223,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="2.6.0",
         module=MODULE,
     )
-    async def mset(self, triplets: Parameters[tuple[KeyT, StringT, JsonType]]) -> bool:
+    def mset(self, triplets: Parameters[tuple[KeyT, StringT, JsonType]]) -> CommandRequest[bool]:
         """
         Sets or updates the JSON value of one or more keys
 
@@ -235,7 +236,7 @@ class Json(ModuleGroup[AnyStr]):
         for key, path, value in triplets:
             command_arguments.extend([key, path, json.dumps(value)])
 
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.JSON_MSET, *command_arguments, callback=SimpleStringCallback()
         )
 
@@ -245,7 +246,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="2.6.0",
         module=MODULE,
     )
-    async def merge(self, key: KeyT, path: StringT, value: JsonType) -> bool:
+    def merge(self, key: KeyT, path: StringT, value: JsonType) -> CommandRequest[bool]:
         """
         Merge a JSON object into an existing Redis key at a specified path.
 
@@ -256,7 +257,7 @@ class Json(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, path, json.dumps(value)]
 
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.JSON_MERGE, *command_arguments, callback=SimpleStringCallback()
         )
 
@@ -266,7 +267,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def numincrby(self, key: KeyT, path: ValueT, value: int | float) -> JsonType:
+    def numincrby(self, key: KeyT, path: ValueT, value: int | float) -> CommandRequest[JsonType]:
         """
         Increments the numeric value at path by a value
 
@@ -276,7 +277,7 @@ class Json(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, path, value]
 
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.JSON_NUMINCRBY, *command_arguments, callback=JsonCallback()
         )
 
@@ -286,7 +287,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def nummultby(self, key: KeyT, path: ValueT, value: int | float) -> JsonType:
+    def nummultby(self, key: KeyT, path: ValueT, value: int | float) -> CommandRequest[JsonType]:
         """
         Multiplies the numeric value at path by a value
 
@@ -296,7 +297,7 @@ class Json(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, path, value]
 
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.JSON_NUMMULTBY, *command_arguments, callback=JsonCallback()
         )
 
@@ -306,12 +307,12 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def strappend(
+    def strappend(
         self,
         key: KeyT,
         value: str | bytes | int | float | None,
         path: KeyT | None = None,
-    ) -> int | list[int | None] | None:
+    ) -> CommandRequest[int | list[int | None] | None]:
         """
         Appends a string to a JSON string value at path
 
@@ -325,8 +326,10 @@ class Json(ModuleGroup[AnyStr]):
         if path is not None:
             command_arguments.append(path)
         command_arguments.append(json.dumps(value))
-        return await self.execute_module_command(
-            CommandName.JSON_STRAPPEND, *command_arguments, callback=OneOrManyCallback[int]()
+        return self.client.create_request(
+            CommandName.JSON_STRAPPEND,
+            *command_arguments,
+            callback=OneOrManyCallback[int](),
         )
 
     @module_command(
@@ -337,7 +340,9 @@ class Json(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def strlen(self, key: KeyT, path: KeyT | None = None) -> int | list[int | None] | None:
+    def strlen(
+        self, key: KeyT, path: KeyT | None = None
+    ) -> CommandRequest[int | list[int | None] | None]:
         """
         Returns the length of the JSON String at path in key
 
@@ -352,8 +357,10 @@ class Json(ModuleGroup[AnyStr]):
         if path is not None:
             command_arguments.append(path)
 
-        return await self.execute_module_command(
-            CommandName.JSON_STRLEN, *command_arguments, callback=OneOrManyCallback[int]()
+        return self.client.create_request(
+            CommandName.JSON_STRLEN,
+            *command_arguments,
+            callback=OneOrManyCallback[int](),
         )
 
     @module_command(
@@ -362,12 +369,12 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def arrappend(
+    def arrappend(
         self,
         key: KeyT,
         values: Parameters[JsonType],
         path: KeyT | None = None,
-    ) -> int | list[int | None] | None:
+    ) -> CommandRequest[int | list[int | None] | None]:
         """
         Append one or more json values into the array at path after the last element in it.
 
@@ -382,7 +389,7 @@ class Json(ModuleGroup[AnyStr]):
         if path:
             command_arguments.append(path)
         command_arguments.extend([json.dumps(value) for value in values])
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.JSON_ARRAPPEND,
             *command_arguments,
             callback=OneOrManyCallback[int](),
@@ -396,14 +403,14 @@ class Json(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def arrindex(
+    def arrindex(
         self,
         key: KeyT,
         path: ValueT,
         value: str | bytes | int | float,
         start: int | None = None,
         stop: int | None = None,
-    ) -> int | list[int | None] | None:
+    ) -> CommandRequest[int | list[int | None] | None]:
         """
         Returns the index of the first occurrence of a JSON scalar value in the array at path
 
@@ -422,8 +429,10 @@ class Json(ModuleGroup[AnyStr]):
         if stop is not None:
             command_arguments.append(stop)
 
-        return await self.execute_module_command(
-            CommandName.JSON_ARRINDEX, *command_arguments, callback=OneOrManyCallback[int]()
+        return self.client.create_request(
+            CommandName.JSON_ARRINDEX,
+            *command_arguments,
+            callback=OneOrManyCallback[int](),
         )
 
     @module_command(
@@ -432,13 +441,13 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def arrinsert(
+    def arrinsert(
         self,
         key: KeyT,
         path: ValueT,
         index: int,
         values: Parameters[JsonType],
-    ) -> int | list[int | None] | None:
+    ) -> CommandRequest[int | list[int | None] | None]:
         """
         Inserts the JSON scalar(s) value at the specified index in the array at path
 
@@ -454,8 +463,10 @@ class Json(ModuleGroup[AnyStr]):
         command_arguments: CommandArgList = [key, path, index]
         command_arguments.extend([json.dumps(value) for value in values])
 
-        return await self.execute_module_command(
-            CommandName.JSON_ARRINSERT, *command_arguments, callback=OneOrManyCallback[int]()
+        return self.client.create_request(
+            CommandName.JSON_ARRINSERT,
+            *command_arguments,
+            callback=OneOrManyCallback[int](),
         )
 
     @module_command(
@@ -466,7 +477,9 @@ class Json(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def arrlen(self, key: KeyT, path: KeyT | None = None) -> int | list[int | None] | None:
+    def arrlen(
+        self, key: KeyT, path: KeyT | None = None
+    ) -> CommandRequest[int | list[int | None] | None]:
         """
         Returns the length of the array at path
 
@@ -481,8 +494,10 @@ class Json(ModuleGroup[AnyStr]):
         if path:
             command_arguments.append(path)
 
-        return await self.execute_module_command(
-            CommandName.JSON_ARRLEN, *command_arguments, callback=OneOrManyCallback[int]()
+        return self.client.create_request(
+            CommandName.JSON_ARRLEN,
+            *command_arguments,
+            callback=OneOrManyCallback[int](),
         )
 
     @module_command(
@@ -491,9 +506,9 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def arrpop(
+    def arrpop(
         self, key: KeyT, path: KeyT | None = None, index: int | None = None
-    ) -> JsonType:
+    ) -> CommandRequest[JsonType]:
         """
         Removes and returns the element at the specified index in the array at path
 
@@ -509,7 +524,7 @@ class Json(ModuleGroup[AnyStr]):
         if index is not None:
             command_arguments.append(index)
 
-        return await self.execute_module_command(
+        return self.client.create_request(
             CommandName.JSON_ARRPOP, *command_arguments, callback=JsonCallback()
         )
 
@@ -519,9 +534,9 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def arrtrim(
+    def arrtrim(
         self, key: KeyT, path: ValueT, start: int, stop: int
-    ) -> int | list[int | None] | None:
+    ) -> CommandRequest[int | list[int | None] | None]:
         """
         Trims the array at path to contain only the specified inclusive range of indices
         from start to stop
@@ -535,8 +550,10 @@ class Json(ModuleGroup[AnyStr]):
         """
         command_arguments: CommandArgList = [key, path, start, stop]
 
-        return await self.execute_module_command(
-            CommandName.JSON_ARRTRIM, *command_arguments, callback=OneOrManyCallback[int]()
+        return self.client.create_request(
+            CommandName.JSON_ARRTRIM,
+            *command_arguments,
+            callback=OneOrManyCallback[int](),
         )
 
     @module_command(
@@ -545,7 +562,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def objkeys(self, key: KeyT, path: StringT | None = None) -> ResponseType:
+    def objkeys(self, key: KeyT, path: StringT | None = None) -> CommandRequest[ResponseType]:
         """
         Returns the JSON keys of the object at path
 
@@ -560,8 +577,10 @@ class Json(ModuleGroup[AnyStr]):
         if path:
             command_arguments.append(path)
 
-        return await self.execute_module_command(
-            CommandName.JSON_OBJKEYS, *command_arguments, callback=NoopCallback[ResponseType]()
+        return self.client.create_request(
+            CommandName.JSON_OBJKEYS,
+            *command_arguments,
+            callback=NoopCallback[ResponseType](),
         )
 
     @module_command(
@@ -570,7 +589,9 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    async def objlen(self, key: KeyT, path: KeyT | None = None) -> int | list[int | None] | None:
+    def objlen(
+        self, key: KeyT, path: KeyT | None = None
+    ) -> CommandRequest[int | list[int | None] | None]:
         """
         Returns the number of keys of the object at path
 
@@ -584,8 +605,10 @@ class Json(ModuleGroup[AnyStr]):
         if path:
             command_arguments.append(path)
 
-        return await self.execute_module_command(
-            CommandName.JSON_OBJLEN, *command_arguments, callback=OneOrManyCallback[int]()
+        return self.client.create_request(
+            CommandName.JSON_OBJLEN,
+            *command_arguments,
+            callback=OneOrManyCallback[int](),
         )
 
     @module_command(
@@ -596,9 +619,9 @@ class Json(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    async def type(
+    def type(
         self, key: KeyT, path: KeyT | None = None
-    ) -> AnyStr | list[AnyStr | None] | None:
+    ) -> CommandRequest[AnyStr | list[AnyStr | None] | None]:
         """
         Returns the type of the JSON value at path
 
@@ -609,8 +632,10 @@ class Json(ModuleGroup[AnyStr]):
         if path is not None:
             command_arguments.append(path)
 
-        return await self.execute_module_command(
-            CommandName.JSON_TYPE, *command_arguments, callback=OneOrManyCallback[AnyStr]()
+        return self.client.create_request(
+            CommandName.JSON_TYPE,
+            *command_arguments,
+            callback=OneOrManyCallback[AnyStr](),
         )
 
     @module_command(
@@ -621,7 +646,7 @@ class Json(ModuleGroup[AnyStr]):
         module=MODULE,
         flags={CommandFlag.READONLY},
     )
-    async def resp(self, key: KeyT, path: KeyT | None = None) -> ResponseType:
+    def resp(self, key: KeyT, path: KeyT | None = None) -> CommandRequest[ResponseType]:
         """
         Returns the JSON value at path in Redis Serialization Protocol (RESP)
 
@@ -632,8 +657,10 @@ class Json(ModuleGroup[AnyStr]):
         if path:
             command_arguments.append(path)
 
-        return await self.execute_module_command(
-            CommandName.JSON_RESP, *command_arguments, callback=NoopCallback[ResponseType]()
+        return self.client.create_request(
+            CommandName.JSON_RESP,
+            *command_arguments,
+            callback=NoopCallback[ResponseType](),
         )
 
     @module_command(
@@ -643,9 +670,9 @@ class Json(ModuleGroup[AnyStr]):
         module=MODULE,
         flags={CommandFlag.READONLY},
     )
-    async def debug_memory(
+    def debug_memory(
         self, key: KeyT, path: KeyT | None = None
-    ) -> int | list[int | None] | None:
+    ) -> CommandRequest[int | list[int | None] | None]:
         """
         Reports the size in bytes of a key
         """
@@ -653,6 +680,8 @@ class Json(ModuleGroup[AnyStr]):
         if path:
             command_arguments.append(path)
 
-        return await self.execute_module_command(
-            CommandName.JSON_DEBUG_MEMORY, *command_arguments, callback=OneOrManyCallback[int]()
+        return self.client.create_request(
+            CommandName.JSON_DEBUG_MEMORY,
+            *command_arguments,
+            callback=OneOrManyCallback[int](),
         )

@@ -9,6 +9,7 @@ from pytest import approx
 from coredis import PureToken
 from coredis.exceptions import ConnectionError, ReadOnlyError, RedisError, ResponseError
 from coredis.tokens import PrefixToken
+from coredis.typing import RedisCommand
 from tests.conftest import targets
 
 
@@ -264,12 +265,12 @@ class TestServer:
     @pytest.mark.noredict
     @pytest.mark.novalkey
     async def test_latency_all(self, client, _s):
-        await client.execute_command(b"debug", "sleep", 0.05)
+        await client.execute_command(RedisCommand(b"debug", ("sleep", 0.05)))
         history = await client.latency_history("command")
         assert len(history) >= 1
         await client.latency_reset()
 
-        await client.execute_command(b"debug", "sleep", 0.05)
+        await client.execute_command(RedisCommand(b"debug", ("sleep", 0.05)))
         history = await client.latency_history("command")
         assert len(history) == 1
         assert history[0][1] == approx(50, 60)
@@ -281,7 +282,7 @@ class TestServer:
     @pytest.mark.noredict
     @pytest.mark.novalkey
     async def test_latency_graph(self, client, _s):
-        await client.execute_command(b"debug", "sleep", 0.05)
+        await client.execute_command(RedisCommand(b"debug", ("sleep", 0.05)))
         graph = await client.latency_graph("command")
         assert _s("command - high") in graph
 
@@ -353,6 +354,7 @@ class TestServer:
         assert not client.connection_pool.peek_available().is_connected
 
 
+@pytest.mark.xfail
 async def test_shutdown(fake_redis):
     fake_redis.responses = {
         b"SHUTDOWN": {

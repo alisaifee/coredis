@@ -45,7 +45,7 @@ def normalized_time_milliseconds(value: int | datetime.datetime) -> int:
     return value
 
 
-async def check_version(
+def check_version(
     instance: coredis.client.Client[Any],
     function_name: str,
     command_details: CommandDetails,

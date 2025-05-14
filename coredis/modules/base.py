@@ -16,18 +16,16 @@ from ..commands._wrappers import (
     CommandDetails,
 )
 from ..commands.constants import CommandFlag, CommandGroup, CommandName
+from ..commands.request import CommandRequest
 from ..exceptions import CommandSyntaxError, ModuleCommandNotSupportedError
 from ..globals import CACHEABLE_COMMANDS, COMMAND_FLAGS, MODULE_GROUPS, MODULES, READONLY_COMMANDS
-from ..response._callbacks import NoopCallback
 from ..typing import (
     AnyStr,
     Callable,
     ClassVar,
-    Coroutine,
     Generic,
     P,
     R,
-    ValueT,
     add_runtime_checks,
 )
 
@@ -35,7 +33,7 @@ if TYPE_CHECKING:
     import coredis.client
 
 
-async def ensure_compatibility(
+def ensure_compatibility(
     client: coredis.client.Client[Any],
     module: str,
     command_details: CommandDetails,
@@ -50,7 +48,7 @@ async def ensure_compatibility(
     ):
         return
     if command_details.version_introduced:
-        module_version = await client.get_server_module_version(module)
+        module_version = client.get_server_module_version(module)
         if module_version and command_details.version_introduced <= module_version:
             if command_details.arguments and set(command_details.arguments.keys()).intersection(
                 kwargs.keys()
@@ -82,7 +80,7 @@ def module_command(
     version_introduced: str | None = None,
     version_deprecated: str | None = None,
     arguments: dict[str, dict[str, str]] | None = None,
-) -> Callable[[Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]]:
+) -> Callable[[Callable[P, CommandRequest[R]]], Callable[P, CommandRequest[R]]]:
     command_details = CommandDetails(
         command_name,
         group,
@@ -95,8 +93,8 @@ def module_command(
     )
 
     def wrapper(
-        func: Callable[P, Coroutine[Any, Any, R]],
-    ) -> Callable[P, Coroutine[Any, Any, R]]:
+        func: Callable[P, CommandRequest[R]],
+    ) -> Callable[P, CommandRequest[R]]:
         runtime_checkable = add_runtime_checks(func)
         if flags and CommandFlag.READONLY in flags:
             READONLY_COMMANDS.add(command_name)
@@ -105,7 +103,7 @@ def module_command(
         COMMAND_FLAGS[command_name] = flags or set()
 
         @functools.wraps(func)
-        async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
+        def wrapped(*args: P.args, **kwargs: P.kwargs) -> CommandRequest[R]:
             from coredis.client import Redis, RedisCluster
 
             mg = cast(ModuleGroup[bytes], args[0])
@@ -113,8 +111,8 @@ def module_command(
             is_regular_client = isinstance(client, (Redis, RedisCluster))
             runtime_checking = not getattr(client, "noreply", None) and is_regular_client
             callable = runtime_checkable if runtime_checking else func
-            await ensure_compatibility(client, module.NAME, command_details, kwargs)
-            return await callable(*args, **kwargs)
+            ensure_compatibility(client, module.NAME, command_details, kwargs)
+            return callable(*args, **kwargs)
 
         wrapped.__doc__ = textwrap.dedent(wrapped.__doc__ or "")
         if group:
@@ -262,15 +260,3 @@ class ModuleGroup(Generic[AnyStr], metaclass=ModuleGroupRegistry):
 
     def __init__(self, client: AbstractExecutor):
         self.client = client
-
-    async def execute_module_command(
-        self,
-        command: bytes,
-        *args: ValueT,
-        callback: Callable[..., R] = NoopCallback(),
-        **options: ValueT | None,
-    ) -> R:
-        return cast(
-            R,
-            await self.client.execute_command(command, *args, callback=callback, **options),
-        )

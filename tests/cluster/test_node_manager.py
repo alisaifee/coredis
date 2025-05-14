@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 # 3rd party imports
 import pytest
@@ -86,8 +86,8 @@ async def test_init_slots_cache_not_all_slots_not_require_full_coverage(s, redis
     """
     Test that if not all slots are covered it should raise an exception
     """
-    with patch.object(Redis, "cluster_slots") as mock_cluster_slots:
-        with patch.object(Redis, "config_get") as mock_config_get:
+    with patch.object(Redis, "cluster_slots", new_callable=AsyncMock) as mock_cluster_slots:
+        with patch.object(Redis, "config_get", new_callable=AsyncMock) as mock_config_get:
             mock_config_get.return_value = {"cluster-require-full-coverage": "no"}
             mock_cluster_slots.return_value = {
                 (0, 5459): [
@@ -187,8 +187,8 @@ async def test_init_slots_cache(s, redis_cluster):
         ],
     }
 
-    with patch.object(Redis, "config_get") as mock_config_get:
-        with patch.object(Redis, "cluster_slots") as mock_cluster_slots:
+    with patch.object(Redis, "config_get", new_callable=AsyncMock) as mock_config_get:
+        with patch.object(Redis, "cluster_slots", new_callable=AsyncMock) as mock_cluster_slots:
             mock_cluster_slots.return_value = good_slots_resp
             mock_config_get.return_value = {"cluster-require-full-coverage": "yes"}
 
@@ -285,15 +285,7 @@ async def test_reset(redis_cluster):
     Test that reset method resets variables back to correct default values.
     """
 
-    class AsyncMock(Mock):
-        def __await__(self):
-            future = asyncio.Future(loop=asyncio.get_event_loop())
-            future.set_result(self)
-            result = yield from future
-
-            return result
-
-    n = NodeManager(startup_nodes=[{}])
+    n = NodeManager(startup_nodes=[])
     n.initialize = AsyncMock()
     await n.reset()
     assert n.initialize.call_count == 1
@@ -304,8 +296,8 @@ async def test_cluster_one_instance(redis_cluster):
     If the cluster exists of only 1 node then there is some hacks that must
     be validated they work.
     """
-    with patch.object(Redis, "cluster_slots") as mock_cluster_slots:
-        with patch.object(Redis, "config_get") as mock_config_get:
+    with patch.object(Redis, "cluster_slots", new_callable=AsyncMock) as mock_cluster_slots:
+        with patch.object(Redis, "config_get", new_callable=AsyncMock) as mock_config_get:
             mock_config_get.return_value = {"cluster-require-full-coverage": "yes"}
             mock_cluster_slots.return_value = {
                 (0, 16383): [
