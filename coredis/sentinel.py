@@ -46,7 +46,7 @@ class SentinelManagedConnection(Connection, Generic[AnyStr]):
         socket_keepalive_options: dict[int, int | bytes] | None = None,
         *,
         client_name: str | None = None,
-        protocol_version: Literal[2, 3] = 2,
+        protocol_version: Literal[2, 3] = 3,
     ):
         self.connection_pool: SentinelConnectionPool = weakref.proxy(connection_pool)
         super().__init__(
