@@ -260,7 +260,7 @@ class TestSentinelCommand:
         )
 
     async def test_no_replicas(self, client, mocker):
-        p = await client.replica_for("mymaster")
+        p = client.replica_for("mymaster")
         replica_rotate = mocker.patch.object(p.connection_pool, "rotate_replicas")
         replica_rotate.return_value = []
         with pytest.raises(ReplicaNotFoundError):
@@ -297,7 +297,7 @@ class TestSentinelCommand:
         assert await new_primary.get("fubar") == "1"
         assert await new_replica.get("fubar") == "1"
 
-        assert replica_spy.call_count == 1
+        assert replica_spy.call_count == 0
 
     @pytest.mark.xfail
     async def test_replication(self, client):

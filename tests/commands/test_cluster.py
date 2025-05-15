@@ -52,10 +52,14 @@ class TestCluster:
     @pytest.mark.min_server_version("7.0.0")
     async def test_cluster_delslots_range(self, client, _s):
         node = client.connection_pool.get_primary_node_by_slot(1)
-        assert await client.cluster_delslotsrange([(1, 2)])
+        node_last = client.connection_pool.get_primary_node_by_slot(16000)
+        assert await client.cluster_delslotsrange([(1, 2), (16000, 16001)])
         assert await client.connection_pool.nodes.get_redis_link(
             node.host, node.port
         ).cluster_addslots([1, 2])
+        assert await client.connection_pool.nodes.get_redis_link(
+            node_last.host, node_last.port
+        ).cluster_addslots([16000, 16001])
 
     @pytest.mark.xfail
     @pytest.mark.replicated_clusteronly

@@ -14,6 +14,7 @@ from ..commands._utils import redis_command_link
 from ..commands._wrappers import (
     ClusterCommandConfig,
     CommandDetails,
+    CommandTask,
 )
 from ..commands.constants import CommandFlag, CommandGroup, CommandName
 from ..exceptions import CommandSyntaxError, ModuleCommandNotSupportedError
@@ -23,7 +24,6 @@ from ..typing import (
     AnyStr,
     Callable,
     ClassVar,
-    Coroutine,
     Generic,
     P,
     R,
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     import coredis.client
 
 
-async def ensure_compatibility(
+def ensure_compatibility(
     client: coredis.client.Client[Any],
     module: str,
     command_details: CommandDetails,
@@ -49,7 +49,7 @@ async def ensure_compatibility(
     ):
         return
     if command_details.version_introduced:
-        module_version = await client.get_server_module_version(module)
+        module_version = client.get_server_module_version(module)
         if module_version and command_details.version_introduced <= module_version:
             if command_details.arguments and set(command_details.arguments.keys()).intersection(
                 kwargs.keys()
@@ -81,7 +81,7 @@ def module_command(
     version_introduced: str | None = None,
     version_deprecated: str | None = None,
     arguments: dict[str, dict[str, str]] | None = None,
-) -> Callable[[Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]]:
+) -> Callable[[Callable[P, CommandTask[R]]], Callable[P, CommandTask[R]]]:
     command_details = CommandDetails(
         command_name,
         group,
@@ -94,8 +94,8 @@ def module_command(
     )
 
     def wrapper(
-        func: Callable[P, Coroutine[Any, Any, R]],
-    ) -> Callable[P, Coroutine[Any, Any, R]]:
+        func: Callable[P, CommandTask[R]],
+    ) -> Callable[P, CommandTask[R]]:
         runtime_checkable = add_runtime_checks(func)
         if flags and CommandFlag.READONLY in flags:
             READONLY_COMMANDS.add(command_name)
@@ -104,7 +104,7 @@ def module_command(
         COMMAND_FLAGS[command_name] = flags or set()
 
         @functools.wraps(func)
-        async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
+        def wrapped(*args: P.args, **kwargs: P.kwargs) -> CommandTask[R]:
             from coredis.client import Redis, RedisCluster
 
             mg = cast(ModuleGroup[bytes], args[0])
@@ -112,8 +112,8 @@ def module_command(
             is_regular_client = isinstance(client, (Redis, RedisCluster))
             runtime_checking = not getattr(client, "noreply", None) and is_regular_client
             callable = runtime_checkable if runtime_checking else func
-            await ensure_compatibility(client, module.NAME, command_details, kwargs)
-            return await callable(*args, **kwargs)
+            ensure_compatibility(client, module.NAME, command_details, kwargs)
+            return callable(*args, **kwargs)
 
         wrapped.__doc__ = textwrap.dedent(wrapped.__doc__ or "")
         if group:

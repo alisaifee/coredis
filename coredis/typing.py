@@ -101,9 +101,6 @@ class RedisError(Exception):
     """
 
 
-CommandArgList = list[str | bytes | int | float]
-
-
 class Node(TypedDict):
     """
     Definition of a cluster node
@@ -125,6 +122,9 @@ ValueT = str | bytes | int | float
 #: The canonical type used for input parameters that represent "strings"
 #: that are transmitted to redis.
 StringT = str | bytes
+
+CommandArgList = list[ValueT]
+
 
 #: Restricted union of container types accepted as arguments to apis
 #: that accept a variable number values for an argument (such as keys, values).

@@ -23,7 +23,7 @@ class LCSCallback(
     ResponseCallback[
         list[ResponseType],
         dict[ResponsePrimitive, ResponseType],
-        AnyStr | int | LCSResult,
+        LCSResult,
     ]
 ):
     def transform(

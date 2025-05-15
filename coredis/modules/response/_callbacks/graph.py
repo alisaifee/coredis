@@ -205,11 +205,9 @@ class QueryCallback(
 
 
 class GraphSlowLogCallback(
-    ResponseCallback[ResponseType, ResponseType, tuple[GraphSlowLogInfo, ...] | bool]
+    ResponseCallback[ResponseType, ResponseType, tuple[GraphSlowLogInfo, ...]]
 ):
-    def transform(
-        self, response: ResponseType, **options: Any
-    ) -> tuple[GraphSlowLogInfo, ...] | bool:
+    def transform(self, response: ResponseType, **options: Any) -> tuple[GraphSlowLogInfo, ...]:
         return tuple(GraphSlowLogInfo(int(k[0]), k[1], k[2], float(k[3])) for k in response)
 
 

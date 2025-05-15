@@ -2,22 +2,20 @@ from __future__ import annotations
 
 from coredis.response._callbacks import ResponseCallback
 from coredis.response.types import GeoCoordinates, GeoSearchResult
-from coredis.typing import Any, AnyStr, ResponseType
+from coredis.typing import Any, AnyStr, Generic, ResponseType
 
 
 class GeoSearchCallback(
+    Generic[AnyStr],
     ResponseCallback[
         ResponseType,
         ResponseType,
-        int | tuple[AnyStr | GeoSearchResult, ...],
-    ]
+        tuple[AnyStr | GeoSearchResult, ...],
+    ],
 ):
     def transform(
         self, response: ResponseType, **options: Any
-    ) -> int | tuple[AnyStr | GeoSearchResult, ...]:
-        if options.get("store") or options.get("storedist"):
-            return response
-
+    ) -> tuple[AnyStr | GeoSearchResult, ...]:
         if not (options.get("withdist") or options.get("withcoord") or options.get("withhash")):
             return tuple(list(response))
 

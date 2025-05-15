@@ -32,6 +32,7 @@ from coredis.connection import (
 )
 from coredis.credentials import AbstractCredentialProvider
 from coredis.exceptions import (
+    AuthenticationError,
     ConnectionError,
     PersistenceError,
     RedisError,
@@ -221,9 +222,7 @@ class Client(
             return False
         return True
 
-    async def get_server_module_version(self, module: str) -> version.Version | None:
-        if self._module_info is None:
-            await self._populate_module_versions()
+    def get_server_module_version(self, module: str) -> version.Version | None:
         return (self._module_info or {}).get(module)
 
     def _ensure_server_version(self, version: str | None) -> None:
@@ -295,7 +294,7 @@ class Client(
         return maybe_wait
 
     async def _populate_module_versions(self) -> None:
-        if self.noreply:
+        if self.noreply or self._module_info is not None:
             return
         try:
             modules = await self.module_list()
@@ -308,11 +307,12 @@ class Client(
                 ver, minor = divmod(ver, 100)
                 ver, major = divmod(ver, 100)
                 self._module_info[name] = version.Version(f"{major}.{minor}.{patch}")
-        except UnknownCommandError:
+        except (UnknownCommandError, AuthenticationError):
             self._module_info = {}
 
     async def initialize(self: ClientT) -> ClientT:
         await self.connection_pool.initialize()
+        await self._populate_module_versions()
         return self
 
     def __await__(self: ClientT) -> Generator[Any, None, ClientT]:
