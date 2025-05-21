@@ -48,18 +48,6 @@ _beartype_found = False
 try:
     import beartype
 
-    if not TYPE_CHECKING:
-        from beartype.typing import (  # noqa: F811
-            Iterable,
-            Iterator,
-            Mapping,
-            MutableMapping,
-            MutableSequence,
-            MutableSet,
-            OrderedDict,
-            Sequence,
-            ValuesView,
-        )
     _beartype_found = True
 except ImportError:  # pragma: no cover
     pass
