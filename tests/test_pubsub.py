@@ -460,7 +460,7 @@ class TestPubSubPubSubSubcommands:
         async with client.pubsub(ignore_subscribe_messages=True) as p:
             await p.subscribe("foo", "bar", "baz", "quux")
             channels = set(await client.pubsub_channels())
-            assert set([_s("bar"), _s("baz"), _s("foo"), _s("quux")]).issubset(channels)
+            assert {_s("bar"), _s("baz"), _s("foo"), _s("quux")}.issubset(channels)
 
     async def test_pubsub_numsub(self, client, _s):
         p1 = client.pubsub(ignore_subscribe_messages=True)

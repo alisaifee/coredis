@@ -194,8 +194,8 @@ def custom_client_sort(documenter):
 
 
 def sort_members(
-    self, documenters: List[Tuple["Documenter", bool]], order: str
-) -> List[Tuple["Documenter", bool]]:
+    self, documenters: list[tuple[Documenter, bool]], order: str
+) -> list[tuple[Documenter, bool]]:
     if self.name == "coredis.Redis" or self.name == "coredis.RedisCluster":
         documenters.sort(key=custom_client_sort)
         return documenters

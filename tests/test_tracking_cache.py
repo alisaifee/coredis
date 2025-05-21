@@ -121,12 +121,12 @@ class CommonExamples:
         await client.set("fubar", "test")
         await cached.get("fubar")
         spy = mocker.spy(clones[0].connection_pool.connection_class, "create_request")
-        assert set([await clone.get("fubar") for clone in clones]) == set([_s("test")])
+        assert {await clone.get("fubar") for clone in clones} == {_s("test")}
         assert spy.call_count == 0, spy.call_args
 
         await client.set("fubar", "fubar")
         await asyncio.sleep(0.1)
-        assert set([await clone.get("fubar") for clone in clones]) == set([_s("fubar")])
+        assert {await clone.get("fubar") for clone in clones} == {_s("fubar")}
         assert spy.call_count < 5, spy.call_args
 
     async def test_stats(self, client, cloner, mocker, _s):

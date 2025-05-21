@@ -244,7 +244,7 @@ def get_remapped_slots(request):
 @contextlib.asynccontextmanager
 async def remapped_slots(client, request):
     keys = get_remapped_slots(request)
-    slots = set([hash_slot(b(key)) for key in keys])
+    slots = {hash_slot(b(key)) for key in keys}
     sources = {}
     destinations = {}
     originals = {}

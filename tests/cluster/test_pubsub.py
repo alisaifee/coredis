@@ -395,7 +395,7 @@ class TestPubSubMessages:
             for _ in range(3):
                 messages.append(await wait_for_message(p))
             assert all(isinstance(message, dict) for message in messages), messages
-            assert set(m["channel"] for m in messages) == {f"foo{{{shard}}}" for shard in shards}
+            assert {m["channel"] for m in messages} == {f"foo{{{shard}}}" for shard in shards}
             assert not await wait_for_message(p)
             await redis_cluster.spublish("foo{a}", "test message")
             assert await wait_for_message(p) == make_message("message", "foo{a}", "test message")
@@ -523,7 +523,7 @@ class TestPubSubPubSubSubcommands:
         async with client.pubsub(ignore_subscribe_messages=True) as p:
             await p.subscribe("foo", "bar", "baz", "quux")
             channels = set(await client.pubsub_channels())
-            assert set([_s("bar"), _s("baz"), _s("foo"), _s("quux")]).issubset(channels)
+            assert {_s("bar"), _s("baz"), _s("foo"), _s("quux")}.issubset(channels)
             await p.unsubscribe()
 
     @pytest.mark.min_server_version("7.0.0")

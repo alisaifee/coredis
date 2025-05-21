@@ -180,7 +180,7 @@ class TestVectorSets:
         assert None is await client.vinfo("missing")
 
     async def test_vrandmember(self, client, sample_data, _s):
-        all_elements = set([_s(k) for k in sample_data.keys()])
+        all_elements = {_s(k) for k in sample_data.keys()}
         assert await client.vrandmember("sample") in all_elements
         assert set(await client.vrandmember("sample", count=5)) & all_elements
         assert set(await client.vrandmember("sample", count=100)) == all_elements

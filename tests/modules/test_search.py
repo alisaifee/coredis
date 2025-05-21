@@ -543,9 +543,9 @@ class TestSearch:
             "@tags:{pk | jpn}",
             returns={"name": None},
         )
-        assert {_s("karachi"), _s("lahore"), _s("ōsaka"), _s("nagoya"), _s("tokyo")} == set(
+        assert {_s("karachi"), _s("lahore"), _s("ōsaka"), _s("nagoya"), _s("tokyo")} == {
             k.properties[_s("name")] for k in tag_results.documents
-        )
+        }
 
     @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
     async def test_vector_similarity_search(
@@ -641,7 +641,7 @@ class TestAggregation:
             verbatim=True,
             timeout=timedelta(seconds=1),
         )
-        assert {k[_s("name")] for k in results.results} == set([_s(c) for c in city_index.keys()])
+        assert {k[_s("name")] for k in results.results} == {_s(c) for c in city_index.keys()}
 
     async def test_aggregation_dialect_3_hash(self, client: Redis, city_index, _s):
         results = await client.search.aggregate(
