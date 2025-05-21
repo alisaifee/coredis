@@ -67,11 +67,12 @@ from coredis.typing import (
     Mapping,
     Parameters,
     ParamSpec,
+    RedisValueT,
     ResponseType,
     StringT,
+    TypeAdapter,
     TypeVar,
     Unpack,
-    ValueT,
 )
 
 P = ParamSpec("P")
@@ -97,6 +98,7 @@ class Client(
     protocol_version: Literal[2, 3]
     server_version: Version | None
     callback_storage: dict[type[ResponseCallback[Any, Any, Any]], dict[str, Any]]
+    type_adapter: TypeAdapter | None
 
     def __init__(
         self,
@@ -130,6 +132,7 @@ class Client(
         retry_policy: RetryPolicy = NoRetryPolicy(),
         noevict: bool = False,
         notouch: bool = False,
+        type_adapter: TypeAdapter | None = None,
         **kwargs: Any,
     ):
         if not connection_pool:
@@ -202,6 +205,7 @@ class Client(
         self.retry_policy = retry_policy
         self._module_info: dict[str, version.Version] | None = None
         self.callback_storage = defaultdict(dict)
+        self.type_adapter = type_adapter
 
     @property
     def noreply(self) -> bool:
@@ -425,7 +429,7 @@ class Client(
             for item in data:
                 yield item
 
-    def register_script(self, script: ValueT) -> Script[AnyStr]:
+    def register_script(self, script: RedisValueT) -> Script[AnyStr]:
         """
         Registers a Lua :paramref:`script`
 
@@ -583,6 +587,7 @@ class Redis(Client[AnyStr]):
         noevict: bool = ...,
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
+        type_adapter: TypeAdapter | None = ...,
         **kwargs: Any,
     ) -> None: ...
 
@@ -621,6 +626,7 @@ class Redis(Client[AnyStr]):
         noevict: bool = ...,
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
+        type_adapter: TypeAdapter | None = ...,
         **kwargs: Any,
     ) -> None: ...
 
@@ -658,6 +664,7 @@ class Redis(Client[AnyStr]):
         noevict: bool = False,
         notouch: bool = False,
         retry_policy: RetryPolicy = ConstantRetryPolicy((ConnectionError, TimeoutError), 2, 0.01),
+        type_adapter: TypeAdapter | None = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -778,6 +785,8 @@ class Redis(Client[AnyStr]):
         :param notouch: Ensures that commands sent by the client will not alter the LRU/LFU of
          the keys they access.
         :param retry_policy: The retry policy to use when interacting with the redis server
+        :param type_adapter: The adapter to use for serializing / deserializing customs types
+         when interacting with redis commands.
 
         """
         super().__init__(
@@ -811,6 +820,7 @@ class Redis(Client[AnyStr]):
             noevict=noevict,
             notouch=notouch,
             retry_policy=retry_policy,
+            type_adapter=type_adapter,
             **kwargs,
         )
         self.cache = cache
@@ -870,6 +880,7 @@ class Redis(Client[AnyStr]):
         noevict: bool = False,
         notouch: bool = False,
         retry_policy: RetryPolicy = ConstantRetryPolicy((ConnectionError, TimeoutError), 2, 0.01),
+        type_adapter: TypeAdapter | None = None,
         cache: AbstractCache | None = None,
         **kwargs: Any,
     ) -> RedisT:
@@ -895,6 +906,7 @@ class Redis(Client[AnyStr]):
                 verify_version=verify_version,
                 noreply=noreply,
                 retry_policy=retry_policy,
+                type_adapter=type_adapter,
                 cache=cache,
                 connection_pool=ConnectionPool.from_url(
                     url,
@@ -914,6 +926,7 @@ class Redis(Client[AnyStr]):
                 verify_version=verify_version,
                 noreply=noreply,
                 retry_policy=retry_policy,
+                type_adapter=type_adapter,
                 cache=cache,
                 connection_pool=ConnectionPool.from_url(
                     url,

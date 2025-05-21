@@ -14,11 +14,11 @@ from coredis.typing import (
     Parameters,
     Protocol,
     R,
+    RedisValueT,
     ResponseType,
     StringT,
     TypeVar,
     Unpack,
-    ValueT,
 )
 
 T_co = TypeVar("T_co", covariant=True)
@@ -26,7 +26,7 @@ T_co = TypeVar("T_co", covariant=True)
 
 class RedisCommandP(Protocol):
     name: bytes
-    arguments: tuple[ValueT, ...]
+    arguments: tuple[RedisValueT, ...]
 
 
 class AbstractExecutor(Protocol):
@@ -53,14 +53,14 @@ class SupportsScript(Protocol[T_co]):  # noqa
         self,
         sha1: StringT,
         keys: Parameters[KeyT] | None = ...,
-        args: Parameters[ValueT] | None = ...,
+        args: Parameters[RedisValueT] | None = ...,
     ) -> ResponseType: ...
 
     async def evalsha_ro(
         self,
         sha1: StringT,
         keys: Parameters[KeyT] | None = ...,
-        args: Parameters[ValueT] | None = ...,
+        args: Parameters[RedisValueT] | None = ...,
     ) -> ResponseType: ...
 
     async def script_load(self, script: StringT) -> T_co: ...

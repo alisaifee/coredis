@@ -15,9 +15,9 @@ from coredis.response._callbacks.sentinel import (
 )
 from coredis.typing import (
     AnyStr,
+    RedisValueT,
     ResponseType,
     StringT,
-    ValueT,
 )
 
 from . import CommandMixin
@@ -39,7 +39,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(CommandName.SENTINEL_CONFIG_GET, version_introduced="6.2.0")
-    def sentinel_config_get(self, name: ValueT) -> CommandTask[dict[AnyStr, AnyStr]]:
+    def sentinel_config_get(self, name: RedisValueT) -> CommandTask[dict[AnyStr, AnyStr]]:
         """
         Get the current value of a global Sentinel configuration parameter.
         The specified name may be a wildcard, similar to :meth:`config_get`
@@ -52,7 +52,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(CommandName.SENTINEL_CONFIG_SET, version_introduced="6.2")
-    def sentinel_config_set(self, name: ValueT, value: ValueT) -> CommandTask[bool]:
+    def sentinel_config_set(self, name: RedisValueT, value: RedisValueT) -> CommandTask[bool]:
         """
         Set the value of a global Sentinel configuration parameter
         """
@@ -136,7 +136,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
         CommandName.SENTINEL_MONITOR,
     )
     def sentinel_monitor(
-        self, name: ValueT, ip: ValueT, port: int, quorum: int
+        self, name: RedisValueT, ip: RedisValueT, port: int, quorum: int
     ) -> CommandTask[bool]:
         """Adds a new master to Sentinel to be monitored"""
 
@@ -159,7 +159,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SENTINEL_REMOVE,
     )
-    def sentinel_remove(self, name: ValueT) -> CommandTask[bool]:
+    def sentinel_remove(self, name: RedisValueT) -> CommandTask[bool]:
         """Removes a master from Sentinel's monitoring"""
 
         return CommandTask(self, CommandName.SENTINEL_REMOVE, name, callback=SimpleStringCallback())
@@ -182,7 +182,9 @@ class SentinelCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SENTINEL_SET,
     )
-    def sentinel_set(self, name: ValueT, option: ValueT, value: ValueT) -> CommandTask[bool]:
+    def sentinel_set(
+        self, name: RedisValueT, option: RedisValueT, value: RedisValueT
+    ) -> CommandTask[bool]:
         """Sets Sentinel monitoring parameters for a given master"""
 
         return CommandTask(

@@ -26,9 +26,9 @@ from ..typing import (
     Literal,
     Mapping,
     Parameters,
+    RedisValueT,
     ResponsePrimitive,
     StringT,
-    ValueT,
 )
 from .base import Module, ModuleGroup, module_command
 
@@ -86,7 +86,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    def add(self, key: KeyT, item: ValueT) -> CommandTask[bool]:
+    def add(self, key: KeyT, item: RedisValueT) -> CommandTask[bool]:
         """
         Adds an item to a Bloom Filter
 
@@ -105,7 +105,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    def madd(self, key: KeyT, items: Parameters[ValueT]) -> CommandTask[tuple[bool, ...]]:
+    def madd(self, key: KeyT, items: Parameters[RedisValueT]) -> CommandTask[tuple[bool, ...]]:
         """
         Adds one or more items to a Bloom Filter. A filter will be created if it does not exist
 
@@ -127,7 +127,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
     def insert(
         self,
         key: KeyT,
-        items: Parameters[ValueT],
+        items: Parameters[RedisValueT],
         capacity: int | None = None,
         error: int | float | None = None,
         expansion: int | None = None,
@@ -173,7 +173,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    def exists(self, key: KeyT, item: ValueT) -> CommandTask[bool]:
+    def exists(self, key: KeyT, item: RedisValueT) -> CommandTask[bool]:
         """
         Checks whether an item exists in a Bloom Filter
 
@@ -190,7 +190,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    def mexists(self, key: KeyT, items: Parameters[ValueT]) -> CommandTask[tuple[bool, ...]]:
+    def mexists(self, key: KeyT, items: Parameters[RedisValueT]) -> CommandTask[tuple[bool, ...]]:
         """
         Checks whether one or more items exist in a Bloom Filter
 
@@ -360,7 +360,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    def add(self, key: KeyT, item: ValueT) -> CommandTask[bool]:
+    def add(self, key: KeyT, item: RedisValueT) -> CommandTask[bool]:
         """
         Adds an item to a Cuckoo Filter
 
@@ -379,7 +379,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    def addnx(self, key: KeyT, item: ValueT) -> CommandTask[bool]:
+    def addnx(self, key: KeyT, item: RedisValueT) -> CommandTask[bool]:
         """
         Adds an item to a Cuckoo Filter if the item did not exist previously.
 
@@ -401,7 +401,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
     def insert(
         self,
         key: KeyT,
-        items: Parameters[ValueT],
+        items: Parameters[RedisValueT],
         capacity: int | None = None,
         nocreate: bool | None = None,
     ) -> CommandTask[tuple[bool, ...]]:
@@ -437,7 +437,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
     def insertnx(
         self,
         key: KeyT,
-        items: Parameters[ValueT],
+        items: Parameters[RedisValueT],
         capacity: int | None = None,
         nocreate: bool | None = None,
     ) -> CommandTask[tuple[bool, ...]]:
@@ -472,7 +472,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    def exists(self, key: KeyT, item: ValueT) -> CommandTask[bool]:
+    def exists(self, key: KeyT, item: RedisValueT) -> CommandTask[bool]:
         """
         Checks whether an item exist in a Cuckoo Filter
 
@@ -493,7 +493,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    def mexists(self, key: KeyT, items: Parameters[ValueT]) -> CommandTask[tuple[bool, ...]]:
+    def mexists(self, key: KeyT, items: Parameters[RedisValueT]) -> CommandTask[tuple[bool, ...]]:
         """
         Checks whether one or more items exist in a Cuckoo Filter
 
@@ -512,7 +512,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    def delete(self, key: KeyT, item: ValueT) -> CommandTask[bool]:
+    def delete(self, key: KeyT, item: RedisValueT) -> CommandTask[bool]:
         """
         Deletes an item from a Cuckoo Filter
 
@@ -533,7 +533,7 @@ class CuckooFilter(ModuleGroup[AnyStr]):
         flags={CommandFlag.READONLY},
         cacheable=True,
     )
-    def count(self, key: KeyT, item: ValueT) -> CommandTask[int]:
+    def count(self, key: KeyT, item: RedisValueT) -> CommandTask[int]:
         """
         Return the number of times an item might be in a Cuckoo Filter
 

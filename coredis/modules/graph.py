@@ -20,9 +20,9 @@ from ..typing import (
     KeyT,
     Literal,
     Parameters,
+    RedisValueT,
     ResponsePrimitive,
     StringT,
-    ValueT,
 )
 from .base import Module, ModuleGroup, module_command
 from .response._callbacks.graph import (
@@ -257,7 +257,7 @@ class Graph(ModuleGroup[AnyStr]):
             combine=ClusterEnsureConsistent[AnyStr](),
         ),
     )
-    def config_set(self, name: StringT, value: ValueT) -> CommandTask[bool]:
+    def config_set(self, name: StringT, value: RedisValueT) -> CommandTask[bool]:
         """
         Updates a RedisGraph configuration
 

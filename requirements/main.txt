@@ -1,4 +1,5 @@
 async_timeout>4,<6
+beartype>=0.20
 deprecated>=1.2
 typing_extensions>=4.3
 packaging>=21,<26

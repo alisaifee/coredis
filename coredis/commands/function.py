@@ -21,6 +21,7 @@ from coredis.typing import (
     P,
     Parameters,
     R,
+    RedisValueT,
     ResponseType,
     StringT,
     TypeVar,
@@ -165,7 +166,7 @@ class Library(Generic[AnyStr]):
 
             import coredis
             from coredis.commands import Library
-            from coredis.typing import KeyT, ValueT
+            from coredis.typing import KeyT, RedisValueT
             from typing import List
 
             class MyAwesomeLibrary(Library):
@@ -213,16 +214,16 @@ class Library(Generic[AnyStr]):
                 \"\"\"
 
                 @Library.wraps("echo")
-                async def echo(self, value: ValueT) -> ValueT: ...
+                async def echo(self, value: RedisValueT) -> RedisValueT: ...
 
                 @Library.wraps("ping")
                 async def ping(self) -> str: ...
 
                 @Library.wraps("get")
-                async def get(self, key: KeyT) -> ValueT: ...
+                async def get(self, key: KeyT) -> RedisValueT: ...
 
                 @Library.wraps("hmmget")
-                async def hmmget(self, *keys: KeyT, **fields_with_values: ValueT): ...
+                async def hmmget(self, *keys: KeyT, **fields_with_values: RedisValueT): ...
                 \"\"\"
                 Return values of ``fields_with_values`` on a first come first serve
                 basis from the hashes at ``keys``. Since ``fields_with_values`` is a mapping
@@ -291,7 +292,7 @@ class Library(Generic[AnyStr]):
 
             def split_args(
                 *a: P.args, **k: P.kwargs
-            ) -> tuple[Library[AnyStr], Parameters[KeyT], Parameters[ValueT]]:
+            ) -> tuple[Library[AnyStr], Parameters[KeyT], Parameters[RedisValueT]]:
                 bound_arguments = sig.bind(*a, **k)
                 bound_arguments.apply_defaults()
                 arguments: dict[str, Any] = bound_arguments.arguments
@@ -305,7 +306,7 @@ class Library(Generic[AnyStr]):
                         " for instructions on how to bind a class to a redis library."
                     )
                 keys: list[KeyT] = []
-                args: list[ValueT] = []
+                args: list[RedisValueT] = []
                 for name in sig.parameters:
                     if name == first_arg:
                         continue

@@ -12,9 +12,9 @@ from coredis.typing import (
     Literal,
     Mapping,
     Parameters,
+    RedisValueT,
     ResponseType,
     StringT,
-    ValueT,
 )
 
 from .._utils import dict_to_flat_list
@@ -89,7 +89,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
                 PureToken.SUM,
             ]
         ) = None,
-        labels: Mapping[StringT, ValueT] | None = None,
+        labels: Mapping[StringT, RedisValueT] | None = None,
     ) -> CommandTask[bool]:
         """
         Create a new time series with the given key.
@@ -233,7 +233,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
                 PureToken.SUM,
             ]
         ) = None,
-        labels: Mapping[StringT, ValueT] | None = None,
+        labels: Mapping[StringT, RedisValueT] | None = None,
     ) -> CommandTask[int]:
         """
         Add a sample to a time series.
@@ -307,7 +307,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         value: int | float,
-        labels: Mapping[StringT, ValueT] | None = None,
+        labels: Mapping[StringT, RedisValueT] | None = None,
         timestamp: datetime | int | StringT | None = None,
         retention: int | timedelta | None = None,
         uncompressed: bool | None = None,
@@ -361,7 +361,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         value: int | float,
-        labels: Mapping[StringT, ValueT] | None = None,
+        labels: Mapping[StringT, RedisValueT] | None = None,
         timestamp: datetime | int | StringT | None = None,
         retention: int | timedelta | None = None,
         uncompressed: bool | None = None,
