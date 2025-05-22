@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, cast
 
 from coredis.response._callbacks import ResponseCallback
 from coredis.typing import (
-    Any,
     AnyStr,
     Iterable,
     ResponsePrimitive,

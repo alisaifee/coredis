@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, cast
 
 from coredis.response._callbacks import ResponseCallback
 from coredis.response._utils import flat_pairs_to_dict
 from coredis.typing import (
-    Any,
     AnyStr,
     ResponsePrimitive,
     ResponseType,

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import SupportsFloat, cast
+from typing import Any, SupportsFloat, cast
 
 from coredis.response._callbacks import ResponseCallback
 from coredis.response.types import ScoredMember, ScoredMembers
 from coredis.typing import (
-    Any,
     AnyStr,
     Generic,
     ResponsePrimitive,

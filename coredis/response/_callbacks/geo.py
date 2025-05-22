@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from typing import Any
+
 from coredis.response._callbacks import ResponseCallback
 from coredis.response.types import GeoCoordinates, GeoSearchResult
-from coredis.typing import Any, AnyStr, ResponseType
+from coredis.typing import AnyStr, ResponseType
 
 
 class GeoSearchCallback(

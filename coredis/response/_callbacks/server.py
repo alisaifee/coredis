@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import datetime
+from typing import Any
 
 from coredis._utils import EncodingInsensitiveDict, nativestr
 from coredis.response._callbacks import ResponseCallback
 from coredis.response._utils import flat_pairs_to_dict
 from coredis.response.types import ClientInfo, RoleInfo, SlowLogInfo
 from coredis.typing import (
-    Any,
     AnyStr,
     ClassVar,
     ResponsePrimitive,

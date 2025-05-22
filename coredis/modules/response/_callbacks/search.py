@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import ChainMap, OrderedDict
 from functools import partial
+from typing import Any
 
 from coredis._json import json
 from coredis._utils import EncodingInsensitiveDict
@@ -13,7 +14,6 @@ from coredis.modules.response.types import (
 from coredis.response._callbacks import ResponseCallback
 from coredis.response._utils import flat_pairs_to_dict
 from coredis.typing import (
-    Any,
     AnyStr,
     ResponsePrimitive,
     ResponseType,

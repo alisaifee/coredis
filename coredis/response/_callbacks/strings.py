@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from typing import Any
+
 from coredis._utils import EncodingInsensitiveDict
 from coredis.response._callbacks import ResponseCallback, SimpleStringCallback
 from coredis.response.types import LCSMatch, LCSResult
 from coredis.typing import (
-    Any,
     AnyStr,
     ResponsePrimitive,
     ResponseType,

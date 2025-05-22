@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, cast
 
 from coredis._json import json
 from coredis.response._callbacks import ResponseCallback
-from coredis.typing import Any, JsonType, ResponseType
+from coredis.typing import JsonType, ResponseType
 
 
 class JsonCallback(ResponseCallback[ResponseType, ResponseType, JsonType]):

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from coredis._utils import b, nativestr
 from coredis.modules.response.types import (
@@ -14,7 +14,6 @@ from coredis.modules.response.types import (
 )
 from coredis.response._callbacks import ResponseCallback
 from coredis.typing import (
-    Any,
     AnyStr,
     Generic,
     Literal,

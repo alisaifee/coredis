@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from typing import Any
+
 from coredis.response._callbacks import DictCallback, ResponseCallback
 from coredis.typing import (
-    Any,
     AnyStr,
     ResponsePrimitive,
     Sequence,

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from typing import Any
+
 from coredis.modules.response.types import AutocompleteSuggestion
 from coredis.response._callbacks import ResponseCallback
-from coredis.typing import Any, AnyStr, ResponseType
+from coredis.typing import AnyStr, ResponseType
 
 
 class AutocompleteCallback(

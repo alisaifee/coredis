@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from coredis.exceptions import DataError, NoKeyError, RedisError
 from coredis.response._callbacks import DateTimeCallback, ResponseCallback
 from coredis.typing import (
-    Any,
     AnyStr,
     ResponseType,
     StringT,

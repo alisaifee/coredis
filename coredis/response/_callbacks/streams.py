@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from coredis._utils import EncodingInsensitiveDict
 from coredis.response._callbacks import ResponseCallback
 from coredis.response._utils import flat_pairs_to_dict, flat_pairs_to_ordered_dict
@@ -10,7 +12,6 @@ from coredis.response.types import (
     StreamPendingExt,
 )
 from coredis.typing import (
-    Any,
     AnyStr,
     OrderedDict,
     ResponseType,

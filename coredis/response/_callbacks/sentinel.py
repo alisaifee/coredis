@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, cast
 
 from coredis._utils import EncodingInsensitiveDict, nativestr
 from coredis.response._callbacks import ResponseCallback
 from coredis.response._callbacks.server import InfoCallback
 from coredis.typing import (
-    Any,
     AnyStr,
     ResponsePrimitive,
     ResponseType,
