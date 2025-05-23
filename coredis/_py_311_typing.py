@@ -4,14 +4,19 @@ from typing import Any, TypeAlias
 
 from .typing import MutableSet, RedisError, ResponsePrimitive
 
-#: Represents the total structure of any response for a redis
-#: command.
+#: Represents the structure of hashable response types (i.e. those that can
+#: be members of sets or keys for maps)
+HashableResponseType: TypeAlias = (
+    ResponsePrimitive | tuple[ResponsePrimitive, ...] | frozenset[ResponsePrimitive]
+)
+
+#: Represents the total structure of any response for any redis command.
 ResponseType: TypeAlias = (
     ResponsePrimitive
     | list[Any]
-    | MutableSet[ResponsePrimitive | tuple[Any, ...] | frozenset[ResponsePrimitive]]
+    | MutableSet[HashableResponseType]
     | dict[
-        ResponsePrimitive | tuple[Any, ...] | frozenset[ResponsePrimitive],
+        HashableResponseType,
         Any,
     ]
     | RedisError

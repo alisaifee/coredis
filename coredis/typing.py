@@ -136,13 +136,13 @@ StringT = str | bytes
 #:     length(b"123")              # invalid
 Parameters = list[T_co] | Set[T_co] | tuple[T_co, ...] | ValuesView[T_co] | Iterator[T_co]
 
-#: Mapping of primitives returned by redis
+#: Primitives returned by redis
 ResponsePrimitive = StringT | int | float | bool | None
 
-if not TYPE_CHECKING and sys.version_info >= (3, 12):
-    from ._py_312_typing import JsonType, ResponseType
+if sys.version_info >= (3, 12):
+    from ._py_312_typing import HashableResponseType, JsonType, ResponseType
 else:
-    from ._py_311_typing import JsonType, ResponseType
+    from ._py_311_typing import HashableResponseType, JsonType, ResponseType
 
 __all__ = [
     "AnyStr",
@@ -157,6 +157,7 @@ __all__ = [
     "Generic",
     "Generator",
     "Hashable",
+    "HashableResponseType",
     "Iterable",
     "Iterator",
     "JsonType",

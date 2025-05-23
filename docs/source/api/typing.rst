@@ -26,15 +26,25 @@ library are accepted via :data:`~coredis.typing.Parameters`.
 Redis Response (RESP) descriptions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The follow two types describe the total representation of parsed responses from the redis
+The follow types describe the total representation of parsed responses from the redis
 serialization protocol(s) (RESP & RESP3) (See :ref:`handbook/response:redis response` for more details).
 
 In most cases these are not exposed through the client API and are only meant
 for internal pre-validation before the parsed response is transformed or narrowed
 to the returns documented in the client API at :ref:`api/clients:clients`.
 
-.. autodata:: coredis.typing.ResponsePrimitive
-.. autodata:: coredis.typing.ResponseType
+.. type:: coredis.typing.ResponsePrimitive
+
+   Primitives returned by redis
+
+.. type:: coredis.typing.HashableResponseType
+
+   The structure of hashable response types (i.e. those that can
+   be members of sets or keys for maps)
+
+.. type:: coredis.typing.ResponseType
+
+   The total structure of any response for any redis command.
 
 
 Response Types

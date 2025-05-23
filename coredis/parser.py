@@ -36,6 +36,7 @@ from coredis.exceptions import (
 )
 from coredis.typing import (
     Final,
+    HashableResponseType,
     MutableSet,
     NamedTuple,
     ResponsePrimitive,
@@ -53,7 +54,7 @@ NOT_ENOUGH_DATA: Final[NotEnoughData] = NotEnoughData()
 class RESPNode:
     __slots__ = ("depth", "key", "node_type")
     depth: int
-    key: ResponsePrimitive | tuple[ResponsePrimitive, ...] | frozenset[ResponsePrimitive]
+    key: HashableResponseType
     node_type: int
 
     def __init__(
@@ -96,11 +97,11 @@ class ListNode(RESPNode):
 
 
 class DictNode(RESPNode):
-    __slots__ = ("container",)
+    __slots__ = ("container", "key")
 
     def __init__(self, depth: int) -> None:
         self.container: dict[
-            (ResponsePrimitive | tuple[ResponsePrimitive, ...] | frozenset[ResponsePrimitive]),
+            HashableResponseType,
             ResponseType,
         ] = {}
         super().__init__(depth * 2, RESPDataType.MAP, None)
@@ -109,7 +110,7 @@ class DictNode(RESPNode):
         self.depth -= 1
         if not self.key:
             self.key = cast(
-                ResponsePrimitive | tuple[ResponsePrimitive, ...] | frozenset[ResponsePrimitive],
+                HashableResponseType,
                 self.ensure_hashable(item),
             )
         else:
@@ -121,9 +122,7 @@ class SetNode(RESPNode):
     __slots__ = ("container",)
 
     def __init__(self, depth: int) -> None:
-        self.container: MutableSet[
-            (ResponsePrimitive | tuple[ResponsePrimitive, ...] | frozenset[ResponsePrimitive])
-        ] = set()
+        self.container: MutableSet[HashableResponseType] = set()
         super().__init__(depth, RESPDataType.SET, None)
 
     def append(
@@ -133,7 +132,7 @@ class SetNode(RESPNode):
         self.depth -= 1
         self.container.add(
             cast(
-                ResponsePrimitive | tuple[ResponsePrimitive, ...] | frozenset[ResponsePrimitive],
+                HashableResponseType,
                 self.ensure_hashable(item),
             )
         )
