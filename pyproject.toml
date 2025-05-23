@@ -20,6 +20,7 @@ disallow_untyped_decorators = true
 show_error_codes = true
 warn_return_any = true
 warn_unused_ignores = true
+exclude = ["coredis/_py_312_typing.py"]
 
 [[tool.mypy.overrides]]
 module = [

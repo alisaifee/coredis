@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import warnings
 from collections import OrderedDict
 from collections.abc import (
@@ -23,7 +24,6 @@ from collections.abc import (
 from types import ModuleType
 from typing import (
     TYPE_CHECKING,
-    Any,
     AnyStr,
     ClassVar,
     Final,
@@ -139,44 +139,10 @@ Parameters = list[T_co] | Set[T_co] | tuple[T_co, ...] | ValuesView[T_co] | Iter
 #: Mapping of primitives returned by redis
 ResponsePrimitive = StringT | int | float | bool | None
 
-#: Represents the total structure of any response for a redis
-#: command.
-#:
-#: This should preferably be represented by a recursive definition to allow for
-#: Limitations in runtime type checkers (beartype) requires conditionally loosening
-#: the definition with the use of  :class:`typing.Any` for now.
-
-if TYPE_CHECKING:
-    ResponseType = (
-        ResponsePrimitive
-        | list["ResponseType"]
-        | MutableSet[
-            ResponsePrimitive | tuple[ResponsePrimitive, ...] | frozenset[ResponsePrimitive]
-        ]
-        | dict[
-            ResponsePrimitive | tuple[ResponsePrimitive, ...] | frozenset[ResponsePrimitive],
-            "ResponseType",
-        ]
-        | RedisError  # response errors get mapped to exceptions.
-    )
+if not TYPE_CHECKING and sys.version_info >= (3, 12):
+    from ._py_312_typing import JsonType, ResponseType
 else:
-    from typing import Any
-
-    ResponseType = (
-        ResponsePrimitive
-        | list[Any]
-        | MutableSet[
-            ResponsePrimitive | tuple[ResponsePrimitive, ...] | frozenset[ResponsePrimitive]
-        ]
-        | dict[
-            ResponsePrimitive | tuple[ResponsePrimitive, ...] | frozenset[ResponsePrimitive],
-            Any,
-        ]
-        | RedisError  # response errors get mapped to exceptions.
-    )
-
-#: Type alias for valid python types that can be represented as json
-JsonType = str | int | float | bool | dict[str, Any] | list[Any] | None
+    from ._py_311_typing import JsonType, ResponseType
 
 __all__ = [
     "AnyStr",
