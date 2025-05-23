@@ -40,8 +40,16 @@ to the returns documented in the client API at :ref:`api/clients:clients`.
 Response Types
 ^^^^^^^^^^^^^^
 In most cases the API returns native python types mapped as closely as possible
-to the response from redis. The responses are normalized across RESP versions ``2`` and ``3``
-to maintain a consistent signature (Most notable example of this is dictionary
+to the response from redis. The responses are normalized across :term:`RESP` versions ``2`` and ``3``
+to maintain a consistent signature, i.e. :term:`RESP` responses are reshaped into their :term:`RESP3`
+counterparts, for example:
+
+- If redis returns a map for a command in :term:`RESP3`, coredis will ensure an identically
+  shaped dictionary is returned for :term:`RESP` as well. (E.g. :meth:`~coredis.Redis.hgetall`)
+- If redis returns a double value for a command in :term:`RESP3`, coredis will parse the string
+  value as a python float for :term:`RESP`. (E.g. :meth:`~coredis.Redis.zscore`)
+- If redis returns a set for a command in :term:`RESP3`, coredis will convert the redis array
+  to a python set (E.g. :meth:`~coredis.Redis.smembers`)
 
 In certain cases these are "lightly" typed using :class:`~typing.NamedTuple`
 or :class:`~typing.TypedDict` for ease of documentation and in the case of "tuples"
