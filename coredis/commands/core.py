@@ -5017,7 +5017,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         Get the score associated with the given member in a sorted set
 
         :return: the score of :paramref:`member` (a double precision floating point number),
-         represented as string or ``None`` if the member doesn't exist.
+         or ``None`` if the member doesn't exist.
         """
 
         return await self.execute_command(
