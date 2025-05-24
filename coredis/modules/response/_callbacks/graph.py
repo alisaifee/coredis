@@ -64,14 +64,17 @@ class QueryCallback(
     relationships: dict[int, StringT]
     labels: dict[int, StringT]
 
-    def __init__(self, graph: StringT):
+    def __init__(self, graph: StringT, **options: Any):
         self.graph = graph
         self.properties = {}
         self.relationships = {}
         self.labels = {}
+        super().__init__(**options)
 
     async def pre_process(
-        self, client: Client[Any], response: ResponseType, **options: Any
+        self,
+        client: Client[Any],
+        response: ResponseType,
     ) -> None:
         if not len(response) == 3:
             return
@@ -139,7 +142,10 @@ class QueryCallback(
             )
         return cache[f"{self.graph}:{type}"]
 
-    def transform(self, response: ResponseType, **options: Any) -> GraphQueryResult[AnyStr]:
+    def transform(
+        self,
+        response: ResponseType,
+    ) -> GraphQueryResult[AnyStr]:
         result_set = []
         headers = []
         if len(response) == 3:
@@ -204,11 +210,12 @@ class QueryCallback(
 
 
 class GraphSlowLogCallback(
-    ResponseCallback[ResponseType, ResponseType, tuple[GraphSlowLogInfo, ...] | bool]
+    ResponseCallback[ResponseType, ResponseType, tuple[GraphSlowLogInfo, ...]]
 ):
     def transform(
-        self, response: ResponseType, **options: Any
-    ) -> tuple[GraphSlowLogInfo, ...] | bool:
+        self,
+        response: ResponseType,
+    ) -> tuple[GraphSlowLogInfo, ...]:
         return tuple(GraphSlowLogInfo(int(k[0]), k[1], k[2], float(k[3])) for k in response)
 
 
@@ -220,7 +227,8 @@ class ConfigGetCallback(
     ]
 ):
     def transform(
-        self, response: ResponseType, **options: Any
+        self,
+        response: ResponseType,
     ) -> ResponsePrimitive | dict[AnyStr, ResponsePrimitive]:
         if isinstance(response, list):
             if isinstance(response[0], list):

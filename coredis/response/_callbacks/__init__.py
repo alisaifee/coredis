@@ -69,11 +69,13 @@ class ClusterCallbackMeta(ABCMeta):
 class ResponseCallback(ABC, Generic[RESP, RESP3, R], metaclass=ResponseCallbackMeta):
     version: Literal[2, 3]
 
+    def __init__(self, **options: Any) -> None:
+        self.options = options
+
     def __call__(
         self,
         response: RESP | RESP3 | ResponseError,
         version: Literal[2, 3] = 2,
-        **options: Any,
     ) -> R:
         self.version = version
         if isinstance(response, ResponseError):
@@ -81,15 +83,15 @@ class ResponseCallback(ABC, Generic[RESP, RESP3, R], metaclass=ResponseCallbackM
             if exc_to_response:
                 return exc_to_response
         if version == 3:
-            return self.transform_3(cast(RESP3, response), **options)
-        return self.transform(cast(RESP, response), **options)
+            return self.transform_3(cast(RESP3, response))
+        return self.transform(cast(RESP, response))
 
     @abstractmethod
-    def transform(self, response: RESP, **options: Any) -> R:
+    def transform(self, response: RESP) -> R:
         pass
 
-    def transform_3(self, response: RESP3, **options: Any) -> R:
-        return self.transform(cast(RESP, response), **options)
+    def transform_3(self, response: RESP3) -> R:
+        return self.transform(cast(RESP, response))
 
     def handle_exception(self, exc: BaseException) -> R | None:
         return exc  # type: ignore
@@ -97,13 +99,11 @@ class ResponseCallback(ABC, Generic[RESP, RESP3, R], metaclass=ResponseCallbackM
 
 @runtime_checkable
 class AsyncPreProcessingCallback(Protocol):
-    async def pre_process(
-        self, client: Client[Any], response: ResponseType, **options: Any
-    ) -> None: ...
+    async def pre_process(self, client: Client[Any], response: ResponseType) -> None: ...
 
 
 class NoopCallback(ResponseCallback[R, R, R]):
-    def transform(self, response: R, **kwargs: ValueT | None) -> R:
+    def transform(self, response: R) -> R:
         return response
 
 
@@ -112,22 +112,21 @@ class ClusterMultiNodeCallback(ABC, Generic[R], metaclass=ClusterCallbackMeta):
         self,
         responses: Mapping[str, R | ResponseError],
         version: int = 2,
-        **kwargs: ValueT | None,
     ) -> R:
         if version == 3:
-            return self.combine_3(responses, **kwargs)
-        return self.combine(responses, **kwargs)
+            return self.combine_3(responses)
+        return self.combine(responses)
 
     @property
     @abstractmethod
     def response_policy(self) -> str: ...
 
     @abstractmethod
-    def combine(self, responses: Mapping[str, R], **kwargs: ValueT | None) -> R:
+    def combine(self, responses: Mapping[str, R], **options: Any) -> R:
         pass
 
-    def combine_3(self, responses: Mapping[str, R], **kwargs: ValueT | None) -> R:
-        return self.combine(responses, **kwargs)
+    def combine_3(self, responses: Mapping[str, R], **options: Any) -> R:
+        return self.combine(responses, **options)
 
     @classmethod
     def raise_any(cls, values: Iterable[R]) -> None:
@@ -140,7 +139,7 @@ class ClusterBoolCombine(ClusterMultiNodeCallback[bool]):
     def __init__(self, any: bool = False):
         self.any = any
 
-    def combine(self, responses: Mapping[str, bool], **kwargs: ValueT | None) -> bool:
+    def combine(self, responses: Mapping[str, bool], **options: Any) -> bool:
         values = tuple(responses.values())
         self.raise_any(values)
         assert (isinstance(value, bool) for value in values)
@@ -157,7 +156,7 @@ class ClusterBoolCombine(ClusterMultiNodeCallback[bool]):
 
 class ClusterAlignedBoolsCombine(ClusterMultiNodeCallback[tuple[bool, ...]]):
     def combine(
-        self, responses: Mapping[str, tuple[bool, ...]], **kwargs: ValueT | None
+        self, responses: Mapping[str, tuple[bool, ...]], **options: Any
     ) -> tuple[bool, ...]:
         return tuple(all(k) for k in zip(*responses.values()))
 
@@ -170,7 +169,7 @@ class ClusterEnsureConsistent(ClusterMultiNodeCallback[R | None]):
     def __init__(self, ensure_consistent: bool = True):
         self.ensure_consistent = ensure_consistent
 
-    def combine(self, responses: Mapping[str, R | None], **kwargs: ValueT | None) -> R | None:
+    def combine(self, responses: Mapping[str, R | None], **options: Any) -> R | None:
         values = tuple(responses.values())
         self.raise_any(values)
         if self.ensure_consistent and len(set(values)) != 1:
@@ -189,7 +188,7 @@ class ClusterEnsureConsistent(ClusterMultiNodeCallback[R | None]):
 
 
 class ClusterFirstNonException(ClusterMultiNodeCallback[R | None]):
-    def combine(self, responses: Mapping[str, R | None], **kwargs: ValueT | None) -> R | None:
+    def combine(self, responses: Mapping[str, R | None], **options: Any) -> R | None:
         for r in responses.values():
             if not isinstance(r, BaseException):
                 return r
@@ -203,7 +202,7 @@ class ClusterFirstNonException(ClusterMultiNodeCallback[R | None]):
 
 
 class ClusterMergeSets(ClusterMultiNodeCallback[set[R]]):
-    def combine(self, responses: Mapping[str, set[R]], **kwargs: ValueT | None) -> set[R]:
+    def combine(self, responses: Mapping[str, set[R]], **options: Any) -> set[R]:
         self.raise_any(responses.values())
         return set(itertools.chain(*responses.values()))
 
@@ -213,11 +212,7 @@ class ClusterMergeSets(ClusterMultiNodeCallback[set[R]]):
 
 
 class ClusterSum(ClusterMultiNodeCallback[int]):
-    def combine(
-        self,
-        responses: Mapping[str, int | ResponseError],
-        **kwargs: ValueT | None,
-    ) -> int:
+    def combine(self, responses: Mapping[str, int | ResponseError], **options: Any) -> int:
         self.raise_any(responses.values())
         return sum(responses.values())
 
@@ -231,7 +226,7 @@ class ClusterMergeMapping(ClusterMultiNodeCallback[dict[CK_co, CR_co]]):
         self.value_combine = value_combine
 
     def combine(
-        self, responses: Mapping[str, dict[CK_co, CR_co]], **kwargs: ValueT | None
+        self, responses: Mapping[str, dict[CK_co, CR_co]], **options: Any
     ) -> dict[CK_co, CR_co]:
         self.raise_any(responses.values())
         response: dict[CK_co, CR_co] = {}
@@ -246,9 +241,7 @@ class ClusterMergeMapping(ClusterMultiNodeCallback[dict[CK_co, CR_co]]):
 
 
 class ClusterConcatenateTuples(ClusterMultiNodeCallback[tuple[R, ...]]):
-    def combine(
-        self, responses: Mapping[str, tuple[R, ...]], **kwargs: ValueT | None
-    ) -> tuple[R, ...]:
+    def combine(self, responses: Mapping[str, tuple[R, ...]], **options: Any) -> tuple[R, ...]:
         self.raise_any(responses.values())
         return tuple(itertools.chain(*responses.values()))
 
@@ -263,10 +256,12 @@ class SimpleStringCallback(ResponseCallback[StringT | None, StringT | None, bool
         raise_on_error: type[Exception] | None = None,
         prefix_match: bool = False,
         ok_values: set[str] = {"OK"},
+        **options: Any,
     ):
         self.raise_on_error = raise_on_error
         self.prefix_match = prefix_match
         self.ok_values = {b(v) for v in ok_values}
+        super().__init__(**options)
 
     def transform(self, response: StringT | None, **options: Any) -> bool:
         if response:
@@ -357,9 +352,12 @@ class ListCallback(ResponseCallback[list[ResponseType], list[ResponseType], list
 
 
 class DateTimeCallback(ResponseCallback[int | float, int | float, datetime.datetime]):
-    def transform(self, response: int | float, **kwargs: ValueT | None) -> datetime.datetime:
+    def transform(
+        self,
+        response: int | float,
+    ) -> datetime.datetime:
         ts = float(response) if not isinstance(response, float) else response
-        if kwargs.get("unit") == "milliseconds":
+        if self.options.get("unit") == "milliseconds":
             ts = ts / 1000.0
         return datetime.datetime.fromtimestamp(ts)
 
@@ -375,9 +373,11 @@ class DictCallback(
         self,
         flat: bool = True,
         recursive: list[str] | None = None,
+        **options: Any,
     ):
         self.flat = flat
         self.recursive = recursive or []
+        super().__init__(**options)
 
     def transform(
         self,

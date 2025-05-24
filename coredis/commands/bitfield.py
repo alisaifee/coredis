@@ -4,7 +4,9 @@ import enum
 
 from coredis._protocols import AbstractExecutor
 from coredis.commands.constants import CommandName
+from coredis.commands.request import CommandRequest
 from coredis.exceptions import ReadOnlyError
+from coredis.response._callbacks import NoopCallback
 from coredis.tokens import PrefixToken, PureToken
 from coredis.typing import (
     AnyStr,
@@ -96,7 +98,13 @@ class BitFieldOperation(Generic[AnyStr]):
 
         return self
 
-    async def exc(self) -> ResponseType:
+    def exc(self) -> CommandRequest[ResponseType]:
         """execute commands in command stack"""
 
-        return await self.redis.execute_command(self._command, *self._command_stack, decode=False)
+        return CommandRequest(
+            self.redis,
+            self._command,
+            *self._command_stack,
+            callback=NoopCallback(),
+            execution_parameters={"decode": False},
+        )
