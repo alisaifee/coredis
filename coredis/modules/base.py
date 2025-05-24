@@ -45,6 +45,7 @@ async def ensure_compatibility(
         Config.optimized
         or not command_details.version_introduced
         or not getattr(client, "verify_version", False)
+        or not getattr(client, "server_version", None)
         or getattr(client, "noreply", False)
     ):
         return
