@@ -92,17 +92,6 @@ class Client(
     ModuleMixin[AnyStr],
     SentinelCommands[AnyStr],
 ):
-    def create_request(
-        self,
-        name: bytes,
-        *arguments: ValueT,
-        callback: Callable[..., T_co],
-        execution_parameters: ExecutionParameters | None = None,
-    ) -> CommandRequest[T_co]:
-        return CommandRequest(
-            self, name, *arguments, callback=callback, execution_parameters=execution_parameters
-        )
-
     cache: AbstractCache | None
     connection_pool: ConnectionPool
     decode_responses: bool
@@ -215,6 +204,29 @@ class Client(
         self.retry_policy = retry_policy
         self._module_info: dict[str, version.Version] | None = None
         self.callback_storage = defaultdict(dict)
+
+    def create_request(
+        self,
+        name: bytes,
+        *arguments: ValueT,
+        callback: Callable[..., T_co],
+        execution_parameters: ExecutionParameters | None = None,
+    ) -> CommandRequest[T_co]:
+        """
+        Factory method to create a command request awaitable.
+        Subclasses of :class:`coredis.client.Client` can override this method
+        if custom behavior is required. See :class:`~coredis.commands.CommandRequest`
+        for details.
+
+        :param name: The name of the command
+        :param arguments: all arguments sent to the command
+        :param callback: a callback that takes the RESP response and converts it
+         into a shape to be returned
+        :return: An instance of a command request bound to this client.
+        """
+        return CommandRequest(
+            self, name, *arguments, callback=callback, execution_parameters=execution_parameters
+        )
 
     @property
     def noreply(self) -> bool:

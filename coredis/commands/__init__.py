@@ -27,7 +27,7 @@ from .bitfield import BitFieldOperation
 from .function import Function, Library
 from .monitor import Monitor
 from .pubsub import ClusterPubSub, PubSub, ShardedPubSub
-from .request import CommandRequest
+from .request import CommandRequest, CommandResponseT
 from .script import Script
 
 
@@ -53,6 +53,7 @@ class CommandMixin(Generic[AnyStr], ABC):
 
 __all__ = [
     "CommandRequest",
+    "CommandResponseT",
     "BitFieldOperation",
     "ClusterPubSub",
     "Function",
