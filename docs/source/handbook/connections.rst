@@ -30,7 +30,7 @@ upto ``max_connections`` connections to be acquired concurrently, and if more ar
 they will raise an exception.
 
 In the following example, a client is created with ``max_connections`` set to ``2``, however ``10``
-tasks are concurrently started. This means ``8`` tasks will fail::
+blocking requests are concurrently started. This means ~ ``8`` requests will fail::
 
     import coredis
     import asyncio
@@ -45,15 +45,16 @@ tasks are concurrently started. This means ``8`` tasks will fail::
 
         await client.set("fubar", 1)
         results = await asyncio.gather(
-            *[asyncio.get_running_loop().create_task(client.get("fubar")) for _ in range(10)],
+            *[client.get("fubar") for _ in range(10)],
             return_exceptions=True
         )
+        print(len([r for r in results if isinstance(r, Exception)]))
         assert len([r for r in results if isinstance(r, Exception)]) == 8
 
     asyncio.run(test())
 
 
-Changing ``max_connections`` to ``10`` will result in all tasks succeeding::
+Changing ``max_connections`` to ``10`` will result in all requests succeeding::
 
     import coredis
     import asyncio
@@ -68,7 +69,7 @@ Changing ``max_connections`` to ``10`` will result in all tasks succeeding::
 
         await client.set("fubar", 1)
         results = await asyncio.gather(
-            *[asyncio.get_running_loop().create_task(client.get("fubar")) for _ in range(10)],
+            *[client.get("fubar") for _ in range(10)],
             return_exceptions=True
         )
         assert len([r for r in results if isinstance(r, Exception)]) == 0
@@ -87,7 +88,7 @@ Cluster
 
 Re-using the example from the :ref:`handbook/connections:non-blocking connection pool` section above,
 but using the blocking variants of the connection pools for parameters :paramref:`coredis.Redis.connection_pool_cls` or :paramref:`coredis.RedisCluster.connection_pool_cls`
-setting ``max_connections`` to ``2`` will not result in any tasks failing but instead blocking to re-use
+and setting ``max_connections`` to ``2`` will not result in any requests failing but instead blocking to re-use
 the ``2`` connections in the pool::
 
 
@@ -109,7 +110,7 @@ the ``2`` connections in the pool::
 
         await client.set("fubar", 1)
         results = await asyncio.gather(
-            *[asyncio.get_running_loop().create_task(client.get("fubar")) for _ in range(10)],
+            *[client.get("fubar") for _ in range(10)],
             return_exceptions=True
         )
         assert len([r for r in results if isinstance(r, Exception)]) == 0
