@@ -797,7 +797,7 @@ class Redis(Client[AnyStr]):
             ssl_keyfile=ssl_keyfile,
             ssl_certfile=ssl_certfile,
             ssl_cert_reqs=ssl_cert_reqs,
-            ssh_check_hostname=ssl_check_hostname,
+            ssl_check_hostname=ssl_check_hostname,
             ssl_ca_certs=ssl_ca_certs,
             max_connections=max_connections,
             max_idle_time=max_idle_time,
