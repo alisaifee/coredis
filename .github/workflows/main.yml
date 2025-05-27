@@ -129,6 +129,7 @@ jobs:
         COREDIS_REDIS_VERSION: ${{matrix.redis-version}}
         COREDIS_RUNTIME_CHECKS: ${{matrix.runtime_type_checks}}
         PYTEST_SENTRY_DSN: ${{ matrix.extensions != 'True' && secrets.SENTRY_DSN || ''}}
+        COMPOSE_PARALLEL_LIMIT: 1
       run: |
         echo "Runtime checks: $COREDIS_RUNTIME_CHECKS"
         echo "UVLoop: $COREDIS_UVLOOP"
