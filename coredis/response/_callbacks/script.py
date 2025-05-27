@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import cast
 
 from coredis._utils import EncodingInsensitiveDict
 from coredis.response._callbacks import ResponseCallback
@@ -19,7 +19,8 @@ class FunctionListCallback(
     ResponseCallback[list[ResponseType], list[ResponseType], Mapping[AnyStr, LibraryDefinition]]
 ):
     def transform(
-        self, response: list[ResponseType], **options: Any
+        self,
+        response: list[ResponseType],
     ) -> Mapping[AnyStr, LibraryDefinition]:
         libraries = [
             EncodingInsensitiveDict(flat_pairs_to_dict(cast(list[ValueT], library)))
@@ -62,7 +63,6 @@ class FunctionStatsCallback(
     def transform(
         self,
         response: list[ResponseType],
-        **options: Any,
     ) -> dict[AnyStr, AnyStr | dict[AnyStr, dict[AnyStr, ResponsePrimitive]] | None]:
         transformed = flat_pairs_to_dict(response)
         key = cast(AnyStr, b"engines" if b"engines" in transformed else "engines")
@@ -82,6 +82,5 @@ class FunctionStatsCallback(
             AnyStr,
             AnyStr | dict[AnyStr, dict[AnyStr, ResponsePrimitive]] | None,
         ],
-        **options: Any,
     ) -> dict[AnyStr, AnyStr | dict[AnyStr, dict[AnyStr, ResponsePrimitive]] | None]:
         return response

@@ -99,6 +99,13 @@ class NodeManager:
                 return node
         return None  # noqa
 
+    def nodes_from_slots(self, *slots: int) -> dict[str, list[int]]:
+        mapping: dict[str, list[int]] = {}
+        for slot in slots:
+            if node := self.node_from_slot(slot):
+                mapping.setdefault(node.name, []).append(slot)
+        return mapping
+
     def all_nodes(self) -> Iterator[ManagedNode]:
         yield from self.nodes.values()
 

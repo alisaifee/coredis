@@ -14,7 +14,7 @@ from coredis.typing import (
 
 class StringSetCallback(ResponseCallback[AnyStr | None, AnyStr | None, AnyStr | bool | None]):
     def transform(self, response: AnyStr | None, **options: Any) -> AnyStr | bool | None:
-        if options.get("get"):
+        if self.options.get("get"):
             return response
         else:
             return SimpleStringCallback()(response)
@@ -24,7 +24,7 @@ class LCSCallback(
     ResponseCallback[
         list[ResponseType],
         dict[ResponsePrimitive, ResponseType],
-        AnyStr | int | LCSResult,
+        LCSResult,
     ]
 ):
     def transform(

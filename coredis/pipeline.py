@@ -12,14 +12,14 @@ from itertools import chain
 from types import TracebackType
 from typing import Any, cast
 
-from wrapt import ObjectProxy  # type: ignore
+from wrapt import ObjectProxy
 
-from coredis._utils import b, hash_slot
+from coredis._utils import b, hash_slot, nativestr
 from coredis.client import Client, Redis, RedisCluster
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName, NodeFlag
 from coredis.commands.script import Script
-from coredis.connection import BaseConnection, ClusterConnection, CommandInvocation
+from coredis.connection import BaseConnection, ClusterConnection, CommandInvocation, Connection
 from coredis.exceptions import (
     AskError,
     ClusterCrossSlotError,
@@ -50,14 +50,18 @@ from coredis.typing import (
     AnyStr,
     Callable,
     Coroutine,
+    ExecutionParameters,
     Generic,
     Iterable,
     KeyT,
     Parameters,
     ParamSpec,
+    RedisCommand,
+    RedisCommandP,
     ResponseType,
     StringT,
     TypeVar,
+    Unpack,
     ValueT,
 )
 
@@ -101,15 +105,15 @@ and retrieve responses for the commands executed in the pipeline.
 class PipelineCommand:
     command: bytes
     args: tuple[ValueT, ...]
-    callback: Callable[..., Any] = NoopCallback()  # type: ignore
-    options: dict[str, ValueT | None] = field(default_factory=dict)
+    callback: Callable[..., Any] = NoopCallback()
+    options: ExecutionParameters = field(default_factory=lambda: ExecutionParameters())
     request: asyncio.Future[ResponseType] | None = None
 
 
 @dataclass
 class ClusterPipelineCommand(PipelineCommand):
     position: int = 0
-    result: Any | None = None  # type: ignore
+    result: Any | None = None
     asking: bool = False
 
 
@@ -121,7 +125,7 @@ class NodeCommands:
         in_transaction: bool = False,
         timeout: float | None = None,
     ):
-        self.client = client
+        self.client: RedisCluster[Any] = client
         self.connection = connection
         self.commands: list[ClusterPipelineCommand] = []
         self.in_transaction = in_transaction
@@ -195,13 +199,10 @@ class NodeCommands:
                     ]
                 ):
                     if isinstance(c.callback, AsyncPreProcessingCallback):
-                        await c.callback.pre_process(
-                            self.client, transaction_result[idx], **c.options
-                        )
+                        await c.callback.pre_process(self.client, transaction_result[idx])
                     c.result = c.callback(
                         transaction_result[idx],
                         version=connection.protocol_version,
-                        **c.options,
                     )
             elif isinstance(self.commands[0].result, BaseException):
                 raise self.commands[0].result
@@ -211,7 +212,9 @@ class PipelineMeta(ABCMeta):
     RESULT_CALLBACKS: dict[str, Callable[..., Any]]
     NODES_FLAGS: dict[str, NodeFlag]
 
-    def __new__(cls, name: str, bases: tuple[type, ...], namespace: dict[str, object]):
+    def __new__(
+        cls, name: str, bases: tuple[type, ...], namespace: dict[str, object]
+    ) -> PipelineMeta:
         kls = super().__new__(cls, name, bases, namespace)
 
         for name, method in PipelineMeta.get_methods(kls).items():
@@ -226,7 +229,9 @@ class PipelineMeta(ABCMeta):
 
 
 class ClusterPipelineMeta(PipelineMeta):
-    def __new__(cls, name: str, bases: tuple[type, ...], namespace: dict[str, object]):
+    def __new__(
+        cls, name: str, bases: tuple[type, ...], namespace: dict[str, object]
+    ) -> PipelineMeta:
         kls = super().__new__(cls, name, bases, namespace)
         for name, method in ClusterPipelineMeta.get_methods(kls).items():
             cmd = getattr(method, "__coredis_command", None)
@@ -273,9 +278,9 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         watches: Parameters[KeyT] | None = None,
         timeout: float | None = None,
     ) -> None:
-        self.client = client
+        self.client: Client[AnyStr] = client
         self.connection_pool = client.connection_pool
-        self.connection = None
+        self.connection: Connection | None = None
         self._transaction = transaction
         self.watching = False
         self.watches: Parameters[KeyT] | None = watches or None
@@ -304,7 +309,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
 
     async def reset_pipeline(self) -> None:
         self.command_stack.clear()
-        self.scripts: set[Script[AnyStr]] = set()
+        self.scripts = set()
         # make sure to reset the connection state in the event that we were
         # watching something
 
@@ -343,25 +348,21 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
 
     async def execute_command(
         self,
-        command: bytes,
-        *args: ValueT,
-        callback: Callable[..., Any] = NoopCallback(),  # type: ignore
-        **options: ValueT | None,
-    ) -> PipelineImpl[AnyStr]:  # type: ignore
-        if (self.watching or command == CommandName.WATCH) and not self.explicit_transaction:
-            return await self.immediate_execute_command(
-                command, *args, callback=callback, **options
-            )  # type: ignore
+        command: RedisCommandP,
+        callback: Callable[..., Any] = NoopCallback(),
+        **options: Unpack[ExecutionParameters],
+    ) -> PipelineImpl[AnyStr]:
+        if (self.watching or command.name == CommandName.WATCH) and not self.explicit_transaction:
+            return await self.immediate_execute_command(command, callback=callback, **options)  # type: ignore
 
-        return self.pipeline_execute_command(command, *args, callback=callback, **options)
+        return self.pipeline_execute_command(command, callback=callback, **options)
 
     async def immediate_execute_command(
         self,
-        command: bytes,
-        *args: ValueT,
-        callback: Callable[..., Any] = NoopCallback(),  # type: ignore
+        command: RedisCommandP,
+        callback: Callable[..., R] = NoopCallback(),
         **kwargs: ValueT | None,
-    ) -> Any:  # type: ignore
+    ) -> R:
         """
         Executes a command immediately, but don't auto-retry on a
         ConnectionError if we're already WATCHing a variable. Used when
@@ -377,12 +378,13 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
             conn = await self.connection_pool.get_connection()
             self.connection = conn
         try:
-            request = await conn.create_request(command, *args, decode=kwargs.get("decode"))
+            request = await conn.create_request(
+                command.name, *command.arguments, decode=kwargs.get("decode")
+            )
 
             return callback(
                 await request,
                 version=conn.protocol_version,
-                **kwargs,
             )
         except (ConnectionError, TimeoutError):
             conn.disconnect()
@@ -390,25 +392,27 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
             # if we're not already watching, we can safely retry the command
             try:
                 if not self.watching:
-                    request = await conn.create_request(command, *args, decode=kwargs.get("decode"))
-                    return callback(await request, version=conn.protocol_version, **kwargs)
+                    request = await conn.create_request(
+                        command.name, *command.arguments, decode=kwargs.get("decode")
+                    )
+                    return callback(await request, version=conn.protocol_version)
+                raise
             except ConnectionError:
                 # the retry failed so cleanup.
                 conn.disconnect()
                 await self.reset_pipeline()
                 raise
         finally:
-            if command in UNWATCH_COMMANDS:
+            if command.name in UNWATCH_COMMANDS:
                 self.watching = False
-            elif command == CommandName.WATCH:
+            elif command.name == CommandName.WATCH:
                 self.watching = True
 
     def pipeline_execute_command(
         self,
-        command: bytes,
-        *args: ValueT,
+        command: RedisCommandP,
         callback: Callable[..., Any],
-        **options: ValueT | None,
+        **options: Unpack[ExecutionParameters],
     ) -> PipelineImpl[AnyStr]:
         """
         Stages a command to be executed next execute() invocation
@@ -424,7 +428,9 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         :meta private:
         """
         self.command_stack.append(
-            PipelineCommand(command=command, args=args, options=options, callback=callback)
+            PipelineCommand(
+                command=command.name, args=command.arguments, options=options, callback=callback
+            )
         )
 
         return self
@@ -501,7 +507,9 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
             )
         except (ExecAbortError, ResponseError):
             if self.explicit_transaction and not multi_failed:
-                await self.immediate_execute_command(CommandName.DISCARD, callback=BoolCallback())
+                await self.immediate_execute_command(
+                    RedisCommand(name=CommandName.DISCARD, arguments=()), callback=BoolCallback()
+                )
 
             if errors and errors[0][1]:
                 raise errors[0][1]
@@ -598,21 +606,22 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
             msg = f"Command # {number} ({cmd} {args}) of pipeline caused error: {str(exception.args[0])}"
             exception.args = (msg,) + exception.args[1:]
 
-    async def load_scripts(self):
+    async def load_scripts(self) -> None:
         # make sure all scripts that are about to be run on this pipeline exist
         scripts = list(self.scripts)
         immediate = self.immediate_execute_command
         shas = [s.sha for s in scripts]
         # we can't use the normal script_* methods because they would just
         # get buffered in the pipeline.
-        exists = await immediate(CommandName.SCRIPT_EXISTS, *shas, callback=BoolsCallback())
+        exists = await immediate(
+            RedisCommand(CommandName.SCRIPT_EXISTS, tuple(shas)), callback=BoolsCallback()
+        )
 
         if not all(exists):
             for s, exist in zip(scripts, exists):
                 if not exist:
                     s.sha = await immediate(
-                        CommandName.SCRIPT_LOAD,
-                        s.script,
+                        RedisCommand(CommandName.SCRIPT_LOAD, (s.script,)),
                         callback=AnyStrCallback[AnyStr](),
                     )
 
@@ -668,7 +677,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
             raise RedisError("Cannot issue a WATCH after a MULTI")
 
         return await self.immediate_execute_command(
-            CommandName.WATCH, *keys, callback=SimpleStringCallback()
+            RedisCommand(CommandName.WATCH, keys), callback=SimpleStringCallback()
         )
 
     async def unwatch(self) -> bool:
@@ -676,7 +685,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
 
         return (
             await self.immediate_execute_command(
-                CommandName.UNWATCH, callback=SimpleStringCallback()
+                RedisCommand(CommandName.UNWATCH, ()), callback=SimpleStringCallback()
             )
             if self.watching
             else True
@@ -717,7 +726,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
             raise RedisError("Cannot issue a WATCH after a MULTI")
 
         return await self.immediate_execute_command(
-            CommandName.WATCH, *keys, callback=SimpleStringCallback()
+            RedisCommand(CommandName.WATCH, keys), callback=SimpleStringCallback()
         )
 
     async def unwatch(self) -> bool:
@@ -732,14 +741,14 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
                     self._watched_connection = None
         return True
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}"
 
-    def __del__(self):
+    def __del__(self) -> None:
         if self._watched_connection:
             self.connection_pool.release(self._watched_connection)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.command_stack)
 
     def __bool__(self) -> bool:
@@ -758,28 +767,24 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
     async def execute_command(
         self,
-        command: bytes,
-        *args: ValueT,
-        callback: Callable[..., Any] = NoopCallback(),  # type: ignore
-        **options: ValueT | None,
-    ) -> ClusterPipelineImpl[AnyStr]:  # type: ignore
-        if (self.watching or command == CommandName.WATCH) and not self.explicit_transaction:
-            return await self.immediate_execute_command(
-                command, *args, callback=callback, **options
-            )  # type: ignore
-        return self.pipeline_execute_command(command, *args, callback=callback, **options)
+        command: RedisCommandP,
+        callback: Callable[..., Any] = NoopCallback(),
+        **options: Unpack[ExecutionParameters],
+    ) -> ClusterPipelineImpl[AnyStr]:
+        if (self.watching or command.name == CommandName.WATCH) and not self.explicit_transaction:
+            return await self.immediate_execute_command(command, callback=callback, **options)
+        return self.pipeline_execute_command(command, callback=callback, **options)
 
     def pipeline_execute_command(
         self,
-        command: bytes,
-        *args: ValueT,
+        command: RedisCommandP,
         callback: Callable[..., Any],
-        **options: ValueT | None,
+        **options: Unpack[ExecutionParameters],
     ) -> ClusterPipelineImpl[AnyStr]:
         self.command_stack.append(
             ClusterPipelineCommand(
-                command=command,
-                args=args,
+                command=command.name,
+                args=command.arguments,
                 options=options,
                 callback=callback,
                 position=len(self.command_stack),
@@ -824,7 +829,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         finally:
             await self.reset_pipeline()
 
-    async def reset_pipeline(self):
+    async def reset_pipeline(self) -> None:
         """Empties pipeline"""
         self.command_stack = []
 
@@ -985,7 +990,9 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
             for c in attempt:
                 try:
                     # send each command individually like we do in the main client.
-                    c.result = await self.client.execute_command(c.command, *c.args, **c.options)
+                    c.result = await self.client.execute_command(
+                        RedisCommand(c.command, c.args), **c.options
+                    )
                 except RedisError as e:
                     c.result = e
 
@@ -996,8 +1003,8 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
             r = c.result
             if not isinstance(c.result, RedisError):
                 if isinstance(c.callback, AsyncPreProcessingCallback):
-                    await c.callback.pre_process(self.client, c.result, **c.options)
-                r = c.callback(c.result, version=protocol_version, **c.options)
+                    await c.callback.pre_process(self.client, c.result)
+                r = c.callback(c.result, version=protocol_version)
             response.append(r)
 
         if raise_on_error:
@@ -1005,7 +1012,9 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
         return tuple(response)
 
-    def _determine_slot(self, command: bytes, *args: ValueT, **options: ValueT) -> int:
+    def _determine_slot(
+        self, command: bytes, *args: ValueT, **options: Unpack[ExecutionParameters]
+    ) -> int:
         """Figure out what slot based on command and args"""
 
         keys: tuple[ValueT, ...] = cast(
@@ -1014,7 +1023,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
         if not keys:
             raise RedisClusterException(
-                f"No way to dispatch {command} to Redis Cluster. Missing key"
+                f"No way to dispatch {nativestr(command)} to Redis Cluster. Missing key"
             )
         slots = {hash_slot(b(key)) for key in keys}
 
@@ -1036,14 +1045,13 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
     async def immediate_execute_command(
         self,
-        command: bytes,
-        *args: ValueT,
-        callback: Callable[..., Any] = NoopCallback(),
-        **kwargs: ValueT | None,
-    ) -> Any:
-        slot = self._determine_slot(command, *args)
+        command: RedisCommandP,
+        callback: Callable[..., R] = NoopCallback(),
+        **kwargs: Unpack[ExecutionParameters],
+    ) -> R:
+        slot = self._determine_slot(command.name, *command.arguments)
         node = self.connection_pool.get_node_by_slot(slot)
-        if command == CommandName.WATCH:
+        if command.name == CommandName.WATCH:
             if self._watched_node and node.name != self._watched_node.name:
                 raise ClusterTransactionError(
                     "Cannot issue a watch on a different node in the same transaction"
@@ -1057,35 +1065,41 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
             conn = await self.connection_pool.get_connection_by_node(node)
 
         try:
-            request = await conn.create_request(command, *args, decode=kwargs.get("decode"))
+            request = await conn.create_request(
+                command.name, *command.arguments, decode=kwargs.get("decode")
+            )
 
             return callback(
                 await request,
                 version=conn.protocol_version,
-                **kwargs,
             )
         except (ConnectionError, TimeoutError):
             conn.disconnect()
 
             try:
                 if not self.watching:
-                    request = await conn.create_request(command, *args, decode=kwargs.get("decode"))
-                    return callback(await request, version=conn.protocol_version, **kwargs)
+                    request = await conn.create_request(
+                        command.name, *command.arguments, decode=kwargs.get("decode")
+                    )
+                    return callback(await request, version=conn.protocol_version)
+                else:
+                    raise
             except ConnectionError:
                 # the retry failed so cleanup.
                 conn.disconnect()
                 await self.reset_pipeline()
                 raise
         finally:
-            if command in UNWATCH_COMMANDS:
+            release = True
+            if command.name in UNWATCH_COMMANDS:
                 self.watching = False
-            elif command == CommandName.WATCH:
+            elif command.name == CommandName.WATCH:
                 self.watching = True
-                # don't release the connection if the command was a watch
-                return
-            self.connection_pool.release(conn)
+                release = False
+            if release:
+                self.connection_pool.release(conn)
 
-    def load_scripts(self):
+    def load_scripts(self) -> None:
         raise RedisClusterException("method load_scripts() is not implemented")
 
     async def _watch(self, node: ManagedNode, conn: BaseConnection, keys: Parameters[KeyT]) -> bool:

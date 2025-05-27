@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import cast
 
 from coredis._utils import EncodingInsensitiveDict, nativestr
 from coredis.response._callbacks import ResponseCallback
@@ -84,13 +84,15 @@ class PrimaryCallback(
         dict[str, str | int | bool],
     ]
 ):
-    def transform(self, response: ResponseType, **options: Any) -> dict[str, str | int | bool]:
+    def transform(
+        self,
+        response: ResponseType,
+    ) -> dict[str, str | int | bool]:
         return parse_sentinel_state(cast(list[ResponsePrimitive], response))
 
     def transform_3(
         self,
         response: dict[ResponsePrimitive, ResponsePrimitive],
-        **options: Any,
     ) -> dict[str, str | int | bool]:
         return add_flags(EncodingInsensitiveDict(response))
 
@@ -105,7 +107,6 @@ class PrimariesCallback(
     def transform(
         self,
         response: list[ResponseType] | dict[ResponsePrimitive, ResponsePrimitive],
-        **options: Any,
     ) -> dict[str, dict[str, str | int | bool]]:
         result: dict[str, dict[str, str | int | bool]] = {}
 
@@ -116,7 +117,8 @@ class PrimariesCallback(
         return result
 
     def transform_3(
-        self, response: list[ResponseType], **options: Any
+        self,
+        response: list[ResponseType],
     ) -> dict[str, dict[str, str | int | bool]]:
         states: dict[str, dict[str, str | int | bool]] = {}
         for state in response:
@@ -133,12 +135,14 @@ class SentinelsStateCallback(
     ]
 ):
     def transform(
-        self, response: list[ResponseType], **options: Any
+        self,
+        response: list[ResponseType],
     ) -> tuple[dict[str, str | bool | int], ...]:
         return tuple(parse_sentinel_state([nativestr(i) for i in item]) for item in response)
 
     def transform_3(
-        self, response: list[ResponseType], **options: Any
+        self,
+        response: list[ResponseType],
     ) -> tuple[dict[str, str | bool | int], ...]:
         return tuple(add_flags(EncodingInsensitiveDict(state)) for state in response)
 
@@ -151,7 +155,8 @@ class GetPrimaryCallback(
     ]
 ):
     def transform(
-        self, response: list[ResponsePrimitive], **options: Any
+        self,
+        response: list[ResponsePrimitive],
     ) -> tuple[str, int] | None:
         return nativestr(response[0]), int(response[1]) if response else None
 
@@ -164,6 +169,7 @@ class SentinelInfoCallback(
     ]
 ):
     def transform(
-        self, response: list[ResponseType], **options: Any
+        self,
+        response: list[ResponseType],
     ) -> dict[AnyStr, dict[int, dict[str, ResponseType]]]:
         return {response[0]: {r[0]: InfoCallback()(r[1]) for r in response[1]}}

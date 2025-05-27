@@ -16,6 +16,7 @@ from coredis.exceptions import (
     ReplicationError,
     UnknownCommandError,
 )
+from coredis.typing import RedisCommand
 from tests.conftest import targets
 
 
@@ -42,7 +43,7 @@ class TestClient:
 
     async def test_unknown_command(self, client):
         with pytest.raises(UnknownCommandError):
-            await client.execute_command(b"BOGUS")
+            await client.execute_command(RedisCommand(b"BOGUS", ()))
 
     @pytest.mark.nodragonfly
     @pytest.mark.parametrize("client_arguments", [{"db": 1}])
@@ -90,7 +91,8 @@ class TestClient:
                 assert "א" == await client.get("fubar")
 
     async def test_blocking_task_cancellation(self, client, _s):
-        task = asyncio.create_task(client.blpop(["nonexistent"], timeout=10))
+        awaitable = client.blpop(["nonexistent"], timeout=10)
+        task = asyncio.ensure_future(awaitable)
         await asyncio.sleep(0.5)
         task.cancel()
         try:

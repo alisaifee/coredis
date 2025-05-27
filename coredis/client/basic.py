@@ -16,6 +16,7 @@ from packaging.version import InvalidVersion, Version
 
 from coredis._utils import EncodingInsensitiveDict, nativestr
 from coredis.cache import AbstractCache
+from coredis.commands import CommandRequest
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandFlag, CommandName
 from coredis.commands.core import CoreCommands
@@ -32,6 +33,7 @@ from coredis.connection import (
 )
 from coredis.credentials import AbstractCredentialProvider
 from coredis.exceptions import (
+    AuthenticationError,
     ConnectionError,
     PersistenceError,
     RedisError,
@@ -56,6 +58,7 @@ from coredis.typing import (
     AsyncIterator,
     Callable,
     Coroutine,
+    ExecutionParameters,
     Generator,
     Generic,
     Iterator,
@@ -64,9 +67,12 @@ from coredis.typing import (
     Mapping,
     Parameters,
     ParamSpec,
+    RedisCommandP,
     ResponseType,
     StringT,
+    T_co,
     TypeVar,
+    Unpack,
     ValueT,
 )
 
@@ -75,7 +81,6 @@ R = TypeVar("R")
 
 if TYPE_CHECKING:
     import coredis.pipeline
-
 
 ClientT = TypeVar("ClientT", bound="Client[Any]")
 RedisT = TypeVar("RedisT", bound="Redis[Any]")
@@ -200,6 +205,29 @@ class Client(
         self._module_info: dict[str, version.Version] | None = None
         self.callback_storage = defaultdict(dict)
 
+    def create_request(
+        self,
+        name: bytes,
+        *arguments: ValueT,
+        callback: Callable[..., T_co],
+        execution_parameters: ExecutionParameters | None = None,
+    ) -> CommandRequest[T_co]:
+        """
+        Factory method to create a command request awaitable.
+        Subclasses of :class:`coredis.client.Client` can override this method
+        if custom behavior is required. See :class:`~coredis.commands.CommandRequest`
+        for details.
+
+        :param name: The name of the command
+        :param arguments: all arguments sent to the command
+        :param callback: a callback that takes the RESP response and converts it
+         into a shape to be returned
+        :return: An instance of a command request bound to this client.
+        """
+        return CommandRequest(
+            self, name, *arguments, callback=callback, execution_parameters=execution_parameters
+        )
+
     @property
     def noreply(self) -> bool:
         if not hasattr(self, "_noreplycontext"):
@@ -221,9 +249,7 @@ class Client(
             return False
         return True
 
-    async def get_server_module_version(self, module: str) -> version.Version | None:
-        if self._module_info is None:
-            await self._populate_module_versions()
+    def get_server_module_version(self, module: str) -> version.Version | None:
         return (self._module_info or {}).get(module)
 
     def _ensure_server_version(self, version: str | None) -> None:
@@ -247,7 +273,7 @@ class Client(
                 self.server_version = None
 
     async def _ensure_wait(
-        self, command: bytes, connection: BaseConnection
+        self, command: RedisCommandP, connection: BaseConnection
     ) -> asyncio.Future[None]:
         maybe_wait: asyncio.Future[None] = asyncio.get_running_loop().create_future()
         wait = self._waitcontext.get()
@@ -258,7 +284,7 @@ class Client(
                 if exc:
                     maybe_wait.set_exception(exc)
                 elif not cast(int, response.result()) >= wait[0]:
-                    maybe_wait.set_exception(ReplicationError(command, wait[0], wait[1]))
+                    maybe_wait.set_exception(ReplicationError(command.name, wait[0], wait[1]))
                 else:
                     maybe_wait.set_result(None)
 
@@ -269,7 +295,7 @@ class Client(
         return maybe_wait
 
     async def _ensure_persistence(
-        self, command: bytes, connection: BaseConnection
+        self, command: RedisCommandP, connection: BaseConnection
     ) -> asyncio.Future[None]:
         maybe_wait: asyncio.Future[None] = asyncio.get_running_loop().create_future()
         waitaof = self._waitaof_context.get()
@@ -284,7 +310,7 @@ class Client(
                 else:
                     res = cast(tuple[int, int], response.result())
                     if not (res[0] >= waitaof[0] and res[1] >= waitaof[1]):
-                        maybe_wait.set_exception(PersistenceError(command, *waitaof))
+                        maybe_wait.set_exception(PersistenceError(command.name, *waitaof))
                     else:
                         maybe_wait.set_result(None)
 
@@ -295,7 +321,7 @@ class Client(
         return maybe_wait
 
     async def _populate_module_versions(self) -> None:
-        if self.noreply:
+        if self.noreply or self._module_info is not None:
             return
         try:
             modules = await self.module_list()
@@ -308,11 +334,12 @@ class Client(
                 ver, minor = divmod(ver, 100)
                 ver, major = divmod(ver, 100)
                 self._module_info[name] = version.Version(f"{major}.{minor}.{patch}")
-        except UnknownCommandError:
+        except (UnknownCommandError, AuthenticationError):
             self._module_info = {}
 
     async def initialize(self: ClientT) -> ClientT:
         await self.connection_pool.initialize()
+        await self._populate_module_versions()
         return self
 
     def __await__(self: ClientT) -> Generator[Any, None, ClientT]:
@@ -539,8 +566,8 @@ class Client(
         finally:
             self._waitaof_context.set(None)
 
-    def should_quick_release(self, command: bytes) -> bool:
-        return CommandFlag.BLOCKING not in COMMAND_FLAGS[command]
+    def should_quick_release(self, command: RedisCommandP) -> bool:
+        return CommandFlag.BLOCKING not in COMMAND_FLAGS[command.name]
 
 
 class Redis(Client[AnyStr]):
@@ -934,37 +961,35 @@ class Redis(Client[AnyStr]):
 
     async def execute_command(
         self,
-        command: bytes,
-        *args: ValueT,
+        command: RedisCommandP,
         callback: Callable[..., R] = NoopCallback(),
-        **options: ValueT | None,
+        **options: Unpack[ExecutionParameters],
     ) -> R:
         """
         Executes a command with configured retries and returns
         the parsed response
         """
         return await self.retry_policy.call_with_retries(
-            lambda: self._execute_command(command, *args, callback=callback, **options),
+            lambda: self._execute_command(command, callback=callback, **options),
             before_hook=self.initialize,
         )
 
     async def _execute_command(
         self,
-        command: bytes,
-        *args: ValueT,
+        command: RedisCommandP,
         callback: Callable[..., R] = NoopCallback(),
-        **options: ValueT | None,
+        **options: Unpack[ExecutionParameters],
     ) -> R:
         pool = self.connection_pool
         quick_release = self.should_quick_release(command)
         connection = await pool.get_connection(
-            command,
-            *args,
+            command.name,
+            *command.arguments,
             acquire=not quick_release or self.requires_wait or self.requires_waitaof,
         )
         try:
-            keys = KeySpec.extract_keys(command, *args)
-            cacheable = command in CACHEABLE_COMMANDS and len(keys) == 1 and not self.noreply
+            keys = KeySpec.extract_keys(command.name, *command.arguments)
+            cacheable = command.name in CACHEABLE_COMMANDS and len(keys) == 1 and not self.noreply
             cached = None
             use_cached = False
             if self.cache:
@@ -973,16 +998,16 @@ class Redis(Client[AnyStr]):
                     await connection.update_tracking_client(
                         True, self.cache.get_client_id(connection)
                     )
-                if command not in READONLY_COMMANDS:
+                if command.name not in READONLY_COMMANDS:
                     self.cache.invalidate(*keys)
                 elif cacheable:
                     try:
                         cached = cast(
                             R,
                             self.cache.get(
-                                command,
+                                command.name,
                                 keys[0],
-                                *args,
+                                *command.arguments,
                             ),
                         )
                         use_cached = random.random() * 100.0 < min(100.0, self.cache.confidence)
@@ -992,8 +1017,8 @@ class Redis(Client[AnyStr]):
                 return cached
             else:
                 request = await connection.create_request(
-                    command,
-                    *args,
+                    command.name,
+                    *command.arguments,
                     noreply=self.noreply,
                     decode=options.get("decode", self._decodecontext.get()),
                     encoding=self._encodingcontext.get(),
@@ -1007,18 +1032,22 @@ class Redis(Client[AnyStr]):
                 if self.noreply:
                     return None  # type: ignore
                 if isinstance(callback, AsyncPreProcessingCallback):
-                    await callback.pre_process(
-                        self, reply, version=self.protocol_version, **options
-                    )
+                    await callback.pre_process(self, reply)
                 response = callback(
                     reply,
                     version=self.protocol_version,
-                    **options,
                 )
                 if self.cache and cacheable:
                     if cached:
-                        self.cache.feedback(command, keys[0], *args, match=cached == response)
-                    self.cache.put(command, keys[0], *args, value=cast(ResponseType, response))
+                        self.cache.feedback(
+                            command.name, keys[0], *command.arguments, match=cached == response
+                        )
+                    self.cache.put(
+                        command.name,
+                        keys[0],
+                        *command.arguments,
+                        value=cast(ResponseType, response),
+                    )
                 return response
         except RedisError:
             connection.disconnect()
