@@ -543,6 +543,19 @@ class CoreCommands(CommandMixin[AnyStr]):
         key: KeyT,
         value: ValueT,
         *,
+        get: Literal[True],
+        ex: int | datetime.timedelta | None = ...,
+        px: int | datetime.timedelta | None = ...,
+        exat: int | datetime.datetime | None = ...,
+        pxat: int | datetime.datetime | None = ...,
+        keepttl: bool | None = ...,
+    ) -> CommandRequest[AnyStr]: ...
+    @overload
+    def set(
+        self,
+        key: KeyT,
+        value: ValueT,
+        *,
         condition: Literal[PureToken.NX, PureToken.XX] | None = ...,
         get: Literal[True],
         ex: int | datetime.timedelta | None = ...,

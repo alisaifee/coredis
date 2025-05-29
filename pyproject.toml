@@ -32,7 +32,6 @@ module = [
     "cachetools",
     "deprecated",
     "pympler",
-    "wrapt",
 ]
 ignore_errors = true
 ignore_missing_imports = true
