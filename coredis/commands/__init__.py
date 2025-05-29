@@ -12,12 +12,12 @@ from abc import ABC, abstractmethod
 from coredis.response._callbacks import NoopCallback
 from coredis.typing import (
     AnyStr,
+    Awaitable,
     Callable,
     ExecutionParameters,
     Generic,
     R,
     RedisCommandP,
-    T_co,
     Unpack,
     ValueT,
 )
@@ -33,22 +33,21 @@ from .script import Script
 
 class CommandMixin(Generic[AnyStr], ABC):
     @abstractmethod
-    async def execute_command(
+    def execute_command(
         self,
         command: RedisCommandP,
         callback: Callable[..., R] = NoopCallback(),
         **options: Unpack[ExecutionParameters],
-    ) -> R:
-        pass
+    ) -> Awaitable[R]: ...
 
     @abstractmethod
     def create_request(
         self,
         name: bytes,
         *arguments: ValueT,
-        callback: Callable[..., T_co],
+        callback: Callable[..., R],
         execution_parameters: ExecutionParameters | None = None,
-    ) -> CommandRequest[T_co]: ...
+    ) -> CommandRequest[R]: ...
 
 
 __all__ = [

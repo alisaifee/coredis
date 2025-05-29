@@ -7,6 +7,7 @@ from typing_extensions import runtime_checkable
 from coredis.response._callbacks import NoopCallback
 from coredis.typing import (
     TYPE_CHECKING,
+    Awaitable,
     Callable,
     ExecutionParameters,
     KeyT,
@@ -29,12 +30,12 @@ if TYPE_CHECKING:
 
 
 class AbstractExecutor(Protocol):
-    async def execute_command(
+    def execute_command(
         self,
         command: RedisCommandP,
         callback: Callable[..., R] = NoopCallback(),
         **options: Unpack[ExecutionParameters],
-    ) -> R: ...
+    ) -> Awaitable[R]: ...
 
     def create_request(
         self,
