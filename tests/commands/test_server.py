@@ -234,7 +234,7 @@ class TestServer:
     @pytest.mark.nocluster
     async def test_lolwut(self, client, _s):
         lolwut = await client.lolwut(5)
-        assert _s("ver.") in lolwut
+        assert "ver." in lolwut
 
     @pytest.mark.nocluster
     async def test_memory_doctor(self, client, _s):

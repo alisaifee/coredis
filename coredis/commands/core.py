@@ -7410,17 +7410,20 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SERVER,
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
-    def lolwut(self, version: int | None = None) -> CommandRequest[AnyStr]:
+    def lolwut(self, version: int | None = None) -> CommandRequest[str]:
         """
         Get the Redis version and a piece of generative computer art
         """
         command_arguments: CommandArgList = []
 
         if version is not None:
-            command_arguments.append(version)
+            command_arguments.extend([PrefixToken.VERSION, version])
 
         return self.create_request(
-            CommandName.LOLWUT, *command_arguments, callback=AnyStrCallback[AnyStr]()
+            CommandName.LOLWUT,
+            *command_arguments,
+            callback=NoopCallback[str](),
+            execution_parameters={"decode": True},
         )
 
     @versionadded(version="3.0.0")
