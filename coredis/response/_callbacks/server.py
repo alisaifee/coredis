@@ -227,6 +227,7 @@ class LatencyHistogramCallback(
         for key, value in histogram.items():
             histogram[key] = EncodingInsensitiveDict(flat_pairs_to_dict(value))
             histogram[key]["histogram_usec"] = flat_pairs_to_dict(histogram[key]["histogram_usec"])
+            histogram[key] = dict(histogram[key])
         return histogram
 
 

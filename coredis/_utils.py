@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import enum
+from collections import UserDict
 from typing import Any
-
-from wrapt import ObjectProxy
 
 from coredis.typing import (
     Hashable,
     Iterable,
     Mapping,
+    MutableMapping,
     ResponseType,
     StringT,
     TypeVar,
@@ -18,61 +18,59 @@ T = TypeVar("T")
 U = TypeVar("U")
 
 
-class EncodingInsensitiveDict(ObjectProxy):  # type: ignore
+class EncodingInsensitiveDict(UserDict[Any, Any]):
     def __init__(
         self,
-        dict: Mapping[Any, Any] | ResponseType | None = None,
+        initial: MutableMapping[Any, Any] | None = None,
         encoding: str = "utf-8",
     ):
-        d = dict or {}
-        super().__init__(d)
-        self._self_encoding = encoding
+        self._encoding = encoding
+        super().__init__(initial or {})
 
-    def __getitem__(self, item: StringT) -> Any:
-        if isinstance(item, str) and item not in self.__wrapped__:
-            return self.__wrapped__.get(
-                item, self.__wrapped__.get(item.encode(self._self_encoding))
-            )
-        elif isinstance(item, bytes) and item not in self.__wrapped__:
-            return self.__wrapped__.get(
-                item, self.__wrapped__.get(item.decode(self._self_encoding))
-            )
-        return self.__wrapped__[item]
-
-    def get(self, item: StringT, default: object | None = None) -> Any:
-        return self.__getitem__(item) or default
-
-    def pop(self, item: StringT, default: object | None = None) -> Any:
-        if item in self.__wrapped__:
-            return self.__wrapped__.pop(item)
-        if isinstance(item, str):
-            return self.__wrapped__.pop(item.encode(self._self_encoding), default)
-
-    def clear(self) -> None:
-        self.__wrapped__.clear()
-
-    def update(self, updates: Mapping[Any, Any]) -> None:
-        self.__wrapped__.update(updates)
-
-    def __setitem__(self, item: StringT, value: object) -> None:
-        if item in self.__wrapped__:
-            self.__wrapped__[item] = value
-        elif isinstance(item, str) and item.encode(self._self_encoding) in self.__wrapped__:
-            self.__wrapped__[item.encode(self._self_encoding)] = value
-        elif isinstance(item, bytes) and item.decode(self._self_encoding) in self.__wrapped__:
-            self.__wrapped__[item.decode(self._self_encoding)] = value
-        else:
-            self.__wrapped__[item] = value
-
-    def __contains__(self, key: StringT) -> bool:
+    def _alt_key(self, key: StringT) -> StringT:
         if isinstance(key, str):
-            return key in self.__wrapped__ or key.encode(self._self_encoding) in self.__wrapped__
+            try:
+                byte_alt = key.encode(self._encoding)
+                if byte_alt in self.data:
+                    return byte_alt
+            except UnicodeEncodeError:
+                pass
         elif isinstance(key, bytes):
-            return key in self.__wrapped__ or key.decode(self._self_encoding) in self.__wrapped__
-        return key in self.__wrapped__
+            try:
+                str_alt = key.decode(self._encoding)
+                if str_alt in self.data:
+                    return str_alt
+            except UnicodeDecodeError:
+                pass
+        return key
 
-    def __repr__(self) -> str:
-        return repr(self.__wrapped__)
+    def __getitem__(self, key: StringT) -> Any:
+        if key in self.data:
+            return self.data[key]
+        alt = self._alt_key(key)
+        if alt in self.data:
+            return self.data[alt]
+        raise KeyError(key)
+
+    def __setitem__(self, key: StringT, value: Any) -> None:
+        alt = self._alt_key(key)
+        self.data[alt] = value
+
+    def __delitem__(self, key: StringT) -> None:
+        alt = self._alt_key(key)
+        del self.data[alt]
+
+    def __contains__(self, key: Any) -> bool:
+        return key in self.data or self._alt_key(key) in self.data
+
+    def get(self, key: StringT, default: Any = None) -> Any:
+        return self.data.get(key, self.data.get(self._alt_key(key), default))
+
+    def pop(self, key: StringT, default: Any = None) -> Any:
+        if key in self.data:
+            return self.data.pop(key)
+        alt = self._alt_key(key)
+        return self.data.pop(alt, default)
 
 
 @enum.unique

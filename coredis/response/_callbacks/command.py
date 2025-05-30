@@ -76,7 +76,8 @@ class CommandDocCallback(
             cmd_mapping[cmd]["arguments"] = [
                 flat_pairs_to_dict(arg) for arg in cmd_mapping[cmd].get("arguments", [])
             ]
-        return cmd_mapping
+            cmd_mapping[cmd] = dict(cmd_mapping[cmd])
+        return dict(cmd_mapping)
 
     def transform_3(
         self,

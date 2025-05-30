@@ -19,6 +19,7 @@ from coredis.typing import (
     Generator,
     Generic,
     KeyT,
+    MutableMapping,
     P,
     Parameters,
     R,
@@ -91,7 +92,7 @@ class Library(Generic[AnyStr]):
         return c
 
     @property
-    def functions(self) -> dict[str, Function[AnyStr]]:
+    def functions(self) -> MutableMapping[str, Function[AnyStr]]:
         """
         mapping of function names to :class:`~coredis.commands.function.Function`
         instances that can be directly called.
