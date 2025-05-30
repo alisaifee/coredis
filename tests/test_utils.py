@@ -8,11 +8,9 @@ class TestEncodingInsensitiveDict:
         assert EncodingInsensitiveDict() == {}
 
     def test_regular_access(self):
-        data = EncodingInsensitiveDict(
-            {"a": 1, b"a": 2, "c": [1, 2, 3], "d": {1, 2, 3}, "e": {"a": 1}}
-        )
+        data = EncodingInsensitiveDict({"a": 1, b"c": [1, 2, 3], "d": {1, 2, 3}, "e": {"a": 1}})
         assert data["a"] == 1
-        assert data[b"a"] == 2
+        assert data[b"a"] == 1
         assert data["c"] == [1, 2, 3]
         assert data["d"] == {1, 2, 3}
         assert data["e"] == {"a": 1}

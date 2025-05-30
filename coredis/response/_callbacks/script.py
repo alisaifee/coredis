@@ -37,11 +37,10 @@ class FunctionListCallback(
             library["functions"] = functions
             transformed[lib_name] = EncodingInsensitiveDict(
                 LibraryDefinition(
-                    name=library["name"],
+                    name=library["library_name"],
                     engine=library["engine"],
-                    description=library["description"],
                     functions=library["functions"],
-                    library_code=library["library_code"],
+                    library_code=library.get("library_code", None),
                 )
             )
         return transformed

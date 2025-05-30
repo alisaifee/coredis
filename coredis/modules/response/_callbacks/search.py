@@ -120,11 +120,10 @@ class SearchResultCallback(
                 result = EncodingInsensitiveDict(result)
                 score_explain = None
                 if self.options.get("explainscore"):
-                    score = result["score"][0]
-                    score_explain = result["score"][1]
+                    score, score_explain = result.get("score")
                 else:
-                    score = result["score"]
-                fields = EncodingInsensitiveDict(result["extra_attributes"])
+                    score = result.get("score", None)
+                fields = EncodingInsensitiveDict(result.get("extra_attributes", {}))
                 if "$" in fields:
                     fields = json.loads(fields.pop("$"))
                 results.append(
@@ -176,7 +175,7 @@ class AggregationResultCallback(
                         r: self.try_json(self.options, v)
                         for r, v in EncodingInsensitiveDict(k)["extra_attributes"].items()
                     }
-                    for k in (EncodingInsensitiveDict(response["results"]))
+                    for k in response["results"]
                 ],
                 cursor,
             )

@@ -112,8 +112,6 @@ class LibraryDefinition(TypedDict):
     name: StringT
     #: the engine used by the library
     engine: Literal["LUA"]
-    #: the library's description
-    description: StringT
     #: Mapping of function names to functions in the library
     functions: dict[StringT, FunctionDefinition]
     #: The library's source code

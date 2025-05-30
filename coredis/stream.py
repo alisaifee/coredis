@@ -19,6 +19,7 @@ from coredis.typing import (
     Generator,
     Generic,
     KeyT,
+    MutableMapping,
     Parameters,
     StringT,
     TypedDict,
@@ -38,7 +39,7 @@ class State(TypedDict, total=False):
 
 
 class Consumer(Generic[AnyStr]):
-    state: dict[KeyT, State]
+    state: MutableMapping[KeyT, State]
     DEFAULT_START_ID: ClassVar[bytes] = b"0-0"
 
     def __init__(
@@ -71,10 +72,10 @@ class Consumer(Generic[AnyStr]):
         """
         self.client: Client[AnyStr] = client
         self.streams: set[KeyT] = set(streams)
-        self.state: dict[StringT, State] = EncodingInsensitiveDict(
+        self.state: MutableMapping[StringT, State] = EncodingInsensitiveDict(
             {stream: stream_parameters.get(nativestr(stream), {}) for stream in streams}
         )
-        self.buffer: dict[AnyStr, list[StreamEntry]] = EncodingInsensitiveDict({})
+        self.buffer: MutableMapping[AnyStr, list[StreamEntry]] = EncodingInsensitiveDict({})
         self.buffer_size = buffer_size
         self.timeout = timeout
         self._initialized = False
