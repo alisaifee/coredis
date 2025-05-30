@@ -110,13 +110,13 @@ class Script(Generic[AnyStr]):
 
         method = client.evalsha_ro if readonly else client.evalsha
         try:
-            return cast(ResponseType, await method(self.sha, keys=keys, args=args))
+            return await method(self.sha, keys=keys, args=args)
         except NoScriptError:
             # Maybe the client is pointed to a different server than the client
             # that created this instance?
             # Overwrite the sha just in case there was a discrepancy.
             self.sha = await client.script_load(self.script)
-            return cast(ResponseType, await method(self.sha, keys=keys, args=args))
+            return await method(self.sha, keys=keys, args=args)
 
     async def execute(
         self,
