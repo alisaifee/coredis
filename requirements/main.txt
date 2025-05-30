@@ -4,4 +4,3 @@ deprecated>=1.2
 typing_extensions>=4.13
 packaging>=21,<26
 pympler>1,<2
-wrapt>=1.1.0,<2

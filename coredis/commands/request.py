@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import functools
-from typing import Any
+from typing import Any, cast
 
 from coredis._protocols import AbstractExecutor
 from coredis.typing import (
@@ -87,7 +87,7 @@ class CommandRequest(Awaitable[CommandResponseT]):
             self.type_adapter.deserialize,
             return_type=transformer,
         )
-        return CommandRequest(
+        return cast(type[CommandRequest[TransformedResponse]], self.__class__)(
             self.client,
             self.name,
             *self.arguments,

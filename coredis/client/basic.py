@@ -326,7 +326,7 @@ class Client(
         return maybe_wait
 
     async def _populate_module_versions(self) -> None:
-        if self.noreply or self._module_info is not None:
+        if self.noreply or getattr(self, "_module_info", None) is not None:
             return
         try:
             modules = await self.module_list()
@@ -1194,7 +1194,7 @@ class Redis(Client[AnyStr]):
         """
         from coredis.pipeline import Pipeline
 
-        return Pipeline[AnyStr].proxy(self, transaction, watches, timeout)
+        return Pipeline[AnyStr](self, transaction, watches, timeout)
 
     async def transaction(
         self,
