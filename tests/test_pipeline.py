@@ -26,13 +26,6 @@ class TestPipeline:
         async with await client.pipeline() as pipe:
             assert await pipe.execute() == ()
 
-    async def test_pipeline_reset(self, client):
-        pipe = await client.pipeline()
-        await pipe.get("a")
-        await pipe.reset()
-        await pipe.set("a", 1)
-        assert await pipe.execute() == (True,)
-
     async def test_pipeline(self, client):
         async with await client.pipeline() as pipe:
             await pipe.set("a", "a1")

@@ -20,7 +20,6 @@ templated-sources:
 	PYTHONPATH=${CURDIR} python -m scripts.code_gen token-enum
 	PYTHONPATH=${CURDIR} python -m scripts.code_gen command-constants
 	PYTHONPATH=${CURDIR} python -m scripts.code_gen cluster-key-extraction
-	PYTHONPATH=${CURDIR} python -m scripts.code_gen pipeline-stub
 
 benchmark:
 	./scripts/benchmark.sh

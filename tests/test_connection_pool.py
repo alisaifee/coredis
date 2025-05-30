@@ -14,7 +14,6 @@ from coredis.exceptions import (
     ConnectionError,
     RedisError,
 )
-from coredis.typing import RedisCommand
 
 
 class DummyConnection:
@@ -597,7 +596,9 @@ class TestConnection:
         """
         client = coredis.Redis()
         pipe = await client.pipeline()
-        await pipe.execute_command(RedisCommand(b"DEBUG", (b"ERROR", b"LOADING fake message")))
+        await pipe.create_request(
+            b"DEBUG", b"ERROR", b"LOADING fake message", callback=lambda r, **k: r
+        )
         with pytest.raises(RedisError):
             await pipe.execute()
         pool = client.connection_pool

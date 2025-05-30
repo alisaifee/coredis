@@ -109,10 +109,10 @@ class Library(Generic[AnyStr]):
         return False
 
     async def initialize(self: LibraryT, replace: bool = False) -> LibraryT:
-        from coredis.pipeline import ClusterPipelineImpl, PipelineImpl  # type: ignore
+        from coredis.pipeline import ClusterPipeline, Pipeline
 
         self._functions.clear()
-        if isinstance(self.client, (PipelineImpl, ClusterPipelineImpl)):
+        if isinstance(self.client, (Pipeline, ClusterPipeline)):
             redis_client = self.client.client
         else:
             redis_client = self.client

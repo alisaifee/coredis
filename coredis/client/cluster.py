@@ -1183,7 +1183,7 @@ class RedisCluster(
 
         from coredis.pipeline import ClusterPipeline
 
-        return ClusterPipeline[AnyStr].proxy(
+        return ClusterPipeline[AnyStr](
             client=self,
             transaction=transaction,
             watches=watches,

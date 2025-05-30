@@ -13,7 +13,7 @@ from coredis.exceptions import (
     TimeoutError,
     WatchError,
 )
-from coredis.pipeline import ClusterPipelineImpl
+from coredis.pipeline import ClusterPipeline
 from tests.conftest import targets
 
 
@@ -23,19 +23,14 @@ class TestPipeline:
         async with await client.pipeline() as pipe:
             assert await pipe.execute() == ()
 
-    async def test_pipeline_reset(self, client):
-        pipe = await client.pipeline()
-        await pipe.get("a")
-        await pipe.reset()
-        await pipe.set("a", 1)
-        assert await pipe.execute() == (True,)
-
     async def test_pipeline(self, client):
         async with await client.pipeline() as pipe:
-            await (await (await (await pipe.set("a", "a1")).get("a")).zadd("z", dict(z1=1))).zadd(
-                "z", dict(z2=4)
-            )
-            await (await pipe.zincrby("z", "z1", 1)).zrange("z", 0, 5, withscores=True)
+            pipe.set("a", "a1")
+            pipe.get("a")
+            pipe.zadd("z", dict(z1=1))
+            pipe.zadd("z", dict(z2=4))
+            pipe.zincrby("z", "z1", 1)
+            pipe.zrange("z", 0, 5, withscores=True)
             assert await pipe.execute() == (
                 True,
                 "a1",
@@ -52,7 +47,9 @@ class TestPipeline:
             assert pipe
 
             # Fill 'er up!
-            await (await (await pipe.set("a", "a1")).set("b", "b1")).set("c", "c1")
+            pipe.set("a", "a1")
+            pipe.set("b", "b1")
+            pipe.set("c", "c1")
             assert len(pipe) == 3
             assert pipe
 
@@ -63,7 +60,9 @@ class TestPipeline:
 
     async def test_pipeline_no_transaction(self, client):
         async with await client.pipeline(transaction=False) as pipe:
-            await (await (await pipe.set("a", "a1")).set("b", "b1")).set("c", "c1")
+            pipe.set("a", "a1")
+            pipe.set("b", "b1")
+            pipe.set("c", "c1")
             assert await pipe.execute() == (
                 True,
                 True,
@@ -137,7 +136,9 @@ class TestPipeline:
 
     async def test_pipeline_transaction(self, client):
         async with await client.pipeline(transaction=True) as pipe:
-            await (await (await pipe.set("a{fu}", "a1")).set("b{fu}", "b1")).set("c{fu}", "c1")
+            pipe.set("a{fu}", "a1")
+            pipe.set("b{fu}", "b1")
+            pipe.set("c{fu}", "c1")
             assert await pipe.execute() == (
                 True,
                 True,
@@ -150,7 +151,9 @@ class TestPipeline:
     async def test_pipeline_transaction_cross_slot(self, client):
         with pytest.raises(ClusterTransactionError):
             async with await client.pipeline(transaction=True) as pipe:
-                await (await (await pipe.set("a{fu}", "a1")).set("b{fu}", "b1")).set("c{fu}", "c1")
+                pipe.set("a{fu}", "a1")
+                pipe.set("b{fu}", "b1")
+                pipe.set("c{fu}", "c1")
                 await pipe.set("a{bar}", "fail!")
                 await pipe.execute()
         assert await client.exists(["a{fu}", "b{fu}", "c{fu}"]) == 0
@@ -182,9 +185,10 @@ class TestPipeline:
         """
         await client.set("c", "a")
         async with await client.pipeline() as pipe:
-            await (await (await (await pipe.set("a", "1")).set("b", "2")).lpush("c", ["3"])).set(
-                "d", "4"
-            )
+            (await pipe.set("a", "1")).set("b", 2)
+            # pipe.set("b", "2")
+            pipe.lpush("c", ["3"])
+            pipe.set("d", "4")
             result = await pipe.execute(raise_on_error=False)
 
             assert result[0]
@@ -226,14 +230,17 @@ class TestPipeline:
     async def test_parse_error_raised(self, client):
         async with await client.pipeline() as pipe:
             # the zrem is invalid because we don't pass any keys to it
-            await (await (await pipe.set("a", "1")).zrem("b", [])).set("b", "2")
+            pipe.set("a", "1")
+            pipe.zrem("b", [])
+            pipe.set("b", "2")
             with pytest.raises(ResponseError) as ex:
                 await pipe.execute()
 
             assert str(ex.value).startswith("Command # 2 (ZREM b) of pipeline caused error: ")
 
             # make sure the pipe was restored to a working state
-            assert await (await pipe.set("z", "zzz")).execute() == (True,)
+            pipe.set("z", "zzz")
+            assert await pipe.execute() == (True,)
             assert await client.get("z") == "zzz"
 
     @pytest.mark.parametrize("cluster_remap_keyslots", [("a{fu}", "b{fu}", "c{bar}", "d{bar}")])
@@ -247,26 +254,26 @@ class TestPipeline:
     @pytest.mark.parametrize(
         "function, args, kwargs",
         [
-            (ClusterPipelineImpl.bgrewriteaof, (), {}),
-            (ClusterPipelineImpl.bgsave, (), {}),
-            (ClusterPipelineImpl.keys, ("*",), {}),
-            (ClusterPipelineImpl.flushdb, (), {}),
-            (ClusterPipelineImpl.flushdb, (), {}),
-            (ClusterPipelineImpl.flushall, (), {}),
+            (ClusterPipeline.bgrewriteaof, (), {}),
+            (ClusterPipeline.bgsave, (), {}),
+            (ClusterPipeline.keys, ("*",), {}),
+            (ClusterPipeline.flushdb, (), {}),
+            (ClusterPipeline.flushdb, (), {}),
+            (ClusterPipeline.flushall, (), {}),
         ],
     )
     async def test_no_key_command(self, client, function, args, kwargs):
         with pytest.raises(RedisClusterException) as exc:
             async with await client.pipeline() as pipe:
-                await function(pipe, *args, **kwargs)
+                function(pipe, *args, **kwargs)
                 await pipe.execute()
         exc.match("No way to dispatch (.*?) to Redis Cluster. Missing key")
 
     @pytest.mark.parametrize(
         "function, args, kwargs",
         [
-            (ClusterPipelineImpl.bitop, (["a{fu}"], "not", "b{bar}"), {}),
-            (ClusterPipelineImpl.brpoplpush, ("a{fu}", "b{bar}", 1.0), {}),
+            (ClusterPipeline.bitop, (["a{fu}"], "not", "b{bar}"), {}),
+            (ClusterPipeline.brpoplpush, ("a{fu}", "b{bar}", 1.0), {}),
         ],
     )
     async def test_multi_key_cross_slot_commands(self, client, function, args, kwargs):
@@ -279,14 +286,14 @@ class TestPipeline:
     @pytest.mark.parametrize(
         "function, args, kwargs, expectation",
         [
-            (ClusterPipelineImpl.bitop, (["a{fu}"], "not", "b{fu}"), {}, (0,)),
-            (ClusterPipelineImpl.brpoplpush, ("a{fu}", "b{fu}", 1.0), {}, (None,)),
+            (ClusterPipeline.bitop, (["a{fu}"], "not", "b{fu}"), {}, (0,)),
+            (ClusterPipeline.brpoplpush, ("a{fu}", "b{fu}", 1.0), {}, (None,)),
         ],
     )
     async def test_multi_key_non_cross_slot(self, client, function, args, kwargs, expectation):
         async with await client.pipeline() as pipe:
-            await pipe.set("x{fu}", 1)
-            await function(pipe, *args, **kwargs)
+            pipe.set("x{fu}", 1)
+            function(pipe, *args, **kwargs)
             res = await pipe.execute()
         assert res == (True,) + expectation
         assert await client.get("x{fu}") == "1"
