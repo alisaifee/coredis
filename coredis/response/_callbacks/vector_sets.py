@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import cast
-
 from coredis._utils import nativestr
 from coredis.response._callbacks import ResponseCallback
 from coredis.response._utils import flat_pairs_to_dict
@@ -11,17 +9,17 @@ from coredis.typing import AnyStr, ResponsePrimitive, StringT
 
 class VSimCallback(
     ResponseCallback[
-        list[AnyStr | None],
-        list[AnyStr | None] | dict[AnyStr, float],
+        list[AnyStr],
+        list[AnyStr] | dict[AnyStr, float],
         tuple[AnyStr, ...] | dict[AnyStr, float],
     ],
 ):
     def transform(
         self,
-        response: list[AnyStr | None],
+        response: list[AnyStr],
     ) -> tuple[AnyStr, ...] | dict[AnyStr, float]:
         if self.options.get("withscores"):
-            it = iter(cast(list[AnyStr], response))
+            it = iter(response)
             return dict(list(zip(it, map(float, it))))
         else:
             return tuple(response)
@@ -31,6 +29,7 @@ class VSimCallback(
         response: list[AnyStr] | dict[AnyStr, float],
     ) -> tuple[AnyStr, ...] | dict[AnyStr, float]:
         if self.options.get("withscores"):
+            assert isinstance(response, dict)
             return response
         else:
             return tuple(response)
@@ -38,33 +37,33 @@ class VSimCallback(
 
 class VLinksCallback(
     ResponseCallback[
-        list[list[ResponsePrimitive]] | None,
-        list[list[ResponsePrimitive] | dict[AnyStr, float]] | None,
+        list[list[AnyStr]] | None,
+        list[list[AnyStr] | dict[AnyStr, float]] | None,
         tuple[tuple[AnyStr, ...] | dict[AnyStr, float], ...] | None,
     ],
 ):
     def transform(
         self,
-        response: list[list[ResponsePrimitive]] | None,
+        response: list[list[AnyStr]] | None,
     ) -> tuple[tuple[AnyStr, ...] | dict[AnyStr, float], ...] | None:
         if response:
             if self.options.get("withscores"):
-                return tuple(
-                    dict(zip(it := iter(cast(list[AnyStr], layer)), map(float, it)))
-                    for layer in response
-                )
+                return tuple(dict(zip(it := iter(layer), map(float, it))) for layer in response)
             else:
                 return tuple(tuple(layer) for layer in response)
+        return None
 
     def transform_3(
         self,
-        response: list[list[ResponsePrimitive] | dict[AnyStr, float]] | None,
+        response: list[list[AnyStr] | dict[AnyStr, float]] | None,
     ) -> tuple[tuple[AnyStr, ...] | dict[AnyStr, float], ...] | None:
         if response:
             if self.options.get("withscores"):
+                assert isinstance(response[0], dict)
                 return tuple(response)
             else:
                 return tuple(tuple(layer) for layer in response)
+        return None
 
 
 class VEmbCallback(
@@ -88,6 +87,7 @@ class VEmbCallback(
                 )
             else:
                 return tuple(map(float, response))
+        return None
 
     def transform_3(
         self,
@@ -103,18 +103,19 @@ class VEmbCallback(
                 )
             else:
                 return tuple(response)
+        return None
 
 
 class VInfoCallback(
     ResponseCallback[
-        list[ResponsePrimitive] | None,
+        list[AnyStr | int] | None,
         dict[AnyStr, AnyStr | int] | None,
         dict[AnyStr, AnyStr | int] | None,
     ]
 ):
     def transform(
         self,
-        response: list[ResponsePrimitive] | None,
+        response: list[AnyStr | int] | None,
     ) -> dict[AnyStr, AnyStr | int] | None:
         return flat_pairs_to_dict(response) if response else None
 
