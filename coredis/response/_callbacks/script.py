@@ -9,9 +9,9 @@ from coredis.response.types import LibraryDefinition
 from coredis.typing import (
     AnyStr,
     Mapping,
+    RedisValueT,
     ResponsePrimitive,
     ResponseType,
-    ValueT,
 )
 
 
@@ -23,7 +23,7 @@ class FunctionListCallback(
         response: list[ResponseType],
     ) -> Mapping[AnyStr, LibraryDefinition]:
         libraries = [
-            EncodingInsensitiveDict(flat_pairs_to_dict(cast(list[ValueT], library)))
+            EncodingInsensitiveDict(flat_pairs_to_dict(cast(list[RedisValueT], library)))
             for library in response
         ]
         transformed = EncodingInsensitiveDict()
