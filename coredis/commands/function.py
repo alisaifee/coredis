@@ -173,7 +173,7 @@ class Library(Generic[AnyStr]):
 
             import coredis
             from coredis.commands import Library
-            from coredis.typing import KeyT, ValueT
+            from coredis.typing import KeyT, RedisValueT
             from typing import List
 
             class MyAwesomeLibrary(Library):
@@ -221,7 +221,7 @@ class Library(Generic[AnyStr]):
                 \"\"\"
 
                 @Library.wraps("echo")
-                def echo(self, value: ValueT) -> CommandRequest[ValueT]: ...
+                def echo(self, value: ValueT) -> CommandRequest[RedisValueT]: ...
 
                 @Library.wraps("ping"print(c)
                 )
@@ -231,7 +231,7 @@ class Library(Generic[AnyStr]):
                 def get(self, key: KeyT) -> CommandRequest[ValueT]: ...
 
                 @Library.wraps("hmmget")
-                def hmmget(self, *keys: KeyT, **fields_with_values: ValueT):
+                def hmmget(self, *keys: KeyT, **fields_with_values: RedisValueT):
                 \"\"\"
                 Return values of ``fields_with_values`` on a first come first serve
                 basis from the hashes at ``keys``. Since ``fields_with_values`` is a mapping

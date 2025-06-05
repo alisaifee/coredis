@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from coredis.typing import ValueT
+from coredis.typing import RedisValueT
 
 
 class RedisError(Exception):
@@ -184,7 +184,7 @@ class ClusterCrossSlotError(ResponseError):
         self,
         message: str | None = None,
         command: bytes | None = None,
-        keys: tuple[ValueT, ...] | None = None,
+        keys: tuple[RedisValueT, ...] | None = None,
     ) -> None:
         super().__init__(message or "Keys in request don't hash to the same slot")
         self.command = command
