@@ -10,6 +10,7 @@ for parameters to redis command wrappers.
 
 .. autodata:: coredis.typing.KeyT
 .. autodata:: coredis.typing.ValueT
+.. autodata:: coredis.typing.RedisValueT
 .. autodata:: coredis.typing.StringT
 .. autodata:: coredis.typing.JsonType
 
@@ -21,6 +22,14 @@ Instead of accepting :class:`~collections.abc.Iterable`, a union of select conta
 library are accepted via :data:`~coredis.typing.Parameters`.
 
 .. autodata:: coredis.typing.Parameters
+
+Custom types
+^^^^^^^^^^^^
+
+.. autoclass:: coredis.typing.SerializableValue
+   :class-doc-from: both
+.. autoclass:: coredis.typing.TypeAdapter
+   :class-doc-from: both
 
 
 Redis Response (RESP) descriptions
