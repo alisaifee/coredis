@@ -7,9 +7,9 @@ from coredis.response.types import ClusterNode, ClusterNodeDetail
 from coredis.typing import (
     AnyStr,
     Mapping,
+    RedisValueT,
     ResponsePrimitive,
     ResponseType,
-    ValueT,
 )
 
 
@@ -81,9 +81,9 @@ class ClusterNodesCallback(ResponseCallback[ResponseType, ResponseType, list[Clu
             resp = nativestr(response)
         current_host = nativestr(self.options.get("current_host", ""))
 
-        def parse_slots(s: str) -> tuple[list[int], list[dict[str, ValueT]]]:
+        def parse_slots(s: str) -> tuple[list[int], list[dict[str, RedisValueT]]]:
             slots: list[int] = []
-            migrations: list[dict[str, ValueT]] = []
+            migrations: list[dict[str, RedisValueT]] = []
 
             for r in s.split(" "):
                 if "->-" in r:
@@ -157,18 +157,18 @@ class ClusterShardsCallback(
     ResponseCallback[
         ResponseType,
         ResponseType,
-        list[dict[AnyStr, list[ValueT] | Mapping[AnyStr, ValueT]]],
+        list[dict[AnyStr, list[RedisValueT] | Mapping[AnyStr, RedisValueT]]],
     ]
 ):
     def transform(
         self,
         response: ResponseType,
-    ) -> list[dict[AnyStr, list[ValueT] | Mapping[AnyStr, ValueT]]]:
-        shard_mapping: list[dict[AnyStr, list[ValueT] | Mapping[AnyStr, ValueT]]] = []
+    ) -> list[dict[AnyStr, list[RedisValueT] | Mapping[AnyStr, RedisValueT]]]:
+        shard_mapping: list[dict[AnyStr, list[RedisValueT] | Mapping[AnyStr, RedisValueT]]] = []
 
         for shard in response:
             transformed = EncodingInsensitiveDict(flat_pairs_to_dict(shard))
-            node_mapping: list[dict[AnyStr, ValueT]] = []
+            node_mapping: list[dict[AnyStr, RedisValueT]] = []
             for node in transformed["nodes"]:
                 node_mapping.append(flat_pairs_to_dict(node))
 
@@ -179,5 +179,5 @@ class ClusterShardsCallback(
     def transform_3(
         self,
         response: ResponseType,
-    ) -> list[dict[AnyStr, list[ValueT] | Mapping[AnyStr, ValueT]]]:
+    ) -> list[dict[AnyStr, list[RedisValueT] | Mapping[AnyStr, RedisValueT]]]:
         return response
