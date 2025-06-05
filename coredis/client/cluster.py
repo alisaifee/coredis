@@ -53,11 +53,12 @@ from coredis.typing import (
     ParamSpec,
     RedisCommand,
     RedisCommandP,
+    RedisValueT,
     ResponseType,
     StringT,
+    TypeAdapter,
     TypeVar,
     Unpack,
-    ValueT,
 )
 
 P = ParamSpec("P")
@@ -208,6 +209,7 @@ class RedisCluster(
         noevict: bool = ...,
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
+        type_adapter: TypeAdapter | None = ...,
         **kwargs: Any,
     ) -> None: ...
 
@@ -246,6 +248,7 @@ class RedisCluster(
         noevict: bool = ...,
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
+        type_adapter: TypeAdapter | None = ...,
         **kwargs: Any,
     ) -> None: ...
 
@@ -293,6 +296,7 @@ class RedisCluster(
                 0.1,
             ),
         ),
+        type_adapter: TypeAdapter | None = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -427,6 +431,8 @@ class RedisCluster(
         :param notouch: Ensures that commands sent by the client will not alter the LRU/LFU
          of the keys they access.
         :param retry_policy: The retry policy to use when interacting with the cluster
+        :param type_adapter: The adapter to use for serializing / deserializing customs types
+         when interacting with redis commands.
         """
 
         if "db" in kwargs:  # noqa
@@ -490,6 +496,7 @@ class RedisCluster(
             noevict=noevict,
             notouch=notouch,
             retry_policy=retry_policy,
+            type_adapter=type_adapter,
             **kwargs,
         )
 
@@ -523,6 +530,7 @@ class RedisCluster(
         noevict: bool = ...,
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
+        type_adapter: TypeAdapter | None = ...,
         cache: AbstractCache | None = ...,
         **kwargs: Any,
     ) -> RedisCluster[bytes]: ...
@@ -542,6 +550,7 @@ class RedisCluster(
         noevict: bool = ...,
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
+        type_adapter: TypeAdapter | None = ...,
         cache: AbstractCache | None = ...,
         **kwargs: Any,
     ) -> RedisCluster[str]: ...
@@ -571,6 +580,7 @@ class RedisCluster(
                 0.1,
             ),
         ),
+        type_adapter: TypeAdapter | None = None,
         **kwargs: Any,
     ) -> RedisClusterT:
         """
@@ -593,6 +603,7 @@ class RedisCluster(
                 verify_version=verify_version,
                 noreply=noreply,
                 retry_policy=retry_policy,
+                type_adapter=type_adapter,
                 cache=cache,
                 connection_pool=ClusterConnectionPool.from_url(
                     url,
@@ -613,6 +624,7 @@ class RedisCluster(
                 verify_version=verify_version,
                 noreply=noreply,
                 retry_policy=retry_policy,
+                type_adapter=type_adapter,
                 cache=cache,
                 connection_pool=ClusterConnectionPool.from_url(
                     url,
@@ -684,10 +696,10 @@ class RedisCluster(
             await self
 
     def _determine_slots(
-        self, command: bytes, *args: ValueT, **options: Unpack[ExecutionParameters]
+        self, command: bytes, *args: RedisValueT, **options: Unpack[ExecutionParameters]
     ) -> set[int]:
         """Determines the slots the command and args would touch"""
-        keys = cast(tuple[ValueT, ...], options.get("keys")) or KeySpec.extract_keys(
+        keys = cast(tuple[RedisValueT, ...], options.get("keys")) or KeySpec.extract_keys(
             command, *args, readonly_command=self.connection_pool.read_from_replicas
         )
         if (
@@ -720,7 +732,7 @@ class RedisCluster(
         )
 
     def determine_node(
-        self, command: bytes, *args: ValueT, **kwargs: Unpack[ExecutionParameters]
+        self, command: bytes, *args: RedisValueT, **kwargs: Unpack[ExecutionParameters]
     ) -> list[ManagedNode] | None:
         node_flag = self.route_flags.get(command)
         if command in self.split_flags and self.non_atomic_cross_slot:
@@ -829,11 +841,11 @@ class RedisCluster(
         self,
         nodes: list[ManagedNode],
         command: bytes,
-        *args: ValueT,
+        *args: RedisValueT,
         slot_arguments_range: tuple[int, int] | None = None,
-    ) -> dict[str, list[tuple[ValueT, ...]]]:
+    ) -> dict[str, list[tuple[RedisValueT, ...]]]:
         node_flag = self.route_flags.get(command)
-        node_arg_mapping: dict[str, list[tuple[ValueT, ...]]] = {}
+        node_arg_mapping: dict[str, list[tuple[RedisValueT, ...]]] = {}
         if command in self.split_flags and self.non_atomic_cross_slot:
             keys = KeySpec.extract_keys(command, *args)
             if keys:

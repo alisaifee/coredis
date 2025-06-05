@@ -10,10 +10,10 @@ from coredis.response.types import ClientInfo, RoleInfo, SlowLogInfo
 from coredis.typing import (
     AnyStr,
     ClassVar,
+    RedisValueT,
     ResponsePrimitive,
     ResponseType,
     StringT,
-    ValueT,
 )
 
 
@@ -217,12 +217,12 @@ class RoleCallback(ResponseCallback[ResponseType, ResponseType, RoleInfo]):
 
 
 class LatencyHistogramCallback(
-    ResponseCallback[ResponseType, ResponseType, dict[AnyStr, dict[AnyStr, ValueT]]]
+    ResponseCallback[ResponseType, ResponseType, dict[AnyStr, dict[AnyStr, RedisValueT]]]
 ):
     def transform(
         self,
         response: ResponseType,
-    ) -> dict[AnyStr, dict[AnyStr, ValueT]]:
+    ) -> dict[AnyStr, dict[AnyStr, RedisValueT]]:
         histogram = flat_pairs_to_dict(response)
         for key, value in histogram.items():
             histogram[key] = EncodingInsensitiveDict(flat_pairs_to_dict(value))

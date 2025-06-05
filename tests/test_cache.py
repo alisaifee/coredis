@@ -3,7 +3,7 @@ from __future__ import annotations
 import coredis.client
 from coredis import BaseConnection
 from coredis.cache import AbstractCache, CacheStats
-from coredis.typing import ResponseType, ValueT
+from coredis.typing import RedisValueT, ResponseType
 from tests.conftest import targets
 
 
@@ -18,16 +18,16 @@ class DummyCache(AbstractCache):
     def healthy(self) -> bool:
         return True
 
-    def get(self, command: bytes, key: bytes, *args: ValueT) -> ResponseType:
+    def get(self, command: bytes, key: bytes, *args: RedisValueT) -> ResponseType:
         return self.dummy[key]
 
-    def put(self, command: bytes, key: bytes, *args: ValueT, value: ResponseType) -> None:
+    def put(self, command: bytes, key: bytes, *args: RedisValueT, value: ResponseType) -> None:
         self.dummy[key] = value
 
     def reset(self) -> None:
         self.dummy.clear()
 
-    def invalidate(self, *keys: ValueT) -> None:
+    def invalidate(self, *keys: RedisValueT) -> None:
         for key in keys:
             self.dummy.pop(key, None)
 
@@ -39,7 +39,7 @@ class DummyCache(AbstractCache):
     def confidence(self) -> float:
         return 100
 
-    def feedback(self, command: bytes, key: bytes, *args: ValueT, match: bool) -> None:
+    def feedback(self, command: bytes, key: bytes, *args: RedisValueT, match: bool) -> None:
         pass
 
     def get_client_id(self, connection: BaseConnection) -> int | None:

@@ -146,13 +146,13 @@ REDIS_ARGUMENT_NAME_OVERRIDES = {
 }
 REDIS_ARGUMENT_TYPE_OVERRIDES = {
     "CLIENT KILL": {"skipme": bool},
-    "COMMAND GETKEYS": {"arguments": ValueT},
-    "COMMAND GETKEYSANDFLAGS": {"arguments": ValueT},
+    "COMMAND GETKEYS": {"arguments": RedisValueT},
+    "COMMAND GETKEYSANDFLAGS": {"arguments": RedisValueT},
     "FUNCTION RESTORE": {"serialized_value": bytes},
-    "MSET": {"key_values": dict[KeyT, ValueT]},
-    "MSETNX": {"key_values": dict[KeyT, ValueT]},
-    "HMSET": {"field_values": dict[StringT, ValueT]},
-    "HSET": {"field_values": dict[StringT, ValueT]},
+    "MSET": {"key_values": dict[KeyT, RedisValueT]},
+    "MSETNX": {"key_values": dict[KeyT, RedisValueT]},
+    "HMSET": {"field_values": dict[StringT, RedisValueT]},
+    "HSET": {"field_values": dict[StringT, RedisValueT]},
     "MIGRATE": {"port": int},
     "RESTORE": {
         "serialized_value": bytes,
@@ -160,20 +160,20 @@ REDIS_ARGUMENT_TYPE_OVERRIDES = {
     },
     "SORT": {"gets": KeyT},
     "SORT_RO": {"gets": KeyT},
-    "XADD": {"field_values": dict[StringT, ValueT], "threshold": Optional[int]},
+    "XADD": {"field_values": dict[StringT, RedisValueT], "threshold": Optional[int]},
     "XAUTOCLAIM": {"min_idle_time": int | datetime.timedelta},
     "XCLAIM": {
         "min_idle_time": int | datetime.timedelta,
         "ms": int | datetime.timedelta | None,
     },
-    "XREAD": {"streams": Mapping[ValueT, ValueT]},
-    "XREADGROUP": {"streams": Mapping[ValueT, ValueT]},
+    "XREAD": {"streams": Mapping[RedisValueT, RedisValueT]},
+    "XREADGROUP": {"streams": Mapping[RedisValueT, RedisValueT]},
     "XTRIM": {"threshold": int},
     "ZADD": {"member_scores": dict[StringT, float]},
-    "ZCOUNT": {"min": ValueT | float, "max": ValueT | float},
-    "ZREVRANGE": {"min": int | ValueT, "max": int | ValueT},
-    "ZRANGE": {"start": int | ValueT, "stop": int | ValueT},
-    "ZRANGESTORE": {"min": int | ValueT, "max": int | ValueT},
+    "ZCOUNT": {"min": RedisValueT | float, "max": RedisValueT | float},
+    "ZREVRANGE": {"min": int | RedisValueT, "max": int | RedisValueT},
+    "ZRANGE": {"start": int | RedisValueT, "stop": int | RedisValueT},
+    "ZRANGESTORE": {"min": int | RedisValueT, "max": int | RedisValueT},
 }
 IGNORED_ARGUMENTS = {
     "FCALL": ["numkeys"],
@@ -219,7 +219,7 @@ REDIS_RETURN_OVERRIDES = {
     "CLUSTER LINKS": list[dict[AnyStr, ResponseType]],
     "CLUSTER NODES": list[ClusterNodeDetail],
     "CLUSTER REPLICAS": list[ClusterNodeDetail],
-    "CLUSTER SHARDS": list[dict[AnyStr, list[ValueT] | Mapping[AnyStr, ValueT]]],
+    "CLUSTER SHARDS": list[dict[AnyStr, list[RedisValueT] | Mapping[AnyStr, RedisValueT]]],
     "CLUSTER SLAVES": list[ClusterNodeDetail],
     "CLUSTER SLOTS": dict[tuple[int, int], tuple[ClusterNode, ...]],
     "COMMAND": dict[str, Command],
@@ -755,7 +755,7 @@ def get_type(arg, command):
     if arg["name"] in ["seconds", "milliseconds"] and inferred_type == int:
         return int | datetime.timedelta
 
-    if arg["name"] == "yes/no" and inferred_type in [StringT, ValueT]:
+    if arg["name"] == "yes/no" and inferred_type in [StringT, RedisValueT]:
         return bool
 
     if (
@@ -776,7 +776,7 @@ def get_type(arg, command):
         ]
         and inferred_type == StringT
     ):
-        return ValueT
+        return RedisValueT
 
     return inferred_type
 
@@ -840,7 +840,7 @@ def get_argument(
             else:
                 if len(child_types) == 1:
                     annotation = Parameters[child_types[0]]
-                elif len(child_types) == 2 and child_types[0] in [StringT, ValueT]:
+                elif len(child_types) == 2 and child_types[0] in [StringT, RedisValueT]:
                     annotation = dict[child_types[0], child_types[1]]
                 else:
                     child_types_repr = ",".join(
@@ -2336,7 +2336,8 @@ from coredis.typing import (
     Mapping,
     Parameters,
     StringT,
-    ValueT,
+    ValueT, 
+    RedisValueT,
 )
 
 # TODO: remove this once mypy can disambiguate class method names
@@ -2659,22 +2660,22 @@ def cluster_key_extraction(path):
 from __future__ import annotations
 
 from coredis._utils import b
-from coredis.typing import Callable, ClassVar, ValueT
+from coredis.typing import Callable, ClassVar, RedisValueT
 
 class KeySpec:
-    READONLY: ClassVar[dict[bytes, Callable[[tuple[ValueT, ...]], tuple[ValueT, ...]]]] = {{ '{' }}
+    READONLY: ClassVar[dict[bytes, Callable[[tuple[RedisValueT, ...]], tuple[RedisValueT, ...]]]] = {{ '{' }}
     {% for command, exprs in readonly.items() %}
         b"{{command}}": lambda args: ({{exprs | join("+")}}),
     {% endfor %}
     {{ '}' }}
-    ALL: ClassVar[dict[bytes, Callable[[tuple[ValueT, ...]], tuple[ValueT, ...]]]] = {{ '{' }}
+    ALL: ClassVar[dict[bytes, Callable[[tuple[RedisValueT, ...]], tuple[RedisValueT, ...]]]] = {{ '{' }}
     {% for command, exprs in all.items() %}
         b"{{command}}": lambda args: ({{exprs | join("+")}}) ,
     {% endfor %}
     {{ '}' }}
 
     @classmethod
-    def extract_keys(cls, *arguments: ValueT, readonly_command: bool = False) -> tuple[ValueT, ...]:
+    def extract_keys(cls, *arguments: RedisValueT, readonly_command: bool = False) -> tuple[RedisValueT, ...]:
         if len(arguments) <= 1:
             return ()
 

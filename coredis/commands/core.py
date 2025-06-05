@@ -153,6 +153,7 @@ from coredis.typing import (
     Literal,
     Mapping,
     Parameters,
+    RedisValueT,
     ResponsePrimitive,
     ResponseType,
     StringT,
@@ -1117,7 +1118,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_shards(
         self,
-    ) -> CommandRequest[list[dict[AnyStr, list[ValueT] | Mapping[AnyStr, ValueT]]]]:
+    ) -> CommandRequest[list[dict[AnyStr, list[RedisValueT] | Mapping[AnyStr, RedisValueT]]]]:
         """
         Get mapping of cluster slots to nodes
         """
@@ -7108,7 +7109,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def latency_histogram(
         self, *commands: StringT
-    ) -> CommandRequest[dict[AnyStr, dict[AnyStr, ValueT]]]:
+    ) -> CommandRequest[dict[AnyStr, dict[AnyStr, RedisValueT]]]:
         """
         Return the cumulative distribution of latencies of a subset of commands or all.
         """

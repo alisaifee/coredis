@@ -20,7 +20,7 @@ from coredis.connection import (
     UnixDomainSocketConnection,
 )
 from coredis.exceptions import ConnectionError
-from coredis.typing import Callable, ClassVar, TypeVar, ValueT
+from coredis.typing import Callable, ClassVar, RedisValueT, TypeVar
 
 _CPT = TypeVar("_CPT", bound="ConnectionPool")
 
@@ -250,9 +250,9 @@ class ConnectionPool:
     async def get_connection(
         self,
         command_name: bytes | None = None,
-        *args: ValueT,
+        *args: RedisValueT,
         acquire: bool = True,
-        **kwargs: ValueT | None,
+        **kwargs: RedisValueT | None,
     ) -> Connection:
         """Gets a connection from the pool"""
         self.checkpid()
@@ -290,7 +290,7 @@ class ConnectionPool:
             connection.disconnect()
             self._created_connections -= 1
 
-    def _make_connection(self, **options: ValueT | None) -> Connection:
+    def _make_connection(self, **options: RedisValueT | None) -> Connection:
         """
         Creates a new connection
         """
@@ -347,7 +347,7 @@ class BlockingConnectionPool(ConnectionPool):
         timeout: int = 20,
         max_idle_time: int = 0,
         idle_check_interval: int = 1,
-        **connection_kwargs: ValueT | None,
+        **connection_kwargs: RedisValueT | None,
     ):
         self.timeout = timeout
         self.queue_class = queue_class
@@ -394,9 +394,9 @@ class BlockingConnectionPool(ConnectionPool):
     async def get_connection(
         self,
         command_name: bytes | None = None,
-        *args: ValueT,
+        *args: RedisValueT,
         acquire: bool = True,
-        **kwargs: ValueT | None,
+        **kwargs: RedisValueT | None,
     ) -> Connection:
         """Gets a connection from the pool"""
         self.checkpid()

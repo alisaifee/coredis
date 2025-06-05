@@ -20,9 +20,9 @@ from coredis.typing import (
     P,
     Parameters,
     R,
+    RedisValueT,
     ResponseType,
     StringT,
-    ValueT,
     add_runtime_checks,
     safe_beartype,
 )
@@ -75,7 +75,7 @@ class Script(Generic[AnyStr]):
     async def __call__(
         self,
         keys: Parameters[KeyT] | None = None,
-        args: Parameters[ValueT] | None = None,
+        args: Parameters[RedisValueT] | None = None,
         client: SupportsScript[AnyStr] | None = None,
         readonly: bool | None = None,
     ) -> ResponseType:
@@ -121,7 +121,7 @@ class Script(Generic[AnyStr]):
     async def execute(
         self,
         keys: Parameters[KeyT] | None = None,
-        args: Parameters[ValueT] | None = None,
+        args: Parameters[RedisValueT] | None = None,
         client: SupportsScript[AnyStr] | None = None,
         readonly: bool | None = None,
     ) -> ResponseType:
@@ -169,12 +169,12 @@ class Script(Generic[AnyStr]):
         passed to redis as an ``arg``::
 
             import coredis
-            from coredis.typing import KeyT, ValueT
+            from coredis.typing import KeyT, RedisValueT
             from typing import List
 
             client = coredis.Redis()
             @client.register_script("return {KEYS[1], ARGV[1]}").wraps()
-            async def echo_key_value(key: KeyT, value: ValueT) -> List[ValueT]: ...
+            async def echo_key_value(key: KeyT, value: RedisValueT) -> List[RedisValueT]: ...
 
             k, v = await echo_key_value("co", "redis")
             # (b"co", b"redis")
@@ -260,13 +260,13 @@ class Script(Generic[AnyStr]):
                 bound_arguments: inspect.BoundArguments,
             ) -> tuple[
                 Parameters[KeyT],
-                Parameters[ValueT],
+                Parameters[RedisValueT],
                 coredis.client.Client[AnyStr] | None,
             ]:
                 bound_arguments.apply_defaults()
                 arguments = bound_arguments.arguments
                 keys: list[KeyT] = []
-                args: list[ValueT] = []
+                args: list[RedisValueT] = []
                 for name in sig.parameters:
                     if name not in arg_fetch:
                         continue
