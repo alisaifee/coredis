@@ -21,8 +21,8 @@ from coredis.typing import (
     ClassVar,
     Iterable,
     Node,
+    RedisValueT,
     StringT,
-    ValueT,
 )
 
 
@@ -205,9 +205,9 @@ class ClusterConnectionPool(ConnectionPool):
     async def get_connection(
         self,
         command_name: bytes | None = None,
-        *keys: ValueT,
+        *keys: RedisValueT,
         acquire: bool = True,
-        **options: ValueT | None,
+        **options: RedisValueT | None,
     ) -> Connection:
         # Only pubsub command/connection should be allowed here
 

@@ -15,6 +15,7 @@ from coredis.typing import (
     Protocol,
     R,
     RedisCommandP,
+    RedisValueT,
     ResponseType,
     StringT,
     TypeVar,
@@ -52,14 +53,14 @@ class SupportsScript(Protocol[T_co]):  # noqa
         self,
         sha1: StringT,
         keys: Parameters[KeyT] | None = ...,
-        args: Parameters[ValueT] | None = ...,
+        args: Parameters[RedisValueT] | None = ...,
     ) -> ResponseType: ...
 
     async def evalsha_ro(
         self,
         sha1: StringT,
         keys: Parameters[KeyT] | None = ...,
-        args: Parameters[ValueT] | None = ...,
+        args: Parameters[RedisValueT] | None = ...,
     ) -> ResponseType: ...
 
     async def script_load(self, script: StringT) -> T_co: ...
