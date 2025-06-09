@@ -3,11 +3,11 @@ from __future__ import annotations
 import json
 import pickle
 from decimal import Decimal
-from typing import Any, Mapping, MutableMapping
+from typing import Any
 
 import pytest
 
-from coredis.typing import SerializableValue, TypeAdapter
+from coredis.typing import Mapping, MutableMapping, SerializableValue, TypeAdapter
 from tests.conftest import targets
 
 
@@ -29,7 +29,7 @@ class TestTransformers:
         ):
             await client.get("fubar").transform(int)
         with pytest.raises(
-            LookupError, match="No registered serializer to serialize SerializableValue\[int\]"
+            LookupError, match="No registered serializer to serialize SerializableValue\\[int\\]"
         ):
             await client.set("fubar", SerializableValue(1))
 
@@ -129,6 +129,31 @@ class TestTransformers:
 
         assert await client.set("fubar", SerializableValue({1: 2}))
         assert {"1": 2} == json.loads(await client.get("fubar"))
+
+    async def test_default_collection_deserializers(self, client, _s):
+        if client.decode_responses:
+            client.type_adapter.register_deserializer(Decimal, lambda v: Decimal(v), str)
+        else:
+            client.type_adapter.register_deserializer(
+                Decimal, lambda v: Decimal(v.decode("utf-8")), bytes
+            )
+
+        await client.hset("hash", {"a": 1})
+        await client.lpush("list", [1])
+        await client.sadd("set", [1])
+        await client.set("key", 1)
+
+        assert {_s("a"): Decimal(1)} == await client.hgetall("hash").transform(
+            dict[str if client.decode_responses else bytes, Decimal]
+        )
+        assert [Decimal(1)] == await client.lrange("list", 0, -1).transform(list[Decimal])
+        assert {Decimal(1)} == await client.lrange("list", 0, -1).transform(set[Decimal])
+        assert (Decimal(1),) == await client.lrange("list", 0, -1).transform(tuple[Decimal])
+        assert (Decimal(1),) == await client.lrange("list", 0, -1).transform(tuple[Decimal, ...])
+        assert [Decimal(1)] == await client.smembers("set").transform(list[Decimal])
+        assert {Decimal(1)} == await client.smembers("set").transform(set[Decimal])
+        assert (Decimal(1),) == await client.smembers("set").transform(tuple[Decimal])
+        assert (Decimal(1),) == await client.smembers("set").transform(tuple[Decimal, ...])
 
     async def test_decorator_errors(self, client):
         with pytest.raises(ValueError):
