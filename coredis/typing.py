@@ -22,7 +22,7 @@ from collections.abc import (
     Set,
     ValuesView,
 )
-from types import ModuleType, UnionType
+from types import GenericAlias, ModuleType, UnionType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -160,6 +160,9 @@ class SerializableValue(Generic[R]):
         self.value = value
 
 
+AdaptableType = type | UnionType | GenericAlias
+
+
 class TypeAdapter:
     """
     Used by the coredis clients :class:`~coredis.Redis` and :class:`~coredis.RedisCluster`
@@ -203,31 +206,26 @@ class TypeAdapter:
     def __init__(
         self,
     ) -> None:
-        self.__serializers: dict[type | UnionType, Callable[[Any], RedisValueT]] = {}
+        self.__serializers: dict[
+            AdaptableType,
+            tuple[Callable[[Any], RedisValueT], int],
+        ] = {}
         self.__deserializers: dict[
-            type | UnionType, dict[type | UnionType, Callable[..., Any]]
+            AdaptableType,
+            dict[AdaptableType, tuple[Callable[..., Any], int]],
         ] = {}
         self.__deserializer_cache: dict[
-            tuple[type | UnionType, type | UnionType], Callable[..., Any]
+            tuple[AdaptableType, AdaptableType | GenericAlias],
+            Callable[..., Any],
         ] = {}
-        self.__serializer_cache: dict[type | UnionType, Callable[[Any], RedisValueT]] = {}
+        self.__serializer_cache: dict[AdaptableType, Callable[[Any], RedisValueT]] = {}
 
     @classmethod
-    def format_type(cls, type_like: type | UnionType) -> str:
+    def format_type(cls, type_like: AdaptableType) -> str:
         if get_origin(type_like):
             return str(type_like)
         else:
             return getattr(type_like, "__name__", str(type_like))
-
-    def reset(self) -> None:
-        """
-        Clears all registered types and their associated serialization/deserialization
-        transform functions
-        """
-        self.__serializers.clear()
-        self.__deserializers.clear()
-        self.__deserializer_cache.clear()
-        self.__serializer_cache.clear()
 
     def register(
         self,
@@ -263,43 +261,94 @@ class TypeAdapter:
         :param serializer: a function that receives an instance of :paramref:`type`
          and returns a value of type :data:`coredis.typing.RedisValueT`
         """
-        self.__serializers[serializable_type] = serializer
+        self.__serializers.setdefault(serializable_type, (serializer, 0))
         self.__serializer_cache.clear()
 
     def register_deserializer(
         self,
         deserialized_type: type[R] | UnionType,
         deserializer: Callable[[Any], R],
-        deserializable_type: type | UnionType = object,
+        deserializable_type: AdaptableType = object,
     ) -> None:
         """
-        Register a deserializer for :paramref:`type`
+        Register a deserializer for :paramref:`type` and automatically register
+        deserializers for common collection types that use this type.
 
-        :param type: The type that should be serialized/deserialized
+        :param type: The type that should be deserialized
         :param deserializer: a function that accepts the return types from
          the redis commands that are expected to be used when deserializing
          to :paramref:`type`.
         :param deserializable_type: the types of values :paramref:`deserializer` should
          be considered for
-
-         .. note:: Multiple deserializers for :paramref:`type` can be registered to explicitly
-            handle different :paramref:`deserializable_type`. For example to deserialize to
-            a Decimal, you can register different functions to handle :class:`str`, :class:`bytes`
-            and :class:`Number` separately::
-
-              from coredis.typing import TypeAdapter
-              from numbers import Number
-              from decimal import Decimal
-
-              adapter = TypeAdapter()
-              adapter.register_deserializer(Decimal, lambda v: Decimal(v), str)
-              adapter.register_deserializer(Decimal, lambda v: Decimal(v.decode("utf-8")), bytes)
-              adapter.register_deserializer(Decimal, lambda v: Decimal(v), Number)
-
         """
+
+        def register_collection_deserializer(
+            collection_type: AdaptableType,
+            deserializable_type: AdaptableType,
+            deserializer: Callable[[Any], Any],
+        ) -> None:
+            self.__deserializers.setdefault(collection_type, {}).setdefault(
+                deserializable_type,
+                (deserializer, -1),
+            )
+
+        # Register the base deserializer
         self.__deserializers.setdefault(deserialized_type, {})[deserializable_type or object] = (
-            deserializer
+            deserializer,
+            0,
         )
+
+        # Register collection deserializers
+        register_collection_deserializer(
+            GenericAlias(list, (deserialized_type,)),
+            GenericAlias(Iterable, deserializable_type),
+            lambda v: [deserializer(item) for item in v],
+        )
+        register_collection_deserializer(
+            GenericAlias(set, (deserialized_type,)),
+            GenericAlias(Iterable, deserializable_type),
+            lambda v: {deserializer(item) for item in v},
+        )
+        register_collection_deserializer(
+            GenericAlias(tuple, (deserialized_type, ...)),
+            GenericAlias(Iterable, deserializable_type),
+            lambda v: tuple([deserializer(item) for item in v]),
+        )
+
+        # Register dictionary deserializers for existing types
+        for t in list(self.__deserializers):
+            if t != deserialized_type:
+                for rt in list(self.__deserializers[t]):
+                    _deserializer, priority = self.__deserializers[t][rt]
+                    if priority >= 0:
+                        register_collection_deserializer(
+                            GenericAlias(dict, (t, deserialized_type)),
+                            GenericAlias(Mapping, (rt, deserializable_type)),
+                            lambda m, key_deserializer=_deserializer: {  # type: ignore
+                                key_deserializer(k): deserializer(v) for k, v in m.items()
+                            },
+                        )
+                        register_collection_deserializer(
+                            GenericAlias(dict, (deserialized_type, t)),
+                            GenericAlias(Mapping, (deserializable_type, rt)),
+                            lambda m, value_deserializer=_deserializer: {  # type: ignore
+                                deserializer(k): value_deserializer(v) for k, v in m.items()
+                            },
+                        )
+
+        # Register dictionary deserializers for primitive types
+        for t in {bytes, str}:
+            register_collection_deserializer(
+                GenericAlias(dict, (t, deserialized_type)),
+                GenericAlias(Mapping, (t, deserializable_type)),
+                lambda v: {k: deserializer(v) for k, v in v.items()},
+            )
+            register_collection_deserializer(
+                GenericAlias(dict, (deserialized_type, t)),
+                GenericAlias(Mapping, (deserializable_type, t)),
+                lambda v: {deserializer(k): v for k, v in v.items()},
+            )
+
         self.__deserializer_cache.clear()
 
     def serializer(self, func: Callable[[R], RedisValueT]) -> Callable[[R], RedisValueT]:
@@ -355,14 +404,14 @@ class TypeAdapter:
 
         :param: a value wrapped in :class:`coredis.typing.SerializableValue`
         """
-        value_type = cast(type | UnionType, infer_hint(value.value))
+        value_type = cast(AdaptableType, infer_hint(value.value))
         if not (transform_function := self.__serializer_cache.get(value_type, None)):
-            candidate: tuple[type | UnionType, Callable[[R], RedisValueT] | None] = (object, None)
+            candidate: tuple[AdaptableType, Callable[[R], RedisValueT] | None] = (object, None)
 
             for t in self.__serializers:
                 if is_bearable(value.value, t):
                     if not candidate[1] or is_subhint(t, candidate[0]):
-                        candidate = (t, self.__serializers[t])
+                        candidate = (t, self.__serializers[t][0])
             if candidate[1]:
                 transform_function = candidate[1]
                 self.__serializer_cache[value_type] = transform_function
@@ -382,15 +431,16 @@ class TypeAdapter:
          the redis commands)
         :param return_type: The type to deserialize to
         """
-        value_type = cast(type | UnionType, infer_hint(value))
+        value_type = cast(AdaptableType, infer_hint(value))
         if not (deserializer := self.__deserializer_cache.get((value_type, return_type), None)):
-            if not (
-                deserializer := self.__deserializers.get(return_type, {}).get(value_type, None)
-            ):
-                candidate: tuple[type | UnionType, type | UnionType, Callable[[Any], R] | None] = (
+            if exact_match := self.__deserializers.get(return_type, {}).get(value_type, None):
+                deserializer = exact_match[0]
+            else:
+                candidate: tuple[AdaptableType, AdaptableType, Callable[[Any], R] | None, int] = (
                     object,
                     object,
                     None,
+                    -100,
                 )
                 for registered_type, transforms in self.__deserializers.items():
                     if is_subhint(return_type, registered_type):
@@ -399,13 +449,15 @@ class TypeAdapter:
                                 is_bearable(value, expected_value_type)
                                 and is_subhint(registered_type, candidate[0])
                                 and is_subhint(expected_value_type, candidate[1])
+                                and transforms[expected_value_type][1] >= candidate[3]
                             ):
                                 candidate = (
                                     registered_type,
                                     expected_value_type,
-                                    transforms[expected_value_type],
+                                    transforms[expected_value_type][0],
+                                    transforms[expected_value_type][1],
                                 )
-                deserializer = candidate[-1]
+                deserializer = candidate[2]
         if deserializer:
             deserialized = deserializer(value)
             if RUNTIME_TYPECHECKS and not is_subhint(
