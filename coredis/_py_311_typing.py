@@ -1,22 +1,17 @@
 from __future__ import annotations
 
+from collections.abc import Hashable
 from typing import Any, TypeAlias
 
 from .typing import MutableSet, RedisError, ResponsePrimitive
-
-#: Represents the structure of hashable response types (i.e. those that can
-#: be members of sets or keys for maps)
-HashableResponseType: TypeAlias = (
-    ResponsePrimitive | tuple[ResponsePrimitive, ...] | frozenset[ResponsePrimitive]
-)
 
 #: Represents the total structure of any response for any redis command.
 ResponseType: TypeAlias = (
     ResponsePrimitive
     | list[Any]
-    | MutableSet[HashableResponseType]
+    | MutableSet[Hashable]
     | dict[
-        HashableResponseType,
+        Hashable,
         Any,
     ]
     | RedisError

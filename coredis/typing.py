@@ -177,9 +177,9 @@ Parameters = list[T_co] | Set[T_co] | tuple[T_co, ...] | ValuesView[T_co] | Iter
 ResponsePrimitive = StringT | int | float | bool | None
 
 if sys.version_info >= (3, 12):
-    from ._py_312_typing import HashableResponseType, JsonType, ResponseType
+    from ._py_312_typing import JsonType, ResponseType
 else:
-    from ._py_311_typing import HashableResponseType, JsonType, ResponseType
+    from ._py_311_typing import JsonType, ResponseType
 
 
 __all__ = [
@@ -195,7 +195,6 @@ __all__ = [
     "Generic",
     "Generator",
     "Hashable",
-    "HashableResponseType",
     "Iterable",
     "Iterator",
     "JsonType",
