@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v4.23.0
+-------
+Release Date: 2025-06-19
+
+* Bug Fix
+
+  * Fix busy loop in pubsub consumer when it isn't subscribed
+    to any channel or pattern.
+
 v4.22.0
 -------
 Release Date: 2025-05-06
@@ -1908,5 +1917,6 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
