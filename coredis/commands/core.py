@@ -7371,7 +7371,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         command_arguments: CommandArgList = []
 
         if version is not None:
-            command_arguments.append(version)
+            command_arguments.extend([PrefixToken.VERSION, version])
 
         return await self.execute_command(
             CommandName.LOLWUT, *command_arguments, callback=AnyStrCallback[AnyStr]()
