@@ -113,6 +113,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         }
         self._message_queue: asyncio.Queue[PubSubMessage | None] = asyncio.Queue()
         self._consumer_task: asyncio.Task[None] | None = None
+        self._subscribed = asyncio.Event()
         self.reset()
 
     @property
@@ -171,6 +172,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         # subscribe twice to these patterns, once for the command and again
         # for the reconnection.
         self.patterns.update(new_patterns)
+        self._subscribed.set()
 
     async def punsubscribe(self, *patterns: StringT) -> None:
         """
@@ -202,6 +204,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         # subscribe twice to these channels, once for the command and again
         # for the reconnection.
         self.channels.update(new_channels)
+        self._subscribed.set()
 
     async def unsubscribe(self, *channels: StringT) -> None:
         """
@@ -375,6 +378,9 @@ class BasePubSub(Generic[AnyStr, PoolT]):
                 if inspect.isawaitable(handler_response):
                     await handler_response
                 return None
+        if not (self.channels or self.patterns):
+            self._subscribed.clear()
+
         return message
 
     async def _consumer(self) -> None:
@@ -387,7 +393,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
                     ):
                         self._message_queue.put_nowait(await self.handle_message(response))
                 else:
-                    await asyncio.sleep(0)
+                    await self._subscribed.wait()
             except asyncio.CancelledError:
                 break
             except ConnectionError:
@@ -485,6 +491,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         self.channels = {}
         self.patterns = {}
         self.initialized = False
+        self._subscribed.clear()
 
     async def reset_connections(self, exc: BaseException | None = None) -> None:
         pass
@@ -674,6 +681,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         for new_channel in new_channels.keys():
             await self.execute_command(CommandName.SSUBSCRIBE, new_channel, sharded=True)
         self.channels.update(new_channels)
+        self._subscribed.set()
 
     async def unsubscribe(self, *channels: StringT) -> None:
         """
@@ -886,6 +894,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         self.channels = {}
         self.patterns = {}
         self.initialized = False
+        self._subscribed.clear()
 
     async def aclose(self) -> None:
         """
