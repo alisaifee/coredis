@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v4.23.1
+-------
+Release Date: 2025-06-20
+
+* Bug Fix
+
+  * Ensure pubsub consumer task cleanly exists when the pubsub instance
+    has been shutdown with `close` or `aclose`
+
 v4.23.0
 -------
 Release Date: 2025-06-19
@@ -1917,6 +1926,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
