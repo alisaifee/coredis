@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from coredis.client import Client
 
 
-class ValueTypes(enum.IntEnum):
+class RedisValueTypes(enum.IntEnum):
     VALUE_UNKNOWN = 0
     VALUE_NULL = 1
     VALUE_STRING = 2
@@ -48,11 +48,11 @@ PROCEDURE_CALLS = {
 }
 
 SCALAR_MAPPING = {
-    ValueTypes.VALUE_INTEGER: int,
-    ValueTypes.VALUE_BOOLEAN: lambda v: b(v) == b"true",
-    ValueTypes.VALUE_DOUBLE: float,
-    ValueTypes.VALUE_STRING: lambda v: v,
-    ValueTypes.VALUE_NULL: lambda _: None,
+    RedisValueTypes.VALUE_INTEGER: int,
+    RedisValueTypes.VALUE_BOOLEAN: lambda v: b(v) == b"true",
+    RedisValueTypes.VALUE_DOUBLE: float,
+    RedisValueTypes.VALUE_STRING: lambda v: v,
+    RedisValueTypes.VALUE_NULL: lambda _: None,
 }
 
 
@@ -101,21 +101,21 @@ class QueryCallback(
         self, entity: Any, max_label_id: int, max_relation_id: int, max_property_id: int
     ) -> tuple[int, int, int]:
         result_type = entity[0]
-        if result_type == ValueTypes.VALUE_NODE:
+        if result_type == RedisValueTypes.VALUE_NODE:
             for label_id in entity[1][1]:
                 max_label_id = max(max_label_id, label_id)
             for property_id in [k[0] for k in entity[1][2]]:
                 max_property_id = max(max_property_id, property_id)
-        elif result_type == ValueTypes.VALUE_EDGE:
+        elif result_type == RedisValueTypes.VALUE_EDGE:
             max_relation_id = max(max_relation_id, entity[1][1])
             for property_id in [k[0] for k in entity[1][4]]:
                 max_property_id = max(max_property_id, property_id)
-        elif result_type == ValueTypes.VALUE_PATH:
+        elif result_type == RedisValueTypes.VALUE_PATH:
             for segment in entity[1]:
                 max_label_id, max_relation_id, max_property_id = self.fetch_max_ids(
                     segment, max_label_id, max_relation_id, max_property_id
                 )
-        elif result_type == ValueTypes.VALUE_ARRAY:
+        elif result_type == RedisValueTypes.VALUE_ARRAY:
             for segment in entity[1]:
                 max_label_id, max_relation_id, max_property_id = self.fetch_max_ids(
                     segment, max_label_id, max_relation_id, max_property_id
@@ -170,21 +170,21 @@ class QueryCallback(
     def parse_entity(self, entity):
         result_type = entity[0]
         if result_type in [
-            ValueTypes.VALUE_NULL,
-            ValueTypes.VALUE_STRING,
-            ValueTypes.VALUE_INTEGER,
-            ValueTypes.VALUE_BOOLEAN,
-            ValueTypes.VALUE_DOUBLE,
+            RedisValueTypes.VALUE_NULL,
+            RedisValueTypes.VALUE_STRING,
+            RedisValueTypes.VALUE_INTEGER,
+            RedisValueTypes.VALUE_BOOLEAN,
+            RedisValueTypes.VALUE_DOUBLE,
         ]:
             return SCALAR_MAPPING[result_type](entity[1])
-        elif result_type == ValueTypes.VALUE_MAP:
+        elif result_type == RedisValueTypes.VALUE_MAP:
             it = iter(entity[1])
             return dict(zip(it, map(self.parse_entity, it)))
-        elif result_type == ValueTypes.VALUE_ARRAY:
+        elif result_type == RedisValueTypes.VALUE_ARRAY:
             return [self.parse_entity(k) for k in entity[1]]
-        elif result_type == ValueTypes.VALUE_POINT:
+        elif result_type == RedisValueTypes.VALUE_POINT:
             return tuple(map(float, entity[1]))
-        elif result_type == ValueTypes.VALUE_EDGE:
+        elif result_type == RedisValueTypes.VALUE_EDGE:
             return GraphRelation(
                 id=entity[1][0],
                 type=self.relationships[entity[1][1]],
@@ -194,7 +194,7 @@ class QueryCallback(
                     self.properties[k[0]]: self.parse_entity((k[1], k[2])) for k in entity[1][4]
                 },
             )
-        elif result_type == ValueTypes.VALUE_NODE:
+        elif result_type == RedisValueTypes.VALUE_NODE:
             return GraphNode(
                 id=entity[1][0],
                 labels={self.labels[k] for k in entity[1][1]},
@@ -202,7 +202,7 @@ class QueryCallback(
                     self.properties[k[0]]: self.parse_entity((k[1], k[2])) for k in entity[1][2]
                 },
             )
-        elif result_type == ValueTypes.VALUE_PATH:
+        elif result_type == RedisValueTypes.VALUE_PATH:
             nodes, relations = entity[1]
             nodes = self.parse_entity(nodes)
             relations = self.parse_entity(relations)

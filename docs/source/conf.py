@@ -88,7 +88,7 @@ autodoc_typehints_format = "short"
 autodoc_preserve_defaults = True
 autodoc_type_aliases = {
     "KeyT": "~coredis.typing.KeyT",
-    "ValueT": "~coredis.typing.ValueT",
+    "RedisValueT": "~coredis.typing.RedisValueT",
     "StringT": "~coredis.typing.StringT",
     "ResponsePrimitive": "~coredis.typing.ResponsePrimitive",
     "ResponseType": "~coredis.typing.ResponseType",
