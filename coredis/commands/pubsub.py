@@ -479,7 +479,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         return thread
 
     async def _consumer(self) -> None:
-        while True:
+        while self.initialized:
             try:
                 if self.subscribed:
                     if response := await self._retry_policy.call_with_retries(
@@ -489,8 +489,6 @@ class BasePubSub(Generic[AnyStr, PoolT]):
                         self._message_queue.put_nowait(await self.handle_message(response))
                 else:
                     await self._subscribed.wait()
-            except asyncio.CancelledError:
-                break
             except ConnectionError:
                 await asyncio.sleep(0)
 
