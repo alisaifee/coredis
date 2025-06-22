@@ -64,41 +64,47 @@ jobs:
         extensions: ["True"]
         label: [""]
         include:
-          - python-version: "3.12"
+          - python-version: "3.13"
             redis-version: next
             test_params: "-m '(not (dragonfly or valkey or redict))'"
             runtime_type_checks: "True"
             label: ""
-          - python-version: "3.12"
+          - python-version: "3.13"
             redis-version: latest
             test_params: "-m '(not (dragonfly or valkey or redict))'"
             extensions: "False"
             runtime_type_checks: "True"
             label: ""
-          - python-version: "3.12"
+          - python-version: "3.13"
             redis-version: latest
             test_params: "-m '(not (dragonfly or valkey or redict))'"
             runtime_type_checks: "True"
             orjson: "True"
             label: ""
-          - python-version: "3.12"
+          - python-version: "3.13"
+            redis-version: latest
+            test_params: "-m '(not (dragonfly or valkey or redict))'"
+            runtime_type_checks: "True"
+            uvloop: "True"
+            label: ""
+          - python-version: "3.13"
             redis-version: 7.4
             test_params: "-m '(not (dragonfly or valkey or redict))'"
             runtime_type_checks: "False"
             label: ""
-          - python-version: "3.12"
+          - python-version: "3.13"
             redis-version: latest
             test_params: "-m dragonfly"
             label: "Dragonfly"
-          - python-version: "3.12"
+          - python-version: "3.13"
             redis-version: 7.0
             test_params: "-m valkey"
             label: "Valkey"
-          - python-version: "3.12"
+          - python-version: "3.13"
             redis-version: 8.0
             test_params: "-m valkey"
             label: "Valkey"
-          - python-version: "3.12"
+          - python-version: "3.13"
             redis-version: "7.0"
             test_params: "-m redict"
             label: "Redict"
