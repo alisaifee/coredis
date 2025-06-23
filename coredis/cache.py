@@ -246,7 +246,7 @@ class LRUCache(Generic[ET]):
     def clear(self) -> None:
         self.__cache.clear()
 
-    def popitem(self) -> bool:
+    def popitem(self) -> Any:
         """
         Recursively remove the oldest entry. If
         the oldest entry is another LRUCache trigger
@@ -257,14 +257,14 @@ class LRUCache(Generic[ET]):
             oldest = next(iter(self.__cache))
             item = self.__cache[oldest]
         except StopIteration:
-            return False
+            return None
 
         if isinstance(item, LRUCache):
-            if item.popitem():
-                return True
-        self.__cache.popitem(last=False)
-
-        return True
+            if popped := item.popitem():
+                return popped
+        if entry := self.__cache.popitem(last=False):
+            return entry[1]
+        return None
 
     def shrink(self) -> None:
         """
@@ -274,11 +274,11 @@ class LRUCache(Generic[ET]):
         """
 
         if self.max_bytes > 0 and asizeof is not None:
-            while asizeof.asizeof(self.__cache) > self.max_bytes:
-                if not self.popitem():
-                    # nothing left to remove
-
+            cur_size = asizeof.asizeof(self.__cache)
+            while cur_size > self.max_bytes:
+                if (popped := self.popitem()) is None:
                     return
+                cur_size -= asizeof.asizeof(popped)
 
     def __repr__(self) -> str:
         if asizeof is not None:
