@@ -12,6 +12,7 @@ import time
 import warnings
 import weakref
 from collections import defaultdict, deque
+from contextlib import suppress
 from typing import TYPE_CHECKING, Any, cast
 
 import async_timeout
@@ -690,17 +691,15 @@ class BaseConnection(asyncio.BaseProtocol):
         self.noreply_set = False
         self._parser.on_disconnect()
         if self._transport:
-            try:
+            with suppress(RuntimeError):
                 self._transport.close()
-            # Raised if event loop is already closed.
-            except RuntimeError:  # noqa
-                pass
 
         disconnect_exc = self._last_error or ConnectionError("connection lost")
         while self._read_waiters:
             waiter = self._read_waiters.pop()
             if not waiter.done():
-                waiter.cancel()
+                with suppress(RuntimeError):
+                    waiter.cancel()
         while True:
             try:
                 request = self._requests.popleft()
