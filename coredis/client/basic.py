@@ -989,7 +989,12 @@ class Redis(Client[AnyStr]):
         )
         try:
             keys = KeySpec.extract_keys(command.name, *command.arguments)
-            cacheable = command.name in CACHEABLE_COMMANDS and len(keys) == 1 and not self.noreply
+            cacheable = (
+                command.name in CACHEABLE_COMMANDS
+                and len(keys) == 1
+                and not self.noreply
+                and self._decodecontext.get() is None
+            )
             cached = None
             use_cached = False
             if self.cache:

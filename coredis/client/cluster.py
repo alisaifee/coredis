@@ -930,6 +930,7 @@ class RedisCluster(
                     and command.name in CACHEABLE_COMMANDS
                     and len(keys) == 1
                     and not self.noreply
+                    and self._decodecontext.get() is None
                 )
                 cached = None
                 use_cached = False
