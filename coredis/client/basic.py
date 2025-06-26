@@ -995,8 +995,10 @@ class Redis(Client[AnyStr]):
                 and not self.noreply
                 and self._decodecontext.get() is None
             )
-            cached = None
+            cached_reply = None
+            cache_hit = False
             use_cached = False
+            reply = None
             if self.cache:
                 if connection.tracking_client_id != self.cache.get_client_id(connection):
                     self.cache.reset()
@@ -1007,7 +1009,7 @@ class Redis(Client[AnyStr]):
                     self.cache.invalidate(*keys)
                 elif cacheable:
                     try:
-                        cached = cast(
+                        cached_reply = cast(
                             R,
                             self.cache.get(
                                 command.name,
@@ -1016,11 +1018,10 @@ class Redis(Client[AnyStr]):
                             ),
                         )
                         use_cached = random.random() * 100.0 < min(100.0, self.cache.confidence)
+                        cache_hit = True
                     except KeyError:
-                        cached = None
-            if use_cached and cached:
-                return cached
-            else:
+                        pass
+            if not (use_cached and cached_reply):
                 request = await connection.create_request(
                     command.name,
                     *command.arguments,
@@ -1038,22 +1039,19 @@ class Redis(Client[AnyStr]):
                     return None  # type: ignore
                 if isinstance(callback, AsyncPreProcessingCallback):
                     await callback.pre_process(self, reply)
-                response = callback(
-                    reply,
-                    version=self.protocol_version,
-                )
-                if self.cache and cacheable:
-                    if cached:
-                        self.cache.feedback(
-                            command.name, keys[0], *command.arguments, match=cached == response
-                        )
+            if self.cache and cacheable:
+                if cache_hit and not use_cached:
+                    self.cache.feedback(
+                        command.name, keys[0], *command.arguments, match=cached_reply == reply
+                    )
+                if not cache_hit:
                     self.cache.put(
                         command.name,
                         keys[0],
                         *command.arguments,
-                        value=cast(ResponseType, response),
+                        value=reply,
                     )
-                return response
+            return callback(cached_reply if cache_hit else reply, version=self.protocol_version)
         except RedisError:
             connection.disconnect()
             raise

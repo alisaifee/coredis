@@ -932,8 +932,10 @@ class RedisCluster(
                     and not self.noreply
                     and self._decodecontext.get() is None
                 )
-                cached = None
+                cache_hit = False
+                cached_reply = None
                 use_cached = False
+                reply = None
                 if self.cache:
                     if r.tracking_client_id != self.cache.get_client_id(r):
                         self.cache.reset()
@@ -942,7 +944,7 @@ class RedisCluster(
                         self.cache.invalidate(*keys)
                     elif cacheable:
                         try:
-                            cached = cast(
+                            cached_reply = cast(
                                 R,
                                 self.cache.get(
                                     command.name,
@@ -951,12 +953,11 @@ class RedisCluster(
                                 ),
                             )
                             use_cached = random.random() * 100.0 < min(100.0, self.cache.confidence)
+                            cache_hit = True
                         except KeyError:
-                            cached = None
+                            pass
 
-                if use_cached and cached:
-                    return cached
-                else:
+                if not (use_cached and cached_reply):
                     request = await r.create_request(
                         command.name,
                         *command.arguments,
@@ -969,34 +970,39 @@ class RedisCluster(
                         self.connection_pool.release(r)
 
                     reply = await request
-                    response = None
                     maybe_wait = [
                         await self._ensure_wait(command, r),
                         await self._ensure_persistence(command, r),
                     ]
-                    if not self.noreply:
-                        if isinstance(callback, AsyncPreProcessingCallback):
-                            await callback.pre_process(
-                                self,
-                                reply,
-                            )
-                        response = callback(
-                            reply,
-                            version=self.protocol_version,
-                        )
                     await asyncio.gather(*maybe_wait)
-                    if self.cache and cacheable:
-                        if cached:
-                            self.cache.feedback(
-                                command.name, keys[0], *command.arguments, match=cached == response
-                            )
-                        self.cache.put(
-                            command.name,
-                            keys[0],
-                            *command.arguments,
-                            value=cast(ResponseType, response),
+                if self.noreply:
+                    return  # type: ignore
+                else:
+                    if isinstance(callback, AsyncPreProcessingCallback):
+                        await callback.pre_process(
+                            self,
+                            reply,
                         )
-                    return response  # type: ignore
+                    response = callback(
+                        cached_reply if cache_hit else reply,
+                        version=self.protocol_version,
+                    )
+                    if self.cache and cacheable:
+                        if cache_hit and not use_cached:
+                            self.cache.feedback(
+                                command.name,
+                                keys[0],
+                                *command.arguments,
+                                match=cached_reply == reply,
+                            )
+                        if not cache_hit:
+                            self.cache.put(
+                                command.name,
+                                keys[0],
+                                *command.arguments,
+                                value=reply,
+                            )
+                    return response
             except (RedisClusterException, BusyLoadingError, asyncio.CancelledError):
                 raise
             except MovedError as e:
