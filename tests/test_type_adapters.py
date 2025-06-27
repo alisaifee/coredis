@@ -29,7 +29,7 @@ class TestTransformers:
         ):
             await client.get("fubar").transform(int)
         with pytest.raises(
-            LookupError, match="No registered serializer to serialize SerializableValue\\[int\\]"
+            LookupError, match="No registered serializer to serialize int"
         ):
             await client.set("fubar", SerializableValue(1))
 

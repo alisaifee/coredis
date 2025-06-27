@@ -417,7 +417,7 @@ class TypeAdapter:
                 self.__serializer_cache[value_type] = transform_function
         if not transform_function:
             raise LookupError(
-                f"No registered serializer to serialize SerializableValue[{self.format_type(value_type)}]"
+                f"No registered serializer to serialize {self.format_type(value_type)}"
             )
         return transform_function(value.value)
 
