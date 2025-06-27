@@ -274,19 +274,19 @@ class CoreCommands(CommandMixin[AnyStr]):
         command_arguments: CommandArgList = []
 
         if ex is not None:
-            command_arguments.append("EX")
+            command_arguments.append(PrefixToken.EX)
             command_arguments.append(normalized_seconds(ex))
 
         if px is not None:
-            command_arguments.append("PX")
+            command_arguments.append(PrefixToken.PX)
             command_arguments.append(normalized_milliseconds(px))
 
         if exat is not None:
-            command_arguments.append("EXAT")
+            command_arguments.append(PrefixToken.EXAT)
             command_arguments.append(normalized_time_seconds(exat))
 
         if pxat is not None:
-            command_arguments.append("PXAT")
+            command_arguments.append(PrefixToken.PXAT)
             command_arguments.append(normalized_time_milliseconds(pxat))
 
         if persist:
@@ -597,19 +597,19 @@ class CoreCommands(CommandMixin[AnyStr]):
         command_arguments: CommandArgList = [key, value]
 
         if ex is not None:
-            command_arguments.append("EX")
+            command_arguments.append(PrefixToken.EX)
             command_arguments.append(normalized_seconds(ex))
 
         if px is not None:
-            command_arguments.append("PX")
+            command_arguments.append(PrefixToken.PX)
             command_arguments.append(normalized_milliseconds(px))
 
         if exat is not None:
-            command_arguments.append("EXAT")
+            command_arguments.append(PrefixToken.EXAT)
             command_arguments.append(normalized_time_seconds(exat))
 
         if pxat is not None:
-            command_arguments.append("PXAT")
+            command_arguments.append(PrefixToken.PXAT)
             command_arguments.append(normalized_time_milliseconds(pxat))
 
         if keepttl:
@@ -1243,7 +1243,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             command_arguments.append(protover)
 
         if password:
-            command_arguments.append("AUTH")
+            command_arguments.append(PrefixToken.AUTH)
             command_arguments.append(username or "default")
             command_arguments.append(password)
 
@@ -1985,7 +1985,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         if condition is not None:
             command_arguments.append(condition)
-        command_arguments.append("FIELDS")
+        command_arguments.append(PrefixToken.FIELDS)
         command_arguments.append(len(list(fields)))
         command_arguments.extend(fields)
 
@@ -2749,15 +2749,15 @@ class CoreCommands(CommandMixin[AnyStr]):
             command_arguments.append(PureToken.REPLACE)
 
         if auth:
-            command_arguments.append("AUTH")
+            command_arguments.append(PrefixToken.AUTH)
             command_arguments.append(auth)
 
         if username and password:
-            command_arguments.append("AUTH2")
+            command_arguments.append(PrefixToken.AUTH2)
             command_arguments.append(username)
             command_arguments.append(password)
 
-        command_arguments.append("KEYS")
+        command_arguments.append(PrefixToken.KEYS)
         command_arguments.extend(keys)
 
         return self.create_request(
@@ -5277,7 +5277,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         ]
 
         if count is not None:
-            command_arguments.append("COUNT")
+            command_arguments.append(PrefixToken.COUNT)
             command_arguments.append(count)
 
         return self.create_request(
@@ -5306,7 +5306,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         ]
 
         if count is not None:
-            command_arguments.append("COUNT")
+            command_arguments.append(PrefixToken.COUNT)
             command_arguments.append(count)
 
         return self.create_request(
@@ -5526,10 +5526,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         command_arguments: CommandArgList = []
 
         if full:
-            command_arguments.append("FULL")
+            command_arguments.append(PureToken.FULL)
 
             if count is not None:
-                command_arguments.extend(["COUNT", count])
+                command_arguments.extend([PrefixToken.COUNT, count])
 
         return self.create_request(
             CommandName.XINFO_STREAM,
@@ -6635,10 +6635,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         command_arguments: CommandArgList = []
 
         if type_:
-            command_arguments.extend(["TYPE", type_])
+            command_arguments.extend([PrefixToken.TYPE, type_])
 
         if identifiers is not None:
-            command_arguments.append("ID")
+            command_arguments.append(PrefixToken.IDENTIFIER)
             command_arguments.extend(identifiers)
 
         return self.create_request(
