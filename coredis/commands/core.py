@@ -511,14 +511,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         Set the value and expiration in milliseconds of a key
         """
 
-        if isinstance(milliseconds, datetime.timedelta):
-            ms = int(milliseconds.microseconds / 1000)
-            milliseconds = (milliseconds.seconds + milliseconds.days * 24 * 3600) * 1000 + ms
-
         return self.create_request(
             CommandName.PSETEX,
             key,
-            milliseconds,
+            normalized_milliseconds(milliseconds),
             value,
             callback=SimpleStringCallback(),
         )
