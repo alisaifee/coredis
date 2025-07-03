@@ -107,11 +107,17 @@ class Library(Generic[AnyStr]):
         return False
 
     async def initialize(self: LibraryT, replace: bool = False) -> LibraryT:
+        from coredis.pipeline import ClusterPipelineImpl, PipelineImpl  # type: ignore
+
         self._functions.clear()
-        library = (await self.client.function_list(self.name)).get(self.name)
+        if isinstance(self.client, (PipelineImpl, ClusterPipelineImpl)):
+            redis_client = self.client.client
+        else:
+            redis_client = self.client
+        library = (await redis_client.function_list(self.name)).get(self.name)
         if (not library and self.code) or (replace or self.replace):
-            await self.client.function_load(self.code, replace=replace or self.replace)
-            library = (await self.client.function_list(self.name)).get(self.name)
+            await redis_client.function_load(self.code, replace=replace or self.replace)
+            library = (await redis_client.function_list(self.name)).get(self.name)
 
         if not library:
             raise FunctionError(f"No library found for {self.name}")
@@ -320,8 +326,7 @@ class Library(Generic[AnyStr]):
             @functools.wraps(func)
             async def _inner(*args: P.args, **kwargs: P.kwargs) -> R:
                 instance, keys, arguments = split_args(*args, **kwargs)
-                func = instance.functions[function_name]
-                if not func:
+                if (func := instance.functions.get(function_name, None)) is None:
                     raise AttributeError(
                         f"Library {instance.name} has no registered function {function_name}"
                     )
