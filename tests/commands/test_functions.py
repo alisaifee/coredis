@@ -6,7 +6,7 @@ from coredis import PureToken
 from coredis.commands.function import Library
 from coredis.commands.request import CommandRequest
 from coredis.exceptions import NotBusyError, ResponseError
-from coredis.typing import KeyT, StringT, ValueT
+from coredis.typing import KeyT, RedisValueT, StringT
 from tests.conftest import targets
 
 library_definition = """#!lua name=coredis
@@ -191,18 +191,20 @@ class TestLibrary:
             def echo_key(self, key: KeyT) -> CommandRequest[StringT]: ...
 
             @Library.wraps("return_arg")
-            def return_arg(self, value: ValueT) -> CommandRequest[ValueT]: ...
+            def return_arg(self, value: RedisValueT) -> CommandRequest[RedisValueT]: ...
 
             @Library.wraps("default_get")
-            def default_get(self, key: KeyT, value: ValueT) -> CommandRequest[ValueT]: ...
+            def default_get(self, key: KeyT, value: RedisValueT) -> CommandRequest[RedisValueT]: ...
 
             @Library.wraps("default_get", key_spec=["quay"])
             def default_get_variadic(
-                self, quay: str, *values: ValueT
-            ) -> CommandRequest[ValueT]: ...
+                self, quay: str, *values: RedisValueT
+            ) -> CommandRequest[RedisValueT]: ...
 
             @Library.wraps("hmmerge")
-            def hmmerge(self, key: KeyT, **values: ValueT) -> CommandRequest[list[ValueT]]: ...
+            def hmmerge(
+                self, key: KeyT, **values: RedisValueT
+            ) -> CommandRequest[list[RedisValueT]]: ...
 
         lib = await Coredis(client)
         assert await lib.echo_key("bar") == _s("bar")
@@ -231,7 +233,7 @@ class TestLibrary:
             def echo_key(self, key: KeyT) -> CommandRequest[StringT]: ...
 
             @Library.wraps("return_arg")
-            def return_arg(self, value: ValueT) -> CommandRequest[ValueT]: ...
+            def return_arg(self, value: RedisValueT) -> CommandRequest[RedisValueT]: ...
 
         fcall = mocker.spy(client, "fcall")
         fcall_ro = mocker.spy(client, "fcall_ro")
@@ -259,10 +261,10 @@ class TestLibrary:
             def echo_key_ro(self, key: KeyT) -> CommandRequest[StringT]: ...
 
             @Library.wraps("return_arg", readonly=False)
-            def return_arg(self, value: ValueT) -> CommandRequest[ValueT]: ...
+            def return_arg(self, value: RedisValueT) -> CommandRequest[RedisValueT]: ...
 
             @Library.wraps("return_arg", readonly=True)
-            def return_arg_ro(self, value: ValueT) -> CommandRequest[ValueT]: ...
+            def return_arg_ro(self, value: RedisValueT) -> CommandRequest[RedisValueT]: ...
 
         fcall = mocker.spy(client, "fcall")
         fcall_ro = mocker.spy(client, "fcall_ro")

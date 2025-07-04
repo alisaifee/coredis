@@ -16,6 +16,7 @@ from wrapt import ObjectProxy
 
 from coredis._utils import b, hash_slot, nativestr
 from coredis.client import Client, Redis, RedisCluster
+from coredis.commands import CommandRequest
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName, NodeFlag
 from coredis.commands.script import Script
@@ -58,6 +59,7 @@ from coredis.typing import (
     ParamSpec,
     RedisCommand,
     RedisCommandP,
+    RedisValueT,
     ResponseType,
     StringT,
     TypeVar,
@@ -76,6 +78,10 @@ ERRORS_ALLOW_RETRY = (
 )
 
 UNWATCH_COMMANDS = {CommandName.DISCARD, CommandName.EXEC, CommandName.UNWATCH}
+
+
+class PipelineCommandRequest(CommandRequest[R]):
+    pass
 
 
 def wrap_pipeline_method(
@@ -289,6 +295,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         self.explicit_transaction = False
         self.scripts: set[Script[AnyStr]] = set()
         self.timeout = timeout
+        self.type_adapter = client.type_adapter
 
     async def __aenter__(self) -> PipelineImpl[AnyStr]:
         return self
@@ -306,6 +313,17 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
 
     def __bool__(self) -> bool:
         return True
+
+    def create_request(
+        self,
+        name: bytes,
+        *arguments: ValueT,
+        callback: Callable[..., R],
+        execution_parameters: ExecutionParameters | None = None,
+    ) -> CommandRequest[R]:
+        return PipelineCommandRequest(
+            self, name, *arguments, callback=callback, execution_parameters=execution_parameters
+        )
 
     async def reset_pipeline(self) -> None:
         self.command_stack.clear()
@@ -598,7 +616,7 @@ class PipelineImpl(Client[AnyStr], metaclass=PipelineMeta):
         exception: RedisError | None,
         number: int,
         command: bytes,
-        args: Iterable[ValueT],
+        args: Iterable[RedisValueT],
     ) -> None:
         if exception:
             cmd = command.decode("latin-1")
@@ -720,6 +738,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         self.explicit_transaction = False
         self.cache = None  # not implemented.
         self.timeout = timeout
+        self.type_adapter = client.type_adapter
 
     async def watch(self, *keys: KeyT) -> bool:
         if self.explicit_transaction:
@@ -806,7 +825,7 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
         exception: RedisError | None,
         number: int,
         command: bytes,
-        args: Iterable[ValueT],
+        args: Iterable[RedisValueT],
     ) -> None:
         if exception:
             cmd = command.decode("latin-1")
@@ -1017,8 +1036,8 @@ class ClusterPipelineImpl(Client[AnyStr], metaclass=ClusterPipelineMeta):
     ) -> int:
         """Figure out what slot based on command and args"""
 
-        keys: tuple[ValueT, ...] = cast(
-            tuple[ValueT, ...], options.get("keys")
+        keys: tuple[RedisValueT, ...] = cast(
+            tuple[RedisValueT, ...], options.get("keys")
         ) or KeySpec.extract_keys(command, *args)
 
         if not keys:
