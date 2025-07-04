@@ -11,9 +11,7 @@ import pytest
 import coredis
 from coredis._utils import query_param_to_bool
 from coredis.exceptions import (
-    BusyLoadingError,
     ConnectionError,
-    ReadOnlyError,
     RedisError,
 )
 from coredis.typing import RedisCommand
@@ -592,37 +590,6 @@ class TestConnection:
         pool = bad_connection.connection_pool
         assert not pool._available_connections[0].is_connected
 
-    @pytest.mark.max_server_version("6.2.0")
-    async def test_busy_loading_disconnects_socket(self):
-        """
-        If Redis raises a LOADING error, the connection should be
-        disconnected and a BusyLoadingError raised
-        """
-        client = coredis.Redis()
-        with pytest.raises(BusyLoadingError):
-            await client.execute_command(
-                RedisCommand(b"DEBUG", (b"ERROR", b"LOADING fake message"))
-            )
-        pool = client.connection_pool
-        assert len(pool._available_connections) == 1
-        assert not pool._available_connections[0].is_connected
-
-    @pytest.mark.max_server_version("6.2.0")
-    async def test_busy_loading_from_pipeline_immediate_command(self):
-        """
-        BusyLoadingErrors should raise from Pipelines that execute a
-        command immediately, like WATCH does.
-        """
-        client = coredis.Redis()
-        pipe = await client.pipeline()
-        with pytest.raises(BusyLoadingError):
-            await pipe.immediate_execute_command(
-                RedisCommand(b"DEBUG", (b"ERROR", b"LOADING fake message"))
-            )
-        pool = client.connection_pool
-        assert not pipe.connection
-        assert len(pool._available_connections) == 1
-
     async def test_busy_loading_from_pipeline(self):
         """
         BusyLoadingErrors should be raised from a pipeline execution
@@ -637,13 +604,6 @@ class TestConnection:
         assert not pipe.connection
         assert len(pool._available_connections) == 1
         assert pool._available_connections[0]._transport
-
-    @pytest.mark.max_server_version("6.2.0")
-    async def test_read_only_error(self):
-        "READONLY errors get turned in ReadOnlyError exceptions"
-        client = coredis.Redis()
-        with pytest.raises(ReadOnlyError):
-            await client.execute_command(b"DEBUG", b"ERROR", b"READONLY blah blah")
 
     def test_connect_from_url_tcp(self):
         connection = coredis.Redis.from_url("redis://localhost")

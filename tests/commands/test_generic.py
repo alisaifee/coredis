@@ -356,13 +356,6 @@ class TestGeneric:
         assert not await client.get("bar")
         assert await clone.get("bar") == _s(1)
 
-    @pytest.mark.max_server_version("6.2.0")
-    async def test_object_encoding(self, client, _s):
-        await client.set("a", "foo")
-        await client.hset("b", {"foo": "1"})
-        assert await client.object_encoding("a") == _s("embstr")
-        assert await client.object_encoding("b") == _s("ziplist")
-
     @pytest.mark.min_server_version("7.0.0")
     async def test_object_encoding_listpack(self, client, _s):
         await client.set("a", "foo")

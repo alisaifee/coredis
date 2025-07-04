@@ -101,19 +101,6 @@ class TestServer:
         with pytest.raises(ResponseError, match="The server is running without a config file"):
             await client.config_rewrite()
 
-    @pytest.mark.max_server_version("6.2.0")
-    @pytest.mark.nocluster
-    async def test_config_set(self, client, _s):
-        data = await client.config_get(["*"])
-        rdbname = data[_s("dbfilename")]
-        try:
-            assert await client.config_set({"dbfilename": "redis_py_test.rdb"})
-            assert (await client.config_get(["dbfilename"]))[_s("dbfilename")] == _s(
-                "redis_py_test.rdb"
-            )
-        finally:
-            assert await client.config_set({"dbfilename": rdbname})
-
     @pytest.mark.nocluster
     async def test_dbsize(self, client, _s):
         await client.set("a", "foo")
