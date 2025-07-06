@@ -9,7 +9,7 @@ from coredis.typing import (
     Callable,
     ExecutionParameters,
     Generator,
-    SerializableValue,
+    Serializable,
     TypeAdapter,
     TypeVar,
     ValueT,
@@ -50,8 +50,7 @@ class CommandRequest(Awaitable[CommandResponseT]):
         self.execution_parameters = execution_parameters or {}
         self.client: AbstractExecutor = client
         self.arguments = tuple(
-            self.type_adapter.serialize(k) if isinstance(k, SerializableValue) else k
-            for k in arguments
+            self.type_adapter.serialize(k) if isinstance(k, Serializable) else k for k in arguments
         )
 
     def run(self) -> Awaitable[CommandResponseT]:

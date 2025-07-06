@@ -129,12 +129,12 @@ class ExecutionParameters(TypedDict):
 KeyT = str | bytes
 
 
-class SerializableValue(Generic[R]):
+class Serializable(Generic[R]):
     """
     Wrapper to be used to pass arbitrary types to redis commands
     to be eventually serialized by :class:`coredis.typing.TypeAdapter.serialize`
 
-    Wrapping a value in :class:`SerializableValue` will pass type checking
+    Wrapping a value in :class:`Serializable` will pass type checking
     wherever a method expects a :class:`coredis.typing.ValueT` - however
     it will still fail if there is no serializer registered through the instance
     of :class:`coredis.typing.TypeAdapter` that is associated with the client.
@@ -148,7 +148,7 @@ class SerializableValue(Generic[R]):
 
       # This will pass type checking but will fail with an :exc:`LookupError`
       # at runtime
-      await client.set("fubar", coredis.typing.SerializableValue(MyThing()))
+      await client.set("fubar", coredis.typing.Serializable(MyThing()))
 
       # however, if a serializer is registered, the above would succeed
       @client.type_adapter.serializer
@@ -174,7 +174,7 @@ class TypeAdapter:
       from decimal import Decimal
       from typing import Any, Mapping, Iterable
       from coredis import Redis
-      from coredis.typing import TypeAdapter, SerializableValue
+      from coredis.typing import TypeAdapter, Serializable
 
       adapter = TypeAdapter()
 
@@ -195,9 +195,9 @@ class TypeAdapter:
           return {key: value_to_decimal(value) for key, value in mapping.items()}
 
       client = coredis.Redis(type_adapter=adapter, decode_responses=True)
-      await client.set("key", SerializableValue(Decimal(1.5)))
-      await client.lpush("list", [SerializableValue(Decimal(1.5))])
-      await client.hset("dict", {"first": SerializableValue(Decimal(1.5))})
+      await client.set("key", Serializable(Decimal(1.5)))
+      await client.lpush("list", [Serializable(Decimal(1.5))])
+      await client.hset("dict", {"first": Serializable(Decimal(1.5))})
       assert Decimal(1.5) == await client.get("key").transform(Decimal)
       assert [Decimal(1.5)] == await client.lrange("list", 0, 0).transform(list[Decimal])
       assert {"first": Decimal(1.5)} == await client.hgetall("dict").transform(dict[str, Decimal])
@@ -396,13 +396,13 @@ class TypeAdapter:
                 "Unable to infer response type from decorated function. Check annotations."
             )
 
-    def serialize(self, value: SerializableValue[R]) -> RedisValueT:
+    def serialize(self, value: Serializable[R]) -> RedisValueT:
         """
         Serializes :paramref:`value` into one of the types represented by
         :data:`~coredis.typing.RedisValueT` using a serializer registered
         via :meth:`register_serializer` or decorated by :meth:`serializer`.
 
-        :param: a value wrapped in :class:`coredis.typing.SerializableValue`
+        :param: a value wrapped in :class:`coredis.typing.Serializable`
         """
         value_type = cast(AdaptableType, infer_hint(value.value))
         if not (transform_function := self.__serializer_cache.get(value_type, None)):
@@ -481,10 +481,10 @@ class TypeAdapter:
 #: defined types. These will eventually be serialized before being
 #: sent to redis.
 #:
-#: Additionally any object wrapped in a :class:`SerializableValue` will be
+#: Additionally any object wrapped in a :class:`Serializable` will be
 #: accepted and will be serialized using an appropriate type adapter
 #: registered with the client. See :ref:`api/typing:custom types` for more details.
-ValueT = str | bytes | int | float | SerializableValue[Any]
+ValueT = str | bytes | int | float | Serializable[Any]
 
 #: The canonical type used for input parameters that represent "strings"
 #: that are transmitted to redis.
@@ -529,7 +529,7 @@ else:
 
 
 __all__ = [
-    "SerializableValue",
+    "Serializable",
     "AnyStr",
     "AsyncIterator",
     "AsyncGenerator",

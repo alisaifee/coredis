@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from coredis.typing import Mapping, MutableMapping, SerializableValue, TypeAdapter
+from coredis.typing import Mapping, MutableMapping, Serializable, TypeAdapter
 from tests.conftest import targets
 
 
@@ -28,10 +28,8 @@ class TestTransformers:
             LookupError, match="No registered deserializer to convert (bytes|str) to int"
         ):
             await client.get("fubar").transform(int)
-        with pytest.raises(
-            LookupError, match="No registered serializer to serialize int"
-        ):
-            await client.set("fubar", SerializableValue(1))
+        with pytest.raises(LookupError, match="No registered serializer to serialize int"):
+            await client.set("fubar", Serializable(1))
 
     async def test_conflicting_types_resolution(self, client):
         client.type_adapter.register(
@@ -47,10 +45,10 @@ class TestTransformers:
             lambda v: pickle.dumps(v),
             lambda v: pickle.loads(v),
         )
-        assert await client.set("intlist", SerializableValue([1, 2, 3]))
-        assert await client.set("strlist", SerializableValue(["1", "2", "3"]))
-        assert await client.set("mixedlist", SerializableValue(["1", "2", 3.0]))
-        assert await client.set("strdict", SerializableValue({"1": "2"}))
+        assert await client.set("intlist", Serializable([1, 2, 3]))
+        assert await client.set("strlist", Serializable(["1", "2", "3"]))
+        assert await client.set("mixedlist", Serializable(["1", "2", 3.0]))
+        assert await client.set("strdict", Serializable({"1": "2"}))
         assert [1, 2, 3] == await client.get("intlist").transform(list[int])
         assert ["1", "2", "3"] == await client.get("strlist").transform(list[str])
         assert ["1", "2", 3.0] == await client.get("mixedlist").transform(list[str | int | float])
@@ -124,10 +122,10 @@ class TestTransformers:
         def _(value: int) -> Decimal:
             return Decimal(value)
 
-        assert await client.set("fubar", SerializableValue(Decimal(1.23)))
+        assert await client.set("fubar", Serializable(Decimal(1.23)))
         assert Decimal(1.23) == await client.get("fubar").transform(Decimal)
 
-        assert await client.set("fubar", SerializableValue({1: 2}))
+        assert await client.set("fubar", Serializable({1: 2}))
         assert {"1": 2} == json.loads(await client.get("fubar"))
 
     async def test_default_collection_deserializers(self, client, _s):
