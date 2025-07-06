@@ -3,6 +3,14 @@
 Changelog
 =========
 
+v4.24.0
+-------
+Release Date: 2025-07-05
+
+* Bug Fix
+
+  * Add support for using library functions with pipelines
+
 v4.23.1
 -------
 Release Date: 2025-06-20
@@ -1926,6 +1934,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
