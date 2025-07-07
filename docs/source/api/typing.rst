@@ -26,7 +26,7 @@ library are accepted via :data:`~coredis.typing.Parameters`.
 Custom types
 ^^^^^^^^^^^^
 
-.. autoclass:: coredis.typing.SerializableValue
+.. autoclass:: coredis.typing.Serializable
    :class-doc-from: both
 .. autoclass:: coredis.typing.TypeAdapter
    :class-doc-from: both
