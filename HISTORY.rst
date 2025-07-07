@@ -3,6 +3,29 @@
 Changelog
 =========
 
+v5.0.0rc1
+---------
+Release Date: 2025-07-07
+
+* Features
+
+  * Add support for using custom types with redis commands
+    by registering serializers and deserializers
+  * Allow stacking pipeline commands syncronously
+  * Expose statically types responses for pipeline commands
+
+
+* Compatibility
+
+  * Add support for redis 8.0 vector set commands
+  * Add support for redis 8.0 hash expiry commands
+  * Remove deprecated pubsub ``listen`` and threaded worker APIs
+  * Remove support for KeyDB
+
+* Performance
+
+  * Streamline client side cache shrinking
+
 v4.24.0
 -------
 Release Date: 2025-07-05
@@ -1934,6 +1957,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
