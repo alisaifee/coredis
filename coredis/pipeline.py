@@ -321,11 +321,6 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
     Any command raising an exception does *not* halt the execution of
     subsequent commands in the pipeline. Instead, the exception is caught
     and its instance is placed into the response list returned by await pipeline.execute()
-    key, _, _, hash_key = await asyncio.gather(*commands)execute().
-    Code iterating over the response list should be able to deal with an
-    instance of an exception as a potential value. In general, these will be
-    ResponseError exceptions, such as those raised when issuing a command
-    on a key of a different datatype.
     """
 
     command_stack: list[PipelineCommandRequest[Any]]
@@ -418,6 +413,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
             self.connection_pool.release(self.connection)
             self.connection = None
 
+    #: :meta private:
     reset_pipeline = clear
 
     @deprecated(

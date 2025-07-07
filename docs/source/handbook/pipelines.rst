@@ -12,7 +12,7 @@ For example:
 
     async def example(client):
         async with await client.pipeline(transaction=True) as pipe:
-            # will return self to send another command
+            # commands is a tuple of awaitables
             commands = (
                 pipe.flushdb(),
                 pipe.set("foo", "bar"),
@@ -21,7 +21,7 @@ For example:
             )
             results = await pipe.execute()
             # results are in order corresponding to your command
-            assert res == (True, True, True, set([b"bar", b"foo"]))
+            assert results == (True, True, True, set([b"bar", b"foo"]))
             # results can also be retrieved from the returns of each command
             assert await asyncio.gather(*commands) == (True, True, True, set[b"bar", b"foo"])
 
