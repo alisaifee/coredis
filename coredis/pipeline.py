@@ -5,6 +5,7 @@ import functools
 import inspect
 import sys
 import textwrap
+import warnings
 from abc import ABCMeta
 from concurrent.futures import CancelledError
 from types import TracebackType
@@ -128,9 +129,17 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
 
     def __await__(self) -> Generator[None, None, CommandResponseT]:
         if hasattr(self, "response"):
-            print(self.response)
             return self.response.__await__()
         else:
+            warnings.warn(
+                """
+Awaiting a pipeline command response before calling `execute()` on the pipeline instance 
+has no effect and returns the pipeline instance itself for backward compatibility.
+
+To add commands to a pipeline simply call the methods synchronously. The awaitable response
+can be awaited after calling `execute()` to retrieve a statically typed response if required.                  
+                """
+            )
             return self.__backward_compatibility_return().__await__()  # type: ignore[return-value]
 
 
