@@ -19,9 +19,9 @@ from ..typing import (
     KeyT,
     Literal,
     Parameters,
+    RedisValueT,
     ResponseType,
     StringT,
-    ValueT,
 )
 from .base import Module, ModuleGroup, module_command
 from .response._callbacks.json import JsonCallback
@@ -96,7 +96,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    def forget(self, key: KeyT, path: ValueT | None = None) -> CommandRequest[int]:
+    def forget(self, key: KeyT, path: RedisValueT | None = None) -> CommandRequest[int]:
         """
         Deletes an element from a path from a json object
 
@@ -118,7 +118,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    def toggle(self, key: KeyT, path: ValueT) -> CommandRequest[JsonType]:
+    def toggle(self, key: KeyT, path: RedisValueT) -> CommandRequest[JsonType]:
         """
         Toggles a boolean value
 
@@ -141,7 +141,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    def clear(self, key: KeyT, path: ValueT | None = None) -> CommandRequest[int]:
+    def clear(self, key: KeyT, path: RedisValueT | None = None) -> CommandRequest[int]:
         """
         Clears all values from an array or an object and sets numeric values to `0`
 
@@ -166,7 +166,7 @@ class Json(ModuleGroup[AnyStr]):
     def set(
         self,
         key: KeyT,
-        path: ValueT,
+        path: RedisValueT,
         value: JsonType,
         condition: Literal[PureToken.NX, PureToken.XX] | None = None,
     ) -> CommandRequest[bool]:
@@ -267,7 +267,9 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    def numincrby(self, key: KeyT, path: ValueT, value: int | float) -> CommandRequest[JsonType]:
+    def numincrby(
+        self, key: KeyT, path: RedisValueT, value: int | float
+    ) -> CommandRequest[JsonType]:
         """
         Increments the numeric value at path by a value
 
@@ -287,7 +289,9 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    def nummultby(self, key: KeyT, path: ValueT, value: int | float) -> CommandRequest[JsonType]:
+    def nummultby(
+        self, key: KeyT, path: RedisValueT, value: int | float
+    ) -> CommandRequest[JsonType]:
         """
         Multiplies the numeric value at path by a value
 
@@ -406,7 +410,7 @@ class Json(ModuleGroup[AnyStr]):
     def arrindex(
         self,
         key: KeyT,
-        path: ValueT,
+        path: RedisValueT,
         value: str | bytes | int | float,
         start: int | None = None,
         stop: int | None = None,
@@ -444,7 +448,7 @@ class Json(ModuleGroup[AnyStr]):
     def arrinsert(
         self,
         key: KeyT,
-        path: ValueT,
+        path: RedisValueT,
         index: int,
         values: Parameters[JsonType],
     ) -> CommandRequest[int | list[int | None] | None]:
@@ -535,7 +539,7 @@ class Json(ModuleGroup[AnyStr]):
         module=MODULE,
     )
     def arrtrim(
-        self, key: KeyT, path: ValueT, start: int, stop: int
+        self, key: KeyT, path: RedisValueT, start: int, stop: int
     ) -> CommandRequest[int | list[int | None] | None]:
         """
         Trims the array at path to contain only the specified inclusive range of indices

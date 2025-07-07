@@ -7,7 +7,7 @@ from coredis import PureToken
 from coredis.client import Client
 from coredis.commands import Script
 from coredis.exceptions import NoScriptError, NotBusyError, ResponseError
-from coredis.typing import AnyStr, KeyT, ValueT
+from coredis.typing import AnyStr, KeyT, RedisValueT
 from tests.conftest import targets
 
 multiply_script = """
@@ -182,7 +182,7 @@ class TestScripting:
         script = client.register_script("return redis.call('GET', KEYS[1]) or ARGV[1]")
 
         @script.wraps()
-        async def default_get(key: KeyT, default: ValueT) -> ValueT: ...
+        async def default_get(key: KeyT, default: RedisValueT) -> RedisValueT: ...
 
         await client.set("key", "redis")
         await default_get("key", "coredis") == "redis"

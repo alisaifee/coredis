@@ -22,12 +22,12 @@ from coredis.typing import (
     Mapping,
     ParamSpec,
     Protocol,
+    RedisValueT,
     ResponsePrimitive,
     ResponseType,
     Sequence,
     StringT,
     TypeVar,
-    ValueT,
     add_runtime_checks,
     runtime_checkable,
 )
@@ -308,8 +308,8 @@ class BoolCallback(ResponseCallback[int | bool, int | bool, bool]):
         return bool(response)
 
 
-class SimpleStringOrIntCallback(ResponseCallback[ValueT, ValueT, bool | int]):
-    def transform(self, response: ValueT, **options: Any) -> bool | int:
+class SimpleStringOrIntCallback(ResponseCallback[RedisValueT, RedisValueT, bool | int]):
+    def transform(self, response: RedisValueT, **options: Any) -> bool | int:
         if isinstance(response, (int, bool)):
             return response
         elif isinstance(response, (str, bytes)):

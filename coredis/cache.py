@@ -18,9 +18,9 @@ from coredis.typing import (
     Literal,
     ModuleType,
     OrderedDict,
+    RedisValueT,
     ResponseType,
     TypeVar,
-    ValueT,
 )
 
 asizeof: ModuleType | None = None
@@ -71,16 +71,16 @@ class CacheStats:
             counter.clear()
             counter[b"__coredis__internal__stats__total"] = total
 
-    def hit(self, key: ValueT) -> None:
+    def hit(self, key: RedisValueT) -> None:
         self.hits[b(key)] += 1
 
-    def miss(self, key: ValueT) -> None:
+    def miss(self, key: RedisValueT) -> None:
         self.misses[b(key)] += 1
 
-    def invalidate(self, key: ValueT) -> None:
+    def invalidate(self, key: RedisValueT) -> None:
         self.invalidations[b(key)] += 1
 
-    def mark_dirty(self, key: ValueT) -> None:
+    def mark_dirty(self, key: RedisValueT) -> None:
         self.dirty[b(key)] += 1
 
     @property
@@ -133,21 +133,23 @@ class AbstractCache(ABC):
         ...
 
     @abstractmethod
-    def get(self, command: bytes, key: ValueT, *args: ValueT) -> ResponseType:
+    def get(self, command: bytes, key: RedisValueT, *args: RedisValueT) -> ResponseType:
         """
         Fetch the cached response for command/key/args combination
         """
         ...
 
     @abstractmethod
-    def put(self, command: bytes, key: ValueT, *args: ValueT, value: ResponseType) -> None:
+    def put(
+        self, command: bytes, key: RedisValueT, *args: RedisValueT, value: ResponseType
+    ) -> None:
         """
         Cache the response for command/key/args combination
         """
         ...
 
     @abstractmethod
-    def invalidate(self, *keys: ValueT) -> None:
+    def invalidate(self, *keys: RedisValueT) -> None:
         """
         Invalidate any cached entries for the provided keys
         """
@@ -172,7 +174,7 @@ class AbstractCache(ABC):
         ...
 
     @abstractmethod
-    def feedback(self, command: bytes, key: ValueT, *args: ValueT, match: bool) -> None:
+    def feedback(self, command: bytes, key: RedisValueT, *args: RedisValueT, match: bool) -> None:
         """
         Provide feedback about a key as having either a match or drift from the actual
         server side value
@@ -359,7 +361,7 @@ class NodeTrackingCache(
     def stats(self) -> CacheStats:
         return self.__stats
 
-    def get(self, command: bytes, key: ValueT, *args: ValueT) -> ResponseType:
+    def get(self, command: bytes, key: RedisValueT, *args: RedisValueT) -> ResponseType:
         try:
             cached = self.__cache.get(b(key)).get(command).get(make_hashable(*args))
             self.__stats.hit(key)
@@ -369,17 +371,19 @@ class NodeTrackingCache(
             self.__stats.miss(key)
             raise
 
-    def put(self, command: bytes, key: ValueT, *args: ValueT, value: ResponseType) -> None:
+    def put(
+        self, command: bytes, key: RedisValueT, *args: RedisValueT, value: ResponseType
+    ) -> None:
         self.__cache.setdefault(b(key), LRUCache()).setdefault(command, LRUCache()).insert(
             make_hashable(*args), value
         )
 
-    def invalidate(self, *keys: ValueT) -> None:
+    def invalidate(self, *keys: RedisValueT) -> None:
         for key in keys:
             self.__stats.invalidate(key)
             self.__cache.remove(b(key))
 
-    def feedback(self, command: bytes, key: ValueT, *args: ValueT, match: bool) -> None:
+    def feedback(self, command: bytes, key: RedisValueT, *args: RedisValueT, match: bool) -> None:
         if not match:
             self.__stats.mark_dirty(key)
             self.invalidate(key)
@@ -583,7 +587,7 @@ class ClusterTrackingCache(AbstractCache):
         except KeyError:
             return None
 
-    def get(self, command: bytes, key: ValueT, *args: ValueT) -> ResponseType:
+    def get(self, command: bytes, key: RedisValueT, *args: RedisValueT) -> ResponseType:
         try:
             cached = self.__cache.get(b(key)).get(command).get(make_hashable(*args))
             self.__stats.hit(key)
@@ -593,17 +597,19 @@ class ClusterTrackingCache(AbstractCache):
             self.__stats.miss(key)
             raise
 
-    def put(self, command: bytes, key: ValueT, *args: ValueT, value: ResponseType) -> None:
+    def put(
+        self, command: bytes, key: RedisValueT, *args: RedisValueT, value: ResponseType
+    ) -> None:
         self.__cache.setdefault(b(key), LRUCache()).setdefault(command, LRUCache()).insert(
             make_hashable(*args), value
         )
 
-    def invalidate(self, *keys: ValueT) -> None:
+    def invalidate(self, *keys: RedisValueT) -> None:
         for key in keys:
             self.__stats.invalidate(key)
             self.__cache.remove(b(key))
 
-    def feedback(self, command: bytes, key: ValueT, *args: ValueT, match: bool) -> None:
+    def feedback(self, command: bytes, key: RedisValueT, *args: RedisValueT, match: bool) -> None:
         if not match:
             self.__stats.mark_dirty(key)
             self.invalidate(key)
@@ -739,20 +745,22 @@ class TrackingCache(AbstractCache):
 
         return None
 
-    def get(self, command: bytes, key: ValueT, *args: ValueT) -> ResponseType:
+    def get(self, command: bytes, key: RedisValueT, *args: RedisValueT) -> ResponseType:
         assert self.instance
 
         return self.instance.get(command, key, *args)
 
-    def put(self, command: bytes, key: ValueT, *args: ValueT, value: ResponseType) -> None:
+    def put(
+        self, command: bytes, key: RedisValueT, *args: RedisValueT, value: ResponseType
+    ) -> None:
         if self.instance:
             self.instance.put(command, key, *args, value=value)
 
-    def invalidate(self, *keys: ValueT) -> None:
+    def invalidate(self, *keys: RedisValueT) -> None:
         if self.instance:
             self.instance.invalidate(*keys)
 
-    def feedback(self, command: bytes, key: ValueT, *args: ValueT, match: bool) -> None:
+    def feedback(self, command: bytes, key: RedisValueT, *args: RedisValueT, match: bool) -> None:
         if self.instance:
             self.instance.feedback(command, key, *args, match=match)
 

@@ -1,12 +1,25 @@
 from __future__ import annotations
 
+import functools
 from typing import Any
 
 from coredis._protocols import AbstractExecutor
-from coredis.typing import Awaitable, Callable, ExecutionParameters, Generator, TypeVar, ValueT
+from coredis.typing import (
+    Awaitable,
+    Callable,
+    ExecutionParameters,
+    Generator,
+    Serializable,
+    TypeAdapter,
+    TypeVar,
+    ValueT,
+)
 
 #: Covariant type used for generalizing :class:`~coredis.command.CommandRequest`
 CommandResponseT = TypeVar("CommandResponseT", covariant=True)
+
+TransformedResponse = TypeVar("TransformedResponse")
+empty_adapter = TypeAdapter()
 
 
 class CommandRequest(Awaitable[CommandResponseT]):
@@ -35,15 +48,61 @@ class CommandRequest(Awaitable[CommandResponseT]):
         self.name = name
         self.callback = callback
         self.execution_parameters = execution_parameters or {}
-        self.arguments = arguments
         self.client: AbstractExecutor = client
+        self.arguments = tuple(
+            self.type_adapter.serialize(k) if isinstance(k, Serializable) else k for k in arguments
+        )
 
     def run(self) -> Awaitable[CommandResponseT]:
         if not hasattr(self, "response"):
             self.response = self.client.execute_command(
                 self, self.callback, **self.execution_parameters
             )
+
         return self.response
+
+    def transform(
+        self, transformer: type[TransformedResponse]
+    ) -> CommandRequest[TransformedResponse]:
+        """
+        :param transformer: A type that was registered with the client
+         using :meth:`~coredis.typing.TypeAdapter.register_deserializer`
+         or decorated by :meth:`~coredis.typing.TypeAdapter.deserializer`
+
+        :return: a command request object that when awaited will return the
+         transformed response
+
+         For example when used with a redis command::
+
+           client = coredis.Redis(....)
+           @client.type_adapter.deserializer
+           def _(value: bytes) -> int:
+               return int(value)
+
+           await client.set("fubar", 1)
+           raw: bytes = await client.get("fubar")
+           int_value: int = await client.get("fubar").transform(int)
+        """
+        transform_func = functools.partial(
+            self.type_adapter.deserialize,
+            return_type=transformer,
+        )
+        return CommandRequest(
+            self.client,
+            self.name,
+            *self.arguments,
+            callback=lambda resp, **kwargs: transform_func(self.callback(resp, **kwargs)),
+            execution_parameters=self.execution_parameters,
+        )
+
+    @property
+    def type_adapter(self) -> TypeAdapter:
+        from coredis.client import Client
+
+        if isinstance(self.client, Client):
+            return self.client.type_adapter
+
+        return empty_adapter
 
     def __await__(self) -> Generator[Any, Any, CommandResponseT]:
         return self.run().__await__()

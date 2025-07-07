@@ -13,9 +13,9 @@ from coredis.typing import (
     Mapping,
     NamedTuple,
     OrderedDict,
+    RedisValueT,
     StringT,
     TypedDict,
-    ValueT,
 )
 
 #: Response from `CLIENT INFO <https://redis.io/commands/client-info>`__
@@ -369,7 +369,7 @@ class ClusterNodeDetail(TypedDict):
     pong_recv: int
     link_state: str
     slots: list[int]
-    migrations: list[dict[str, ValueT]]
+    migrations: list[dict[str, RedisValueT]]
 
 
 class PubSubMessage(TypedDict):

@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from coredis.constants import SYM_CRLF, SYM_DOLLAR, SYM_EMPTY, SYM_STAR
-from coredis.typing import ValueT
+from coredis.typing import RedisValueT
 
 
 class Packer:
     def __init__(self, encoding: str):
         self.encoding = encoding
 
-    def encode(self, value: ValueT) -> bytes:
+    def encode(self, value: RedisValueT) -> bytes:
         """Returns a bytestring representation of the value"""
         if isinstance(value, str):
             return value.encode(self.encoding)
@@ -18,7 +18,7 @@ class Packer:
             return b"%.15g" % value
         return value
 
-    def pack_command(self, command: bytes, *args: ValueT) -> list[bytes]:
+    def pack_command(self, command: bytes, *args: RedisValueT) -> list[bytes]:
         "Pack a series of arguments into the Redis protocol"
         output: list[bytes] = []
         # the client might have included 1 or more literal arguments in
@@ -50,7 +50,7 @@ class Packer:
         output.append(buff)
         return output
 
-    def pack_commands(self, commands: list[tuple[ValueT, ...]]) -> list[bytes]:
+    def pack_commands(self, commands: list[tuple[RedisValueT, ...]]) -> list[bytes]:
         output: list[bytes] = []
         command_arguments: list[bytes] = []
         buffer_length = 0
