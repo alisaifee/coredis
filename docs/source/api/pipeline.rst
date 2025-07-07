@@ -11,4 +11,3 @@ For examples refer to :ref:`handbook/pipelines:pipelines`.
 
 .. autoclass:: coredis.pipeline.ClusterPipeline
    :class-doc-from: both
-
