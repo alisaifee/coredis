@@ -43,9 +43,6 @@ the `Redis command documentation <https://redis.io/commands>`__ to define the AP
 For higher level concepts such as :ref:`handbook/pipelines:pipelines`, :ref:`handbook/scripting:lua scripts`,
 :ref:`handbook/pubsub:pubsub` abstractions are provided to encapsulate recommended patterns.
 
-.. warning:: The command API does **NOT** mirror the official python :pypi:`redis` client.
-   For details about the high level differences refer to :ref:`history:divergence from aredis & redis-py`
-
 Feature Summary
 ===============
 
