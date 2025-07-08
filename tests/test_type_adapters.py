@@ -31,6 +31,7 @@ class TestTransformers:
         with pytest.raises(LookupError, match="No registered serializer to serialize int"):
             await client.set("fubar", Serializable(1))
 
+    @pytest.mark.runtimechecks
     async def test_conflicting_types_resolution(self, client):
         client.type_adapter.register(
             list[int], lambda v: pickle.dumps(v), lambda v: pickle.loads(v)

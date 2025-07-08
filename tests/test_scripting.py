@@ -189,6 +189,7 @@ class TestScripting:
         await client.delete(["key"])
         await default_get("key", "coredis") == "coredis"
 
+    @pytest.mark.runtimechecks
     async def test_wraps_function_key_value_type_checking(self, client):
         script = client.register_script("return redis.call('GET', KEYS[1]) or ARGV[1]")
 
@@ -202,6 +203,7 @@ class TestScripting:
         with pytest.raises(BeartypeCallHintParamViolation):
             await default_get("key", 1) == "coredis"
 
+    @pytest.mark.runtimechecks
     async def test_wraps_class_method(self, client):
         scrpt = Script(None, "return redis.call('GET', KEYS[1]) or ARGV[1]")
 

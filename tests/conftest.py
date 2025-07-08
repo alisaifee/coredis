@@ -188,6 +188,8 @@ async def check_test_constraints(request, client, protocol=3):
             ):
                 return pytest.skip("Skipped for non replicated cluster")
 
+        if marker.name == "runtimechecks" and not RUNTIME_TYPECHECKS:
+            return pytest.skip("Skipped with runtime checks disabled")
         if marker.name == "noruntimechecks" and RUNTIME_TYPECHECKS:
             return pytest.skip("Skipped with runtime checks enabled")
 
