@@ -92,12 +92,12 @@ def wrap_pipeline_method(
     wrapper.__annotations__["return"] = kls
     wrapper.__doc__ = textwrap.dedent(wrapper.__doc__ or "")
     wrapper.__doc__ = f"""
-Pipeline variant of :meth:`coredis.Redis.{func.__name__}` that does not execute
-immediately and instead pushes the command into a stack for batch send.
+.. note:: Pipeline variant of :meth:`coredis.Redis.{func.__name__}` that does not execute
+  immediately and instead pushes the command into a stack for batch send.
 
-The return value can be retrieved either as part of the tuple returned by
-:meth:`~{kls.__name__}.execute` or by awaiting the :class:`~coredis.commands.CommandRequest`
-instance after calling :meth:`~{kls.__name__}.execute`
+  The return value can be retrieved either as part of the tuple returned by
+  :meth:`~{kls.__name__}.execute` or by awaiting the :class:`~coredis.commands.CommandRequest`
+  instance after calling :meth:`~{kls.__name__}.execute`
 
 {wrapper.__doc__}
 """
@@ -105,6 +105,11 @@ instance after calling :meth:`~{kls.__name__}.execute`
 
 
 class PipelineCommandRequest(CommandRequest[CommandResponseT]):
+    """
+    Command request used within a pipeline. Handles immediate execution for WATCH or
+    watched commands outside explicit transactions, otherwise queues the command.
+    """
+
     client: Pipeline[Any] | ClusterPipeline[Any]
     queued_response: Awaitable[bytes | str]
 
@@ -127,6 +132,9 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
             client.pipeline_execute_command(self)  # type: ignore[arg-type]
 
     async def __backward_compatibility_return(self) -> Pipeline[Any] | ClusterPipeline[Any]:
+        """
+        For backward compatibility: returns the pipeline instance when awaited before execute().
+        """
         return self.client
 
     def __await__(self) -> Generator[None, None, CommandResponseT]:
@@ -146,6 +154,10 @@ can be awaited after calling `execute()` to retrieve a statically typed response
 
 
 class ClusterPipelineCommandRequest(PipelineCommandRequest[CommandResponseT]):
+    """
+    Command request for cluster pipelines, tracks position and result for cluster routing.
+    """
+
     def __init__(
         self,
         client: ClusterPipeline[Any],
@@ -163,6 +175,10 @@ class ClusterPipelineCommandRequest(PipelineCommandRequest[CommandResponseT]):
 
 
 class NodeCommands:
+    """
+    Helper for grouping and executing commands on a single cluster node, handling transactions if needed.
+    """
+
     def __init__(
         self,
         client: RedisCluster[AnyStr],
@@ -188,14 +204,11 @@ class NodeCommands:
         connection = self.connection
         commands = self.commands
 
-        # We are going to clobber the commands with the write, so go ahead
-        # and ensure that nothing is sitting there from a previous run.
-
+        # Reset results for all commands before writing.
         for c in commands:
             c.result = None
 
-        # build up all commands into a single request to increase network perf
-        # send all the commands and catch connection and timeout errors.
+        # Batch all commands into a single request for efficiency.
         try:
             if self.in_transaction:
                 self.multi_cmd = await connection.create_request(
@@ -307,20 +320,16 @@ class ClusterPipelineMeta(PipelineMeta):
 
 
 class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
-    """Pipeline for the Redis class"""
-
     """
-    Pipelines provide a way to transmit multiple commands to the Redis server
-    in one transmission.  This is convenient for batch processing, such as
-    saving all the values in a list to Redis.
+    Pipeline for batching multiple commands to a Redis server.
+    Supports transactions and command stacking.
 
     All commands executed within a pipeline are wrapped with MULTI and EXEC
-    calls. This guarantees all commands executed in the pipeline will be
-    executed atomically.
+    calls when :paramref:`transaction` is ``True``.
 
     Any command raising an exception does *not* halt the execution of
     subsequent commands in the pipeline. Instead, the exception is caught
-    and its instance is placed into the response list returned by await pipeline.execute()
+    and its instance is placed into the response list returned by :meth:`execute`
     """
 
     command_stack: list[PipelineCommandRequest[Any]]
@@ -340,7 +349,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         self.watching = False
         self.watches: Parameters[KeyT] | None = watches or None
         self.command_stack = []
-        self.cache = None  # not implemented.
+        self.cache = None
         self.explicit_transaction = False
         self.scripts: set[Script[AnyStr]] = set()
         self.timeout = timeout
@@ -385,30 +394,21 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
 
     async def clear(self) -> None:
         """
-        Empties the pipeline and resets / returns the connection
-        back to the pool
+        Clear the pipeline, reset state, and release the connection back to the pool.
         """
         self.command_stack.clear()
         self.scripts = set()
-        # make sure to reset the connection state in the event that we were
-        # watching something
-
+        # Reset connection state if we were watching something.
         if self.watching and self.connection:
             try:
-                # call this manually since our unwatch or
-                # immediate_execute_command methods can call clear()
                 request = await self.connection.create_request(CommandName.UNWATCH, decode=False)
                 await request
             except ConnectionError:
-                # disconnect will also remove any previous WATCHes
                 self.connection.disconnect()
-        # clean up the other instance attributes
+        # Reset pipeline state and release connection if needed.
         self.watching = False
         self.watches = []
         self.explicit_transaction = False
-        # we can safely return the connection to the pool here since we're
-        # sure we're no longer WATCHing anything
-
         if self.connection:
             self.connection_pool.release(self.connection)
             self.connection = None
@@ -422,19 +422,14 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
     )
     def reset(self) -> CommandRequest[None]:
         """
-        Empties the pipeline and resets / returns the connection
-        back to the pool
-
-        :meta private:
+        Deprecated. Use :meth:`clear` instead.
         """
         return self.clear()  # type: ignore
 
     def multi(self) -> None:
         """
-        Starts a transactional block of the pipeline after WATCH commands
-        are issued. End the transactional block with `execute`.
+        Start a transactional block after WATCH commands. End with `execute()`.
         """
-
         if self.explicit_transaction:
             raise RedisError("Cannot issue nested calls to MULTI")
 
@@ -504,17 +499,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         command: PipelineCommandRequest[R],
     ) -> None:
         """
-        Stages a command to be executed next execute() invocation
-
-        Returns the current Pipeline object back so commands can be
-        chained together, such as:
-
-        pipe = pipe.set('foo', 'bar').incr('baz').decr('bang')
-
-        At some other point, you can then run: pipe.execute(),
-        which will execute all commands queued in the pipe.
-
-        :meta private:
+        Queue a command for execution on the next `execute()` call.
         """
         self.command_stack.append(command)
 
@@ -704,7 +689,9 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
                     )
 
     async def execute(self, raise_on_error: bool = True) -> tuple[Any, ...]:
-        """Executes all the commands in the current pipeline"""
+        """
+        Execute all queued commands in the pipeline. Returns a tuple of results.
+        """
         stack = self.command_stack
 
         if not stack:
@@ -748,9 +735,8 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
 
     def watch(self, *keys: KeyT) -> CommandRequest[bool]:
         """
-        Watches the values at ``keys`` for change. Commands issues after this call
-        will be executed immediately and should be awaited. To switch back to
-        pipeline buffering mode, call :meth:`multi`.
+        Watch the given keys for changes. Switches to immediate execution mode
+        until :meth:`multi` is called.
         """
         if self.explicit_transaction:
             raise RedisError("Cannot issue a WATCH after a MULTI")
@@ -759,13 +745,21 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
 
     def unwatch(self) -> CommandRequest[bool]:
         """
-        Removes watches from any previously specified keys and returns the pipeline
-        to buffered mode.
+        Remove all key watches and return to buffered mode.
         """
         return self.create_request(CommandName.UNWATCH, callback=SimpleStringCallback())
 
 
 class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
+    """
+    Pipeline for batching commands to a Redis Cluster.
+    Handles routing, transactions, and error management across nodes.
+
+    .. warning:: Unlike :class:`Pipeline`, :paramref:`transaction` is ``False`` by
+       default as there is limited support for transactions in redis cluster
+       (only keys in the same slot can be part of a transaction).
+    """
+
     client: RedisCluster[AnyStr]
     connection_pool: ClusterConnectionPool
     command_stack: list[ClusterPipelineCommandRequest[Any]]
@@ -791,7 +785,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
         self.watches: Parameters[KeyT] | None = watches or None
         self.watching = False
         self.explicit_transaction = False
-        self.cache = None  # not implemented.
+        self.cache = None
         self.timeout = timeout
         self.type_adapter = client.type_adapter
 
@@ -811,9 +805,8 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
     def watch(self, *keys: KeyT) -> CommandRequest[bool]:
         """
-        Watches the values at ``keys`` for change. Commands issues after this call
-        will be executed immediately and should be awaited. To switch back to
-        pipeline buffering mode, call :meth:`multi`.
+        Watch the given keys for changes. Switches to immediate execution mode
+        until :meth:`multi` is called.
         """
         if self.explicit_transaction:
             raise RedisError("Cannot issue a WATCH after a MULTI")
@@ -822,8 +815,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
     async def unwatch(self) -> bool:
         """
-        Removes watches from any previously specified keys and returns the pipeline
-        to buffered mode.
+        Remove all key watches and return to buffered mode.
         """
         if self._watched_connection:
             try:
@@ -898,7 +890,9 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
             exception.args = (msg,) + exception.args[1:]
 
     async def execute(self, raise_on_error: bool = True) -> tuple[object, ...]:
-        """Executes all the commands in the current pipeline"""
+        """
+        Execute all queued commands in the cluster pipeline. Returns a tuple of results.
+        """
         await self.connection_pool.initialize()
 
         if not self.command_stack:
@@ -915,8 +909,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
     async def clear(self) -> None:
         """
-        Empties the pipeline and resets / returns the connection
-        back to the pool
+        Clear the pipeline, reset state, and release any held connections.
         """
         self.command_stack = []
 
@@ -981,9 +974,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
             if self.explicit_transaction:
                 request = await conn.create_request(CommandName.DISCARD)
                 await request
-        # If at least one watched key is modified before the EXEC command,
-        # the whole transaction aborts,
-        # and EXEC returns a Null reply to notify that the transaction failed.
+        # If at least one watched key is modified before EXEC, the transaction aborts and EXEC returns null.
 
         if node_commands.exec_cmd and await node_commands.exec_cmd is None:
             raise WatchError
@@ -1006,104 +997,57 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
         self, raise_on_error: bool = True, allow_redirections: bool = True
     ) -> tuple[object, ...]:
         """
-        Sends a bunch of cluster commands to the redis cluster.
-
-        `allow_redirections` If the pipeline should follow `ASK` & `MOVED` responses
-        automatically. If set to false it will raise RedisClusterException.
+        Execute all queued commands in the cluster pipeline, handling redirections
+        and retries as needed.
 
         :meta private:
         """
-        # the first time sending the commands we send all of the commands that were queued up.
-        # if we have to run through it again, we only retry the commands that failed.
+        # On first send, queue all commands. On retry, only failed ones.
         attempt = sorted(self.command_stack, key=lambda x: x.position)
 
-        protocol_version: int = 3
-        # build a list of node objects based on node names we need to
+        # Group commands by node for efficient network usage.
         nodes: dict[str, NodeCommands] = {}
-        # as we move through each command that still needs to be processed,
-        # we figure out the slot number that command maps to, then from the slot determine the node.
         for c in attempt:
-            # refer to our internal node -> slot table that tells us where a given
-            # command should route to.
             slot = self._determine_slot(c.name, *c.arguments)
             node = self.connection_pool.get_node_by_slot(slot)
-
             if node.name not in nodes:
                 nodes[node.name] = NodeCommands(
                     self.client,
                     await self.connection_pool.get_connection_by_node(node),
                     timeout=self.timeout,
                 )
-
             nodes[node.name].append(c)
 
-        # send the commands in sequence.
-        # we  write to all the open sockets for each node first, before reading anything
-        # this allows us to flush all the requests out across the network essentially in parallel
-        # so that we can read them all in parallel as they come back.
-        # we dont' multiplex on the sockets as they come available, but that shouldn't make
-        # too much difference.
+        # Write to all nodes, then read from all nodes in sequence.
         node_commands = nodes.values()
-
         for n in node_commands:
             await n.write()
-
         for n in node_commands:
             await n.read()
 
-        # release all of the redis connections we allocated earlier back into the connection pool.
-        # we used to do this step as part of a try/finally block, but it is really dangerous to
-        # release connections back into the pool if for some reason the socket has data still left
-        # in it from a previous operation. The write and read operations already have try/catch
-        # around them for all known types of errors including connection and socket level errors.
-        # So if we hit an exception, something really bad happened and putting any of
-        # these connections back into the pool is a very bad idea.
-        # the socket might have unread buffer still sitting in it, and then the
-        # next time we read from it we pass the buffered result back from a previous
-        # command and every single request after to that connection will always get
-        # a mismatched result. (not just theoretical, I saw this happen on production x.x).
+        # Release all connections back to the pool only if safe (no unread buffer).
+        # If an error occurred, do not release to avoid buffer mismatches.
         for n in nodes.values():
             protocol_version = n.connection.protocol_version
             self.connection_pool.release(n.connection)
-        # if the response isn't an exception it is a valid response from the node
-        # we're all done with that command, YAY!
-        # if we have more commands to attempt, we've run into problems.
-        # collect all the commands we are allowed to retry.
-        # (MOVED, ASK, or connection errors or timeout errors)
+
+        # Retry MOVED/ASK/connection errors one by one if allowed.
         attempt = sorted(
             (c for c in attempt if isinstance(c.result, ERRORS_ALLOW_RETRY)),
             key=lambda x: x.position,
         )
 
         if attempt and allow_redirections:
-            # RETRY MAGIC HAPPENS HERE!
-            # send these remaing comamnds one at a time using `execute_command`
-            # in the main client. This keeps our retry logic in one place mostly,
-            # and allows us to be more confident in correctness of behavior.
-            # at this point any speed gains from pipelining have been lost
-            # anyway, so we might as well make the best attempt to get the correct
-            # behavior.
-            #
-            # The client command will handle retries for each individual command
-            # sequentially as we pass each one into `execute_command`. Any exceptions
-            # that bubble out should only appear once all retries have been exhausted.
-            #
-            # If a lot of commands have failed, we'll be setting the
-            # flag to rebuild the slots table from scratch. So MOVED errors should
-            # correct .commandsthemselves fairly quickly.
             await self.connection_pool.nodes.increment_reinitialize_counter(len(attempt))
-
             for c in attempt:
                 try:
-                    # send each command individually like we do in the main client.
                     c.result = await self.client.execute_command(
                         RedisCommand(c.name, c.arguments), **c.execution_parameters
                     )
                 except RedisError as e:
                     c.result = e
 
-        # turn the response back into a simple flat array that corresponds
-        # to the sequence of commands issued in the stack in pipeline.execute()
+        # Flatten results to match the original command order.
         response = []
         for c in sorted(self.command_stack, key=lambda x: x.position):
             r = c.result
@@ -1121,8 +1065,9 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
     def _determine_slot(
         self, command: bytes, *args: ValueT, **options: Unpack[ExecutionParameters]
     ) -> int:
-        """Figure out what slot based on command and args"""
-
+        """
+        Determine the hash slot for the given command and arguments.
+        """
         keys: tuple[RedisValueT, ...] = cast(
             tuple[RedisValueT, ...], options.get("keys")
         ) or KeySpec.extract_keys(command, *args)  # type: ignore
@@ -1138,13 +1083,15 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
         return slots.pop()
 
     def _fail_on_redirect(self, allow_redirections: bool) -> None:
+        """
+        Raise if redirections are not allowed in the pipeline.
+        """
         if not allow_redirections:
             raise RedisClusterException("ASK & MOVED redirection not allowed in this pipeline")
 
     def multi(self) -> None:
         """
-        Starts a transactional block of the pipeline after WATCH commands
-        are issued. End the transactional block with `execute`.
+        Start a transactional block after WATCH commands. End with `execute()`.
         """
         if self.explicit_transaction:
             raise RedisError("Cannot issue nested calls to MULTI")
