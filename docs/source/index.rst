@@ -182,16 +182,6 @@ Support for Redis API compatible databases
 **coredis** is known to work with the following databases that have redis protocol compatibility:
 
 - `Dragonfly <https://dragonflydb.io/>`__
-    Dragonfly currently has compatibility with redis 6.2, though there is increasing support for commands from higher versions.
-    For up to date details please refer to the `dragonfly api status documentation <https://www.dragonflydb.io/docs/command-reference/compatibility>`__.
-
-    To see which functionality of **coredis** is tested against dragonfly, checkout a copy of **coredis** and run the
-    following::
-
-        pytest --collect-only -m dragonfly
-
-    .. warning:: Since dragonfly does not yet support RESP3 (which is the default protocol version
-       for **coredis**) connecting to a dragonfly instance requires setting :paramref:`coredis.Redis.protocol_version` to ``2``.
 - `Valkey <https://valkey.io/>`__
 - `Redict <https://redict.io/>`__
 
