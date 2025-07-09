@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from functools import wraps
 from typing import Any
 
-from coredis.typing import Callable, Coroutine, P, R
+from coredis.typing import Awaitable, Callable, P, R
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +31,10 @@ class RetryPolicy(ABC):
 
     async def call_with_retries(
         self,
-        func: Callable[..., Coroutine[Any, Any, R]],
-        before_hook: Callable[..., Coroutine[Any, Any, Any]] | None = None,
-        failure_hook: Callable[..., Coroutine[Any, Any, None]]
-        | dict[type[BaseException], Callable[..., Coroutine[Any, Any, None]]]
+        func: Callable[..., Awaitable[R]],
+        before_hook: Callable[..., Awaitable[Any]] | None = None,
+        failure_hook: Callable[..., Awaitable[Any]]
+        | dict[type[BaseException], Callable[..., Awaitable[None]]]
         | None = None,
     ) -> R:
         """
@@ -159,12 +159,11 @@ class CompositeRetryPolicy(RetryPolicy):
 
     async def call_with_retries(
         self,
-        func: Callable[..., Coroutine[Any, Any, R]],
-        before_hook: Callable[..., Coroutine[Any, Any, Any]] | None = None,
+        func: Callable[..., Awaitable[R]],
+        before_hook: Callable[..., Awaitable[Any]] | None = None,
         failure_hook: None
         | (
-            Callable[..., Coroutine[Any, Any, None]]
-            | dict[type[BaseException], Callable[..., Coroutine[Any, Any, None]]]
+            Callable[..., Awaitable[Any]] | dict[type[BaseException], Callable[..., Awaitable[Any]]]
         ) = None,
     ) -> R:
         """
@@ -214,15 +213,15 @@ class CompositeRetryPolicy(RetryPolicy):
 
 def retryable(
     policy: RetryPolicy,
-    failure_hook: Callable[..., Coroutine[Any, Any, None]] | None = None,
-) -> Callable[[Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R]]]:
+    failure_hook: Callable[..., Awaitable[Any]] | None = None,
+) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
     """
     Decorator to be used to apply a retry policy to a coroutine
     """
 
     def inner(
-        func: Callable[P, Coroutine[Any, Any, R]],
-    ) -> Callable[P, Coroutine[Any, Any, R]]:
+        func: Callable[P, Awaitable[R]],
+    ) -> Callable[P, Awaitable[R]]:
         @wraps(func)
         async def _inner(*args: P.args, **kwargs: P.kwargs) -> R:
             return await policy.call_with_retries(
