@@ -106,9 +106,9 @@ class TestScripting:
         precalculated_sha = multiply.sha
         assert precalculated_sha
         pipe = await client.pipeline()
-        await pipe.set("a", "2")
-        await pipe.get("a")
-        await multiply(keys=["a"], args=[3], client=pipe)
+        pipe.set("a", "2")
+        pipe.get("a")
+        multiply(keys=["a"], args=[3], client=pipe)
         assert await client.script_exists([multiply.sha]) == (False,)
         # [SET worked, GET 'a', result of multiple script]
         assert await pipe.execute() == (True, "2", 6)
@@ -121,9 +121,9 @@ class TestScripting:
         # the multiply script should be reloaded by pipe.execute()
         await client.script_flush()
         pipe = await client.pipeline()
-        await pipe.set("a", "2")
-        await pipe.get("a")
-        await multiply(keys=["a"], args=[3], client=pipe)
+        pipe.set("a", "2")
+        pipe.get("a")
+        multiply(keys=["a"], args=[3], client=pipe)
         assert await client.script_exists([multiply.sha]) == (False,)
         # [SET worked, GET 'a', result of multiple script]
         assert await pipe.execute() == (
@@ -142,7 +142,7 @@ class TestScripting:
         # msgpack.dumps({"name": "joe"})
         msgpack_message_1 = b"\x81\xa4name\xa3Joe"
 
-        await msgpack_hello(args=[msgpack_message_1], client=pipe)
+        msgpack_hello(args=[msgpack_message_1], client=pipe)
 
         assert await client.script_exists([msgpack_hello.sha]) == (False,)
         assert (await pipe.execute())[0] == "hello Joe"
@@ -150,7 +150,7 @@ class TestScripting:
 
         msgpack_hello_broken = client.register_script(msgpack_hello_script_broken)
 
-        await msgpack_hello_broken(args=[msgpack_message_1], client=pipe)
+        msgpack_hello_broken(args=[msgpack_message_1], client=pipe)
         with pytest.raises(ResponseError) as excinfo:
             await pipe.execute()
         assert excinfo.type == ResponseError
@@ -189,7 +189,6 @@ class TestScripting:
         await client.delete(["key"])
         await default_get("key", "coredis") == "coredis"
 
-    @pytest.mark.runtimechecks
     async def test_wraps_function_key_value_type_checking(self, client):
         script = client.register_script("return redis.call('GET', KEYS[1]) or ARGV[1]")
 
@@ -197,11 +196,11 @@ class TestScripting:
         async def default_get(key: KeyT, default: str) -> str: ...
 
         await client.set("key", "redis")
-        await default_get("key", "coredis") == "redis"
+        assert await default_get("key", "coredis") == "redis"
         await client.delete(["key"])
-        await default_get("key", "coredis") == "coredis"
+        assert await default_get("key", "coredis") == "coredis"
         with pytest.raises(BeartypeCallHintParamViolation):
-            await default_get("key", 1) == "coredis"
+            await default_get("key", 1)
 
     @pytest.mark.runtimechecks
     async def test_wraps_class_method(self, client):

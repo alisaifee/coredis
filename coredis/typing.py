@@ -63,7 +63,7 @@ R = TypeVar("R")
 
 
 def safe_beartype(func: Callable[P, R]) -> Callable[P, R]:
-    return beartype(func) if RUNTIME_TYPECHECKS else func
+    return beartype(func)
 
 
 def add_runtime_checks(func: Callable[P, R]) -> Callable[P, R]:

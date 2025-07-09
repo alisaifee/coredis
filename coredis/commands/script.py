@@ -10,7 +10,9 @@ from deprecated.sphinx import versionadded
 
 from coredis._protocols import SupportsScript
 from coredis._utils import b
+from coredis.commands import CommandRequest
 from coredis.exceptions import NoScriptError
+from coredis.retry import ConstantRetryPolicy, retryable
 from coredis.typing import (
     AnyStr,
     Awaitable,
@@ -72,16 +74,16 @@ class Script(Generic[AnyStr]):
         self.sha = hashlib.sha1(b(script)).hexdigest()  # type: ignore
         self.readonly = readonly
 
-    async def __call__(
+    def __call__(
         self,
         keys: Parameters[KeyT] | None = None,
         args: Parameters[RedisValueT] | None = None,
         client: SupportsScript[AnyStr] | None = None,
         readonly: bool | None = None,
-    ) -> ResponseType:
+    ) -> CommandRequest[ResponseType]:
         """
         Executes the script registered in :paramref:`Script.script` using
-        :meth:`coredis.Redis.evalsha`. Additionally if the script was not yet
+        :meth:`coredis.Redis.evalsha`. Additionally, if the script was not yet
         registered on the instance, it will automatically do that as well
         and cache the sha at :data:`Script.sha`
 
@@ -103,20 +105,21 @@ class Script(Generic[AnyStr]):
         if readonly is None:
             readonly = self.readonly
 
+        method = client.evalsha_ro if readonly else client.evalsha
+
         # make sure the Redis server knows about the script
         if isinstance(client, Pipeline):
             # make sure this script is good to go on pipeline
             cast(Pipeline[AnyStr], client).scripts.add(self)
-
-        method = client.evalsha_ro if readonly else client.evalsha
-        try:
-            return await method(self.sha, keys=keys, args=args)
-        except NoScriptError:
-            # Maybe the client is pointed to a different server than the client
-            # that created this instance?
-            # Overwrite the sha just in case there was a discrepancy.
-            self.sha = await client.script_load(self.script)
-            return await method(self.sha, keys=keys, args=args)
+            return method(self.sha, keys=keys, args=args)
+        else:
+            return cast(
+                CommandRequest[ResponseType],
+                retryable(
+                    ConstantRetryPolicy((NoScriptError,), 1, 0),
+                    failure_hook=lambda _: client.script_load(self.script),
+                )(method)(self.sha, keys=keys, args=args),
+            )
 
     async def execute(
         self,
