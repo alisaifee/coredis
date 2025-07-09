@@ -49,21 +49,21 @@ class AbstractExecutor(Protocol):
 
 @runtime_checkable
 class SupportsScript(Protocol[T_co]):  # noqa
-    async def evalsha(
+    def evalsha(
         self,
         sha1: StringT,
         keys: Parameters[KeyT] | None = ...,
         args: Parameters[RedisValueT] | None = ...,
-    ) -> ResponseType: ...
+    ) -> CommandRequest[ResponseType]: ...
 
-    async def evalsha_ro(
+    def evalsha_ro(
         self,
         sha1: StringT,
         keys: Parameters[KeyT] | None = ...,
         args: Parameters[RedisValueT] | None = ...,
-    ) -> ResponseType: ...
+    ) -> CommandRequest[ResponseType]: ...
 
-    async def script_load(self, script: StringT) -> T_co: ...
+    def script_load(self, script: StringT) -> CommandRequest[T_co]: ...
 
 
 @runtime_checkable
