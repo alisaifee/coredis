@@ -53,8 +53,6 @@ from typing_extensions import (
 
 from coredis.config import Config
 
-_runtime_checks = False
-
 RUNTIME_TYPECHECKS = Config.runtime_checks and not TYPE_CHECKING
 
 P = ParamSpec("P")
