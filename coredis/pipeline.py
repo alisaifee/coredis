@@ -148,7 +148,8 @@ has no effect and returns the pipeline instance itself for backward compatibilit
 
 To add commands to a pipeline simply call the methods synchronously. The awaitable response
 can be awaited after calling `execute()` to retrieve a statically typed response if required.                  
-                """
+                """,
+                stacklevel=2,
             )
             return self.__backward_compatibility_return().__await__()  # type: ignore[return-value]
 
