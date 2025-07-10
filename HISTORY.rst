@@ -3,6 +3,14 @@
 Changelog
 =========
 
+v5.0.0rc2
+---------
+Release Date: 2025-07-10
+
+* Bug Fix
+
+  * Fix duplicate command error in using ``transform`` with pipeline
+
 v5.0.0rc1
 ---------
 Release Date: 2025-07-07
@@ -1957,6 +1965,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
