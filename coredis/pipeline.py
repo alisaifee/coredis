@@ -18,6 +18,7 @@ from coredis.client import Client, RedisCluster
 from coredis.commands import CommandRequest, CommandResponseT
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName, NodeFlag
+from coredis.commands.request import TransformedResponse
 from coredis.commands.script import Script
 from coredis.connection import BaseConnection, ClusterConnection, CommandInvocation, Connection
 from coredis.exceptions import (
@@ -120,16 +121,39 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
         *arguments: ValueT,
         callback: Callable[..., CommandResponseT],
         execution_parameters: ExecutionParameters | None = None,
+        parent: CommandRequest[Any] | None = None,
     ) -> None:
         super().__init__(
-            client, name, *arguments, callback=callback, execution_parameters=execution_parameters
+            client,
+            name,
+            *arguments,
+            callback=callback,
+            execution_parameters=execution_parameters,
         )
-        if (client.watching or name == CommandName.WATCH) and not client.explicit_transaction:
-            self.response = client.immediate_execute_command(
-                self, callback=callback, **self.execution_parameters
-            )
-        else:
-            client.pipeline_execute_command(self)  # type: ignore[arg-type]
+        if not parent:
+            if (client.watching or name == CommandName.WATCH) and not client.explicit_transaction:
+                self.response = client.immediate_execute_command(
+                    self, callback=callback, **self.execution_parameters
+                )
+            else:
+                client.pipeline_execute_command(self)  # type: ignore[arg-type]
+        self.parent = parent
+
+    def transform(
+        self, transformer: type[TransformedResponse]
+    ) -> CommandRequest[TransformedResponse]:
+        transform_func = functools.partial(
+            self.type_adapter.deserialize,
+            return_type=transformer,
+        )
+        return cast(type[PipelineCommandRequest[TransformedResponse]], self.__class__)(
+            self.client,
+            self.name,
+            *self.arguments,
+            callback=lambda resp, **k: transform_func(resp),
+            execution_parameters=self.execution_parameters,
+            parent=self,
+        )
 
     async def __backward_compatibility_return(self) -> Pipeline[Any] | ClusterPipeline[Any]:
         """
@@ -140,6 +164,16 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
     def __await__(self) -> Generator[None, None, CommandResponseT]:
         if hasattr(self, "response"):
             return self.response.__await__()
+        elif self.parent:
+            parent = self.parent
+
+            async def _transformed() -> CommandResponseT:
+                if hasattr(parent, "response"):
+                    return self.callback(await parent.response)
+                else:
+                    return await parent  # type: ignore[no-any-return]
+
+            return _transformed().__await__()
         else:
             warnings.warn(
                 """
@@ -166,12 +200,18 @@ class ClusterPipelineCommandRequest(PipelineCommandRequest[CommandResponseT]):
         *arguments: ValueT,
         callback: Callable[..., CommandResponseT],
         execution_parameters: ExecutionParameters | None = None,
+        parent: CommandRequest[Any] | None = None,
     ) -> None:
         self.position: int = 0
         self.result: Any | None = None
         self.asking: bool = False
         super().__init__(
-            client, name, *arguments, callback=callback, execution_parameters=execution_parameters
+            client,
+            name,
+            *arguments,
+            callback=callback,
+            execution_parameters=execution_parameters,
+            parent=parent,
         )
 
 

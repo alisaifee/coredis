@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from decimal import Decimal
 
 import pytest
 
@@ -11,6 +12,7 @@ from coredis.exceptions import (
     TimeoutError,
     WatchError,
 )
+from coredis.typing import Serializable
 from tests.conftest import targets
 
 
@@ -42,6 +44,18 @@ class TestPipeline:
                 2.0,
                 (("z1", 2.0), ("z2", 4)),
             )
+
+    async def test_pipeline_transforms(self, client, _s):
+        client.type_adapter.register(
+            Decimal,
+            lambda v: str(v),
+            lambda v: Decimal(v if isinstance(v, str) else v.decode("utf-8")),
+        )
+        pipe = await client.pipeline()
+        pipe.set("a", Serializable(Decimal(1.23)))
+        r = pipe.get("a").transform(Decimal)
+        assert (True, _s(str(Decimal(1.23)))) == await pipe.execute()
+        assert Decimal(1.23) == await r
 
     async def test_pipeline_length(self, client):
         async with await client.pipeline() as pipe:
