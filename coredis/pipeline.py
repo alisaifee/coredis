@@ -165,13 +165,11 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
         if hasattr(self, "response"):
             return self.response.__await__()
         elif self.parent:
-            parent = self.parent
-
             async def _transformed() -> CommandResponseT:
-                if hasattr(parent, "response"):
-                    return self.callback(await parent.response)
+                if (r := await self.parent) == self.client:  # type: ignore
+                    return r  # type: ignore
                 else:
-                    return await parent  # type: ignore[no-any-return]
+                    return self.callback(r)
 
             return _transformed().__await__()
         else:
