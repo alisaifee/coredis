@@ -24,6 +24,7 @@ from coredis.typing import (
     Iterable,
     Literal,
     StringT,
+    TypeAdapter,
 )
 
 
@@ -195,6 +196,7 @@ class Sentinel(Generic[AnyStr]):
         sentinel_kwargs: dict[str, Any] | None = ...,
         decode_responses: Literal[False] = ...,
         cache: AbstractCache | None = None,
+        type_adapter: TypeAdapter | None = ...,
         **connection_kwargs: Any,
     ) -> None: ...
 
@@ -206,6 +208,7 @@ class Sentinel(Generic[AnyStr]):
         sentinel_kwargs: dict[str, Any] | None = ...,
         decode_responses: Literal[True] = ...,
         cache: AbstractCache | None = None,
+        type_adapter: TypeAdapter | None = None,
         **connection_kwargs: Any,
     ) -> None: ...
 
@@ -216,6 +219,7 @@ class Sentinel(Generic[AnyStr]):
         sentinel_kwargs: dict[str, Any] | None = None,
         decode_responses: bool = False,
         cache: AbstractCache | None = None,
+        type_adapter: TypeAdapter | None = None,
         **connection_kwargs: Any,
     ) -> None:
         """
@@ -236,6 +240,9 @@ class Sentinel(Generic[AnyStr]):
          and ``protocol_version`` options specified in :paramref:`connection_kwargs` will be used.
         :param cache: If provided the cache will be shared between both primaries and replicas
          returned by this sentinel.
+        :param type_adapter: The adapter to use for serializing / deserializing customs types
+         when interacting with redis commands. If provided this adapter will be used for both
+         primaries and replicas returned by this sentinel.
         :param connection_kwargs: are keyword arguments that will be used when
          establishing a connection to a Redis server (i.e. are passed on to the
          constructor of :class:`Redis` for all primary and replicas).
@@ -260,6 +267,7 @@ class Sentinel(Generic[AnyStr]):
         self.min_other_sentinels = min_other_sentinels
         self.connection_kwargs = connection_kwargs
         self.__cache = cache
+        self.__type_adapter = type_adapter
         self.connection_kwargs["decode_responses"] = self.sentinel_kwargs["decode_responses"] = (
             decode_responses
         )
@@ -406,6 +414,7 @@ class Sentinel(Generic[AnyStr]):
                 **connection_kwargs,
             ),
             cache=self.__cache,
+            type_adapter=self.__type_adapter,
         )
 
     @overload
@@ -461,4 +470,5 @@ class Sentinel(Generic[AnyStr]):
                 **connection_kwargs,
             ),
             cache=self.__cache,
+            type_adapter=self.__type_adapter,
         )
