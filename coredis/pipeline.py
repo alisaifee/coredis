@@ -538,6 +538,8 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
     ) -> None:
         """
         Queue a command for execution on the next `execute()` call.
+
+        :meta private:
         """
         self.command_stack.append(command)
 
