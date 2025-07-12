@@ -89,8 +89,6 @@ def wrap_pipeline_method(
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> Awaitable[R]:
         return func(*args, **kwargs)
 
-    wrapper.__annotations__ = wrapper.__annotations__.copy()
-    wrapper.__annotations__["return"] = kls
     wrapper.__doc__ = textwrap.dedent(wrapper.__doc__ or "")
     wrapper.__doc__ = f"""
 .. note:: Pipeline variant of :meth:`coredis.Redis.{func.__name__}` that does not execute
@@ -165,6 +163,7 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
         if hasattr(self, "response"):
             return self.response.__await__()
         elif self.parent:
+
             async def _transformed() -> CommandResponseT:
                 if (r := await self.parent) == self.client:  # type: ignore
                     return r  # type: ignore
