@@ -436,8 +436,6 @@ Determines the type of value stored at a key.
 
 
 
-- Supports client caching: yes
-
 
 
 UNLINK

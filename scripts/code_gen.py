@@ -22,10 +22,12 @@ import coredis.client
 import coredis.pipeline
 from coredis.commands.constants import *  # noqa
 from coredis.commands.monitor import Monitor
+from coredis.globals import CACHEABLE_COMMANDS
 from coredis.pool import ClusterConnectionPool, ConnectionPool  # noqa
 from coredis.response.types import *  # noqa
 from coredis.tokens import PureToken  # noqa
 from coredis.typing import *  # noqa
+from coredis._utils import b
 
 MAX_SUPPORTED_VERSION = version.parse("8.999.999")
 MIN_SUPPORTED_VERSION = version.parse("5.999.999")
@@ -1357,7 +1359,7 @@ def generate_compatibility_section(
 {% if method["version_changed"] %}
 - {{method["version_changed"]}}
 {% endif %}
-{% if method["located"] and getattr(method["located"], "__coredis_command", None) and method["located"].__coredis_command.cache_config %}
+{% if b(sanitized(method["command"]["name"]).upper()) in CACHEABLE_COMMANDS %}
 - Supports client caching: yes
 {% endif -%}
 {% if debug %}
@@ -1592,6 +1594,7 @@ def generate_compatibility_section(
     env.globals.update(
         MIN_SUPPORTED_VERSION=MIN_SUPPORTED_VERSION,
         MAX_SUPPORTED_VERSION=MAX_SUPPORTED_VERSION,
+        CACHEABLE_COMMANDS=CACHEABLE_COMMANDS,
         get_official_commands=get_official_commands,
         inspect=inspect,
         len=len,
@@ -1605,6 +1608,7 @@ def generate_compatibility_section(
         debug=debug,
         sanitized=sanitized,
         getattr=getattr,
+        b=b
     )
     section_template = env.from_string(section_template_str)
     methods_by_group = {}
