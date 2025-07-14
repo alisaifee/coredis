@@ -10,7 +10,6 @@ from deprecated.sphinx import versionadded
 
 from coredis._protocols import SupportsScript
 from coredis._utils import b
-from coredis.commands import CommandRequest
 from coredis.exceptions import NoScriptError
 from coredis.retry import ConstantRetryPolicy, retryable
 from coredis.typing import (
@@ -81,7 +80,7 @@ class Script(Generic[AnyStr]):
         args: Parameters[ValueT] | None = None,
         client: SupportsScript[AnyStr] | None = None,
         readonly: bool | None = None,
-    ) -> CommandRequest[ResponseType]:
+    ) -> Awaitable[ResponseType]:
         """
         Executes the script registered in :paramref:`Script.script` using
         :meth:`coredis.Redis.evalsha`. Additionally, if the script was not yet
@@ -114,13 +113,10 @@ class Script(Generic[AnyStr]):
             cast(Pipeline[AnyStr], client).scripts.add(self)
             return method(self.sha, keys=keys, args=args)
         else:
-            return cast(
-                CommandRequest[ResponseType],
-                retryable(
-                    ConstantRetryPolicy((NoScriptError,), 1, 0),
-                    failure_hook=lambda _: client.script_load(self.script),
-                )(method)(self.sha, keys=keys, args=args),
-            )
+            return retryable(
+                ConstantRetryPolicy((NoScriptError,), 1, 0),
+                failure_hook=lambda _: client.script_load(self.script),
+            )(method)(self.sha, keys=keys, args=args)
 
     async def execute(
         self,
