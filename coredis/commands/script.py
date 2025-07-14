@@ -25,6 +25,7 @@ from coredis.typing import (
     RedisValueT,
     ResponseType,
     StringT,
+    ValueT,
     add_runtime_checks,
     safe_beartype,
 )
@@ -77,7 +78,7 @@ class Script(Generic[AnyStr]):
     def __call__(
         self,
         keys: Parameters[KeyT] | None = None,
-        args: Parameters[RedisValueT] | None = None,
+        args: Parameters[ValueT] | None = None,
         client: SupportsScript[AnyStr] | None = None,
         readonly: bool | None = None,
     ) -> CommandRequest[ResponseType]:
@@ -124,7 +125,7 @@ class Script(Generic[AnyStr]):
     async def execute(
         self,
         keys: Parameters[KeyT] | None = None,
-        args: Parameters[RedisValueT] | None = None,
+        args: Parameters[ValueT] | None = None,
         client: SupportsScript[AnyStr] | None = None,
         readonly: bool | None = None,
     ) -> ResponseType:
