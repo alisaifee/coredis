@@ -8110,6 +8110,37 @@ class CoreCommands(CommandMixin[AnyStr]):
         filter_ef: int | None = ...,
         truth: bool | None = ...,
     ) -> CommandRequest[dict[AnyStr, float]]: ...
+    @overload
+    def vsim(
+        self,
+        key: KeyT,
+        *,
+        element: StringT | None = ...,
+        values: Parameters[float] | bytes | None = ...,
+        withattribs: Literal[True],
+        count: int | None = ...,
+        epsilon: float | None = ...,
+        ef: int | None = ...,
+        filter: StringT | None = ...,
+        filter_ef: int | None = ...,
+        truth: bool | None = ...,
+    ) -> CommandRequest[dict[AnyStr, JsonType]]: ...
+    @overload
+    def vsim(
+        self,
+        key: KeyT,
+        *,
+        element: StringT | None = ...,
+        values: Parameters[float] | bytes | None = ...,
+        withscores: Literal[True],
+        withattribs: Literal[True],
+        count: int | None = ...,
+        epsilon: float | None = ...,
+        ef: int | None = ...,
+        filter: StringT | None = ...,
+        filter_ef: int | None = ...,
+        truth: bool | None = ...,
+    ) -> CommandRequest[dict[AnyStr, tuple[float, JsonType]]]: ...
 
     @versionadded(version="5.0.0")
     @mutually_exclusive_parameters("values", "element", required=True)
@@ -8117,6 +8148,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.VSIM,
         version_introduced="8.0.0",
         group=CommandGroup.VECTOR_SET,
+        arguments={"withattribs": {"version_introduced": "8.1.240"}},
     )
     def vsim(
         self,
@@ -8125,13 +8157,19 @@ class CoreCommands(CommandMixin[AnyStr]):
         element: StringT | None = None,
         values: Parameters[float] | bytes | None = None,
         withscores: bool | None = None,
+        withattribs: bool | None = None,
         count: int | None = None,
         epsilon: float | None = None,
         ef: int | None = None,
         filter: StringT | None = None,
         filter_ef: int | None = None,
         truth: bool | None = None,
-    ) -> CommandRequest[tuple[AnyStr, ...] | dict[AnyStr, float]]:
+    ) -> CommandRequest[
+        tuple[AnyStr, ...]
+        | dict[AnyStr, float]
+        | dict[AnyStr, JsonType]
+        | dict[AnyStr, tuple[float, JsonType]]
+    ]:
         """
         Return elements similar to a given vector or element
 
@@ -8140,6 +8178,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param values: either a byte representation of a 32-bit floating point (FP32) blob of values
          or a sequence of doubles representing the vector to use as the similarity reference.
         :param withscores: whether to return similarity scores for each result
+        :param withattribs: whether to include attributes for for each result
         :param count: number of results to limit to
         :param epsilon: distance threshold; results with distance greater than this are
          excluded.
@@ -8148,7 +8187,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param filter_ef: limits the number of filtering attempts
         :param truth: forces an exact linear scan of all elements bypassing the HSNW graph
         :return: the matching elements or a mapping of the matching elements to their scores
-         if :paramref:`withscores` is ``True``
+         if :paramref:`withscores` is ``True`` and/or their attributes if :paramref:`withattribs`
+         is ``True``
         """
         command_arguments: CommandArgList = [key]
         if values is not None:
@@ -8162,6 +8202,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         if withscores:
             command_arguments.append(PureToken.WITHSCORES)
+        if withattribs:
+            command_arguments.append(b"WITHATTRIBS")
         if count is not None:
             command_arguments.extend([PrefixToken.COUNT, count])
         if ef is not None:
@@ -8177,7 +8219,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return self.create_request(
             CommandName.VSIM,
             *command_arguments,
-            callback=VSimCallback[AnyStr](withscores=withscores),
+            callback=VSimCallback[AnyStr](withscores=withscores, withattribs=withattribs),
         )
 
     @versionadded(version="5.0.0")

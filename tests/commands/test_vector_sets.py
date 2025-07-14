@@ -128,6 +128,15 @@ class TestVectorSets:
             await client.vsim("sample", element="a1", truth=True)
         )[-3:]
 
+    @pytest.mark.min_server_version("8.1.240")
+    async def test_vsim_withattribs(self, client, sample_data, _s):
+        similarity_with_attribs = await client.vsim("sample", element="a1", withattribs=True)
+        assert similarity_with_attribs[_s("a1")] == {"group": "a"}
+        similarity_with_attribs_and_scores = await client.vsim(
+            "sample", element="a1", withattribs=True, withscores=True
+        )
+        assert similarity_with_attribs_and_scores[_s("a1")] == (1.0, {"group": "a"})
+
     async def test_attributes(self, client, _s):
         attributes = {"a": 1, "b": [1, 2, 3], "c": {"4": 5, "6": 7}}
         assert await client.vadd("test", "element", [1, 2, 3], attributes=attributes)
