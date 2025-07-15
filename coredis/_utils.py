@@ -120,10 +120,6 @@ def b(x: ResponseType, encoding: str | None = None) -> bytes:
     return _v.encode(encoding) if encoding else _v.encode()
 
 
-def defaultvalue(value: U | None, default: T) -> U | T:
-    return default if value is None else value
-
-
 def nativestr(x: ResponseType, encoding: str = "utf-8") -> str:
     if isinstance(x, (str, bytes)):
         return x if isinstance(x, str) else x.decode(encoding, "replace")

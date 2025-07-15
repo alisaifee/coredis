@@ -7,7 +7,7 @@ from typing import overload
 from deprecated.sphinx import versionadded
 
 from coredis._json import json
-from coredis._utils import defaultvalue, dict_to_flat_list, tuples_to_flat_list
+from coredis._utils import dict_to_flat_list, tuples_to_flat_list
 from coredis.commands import CommandMixin
 from coredis.commands._utils import (
     normalized_milliseconds,
@@ -5269,8 +5269,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         command_arguments: CommandArgList = [
-            defaultvalue(start, "-"),
-            defaultvalue(end, "+"),
+            start if start is not None else "-",
+            end if end is not None else "+",
         ]
 
         if count is not None:
@@ -5298,8 +5298,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         IDs interval, in reverse order (from greater to smaller IDs) compared to XRANGE
         """
         command_arguments: CommandArgList = [
-            defaultvalue(end, "+"),
-            defaultvalue(start, "-"),
+            end if end is not None else "+",
+            start if start is not None else "-",
         ]
 
         if count is not None:
