@@ -221,8 +221,8 @@ class TestGraph:
     @pytest.mark.parametrize("transaction", [True, False])
     async def test_pipeline(self, client: Redis, transaction):
         p = await client.pipeline(transaction=transaction)
-        await p.graph.query("graph", "CREATE (:Node {name: 'A'})")
-        await p.graph.query("graph", "MATCH (n) return n")
+        p.graph.query("graph", "CREATE (:Node {name: 'A'})")
+        p.graph.query("graph", "MATCH (n) return n")
         assert (
             GraphQueryResult((), (), stats=ANY),
             GraphQueryResult(

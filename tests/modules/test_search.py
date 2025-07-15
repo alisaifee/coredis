@@ -609,9 +609,9 @@ class TestSearch:
             prefixes=["{search}:"],
         )
         p = await client.pipeline()
-        await p.hset("{search}:doc:1", {"name": "hello"})
-        await p.hset("{search}:doc:2", {"name": "world"})
-        await p.search.search(
+        p.hset("{search}:doc:1", {"name": "hello"})
+        p.hset("{search}:doc:2", {"name": "world"})
+        p.search.search(
             "{search}:idx",
             "@name:hello",
         )
@@ -854,9 +854,9 @@ class TestAggregation:
             prefixes=["{search}:"],
         )
         p = await client.pipeline()
-        await p.hset("{search}:doc:1", {"name": "hello"})
-        await p.hset("{search}:doc:2", {"name": "world"})
-        await p.search.aggregate(
+        p.hset("{search}:doc:1", {"name": "hello"})
+        p.hset("{search}:doc:2", {"name": "world"})
+        p.search.aggregate(
             "{search}:idx",
             "*",
             transforms=[Group("@name", [Reduce("count", [0], "count")])],

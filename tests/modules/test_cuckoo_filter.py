@@ -88,11 +88,11 @@ class TestCuckooFilter:
     @pytest.mark.parametrize("transaction", [True, False])
     async def test_pipeline(self, client: Redis, transaction: bool):
         p = await client.pipeline(transaction=transaction)
-        await p.cf.add("filter", 1)
-        await p.cf.add("filter", 2)
-        await p.cf.exists("filter", 2)
-        await p.cf.mexists("filter", [1, 2, 3])
-        await p.cf.delete("filter", 2)
-        await p.cf.exists("filter", 2)
+        p.cf.add("filter", 1)
+        p.cf.add("filter", 2)
+        p.cf.exists("filter", 2)
+        p.cf.mexists("filter", [1, 2, 3])
+        p.cf.delete("filter", 2)
+        p.cf.exists("filter", 2)
 
         assert (True, True, True, (True, True, False), True, False) == await p.execute()

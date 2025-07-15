@@ -50,7 +50,7 @@ class TestTopK:
     @pytest.mark.parametrize("transaction", [True, False])
     async def test_pipeline(self, client: Redis, transaction: bool):
         p = await client.pipeline(transaction=transaction)
-        await p.topk.reserve("topk", 3)
-        await p.topk.add("topk", ["1", "2", "3"])
-        await p.topk.query("topk", ["1", "2", "3"])
+        p.topk.reserve("topk", 3)
+        p.topk.add("topk", ["1", "2", "3"])
+        p.topk.query("topk", ["1", "2", "3"])
         assert (True, (None, None, None), (True, True, True)) == await p.execute()

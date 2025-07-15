@@ -90,10 +90,10 @@ class TestBloomFilter:
     @pytest.mark.parametrize("transaction", [True, False])
     async def test_pipeline(self, client: Redis, transaction: bool):
         p = await client.pipeline(transaction=transaction)
-        await p.bf.add("filter", 1)
-        await p.bf.add("filter", 2)
-        await p.bf.exists("filter", 2)
-        await p.bf.mexists("filter", [1, 2, 3])
+        p.bf.add("filter", 1)
+        p.bf.add("filter", 2)
+        p.bf.exists("filter", 2)
+        p.bf.mexists("filter", [1, 2, 3])
         assert (
             True,
             True,

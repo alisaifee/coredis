@@ -63,13 +63,13 @@ class TestAutocomplete:
     @pytest.mark.parametrize("transaction", [True, False])
     async def test_pipeline(self, client: Redis, transaction: bool, _s):
         p = await client.pipeline(transaction=transaction)
-        await p.autocomplete.sugadd("suggest", "hello", 1)
-        await p.autocomplete.sugadd("suggest", "hello world", 1)
-        await p.autocomplete.suglen("suggest")
-        await p.autocomplete.sugget("suggest", "hel")
-        await p.autocomplete.sugdel("suggest", "hello")
-        await p.autocomplete.sugdel("suggest", "hello world")
-        await p.autocomplete.suglen("suggest")
+        p.autocomplete.sugadd("suggest", "hello", 1)
+        p.autocomplete.sugadd("suggest", "hello world", 1)
+        p.autocomplete.suglen("suggest")
+        p.autocomplete.sugget("suggest", "hel")
+        p.autocomplete.sugdel("suggest", "hello")
+        p.autocomplete.sugdel("suggest", "hello world")
+        p.autocomplete.suglen("suggest")
         assert (
             1,
             2,

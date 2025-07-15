@@ -832,16 +832,16 @@ class TestJson:
     @pytest.mark.parametrize("transaction", [True, False])
     async def test_pipeline(self, client: Redis, transaction: bool):
         p = await client.pipeline(transaction=transaction)
-        await p.json.set(
+        p.json.set(
             "key",
             LEGACY_ROOT_PATH,
             {"a": 1, "b": [2], "c": {"d": "3"}, "e": {"f": [{"g": 4, "h": True}]}},
         )
-        await p.json.numincrby("key", "$.a", 1)
-        await p.json.arrappend("key", [1], "..*")
-        await p.json.strappend("key", "bar", "..*")
-        await p.json.toggle("key", "..*")
-        await p.json.toggle("key", "..*")
+        p.json.numincrby("key", "$.a", 1)
+        p.json.arrappend("key", [1], "..*")
+        p.json.strappend("key", "bar", "..*")
+        p.json.toggle("key", "..*")
+        p.json.toggle("key", "..*")
         assert (
             True,
             [2],
