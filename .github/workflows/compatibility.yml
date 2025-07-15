@@ -65,6 +65,11 @@ jobs:
         label: [""]
         include:
           - python-version: "3.13"
+            redis-version: "8.2-rc1"
+            test_params: "-m '(not (dragonfly or valkey or redict))'"
+            runtime_type_checks: "True"
+            label: ""
+          - python-version: "3.13"
             redis-version: next
             test_params: "-m '(not (dragonfly or valkey or redict))'"
             runtime_type_checks: "True"
