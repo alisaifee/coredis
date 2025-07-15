@@ -91,7 +91,7 @@ jobs:
             test_params: "-m redict"
             label: "Redict"
           - python-version: "pypy-3.10"
-            redis-version: "7.0"
+            redis-version: "8.0"
             test_params: "-m '(not (dragonfly or valkey or redict))' tests/commands tests/test_tracking_cache.py"
             runtime_type_checks: "False"
             extensions: "False"
