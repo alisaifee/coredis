@@ -30,12 +30,12 @@ class TestPipeline:
 
     async def test_pipeline(self, client):
         async with await client.pipeline() as pipe:
-            await pipe.set("a", "a1")
-            await pipe.get("a")
-            await pipe.zadd("z", dict(z1=1))
-            await pipe.zadd("z", dict(z2=4))
-            await pipe.zincrby("z", "z1", 1)
-            await pipe.zrange("z", 0, 5, withscores=True)
+            pipe.set("a", "a1")
+            pipe.get("a")
+            pipe.zadd("z", dict(z1=1))
+            pipe.zadd("z", dict(z2=4))
+            pipe.zincrby("z", "z1", 1)
+            pipe.zrange("z", 0, 5, withscores=True)
             assert await pipe.execute() == (
                 True,
                 "a1",
@@ -64,9 +64,9 @@ class TestPipeline:
             assert pipe
 
             # Fill 'er up!
-            await pipe.set("a", "a1")
-            await pipe.set("b", "b1")
-            await pipe.set("c", "c1")
+            pipe.set("a", "a1")
+            pipe.set("b", "b1")
+            pipe.set("c", "c1")
             assert len(pipe) == 3
             assert pipe
 
@@ -77,9 +77,9 @@ class TestPipeline:
 
     async def test_pipeline_no_transaction(self, client):
         async with await client.pipeline(transaction=False) as pipe:
-            await pipe.set("a", "a1")
-            await pipe.set("b", "b1")
-            await pipe.set("c", "c1")
+            pipe.set("a", "a1")
+            pipe.set("b", "b1")
+            pipe.set("c", "c1")
             assert await pipe.execute() == (True, True, True)
             assert await client.get("a") == "a1"
             assert await client.get("b") == "b1"
@@ -94,10 +94,10 @@ class TestPipeline:
         pipe = await client.pipeline(transaction=False)
         pipe.multi()
         with pytest.raises(RedisError):
-            await pipe.watch("test")
+            pipe.watch("test")
 
         pipe = await client.pipeline(transaction=False)
-        await pipe.set("fubar", 1)
+        pipe.set("fubar", 1)
         with pytest.raises(RedisError):
             pipe.multi()
 
@@ -106,7 +106,7 @@ class TestPipeline:
         no_perm_client = await user_client("testuser", "on", "+@all", "-MULTI")
         async with await no_perm_client.pipeline(transaction=False) as pipe:
             pipe.multi()
-            await pipe.get("fubar")
+            pipe.get("fubar")
             with pytest.raises(AuthorizationError):
                 await pipe.execute()
 
@@ -118,7 +118,7 @@ class TestPipeline:
             a = await pipe.get("a")
 
             pipe.multi()
-            await pipe.set("a", str(int(a) + 1))
+            pipe.set("a", str(int(a) + 1))
             assert await pipe.execute() == (True,)
 
     async def test_pipeline_no_transaction_watch_failure(self, client):
@@ -131,7 +131,7 @@ class TestPipeline:
             await client.set("a", "bad")
 
             pipe.multi()
-            await pipe.set("a", str(int(a) + 1))
+            pipe.set("a", str(int(a) + 1))
 
             with pytest.raises(WatchError):
                 await pipe.execute()
@@ -145,10 +145,10 @@ class TestPipeline:
         """
         await client.set("c", "a")
         async with await client.pipeline() as pipe:
-            await pipe.set("a", "1")
-            await pipe.set("b", "2")
-            await pipe.lpush("c", ["3"])
-            await pipe.set("d", "4")
+            pipe.set("a", "1")
+            pipe.set("b", "2")
+            pipe.lpush("c", ["3"])
+            pipe.set("d", "4")
             result = await pipe.execute(raise_on_error=False)
 
             assert result[0]
@@ -167,7 +167,7 @@ class TestPipeline:
             assert await client.get("d") == "4"
 
             # make sure the pipe was restored to a working state
-            await pipe.set("z", "zzz")
+            pipe.set("z", "zzz")
             assert await pipe.execute() == (True,)
             assert await client.get("z") == "zzz"
 
@@ -179,10 +179,10 @@ class TestPipeline:
         await client.set("c", "a")
         async with await client.pipeline(transaction=False) as pipe:
             pipe.multi()
-            await pipe.set("a", "1")
-            await pipe.set("b", "2")
-            await pipe.lpush("c", ["3"])
-            await pipe.set("d", "4")
+            pipe.set("a", "1")
+            pipe.set("b", "2")
+            pipe.lpush("c", ["3"])
+            pipe.set("d", "4")
             result = await pipe.execute(raise_on_error=False)
 
             assert result[0]
@@ -201,22 +201,22 @@ class TestPipeline:
             assert await client.get("d") == "4"
 
             # make sure the pipe was restored to a working state
-            await pipe.set("z", "zzz")
+            pipe.set("z", "zzz")
             assert await pipe.execute() == (True,)
             assert await client.get("z") == "zzz"
 
     async def test_exec_error_raised(self, client):
         await client.set("c", "a")
         async with await client.pipeline() as pipe:
-            await pipe.set("a", "1")
-            await pipe.set("b", "2")
-            await pipe.lpush("c", ["3"])
-            await pipe.set("d", "4")
+            pipe.set("a", "1")
+            pipe.set("b", "2")
+            pipe.lpush("c", ["3"])
+            pipe.set("d", "4")
             with pytest.raises(ResponseError):
                 await pipe.execute()
 
             # make sure the pipe was restored to a working state
-            await pipe.set("z", "zzz")
+            pipe.set("z", "zzz")
             assert await pipe.execute() == (True,)
             assert await client.get("z") == "zzz"
 
@@ -224,15 +224,15 @@ class TestPipeline:
         await client.set("c", "a")
         async with await client.pipeline(transaction=False) as pipe:
             pipe.multi()
-            await pipe.set("a", "1")
-            await pipe.set("b", "2")
-            await pipe.lpush("c", ["3"])
-            await pipe.set("d", "4")
+            pipe.set("a", "1")
+            pipe.set("b", "2")
+            pipe.lpush("c", ["3"])
+            pipe.set("d", "4")
             with pytest.raises(ResponseError):
                 await pipe.execute()
 
             # make sure the pipe was restored to a working state
-            await pipe.set("z", "zzz")
+            pipe.set("z", "zzz")
             assert await pipe.execute() == (True,)
             assert await client.get("z") == "zzz"
 
@@ -240,14 +240,14 @@ class TestPipeline:
     async def test_parse_error_raised(self, client):
         async with await client.pipeline() as pipe:
             # the zrem is invalid because we don't pass any keys to it
-            await pipe.set("a", "1")
-            await pipe.zrem("b", [])
-            await pipe.set("b", "2")
+            pipe.set("a", "1")
+            pipe.zrem("b", [])
+            pipe.set("b", "2")
             with pytest.raises(ResponseError):
                 await pipe.execute()
 
             # make sure the pipe was restored to a working state
-            await pipe.set("z", "zzz")
+            pipe.set("z", "zzz")
             assert await pipe.execute() == (True,)
             assert await client.get("z") == "zzz"
 
@@ -256,14 +256,14 @@ class TestPipeline:
         async with await client.pipeline(transaction=False) as pipe:
             pipe.multi()
             # the zrem is invalid because we don't pass any keys to it
-            await pipe.set("a", "1")
-            await pipe.zrem("b", [])
-            await pipe.set("b", "2")
+            pipe.set("a", "1")
+            pipe.zrem("b", [])
+            pipe.set("b", "2")
             with pytest.raises(ResponseError):
                 await pipe.execute()
 
             # make sure the pipe was restored to a working state
-            await pipe.set("z", "zzz")
+            pipe.set("z", "zzz")
             assert await pipe.execute() == (True,)
             assert await client.get("z") == "zzz"
 
@@ -280,7 +280,7 @@ class TestPipeline:
             assert b_value == "2"
             pipe.multi()
 
-            await pipe.set("c", "3")
+            pipe.set("c", "3")
             assert await pipe.execute() == (True,)
             assert not pipe.watching
 
@@ -292,7 +292,7 @@ class TestPipeline:
             await pipe.watch("a", "b")
             await client.set("b", "3")
             pipe.multi()
-            await pipe.get("a")
+            pipe.get("a")
             with pytest.raises(WatchError):
                 await pipe.execute()
 
@@ -312,7 +312,7 @@ class TestPipeline:
                 except Exception:
                     break
 
-        [await pipe.set("a{fu}", -1 * i) for i in range(1000)]
+        [pipe.set("a{fu}", -1 * i) for i in range(1000)]
 
         task = asyncio.create_task(overwrite())
         try:
@@ -331,7 +331,7 @@ class TestPipeline:
             await client.set("b", "3")
             await pipe.unwatch()
             assert not pipe.watching
-            await pipe.get("a")
+            pipe.get("a")
             assert await pipe.execute() == ("1",)
 
     async def test_transaction_callable(self, client):
@@ -353,7 +353,7 @@ class TestPipeline:
                 has_run.append("it has")
 
             pipe.multi()
-            await pipe.set("c", str(int(a_value) + int(b_value)))
+            pipe.set("c", str(int(a_value) + int(b_value)))
 
         result = await client.transaction(my_transaction, "a", "b", watch_delay=0.01)
         assert result == (True,)
@@ -362,8 +362,8 @@ class TestPipeline:
     async def test_exec_error_in_no_transaction_pipeline(self, client):
         await client.set("a", "1")
         async with await client.pipeline(transaction=False) as pipe:
-            await pipe.llen("a")
-            await pipe.expire("a", 100)
+            pipe.llen("a")
+            pipe.expire("a", 100)
 
             with pytest.raises(ResponseError):
                 await pipe.execute()
@@ -374,8 +374,8 @@ class TestPipeline:
         key = chr(11) + "abcd" + chr(23)
         await client.set(key, "1")
         async with await client.pipeline(transaction=False) as pipe:
-            await pipe.llen(key)
-            await pipe.expire(key, 100)
+            pipe.llen(key)
+            pipe.expire(key, 100)
 
             with pytest.raises(ResponseError):
                 await pipe.execute()
@@ -387,12 +387,12 @@ class TestPipeline:
         await client.ping()
         pipeline = await client.pipeline(timeout=0.01)
         for i in range(20):
-            await pipeline.hgetall("hash")
+            pipeline.hgetall("hash")
         with pytest.raises(TimeoutError):
             await pipeline.execute()
 
         await client.ping()
         pipeline = await client.pipeline(timeout=5)
         for i in range(20):
-            await pipeline.hgetall("hash")
+            pipeline.hgetall("hash")
         await pipeline.execute()
