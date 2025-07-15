@@ -10,13 +10,10 @@ from coredis.typing import (
     Awaitable,
     Callable,
     ExecutionParameters,
-    KeyT,
-    Parameters,
     Protocol,
     R,
     RedisCommandP,
     ResponseType,
-    StringT,
     TypeVar,
     Unpack,
     ValueT,
@@ -44,25 +41,6 @@ class AbstractExecutor(Protocol):
         callback: Callable[..., R],
         execution_parameters: ExecutionParameters | None = None,
     ) -> CommandRequest[R]: ...
-
-
-@runtime_checkable
-class SupportsScript(Protocol[T_co]):  # noqa
-    def evalsha(
-        self,
-        sha1: StringT,
-        keys: Parameters[KeyT] | None = ...,
-        args: Parameters[ValueT] | None = ...,
-    ) -> CommandRequest[ResponseType]: ...
-
-    def evalsha_ro(
-        self,
-        sha1: StringT,
-        keys: Parameters[KeyT] | None = ...,
-        args: Parameters[ValueT] | None = ...,
-    ) -> CommandRequest[ResponseType]: ...
-
-    def script_load(self, script: StringT) -> CommandRequest[T_co]: ...
 
 
 @runtime_checkable

@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Any, cast
 
 from deprecated.sphinx import versionadded
 
-from coredis._protocols import SupportsScript
 from coredis._utils import b
 from coredis.exceptions import NoScriptError
 from coredis.retry import ConstantRetryPolicy, retryable
@@ -53,7 +52,7 @@ class Script(Generic[AnyStr]):
 
     def __init__(
         self,
-        registered_client: SupportsScript[AnyStr] | None = None,
+        registered_client: coredis.client.Client[AnyStr] | None = None,
         script: StringT | None = None,
         readonly: bool = False,
     ):
@@ -66,7 +65,7 @@ class Script(Generic[AnyStr]):
         :param readonly: If ``True`` the script will be called with
          :meth:`coredis.Redis.evalsha_ro` instead of :meth:`coredis.Redis.evalsha`
         """
-        self.registered_client: SupportsScript[AnyStr] | None = registered_client
+        self.registered_client: coredis.client.Client[AnyStr] | None = registered_client
         self.script: StringT
         if not script:
             raise RuntimeError("No script provided")
@@ -78,7 +77,7 @@ class Script(Generic[AnyStr]):
         self,
         keys: Parameters[KeyT] | None = None,
         args: Parameters[ValueT] | None = None,
-        client: SupportsScript[AnyStr] | None = None,
+        client: coredis.client.Client[AnyStr] | None = None,
         readonly: bool | None = None,
     ) -> Awaitable[ResponseType]:
         """
@@ -122,7 +121,7 @@ class Script(Generic[AnyStr]):
         self,
         keys: Parameters[KeyT] | None = None,
         args: Parameters[ValueT] | None = None,
-        client: SupportsScript[AnyStr] | None = None,
+        client: coredis.client.Client[AnyStr] | None = None,
         readonly: bool | None = None,
     ) -> ResponseType:
         """
