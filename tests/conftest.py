@@ -66,20 +66,6 @@ def uvloop():
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
-@pytest.fixture(scope="function")
-def event_loop():
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-
-    for task in [t for t in asyncio.all_tasks(loop) if not (t.done() or t.cancelled())]:
-        task.cancel()
-        try:
-            loop.run_until_complete(task)
-        except:  # noqa
-            pass
-    loop.close()
-
-
 @total_ordering
 class UnparseableVersion:
     def __init__(self, version: str):
