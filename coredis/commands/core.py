@@ -8203,7 +8203,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         if withscores:
             command_arguments.append(PureToken.WITHSCORES)
         if withattribs:
-            command_arguments.append(b"WITHATTRIBS")
+            command_arguments.append(PureToken.WITHATTRIBS)
         if count is not None:
             command_arguments.extend([PrefixToken.COUNT, count])
         if ef is not None:

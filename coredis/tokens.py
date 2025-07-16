@@ -773,6 +773,11 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``VSIM``
+    WITHATTRIBS = b"WITHATTRIBS"
+
+    #: Used by:
+    #:
     #:  - ``VEMB``
     RAW = b"RAW"
 

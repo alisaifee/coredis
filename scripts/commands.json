@@ -19554,6 +19554,12 @@
                 "optional": true
             },
             {
+                "token": "WITHATTRIBS",
+                "name": "withattribs",
+                "type": "pure-token",
+                "optional": true
+            },
+            {
                 "token": "COUNT",
                 "name": "count",
                 "type": "integer",
