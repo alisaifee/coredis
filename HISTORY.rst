@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v5.0.1
+------
+Release Date: 2025-07-18
+
+* Bug Fix
+
+  * Fix regression caused by ``5.0.0`` which completely broke the use of Sentinel
+    with ``decode_responses=False``.
+
 v5.0.0
 ------
 Release Date: 2025-07-16
@@ -1991,11 +2000,3 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
-
-
-
-
-
-
-
-
