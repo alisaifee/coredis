@@ -72,6 +72,14 @@ class EncodingInsensitiveDict(UserDict[Any, Any]):
         alt = self._alt_key(key)
         return self.data.pop(alt, default)
 
+    def stringify_keys(self) -> dict[str, Any]:
+        d = {}
+        for key, value in self.items():
+            d[key.decode(self._encoding) if isinstance(key, bytes) else key] = (
+                value.stringify_keys() if isinstance(value, EncodingInsensitiveDict) else value
+            )
+        return d
+
 
 @enum.unique
 class CaseAndEncodingInsensitiveEnum(bytes, enum.Enum):

@@ -23,6 +23,7 @@ from coredis.typing import (
     Generic,
     Iterable,
     Literal,
+    ResponsePrimitive,
     StringT,
     TypeAdapter,
 )
@@ -291,18 +292,18 @@ class Sentinel(Generic[AnyStr]):
 
     def __check_primary_state(
         self,
-        state: dict[str, int | bool | str],
+        state: dict[str, ResponsePrimitive],
     ) -> bool:
         if not state["is_master"] or state["is_sdown"] or state["is_odown"]:
             return False
 
-        if int(state["num-other-sentinels"]) < self.min_other_sentinels:
+        if int(state["num-other-sentinels"] or 0) < self.min_other_sentinels:
             return False
 
         return True
 
     def __filter_replicas(
-        self, replicas: Iterable[dict[str, str | int | bool]]
+        self, replicas: Iterable[dict[str, ResponsePrimitive]]
     ) -> list[tuple[str, int]]:
         """Removes replicas that are in an ODOWN or SDOWN state"""
         replicas_alive: list[tuple[str, int]] = []
@@ -310,7 +311,9 @@ class Sentinel(Generic[AnyStr]):
         for replica in replicas:
             if replica["is_odown"] or replica["is_sdown"]:
                 continue
-            replicas_alive.append((nativestr(replica["ip"]), int(replica["port"])))
+            ip, port = replica["ip"], replica["port"]
+            assert ip and port
+            replicas_alive.append((nativestr(ip), int(port)))
 
         return replicas_alive
 
@@ -337,7 +340,7 @@ class Sentinel(Generic[AnyStr]):
                     self.sentinels[0],
                 )
 
-                return nativestr(state["ip"]), int(state["port"])
+                return nativestr(state["ip"]), int(state["port"] or -1)
         raise PrimaryNotFoundError(f"No primary found for {service_name!r}")
 
     async def discover_replicas(self, service_name: str) -> list[tuple[str, int]]:

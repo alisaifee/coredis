@@ -197,7 +197,7 @@ async def test_autodecode(redis_sentinel_server):
     assert await sentinel.primary_for("mymaster", decode_responses=False).ping() == b"PONG"
 
 
-@targets("redis_sentinel", "redis_sentinel_resp2")
+@targets("redis_sentinel", "redis_sentinel_raw", "redis_sentinel_resp2")
 class TestSentinelCommand:
     async def test_primary_for(self, client, host_ip):
         primary = client.primary_for("mymaster")
@@ -215,14 +215,14 @@ class TestSentinelCommand:
     async def test_ckquorum(self, client):
         assert await client.sentinels[0].sentinel_ckquorum("mymaster")
 
-    async def test_sentinel_config_get(self, client):
+    async def test_sentinel_config_get(self, client, _s):
         configs = await client.sentinels[0].sentinel_config_get("*")
-        assert configs["resolve-hostnames"] == "yes"
+        assert configs[_s("resolve-hostnames")] == _s("yes")
 
-    async def test_sentinel_config_set(self, client):
+    async def test_sentinel_config_set(self, client, _s):
         await client.sentinels[0].sentinel_config_set("resolve-hostnames", "no")
         configs = await client.sentinels[0].sentinel_config_get("*")
-        assert configs["resolve-hostnames"] == "no"
+        assert configs[_s("resolve-hostnames")] == _s("no")
 
     async def test_master_address_by_name(self, client):
         master_address = await client.sentinels[0].sentinel_get_master_addr_by_name("mymaster")
@@ -232,7 +232,6 @@ class TestSentinelCommand:
         mock_exec = mocker.patch.object(client.sentinels[0], "execute_command", autospec=True)
         mock_exec.return_value = True
         assert await client.sentinels[0].sentinel_failover("mymaster")
-        print(mock_exec.call_args)
         assert mock_exec.call_args[0][0].arguments[0] == "mymaster"
 
     async def test_flush_config(self, client):
@@ -243,10 +242,10 @@ class TestSentinelCommand:
         assert (await client.primary_for("mymaster").role()).role == "master"
         assert (await client.replica_for("mymaster").role()).role == "slave"
 
-    async def test_infocache(self, client):
+    async def test_infocache(self, client, _s):
         assert await client.sentinels[0].sentinel_flushconfig()
         info_cache = await client.sentinels[0].sentinel_infocache("mymaster")
-        roles = {info["role"] for info in list(info_cache["mymaster"].values())}
+        roles = {info["role"] for info in list(info_cache[_s("mymaster")].values())}
         assert {"master", "slave"} & roles
 
     async def test_sentinel_master(self, client):
@@ -276,10 +275,10 @@ class TestSentinelCommand:
     @pytest.mark.parametrize(
         "client_arguments", [{"cache": coredis.cache.TrackingCache(max_size_bytes=-1)}]
     )
-    async def test_sentinel_cache(self, client, client_arguments, mocker):
+    async def test_sentinel_cache(self, client, client_arguments, mocker, _s):
         await client.primary_for("mymaster").set("fubar", 1)
 
-        assert await client.primary_for("mymaster").get("fubar") == "1"
+        assert await client.primary_for("mymaster").get("fubar") == _s("1")
 
         new_primary = client.primary_for("mymaster")
         new_replica = client.replica_for("mymaster")
@@ -295,8 +294,8 @@ class TestSentinelCommand:
         assert new_primary.cache.healthy
         assert new_replica.cache.healthy
 
-        assert await new_primary.get("fubar") == "1"
-        assert await new_replica.get("fubar") == "1"
+        assert await new_primary.get("fubar") == _s("1")
+        assert await new_replica.get("fubar") == _s("1")
 
         assert replica_spy.call_count == 0
 

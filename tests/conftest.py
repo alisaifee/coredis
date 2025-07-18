@@ -911,6 +911,21 @@ async def redis_sentinel(redis_sentinel_server, request):
 
 
 @pytest.fixture
+async def redis_sentinel_raw(redis_sentinel_server, request):
+    sentinel = coredis.sentinel.Sentinel(
+        [redis_sentinel_server],
+        sentinel_kwargs={},
+        **get_client_test_args(request),
+    )
+    master = sentinel.primary_for("mymaster")
+    await check_test_constraints(request, master)
+    await set_default_test_config(sentinel)
+    await master.flushall()
+
+    return sentinel
+
+
+@pytest.fixture
 async def redis_sentinel_resp2(redis_sentinel_server, request):
     sentinel = coredis.sentinel.Sentinel(
         [redis_sentinel_server],
@@ -1128,12 +1143,20 @@ def redis_server_time():
 @pytest.fixture
 def _s(client):
     def str_or_bytes(value):
-        if client.decode_responses:
-            return str(value)
-        else:
-            value = str(value)
+        if isinstance(client, coredis.client.Client):
+            if client.decode_responses:
+                return str(value)
+            else:
+                value = str(value)
 
-            return value.encode(client.encoding)
+                return value.encode(client.encoding)
+        elif isinstance(client, coredis.sentinel.Sentinel):
+            if client.connection_kwargs.get("decode_responses"):
+                return str(value)
+            else:
+                value = str(value)
+
+            return value.encode(client.connection_kwargs.get("encoding", "utf-8"))
 
     return str_or_bytes
 

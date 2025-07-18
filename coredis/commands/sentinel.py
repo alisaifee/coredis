@@ -16,7 +16,7 @@ from coredis.response._callbacks.sentinel import (
 from coredis.typing import (
     AnyStr,
     RedisValueT,
-    ResponseType,
+    ResponsePrimitive,
     StringT,
 )
 
@@ -105,7 +105,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.SENTINEL_INFO_CACHE)
     def sentinel_infocache(
         self, *nodenames: StringT
-    ) -> CommandRequest[dict[AnyStr, dict[int, dict[str, ResponseType]]]]:
+    ) -> CommandRequest[dict[AnyStr, dict[int, dict[str, ResponsePrimitive]]]]:
         """
         Return cached INFO output from masters and replicas.
         """
@@ -119,7 +119,9 @@ class SentinelCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SENTINEL_MASTER,
     )
-    def sentinel_master(self, service_name: StringT) -> CommandRequest[dict[str, int | bool | str]]:
+    def sentinel_master(
+        self, service_name: StringT
+    ) -> CommandRequest[dict[str, ResponsePrimitive]]:
         """Returns a dictionary containing the specified masters state."""
 
         return CommandRequest(
@@ -129,7 +131,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SENTINEL_MASTERS,
     )
-    def sentinel_masters(self) -> CommandRequest[dict[str, dict[str, int | bool | str]]]:
+    def sentinel_masters(self) -> CommandRequest[dict[str, dict[str, ResponsePrimitive]]]:
         """Returns a list of dictionaries containing each master's state."""
 
         return CommandRequest(self, CommandName.SENTINEL_MASTERS, callback=PrimariesCallback())
@@ -173,7 +175,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     )
     def sentinel_sentinels(
         self, service_name: StringT
-    ) -> CommandRequest[tuple[dict[str, int | bool | str], ...]]:
+    ) -> CommandRequest[tuple[dict[str, ResponsePrimitive], ...]]:
         """Returns a list of sentinels for :paramref:`service_name`"""
 
         return CommandRequest(
@@ -205,7 +207,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     )
     def sentinel_slaves(
         self, service_name: StringT
-    ) -> CommandRequest[tuple[dict[str, int | bool | str], ...]]:
+    ) -> CommandRequest[tuple[dict[str, ResponsePrimitive], ...]]:
         """Returns a list of slaves for paramref:`service_name`"""
 
         return CommandRequest(
@@ -217,7 +219,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     )
     def sentinel_replicas(
         self, service_name: StringT
-    ) -> CommandRequest[tuple[dict[str, int | bool | str], ...]]:
+    ) -> CommandRequest[tuple[dict[str, ResponsePrimitive], ...]]:
         """Returns a list of replicas for :paramref:`service_name`"""
 
         return CommandRequest(
