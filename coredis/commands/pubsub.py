@@ -8,7 +8,7 @@ from functools import partial
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, cast
 
-from anyio import fail_after, sleep
+from anyio import get_cancelled_exc_class, move_on_after, sleep
 from deprecated.sphinx import versionadded
 
 from coredis._utils import CaseAndEncodingInsensitiveEnum, b, hash_slot, nativestr
@@ -228,14 +228,11 @@ class BasePubSub(Generic[AnyStr, PoolT]):
          on the connection. If the ``None`` the command will block forever.
         """
 
-        try:
-            await self.initialize()
-            with fail_after(timeout):
-                return self._filter_ignored_messages(
-                    await self._message_queue.get(), ignore_subscribe_messages
-                )
-        except asyncio.TimeoutError:
-            return None
+        await self.initialize()
+        with move_on_after(timeout):
+            return self._filter_ignored_messages(
+                await self._message_queue.get(), ignore_subscribe_messages
+            )
 
     async def on_connect(self, connection: BaseConnection) -> None:
         """
@@ -311,10 +308,9 @@ class BasePubSub(Generic[AnyStr, PoolT]):
             ),
         )
 
-        try:
-            return await asyncio.wait_for(coro, timeout if (timeout and timeout > 0) else None)
-        except asyncio.TimeoutError:
-            return None
+        timeout = timeout if timeout and timeout > 0 else None
+        with move_on_after(timeout):
+            return await coro
 
     async def handle_message(self, response: ResponseType) -> PubSubMessage | None:
         """
@@ -418,7 +414,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
     ) -> ResponseType | None:
         try:
             return await command(*args)
-        except asyncio.CancelledError:
+        except get_cancelled_exc_class():
             # do not retry if coroutine is cancelled
             if await connection.can_read():  # noqa
                 connection.disconnect()

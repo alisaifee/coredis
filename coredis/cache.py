@@ -463,12 +463,9 @@ class NodeTrackingCache(
 
     async def __compact(self) -> None:
         while True:
-            try:
-                self.__cache.shrink()
-                self.__stats.compact()
-                await sleep(max(1, self.__max_idle_seconds - 1))
-            except asyncio.CancelledError:
-                break
+            self.__cache.shrink()
+            self.__stats.compact()
+            await sleep(max(1, self.__max_idle_seconds - 1))
 
     async def __invalidate(self) -> None:
         while True:
@@ -476,8 +473,6 @@ class NodeTrackingCache(
                 key = b(await self.messages.get())
                 self.invalidate(key)
                 self.messages.task_done()
-            except asyncio.CancelledError:
-                break
             except RuntimeError:  # noqa
                 break
 

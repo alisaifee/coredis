@@ -11,7 +11,7 @@ from abc import ABCMeta
 from ssl import SSLContext
 from typing import TYPE_CHECKING, Any, cast, overload
 
-from anyio import sleep
+from anyio import get_cancelled_exc_class, sleep
 from deprecated.sphinx import versionadded
 
 from coredis._utils import b, hash_slot
@@ -1016,7 +1016,7 @@ class RedisCluster(
                                 value=reply,
                             )
                     return response
-            except (RedisClusterException, BusyLoadingError, asyncio.CancelledError):
+            except (RedisClusterException, BusyLoadingError, get_cancelled_exc_class()):
                 raise
             except MovedError as e:
                 # Reinitialize on ever x number of MovedError.

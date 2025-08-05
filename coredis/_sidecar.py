@@ -84,12 +84,9 @@ class Sidecar:
 
     async def __health_check(self) -> None:
         while True:
-            try:
-                if self.connection:
-                    await self.connection.send_command(b"PING")
-                await sleep(self.health_check_interval)
-            except asyncio.CancelledError:
-                break
+            if self.connection:
+                await self.connection.send_command(b"PING")
+            await sleep(self.health_check_interval)
 
     async def __read_loop(self) -> None:
         while self.connection:
@@ -102,8 +99,6 @@ class Sidecar:
                     continue
                 for m in self.process_message(response):
                     self.messages.put_nowait(m)
-            except asyncio.CancelledError:
-                break
             except ConnectionError:
                 if self.client and self.connection:
                     self.client.connection_pool.release(self.connection)

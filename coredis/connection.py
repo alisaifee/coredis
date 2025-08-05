@@ -15,7 +15,7 @@ from collections import defaultdict, deque
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any, cast
 
-from anyio import fail_after
+from anyio import create_task_group, fail_after, get_cancelled_exc_class
 
 import coredis
 from coredis._packer import Packer
@@ -286,7 +286,7 @@ class BaseConnection(asyncio.BaseProtocol):
         self._connection_error = None
         try:
             await self._connect()
-        except (asyncio.CancelledError, RedisError) as err:
+        except (get_cancelled_exc_class(), RedisError) as err:
             self._connection_error = err
             raise
         except Exception as err:
@@ -450,18 +450,19 @@ class BaseConnection(asyncio.BaseProtocol):
                 self.server_version = nativestr(resp[3])
                 self.client_id = int(resp[7])
             if self.server_version >= "7.2":
-                await asyncio.gather(
-                    await self.create_request(
+                async with create_task_group() as tg:
+                    tg.start_soon(
+                        self.create_request,
                         b"CLIENT SETINFO",
                         b"LIB-NAME",
                         b"coredis",
-                    ),
-                    await self.create_request(
+                    )
+                    tg.start_soon(
+                        self.create_request,
                         b"CLIENT SETINFO",
                         b"LIB-VER",
                         coredis.__version__,
-                    ),
-                )
+                    )
             self.needs_handshake = False
         except AuthenticationRequiredError:
             await self.try_legacy_auth()
@@ -545,10 +546,9 @@ class BaseConnection(asyncio.BaseProtocol):
                     lambda _: self._read_waiters.discard(read_ready_task)
                 )
                 self._read_waiters.add(read_ready_task)
-                await asyncio.wait_for(read_ready_task, timeout)
-            except asyncio.TimeoutError:
-                raise TimeoutError
-            except asyncio.CancelledError:
+                with fail_after(timeout):
+                    await read_ready_task
+            except get_cancelled_exc_class():
                 if not self.is_connected:
                     raise ConnectionError("Connection lost")
                 raise
@@ -570,10 +570,12 @@ class BaseConnection(asyncio.BaseProtocol):
         try:
             with fail_after(timeout):
                 await self._write_ready.wait()
-        except asyncio.TimeoutError:
+        except TimeoutError as e:
             if self._transport:
                 self.disconnect()
-            raise TimeoutError(f"Unable to write after waiting for socket for {timeout} seconds")
+            raise TimeoutError(
+                f"Unable to write after waiting for socket for {timeout} seconds"
+            ) from e
         self._transport.writelines(command)
 
     async def send_command(
@@ -778,10 +780,10 @@ class Connection(BaseConnection):
             try:
                 with fail_after(self._connect_timeout):
                     transport, _ = await connection
-            except asyncio.TimeoutError:
+            except TimeoutError as e:
                 raise ConnectionError(
                     f"Unable to establish a connection within {self._connect_timeout} seconds"
-                )
+                ) from e
             sock = transport.get_extra_info("socket")
             if sock is not None:
                 try:
