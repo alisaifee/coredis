@@ -16,29 +16,21 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
     - uses: actions/checkout@v3
-    - name: Cache dependencies
-      uses: actions/cache@v3
+    - name: Install uv and Python
+      uses: astral-sh/setup-uv@v6
       with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('requirements/**') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
+        enable-cache: true
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+    - name: Setup uv venv
       run: |
-        python -m pip install --upgrade pip setuptools wheel
-        pip install -r requirements/dev.txt
-        python setup.py build
+        uv sync --locked --all-extras --group dev
     - name: Lint with ruff
       run: |
-        ruff check --select I coredis tests
-        ruff check coredis tests
+        uv run ruff check --select I coredis tests
+        uv run ruff check coredis tests
     - name: Check types
       run: |
-        mypy coredis
+        uv run mypy coredis
     - name: Check auto generated sources
       run: |
         make templated-sources
@@ -123,33 +115,25 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Cache dependencies
-      uses: actions/cache@v3
+    - name: Install uv and Python
+      uses: astral-sh/setup-uv@v6
       with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('requirements/**') }}
-        restore-keys: |
-          ${{ runner.os }}-${{ matrix.python-version }}-pip-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
+        enable-cache: true
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+    - name: Setup uv venv
       run: |
-        python -m pip install --upgrade pip setuptools wheel
-        pip install -r requirements/ci.txt
-        python setup.py build
+        uv sync --locked --all-extras --group ci
     - name: Compile extensions
       if: ${{ matrix.extensions == 'True' }}
-      run: python setup.py build_ext --inplace --use-mypyc
+      run: uv run mypyc coredis/constants.py coredis/parser.py coredis/_packer.py
     - name: Install uvloop
       if: ${{ matrix.uvloop == 'True' }}
       run:
-        pip install uvloop
+        uv pip install uvloop
     - name: Install orjson
       if: ${{ matrix.orjson == 'True' }}
       run:
-        pip install orjson
+        uv pip install orjson
     - name: Tests with coverage
       env:
         COREDIS_UVLOOP: ${{ matrix.uvloop }}
@@ -163,7 +147,7 @@ jobs:
         echo "Runtime checks: $COREDIS_RUNTIME_CHECKS"
         echo "UVLoop: $COREDIS_UVLOOP"
         echo "CI: $CI"
-        pytest --reverse --reruns 2 --cov=coredis --cov-report=xml ${{ matrix.test_params }}
+        uv run pytest --reverse --reruns 2 --cov=coredis --cov-report=xml ${{ matrix.test_params }}
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4.2.0
       env:

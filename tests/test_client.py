@@ -4,8 +4,8 @@ import asyncio
 import ssl
 from ssl import SSLError
 
-import async_timeout
 import pytest
+from anyio import fail_after
 from packaging.version import Version
 
 import coredis
@@ -99,7 +99,7 @@ class TestClient:
             await task
         except asyncio.CancelledError:
             pass
-        async with async_timeout.timeout(0.1):
+        with fail_after(0.1):
             assert _s("PONG") == await client.ping()
 
     @pytest.mark.nodragonfly

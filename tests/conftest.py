@@ -7,6 +7,7 @@ import platform
 import socket
 import time
 from functools import total_ordering
+from typing import Any, Generator
 
 import pytest
 import redis
@@ -14,14 +15,12 @@ from packaging import version
 from pytest_lazy_fixtures import lf
 
 import coredis
-import coredis.connection
-import coredis.experimental
-import coredis.parser
 import coredis.sentinel
-from coredis import BlockingConnectionPool
 from coredis._utils import EncodingInsensitiveDict, b, hash_slot, nativestr
 from coredis.cache import TrackingCache
+from coredis.client.basic import Redis
 from coredis.credentials import UserPassCredentialProvider
+from coredis.pool.basic import ConnectionPool
 from coredis.response._callbacks import NoopCallback
 from coredis.typing import (
     RUNTIME_TYPECHECKS,
@@ -58,6 +57,11 @@ SERVER_DEFAULT_ARGS = {
 }
 
 
+@pytest.fixture(scope="session")
+def anyio_backend() -> str:
+    return "trio"
+
+
 @pytest.fixture(scope="session", autouse=True)
 def uvloop():
     if os.environ.get("COREDIS_UVLOOP") == "True":
@@ -81,7 +85,7 @@ class UnparseableVersion:
         return True
 
 
-async def get_module_versions(client):
+async def get_module_versions(client: Redis):
     if str(client) not in MODULE_VERSIONS:
         MODULE_VERSIONS[str(client)] = {}
         try:
@@ -420,11 +424,10 @@ def redis_stack_cluster_server(docker_services):
 
 
 @pytest.fixture(scope="session")
-def redis_sentinel_server(docker_services):
+def redis_sentinel_server(docker_services) -> Generator[tuple[str, int], Any, None]:
     docker_services.start("redis-sentinel")
     docker_services.wait_for_service("redis-sentinel", 26379, ping_socket)
-
-    yield ["localhost", 26379]
+    yield "localhost", 26379
 
 
 @pytest.fixture(scope="session")
@@ -470,15 +473,23 @@ def redict_server(docker_services):
 @pytest.fixture
 async def redis_basic(redis_basic_server, request):
     client = coredis.Redis(
-        "localhost", 6379, decode_responses=True, **get_client_test_args(request)
+        "localhost",
+        6379,
+        decode_responses=True,
+        connection_pool=ConnectionPool(
+            host="localhost",
+            port=6379,
+            decode_responses=True,
+            blocking=False,
+            **get_client_test_args(request),
+        ),
+        **get_client_test_args(request),
     )
-    await check_test_constraints(request, client)
-    await client.flushall()
-    await set_default_test_config(client)
-
-    yield client
-
-    client.connection_pool.disconnect()
+    async with client:
+        await check_test_constraints(request, client)
+        await client.flushall()
+        await set_default_test_config(client)
+        yield client
 
 
 @pytest.fixture
@@ -490,13 +501,11 @@ async def redis_basic_resp2(redis_basic_server, request):
         protocol_version=2,
         **get_client_test_args(request),
     )
-    await check_test_constraints(request, client)
-    await client.flushall()
-    await set_default_test_config(client)
-
-    yield client
-
-    client.connection_pool.disconnect()
+    async with client:
+        await check_test_constraints(request, client)
+        await client.flushall()
+        await set_default_test_config(client)
+        yield client
 
 
 @pytest.fixture
@@ -505,21 +514,20 @@ async def redis_basic_blocking(redis_basic_server, request):
         "localhost",
         6379,
         decode_responses=True,
-        connection_pool=BlockingConnectionPool(
+        connection_pool=ConnectionPool(
             host="localhost",
             port=6379,
             decode_responses=True,
+            blocking=True,
             **get_client_test_args(request),
         ),
         **get_client_test_args(request),
     )
-    await check_test_constraints(request, client)
-    await client.flushall()
-    await set_default_test_config(client)
-
-    yield client
-
-    client.connection_pool.disconnect()
+    async with client:
+        await check_test_constraints(request, client)
+        await client.flushall()
+        await set_default_test_config(client)
+        yield client
 
 
 @pytest.fixture
@@ -527,25 +535,21 @@ async def redis_stack(redis_stack_server, request):
     client = coredis.Redis(
         *redis_stack_server, decode_responses=True, **get_client_test_args(request)
     )
-    await check_test_constraints(request, client)
-    await client.flushall()
-    await set_default_test_config(client)
-
-    yield client
-
-    client.connection_pool.disconnect()
+    async with client:
+        await check_test_constraints(request, client)
+        await client.flushall()
+        await set_default_test_config(client)
+        yield client
 
 
 @pytest.fixture
 async def redis_stack_raw(redis_stack_server, request):
     client = coredis.Redis(*redis_stack_server, **get_client_test_args(request))
-    await check_test_constraints(request, client)
-    await client.flushall()
-    await set_default_test_config(client)
-
-    yield client
-
-    client.connection_pool.disconnect()
+    async with client:
+        await check_test_constraints(request, client)
+        await client.flushall()
+        await set_default_test_config(client)
+        yield client
 
 
 @pytest.fixture
@@ -557,32 +561,24 @@ async def redis_stack_cached(redis_stack_server, request):
         cache=cache,
         **get_client_test_args(request),
     )
-    await check_test_constraints(request, client)
-    await client.flushall()
-    await set_default_test_config(client)
-
-    yield client
-    client.connection_pool.disconnect()
+    async with client:
+        await check_test_constraints(request, client)
+        await client.flushall()
+        await set_default_test_config(client)
+        yield client
     cache.shutdown()
 
 
 @pytest.fixture
 async def redis_basic_raw(redis_basic_server, request):
     client = coredis.Redis(
-        "localhost",
-        6379,
-        decode_responses=False,
-    )
-    await check_test_constraints(request, client)
-    client = coredis.Redis(
         "localhost", 6379, decode_responses=False, **get_client_test_args(request)
     )
-    await client.flushall()
-    await set_default_test_config(client)
-
-    yield client
-
-    client.connection_pool.disconnect()
+    async with client:
+        await check_test_constraints(request, client)
+        await client.flushall()
+        await set_default_test_config(client)
+        yield client
 
 
 @pytest.fixture
@@ -596,13 +592,11 @@ async def redis_ssl(redis_ssl_server, request):
     client = coredis.Redis.from_url(
         storage_url, decode_responses=True, **get_client_test_args(request)
     )
-    await check_test_constraints(request, client)
-    await client.flushall()
-    await set_default_test_config(client)
-
-    yield client
-
-    client.connection_pool.disconnect()
+    async with client:
+        await check_test_constraints(request, client)
+        await client.flushall()
+        await set_default_test_config(client)
+        yield client
 
 
 @pytest.fixture
@@ -611,13 +605,11 @@ async def redis_ssl_no_client_auth(redis_ssl_server_no_client_auth, request):
     client = coredis.Redis.from_url(
         storage_url, decode_responses=True, **get_client_test_args(request)
     )
-    await check_test_constraints(request, client)
-    await client.flushall()
-    await set_default_test_config(client)
-
-    yield client
-
-    client.connection_pool.disconnect()
+    async with client:
+        await check_test_constraints(request, client)
+        await client.flushall()
+        await set_default_test_config(client)
+        yield client
 
 
 @pytest.fixture
@@ -627,13 +619,11 @@ async def redis_auth(redis_auth_server, request):
         decode_responses=True,
         **get_client_test_args(request),
     )
-    await check_test_constraints(request, client)
-    await client.flushall()
-    await set_default_test_config(client)
-
-    yield client
-
-    client.connection_pool.disconnect()
+    async with client:
+        await check_test_constraints(request, client)
+        await client.flushall()
+        await set_default_test_config(client)
+        yield client
 
 
 @pytest.fixture
@@ -645,13 +635,11 @@ async def redis_auth_cred_provider(redis_auth_server, request):
         decode_responses=True,
         **get_client_test_args(request),
     )
-    await check_test_constraints(request, client)
-    await client.flushall()
-    await set_default_test_config(client)
-
-    yield client
-
-    client.connection_pool.disconnect()
+    async with client:
+        await check_test_constraints(request, client)
+        await client.flushall()
+        await set_default_test_config(client)
+        yield client
 
 
 @pytest.fixture
@@ -661,13 +649,11 @@ async def redis_uds(redis_uds_server, request):
         decode_responses=True,
         **get_client_test_args(request),
     )
-    await check_test_constraints(request, client)
-    await client.flushall()
-    await set_default_test_config(client)
-
-    yield client
-
-    client.connection_pool.disconnect()
+    async with client:
+        await check_test_constraints(request, client)
+        await client.flushall()
+        await set_default_test_config(client)
+        yield client
 
 
 @pytest.fixture
@@ -680,13 +666,11 @@ async def redis_cached(redis_basic_server, request):
         cache=cache,
         **get_client_test_args(request),
     )
-    await check_test_constraints(request, client)
-    await client.flushall()
-    await set_default_test_config(client)
-
-    yield client
-
-    client.connection_pool.disconnect()
+    async with client:
+        await check_test_constraints(request, client)
+        await client.flushall()
+        await set_default_test_config(client)
+        yield client
     cache.shutdown()
 
 
@@ -895,19 +879,15 @@ async def redis_stack_cluster(redis_stack_cluster_server, request):
 
 
 @pytest.fixture
-async def redis_sentinel(redis_sentinel_server, request):
-    sentinel = coredis.sentinel.Sentinel(
-        [redis_sentinel_server],
-        sentinel_kwargs={},
+async def redis_sentinel(redis_sentinel_server: tuple[str, int], request):
+    sentinel = coredis.Sentinel(
+        sentinels=[redis_sentinel_server],
+        sentinel_kwargs={"connect_timeout": 1},
         decode_responses=True,
         **get_client_test_args(request),
     )
-    master = sentinel.primary_for("mymaster")
-    await check_test_constraints(request, master)
-    await set_default_test_config(sentinel)
-    await master.flushall()
-
-    return sentinel
+    async with sentinel:
+        yield sentinel
 
 
 @pytest.fixture
@@ -918,11 +898,11 @@ async def redis_sentinel_raw(redis_sentinel_server, request):
         **get_client_test_args(request),
     )
     master = sentinel.primary_for("mymaster")
-    await check_test_constraints(request, master)
-    await set_default_test_config(sentinel)
-    await master.flushall()
-
-    return sentinel
+    async with master:
+        await check_test_constraints(request, master)
+        await set_default_test_config(sentinel)
+        await master.flushall()
+        return sentinel
 
 
 @pytest.fixture
@@ -1130,7 +1110,6 @@ def module_targets():
 def redis_server_time():
     async def _get_server_time(client):
         if isinstance(client, coredis.RedisCluster):
-            await client
             node = list(client.primaries).pop()
 
             return await node.time()
@@ -1163,7 +1142,7 @@ def _s(client):
 
 @pytest.fixture
 def cloner():
-    async def _cloner(client, initialize=True, connection_kwargs={}, **kwargs):
+    async def _cloner(client, connection_kwargs={}, **kwargs):
         if isinstance(client, coredis.client.Redis):
             c_kwargs = client.connection_pool.connection_kwargs
             c_kwargs.update(connection_kwargs)
@@ -1183,10 +1162,6 @@ def cloner():
                 encoding=client.encoding,
                 **kwargs,
             )
-
-        if initialize:
-            await c.ping()
-
         return c
 
     return _cloner

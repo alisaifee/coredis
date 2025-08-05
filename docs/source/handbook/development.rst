@@ -14,8 +14,7 @@ The unit tests will lazily initialize the containers required per test using the
 
 .. code-block:: bash
 
-    $ pip install -r requirements/test.txt
-    $ pytest tests/
+    $ uv run pytest tests
 
 
 To reduce unnecessary setup and tear down the containers are left running after the tests complete. To cleanup::

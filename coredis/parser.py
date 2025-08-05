@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import asyncio
+from abc import abstractmethod
 from collections.abc import Hashable
 from io import BytesIO
 from typing import cast
 
-from coredis._protocols import ConnectionP
-from coredis._utils import b
+from anyio.streams.memory import MemoryObjectSendStream
+
+from coredis._utils import CaseAndEncodingInsensitiveEnum, b, logger
 from coredis.constants import SYM_CRLF, RESPDataType
 from coredis.exceptions import (
     AskError,
@@ -50,6 +51,35 @@ class NotEnoughData:
 NOT_ENOUGH_DATA: Final[NotEnoughData] = NotEnoughData()
 
 
+class PubSubMessageTypes(CaseAndEncodingInsensitiveEnum):
+    MESSAGE = b"message"
+    PMESSAGE = b"pmessage"
+    SMESSAGE = b"smessage"
+    SUBSCRIBE = b"subscribe"
+    UNSUBSCRIBE = b"unsubscribe"
+    PSUBSCRIBE = b"psubscribe"
+    PUNSUBSCRIBE = b"punsubscribe"
+    SSUBSCRIBE = b"ssubscribe"
+    SUNSUBSCRIBE = b"sunsubscribe"
+
+
+PUBLISH_MESSAGE_TYPES = {
+    PubSubMessageTypes.MESSAGE.value,
+    PubSubMessageTypes.PMESSAGE.value,
+}
+SUBUNSUB_MESSAGE_TYPES = {
+    PubSubMessageTypes.SUBSCRIBE.value,
+    PubSubMessageTypes.PSUBSCRIBE.value,
+    PubSubMessageTypes.UNSUBSCRIBE.value,
+    PubSubMessageTypes.PUNSUBSCRIBE.value,
+}
+UNSUBSCRIBE_MESSAGE_TYPES = {
+    PubSubMessageTypes.UNSUBSCRIBE.value,
+    PubSubMessageTypes.PUNSUBSCRIBE.value,
+}
+PUSH_MESSAGE_TYPES = PUBLISH_MESSAGE_TYPES | SUBUNSUB_MESSAGE_TYPES
+
+
 class RESPNode:
     __slots__ = ("depth", "key", "node_type")
     depth: int
@@ -66,8 +96,8 @@ class RESPNode:
         self.node_type = node_type
         self.key = key
 
-    def append(self, item: ResponseType) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def append(self, item: ResponseType) -> None: ...
 
     def ensure_hashable(self, item: ResponseType) -> Hashable:
         if isinstance(item, (int, float, bool, str, bytes)):
@@ -80,7 +110,7 @@ class RESPNode:
             return tuple(
                 (cast(ResponsePrimitive, k), self.ensure_hashable(v)) for k, v in item.items()
             )
-        return item  # noqa
+        return item
 
 
 class ListNode(RESPNode):
@@ -164,8 +194,8 @@ class Parser:
         "WRONGTYPE": WrongTypeError,
     }
 
-    def __init__(self) -> None:
-        self.push_messages: asyncio.Queue[ResponseType] | None = None
+    def __init__(self, push_messages: MemoryObjectSendStream[ResponseType]) -> None:
+        self.push_messages = push_messages
         self.localbuffer: BytesIO = BytesIO(b"")
         self.bytes_read: int = 0
         self.bytes_written: int = 0
@@ -175,10 +205,6 @@ class Parser:
         self.localbuffer.seek(self.bytes_written)
         self.bytes_written += self.localbuffer.write(data)
         self.localbuffer.seek(self.bytes_read)
-
-    def on_connect(self, connection: ConnectionP) -> None:
-        """Called when the stream connects"""
-        self.push_messages = connection.push_messages
 
     def on_disconnect(self) -> None:
         """Called when the stream disconnects"""
@@ -201,15 +227,13 @@ class Parser:
         self,
         decode: bool,
         encoding: str | None = None,
-        push_message_types: set[bytes] | None = None,
     ) -> NotEnoughData | ResponseType:
         """
 
         :param decode: Whether to decode simple or bulk strings
         :param push_message_types: the push message types to return if they
          arrive. If a message arrives that does not match the filter, it will
-         be put on the :data:`~coredis.connection.BaseConnection.push_messages`
-         queue
+         be logged; otherwise, it will be put on the :data:`~coredis.connection.BaseConnection.push_messages` queue
         :return: The next available parsed response read from the connection.
          If there is not enough data on the wire a ``NotEnoughData`` instance
          will be returned.
@@ -221,12 +245,11 @@ class Parser:
             else:
                 if response and response.response_type == RESPDataType.PUSH:
                     assert isinstance(response.response, list)
-                    assert self.push_messages
-                    if not push_message_types or b(response.response[0]) not in push_message_types:
-                        self.push_messages.put_nowait(response.response)
-                        continue
+                    if b(response.response[0]) not in PUSH_MESSAGE_TYPES:
+                        logger.debug(f"Unhandled push message: {response.response}")
                     else:
-                        break
+                        self.push_messages.send_nowait(response.response)
+                    continue
                 else:
                     break
         return response.response if response else None

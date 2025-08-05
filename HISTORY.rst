@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v5.1.0
+------
+Release Date: 2025-09-10
+
+* Bug Fix
+
+  * Ensure ``ssl_context`` passed in kwargs of ``from_url`` factory
+    method is respected.
+
 v5.0.1
 ------
 Release Date: 2025-07-18
@@ -2000,3 +2009,4 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+

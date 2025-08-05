@@ -20,10 +20,10 @@ from coredis.connection import (
 )
 from coredis.pool import (
     BlockingClusterConnectionPool,
-    BlockingConnectionPool,
     ClusterConnectionPool,
     ConnectionPool,
 )
+from coredis.sentinel import Sentinel
 from coredis.tokens import PureToken
 
 from . import _version
@@ -36,11 +36,11 @@ __all__ = [
     "Connection",
     "UnixDomainSocketConnection",
     "ClusterConnection",
-    "BlockingConnectionPool",
     "ConnectionPool",
     "BlockingClusterConnectionPool",
     "ClusterConnectionPool",
     "PureToken",
+    "Sentinel",
 ]
 
 __version__ = cast(str, _version.get_versions()["version"])  # type: ignore

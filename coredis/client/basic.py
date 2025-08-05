@@ -1,18 +1,18 @@
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import contextvars
-import functools
 import random
 import warnings
 from collections import defaultdict
 from ssl import SSLContext
 from typing import TYPE_CHECKING, Any, cast, overload
 
+from anyio import AsyncContextManagerMixin, create_task_group
 from deprecated.sphinx import versionadded
 from packaging import version
 from packaging.version import InvalidVersion, Version
+from typing_extensions import Self
 
 from coredis._utils import EncodingInsensitiveDict, nativestr
 from coredis.cache import AbstractCache
@@ -21,7 +21,6 @@ from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandFlag, CommandName
 from coredis.commands.core import CoreCommands
 from coredis.commands.function import Library
-from coredis.commands.monitor import Monitor
 from coredis.commands.pubsub import PubSub, SubscriptionCallback
 from coredis.commands.script import Script
 from coredis.commands.sentinel import SentinelCommands
@@ -34,13 +33,13 @@ from coredis.connection import (
 from coredis.credentials import AbstractCredentialProvider
 from coredis.exceptions import (
     AuthenticationError,
+    AuthorizationError,
     ConnectionError,
     PersistenceError,
-    RedisError,
     ReplicationError,
+    ResponseError,
     TimeoutError,
     UnknownCommandError,
-    WatchError,
 )
 from coredis.globals import CACHEABLE_COMMANDS, COMMAND_FLAGS, READONLY_COMMANDS
 from coredis.modules import ModuleMixin
@@ -50,16 +49,14 @@ from coredis.response._callbacks import (
     NoopCallback,
     ResponseCallback,
 )
-from coredis.response.types import MonitorResult, ScoredMember
+from coredis.response.types import ScoredMember
 from coredis.retry import ConstantRetryPolicy, NoRetryPolicy, RetryPolicy
 from coredis.typing import (
     AnyStr,
     AsyncGenerator,
     AsyncIterator,
     Callable,
-    Coroutine,
     ExecutionParameters,
-    Generator,
     Generic,
     Iterator,
     KeyT,
@@ -69,7 +66,6 @@ from coredis.typing import (
     ParamSpec,
     RedisCommandP,
     RedisValueT,
-    ResponseType,
     StringT,
     T_co,
     TypeAdapter,
@@ -83,12 +79,14 @@ R = TypeVar("R")
 
 if TYPE_CHECKING:
     import coredis.pipeline
+    from coredis.recipes.locks.lua_lock import Lock
 
 ClientT = TypeVar("ClientT", bound="Client[Any]")
 RedisT = TypeVar("RedisT", bound="Redis[Any]")
 
 
 class Client(
+    AsyncContextManagerMixin,
     Generic[AnyStr],
     CoreCommands[AnyStr],
     ModuleMixin[AnyStr],
@@ -126,7 +124,7 @@ class Client(
         ssl_check_hostname: bool | None = None,
         ssl_ca_certs: str | None = None,
         max_connections: int | None = None,
-        max_idle_time: float = 0,
+        max_idle_time: int | None = None,
         idle_check_interval: float = 1,
         client_name: str | None = None,
         protocol_version: Literal[2, 3] = 3,
@@ -277,53 +275,25 @@ class Client(
                 self.verify_version = False
                 self.server_version = None
 
-    async def _ensure_wait(
-        self, command: RedisCommandP, connection: BaseConnection
-    ) -> asyncio.Future[None]:
-        maybe_wait: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+    async def _ensure_wait(self, command: RedisCommandP, connection: BaseConnection) -> None:
         wait = self._waitcontext.get()
-        if wait and wait[0] > 0:
+        if not wait or wait[0] <= 0:
+            return
 
-            def check_wait(wait: tuple[int, int], response: asyncio.Future[ResponseType]) -> None:
-                exc = response.exception()
-                if exc:
-                    maybe_wait.set_exception(exc)
-                elif not cast(int, response.result()) >= wait[0]:
-                    maybe_wait.set_exception(ReplicationError(command.name, wait[0], wait[1]))
-                else:
-                    maybe_wait.set_result(None)
+        request = await connection.create_request(CommandName.WAIT, *wait, decode=False)
+        result = await request
+        if not cast(int, result) >= wait[0]:
+            raise ReplicationError(command.name, wait[0], wait[1])
 
-            request = await connection.create_request(CommandName.WAIT, *wait, decode=False)
-            request.add_done_callback(functools.partial(check_wait, wait))
-        else:
-            maybe_wait.set_result(None)
-        return maybe_wait
-
-    async def _ensure_persistence(
-        self, command: RedisCommandP, connection: BaseConnection
-    ) -> asyncio.Future[None]:
-        maybe_wait: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+    async def _ensure_persistence(self, command: RedisCommandP, connection: BaseConnection) -> None:
         waitaof = self._waitaof_context.get()
-        if waitaof and waitaof[0] > 0:
+        if not waitaof or waitaof[0] <= 0:
+            return
 
-            def check_wait(
-                waitaof: tuple[int, int, int], response: asyncio.Future[ResponseType]
-            ) -> None:
-                exc = response.exception()
-                if exc:
-                    maybe_wait.set_exception(exc)
-                else:
-                    res = cast(tuple[int, int], response.result())
-                    if not (res[0] >= waitaof[0] and res[1] >= waitaof[1]):
-                        maybe_wait.set_exception(PersistenceError(command.name, *waitaof))
-                    else:
-                        maybe_wait.set_result(None)
-
-            request = await connection.create_request(CommandName.WAITAOF, *waitaof, decode=False)
-            request.add_done_callback(functools.partial(check_wait, waitaof))
-        else:
-            maybe_wait.set_result(None)
-        return maybe_wait
+        request = await connection.create_request(CommandName.WAITAOF, *waitaof, decode=False)
+        result = cast(tuple[int, int], await request)
+        if not (result[0] >= waitaof[0] and result[1] >= waitaof[1]):
+            raise PersistenceError(command.name, *waitaof)
 
     async def _populate_module_versions(self) -> None:
         if self.noreply or getattr(self, "_module_info", None) is not None:
@@ -339,16 +309,14 @@ class Client(
                 ver, minor = divmod(ver, 100)
                 ver, major = divmod(ver, 100)
                 self._module_info[name] = version.Version(f"{major}.{minor}.{patch}")
-        except (UnknownCommandError, AuthenticationError):
+        except (UnknownCommandError, AuthenticationError, AuthorizationError):
             self._module_info = {}
-
-    async def initialize(self: ClientT) -> ClientT:
-        await self.connection_pool.initialize()
-        await self._populate_module_versions()
-        return self
-
-    def __await__(self: ClientT) -> Generator[Any, None, ClientT]:
-        return self.initialize().__await__()
+        except ResponseError as err:
+            warnings.warn(
+                "Unable to determine module support due to response error from "
+                f"`MODULE LIST`: {err}."
+            )
+            self._module_info = {}
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{repr(self.connection_pool)}>"
@@ -603,7 +571,7 @@ class Redis(Client[AnyStr]):
         ssl_check_hostname: bool | None = ...,
         ssl_ca_certs: str | None = ...,
         max_connections: int | None = ...,
-        max_idle_time: float = ...,
+        max_idle_time: int | None = ...,
         idle_check_interval: float = ...,
         client_name: str | None = ...,
         protocol_version: Literal[2, 3] = ...,
@@ -642,7 +610,7 @@ class Redis(Client[AnyStr]):
         ssl_check_hostname: bool | None = ...,
         ssl_ca_certs: str | None = ...,
         max_connections: int | None = ...,
-        max_idle_time: float = ...,
+        max_idle_time: int | None = ...,
         idle_check_interval: float = ...,
         client_name: str | None = ...,
         protocol_version: Literal[2, 3] = ...,
@@ -680,7 +648,7 @@ class Redis(Client[AnyStr]):
         ssl_check_hostname: bool | None = None,
         ssl_ca_certs: str | None = None,
         max_connections: int | None = None,
-        max_idle_time: float = 0,
+        max_idle_time: int | None = None,
         idle_check_interval: float = 1,
         client_name: str | None = None,
         protocol_version: Literal[2, 3] = 3,
@@ -966,12 +934,13 @@ class Redis(Client[AnyStr]):
                 ),
             )
 
-    async def initialize(self) -> Redis[AnyStr]:
-        if not self.connection_pool.initialized:
-            await super().initialize()
+    @contextlib.asynccontextmanager
+    async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
+        async with self.connection_pool:
+            await self._populate_module_versions()
             if self.cache:
-                self.cache = await self.cache.initialize(self)
-        return self
+                await self.cache.initialize(self)
+            yield self
 
     async def execute_command(
         self,
@@ -985,7 +954,6 @@ class Redis(Client[AnyStr]):
         """
         return await self.retry_policy.call_with_retries(
             lambda: self._execute_command(command, callback=callback, **options),
-            before_hook=self.initialize,
         )
 
     async def _execute_command(
@@ -996,11 +964,9 @@ class Redis(Client[AnyStr]):
     ) -> R:
         pool = self.connection_pool
         quick_release = self.should_quick_release(command)
-        connection = await pool.get_connection(
-            command.name,
-            *command.arguments,
-            acquire=not quick_release or self.requires_wait or self.requires_waitaof,
-        )
+        should_block = not quick_release or self.requires_wait or self.requires_waitaof
+        connection = await pool.acquire(blocking=should_block)
+        released = False
         try:
             keys = KeySpec.extract_keys(command.name, *command.arguments)
             cacheable = (
@@ -1014,10 +980,11 @@ class Redis(Client[AnyStr]):
             use_cached = False
             reply = None
             if self.cache:
-                if connection.tracking_client_id != self.cache.get_client_id(connection):
-                    self.cache.reset()
+                if connection.tracking_client_id != self.cache.get_client_id(connection):  # type: ignore
+                    self.cache.reset()  # type: ignore
                     await connection.update_tracking_client(
-                        True, self.cache.get_client_id(connection)
+                        True,
+                        self.cache.get_client_id(connection),  # type: ignore
                     )
                 if command.name not in READONLY_COMMANDS:
                     self.cache.invalidate(*keys)
@@ -1043,12 +1010,12 @@ class Redis(Client[AnyStr]):
                     decode=options.get("decode", self._decodecontext.get()),
                     encoding=self._encodingcontext.get(),
                 )
-                maybe_wait = [
-                    await self._ensure_wait(command, connection),
-                    await self._ensure_persistence(command, connection),
-                ]
+                connection.pending -= 1
+                released = True
                 reply = await request
-                await asyncio.gather(*maybe_wait)
+                async with create_task_group() as tg:
+                    tg.start_soon(self._ensure_wait, command, connection)
+                    tg.start_soon(self._ensure_persistence, command, connection)
                 if self.noreply:
                     return None  # type: ignore
                 if isinstance(callback, AsyncPreProcessingCallback):
@@ -1066,13 +1033,12 @@ class Redis(Client[AnyStr]):
                         value=reply,
                     )
             return callback(cached_reply if cache_hit else reply, version=self.protocol_version)
-        except RedisError:
-            connection.disconnect()
-            raise
         finally:
             self._ensure_server_version(connection.server_version)
-            if not quick_release or self.requires_wait or self.requires_waitaof:
-                pool.release(connection)
+            if should_block:
+                connection.blocked = False
+            if not released:
+                connection.pending -= 1
 
     @overload
     def decoding(
@@ -1117,24 +1083,6 @@ class Redis(Client[AnyStr]):
             self._decodecontext.set(prev_decode)
             self._encodingcontext.set(prev_encoding)
 
-    def monitor(
-        self,
-        response_handler: Callable[[MonitorResult], None] | None = None,
-    ) -> Monitor[AnyStr]:
-        """
-        :param response_handler: Optional callback to be triggered whenever
-         a command is received by this monitor.
-
-        Return an instance of a :class:`~coredis.commands.monitor.Monitor`
-
-        The monitor can be used as an async iterator or individual commands
-        can be fetched via :meth:`~coredis.commands.monitor.Monitor.get_command`.
-        When a :paramref:`response_handler` is provided it will simply by called
-        for every command received.
-
-        """
-        return Monitor[AnyStr](self, response_handler)
-
     def pubsub(
         self,
         ignore_subscribe_messages: bool = False,
@@ -1176,10 +1124,10 @@ class Redis(Client[AnyStr]):
             **kwargs,
         )
 
-    async def pipeline(
+    def pipeline(
         self,
-        transaction: bool | None = True,
-        watches: Parameters[KeyT] | None = None,
+        raise_on_error: bool = True,
+        transaction: bool = True,
         timeout: float | None = None,
     ) -> coredis.pipeline.Pipeline[AnyStr]:
         """
@@ -1187,43 +1135,21 @@ class Redis(Client[AnyStr]):
         batch execution.
 
         :param transaction: indicates whether all commands should be executed atomically.
-        :param watches: If :paramref:`transaction` is True these keys are watched for external
-         changes during the transaction.
         :param timeout: If specified this value will take precedence over
          :paramref:`Redis.stream_timeout`
         """
         from coredis.pipeline import Pipeline
 
-        return Pipeline[AnyStr](self, transaction, watches, timeout)
+        return Pipeline[AnyStr](self, transaction, raise_on_error, timeout)
 
-    async def transaction(
+    def lock(
         self,
-        func: Callable[[coredis.pipeline.Pipeline[AnyStr]], Coroutine[Any, Any, Any]],
-        *watches: KeyT,
-        value_from_callable: bool = False,
-        watch_delay: float | None = None,
-        **kwargs: Any,
-    ) -> Any | None:
-        """
-        Convenience method for executing the callable :paramref:`func` as a
-        transaction while watching all keys specified in :paramref:`watches`.
+        name: StringT,
+        timeout: float | None = None,
+        sleep: float = 0.1,
+        blocking: bool = True,
+        blocking_timeout: float | None = None,
+    ) -> Lock[AnyStr]:
+        from coredis.recipes.locks import Lock
 
-        :param func: callable should expect a single argument which is a
-         :class:`coredis.pipeline.Pipeline` object retrieved by calling
-         :meth:`~coredis.Redis.pipeline`.
-        :param watches: The keys to watch during the transaction
-        :param value_from_callable: Whether to return the result of transaction or the value
-         returned from :paramref:`func`
-        """
-        async with await self.pipeline(True) as pipe:
-            while True:
-                try:
-                    if watches:
-                        await pipe.watch(*watches)
-                    func_value = await func(pipe)
-                    exec_value = await pipe.execute()
-                    return func_value if value_from_callable else exec_value
-                except WatchError:
-                    if watch_delay is not None and watch_delay > 0:
-                        await asyncio.sleep(watch_delay)
-                    continue
+        return Lock(self, name, timeout, sleep, blocking, blocking_timeout)

@@ -1,17 +1,20 @@
 from __future__ import annotations
 
-import asyncio
 import pickle
 import time
 
+import anyio
 import pytest
 
 import coredis
+from coredis.commands.pubsub import PubSub
 from coredis.exceptions import ConnectionError
 from tests.conftest import targets
 
+pytestmark = pytest.mark.anyio
 
-async def wait_for_message(pubsub, timeout=0.5, ignore_subscribe_messages=False):
+
+async def wait_for_message(pubsub: PubSub, timeout=0.5, ignore_subscribe_messages=False):
     now = time.time()
     timeout = now + timeout
 
@@ -22,7 +25,7 @@ async def wait_for_message(pubsub, timeout=0.5, ignore_subscribe_messages=False)
 
         if message is not None:
             return message
-        await asyncio.sleep(0.01)
+        await anyio.sleep(0.01)
         now = time.time()
 
     return None
@@ -418,7 +421,7 @@ class TestPubSubMessages:
             await client.publish("fu", "bar")
             await client.publish("bar", "fu")
 
-            await asyncio.sleep(0.1)
+            await anyio.sleep(0.1)
 
             assert messages == {_s("fu"), _s("bar")}
 
@@ -434,15 +437,14 @@ class TestPubSubMessages:
                 [messages.append(message) async for message in p]
 
             async def unsubscribe():
-                await asyncio.sleep(0.1)
+                await anyio.sleep(0.1)
                 await p.punsubscribe("fu*")
                 await p.unsubscribe("test")
 
-            completed, pending = await asyncio.wait(
-                [asyncio.create_task(collect()), asyncio.create_task(unsubscribe())], timeout=1
-            )
-            assert all(task.done() for task in completed)
-            assert not pending
+            with anyio.fail_after(1):
+                async with anyio.create_task_group() as tg:
+                    tg.start_soon(collect)
+                    tg.start_soon(unsubscribe)
             assert len(messages) == 20
 
 
@@ -464,20 +466,15 @@ class TestPubSubPubSubSubcommands:
 
     async def test_pubsub_numsub(self, client, _s):
         p1 = client.pubsub(ignore_subscribe_messages=True)
-        await p1.subscribe("foo", "bar", "baz")
         p2 = client.pubsub(ignore_subscribe_messages=True)
-        await p2.subscribe("bar", "baz")
         p3 = client.pubsub(ignore_subscribe_messages=True)
-        await p3.subscribe("baz")
+        async with p1, p2, p3:
+            await p1.subscribe("foo", "bar", "baz")
+            await p2.subscribe("bar", "baz")
+            await p3.subscribe("baz")
 
-        channels = {_s("foo"): 1, _s("bar"): 2, _s("baz"): 3}
-        assert channels == await client.pubsub_numsub("foo", "bar", "baz")
-        await p1.unsubscribe()
-        await p2.unsubscribe()
-        await p3.unsubscribe()
-        p1.close()
-        p2.close()
-        p3.close()
+            channels = {_s("foo"): 1, _s("bar"): 2, _s("baz"): 3}
+            assert channels == await client.pubsub_numsub("foo", "bar", "baz")
 
     async def test_pubsub_numpat(self, client):
         pubsub_count = await client.pubsub_numpat()

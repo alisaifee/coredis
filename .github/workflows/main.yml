@@ -11,29 +11,21 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
     - uses: actions/checkout@v3
-    - name: Cache dependencies
-      uses: actions/cache@v3
+    - name: Install uv and Python
+      uses: astral-sh/setup-uv@v6
       with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('requirements/**') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
+        enable-cache: true
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+    - name: Setup uv venv
       run: |
-        python -m pip install --upgrade pip setuptools wheel
-        pip install -r requirements/dev.txt
-        python setup.py build
+        uv sync --locked --all-extras --group dev
     - name: Lint with ruff
       run: |
-        ruff check --select I coredis tests
-        ruff check coredis tests
+        uv run ruff check --select I coredis tests
+        uv run ruff check coredis tests
     - name: Check types
       run: |
-        mypy coredis
+        uv run mypy coredis
     - name: Check auto generated sources
       run: |
         make templated-sources
@@ -99,33 +91,25 @@ jobs:
             label: ""
     steps:
     - uses: actions/checkout@v3
-    - name: Cache dependencies
-      uses: actions/cache@v3
+    - name: Install uv and Python
+      uses: astral-sh/setup-uv@v6
       with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('requirements/**') }}
-        restore-keys: |
-          ${{ runner.os }}-${{ matrix.python-version }}-pip-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
+        enable-cache: true
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+    - name: Setup uv venv
       run: |
-        python -m pip install --upgrade pip setuptools wheel
-        pip install -r requirements/ci.txt
-        python setup.py build
+        uv sync --locked --all-extras --group ci
     - name: Compile extensions
       if: ${{ matrix.extensions == 'True' }}
-      run: python setup.py build_ext --inplace --use-mypyc
+      run: uv run mypyc coredis/constants.py coredis/parser.py coredis/_packer.py
     - name: Install uvloop
       if: ${{ matrix.uvloop == 'True' }}
       run:
-        pip install uvloop
+        uv pip install uvloop
     - name: Install orjson
       if: ${{ matrix.orjson == 'True' }}
       run:
-        pip install orjson
+        uv pip install orjson
     - name: Tests
       env:
         COREDIS_UVLOOP: ${{ matrix.uvloop }}
@@ -139,7 +123,7 @@ jobs:
         echo "Runtime checks: $COREDIS_RUNTIME_CHECKS"
         echo "UVLoop: $COREDIS_UVLOOP"
         echo "CI: $CI"
-        pytest --reverse --reruns 2 --cov=coredis --cov-report=xml ${{ matrix.test_params }}
+        uv run pytest --reverse --reruns 2 --cov=coredis --cov-report=xml ${{ matrix.test_params }}
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4.2.0
       env:
@@ -185,6 +169,13 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Setup uv venv
+        run: |
+          uv sync --locked --all-extras --group dev
       - name: Set up QEMU
         if: runner.os == 'Linux'
         uses: docker/setup-qemu-action@v2
@@ -194,9 +185,9 @@ jobs:
           only: ${{ matrix.only }}
         env:
           CIBW_BUILD_VERBOSITY: 3
-          CIBW_BUILD_FRONTEND: "build"
-          CIBW_CONFIG_SETTINGS: "--build-option=--use-mypyc"
-          CIBW_TEST_COMMAND: "python -c 'import coredis'"
+          CIBW_BUILD_FRONTEND: "build[uv]"
+          CIBW_TEST_COMMAND: "uv run python -c 'import coredis'"
+          USE_MYPYC: true
       - uses: actions/upload-artifact@v4
         with:
           name: wheels-${{matrix.only}}
@@ -209,10 +200,15 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
       - name: Build wheels
+        env:
+          PURE_PYTHON: true
         run: |
-          python -m pip install build
-          PURE_PYTHON=1 python -m build --wheel
+          uv build
       - uses: actions/upload-artifact@v4
         with:
           name: pure_wheels
@@ -224,15 +220,19 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
       - name: Build sdist
         run: |
-          pipx run build --sdist
+          uv build --sdist
       - uses: actions/upload-artifact@v4
         with:
           name: src_dist
           path: dist/*.tar.gz
   upload_pypi:
-    needs: [test, build_wheels, build_pure_wheel, build_sdist]
+    needs: [build_wheels, build_pure_wheel, build_sdist]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
     permissions:
@@ -251,8 +251,9 @@ jobs:
         with:
           repository_url: https://test.pypi.org/legacy/
           skip_existing: true
+          verbose: true
   upload_pypi_release:
-    needs: [test, build_wheels, build_sdist]
+    needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     permissions:

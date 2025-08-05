@@ -1,5 +1,5 @@
 from __future__ import annotations
 
-from .lua_lock import LuaLock
+from .lua_lock import Lock
 
-__all__ = ["LuaLock"]
+__all__ = ["Lock"]

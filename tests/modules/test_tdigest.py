@@ -7,6 +7,8 @@ import pytest
 from coredis import Redis
 from tests.conftest import module_targets
 
+pytestmark = pytest.mark.anyio
+
 
 @pytest.mark.min_module_version("bf", "2.4.0")
 @module_targets()
