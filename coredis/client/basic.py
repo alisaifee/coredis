@@ -1,16 +1,14 @@
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import contextvars
-import functools
 import random
 import warnings
 from collections import defaultdict
 from ssl import SSLContext
 from typing import TYPE_CHECKING, Any, cast, overload
 
-from anyio import sleep
+from anyio import create_task_group, sleep
 from deprecated.sphinx import versionadded
 from packaging import version
 from packaging.version import InvalidVersion, Version
@@ -72,7 +70,6 @@ from coredis.typing import (
     ParamSpec,
     RedisCommandP,
     RedisValueT,
-    ResponseType,
     StringT,
     T_co,
     TypeAdapter,
@@ -280,53 +277,25 @@ class Client(
                 self.verify_version = False
                 self.server_version = None
 
-    async def _ensure_wait(
-        self, command: RedisCommandP, connection: BaseConnection
-    ) -> asyncio.Future[None]:
-        maybe_wait: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+    async def _ensure_wait(self, command: RedisCommandP, connection: BaseConnection) -> None:
         wait = self._waitcontext.get()
-        if wait and wait[0] > 0:
+        if not wait or wait[0] <= 0:
+            return
 
-            def check_wait(wait: tuple[int, int], response: asyncio.Future[ResponseType]) -> None:
-                exc = response.exception()
-                if exc:
-                    maybe_wait.set_exception(exc)
-                elif not cast(int, response.result()) >= wait[0]:
-                    maybe_wait.set_exception(ReplicationError(command.name, wait[0], wait[1]))
-                else:
-                    maybe_wait.set_result(None)
+        request = await connection.create_request(CommandName.WAIT, *wait, decode=False)
+        result = await request
+        if not cast(int, result) >= wait[0]:
+            raise ReplicationError(command.name, wait[0], wait[1])
 
-            request = await connection.create_request(CommandName.WAIT, *wait, decode=False)
-            request.add_done_callback(functools.partial(check_wait, wait))
-        else:
-            maybe_wait.set_result(None)
-        return maybe_wait
-
-    async def _ensure_persistence(
-        self, command: RedisCommandP, connection: BaseConnection
-    ) -> asyncio.Future[None]:
-        maybe_wait: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+    async def _ensure_persistence(self, command: RedisCommandP, connection: BaseConnection) -> None:
         waitaof = self._waitaof_context.get()
-        if waitaof and waitaof[0] > 0:
+        if not waitaof or waitaof[0] <= 0:
+            return
 
-            def check_wait(
-                waitaof: tuple[int, int, int], response: asyncio.Future[ResponseType]
-            ) -> None:
-                exc = response.exception()
-                if exc:
-                    maybe_wait.set_exception(exc)
-                else:
-                    res = cast(tuple[int, int], response.result())
-                    if not (res[0] >= waitaof[0] and res[1] >= waitaof[1]):
-                        maybe_wait.set_exception(PersistenceError(command.name, *waitaof))
-                    else:
-                        maybe_wait.set_result(None)
-
-            request = await connection.create_request(CommandName.WAITAOF, *waitaof, decode=False)
-            request.add_done_callback(functools.partial(check_wait, waitaof))
-        else:
-            maybe_wait.set_result(None)
-        return maybe_wait
+        request = await connection.create_request(CommandName.WAITAOF, *waitaof, decode=False)
+        result = cast(tuple[int, int], await request)
+        if not (result[0] >= waitaof[0] and result[1] >= waitaof[1]):
+            raise PersistenceError(command.name, *waitaof)
 
     async def _populate_module_versions(self) -> None:
         if self.noreply or getattr(self, "_module_info", None) is not None:
@@ -1052,12 +1021,10 @@ class Redis(Client[AnyStr]):
                     decode=options.get("decode", self._decodecontext.get()),
                     encoding=self._encodingcontext.get(),
                 )
-                maybe_wait = [
-                    await self._ensure_wait(command, connection),
-                    await self._ensure_persistence(command, connection),
-                ]
                 reply = await request
-                await asyncio.gather(*maybe_wait)
+                async with create_task_group() as tg:
+                    tg.start_soon(self._ensure_wait, command, connection)
+                    tg.start_soon(self._ensure_persistence, command, connection)
                 if self.noreply:
                     return None  # type: ignore
                 if isinstance(callback, AsyncPreProcessingCallback):
