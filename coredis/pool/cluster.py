@@ -8,7 +8,7 @@ import time
 import warnings
 from typing import Any, cast
 
-import async_timeout
+from anyio import fail_after
 
 from coredis._utils import b, hash_slot
 from coredis.connection import ClusterConnection, Connection
@@ -395,7 +395,7 @@ class ClusterConnectionPool(ConnectionPool):
                 connection = None
         else:
             try:
-                async with async_timeout.timeout(self.blocking_timeout):
+                with fail_after(self.blocking_timeout):
                     connection = await self.__node_pool(node.name).get()
             except asyncio.TimeoutError:
                 raise ConnectionError("No connection available.")

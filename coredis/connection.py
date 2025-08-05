@@ -15,7 +15,7 @@ from collections import defaultdict, deque
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any, cast
 
-import async_timeout
+from anyio import fail_after
 
 import coredis
 from coredis._packer import Packer
@@ -568,7 +568,7 @@ class BaseConnection(asyncio.BaseProtocol):
 
         assert self._transport
         try:
-            async with async_timeout.timeout(timeout):
+            with fail_after(timeout):
                 await self._write_ready.wait()
         except asyncio.TimeoutError:
             if self._transport:
@@ -776,7 +776,7 @@ class Connection(BaseConnection):
                 )
 
             try:
-                async with async_timeout.timeout(self._connect_timeout):
+                with fail_after(self._connect_timeout):
                     transport, _ = await connection
             except asyncio.TimeoutError:
                 raise ConnectionError(
@@ -835,7 +835,7 @@ class UnixDomainSocketConnection(BaseConnection):
         self._description_args = lambda: {"path": self.path, "db": self.db}
 
     async def _connect(self) -> None:
-        async with async_timeout.timeout(self._connect_timeout):
+        with fail_after(self._connect_timeout):
             await asyncio.get_running_loop().create_unix_connection(lambda: self, path=self.path)
 
         await self.on_connect()

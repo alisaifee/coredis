@@ -139,7 +139,6 @@ exclude = ["coredis/_py_312_typing.py"]
 
 [[tool.mypy.overrides]]
 module = [
-    "async_timeout",
     "beartype",
     "asyncache",
     "aiobotocore.*",

@@ -8,7 +8,7 @@ from functools import partial
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, cast
 
-import async_timeout
+from anyio import fail_after
 from deprecated.sphinx import versionadded
 
 from coredis._utils import CaseAndEncodingInsensitiveEnum, b, hash_slot, nativestr
@@ -230,7 +230,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
 
         try:
             await self.initialize()
-            async with async_timeout.timeout(timeout):
+            with fail_after(timeout):
                 return self._filter_ignored_messages(
                     await self._message_queue.get(), ignore_subscribe_messages
                 )

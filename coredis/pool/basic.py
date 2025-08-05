@@ -10,7 +10,7 @@ from ssl import SSLContext, VerifyMode
 from typing import Any, cast
 from urllib.parse import parse_qs, unquote, urlparse
 
-import async_timeout
+from anyio import fail_after
 
 from coredis._utils import query_param_to_bool
 from coredis.connection import (
@@ -405,7 +405,7 @@ class BlockingConnectionPool(ConnectionPool):
         self.checkpid()
 
         try:
-            async with async_timeout.timeout(self.timeout):
+            with fail_after(self.timeout):
                 connection = await self._pool.get()
             if connection and connection.is_connected and connection.needs_handshake:
                 await connection.perform_handshake()
