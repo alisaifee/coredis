@@ -8,7 +8,7 @@ from functools import partial
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, cast
 
-from anyio import fail_after
+from anyio import fail_after, sleep
 from deprecated.sphinx import versionadded
 
 from coredis._utils import CaseAndEncodingInsensitiveEnum, b, hash_slot, nativestr
@@ -395,7 +395,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
                 else:
                     await self._subscribed.wait()
             except ConnectionError:
-                await asyncio.sleep(0)
+                await sleep(0)
 
     def _filter_ignored_messages(
         self,

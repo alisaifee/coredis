@@ -8,7 +8,7 @@ import time
 import warnings
 from typing import Any, cast
 
-from anyio import fail_after
+from anyio import fail_after, sleep
 
 from coredis._utils import b, hash_slot
 from coredis.connection import ClusterConnection, Connection
@@ -180,7 +180,7 @@ class ClusterConnectionPool(ConnectionPool):
                 if node.name in self._created_connections_per_node:
                     self._created_connections_per_node[node.name] -= 1
                 break
-            await asyncio.sleep(self.idle_check_interval)
+            await sleep(self.idle_check_interval)
 
     def reset(self) -> None:
         """Resets the connection pool back to a clean state"""

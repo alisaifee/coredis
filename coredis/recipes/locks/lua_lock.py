@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import contextvars
 import importlib.resources
 import math
@@ -9,6 +8,8 @@ import uuid
 import warnings
 from types import TracebackType
 from typing import cast
+
+from anyio import sleep
 
 from coredis.client import Redis, RedisCluster
 from coredis.commands import Script
@@ -173,7 +174,7 @@ class LuaLock(Generic[AnyStr]):
 
             if stop_trying_at is not None and time.time() > stop_trying_at:
                 return False
-            await asyncio.sleep(self.sleep)
+            await sleep(self.sleep)
 
     async def release(self) -> None:
         """

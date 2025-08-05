@@ -10,7 +10,7 @@ from ssl import SSLContext, VerifyMode
 from typing import Any, cast
 from urllib.parse import parse_qs, unquote, urlparse
 
-from anyio import fail_after
+from anyio import fail_after, sleep
 
 from coredis._utils import query_param_to_bool
 from coredis.connection import (
@@ -229,7 +229,7 @@ class ConnectionPool:
                     self._available_connections.remove(connection)
                 self._created_connections -= 1
                 break
-            await asyncio.sleep(self.idle_check_interval)
+            await sleep(self.idle_check_interval)
 
     def reset(self) -> None:
         self.pid = os.getpid()
@@ -374,7 +374,7 @@ class BlockingConnectionPool(ConnectionPool):
                 connection.disconnect()
 
                 break
-            await asyncio.sleep(self.idle_check_interval)
+            await sleep(self.idle_check_interval)
 
     def reset(self) -> None:
         self._pool: asyncio.Queue[Connection | None] = self.queue_class(self.max_connections)

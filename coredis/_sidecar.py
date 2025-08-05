@@ -5,6 +5,8 @@ import time
 import weakref
 from typing import TYPE_CHECKING, Any
 
+from anyio import sleep
+
 from coredis.connection import BaseConnection, Connection
 from coredis.exceptions import ConnectionError
 from coredis.typing import ResponseType, TypeVar
@@ -85,7 +87,7 @@ class Sidecar:
             try:
                 if self.connection:
                     await self.connection.send_command(b"PING")
-                await asyncio.sleep(self.health_check_interval)
+                await sleep(self.health_check_interval)
             except asyncio.CancelledError:
                 break
 

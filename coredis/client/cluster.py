@@ -11,6 +11,7 @@ from abc import ABCMeta
 from ssl import SSLContext
 from typing import TYPE_CHECKING, Any, cast, overload
 
+from anyio import sleep
 from deprecated.sphinx import versionadded
 
 from coredis._utils import b, hash_slot
@@ -1030,7 +1031,7 @@ class RedisCluster(
                 self.connection_pool.nodes.slots[e.slot_id][0] = node
             except TryAgainError:
                 if remaining_attempts < self.MAX_RETRIES / 2:
-                    await asyncio.sleep(0.05)
+                    await sleep(0.05)
             except AskError as e:
                 redirect_addr, asking = f"{e.host}:{e.port}", True
             finally:
@@ -1246,7 +1247,7 @@ class RedisCluster(
                     return func_value if value_from_callable else exec_value
                 except WatchError:
                     if watch_delay is not None and watch_delay > 0:
-                        await asyncio.sleep(watch_delay)
+                        await sleep(watch_delay)
                     continue
 
     async def scan_iter(

@@ -10,6 +10,7 @@ from collections import defaultdict
 from ssl import SSLContext
 from typing import TYPE_CHECKING, Any, cast, overload
 
+from anyio import sleep
 from deprecated.sphinx import versionadded
 from packaging import version
 from packaging.version import InvalidVersion, Version
@@ -1233,5 +1234,5 @@ class Redis(Client[AnyStr]):
                     return func_value if value_from_callable else exec_value
                 except WatchError:
                     if watch_delay is not None and watch_delay > 0:
-                        await asyncio.sleep(watch_delay)
+                        await sleep(watch_delay)
                     continue
