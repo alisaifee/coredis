@@ -6,7 +6,7 @@ import random
 import warnings
 from collections import defaultdict
 from ssl import SSLContext
-from typing import TYPE_CHECKING, Any, cast, overload
+from typing import TYPE_CHECKING, Any, Self, cast, overload
 
 from anyio import create_task_group, sleep
 from deprecated.sphinx import versionadded
@@ -320,10 +320,17 @@ class Client(
             )
             self._module_info = {}
 
-    async def initialize(self: ClientT) -> ClientT:
-        await self.connection_pool.initialize()
+    async def __aenter__(self) -> Self:
+        await self.connection_pool.__aenter__()
         await self._populate_module_versions()
         return self
+
+    async def __aexit__(self, *args) -> None:
+        self.connection_pool._task_group.cancel_scope.cancel()
+        await self.connection_pool.__aexit__(*args)
+
+    async def initialize(self: ClientT) -> ClientT:
+        return await self.__aenter__()
 
     def __await__(self: ClientT) -> Generator[Any, None, ClientT]:
         return self.initialize().__await__()
