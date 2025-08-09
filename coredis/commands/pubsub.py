@@ -8,7 +8,7 @@ from functools import partial
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, cast
 
-import async_timeout
+from anyio import create_memory_object_stream, get_cancelled_exc_class, move_on_after, sleep
 from deprecated.sphinx import versionadded
 
 from coredis._utils import CaseAndEncodingInsensitiveEnum, b, hash_slot, nativestr
@@ -97,6 +97,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         patterns: Parameters[StringT] | None = None,
         pattern_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
+        max_buffer_size: int = 1024,
     ):
         self.initialized = False
         self.connection_pool = connection_pool
@@ -111,7 +112,9 @@ class BasePubSub(Generic[AnyStr, PoolT]):
             **{nativestr(pattern): None for pattern in patterns or []},
             **{nativestr(k): v for k, v in (pattern_handlers or {}).items()},
         }
-        self._message_queue: asyncio.Queue[PubSubMessage | None] = asyncio.Queue()
+        self._send_stream, self._receive_stream = create_memory_object_stream[PubSubMessage | None](
+            max_buffer_size=max_buffer_size
+        )
         self._consumer_task: asyncio.Task[None] | None = None
         self._subscribed = asyncio.Event()
         self.reset()
@@ -228,14 +231,11 @@ class BasePubSub(Generic[AnyStr, PoolT]):
          on the connection. If the ``None`` the command will block forever.
         """
 
-        try:
-            await self.initialize()
-            async with async_timeout.timeout(timeout):
-                return self._filter_ignored_messages(
-                    await self._message_queue.get(), ignore_subscribe_messages
-                )
-        except asyncio.TimeoutError:
-            return None
+        await self.initialize()
+        with move_on_after(timeout):
+            return self._filter_ignored_messages(
+                await self._receive_stream.receive(), ignore_subscribe_messages
+            )
 
     async def on_connect(self, connection: BaseConnection) -> None:
         """
@@ -311,10 +311,9 @@ class BasePubSub(Generic[AnyStr, PoolT]):
             ),
         )
 
-        try:
-            return await asyncio.wait_for(coro, timeout if (timeout and timeout > 0) else None)
-        except asyncio.TimeoutError:
-            return None
+        timeout = timeout if timeout and timeout > 0 else None
+        with move_on_after(timeout):
+            return await coro
 
     async def handle_message(self, response: ResponseType) -> PubSubMessage | None:
         """
@@ -384,18 +383,19 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         return message
 
     async def _consumer(self) -> None:
-        while self.initialized:
-            try:
-                if self.subscribed:
-                    if response := await self._retry_policy.call_with_retries(
-                        lambda: self.parse_response(block=True),
-                        failure_hook=self.reset_connections,
-                    ):
-                        self._message_queue.put_nowait(await self.handle_message(response))
-                else:
-                    await self._subscribed.wait()
-            except ConnectionError:
-                await asyncio.sleep(0)
+        with self._send_stream:
+            while self.initialized:
+                try:
+                    if self.subscribed:
+                        if response := await self._retry_policy.call_with_retries(
+                            lambda: self.parse_response(block=True),
+                            failure_hook=self.reset_connections,
+                        ):
+                            self._send_stream.send_nowait(await self.handle_message(response))
+                    else:
+                        await self._subscribed.wait()
+                except ConnectionError:
+                    await sleep(0)
 
     def _filter_ignored_messages(
         self,
@@ -418,7 +418,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
     ) -> ResponseType | None:
         try:
             return await command(*args)
-        except asyncio.CancelledError:
+        except get_cancelled_exc_class():
             # do not retry if coroutine is cancelled
             if await connection.can_read():  # noqa
                 connection.disconnect()
@@ -449,6 +449,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
+        self._receive_stream.close()
         await self.aclose()
 
     async def aclose(self) -> None:
