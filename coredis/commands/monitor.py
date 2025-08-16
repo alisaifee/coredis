@@ -160,8 +160,6 @@ class Monitor(Generic[AnyStr]):
                     self._response_handler(result)
                 else:
                     self._monitor_results.put_nowait(result)
-            except asyncio.CancelledError:
-                break
             except ConnectionError:
                 break
         self.__reset()

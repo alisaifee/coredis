@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import asyncio
 from collections.abc import Hashable
 from io import BytesIO
 from typing import cast
+
+from anyio.streams.memory import MemoryObjectSendStream
 
 from coredis._protocols import ConnectionP
 from coredis._utils import b
@@ -165,7 +166,7 @@ class Parser:
     }
 
     def __init__(self) -> None:
-        self.push_messages: asyncio.Queue[ResponseType] | None = None
+        self.push_messages: MemoryObjectSendStream[ResponseType] | None = None
         self.localbuffer: BytesIO = BytesIO(b"")
         self.bytes_read: int = 0
         self.bytes_written: int = 0
@@ -223,7 +224,7 @@ class Parser:
                     assert isinstance(response.response, list)
                     assert self.push_messages
                     if not push_message_types or b(response.response[0]) not in push_message_types:
-                        self.push_messages.put_nowait(response.response)
+                        self.push_messages.send_nowait(response.response)
                         continue
                     else:
                         break

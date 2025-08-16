@@ -20,7 +20,13 @@ from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName, NodeFlag
 from coredis.commands.request import TransformedResponse
 from coredis.commands.script import Script
-from coredis.connection import BaseConnection, ClusterConnection, CommandInvocation, Connection
+from coredis.connection import (
+    BaseConnection,
+    ClusterConnection,
+    CommandInvocation,
+    Connection,
+    Request,
+)
 from coredis.exceptions import (
     AskError,
     ClusterCrossSlotError,
@@ -229,8 +235,8 @@ class NodeCommands:
         self.commands: list[ClusterPipelineCommandRequest[Any]] = []
         self.in_transaction = in_transaction
         self.timeout = timeout
-        self.multi_cmd: asyncio.Future[ResponseType] | None = None
-        self.exec_cmd: asyncio.Future[ResponseType] | None = None
+        self.multi_cmd: Request | None = None
+        self.exec_cmd: Request | None = None
 
     def extend(self, c: list[ClusterPipelineCommandRequest[Any]]) -> None:
         self.commands.extend(c)
