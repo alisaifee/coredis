@@ -40,15 +40,11 @@ from coredis.typing import (
 )
 
 if TYPE_CHECKING:
-    import coredis.client
     import coredis.connection
     import coredis.pool
 
 T = TypeVar("T")
-
-
 PoolT = TypeVar("PoolT", bound="coredis.pool.ConnectionPool")
-
 #: Callables for message handler callbacks. The callbacks
 #:  can be sync or async.
 SubscriptionCallback = Callable[[PubSubMessage], Awaitable[None]] | Callable[[PubSubMessage], None]
@@ -300,20 +296,13 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         :meta private:
         """
         await self.initialize()
-
         assert self.connection
-        coro = self._execute(
-            self.connection,
-            partial(
-                self.connection.fetch_push_message,
-                block=block,
-                push_message_types=self.SUBUNSUB_MESSAGE_TYPES | self.PUBLISH_MESSAGE_TYPES,
-            ),
-        )
-
         timeout = timeout if timeout and timeout > 0 else None
         with move_on_after(timeout):
-            return await coro
+            return await self._execute(
+                self.connection,
+                partial(self.connection.fetch_push_message, block=block),
+            )
 
     async def handle_message(self, response: ResponseType) -> PubSubMessage | None:
         """
@@ -383,19 +372,19 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         return message
 
     async def _consumer(self) -> None:
-        with self._send_stream:
-            while self.initialized:
-                try:
-                    if self.subscribed:
-                        if response := await self._retry_policy.call_with_retries(
-                            lambda: self.parse_response(block=True),
-                            failure_hook=self.reset_connections,
-                        ):
-                            self._send_stream.send_nowait(await self.handle_message(response))
-                    else:
-                        await self._subscribed.wait()
-                except ConnectionError:
-                    await sleep(0)
+        while self.initialized:
+            try:
+                if self.subscribed:
+                    if response := await self._retry_policy.call_with_retries(
+                        lambda: self.parse_response(block=True),
+                        failure_hook=self.reset_connections,
+                    ):
+                        msg = await self.handle_message(response)
+                        self._send_stream.send_nowait(msg)
+                else:
+                    await self._subscribed.wait()
+            except ConnectionError:
+                await sleep(0)
 
     def _filter_ignored_messages(
         self,
@@ -449,7 +438,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
-        self._receive_stream.close()
+        # self._receive_stream.close()
         await self.aclose()
 
     async def aclose(self) -> None:

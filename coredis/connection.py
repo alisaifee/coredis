@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import asyncio
 import dataclasses
 import inspect
 import itertools
+import math
 import os
 import socket
 import ssl
@@ -12,15 +12,15 @@ import warnings
 import weakref
 from abc import abstractmethod
 from collections import defaultdict, deque
-from contextlib import suppress
 from typing import TYPE_CHECKING, Any, cast, override
 
 from anyio import (
     Event,
+    Lock,
     connect_tcp,
     connect_unix,
+    create_memory_object_stream,
     fail_after,
-    get_cancelled_exc_class,
     move_on_after,
     sleep,
 )
@@ -74,7 +74,18 @@ class Request:
     _result: ResponseType | None = None
 
     def __await__(self):
-        return self.get_result().__await__()
+        return self._process_pending_responses().__await__()
+
+    async def _process_pending_responses(self) -> ResponseType:
+        try:
+            if not self._event.is_set() and not self.connection._read_lock.locked():
+                await self.connection.lazily_process_responses(self)
+            return await self.get_result()
+        except ReferenceError:
+            self._exc = ConnectionError("connection closed!")
+            if self.raise_exceptions:
+                raise self._exc
+            return self._exc  # type: ignore
 
     async def get_result(self) -> ResponseType:
         # return nothing
@@ -147,26 +158,12 @@ class RedisSSLContext:
 
 class BaseConnection:
     """
-    Base connection class which implements
-    :class:`asyncio.BaseProtocol` to interact
-    with the underlying connection established
-    with the redis server.
+    Base connection class which interacts with the underlying connection
+    established with the redis server.
     """
-
-    #: id for this connection as returned by the redis server
-    client_id: int | None
-    #: Queue that collects any unread push message types
-    push_messages: asyncio.Queue[ResponseType]
-    #: client id that the redis server should send any redirected notifications to
-    tracking_client_id: int | None
-    #: Whether the connection should use RESP or RESP3
-    protocol_version: Literal[2, 3]
 
     description: ClassVar[str] = "BaseConnection"
     locator: ClassVar[str] = ""
-
-    #: average response time of requests made on this connection
-    average_response_time: float
 
     def __init__(
         self,
@@ -192,21 +189,25 @@ class BaseConnection:
         ] = list()
         self.encoding = encoding
         self.decode_responses = decode_responses
+        #: Whether the connection should use RESP or RESP3
         self.protocol_version = protocol_version
         self.server_version: str | None = None
         self.client_name = client_name
+        #: id for this connection as returned by the redis server
         self.client_id = None
+        #: client id that the redis server should send any redirected notifications to
         self.tracking_client_id = None
 
         self.last_active_at: float = time.time()
         self.last_request_processed_at: float | None = None
 
-        self.connection: ByteStream | None = None
+        self._connection: ByteStream | None = None
         self._parser = Parser()
-        self._read_flag = asyncio.Event()
-        self._read_waiters: set[asyncio.Task[bool]] = set()
         self.packer: Packer = Packer(self.encoding)
-        self.push_messages: asyncio.Queue[ResponseType] = asyncio.Queue()
+        #: Queue that collects any unread push message types
+        self.push_messages, self._receive_messages = create_memory_object_stream[ResponseType](
+            math.inf
+        )
 
         self.noreply: bool = noreply
         self.noreply_set: bool = False
@@ -219,11 +220,12 @@ class BaseConnection:
         self._connection_error: BaseException | None = None
 
         self._requests: deque[Request] = deque()
+        self._write_lock = Lock()
+        self._read_lock = Lock()
 
+        #: average response time of requests made on this connection
         self.average_response_time: float = 0
         self.requests_processed: int = 0
-        self._write_ready: asyncio.Event = asyncio.Event()
-        self._transport_lock: asyncio.Lock = asyncio.Lock()
 
     def __repr__(self) -> str:
         return self.describe(self._description_args())
@@ -235,6 +237,12 @@ class BaseConnection:
     @property
     def location(self) -> str:
         return self.locator.format_map(defaultdict(lambda: None, self._description_args()))
+
+    @property
+    def connection(self) -> ByteStream:
+        if not self._connection:
+            raise Exception("Connection not initialized correctly!")
+        return self._connection
 
     @property
     def estimated_time_to_idle(self) -> float:
@@ -256,7 +264,7 @@ class BaseConnection:
         Whether the connection is established and initial handshakes were
         performed without error
         """
-        return self.connection is not None and self._connection_error is None
+        return self._connection is not None and self._connection_error is None
 
     @property
     def requests_pending(self) -> int:
@@ -297,56 +305,64 @@ class BaseConnection:
         return self._parser.can_read()
 
     @abstractmethod
-    async def connect(self) -> None: ...
+    async def _connect(self) -> None: ...
 
-    async def run(self):
+    async def connect(self) -> None:
         """
         Establish a connnection to the redis server
         and initiate any post connect callbacks
         """
-        assert self.connection
-        async with self.connection:
-            while True:
-                data = await self.connection.receive()
-                self.process_data(data)
+        await self._connect()
+        # setup connection
+        await self.on_connect()
+        # run any user callbacks. right now the only internal callback
+        # is for pubsub channel/pattern resubscription
+        for callback in self._connect_callbacks:
+            task = callback(self)
+            if inspect.isawaitable(task):
+                await task
 
-    def process_data(self, data: bytes) -> None:
-        self._parser.feed(data)
-        self._read_flag.set()
-        if not self._requests:
-            return
+    async def lazily_process_responses(self, until: Request | None = None) -> None:
+        """
+        Listen on the socket and run the parser lazily, completing pending requests in
+        FIFO order until provided request is completed (or until the queue is empty if
+        None).
+        """
+        async with self._read_lock:
+            while self._requests and (until is None or not until._event.is_set()):
+                # Peek at the head request; don't pop until we have a full reply
+                head = self._requests[0]
+                # Try to parse a complete response from already-fed bytes
+                response = self._parser.get_response(head.decode, head.encoding)
+                if isinstance(response, NotEnoughData):
+                    # Need more bytes; read once, feed, and retry
+                    try:
+                        data = await self.connection.receive()
+                    except BaseException:
+                        self.disconnect()
+                        raise
+                    self._parser.feed(data)
+                    continue  # loop back and try parsing again
 
-        request = self._requests.popleft()
-        response = self._parser.get_response(request.decode, request.encoding)
-        while not isinstance(
-            response,
-            NotEnoughData,
-        ):
-            if request.raise_exceptions and isinstance(response, RedisError):
-                request._exc = response
-            else:
-                request._result = response
-            request._event.set()
-
-            self.last_request_processed_at = time.time()
-            self.requests_processed += 1
-            response_time = time.time() - request.created_at
-
-            self.average_response_time = (
-                (self.average_response_time * (self.requests_processed - 1)) + response_time
-            ) / self.requests_processed
-
-            try:
+                # We have a full response for `head`; now pop and complete it
                 request = self._requests.popleft()
-            except IndexError:
-                return
 
-            response = self._parser.get_response(request.decode, request.encoding)
+                if request.raise_exceptions and isinstance(response, RedisError):
+                    request._exc = response
+                else:
+                    request._result = response
+                request._event.set()
 
-        # In case the first request pulled from the queue doesn't have enough data
-        # to process, put it back to the start of the queue for the next iteration
-        if request:
-            self._requests.appendleft(request)
+                # metrics
+                self.last_request_processed_at = time.time()
+                self.requests_processed += 1
+                response_time = self.last_request_processed_at - request.created_at
+                self.average_response_time = (
+                    (self.average_response_time * (self.requests_processed - 1)) + response_time
+                ) / self.requests_processed
+
+                if until is request:
+                    return
 
     async def update_tracking_client(self, enabled: bool, client_id: int | None = None) -> bool:
         """
@@ -478,59 +494,21 @@ class BaseConnection:
             self.noreply_set = True
 
         self.last_active_at = time.time()
-        # run any user callbacks. right now the only internal callback
-        # is for pubsub channel/pattern resubscription
-        for callback in self._connect_callbacks:
-            task = callback(self)
-            if inspect.isawaitable(task):
-                await task
 
     async def fetch_push_message(
         self,
-        decode: RedisValueT | None = None,
-        push_message_types: set[bytes] | None = None,
         block: bool | None = False,
     ) -> ResponseType:
         """
         Read the next pending response
         """
-        if not self.is_connected:
-            await self.connect()
+        print("fetching message!")
+        if block:
+            timeout = self._stream_timeout if not block else None
+            with fail_after(timeout):
+                return await self._receive_messages.receive()
 
-        if len(self._requests) > 0:
-            raise ConnectionError(
-                f"Invalid request for push messages. {len(self._requests)} requests still pending"
-            )
-
-        message = self._parser.get_response(
-            bool(decode) if decode is not None else self.decode_responses,
-            self.encoding,
-            push_message_types,
-        )
-        while isinstance(
-            message,
-            NotEnoughData,
-        ):
-            self._read_flag.clear()
-            try:
-                timeout = self._stream_timeout if not block else None
-                read_ready_task = asyncio.create_task(self._read_flag.wait())
-                read_ready_task.add_done_callback(
-                    lambda _: self._read_waiters.discard(read_ready_task)
-                )
-                self._read_waiters.add(read_ready_task)
-                with fail_after(timeout):
-                    await read_ready_task
-            except get_cancelled_exc_class():
-                if not self.is_connected:
-                    raise ConnectionError("Connection lost")
-                raise
-            message = self._parser.get_response(
-                bool(decode) if decode is not None else self.decode_responses,
-                self.encoding,
-                push_message_types,
-            )
-        return message
+        return self._receive_messages.receive_nowait()
 
     async def _send_packed_command(
         self, command: list[bytes], timeout: float | None = None
@@ -539,13 +517,13 @@ class BaseConnection:
         Sends an already packed command to the Redis server
         """
 
-        assert self.connection
         try:
             with fail_after(timeout):
-                data = b"".join(command)
-                await self.connection.send(data)
+                async with self._write_lock:
+                    data = b"".join(command)
+                    await self.connection.send(data)
         except TimeoutError as e:
-            if self.connection:
+            if self._connection:
                 self.disconnect()
             raise TimeoutError(
                 f"Unable to write after waiting for socket for {timeout} seconds"
@@ -559,12 +537,7 @@ class BaseConnection:
         """
         Send a command to the redis server
         """
-
-        if not self.is_connected:
-            await self.connect()
-
         await self._send_packed_command(self.packer.pack_command(command, *args))
-
         self.last_active_at = time.time()
 
     async def create_request(
@@ -581,9 +554,6 @@ class BaseConnection:
         Send a command to the redis server
         """
         from coredis.commands.constants import CommandName
-
-        if not self.is_connected:
-            await self.connect()
 
         cmd_list = []
         request_timeout: float | None = timeout or self._stream_timeout
@@ -615,10 +585,6 @@ class BaseConnection:
         """
         Send multiple commands to the redis server
         """
-
-        if not self.is_connected:
-            await self.connect()
-
         request_timeout: float | None = timeout or self._stream_timeout
 
         await self._send_packed_command(
@@ -650,21 +616,16 @@ class BaseConnection:
         self.needs_handshake = True
         self.noreply_set = False
         self._parser.on_disconnect()
+        if self._connection:
+            self.push_messages.close()
+            self._receive_messages.close()
 
         disconnect_exc = self._last_error or ConnectionError("connection lost")
-        while self._read_waiters:
-            waiter = self._read_waiters.pop()
-            if not waiter.done():
-                with suppress(RuntimeError):
-                    waiter.cancel()
-        while True:
-            try:
-                request = self._requests.popleft()
-                if not request._event.is_set():
-                    request._exc = disconnect_exc
-                    request._event.set()
-            except IndexError:
-                break
+        while self._requests:
+            request = self._requests.popleft()
+            if not request._event.is_set():
+                request._exc = disconnect_exc
+                request._event.set()
 
 
 class Connection(BaseConnection):
@@ -720,16 +681,16 @@ class Connection(BaseConnection):
         self.socket_keepalive_options: dict[int, int | bytes] = socket_keepalive_options or {}
 
     @override
-    async def connect(self) -> None:
+    async def _connect(self) -> None:
         with fail_after(self._connect_timeout):
             if self.ssl_context:
-                self.connection = await connect_tcp(
+                self._connection = await connect_tcp(
                     self.host, self.port, ssl_context=self.ssl_context
                 )
             else:
-                self.connection = await connect_tcp(self.host, self.port)
+                self._connection = await connect_tcp(self.host, self.port)
 
-            sock = self.connection.extra(SocketAttribute.raw_socket, default=None)
+            sock = self._connection.extra(SocketAttribute.raw_socket, default=None)
             if sock is not None:
                 if self.socket_keepalive:  # TCP_KEEPALIVE
                     sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
@@ -773,9 +734,9 @@ class UnixDomainSocketConnection(BaseConnection):
         self._description_args = lambda: {"path": self.path, "db": self.db}
 
     @override
-    async def connect(self) -> None:
+    async def _connect(self) -> None:
         with fail_after(self._connect_timeout):
-            self.connection = await connect_unix(self.path)
+            self._connection = await connect_unix(self.path)
 
 
 class ClusterConnection(Connection):

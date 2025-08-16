@@ -5,13 +5,12 @@ import os
 import threading
 import time
 import warnings
-from contextlib import asynccontextmanager
 from itertools import chain
 from ssl import SSLContext, VerifyMode
-from typing import Any, AsyncGenerator, Self, cast
+from typing import Any, cast
 from urllib.parse import parse_qs, unquote, urlparse
 
-from anyio import AsyncContextManagerMixin, create_task_group, fail_after, sleep
+from anyio import fail_after, sleep
 
 from coredis._utils import query_param_to_bool
 from coredis.connection import (
@@ -26,7 +25,7 @@ from coredis.typing import Callable, ClassVar, RedisValueT, TypeVar
 _CPT = TypeVar("_CPT", bound="ConnectionPool")
 
 
-class ConnectionPool(AsyncContextManagerMixin):
+class ConnectionPool:
     """Generic connection pool"""
 
     #: Mapping of querystring arguments to their parser functions
@@ -210,12 +209,8 @@ class ConnectionPool(AsyncContextManagerMixin):
         self.decode_responses = bool(self.connection_kwargs.get("decode_responses", False))
         self.encoding = str(self.connection_kwargs.get("encoding", "utf-8"))
 
-    @asynccontextmanager
-    async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        async with create_task_group() as tg:
-            self._task_group = tg
-            self.initialized = True
-            yield self
+    async def initialize(self) -> None:
+        self.initialized = True
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{self.connection_class.describe(self.connection_kwargs)}>"
@@ -273,8 +268,6 @@ class ConnectionPool(AsyncContextManagerMixin):
                 raise ConnectionError("Too many connections")
             connection = self._make_connection(**kwargs)
             await connection.connect()
-            self._task_group.start_soon(connection.run)
-            await connection.on_connect()
 
         if acquire:
             self._in_use_connections.add(connection)
@@ -296,7 +289,6 @@ class ConnectionPool(AsyncContextManagerMixin):
     def disconnect(self) -> None:
         """Closes all connections in the pool"""
         all_conns = chain(self._available_connections, self._in_use_connections)
-        self._task_group.cancel_scope.cancel()
 
         for connection in all_conns:
             connection.disconnect()

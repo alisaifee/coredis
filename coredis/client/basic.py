@@ -320,17 +320,10 @@ class Client(
             )
             self._module_info = {}
 
-    async def __aenter__(self) -> Self:
-        await self.connection_pool.__aenter__()
+    async def initialize(self) -> Self:
+        await self.connection_pool.initialize()
         await self._populate_module_versions()
         return self
-
-    async def __aexit__(self, *args) -> None:
-        self.connection_pool._task_group.cancel_scope.cancel()
-        await self.connection_pool.__aexit__(*args)
-
-    async def initialize(self: ClientT) -> ClientT:
-        return await self.__aenter__()
 
     def __await__(self: ClientT) -> Generator[Any, None, ClientT]:
         return self.initialize().__await__()
@@ -1161,7 +1154,7 @@ class Redis(Client[AnyStr]):
 
     async def pipeline(
         self,
-        transaction: bool | None = True,
+        transaction: bool = True,
         watches: Parameters[KeyT] | None = None,
         timeout: float | None = None,
     ) -> coredis.pipeline.Pipeline[AnyStr]:
