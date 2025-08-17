@@ -4,7 +4,6 @@ import asyncio
 import inspect
 from asyncio import CancelledError
 from contextlib import suppress
-from functools import partial
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, cast
 
@@ -299,10 +298,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         assert self.connection
         timeout = timeout if timeout and timeout > 0 else None
         with move_on_after(timeout):
-            return await self._execute(
-                self.connection,
-                partial(self.connection.fetch_push_message, block=block),
-            )
+            return await self.connection.fetch_push_message(block=block)
 
     async def handle_message(self, response: ResponseType) -> PubSubMessage | None:
         """
@@ -827,11 +823,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                     except:  # noqa
                         raise ConnectionError("Shard connections not stable")
             tasks: dict[str, asyncio.Task[ResponseType]] = {
-                node_id: asyncio.create_task(
-                    connection.fetch_push_message(
-                        push_message_types=self.SUBUNSUB_MESSAGE_TYPES | self.PUBLISH_MESSAGE_TYPES,
-                    ),
-                )
+                node_id: asyncio.create_task(connection.fetch_push_message())
                 for node_id, connection in self.shard_connections.items()
                 if node_id not in self.pending_tasks
             }

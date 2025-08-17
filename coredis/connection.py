@@ -15,11 +15,13 @@ from collections import defaultdict, deque
 from typing import TYPE_CHECKING, Any, cast, override
 
 from anyio import (
+    CancelScope,
     Event,
     Lock,
     connect_tcp,
     connect_unix,
     create_memory_object_stream,
+    create_task_group,
     fail_after,
     move_on_after,
     sleep,
@@ -61,7 +63,7 @@ if TYPE_CHECKING:
 
 @dataclasses.dataclass
 class Request:
-    connection: weakref.ProxyType[Connection]
+    connection: Connection
     command: bytes
     decode: bool
     encoding: str | None = None
@@ -74,35 +76,39 @@ class Request:
     _result: ResponseType | None = None
 
     def __await__(self):
-        return self._process_pending_responses().__await__()
-
-    async def _process_pending_responses(self) -> ResponseType:
-        try:
-            if not self._event.is_set() and not self.connection._read_lock.locked():
-                await self.connection.lazily_process_responses(self)
-            return await self.get_result()
-        except ReferenceError:
-            self._exc = ConnectionError("connection closed!")
-            if self.raise_exceptions:
-                raise self._exc
-            return self._exc  # type: ignore
+        return self.get_result().__await__()
 
     async def get_result(self) -> ResponseType:
         # return nothing
         if self.no_reply:
             return await sleep(0)  # add a checkpoint
+        # return now if response available
+        if self._event.is_set():
+            return self._result_or_exc()
         # add response timeout
         with move_on_after(self.response_timeout) as scope:
-            await self._event.wait()
-        if scope.cancelled_caught:
+            async with create_task_group() as tg:
+                # wait
+                tg.start_soon(self._wait_for_event, tg.cancel_scope)
+                # lazily_process_responses can be cancelled whenever, since it only
+                # yields control waiting for data or the lock
+                tg.start_soon(self.connection.lazily_process_responses, self)
+        if scope.cancelled_caught and not self._event.is_set():
             self._exc = TimeoutError(
                 f"command {nativestr(self.command)} timed out after {self.response_timeout} seconds"
             )
+        return self._result_or_exc()
+
+    def _result_or_exc(self) -> ResponseType:
         if self._exc is not None:
             if self.raise_exceptions:
                 raise self._exc
             return self._exc  # type: ignore
         return self._result
+
+    async def _wait_for_event(self, scope: CancelScope) -> None:
+        await self._event.wait()
+        scope.cancel()
 
 
 @dataclasses.dataclass
@@ -202,12 +208,10 @@ class BaseConnection:
         self.last_request_processed_at: float | None = None
 
         self._connection: ByteStream | None = None
-        self._parser = Parser()
-        self.packer: Packer = Packer(self.encoding)
         #: Queue that collects any unread push message types
-        self.push_messages, self._receive_messages = create_memory_object_stream[ResponseType](
-            math.inf
-        )
+        push_messages, self._receive_messages = create_memory_object_stream[ResponseType](math.inf)
+        self._parser = Parser(push_messages)
+        self.packer: Packer = Packer(self.encoding)
 
         self.noreply: bool = noreply
         self.noreply_set: bool = False
@@ -346,7 +350,6 @@ class BaseConnection:
 
                 # We have a full response for `head`; now pop and complete it
                 request = self._requests.popleft()
-
                 if request.raise_exceptions and isinstance(response, RedisError):
                     request._exc = response
                 else:
@@ -469,7 +472,6 @@ class BaseConnection:
             self.needs_handshake = False
 
     async def on_connect(self) -> None:
-        self._parser.on_connect(self)
         await self.perform_handshake()
 
         if self.db:
@@ -495,14 +497,10 @@ class BaseConnection:
 
         self.last_active_at = time.time()
 
-    async def fetch_push_message(
-        self,
-        block: bool | None = False,
-    ) -> ResponseType:
+    async def fetch_push_message(self, block: bool = False) -> ResponseType:
         """
         Read the next pending response
         """
-        print("fetching message!")
         if block:
             timeout = self._stream_timeout if not block else None
             with fail_after(timeout):
@@ -617,8 +615,8 @@ class BaseConnection:
         self.noreply_set = False
         self._parser.on_disconnect()
         if self._connection:
-            self.push_messages.close()
             self._receive_messages.close()
+            # TODO: aclose connection
 
         disconnect_exc = self._last_error or ConnectionError("connection lost")
         while self._requests:

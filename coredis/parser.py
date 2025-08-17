@@ -6,7 +6,6 @@ from typing import cast
 
 from anyio.streams.memory import MemoryObjectSendStream
 
-from coredis._protocols import ConnectionP
 from coredis._utils import b
 from coredis.constants import SYM_CRLF, RESPDataType
 from coredis.exceptions import (
@@ -165,8 +164,8 @@ class Parser:
         "WRONGTYPE": WrongTypeError,
     }
 
-    def __init__(self) -> None:
-        self.push_messages: MemoryObjectSendStream[ResponseType] | None = None
+    def __init__(self, push_messages: MemoryObjectSendStream[ResponseType]) -> None:
+        self.push_messages = push_messages
         self.localbuffer: BytesIO = BytesIO(b"")
         self.bytes_read: int = 0
         self.bytes_written: int = 0
@@ -176,10 +175,6 @@ class Parser:
         self.localbuffer.seek(self.bytes_written)
         self.bytes_written += self.localbuffer.write(data)
         self.localbuffer.seek(self.bytes_read)
-
-    def on_connect(self, connection: ConnectionP) -> None:
-        """Called when the stream connects"""
-        self.push_messages = connection.push_messages
 
     def on_disconnect(self) -> None:
         """Called when the stream disconnects"""
@@ -222,7 +217,6 @@ class Parser:
             else:
                 if response and response.response_type == RESPDataType.PUSH:
                     assert isinstance(response.response, list)
-                    assert self.push_messages
                     if not push_message_types or b(response.response[0]) not in push_message_types:
                         self.push_messages.send_nowait(response.response)
                         continue
