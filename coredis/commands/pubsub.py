@@ -7,7 +7,13 @@ from contextlib import suppress
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, cast
 
-from anyio import create_memory_object_stream, get_cancelled_exc_class, move_on_after, sleep
+from anyio import (
+    create_memory_object_stream,
+    create_task_group,
+    get_cancelled_exc_class,
+    move_on_after,
+    sleep,
+)
 from deprecated.sphinx import versionadded
 
 from coredis._utils import CaseAndEncodingInsensitiveEnum, b, hash_slot, nativestr
@@ -144,8 +150,13 @@ class BasePubSub(Generic[AnyStr, PoolT]):
             if self._initial_pattern_subscriptions:
                 await self.psubscribe(**self._initial_pattern_subscriptions)
             self.connection.register_connect_callback(self.on_connect)
-            if not self._consumer_task or self._consumer_task.done():
-                self._consumer_task = asyncio.create_task(self._consumer())
+            self._task_group = await create_task_group().__aenter__()
+            self._task_group.start_soon(
+                self.connection.lazily_process_responses,
+                None,
+                self.SUBUNSUB_MESSAGE_TYPES | self.PUBLISH_MESSAGE_TYPES,
+            )
+            self._task_group.start_soon(self._consumer)
         return self
 
     async def psubscribe(
@@ -435,6 +446,8 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         traceback: TracebackType | None,
     ) -> None:
         # self._receive_stream.close()
+        self._task_group.cancel_scope.cancel()
+        await self._task_group.__aexit__(exc_type, exc_value, traceback)
         await self.aclose()
 
     async def aclose(self) -> None:
@@ -465,12 +478,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
             self.connection.clear_connect_callbacks()
             self.connection_pool.release(self.connection)
             self.connection = None
-        if self._consumer_task:
-            try:
-                self._consumer_task.cancel()
-            except RuntimeError:  # noqa
-                pass
-            self._consumer_task = None
+        # TODO: reset task group
 
         self.channels = {}
         self.patterns = {}

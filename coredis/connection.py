@@ -326,18 +326,20 @@ class BaseConnection:
             if inspect.isawaitable(task):
                 await task
 
-    async def lazily_process_responses(self, until: Request | None = None) -> None:
+    async def lazily_process_responses(
+        self, until: Request | None = None, push_message_types: set[bytes] | None = None
+    ) -> None:
         """
         Listen on the socket and run the parser lazily, completing pending requests in
-        FIFO order until provided request is completed (or until the queue is empty if
-        None).
+        FIFO order until provided request is completed (or indefinitely if None)
         """
         async with self._read_lock:
-            while self._requests and (until is None or not until._event.is_set()):
-                # Peek at the head request; don't pop until we have a full reply
-                head = self._requests[0]
+            while until is None or (self._requests and not until._event.is_set()):
+                decode = self._requests[0].decode if self._requests else self.decode_responses
                 # Try to parse a complete response from already-fed bytes
-                response = self._parser.get_response(head.decode, head.encoding)
+                response = self._parser.get_response(
+                    decode, self.encoding, push_message_types=push_message_types
+                )
                 if isinstance(response, NotEnoughData):
                     # Need more bytes; read once, feed, and retry
                     try:

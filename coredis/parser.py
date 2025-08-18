@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Hashable
 from io import BytesIO
 from typing import cast
@@ -41,6 +42,8 @@ from coredis.typing import (
     ResponsePrimitive,
     ResponseType,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class NotEnoughData:
@@ -204,8 +207,7 @@ class Parser:
         :param decode: Whether to decode simple or bulk strings
         :param push_message_types: the push message types to return if they
          arrive. If a message arrives that does not match the filter, it will
-         be put on the :data:`~coredis.connection.BaseConnection.push_messages`
-         queue
+         be logged; otherwise, it will be put on the :data:`~coredis.connection.BaseConnection.push_messages` queue
         :return: The next available parsed response read from the connection.
          If there is not enough data on the wire a ``NotEnoughData`` instance
          will be returned.
@@ -218,10 +220,10 @@ class Parser:
                 if response and response.response_type == RESPDataType.PUSH:
                     assert isinstance(response.response, list)
                     if not push_message_types or b(response.response[0]) not in push_message_types:
-                        self.push_messages.send_nowait(response.response)
-                        continue
+                        logger.debug(f"Unhandled push message: {response.response}")
                     else:
-                        break
+                        self.push_messages.send_nowait(response.response)
+                    continue
                 else:
                     break
         return response.response if response else None
