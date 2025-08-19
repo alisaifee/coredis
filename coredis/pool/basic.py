@@ -3,14 +3,13 @@ from __future__ import annotations
 import asyncio
 import os
 import threading
-import time
 import warnings
 from itertools import chain
 from ssl import SSLContext, VerifyMode
 from typing import Any, cast
 from urllib.parse import parse_qs, unquote, urlparse
 
-import async_timeout
+from anyio import fail_after
 
 from coredis._utils import query_param_to_bool
 from coredis.connection import (
@@ -182,7 +181,7 @@ class ConnectionPool:
         *,
         connection_class: type[Connection] | None = None,
         max_connections: int | None = None,
-        max_idle_time: int = 0,
+        max_idle_time: int | None = None,
         idle_check_interval: int = 1,
         **connection_kwargs: Any | None,
     ) -> None:
@@ -198,6 +197,7 @@ class ConnectionPool:
         """
         self.connection_class = connection_class or Connection
         self.connection_kwargs = connection_kwargs
+        self.connection_kwargs["max_idle_time"] = max_idle_time
         self.max_connections = max_connections or 2**31
         self.max_idle_time = max_idle_time
         self.idle_check_interval = idle_check_interval
@@ -214,19 +214,6 @@ class ConnectionPool:
 
     def __del__(self) -> None:
         self.disconnect()
-
-    async def disconnect_on_idle_time_exceeded(self, connection: Connection) -> None:
-        while True:
-            if (
-                time.time() - connection.last_active_at > self.max_idle_time
-                and not connection.requests_pending
-            ):
-                connection.disconnect()
-                if connection in self._available_connections:
-                    self._available_connections.remove(connection)
-                self._created_connections -= 1
-                break
-            await asyncio.sleep(self.idle_check_interval)
 
     def reset(self) -> None:
         self.pid = os.getpid()
@@ -264,6 +251,7 @@ class ConnectionPool:
             if self._created_connections >= self.max_connections:
                 raise ConnectionError("Too many connections")
             connection = self._make_connection(**kwargs)
+            await connection.connect()
 
         if acquire:
             self._in_use_connections.add(connection)
@@ -299,10 +287,6 @@ class ConnectionPool:
         connection = self.connection_class(
             **self.connection_kwargs,  # type: ignore
         )
-
-        if self.max_idle_time > self.idle_check_interval > 0:
-            # do not await the future
-            asyncio.ensure_future(self.disconnect_on_idle_time_exceeded(connection))
 
         return connection
 
@@ -345,7 +329,7 @@ class BlockingConnectionPool(ConnectionPool):
         queue_class: type[asyncio.Queue[Connection | None]] = asyncio.LifoQueue,
         max_connections: int | None = None,
         timeout: int = 20,
-        max_idle_time: int = 0,
+        max_idle_time: int | None = None,
         idle_check_interval: int = 1,
         **connection_kwargs: RedisValueT | None,
     ):
@@ -362,16 +346,6 @@ class BlockingConnectionPool(ConnectionPool):
             idle_check_interval=idle_check_interval,
             **connection_kwargs,
         )
-
-    async def disconnect_on_idle_time_exceeded(self, connection: Connection) -> None:
-        while True:
-            if time.time() - connection.last_active_at > self.max_idle_time:
-                # Unlike the non blocking pool, we don't free the connection object,
-                # but always reuse it
-                connection.disconnect()
-
-                break
-            await asyncio.sleep(self.idle_check_interval)
 
     def reset(self) -> None:
         self._pool: asyncio.Queue[Connection | None] = self.queue_class(self.max_connections)
@@ -402,7 +376,7 @@ class BlockingConnectionPool(ConnectionPool):
         self.checkpid()
 
         try:
-            async with async_timeout.timeout(self.timeout):
+            with fail_after(self.timeout):
                 connection = await self._pool.get()
             if connection and connection.is_connected and connection.needs_handshake:
                 await connection.perform_handshake()

@@ -20,9 +20,9 @@ async def test_connect_tcp(redis_basic):
     request = await conn.create_request(b"PING")
     res = await request
     assert res == b"PONG"
-    assert conn._transport is not None
+    assert conn._connection is not None
     conn.disconnect()
-    assert conn._transport is None
+    assert conn._connection is None
 
 
 async def test_connect_cred_provider(redis_auth_cred_provider):
@@ -37,9 +37,9 @@ async def test_connect_cred_provider(redis_auth_cred_provider):
     request = await conn.create_request(b"PING")
     res = await request
     assert res == b"PONG"
-    assert conn._transport is not None
+    assert conn._connection is not None
     conn.disconnect()
-    assert conn._transport is None
+    assert conn._connection is None
 
 
 @pytest.mark.os("linux")

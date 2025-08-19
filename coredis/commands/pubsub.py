@@ -4,17 +4,28 @@ import asyncio
 import inspect
 from asyncio import CancelledError
 from contextlib import suppress
-from functools import partial
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, cast
 
-import async_timeout
+from anyio import (
+    create_memory_object_stream,
+    create_task_group,
+    get_cancelled_exc_class,
+    move_on_after,
+    sleep,
+)
 from deprecated.sphinx import versionadded
 
-from coredis._utils import CaseAndEncodingInsensitiveEnum, b, hash_slot, nativestr
+from coredis._utils import b, hash_slot, nativestr
 from coredis.commands.constants import CommandName
 from coredis.connection import BaseConnection, Connection
 from coredis.exceptions import ConnectionError, PubSubError, TimeoutError
+from coredis.parser import (
+    PUBLISH_MESSAGE_TYPES,
+    SUBUNSUB_MESSAGE_TYPES,
+    UNSUBSCRIBE_MESSAGE_TYPES,
+    PubSubMessageTypes,
+)
 from coredis.response.types import PubSubMessage
 from coredis.retry import (
     CompositeRetryPolicy,
@@ -40,48 +51,17 @@ from coredis.typing import (
 )
 
 if TYPE_CHECKING:
-    import coredis.client
     import coredis.connection
     import coredis.pool
 
 T = TypeVar("T")
-
-
 PoolT = TypeVar("PoolT", bound="coredis.pool.ConnectionPool")
-
 #: Callables for message handler callbacks. The callbacks
 #:  can be sync or async.
 SubscriptionCallback = Callable[[PubSubMessage], Awaitable[None]] | Callable[[PubSubMessage], None]
 
 
-class PubSubMessageTypes(CaseAndEncodingInsensitiveEnum):
-    MESSAGE = b"message"
-    PMESSAGE = b"pmessage"
-    SMESSAGE = b"smessage"
-    SUBSCRIBE = b"subscribe"
-    UNSUBSCRIBE = b"unsubscribe"
-    PSUBSCRIBE = b"psubscribe"
-    PUNSUBSCRIBE = b"punsubscribe"
-    SSUBSCRIBE = b"ssubscribe"
-    SUNSUBSCRIBE = b"sunsubscribe"
-
-
 class BasePubSub(Generic[AnyStr, PoolT]):
-    PUBLISH_MESSAGE_TYPES = {
-        PubSubMessageTypes.MESSAGE.value,
-        PubSubMessageTypes.PMESSAGE.value,
-    }
-    SUBUNSUB_MESSAGE_TYPES = {
-        PubSubMessageTypes.SUBSCRIBE.value,
-        PubSubMessageTypes.PSUBSCRIBE.value,
-        PubSubMessageTypes.UNSUBSCRIBE.value,
-        PubSubMessageTypes.PUNSUBSCRIBE.value,
-    }
-    UNSUBSCRIBE_MESSAGE_TYPES = {
-        PubSubMessageTypes.UNSUBSCRIBE.value,
-        PubSubMessageTypes.PUNSUBSCRIBE.value,
-    }
-
     channels: MutableMapping[StringT, SubscriptionCallback | None]
     patterns: MutableMapping[StringT, SubscriptionCallback | None]
 
@@ -97,11 +77,12 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         patterns: Parameters[StringT] | None = None,
         pattern_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
+        max_buffer_size: int = 1024,
     ):
         self.initialized = False
         self.connection_pool = connection_pool
         self.ignore_subscribe_messages = ignore_subscribe_messages
-        self.connection: coredis.connection.Connection | None = None
+        self.connection: coredis.BaseConnection | None = None
         self._retry_policy = retry_policy or NoRetryPolicy()
         self._initial_channel_subscriptions = {
             **{nativestr(channel): None for channel in channels or []},
@@ -111,7 +92,9 @@ class BasePubSub(Generic[AnyStr, PoolT]):
             **{nativestr(pattern): None for pattern in patterns or []},
             **{nativestr(k): v for k, v in (pattern_handlers or {}).items()},
         }
-        self._message_queue: asyncio.Queue[PubSubMessage | None] = asyncio.Queue()
+        self._send_stream, self._receive_stream = create_memory_object_stream[PubSubMessage | None](
+            max_buffer_size=max_buffer_size
+        )
         self._consumer_task: asyncio.Task[None] | None = None
         self._subscribed = asyncio.Event()
         self.reset()
@@ -146,8 +129,9 @@ class BasePubSub(Generic[AnyStr, PoolT]):
             if self._initial_pattern_subscriptions:
                 await self.psubscribe(**self._initial_pattern_subscriptions)
             self.connection.register_connect_callback(self.on_connect)
-            if not self._consumer_task or self._consumer_task.done():
-                self._consumer_task = asyncio.create_task(self._consumer())
+            self._task_group = await create_task_group().__aenter__()
+            self._task_group.start_soon(self.connection.lazily_process_responses, None)
+            self._task_group.start_soon(self._consumer)
         return self
 
     async def psubscribe(
@@ -228,14 +212,11 @@ class BasePubSub(Generic[AnyStr, PoolT]):
          on the connection. If the ``None`` the command will block forever.
         """
 
-        try:
-            await self.initialize()
-            async with async_timeout.timeout(timeout):
-                return self._filter_ignored_messages(
-                    await self._message_queue.get(), ignore_subscribe_messages
-                )
-        except asyncio.TimeoutError:
-            return None
+        await self.initialize()
+        with move_on_after(timeout):
+            return self._filter_ignored_messages(
+                await self._receive_stream.receive(), ignore_subscribe_messages
+            )
 
     async def on_connect(self, connection: BaseConnection) -> None:
         """
@@ -288,7 +269,6 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         if self.connection is None:
             self.connection = await self.connection_pool.get_connection()
             self.connection.register_connect_callback(self.on_connect)
-        assert self.connection
         return await self._execute(self.connection, self.connection.send_command, command, *args)
 
     async def parse_response(
@@ -300,21 +280,14 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         :meta private:
         """
         await self.initialize()
-
         assert self.connection
-        coro = self._execute(
-            self.connection,
-            partial(
-                self.connection.fetch_push_message,
-                block=block,
-                push_message_types=self.SUBUNSUB_MESSAGE_TYPES | self.PUBLISH_MESSAGE_TYPES,
-            ),
-        )
-
-        try:
-            return await asyncio.wait_for(coro, timeout if (timeout and timeout > 0) else None)
-        except asyncio.TimeoutError:
-            return None
+        timeout = timeout if timeout and timeout > 0 else None
+        with move_on_after(timeout):
+            if self.connection.protocol_version == 3:
+                return await self.connection.fetch_push_message(block=block)
+            else:
+                # TODO: implement RESP2-compatible
+                pass
 
     async def handle_message(self, response: ResponseType) -> PubSubMessage | None:
         """
@@ -329,7 +302,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         message_type_str = nativestr(r[0])
         message: PubSubMessage
 
-        if message_type in self.SUBUNSUB_MESSAGE_TYPES:
+        if message_type in SUBUNSUB_MESSAGE_TYPES:
             message = PubSubMessage(
                 type=message_type_str,
                 pattern=cast(StringT, r[1]) if message_type[0] == ord(b"p") else None,
@@ -340,7 +313,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
                 data=cast(int, r[2]),
             )
 
-        elif message_type in self.PUBLISH_MESSAGE_TYPES:
+        elif message_type in PUBLISH_MESSAGE_TYPES:
             if message_type == PubSubMessageTypes.PMESSAGE:
                 message = PubSubMessage(
                     type="pmessage",
@@ -359,14 +332,14 @@ class BasePubSub(Generic[AnyStr, PoolT]):
             raise PubSubError(f"Unknown message type {message_type_str}")  # noqa
 
         # if this is an unsubscribe message, remove it from memory
-        if message_type in self.UNSUBSCRIBE_MESSAGE_TYPES:
+        if message_type in UNSUBSCRIBE_MESSAGE_TYPES:
             if message_type == PubSubMessageTypes.PUNSUBSCRIBE:
                 subscribed_dict = self.patterns
             else:
                 subscribed_dict = self.channels
             subscribed_dict.pop(message["channel"], None)
 
-        if message_type in self.PUBLISH_MESSAGE_TYPES:
+        if message_type in PUBLISH_MESSAGE_TYPES:
             handler = None
             if message_type == PubSubMessageTypes.PMESSAGE and message["pattern"]:
                 handler = self.patterns.get(message["pattern"], None)
@@ -391,11 +364,12 @@ class BasePubSub(Generic[AnyStr, PoolT]):
                         lambda: self.parse_response(block=True),
                         failure_hook=self.reset_connections,
                     ):
-                        self._message_queue.put_nowait(await self.handle_message(response))
+                        msg = await self.handle_message(response)
+                        self._send_stream.send_nowait(msg)
                 else:
                     await self._subscribed.wait()
             except ConnectionError:
-                await asyncio.sleep(0)
+                await sleep(0)
 
     def _filter_ignored_messages(
         self,
@@ -404,7 +378,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
     ) -> PubSubMessage | None:
         if (
             message
-            and b(message["type"]) in self.SUBUNSUB_MESSAGE_TYPES
+            and b(message["type"]) in SUBUNSUB_MESSAGE_TYPES
             and (self.ignore_subscribe_messages or ignore_subscribe_messages)
         ):
             return None
@@ -418,7 +392,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
     ) -> ResponseType | None:
         try:
             return await command(*args)
-        except asyncio.CancelledError:
+        except get_cancelled_exc_class():
             # do not retry if coroutine is cancelled
             if await connection.can_read():  # noqa
                 connection.disconnect()
@@ -449,6 +423,9 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
+        # self._receive_stream.close()
+        self._task_group.cancel_scope.cancel()
+        await self._task_group.__aexit__(exc_type, exc_value, traceback)
         await self.aclose()
 
     async def aclose(self) -> None:
@@ -477,14 +454,8 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         if self.connection:
             self.connection.disconnect()
             self.connection.clear_connect_callbacks()
-            self.connection_pool.release(self.connection)
             self.connection = None
-        if self._consumer_task:
-            try:
-                self._consumer_task.cancel()
-            except RuntimeError:  # noqa
-                pass
-            self._consumer_task = None
+        # TODO: reset task group
 
         self.channels = {}
         self.patterns = {}
@@ -837,11 +808,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                     except:  # noqa
                         raise ConnectionError("Shard connections not stable")
             tasks: dict[str, asyncio.Task[ResponseType]] = {
-                node_id: asyncio.create_task(
-                    connection.fetch_push_message(
-                        push_message_types=self.SUBUNSUB_MESSAGE_TYPES | self.PUBLISH_MESSAGE_TYPES,
-                    ),
-                )
+                node_id: asyncio.create_task(connection.fetch_push_message())
                 for node_id, connection in self.shard_connections.items()
                 if node_id not in self.pending_tasks
             }
