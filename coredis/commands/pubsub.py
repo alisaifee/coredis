@@ -16,10 +16,16 @@ from anyio import (
 )
 from deprecated.sphinx import versionadded
 
-from coredis._utils import CaseAndEncodingInsensitiveEnum, b, hash_slot, nativestr
+from coredis._utils import b, hash_slot, nativestr
 from coredis.commands.constants import CommandName
 from coredis.connection import BaseConnection, Connection
 from coredis.exceptions import ConnectionError, PubSubError, TimeoutError
+from coredis.parser import (
+    PUBLISH_MESSAGE_TYPES,
+    SUBUNSUB_MESSAGE_TYPES,
+    UNSUBSCRIBE_MESSAGE_TYPES,
+    PubSubMessageTypes,
+)
 from coredis.response.types import PubSubMessage
 from coredis.retry import (
     CompositeRetryPolicy,
@@ -55,34 +61,7 @@ PoolT = TypeVar("PoolT", bound="coredis.pool.ConnectionPool")
 SubscriptionCallback = Callable[[PubSubMessage], Awaitable[None]] | Callable[[PubSubMessage], None]
 
 
-class PubSubMessageTypes(CaseAndEncodingInsensitiveEnum):
-    MESSAGE = b"message"
-    PMESSAGE = b"pmessage"
-    SMESSAGE = b"smessage"
-    SUBSCRIBE = b"subscribe"
-    UNSUBSCRIBE = b"unsubscribe"
-    PSUBSCRIBE = b"psubscribe"
-    PUNSUBSCRIBE = b"punsubscribe"
-    SSUBSCRIBE = b"ssubscribe"
-    SUNSUBSCRIBE = b"sunsubscribe"
-
-
 class BasePubSub(Generic[AnyStr, PoolT]):
-    PUBLISH_MESSAGE_TYPES = {
-        PubSubMessageTypes.MESSAGE.value,
-        PubSubMessageTypes.PMESSAGE.value,
-    }
-    SUBUNSUB_MESSAGE_TYPES = {
-        PubSubMessageTypes.SUBSCRIBE.value,
-        PubSubMessageTypes.PSUBSCRIBE.value,
-        PubSubMessageTypes.UNSUBSCRIBE.value,
-        PubSubMessageTypes.PUNSUBSCRIBE.value,
-    }
-    UNSUBSCRIBE_MESSAGE_TYPES = {
-        PubSubMessageTypes.UNSUBSCRIBE.value,
-        PubSubMessageTypes.PUNSUBSCRIBE.value,
-    }
-
     channels: MutableMapping[StringT, SubscriptionCallback | None]
     patterns: MutableMapping[StringT, SubscriptionCallback | None]
 
@@ -103,7 +82,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         self.initialized = False
         self.connection_pool = connection_pool
         self.ignore_subscribe_messages = ignore_subscribe_messages
-        self.connection: coredis.connection.Connection | None = None
+        self.connection: coredis.BaseConnection | None = None
         self._retry_policy = retry_policy or NoRetryPolicy()
         self._initial_channel_subscriptions = {
             **{nativestr(channel): None for channel in channels or []},
@@ -151,11 +130,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
                 await self.psubscribe(**self._initial_pattern_subscriptions)
             self.connection.register_connect_callback(self.on_connect)
             self._task_group = await create_task_group().__aenter__()
-            self._task_group.start_soon(
-                self.connection.lazily_process_responses,
-                None,
-                self.SUBUNSUB_MESSAGE_TYPES | self.PUBLISH_MESSAGE_TYPES,
-            )
+            self._task_group.start_soon(self.connection.lazily_process_responses, None)
             self._task_group.start_soon(self._consumer)
         return self
 
@@ -324,7 +299,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         message_type_str = nativestr(r[0])
         message: PubSubMessage
 
-        if message_type in self.SUBUNSUB_MESSAGE_TYPES:
+        if message_type in SUBUNSUB_MESSAGE_TYPES:
             message = PubSubMessage(
                 type=message_type_str,
                 pattern=cast(StringT, r[1]) if message_type[0] == ord(b"p") else None,
@@ -335,7 +310,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
                 data=cast(int, r[2]),
             )
 
-        elif message_type in self.PUBLISH_MESSAGE_TYPES:
+        elif message_type in PUBLISH_MESSAGE_TYPES:
             if message_type == PubSubMessageTypes.PMESSAGE:
                 message = PubSubMessage(
                     type="pmessage",
@@ -354,14 +329,14 @@ class BasePubSub(Generic[AnyStr, PoolT]):
             raise PubSubError(f"Unknown message type {message_type_str}")  # noqa
 
         # if this is an unsubscribe message, remove it from memory
-        if message_type in self.UNSUBSCRIBE_MESSAGE_TYPES:
+        if message_type in UNSUBSCRIBE_MESSAGE_TYPES:
             if message_type == PubSubMessageTypes.PUNSUBSCRIBE:
                 subscribed_dict = self.patterns
             else:
                 subscribed_dict = self.channels
             subscribed_dict.pop(message["channel"], None)
 
-        if message_type in self.PUBLISH_MESSAGE_TYPES:
+        if message_type in PUBLISH_MESSAGE_TYPES:
             handler = None
             if message_type == PubSubMessageTypes.PMESSAGE and message["pattern"]:
                 handler = self.patterns.get(message["pattern"], None)
@@ -400,7 +375,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
     ) -> PubSubMessage | None:
         if (
             message
-            and b(message["type"]) in self.SUBUNSUB_MESSAGE_TYPES
+            and b(message["type"]) in SUBUNSUB_MESSAGE_TYPES
             and (self.ignore_subscribe_messages or ignore_subscribe_messages)
         ):
             return None
@@ -476,7 +451,6 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         if self.connection:
             self.connection.disconnect()
             self.connection.clear_connect_callbacks()
-            self.connection_pool.release(self.connection)
             self.connection = None
         # TODO: reset task group
 

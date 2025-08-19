@@ -126,7 +126,7 @@ class Client(
         ssl_check_hostname: bool | None = None,
         ssl_ca_certs: str | None = None,
         max_connections: int | None = None,
-        max_idle_time: float = 0,
+        max_idle_time: int | None = None,
         idle_check_interval: float = 1,
         client_name: str | None = None,
         protocol_version: Literal[2, 3] = 3,
@@ -581,7 +581,7 @@ class Redis(Client[AnyStr]):
         ssl_check_hostname: bool | None = ...,
         ssl_ca_certs: str | None = ...,
         max_connections: int | None = ...,
-        max_idle_time: float = ...,
+        max_idle_time: int | None = ...,
         idle_check_interval: float = ...,
         client_name: str | None = ...,
         protocol_version: Literal[2, 3] = ...,
@@ -620,7 +620,7 @@ class Redis(Client[AnyStr]):
         ssl_check_hostname: bool | None = ...,
         ssl_ca_certs: str | None = ...,
         max_connections: int | None = ...,
-        max_idle_time: float = ...,
+        max_idle_time: int | None = ...,
         idle_check_interval: float = ...,
         client_name: str | None = ...,
         protocol_version: Literal[2, 3] = ...,
@@ -658,7 +658,7 @@ class Redis(Client[AnyStr]):
         ssl_check_hostname: bool | None = None,
         ssl_ca_certs: str | None = None,
         max_connections: int | None = None,
-        max_idle_time: float = 0,
+        max_idle_time: int | None = None,
         idle_check_interval: float = 1,
         client_name: str | None = None,
         protocol_version: Literal[2, 3] = 3,
@@ -974,11 +974,7 @@ class Redis(Client[AnyStr]):
     ) -> R:
         pool = self.connection_pool
         quick_release = self.should_quick_release(command)
-        connection = await pool.get_connection(
-            command.name,
-            *command.arguments,
-            acquire=not quick_release or self.requires_wait or self.requires_waitaof,
-        )
+        connection = await pool.get_connection()
         try:
             keys = KeySpec.extract_keys(command.name, *command.arguments)
             cacheable = (

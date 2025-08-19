@@ -182,6 +182,7 @@ class BaseConnection:
         noreply: bool = False,
         noevict: bool = False,
         notouch: bool = False,
+        max_idle_time: int | None = None,
     ):
         self._stream_timeout = stream_timeout
         self.username: str | None = None
@@ -212,6 +213,7 @@ class BaseConnection:
         push_messages, self._receive_messages = create_memory_object_stream[ResponseType](math.inf)
         self._parser = Parser(push_messages)
         self.packer: Packer = Packer(self.encoding)
+        self.max_idle_time = max_idle_time
 
         self.noreply: bool = noreply
         self.noreply_set: bool = False
@@ -326,9 +328,7 @@ class BaseConnection:
             if inspect.isawaitable(task):
                 await task
 
-    async def lazily_process_responses(
-        self, until: Request | None = None, push_message_types: set[bytes] | None = None
-    ) -> None:
+    async def lazily_process_responses(self, until: Request | None = None) -> None:
         """
         Listen on the socket and run the parser lazily, completing pending requests in
         FIFO order until provided request is completed (or indefinitely if None)
@@ -337,13 +337,15 @@ class BaseConnection:
             while until is None or (self._requests and not until._event.is_set()):
                 decode = self._requests[0].decode if self._requests else self.decode_responses
                 # Try to parse a complete response from already-fed bytes
-                response = self._parser.get_response(
-                    decode, self.encoding, push_message_types=push_message_types
-                )
+                response = self._parser.get_response(decode, self.encoding)
                 if isinstance(response, NotEnoughData):
                     # Need more bytes; read once, feed, and retry
                     try:
-                        data = await self.connection.receive()
+                        with fail_after(self.max_idle_time):
+                            data = await self.connection.receive()
+                    except TimeoutError:
+                        self.disconnect()
+                        return
                     except BaseException:
                         self.disconnect()
                         raise
@@ -357,14 +359,6 @@ class BaseConnection:
                 else:
                     request._result = response
                 request._event.set()
-
-                # metrics
-                self.last_request_processed_at = time.time()
-                self.requests_processed += 1
-                response_time = self.last_request_processed_at - request.created_at
-                self.average_response_time = (
-                    (self.average_response_time * (self.requests_processed - 1)) + response_time
-                ) / self.requests_processed
 
                 if until is request:
                     return
@@ -653,6 +647,7 @@ class Connection(BaseConnection):
         noreply: bool = False,
         noevict: bool = False,
         notouch: bool = False,
+        max_idle_time: int | None = None,
     ):
         super().__init__(
             stream_timeout,
@@ -663,6 +658,7 @@ class Connection(BaseConnection):
             noreply=noreply,
             noevict=noevict,
             notouch=notouch,
+            max_idle_time=max_idle_time,
         )
         self.host = host
         self.port = port
@@ -716,6 +712,7 @@ class UnixDomainSocketConnection(BaseConnection):
         *,
         client_name: str | None = None,
         protocol_version: Literal[2, 3] = 3,
+        max_idle_time: int | None = None,
         **_: RedisValueT,
     ) -> None:
         super().__init__(
@@ -724,6 +721,7 @@ class UnixDomainSocketConnection(BaseConnection):
             decode_responses,
             client_name=client_name,
             protocol_version=protocol_version,
+            max_idle_time=max_idle_time,
         )
         self.path = path
         self.db = db
@@ -768,6 +766,7 @@ class ClusterConnection(Connection):
         noreply: bool = False,
         noevict: bool = False,
         notouch: bool = False,
+        max_idle_time: int | None = None,
     ) -> None:
         self.read_from_replicas = read_from_replicas
         super().__init__(
@@ -789,6 +788,7 @@ class ClusterConnection(Connection):
             noreply=noreply,
             noevict=noevict,
             notouch=notouch,
+            max_idle_time=max_idle_time,
         )
 
         async def _on_connect(*args):

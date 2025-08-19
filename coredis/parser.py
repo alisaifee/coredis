@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import logging
+from abc import abstractmethod
 from collections.abc import Hashable
 from io import BytesIO
 from typing import cast
 
 from anyio.streams.memory import MemoryObjectSendStream
 
-from coredis._utils import b
+from coredis._utils import CaseAndEncodingInsensitiveEnum, b
 from coredis.constants import SYM_CRLF, RESPDataType
 from coredis.exceptions import (
     AskError,
@@ -53,6 +54,35 @@ class NotEnoughData:
 NOT_ENOUGH_DATA: Final[NotEnoughData] = NotEnoughData()
 
 
+class PubSubMessageTypes(CaseAndEncodingInsensitiveEnum):
+    MESSAGE = b"message"
+    PMESSAGE = b"pmessage"
+    SMESSAGE = b"smessage"
+    SUBSCRIBE = b"subscribe"
+    UNSUBSCRIBE = b"unsubscribe"
+    PSUBSCRIBE = b"psubscribe"
+    PUNSUBSCRIBE = b"punsubscribe"
+    SSUBSCRIBE = b"ssubscribe"
+    SUNSUBSCRIBE = b"sunsubscribe"
+
+
+PUBLISH_MESSAGE_TYPES = {
+    PubSubMessageTypes.MESSAGE.value,
+    PubSubMessageTypes.PMESSAGE.value,
+}
+SUBUNSUB_MESSAGE_TYPES = {
+    PubSubMessageTypes.SUBSCRIBE.value,
+    PubSubMessageTypes.PSUBSCRIBE.value,
+    PubSubMessageTypes.UNSUBSCRIBE.value,
+    PubSubMessageTypes.PUNSUBSCRIBE.value,
+}
+UNSUBSCRIBE_MESSAGE_TYPES = {
+    PubSubMessageTypes.UNSUBSCRIBE.value,
+    PubSubMessageTypes.PUNSUBSCRIBE.value,
+}
+PUSH_MESSAGE_TYPES = PUBLISH_MESSAGE_TYPES | SUBUNSUB_MESSAGE_TYPES
+
+
 class RESPNode:
     __slots__ = ("depth", "key", "node_type")
     depth: int
@@ -69,8 +99,8 @@ class RESPNode:
         self.node_type = node_type
         self.key = key
 
-    def append(self, item: ResponseType) -> None:
-        raise NotImplementedError()
+    @abstractmethod
+    def append(self, item: ResponseType) -> None: ...
 
     def ensure_hashable(self, item: ResponseType) -> Hashable:
         if isinstance(item, (int, float, bool, str, bytes)):
@@ -83,7 +113,7 @@ class RESPNode:
             return tuple(
                 (cast(ResponsePrimitive, k), self.ensure_hashable(v)) for k, v in item.items()
             )
-        return item  # noqa
+        return item  # type: ignore
 
 
 class ListNode(RESPNode):
@@ -200,7 +230,6 @@ class Parser:
         self,
         decode: bool,
         encoding: str | None = None,
-        push_message_types: set[bytes] | None = None,
     ) -> NotEnoughData | ResponseType:
         """
 
@@ -219,7 +248,7 @@ class Parser:
             else:
                 if response and response.response_type == RESPDataType.PUSH:
                     assert isinstance(response.response, list)
-                    if not push_message_types or b(response.response[0]) not in push_message_types:
+                    if b(response.response[0]) not in PUSH_MESSAGE_TYPES:
                         logger.debug(f"Unhandled push message: {response.response}")
                     else:
                         self.push_messages.send_nowait(response.response)
