@@ -335,6 +335,7 @@ class BaseConnection:
         """
         async with self._read_lock:
             while until is None or (self._requests and not until._event.is_set()):
+                # TODO: this is probably a bad way to do this
                 decode = self._requests[0].decode if self._requests else self.decode_responses
                 # Try to parse a complete response from already-fed bytes
                 response = self._parser.get_response(decode, self.encoding)

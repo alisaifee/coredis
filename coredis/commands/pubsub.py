@@ -269,7 +269,6 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         if self.connection is None:
             self.connection = await self.connection_pool.get_connection()
             self.connection.register_connect_callback(self.on_connect)
-        assert self.connection
         return await self._execute(self.connection, self.connection.send_command, command, *args)
 
     async def parse_response(
@@ -284,7 +283,11 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         assert self.connection
         timeout = timeout if timeout and timeout > 0 else None
         with move_on_after(timeout):
-            return await self.connection.fetch_push_message(block=block)
+            if self.connection.protocol_version == 3:
+                return await self.connection.fetch_push_message(block=block)
+            else:
+                # TODO: implement RESP2-compatible
+                pass
 
     async def handle_message(self, response: ResponseType) -> PubSubMessage | None:
         """
