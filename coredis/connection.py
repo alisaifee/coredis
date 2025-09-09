@@ -9,13 +9,12 @@ import socket
 import ssl
 import time
 import warnings
-import weakref
 from abc import abstractmethod
 from collections import defaultdict, deque
 from typing import TYPE_CHECKING, Any, cast, override
 
 from anyio import (
-    CancelScope,
+    TASK_STATUS_IGNORED,
     Event,
     Lock,
     connect_tcp,
@@ -26,7 +25,7 @@ from anyio import (
     move_on_after,
     sleep,
 )
-from anyio.abc import ByteStream, SocketAttribute
+from anyio.abc import ByteStream, SocketAttribute, TaskStatus
 
 import coredis
 from coredis._packer import Packer
@@ -63,7 +62,7 @@ if TYPE_CHECKING:
 
 @dataclasses.dataclass
 class Request:
-    connection: Connection
+    connection: BaseConnection
     command: bytes
     decode: bool
     encoding: str | None = None
@@ -87,12 +86,7 @@ class Request:
             return self._result_or_exc()
         # add response timeout
         with move_on_after(self.response_timeout) as scope:
-            async with create_task_group() as tg:
-                # wait
-                tg.start_soon(self._wait_for_event, tg.cancel_scope)
-                # lazily_process_responses can be cancelled whenever, since it only
-                # yields control waiting for data or the lock
-                tg.start_soon(self.connection.lazily_process_responses, self)
+            await self._event.wait()
         if scope.cancelled_caught and not self._event.is_set():
             self._exc = TimeoutError(
                 f"command {nativestr(self.command)} timed out after {self.response_timeout} seconds"
@@ -105,10 +99,6 @@ class Request:
                 raise self._exc
             return self._exc  # type: ignore
         return self._result
-
-    async def _wait_for_event(self, scope: CancelScope) -> None:
-        await self._event.wait()
-        scope.cancel()
 
 
 @dataclasses.dataclass
@@ -205,9 +195,6 @@ class BaseConnection:
         #: client id that the redis server should send any redirected notifications to
         self.tracking_client_id = None
 
-        self.last_active_at: float = time.time()
-        self.last_request_processed_at: float | None = None
-
         self._connection: ByteStream | None = None
         #: Queue that collects any unread push message types
         push_messages, self._receive_messages = create_memory_object_stream[ResponseType](math.inf)
@@ -227,11 +214,6 @@ class BaseConnection:
 
         self._requests: deque[Request] = deque()
         self._write_lock = Lock()
-        self._read_lock = Lock()
-
-        #: average response time of requests made on this connection
-        self.average_response_time: float = 0
-        self.requests_processed: int = 0
 
     def __repr__(self) -> str:
         return self.describe(self._description_args())
@@ -245,24 +227,14 @@ class BaseConnection:
         return self.locator.format_map(defaultdict(lambda: None, self._description_args()))
 
     @property
+    def pending_requests(self) -> int:
+        return len(self._requests)
+
+    @property
     def connection(self) -> ByteStream:
         if not self._connection:
             raise Exception("Connection not initialized correctly!")
         return self._connection
-
-    @property
-    def estimated_time_to_idle(self) -> float:
-        """
-        Estimated time till the pending request queue of this connection
-        has been cleared
-        """
-        return self.requests_pending * self.average_response_time
-
-    def __del__(self) -> None:
-        try:
-            self.disconnect()
-        except Exception:  # noqa
-            pass
 
     @property
     def is_connected(self) -> bool:
@@ -271,26 +243,6 @@ class BaseConnection:
         performed without error
         """
         return self._connection is not None and self._connection_error is None
-
-    @property
-    def requests_pending(self) -> int:
-        """
-        Number of requests pending response on this connection
-        """
-        return len(self._requests)
-
-    @property
-    def lag(self) -> float:
-        """
-        Returns the amount of seconds since the last request was processed
-        if there are still in flight requests pending on this connection
-        """
-        if not self._requests:
-            return 0
-        elif self.last_request_processed_at is None:
-            return time.time()
-        else:
-            return time.time() - self.last_request_processed_at
 
     def register_connect_callback(
         self,
@@ -313,29 +265,35 @@ class BaseConnection:
     @abstractmethod
     async def _connect(self) -> None: ...
 
-    async def connect(self) -> None:
+    async def run(self, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
         """
         Establish a connnection to the redis server
-        and initiate any post connect callbacks
+        and initiate any post connect callbacks.
         """
         await self._connect()
-        # setup connection
-        await self.on_connect()
-        # run any user callbacks. right now the only internal callback
-        # is for pubsub channel/pattern resubscription
-        for callback in self._connect_callbacks:
-            task = callback(self)
-            if inspect.isawaitable(task):
-                await task
+        try:
+            async with create_task_group() as tg:
+                tg.start_soon(self.listen_for_responses)
+                # setup connection
+                await self.on_connect()
+                # run any user callbacks. right now the only internal callback
+                # is for pubsub channel/pattern resubscription
+                for callback in self._connect_callbacks:
+                    task = callback(self)
+                    if inspect.isawaitable(task):
+                        await task
+                task_status.started()
+        finally:
+            self.disconnect()
 
-    async def lazily_process_responses(self, until: Request | None = None) -> None:
+    async def listen_for_responses(self) -> None:
         """
-        Listen on the socket and run the parser lazily, completing pending requests in
-        FIFO order until provided request is completed (or indefinitely if None)
+        Listen on the socket and run the parser, completing pending requests in
+        FIFO order.
         """
-        async with self._read_lock:
-            while until is None or (self._requests and not until._event.is_set()):
-                # TODO: this is probably a bad way to do this
+        async with self.connection:
+            while True:
+                # TODO: is this a safe way to do this?
                 decode = self._requests[0].decode if self._requests else self.decode_responses
                 # Try to parse a complete response from already-fed bytes
                 response = self._parser.get_response(decode, self.encoding)
@@ -354,15 +312,13 @@ class BaseConnection:
                     continue  # loop back and try parsing again
 
                 # We have a full response for `head`; now pop and complete it
-                request = self._requests.popleft()
-                if request.raise_exceptions and isinstance(response, RedisError):
-                    request._exc = response
-                else:
-                    request._result = response
-                request._event.set()
-
-                if until is request:
-                    return
+                if self._requests:
+                    request = self._requests.popleft()
+                    if request.raise_exceptions and isinstance(response, RedisError):
+                        request._exc = response
+                    else:
+                        request._result = response
+                    request._event.set()
 
     async def update_tracking_client(self, enabled: bool, client_id: int | None = None) -> bool:
         """
@@ -492,8 +448,6 @@ class BaseConnection:
             await (await self.create_request(b"CLIENT REPLY", b"OFF", noreply=True))
             self.noreply_set = True
 
-        self.last_active_at = time.time()
-
     async def fetch_push_message(self, block: bool = False) -> ResponseType:
         """
         Read the next pending response
@@ -533,7 +487,6 @@ class BaseConnection:
         Send a command to the redis server
         """
         await self._send_packed_command(self.packer.pack_command(command, *args))
-        self.last_active_at = time.time()
 
     async def create_request(
         self,
@@ -557,10 +510,8 @@ class BaseConnection:
         cmd_list.extend(self.packer.pack_command(command, *args))
         await self._send_packed_command(cmd_list, timeout=request_timeout)
 
-        self.last_active_at = time.time()
-
         request = Request(
-            weakref.proxy(self),
+            self,
             command,
             bool(decode) if decode is not None else self.decode_responses,
             encoding or self.encoding,
@@ -589,11 +540,10 @@ class BaseConnection:
             timeout=request_timeout,
         )
 
-        self.last_active_at = time.time()
         requests: list[Request] = []
         for cmd in commands:
             request = Request(
-                weakref.proxy(self),
+                self,
                 cmd.command,
                 bool(cmd.decode) if cmd.decode is not None else self.decode_responses,
                 cmd.encoding or self.encoding,
@@ -613,7 +563,6 @@ class BaseConnection:
         self._parser.on_disconnect()
         if self._connection:
             self._receive_messages.close()
-            # TODO: aclose connection
 
         disconnect_exc = self._last_error or ConnectionError("connection lost")
         while self._requests:

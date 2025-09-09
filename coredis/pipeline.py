@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import functools
 import inspect
 import sys
@@ -11,6 +10,7 @@ from concurrent.futures import CancelledError
 from types import TracebackType
 from typing import Any, cast
 
+from anyio import sleep
 from deprecated.sphinx import deprecated
 
 from coredis._utils import b, hash_slot, nativestr
@@ -107,6 +107,11 @@ def wrap_pipeline_method(
 {wrapper.__doc__}
 """
     return wrapper
+
+
+async def await_result(result: T) -> T:
+    await sleep(0)  # checkpoint
+    return result
 
 
 class PipelineCommandRequest(CommandRequest[CommandResponseT]):
@@ -639,8 +644,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
                 if isinstance(cmd.callback, AsyncPreProcessingCallback):
                     await cmd.callback.pre_process(self.client, r)
                 r = cmd.callback(r, version=connection.protocol_version, **cmd.execution_parameters)
-                cmd.response = asyncio.get_running_loop().create_future()
-                cmd.response.set_result(r)
+                cmd.response = await_result(r)
             data.append(r)
         return tuple(data)
 
@@ -681,12 +685,10 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
                     version=connection.protocol_version,
                     **cmd.execution_parameters,
                 )
-                cmd.response = asyncio.get_event_loop().create_future()
-                cmd.response.set_result(resp)
+                cmd.response = await_result(resp)
                 response.append(resp)
             except ResponseError as re:
-                cmd.response = asyncio.get_event_loop().create_future()
-                cmd.response.set_exception(re)
+                cmd.response = await_result(re)
                 response.append(sys.exc_info()[1])
         if raise_on_error:
             self.raise_first_error(commands, response)

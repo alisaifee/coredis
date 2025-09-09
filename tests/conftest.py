@@ -472,13 +472,11 @@ async def redis_basic(redis_basic_server, request):
     client = coredis.Redis(
         "localhost", 6379, decode_responses=True, **get_client_test_args(request)
     )
-    await check_test_constraints(request, client)
-    await client.flushall()
-    await set_default_test_config(client)
-
-    yield client
-
-    client.connection_pool.disconnect()
+    async with client:
+        await check_test_constraints(request, client)
+        await client.flushall()
+        await set_default_test_config(client)
+        yield client
 
 
 @pytest.fixture
@@ -490,13 +488,11 @@ async def redis_basic_resp2(redis_basic_server, request):
         protocol_version=2,
         **get_client_test_args(request),
     )
-    await check_test_constraints(request, client)
-    await client.flushall()
-    await set_default_test_config(client)
-
-    yield client
-
-    client.connection_pool.disconnect()
+    async with client:
+        await check_test_constraints(request, client)
+        await client.flushall()
+        await set_default_test_config(client)
+        yield client
 
 
 @pytest.fixture
@@ -1130,7 +1126,6 @@ def module_targets():
 def redis_server_time():
     async def _get_server_time(client):
         if isinstance(client, coredis.RedisCluster):
-            await client
             node = list(client.primaries).pop()
 
             return await node.time()

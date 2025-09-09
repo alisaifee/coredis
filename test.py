@@ -1,4 +1,4 @@
-from anyio import run
+from trio import run
 
 from coredis import Redis
 
@@ -6,7 +6,8 @@ redis = Redis.from_url("redis://localhost:6379", decode_responses=True)
 
 
 async def main():
-    print(await redis.ping())
+    async with redis:
+        print(await redis.ping())
 
 
 run(main)

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import asyncio
 import inspect
-from asyncio import CancelledError
 from contextlib import suppress
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 
 from anyio import (
+    Event,
     create_memory_object_stream,
     create_task_group,
     get_cancelled_exc_class,
@@ -37,7 +36,6 @@ from coredis.typing import (
     AnyStr,
     Awaitable,
     Callable,
-    Generator,
     Generic,
     Mapping,
     MutableMapping,
@@ -96,7 +94,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
             max_buffer_size=max_buffer_size
         )
         self._consumer_task: asyncio.Task[None] | None = None
-        self._subscribed = asyncio.Event()
+        self._subscribed = Event()
         self.reset()
 
     @property
@@ -212,7 +210,6 @@ class BasePubSub(Generic[AnyStr, PoolT]):
          on the connection. If the ``None`` the command will block forever.
         """
 
-        await self.initialize()
         with move_on_after(timeout):
             return self._filter_ignored_messages(
                 await self._receive_stream.receive(), ignore_subscribe_messages
@@ -264,7 +261,6 @@ class BasePubSub(Generic[AnyStr, PoolT]):
 
         :meta private:
         """
-        await self.initialize()
 
         if self.connection is None:
             self.connection = await self.connection_pool.get_connection()
@@ -279,7 +275,6 @@ class BasePubSub(Generic[AnyStr, PoolT]):
 
         :meta private:
         """
-        await self.initialize()
         assert self.connection
         timeout = timeout if timeout and timeout > 0 else None
         with move_on_after(timeout):
@@ -352,7 +347,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
                     await handler_response
                 return None
         if not (self.channels or self.patterns):
-            self._subscribed.clear()
+            self._subscribed = Event()
 
         return message
 
@@ -398,14 +393,10 @@ class BasePubSub(Generic[AnyStr, PoolT]):
                 connection.disconnect()
             raise
 
-    def __await__(self) -> Generator[Any, None, Self]:
-        return self.initialize().__await__()
-
     def __aiter__(self) -> Self:
         return self
 
     async def __anext__(self) -> PubSubMessage:
-        await self.initialize()
         while self.subscribed:
             if message := await self.get_message():
                 return message
@@ -460,7 +451,7 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         self.channels = {}
         self.patterns = {}
         self.initialized = False
-        self._subscribed.clear()
+        self._subscribed = Event()
 
     async def reset_connections(self, exc: BaseException | None = None) -> None:
         pass
@@ -531,7 +522,6 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
     async def execute_command(
         self, command: bytes, *args: RedisValueT, **options: RedisValueT
     ) -> ResponseType | None:
-        await self.initialize()
         assert self.connection
         return await self._execute(self.connection, self.connection.send_command, command, *args)
 
@@ -641,7 +631,6 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
          :meth:`get_message`.
         """
 
-        await self.initialize()
         new_channels: MutableMapping[StringT, SubscriptionCallback | None] = {}
         new_channels.update(dict.fromkeys(map(self.encode, channels)))
 
