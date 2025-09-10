@@ -943,7 +943,6 @@ class Redis(Client[AnyStr]):
             if self.cache:
                 await self.cache.initialize(self)
             yield self
-            self.connection_pool.disconnect()
 
     async def execute_command(
         self,
@@ -1037,7 +1036,8 @@ class Redis(Client[AnyStr]):
         finally:
             self._ensure_server_version(connection.server_version)
             if not quick_release or self.requires_wait or self.requires_waitaof:
-                pool.release(connection)
+                # TODO: handle blocking commands
+                pass
 
     @overload
     def decoding(

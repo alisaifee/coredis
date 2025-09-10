@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import os
-import threading
 import warnings
 from contextlib import asynccontextmanager
 from ssl import SSLContext, VerifyMode
@@ -205,7 +203,6 @@ class ConnectionPool(AsyncContextManagerMixin):
         self.max_idle_time = max_idle_time
         self.idle_check_interval = idle_check_interval
         self.initialized = False
-        self.reset()
         self.decode_responses = bool(self.connection_kwargs.get("decode_responses", False))
         self.encoding = str(self.connection_kwargs.get("encoding", "utf-8"))
         self._connections: set[BaseConnection] = set()
@@ -216,22 +213,10 @@ class ConnectionPool(AsyncContextManagerMixin):
             self._task_group = tg
             self.initialized = True
             yield self
+            self._task_group.cancel_scope.cancel()
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{self.connection_class.describe(self.connection_kwargs)}>"
-
-    def reset(self) -> None:
-        self.pid = os.getpid()
-        self._check_lock = threading.Lock()
-
-    def checkpid(self) -> None:  # noqa
-        if self.pid != os.getpid():
-            with self._check_lock:
-                # Double check
-                if self.pid == os.getpid():
-                    return
-                self.disconnect()
-                self.reset()
 
     def peek_available(self) -> BaseConnection | None:
         return next(
@@ -241,7 +226,6 @@ class ConnectionPool(AsyncContextManagerMixin):
 
     async def get_connection(self, **kwargs: RedisValueT | None) -> BaseConnection:
         """Gets a connection from the pool"""
-        self.checkpid()
         if connection := self.peek_available():
             return connection
         if len(self._connections) >= self.max_connections:
@@ -249,19 +233,6 @@ class ConnectionPool(AsyncContextManagerMixin):
         connection = self.connection_class(**self.connection_kwargs)
         await self._task_group.start(connection.run)
         return connection
-
-    def release(self, connection: BaseConnection) -> None:
-        """
-        Releases the :paramref:`connection` back to the pool
-        """
-        self.checkpid()
-
-        if connection.pid == self.pid:
-            self._connections.remove(connection)
-
-    def disconnect(self) -> None:
-        """Closes all connections in the pool"""
-        self._task_group.cancel_scope.cancel()
 
 
 class BlockingConnectionPool(ConnectionPool):
