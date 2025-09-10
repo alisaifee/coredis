@@ -155,17 +155,20 @@ class ConnectionPool:
                     pass
 
             if parsed_url.scheme == "rediss":
-                keyfile = cast(str | None, url_options.pop("ssl_keyfile", None))
-                certfile = cast(str | None, url_options.pop("ssl_certfile", None))
-                check_hostname = query_param_to_bool(url_options.pop("ssl_check_hostname", None))
-                cert_reqs = cast(
-                    str | VerifyMode | None,
-                    url_options.pop("ssl_cert_reqs", None),
-                )
-                ca_certs = cast(str | None, url_options.pop("ssl_ca_certs", None))
-                url_options["ssl_context"] = RedisSSLContext(
-                    keyfile, certfile, cert_reqs, ca_certs, check_hostname
-                ).get()
+                if "ssl_context" not in kwargs:
+                    keyfile = cast(str | None, url_options.pop("ssl_keyfile", None))
+                    certfile = cast(str | None, url_options.pop("ssl_certfile", None))
+                    check_hostname = query_param_to_bool(
+                        url_options.pop("ssl_check_hostname", None)
+                    )
+                    cert_reqs = cast(
+                        str | VerifyMode | None,
+                        url_options.pop("ssl_cert_reqs", None),
+                    )
+                    ca_certs = cast(str | None, url_options.pop("ssl_ca_certs", None))
+                    url_options["ssl_context"] = RedisSSLContext(
+                        keyfile, certfile, cert_reqs, ca_certs, check_hostname
+                    ).get()
 
         # last shot at the db value
         _db = url_options.get("db", db or 0)
