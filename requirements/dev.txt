@@ -2,7 +2,7 @@
 -r publishing.txt
 -r recipes.txt
 ruff
-mypy==1.17.1; implementation_name!='pypy'
+mypy==1.18.1; implementation_name!='pypy'
 redis>=4.2.0
 twine
 types-deprecated
