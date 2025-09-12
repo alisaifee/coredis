@@ -6,7 +6,7 @@ from ssl import SSLContext, VerifyMode
 from typing import Any, AsyncGenerator, Self, cast
 from urllib.parse import parse_qs, unquote, urlparse
 
-from anyio import AsyncContextManagerMixin, create_task_group
+from anyio import AsyncContextManagerMixin, Condition, create_task_group, sleep
 
 from coredis._utils import query_param_to_bool
 from coredis.connection import (
@@ -16,10 +16,9 @@ from coredis.connection import (
     UnixDomainSocketConnection,
 )
 from coredis.exceptions import ConnectionError
-from coredis.typing import Callable, ClassVar, RedisValueT, TypeVar
+from coredis.typing import Callable, ClassVar, TypeVar
 
 _CPT = TypeVar("_CPT", bound="ConnectionPool")
-MAX_REQUESTS_PER_CONNECTION = 32
 
 
 class ConnectionPool(AsyncContextManagerMixin):
@@ -184,6 +183,7 @@ class ConnectionPool(AsyncContextManagerMixin):
         max_connections: int | None = None,
         max_idle_time: int | None = None,
         idle_check_interval: int = 1,
+        blocking: bool = True,
         **connection_kwargs: Any,
     ) -> None:
         """
@@ -205,7 +205,9 @@ class ConnectionPool(AsyncContextManagerMixin):
         self.initialized = False
         self.decode_responses = bool(self.connection_kwargs.get("decode_responses", False))
         self.encoding = str(self.connection_kwargs.get("encoding", "utf-8"))
+        self.blocking = blocking
         self._connections: set[BaseConnection] = set()
+        self._condition = Condition()
 
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
@@ -218,75 +220,32 @@ class ConnectionPool(AsyncContextManagerMixin):
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{self.connection_class.describe(self.connection_kwargs)}>"
 
-    def peek_available(self) -> BaseConnection | None:
-        return next(
-            (c for c in self._connections if c.pending_requests <= MAX_REQUESTS_PER_CONNECTION),
+    async def acquire(self) -> BaseConnection:
+        """
+        Gets a connection from the pool, or creates a new one if all are busy.
+        """
+        connection = next(
+            (c for c in self._connections if c._limiter.value != 0 and not c._blocked),
             None,
         )
-
-    async def get_connection(self, **kwargs: RedisValueT | None) -> BaseConnection:
-        """Gets a connection from the pool"""
-        if connection := self.peek_available():
-            return connection
-        if len(self._connections) >= self.max_connections:
-            raise ConnectionError("Too many connections")
-        connection = self.connection_class(**self.connection_kwargs)
-        await self._task_group.start(connection.run)
+        if not connection:
+            if len(self._connections) >= self.max_connections:
+                if self.blocking:  # wait for a connection to become available
+                    async with self._condition:
+                        await self._condition.wait()
+                    connection = next(
+                        c for c in self._connections if c._limiter.value != 0 and not c._blocked
+                    )
+                else:
+                    raise ConnectionError("Too many connections")
+            else:
+                connection = self.connection_class(**self.connection_kwargs)
+                await self._task_group.start(connection.run, self)
+                self._connections.add(connection)
+        connection._limiter.acquire_nowait()
+        await sleep(0)  # checkpoint
         return connection
 
 
 class BlockingConnectionPool(ConnectionPool):
-    """
-    Blocking connection pool::
-
-        >>> from coredis import Redis
-        >>> client = Redis(connection_pool=BlockingConnectionPool())
-
-    It performs the same function as the default
-    :class:`~coredis.ConnectionPool`, in that, it maintains a pool of reusable
-    connections that can be shared by multiple redis clients.
-
-    The difference is that, in the event that a client tries to get a
-    connection from the pool when all of the connections are in use, rather than
-    raising a :exc:`~coredis.ConnectionError` (as the default
-    :class:`~coredis.ConnectionPool` implementation does), it
-    makes the client blocks for a specified number of seconds until
-    a connection becomes available.
-
-    Use :paramref:`max_connections` to increase / decrease the pool size::
-
-        >>> pool = BlockingConnectionPool(max_connections=10)
-
-    Use :paramref:`timeout` to tell it either how many seconds to wait for a
-    connection to become available, or to block forever::
-
-        >>> # Block forever.
-        >>> pool = BlockingConnectionPool(timeout=None)
-        >>> # Raise a ``ConnectionError`` after five seconds if a connection is
-        >>> # not available.
-        >>> pool = BlockingConnectionPool(timeout=5)
-    """
-
-    def __init__(
-        self,
-        connection_class: type[Connection] | None = None,
-        max_connections: int | None = None,
-        timeout: int = 20,
-        max_idle_time: int | None = None,
-        idle_check_interval: int = 1,
-        **connection_kwargs: RedisValueT | None,
-    ):
-        self.timeout = timeout
-        self.total_wait = 0
-        self.total_allocated = 0
-        max_connections = max_connections or 50
-
-        super().__init__(
-            connection_class=connection_class or Connection,
-            max_connections=max_connections,
-            max_idle_time=max_idle_time,
-            idle_check_interval=idle_check_interval,
-            **connection_kwargs,
-        )
-
-    async def get_connection(self, **kwargs: RedisValueT | None) -> BaseConnection: ...
+    pass

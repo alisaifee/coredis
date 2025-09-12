@@ -17,6 +17,7 @@ from anyio import (
     TASK_STATUS_IGNORED,
     Event,
     Lock,
+    Semaphore,
     connect_tcp,
     connect_unix,
     create_memory_object_stream,
@@ -54,21 +55,23 @@ from coredis.typing import (
     TypeVar,
 )
 
+MAX_REQUESTS_PER_CONNECTION = 32
 R = TypeVar("R")
 
 if TYPE_CHECKING:
+    from coredis.pool.basic import ConnectionPool
     from coredis.pool.nodemanager import ManagedNode
 
 
 @dataclasses.dataclass
 class Request:
-    connection: BaseConnection
     command: bytes
     decode: bool
     encoding: str | None = None
     raise_exceptions: bool = True
     response_timeout: float | None = None
     no_reply: bool = False
+    blocking: bool = False
     created_at: float = dataclasses.field(default_factory=lambda: time.time())
     _event: Event = dataclasses.field(default_factory=Event)
     _exc: BaseException | None = None
@@ -209,11 +212,13 @@ class BaseConnection:
         self.notouch: bool = notouch
 
         self.needs_handshake: bool = True
+        self._blocked: bool = False
         self._last_error: BaseException | None = None
         self._connection_error: BaseException | None = None
 
         self._requests: deque[Request] = deque()
         self._write_lock = Lock()
+        self._limiter = Semaphore(MAX_REQUESTS_PER_CONNECTION)
 
     def __repr__(self) -> str:
         return self.describe(self._description_args())
@@ -253,19 +258,12 @@ class BaseConnection:
     def clear_connect_callbacks(self) -> None:
         self._connect_callbacks = list()
 
-    async def can_read(self) -> bool:
-        """Checks for data that can be read"""
-        assert self._parser
-
-        if not self.is_connected:
-            await self.connect()
-
-        return self._parser.can_read()
-
     @abstractmethod
     async def _connect(self) -> None: ...
 
-    async def run(self, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
+    async def run(
+        self, pool: ConnectionPool, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
+    ) -> None:
         """
         Establish a connnection to the redis server
         and initiate any post connect callbacks.
@@ -273,7 +271,7 @@ class BaseConnection:
         await self._connect()
         try:
             async with create_task_group() as tg:
-                tg.start_soon(self.listen_for_responses)
+                tg.start_soon(self.listen_for_responses, pool)
                 # setup connection
                 await self.on_connect()
                 # run any user callbacks. right now the only internal callback
@@ -285,15 +283,15 @@ class BaseConnection:
                 task_status.started()
         finally:
             self.disconnect()
+            pool._connections.remove(self)
 
-    async def listen_for_responses(self) -> None:
+    async def listen_for_responses(self, pool: ConnectionPool) -> None:
         """
         Listen on the socket and run the parser, completing pending requests in
         FIFO order.
         """
         async with self.connection:
             while True:
-                # TODO: is this a safe way to do this?
                 decode = self._requests[0].decode if self._requests else self.decode_responses
                 # Try to parse a complete response from already-fed bytes
                 response = self._parser.get_response(decode, self.encoding)
@@ -314,6 +312,10 @@ class BaseConnection:
                 # We have a full response for `head`; now pop and complete it
                 if self._requests:
                     request = self._requests.popleft()
+                    self._limiter.release()
+                    if pool.blocking and not self._blocked:
+                        async with pool._condition:
+                            pool._condition.notify()
                     if request.raise_exceptions and isinstance(response, RedisError):
                         request._exc = response
                     else:
@@ -511,7 +513,6 @@ class BaseConnection:
         await self._send_packed_command(cmd_list, timeout=request_timeout)
 
         request = Request(
-            self,
             command,
             bool(decode) if decode is not None else self.decode_responses,
             encoding or self.encoding,
@@ -532,7 +533,6 @@ class BaseConnection:
         Send multiple commands to the redis server
         """
         request_timeout: float | None = timeout or self._stream_timeout
-
         await self._send_packed_command(
             self.packer.pack_commands(
                 list(itertools.chain((cmd.command, *cmd.args) for cmd in commands))
@@ -543,7 +543,6 @@ class BaseConnection:
         requests: list[Request] = []
         for cmd in commands:
             request = Request(
-                self,
                 cmd.command,
                 bool(cmd.decode) if cmd.decode is not None else self.decode_responses,
                 cmd.encoding or self.encoding,

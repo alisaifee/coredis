@@ -112,7 +112,7 @@ class Monitor(Generic[AnyStr]):
 
     async def __connect(self) -> None:
         if self.connection is None:
-            self.connection = await self.client.connection_pool.get_connection()
+            self.connection = await self.client.connection_pool.acquire()
 
     async def __start_monitor(self: MonitorT) -> MonitorT:
         if self.monitoring:

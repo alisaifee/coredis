@@ -45,7 +45,7 @@ class Sidecar:
     async def start(self: SidecarT, client: coredis.client.Client[Any]) -> SidecarT:
         self._client = weakref.ref(client, lambda *_: self.stop())
         if not self.connection and self.client:
-            self.connection = await self.client.connection_pool.get_connection()
+            self.connection = await self.client.connection_pool.acquire()
             self.connection.register_connect_callback(self.on_reconnect)
             await self.connection.connect()
             if self.connection.tracking_client_id:  # noqa

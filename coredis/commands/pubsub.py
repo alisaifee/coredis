@@ -9,7 +9,6 @@ from anyio import (
     Event,
     create_memory_object_stream,
     create_task_group,
-    get_cancelled_exc_class,
     move_on_after,
     sleep,
 )
@@ -118,7 +117,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         async with create_task_group() as tg:
             # initialize subscriptions and connection
-            self.connection = await self.connection_pool.get_connection()
+            self.connection = await self.connection_pool.acquire()
             self.initialized = True
             if self._initial_channel_subscriptions:
                 await self.subscribe(**self._initial_channel_subscriptions)
@@ -271,9 +270,9 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         """
 
         if self.connection is None:
-            self.connection = await self.connection_pool.get_connection()
+            self.connection = await self.connection_pool.acquire()
             self.connection.register_connect_callback(self.on_connect)
-        return await self._execute(self.connection, self.connection.send_command, command, *args)
+        return await self._execute(self.connection.send_command, command, *args)
 
     async def parse_response(
         self, block: bool = True, timeout: float | None = None
@@ -388,17 +387,10 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
     async def _execute(
         self,
-        connection: BaseConnection,
         command: Callable[..., Awaitable[None]] | Callable[..., Awaitable[ResponseType]],
         *args: RedisValueT,
     ) -> ResponseType | None:
-        try:
-            return await command(*args)
-        except get_cancelled_exc_class():
-            # do not retry if coroutine is cancelled
-            if await connection.can_read():  # noqa
-                connection.disconnect()
-            raise
+        return await command(*args)
 
 
 class PubSub(BasePubSub[AnyStr, "coredis.pool.ConnectionPool"]):
@@ -467,7 +459,7 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         self, command: bytes, *args: RedisValueT, **options: RedisValueT
     ) -> ResponseType | None:
         assert self.connection
-        return await self._execute(self.connection, self.connection.send_command, command, *args)
+        return await self._execute(self.connection.send_command, command, *args)
 
     async def initialize(self) -> Self:
         """
@@ -638,12 +630,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
             self.channel_connection_mapping[args[0]] = self.shard_connections[key]
             assert self.shard_connections[key]
-            return await self._execute(
-                self.shard_connections[key],
-                self.shard_connections[key].send_command,
-                command,
-                *args,
-            )
+            return await self._execute(self.shard_connections[key].send_command, command, *args)
         raise PubSubError(f"Unable to determine shard for channel {args[0]!r}")
 
     async def initialize(self) -> Self:

@@ -9,6 +9,7 @@ async def main():
     async with redis:
         print(await redis.ping())
         async with redis.pubsub(channels=["mychannel"]) as ps:
+            await redis.publish("mychannel", "test message!")
             async for msg in ps:
                 print(msg)
                 if msg["type"] == "message":

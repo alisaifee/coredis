@@ -511,7 +511,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         conn = self.connection
         # if this is the first call, we need a connection
         if not conn:
-            conn = await self.connection_pool.get_connection()
+            conn = await self.connection_pool.acquire()
             self.connection = conn
         try:
             request = await conn.create_request(
@@ -756,7 +756,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         conn = self.connection
 
         if not conn:
-            conn = await self.connection_pool.get_connection()
+            conn = await self.connection_pool.acquire()
             # assign to self.connection so clear() releases the connection
             # back to the pool after we're done
             self.connection = conn
