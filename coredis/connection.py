@@ -321,8 +321,7 @@ class BaseConnection:
                     self._limiter.release()
                     if pool.blocking:
                         async with pool._condition:
-                            if not self.blocked.locked():
-                                pool._condition.notify()
+                            pool._condition.notify_all()
                     if request.raise_exceptions and isinstance(response, RedisError):
                         request._exc = response
                     else:

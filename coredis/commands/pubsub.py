@@ -126,6 +126,9 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
             await self.unsubscribe()
             await self.punsubscribe()
             self.connection.pubsub = False
+            if self.connection_pool.blocking:
+                async with self.connection_pool._condition:
+                    self.connection_pool._condition.notify_all()
 
     async def psubscribe(
         self,

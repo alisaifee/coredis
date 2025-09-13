@@ -250,13 +250,11 @@ class ConnectionPool(AsyncContextManagerMixin):
                 for c in self._connections
                 if c._limiter.value != 0 and not c.blocked and not c.pipeline
             )
-        connection = next(expr(), None)
-        if not connection:
+        while not (connection := next(expr(), None)):
             if len(self._connections) >= self.max_connections:
                 if self.blocking:  # wait for a connection to become available
                     async with self._condition:
                         await self._condition.wait()
-                    connection = next(expr())
                 else:
                     raise ConnectionError("Too many connections")
             else:
