@@ -48,7 +48,6 @@ from coredis.typing import (
 )
 
 if TYPE_CHECKING:
-    import coredis.connection
     import coredis.pool
 
 T = TypeVar("T")
@@ -123,7 +122,6 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
                 await self.subscribe(**self._initial_channel_subscriptions)
             if self._initial_pattern_subscriptions:
                 await self.psubscribe(**self._initial_pattern_subscriptions)
-            self.connection.register_connect_callback(self.on_connect)
             tg.start_soon(self._consumer)
             yield self
             # cleanup
@@ -132,12 +130,6 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
                 await self.unsubscribe()
                 await self.punsubscribe()
                 self.connection.disconnect()
-                self.connection.clear_connect_callbacks()
-                self.connection = None
-                self.channels = {}
-                self.patterns = {}
-                self.initialized = False
-                self._subscribed = Event()
 
     async def psubscribe(
         self,
@@ -222,29 +214,6 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
                 await self._receive_stream.receive(), ignore_subscribe_messages
             )
 
-    async def on_connect(self, connection: BaseConnection) -> None:
-        """
-        Re-subscribe to any channels and patterns previously subscribed to
-
-        :meta private:
-        """
-
-        if self.channels:
-            await self.subscribe(
-                **{
-                    k.decode(self.connection_pool.encoding) if isinstance(k, bytes) else k: v
-                    for k, v in self.channels.items()
-                }
-            )
-
-        if self.patterns:
-            await self.psubscribe(
-                **{
-                    k.decode(self.connection_pool.encoding) if isinstance(k, bytes) else k: v
-                    for k, v in self.patterns.items()
-                }
-            )
-
     def encode(self, value: StringT) -> StringT:
         """
         Encodes the value so that it's identical to what we'll read off the
@@ -268,11 +237,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
         :meta private:
         """
-
-        if self.connection is None:
-            self.connection = await self.connection_pool.acquire()
-            self.connection.register_connect_callback(self.on_connect)
-        return await self._execute(self.connection.send_command, command, *args)
+        return await self.connection.send_command(command, *args)
 
     async def parse_response(
         self, block: bool = True, timeout: float | None = None
@@ -289,7 +254,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
                 return await self.connection.fetch_push_message(block=block)
             else:
                 # TODO: implement RESP2-compatible
-                pass
+                raise NotImplementedError()
 
     async def handle_message(self, response: ResponseType) -> PubSubMessage | None:
         """
@@ -384,13 +349,6 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         ):
             return None
         return message
-
-    async def _execute(
-        self,
-        command: Callable[..., Awaitable[None]] | Callable[..., Awaitable[ResponseType]],
-        *args: RedisValueT,
-    ) -> ResponseType | None:
-        return await command(*args)
 
 
 class PubSub(BasePubSub[AnyStr, "coredis.pool.ConnectionPool"]):

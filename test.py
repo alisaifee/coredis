@@ -14,11 +14,12 @@ async def main():
                 print(msg)
                 if msg["type"] == "message":
                     break
-            async with redis.pipeline(transaction=False) as pipe:
-                pipe.incr("tmpkey")
-                val = pipe.get("tmpkey")
-                pipe.delete(["tmpkey"])
-            print(await val)
+            await redis.pubsub_numsub("mychannel")
+        async with redis.pipeline(transaction=False) as pipe:
+            pipe.incr("tmpkey")
+            val = pipe.get("tmpkey")
+            pipe.delete(["tmpkey"])
+        print(await val)
 
 
 run(main)

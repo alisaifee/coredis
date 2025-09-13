@@ -7,13 +7,14 @@ import anyio
 import pytest
 
 import coredis
+from coredis.commands.pubsub import PubSub
 from coredis.exceptions import ConnectionError
 from tests.conftest import targets
 
 pytestmark = pytest.mark.anyio
 
 
-async def wait_for_message(pubsub, timeout=0.5, ignore_subscribe_messages=False):
+async def wait_for_message(pubsub: PubSub, timeout=0.5, ignore_subscribe_messages=False):
     now = time.time()
     timeout = now + timeout
 
