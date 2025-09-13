@@ -212,13 +212,14 @@ class BaseConnection:
         self.notouch: bool = notouch
 
         self.needs_handshake: bool = True
-        self._blocked: bool = False
         self._last_error: BaseException | None = None
         self._connection_error: BaseException | None = None
 
         self._requests: deque[Request] = deque()
         self._write_lock = Lock()
         self._limiter = Semaphore(MAX_REQUESTS_PER_CONNECTION)
+        #: used for pipelines and blocking commands like XREAD
+        self.blocked = Lock()
 
     def __repr__(self) -> str:
         return self.describe(self._description_args())
@@ -283,7 +284,8 @@ class BaseConnection:
                 task_status.started()
         finally:
             self.disconnect()
-            pool._connections.remove(self)
+            if self in pool._connections:
+                pool._connections.remove(self)
 
     async def listen_for_responses(self, pool: ConnectionPool) -> None:
         """
@@ -313,9 +315,10 @@ class BaseConnection:
                 if self._requests:
                     request = self._requests.popleft()
                     self._limiter.release()
-                    if pool.blocking and not self._blocked:
+                    if pool.blocking:
                         async with pool._condition:
-                            pool._condition.notify()
+                            if not self.blocked.locked():
+                                pool._condition.notify()
                     if request.raise_exceptions and isinstance(response, RedisError):
                         request._exc = response
                     else:

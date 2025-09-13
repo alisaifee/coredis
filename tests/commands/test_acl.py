@@ -5,6 +5,8 @@ import pytest
 from coredis.exceptions import AuthenticationError, AuthorizationError, ResponseError
 from tests.conftest import targets
 
+pytestmark = pytest.mark.anyio
+
 
 @pytest.fixture(autouse=True, scope="function")
 async def teardown(client):

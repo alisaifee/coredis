@@ -969,7 +969,7 @@ class Redis(Client[AnyStr]):
         connection = await pool.acquire()
         should_block = not quick_release or self.requires_wait or self.requires_waitaof
         if should_block:
-            connection._blocked = True
+            await connection.blocked.acquire()
         try:
             keys = KeySpec.extract_keys(command.name, *command.arguments)
             cacheable = (
@@ -1039,7 +1039,7 @@ class Redis(Client[AnyStr]):
         finally:
             self._ensure_server_version(connection.server_version)
             if should_block:
-                connection._blocked = False
+                connection.blocked.release()
 
     @overload
     def decoding(
@@ -1143,10 +1143,10 @@ class Redis(Client[AnyStr]):
             **kwargs,
         )
 
-    async def pipeline(
+    def pipeline(
         self,
+        raise_on_error: bool = True,
         transaction: bool = True,
-        watches: Parameters[KeyT] | None = None,
         timeout: float | None = None,
     ) -> coredis.pipeline.Pipeline[AnyStr]:
         """
@@ -1154,14 +1154,12 @@ class Redis(Client[AnyStr]):
         batch execution.
 
         :param transaction: indicates whether all commands should be executed atomically.
-        :param watches: If :paramref:`transaction` is True these keys are watched for external
-         changes during the transaction.
         :param timeout: If specified this value will take precedence over
          :paramref:`Redis.stream_timeout`
         """
         from coredis.pipeline import Pipeline
 
-        return Pipeline[AnyStr](self, transaction, watches, timeout)
+        return Pipeline[AnyStr](self, transaction, raise_on_error, timeout)
 
     async def transaction(
         self,
@@ -1182,7 +1180,7 @@ class Redis(Client[AnyStr]):
         :param value_from_callable: Whether to return the result of transaction or the value
          returned from :paramref:`func`
         """
-        async with await self.pipeline(True) as pipe:
+        async with self.pipeline(transaction=True) as pipe:
             while True:
                 try:
                     if watches:

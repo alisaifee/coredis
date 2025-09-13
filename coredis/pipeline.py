@@ -4,11 +4,10 @@ import functools
 import inspect
 import sys
 import textwrap
-import warnings
 from abc import ABCMeta
 from concurrent.futures import CancelledError
-from types import TracebackType
-from typing import Any, cast
+from contextlib import asynccontextmanager
+from typing import Any, AsyncGenerator, cast
 
 from anyio import sleep
 from deprecated.sphinx import deprecated
@@ -24,7 +23,6 @@ from coredis.connection import (
     BaseConnection,
     ClusterConnection,
     CommandInvocation,
-    Connection,
     Request,
 )
 from coredis.exceptions import (
@@ -42,7 +40,7 @@ from coredis.exceptions import (
     TryAgainError,
     WatchError,
 )
-from coredis.pool import ClusterConnectionPool, ConnectionPool
+from coredis.pool import ClusterConnectionPool
 from coredis.pool.nodemanager import ManagedNode
 from coredis.response._callbacks import (
     AnyStrCallback,
@@ -109,9 +107,23 @@ def wrap_pipeline_method(
     return wrapper
 
 
-async def await_result(result: T) -> T:
-    await sleep(0)  # checkpoint
-    return result
+class Awaitablize(Awaitable[T]):
+    __slots__ = ("_result",)
+
+    def __init__(self, result: T) -> None:
+        self._result = result
+
+    def __await__(self) -> Generator[Any, None, T]:
+        async def _coro() -> T:
+            await sleep(0)  # checkpoint
+            return self._result
+
+        # create the coroutine when awaited to avoid Python warning on GC
+        return _coro().__await__()
+
+
+def await_result(result: T) -> Awaitable[T]:
+    return Awaitablize(result)
 
 
 class PipelineCommandRequest(CommandRequest[CommandResponseT]):
@@ -164,12 +176,6 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
             parent=self,
         )
 
-    async def __backward_compatibility_return(self) -> Pipeline[Any] | ClusterPipeline[Any]:
-        """
-        For backward compatibility: returns the pipeline instance when awaited before execute().
-        """
-        return self.client
-
     def __await__(self) -> Generator[None, None, CommandResponseT]:
         if hasattr(self, "response"):
             return self.response.__await__()
@@ -182,18 +188,16 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
                     return self.callback(r)
 
             return _transformed().__await__()
-        else:
-            warnings.warn(
-                """
-Awaiting a pipeline command response before calling `execute()` on the pipeline instance 
-has no effect and returns the pipeline instance itself for backward compatibility.
+        exc = ResponseError(
+            "Result not set! Either a transaction failed, or you're awaiting a pipeline command before calling execute."
+        )
+        if self.client._raise_on_error:
+            raise exc
 
-To add commands to a pipeline simply call the methods synchronously. The awaitable response
-can be awaited after calling `execute()` to retrieve a statically typed response if required.                  
-                """,
-                stacklevel=2,
-            )
-            return self.__backward_compatibility_return().__await__()  # type: ignore[return-value]
+        async def _get_exc() -> ResponseError:
+            return exc
+
+        return _get_exc().__await__()  # type: ignore
 
 
 class ClusterPipelineCommandRequest(PipelineCommandRequest[CommandResponseT]):
@@ -381,51 +385,48 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
     and its instance is placed into the response list returned by :meth:`execute`
     """
 
-    command_stack: list[PipelineCommandRequest[Any]]
-    connection_pool: ConnectionPool
-
     def __init__(
         self,
         client: Client[AnyStr],
         transaction: bool | None,
-        watches: Parameters[KeyT] | None = None,
+        raise_on_error: bool = True,
         timeout: float | None = None,
     ) -> None:
         self.client: Client[AnyStr] = client
-        self.connection_pool = client.connection_pool
-        self.connection: Connection | None = None
+        self._connection: BaseConnection | None = None
         self._transaction = transaction
+        self._raise_on_error = raise_on_error
         self.watching = False
-        self.watches: Parameters[KeyT] | None = watches or None
-        self.command_stack = []
+        self.command_stack: list[PipelineCommandRequest[Any]] = []
         self.cache = None
         self.explicit_transaction = False
         self.scripts: set[Script[AnyStr]] = set()
         self.timeout = timeout
         self.type_adapter = client.type_adapter
 
-    async def __aenter__(self) -> Pipeline[AnyStr]:
-        return await self.get_instance()
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}<{repr(self._connection)}>"
 
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
-        await self.clear()
+    @property
+    def connection(self) -> BaseConnection:
+        if not self._connection:
+            raise RedisError(
+                "Pipeline not initialized correctly! Make sure to use await or the async context manager."
+            )
+        return self._connection
 
-    def __await__(self) -> Generator[Any, Any, Pipeline[AnyStr]]:
-        return self.get_instance().__await__()
+    @asynccontextmanager
+    async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
+        self._connection = await self.client.connection_pool.acquire(dedicated=True)
+        yield self
+        await self.execute()
+        self.connection.blocked.release()
 
     def __len__(self) -> int:
         return len(self.command_stack)
 
     def __bool__(self) -> bool:
         return True
-
-    async def get_instance(self) -> Pipeline[AnyStr]:
-        return self
 
     def create_request(
         self,
@@ -443,24 +444,21 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
 
     async def clear(self) -> None:
         """
-        Clear the pipeline, reset state, and release the connection back to the pool.
+        Clear the pipeline and reset state.
         """
         self.command_stack.clear()
         self.scripts = set()
         # Reset connection state if we were watching something.
         if self.watching and self.connection:
             try:
-                request = await self.connection.create_request(CommandName.UNWATCH, decode=False)
-                await request
+                await (await self.connection.create_request(CommandName.UNWATCH, decode=False))
             except ConnectionError:
                 self.connection.disconnect()
+        else:
+            await sleep(0)  # checkpoint
         # Reset pipeline state and release connection if needed.
         self.watching = False
-        self.watches = []
         self.explicit_transaction = False
-        if self.connection:
-            self.connection_pool.release(self.connection)
-            self.connection = None
 
     #: :meta private:
     reset_pipeline = clear
@@ -481,10 +479,33 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         """
         if self.explicit_transaction:
             raise RedisError("Cannot issue nested calls to MULTI")
-
         if self.command_stack:
             raise RedisError("Commands without an initial WATCH have already been issued")
         self.explicit_transaction = True
+
+    async def watch(self, *keys: KeyT) -> bool:
+        """
+        Watch the given keys for changes. Switches to immediate execution mode
+        until :meth:`multi` is called.
+        """
+        if self.explicit_transaction:
+            raise RedisError("Cannot issue a WATCH after a MULTI")
+        return await self.immediate_execute_command(
+            RedisCommand(name=CommandName.WATCH, arguments=keys),
+            callback=SimpleStringCallback(),
+        )
+
+    async def unwatch(self) -> bool:
+        """
+        Remove all key watches and return to buffered mode.
+        """
+        if not self.watching:
+            await sleep(0)  # checkpoint
+            return False
+        return await self.immediate_execute_command(
+            RedisCommand(name=CommandName.UNWATCH, arguments=()),
+            callback=SimpleStringCallback(),
+        )
 
     def execute_command(
         self,
@@ -508,33 +529,27 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
 
         :meta private:
         """
-        conn = self.connection
-        # if this is the first call, we need a connection
-        if not conn:
-            conn = await self.connection_pool.acquire()
-            self.connection = conn
         try:
-            request = await conn.create_request(
+            request = await self.connection.create_request(
                 command.name, *command.arguments, decode=kwargs.get("decode")
             )
             return callback(
                 await request,
-                version=conn.protocol_version,
+                version=self.connection.protocol_version,
             )
         except (ConnectionError, TimeoutError):
-            conn.disconnect()
-
+            self.connection.disconnect()
             # if we're not already watching, we can safely retry the command
             try:
                 if not self.watching:
-                    request = await conn.create_request(
+                    request = await self.connection.create_request(
                         command.name, *command.arguments, decode=kwargs.get("decode")
                     )
-                    return callback(await request, version=conn.protocol_version)
+                    return callback(await request, version=self.connection.protocol_version)
                 raise
             except ConnectionError:
                 # the retry failed so cleanup.
-                conn.disconnect()
+                self.connection.disconnect()
                 await self.clear()
                 raise
         finally:
@@ -558,7 +573,6 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         self,
         connection: BaseConnection,
         commands: list[PipelineCommandRequest[Any]],
-        raise_on_error: bool,
     ) -> tuple[Any, ...]:
         multi_cmd = await connection.create_request(CommandName.MULTI, timeout=self.timeout)
         requests = await connection.create_requests(
@@ -590,6 +604,8 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         # the socket
         try:
             await multi_cmd
+        except TimeoutError:  # in this case not all responses may be present
+            raise
         except RedisError:
             multi_failed = True
             errors.append((0, cast(RedisError, sys.exc_info()[1])))
@@ -606,10 +622,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
 
         response: list[ResponseType]
         try:
-            response = cast(
-                list[ResponseType],
-                await exec_cmd if exec_cmd else None,
-            )
+            response = cast(list[ResponseType], await exec_cmd)
         except (ExecAbortError, ResponseError):
             if self.explicit_transaction and not multi_failed:
                 await self.immediate_execute_command(
@@ -634,7 +647,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
             raise ResponseError("Wrong number of response items from pipeline execution")
 
         # find any errors in the response and raise if necessary
-        if raise_on_error:
+        if self._raise_on_error:
             self.raise_first_error(commands, response)
 
         # We have to run response callbacks manually
@@ -649,10 +662,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         return tuple(data)
 
     async def _execute_pipeline(
-        self,
-        connection: BaseConnection,
-        commands: list[PipelineCommandRequest[Any]],
-        raise_on_error: bool,
+        self, connection: BaseConnection, commands: list[PipelineCommandRequest[Any]]
     ) -> tuple[Any, ...]:
         # build up all commands into a single request to increase network perf
         requests = await connection.create_requests(
@@ -690,7 +700,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
             except ResponseError as re:
                 cmd.response = await_result(re)
                 response.append(sys.exc_info()[1])
-        if raise_on_error:
+        if self._raise_on_error:
             self.raise_first_error(commands, response)
 
         return tuple(response)
@@ -736,14 +746,12 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
                         callback=AnyStrCallback[AnyStr](),
                     )
 
-    async def execute(self, raise_on_error: bool = True) -> tuple[Any, ...]:
+    async def execute(self) -> None:
         """
-        Execute all queued commands in the pipeline. Returns a tuple of results.
+        Execute all queued commands in the pipeline.
         """
-        stack = self.command_stack
-
-        if not stack:
-            return ()
+        if not self.command_stack:
+            return None
 
         if self.scripts:
             await self.load_scripts()
@@ -753,49 +761,22 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         else:
             exec = self._execute_pipeline
 
-        conn = self.connection
-
-        if not conn:
-            conn = await self.connection_pool.acquire()
-            # assign to self.connection so clear() releases the connection
-            # back to the pool after we're done
-            self.connection = conn
-
         try:
-            return await exec(conn, stack, raise_on_error)
+            await exec(self.connection, self.command_stack)
         except (ConnectionError, TimeoutError, CancelledError):
-            conn.disconnect()
-
+            self.connection.disconnect()
             # if we were watching a variable, the watch is no longer valid
             # since this connection has died. raise a WatchError, which
             # indicates the user should retry his transaction. If this is more
             # than a temporary failure, the WATCH that the user next issues
             # will fail, propegating the real ConnectionError
-
             if self.watching:
-                raise WatchError("A ConnectionError occured on while watching one or more keys")
+                raise WatchError("A connection error occured while watching one or more keys")
             # otherwise, it's safe to retry since the transaction isn't
             # predicated on any state
-
-            return await exec(conn, stack, raise_on_error)
+            await exec(self.connection, self.command_stack)
         finally:
             await self.clear()
-
-    def watch(self, *keys: KeyT) -> CommandRequest[bool]:
-        """
-        Watch the given keys for changes. Switches to immediate execution mode
-        until :meth:`multi` is called.
-        """
-        if self.explicit_transaction:
-            raise RedisError("Cannot issue a WATCH after a MULTI")
-
-        return self.create_request(CommandName.WATCH, *keys, callback=SimpleStringCallback())
-
-    def unwatch(self) -> CommandRequest[bool]:
-        """
-        Remove all key watches and return to buffered mode.
-        """
-        return self.create_request(CommandName.UNWATCH, callback=SimpleStringCallback())
 
 
 class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
@@ -889,17 +870,6 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
     def __await__(self) -> Generator[None, None, Self]:
         yield
         return self
-
-    async def __aenter__(self) -> ClusterPipeline[AnyStr]:
-        return self
-
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
-        await self.clear()
 
     def execute_command(
         self,
