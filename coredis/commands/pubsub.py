@@ -75,7 +75,6 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         pattern_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         max_buffer_size: int = 1024,
     ):
-        self.initialized = False
         self.connection_pool = connection_pool
         self.ignore_subscribe_messages = ignore_subscribe_messages
         self.connection: coredis.BaseConnection | None = None
@@ -94,7 +93,6 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         self._subscribed = Event()
         self.channels = {}
         self.patterns = {}
-        self.initialized = False
 
     @property
     def subscribed(self) -> bool:
@@ -116,8 +114,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         async with create_task_group() as tg:
             # initialize subscriptions and connection
-            self.connection = await self.connection_pool.acquire()
-            self.initialized = True
+            self.connection = await self.connection_pool.acquire(pubsub=True)
             if self._initial_channel_subscriptions:
                 await self.subscribe(**self._initial_channel_subscriptions)
             if self._initial_pattern_subscriptions:
@@ -126,10 +123,9 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
             yield self
             # cleanup
             tg.cancel_scope.cancel()
-            if self.connection:
-                await self.unsubscribe()
-                await self.punsubscribe()
-                self.connection.disconnect()
+            await self.unsubscribe()
+            await self.punsubscribe()
+            self.connection.pubsub = False
 
     async def psubscribe(
         self,
@@ -324,7 +320,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         return message
 
     async def _consumer(self) -> None:
-        while self.initialized:
+        while True:
             try:
                 if self.subscribed:
                     if response := await self._retry_policy.call_with_retries(
@@ -418,45 +414,6 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
     ) -> ResponseType | None:
         assert self.connection
         return await self._execute(self.connection.send_command, command, *args)
-
-    async def initialize(self) -> Self:
-        """
-        Ensures the pubsub instance is ready to consume messages
-        by establishing a connection to a random cluster node, setting up any
-        initial channel or pattern subscriptions that were specified during
-        instantiation and starting the consumer background task.
-
-        The method can be called multiple times without any
-        risk as it will skip initialization if the consumer is already
-        initialized.
-
-        .. important:: This method doesn't need to be called explicitly
-           as it will always be called internally before any relevant
-           documented interaction.
-
-        :return: the instance itself
-        """
-        if not self.initialized:
-            if self.connection is None:
-                await self.reset_connections(None)
-            self.initialized = True
-            if self._initial_channel_subscriptions:
-                await self.subscribe(**self._initial_channel_subscriptions)
-            if self._initial_pattern_subscriptions:
-                await self.psubscribe(**self._initial_pattern_subscriptions)
-            if not self._consumer_task or self._consumer_task.done():
-                self._consumer_task = asyncio.create_task(self._consumer())
-        return self
-
-    async def reset_connections(self, exc: BaseException | None = None) -> None:
-        if self.connection:
-            self.connection.disconnect()
-            self.connection_pool.initialized = False
-
-        await self.connection_pool.initialize()
-
-        self.connection = await self.connection_pool.get_connection(b"pubsub")
-        self.connection.register_connect_callback(self.on_connect)
 
 
 @versionadded(version="3.6.0")

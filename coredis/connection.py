@@ -218,8 +218,12 @@ class BaseConnection:
         self._requests: deque[Request] = deque()
         self._write_lock = Lock()
         self._limiter = Semaphore(MAX_REQUESTS_PER_CONNECTION)
-        #: used for pipelines and blocking commands like XREAD
-        self.blocked = Lock()
+        #: used for blocking commands like XREAD; these need a 100% dedicated connection
+        self.blocked = False
+        #: used for pipelines, which are mostly blocking but can coexist with a pubsub
+        self.pipeline = False
+        #: used for pubsub, since we can't do two pubsubs on the same connection
+        self.pubsub = False
 
     def __repr__(self) -> str:
         return self.describe(self._description_args())

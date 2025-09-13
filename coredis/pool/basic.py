@@ -220,24 +220,43 @@ class ConnectionPool(AsyncContextManagerMixin):
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{self.connection_class.describe(self.connection_kwargs)}>"
 
-    async def acquire(self, dedicated: bool = False) -> BaseConnection:
+    async def acquire(
+        self, blocking: bool = False, pipeline: bool = False, pubsub: bool = False
+    ) -> BaseConnection:
         """
         Gets a connection from the pool, or creates a new one if all are busy.
         """
-        connection = next(
-            (c for c in self._connections if c._limiter.value != 0 and not c.blocked.locked()),
-            None,
-        )
+        if pipeline:  # only a pubsub can coexist here
+            expr = lambda: (
+                c
+                for c in self._connections
+                if c._limiter.value != 0 and not c.blocked and not c.pipeline
+            )
+        elif pubsub:  # can't have two pubsubs on one connection
+            expr = lambda: (
+                c
+                for c in self._connections
+                if c._limiter.value != 0 and not c.blocked and not c.pubsub
+            )
+        elif blocking:  # needs completely dedicated connection
+            expr = lambda: (
+                c
+                for c in self._connections
+                if c._limiter.value != 0 and not c.blocked and not c.pubsub and not c.pipeline
+            )
+        else:  # if connection has a pubsub it's fine
+            expr = lambda: (
+                c
+                for c in self._connections
+                if c._limiter.value != 0 and not c.blocked and not c.pipeline
+            )
+        connection = next(expr(), None)
         if not connection:
             if len(self._connections) >= self.max_connections:
                 if self.blocking:  # wait for a connection to become available
                     async with self._condition:
                         await self._condition.wait()
-                    connection = next(
-                        c
-                        for c in self._connections
-                        if c._limiter.value != 0 and not c.blocked.locked()
-                    )
+                    connection = next(expr())
                 else:
                     raise ConnectionError("Too many connections")
             else:
@@ -245,8 +264,12 @@ class ConnectionPool(AsyncContextManagerMixin):
                 await self._task_group.start(connection.run, self)
                 self._connections.add(connection)
         connection._limiter.acquire_nowait()
-        if dedicated:
-            connection.blocked.acquire_nowait()
+        if blocking:
+            connection.blocked = True
+        elif pipeline:
+            connection.pipeline = True
+        elif pubsub:
+            connection.pubsub = True
         await sleep(0)  # checkpoint
         return connection
 

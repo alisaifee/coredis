@@ -966,10 +966,8 @@ class Redis(Client[AnyStr]):
     ) -> R:
         pool = self.connection_pool
         quick_release = self.should_quick_release(command)
-        connection = await pool.acquire()
         should_block = not quick_release or self.requires_wait or self.requires_waitaof
-        if should_block:
-            await connection.blocked.acquire()
+        connection = await pool.acquire(blocking=should_block)
         try:
             keys = KeySpec.extract_keys(command.name, *command.arguments)
             cacheable = (
@@ -1039,7 +1037,7 @@ class Redis(Client[AnyStr]):
         finally:
             self._ensure_server_version(connection.server_version)
             if should_block:
-                connection.blocked.release()
+                connection.blocked = False
 
     @overload
     def decoding(

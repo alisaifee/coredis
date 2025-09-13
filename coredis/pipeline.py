@@ -417,10 +417,10 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
 
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        self._connection = await self.client.connection_pool.acquire(dedicated=True)
+        self._connection = await self.client.connection_pool.acquire(pipeline=True)
         yield self
         await self.execute()
-        self.connection.blocked.release()
+        self.connection.pipeline = False
 
     def __len__(self) -> int:
         return len(self.command_stack)
