@@ -34,8 +34,6 @@ class DummyConnection(ClusterConnection):
         self._description_args = lambda: {}
         self._parse_task = None
         self._requests = deque()
-        self.average_response_time = 0
-        self.requests_processed = 0
 
 
 class TestConnectionPool:

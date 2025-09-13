@@ -6,6 +6,8 @@ from coredis import PureToken
 from coredis.exceptions import CommandSyntaxError, DataError
 from tests.conftest import server_deprecation_warning, targets
 
+pytestmark = pytest.mark.anyio
+
 
 @targets(
     "redis_basic",
