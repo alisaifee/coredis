@@ -7,7 +7,6 @@ from io import BytesIO
 from typing import cast
 
 from anyio.streams.memory import MemoryObjectSendStream
-
 from coredis._utils import CaseAndEncodingInsensitiveEnum, b
 from coredis.constants import SYM_CRLF, RESPDataType
 from coredis.exceptions import (

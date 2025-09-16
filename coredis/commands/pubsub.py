@@ -12,8 +12,6 @@ from anyio import (
     move_on_after,
     sleep,
 )
-from deprecated.sphinx import versionadded
-
 from coredis._utils import b, hash_slot, nativestr
 from coredis.commands.constants import CommandName
 from coredis.connection import BaseConnection, Connection
@@ -46,6 +44,7 @@ from coredis.typing import (
     StringT,
     TypeVar,
 )
+from deprecated.sphinx import versionadded
 
 if TYPE_CHECKING:
     import coredis.pool
@@ -576,37 +575,6 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
             if not self._consumer_task or self._consumer_task.done():
                 self._consumer_task = asyncio.create_task(self._consumer())
         return self
-
-    async def reset_connections(self, exc: BaseException | None = None) -> None:
-        for connection in self.shard_connections.values():
-            connection.disconnect()
-            connection.clear_connect_callbacks()
-            self.connection_pool.release(connection)
-        self.shard_connections.clear()
-        for _, task in self.pending_tasks.items():
-            if not task.done():
-                task.cancel()
-                with suppress(CancelledError):
-                    await task
-        self.pending_tasks.clear()
-        self.connection_pool.disconnect()
-        self.connection_pool.reset()
-        self.connection_pool.initialized = False
-        await self.connection_pool.initialize()
-        for channel in self.channels:
-            slot = hash_slot(b(channel))
-            node = self.connection_pool.nodes.node_from_slot(slot)
-            if node and node.node_id:
-                key = node.node_id
-                self.shard_connections[key] = await self.connection_pool.get_connection(
-                    b"pubsub",
-                    channel=channel,
-                    node_type="replica" if self.read_from_replicas else "primary",
-                )
-                # register a callback that re-subscribes to any channels we
-                # were listening to when we were disconnected
-                self.shard_connections[key].register_connect_callback(self.on_connect)
-                self.channel_connection_mapping[channel] = self.shard_connections[key]
 
     async def parse_response(
         self, block: bool = True, timeout: float | None = None

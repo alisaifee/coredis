@@ -10,8 +10,6 @@ from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, cast
 
 from anyio import sleep
-from deprecated.sphinx import deprecated
-
 from coredis._utils import b, hash_slot, nativestr
 from coredis.client import Client, RedisCluster
 from coredis.commands import CommandRequest, CommandResponseT
@@ -45,7 +43,6 @@ from coredis.pool.nodemanager import ManagedNode
 from coredis.response._callbacks import (
     AnyStrCallback,
     AsyncPreProcessingCallback,
-    BoolCallback,
     BoolsCallback,
     NoopCallback,
     SimpleStringCallback,
@@ -72,6 +69,7 @@ from coredis.typing import (
     Unpack,
     ValueT,
 )
+from deprecated.sphinx import deprecated
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -454,10 +452,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         self.scripts = set()
         # Reset connection state if we were watching something.
         if self.watching and self.connection:
-            try:
-                await (await self.connection.create_request(CommandName.UNWATCH, decode=False))
-            except ConnectionError:
-                self.connection.disconnect()
+            await (await self.connection.create_request(CommandName.UNWATCH, decode=False))
         else:
             await sleep(0)  # checkpoint
         # Reset pipeline state and release connection if needed.
@@ -542,7 +537,6 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
                 version=self.connection.protocol_version,
             )
         except (ConnectionError, TimeoutError):
-            self.connection.disconnect()
             # if we're not already watching, we can safely retry the command
             try:
                 if not self.watching:
@@ -553,7 +547,6 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
                 raise
             except ConnectionError:
                 # the retry failed so cleanup.
-                self.connection.disconnect()
                 await self.clear()
                 raise
         finally:
@@ -578,9 +571,9 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         connection: BaseConnection,
         commands: list[PipelineCommandRequest[Any]],
     ) -> tuple[Any, ...]:
-        multi_cmd = await connection.create_request(CommandName.MULTI, timeout=self.timeout)
         requests = await connection.create_requests(
-            [
+            [CommandInvocation(CommandName.MULTI, (), None, None)]
+            + [
                 CommandInvocation(
                     cmd.name,
                     cmd.arguments,
@@ -592,62 +585,50 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
                     None,
                 )
                 for cmd in commands
-            ],
+            ]
+            + [CommandInvocation(CommandName.EXEC, (), None, None)],
             timeout=self.timeout,
         )
-        exec_cmd = await connection.create_request(CommandName.EXEC, timeout=self.timeout)
         for i, cmd in enumerate(commands):
             cmd.queued_response = cast(Awaitable[StringT], requests[i])
 
         errors: list[tuple[int, RedisError | None]] = []
-        multi_failed = False
 
         # parse off the response for MULTI
         # NOTE: we need to handle ResponseErrors here and continue
         # so that we read all the additional command messages from
         # the socket
         try:
-            await multi_cmd
-        except TimeoutError:  # in this case not all responses may be present
-            raise
-        except RedisError:
-            multi_failed = True
-            errors.append((0, cast(RedisError, sys.exc_info()[1])))
+            await requests[0]
+        except RedisError as e:
+            errors.append((0, e))
 
         # and all the other commands
-        for i, cmd in enumerate(commands):
+        for i, cmd in enumerate(commands[1:-1]):
             try:
                 if cmd.queued_response:
-                    assert (await cmd.queued_response) in {b"QUEUED", "QUEUED"}
-            except RedisError:
-                ex = cast(RedisError, sys.exc_info()[1])
-                self.annotate_exception(ex, i + 1, cmd.name, cmd.arguments)
-                errors.append((i, ex))
+                    if (await cmd.queued_response) not in {b"QUEUED", "QUEUED"}:
+                        # TODO: log warning
+                        pass
+            except RedisError as e:
+                self.annotate_exception(e, i + 1, cmd.name, cmd.arguments)
+                errors.append((i, e))
 
-        response: list[ResponseType]
         try:
-            response = cast(list[ResponseType], await exec_cmd)
-        except (ExecAbortError, ResponseError):
-            if self.explicit_transaction and not multi_failed:
-                await self.immediate_execute_command(
-                    RedisCommand(name=CommandName.DISCARD, arguments=()), callback=BoolCallback()
-                )
-
+            response = cast(list[ResponseType] | None, await requests[-1])
+        except (ExecAbortError, ResponseError) as e:
             if errors and errors[0][1]:
-                raise errors[0][1]
+                raise errors[0][1] from e
             raise
 
         if response is None:
             raise WatchError("Watched variable changed.")
 
         # put any parse errors into the response
-
         for i, e in errors:
             response.insert(i, cast(ResponseType, e))
 
         if len(response) != len(commands):
-            if self.connection:
-                self.connection.disconnect()
             raise ResponseError("Wrong number of response items from pipeline execution")
 
         # find any errors in the response and raise if necessary
@@ -767,18 +748,17 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
 
         try:
             await exec(self.connection, self.command_stack)
-        except (ConnectionError, TimeoutError, CancelledError):
-            self.connection.disconnect()
+        except (ConnectionError, TimeoutError, CancelledError) as e:
             # if we were watching a variable, the watch is no longer valid
             # since this connection has died. raise a WatchError, which
             # indicates the user should retry his transaction. If this is more
             # than a temporary failure, the WATCH that the user next issues
             # will fail, propegating the real ConnectionError
             if self.watching:
-                raise WatchError("A connection error occured while watching one or more keys")
-            # otherwise, it's safe to retry since the transaction isn't
-            # predicated on any state
-            await exec(self.connection, self.command_stack)
+                raise WatchError(
+                    "A connection error occured while watching one or more keys"
+                ) from e
+            raise
         finally:
             await self.clear()
 

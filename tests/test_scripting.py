@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import pytest
-from beartype.roar import BeartypeCallHintParamViolation
 
+from beartype.roar import BeartypeCallHintParamViolation
 from coredis import PureToken
 from coredis._utils import gather
 from coredis.client import Client
@@ -90,7 +90,7 @@ class TestScripting:
         assert await client.script_flush(sync_type=PureToken.SYNC)
         assert await client.script_exists([sha]) == (False,)
 
-    async def test_script_object(self, client):
+    async def test_script_object(self, client: Redis[str]):
         await client.set("a", "2")
         multiply = client.register_script(multiply_script)
         precalculated_sha = multiply.sha

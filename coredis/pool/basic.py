@@ -7,7 +7,6 @@ from typing import Any, AsyncGenerator, Self, cast
 from urllib.parse import parse_qs, unquote, urlparse
 
 from anyio import AsyncContextManagerMixin, Condition, create_task_group, sleep
-
 from coredis._utils import query_param_to_bool
 from coredis.connection import (
     BaseConnection,
@@ -199,7 +198,7 @@ class ConnectionPool(AsyncContextManagerMixin):
         self.connection_class = connection_class or Connection
         self.connection_kwargs = connection_kwargs
         self.connection_kwargs["max_idle_time"] = max_idle_time
-        self.max_connections = max_connections or 2**31
+        self.max_connections = max_connections or 64
         self.max_idle_time = max_idle_time
         self.idle_check_interval = idle_check_interval
         self.initialized = False
@@ -228,27 +227,21 @@ class ConnectionPool(AsyncContextManagerMixin):
         """
         if pipeline:  # only a pubsub can coexist here
             expr = lambda: (
-                c
-                for c in self._connections
-                if c._limiter.value != 0 and not c.blocked and not c.pipeline
+                c for c in self._connections if c.available and not c.blocked and not c.pipeline
             )
         elif pubsub:  # can't have two pubsubs on one connection
             expr = lambda: (
-                c
-                for c in self._connections
-                if c._limiter.value != 0 and not c.blocked and not c.pubsub
+                c for c in self._connections if c.available and not c.blocked and not c.pubsub
             )
         elif blocking:  # needs completely dedicated connection
             expr = lambda: (
                 c
                 for c in self._connections
-                if c._limiter.value != 0 and not c.blocked and not c.pubsub and not c.pipeline
+                if c.available and not c.blocked and not c.pubsub and not c.pipeline
             )
         else:  # if connection has a pubsub it's fine
             expr = lambda: (
-                c
-                for c in self._connections
-                if c._limiter.value != 0 and not c.blocked and not c.pipeline
+                c for c in self._connections if c.available and not c.blocked and not c.pipeline
             )
         while not (connection := next(expr(), None)):
             if len(self._connections) >= self.max_connections:
@@ -261,16 +254,14 @@ class ConnectionPool(AsyncContextManagerMixin):
                 connection = self.connection_class(**self.connection_kwargs)
                 await self._task_group.start(connection.run, self)
                 self._connections.add(connection)
-        connection._limiter.acquire_nowait()
+                return connection
         if blocking:
             connection.blocked = True
         elif pipeline:
             connection.pipeline = True
         elif pubsub:
             connection.pubsub = True
+        else:
+            connection._counter += 1
         await sleep(0)  # checkpoint
         return connection
-
-
-class BlockingConnectionPool(ConnectionPool):
-    pass

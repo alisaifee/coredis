@@ -13,11 +13,11 @@ from abc import abstractmethod
 from collections import defaultdict, deque
 from typing import TYPE_CHECKING, Any, cast, override
 
+import coredis
 from anyio import (
     TASK_STATUS_IGNORED,
     Event,
     Lock,
-    Semaphore,
     connect_tcp,
     connect_unix,
     create_memory_object_stream,
@@ -27,8 +27,6 @@ from anyio import (
     sleep,
 )
 from anyio.abc import ByteStream, SocketAttribute, TaskStatus
-
-import coredis
 from coredis._packer import Packer
 from coredis._utils import nativestr
 from coredis.credentials import (
@@ -217,13 +215,13 @@ class BaseConnection:
 
         self._requests: deque[Request] = deque()
         self._write_lock = Lock()
-        self._limiter = Semaphore(MAX_REQUESTS_PER_CONNECTION)
         #: used for blocking commands like XREAD; these need a 100% dedicated connection
         self.blocked = False
         #: used for pipelines, which are mostly blocking but can coexist with a pubsub
         self.pipeline = False
         #: used for pubsub, since we can't do two pubsubs on the same connection
         self.pubsub = False
+        self._counter = 0
 
     def __repr__(self) -> str:
         return self.describe(self._description_args())
@@ -237,8 +235,8 @@ class BaseConnection:
         return self.locator.format_map(defaultdict(lambda: None, self._description_args()))
 
     @property
-    def pending_requests(self) -> int:
-        return len(self._requests)
+    def available(self) -> bool:
+        return len(self._requests) + self._counter < MAX_REQUESTS_PER_CONNECTION
 
     @property
     def connection(self) -> ByteStream:
@@ -267,7 +265,7 @@ class BaseConnection:
     async def _connect(self) -> None: ...
 
     async def run(
-        self, pool: ConnectionPool, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
+        self, pool: ConnectionPool, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
     ) -> None:
         """
         Establish a connnection to the redis server
@@ -275,7 +273,7 @@ class BaseConnection:
         """
         await self._connect()
         try:
-            async with create_task_group() as tg:
+            async with self.connection, self._parser.push_messages, create_task_group() as tg:
                 tg.start_soon(self.listen_for_responses, pool)
                 # setup connection
                 await self.on_connect()
@@ -287,7 +285,13 @@ class BaseConnection:
                         await task
                 task_status.started()
         finally:
-            self.disconnect()
+            self._parser.on_disconnect()
+            disconnect_exc = self._last_error or ConnectionError("connection lost")
+            while self._requests:
+                request = self._requests.popleft()
+                if not request._event.is_set():
+                    request._exc = disconnect_exc
+                    request._event.set()
             if self in pool._connections:
                 pool._connections.remove(self)
 
@@ -296,37 +300,28 @@ class BaseConnection:
         Listen on the socket and run the parser, completing pending requests in
         FIFO order.
         """
-        async with self.connection:
-            while True:
-                decode = self._requests[0].decode if self._requests else self.decode_responses
-                # Try to parse a complete response from already-fed bytes
-                response = self._parser.get_response(decode, self.encoding)
-                if isinstance(response, NotEnoughData):
-                    # Need more bytes; read once, feed, and retry
-                    try:
-                        with fail_after(self.max_idle_time):
-                            data = await self.connection.receive()
-                    except TimeoutError:
-                        self.disconnect()
-                        return
-                    except BaseException:
-                        self.disconnect()
-                        raise
-                    self._parser.feed(data)
-                    continue  # loop back and try parsing again
+        while True:
+            decode = self._requests[0].decode if self._requests else self.decode_responses
+            # Try to parse a complete response from already-fed bytes
+            response = self._parser.get_response(decode, self.encoding)
+            if isinstance(response, NotEnoughData):
+                # Need more bytes; read once, feed, and retry
+                with fail_after(self.max_idle_time):
+                    data = await self.connection.receive()
+                self._parser.feed(data)
+                continue  # loop back and try parsing again
 
-                # We have a full response for `head`; now pop and complete it
-                if self._requests:
-                    request = self._requests.popleft()
-                    self._limiter.release()
-                    if pool.blocking:
-                        async with pool._condition:
-                            pool._condition.notify_all()
-                    if request.raise_exceptions and isinstance(response, RedisError):
-                        request._exc = response
-                    else:
-                        request._result = response
-                    request._event.set()
+            # We have a full response for `head`; now pop and complete it
+            if self._requests:
+                request = self._requests.popleft()
+                if pool.blocking:
+                    async with pool._condition:
+                        pool._condition.notify_all()
+                if request.raise_exceptions and isinstance(response, RedisError):
+                    request._exc = response
+                else:
+                    request._result = response
+                request._event.set()
 
     async def update_tracking_client(self, enabled: bool, client_id: int | None = None) -> bool:
         """
@@ -473,18 +468,10 @@ class BaseConnection:
         """
         Sends an already packed command to the Redis server
         """
-
-        try:
-            with fail_after(timeout):
-                async with self._write_lock:
-                    data = b"".join(command)
-                    await self.connection.send(data)
-        except TimeoutError as e:
-            if self._connection:
-                self.disconnect()
-            raise TimeoutError(
-                f"Unable to write after waiting for socket for {timeout} seconds"
-            ) from e
+        with fail_after(timeout):
+            async with self._write_lock:
+                data = b"".join(command)
+                await self.connection.send(data)
 
     async def send_command(
         self,
@@ -558,23 +545,6 @@ class BaseConnection:
             self._requests.append(request)
             requests.append(request)
         return requests
-
-    def disconnect(self) -> None:
-        """
-        Disconnect from the Redis server
-        """
-        self.needs_handshake = True
-        self.noreply_set = False
-        self._parser.on_disconnect()
-        if self._connection:
-            self._receive_messages.close()
-
-        disconnect_exc = self._last_error or ConnectionError("connection lost")
-        while self._requests:
-            request = self._requests.popleft()
-            if not request._event.is_set():
-                request._exc = disconnect_exc
-                request._event.set()
 
 
 class Connection(BaseConnection):

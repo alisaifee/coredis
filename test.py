@@ -1,4 +1,4 @@
-from trio import run
+from anyio import run
 
 from coredis import Redis
 
@@ -14,7 +14,6 @@ async def main():
                 print(msg)
                 if msg["type"] == "message":
                     break
-            await redis.pubsub_numsub("mychannel")
         async with redis.pipeline(transaction=False) as pipe:
             pipe.incr("tmpkey")
             val = pipe.get("tmpkey")

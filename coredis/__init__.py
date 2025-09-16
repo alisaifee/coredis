@@ -20,7 +20,6 @@ from coredis.connection import (
 )
 from coredis.pool import (
     BlockingClusterConnectionPool,
-    BlockingConnectionPool,
     ClusterConnectionPool,
     ConnectionPool,
 )
@@ -36,7 +35,6 @@ __all__ = [
     "Connection",
     "UnixDomainSocketConnection",
     "ClusterConnection",
-    "BlockingConnectionPool",
     "ConnectionPool",
     "BlockingClusterConnectionPool",
     "ClusterConnectionPool",
