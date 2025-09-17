@@ -1,14 +1,128 @@
 [build-system]
 build-backend = "setuptools.build_meta"
 requires = [
-  "mypy==1.18.1",
-  "packaging>=21,<26",
   "beartype>=0.20",
+  "mypy==1.18.1",
   "pympler>1,<2",
-  "setuptools",
+  "setuptools>=80",
   "types_deprecated",
-  "versioneer[toml]",
+  "versioneer[toml]>=0.28",
 ]
+
+[project]
+name = "coredis"
+dynamic = ["version"]
+description = "Python async client for Redis key-value store"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+  {name = "Ali-Akber Saifee", email = "ali@indydevs.org"}
+]
+maintainers = [
+  {name = "Ali-Akber Saifee", email = "ali@indydevs.org"}
+]
+keywords = ["Redis", "key-value store", "asyncio"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+requires-python = ">=3.10"
+dependencies = [
+  "async_timeout>4,<6",
+  "beartype>=0.20",
+  "deprecated>=1.2",
+  "typing_extensions>=4.13",
+  "packaging>=21,<26",
+  "pympler>1,<2",
+]
+
+[project.optional-dependencies]
+recipes = [
+  "aiobotocore>=2.15.2",
+  "asyncache>=0.3.1",
+]
+
+[dependency-groups]
+
+test = [
+  "beartype",
+  "coverage",
+  "lovely-pytest-docker",
+  "mock",
+  "numpy",
+  "pytest",
+  "pytest-asyncio",
+  "pytest-cov",
+  "pytest-env",
+  "pytest-lazy-fixtures",
+  "pytest-mock",
+  "pytest-reverse",
+  "redis",
+  "aiobotocore>=2.15.2",
+  "asyncache>=0.3.1",
+  "moto"
+]
+
+dev = [
+  "setuptools>=80",
+  "ruff",
+  "mypy==1.17.1; implementation_name!='pypy'",
+  "redis>=4.2.0",
+  "types-deprecated",
+  "click==8.1.2",
+  "inflect>=6.0.0",
+  "Jinja2==3.1.5",
+  {include-group = "test"},
+]
+
+ci = [
+  "pytest-rerunfailures",
+  "pytest-sentry",
+  {include-group = "dev"},
+]
+
+docs = [
+  "requests>2,<3",
+  "furo==2025.7.19",
+  "Sphinx>=4,<9",
+  "sphinx-copybutton==0.5.2",
+  "sphinx-autobuild==2024.10.3",
+  "sphinx-issues==5.0.1",
+  "sphinxext-opengraph==0.13.0",
+  "sphinx-sitemap==2.8.0",
+  "sphinx-paramlinks==0.6.0",
+  "sphinxcontrib-programoutput==0.18",
+  "botocore",
+  "cachetools",
+  {include-group = "dev"},
+]
+
+[project.urls]
+Homepage = "https://github.com/alisaifee/coredis"
+Source = "https://github.com/alisaifee/coredis"
+Changelog = "https://github.com/alisaifee/coredis/releases"
+Documentation = "https://coredis.readthedocs.org"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+coredis = ["py.typed"]
+
+[tool.setuptools.dynamic]
+version = { attr = "versioneer.get_version" }
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["coredis.*"]
 
 [tool.mypy]
 strict = true
@@ -52,7 +166,7 @@ ignore_missing_imports = true
 
 [tool.ruff]
 line-length=100
-exclude = ["doc/**","_version.py","versioneer.py"]
+exclude = ["doc/**","_version.py","versioneer.py", "coredis/_py_312_typing.py"]
 
 [tool.ruff.lint]
 typing-modules = ["coredis.typing"]
