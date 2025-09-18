@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import functools
 import inspect
-import sys
 import textwrap
 from abc import ABCMeta
 from concurrent.futures import CancelledError
@@ -10,6 +9,8 @@ from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, cast
 
 from anyio import sleep
+from deprecated.sphinx import deprecated
+
 from coredis._utils import b, hash_slot, nativestr
 from coredis.client import Client, RedisCluster
 from coredis.commands import CommandRequest, CommandResponseT
@@ -69,7 +70,6 @@ from coredis.typing import (
     Unpack,
     ValueT,
 )
-from deprecated.sphinx import deprecated
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -323,7 +323,7 @@ class NodeCommands:
                 ):
                     if isinstance(c.callback, AsyncPreProcessingCallback):
                         await c.callback.pre_process(self.client, transaction_result[idx])
-                    c.result = c.callback(
+                    c.result = c.callback(  # type: ignore
                         transaction_result[idx],
                         version=connection.protocol_version,
                     )
@@ -418,7 +418,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         pool = self.client.connection_pool
         self._connection = await pool.acquire(pipeline=True)
         yield self
-        await self.execute()
+        await self._execute()
         self.connection.pipeline = False
         if pool.blocking:
             async with pool._condition:
@@ -458,19 +458,6 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         # Reset pipeline state and release connection if needed.
         self.watching = False
         self.explicit_transaction = False
-
-    #: :meta private:
-    reset_pipeline = clear
-
-    @deprecated(
-        "The reset method in pipelines clashes with the redis ``RESET`` command. Use :meth:`clear` instead",
-        "5.0.0",
-    )
-    def reset(self) -> CommandRequest[None]:
-        """
-        Deprecated. Use :meth:`clear` instead.
-        """
-        return self.clear()  # type: ignore
 
     def multi(self) -> None:
         """
@@ -641,7 +628,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
             if not isinstance(r, Exception):
                 if isinstance(cmd.callback, AsyncPreProcessingCallback):
                     await cmd.callback.pre_process(self.client, r)
-                r = cmd.callback(r, version=connection.protocol_version, **cmd.execution_parameters)
+                r = cmd.callback(r, version=connection.protocol_version, **cmd.execution_parameters)  # type: ignore
                 cmd.response = await_result(r)
             data.append(r)
         return tuple(data)
@@ -679,12 +666,12 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
                     res,
                     version=connection.protocol_version,
                     **cmd.execution_parameters,
-                )
+                )  # type: ignore
                 cmd.response = await_result(resp)
                 response.append(resp)
             except ResponseError as re:
                 cmd.response = await_result(re)
-                response.append(sys.exc_info()[1])
+                response.append(re)
         if self._raise_on_error:
             self.raise_first_error(commands, response)
 
@@ -713,6 +700,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
             exception.args = (msg,) + exception.args[1:]
 
     async def load_scripts(self) -> None:
+        # TODO: don't always run this!
         # make sure all scripts that are about to be run on this pipeline exist
         scripts = list(self.scripts)
         immediate = self.immediate_execute_command
@@ -731,7 +719,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
                         callback=AnyStrCallback[AnyStr](),
                     )
 
-    async def execute(self) -> None:
+    async def _execute(self) -> None:
         """
         Execute all queued commands in the pipeline.
         """
@@ -783,7 +771,8 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
     def __init__(
         self,
         client: RedisCluster[AnyStr],
-        transaction: bool | None = False,
+        raise_on_error: bool = True,
+        transaction: bool = False,
         watches: Parameters[KeyT] | None = None,
         timeout: float | None = None,
     ) -> None:
@@ -792,6 +781,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
         self.client = client
         self.connection_pool = client.connection_pool
         self.result_callbacks = client.result_callbacks
+        self._raise_on_error = raise_on_error
         self._transaction = transaction
         self._watched_node: ManagedNode | None = None
         self._watched_connection: ClusterConnection | None = None

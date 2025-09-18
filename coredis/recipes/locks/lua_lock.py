@@ -29,7 +29,7 @@ with warnings.catch_warnings():
     RELEASE_SCRIPT = Script(script=importlib.resources.read_text(__package__, "release.lua"))
 
 
-class LuaLock(Generic[AnyStr]):
+class Lock(Generic[AnyStr]):
     """
     A shared, distributed Lock using LUA scripts.
 
@@ -130,7 +130,7 @@ class LuaLock(Generic[AnyStr]):
 
     async def __aenter__(
         self,
-    ) -> LuaLock[AnyStr]:
+    ) -> Lock[AnyStr]:
         if await self.acquire():
             return self
         raise LockAcquisitionError("Could not acquire lock")

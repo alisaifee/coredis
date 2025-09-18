@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import logging
 from abc import abstractmethod
 from collections.abc import Hashable
 from io import BytesIO
 from typing import cast
 
 from anyio.streams.memory import MemoryObjectSendStream
+
+from coredis import logger
 from coredis._utils import CaseAndEncodingInsensitiveEnum, b
 from coredis.constants import SYM_CRLF, RESPDataType
 from coredis.exceptions import (
@@ -42,8 +43,6 @@ from coredis.typing import (
     ResponsePrimitive,
     ResponseType,
 )
-
-logger = logging.getLogger(__name__)
 
 
 class NotEnoughData:

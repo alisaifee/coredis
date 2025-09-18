@@ -11,11 +11,11 @@ import time
 import warnings
 from abc import abstractmethod
 from collections import defaultdict, deque
-from typing import TYPE_CHECKING, Any, cast, override
+from typing import TYPE_CHECKING, Any, cast
 
-import coredis
 from anyio import (
     TASK_STATUS_IGNORED,
+    ClosedResourceError,
     Event,
     Lock,
     connect_tcp,
@@ -27,6 +27,10 @@ from anyio import (
     sleep,
 )
 from anyio.abc import ByteStream, SocketAttribute, TaskStatus
+from typing_extensions import override
+
+import coredis
+from coredis import logger
 from coredis._packer import Packer
 from coredis._utils import nativestr
 from coredis.credentials import (
@@ -221,7 +225,8 @@ class BaseConnection:
         self.pipeline = False
         #: used for pubsub, since we can't do two pubsubs on the same connection
         self.pubsub = False
-        self._counter = 0
+        #: used for normal commands, to ensure they're sent (but not necessarily received)
+        self.pending = 0
 
     def __repr__(self) -> str:
         return self.describe(self._description_args())
@@ -236,7 +241,7 @@ class BaseConnection:
 
     @property
     def available(self) -> bool:
-        return len(self._requests) + self._counter < MAX_REQUESTS_PER_CONNECTION
+        return len(self._requests) < MAX_REQUESTS_PER_CONNECTION and not self.blocked
 
     @property
     def connection(self) -> ByteStream:
@@ -469,9 +474,11 @@ class BaseConnection:
         Sends an already packed command to the Redis server
         """
         with fail_after(timeout):
-            async with self._write_lock:
-                data = b"".join(command)
+            data = b"".join(command)
+            try:
                 await self.connection.send(data)
+            except ClosedResourceError:
+                logger.exception(f"Failed to send {data}!")
 
     async def send_command(
         self,
@@ -481,7 +488,8 @@ class BaseConnection:
         """
         Send a command to the redis server
         """
-        await self._send_packed_command(self.packer.pack_command(command, *args))
+        async with self._write_lock:
+            await self._send_packed_command(self.packer.pack_command(command, *args))
 
     async def create_request(
         self,
@@ -498,22 +506,22 @@ class BaseConnection:
         """
         from coredis.commands.constants import CommandName
 
-        cmd_list = []
-        request_timeout: float | None = timeout or self._stream_timeout
-        if self.is_connected and noreply and not self.noreply:
-            cmd_list = self.packer.pack_command(CommandName.CLIENT_REPLY, PureToken.SKIP)
-        cmd_list.extend(self.packer.pack_command(command, *args))
-        await self._send_packed_command(cmd_list, timeout=request_timeout)
-
-        request = Request(
-            command,
-            bool(decode) if decode is not None else self.decode_responses,
-            encoding or self.encoding,
-            raise_exceptions,
-            request_timeout,
-            no_reply=bool(self.noreply_set or noreply),
-        )
-        self._requests.append(request)
+        async with self._write_lock:
+            cmd_list = []
+            request_timeout: float | None = timeout or self._stream_timeout
+            request = Request(
+                command,
+                bool(decode) if decode is not None else self.decode_responses,
+                encoding or self.encoding,
+                raise_exceptions,
+                request_timeout,
+                no_reply=bool(self.noreply_set or noreply),
+            )
+            self._requests.append(request)
+            if self.is_connected and noreply and not self.noreply:
+                cmd_list = self.packer.pack_command(CommandName.CLIENT_REPLY, PureToken.SKIP)
+            cmd_list.extend(self.packer.pack_command(command, *args))
+            await self._send_packed_command(cmd_list, timeout=request_timeout)
         return request
 
     async def create_requests(
@@ -526,24 +534,24 @@ class BaseConnection:
         Send multiple commands to the redis server
         """
         request_timeout: float | None = timeout or self._stream_timeout
-        await self._send_packed_command(
-            self.packer.pack_commands(
-                list(itertools.chain((cmd.command, *cmd.args) for cmd in commands))
-            ),
-            timeout=request_timeout,
-        )
-
         requests: list[Request] = []
-        for cmd in commands:
-            request = Request(
-                cmd.command,
-                bool(cmd.decode) if cmd.decode is not None else self.decode_responses,
-                cmd.encoding or self.encoding,
-                raise_exceptions,
-                request_timeout,
+        async with self._write_lock:
+            for cmd in commands:
+                request = Request(
+                    cmd.command,
+                    bool(cmd.decode) if cmd.decode is not None else self.decode_responses,
+                    cmd.encoding or self.encoding,
+                    raise_exceptions,
+                    request_timeout,
+                )
+                self._requests.append(request)
+                requests.append(request)
+            await self._send_packed_command(
+                self.packer.pack_commands(
+                    list(itertools.chain((cmd.command, *cmd.args) for cmd in commands))
+                ),
+                timeout=request_timeout,
             )
-            self._requests.append(request)
-            requests.append(request)
         return requests
 
 

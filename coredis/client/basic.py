@@ -6,12 +6,13 @@ import random
 import warnings
 from collections import defaultdict
 from ssl import SSLContext
-from typing import TYPE_CHECKING, Any, Self, cast, overload
+from typing import TYPE_CHECKING, Any, cast, overload
 
-from anyio import AsyncContextManagerMixin, create_task_group, sleep
+from anyio import AsyncContextManagerMixin, create_task_group
 from deprecated.sphinx import versionadded
 from packaging import version
 from packaging.version import InvalidVersion, Version
+from typing_extensions import Self
 
 from coredis._utils import EncodingInsensitiveDict, nativestr
 from coredis.cache import AbstractCache
@@ -20,7 +21,6 @@ from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandFlag, CommandName
 from coredis.commands.core import CoreCommands
 from coredis.commands.function import Library
-from coredis.commands.monitor import Monitor
 from coredis.commands.pubsub import PubSub, SubscriptionCallback
 from coredis.commands.script import Script
 from coredis.commands.sentinel import SentinelCommands
@@ -40,7 +40,6 @@ from coredis.exceptions import (
     ResponseError,
     TimeoutError,
     UnknownCommandError,
-    WatchError,
 )
 from coredis.globals import CACHEABLE_COMMANDS, COMMAND_FLAGS, READONLY_COMMANDS
 from coredis.modules import ModuleMixin
@@ -50,14 +49,13 @@ from coredis.response._callbacks import (
     NoopCallback,
     ResponseCallback,
 )
-from coredis.response.types import MonitorResult, ScoredMember
+from coredis.response.types import ScoredMember
 from coredis.retry import ConstantRetryPolicy, NoRetryPolicy, RetryPolicy
 from coredis.typing import (
     AnyStr,
     AsyncGenerator,
     AsyncIterator,
     Callable,
-    Coroutine,
     ExecutionParameters,
     Generic,
     Iterator,
@@ -81,6 +79,7 @@ R = TypeVar("R")
 
 if TYPE_CHECKING:
     import coredis.pipeline
+    from coredis.recipes.locks.lua_lock import Lock
 
 ClientT = TypeVar("ClientT", bound="Client[Any]")
 RedisT = TypeVar("RedisT", bound="Redis[Any]")
@@ -967,6 +966,7 @@ class Redis(Client[AnyStr]):
         quick_release = self.should_quick_release(command)
         should_block = not quick_release or self.requires_wait or self.requires_waitaof
         connection = await pool.acquire(blocking=should_block)
+        released = False
         try:
             keys = KeySpec.extract_keys(command.name, *command.arguments)
             cacheable = (
@@ -1009,7 +1009,8 @@ class Redis(Client[AnyStr]):
                     decode=options.get("decode", self._decodecontext.get()),
                     encoding=self._encodingcontext.get(),
                 )
-                connection._counter -= 1
+                connection.pending -= 1
+                released = True
                 reply = await request
                 async with create_task_group() as tg:
                     tg.start_soon(self._ensure_wait, command, connection)
@@ -1035,6 +1036,8 @@ class Redis(Client[AnyStr]):
             self._ensure_server_version(connection.server_version)
             if should_block:
                 connection.blocked = False
+            if not released:
+                connection.pending -= 1
 
     @overload
     def decoding(
@@ -1078,24 +1081,6 @@ class Redis(Client[AnyStr]):
         finally:
             self._decodecontext.set(prev_decode)
             self._encodingcontext.set(prev_encoding)
-
-    def monitor(
-        self,
-        response_handler: Callable[[MonitorResult], None] | None = None,
-    ) -> Monitor[AnyStr]:
-        """
-        :param response_handler: Optional callback to be triggered whenever
-         a command is received by this monitor.
-
-        Return an instance of a :class:`~coredis.commands.monitor.Monitor`
-
-        The monitor can be used as an async iterator or individual commands
-        can be fetched via :meth:`~coredis.commands.monitor.Monitor.get_command`.
-        When a :paramref:`response_handler` is provided it will simply by called
-        for every command received.
-
-        """
-        return Monitor[AnyStr](self, response_handler)
 
     def pubsub(
         self,
@@ -1156,34 +1141,14 @@ class Redis(Client[AnyStr]):
 
         return Pipeline[AnyStr](self, transaction, raise_on_error, timeout)
 
-    async def transaction(
+    def lock(
         self,
-        func: Callable[[coredis.pipeline.Pipeline[AnyStr]], Coroutine[Any, Any, Any]],
-        *watches: KeyT,
-        value_from_callable: bool = False,
-        watch_delay: float | None = None,
-        **kwargs: Any,
-    ) -> Any | None:
-        """
-        Convenience method for executing the callable :paramref:`func` as a
-        transaction while watching all keys specified in :paramref:`watches`.
+        name: StringT,
+        timeout: float | None = None,
+        sleep: float = 0.1,
+        blocking: bool = True,
+        blocking_timeout: float | None = None,
+    ) -> Lock:
+        from coredis.recipes.locks import Lock
 
-        :param func: callable should expect a single argument which is a
-         :class:`coredis.pipeline.Pipeline` object retrieved by calling
-         :meth:`~coredis.Redis.pipeline`.
-        :param watches: The keys to watch during the transaction
-        :param value_from_callable: Whether to return the result of transaction or the value
-         returned from :paramref:`func`
-        """
-        async with self.pipeline(transaction=True) as pipe:
-            while True:
-                try:
-                    if watches:
-                        await pipe.watch(*watches)
-                    func_value = await func(pipe)
-                    exec_value = await pipe.execute()
-                    return func_value if value_from_callable else exec_value
-                except WatchError:
-                    if watch_delay is not None and watch_delay > 0:
-                        await sleep(watch_delay)
-                    continue
+        return Lock(self, name, timeout, sleep, blocking, blocking_timeout)
