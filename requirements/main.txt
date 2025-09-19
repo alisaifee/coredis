@@ -1,6 +1,6 @@
-async_timeout>4,<6
 beartype>=0.20
 deprecated>=1.2
 typing_extensions>=4.13
 packaging>=21,<26
 pympler>1,<2
+anyio>=4.10.0

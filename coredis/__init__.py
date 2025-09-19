@@ -8,6 +8,7 @@ cluster & sentinel.
 
 from __future__ import annotations
 
+import logging
 from typing import cast
 
 from coredis.client import Redis, RedisCluster
@@ -20,13 +21,15 @@ from coredis.connection import (
 )
 from coredis.pool import (
     BlockingClusterConnectionPool,
-    BlockingConnectionPool,
     ClusterConnectionPool,
     ConnectionPool,
 )
 from coredis.tokens import PureToken
 
 from . import _version
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 __all__ = [
     "Config",
@@ -36,7 +39,6 @@ __all__ = [
     "Connection",
     "UnixDomainSocketConnection",
     "ClusterConnection",
-    "BlockingConnectionPool",
     "ConnectionPool",
     "BlockingClusterConnectionPool",
     "ClusterConnectionPool",

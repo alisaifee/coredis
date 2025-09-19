@@ -69,28 +69,28 @@ class TestConnectionPool:
     async def test_connection_creation(self):
         connection_kwargs = {"foo": "bar", "biz": "baz"}
         pool = self.get_pool(connection_kwargs=connection_kwargs)
-        connection = await pool.get_connection()
+        connection = await pool.acquire()
         assert isinstance(connection, DummyConnection)
         assert connection.kwargs == connection_kwargs
 
     async def test_multiple_connections(self):
         pool = self.get_pool()
-        c1 = await pool.get_connection()
-        c2 = await pool.get_connection()
+        c1 = await pool.acquire()
+        c2 = await pool.acquire()
         assert c1 != c2
 
     async def test_max_connections(self):
         pool = self.get_pool(max_connections=2)
-        await pool.get_connection()
-        await pool.get_connection()
+        await pool.acquire()
+        await pool.acquire()
         with pytest.raises(ConnectionError):
-            await pool.get_connection()
+            await pool.acquire()
 
     async def test_pool_disconnect(self):
         pool = self.get_pool(max_connections=3)
-        c1 = await pool.get_connection()
-        c2 = await pool.get_connection()
-        c3 = await pool.get_connection()
+        c1 = await pool.acquire()
+        c2 = await pool.acquire()
+        c3 = await pool.acquire()
         pool.release(c3)
         pool.disconnect()
         assert not c1.is_connected
@@ -99,10 +99,10 @@ class TestConnectionPool:
 
     async def test_reuse_previously_released_connection(self):
         pool = self.get_pool()
-        c1 = await pool.get_connection()
+        c1 = await pool.acquire()
         await c1.connect()
         pool.release(c1)
-        c2 = await pool.get_connection()
+        c2 = await pool.acquire()
         assert c1 == c2
 
     def test_repr_contains_db_info_tcp(self):
@@ -164,48 +164,48 @@ class TestBlockingConnectionPool:
     async def test_connection_creation(self):
         connection_kwargs = {"foo": "bar", "biz": "baz"}
         pool = self.get_pool(connection_kwargs=connection_kwargs)
-        connection = await pool.get_connection()
+        connection = await pool.acquire()
         assert isinstance(connection, DummyConnection)
         assert connection.kwargs == connection_kwargs
 
     async def test_multiple_connections(self):
         pool = self.get_pool()
-        c1 = await pool.get_connection()
-        c2 = await pool.get_connection()
+        c1 = await pool.acquire()
+        c2 = await pool.acquire()
         assert c1 != c2
 
     async def test_max_connections_timeout(self):
         pool = self.get_pool(max_connections=2, timeout=0.1)
-        await pool.get_connection()
-        await pool.get_connection()
+        await pool.acquire()
+        await pool.acquire()
         with pytest.raises(ConnectionError):
-            await pool.get_connection()
+            await pool.acquire()
 
     async def test_max_connections_no_timeout(self):
         pool = self.get_pool(max_connections=2)
-        await pool.get_connection()
-        released_conn = await pool.get_connection()
+        await pool.acquire()
+        released_conn = await pool.acquire()
 
         def releaser():
             pool.release(released_conn)
 
         loop = asyncio.get_running_loop()
         loop.call_later(0.2, releaser)
-        new_conn = await pool.get_connection()
+        new_conn = await pool.acquire()
         assert new_conn == released_conn
 
     async def test_reuse_previously_released_connection(self):
         pool = self.get_pool()
-        c1 = await pool.get_connection()
+        c1 = await pool.acquire()
         pool.release(c1)
-        c2 = await pool.get_connection()
+        c2 = await pool.acquire()
         assert c1 == c2
 
     async def test_pool_disconnect(self):
         pool = self.get_pool()
-        c1 = await pool.get_connection()
-        c2 = await pool.get_connection()
-        c3 = await pool.get_connection()
+        c1 = await pool.acquire()
+        c2 = await pool.acquire()
+        c3 = await pool.acquire()
         pool.release(c3)
         pool.disconnect()
         assert not c1.is_connected
@@ -241,14 +241,14 @@ class TestBlockingConnectionPool:
         )
         await rs.info()
         assert len(rs.connection_pool._in_use_connections) == 0
-        conn = await rs.connection_pool.get_connection()
+        conn = await rs.connection_pool.acquire()
         last_active_at = conn.last_active_at
         rs.connection_pool.release(conn)
         await asyncio.sleep(0.3)
         assert len(rs.connection_pool._in_use_connections) == 0
         assert last_active_at == conn.last_active_at
         assert conn._transport is None
-        new_conn = await rs.connection_pool.get_connection()
+        new_conn = await rs.connection_pool.acquire()
         assert conn == new_conn
 
 
@@ -571,7 +571,7 @@ class TestSSLConnectionURLParsing:
         if query_param:
             uri += f"&ssl_cert_reqs={query_param}"
         pool = coredis.ConnectionPool.from_url(uri)
-        assert (await pool.get_connection()).ssl_context.verify_mode == expected
+        assert (await pool.acquire()).ssl_context.verify_mode == expected
 
 
 class TestConnection:

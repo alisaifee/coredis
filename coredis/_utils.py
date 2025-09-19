@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import enum
 from collections import UserDict
-from typing import Any
+from typing import Any, Awaitable, overload
+
+from anyio import create_task_group
 
 from coredis.typing import (
     Hashable,
@@ -478,3 +480,76 @@ __all__ = [
     "EncodingInsensitiveDict",
     "CaseAndEncodingInsensitiveEnum",
 ]
+
+T1 = TypeVar("T1")
+T2 = TypeVar("T2")
+T3 = TypeVar("T3")
+T4 = TypeVar("T4")
+T5 = TypeVar("T5")
+T6 = TypeVar("T6")
+
+
+@overload
+async def gather(
+    awaitable1: Awaitable[T1],
+    awaitable2: Awaitable[T2],
+    /,
+) -> tuple[T1, T2]: ...
+
+
+@overload
+async def gather(
+    awaitable1: Awaitable[T1],
+    awaitable2: Awaitable[T2],
+    awaitable3: Awaitable[T3],
+    /,
+) -> tuple[T1, T2, T3]: ...
+
+
+@overload
+async def gather(
+    awaitable1: Awaitable[T1],
+    awaitable2: Awaitable[T2],
+    awaitable3: Awaitable[T3],
+    awaitable4: Awaitable[T4],
+    /,
+) -> tuple[T1, T2, T3, T4]: ...
+
+
+@overload
+async def gather(
+    awaitable1: Awaitable[T1],
+    awaitable2: Awaitable[T2],
+    awaitable3: Awaitable[T3],
+    awaitable4: Awaitable[T4],
+    awaitable5: Awaitable[T5],
+    /,
+) -> tuple[T1, T2, T3, T4, T5]: ...
+
+
+@overload
+async def gather(
+    awaitable1: Awaitable[T1],
+    awaitable2: Awaitable[T2],
+    awaitable3: Awaitable[T3],
+    awaitable4: Awaitable[T4],
+    awaitable5: Awaitable[T5],
+    awaitable6: Awaitable[T6],
+    /,
+) -> tuple[T1, T2, T3, T4, T5, T6]: ...
+
+
+@overload
+async def gather(*awaitables: Awaitable[T1]) -> tuple[T1, ...]: ...
+
+
+async def gather(*awaitables: Awaitable[Any]) -> tuple[Any, ...]:
+    results: list[Any] = [None] * len(awaitables)
+
+    async def runner(awaitable: Awaitable[Any], i: int) -> None:
+        results[i] = await awaitable
+
+    async with create_task_group() as tg:
+        for i, awaitable in enumerate(awaitables):
+            tg.start_soon(runner, awaitable, i)
+    return tuple(results)

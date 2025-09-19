@@ -20,14 +20,13 @@ from packaging import version
 import coredis
 import coredis.client
 import coredis.pipeline
+from coredis._utils import b
 from coredis.commands.constants import *  # noqa
-from coredis.commands.monitor import Monitor
 from coredis.globals import CACHEABLE_COMMANDS
 from coredis.pool import ClusterConnectionPool, ConnectionPool  # noqa
 from coredis.response.types import *  # noqa
 from coredis.tokens import PureToken  # noqa
 from coredis.typing import *  # noqa
-from coredis._utils import b
 
 MAX_SUPPORTED_VERSION = version.parse("8.999.999")
 MIN_SUPPORTED_VERSION = version.parse("5.999.999")
@@ -263,7 +262,6 @@ REDIS_RETURN_OVERRIDES = {
     "MEMORY STATS": dict[AnyStr, AnyStr | int | float],
     "MGET": tuple[AnyStr | None, ...],
     "MODULE LIST": tuple[dict, ...],
-    "MONITOR": Monitor,
     "PING": AnyStr,
     "PFADD": bool,
     "PSETEX": bool,
@@ -1608,7 +1606,7 @@ def generate_compatibility_section(
         debug=debug,
         sanitized=sanitized,
         getattr=getattr,
-        b=b
+        b=b,
     )
     section_template = env.from_string(section_template_str)
     methods_by_group = {}

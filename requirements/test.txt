@@ -5,13 +5,13 @@ lovely-pytest-docker
 mock
 numpy
 pytest
-pytest-asyncio
 pytest-cov
 pytest-env
 pytest-lazy-fixtures
 pytest-mock
 pytest-reverse
 redis
+trio
 
 # Recipe test dependencies
 moto

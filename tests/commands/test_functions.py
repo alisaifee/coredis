@@ -9,6 +9,8 @@ from coredis.exceptions import NotBusyError, ResponseError
 from coredis.typing import KeyT, RedisValueT, StringT
 from tests.conftest import targets
 
+pytestmark = pytest.mark.anyio
+
 library_definition = """#!lua name=coredis
 
 local function echo_key(keys, args)

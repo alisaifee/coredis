@@ -9,6 +9,8 @@ from coredis import PureToken
 from coredis.exceptions import DataError, NoKeyError, ResponseError
 from tests.conftest import targets
 
+pytestmark = pytest.mark.anyio
+
 
 @targets(
     "redis_basic",
@@ -36,16 +38,17 @@ class TestGeneric:
         await client.set("score{fu}:1", "8")
         await client.set("score{fu}:2", "3")
         await client.set("score{fu}:3", "5")
-        assert await clone.sort_ro("a{fu}") == (_s("1"), _s("2"), _s("3"), _s("4"))
-        assert await clone.sort_ro("a{fu}", offset=1, count=2) == (_s("2"), _s("3"))
-        assert await clone.sort_ro("a{fu}", order=PureToken.DESC, offset=1, count=2) == (
-            _s("3"),
-            _s("2"),
-        )
-        assert await clone.sort_ro("a{fu}", alpha=True, offset=1, count=2) == (
-            _s("2"),
-            _s("3"),
-        )
+        async with clone:
+            assert await clone.sort_ro("a{fu}") == (_s("1"), _s("2"), _s("3"), _s("4"))
+            assert await clone.sort_ro("a{fu}", offset=1, count=2) == (_s("2"), _s("3"))
+            assert await clone.sort_ro("a{fu}", order=PureToken.DESC, offset=1, count=2) == (
+                _s("3"),
+                _s("2"),
+            )
+            assert await clone.sort_ro("a{fu}", alpha=True, offset=1, count=2) == (
+                _s("2"),
+                _s("3"),
+            )
 
     async def test_sort_limited(self, client, _s):
         await client.rpush("a", ["3", "2", "1", "4"])
@@ -242,7 +245,7 @@ class TestGeneric:
     @pytest.mark.novalkey
     @pytest.mark.noredict
     async def test_migrate_single_key_with_auth(self, client, redis_auth, _s):
-        auth_connection = await redis_auth.connection_pool.get_connection()
+        auth_connection = await redis_auth.connection_pool.acquire()
         await client.set("a", "1")
 
         with pytest.raises(DataError):
@@ -318,7 +321,7 @@ class TestGeneric:
     @pytest.mark.novalkey
     @pytest.mark.noredict
     async def test_migrate_multiple_keys_with_auth(self, client, redis_auth, _s):
-        auth_connection = await redis_auth.connection_pool.get_connection()
+        auth_connection = await redis_auth.connection_pool.acquire()
         await client.set("a", "1")
         await client.set("c", "2")
         assert not await client.migrate("172.17.0.1", auth_connection.port, 0, 100, "d", "b")
@@ -335,7 +338,8 @@ class TestGeneric:
         await client.set("foo", 1)
         assert await client.move("foo", 1)
         assert not await client.get("foo")
-        assert await clone.get("foo") == _s(1)
+        async with clone:
+            assert await clone.get("foo") == _s(1)
 
     async def test_copy(self, client, _s):
         await client.set("a{foo}", "foo")
@@ -354,7 +358,8 @@ class TestGeneric:
         await client.set("foo", 1)
         assert await client.copy("foo", "bar", db=1)
         assert not await client.get("bar")
-        assert await clone.get("bar") == _s(1)
+        async with clone:
+            assert await clone.get("bar") == _s(1)
 
     @pytest.mark.min_server_version("7.0.0")
     async def test_object_encoding_listpack(self, client, _s):
