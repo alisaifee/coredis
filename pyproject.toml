@@ -1,7 +1,7 @@
 [build-system]
 build-backend = "setuptools.build_meta"
 requires = [
-  "mypy==1.18.1",
+  "mypy==1.18.2",
   "packaging>=21,<26",
   "beartype>=0.20",
   "pympler>1,<2",
