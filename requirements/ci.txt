@@ -1,3 +1,0 @@
--r dev.txt
-pytest-rerunfailures
-pytest-sentry

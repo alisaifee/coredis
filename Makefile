@@ -1,25 +1,25 @@
 lint:
-	ruff check --select I coredis tests
-	ruff check coredis tests
-	ruff format --check coredis tests
-	mypy coredis
+	uv run ruff check --select I coredis tests
+	uv run ruff check coredis tests
+	uv run ruff format --check coredis tests
+	uv run mypy coredis
 
 lint-fix:
-	ruff check --select I --fix coredis tests
-	ruff check --fix coredis tests
-	ruff format coredis tests
-	mypy coredis
+	uv run ruff check --select I --fix coredis tests
+	uv run ruff check --fix coredis tests
+	uv run ruff format coredis tests
+	uv run mypy coredis
 
 DEBUG := False
 
 coverage-docs:
 	rm -rf docs/source/compatibility.rst
-	PYTHONPATH=${CURDIR} python -m scripts.code_gen --debug=${DEBUG} coverage-doc
+	PYTHONPATH=${CURDIR} uv run python -m scripts.code_gen --debug=${DEBUG} coverage-doc
 
 templated-sources:
-	PYTHONPATH=${CURDIR} python -m scripts.code_gen token-enum
-	PYTHONPATH=${CURDIR} python -m scripts.code_gen command-constants
-	PYTHONPATH=${CURDIR} python -m scripts.code_gen cluster-key-extraction
+	PYTHONPATH=${CURDIR} uv run python -m scripts.code_gen token-enum
+	PYTHONPATH=${CURDIR} uv run python -m scripts.code_gen command-constants
+	PYTHONPATH=${CURDIR} uv run python -m scripts.code_gen cluster-key-extraction
 
 benchmark:
 	./scripts/benchmark.sh

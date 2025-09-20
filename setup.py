@@ -1,159 +1,96 @@
+#!/usr/bin/env python3
+"""
+Minimal setup.py for coredis extension modules.
+All project metadata is defined in pyproject.toml (PEP-621).
+This file only handles C extensions and mypyc compilation.
+"""
+
 from __future__ import annotations
 
 import os
-import pathlib
-import platform
-import sys
-
-import versioneer
-
-__author__ = "Ali-Akber Saifee"
-__email__ = "ali@indydevs.org"
-__copyright__ = "Copyright 2023, Ali-Akber Saifee"
-
-from setuptools import find_packages, setup
+from setuptools import Extension
 from setuptools.command.build_ext import build_ext
-from setuptools.extension import Extension
-
-THIS_DIR = os.path.abspath(os.path.dirname(__file__))
-PY_IMPLEMENTATION = platform.python_implementation()
-USE_MYPYC = False
-PURE_PYTHON = os.environ.get("PURE_PYTHON", PY_IMPLEMENTATION != "CPython")
 
 
-def get_requirements(req_file):
-    requirements = []
-
-    for r in open(os.path.join(THIS_DIR, "requirements", req_file)).read().splitlines():
-        req = r.strip()
-
-        if req.startswith("-r"):
-            requirements.extend(get_requirements(req.replace("-r ", "")))
-        elif req:
-            requirements.append(req)
-
-    return requirements
-
-
-class coredis_build_ext(build_ext):
-    warning_message = """
-********************************************************************
-{target} could not
-be compiled. No C extensions are essential for coredis to run,
-although they do result in significant speed improvements for
-response parsing.
-{comment}
-********************************************************************
-"""
+class CoredisBuildExt(build_ext):
+    """Custom build_ext that handles mypyc compilation."""
 
     def run(self):
-        try:
-            super().run()
-        except Exception as e:
-            self.warn(e)
-            self.warn(
-                self.warning_message.format(
-                    target="Extension modules",
-                    comment=(
-                        "There is an issue with your platform configuration "
-                        "- see above."
-                    ),
+        """Run the build process with mypyc support."""
+        # Check if mypyc should be used
+        use_mypyc = os.environ.get("USE_MYPYC", "false").lower() == "true"
+
+        if use_mypyc:
+            try:
+                from mypyc.build import mypycify
+
+                # Add mypyc extensions
+                mypyc_modules = [
+                    "coredis/constants.py",
+                    "coredis/parser.py",
+                    "coredis/_packer.py",
+                ]
+
+                mypyc_extensions = mypycify(
+                    mypyc_modules,
+                    debug_level="0",
+                    strip_asserts=True,
                 )
-            )
 
-    def build_extension(self, ext):
-        try:
-            super().build_extension(ext)
-        except Exception as e:
-            self.warn(e)
-            self.warn(
-                self.warning_message.format(
-                    target=f"The {ext.name} extension ",
-                    comment=(
-                        "The output above this warning shows how the "
-                        "compilation failed."
-                    ),
-                )
-            )
+                # Remove -Werror from extra_compile_args to avoid build failures
+
+                for ext in mypyc_extensions:
+                    if hasattr(ext, "extra_compile_args") and "-Werror" in ext.extra_compile_args:
+                        ext.extra_compile_args.remove("-Werror")
+                    # Fix the _needs_stub attribute issue
+
+                    if not hasattr(ext, "_needs_stub"):
+                        ext._needs_stub = False
+
+                # Add mypyc extensions to the existing extensions
+                self.extensions.extend(mypyc_extensions)
+
+            except ImportError:
+                print("Warning: mypyc not available, skipping mypyc compilation")
+            except Exception as e:
+                print(f"Warning: mypyc compilation failed: {e}")
+
+        # Call the parent run method
+        super().run()
 
 
-_ROOT_DIR = pathlib.Path(__file__).parent
-
-with open(str(_ROOT_DIR / "README.md")) as f:
-    long_description = f.read()
-
-if len(sys.argv) > 1 and "--use-mypyc" in sys.argv:
-    sys.argv.remove("--use-mypyc")
-    USE_MYPYC = True
-
-if not PURE_PYTHON:
-    extensions = [
-        Extension(
-            name="coredis.speedups",
-            sources=["coredis/speedups.c"],
-        )
-    ]
-
-    if USE_MYPYC:
-        from mypyc.build import mypycify
-
-        extensions += mypycify(
-            [
-                "coredis/constants.py",
-                "coredis/parser.py",
-                "coredis/_packer.py",
-            ],
-            debug_level="0",
-            strip_asserts=True,
-        )
-        for ext in extensions:
-            if "-Werror" in ext.extra_compile_args:
-                ext.extra_compile_args.remove("-Werror")
-else:
+def get_ext_modules():
+    """Get extension modules for the build."""
     extensions = []
 
+    # Add C extension if not pure Python
 
-setup(
-    name="coredis",
-    version=versioneer.get_version(),
-    description="Python async client for Redis key-value store",
-    long_description=long_description,
-    long_description_content_type="text/markdown",
-    url="https://github.com/alisaifee/coredis",
-    project_urls={
-        "Source": "https://github.com/alisaifee/coredis",
-        "Changes": "https://github.com/alisaifee/coredis/releases",
-        "Documentation": "https://coredis.readthedocs.org",
-    },
-    author=__author__,
-    author_email=__email__,
-    maintainer=__author__,
-    maintainer_email=__email__,
-    keywords=["Redis", "key-value store", "asyncio"],
-    license="MIT",
-    packages=find_packages(exclude=["*tests*"]),
-    include_package_data=True,
-    package_data={
-        "coredis": ["py.typed"],
-    },
-    python_requires=">=3.10",
-    install_requires=get_requirements("main.txt"),
-    extras_require={"recipes": get_requirements("recipes.txt")},
-    cmdclass=versioneer.get_cmdclass(
-        {
-            "build_ext": coredis_build_ext,
-        }
-    ),
-    classifiers=[
-        "Development Status :: 5 - Production/Stable",
-        "Intended Audience :: Developers",
-        "Operating System :: OS Independent",
-        "Programming Language :: Python",
-        "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
-        "Programming Language :: Python :: 3.12",
-        "Programming Language :: Python :: 3.13",
-        "Programming Language :: Python :: Implementation :: PyPy",
-    ],
-    ext_modules=extensions,
-)
+    if not os.environ.get("PURE_PYTHON", "false").lower() == "true":
+        extensions.append(
+            Extension(
+                name="coredis.speedups",
+                sources=["coredis/speedups.c"],
+            )
+        )
+
+    return extensions
+
+
+def get_cmdclass():
+    """Get custom command classes."""
+
+    return {
+        "build_ext": CoredisBuildExt,
+    }
+
+
+# This is the minimal setup.py that only defines extensions
+# All other metadata comes from pyproject.toml
+
+if __name__ == "__main__":
+    from setuptools import setup
+
+    setup(
+        ext_modules=get_ext_modules(),
+        cmdclass=get_cmdclass(),
+    )
