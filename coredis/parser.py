@@ -7,8 +7,7 @@ from typing import cast
 
 from anyio.streams.memory import MemoryObjectSendStream
 
-from coredis import logger
-from coredis._utils import CaseAndEncodingInsensitiveEnum, b
+from coredis._utils import CaseAndEncodingInsensitiveEnum, b, logger
 from coredis.constants import SYM_CRLF, RESPDataType
 from coredis.exceptions import (
     AskError,

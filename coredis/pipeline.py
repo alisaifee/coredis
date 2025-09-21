@@ -11,7 +11,7 @@ from typing import Any, AsyncGenerator, cast
 from anyio import sleep
 from deprecated.sphinx import deprecated
 
-from coredis._utils import b, hash_slot, nativestr
+from coredis._utils import b, hash_slot, logger, nativestr
 from coredis.client import Client, RedisCluster
 from coredis.commands import CommandRequest, CommandResponseT
 from coredis.commands._key_spec import KeySpec
@@ -594,9 +594,8 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         for i, cmd in enumerate(commands[1:-1]):
             try:
                 if cmd.queued_response:
-                    if (await cmd.queued_response) not in {b"QUEUED", "QUEUED"}:
-                        # TODO: log warning
-                        pass
+                    if (resp := await cmd.queued_response) not in {b"QUEUED", "QUEUED"}:
+                        logger.warning(f"Abnormal response in pipeline: {resp}")
             except RedisError as e:
                 self.annotate_exception(e, i + 1, cmd.name, cmd.arguments)
                 errors.append((i, e))
@@ -700,7 +699,6 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
             exception.args = (msg,) + exception.args[1:]
 
     async def load_scripts(self) -> None:
-        # TODO: don't always run this!
         # make sure all scripts that are about to be run on this pipeline exist
         scripts = list(self.scripts)
         immediate = self.immediate_execute_command

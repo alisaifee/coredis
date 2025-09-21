@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-import logging
 from abc import ABC, abstractmethod
 from functools import wraps
 from typing import Any
 
 from anyio import sleep
 
+from coredis._utils import logger
 from coredis.typing import Awaitable, Callable, P, R
-
-logger = logging.getLogger(__name__)
 
 
 class RetryPolicy(ABC):

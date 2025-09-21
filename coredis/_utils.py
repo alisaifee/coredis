@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum
+import logging
 from collections import UserDict
 from typing import Any, Awaitable, overload
 
@@ -15,6 +16,9 @@ from coredis.typing import (
     StringT,
     TypeVar,
 )
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 T = TypeVar("T")
 U = TypeVar("U")

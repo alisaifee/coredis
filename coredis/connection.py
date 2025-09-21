@@ -30,9 +30,8 @@ from anyio.abc import ByteStream, SocketAttribute, TaskStatus
 from typing_extensions import override
 
 import coredis
-from coredis import logger
 from coredis._packer import Packer
-from coredis._utils import nativestr
+from coredis._utils import logger, nativestr
 from coredis.credentials import (
     AbstractCredentialProvider,
     UserPass,
@@ -311,9 +310,11 @@ class BaseConnection:
             response = self._parser.get_response(decode, self.encoding)
             if isinstance(response, NotEnoughData):
                 # Need more bytes; read once, feed, and retry
-                with fail_after(self.max_idle_time):
+                with move_on_after(self.max_idle_time) as scope:
                     data = await self.connection.receive()
-                self._parser.feed(data)
+                    self._parser.feed(data)
+                if scope.cancelled_caught:  # this will cleanup the connection gracefully
+                    break
                 continue  # loop back and try parsing again
 
             # We have a full response for `head`; now pop and complete it
