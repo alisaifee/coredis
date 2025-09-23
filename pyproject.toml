@@ -72,7 +72,7 @@ test = [
 ]
 
 dev = [
-  "click==8.1.2",
+  "click==8.3.0",
   "inflect>=6.0.0",
   "Jinja2==3.1.5",
   "mypy==1.17.1; implementation_name!='pypy'",
