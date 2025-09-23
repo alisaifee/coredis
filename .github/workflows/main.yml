@@ -205,8 +205,10 @@ jobs:
         with:
           enable-cache: true
       - name: Build wheels
+        env:
+          PURE_PYTHON: true
         run: |
-          PURE_PYTHON=1 uv build
+          uv build
       - uses: actions/upload-artifact@v4
         with:
           name: pure_wheels
