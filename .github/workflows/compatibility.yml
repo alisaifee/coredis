@@ -30,7 +30,7 @@ jobs:
         uv run ruff check coredis tests
     - name: Check types
       run: |
-        mypy coredis
+        uv run mypy coredis
     - name: Check auto generated sources
       run: |
         make templated-sources
