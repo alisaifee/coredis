@@ -4,7 +4,7 @@ import random
 from contextlib import AsyncExitStack, asynccontextmanager
 from typing import Any, AsyncGenerator, AsyncIterator, overload
 
-from anyio import AsyncContextManagerMixin, create_task_group
+from anyio import AsyncContextManagerMixin
 from typing_extensions import Self, override
 
 from coredis import Redis
@@ -92,12 +92,11 @@ class SentinelConnectionPool(ConnectionPool):
 
     async def get_primary_address(self) -> tuple[str, int]:
         primary_address = await self.sentinel_manager.discover_primary(self.service_name)
-
         if self.is_primary:
-            if self.primary_address != primary_address:
-                self.primary_address = primary_address
+            if self.primary_address != primary_address and self.primary_address is not None:
                 # Primary address changed, disconnect all clients in this pool
                 self._task_group.cancel_scope.cancel()
+            self.primary_address = primary_address
 
         return primary_address
 
@@ -221,9 +220,8 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         async with AsyncExitStack() as stack:
-            async with create_task_group() as tg:
-                for s in self.sentinels:
-                    tg.start_soon(stack.enter_async_context, s.__asynccontextmanager__())
+            for s in self.sentinels:
+                await stack.enter_async_context(s.__asynccontextmanager__())
             yield self
 
     def __repr__(self) -> str:
