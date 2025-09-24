@@ -51,9 +51,9 @@ class TestConnectionPool:
     async def test_pool_disconnect(self):
         pool = self.get_pool(max_connections=3)
         async with pool:
-            c1 = await pool.acquire(blocking=True)
-            c2 = await pool.acquire(blocking=True)
-            c3 = await pool.acquire(blocking=True)
+            await pool.acquire(blocking=True)
+            await pool.acquire(blocking=True)
+            await pool.acquire(blocking=True)
         assert pool._connections == set()
 
     async def test_reuse_previously_released_connection(self):
@@ -130,9 +130,9 @@ class TestBlockingConnectionPool:
     async def test_pool_disconnect(self):
         pool = self.get_pool()
         async with pool:
-            c1 = await pool.acquire(blocking=True)
-            c2 = await pool.acquire(blocking=True)
-            c3 = await pool.acquire(blocking=True)
+            await pool.acquire(blocking=True)
+            await pool.acquire(blocking=True)
+            await pool.acquire(blocking=True)
         assert pool._connections == set()
 
     def test_repr_contains_db_info_tcp(self):

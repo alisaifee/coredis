@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import inspect
 from contextlib import asynccontextmanager, suppress
 from typing import TYPE_CHECKING, AsyncGenerator, cast
@@ -12,6 +13,8 @@ from anyio import (
     move_on_after,
     sleep,
 )
+from deprecated.sphinx import versionadded
+
 from coredis._utils import b, hash_slot, nativestr
 from coredis.commands.constants import CommandName
 from coredis.connection import BaseConnection, Connection
@@ -44,7 +47,6 @@ from coredis.typing import (
     StringT,
     TypeVar,
 )
-from deprecated.sphinx import versionadded
 
 if TYPE_CHECKING:
     import coredis.pool
@@ -602,7 +604,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                         break
                     else:
                         task.cancel()
-                        with suppress(CancelledError):
+                        with suppress(asyncio.CancelledError):
                             await task
         # If there were no pending results check the shards
         if not result:

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import asyncio
 import dataclasses
-import time
 import weakref
 from abc import ABC, abstractmethod
 from collections import Counter
@@ -10,10 +8,9 @@ from typing import TYPE_CHECKING, Any
 
 from anyio import sleep
 
-from coredis._sidecar import Sidecar
 from coredis._utils import b, make_hashable
-from coredis.commands import PubSub
 from coredis.connection import BaseConnection
+from coredis.parser import SUBUNSUB_MESSAGE_TYPES
 from coredis.typing import (
     Generic,
     Hashable,
@@ -126,14 +123,6 @@ class AbstractCache(ABC):
         """
         ...
 
-    @property
-    @abstractmethod
-    def healthy(self) -> bool:
-        """
-        Whether the cache is healthy and should be taken seriously
-        """
-        ...
-
     @abstractmethod
     def get(self, command: bytes, key: RedisValueT, *args: RedisValueT) -> ResponseType:
         """
@@ -180,29 +169,6 @@ class AbstractCache(ABC):
         """
         Provide feedback about a key as having either a match or drift from the actual
         server side value
-        """
-        ...
-
-    @abstractmethod
-    def get_client_id(self, connection: BaseConnection) -> int | None:
-        """
-        If the cache supports receiving invalidation events from the server
-        return the ``client_id`` that the :paramref:`connection` should send
-        redirects to.
-        """
-        ...
-
-    @abstractmethod
-    def reset(self) -> None:
-        """
-        Reset the cache
-        """
-        ...
-
-    @abstractmethod
-    def shutdown(self) -> None:
-        """
-        Explicitly shutdown the cache
         """
         ...
 
@@ -300,10 +266,7 @@ class LRUCache(Generic[ET]):
             self.__cache.popitem(last=False)
 
 
-class NodeTrackingCache(
-    Sidecar,
-    AbstractCache,
-):
+class NodeTrackingCache(AbstractCache):
     """
     An LRU cache that uses server assisted client caching
     to ensure local cache entries are invalidated if any
@@ -335,24 +298,13 @@ class NodeTrackingCache(
          confirmations of correct cached values will increase the confidence by 0.01%
          upto 100.
         """
-        super().__init__({b"invalidate"}, max(1, max_idle_seconds - 1))
         self.__protocol_version: Literal[2, 3] | None = None
-        self.__invalidation_task: asyncio.Task[None] | None = None
-        self.__compact_task: asyncio.Task[None] | None = None
         self.__max_idle_seconds = max_idle_seconds
         self.__confidence = self.__original_confidence = confidence
         self.__dynamic_confidence = dynamic_confidence
         self.__stats = stats or CacheStats()
         self.__cache: LRUCache[LRUCache[LRUCache[ResponseType]]] = cache or LRUCache(
             max_keys, max_size_bytes
-        )
-
-    @property
-    def healthy(self) -> bool:
-        return bool(
-            self.connection
-            and self.connection.is_connected
-            and time.monotonic() - self.last_checkin < self.__max_idle_seconds
         )
 
     @property
@@ -396,18 +348,13 @@ class NodeTrackingCache(
                 max(0.0, self.__confidence * (1.0001 if match else 0.999)),
             )
 
-    def reset(self) -> None:
-        self.__cache.clear()
-        self.__stats.compact()
-        self.__confidence = self.__original_confidence
-
     def process_message(self, message: ResponseType) -> tuple[ResponseType, ...]:
         assert isinstance(message, list)
 
         if self.__protocol_version == 2:
             assert isinstance(message[0], bytes)
 
-            if b(message[0]) in PubSub.SUBUNSUB_MESSAGE_TYPES:
+            if b(message[0]) in SUBUNSUB_MESSAGE_TYPES:
                 return ()
             elif message[2] is not None:
                 assert isinstance(message[2], list)
@@ -427,39 +374,15 @@ class NodeTrackingCache(
         self.__protocol_version = client.protocol_version
         await super().start(client)
 
+        """
         if not self.__invalidation_task or self.__invalidation_task.done():
             self.__invalidation_task = asyncio.create_task(self.__invalidate())
 
         if not self.__compact_task or self.__compact_task.done():
             self.__compact_task = asyncio.create_task(self.__compact())
+        """
 
         return self
-
-    async def on_reconnect(self, connection: BaseConnection) -> None:
-        self.__cache.clear()
-        await super().on_reconnect(connection)
-
-        if self.__protocol_version == 2 and self.connection:
-            await self.connection.send_command(b"SUBSCRIBE", b"__redis__:invalidate")
-
-    def shutdown(self) -> None:
-        try:
-            asyncio.get_running_loop()
-
-            if self.__invalidation_task:
-                self.__invalidation_task.cancel()
-
-            if self.__compact_task:
-                self.__compact_task.cancel()
-            super().stop()
-        except RuntimeError:
-            pass
-
-    def get_client_id(self, client: BaseConnection) -> int | None:
-        if self.connection and self.connection.is_connected:
-            return self.client_id
-
-        return None
 
     async def __compact(self) -> None:
         while True:
@@ -468,6 +391,7 @@ class NodeTrackingCache(
             await sleep(max(1, self.__max_idle_seconds - 1))
 
     async def __invalidate(self) -> None:
+        self.__cache.clear()
         while True:
             try:
                 key = b(await self.messages.get())
@@ -722,10 +646,6 @@ class TrackingCache(AbstractCache):
         return self
 
     @property
-    def healthy(self) -> bool:
-        return bool(self.instance and self.instance.healthy)
-
-    @property
     def confidence(self) -> float:
         if not self.instance:
             return self.__confidence
@@ -735,12 +655,6 @@ class TrackingCache(AbstractCache):
     @property
     def stats(self) -> CacheStats:
         return self.__stats
-
-    def get_client_id(self, connection: BaseConnection) -> int | None:
-        if self.instance:
-            return self.instance.get_client_id(connection)
-
-        return None
 
     def get(self, command: bytes, key: RedisValueT, *args: RedisValueT) -> ResponseType:
         assert self.instance
@@ -760,15 +674,6 @@ class TrackingCache(AbstractCache):
     def feedback(self, command: bytes, key: RedisValueT, *args: RedisValueT, match: bool) -> None:
         if self.instance:
             self.instance.feedback(command, key, *args, match=match)
-
-    def reset(self) -> None:
-        if self.instance:
-            self.instance.reset()
-
-    def shutdown(self) -> None:
-        if self.instance:
-            self.instance.shutdown()
-        self.__client = None
 
     def share(self) -> TrackingCache:
         """
@@ -793,6 +698,3 @@ class TrackingCache(AbstractCache):
         )
 
         return copy
-
-    def __del__(self) -> None:
-        self.shutdown()

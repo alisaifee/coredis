@@ -6,6 +6,8 @@ import inspect
 import itertools
 from typing import TYPE_CHECKING, Any, cast
 
+from deprecated.sphinx import versionadded
+
 from coredis._utils import b
 from coredis.exceptions import NoScriptError
 from coredis.retry import ConstantRetryPolicy, retryable
@@ -25,7 +27,6 @@ from coredis.typing import (
     add_runtime_checks,
     safe_beartype,
 )
-from deprecated.sphinx import versionadded
 
 if TYPE_CHECKING:
     import coredis.client

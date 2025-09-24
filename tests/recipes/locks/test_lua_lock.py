@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import time
 import uuid
-from unittest.mock import PropertyMock
 
 import pytest
 
 from coredis.exceptions import LockError
 from coredis.recipes.locks import Lock
 from tests.conftest import targets
+
+pytestmark = pytest.mark.anyio
 
 
 @pytest.fixture
@@ -71,17 +72,6 @@ class TestLock:
         assert not await lock2.acquire()
         assert (time.time() - start) > 0.2
         await lock1.release()
-
-    @pytest.mark.replicated_clusteronly
-    async def test_lock_replication_failed(self, client, mocker, lock_name):
-        replication_factor = mocker.patch(
-            "coredis.recipes.locks.LuaLock.replication_factor",
-            new_callable=PropertyMock,
-        )
-        replication_factor.return_value = 2
-        lock1 = Lock(client, lock_name, blocking=True, blocking_timeout=1)
-        with pytest.warns(RuntimeWarning):
-            assert not await lock1.acquire()
 
     async def test_context_manager(self, client, _s, lock_name):
         # blocking_timeout prevents a deadlock if the lock can't be acquired

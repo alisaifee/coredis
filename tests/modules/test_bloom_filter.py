@@ -8,6 +8,8 @@ from coredis import Redis
 from coredis.exceptions import ResponseError
 from tests.conftest import module_targets
 
+pytestmark = pytest.mark.anyio
+
 
 @module_targets()
 class TestBloomFilter:

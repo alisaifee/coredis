@@ -11,7 +11,7 @@ import time
 import warnings
 from abc import abstractmethod
 from collections import defaultdict, deque
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Generator, cast
 
 from anyio import (
     TASK_STATUS_IGNORED,
@@ -78,13 +78,14 @@ class Request:
     _exc: BaseException | None = None
     _result: ResponseType | None = None
 
-    def __await__(self):
+    def __await__(self) -> Generator[Any, None, ResponseType]:
         return self.get_result().__await__()
 
     async def get_result(self) -> ResponseType:
         # return nothing
         if self.no_reply:
-            return await sleep(0)  # add a checkpoint
+            await sleep(0)  # add a checkpoint
+            return None
         # return now if response available
         if self._event.is_set():
             return self._result_or_exc()
@@ -195,9 +196,9 @@ class BaseConnection:
         self.server_version: str | None = None
         self.client_name = client_name
         #: id for this connection as returned by the redis server
-        self.client_id = None
+        self.client_id: int | None = None
         #: client id that the redis server should send any redirected notifications to
-        self.tracking_client_id = None
+        self.tracking_client_id: int | None = None
 
         self._connection: ByteStream | None = None
         #: Queue that collects any unread push message types
@@ -479,7 +480,7 @@ class BaseConnection:
             try:
                 await self.connection.send(data)
             except ClosedResourceError:
-                logger.exception(f"Failed to send {data}!")
+                logger.exception(f"Failed to send {data.decode()}!")
 
     async def send_command(
         self,
@@ -725,7 +726,7 @@ class ClusterConnection(Connection):
             max_idle_time=max_idle_time,
         )
 
-        async def _on_connect(*args):
+        async def _on_connect(*args) -> None:
             """
             Initialize the connection, authenticate and select a database and send
             `READONLY` if `read_from_replicas` is set during initialization.

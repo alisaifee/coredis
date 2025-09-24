@@ -323,7 +323,7 @@ class NodeCommands:
                 ):
                     if isinstance(c.callback, AsyncPreProcessingCallback):
                         await c.callback.pre_process(self.client, transaction_result[idx])
-                    c.result = c.callback(  # type: ignore
+                    c.result = c.callback(
                         transaction_result[idx],
                         version=connection.protocol_version,
                     )

@@ -4,6 +4,8 @@ import datetime
 import itertools
 from typing import overload
 
+from deprecated.sphinx import versionadded
+
 from coredis._json import json
 from coredis._utils import dict_to_flat_list, tuples_to_flat_list
 from coredis.commands import CommandMixin
@@ -157,7 +159,6 @@ from coredis.typing import (
     StringT,
     ValueT,
 )
-from deprecated.sphinx import versionadded
 
 # TODO: remove this once mypy can disambiguate class method names
 #  from builtin types. ``set`` is a redis commands with

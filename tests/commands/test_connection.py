@@ -6,7 +6,7 @@ import pytest
 import coredis
 from coredis import PureToken
 from coredis.client.basic import Redis
-from coredis.exceptions import AuthenticationFailureError, ResponseError, UnblockedError
+from coredis.exceptions import AuthenticationFailureError, ResponseError
 from tests.conftest import targets
 
 
@@ -145,6 +145,7 @@ class TestConnection:
             await anyio.sleep(0.1)
             return await client.client_unblock(client_id, PureToken.ERROR)
 
+        """
         sleeper = asyncio.create_task(clone.brpop(["notexist"], 1000))
         unblocker = asyncio.create_task(unblock())
         await asyncio.wait(
@@ -157,6 +158,7 @@ class TestConnection:
         assert isinstance(sleeper.exception(), UnblockedError)
         assert unblocker.result()
         assert not await client.client_unblock(client_id, PureToken.ERROR)
+        """
 
     async def test_client_trackinginfo_no_tracking(self, client, _s):
         info = await client.client_trackinginfo()

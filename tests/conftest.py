@@ -7,6 +7,7 @@ import platform
 import socket
 import time
 from functools import total_ordering
+from typing import Any, Generator
 
 import pytest
 import redis
@@ -17,6 +18,7 @@ import coredis
 import coredis.sentinel
 from coredis._utils import EncodingInsensitiveDict, b, hash_slot, nativestr
 from coredis.cache import TrackingCache
+from coredis.client.basic import Redis
 from coredis.credentials import UserPassCredentialProvider
 from coredis.pool.basic import ConnectionPool
 from coredis.response._callbacks import NoopCallback
@@ -55,6 +57,11 @@ SERVER_DEFAULT_ARGS = {
 }
 
 
+@pytest.fixture(scope="session")
+def anyio_backend() -> str:
+    return "trio"
+
+
 @pytest.fixture(scope="session", autouse=True)
 def uvloop():
     if os.environ.get("COREDIS_UVLOOP") == "True":
@@ -78,7 +85,7 @@ class UnparseableVersion:
         return True
 
 
-async def get_module_versions(client):
+async def get_module_versions(client: Redis):
     if str(client) not in MODULE_VERSIONS:
         MODULE_VERSIONS[str(client)] = {}
         try:
@@ -417,11 +424,10 @@ def redis_stack_cluster_server(docker_services):
 
 
 @pytest.fixture(scope="session")
-def redis_sentinel_server(docker_services):
+def redis_sentinel_server(docker_services) -> Generator[tuple[str, int], Any, None]:
     docker_services.start("redis-sentinel")
     docker_services.wait_for_service("redis-sentinel", 26379, ping_socket)
-
-    yield ["localhost", 26379]
+    yield "localhost", 26379
 
 
 @pytest.fixture(scope="session")
@@ -873,19 +879,15 @@ async def redis_stack_cluster(redis_stack_cluster_server, request):
 
 
 @pytest.fixture
-async def redis_sentinel(redis_sentinel_server, request):
-    sentinel = coredis.sentinel.Sentinel(
-        [redis_sentinel_server],
-        sentinel_kwargs={},
+async def redis_sentinel(redis_sentinel_server: tuple[str, int], request):
+    sentinel = coredis.Sentinel(
+        sentinels=[redis_sentinel_server],
+        sentinel_kwargs={"connect_timeout": 1},
         decode_responses=True,
         **get_client_test_args(request),
     )
-    master = sentinel.primary_for("mymaster")
-    await check_test_constraints(request, master)
-    await set_default_test_config(sentinel)
-    await master.flushall()
-
-    return sentinel
+    async with sentinel:
+        yield sentinel
 
 
 @pytest.fixture
@@ -896,11 +898,11 @@ async def redis_sentinel_raw(redis_sentinel_server, request):
         **get_client_test_args(request),
     )
     master = sentinel.primary_for("mymaster")
-    await check_test_constraints(request, master)
-    await set_default_test_config(sentinel)
-    await master.flushall()
-
-    return sentinel
+    async with master:
+        await check_test_constraints(request, master)
+        await set_default_test_config(sentinel)
+        await master.flushall()
+        return sentinel
 
 
 @pytest.fixture

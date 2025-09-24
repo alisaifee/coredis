@@ -1148,7 +1148,7 @@ class Redis(Client[AnyStr]):
         sleep: float = 0.1,
         blocking: bool = True,
         blocking_timeout: float | None = None,
-    ) -> Lock:
+    ) -> Lock[AnyStr]:
         from coredis.recipes.locks import Lock
 
         return Lock(self, name, timeout, sleep, blocking, blocking_timeout)

@@ -110,7 +110,7 @@ class RESPNode:
             return tuple(
                 (cast(ResponsePrimitive, k), self.ensure_hashable(v)) for k, v in item.items()
             )
-        return item  # type: ignore
+        return item
 
 
 class ListNode(RESPNode):

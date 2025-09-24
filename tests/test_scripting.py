@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import pytest
-
 from beartype.roar import BeartypeCallHintParamViolation
+
 from coredis import PureToken
 from coredis._utils import gather
 from coredis.client import Client
