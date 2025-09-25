@@ -1908,7 +1908,7 @@ def token_enum(ctx, path):
     t = env.from_string(
         """from __future__ import annotations
 
-from coredis._utils import CaseAndEncodingInsensitiveEnum
+from coredis._enum import CaseAndEncodingInsensitiveEnum
 
 class PureToken(CaseAndEncodingInsensitiveEnum):
     \"\"\"
@@ -1975,7 +1975,7 @@ from __future__ import annotations
 
 import enum
 
-from coredis._utils import CaseAndEncodingInsensitiveEnum
+from coredis._enum import CaseAndEncodingInsensitiveEnum
 
 class CommandName(CaseAndEncodingInsensitiveEnum):
     \"\"\"

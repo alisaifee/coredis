@@ -8,8 +8,7 @@ cluster & sentinel.
 
 from __future__ import annotations
 
-from typing import cast
-
+from coredis._version import __version__
 from coredis.client import Redis, RedisCluster
 from coredis.config import Config
 from coredis.connection import (
@@ -26,8 +25,6 @@ from coredis.pool import (
 )
 from coredis.tokens import PureToken
 
-from . import _version
-
 __all__ = [
     "Config",
     "Redis",
@@ -41,6 +38,5 @@ __all__ = [
     "BlockingClusterConnectionPool",
     "ClusterConnectionPool",
     "PureToken",
+    "__version__",
 ]
-
-__version__ = cast(str, _version.get_versions()["version"])  # type: ignore
