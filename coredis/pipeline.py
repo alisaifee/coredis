@@ -131,7 +131,6 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
     """
 
     client: Pipeline[Any] | ClusterPipeline[Any]
-    queued_response: Awaitable[bytes | str]
 
     def __init__(
         self,
@@ -576,11 +575,8 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
             + [CommandInvocation(CommandName.EXEC, (), None, None)],
             timeout=self.timeout,
         )
-        for i, cmd in enumerate(commands):
-            cmd.queued_response = cast(Awaitable[StringT], requests[i])
 
         errors: list[tuple[int, RedisError | None]] = []
-
         # parse off the response for MULTI
         # NOTE: we need to handle ResponseErrors here and continue
         # so that we read all the additional command messages from
@@ -593,9 +589,8 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         # and all the other commands
         for i, cmd in enumerate(commands[1:-1]):
             try:
-                if cmd.queued_response:
-                    if (resp := await cmd.queued_response) not in {b"QUEUED", "QUEUED"}:
-                        logger.warning(f"Abnormal response in pipeline: {resp}")
+                if (resp := await requests[i]) not in {b"QUEUED", "QUEUED"}:
+                    logger.warning(f"Abnormal response in pipeline: {resp!r}")
             except RedisError as e:
                 self.annotate_exception(e, i + 1, cmd.name, cmd.arguments)
                 errors.append((i, e))
@@ -611,7 +606,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
             raise WatchError("Watched variable changed.")
 
         # put any parse errors into the response
-        for i, e in errors:
+        for i, e in errors:  # type: ignore
             response.insert(i, cast(ResponseType, e))
 
         if len(response) != len(commands):
@@ -627,7 +622,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
             if not isinstance(r, Exception):
                 if isinstance(cmd.callback, AsyncPreProcessingCallback):
                     await cmd.callback.pre_process(self.client, r)
-                r = cmd.callback(r, version=connection.protocol_version, **cmd.execution_parameters)  # type: ignore
+                r = cmd.callback(r, version=connection.protocol_version, **cmd.execution_parameters)
                 cmd.response = await_result(r)
             data.append(r)
         return tuple(data)
@@ -665,7 +660,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
                     res,
                     version=connection.protocol_version,
                     **cmd.execution_parameters,
-                )  # type: ignore
+                )
                 cmd.response = await_result(resp)
                 response.append(resp)
             except ResponseError as re:
@@ -1121,7 +1116,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
                 version=conn.protocol_version,
             )
         except (ConnectionError, TimeoutError):
-            conn.disconnect()
+            # conn.disconnect()
 
             try:
                 if not self.watching:
@@ -1133,7 +1128,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
                     raise
             except ConnectionError:
                 # the retry failed so cleanup.
-                conn.disconnect()
+                # conn.disconnect()
                 await self.clear()
                 raise
         finally:

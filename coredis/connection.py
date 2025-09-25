@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 import inspect
-import itertools
 import math
 import os
 import socket
@@ -508,21 +507,21 @@ class BaseConnection:
         """
         from coredis.commands.constants import CommandName
 
+        cmd_list = []
+        if self.is_connected and noreply and not self.noreply:
+            cmd_list = self.packer.pack_command(CommandName.CLIENT_REPLY, PureToken.SKIP)
+        cmd_list.extend(self.packer.pack_command(command, *args))
+        request_timeout: float | None = timeout or self._stream_timeout
+        request = Request(
+            command,
+            bool(decode) if decode is not None else self.decode_responses,
+            encoding or self.encoding,
+            raise_exceptions,
+            request_timeout,
+            no_reply=bool(self.noreply_set or noreply),
+        )
         async with self._write_lock:
-            cmd_list = []
-            request_timeout: float | None = timeout or self._stream_timeout
-            request = Request(
-                command,
-                bool(decode) if decode is not None else self.decode_responses,
-                encoding or self.encoding,
-                raise_exceptions,
-                request_timeout,
-                no_reply=bool(self.noreply_set or noreply),
-            )
             self._requests.append(request)
-            if self.is_connected and noreply and not self.noreply:
-                cmd_list = self.packer.pack_command(CommandName.CLIENT_REPLY, PureToken.SKIP)
-            cmd_list.extend(self.packer.pack_command(command, *args))
             await self._send_packed_command(cmd_list, timeout=request_timeout)
         return request
 
@@ -536,24 +535,20 @@ class BaseConnection:
         Send multiple commands to the redis server
         """
         request_timeout: float | None = timeout or self._stream_timeout
-        requests: list[Request] = []
-        async with self._write_lock:
-            for cmd in commands:
-                request = Request(
-                    cmd.command,
-                    bool(cmd.decode) if cmd.decode is not None else self.decode_responses,
-                    cmd.encoding or self.encoding,
-                    raise_exceptions,
-                    request_timeout,
-                )
-                self._requests.append(request)
-                requests.append(request)
-            await self._send_packed_command(
-                self.packer.pack_commands(
-                    list(itertools.chain((cmd.command, *cmd.args) for cmd in commands))
-                ),
-                timeout=request_timeout,
+        requests = [
+            Request(
+                cmd.command,
+                bool(cmd.decode) if cmd.decode is not None else self.decode_responses,
+                cmd.encoding or self.encoding,
+                raise_exceptions,
+                request_timeout,
             )
+            for cmd in commands
+        ]
+        packed = self.packer.pack_commands([(cmd.command, *cmd.args) for cmd in commands])
+        async with self._write_lock:
+            self._requests.extend(requests)
+            await self._send_packed_command(packed, timeout=request_timeout)
         return requests
 
 
@@ -726,7 +721,7 @@ class ClusterConnection(Connection):
             max_idle_time=max_idle_time,
         )
 
-        async def _on_connect(*args) -> None:
+        async def _on_connect(*args: Any) -> None:
             """
             Initialize the connection, authenticate and select a database and send
             `READONLY` if `read_from_replicas` is set during initialization.

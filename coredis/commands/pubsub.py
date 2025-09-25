@@ -3,13 +3,14 @@ from __future__ import annotations
 import asyncio
 import inspect
 from contextlib import asynccontextmanager, suppress
-from typing import TYPE_CHECKING, AsyncGenerator, cast
+from typing import TYPE_CHECKING, Any, AsyncGenerator, cast
 
 from anyio import (
     AsyncContextManagerMixin,
     Event,
     create_memory_object_stream,
     create_task_group,
+    fail_after,
     move_on_after,
     sleep,
 )
@@ -78,7 +79,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
     ):
         self.connection_pool = connection_pool
         self.ignore_subscribe_messages = ignore_subscribe_messages
-        self.connection: coredis.BaseConnection | None = None
+        self._connection: coredis.BaseConnection | None = None
         self._retry_policy = retry_policy or NoRetryPolicy()
         self._initial_channel_subscriptions = {
             **{nativestr(channel): None for channel in channels or []},
@@ -94,6 +95,12 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         self._subscribed = Event()
         self.channels = {}
         self.patterns = {}
+
+    @property
+    def connection(self) -> BaseConnection:
+        if not self._connection:
+            raise Exception("Connection not initialized correctly!")
+        return self._connection
 
     @property
     def subscribed(self) -> bool:
@@ -115,7 +122,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         async with create_task_group() as tg:
             # initialize subscriptions and connection
-            self.connection = await self.connection_pool.acquire(pubsub=True)
+            self._connection = await self.connection_pool.acquire(pubsub=True)
             if self._initial_channel_subscriptions:
                 await self.subscribe(**self._initial_channel_subscriptions)
             if self._initial_pattern_subscriptions:
@@ -213,6 +220,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
             return self._filter_ignored_messages(
                 await self._receive_stream.receive(), ignore_subscribe_messages
             )
+        return None
 
     def encode(self, value: StringT) -> StringT:
         """
@@ -231,13 +239,13 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
     async def execute_command(
         self, command: bytes, *args: RedisValueT, **options: RedisValueT
-    ) -> ResponseType | None:
+    ) -> None:
         """
         Executes a publish/subscribe command
 
         :meta private:
         """
-        return await self.connection.send_command(command, *args)
+        await self.connection.send_command(command, *args)
 
     async def parse_response(
         self, block: bool = True, timeout: float | None = None
@@ -249,12 +257,11 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         """
         assert self.connection
         timeout = timeout if timeout and timeout > 0 else None
-        with move_on_after(timeout):
-            if self.connection.protocol_version == 3:
-                return await self.connection.fetch_push_message(block=block)
-            else:
-                # TODO: implement RESP2-compatible
-                raise NotImplementedError()
+        if self.connection.protocol_version != 3:
+            # TODO: implement RESP2-compatible?
+            raise NotImplementedError()
+        with fail_after(timeout):
+            return await self.connection.fetch_push_message(block=block)
 
     async def handle_message(self, response: ResponseType) -> PubSubMessage | None:
         """
@@ -415,9 +422,8 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
     async def execute_command(
         self, command: bytes, *args: RedisValueT, **options: RedisValueT
-    ) -> ResponseType | None:
-        assert self.connection
-        return await self._execute(self.connection.send_command, command, *args)
+    ) -> None:
+        await self.connection.send_command(command, *args)
 
 
 @versionadded(version="3.6.0")
@@ -528,7 +534,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
     async def execute_command(
         self, command: bytes, *args: RedisValueT, **options: RedisValueT
-    ) -> ResponseType | None:
+    ) -> None:
         await self.initialize()
 
         assert isinstance(args[0], (bytes, str))
@@ -538,7 +544,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         if node and node.node_id:
             key = node.node_id
             if self.shard_connections.get(key) is None:
-                self.shard_connections[key] = await self.connection_pool.get_connection(
+                self.shard_connections[key] = await self.connection_pool._get_connection(
                     b"pubsub",
                     channel=channel,
                     node_type="replica" if self.read_from_replicas else "primary",
@@ -549,7 +555,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
             self.channel_connection_mapping[args[0]] = self.shard_connections[key]
             assert self.shard_connections[key]
-            return await self._execute(self.shard_connections[key].send_command, command, *args)
+            await self.shard_connections[key].send_command(command, *args)
         raise PubSubError(f"Unable to determine shard for channel {args[0]!r}")
 
     async def initialize(self) -> Self:
@@ -569,13 +575,12 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
         :return: the instance itself
         """
-        if not self.initialized:
-            await self.connection_pool.initialize()
-            self.initialized = True
-            if self._initial_channel_subscriptions:
-                await self.subscribe(**self._initial_channel_subscriptions)
-            if not self._consumer_task or self._consumer_task.done():
-                self._consumer_task = asyncio.create_task(self._consumer())
+        await self.connection_pool.initialize()
+        if self._initial_channel_subscriptions:
+            await self.subscribe(**self._initial_channel_subscriptions)
+        self._consumer_task: asyncio.Task[Any]
+        if not self._consumer_task or self._consumer_task.done():
+            self._consumer_task = asyncio.create_task(self._consumer())
         return self
 
     async def parse_response(
@@ -612,7 +617,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
             if broken_connections:
                 for connection in broken_connections:
                     try:
-                        await connection.connect()
+                        await connection._connect()
                     except:  # noqa
                         raise ConnectionError("Shard connections not stable")
             tasks: dict[str, asyncio.Task[ResponseType]] = {
@@ -657,7 +662,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
     def reset(self) -> None:
         for connection in self.shard_connections.values():
-            connection.disconnect()
+            # connection.disconnect()
             connection.clear_connect_callbacks()
             self.connection_pool.release(connection)
         for _, task in self.pending_tasks.items():
@@ -667,7 +672,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         self.channels = {}
         self.patterns = {}
         self.initialized = False
-        self._subscribed.clear()
+        self._subscribed = Event()
 
     async def aclose(self) -> None:
         """
@@ -676,4 +681,3 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         """
         if self.shard_connections:
             await self.unsubscribe()
-        self.close()

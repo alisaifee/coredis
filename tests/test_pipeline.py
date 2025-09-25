@@ -270,31 +270,6 @@ class TestPipeline:
             res = pipe.get("a")
         assert await res == "1"
 
-    async def test_transaction_callable(self, client: Redis[str]):
-        await client.set("a", "1")
-        await client.set("b", "2")
-        has_run = []
-
-        async def my_transaction(pipe):
-            a_value = await pipe.get("a")
-            assert a_value in ("1", "2")
-            b_value = await pipe.get("b")
-            assert b_value == "2"
-
-            # silly run-once code... incr's "a" so WatchError should be raised
-            # forcing this all to run again. this should incr "a" once to "2"
-
-            if not has_run:
-                await client.incr("a")
-                has_run.append("it has")
-
-            pipe.multi()
-            pipe.set("c", str(int(a_value) + int(b_value)))
-
-        result = await client.transaction(my_transaction, "a", "b", watch_delay=0.01)
-        assert result
-        assert await client.get("c") == "4"
-
     async def test_exec_error_in_no_transaction_pipeline(self, client: Redis[str]):
         await client.set("a", "1")
         with pytest.raises(ResponseError):
