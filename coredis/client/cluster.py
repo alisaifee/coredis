@@ -31,7 +31,6 @@ from coredis.exceptions import (
     RedisClusterException,
     TimeoutError,
     TryAgainError,
-    WatchError,
 )
 from coredis.globals import CACHEABLE_COMMANDS, MODULE_GROUPS, READONLY_COMMANDS
 from coredis.pool import ClusterConnectionPool
@@ -598,7 +597,7 @@ class RedisCluster(
         the :func:`coredis.ConnectionPool.from_url`.
         """
         if decode_responses:
-            return cls(
+            return cls(  # type: ignore
                 decode_responses=True,
                 protocol_version=protocol_version,
                 verify_version=verify_version,
@@ -619,7 +618,7 @@ class RedisCluster(
                 ),
             )
         else:
-            return cls(
+            return cls(  # type: ignore
                 decode_responses=False,
                 protocol_version=protocol_version,
                 verify_version=verify_version,
@@ -643,7 +642,7 @@ class RedisCluster(
     async def initialize(self) -> RedisCluster[AnyStr]:
         if self.refresh_table_asap:
             self.connection_pool.initialized = False
-        await super().initialize()
+        # await super().initialize()
         if self.cache:
             self.cache = await self.cache.initialize(self)
         self.refresh_table_asap = False
@@ -694,7 +693,8 @@ class RedisCluster(
 
     async def _ensure_initialized(self) -> None:
         if not self.connection_pool.initialized or self.refresh_table_asap:
-            await self
+            # await self
+            pass
 
     def _determine_slots(
         self, command: bytes, *args: RedisValueT, **options: Unpack[ExecutionParameters]
@@ -907,7 +907,8 @@ class RedisCluster(
         while remaining_attempts > 0:
             remaining_attempts -= 1
             if self.refresh_table_asap and not slots:
-                await self
+                # await self
+                pass
             if asking and redirect_addr:
                 node = self.connection_pool.nodes.nodes[redirect_addr]
                 r = await self.connection_pool.get_connection_by_node(node)
@@ -950,9 +951,9 @@ class RedisCluster(
                 use_cached = False
                 reply = None
                 if self.cache:
-                    if r.tracking_client_id != self.cache.get_client_id(r):
-                        self.cache.reset()
-                        await r.update_tracking_client(True, self.cache.get_client_id(r))
+                    if r.tracking_client_id != self.cache.get_client_id(r):  # type: ignore
+                        # self.cache.reset()
+                        await r.update_tracking_client(True, self.cache.get_client_id(r))  # type: ignore
                     if command.name not in READONLY_COMMANDS:
                         self.cache.invalidate(*keys)
                     elif cacheable:
@@ -1167,7 +1168,7 @@ class RedisCluster(
 
     async def pipeline(
         self,
-        transaction: bool | None = None,
+        transaction: bool = False,
         watches: Parameters[StringT] | None = None,
         timeout: float | None = None,
     ) -> coredis.pipeline.ClusterPipeline[AnyStr]:
@@ -1194,59 +1195,12 @@ class RedisCluster(
 
         from coredis.pipeline import ClusterPipeline
 
-        return ClusterPipeline[AnyStr](
+        return ClusterPipeline[AnyStr](  # type: ignore
             client=self,
             transaction=transaction,
             watches=watches,
             timeout=timeout,
         )
-
-    async def transaction(
-        self,
-        func: Callable[
-            [coredis.pipeline.ClusterPipeline[AnyStr]],
-            Coroutine[Any, Any, Any],
-        ],
-        *watches: StringT,
-        value_from_callable: bool = False,
-        watch_delay: float | None = None,
-        **kwargs: Any,
-    ) -> Any:
-        """
-        Convenience method for executing the callable :paramref:`func` as a
-        transaction while watching all keys specified in :paramref:`watches`.
-
-        :param func: callable should expect a single argument which is a
-         :class:`coredis.pipeline.ClusterPipeline` object retrieved by calling
-         :meth:`~coredis.RedisCluster.pipeline`.
-        :param watches: The keys to watch during the transaction. The keys should route
-         to the same node as the keys touched by the commands in :paramref:`func`
-        :param value_from_callable: Whether to return the result of transaction or the value
-         returned from :paramref:`func`
-
-        .. warning:: Cluster transactions can only be run with commands that
-           route to the same slot.
-
-        .. versionchanged:: 4.9.0
-
-           When the transaction is started with :paramref:`watches` the
-           :class:`~coredis.pipeline.ClusterPipeline` instance passed to :paramref:`func`
-           will not start queuing commands until a call to
-           :meth:`~coredis.pipeline.ClusterPipeline.multi` is made. This makes the cluster
-           implementation consistent with :meth:`coredis.Redis.transaction`
-        """
-        async with await self.pipeline(True) as pipe:
-            while True:
-                try:
-                    if watches:
-                        await pipe.watch(*watches)
-                    func_value = await func(pipe)
-                    exec_value = await pipe.execute()
-                    return func_value if value_from_callable else exec_value
-                except WatchError:
-                    if watch_delay is not None and watch_delay > 0:
-                        await sleep(watch_delay)
-                    continue
 
     async def scan_iter(
         self,

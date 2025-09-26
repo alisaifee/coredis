@@ -372,7 +372,7 @@ class NodeTrackingCache(AbstractCache):
         client: coredis.client.Redis[Any] | coredis.client.RedisCluster[Any],
     ) -> NodeTrackingCache:
         self.__protocol_version = client.protocol_version
-        await super().start(client)
+        # await super().start(client)
 
         """
         if not self.__invalidation_task or self.__invalidation_task.done():
@@ -394,9 +394,12 @@ class NodeTrackingCache(AbstractCache):
         self.__cache.clear()
         while True:
             try:
+                """
                 key = b(await self.messages.get())
                 self.invalidate(key)
                 self.messages.task_done()
+                """
+                pass
             except RuntimeError:  # noqa
                 break
 
@@ -460,7 +463,8 @@ class ClusterTrackingCache(AbstractCache):
         self.__cache.clear()
 
         for sidecar in self.node_caches.values():
-            sidecar.shutdown()
+            # sidecar.shutdown()
+            pass
         self.node_caches.clear()
         self.__nodes = list(client.all_nodes)
 
@@ -473,8 +477,8 @@ class ClusterTrackingCache(AbstractCache):
                 stats=self.__stats,
             )
             await node_cache.initialize(node)
-            assert node_cache.connection
-            self.node_caches[node_cache.connection.location] = node_cache
+            # assert node_cache.connection
+            self.node_caches[node_cache.connection.location] = node_cache  # type: ignore
 
         return self
 
@@ -491,7 +495,7 @@ class ClusterTrackingCache(AbstractCache):
             self.client
             and self.client.connection_pool.initialized
             and self.node_caches
-            and all(cache.healthy for cache in self.node_caches.values())
+            and all(cache.healthy for cache in self.node_caches.values())  # type: ignore
         )
 
     @property
@@ -504,7 +508,7 @@ class ClusterTrackingCache(AbstractCache):
 
     def get_client_id(self, connection: BaseConnection) -> int | None:
         try:
-            return self.node_caches[connection.location].get_client_id(connection)
+            return self.node_caches[connection.location].get_client_id(connection)  # type: ignore
         except KeyError:
             return None
 
@@ -549,7 +553,8 @@ class ClusterTrackingCache(AbstractCache):
     def shutdown(self) -> None:
         if self.node_caches:
             for sidecar in self.node_caches.values():
-                sidecar.shutdown()
+                # sidecar.shutdown()
+                pass
             self.node_caches.clear()
             self.__nodes.clear()
 

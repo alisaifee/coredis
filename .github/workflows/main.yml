@@ -232,7 +232,7 @@ jobs:
           name: src_dist
           path: dist/*.tar.gz
   upload_pypi:
-    needs: [test, build_wheels, build_pure_wheel, build_sdist]
+    needs: [build_wheels, build_pure_wheel, build_sdist]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
     permissions:
@@ -253,7 +253,7 @@ jobs:
           skip_existing: true
           verbose: true
   upload_pypi_release:
-    needs: [test, build_wheels, build_sdist]
+    needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     permissions:

@@ -4,11 +4,10 @@ import asyncio
 import os
 import random
 import threading
-import time
 import warnings
 from typing import Any, cast
 
-from anyio import fail_after, sleep
+from anyio import fail_after
 
 from coredis._utils import b, hash_slot
 from coredis.connection import ClusterConnection, Connection
@@ -66,7 +65,7 @@ class ClusterConnectionPool(ConnectionPool):
         idle_check_interval: int = 1,
         blocking: bool = False,
         timeout: int = 20,
-        **connection_kwargs: Any | None,
+        **connection_kwargs: Any,
     ):
         """
 
@@ -125,7 +124,7 @@ class ClusterConnectionPool(ConnectionPool):
             skip_full_coverage_check=skip_full_coverage_check,
             max_connections=self.max_connections,
             nodemanager_follow_cluster=nodemanager_follow_cluster,
-            **connection_kwargs,  # type: ignore
+            **connection_kwargs,
         )
         self.connection_kwargs = connection_kwargs
         self.connection_kwargs["read_from_replicas"] = read_from_replicas
@@ -166,21 +165,7 @@ class ClusterConnectionPool(ConnectionPool):
                             f"{len(self.nodes.nodes) - self.max_connections} connections."
                         )
                         self.max_connections = len(self.nodes.nodes)
-                    await super().initialize()
-
-    async def disconnect_on_idle_time_exceeded(self, connection: Connection) -> None:
-        assert isinstance(connection, ClusterConnection)
-        while True:
-            if (
-                time.time() - connection.last_active_at > self.max_idle_time
-                and not connection.requests_pending
-            ):
-                connection.disconnect()
-                node = connection.node
-                if node.name in self._created_connections_per_node:
-                    self._created_connections_per_node[node.name] -= 1
-                break
-            await sleep(self.idle_check_interval)
+                    # await super().initialize()
 
     def reset(self) -> None:
         """Resets the connection pool back to a clean state"""
@@ -202,7 +187,7 @@ class ClusterConnectionPool(ConnectionPool):
                 self.disconnect()
                 self.reset()
 
-    async def get_connection(
+    async def _get_connection(
         self,
         command_name: bytes | None = None,
         *keys: RedisValueT,
@@ -260,15 +245,16 @@ class ClusterConnectionPool(ConnectionPool):
         connection = self.connection_class(
             host=node.host,
             port=node.port,
-            **self.connection_kwargs,  # type: ignore
+            **self.connection_kwargs,
         )
 
         # Must store node in the connection to make it eaiser to track
         connection.node = node
 
-        if self.max_idle_time > self.idle_check_interval > 0:
+        if self.max_idle_time and self.max_idle_time > 0:
             # do not await the future
-            asyncio.ensure_future(self.disconnect_on_idle_time_exceeded(connection))
+            # asyncio.ensure_future(self.disconnect_on_idle_time_exceeded(connection))
+            pass
 
         return connection
 
@@ -326,7 +312,7 @@ class ClusterConnectionPool(ConnectionPool):
             try:
                 self.__node_pool(connection.node.name).put_nowait(connection)
             except asyncio.QueueFull:
-                connection.disconnect()
+                # connection.disconnect()
                 # reduce node connection count in case of too many connection error raised
                 if connection.node.name in self._created_connections_per_node:
                     self._created_connections_per_node[connection.node.name] -= 1
@@ -335,14 +321,16 @@ class ClusterConnectionPool(ConnectionPool):
         """Closes all connections in the pool"""
         for node_connections in self._cluster_in_use_connections.values():
             for connection in node_connections:
-                connection.disconnect()
+                # connection.disconnect()
+                pass
         for node, available_connections in self._cluster_available_connections.items():
             removed = 0
             while True:
                 try:
                     _connection = available_connections.get_nowait()
                     if _connection:
-                        _connection.disconnect()
+                        # _connection.disconnect()
+                        pass
                         if node in self._created_connections_per_node:
                             self._created_connections_per_node[node] -= 1
                     removed += 1

@@ -42,6 +42,7 @@ dependencies = [
   "typing_extensions>=4.13",
   "packaging>=21,<26",
   "pympler>1,<2",
+  "anyio>=4.10.0",
 ]
 
 [project.optional-dependencies]
@@ -68,7 +69,8 @@ test = [
   "redis",
   "aiobotocore>=2.15.2",
   "asyncache>=0.3.1",
-  "moto"
+  "moto",
+  "trio"
 ]
 
 dev = [

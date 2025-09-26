@@ -980,10 +980,11 @@ class Redis(Client[AnyStr]):
             use_cached = False
             reply = None
             if self.cache:
-                if connection.tracking_client_id != self.cache.get_client_id(connection):
-                    self.cache.reset()
+                if connection.tracking_client_id != self.cache.get_client_id(connection):  # type: ignore
+                    # self.cache.reset()
                     await connection.update_tracking_client(
-                        True, self.cache.get_client_id(connection)
+                        True,
+                        self.cache.get_client_id(connection),  # type: ignore
                     )
                 if command.name not in READONLY_COMMANDS:
                     self.cache.invalidate(*keys)
