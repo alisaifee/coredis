@@ -16,6 +16,7 @@ from anyio import (
 )
 from deprecated.sphinx import versionadded
 
+from coredis._enum import CaseAndEncodingInsensitiveEnum
 from coredis._utils import b, hash_slot, nativestr
 from coredis.commands.constants import CommandName
 from coredis.connection import BaseConnection, Connection

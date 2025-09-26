@@ -101,7 +101,7 @@ jobs:
         uv sync --locked --all-extras --group ci
     - name: Compile extensions
       if: ${{ matrix.extensions == 'True' }}
-      run: uv run mypyc coredis/constants.py coredis/parser.py coredis/_packer.py
+      run: uv run mypyc coredis/constants.py coredis/parser.py coredis/_packer.py coredis/_utils.py
     - name: Install uvloop
       if: ${{ matrix.uvloop == 'True' }}
       run:
@@ -139,7 +139,7 @@ jobs:
           fetch-depth: 0
       - name: Install cibuildwheel and pypyp
         run: |
-          pipx install cibuildwheel==2.22.0
+          pipx install cibuildwheel==3.2.0
           pipx install pypyp==1.3
       - id: set-matrix
         run: |
@@ -180,14 +180,13 @@ jobs:
         if: runner.os == 'Linux'
         uses: docker/setup-qemu-action@v2
       - name: Build wheel
-        uses: pypa/cibuildwheel@v2.22.0
+        uses: pypa/cibuildwheel@v3.2.0
         with:
           only: ${{ matrix.only }}
         env:
           CIBW_BUILD_VERBOSITY: 3
           CIBW_BUILD_FRONTEND: "build[uv]"
           CIBW_TEST_COMMAND: "uv run python -c 'import coredis'"
-          USE_MYPYC: true
       - uses: actions/upload-artifact@v4
         with:
           name: wheels-${{matrix.only}}

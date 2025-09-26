@@ -1,12 +1,14 @@
 [build-system]
-build-backend = "setuptools.build_meta"
+build-backend = "hatchling.build"
 requires = [
-  "beartype>=0.20",
+  "async_timeout>4,<6",
+  "hatchling>=1.14.0",
+  "hatch-mypyc>=0.1.0",
+  "hatch-vcs>=0.4.0",
   "mypy==1.18.1",
+  "types-deprecated",
   "pympler>1,<2",
-  "setuptools>=80",
-  "types_deprecated",
-  "versioneer[toml]>=0.28",
+  "beartype>=0.20",
 ]
 
 [project]
@@ -75,12 +77,13 @@ test = [
 
 dev = [
   "click==8.1.2",
+  "hatch>=1.14.0",
+  "hatch-mypyc>=0.1.0",
   "inflect>=6.0.0",
   "Jinja2==3.1.5",
   "mypy==1.17.1; implementation_name!='pypy'",
   "redis>=4.2.0",
   "ruff",
-  "setuptools>=80",
   "types-deprecated",
   {include-group = "test"},
 ]
@@ -113,18 +116,49 @@ Source = "https://github.com/alisaifee/coredis"
 Changelog = "https://github.com/alisaifee/coredis/releases"
 Documentation = "https://coredis.readthedocs.org"
 
-[tool.setuptools]
-include-package-data = true
+[tool.hatch.version]
+source = "vcs"
 
-[tool.setuptools.package-data]
-coredis = ["py.typed"]
+[tool.hatch.build.targets.wheel]
+packages = ["coredis"]
 
-[tool.setuptools.dynamic]
-version = { attr = "versioneer.get_version" }
+[tool.hatch.build.hooks.vcs]
+version-file = "coredis/_version.py"
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["coredis*"]
+[tool.hatch.build.targets.wheel.hooks.mypyc]
+enable-by-default = false
+dependencies = [
+  "hatch-mypyc>=0.16.0",
+  "mypy==1.18.1",
+]
+require-runtime-dependencies = true
+include = [
+  "coredis/constants.py",
+  "coredis/parser.py",
+  "coredis/_packer.py",
+  "coredis/_utils.py",
+]
+mypy-args = [
+  "--ignore-missing-imports",
+  "--disable-error-code=import-untyped",
+  "--disable-error-code=no-redef",
+  "--disable-error-code=override",
+  "--disable-error-code=return-value",
+  "--disable-error-code=arg-type",
+  "--disable-error-code=assignment",
+  "--disable-error-code=index",
+  "--disable-error-code=union-attr",
+  "--disable-error-code=misc",
+  "--disable-error-code=type-arg",
+  "--disable-error-code=dict-item",
+  "--disable-error-code=call-overload",
+  "--disable-error-code=var-annotated",
+  "--disable-error-code=return",
+  "--disable-error-code=str-bytes-safe",
+  "--disable-error-code=type-var",
+  "--disable-error-code=typeddict-item"
+]
+options = { debug_level = "0" }
 
 [tool.mypy]
 strict = true
@@ -167,7 +201,7 @@ ignore_missing_imports = true
 
 [tool.ruff]
 line-length=100
-exclude = ["doc/**","_version.py","versioneer.py", "coredis/_py_312_typing.py"]
+exclude = ["doc/**","_version.py","coredis/_py_312_typing.py"]
 
 [tool.ruff.lint]
 typing-modules = ["coredis.typing"]
@@ -175,9 +209,11 @@ typing-modules = ["coredis.typing"]
 [tool.ruff.lint.isort]
 required-imports = ["from __future__ import annotations"]
 
-[tool.versioneer]
-VCS = "git"
-style = "pep440-pre"
-versionfile_source = "coredis/_version.py"
-versionfile_build = "coredis/_version.py"
-parentdir_prefix = "coredis-"
+[tool.cibuildwheel.environment]
+HATCH_BUILD_HOOKS_ENABLE = "1"
+MYPYC_OPT_LEVEL = "3"
+
+[tool.cibuildwheel.linux.environment]
+HATCH_BUILD_HOOKS_ENABLE = "1"
+MYPYC_OPT_LEVEL = "3"
+
