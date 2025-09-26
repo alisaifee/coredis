@@ -548,6 +548,8 @@ async def gather(*awaitables: Awaitable[T1]) -> tuple[T1, ...]: ...
 
 
 async def gather(*awaitables: Awaitable[Any]) -> tuple[Any, ...]:
+    if len(awaitables) == 1:
+        return (await awaitables[0],)
     results: list[Any] = [None] * len(awaitables)
 
     async def runner(awaitable: Awaitable[Any], i: int) -> None:
