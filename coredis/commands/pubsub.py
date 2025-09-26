@@ -11,7 +11,8 @@ from typing import TYPE_CHECKING, Any, cast
 import async_timeout
 from deprecated.sphinx import versionadded
 
-from coredis._utils import CaseAndEncodingInsensitiveEnum, b, hash_slot, nativestr
+from coredis._enum import CaseAndEncodingInsensitiveEnum
+from coredis._utils import b, hash_slot, nativestr
 from coredis.commands.constants import CommandName
 from coredis.connection import BaseConnection, Connection
 from coredis.exceptions import ConnectionError, PubSubError, TimeoutError
