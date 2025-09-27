@@ -306,8 +306,9 @@ class BaseConnection:
         """
         while True:
             decode = self._requests[0].decode if self._requests else self.decode_responses
+            encoding = self._requests[0].encoding if self._requests else self.encoding
             # Try to parse a complete response from already-fed bytes
-            response = self._parser.get_response(decode, self.encoding)
+            response = self._parser.get_response(decode, encoding)
             if isinstance(response, NotEnoughData):
                 # Need more bytes; read once, feed, and retry
                 with move_on_after(self.max_idle_time) as scope:
