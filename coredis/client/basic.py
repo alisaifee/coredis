@@ -10,7 +10,7 @@ from collections import defaultdict
 from ssl import SSLContext
 from typing import TYPE_CHECKING, Any, cast, overload
 
-from deprecated.sphinx import versionadded
+from deprecated.sphinx import versionadded, deprecated
 from packaging import version
 from packaging.version import InvalidVersion, Version
 
@@ -1125,6 +1125,10 @@ class Redis(Client[AnyStr]):
             self._decodecontext.set(prev_decode)
             self._encodingcontext.set(prev_encoding)
 
+    @deprecated(
+        "The implementation of a monitor will be removed in 6.0",
+        version="5.2.0"
+    )
     def monitor(
         self,
         response_handler: Callable[[MonitorResult], None] | None = None,
