@@ -6,8 +6,6 @@ from coredis import Redis
 from coredis.exceptions import CommandSyntaxError, ModuleCommandNotSupportedError
 from tests.conftest import module_targets
 
-pytestmark = pytest.mark.anyio
-
 
 @module_targets()
 class TestModuleCompatibility:

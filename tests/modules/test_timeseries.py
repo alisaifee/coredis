@@ -10,8 +10,6 @@ import pytest
 from coredis import PureToken, Redis
 from tests.conftest import module_targets
 
-pytestmark = pytest.mark.anyio
-
 
 @module_targets()
 class TestTimeseries:

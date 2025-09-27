@@ -7,8 +7,6 @@ import pytest
 from coredis import Redis
 from tests.conftest import module_targets
 
-pytestmark = pytest.mark.anyio
-
 
 @module_targets()
 class TestTopK:

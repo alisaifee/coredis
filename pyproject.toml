@@ -61,7 +61,6 @@ test = [
   "mock",
   "numpy",
   "pytest",
-  "pytest-asyncio",
   "pytest-cov",
   "pytest-env",
   "pytest-lazy-fixtures",

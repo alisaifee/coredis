@@ -14,8 +14,6 @@ from coredis.exceptions import (
     RedisError,
 )
 
-pytestmark = pytest.mark.anyio
-
 
 class TestConnectionPool:
     def get_pool(

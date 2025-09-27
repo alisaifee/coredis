@@ -4,8 +4,6 @@ import pytest
 
 from tests.conftest import targets
 
-pytestmark = pytest.mark.anyio
-
 
 @targets(
     "redis_basic",

@@ -6,8 +6,6 @@ import coredis
 from coredis.credentials import UserPassCredentialProvider
 from coredis.exceptions import AuthenticationError, ConnectionError
 
-pytestmark = pytest.mark.anyio
-
 
 @pytest.mark.parametrize(
     "username, password",

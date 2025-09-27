@@ -6,8 +6,6 @@ from coredis import PureToken
 from coredis.exceptions import CommandSyntaxError, ReadOnlyError, RedisError
 from tests.conftest import targets
 
-pytestmark = pytest.mark.anyio
-
 
 @targets(
     "redis_basic",

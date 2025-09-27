@@ -7,8 +7,6 @@ from coredis import PureToken
 from coredis._utils import gather
 from tests.conftest import server_deprecation_warning, targets
 
-pytestmark = pytest.mark.anyio
-
 
 @targets(
     "redis_basic",

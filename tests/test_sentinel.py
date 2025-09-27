@@ -13,8 +13,6 @@ from coredis.exceptions import (
 from coredis.sentinel import Sentinel, SentinelConnectionPool
 from tests.conftest import targets
 
-pytestmark = pytest.mark.anyio
-
 
 async def test_init_compose_sentinel(redis_sentinel: Sentinel):
     print(await redis_sentinel.discover_primary("mymaster"))

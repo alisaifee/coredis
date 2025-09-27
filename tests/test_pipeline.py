@@ -16,8 +16,6 @@ from coredis.exceptions import (
 from coredis.typing import Serializable
 from tests.conftest import targets
 
-pytestmark = pytest.mark.anyio
-
 
 @targets(
     "redis_basic",
