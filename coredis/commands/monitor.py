@@ -17,10 +17,8 @@ if TYPE_CHECKING:
 
 MonitorT = TypeVar("MonitorT", bound="Monitor[Any]")
 
-@deprecated(
-    "The implementation of a monitor will be removed in 6.0",
-    version="5.2.0"
-)
+
+@deprecated("The implementation of a monitor will be removed in 6.0", version="5.2.0")
 class Monitor(Generic[AnyStr]):
     """
     Monitor is useful for handling the ``MONITOR`` command to the redis server.
