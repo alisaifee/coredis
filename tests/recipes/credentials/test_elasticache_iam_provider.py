@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import pytest
 from moto import mock_aws
 
 from coredis.recipes.credentials import ElastiCacheIAMProvider
+
+pytestmark = pytest.mark.anyio
 
 
 class TestElastiCacheIAMProvider:

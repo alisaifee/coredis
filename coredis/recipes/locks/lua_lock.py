@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import contextvars
 import importlib.resources
 import math
@@ -9,6 +8,8 @@ import uuid
 import warnings
 from types import TracebackType
 from typing import cast
+
+from anyio import sleep
 
 from coredis.client import Redis, RedisCluster
 from coredis.commands import Script
@@ -28,7 +29,7 @@ with warnings.catch_warnings():
     RELEASE_SCRIPT = Script(script=importlib.resources.read_text(__package__, "release.lua"))
 
 
-class LuaLock(Generic[AnyStr]):
+class Lock(Generic[AnyStr]):
     """
     A shared, distributed Lock using LUA scripts.
 
@@ -129,7 +130,7 @@ class LuaLock(Generic[AnyStr]):
 
     async def __aenter__(
         self,
-    ) -> LuaLock[AnyStr]:
+    ) -> Lock[AnyStr]:
         if await self.acquire():
             return self
         raise LockAcquisitionError("Could not acquire lock")
@@ -173,7 +174,7 @@ class LuaLock(Generic[AnyStr]):
 
             if stop_trying_at is not None and time.time() > stop_trying_at:
                 return False
-            await asyncio.sleep(self.sleep)
+            await sleep(self.sleep)
 
     async def release(self) -> None:
         """

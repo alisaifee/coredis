@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import asyncio
 import datetime
 
+import anyio
 import pytest
 from pytest import approx
 
@@ -11,6 +11,8 @@ from coredis.exceptions import ConnectionError, ReadOnlyError, RedisError, Respo
 from coredis.tokens import PrefixToken
 from coredis.typing import RedisCommand
 from tests.conftest import targets
+
+pytestmark = pytest.mark.anyio
 
 
 @targets(
@@ -337,7 +339,7 @@ class TestServer:
     @pytest.mark.xfail
     async def test_quit(self, client):
         assert await client.quit()
-        await asyncio.sleep(0.1)
+        await anyio.sleep(0.1)
         assert not client.connection_pool.peek_available().is_connected
 
 

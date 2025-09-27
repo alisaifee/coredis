@@ -6242,7 +6242,6 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :return: The SHA1 digest of the script added into the script cache
         """
-
         return self.create_request(
             CommandName.SCRIPT_LOAD, script, callback=AnyStrCallback[AnyStr]()
         )

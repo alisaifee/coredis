@@ -9,6 +9,8 @@ from coredis.exceptions import ResponseError
 from coredis.modules.response.types import GraphNode, GraphQueryResult
 from tests.conftest import module_targets
 
+pytestmark = pytest.mark.anyio
+
 
 @module_targets()
 @pytest.mark.max_server_version("7.0.0")
