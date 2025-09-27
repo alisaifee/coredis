@@ -522,7 +522,8 @@ class BaseConnection:
             no_reply=bool(self.noreply_set or noreply),
         )
         async with self._write_lock:
-            self._requests.append(request)
+            if not (self.noreply or noreply):
+                self._requests.append(request)
             await self._send_packed_command(cmd_list, timeout=request_timeout)
         return request
 
