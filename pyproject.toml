@@ -117,6 +117,10 @@ Documentation = "https://coredis.readthedocs.org"
 [tool.hatch.version]
 source = "vcs"
 
+[tool.hatch.version.raw-options]
+version_scheme = "no-guess-dev"
+local_scheme = "no-local-version"
+
 [tool.hatch.build.targets.wheel]
 packages = ["coredis"]
 
