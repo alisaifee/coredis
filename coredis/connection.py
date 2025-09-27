@@ -10,6 +10,7 @@ import time
 import warnings
 from abc import abstractmethod
 from collections import defaultdict, deque
+from enum import IntFlag
 from typing import TYPE_CHECKING, Any, Generator, cast
 
 from anyio import (
@@ -61,6 +62,17 @@ R = TypeVar("R")
 if TYPE_CHECKING:
     from coredis.pool.basic import ConnectionPool
     from coredis.pool.nodemanager import ManagedNode
+
+
+class ConnectionMode(IntFlag):
+    """
+    Represents state of connection.
+    Zero means normal, 5 means blocking & pubsub, etc.
+    """
+
+    BLOCKING = 1
+    PIPELINE = 2
+    PUBSUB = 4
 
 
 @dataclasses.dataclass
@@ -218,12 +230,7 @@ class BaseConnection:
 
         self._requests: deque[Request] = deque()
         self._write_lock = Lock()
-        #: used for blocking commands like XREAD; these need a 100% dedicated connection
-        self.blocked = False
-        #: used for pipelines, which are mostly blocking but can coexist with a pubsub
-        self.pipeline = False
-        #: used for pubsub, since we can't do two pubsubs on the same connection
-        self.pubsub = False
+        self._mode = 0
         #: used for normal commands, to ensure they're sent (but not necessarily received)
         self.pending = 0
 
@@ -240,7 +247,7 @@ class BaseConnection:
 
     @property
     def available(self) -> bool:
-        return len(self._requests) < MAX_REQUESTS_PER_CONNECTION and not self.blocked
+        return len(self._requests) < MAX_REQUESTS_PER_CONNECTION
 
     @property
     def connection(self) -> ByteStream:
@@ -288,9 +295,12 @@ class BaseConnection:
                     if inspect.isawaitable(task):
                         await task
                 task_status.started()
+        except Exception as e:
+            logger.exception("Connection closed unexpectedly!")
+            self._last_error = e
         finally:
             self._parser.on_disconnect()
-            disconnect_exc = self._last_error or ConnectionError("connection lost")
+            disconnect_exc = self._last_error or ConnectionError("Connection lost!")
             while self._requests:
                 request = self._requests.popleft()
                 if not request._event.is_set():

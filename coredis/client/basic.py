@@ -8,7 +8,7 @@ from collections import defaultdict
 from ssl import SSLContext
 from typing import TYPE_CHECKING, Any, cast, overload
 
-from anyio import AsyncContextManagerMixin, create_task_group
+from anyio import AsyncContextManagerMixin
 from deprecated.sphinx import versionadded
 from packaging import version
 from packaging.version import InvalidVersion, Version
@@ -27,6 +27,7 @@ from coredis.commands.sentinel import SentinelCommands
 from coredis.config import Config
 from coredis.connection import (
     BaseConnection,
+    ConnectionMode,
     RedisSSLContext,
     UnixDomainSocketConnection,
 )
@@ -275,25 +276,28 @@ class Client(
                 self.verify_version = False
                 self.server_version = None
 
-    async def _ensure_wait(self, command: RedisCommandP, connection: BaseConnection) -> None:
+    async def _ensure_wait_and_persist(
+        self, command: RedisCommandP, connection: BaseConnection
+    ) -> None:
         wait = self._waitcontext.get()
-        if not wait or wait[0] <= 0:
-            return
-
-        request = await connection.create_request(CommandName.WAIT, *wait, decode=False)
-        result = await request
-        if not cast(int, result) >= wait[0]:
-            raise ReplicationError(command.name, wait[0], wait[1])
-
-    async def _ensure_persistence(self, command: RedisCommandP, connection: BaseConnection) -> None:
         waitaof = self._waitaof_context.get()
-        if not waitaof or waitaof[0] <= 0:
-            return
+        wait_request = None
+        aof_request = None
+        if wait and wait[0] > 0:
+            wait_request = await connection.create_request(CommandName.WAIT, *wait, decode=False)
 
-        request = await connection.create_request(CommandName.WAITAOF, *waitaof, decode=False)
-        result = cast(tuple[int, int], await request)
-        if not (result[0] >= waitaof[0] and result[1] >= waitaof[1]):
-            raise PersistenceError(command.name, *waitaof)
+        if waitaof and waitaof[0] > 0:
+            aof_request = await connection.create_request(
+                CommandName.WAITAOF, *waitaof, decode=False
+            )
+        if wait_request and wait:
+            wait_result = await wait_request
+            if not cast(int, wait_result) >= wait[0]:
+                raise ReplicationError(command.name, wait[0], wait[1])
+        if aof_request and waitaof:
+            aof_result = cast(tuple[int, int], await aof_request)
+            if not (aof_result[0] >= waitaof[0] and aof_result[1] >= waitaof[1]):
+                raise PersistenceError(command.name, *waitaof)
 
     async def _populate_module_versions(self) -> None:
         if self.noreply or getattr(self, "_module_info", None) is not None:
@@ -956,89 +960,160 @@ class Redis(Client[AnyStr]):
             lambda: self._execute_command(command, callback=callback, **options),
         )
 
-    async def _execute_command(
+    async def _execute_blocking(
         self,
         command: RedisCommandP,
         callback: Callable[..., R] = NoopCallback(),
         **options: Unpack[ExecutionParameters],
     ) -> R:
         pool = self.connection_pool
+        async with pool.acquire(mode=ConnectionMode.BLOCKING) as connection:
+            try:
+                keys = KeySpec.extract_keys(command.name, *command.arguments)
+                cacheable = (
+                    command.name in CACHEABLE_COMMANDS
+                    and len(keys) == 1
+                    and not self.noreply
+                    and self._decodecontext.get() is None
+                )
+                cached_reply = None
+                cache_hit = False
+                use_cached = False
+                reply = None
+                if self.cache:
+                    if connection.tracking_client_id != self.cache.get_client_id(connection):  # type: ignore
+                        self.cache.reset()  # type: ignore
+                        await connection.update_tracking_client(
+                            True,
+                            self.cache.get_client_id(connection),  # type: ignore
+                        )
+                    if command.name not in READONLY_COMMANDS:
+                        self.cache.invalidate(*keys)
+                    elif cacheable:
+                        try:
+                            cached_reply = cast(
+                                R,
+                                self.cache.get(
+                                    command.name,
+                                    keys[0],
+                                    *command.arguments,
+                                ),
+                            )
+                            use_cached = random.random() * 100.0 < min(100.0, self.cache.confidence)
+                            cache_hit = True
+                        except KeyError:
+                            pass
+                if not (use_cached and cached_reply):
+                    request = await connection.create_request(
+                        command.name,
+                        *command.arguments,
+                        noreply=self.noreply,
+                        decode=options.get("decode", self._decodecontext.get()),
+                        encoding=self._encodingcontext.get(),
+                    )
+                    reply = await request
+                    await self._ensure_wait_and_persist(command, connection)
+                    if self.noreply:
+                        return None  # type: ignore
+                    if isinstance(callback, AsyncPreProcessingCallback):
+                        await callback.pre_process(self, reply)
+                if self.cache and cacheable:
+                    if cache_hit and not use_cached:
+                        self.cache.feedback(
+                            command.name, keys[0], *command.arguments, match=cached_reply == reply
+                        )
+                    if not cache_hit:
+                        self.cache.put(
+                            command.name,
+                            keys[0],
+                            *command.arguments,
+                            value=reply,
+                        )
+                return callback(cached_reply if cache_hit else reply, version=self.protocol_version)
+            finally:
+                self._ensure_server_version(connection.server_version)
+
+    async def _execute_command(
+        self,
+        command: RedisCommandP,
+        callback: Callable[..., R] = NoopCallback(),
+        **options: Unpack[ExecutionParameters],
+    ) -> R:
         quick_release = self.should_quick_release(command)
         should_block = not quick_release or self.requires_wait or self.requires_waitaof
-        connection = await pool.acquire(blocking=should_block)
+        if should_block:
+            return await self._execute_blocking(command, callback, **options)
+        pool = self.connection_pool
         released = False
-        try:
-            keys = KeySpec.extract_keys(command.name, *command.arguments)
-            cacheable = (
-                command.name in CACHEABLE_COMMANDS
-                and len(keys) == 1
-                and not self.noreply
-                and self._decodecontext.get() is None
-            )
-            cached_reply = None
-            cache_hit = False
-            use_cached = False
-            reply = None
-            if self.cache:
-                if connection.tracking_client_id != self.cache.get_client_id(connection):  # type: ignore
-                    self.cache.reset()  # type: ignore
-                    await connection.update_tracking_client(
-                        True,
-                        self.cache.get_client_id(connection),  # type: ignore
-                    )
-                if command.name not in READONLY_COMMANDS:
-                    self.cache.invalidate(*keys)
-                elif cacheable:
-                    try:
-                        cached_reply = cast(
-                            R,
-                            self.cache.get(
-                                command.name,
-                                keys[0],
-                                *command.arguments,
-                            ),
-                        )
-                        use_cached = random.random() * 100.0 < min(100.0, self.cache.confidence)
-                        cache_hit = True
-                    except KeyError:
-                        pass
-            if not (use_cached and cached_reply):
-                request = await connection.create_request(
-                    command.name,
-                    *command.arguments,
-                    noreply=self.noreply,
-                    decode=options.get("decode", self._decodecontext.get()),
-                    encoding=self._encodingcontext.get(),
+        async with pool.acquire() as connection:
+            try:
+                keys = KeySpec.extract_keys(command.name, *command.arguments)
+                cacheable = (
+                    command.name in CACHEABLE_COMMANDS
+                    and len(keys) == 1
+                    and not self.noreply
+                    and self._decodecontext.get() is None
                 )
-                connection.pending -= 1
-                released = True
-                reply = await request
-                async with create_task_group() as tg:
-                    tg.start_soon(self._ensure_wait, command, connection)
-                    tg.start_soon(self._ensure_persistence, command, connection)
-                if self.noreply:
-                    return None  # type: ignore
-                if isinstance(callback, AsyncPreProcessingCallback):
-                    await callback.pre_process(self, reply)
-            if self.cache and cacheable:
-                if cache_hit and not use_cached:
-                    self.cache.feedback(
-                        command.name, keys[0], *command.arguments, match=cached_reply == reply
-                    )
-                if not cache_hit:
-                    self.cache.put(
+                cached_reply = None
+                cache_hit = False
+                use_cached = False
+                reply = None
+                if self.cache:
+                    if connection.tracking_client_id != self.cache.get_client_id(connection):  # type: ignore
+                        self.cache.reset()  # type: ignore
+                        await connection.update_tracking_client(
+                            True,
+                            self.cache.get_client_id(connection),  # type: ignore
+                        )
+                    if command.name not in READONLY_COMMANDS:
+                        self.cache.invalidate(*keys)
+                    elif cacheable:
+                        try:
+                            cached_reply = cast(
+                                R,
+                                self.cache.get(
+                                    command.name,
+                                    keys[0],
+                                    *command.arguments,
+                                ),
+                            )
+                            use_cached = random.random() * 100.0 < min(100.0, self.cache.confidence)
+                            cache_hit = True
+                        except KeyError:
+                            pass
+                if not (use_cached and cached_reply):
+                    request = await connection.create_request(
                         command.name,
-                        keys[0],
                         *command.arguments,
-                        value=reply,
+                        noreply=self.noreply,
+                        decode=options.get("decode", self._decodecontext.get()),
+                        encoding=self._encodingcontext.get(),
                     )
-            return callback(cached_reply if cache_hit else reply, version=self.protocol_version)
-        finally:
-            self._ensure_server_version(connection.server_version)
-            if should_block:
-                connection.blocked = False
-            if not released:
-                connection.pending -= 1
+                    connection.pending -= 1
+                    released = True
+                    reply = await request
+                    await self._ensure_wait_and_persist(command, connection)
+                    if self.noreply:
+                        return None  # type: ignore
+                    if isinstance(callback, AsyncPreProcessingCallback):
+                        await callback.pre_process(self, reply)
+                if self.cache and cacheable:
+                    if cache_hit and not use_cached:
+                        self.cache.feedback(
+                            command.name, keys[0], *command.arguments, match=cached_reply == reply
+                        )
+                    if not cache_hit:
+                        self.cache.put(
+                            command.name,
+                            keys[0],
+                            *command.arguments,
+                            value=reply,
+                        )
+                return callback(cached_reply if cache_hit else reply, version=self.protocol_version)
+            finally:
+                self._ensure_server_version(connection.server_version)
+                if not released:
+                    connection.pending -= 1
 
     @overload
     def decoding(

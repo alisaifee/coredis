@@ -1,7 +1,7 @@
 [build-system]
 build-backend = "hatchling.build"
 requires = [
-  "async_timeout>4,<6",
+  "anyio>=4.11.0",
   "hatchling>=1.14.0",
   "hatch-mypyc>=0.1.0",
   "hatch-vcs>=0.4.0",
@@ -38,13 +38,12 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-  "async_timeout>4,<6",
+  "anyio>=4.11.0",
   "beartype>=0.20",
   "deprecated>=1.2",
   "typing_extensions>=4.13",
   "packaging>=21,<26",
   "pympler>1,<2",
-  "anyio>=4.11.0",
 ]
 
 [project.optional-dependencies]
@@ -118,6 +117,10 @@ Documentation = "https://coredis.readthedocs.org"
 
 [tool.hatch.version]
 source = "vcs"
+
+[tool.hatch.version.raw-options]
+version_scheme = "no-guess-dev"
+local_scheme = "no-local-version"
 
 [tool.hatch.build.targets.wheel]
 packages = ["coredis"]

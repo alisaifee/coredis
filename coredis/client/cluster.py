@@ -11,7 +11,7 @@ from abc import ABCMeta
 from ssl import SSLContext
 from typing import TYPE_CHECKING, Any, cast, overload
 
-from anyio import create_task_group, get_cancelled_exc_class, sleep
+from anyio import get_cancelled_exc_class, sleep
 from deprecated.sphinx import versionadded
 
 from coredis._utils import b, hash_slot
@@ -984,9 +984,7 @@ class RedisCluster(
                         self.connection_pool.release(r)
 
                     reply = await request
-                    async with create_task_group() as tg:
-                        tg.start_soon(self._ensure_wait, command, r)
-                        tg.start_soon(self._ensure_persistence, command, r)
+                    await self._ensure_wait_and_persist(command, r)
                 if self.noreply:
                     return  # type: ignore
                 else:

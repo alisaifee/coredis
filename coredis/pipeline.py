@@ -11,7 +11,7 @@ from typing import Any, AsyncGenerator, cast
 from anyio import sleep
 from deprecated.sphinx import deprecated
 
-from coredis._utils import b, hash_slot, logger, nativestr
+from coredis._utils import b, hash_slot, nativestr
 from coredis.client import Client, RedisCluster
 from coredis.commands import CommandRequest, CommandResponseT
 from coredis.commands._key_spec import KeySpec
@@ -22,6 +22,7 @@ from coredis.connection import (
     BaseConnection,
     ClusterConnection,
     CommandInvocation,
+    ConnectionMode,
     Request,
 )
 from coredis.exceptions import (
@@ -382,6 +383,8 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
     and its instance is placed into the response list returned by :meth:`execute`
     """
 
+    QUEUED_RESPONSES = {b"QUEUED", "QUEUED"}
+
     def __init__(
         self,
         client: Client[AnyStr],
@@ -415,13 +418,9 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         pool = self.client.connection_pool
-        self._connection = await pool.acquire(pipeline=True)
-        yield self
-        await self._execute()
-        self.connection.pipeline = False
-        if pool.blocking:
-            async with pool._condition:
-                pool._condition.notify_all()
+        async with pool.acquire(mode=ConnectionMode.PIPELINE) as self._connection:
+            yield self
+            await self._execute()
 
     def __len__(self) -> int:
         return len(self.command_stack)
@@ -587,13 +586,15 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
             errors.append((0, e))
 
         # and all the other commands
-        for i, cmd in enumerate(commands[1:-1]):
+        for i, cmd in enumerate(commands):
             try:
-                if (resp := await requests[i]) not in {b"QUEUED", "QUEUED"}:
-                    logger.warning(f"Abnormal response in pipeline: {resp!r}")
+                if (resp := await requests[i + 1]) not in self.QUEUED_RESPONSES:
+                    raise Exception(
+                        f"Abnormal response in pipeline for command {cmd.name!r}: {resp!r}"
+                    )
             except RedisError as e:
                 self.annotate_exception(e, i + 1, cmd.name, cmd.arguments)
-                errors.append((i, e))
+                errors.append((i + 1, e))
 
         try:
             response = cast(list[ResponseType] | None, await requests[-1])

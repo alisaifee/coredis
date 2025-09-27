@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import enum
 import logging
 from collections import UserDict
 from typing import Any, Awaitable, overload

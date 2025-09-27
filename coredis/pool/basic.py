@@ -6,13 +6,14 @@ from ssl import SSLContext, VerifyMode
 from typing import Any, AsyncGenerator, Generator, cast
 from urllib.parse import parse_qs, unquote, urlparse
 
-from anyio import AsyncContextManagerMixin, Condition, create_task_group, sleep
+from anyio import AsyncContextManagerMixin, Condition, create_task_group
 from typing_extensions import Self
 
 from coredis._utils import query_param_to_bool
 from coredis.connection import (
     BaseConnection,
     Connection,
+    ConnectionMode,
     RedisSSLContext,
     UnixDomainSocketConnection,
 )
@@ -23,7 +24,9 @@ _CPT = TypeVar("_CPT", bound="ConnectionPool")
 
 
 class ConnectionPool(AsyncContextManagerMixin):
-    """Generic connection pool"""
+    """
+    Generic connection pool
+    """
 
     #: Mapping of querystring arguments to their parser functions
     URL_QUERY_ARGUMENT_PARSERS: ClassVar[
@@ -182,7 +185,7 @@ class ConnectionPool(AsyncContextManagerMixin):
         *,
         connection_class: type[BaseConnection] | None = None,
         max_connections: int | None = None,
-        max_idle_time: int | None = None,
+        max_idle_time: int | None = 300,
         idle_check_interval: int = 1,
         blocking: bool = False,
         **connection_kwargs: Any,
@@ -220,58 +223,54 @@ class ConnectionPool(AsyncContextManagerMixin):
         return f"{type(self).__name__}<{self.connection_class.describe(self.connection_kwargs)}>"
 
     def get_connection_for_pipeline(self) -> Generator[BaseConnection, None, None]:
-        return (c for c in self._connections if c.available and not c.pipeline and c.pending == 0)
+        return (c for c in self._connections if c.available and not c._mode & 3 and c.pending == 0)
 
     def get_connection_for_pubsub(self) -> Generator[BaseConnection, None, None]:
-        return (c for c in self._connections if c.available and not c.pubsub)
+        return (c for c in self._connections if c.available and not c._mode & 5)
 
     def get_connection_for_blocking(self) -> Generator[BaseConnection, None, None]:
-        return (
-            c
-            for c in self._connections
-            if c.available and not c.pubsub and not c.pipeline and c.pending == 0
-        )
+        return (c for c in self._connections if c.available and not c._mode and c.pending == 0)
 
     def get_connection(self) -> Generator[BaseConnection, None, None]:
-        return (c for c in self._connections if c.available and not c.pipeline)
+        return (c for c in self._connections if c.available and not c._mode & 3)
 
-    async def acquire(
-        self, blocking: bool = False, pipeline: bool = False, pubsub: bool = False
-    ) -> BaseConnection:
+    @asynccontextmanager
+    async def acquire(self, mode: ConnectionMode | None = None) -> AsyncGenerator[BaseConnection]:
         """
         Gets a connection from the pool, or creates a new one if all are busy.
         """
-        if pipeline:  # if connection has a pubsub it's fine
+        if mode == ConnectionMode.PIPELINE:  # if connection has a pubsub it's fine
             gen = self.get_connection_for_pipeline
-        elif pubsub:  # can't have two pubsubs on one connection
+        elif mode == ConnectionMode.PUBSUB:  # can't have two pubsubs on one connection
             gen = self.get_connection_for_pubsub
-        elif blocking:  # needs completely dedicated connection
+        elif mode == ConnectionMode.BLOCKING:  # needs completely dedicated connection
             gen = self.get_connection_for_blocking
         else:  # normal commands
             gen = self.get_connection
         while not (connection := next(gen(), None)):
             if len(self._connections) >= self.max_connections:
-                if self.blocking:  # wait for a connection to become available
-                    async with self._condition:
-                        await self._condition.wait()
-                else:
+                if not self.blocking:
                     raise ConnectionError("Too many connections")
+                async with self._condition:  # wait for a connection to become available
+                    await self._condition.wait()
             else:
                 connection = self.connection_class(**self.connection_kwargs)
                 await self._task_group.start(connection.run, self)
                 self._connections.add(connection)
                 break
-        if blocking:
-            # set flag until the connection becomes unblocked
-            connection.blocked = True
-        elif pipeline:
-            # set flag until the pipeline is done
-            connection.pipeline = True
-        elif pubsub:
-            # set flag until the pubsub is closed
-            connection.pubsub = True
-        else:
-            # increment counter until the command is sent
+        if mode is not None:
+            connection._mode |= mode
+        else:  # increment counter until the command is sent
             connection.pending += 1
-        await sleep(0)  # checkpoint
-        return connection
+        try:
+            yield connection
+        except BaseException:
+            if connection in self._connections:
+                self._connections.remove(connection)
+            raise
+        finally:
+            if mode is not None:
+                connection._mode ^= mode
+                if self.blocking:
+                    async with self._condition:
+                        self._condition.notify_all()

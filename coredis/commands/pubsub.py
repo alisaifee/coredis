@@ -16,10 +16,9 @@ from anyio import (
 )
 from deprecated.sphinx import versionadded
 
-from coredis._enum import CaseAndEncodingInsensitiveEnum
 from coredis._utils import b, hash_slot, nativestr
 from coredis.commands.constants import CommandName
-from coredis.connection import BaseConnection, Connection
+from coredis.connection import BaseConnection, Connection, ConnectionMode
 from coredis.exceptions import ConnectionError, PubSubError, TimeoutError
 from coredis.parser import (
     PUBLISH_MESSAGE_TYPES,
@@ -121,9 +120,11 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        async with create_task_group() as tg:
-            # initialize subscriptions and connection
-            self._connection = await self.connection_pool.acquire(pubsub=True)
+        async with (
+            create_task_group() as tg,
+            self.connection_pool.acquire(mode=ConnectionMode.PUBSUB) as self._connection,
+        ):
+            # initialize subscriptions
             if self._initial_channel_subscriptions:
                 await self.subscribe(**self._initial_channel_subscriptions)
             if self._initial_pattern_subscriptions:
@@ -134,10 +135,6 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
             tg.cancel_scope.cancel()
             await self.unsubscribe()
             await self.punsubscribe()
-            self.connection.pubsub = False
-            if self.connection_pool.blocking:
-                async with self.connection_pool._condition:
-                    self.connection_pool._condition.notify_all()
 
     async def psubscribe(
         self,
