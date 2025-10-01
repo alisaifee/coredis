@@ -195,3 +195,9 @@ class TestVectorSets:
         assert set(await client.vrandmember("sample", count=100)) == all_elements
         assert None is await client.vrandmember("missing")
         assert () == await client.vrandmember("missing", 10)
+
+    @pytest.mark.min_server_version("8.2")
+    async def test_vismember(self, client, sample_data, _s):
+        assert await client.vismember("sample", "a1")
+        assert not await client.vismember("sample", "x1")
+        assert not await client.vismember("xample", "x1")

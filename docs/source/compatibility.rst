@@ -3826,14 +3826,22 @@ Return one or multiple random members from a vector set
 
 
 
-VISMEMBER [X]
-*************
+VISMEMBER
+*********
 
 Check if an element exists in a vector set
 
 - Documentation: `VISMEMBER <https://redis.io/commands/vismember>`_
+- Implementation: :meth:`~coredis.Redis.vismember`
 
-- Not Implemented
+- New in redis: 8.2.0
+
+
+
+- .. versionadded:: 5.2.0
+
+
+
 
 
 

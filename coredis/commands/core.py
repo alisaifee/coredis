@@ -8398,3 +8398,21 @@ class CoreCommands(CommandMixin[AnyStr]):
             *command_arguments,
             callback=ItemOrTupleCallback[AnyStr | None](),
         )
+
+    @versionadded(version="5.2.0")
+    @redis_command(CommandName.VISMEMBER, version_introduced="8.2.0", group=CommandGroup.VECTOR_SET)
+    def vismember(self, key: KeyT, element: StringT) -> CommandRequest[bool]:
+        """
+        Check if an element exists in a vector set
+
+        :param key: The key containing the vector set
+        :param element: The element to check for membership
+
+
+        """
+        return self.create_request(
+            CommandName.VISMEMBER,
+            key,
+            element,
+            callback=BoolCallback(),
+        )
