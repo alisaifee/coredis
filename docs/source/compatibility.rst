@@ -3042,6 +3042,26 @@ Deletes messages from the beginning of a stream.
 
 
 
+XACKDEL [X]
+***********
+
+Acknowledges and deletes one or multiple messages for a stream consumer group.
+
+- Documentation: `XACKDEL <https://redis.io/commands/xackdel>`_
+
+- Not Implemented
+
+
+XDELEX [X]
+**********
+
+Deletes one or multiple entries from the stream.
+
+- Documentation: `XDELEX <https://redis.io/commands/xdelex>`_
+
+- Not Implemented
+
+
 
 
 
@@ -3629,7 +3649,7 @@ Add one or more elements to a vector set, or update its vector if it already exi
 VREM
 ****
 
-Remove one or more elements from a vector set
+Remove an element from a vector set
 
 - Documentation: `VREM <https://redis.io/commands/vrem>`_
 - Implementation: :meth:`~coredis.Redis.vrem`
@@ -3804,6 +3824,16 @@ Return one or multiple random members from a vector set
 
 
 
+
+
+VISMEMBER [X]
+*************
+
+Check if an element exists in a vector set
+
+- Documentation: `VISMEMBER <https://redis.io/commands/vismember>`_
+
+- Not Implemented
 
 
 
@@ -5604,6 +5634,16 @@ CLUSTER MYSHARDID [X]
 Returns the shard ID of a node.
 
 - Documentation: `CLUSTER MYSHARDID <https://redis.io/commands/cluster-myshardid>`_
+
+- Not Implemented
+
+
+CLUSTER SLOT-STATS [X]
+**********************
+
+Return an array of slot usage statistics for slots assigned to the current node.
+
+- Documentation: `CLUSTER SLOT-STATS <https://redis.io/commands/cluster-slot-stats>`_
 
 - Not Implemented
 
