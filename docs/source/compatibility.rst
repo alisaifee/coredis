@@ -2764,6 +2764,24 @@ Returns the number of messages that were successfully acknowledged by the consum
 
 
 
+XACKDEL
+*******
+
+Acknowledges and deletes one or multiple messages for a stream consumer group.
+
+- Documentation: `XACKDEL <https://redis.io/commands/xackdel>`_
+- Implementation: :meth:`~coredis.Redis.xackdel`
+
+- New in redis: 8.2.0
+
+
+
+- .. versionadded:: 5.2.0
+
+
+
+
+
 XADD
 ****
 
@@ -2819,6 +2837,24 @@ Returns the number of messages after removing them from a stream.
 - Implementation: :meth:`~coredis.Redis.xdel`
 
 
+
+
+
+
+
+XDELEX
+******
+
+Deletes one or multiple entries from the stream.
+
+- Documentation: `XDELEX <https://redis.io/commands/xdelex>`_
+- Implementation: :meth:`~coredis.Redis.xdelex`
+
+- New in redis: 8.2.0
+
+
+
+- .. versionadded:: 5.2.0
 
 
 
@@ -3040,26 +3076,6 @@ Deletes messages from the beginning of a stream.
 
 
 
-
-
-XACKDEL [X]
-***********
-
-Acknowledges and deletes one or multiple messages for a stream consumer group.
-
-- Documentation: `XACKDEL <https://redis.io/commands/xackdel>`_
-
-- Not Implemented
-
-
-XDELEX [X]
-**********
-
-Deletes one or multiple entries from the stream.
-
-- Documentation: `XDELEX <https://redis.io/commands/xdelex>`_
-
-- Not Implemented
 
 
 
