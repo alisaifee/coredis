@@ -3,6 +3,28 @@
 Changelog
 =========
 
+v5.2.0
+------
+Release Date: 2025-10-01
+
+* Feature
+
+  * Add support for new stream commands (``xackdel`` & ``xdelex``)
+    in redis 8.2
+  * Add ``vismember`` command for vector sets
+
+* Bug Fix
+
+  * Allow client to gracefully proceed when modules can't be
+    enumerated due to ACL restrictions
+
+* Development
+
+  * Switch entirely to pyproject.toml for project metadata
+  * Use hatch for build
+  * Use uv for development environment
+
+
 v5.1.0
 ------
 Release Date: 2025-09-10
@@ -2009,4 +2031,5 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
