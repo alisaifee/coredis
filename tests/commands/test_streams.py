@@ -514,3 +514,39 @@ class TestStreams:
 
         assert 1 == await client.xdel("test_stream", [entry])
         assert 0 == await client.xdel("test_stream", [entry])
+
+    @pytest.mark.min_server_version("8.2")
+    async def test_xackdel(self, client, _s):
+        ids = []
+
+        for i in range(4):
+            ids.append(await client.xadd("test_stream", {"k1": i}))
+
+        await client.xgroup_create("test_stream", "group", "0")
+
+        await client.xreadgroup("group", "consumer", {"test_stream": ">"})
+
+        assert await client.xackdel("missing_stream", "group", [ids[0]]) == (-1,)
+
+        assert await client.xackdel("test_stream", "group", [ids[0]]) == (1,)
+        assert await client.xackdel("test_stream", "group", [ids[0]]) == (-1,)
+
+        assert await client.xackdel("test_stream", "group", [ids[1]], PureToken.KEEPREF) == (1,)
+        assert await client.xackdel("test_stream", "group", [ids[2]], PureToken.DELREF) == (1,)
+        assert await client.xackdel("test_stream", "group", [ids[3]], PureToken.ACKED) == (1,)
+
+    @pytest.mark.min_server_version("8.2")
+    async def test_delex(self, client, _s):
+        ids = []
+
+        for i in range(4):
+            ids.append(await client.xadd("test_stream", {"k1": i}))
+
+        assert await client.xdelex("missing_stream", [ids[0]]) == (-1,)
+
+        assert await client.xdelex("test_stream", [ids[0]]) == (1,)
+        assert await client.xdelex("test_stream", [ids[0]]) == (-1,)
+
+        assert await client.xdelex("test_stream", [ids[1]], PureToken.KEEPREF) == (1,)
+        assert await client.xdelex("test_stream", [ids[2]], PureToken.DELREF) == (1,)
+        assert await client.xdelex("test_stream", [ids[3]], PureToken.ACKED) == (1,)

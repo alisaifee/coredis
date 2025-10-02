@@ -65,7 +65,29 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``BITOP``
+    ANDOR = b"ANDOR"
+
+    #: Used by:
+    #:
+    #:  - ``BITOP``
+    DIFF = b"DIFF"
+
+    #: Used by:
+    #:
+    #:  - ``BITOP``
+    DIFF1 = b"DIFF1"
+
+    #: Used by:
+    #:
+    #:  - ``BITOP``
     NOT = b"NOT"
+
+    #: Used by:
+    #:
+    #:  - ``BITOP``
+    #:  - ``REPLICAOF``
+    #:  - ``SLAVEOF``
+    ONE = b"ONE"
 
     #: Used by:
     #:
@@ -267,6 +289,36 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``CLUSTER SLOT-STATS``
+    #:  - ``FT.AGGREGATE``
+    #:  - ``FT.SEARCH``
+    #:  - ``GEORADIUS``
+    #:  - ``GEORADIUSBYMEMBER``
+    #:  - ``GEORADIUSBYMEMBER_RO``
+    #:  - ``GEORADIUS_RO``
+    #:  - ``GEOSEARCH``
+    #:  - ``GEOSEARCHSTORE``
+    #:  - ``SORT``
+    #:  - ``SORT_RO``
+    ASC = b"ASC"
+
+    #: Used by:
+    #:
+    #:  - ``CLUSTER SLOT-STATS``
+    #:  - ``FT.AGGREGATE``
+    #:  - ``FT.SEARCH``
+    #:  - ``GEORADIUS``
+    #:  - ``GEORADIUSBYMEMBER``
+    #:  - ``GEORADIUSBYMEMBER_RO``
+    #:  - ``GEORADIUS_RO``
+    #:  - ``GEOSEARCH``
+    #:  - ``GEOSEARCHSTORE``
+    #:  - ``SORT``
+    #:  - ``SORT_RO``
+    DESC = b"DESC"
+
+    #: Used by:
+    #:
     #:  - ``COPY``
     #:  - ``FUNCTION LOAD``
     #:  - ``FUNCTION RESTORE``
@@ -437,34 +489,6 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
-    #:  - ``FT.AGGREGATE``
-    #:  - ``FT.SEARCH``
-    #:  - ``GEORADIUS``
-    #:  - ``GEORADIUSBYMEMBER``
-    #:  - ``GEORADIUSBYMEMBER_RO``
-    #:  - ``GEORADIUS_RO``
-    #:  - ``GEOSEARCH``
-    #:  - ``GEOSEARCHSTORE``
-    #:  - ``SORT``
-    #:  - ``SORT_RO``
-    ASC = b"ASC"
-
-    #: Used by:
-    #:
-    #:  - ``FT.AGGREGATE``
-    #:  - ``FT.SEARCH``
-    #:  - ``GEORADIUS``
-    #:  - ``GEORADIUSBYMEMBER``
-    #:  - ``GEORADIUSBYMEMBER_RO``
-    #:  - ``GEORADIUS_RO``
-    #:  - ``GEOSEARCH``
-    #:  - ``GEOSEARCHSTORE``
-    #:  - ``SORT``
-    #:  - ``SORT_RO``
-    DESC = b"DESC"
-
-    #: Used by:
-    #:
     #:  - ``GEORADIUS``
     #:  - ``GEORADIUSBYMEMBER``
     #:  - ``GEORADIUSBYMEMBER_RO``
@@ -564,12 +588,6 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
-    #:  - ``REPLICAOF``
-    #:  - ``SLAVEOF``
-    ONE = b"ONE"
-
-    #: Used by:
-    #:
     #:  - ``RESTORE``
     #:  - ``RESTORE-ASKING``
     ABSTTL = b"ABSTTL"
@@ -599,6 +617,30 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``SORT``
     #:  - ``SORT_RO``
     SORTING = b"ALPHA"
+
+    #: Used by:
+    #:
+    #:  - ``XACKDEL``
+    #:  - ``XADD``
+    #:  - ``XDELEX``
+    #:  - ``XTRIM``
+    ACKED = b"ACKED"
+
+    #: Used by:
+    #:
+    #:  - ``XACKDEL``
+    #:  - ``XADD``
+    #:  - ``XDELEX``
+    #:  - ``XTRIM``
+    DELREF = b"DELREF"
+
+    #: Used by:
+    #:
+    #:  - ``XACKDEL``
+    #:  - ``XADD``
+    #:  - ``XDELEX``
+    #:  - ``XTRIM``
+    KEEPREF = b"KEEPREF"
 
     #: Used by:
     #:
@@ -751,12 +793,6 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
-    #:  - ``FT.AGGREGATE``
-    #:  - ``VADD``
-    REDUCE = b"REDUCE"
-
-    #: Used by:
-    #:
     #:  - ``VADD``
     #:  - ``VSIM``
     VALUES = b"VALUES"
@@ -765,6 +801,11 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``VSIM``
     ELE = b"ELE"
+
+    #: Used by:
+    #:
+    #:  - ``VSIM``
+    NOTHREAD = b"NOTHREAD"
 
     #: Used by:
     #:
@@ -1225,6 +1266,11 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    REDUCE = b"REDUCE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
     STDDEV = b"STDDEV"
 
     #: Used by:
@@ -1415,6 +1461,33 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``CLUSTER SETSLOT``
     MIGRATING = b"MIGRATING"
+
+    #: Used by:
+    #:
+    #:  - ``CLUSTER SLOT-STATS``
+    #:  - ``SINTERCARD``
+    #:  - ``SORT``
+    #:  - ``SORT_RO``
+    #:  - ``XADD``
+    #:  - ``XTRIM``
+    #:  - ``ZINTERCARD``
+    #:  - ``ZRANGE``
+    #:  - ``ZRANGEBYLEX``
+    #:  - ``ZRANGEBYSCORE``
+    #:  - ``ZRANGESTORE``
+    #:  - ``ZREVRANGEBYLEX``
+    #:  - ``ZREVRANGEBYSCORE``
+    LIMIT = b"LIMIT"
+
+    #: Used by:
+    #:
+    #:  - ``CLUSTER SLOT-STATS``
+    ORDERBY = b"ORDERBY"
+
+    #: Used by:
+    #:
+    #:  - ``CLUSTER SLOT-STATS``
+    SLOTSRANGE = b"SLOTSRANGE"
 
     #: Used by:
     #:
@@ -1625,25 +1698,15 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
-    #:  - ``SINTERCARD``
-    #:  - ``SORT``
-    #:  - ``SORT_RO``
-    #:  - ``XADD``
-    #:  - ``XTRIM``
-    #:  - ``ZINTERCARD``
-    #:  - ``ZRANGE``
-    #:  - ``ZRANGEBYLEX``
-    #:  - ``ZRANGEBYSCORE``
-    #:  - ``ZRANGESTORE``
-    #:  - ``ZREVRANGEBYLEX``
-    #:  - ``ZREVRANGEBYSCORE``
-    LIMIT = b"LIMIT"
-
-    #: Used by:
-    #:
     #:  - ``SORT``
     #:  - ``SORT_RO``
     BY = b"BY"
+
+    #: Used by:
+    #:
+    #:  - ``XACKDEL``
+    #:  - ``XDELEX``
+    IDS = b"IDS"
 
     #: Used by:
     #:
@@ -1725,6 +1788,11 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``VADD``
     M = b"M"
+
+    #: Used by:
+    #:
+    #:  - ``VADD``
+    REDUCE = b"REDUCE"
 
     #: Used by:
     #:

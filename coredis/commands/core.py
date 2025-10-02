@@ -5182,6 +5182,35 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.XACK, key, group, *identifiers, callback=IntCallback()
         )
 
+    @versionadded(version="5.2.0")
+    @ensure_iterable_valid("identifiers")
+    @redis_command(
+        CommandName.XACKDEL,
+        version_introduced="8.2.0",
+        group=CommandGroup.STREAM,
+        flags={CommandFlag.FAST},
+    )
+    def xackdel(
+        self,
+        key: KeyT,
+        group: StringT,
+        identifiers: Parameters[ValueT],
+        condition: Literal[PureToken.KEEPREF, PureToken.DELREF, PureToken.ACKED] | None = None,
+    ) -> CommandRequest[tuple[int, ...]]:
+        """
+        Acknowledges and conditionally deletes one or multiple entries (messages) for a stream
+        consumer group at the specified key.
+
+        """
+        command_arguments: CommandArgList = [key, group]
+        if condition is not None:
+            command_arguments.append(condition)
+
+        command_arguments.extend([PrefixToken.IDS, len(list(identifiers)), *identifiers])
+        return self.create_request(
+            CommandName.XACKDEL, *command_arguments, callback=TupleCallback[int]()
+        )
+
     @mutually_inclusive_parameters("trim_strategy", "threshold")
     @redis_command(
         CommandName.XADD,
@@ -5189,6 +5218,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         arguments={
             "nomkstream": {"version_introduced": "6.2.0"},
             "limit": {"version_introduced": "6.2.0"},
+            "condition": {"version_introduced": "8.2.0"},
         },
         flags={CommandFlag.FAST},
     )
@@ -5202,6 +5232,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         threshold: int | None = None,
         trim_operator: Literal[PureToken.EQUAL, PureToken.APPROXIMATELY] | None = None,
         limit: int | None = None,
+        condition: Literal[PureToken.KEEPREF, PureToken.DELREF, PureToken.ACKED] | None = None,
     ) -> CommandRequest[AnyStr | None]:
         """
         Appends a new entry to a stream
@@ -5217,7 +5248,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         if nomkstream is not None:
             command_arguments.append(PureToken.NOMKSTREAM)
-
+        if condition is not None:
+            command_arguments.append(condition)
         if trim_strategy == PureToken.MAXLEN:
             command_arguments.append(trim_strategy)
 
@@ -5436,7 +5468,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.XTRIM,
         group=CommandGroup.STREAM,
-        arguments={"limit": {"version_introduced": "6.2.0"}},
+        arguments={
+            "limit": {"version_introduced": "6.2.0"},
+            "condition": {"version_introduced": "8.2.0"},
+        },
     )
     def xtrim(
         self,
@@ -5445,6 +5480,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         threshold: int,
         trim_operator: Literal[PureToken.EQUAL, PureToken.APPROXIMATELY] | None = None,
         limit: int | None = None,
+        condition: Literal[PureToken.KEEPREF, PureToken.DELREF, PureToken.ACKED] | None = None,
     ) -> CommandRequest[int]:
         """ """
         command_arguments: CommandArgList = [trim_strategy]
@@ -5456,6 +5492,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         if limit is not None:
             command_arguments.extend(["LIMIT", limit])
+        if condition is not None:
+            command_arguments.append(condition)
 
         return self.create_request(
             CommandName.XTRIM, key, *command_arguments, callback=IntCallback()
@@ -5468,9 +5506,37 @@ class CoreCommands(CommandMixin[AnyStr]):
         flags={CommandFlag.FAST},
     )
     def xdel(self, key: KeyT, identifiers: Parameters[ValueT]) -> CommandRequest[int]:
-        """ """
+        """
+        Removes the specified entries from a stream, and returns the number of entries deleted
+        """
 
         return self.create_request(CommandName.XDEL, key, *identifiers, callback=IntCallback())
+
+    @versionadded(version="5.2.0")
+    @ensure_iterable_valid("identifiers")
+    @redis_command(
+        CommandName.XDELEX,
+        version_introduced="8.2",
+        group=CommandGroup.STREAM,
+        flags={CommandFlag.FAST},
+    )
+    def xdelex(
+        self,
+        key: KeyT,
+        identifiers: Parameters[ValueT],
+        condition: Literal[PureToken.KEEPREF, PureToken.DELREF, PureToken.ACKED] | None = None,
+    ) -> CommandRequest[tuple[int, ...]]:
+        """
+        Deletes one or multiple entries from the stream at the specified key.
+        """
+        command_arguments: CommandArgList = [key]
+        if condition is not None:
+            command_arguments.append(condition)
+        command_arguments.extend([PrefixToken.IDS, len(list(identifiers)), *identifiers])
+
+        return self.create_request(
+            CommandName.XDELEX, *command_arguments, callback=TupleCallback[int]()
+        )
 
     @redis_command(
         CommandName.XINFO_CONSUMERS,
@@ -8397,4 +8463,22 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.VRANDMEMBER,
             *command_arguments,
             callback=ItemOrTupleCallback[AnyStr | None](),
+        )
+
+    @versionadded(version="5.2.0")
+    @redis_command(CommandName.VISMEMBER, version_introduced="8.2.0", group=CommandGroup.VECTOR_SET)
+    def vismember(self, key: KeyT, element: StringT) -> CommandRequest[bool]:
+        """
+        Check if an element exists in a vector set
+
+        :param key: The key containing the vector set
+        :param element: The element to check for membership
+
+
+        """
+        return self.create_request(
+            CommandName.VISMEMBER,
+            key,
+            element,
+            callback=BoolCallback(),
         )
