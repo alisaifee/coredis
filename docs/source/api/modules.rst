@@ -78,11 +78,6 @@ Autocomplete
 ============
 .. autoclass:: coredis.modules.Autocomplete
 
-RedisGraph
-^^^^^^^^^^
-
-.. autoclass:: coredis.modules.Graph
-
 TimeSeries
 ^^^^^^^^^^
 .. autoclass:: coredis.modules.TimeSeries

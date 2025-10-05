@@ -72,7 +72,6 @@ Feature Summary
 
   * :ref:`handbook/modules:RedisJSON`
   * :ref:`handbook/modules:RediSearch`
-  * :ref:`handbook/modules:RedisGraph`
   * :ref:`handbook/modules:RedisBloom`
   * :ref:`handbook/modules:RedisTimeSeries`
 
