@@ -3,6 +3,16 @@
 Changelog
 =========
 
+v5.3.0
+------
+Release Date: 2025-10-10
+
+* Compatibility
+
+  * Mark redis graph module support as deprecated
+  * Fix compatibility with beartype >= 0.22
+  * Add support for python 3.14
+
 v5.2.0
 ------
 Release Date: 2025-10-01
@@ -2031,5 +2041,6 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
