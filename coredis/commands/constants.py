@@ -145,6 +145,7 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     CLUSTER_LINKS = b"CLUSTER LINKS"  # Since redis: 7.0.0
     CLUSTER_SHARDS = b"CLUSTER SHARDS"  # Since redis: 7.0.0
     CLUSTER_MYSHARDID = b"CLUSTER MYSHARDID"  # Since redis: 7.2.0
+    CLUSTER_SLOT_STATS = b"CLUSTER SLOT-STATS"  # Since redis: 8.2.0
     CLUSTER_SLAVES = b"CLUSTER SLAVES"  # Deprecated in redis: 5.0.0
     CLUSTER_SLOTS = b"CLUSTER SLOTS"  # Deprecated in redis: 7.0.0
 
@@ -422,6 +423,8 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     XTRIM = b"XTRIM"  # Since redis: 5.0.0
     XAUTOCLAIM = b"XAUTOCLAIM"  # Since redis: 6.2.0
     XGROUP_CREATECONSUMER = b"XGROUP CREATECONSUMER"  # Since redis: 6.2.0
+    XACKDEL = b"XACKDEL"  # Since redis: 8.2.0
+    XDELEX = b"XDELEX"  # Since redis: 8.2.0
 
     #: Commands for vector_set
     VADD = b"VADD"  # Since redis: 8.0.0
@@ -435,6 +438,7 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     VSETATTR = b"VSETATTR"  # Since redis: 8.0.0
     VGETATTR = b"VGETATTR"  # Since redis: 8.0.0
     VRANDMEMBER = b"VRANDMEMBER"  # Since redis: 8.0.0
+    VISMEMBER = b"VISMEMBER"  # Since redis: 8.2.0
 
     #: Commands for json
     JSON_DEL = b"JSON.DEL"  # Since RedisJSON: 1.0.0

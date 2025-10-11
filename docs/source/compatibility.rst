@@ -2764,6 +2764,24 @@ Returns the number of messages that were successfully acknowledged by the consum
 
 
 
+XACKDEL
+*******
+
+Acknowledges and deletes one or multiple messages for a stream consumer group.
+
+- Documentation: `XACKDEL <https://redis.io/commands/xackdel>`_
+- Implementation: :meth:`~coredis.Redis.xackdel`
+
+- New in redis: 8.2.0
+
+
+
+- .. versionadded:: 5.2.0
+
+
+
+
+
 XADD
 ****
 
@@ -2819,6 +2837,24 @@ Returns the number of messages after removing them from a stream.
 - Implementation: :meth:`~coredis.Redis.xdel`
 
 
+
+
+
+
+
+XDELEX
+******
+
+Deletes one or multiple entries from the stream.
+
+- Documentation: `XDELEX <https://redis.io/commands/xdelex>`_
+- Implementation: :meth:`~coredis.Redis.xdelex`
+
+- New in redis: 8.2.0
+
+
+
+- .. versionadded:: 5.2.0
 
 
 
@@ -3629,7 +3665,7 @@ Add one or more elements to a vector set, or update its vector if it already exi
 VREM
 ****
 
-Remove one or more elements from a vector set
+Remove an element from a vector set
 
 - Documentation: `VREM <https://redis.io/commands/vrem>`_
 - Implementation: :meth:`~coredis.Redis.vrem`
@@ -3801,6 +3837,24 @@ Return one or multiple random members from a vector set
 
 
 - .. versionadded:: 5.0.0
+
+
+
+
+
+VISMEMBER
+*********
+
+Check if an element exists in a vector set
+
+- Documentation: `VISMEMBER <https://redis.io/commands/vismember>`_
+- Implementation: :meth:`~coredis.Redis.vismember`
+
+- New in redis: 8.2.0
+
+
+
+- .. versionadded:: 5.2.0
 
 
 
@@ -5604,6 +5658,16 @@ CLUSTER MYSHARDID [X]
 Returns the shard ID of a node.
 
 - Documentation: `CLUSTER MYSHARDID <https://redis.io/commands/cluster-myshardid>`_
+
+- Not Implemented
+
+
+CLUSTER SLOT-STATS [X]
+**********************
+
+Return an array of slot usage statistics for slots assigned to the current node.
+
+- Documentation: `CLUSTER SLOT-STATS <https://redis.io/commands/cluster-slot-stats>`_
 
 - Not Implemented
 

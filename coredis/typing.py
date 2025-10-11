@@ -43,8 +43,21 @@ from typing import (
     runtime_checkable,
 )
 
+from beartype import __version__ as beartype_version
 from beartype import beartype
-from beartype.door import infer_hint, is_bearable, is_subhint
+from packaging import version
+
+if TYPE_CHECKING:
+    infer_hint: Callable[..., Any]
+    is_bearable: Callable[[Any, Any], bool]
+    is_subhint: Callable[[Any, Any], bool]
+else:
+    if version.parse(beartype_version) < version.parse("0.22"):
+        from beartype.door import infer_hint
+    else:
+        from beartype.bite import infer_hint
+
+from beartype.door import is_bearable, is_subhint
 from typing_extensions import (
     NotRequired,
     Self,

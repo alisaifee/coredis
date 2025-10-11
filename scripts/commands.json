@@ -886,6 +886,30 @@
                         "type": "pure-token",
                         "display_text": "not",
                         "token": "NOT"
+                    },
+                    {
+                        "name": "diff",
+                        "type": "pure-token",
+                        "display_text": "diff",
+                        "token": "DIFF"
+                    },
+                    {
+                        "name": "diff1",
+                        "type": "pure-token",
+                        "display_text": "diff1",
+                        "token": "DIFF1"
+                    },
+                    {
+                        "name": "andor",
+                        "type": "pure-token",
+                        "display_text": "andor",
+                        "token": "ANDOR"
+                    },
+                    {
+                        "name": "one",
+                        "type": "pure-token",
+                        "display_text": "one",
+                        "token": "ONE"
                     }
                 ]
             },
@@ -3085,6 +3109,87 @@
         ],
         "hints": [
             "nondeterministic_output"
+        ]
+    },
+    "CLUSTER SLOT-STATS": {
+        "summary": "Return an array of slot usage statistics for slots assigned to the current node.",
+        "since": "8.2.0",
+        "group": "cluster",
+        "complexity": "O(N) where N is the total number of slots based on arguments. O(N*log(N)) with ORDERBY subcommand.",
+        "acl_categories": [
+            "@slow"
+        ],
+        "arity": -4,
+        "arguments": [
+            {
+                "name": "filter",
+                "type": "oneof",
+                "arguments": [
+                    {
+                        "name": "slotsrange",
+                        "type": "block",
+                        "token": "SLOTSRANGE",
+                        "arguments": [
+                            {
+                                "name": "start-slot",
+                                "type": "integer",
+                                "display_text": "start-slot"
+                            },
+                            {
+                                "name": "end-slot",
+                                "type": "integer",
+                                "display_text": "end-slot"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "orderby",
+                        "type": "block",
+                        "token": "ORDERBY",
+                        "arguments": [
+                            {
+                                "name": "metric",
+                                "type": "string",
+                                "display_text": "metric"
+                            },
+                            {
+                                "name": "limit",
+                                "type": "integer",
+                                "display_text": "limit",
+                                "token": "LIMIT",
+                                "optional": true
+                            },
+                            {
+                                "name": "order",
+                                "type": "oneof",
+                                "optional": true,
+                                "arguments": [
+                                    {
+                                        "name": "asc",
+                                        "type": "pure-token",
+                                        "display_text": "asc",
+                                        "token": "ASC"
+                                    },
+                                    {
+                                        "name": "desc",
+                                        "type": "pure-token",
+                                        "display_text": "desc",
+                                        "token": "DESC"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "command_flags": [
+            "loading",
+            "stale"
+        ],
+        "hints": [
+            "nondeterministic_output",
+            "request_policy:all_shards"
         ]
     },
     "CLUSTER SLOTS": {
@@ -15501,6 +15606,99 @@
             "fast"
         ]
     },
+    "XACKDEL": {
+        "summary": "Acknowledges and deletes one or multiple messages for a stream consumer group.",
+        "since": "8.2.0",
+        "group": "stream",
+        "complexity": "O(1) for each message ID processed.",
+        "acl_categories": [
+            "@write",
+            "@stream",
+            "@fast"
+        ],
+        "arity": -6,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RW": true,
+                "update": true,
+                "delete": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "group",
+                "type": "string",
+                "display_text": "group"
+            },
+            {
+                "name": "condition",
+                "type": "oneof",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "keepref",
+                        "type": "pure-token",
+                        "display_text": "keepref",
+                        "token": "KEEPREF"
+                    },
+                    {
+                        "name": "delref",
+                        "type": "pure-token",
+                        "display_text": "delref",
+                        "token": "DELREF"
+                    },
+                    {
+                        "name": "acked",
+                        "type": "pure-token",
+                        "display_text": "acked",
+                        "token": "ACKED"
+                    }
+                ]
+            },
+            {
+                "name": "ids",
+                "type": "block",
+                "token": "IDS",
+                "arguments": [
+                    {
+                        "name": "numids",
+                        "type": "integer",
+                        "display_text": "numids"
+                    },
+                    {
+                        "name": "id",
+                        "type": "string",
+                        "display_text": "id",
+                        "multiple": true
+                    }
+                ]
+            }
+        ],
+        "command_flags": [
+            "write",
+            "fast"
+        ]
+    },
     "XADD": {
         "summary": "Appends a new message to a stream. Creates the key if it doesn't exist.",
         "since": "5.0.0",
@@ -15514,6 +15712,10 @@
             [
                 "7.0.0",
                 "Added support for the `<ms>-*` explicit ID form."
+            ],
+            [
+                "8.2.0",
+                "Added the `KEEPREF`, `DELREF` and `ACKED` options."
             ]
         ],
         "acl_categories": [
@@ -15557,6 +15759,31 @@
                 "token": "NOMKSTREAM",
                 "since": "6.2.0",
                 "optional": true
+            },
+            {
+                "name": "condition",
+                "type": "oneof",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "keepref",
+                        "type": "pure-token",
+                        "display_text": "keepref",
+                        "token": "KEEPREF"
+                    },
+                    {
+                        "name": "delref",
+                        "type": "pure-token",
+                        "display_text": "delref",
+                        "token": "DELREF"
+                    },
+                    {
+                        "name": "acked",
+                        "type": "pure-token",
+                        "display_text": "acked",
+                        "token": "ACKED"
+                    }
+                ]
             },
             {
                 "name": "trim",
@@ -15900,6 +16127,93 @@
                 "type": "string",
                 "display_text": "id",
                 "multiple": true
+            }
+        ],
+        "command_flags": [
+            "write",
+            "fast"
+        ]
+    },
+    "XDELEX": {
+        "summary": "Deletes one or multiple entries from the stream.",
+        "since": "8.2.0",
+        "group": "stream",
+        "complexity": "O(1) for each single item to delete in the stream, regardless of the stream size.",
+        "acl_categories": [
+            "@write",
+            "@stream",
+            "@fast"
+        ],
+        "arity": -5,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RW": true,
+                "delete": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "condition",
+                "type": "oneof",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "keepref",
+                        "type": "pure-token",
+                        "display_text": "keepref",
+                        "token": "KEEPREF"
+                    },
+                    {
+                        "name": "delref",
+                        "type": "pure-token",
+                        "display_text": "delref",
+                        "token": "DELREF"
+                    },
+                    {
+                        "name": "acked",
+                        "type": "pure-token",
+                        "display_text": "acked",
+                        "token": "ACKED"
+                    }
+                ]
+            },
+            {
+                "name": "ids",
+                "type": "block",
+                "token": "IDS",
+                "arguments": [
+                    {
+                        "name": "numids",
+                        "type": "integer",
+                        "display_text": "numids"
+                    },
+                    {
+                        "name": "id",
+                        "type": "string",
+                        "display_text": "id",
+                        "multiple": true
+                    }
+                ]
             }
         ],
         "command_flags": [
@@ -16981,6 +17295,10 @@
             [
                 "6.2.0",
                 "Added the `MINID` trimming strategy and the `LIMIT` option."
+            ],
+            [
+                "8.2.0",
+                "Added the `KEEPREF`, `DELREF` and `ACKED` options."
             ]
         ],
         "acl_categories": [
@@ -17070,6 +17388,31 @@
                         "token": "LIMIT",
                         "since": "6.2.0",
                         "optional": true
+                    },
+                    {
+                        "name": "condition",
+                        "type": "oneof",
+                        "optional": true,
+                        "arguments": [
+                            {
+                                "name": "keepref",
+                                "type": "pure-token",
+                                "display_text": "keepref",
+                                "token": "KEEPREF"
+                            },
+                            {
+                                "name": "delref",
+                                "type": "pure-token",
+                                "display_text": "delref",
+                                "token": "DELREF"
+                            },
+                            {
+                                "name": "acked",
+                                "type": "pure-token",
+                                "display_text": "acked",
+                                "token": "ACKED"
+                            }
+                        ]
                     }
                 ]
             }
@@ -19391,7 +19734,7 @@
         "complexity": "O(log(N)) for each element added, where N is the number of elements in the vector set.",
         "group": "vector_set",
         "since": "8.0.0",
-        "arity": -1,
+        "arity": -5,
         "function": "vaddCommand",
         "arguments": [
             {
@@ -19401,13 +19744,14 @@
             {
                 "token": "REDUCE",
                 "name": "reduce",
-                "type": "pure-token",
-                "optional": true
-            },
-            {
-                "name": "dim",
-                "type": "integer",
-                "optional": true
+                "type": "block",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "dim",
+                        "type": "integer"
+                    }
+                ]
             },
             {
                 "name": "format",
@@ -19486,11 +19830,11 @@
         ]
     },
     "VREM": {
-        "summary": "Remove one or more elements from a vector set",
+        "summary": "Remove an element from a vector set",
         "complexity": "O(log(N)) for each element removed, where N is the number of elements in the vector set.",
         "group": "vector_set",
         "since": "8.0.0",
-        "arity": -2,
+        "arity": 3,
         "function": "vremCommand",
         "command_flags": [
             "WRITE"
@@ -19502,8 +19846,7 @@
             },
             {
                 "name": "element",
-                "type": "string",
-                "multiple": true
+                "type": "string"
             }
         ]
     },
@@ -19512,7 +19855,7 @@
         "complexity": "O(log(N)) where N is the number of elements in the vector set.",
         "group": "vector_set",
         "since": "8.0.0",
-        "arity": -3,
+        "arity": -4,
         "function": "vsimCommand",
         "command_flags": [
             "READONLY"
@@ -19592,6 +19935,12 @@
             {
                 "token": "TRUTH",
                 "name": "truth",
+                "type": "pure-token",
+                "optional": true
+            },
+            {
+                "token": "NOTHREAD",
+                "name": "nothread",
                 "type": "pure-token",
                 "optional": true
             }
@@ -19770,6 +20119,27 @@
                 "name": "count",
                 "type": "integer",
                 "optional": true
+            }
+        ]
+    },
+    "VISMEMBER": {
+        "summary": "Check if an element exists in a vector set",
+        "complexity": "O(1)",
+        "group": "vector_set",
+        "since": "8.2.0",
+        "arity": 3,
+        "function": "vismemberCommand",
+        "command_flags": [
+            "READONLY"
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key"
+            },
+            {
+                "name": "element",
+                "type": "string"
             }
         ]
     }
