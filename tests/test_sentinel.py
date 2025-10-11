@@ -4,89 +4,29 @@ import pytest
 
 import coredis
 from coredis.exceptions import (
-    ConnectionError,
     PrimaryNotFoundError,
     ReadOnlyError,
     ReplicaNotFoundError,
     ReplicationError,
     ResponseError,
-    TimeoutError,
 )
 from coredis.sentinel import Sentinel, SentinelConnectionPool
 from tests.conftest import targets
 
-pytestmarks = pytest.mark.asyncio
+pytestmark = pytest.mark.anyio
 
 
-class SentinelTestClient:
-    def __init__(self, cluster, id):
-        self.cluster = cluster
-        self.id = id
-
-    async def sentinel_masters(self):
-        self.cluster.connection_error_if_down(self)
-        self.cluster.timeout_if_down(self)
-
-        return {self.cluster.service_name: self.cluster.primary}
-
-    async def sentinel_replicas(self, primary_name):
-        self.cluster.connection_error_if_down(self)
-        self.cluster.timeout_if_down(self)
-
-        if primary_name != self.cluster.service_name:
-            return []
-
-        return self.cluster.replicas
+async def test_init_compose_sentinel(redis_sentinel: Sentinel):
+    print(await redis_sentinel.discover_primary("mymaster"))
+    return
+    master = redis_sentinel.primary_for("mymaster")
+    print(master)
+    async with master:
+        await master.ping()
 
 
-class SentinelTestCluster:
-    def __init__(self, service_name="mymaster", ip="127.0.0.1", port=6379):
-        self.clients = {}
-        self.primary = {
-            "ip": ip,
-            "port": port,
-            "is_master": True,
-            "is_sdown": False,
-            "is_odown": False,
-            "num-other-sentinels": 0,
-        }
-        self.service_name = service_name
-        self.replicas = []
-        self.nodes_down = set()
-        self.nodes_timeout = set()
-
-    def connection_error_if_down(self, node):
-        if node.id in self.nodes_down:
-            raise ConnectionError
-
-    def timeout_if_down(self, node):
-        if node.id in self.nodes_timeout:
-            raise TimeoutError
-
-    def client(self, host, port, **kwargs):
-        return SentinelTestClient(self, (host, port))
-
-
-@pytest.fixture()
-def cluster(request):
-    def teardown():
-        coredis.sentinel.Redis = saved_Redis
-
-    cluster = SentinelTestCluster()
-    saved_Redis = coredis.sentinel.Redis
-    coredis.sentinel.Redis = cluster.client
-    request.addfinalizer(teardown)
-
-    return cluster
-
-
-@pytest.fixture()
-def sentinel(request, cluster):
-    return Sentinel([("foo", 26379), ("bar", 26379)])
-
-
-async def test_discover_primary(sentinel):
-    address = await sentinel.discover_primary("mymaster")
+async def test_discover_primary(redis_sentinel: Sentinel):
+    address = await redis_sentinel.discover_primary("mymaster")
     assert address == ("127.0.0.1", 6379)
 
 
@@ -95,7 +35,7 @@ async def test_discover_primary_error(sentinel):
         await sentinel.discover_primary("xxx")
 
 
-async def test_discover_primary_sentinel_down(cluster, sentinel):
+async def test_discover_primary_sentinel_down(cluster, sentinel: Sentinel):
     # Put first sentinel 'foo' down
     cluster.nodes_down.add(("foo", 26379))
     address = await sentinel.discover_primary("mymaster")
@@ -104,7 +44,7 @@ async def test_discover_primary_sentinel_down(cluster, sentinel):
     assert sentinel.sentinels[0].id == ("bar", 26379)
 
 
-async def test_discover_primary_sentinel_timeout(cluster, sentinel):
+async def test_discover_primary_sentinel_timeout(cluster, sentinel: Sentinel):
     # Put first sentinel 'foo' down
     cluster.nodes_timeout.add(("foo", 26379))
     address = await sentinel.discover_primary("mymaster")
@@ -174,11 +114,12 @@ async def test_discover_replicas(cluster, sentinel):
     ]
 
 
-async def test_replica_for_slave_not_found_error(cluster, sentinel):
+async def test_replica_for_slave_not_found_error(cluster, sentinel: Sentinel):
     cluster.primary["is_odown"] = True
     replica = sentinel.replica_for("mymaster", db=9)
-    with pytest.raises(ReplicaNotFoundError):
-        await replica.ping()
+    async with replica:
+        with pytest.raises(ReplicaNotFoundError):
+            await replica.ping()
 
 
 async def test_replica_round_robin(cluster, sentinel):
@@ -187,14 +128,20 @@ async def test_replica_round_robin(cluster, sentinel):
         {"ip": "replica1", "port": 6379, "is_odown": False, "is_sdown": False},
     ]
     pool = SentinelConnectionPool("mymaster", sentinel)
-    rotator = await pool.rotate_replicas()
-    assert set(rotator) == {("replica0", 6379), ("replica1", 6379)}
+    async for rotator in pool.rotate_replicas():
+        assert rotator in {("replica0", 6379), ("replica1", 6379)}
 
 
-async def test_autodecode(redis_sentinel_server):
+async def test_autodecode(redis_sentinel_server: tuple[str, int]):
     sentinel = Sentinel(sentinels=[redis_sentinel_server], decode_responses=True)
-    assert await sentinel.primary_for("mymaster").ping() == "PONG"
-    assert await sentinel.primary_for("mymaster", decode_responses=False).ping() == b"PONG"
+    print(sentinel)
+    client = sentinel.primary_for("mymaster")
+    print(client, client.connection_pool)
+    async with client:
+        assert await client.ping() == "PONG"
+    client = sentinel.primary_for("mymaster", decode_responses=False)
+    async with client:
+        assert await client.ping() == b"PONG"
 
 
 @targets("redis_sentinel", "redis_sentinel_raw", "redis_sentinel_resp2")

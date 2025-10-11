@@ -17,6 +17,8 @@ from coredis.modules.search import Apply, Field, Filter, Group, Reduce
 from coredis.retry import ConstantRetryPolicy, retryable
 from tests.conftest import module_targets
 
+pytestmark = pytest.mark.anyio
+
 
 @pytest.fixture(scope="module")
 def query_vectors():

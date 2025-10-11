@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-import asyncio
 import datetime
 import time
 
+import anyio
 import pytest
 
 from coredis import PureToken
 from coredis.exceptions import CommandSyntaxError
 from tests.conftest import server_deprecation_warning, targets
+
+pytestmark = pytest.mark.anyio
 
 
 @targets(
@@ -77,7 +79,7 @@ class TestHash:
         assert (2, 2, -2) == await client.hexpire(
             "a", datetime.timedelta(seconds=0), ["1", "3", "5"], PureToken.LT
         )
-        await asyncio.sleep(1)
+        await anyio.sleep(1)
         assert {_s("2"): _s("2")} == await client.hgetall(_s("a"))
 
     @pytest.mark.min_server_version("7.4.0")
@@ -98,7 +100,7 @@ class TestHash:
             ["1", "3", "5"],
             PureToken.LT,
         )
-        await asyncio.sleep(1)
+        await anyio.sleep(1)
         assert {_s("2"): _s("2")} == await client.hgetall(_s("a"))
 
     @pytest.mark.min_server_version("7.4.0")
@@ -136,7 +138,7 @@ class TestHash:
         assert (2, 2, -2) == await client.hpexpire(
             "a", datetime.timedelta(milliseconds=0), ["1", "3", "5"], PureToken.LT
         )
-        await asyncio.sleep(1)
+        await anyio.sleep(1)
         assert {_s("2"): _s("2")} == await client.hgetall(_s("a"))
 
     @pytest.mark.min_server_version("7.4.0")
@@ -163,7 +165,7 @@ class TestHash:
             ["1", "3", "5"],
             PureToken.LT,
         )
-        await asyncio.sleep(1)
+        await anyio.sleep(1)
         assert {_s("2"): _s("2")} == await client.hgetall(_s("a"))
 
     @pytest.mark.min_server_version("7.4.0")
