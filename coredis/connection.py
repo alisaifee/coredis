@@ -27,6 +27,7 @@ from anyio import (
     sleep,
 )
 from anyio.abc import ByteStream, SocketAttribute, TaskStatus
+from anyio.streams.tls import TLSStream
 from typing_extensions import override
 
 import coredis
@@ -273,7 +274,7 @@ class BaseConnection:
         self._connect_callbacks = list()
 
     @abstractmethod
-    async def _connect(self) -> None: ...
+    async def _connect(self) -> ByteStream: ...
 
     async def run(
         self, pool: ConnectionPool, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
@@ -282,7 +283,7 @@ class BaseConnection:
         Establish a connnection to the redis server
         and initiate any post connect callbacks.
         """
-        await self._connect()
+        self._connection = await self._connect()
         try:
             async with self.connection, self._parser.push_messages, create_task_group() as tg:
                 tg.start_soon(self.listen_for_responses, pool)
@@ -617,21 +618,23 @@ class Connection(BaseConnection):
         self.socket_keepalive_options: dict[int, int | bytes] = socket_keepalive_options or {}
 
     @override
-    async def _connect(self) -> None:
+    async def _connect(self) -> ByteStream:
         with fail_after(self._connect_timeout):
+            connection = await connect_tcp(self.host, self.port)
             if self.ssl_context:
-                self._connection = await connect_tcp(
-                    self.host, self.port, ssl_context=self.ssl_context
+                connection = await TLSStream.wrap(
+                    connection,
+                    ssl_context=self.ssl_context,
+                    standard_compatible=False,
+                    server_side=False,
                 )
-            else:
-                self._connection = await connect_tcp(self.host, self.port)
-
-            sock = self._connection.extra(SocketAttribute.raw_socket, default=None)
+            sock = connection.extra(SocketAttribute.raw_socket, default=None)
             if sock is not None:
                 if self.socket_keepalive:  # TCP_KEEPALIVE
                     sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
                     for k, v in self.socket_keepalive_options.items():
                         sock.setsockopt(socket.SOL_TCP, k, v)
+            return connection
 
 
 class UnixDomainSocketConnection(BaseConnection):
@@ -672,9 +675,9 @@ class UnixDomainSocketConnection(BaseConnection):
         self._description_args = lambda: {"path": self.path, "db": self.db}
 
     @override
-    async def _connect(self) -> None:
+    async def _connect(self) -> ByteStream:
         with fail_after(self._connect_timeout):
-            self._connection = await connect_unix(self.path)
+            return await connect_unix(self.path)
 
 
 class ClusterConnection(Connection):
