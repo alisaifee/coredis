@@ -6,6 +6,8 @@ from coredis import PureToken, Redis
 from coredis.exceptions import ResponseError
 from tests.conftest import module_targets
 
+pytestmark = pytest.mark.anyio
+
 LEGACY_ROOT_PATH = "."
 
 

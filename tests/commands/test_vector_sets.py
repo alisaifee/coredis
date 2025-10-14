@@ -8,6 +8,8 @@ from coredis import PureToken
 from coredis.exceptions import CommandSyntaxError, ResponseError
 from tests.conftest import targets
 
+pytestmark = pytest.mark.anyio
+
 
 @pytest.fixture
 async def sample_data(client):

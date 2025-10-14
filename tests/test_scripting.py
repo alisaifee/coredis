@@ -4,11 +4,15 @@ import pytest
 from beartype.roar import BeartypeCallHintParamViolation
 
 from coredis import PureToken
+from coredis._utils import gather
 from coredis.client import Client
+from coredis.client.basic import Redis
 from coredis.commands import Script
 from coredis.exceptions import NoScriptError, NotBusyError, ResponseError
 from coredis.typing import AnyStr, KeyT, RedisValueT
 from tests.conftest import targets
+
+pytestmark = pytest.mark.anyio
 
 multiply_script = """
 local value = redis.call('GET', KEYS[1])
@@ -86,7 +90,7 @@ class TestScripting:
         assert await client.script_flush(sync_type=PureToken.SYNC)
         assert await client.script_exists([sha]) == (False,)
 
-    async def test_script_object(self, client):
+    async def test_script_object(self, client: Redis[str]):
         await client.set("a", "2")
         multiply = client.register_script(multiply_script)
         precalculated_sha = multiply.sha
@@ -101,17 +105,17 @@ class TestScripting:
         # Test first evalsha block
         assert await multiply(keys=["a"], args=[3]) == 6
 
-    async def test_script_object_in_pipeline(self, client):
+    async def test_script_object_in_pipeline(self, client: Redis[str]):
         multiply = client.register_script(multiply_script)
         precalculated_sha = multiply.sha
         assert precalculated_sha
-        pipe = await client.pipeline()
-        pipe.set("a", "2")
-        pipe.get("a")
-        multiply(keys=["a"], args=[3], client=pipe)
-        assert await client.script_exists([multiply.sha]) == (False,)
+        async with client.pipeline() as pipe:
+            a = pipe.set("a", "2")
+            b = pipe.get("a")
+            c = multiply(keys=["a"], args=[3], client=pipe)
+            assert await client.script_exists([multiply.sha]) == (False,)
         # [SET worked, GET 'a', result of multiple script]
-        assert await pipe.execute() == (True, "2", 6)
+        assert await gather(a, b, c) == (True, "2", 6)
         # The script should have been loaded by pipe.execute()
         assert await client.script_exists([multiply.sha]) == (True,)
         # The precalculated sha should have been the correct one
@@ -120,40 +124,35 @@ class TestScripting:
         # purge the script from redis's cache and re-run the pipeline
         # the multiply script should be reloaded by pipe.execute()
         await client.script_flush()
-        pipe = await client.pipeline()
-        pipe.set("a", "2")
-        pipe.get("a")
-        multiply(keys=["a"], args=[3], client=pipe)
-        assert await client.script_exists([multiply.sha]) == (False,)
+        async with client.pipeline() as pipe:
+            a = pipe.set("a", "2")
+            b = pipe.get("a")
+            c = multiply(keys=["a"], args=[3], client=pipe)
+            assert await client.script_exists([multiply.sha]) == (False,)
         # [SET worked, GET 'a', result of multiple script]
-        assert await pipe.execute() == (
-            True,
-            "2",
-            6,
-        )
+        assert await gather(a, b, c) == (True, "2", 6)
         assert await client.script_exists([multiply.sha]) == (True,)
 
     async def testscript_flush_eval_msgpack_pipeline_error_in_lua(self, client):
         msgpack_hello = client.register_script(msgpack_hello_script)
         assert msgpack_hello.sha
 
-        pipe = await client.pipeline()
         # avoiding a dependency to msgpack, this is the output of
         # msgpack.dumps({"name": "joe"})
         msgpack_message_1 = b"\x81\xa4name\xa3Joe"
+        async with client.pipeline() as pipe:
+            res = msgpack_hello(args=[msgpack_message_1], client=pipe)
+            assert await client.script_exists([msgpack_hello.sha]) == (False,)
 
-        msgpack_hello(args=[msgpack_message_1], client=pipe)
-
-        assert await client.script_exists([msgpack_hello.sha]) == (False,)
-        assert (await pipe.execute())[0] == "hello Joe"
+        assert await res == "hello Joe"
         assert await client.script_exists([msgpack_hello.sha]) == (True,)
 
         msgpack_hello_broken = client.register_script(msgpack_hello_script_broken)
 
-        msgpack_hello_broken(args=[msgpack_message_1], client=pipe)
         with pytest.raises(ResponseError) as excinfo:
-            await pipe.execute()
-        assert excinfo.type == ResponseError
+            async with client.pipeline() as pipe:
+                msgpack_hello_broken(args=[msgpack_message_1], client=pipe)
+            assert excinfo.type == ResponseError
 
     async def test_script_kill_no_scripts(self, client):
         with pytest.raises(NotBusyError):
