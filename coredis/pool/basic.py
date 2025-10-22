@@ -211,6 +211,7 @@ class ConnectionPool(AsyncContextManagerMixin):
         self.blocking = blocking
         self._connections: set[BaseConnection] = set()
         self._condition = Condition()
+        self._other_condition = Condition()
 
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
@@ -251,8 +252,13 @@ class ConnectionPool(AsyncContextManagerMixin):
             if len(self._connections) >= self.max_connections:
                 if not self.blocking:
                     raise ConnectionError("Too many connections")
-                async with self._condition:  # wait for a connection to become available
-                    await self._condition.wait()
+                # wait for a connection to become available
+                if mode is None:
+                    async with self._condition:
+                        await self._condition.wait()
+                else:
+                    async with self._other_condition:
+                        await self._other_condition.wait()
             else:
                 connection = self.connection_class(**self.connection_kwargs)
                 await self._task_group.start(connection.run, self)
@@ -271,6 +277,10 @@ class ConnectionPool(AsyncContextManagerMixin):
         finally:
             if mode is not None:
                 connection._mode ^= mode
-                if self.blocking:
+            if self.blocking:
+                if mode is None:
                     async with self._condition:
-                        self._condition.notify_all()
+                        self._condition.notify()
+                else:
+                    async with self._other_condition:
+                        self._other_condition.notify_all()

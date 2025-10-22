@@ -144,7 +144,7 @@ def make_hashable(*args: Any) -> tuple[Hashable, ...]:
     )
 
 
-def query_param_to_bool(value: Any | None) -> bool | None:
+def query_param_to_bool(value: Any) -> bool | None:
     if value is None or value in ("", b""):
         return None
     if isinstance(value, (int, float, bool, str, bytes)):

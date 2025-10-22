@@ -331,14 +331,14 @@ class BaseConnection:
             # We have a full response for `head`; now pop and complete it
             if self._requests:
                 request = self._requests.popleft()
-                if pool.blocking:
-                    async with pool._condition:
-                        pool._condition.notify_all()
                 if request.raise_exceptions and isinstance(response, RedisError):
                     request._exc = response
                 else:
                     request._result = response
                 request._event.set()
+                if pool.blocking:
+                    async with pool._condition:
+                        pool._condition.notify()
 
     async def update_tracking_client(self, enabled: bool, client_id: int | None = None) -> bool:
         """

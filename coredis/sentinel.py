@@ -4,7 +4,8 @@ import random
 from contextlib import AsyncExitStack, asynccontextmanager
 from typing import Any, AsyncGenerator, AsyncIterator, overload
 
-from anyio import AsyncContextManagerMixin
+from anyio import AsyncContextManagerMixin, ConnectionFailed
+from anyio.abc import ByteStream
 from typing_extensions import Self, override
 
 from coredis import Redis
@@ -43,19 +44,17 @@ class SentinelManagedConnection(Connection, Generic[AnyStr]):
             host_info = ""
         return f"{type(self).__name__}<service={pool.service_name}{host_info}>"
 
-    async def connect_to(self, address: tuple[str, int]) -> None:
-        self.host, self.port = address
-        await super()._connect()
-
     @override
-    async def _connect(self) -> None:
+    async def _connect(self) -> ByteStream:
         if self.connection_pool.is_primary:
-            await self.connect_to(await self.connection_pool.get_primary_address())
+            self.host, self.port = await self.connection_pool.get_primary_address()
+            return await super()._connect()
         else:
             async for replica in self.connection_pool.rotate_replicas():
                 try:
-                    return await self.connect_to(replica)
-                except ConnectionError:
+                    self.host, self.port = replica
+                    return await super()._connect()
+                except ConnectionFailed:
                     continue
             raise ReplicaNotFoundError  # Never be here
 

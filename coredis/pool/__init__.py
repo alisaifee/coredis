@@ -1,6 +1,6 @@
 from __future__ import annotations
 
 from .basic import ConnectionPool
-from .cluster import BlockingClusterConnectionPool, ClusterConnectionPool
+from .cluster import ClusterConnectionPool
 
-__all__ = ["ConnectionPool", "ClusterConnectionPool", "BlockingClusterConnectionPool"]
+__all__ = ["ConnectionPool", "ClusterConnectionPool"]

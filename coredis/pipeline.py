@@ -213,7 +213,7 @@ class ClusterPipelineCommandRequest(PipelineCommandRequest[CommandResponseT]):
         parent: CommandRequest[Any] | None = None,
     ) -> None:
         self.position: int = 0
-        self.result: Any | None = None
+        self.result: Any = None
         self.asking: bool = False
         super().__init__(
             client,

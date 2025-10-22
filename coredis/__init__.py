@@ -17,11 +17,7 @@ from coredis.connection import (
     Connection,
     UnixDomainSocketConnection,
 )
-from coredis.pool import (
-    BlockingClusterConnectionPool,
-    ClusterConnectionPool,
-    ConnectionPool,
-)
+from coredis.pool import ClusterConnectionPool, ConnectionPool
 from coredis.sentinel import Sentinel
 from coredis.tokens import PureToken
 
@@ -34,7 +30,6 @@ __all__ = [
     "UnixDomainSocketConnection",
     "ClusterConnection",
     "ConnectionPool",
-    "BlockingClusterConnectionPool",
     "ClusterConnectionPool",
     "PureToken",
     "Sentinel",
