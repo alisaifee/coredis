@@ -211,7 +211,7 @@ class ConnectionPool(AsyncContextManagerMixin):
         self.blocking = blocking
         self._connections: set[BaseConnection] = set()
         self._condition = Condition()
-        self._other_condition = Condition()
+        self._dedicated_condition = Condition()
 
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
@@ -257,8 +257,8 @@ class ConnectionPool(AsyncContextManagerMixin):
                     async with self._condition:
                         await self._condition.wait()
                 else:
-                    async with self._other_condition:
-                        await self._other_condition.wait()
+                    async with self._dedicated_condition:
+                        await self._dedicated_condition.wait()
             else:
                 connection = self.connection_class(**self.connection_kwargs)
                 await self._task_group.start(connection.run, self)
@@ -278,9 +278,8 @@ class ConnectionPool(AsyncContextManagerMixin):
             if mode is not None:
                 connection._mode ^= mode
             if self.blocking:
-                if mode is None:
-                    async with self._condition:
-                        self._condition.notify()
-                else:
-                    async with self._other_condition:
-                        self._other_condition.notify_all()
+                async with self._condition:
+                    self._condition.notify()
+                if mode is not None:
+                    async with self._dedicated_condition:
+                        self._dedicated_condition.notify_all()
