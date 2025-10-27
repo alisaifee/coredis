@@ -13,8 +13,6 @@ from coredis.exceptions import (
 )
 from tests.conftest import targets
 
-pytestmark = pytest.mark.anyio
-
 
 async def get_stream_message(client, stream, message_id):
     "Fetch a stream message and format it as a (message_id, fields) pair"

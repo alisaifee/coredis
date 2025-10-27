@@ -8,8 +8,6 @@ from coredis import Redis
 from coredis.modules.response.types import AutocompleteSuggestion
 from tests.conftest import module_targets
 
-pytestmark = pytest.mark.anyio
-
 
 @module_targets()
 class TestAutocomplete:

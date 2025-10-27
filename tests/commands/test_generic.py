@@ -9,8 +9,6 @@ from coredis import PureToken
 from coredis.exceptions import DataError, NoKeyError, ResponseError
 from tests.conftest import targets
 
-pytestmark = pytest.mark.anyio
-
 
 @targets(
     "redis_basic",

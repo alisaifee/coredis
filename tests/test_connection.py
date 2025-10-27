@@ -10,8 +10,6 @@ from coredis import Connection, ConnectionPool, UnixDomainSocketConnection
 from coredis.credentials import UserPassCredentialProvider
 from coredis.exceptions import TimeoutError
 
-pytestmark = pytest.mark.anyio
-
 
 async def test_connect_tcp(redis_basic):
     conn = Connection()
