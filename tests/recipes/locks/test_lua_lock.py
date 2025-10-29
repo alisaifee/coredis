@@ -9,8 +9,6 @@ from coredis.exceptions import LockError
 from coredis.recipes.locks import Lock
 from tests.conftest import targets
 
-pytestmark = pytest.mark.anyio
-
 
 @pytest.fixture
 def lock_name():

@@ -12,8 +12,6 @@ from coredis.tokens import PrefixToken
 from coredis.typing import RedisCommand
 from tests.conftest import targets
 
-pytestmark = pytest.mark.anyio
-
 
 @targets(
     "redis_basic",

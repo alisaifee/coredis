@@ -12,8 +12,6 @@ from coredis.exceptions import NoScriptError, NotBusyError, ResponseError
 from coredis.typing import AnyStr, KeyT, RedisValueT
 from tests.conftest import targets
 
-pytestmark = pytest.mark.anyio
-
 multiply_script = """
 local value = redis.call('GET', KEYS[1])
 value = tonumber(value)

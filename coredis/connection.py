@@ -620,7 +620,7 @@ class Connection(BaseConnection):
     @override
     async def _connect(self) -> ByteStream:
         with fail_after(self._connect_timeout):
-            connection = await connect_tcp(self.host, self.port)
+            connection: ByteStream = await connect_tcp(self.host, self.port)
             if self.ssl_context:
                 connection = await TLSStream.wrap(
                     connection,
