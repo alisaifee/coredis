@@ -648,7 +648,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
             timeout=self.timeout,
         )
         for i, cmd in enumerate(commands):
-            cmd.response = requests[i]
+            cmd.response = await_result(requests[i])
 
         response: list[Any] = []
         for cmd in commands:
@@ -834,9 +834,10 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
     def __bool__(self) -> bool:
         return True
 
-    def __await__(self) -> Generator[None, None, Self]:
-        yield
-        return self
+    @asynccontextmanager
+    async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
+        yield self
+        await self.execute()
 
     def execute_command(
         self,
@@ -1040,6 +1041,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
                 if isinstance(c.callback, AsyncPreProcessingCallback):
                     await c.callback.pre_process(self.client, c.result)
                 r = c.callback(c.result, version=protocol_version)
+                c.response = await_result(r)
             response.append(r)
 
         if raise_on_error:

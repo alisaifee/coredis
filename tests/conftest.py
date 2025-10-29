@@ -255,14 +255,18 @@ async def remapped_slots(client, request):
         moves[slot] = destinations[slot].node_id
     try:
         for slot in moves.keys():
-            [await p.cluster_setslot(slot, node=moves[slot]) for p in client.primaries]
+            for p in client.primaries:
+                async with p:
+                    await p.cluster_setslot(slot, node=moves[slot])
         yield
     finally:
         if originals:
             await client.flushall()
 
             for slot in originals.keys():
-                [await p.cluster_setslot(slot, node=originals[slot]) for p in client.primaries]
+                for p in client.primaries:
+                    async with p:
+                        await p.cluster_setslot(slot, node=originals[slot])
 
 
 def check_redis_cluster_ready(host, port):
