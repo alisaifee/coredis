@@ -22,7 +22,8 @@ authors = [
   {name = "Ali-Akber Saifee", email = "ali@indydevs.org"}
 ]
 maintainers = [
-  {name = "Ali-Akber Saifee", email = "ali@indydevs.org"}
+  {name = "Ali-Akber Saifee", email = "ali@indydevs.org"},
+  {name = "Graeme Holliday", email = "graeme@tastyware.dev"}
 ]
 keywords = ["Redis", "key-value store", "asyncio"]
 classifiers = [
@@ -45,6 +46,7 @@ dependencies = [
   "typing_extensions>=4.13",
   "packaging>=21,<26",
   "pympler>1,<2",
+  "exceptiongroup>=1.3.0",
 ]
 
 [project.optional-dependencies]
@@ -220,4 +222,3 @@ MYPYC_OPT_LEVEL = "3"
 [tool.cibuildwheel.linux.environment]
 HATCH_BUILD_HOOKS_ENABLE = "1"
 MYPYC_OPT_LEVEL = "3"
-

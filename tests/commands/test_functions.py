@@ -62,10 +62,8 @@ async def simple_library(client):
 @targets(
     "redis_basic",
     "redis_basic_resp2",
-    "redis_basic_blocking",
     "redis_basic_raw",
     "redis_cluster",
-    "redis_cluster_blocking",
     "redis_cluster_raw",
     "valkey",
 )

@@ -17,13 +17,7 @@ from coredis.typing import Serializable
 from tests.conftest import targets
 
 
-@targets(
-    "redis_basic",
-    "redis_basic_blocking",
-    "dragonfly",
-    "valkey",
-    "redict",
-)
+@targets("redis_basic", "dragonfly", "valkey", "redict")
 class TestPipeline:
     async def test_empty_pipeline(self, client):
         async with client.pipeline():

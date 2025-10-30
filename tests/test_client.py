@@ -22,7 +22,6 @@ from tests.conftest import targets
 
 @targets(
     "redis_basic",
-    "redis_basic_blocking",
     "redis_basic_raw",
     "redis_ssl",
     "redis_ssl_no_client_auth",
