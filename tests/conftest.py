@@ -57,11 +57,6 @@ SERVER_DEFAULT_ARGS = {
 }
 
 
-@pytest.fixture(scope="session")
-def anyio_backend() -> str:
-    return "trio"
-
-
 @pytest.fixture(scope="session", autouse=True)
 def uvloop():
     if os.environ.get("COREDIS_UVLOOP") == "True":
@@ -481,7 +476,6 @@ async def redis_basic(redis_basic_server, request):
             host="localhost",
             port=6379,
             decode_responses=True,
-            blocking=False,
             **get_client_test_args(request),
         ),
         **get_client_test_args(request),
@@ -500,28 +494,6 @@ async def redis_basic_resp2(redis_basic_server, request):
         6379,
         decode_responses=True,
         protocol_version=2,
-        **get_client_test_args(request),
-    )
-    await check_test_constraints(request, client)
-    async with client:
-        await client.flushall()
-        await set_default_test_config(client)
-        yield client
-
-
-@pytest.fixture
-async def redis_basic_blocking(redis_basic_server, request):
-    client = coredis.Redis(
-        "localhost",
-        6379,
-        decode_responses=True,
-        connection_pool=ConnectionPool(
-            host="localhost",
-            port=6379,
-            decode_responses=True,
-            blocking=True,
-            **get_client_test_args(request),
-        ),
         **get_client_test_args(request),
     )
     await check_test_constraints(request, client)
@@ -725,32 +697,6 @@ async def redis_cluster_auth_cred_provider(redis_cluster_auth_server, request):
         8500,
         decode_responses=True,
         credential_provider=UserPassCredentialProvider(password="sekret"),
-        **get_client_test_args(request),
-    )
-    await check_test_constraints(request, cluster)
-    async with cluster:
-        await cluster.flushall()
-        await cluster.flushdb()
-
-        for primary in cluster.primaries:
-            async with primary:
-                await set_default_test_config(primary)
-
-        async with remapped_slots(cluster, request):
-            yield cluster
-
-
-@pytest.fixture
-async def redis_cluster_blocking(redis_cluster_server, request):
-    pool = coredis.BlockingClusterConnectionPool(
-        startup_nodes=[{"host": "localhost", "port": 7000}],
-        max_connections=32,
-        decode_responses=True,
-        **get_client_test_args(request),
-    )
-    cluster = coredis.RedisCluster(
-        connection_pool=pool,
-        decode_responses=True,
         **get_client_test_args(request),
     )
     await check_test_constraints(request, cluster)

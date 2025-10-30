@@ -70,14 +70,7 @@ def make_subscribe_test_data(pubsub, encoder, type):
     assert False, f"invalid subscribe type: {type}"
 
 
-@targets(
-    "redis_basic",
-    "redis_basic_blocking",
-    "redis_basic_raw",
-    "dragonfly",
-    "valkey",
-    "redict",
-)
+@targets("redis_basic", "redis_basic_raw", "dragonfly", "valkey", "redict")
 class TestPubSubSubscribeUnsubscribe:
     async def _test_subscribe_unsubscribe(
         self,

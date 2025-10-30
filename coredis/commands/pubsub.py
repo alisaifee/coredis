@@ -18,7 +18,7 @@ from deprecated.sphinx import versionadded
 
 from coredis._utils import b, hash_slot, nativestr
 from coredis.commands.constants import CommandName
-from coredis.connection import BaseConnection, Connection, ConnectionMode
+from coredis.connection import BaseConnection, Connection
 from coredis.exceptions import ConnectionError, PubSubError, TimeoutError
 from coredis.parser import (
     PUBLISH_MESSAGE_TYPES,
@@ -122,7 +122,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         async with (
             create_task_group() as tg,
-            self.connection_pool.acquire(mode=ConnectionMode.PUBSUB) as self._connection,
+            self.connection_pool.acquire_dedicated() as self._connection,
         ):
             # initialize subscriptions
             if self._initial_channel_subscriptions:

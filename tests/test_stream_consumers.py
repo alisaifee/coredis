@@ -20,13 +20,7 @@ async def consume_entries(consumer, count, consumed=None):
     return consumed
 
 
-@targets(
-    "redis_basic",
-    "redis_basic_blocking",
-    "redis_basic_raw",
-    "redis_cluster",
-    "redis_cluster_raw",
-)
+@targets("redis_basic", "redis_basic_raw", "redis_cluster", "redis_cluster_raw")
 class TestStreamConsumers:
     async def test_single_consumer(self, client, _s):
         consumer = await Consumer(client, ["a", "b"])

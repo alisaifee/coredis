@@ -27,7 +27,6 @@ from coredis.commands.sentinel import SentinelCommands
 from coredis.config import Config
 from coredis.connection import (
     BaseConnection,
-    ConnectionMode,
     RedisSSLContext,
     UnixDomainSocketConnection,
 )
@@ -967,7 +966,7 @@ class Redis(Client[AnyStr]):
         **options: Unpack[ExecutionParameters],
     ) -> R:
         pool = self.connection_pool
-        async with pool.acquire(mode=ConnectionMode.BLOCKING) as connection:
+        async with pool.acquire_dedicated() as connection:
             try:
                 keys = KeySpec.extract_keys(command.name, *command.arguments)
                 cacheable = (
@@ -1044,8 +1043,7 @@ class Redis(Client[AnyStr]):
         if should_block:
             return await self._execute_blocking(command, callback, **options)
         pool = self.connection_pool
-        released = False
-        async with pool.acquire() as connection:
+        async with pool.acquire_multiplexed() as connection:
             try:
                 keys = KeySpec.extract_keys(command.name, *command.arguments)
                 cacheable = (
@@ -1089,8 +1087,6 @@ class Redis(Client[AnyStr]):
                         decode=options.get("decode", self._decodecontext.get()),
                         encoding=self._encodingcontext.get(),
                     )
-                    connection.pending -= 1
-                    released = True
                     reply = await request
                     await self._ensure_wait_and_persist(command, connection)
                     if self.noreply:
@@ -1112,8 +1108,6 @@ class Redis(Client[AnyStr]):
                 return callback(cached_reply if cache_hit else reply, version=self.protocol_version)
             finally:
                 self._ensure_server_version(connection.server_version)
-                if not released:
-                    connection.pending -= 1
 
     @overload
     def decoding(

@@ -3,21 +3,19 @@ from __future__ import annotations
 import warnings
 from contextlib import asynccontextmanager
 from ssl import SSLContext, VerifyMode
-from typing import Any, AsyncGenerator, Generator, cast
+from typing import Any, AsyncGenerator, cast
 from urllib.parse import parse_qs, unquote, urlparse
 
-from anyio import AsyncContextManagerMixin, Condition, create_task_group
+from anyio import AsyncContextManagerMixin, Lock, Semaphore, create_task_group
 from typing_extensions import Self
 
 from coredis._utils import query_param_to_bool
 from coredis.connection import (
     BaseConnection,
     Connection,
-    ConnectionMode,
     RedisSSLContext,
     UnixDomainSocketConnection,
 )
-from coredis.exceptions import ConnectionError
 from coredis.typing import Callable, ClassVar, TypeVar
 
 _CPT = TypeVar("_CPT", bound="ConnectionPool")
@@ -180,14 +178,17 @@ class ConnectionPool(AsyncContextManagerMixin):
 
         return cls(**kwargs)
 
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}<{self.connection_class.describe(self.connection_kwargs)}>"
+
     def __init__(
         self,
         *,
         connection_class: type[BaseConnection] | None = None,
         max_connections: int | None = None,
         max_idle_time: int | None = 300,
+        multiplexed_connections: int = 4,
         idle_check_interval: int = 1,
-        blocking: bool = False,
         **connection_kwargs: Any,
     ) -> None:
         """
@@ -208,10 +209,14 @@ class ConnectionPool(AsyncContextManagerMixin):
         self.idle_check_interval = idle_check_interval
         self.decode_responses = bool(self.connection_kwargs.get("decode_responses", False))
         self.encoding = str(self.connection_kwargs.get("encoding", "utf-8"))
-        self.blocking = blocking
-        self._connections: set[BaseConnection] = set()
-        self._condition = Condition()
-        self._dedicated_condition = Condition()
+        self._multiplexed_count = multiplexed_connections
+        self._multiplexed_connections: list[BaseConnection] = []
+        self._used_dedicated_connections: set[BaseConnection] = set()
+        self._free_dedicated_connections: set[BaseConnection] = set()
+        self._connection_lock = Lock()
+        self._multiplexed_index = 0
+        dedicated_count = self.max_connections - multiplexed_connections
+        self._capacity = Semaphore(dedicated_count, max_value=dedicated_count)
 
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
@@ -220,66 +225,50 @@ class ConnectionPool(AsyncContextManagerMixin):
             yield self
             self._task_group.cancel_scope.cancel()
 
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}<{self.connection_class.describe(self.connection_kwargs)}>"
-
-    def get_connection_for_pipeline(self) -> Generator[BaseConnection, None, None]:
-        return (c for c in self._connections if c.available and not c._mode & 3 and c.pending == 0)
-
-    def get_connection_for_pubsub(self) -> Generator[BaseConnection, None, None]:
-        return (c for c in self._connections if c.available and not c._mode & 5)
-
-    def get_connection_for_blocking(self) -> Generator[BaseConnection, None, None]:
-        return (c for c in self._connections if c.available and not c._mode and c.pending == 0)
-
-    def get_connection(self) -> Generator[BaseConnection, None, None]:
-        return (c for c in self._connections if c.available and not c._mode & 3)
-
     @asynccontextmanager
-    async def acquire(self, mode: ConnectionMode | None = None) -> AsyncGenerator[BaseConnection]:
+    async def acquire_multiplexed(self) -> AsyncGenerator[BaseConnection]:
         """
-        Gets a connection from the pool, or creates a new one if all are busy.
+        Gets a multiplexing connection from the pool, or creates a new one if all are busy.
         """
-        if mode == ConnectionMode.PIPELINE:  # if connection has a pubsub it's fine
-            gen = self.get_connection_for_pipeline
-        elif mode == ConnectionMode.PUBSUB:  # can't have two pubsubs on one connection
-            gen = self.get_connection_for_pubsub
-        elif mode == ConnectionMode.BLOCKING:  # needs completely dedicated connection
-            gen = self.get_connection_for_blocking
-        else:  # normal commands
-            gen = self.get_connection
-        while not (connection := next(gen(), None)):
-            if len(self._connections) >= self.max_connections:
-                if not self.blocking:
-                    raise ConnectionError("Too many connections")
-                # wait for a connection to become available
-                if mode is None:
-                    async with self._condition:
-                        await self._condition.wait()
-                else:
-                    async with self._dedicated_condition:
-                        await self._dedicated_condition.wait()
-            else:
-                connection = self.connection_class(**self.connection_kwargs)
-                await self._task_group.start(connection.run, self)
-                self._connections.add(connection)
-                break
-        if mode is not None:
-            connection._mode |= mode
-        else:  # increment counter until the command is sent
-            connection.pending += 1
+        # Round-robin distribution
+        connection: BaseConnection | None = None
+        if len(self._multiplexed_connections) < self._multiplexed_count:
+            async with self._connection_lock:
+                if len(self._multiplexed_connections) < self._multiplexed_count:
+                    connection = self.connection_class(**self.connection_kwargs)
+                    await self._task_group.start(connection.run)
+                    self._multiplexed_connections.append(connection)
+        if connection is None:
+            i = self._multiplexed_index % len(self._multiplexed_connections)
+            self._multiplexed_index += 1
+            connection = self._multiplexed_connections[i]
         try:
             yield connection
         except BaseException:
-            if connection in self._connections:
-                self._connections.remove(connection)
+            if connection in self._multiplexed_connections:
+                self._multiplexed_connections.remove(connection)
             raise
-        finally:
-            if mode is not None:
-                connection._mode ^= mode
-            if self.blocking:
-                async with self._condition:
-                    self._condition.notify()
-                if mode is not None:
-                    async with self._dedicated_condition:
-                        self._dedicated_condition.notify_all()
+
+    @asynccontextmanager
+    async def acquire_dedicated(self) -> AsyncGenerator[BaseConnection]:
+        """
+        Gets a dedicated connection from the pool, or creates a new one if all are busy.
+        """
+        async with self._capacity:
+            if self._free_dedicated_connections:
+                connection = self._free_dedicated_connections.pop()
+            else:
+                connection = self.connection_class(**self.connection_kwargs)
+                await self._task_group.start(connection.run)
+            self._used_dedicated_connections.add(connection)
+            try:
+                yield connection
+            except BaseException:
+                if connection in self._used_dedicated_connections:
+                    self._used_dedicated_connections.remove(connection)
+                elif connection in self._free_dedicated_connections:
+                    self._free_dedicated_connections.remove(connection)
+                raise
+            else:
+                self._used_dedicated_connections.remove(connection)
+                self._free_dedicated_connections.add(connection)

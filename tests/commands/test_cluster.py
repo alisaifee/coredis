@@ -14,7 +14,6 @@ from tests.conftest import targets
 @targets(
     "redis_cluster",
     "redis_cluster_noreplica",
-    "redis_cluster_blocking",
     "redis_cluster_raw",
     "redis_cluster_ssl",
 )

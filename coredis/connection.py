@@ -10,7 +10,6 @@ import time
 import warnings
 from abc import abstractmethod
 from collections import defaultdict, deque
-from enum import IntFlag
 from typing import TYPE_CHECKING, Any, Generator, cast
 
 from anyio import (
@@ -57,23 +56,10 @@ from coredis.typing import (
     TypeVar,
 )
 
-MAX_REQUESTS_PER_CONNECTION = 32
 R = TypeVar("R")
 
 if TYPE_CHECKING:
-    from coredis.pool.basic import ConnectionPool
     from coredis.pool.nodemanager import ManagedNode
-
-
-class ConnectionMode(IntFlag):
-    """
-    Represents state of connection.
-    Zero means normal, 5 means blocking & pubsub, etc.
-    """
-
-    BLOCKING = 1
-    PIPELINE = 2
-    PUBSUB = 4
 
 
 @dataclasses.dataclass
@@ -231,9 +217,6 @@ class BaseConnection:
 
         self._requests: deque[Request] = deque()
         self._write_lock = Lock()
-        self._mode = 0
-        #: used for normal commands, to ensure they're sent (but not necessarily received)
-        self.pending = 0
 
     def __repr__(self) -> str:
         return self.describe(self._description_args())
@@ -245,10 +228,6 @@ class BaseConnection:
     @property
     def location(self) -> str:
         return self.locator.format_map(defaultdict(lambda: None, self._description_args()))
-
-    @property
-    def available(self) -> bool:
-        return len(self._requests) < MAX_REQUESTS_PER_CONNECTION
 
     @property
     def connection(self) -> ByteStream:
@@ -276,9 +255,7 @@ class BaseConnection:
     @abstractmethod
     async def _connect(self) -> ByteStream: ...
 
-    async def run(
-        self, pool: ConnectionPool, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
-    ) -> None:
+    async def run(self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
         """
         Establish a connnection to the redis server
         and initiate any post connect callbacks.
@@ -286,7 +263,7 @@ class BaseConnection:
         self._connection = await self._connect()
         try:
             async with self.connection, self._parser.push_messages, create_task_group() as tg:
-                tg.start_soon(self.listen_for_responses, pool)
+                tg.start_soon(self.listen_for_responses)
                 # setup connection
                 await self.on_connect()
                 # run any user callbacks. right now the only internal callback
@@ -299,6 +276,7 @@ class BaseConnection:
         except Exception as e:
             logger.exception("Connection closed unexpectedly!")
             self._last_error = e
+            raise
         finally:
             self._parser.on_disconnect()
             disconnect_exc = self._last_error or ConnectionError("Connection lost!")
@@ -307,10 +285,8 @@ class BaseConnection:
                 if not request._event.is_set():
                     request._exc = disconnect_exc
                     request._event.set()
-            if self in pool._connections:
-                pool._connections.remove(self)
 
-    async def listen_for_responses(self, pool: ConnectionPool) -> None:
+    async def listen_for_responses(self) -> None:
         """
         Listen on the socket and run the parser, completing pending requests in
         FIFO order.
@@ -336,9 +312,6 @@ class BaseConnection:
                 else:
                     request._result = response
                 request._event.set()
-                if pool.blocking:
-                    async with pool._condition:
-                        pool._condition.notify()
 
     async def update_tracking_client(self, enabled: bool, client_id: int | None = None) -> bool:
         """

@@ -34,31 +34,31 @@ class TestConnectionPool:
     async def test_multiple_connections(self):
         pool = self.get_pool()
         async with pool:
-            c1 = await pool.acquire(blocking=True)
-            c2 = await pool.acquire(blocking=True)
+            c1 = await pool.acquire_dedicated(blocking=True)
+            c2 = await pool.acquire_dedicated(blocking=True)
             assert c1 != c2
 
     async def test_max_connections(self):
         pool = self.get_pool(max_connections=2)
         async with pool:
-            await pool.acquire(blocking=True)
-            await pool.acquire(blocking=True)
+            await pool.acquire_dedicated(blocking=True)
+            await pool.acquire_dedicated(blocking=True)
             with pytest.raises(ConnectionError):
-                await pool.acquire(blocking=True)
+                await pool.acquire_dedicated(blocking=True)
 
     async def test_pool_disconnect(self):
         pool = self.get_pool(max_connections=3)
         async with pool:
-            await pool.acquire(blocking=True)
-            await pool.acquire(blocking=True)
-            await pool.acquire(blocking=True)
+            await pool.acquire_dedicated(blocking=True)
+            await pool.acquire_dedicated(blocking=True)
+            await pool.acquire_dedicated(blocking=True)
         assert pool._connections == set()
 
     async def test_reuse_previously_released_connection(self):
         pool = self.get_pool()
         async with pool:
-            c1 = await pool.acquire()
-            c2 = await pool.acquire()
+            c1 = await pool.acquire_dedicated()
+            c2 = await pool.acquire_dedicated()
         assert c1 == c2
 
     def test_repr_contains_db_info_tcp(self):
@@ -112,25 +112,25 @@ class TestBlockingConnectionPool:
     async def test_multiple_connections(self):
         pool = self.get_pool()
         async with pool:
-            c1 = await pool.acquire(blocking=True)
-            c2 = await pool.acquire(blocking=True)
+            c1 = await pool.acquire_dedicated(blocking=True)
+            c2 = await pool.acquire_dedicated(blocking=True)
             assert c1 != c2
 
     async def test_max_connections_timeout(self):
         pool = self.get_pool(max_connections=2)
         async with pool:
             with move_on_after(1) as scope:
-                await pool.acquire(blocking=True)
-                await pool.acquire(blocking=True)
-                await pool.acquire(blocking=True)
+                await pool.acquire_dedicated(blocking=True)
+                await pool.acquire_dedicated(blocking=True)
+                await pool.acquire_dedicated(blocking=True)
             assert scope.cancelled_caught
 
     async def test_pool_disconnect(self):
         pool = self.get_pool()
         async with pool:
-            await pool.acquire(blocking=True)
-            await pool.acquire(blocking=True)
-            await pool.acquire(blocking=True)
+            await pool.acquire_dedicated(blocking=True)
+            await pool.acquire_dedicated(blocking=True)
+            await pool.acquire_dedicated(blocking=True)
         assert pool._connections == set()
 
     def test_repr_contains_db_info_tcp(self):
