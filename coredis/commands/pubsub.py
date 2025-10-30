@@ -111,12 +111,11 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         return self
 
     async def __anext__(self) -> PubSubMessage:
-        while self.subscribed:
+        while True:
             if message := await self.get_message():
                 return message
             else:
                 continue
-        raise StopAsyncIteration()
 
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
@@ -130,11 +129,15 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
             if self._initial_pattern_subscriptions:
                 await self.psubscribe(**self._initial_pattern_subscriptions)
             tg.start_soon(self._consumer)
+            tg.start_soon(self._keepalive)
             yield self
             # cleanup
             tg.cancel_scope.cancel()
-            await self.unsubscribe()
-            await self.punsubscribe()
+
+    async def _keepalive(self) -> None:
+        while True:
+            await sleep(30)
+            await (await self.connection.create_request(CommandName.PING))
 
     async def psubscribe(
         self,
@@ -253,10 +256,8 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
         :meta private:
         """
-        assert self.connection
         timeout = timeout if timeout and timeout > 0 else None
         if self.connection.protocol_version != 3:
-            # TODO: implement RESP2-compatible?
             raise NotImplementedError()
         with fail_after(timeout):
             return await self.connection.fetch_push_message(block=block)
@@ -330,17 +331,14 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
     async def _consumer(self) -> None:
         while True:
-            try:
-                if self.subscribed:
-                    if response := await self._retry_policy.call_with_retries(
-                        lambda: self.parse_response(block=True),
-                    ):
-                        msg = await self.handle_message(response)
-                        self._send_stream.send_nowait(msg)
-                else:
-                    await self._subscribed.wait()
-            except ConnectionError:
-                await sleep(0)
+            if self._subscribed.is_set():
+                if response := await self._retry_policy.call_with_retries(
+                    lambda: self.parse_response(block=True),
+                ):
+                    msg = await self.handle_message(response)
+                    self._send_stream.send_nowait(msg)
+            else:
+                await self._subscribed.wait()
 
     def _filter_ignored_messages(
         self,

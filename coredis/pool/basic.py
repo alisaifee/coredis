@@ -224,6 +224,9 @@ class ConnectionPool(AsyncContextManagerMixin):
             self._task_group = tg
             yield self
             self._task_group.cancel_scope.cancel()
+            self._multiplexed_connections.clear()
+            self._free_dedicated_connections.clear()
+            self._used_dedicated_connections.clear()
 
     @asynccontextmanager
     async def acquire_multiplexed(self) -> AsyncGenerator[BaseConnection]:
