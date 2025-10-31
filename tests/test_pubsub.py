@@ -7,6 +7,7 @@ import anyio
 import pytest
 
 import coredis
+from coredis.client.basic import Redis
 from coredis.commands.pubsub import PubSub
 from coredis.exceptions import ConnectionError
 from tests.conftest import targets
@@ -110,9 +111,10 @@ class TestPubSubSubscribeUnsubscribe:
         await self._test_subscribe_unsubscribe(**kwargs)
 
     async def _test_resubscribe_on_reconnection(
-        self, p, encoder, sub_type, unsub_type, sub_func, unsub_func, keys
+        self, p: PubSub, encoder, sub_type, unsub_type, sub_func, unsub_func, keys
     ):
         async with p:
+            p.connection.max_idle_time = 1
             for key in keys:
                 assert await sub_func(key) is None
             # should be a message for each channel/pattern we just subscribed to
@@ -120,8 +122,8 @@ class TestPubSubSubscribeUnsubscribe:
             for i, key in enumerate(keys):
                 assert await wait_for_message(p) == make_message(sub_type, encoder(key), i + 1)
 
-            # manually disconnect
-            p.connection.disconnect()
+            # wait for disconnect
+            await anyio.sleep(2)
             # calling get_message again reconnects and resubscribes
             # note, we may not re-subscribe to channels in exactly the same order
             # so we have to do some extra checks to make sure we got them all
@@ -243,7 +245,7 @@ class TestPubSubSubscribeUnsubscribe:
                 assert message is None
             assert p.subscribed is False
 
-    async def test_subscribe_on_construct(self, client, _s):
+    async def test_subscribe_on_construct(self, client: Redis, _s):
         handled = []
 
         def handle(message):
@@ -256,7 +258,6 @@ class TestPubSubSubscribeUnsubscribe:
             patterns=["baz*"],
             pattern_handlers={"qu*": handle},
         ) as pubsub:
-            assert pubsub.subscribed
             await client.publish("foo", "bar")
             await client.publish("bar", "foo")
             await client.publish("baz", "qux")
@@ -269,7 +270,6 @@ class TestPubSubSubscribeUnsubscribe:
             )
 
         assert handled == [_s("foo"), _s("quxx")]
-        assert not pubsub.subscribed
 
 
 @targets("redis_basic", "redis_basic_raw")

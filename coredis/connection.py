@@ -273,7 +273,7 @@ class BaseConnection:
                     if inspect.isawaitable(task):
                         await task
                 task_status.started()
-        except Exception as e:
+        except BaseException as e:
             logger.exception("Connection closed unexpectedly!")
             self._last_error = e
             raise

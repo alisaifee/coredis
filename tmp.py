@@ -13,7 +13,8 @@ async def main():
             async for msg in ps:
                 print(msg)
                 if msg["type"] == "message":
-                    break
+                    # when there are no subscriptions left iterator ends
+                    await ps.unsubscribe("mychannel")
         async with redis.pipeline(transaction=False) as pipe:
             pipe.incr("tmpkey")
             val = pipe.get("tmpkey")

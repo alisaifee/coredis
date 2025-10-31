@@ -6,7 +6,7 @@ from ssl import SSLContext, VerifyMode
 from typing import Any, AsyncGenerator, cast
 from urllib.parse import parse_qs, unquote, urlparse
 
-from anyio import AsyncContextManagerMixin, Lock, Semaphore, create_task_group
+from anyio import AsyncContextManagerMixin, Lock, Semaphore, create_task_group, fail_after
 from typing_extensions import Self
 
 from coredis._utils import query_param_to_bool
@@ -186,7 +186,7 @@ class ConnectionPool(AsyncContextManagerMixin):
         *,
         connection_class: type[BaseConnection] | None = None,
         max_connections: int | None = None,
-        max_idle_time: int | None = 300,
+        max_block_time: float | None = None,
         multiplexed_connections: int = 4,
         idle_check_interval: int = 1,
         **connection_kwargs: Any,
@@ -200,12 +200,14 @@ class ConnectionPool(AsyncContextManagerMixin):
 
         Any additional keyword arguments are passed to the constructor of
         connection_class.
+
+        :param max_block_time: seconds to block if no connections are available; if None, blocks forever
         """
+        assert max_connections is None or multiplexed_connections < max_connections
         self.connection_class = connection_class or Connection
         self.connection_kwargs = connection_kwargs
-        self.connection_kwargs["max_idle_time"] = max_idle_time
         self.max_connections = max_connections or 64
-        self.max_idle_time = max_idle_time
+        self.max_block_time = max_block_time
         self.idle_check_interval = idle_check_interval
         self.decode_responses = bool(self.connection_kwargs.get("decode_responses", False))
         self.encoding = str(self.connection_kwargs.get("encoding", "utf-8"))
@@ -231,7 +233,7 @@ class ConnectionPool(AsyncContextManagerMixin):
     @asynccontextmanager
     async def acquire_multiplexed(self) -> AsyncGenerator[BaseConnection]:
         """
-        Gets a multiplexing connection from the pool, or creates a new one if all are busy.
+        Gets a multiplexing connection from the pool, creating one if not enough exist.
         """
         # Round-robin distribution
         connection: BaseConnection | None = None
@@ -257,21 +259,24 @@ class ConnectionPool(AsyncContextManagerMixin):
         """
         Gets a dedicated connection from the pool, or creates a new one if all are busy.
         """
-        async with self._capacity:
-            if self._free_dedicated_connections:
-                connection = self._free_dedicated_connections.pop()
-            else:
-                connection = self.connection_class(**self.connection_kwargs)
-                await self._task_group.start(connection.run)
-            self._used_dedicated_connections.add(connection)
-            try:
-                yield connection
-            except BaseException:
-                if connection in self._used_dedicated_connections:
-                    self._used_dedicated_connections.remove(connection)
-                elif connection in self._free_dedicated_connections:
-                    self._free_dedicated_connections.remove(connection)
-                raise
-            else:
+        with fail_after(self.max_block_time):
+            await self._capacity.acquire()
+        if self._free_dedicated_connections:
+            connection = self._free_dedicated_connections.pop()
+        else:
+            connection = self.connection_class(**self.connection_kwargs)
+            await self._task_group.start(connection.run)
+        self._used_dedicated_connections.add(connection)
+        try:
+            yield connection
+        except BaseException:
+            if connection in self._used_dedicated_connections:
                 self._used_dedicated_connections.remove(connection)
-                self._free_dedicated_connections.add(connection)
+            elif connection in self._free_dedicated_connections:
+                self._free_dedicated_connections.remove(connection)
+            raise
+        else:
+            self._used_dedicated_connections.remove(connection)
+            self._free_dedicated_connections.add(connection)
+        finally:
+            self._capacity.release()

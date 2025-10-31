@@ -6,7 +6,10 @@ from contextlib import asynccontextmanager, suppress
 from typing import TYPE_CHECKING, Any, AsyncGenerator, cast
 
 from anyio import (
+    TASK_STATUS_IGNORED,
     AsyncContextManagerMixin,
+    ConnectionFailed,
+    EndOfStream,
     Event,
     create_memory_object_stream,
     create_task_group,
@@ -14,9 +17,11 @@ from anyio import (
     move_on_after,
     sleep,
 )
+from anyio.abc import TaskStatus
 from deprecated.sphinx import versionadded
+from exceptiongroup import BaseExceptionGroup, catch
 
-from coredis._utils import b, hash_slot, nativestr
+from coredis._utils import b, hash_slot, logger, nativestr
 from coredis.commands.constants import CommandName
 from coredis.connection import BaseConnection, Connection
 from coredis.exceptions import ConnectionError, PubSubError, TimeoutError
@@ -111,28 +116,59 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         return self
 
     async def __anext__(self) -> PubSubMessage:
-        while True:
+        while self._subscribed.is_set():
             if message := await self.get_message():
                 return message
-            else:
-                continue
+        raise StopAsyncIteration()
 
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        async with (
-            create_task_group() as tg,
-            self.connection_pool.acquire_dedicated() as self._connection,
-        ):
+        # auto-reconnection for long-lived pubsub instances
+        async with create_task_group() as tg:
+            await tg.start(self._manage_connection)
             # initialize subscriptions
             if self._initial_channel_subscriptions:
                 await self.subscribe(**self._initial_channel_subscriptions)
             if self._initial_pattern_subscriptions:
                 await self.psubscribe(**self._initial_pattern_subscriptions)
-            tg.start_soon(self._consumer)
-            tg.start_soon(self._keepalive)
             yield self
             # cleanup
+            await self.unsubscribe()
+            await self.punsubscribe()
             tg.cancel_scope.cancel()
+
+    async def _manage_connection(
+        self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
+    ) -> None:
+        def handle_exception_group(group: BaseExceptionGroup) -> None:
+            logger.error("Pubsub disconnected!")
+            for error in group.exceptions:
+                logger.error(error)
+            logger.warning("Retrying...")
+
+        MAX_TRIES = 10
+        done = False
+        tries = 0
+        while not done and tries < MAX_TRIES:
+            # retry with exponential backoff
+            await sleep(tries**2)
+            tries += 1
+            with catch({(ConnectionError, ConnectionFailed, EndOfStream): handle_exception_group}):
+                async with self.connection_pool.acquire_dedicated() as self._connection:
+                    async with create_task_group() as tg:
+                        tg.start_soon(self._consumer)
+                        tg.start_soon(self._keepalive)
+                        if tries == 1:
+                            task_status.started()
+                        else:  # resubscribe
+                            if self.channels:
+                                await self.subscribe(*self.channels.keys())
+                            if self.patterns:
+                                await self.psubscribe(*self.patterns.keys())
+                    done = True
+
+        if tries >= MAX_TRIES:
+            raise Exception("Pubsub aborted after max reconnection attempts!")
 
     async def _keepalive(self) -> None:
         while True:
