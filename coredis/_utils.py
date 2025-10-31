@@ -4,7 +4,7 @@ import logging
 from collections import UserDict
 from typing import Any, Awaitable, overload
 
-from anyio import CancelScope, create_task_group
+from anyio import create_task_group
 
 from coredis.typing import (
     Hashable,
@@ -518,28 +518,28 @@ async def gather(
 async def gather(*awaitables: Awaitable[Any], return_exceptions: bool = False) -> tuple[Any, ...]:
     if not awaitables:
         return ()
+    if len(awaitables) == 1:
+        try:
+            return (await awaitables[0],)
+        except Exception as exc:
+            if return_exceptions:
+                return (exc,)
+            else:
+                raise
 
     results: list[Any] = [None] * len(awaitables)
-    first_exc: BaseException | None = None
 
-    async def runner(awaitable: Awaitable[Any], i: int, scope: CancelScope) -> None:
-        nonlocal first_exc
+    async def runner(awaitable: Awaitable[Any], i: int) -> None:
         try:
             results[i] = await awaitable
-        except BaseException as exc:
+        except Exception as exc:
+            if not return_exceptions:
+                raise
             results[i] = exc
-            if first_exc is None:
-                first_exc = exc
-                if not return_exceptions:
-                    scope.cancel()
 
     async with create_task_group() as tg:
-        scope = tg.cancel_scope
         for i, awaitable in enumerate(awaitables):
-            tg.start_soon(runner, awaitable, i, scope)
-
-    if first_exc and not return_exceptions:
-        raise first_exc
+            tg.start_soon(runner, awaitable, i)
 
     return tuple(results)
 
