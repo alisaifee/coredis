@@ -6,7 +6,6 @@ import math
 import os
 import socket
 import ssl
-import time
 import warnings
 from abc import abstractmethod
 from collections import defaultdict, deque
@@ -23,7 +22,6 @@ from anyio import (
     create_task_group,
     fail_after,
     move_on_after,
-    sleep,
 )
 from anyio.abc import ByteStream, SocketAttribute, TaskStatus
 from anyio.streams.tls import TLSStream
@@ -69,9 +67,6 @@ class Request:
     encoding: str | None = None
     raise_exceptions: bool = True
     response_timeout: float | None = None
-    no_reply: bool = False
-    blocking: bool = False
-    created_at: float = dataclasses.field(default_factory=lambda: time.time())
     _event: Event = dataclasses.field(default_factory=Event)
     _exc: BaseException | None = None
     _result: ResponseType | None = None
@@ -79,11 +74,16 @@ class Request:
     def __await__(self) -> Generator[Any, None, ResponseType]:
         return self.get_result().__await__()
 
+    def resolve(self, response: ResponseType) -> None:
+        self._result = response
+        self._event.set()
+
+    def fail(self, error: BaseException) -> None:
+        if not self._event.is_set():
+            self._exc = error
+            self._event.set()
+
     async def get_result(self) -> ResponseType:
-        # return nothing
-        if self.no_reply:
-            await sleep(0)  # add a checkpoint
-            return None
         # return now if response available
         if self._event.is_set():
             return self._result_or_exc()
@@ -282,9 +282,7 @@ class BaseConnection:
             disconnect_exc = self._last_error or ConnectionError("Connection lost!")
             while self._requests:
                 request = self._requests.popleft()
-                if not request._event.is_set():
-                    request._exc = disconnect_exc
-                    request._event.set()
+                request.fail(disconnect_exc)
 
     async def listen_for_responses(self) -> None:
         """
@@ -310,10 +308,9 @@ class BaseConnection:
             if self._requests:
                 request = self._requests.popleft()
                 if request.raise_exceptions and isinstance(response, RedisError):
-                    request._exc = response
+                    request.fail(response)
                 else:
-                    request._result = response
-                request._event.set()
+                    request.resolve(response)
 
     async def update_tracking_client(self, enabled: bool, client_id: int | None = None) -> bool:
         """
@@ -504,10 +501,12 @@ class BaseConnection:
             encoding or self.encoding,
             raise_exceptions,
             request_timeout,
-            no_reply=bool(self.noreply_set or noreply),
         )
         async with self._write_lock:
-            self._requests.append(request)
+            if not (self.noreply_set or noreply):
+                self._requests.append(request)
+            else:
+                request.resolve(None)
             await self._send_packed_command(cmd_list, timeout=request_timeout)
         return request
 
