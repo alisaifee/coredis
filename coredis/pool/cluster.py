@@ -295,28 +295,6 @@ class ClusterConnectionPool(ConnectionPool):
                 if connection.node.name in self._created_connections_per_node:
                     self._created_connections_per_node[connection.node.name] -= 1
 
-    def disconnect(self) -> None:
-        """Closes all connections in the pool"""
-        for node_connections in self._cluster_in_use_connections.values():
-            for connection in node_connections:
-                # connection.disconnect()
-                pass
-        for node, available_connections in self._cluster_available_connections.items():
-            removed = 0
-            while True:
-                try:
-                    _connection = available_connections.get_nowait()
-                    if _connection:
-                        # _connection.disconnect()
-                        if node in self._created_connections_per_node:
-                            self._created_connections_per_node[node] -= 1
-                    removed += 1
-                except WouldBlock:
-                    break
-            # Refill queue with empty slots
-            for _ in range(removed):
-                available_connections.put_nowait(None)
-
     def count_all_num_connections(self, node: ManagedNode) -> int:
         if self.max_connections_per_node:
             return self._created_connections_per_node.get(node.name, 0)

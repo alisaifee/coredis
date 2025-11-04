@@ -760,12 +760,10 @@ class RedisCluster(
         return None
 
     async def on_connection_error(self, _: BaseException) -> None:
-        self.connection_pool.disconnect()
         self.connection_pool.reset()
         self.refresh_table_asap = True
 
     async def on_cluster_down_error(self, _: BaseException) -> None:
-        self.connection_pool.disconnect()
         self.connection_pool.reset()
         self.refresh_table_asap = True
 

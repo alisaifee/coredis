@@ -149,17 +149,6 @@ class TestConnectionPool:
         pool = await self.get_pool(max_connections=None)
         assert pool.max_connections == 2**31
 
-    async def test_pool_disconnect(self):
-        pool = await self.get_pool()
-        c1 = await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7000}))
-        c2 = await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7001}))
-        c3 = await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7000}))
-        pool.release(c3)
-        pool.disconnect()
-        assert not c1.is_connected
-        assert not c2.is_connected
-        assert not c3.is_connected
-
     async def test_reuse_previously_released_connection(self):
         pool = await self.get_pool()
         c1 = await pool.get_connection_by_node(ManagedNode(**{"host": "127.0.0.1", "port": 7000}))
