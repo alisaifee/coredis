@@ -175,7 +175,7 @@ class ClusterConnectionPool(ConnectionPool):
         self._check_lock = threading.Lock()
         self.initialized = False
 
-    async def _get_connection(
+    async def get_connection(
         self,
         command_name: bytes | None = None,
         *keys: RedisValueT,
