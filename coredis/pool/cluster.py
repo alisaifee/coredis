@@ -8,10 +8,10 @@ import warnings
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, cast
 
-from anyio import Lock, WouldBlock, fail_after
+from anyio import Lock, fail_after
 from typing_extensions import Self
 
-from coredis._async_utils import AsyncQueue
+from coredis._async_utils import AsyncQueue, QueueEmpty, QueueFull
 from coredis._utils import b, hash_slot
 from coredis.connection import ClusterConnection, Connection
 from coredis.exceptions import ConnectionError, RedisClusterException
@@ -42,7 +42,6 @@ class ClusterConnectionPool(ConnectionPool):
         "reinitialize_steps": int,
         "skip_full_coverage_check": bool,
         "read_from_replicas": bool,
-        "blocking": bool,
     }
 
     nodes: NodeManager
@@ -65,7 +64,6 @@ class ClusterConnectionPool(ConnectionPool):
         read_from_replicas: bool = False,
         max_idle_time: int = 0,
         idle_check_interval: int = 1,
-        blocking: bool = False,
         timeout: int = 20,
         **connection_kwargs: Any,
     ):
@@ -83,11 +81,8 @@ class ClusterConnectionPool(ConnectionPool):
         :param max_connections: Maximum number of connections to allow concurrently from this
          client. If the value is ``None`` it will default to 32.
         :param max_connections_per_node: Whether to use the value of :paramref:`max_connections`
-         on a per node basis or cluster wide. If ``False`` and :paramref:`blocking` is ``True``
-         the per-node connection pools will have a maximum size of :paramref:`max_connections`
-         divided by the number of nodes in the cluster.
-        :param blocking: If ``True`` the client will block at most :paramref:`timeout` seconds
-         if :paramref:`max_connections` is reachd when trying to obtain a connection
+         on a per node basis or cluster wide. If ``False``  the per-node connection pools will have
+         a maximum size of :paramref:`max_connections` divided by the number of nodes in the cluster.
         :param timeout: Number of seconds to block if :paramref:`block` is ``True`` when trying to
          obtain a connection.
         :param skip_full_coverage_check:
@@ -112,7 +107,6 @@ class ClusterConnectionPool(ConnectionPool):
             port = connection_kwargs.pop("port", None)
             if host and port:
                 startup_nodes = [Node(host=str(host), port=int(port))]
-        self.blocking = blocking
         self.blocking_timeout = timeout
         self.max_connections = max_connections or 2**31
         self.max_connections_per_node = max_connections_per_node
@@ -207,7 +201,7 @@ class ClusterConnectionPool(ConnectionPool):
 
         try:
             connection = self.__node_pool(node.name).get_nowait()
-        except WouldBlock:
+        except QueueEmpty:
             connection = None
         if not connection:
             connection = await self._make_node_connection(node)
@@ -270,20 +264,15 @@ class ClusterConnectionPool(ConnectionPool):
 
         q: AsyncQueue[Connection | None] = AsyncQueue(q_size)
 
-        # If the queue is non-blocking, we don't need to pre-populate it
-        if not self.blocking:
-            return q
-
         if q_size > 2**16:  # noqa
-            raise RuntimeError(
-                f"Requested unsupported value of max_connections: {q_size} in blocking mode"
-            )
+            raise RuntimeError(f"Requested unsupported value of max_connections: {q_size}")
 
         while True:
             try:
                 q.put_nowait(None)
-            except WouldBlock:
+            except QueueFull:
                 break
+
         return q
 
     def release(self, connection: Connection) -> None:
@@ -302,9 +291,7 @@ class ClusterConnectionPool(ConnectionPool):
                 pass
             try:
                 self.__node_pool(connection.node.name).put_nowait(connection)
-            except WouldBlock:
-                # connection.disconnect()
-                # reduce node connection count in case of too many connection error raised
+            except QueueFull:
                 if connection.node.name in self._created_connections_per_node:
                     self._created_connections_per_node[connection.node.name] -= 1
 
@@ -362,17 +349,11 @@ class ClusterConnectionPool(ConnectionPool):
 
     async def get_connection_by_node(self, node: ManagedNode) -> ClusterConnection:
         """Gets a connection by node"""
-        if not self.blocking:
-            try:
-                connection = self.__node_pool(node.name).get_nowait()
-            except WouldBlock:
-                connection = None
-        else:
-            try:
-                with fail_after(self.blocking_timeout):
-                    connection = await self.__node_pool(node.name).get()
-            except asyncio.TimeoutError:
-                raise ConnectionError("No connection available.")
+        try:
+            with fail_after(self.blocking_timeout):
+                connection = await self.__node_pool(node.name).get()
+        except asyncio.TimeoutError:
+            raise ConnectionError("No connection available.")
 
         if not connection:
             connection = await self._make_node_connection(node)
