@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from collections import deque
 from contextlib import asynccontextmanager
 from ssl import SSLContext, VerifyMode
 from typing import Any, AsyncGenerator, cast
@@ -214,7 +215,7 @@ class ConnectionPool(AsyncContextManagerMixin):
         self._multiplexed_count = multiplexed_connections
         self._multiplexed_connections: list[BaseConnection] = []
         self._used_dedicated_connections: set[BaseConnection] = set()
-        self._free_dedicated_connections: set[BaseConnection] = set()
+        self._free_dedicated_connections: deque[BaseConnection] = deque()
         self._connection_lock = Lock()
         self._multiplexed_index = 0
         dedicated_count = self.max_connections - multiplexed_connections
@@ -286,4 +287,4 @@ class ConnectionPool(AsyncContextManagerMixin):
         # if we're here there wasn't an error
         if connection in self._used_dedicated_connections:
             self._used_dedicated_connections.remove(connection)
-            self._free_dedicated_connections.add(connection)
+            self._free_dedicated_connections.appendleft(connection)
