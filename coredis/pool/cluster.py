@@ -96,15 +96,14 @@ class ClusterConnectionPool(ConnectionPool):
         """
         super().__init__(
             connection_class=connection_class,
-            max_connections=max_connections,
-            max_idle_time=max_idle_time,
-            idle_check_interval=idle_check_interval,
             **connection_kwargs,
         )
         self.initialized = False
+
         if startup_nodes is None:
             host = connection_kwargs.pop("host", None)
             port = connection_kwargs.pop("port", None)
+
             if host and port:
                 startup_nodes = [Node(host=str(host), port=int(port))]
         self.blocking_timeout = timeout
@@ -154,6 +153,7 @@ class ClusterConnectionPool(ConnectionPool):
             async with self._init_lock:
                 if not self.initialized:
                     await self.nodes.initialize()
+
                     if not self.max_connections_per_node and self.max_connections < len(
                         self.nodes.nodes
                     ):
@@ -194,6 +194,7 @@ class ClusterConnectionPool(ConnectionPool):
             return await self.get_random_connection()
 
         slot = hash_slot(b(routing_key))
+
         if node_type == "replica":
             node = self.get_replica_node_by_slot(slot)
         else:
@@ -203,16 +204,19 @@ class ClusterConnectionPool(ConnectionPool):
             connection = self.__node_pool(node.name).get_nowait()
         except QueueEmpty:
             connection = None
+
         if not connection:
             connection = await self._make_node_connection(node)
         else:
             if connection.is_connected and connection.needs_handshake:
                 await connection.perform_handshake()
+
         if acquire:
             self._cluster_in_use_connections.setdefault(node.name, set())
             self._cluster_in_use_connections[node.name].add(connection)
         else:
             self.__node_pool(node.name).put_nowait(connection)
+
         return connection
 
     async def _make_node_connection(self, node: ManagedNode) -> Connection:
@@ -239,8 +243,7 @@ class ClusterConnectionPool(ConnectionPool):
         connection.node = node
 
         if self.max_idle_time and self.max_idle_time > 0:
-            # do not await the future
-            # asyncio.ensure_future(self.disconnect_on_idle_time_exceeded(connection))
+            # TODO: disconnect idle connections
             pass
 
         return connection
@@ -248,6 +251,7 @@ class ClusterConnectionPool(ConnectionPool):
     def __node_pool(self, node: str) -> AsyncQueue[Connection | None]:
         if not self._cluster_available_connections.get(node):
             self._cluster_available_connections[node] = self.__default_node_queue()
+
         return self._cluster_available_connections[node]
 
     def __default_node_queue(
@@ -303,8 +307,10 @@ class ClusterConnectionPool(ConnectionPool):
 
     async def get_random_connection(self, primary: bool = False) -> ClusterConnection:
         """Opens new connection to random redis server in the cluster"""
+
         for node in self.nodes.random_startup_node_iter(primary):
             connection = await self.get_connection_by_node(node)
+
             if connection:
                 return connection
         raise RedisClusterException("Cant reach a single startup node.")
@@ -336,6 +342,7 @@ class ClusterConnectionPool(ConnectionPool):
         if not connection:
             connection = await self._make_node_connection(node)
         self._cluster_in_use_connections.setdefault(node.name, set()).add(connection)
+
         return cast(ClusterConnection, connection)
 
     def get_primary_node_by_slot(self, slot: int) -> ManagedNode:
@@ -343,6 +350,7 @@ class ClusterConnectionPool(ConnectionPool):
 
     def get_primary_node_by_slots(self, slots: list[int]) -> ManagedNode:
         nodes = {self.nodes.slots[slot][0].node_id for slot in slots}
+
         if len(nodes) == 1:
             return self.nodes.slots[slots[0]][0]
         else:
@@ -355,8 +363,10 @@ class ClusterConnectionPool(ConnectionPool):
         self, slots: list[int], replica_only: bool = False
     ) -> ManagedNode:
         nodes = {self.nodes.slots[slot][0].node_id for slot in slots}
+
         if len(nodes) == 1:
             slot = slots[0]
+
             if replica_only:
                 return random.choice(
                     [node for node in self.nodes.slots[slot] if node.server_type != "primary"]
@@ -369,9 +379,11 @@ class ClusterConnectionPool(ConnectionPool):
     def get_node_by_slot(self, slot: int, command: bytes | None = None) -> ManagedNode:
         if self.read_from_replicas and command in READONLY_COMMANDS:
             return self.get_replica_node_by_slot(slot)
+
         return self.get_primary_node_by_slot(slot)
 
     def get_node_by_slots(self, slots: list[int], command: bytes | None = None) -> ManagedNode:
         if self.read_from_replicas and command in READONLY_COMMANDS:
             return self.get_replica_node_by_slots(slots)
+
         return self.get_primary_node_by_slots(slots)
