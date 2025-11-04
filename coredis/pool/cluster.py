@@ -239,7 +239,8 @@ class ClusterConnectionPool(ConnectionPool):
             port=node.port,
             **self.connection_kwargs,
         )
-        await self._task_group.start(connection.run)
+        self._task_group.start_soon(connection.run)
+        await connection._started.wait()
         # Must store node in the connection to make it easier to track
         connection.node = node
 

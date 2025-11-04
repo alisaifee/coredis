@@ -230,8 +230,14 @@ class ConnectionPool(AsyncContextManagerMixin):
             self._free_dedicated_connections.clear()
             self._used_dedicated_connections.clear()
 
-    @asynccontextmanager
-    async def acquire_multiplexed(self) -> AsyncGenerator[BaseConnection]:
+    async def wrap_multiplexed(self, connection: BaseConnection) -> None:
+        try:
+            await connection.run()
+        finally:
+            if connection in self._multiplexed_connections:
+                self._multiplexed_connections.remove(connection)
+
+    async def acquire_multiplexed(self) -> BaseConnection:
         """
         Gets a multiplexing connection from the pool, creating one if not enough exist.
         """
@@ -241,18 +247,23 @@ class ConnectionPool(AsyncContextManagerMixin):
             async with self._connection_lock:
                 if len(self._multiplexed_connections) < self._multiplexed_count:
                     connection = self.connection_class(**self.connection_kwargs)
-                    await self._task_group.start(connection.run)
+                    self._task_group.start_soon(self.wrap_multiplexed, connection)
+                    await connection._started.wait()
                     self._multiplexed_connections.append(connection)
         if connection is None:
             i = self._multiplexed_index % len(self._multiplexed_connections)
             self._multiplexed_index += 1
             connection = self._multiplexed_connections[i]
+        return connection
+
+    async def wrap_dedicated(self, connection: BaseConnection) -> None:
         try:
-            yield connection
-        except BaseException:
-            if connection in self._multiplexed_connections:
-                self._multiplexed_connections.remove(connection)
-            raise
+            await connection.run()
+        finally:
+            if connection in self._used_dedicated_connections:
+                self._used_dedicated_connections.remove(connection)
+            elif connection in self._free_dedicated_connections:
+                self._free_dedicated_connections.remove(connection)
 
     @asynccontextmanager
     async def acquire_dedicated(self) -> AsyncGenerator[BaseConnection]:
@@ -265,18 +276,14 @@ class ConnectionPool(AsyncContextManagerMixin):
             connection = self._free_dedicated_connections.pop()
         else:
             connection = self.connection_class(**self.connection_kwargs)
-            await self._task_group.start(connection.run)
+            self._task_group.start_soon(self.wrap_dedicated, connection)
+            await connection._started.wait()
         self._used_dedicated_connections.add(connection)
         try:
             yield connection
-        except BaseException:
-            if connection in self._used_dedicated_connections:
-                self._used_dedicated_connections.remove(connection)
-            elif connection in self._free_dedicated_connections:
-                self._free_dedicated_connections.remove(connection)
-            raise
-        else:
-            self._used_dedicated_connections.remove(connection)
-            self._free_dedicated_connections.add(connection)
         finally:
             self._capacity.release()
+        # if we're here there wasn't an error
+        if connection in self._used_dedicated_connections:
+            self._used_dedicated_connections.remove(connection)
+            self._free_dedicated_connections.add(connection)
