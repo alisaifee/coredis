@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, Generator, cast
 
 from anyio import (
     ClosedResourceError,
+    EndOfStream,
     Event,
     Lock,
     connect_tcp,
@@ -232,7 +233,7 @@ class BaseConnection:
     @property
     def connection(self) -> ByteStream:
         if not self._connection:
-            raise Exception("Connection not initialized correctly!")
+            raise ConnectionError("Connection not initialized correctly!")
         return self._connection
 
     @property
@@ -260,6 +261,7 @@ class BaseConnection:
         Establish a connnection to the redis server
         and initiate any post connect callbacks.
         """
+
         self._connection = await self._connect()
         try:
             async with self.connection, self._parser.push_messages, create_task_group() as tg:
@@ -284,6 +286,7 @@ class BaseConnection:
             while self._requests:
                 request = self._requests.popleft()
                 request.fail(disconnect_exc)
+            self._connection = None
 
     async def listen_for_responses(self) -> None:
         """
@@ -299,7 +302,11 @@ class BaseConnection:
             if isinstance(response, NotEnoughData):
                 # Need more bytes; read once, feed, and retry
                 with move_on_after(self.max_idle_time) as scope:
-                    data = await self.connection.receive()
+                    try:
+                        data = await self.connection.receive()
+                    except (EndOfStream, ConnectionError) as exc:
+                        self._last_error = exc
+                        return
                     self._parser.feed(data)
                 if scope.cancelled_caught:  # this will cleanup the connection gracefully
                     break
@@ -462,8 +469,10 @@ class BaseConnection:
             data = b"".join(command)
             try:
                 await self.connection.send(data)
-            except ClosedResourceError:
-                logger.exception(f"Failed to send {data.decode()}!")
+            except ClosedResourceError as err:
+                self._last_error = err
+                self._connection = None
+                raise ConnectionError(str(err)) from err
 
     async def send_command(
         self,

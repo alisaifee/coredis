@@ -330,7 +330,7 @@ class ClusterConnectionPool(ConnectionPool):
         except asyncio.TimeoutError:
             raise ConnectionError("No connection available.")
 
-        if not connection:
+        if not connection or not connection.is_connected:
             connection = await self._make_node_connection(node)
         self._cluster_in_use_connections.setdefault(node.name, set()).add(connection)
 

@@ -232,7 +232,7 @@ class ConnectionPool(AsyncContextManagerMixin):
         with fail_after(self.timeout):
             connection = await self._pool.get()
 
-        if connection is None:
+        if connection is None or not connection.is_connected:
             connection = self.connection_class(**self.connection_kwargs)
             self._task_group.start_soon(connection.run)
             await connection._started.wait()
