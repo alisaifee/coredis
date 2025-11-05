@@ -124,13 +124,14 @@ class TestServer:
         await client.set("a", "foo")
         await client.set("b", "bar")
         db1 = await cloner(client, connection_kwargs={"db": 1})
-        await db1.set("a", "foo")
-        await db1.set("b", "bar")
-        assert len(await client.keys()) == 2
-        assert len(await db1.keys()) == 2
-        assert await client.flushall(mode)
-        assert len(await client.keys()) == 0
-        assert len(await db1.keys()) == 0
+        async with db1:
+            await db1.set("a", "foo")
+            await db1.set("b", "bar")
+            assert len(await client.keys()) == 2
+            assert len(await db1.keys()) == 2
+            assert await client.flushall(mode)
+            assert len(await client.keys()) == 0
+            assert len(await db1.keys()) == 0
 
     @pytest.mark.parametrize(
         "mode",
