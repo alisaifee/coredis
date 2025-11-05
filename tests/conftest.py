@@ -20,7 +20,6 @@ from coredis._utils import EncodingInsensitiveDict, b, hash_slot, nativestr
 from coredis.cache import TrackingCache
 from coredis.client.basic import Redis
 from coredis.credentials import UserPassCredentialProvider
-from coredis.pool.basic import ConnectionPool
 from coredis.response._callbacks import NoopCallback
 from coredis.typing import (
     RUNTIME_TYPECHECKS,
@@ -476,12 +475,6 @@ async def redis_basic(redis_basic_server, request):
         "localhost",
         6379,
         decode_responses=True,
-        connection_pool=ConnectionPool(
-            host="localhost",
-            port=6379,
-            decode_responses=True,
-            **get_client_test_args(request),
-        ),
         **get_client_test_args(request),
     )
     await check_test_constraints(request, client)
