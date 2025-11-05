@@ -723,7 +723,8 @@ async def redis_cluster_noreplica(redis_cluster_noreplica_server, request):
         await cluster.flushdb()
 
         for primary in cluster.primaries:
-            await set_default_test_config(primary)
+            async with primary:
+                await set_default_test_config(primary)
 
         async with remapped_slots(cluster, request):
             yield cluster
@@ -747,7 +748,8 @@ async def redis_cluster_ssl(redis_ssl_cluster_server, request):
         await cluster.flushdb()
 
         for primary in cluster.primaries:
-            await set_default_test_config(primary)
+            async with primary:
+                await set_default_test_config(primary)
         yield cluster
 
 
@@ -804,7 +806,8 @@ async def redis_stack_cluster(redis_stack_cluster_server, request):
         await cluster.flushdb()
 
         for primary in cluster.primaries:
-            await set_default_test_config(primary)
+            async with primary:
+                await set_default_test_config(primary)
 
         async with remapped_slots(cluster, request):
             yield cluster
