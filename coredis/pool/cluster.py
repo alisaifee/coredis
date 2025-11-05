@@ -84,8 +84,7 @@ class ClusterConnectionPool(ConnectionPool):
         :param max_connections_per_node: Whether to use the value of :paramref:`max_connections`
          on a per node basis or cluster wide. If ``False``  the per-node connection pools will have
          a maximum size of :paramref:`max_connections` divided by the number of nodes in the cluster.
-        :param timeout: Number of seconds to block if :paramref:`block` is ``True`` when trying to
-         obtain a connection.
+        :param timeout: Number of seconds to block when trying to obtain a connection.
         :param skip_full_coverage_check:
             Skips the check of cluster-require-full-coverage config, useful for clusters
             without the :rediscommand:`CONFIG` command (For example with AWS Elasticache)
@@ -107,8 +106,8 @@ class ClusterConnectionPool(ConnectionPool):
 
             if host and port:
                 startup_nodes = [Node(host=str(host), port=int(port))]
-        self.blocking_timeout = timeout
-        self.max_connections = max_connections or 2**31
+        self.timeout = timeout
+        self.max_connections = max_connections or 64
         self.max_connections_per_node = max_connections_per_node
         self.nodes = NodeManager(
             startup_nodes,
@@ -146,8 +145,10 @@ class ClusterConnectionPool(ConnectionPool):
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         async with super().__asynccontextmanager__():
             await self.initialize()
-            yield self
-            self.reset()
+            try:
+                yield self
+            finally:
+                self.reset()
 
     async def initialize(self) -> None:
         if not self.initialized:
@@ -267,12 +268,7 @@ class ClusterConnectionPool(ConnectionPool):
             ),
         )
 
-        q = ConnectionQueue[Connection](q_size)
-
-        if q_size > 2**16:  # noqa
-            raise RuntimeError(f"Requested unsupported value of max_connections: {q_size}")
-
-        return q
+        return ConnectionQueue[Connection](q_size)
 
     def release(self, connection: Connection) -> None:
         """Releases the connection back to the pool"""
@@ -329,7 +325,7 @@ class ClusterConnectionPool(ConnectionPool):
     async def get_connection_by_node(self, node: ManagedNode) -> ClusterConnection:
         """Gets a connection by node"""
         try:
-            with fail_after(self.blocking_timeout):
+            with fail_after(self.timeout):
                 connection = await self.__node_pool(node.name).get()
         except asyncio.TimeoutError:
             raise ConnectionError("No connection available.")

@@ -417,7 +417,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         pool = self.client.connection_pool
-        async with pool.acquire_dedicated() as self._connection:
+        async with pool.acquire(blocking=True) as self._connection:
             yield self
             await self._execute()
 

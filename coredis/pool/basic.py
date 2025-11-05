@@ -6,7 +6,7 @@ from ssl import SSLContext, VerifyMode
 from typing import Any, AsyncGenerator, cast
 from urllib.parse import parse_qs, unquote, urlparse
 
-from anyio import AsyncContextManagerMixin, Lock, Semaphore, create_task_group, fail_after
+from anyio import AsyncContextManagerMixin, Lock, create_task_group, fail_after
 from typing_extensions import Self
 
 from coredis._utils import query_param_to_bool
@@ -17,6 +17,8 @@ from coredis.connection import (
     UnixDomainSocketConnection,
 )
 from coredis.typing import Callable, ClassVar, TypeVar
+
+from ._utils import ConnectionQueue
 
 _CPT = TypeVar("_CPT", bound="ConnectionPool")
 
@@ -186,7 +188,7 @@ class ConnectionPool(AsyncContextManagerMixin):
         *,
         connection_class: type[BaseConnection] | None = None,
         max_connections: int | None = None,
-        max_block_time: float | None = None,
+        timeout: float | None = None,
         multiplexed_connections: int = 4,
         idle_check_interval: int = 1,
         **connection_kwargs: Any,
@@ -201,89 +203,41 @@ class ConnectionPool(AsyncContextManagerMixin):
         Any additional keyword arguments are passed to the constructor of
         connection_class.
 
-        :param max_block_time: seconds to block if no connections are available; if None, blocks forever
+        :param timeout: Number of seconds to block when trying to obtain a connection.
         """
-        assert max_connections is None or multiplexed_connections < max_connections
         self.connection_class = connection_class or Connection
         self.connection_kwargs = connection_kwargs
         self.max_connections = max_connections or 64
-        self.max_block_time = max_block_time
+        self.timeout = timeout
         self.idle_check_interval = idle_check_interval
         self.decode_responses = bool(self.connection_kwargs.get("decode_responses", False))
         self.encoding = str(self.connection_kwargs.get("encoding", "utf-8"))
-        self._multiplexed_count = multiplexed_connections
-        self._multiplexed_connections: list[BaseConnection] = []
-        self._used_dedicated_connections: set[BaseConnection] = set()
-        self._free_dedicated_connections: set[BaseConnection] = set()
         self._connection_lock = Lock()
-        self._multiplexed_index = 0
-        dedicated_count = self.max_connections - multiplexed_connections
-        self._capacity = Semaphore(dedicated_count, max_value=dedicated_count)
+        self._pool: ConnectionQueue[BaseConnection] = ConnectionQueue[BaseConnection](
+            self.max_connections
+        )
 
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         async with create_task_group() as tg:
             self._task_group = tg
-            yield self
-            self._task_group.cancel_scope.cancel()
-            self._multiplexed_connections.clear()
-            self._free_dedicated_connections.clear()
-            self._used_dedicated_connections.clear()
-
-    async def wrap_multiplexed(self, connection: BaseConnection) -> None:
-        try:
-            await connection.run()
-        finally:
-            if connection in self._multiplexed_connections:
-                self._multiplexed_connections.remove(connection)
-
-    async def acquire_multiplexed(self) -> BaseConnection:
-        """
-        Gets a multiplexing connection from the pool, creating one if not enough exist.
-        """
-        # Round-robin distribution
-        connection: BaseConnection | None = None
-        if len(self._multiplexed_connections) < self._multiplexed_count:
-            async with self._connection_lock:
-                if len(self._multiplexed_connections) < self._multiplexed_count:
-                    connection = self.connection_class(**self.connection_kwargs)
-                    self._task_group.start_soon(self.wrap_multiplexed, connection)
-                    await connection._started.wait()
-                    self._multiplexed_connections.append(connection)
-        if connection is None:
-            i = self._multiplexed_index % len(self._multiplexed_connections)
-            self._multiplexed_index += 1
-            connection = self._multiplexed_connections[i]
-        return connection
-
-    async def wrap_dedicated(self, connection: BaseConnection) -> None:
-        try:
-            await connection.run()
-        finally:
-            if connection in self._used_dedicated_connections:
-                self._used_dedicated_connections.remove(connection)
-            elif connection in self._free_dedicated_connections:
-                self._free_dedicated_connections.remove(connection)
+            try:
+                yield self
+                self._task_group.cancel_scope.cancel()
+            finally:
+                self._pool.reset()
 
     @asynccontextmanager
-    async def acquire_dedicated(self) -> AsyncGenerator[BaseConnection]:
-        """
-        Gets a dedicated connection from the pool, or creates a new one if all are busy.
-        """
-        with fail_after(self.max_block_time):
-            await self._capacity.acquire()
-        if self._free_dedicated_connections:
-            connection = self._free_dedicated_connections.pop()
-        else:
+    async def acquire(self, blocking: bool = False) -> AsyncGenerator[BaseConnection]:
+        with fail_after(self.timeout):
+            connection = await self._pool.get()
+
+        if connection is None:
             connection = self.connection_class(**self.connection_kwargs)
-            self._task_group.start_soon(self.wrap_dedicated, connection)
+            self._task_group.start_soon(connection.run)
             await connection._started.wait()
-        self._used_dedicated_connections.add(connection)
-        try:
-            yield connection
-        finally:
-            self._capacity.release()
-        # if we're here there wasn't an error
-        if connection in self._used_dedicated_connections:
-            self._used_dedicated_connections.remove(connection)
-            self._free_dedicated_connections.add(connection)
+        if not blocking:
+            self._pool.put_nowait(connection)
+        yield connection
+        if blocking:
+            self._pool.put_nowait(connection)
