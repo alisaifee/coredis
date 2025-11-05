@@ -241,7 +241,7 @@ class TestGeneric:
     @pytest.mark.novalkey
     @pytest.mark.noredict
     async def test_migrate_single_key_with_auth(self, client, redis_auth, _s):
-        auth_connection = await redis_auth.connection_pool.acquire()
+        auth_connection = await redis_auth.connection_pool.acquire_multiplexed()
         await client.set("a", "1")
 
         with pytest.raises(DataError):
@@ -317,7 +317,7 @@ class TestGeneric:
     @pytest.mark.novalkey
     @pytest.mark.noredict
     async def test_migrate_multiple_keys_with_auth(self, client, redis_auth, _s):
-        auth_connection = await redis_auth.connection_pool.acquire()
+        auth_connection = await redis_auth.connection_pool.acquire_multiplexed()
         await client.set("a", "1")
         await client.set("c", "2")
         assert not await client.migrate("172.17.0.1", auth_connection.port, 0, 100, "d", "b")
