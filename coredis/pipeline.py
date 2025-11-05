@@ -648,7 +648,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
             timeout=self.timeout,
         )
         for i, cmd in enumerate(commands):
-            cmd.response = await_result(requests[i])
+            cmd.response = requests[i]
 
         response: list[Any] = []
         for cmd in commands:
