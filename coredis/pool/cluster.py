@@ -11,7 +11,6 @@ from typing import Any, AsyncGenerator, cast
 from anyio import Lock, fail_after
 from typing_extensions import Self
 
-from coredis._async_utils import AsyncQueue, QueueEmpty, QueueFull
 from coredis._utils import b, hash_slot
 from coredis.connection import ClusterConnection, Connection
 from coredis.exceptions import ConnectionError, RedisClusterException
@@ -26,6 +25,8 @@ from coredis.typing import (
     RedisValueT,
     StringT,
 )
+
+from ._utils import ConnectionQueue, QueueEmpty, QueueFull
 
 
 class ClusterConnectionPool(ConnectionPool):
@@ -48,7 +49,7 @@ class ClusterConnectionPool(ConnectionPool):
     connection_class: type[ClusterConnection]
 
     _created_connections_per_node: dict[str, int]
-    _cluster_available_connections: dict[str, AsyncQueue[Connection | None]]
+    _cluster_available_connections: dict[str, ConnectionQueue[Connection]]
     _cluster_in_use_connections: dict[str, set[Connection]]
 
     def __init__(
@@ -248,7 +249,7 @@ class ClusterConnectionPool(ConnectionPool):
 
         return connection
 
-    def __node_pool(self, node: str) -> AsyncQueue[Connection | None]:
+    def __node_pool(self, node: str) -> ConnectionQueue[Connection]:
         if not self._cluster_available_connections.get(node):
             self._cluster_available_connections[node] = self.__default_node_queue()
 
@@ -256,7 +257,7 @@ class ClusterConnectionPool(ConnectionPool):
 
     def __default_node_queue(
         self,
-    ) -> AsyncQueue[Connection | None]:
+    ) -> ConnectionQueue[Connection]:
         q_size = max(
             1,
             int(
@@ -266,16 +267,10 @@ class ClusterConnectionPool(ConnectionPool):
             ),
         )
 
-        q: AsyncQueue[Connection | None] = AsyncQueue(q_size)
+        q = ConnectionQueue[Connection](q_size)
 
         if q_size > 2**16:  # noqa
             raise RuntimeError(f"Requested unsupported value of max_connections: {q_size}")
-
-        while True:
-            try:
-                q.put_nowait(None)
-            except QueueFull:
-                break
 
         return q
 
