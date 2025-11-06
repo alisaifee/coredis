@@ -6,15 +6,16 @@ import random
 import warnings
 from collections import defaultdict
 from ssl import SSLContext
-from typing import TYPE_CHECKING, Any, cast, overload
+from typing import TYPE_CHECKING, Any, Coroutine, cast, overload
 
-from anyio import AsyncContextManagerMixin
+from anyio import AsyncContextManagerMixin, sleep
 from deprecated.sphinx import versionadded
+from exceptiongroup import catch
 from packaging import version
 from packaging.version import InvalidVersion, Version
 from typing_extensions import Self
 
-from coredis._utils import EncodingInsensitiveDict, nativestr
+from coredis._utils import EncodingInsensitiveDict, logger, nativestr
 from coredis.cache import AbstractCache
 from coredis.commands import CommandRequest
 from coredis.commands._key_spec import KeySpec
@@ -40,6 +41,7 @@ from coredis.exceptions import (
     ResponseError,
     TimeoutError,
     UnknownCommandError,
+    WatchError,
 )
 from coredis.globals import CACHEABLE_COMMANDS, COMMAND_FLAGS, READONLY_COMMANDS
 from coredis.modules import ModuleMixin
@@ -966,7 +968,7 @@ class Redis(Client[AnyStr]):
         **options: Unpack[ExecutionParameters],
     ) -> R:
         pool = self.connection_pool
-        async with pool.acquire_dedicated() as connection:
+        async with pool.acquire() as connection:
             try:
                 keys = KeySpec.extract_keys(command.name, *command.arguments)
                 cacheable = (
@@ -1043,71 +1045,71 @@ class Redis(Client[AnyStr]):
         if should_block:
             return await self._execute_blocking(command, callback, **options)
         pool = self.connection_pool
-        connection = await pool.acquire_multiplexed()
-        try:
-            keys = KeySpec.extract_keys(command.name, *command.arguments)
-            cacheable = (
-                command.name in CACHEABLE_COMMANDS
-                and len(keys) == 1
-                and not self.noreply
-                and self._decodecontext.get() is None
-            )
-            cached_reply = None
-            cache_hit = False
-            use_cached = False
-            reply = None
-            if self.cache:
-                if connection.tracking_client_id != self.cache.get_client_id(connection):  # type: ignore
-                    self.cache.reset()  # type: ignore
-                    await connection.update_tracking_client(
-                        True,
-                        self.cache.get_client_id(connection),  # type: ignore
-                    )
-                if command.name not in READONLY_COMMANDS:
-                    self.cache.invalidate(*keys)
-                elif cacheable:
-                    try:
-                        cached_reply = cast(
-                            R,
-                            self.cache.get(
-                                command.name,
-                                keys[0],
-                                *command.arguments,
-                            ),
-                        )
-                        use_cached = random.random() * 100.0 < min(100.0, self.cache.confidence)
-                        cache_hit = True
-                    except KeyError:
-                        pass
-            if not (use_cached and cached_reply):
-                request = await connection.create_request(
-                    command.name,
-                    *command.arguments,
-                    noreply=self.noreply,
-                    decode=options.get("decode", self._decodecontext.get()),
-                    encoding=self._encodingcontext.get(),
+        async with pool.acquire() as connection:
+            try:
+                keys = KeySpec.extract_keys(command.name, *command.arguments)
+                cacheable = (
+                    command.name in CACHEABLE_COMMANDS
+                    and len(keys) == 1
+                    and not self.noreply
+                    and self._decodecontext.get() is None
                 )
-                reply = await request
-                await self._ensure_wait_and_persist(command, connection)
-                if self.noreply:
-                    return None  # type: ignore
-                if isinstance(callback, AsyncPreProcessingCallback):
-                    await callback.pre_process(self, reply)
-            if self.cache and cacheable:
-                if cache_hit and not use_cached:
-                    self.cache.feedback(
-                        command.name, keys[0], *command.arguments, match=cached_reply == reply
-                    )
-                if not cache_hit:
-                    self.cache.put(
+                cached_reply = None
+                cache_hit = False
+                use_cached = False
+                reply = None
+                if self.cache:
+                    if connection.tracking_client_id != self.cache.get_client_id(connection):  # type: ignore
+                        self.cache.reset()  # type: ignore
+                        await connection.update_tracking_client(
+                            True,
+                            self.cache.get_client_id(connection),  # type: ignore
+                        )
+                    if command.name not in READONLY_COMMANDS:
+                        self.cache.invalidate(*keys)
+                    elif cacheable:
+                        try:
+                            cached_reply = cast(
+                                R,
+                                self.cache.get(
+                                    command.name,
+                                    keys[0],
+                                    *command.arguments,
+                                ),
+                            )
+                            use_cached = random.random() * 100.0 < min(100.0, self.cache.confidence)
+                            cache_hit = True
+                        except KeyError:
+                            pass
+                if not (use_cached and cached_reply):
+                    request = await connection.create_request(
                         command.name,
-                        keys[0],
                         *command.arguments,
-                        value=reply,
+                        noreply=self.noreply,
+                        decode=options.get("decode", self._decodecontext.get()),
+                        encoding=self._encodingcontext.get(),
                     )
-            return callback(cached_reply if cache_hit else reply, version=self.protocol_version)
-        finally:
-            self._ensure_server_version(connection.server_version)
+                    reply = await request
+                    await self._ensure_wait_and_persist(command, connection)
+                    if self.noreply:
+                        return None  # type: ignore
+                    if isinstance(callback, AsyncPreProcessingCallback):
+                        await callback.pre_process(self, reply)
+                if self.cache and cacheable:
+                    if cache_hit and not use_cached:
+                        self.cache.feedback(
+                            command.name, keys[0], *command.arguments, match=cached_reply == reply
+                        )
+                    if not cache_hit:
+                        self.cache.put(
+                            command.name,
+                            keys[0],
+                            *command.arguments,
+                            value=reply,
+                        )
+                return callback(cached_reply if cache_hit else reply, version=self.protocol_version)
+            finally:
+                self._ensure_server_version(connection.server_version)
 
     @overload
     def decoding(
@@ -1219,6 +1221,55 @@ class Redis(Client[AnyStr]):
         blocking: bool = True,
         blocking_timeout: float | None = None,
     ) -> Lock[AnyStr]:
+        """
+        Return a lock instance which can be used to guard resource access across
+        multiple machines.
+
+        :param name: key for the lock
+        :param timeout: indicates a maximum life for the lock.
+         By default, it will remain locked until :meth:`release` is called.
+         ``timeout`` can be specified as a float or integer, both representing
+         the number of seconds to wait.
+
+        :param sleep: indicates the amount of time to sleep per loop iteration
+         when the lock is in blocking mode and another client is currently
+         holding the lock.
+
+        :param blocking: indicates whether calling :meth:`acquire` should block until
+         the lock has been acquired or to fail immediately, causing :meth:`acquire`
+         to return ``False`` and the lock not being acquired. Defaults to ``True``.
+
+        :param blocking_timeout: indicates the maximum amount of time in seconds to
+         spend trying to acquire the lock. A value of ``None`` indicates
+         continue trying forever. ``blocking_timeout`` can be specified as a
+         :class:`float` or :class:`int`, both representing the number of seconds to wait.
+        """
         from coredis.recipes.locks import Lock
 
         return Lock(self, name, timeout, sleep, blocking, blocking_timeout)
+
+    async def transaction(
+        self,
+        func: Callable[[coredis.pipeline.Pipeline[AnyStr]], Coroutine[Any, Any, R]],
+        *watches: KeyT,
+        watch_delay: float | None = None,
+    ) -> R:
+        """
+        Convenience method for executing the callable :paramref:`func` as a
+        transaction while watching all keys specified in :paramref:`watches`.
+
+        :param func: callable should expect a single argument which is a
+         :class:`coredis.pipeline.Pipeline` object retrieved by calling
+         :meth:`~coredis.Redis.pipeline`.
+        :param watches: The keys to watch during the transaction
+        :param watch_delay: Time in seconds to wait after each watch error before retrying
+        """
+        msg = "Caught WatchError in transaction, retrying..."
+        while True:
+            with catch({WatchError: lambda _: logger.warning(msg)}):
+                async with self.pipeline(transaction=False) as pipe:
+                    if watches:
+                        await pipe.watch(*watches)
+                    return await func(pipe)
+            if watch_delay:
+                await sleep(watch_delay)

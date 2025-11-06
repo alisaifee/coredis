@@ -154,7 +154,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
             await sleep(tries**2)
             tries += 1
             with catch({(ConnectionError, ConnectionFailed, EndOfStream): handle_exception_group}):
-                async with self.connection_pool.acquire_dedicated() as self._connection:
+                async with self.connection_pool.acquire() as self._connection:
                     async with create_task_group() as tg:
                         self._current_scope = tg.cancel_scope
                         tg.start_soon(self._consumer)
