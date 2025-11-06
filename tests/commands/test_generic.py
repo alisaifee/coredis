@@ -376,6 +376,7 @@ class TestGeneric:
         assert isinstance(await client.object_freq("a"), int)
 
     @pytest.mark.novalkey
+    @pytest.mark.noredict
     async def test_object_idletime(self, client, _s):
         await client.set("a", "foo")
         assert isinstance(await client.object_idletime("a"), int)
