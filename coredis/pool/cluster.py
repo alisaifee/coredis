@@ -50,7 +50,6 @@ class ClusterConnectionPool(ConnectionPool):
 
     _created_connections_per_node: dict[str, int]
     _cluster_available_connections: dict[str, ConnectionQueue[Connection]]
-    _cluster_in_use_connections: dict[str, set[Connection]]
 
     def __init__(
         self,
@@ -173,7 +172,6 @@ class ClusterConnectionPool(ConnectionPool):
         self.pid = os.getpid()
         self._created_connections_per_node = {}
         self._cluster_available_connections = {}
-        self._cluster_in_use_connections = {}
         self._check_lock = threading.Lock()
         self.initialized = False
 
@@ -213,10 +211,7 @@ class ClusterConnectionPool(ConnectionPool):
             if connection.is_connected and connection.needs_handshake:
                 await connection.perform_handshake()
 
-        if acquire:
-            self._cluster_in_use_connections.setdefault(node.name, set())
-            self._cluster_in_use_connections[node.name].add(connection)
-        else:
+        if not acquire:
             self.__node_pool(node.name).put_nowait(connection)
 
         return connection
@@ -275,20 +270,10 @@ class ClusterConnectionPool(ConnectionPool):
         assert isinstance(connection, ClusterConnection)
 
         if connection.pid == self.pid:
-            # Remove the current connection from _in_use_connection and add it back to the available
-            # pool. There is cases where the connection is to be removed but it will not exist and
-            # there must be a safe way to remove
-            i_c = self._cluster_in_use_connections.get(connection.node.name, set())
-
-            if connection in i_c:
-                i_c.remove(connection)
-            else:
-                pass
             try:
                 self.__node_pool(connection.node.name).put_nowait(connection)
             except QueueFull:
-                if connection.node.name in self._created_connections_per_node:
-                    self._created_connections_per_node[connection.node.name] -= 1
+                pass
 
     def count_all_num_connections(self, node: ManagedNode) -> int:
         if self.max_connections_per_node:
@@ -332,7 +317,6 @@ class ClusterConnectionPool(ConnectionPool):
 
         if not connection or not connection.is_connected:
             connection = await self._make_node_connection(node)
-        self._cluster_in_use_connections.setdefault(node.name, set()).add(connection)
 
         return cast(ClusterConnection, connection)
 
