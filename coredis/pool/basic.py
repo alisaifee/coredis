@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import warnings
+from collections import deque
 from contextlib import asynccontextmanager
 from ssl import SSLContext, VerifyMode
 from typing import Any, AsyncGenerator, cast
 from urllib.parse import parse_qs, unquote, urlparse
 
-from anyio import AsyncContextManagerMixin, Lock, create_task_group, fail_after
+from anyio import AsyncContextManagerMixin, Semaphore, create_task_group, fail_after
 from typing_extensions import Self
 
 from coredis._utils import query_param_to_bool
@@ -189,7 +190,6 @@ class ConnectionPool(AsyncContextManagerMixin):
         connection_class: type[BaseConnection] | None = None,
         max_connections: int | None = None,
         timeout: float | None = None,
-        multiplexed_connections: int = 4,
         idle_check_interval: int = 1,
         **connection_kwargs: Any,
     ) -> None:
@@ -202,8 +202,6 @@ class ConnectionPool(AsyncContextManagerMixin):
 
         Any additional keyword arguments are passed to the constructor of
         connection_class.
-
-        :param timeout: Number of seconds to block when trying to obtain a connection.
         """
         self.connection_class = connection_class or Connection
         self.connection_kwargs = connection_kwargs
@@ -212,32 +210,47 @@ class ConnectionPool(AsyncContextManagerMixin):
         self.idle_check_interval = idle_check_interval
         self.decode_responses = bool(self.connection_kwargs.get("decode_responses", False))
         self.encoding = str(self.connection_kwargs.get("encoding", "utf-8"))
-        self._connection_lock = Lock()
-        self._pool: ConnectionQueue[BaseConnection] = ConnectionQueue[BaseConnection](
-            self.max_connections
-        )
+        self._used_connections: set[BaseConnection] = set()
+        self._free_connections: deque[BaseConnection] = deque()
+        self._capacity = Semaphore(self.max_connections, max_value=self.max_connections)
 
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         async with create_task_group() as tg:
             self._task_group = tg
-            try:
-                yield self
-                self._task_group.cancel_scope.cancel()
-            finally:
-                self._pool.reset()
+            yield self
+            self._task_group.cancel_scope.cancel()
+            self._free_connections.clear()
+            self._used_connections.clear()
+
+    async def wrap_connection(self, connection: BaseConnection) -> None:
+        try:
+            await connection.run()
+        finally:
+            if connection in self._used_connections:
+                self._used_connections.remove(connection)
+            elif connection in self._free_connections:
+                self._free_connections.remove(connection)
 
     @asynccontextmanager
-    async def acquire(self, blocking: bool = False) -> AsyncGenerator[BaseConnection]:
-        with fail_after(self.timeout):
-            connection = await self._pool.get()
-
-        if connection is None or not connection.is_connected:
+    async def acquire(self) -> AsyncGenerator[BaseConnection]:
+        """
+        Gets a dedicated connection from the pool, or creates a new one if all are busy.
+        """
+        with fail_after(self.max_block_time):
+            await self._capacity.acquire()
+        if self._free_connections:
+            connection = self._free_connections.pop()
+        else:
             connection = self.connection_class(**self.connection_kwargs)
-            self._task_group.start_soon(connection.run)
+            self._task_group.start_soon(self.wrap_connection, connection)
             await connection._started.wait()
-        if not blocking:
-            self._pool.put_nowait(connection)
-        yield connection
-        if blocking:
-            self._pool.put_nowait(connection)
+        self._used_connections.add(connection)
+        try:
+            yield connection
+        finally:
+            self._capacity.release()
+        # if we're here there wasn't an error
+        if connection in self._used_connections:
+            self._used_connections.remove(connection)
+            self._free_connections.append(connection)

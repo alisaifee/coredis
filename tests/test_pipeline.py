@@ -6,6 +6,7 @@ import pytest
 
 from coredis._utils import gather
 from coredis.client.basic import Redis
+from coredis.commands.request import CommandRequest
 from coredis.exceptions import (
     AuthorizationError,
     RedisError,
@@ -13,6 +14,7 @@ from coredis.exceptions import (
     TimeoutError,
     WatchError,
 )
+from coredis.pipeline import Pipeline
 from coredis.typing import Serializable
 from tests.conftest import targets
 
@@ -293,3 +295,28 @@ class TestPipeline:
         async with client.pipeline(timeout=5) as pipe:
             for _ in range(20):
                 pipe.hgetall("hash")
+
+    async def test_transaction_callable(self, client: Redis[str]):
+        await client.set("a", "1")
+        await client.set("b", "2")
+        has_run = False
+
+        async def my_transaction(pipe: Pipeline[str]) -> CommandRequest[bool]:
+            nonlocal has_run
+            a_value = await pipe.get("a")
+            assert a_value in ("1", "2")
+            b_value = await pipe.get("b")
+            assert b_value == "2"
+
+            # silly run-once code... incr's "a" so WatchError should be raised
+            # forcing this all to run again. this should incr "a" once to "2"
+            if not has_run:
+                await client.incr("a")
+                has_run = True
+
+            pipe.multi()
+            return pipe.set("c", str(int(a_value) + int(b_value)))
+
+        result = await client.transaction(my_transaction, "a", "b", watch_delay=0.01)
+        assert await result
+        assert await client.get("c") == "4"

@@ -57,8 +57,8 @@ class TestConnectionPool:
     async def test_reuse_previously_released_connection(self):
         pool = self.get_pool()
         async with pool:
-            c1 = await pool.acquire(blocking=True)
-            c2 = await pool.acquire(blocking=True)
+            c1 = await pool.acquire()
+            c2 = await pool.acquire()
         assert c1 == c2
 
     def test_repr_contains_db_info_tcp(self):

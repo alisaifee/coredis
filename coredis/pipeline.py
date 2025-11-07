@@ -418,7 +418,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         pool = self.client.connection_pool
-        async with pool.acquire(blocking=True) as self._connection:
+        async with pool.acquire() as self._connection:
             yield self
             await self._execute()
 
@@ -697,18 +697,17 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
     async def load_scripts(self) -> None:
         # make sure all scripts that are about to be run on this pipeline exist
         scripts = list(self.scripts)
-        immediate = self.immediate_execute_command
         shas = [s.sha for s in scripts]
         # we can't use the normal script_* methods because they would just
         # get buffered in the pipeline.
-        exists = await immediate(
+        exists = await self.immediate_execute_command(
             RedisCommand(CommandName.SCRIPT_EXISTS, tuple(shas)), callback=BoolsCallback()
         )
 
         if not all(exists):
             for s, exist in zip(scripts, exists):
                 if not exist:
-                    s.sha = await immediate(
+                    s.sha = await self.immediate_execute_command(
                         RedisCommand(CommandName.SCRIPT_LOAD, (s.script,)),
                         callback=AnyStrCallback[AnyStr](),
                     )

@@ -20,6 +20,7 @@ async def main():
             val = pipe.get("tmpkey")
             pipe.delete(["tmpkey"])
         print(await val)
+        print(await redis.blpop(["mylist"], 1))
 
 
 run(main)
