@@ -263,11 +263,7 @@ class BaseConnection:
 
         self._connection = await self._connect()
         try:
-            async with (
-                self.connection,
-                self._parser.push_messages,
-                create_task_group() as tg,
-            ):
+            async with self.connection, self._parser.push_messages, create_task_group() as tg:
                 tg.start_soon(self.listen_for_responses)
                 # setup connection
                 await self.on_connect()

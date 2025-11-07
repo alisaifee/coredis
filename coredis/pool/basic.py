@@ -19,8 +19,6 @@ from coredis.connection import (
 )
 from coredis.typing import Callable, ClassVar, TypeVar
 
-from ._utils import ConnectionQueue
-
 _CPT = TypeVar("_CPT", bound="ConnectionPool")
 
 
@@ -237,7 +235,7 @@ class ConnectionPool(AsyncContextManagerMixin):
         """
         Gets a dedicated connection from the pool, or creates a new one if all are busy.
         """
-        with fail_after(self.max_block_time):
+        with fail_after(self.timeout):
             await self._capacity.acquire()
         if self._free_connections:
             connection = self._free_connections.pop()
