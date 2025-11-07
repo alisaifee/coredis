@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import anyio
 import pytest
+from exceptiongroup import catch
 
-import coredis
 from coredis import PureToken
 from coredis.client.basic import Redis
-from coredis.exceptions import AuthenticationFailureError, ResponseError
+from coredis.exceptions import AuthenticationFailureError, ResponseError, UnblockedError
 from tests.conftest import targets
 
 
@@ -76,88 +76,89 @@ class TestConnection:
             assert await client.client_no_touch(PureToken.OFF)
 
     async def test_client_tracking(self, client, _s, cloner):
-        clone = await cloner(client)
-        clone_connection = await clone.connection_pool.get_connection("tracking")
-        clone_id = clone_connection.client_id
-        assert await client.client_tracking(PureToken.ON, redirect=clone_id, noloop=True)
-        assert clone_id == await client.client_getredir()
-        assert await client.client_tracking(PureToken.OFF)
-        assert -1 == await client.client_getredir()
-        with pytest.raises(ResponseError, match="does not exist"):
-            clients = await client.client_list()
-            invalid_client_id = max(c["id"] for c in clients) + 100
-            await client.client_tracking(PureToken.ON, redirect=invalid_client_id)
-        assert await client.client_tracking(PureToken.ON, bcast=True, redirect=clone_id)
-        assert await client.client_tracking(PureToken.OFF)
-        assert await client.client_tracking(
-            PureToken.ON, "fu:", "bar:", bcast=True, redirect=clone_id
-        )
-        assert await client.client_tracking(PureToken.OFF)
-        with pytest.raises(ResponseError, match="'fu' overlaps"):
-            assert await client.client_tracking(
-                PureToken.ON, "fu", "fuu", bcast=True, redirect=clone_id
-            )
-        assert await client.client_tracking(PureToken.ON, optin=True, redirect=clone_id)
-        with pytest.raises(ResponseError, match="in OPTOUT mode"):
-            await client.client_caching(PureToken.NO)
-        assert await client.client_tracking(PureToken.ON, optin=True, redirect=clone_id)
-        assert await client.client_caching(PureToken.YES)
+        async with await cloner(client) as clone:
+            async with clone.connection_pool.acquire(blocking=True) as clone_connection:
+                clone_id = clone_connection.client_id
+                assert await client.client_tracking(PureToken.ON, redirect=clone_id, noloop=True)
+                assert clone_id == await client.client_getredir()
+                assert await client.client_tracking(PureToken.OFF)
+                assert -1 == await client.client_getredir()
+                with pytest.raises(ResponseError, match="does not exist"):
+                    clients = await client.client_list()
+                    invalid_client_id = max(c["id"] for c in clients) + 100
+                    await client.client_tracking(PureToken.ON, redirect=invalid_client_id)
+                assert await client.client_tracking(PureToken.ON, bcast=True, redirect=clone_id)
+                assert await client.client_tracking(PureToken.OFF)
+                assert await client.client_tracking(
+                    PureToken.ON, "fu:", "bar:", bcast=True, redirect=clone_id
+                )
+                assert await client.client_tracking(PureToken.OFF)
+                with pytest.raises(ResponseError, match="'fu' overlaps"):
+                    assert await client.client_tracking(
+                        PureToken.ON, "fu", "fuu", bcast=True, redirect=clone_id
+                    )
+                assert await client.client_tracking(PureToken.ON, optin=True, redirect=clone_id)
+                with pytest.raises(ResponseError, match="in OPTOUT mode"):
+                    await client.client_caching(PureToken.NO)
+                assert await client.client_tracking(PureToken.ON, optin=True, redirect=clone_id)
+                assert await client.client_caching(PureToken.YES)
 
-        with pytest.raises(ResponseError, match="You can't switch"):
-            await client.client_tracking(PureToken.ON, optout=True, redirect=clone_id)
-        assert await client.client_tracking(PureToken.OFF)
-        assert await client.client_tracking(PureToken.ON, optout=True, redirect=clone_id)
-        with pytest.raises(ResponseError, match="in OPTIN mode"):
-            await client.client_caching(PureToken.YES)
-        assert await client.client_tracking(PureToken.ON, optout=True, redirect=clone_id)
-        assert await client.client_caching(PureToken.NO)
+                with pytest.raises(ResponseError, match="You can't switch"):
+                    await client.client_tracking(PureToken.ON, optout=True, redirect=clone_id)
+                assert await client.client_tracking(PureToken.OFF)
+                assert await client.client_tracking(PureToken.ON, optout=True, redirect=clone_id)
+                with pytest.raises(ResponseError, match="in OPTIN mode"):
+                    await client.client_caching(PureToken.YES)
+                assert await client.client_tracking(PureToken.ON, optout=True, redirect=clone_id)
+                assert await client.client_caching(PureToken.NO)
 
     async def test_client_getredir(self, client, _s, cloner):
         assert await client.client_getredir() == -1
         clone = await cloner(client)
-        clone_id = (await clone.client_info())["id"]
-        assert await client.client_tracking(PureToken.ON, redirect=clone_id)
-        assert await client.client_getredir() == clone_id
+        async with clone:
+            clone_id = (await clone.client_info())["id"]
+            assert await client.client_tracking(PureToken.ON, redirect=clone_id)
+            assert await client.client_getredir() == clone_id
 
     async def test_client_pause_unpause(self, client, _s, cloner):
-        clone = await cloner(client)
-        assert await clone.client_pause(1000)
-        with pytest.raises(TimeoutError):
-            with anyio.fail_after(0.01):
-                await clone.ping()
-        assert await client.client_unpause()
-        assert await clone.ping() == _s("PONG")
-        assert await clone.client_pause(1000, PureToken.WRITE)
-        assert not await clone.get("fubar")
-        with pytest.raises(TimeoutError):
-            with anyio.fail_after(0.01):
-                await clone.set("fubar", 1)
-        assert await client.client_unpause()
-        assert await clone.set("fubar", 1)
+        async with await cloner(client) as clone:
+            assert await clone.client_pause(1000)
+            with pytest.raises(TimeoutError):
+                with anyio.fail_after(0.01):
+                    await clone.ping()
+            assert await client.client_unpause()
+            assert await clone.ping() == _s("PONG")
+            assert await clone.client_pause(1000, PureToken.WRITE)
+            assert not await clone.get("fubar")
+            with pytest.raises(TimeoutError):
+                with anyio.fail_after(0.01):
+                    await clone.set("fubar", 1)
+            assert await client.client_unpause()
+            assert await clone.set("fubar", 1)
 
-    @pytest.mark.xfail
     async def test_client_unblock(self, client: Redis, cloner):
-        clone: Redis = await cloner(client)
-        client_id = await clone.client_id()
+        async with await cloner(client) as clone:
+            client_id = await clone.client_id()
 
-        async def unblock():
-            await anyio.sleep(0.1)
-            return await client.client_unblock(client_id, PureToken.ERROR)
+            async def unblock():
+                await anyio.sleep(0.1)
+                return await client.client_unblock(client_id, PureToken.ERROR)
 
-        """
-        sleeper = asyncio.create_task(clone.brpop(["notexist"], 1000))
-        unblocker = asyncio.create_task(unblock())
-        await asyncio.wait(
-            [
-                sleeper,
-                unblocker,
-            ],
-            return_when=asyncio.FIRST_COMPLETED,
-        )
-        assert isinstance(sleeper.exception(), UnblockedError)
-        assert unblocker.result()
-        assert not await client.client_unblock(client_id, PureToken.ERROR)
-        """
+            async def blocking():
+                await clone.brpop(["notexist"], 1000)
+
+            unblocked = False
+
+            def unblocked_raised(_):
+                nonlocal unblocked
+                unblocked = True
+
+            with catch({UnblockedError: unblocked_raised}):
+                async with anyio.create_task_group() as tg:
+                    tg.start_soon(blocking)
+                    tg.start_soon(unblock)
+            assert unblocked
+            assert not await client.client_unblock(client_id, PureToken.ERROR)
 
     async def test_client_trackinginfo_no_tracking(self, client, _s):
         info = await client.client_trackinginfo()
@@ -188,35 +189,35 @@ class TestConnection:
             await client.client_kill(ip_port="1.1.1.1:9999")
 
     async def test_client_kill_filter(self, client, cloner, _s):
-        clone = await cloner(client)
-        clone_id = (await clone.client_info())["id"]
-        assert await client.client_kill(identifier=clone_id) > 0
-        with pytest.raises(ResponseError, match="No such user"):
-            await client.client_kill(user="noexist") == 0
+        async with await cloner(client) as clone:
+            clone_id = (await clone.client_info())["id"]
+            assert await client.client_kill(identifier=clone_id) > 0
+            with pytest.raises(ResponseError, match="No such user"):
+                await client.client_kill(user="noexist") == 0
 
-        clone_addr = (await clone.client_info())["addr"]
-        assert await client.client_kill(addr=clone_addr) == 1
+            clone_addr = (await clone.client_info())["addr"]
+            assert await client.client_kill(addr=clone_addr) == 1
 
     async def test_client_kill_filter_skip_me(self, client, cloner, _s):
-        clone = await cloner(client)
-        my_id = (await client.client_info())["id"]
-        clone_id = (await clone.client_info())["id"]
-        laddr = (await client.client_info())["laddr"]
-        resp = await client.client_kill(laddr=laddr, skipme=True)
-        assert resp > 0
-        await clone.ping()
-        assert clone_id != (await clone.client_info())["id"]
-        assert my_id == (await client.client_info())["id"]
+        async with await cloner(client) as clone:
+            my_id = (await client.client_info())["id"]
+            clone_id = (await clone.client_info())["id"]
+            laddr = (await client.client_info())["laddr"]
+            resp = await client.client_kill(laddr=laddr, skipme=True)
+            assert resp > 0
+            await clone.ping()
+            assert clone_id != (await clone.client_info())["id"]
+            assert my_id == (await client.client_info())["id"]
 
     @pytest.mark.min_server_version("7.4.0")
     async def test_client_kill_filter_maxage(self, client, cloner, _s):
-        clone = await cloner(client)
-        my_id = (await client.client_info())["id"]
-        clone_id = (await clone.client_info())["id"]
-        await anyio.sleep(1)
-        assert await client.client_kill(maxage=1, skipme=False) >= 2
-        assert clone_id != (await clone.client_info())["id"]
-        assert my_id != (await client.client_info())["id"]
+        async with await cloner(client) as clone:
+            my_id = (await client.client_info())["id"]
+            clone_id = (await clone.client_info())["id"]
+            await anyio.sleep(1)
+            assert await client.client_kill(maxage=1, skipme=False) >= 2
+            assert clone_id != (await clone.client_info())["id"]
+            assert my_id != (await client.client_info())["id"]
 
     async def test_client_list_after_client_setname(self, client, _s):
         with pytest.warns(UserWarning):
@@ -242,13 +243,13 @@ class TestConnection:
 
     @pytest.mark.novalkey
     @pytest.mark.noredict
-    async def test_client_pause(self, client):
+    async def test_client_pause(self, client, cloner):
         key = "key_should_expire"
-        another_client = coredis.Redis()
-        await client.set(key, "1", px=100)
-        assert await client.client_pause(100)
-        res = await another_client.get(key)
-        assert not res
+        async with await cloner(client) as another_client:
+            await client.set(key, "1", px=100)
+            assert await client.client_pause(100)
+            res = await another_client.get(key)
+            assert not res
 
     async def test_select(self, client, _s):
         assert (await client.client_info())["db"] == 0

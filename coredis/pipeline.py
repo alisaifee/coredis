@@ -326,6 +326,7 @@ class NodeCommands:
                         transaction_result[idx],
                         version=connection.protocol_version,
                     )
+                    c.response = await_result(c.result)
             elif isinstance(multi_result, BaseException):
                 raise multi_result
 
@@ -833,9 +834,10 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
     def __bool__(self) -> bool:
         return True
 
-    def __await__(self) -> Generator[None, None, Self]:
-        yield
-        return self
+    @asynccontextmanager
+    async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
+        yield self
+        await self.execute()
 
     def execute_command(
         self,
@@ -1039,6 +1041,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
                 if isinstance(c.callback, AsyncPreProcessingCallback):
                     await c.callback.pre_process(self.client, c.result)
                 r = c.callback(c.result, version=protocol_version)
+                c.response = await_result(r)
             response.append(r)
 
         if raise_on_error:

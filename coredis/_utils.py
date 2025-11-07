@@ -440,11 +440,6 @@ def hash_slot(key: bytes) -> int:
     return crc16(key) % 16384
 
 
-__all__ = [
-    "hash_slot",
-    "EncodingInsensitiveDict",
-]
-
 T1 = TypeVar("T1")
 T2 = TypeVar("T2")
 T3 = TypeVar("T3")
@@ -458,6 +453,8 @@ async def gather(
     awaitable1: Awaitable[T1],
     awaitable2: Awaitable[T2],
     /,
+    *,
+    return_exceptions: bool = False,
 ) -> tuple[T1, T2]: ...
 
 
@@ -467,6 +464,8 @@ async def gather(
     awaitable2: Awaitable[T2],
     awaitable3: Awaitable[T3],
     /,
+    *,
+    return_exceptions: bool = False,
 ) -> tuple[T1, T2, T3]: ...
 
 
@@ -477,6 +476,8 @@ async def gather(
     awaitable3: Awaitable[T3],
     awaitable4: Awaitable[T4],
     /,
+    *,
+    return_exceptions: bool = False,
 ) -> tuple[T1, T2, T3, T4]: ...
 
 
@@ -488,6 +489,8 @@ async def gather(
     awaitable4: Awaitable[T4],
     awaitable5: Awaitable[T5],
     /,
+    *,
+    return_exceptions: bool = False,
 ) -> tuple[T1, T2, T3, T4, T5]: ...
 
 
@@ -500,22 +503,48 @@ async def gather(
     awaitable5: Awaitable[T5],
     awaitable6: Awaitable[T6],
     /,
+    *,
+    return_exceptions: bool = False,
 ) -> tuple[T1, T2, T3, T4, T5, T6]: ...
 
 
 @overload
-async def gather(*awaitables: Awaitable[T1]) -> tuple[T1, ...]: ...
+async def gather(
+    *awaitables: Awaitable[T1],
+    return_exceptions: bool = False,
+) -> tuple[T1, ...]: ...
 
 
-async def gather(*awaitables: Awaitable[Any]) -> tuple[Any, ...]:
+async def gather(*awaitables: Awaitable[Any], return_exceptions: bool = False) -> tuple[Any, ...]:
+    if not awaitables:
+        return ()
     if len(awaitables) == 1:
-        return (await awaitables[0],)
+        try:
+            return (await awaitables[0],)
+        except Exception as exc:
+            if return_exceptions:
+                return (exc,)
+            else:
+                raise
+
     results: list[Any] = [None] * len(awaitables)
 
     async def runner(awaitable: Awaitable[Any], i: int) -> None:
-        results[i] = await awaitable
+        try:
+            results[i] = await awaitable
+        except Exception as exc:
+            if not return_exceptions:
+                raise
+            results[i] = exc
 
     async with create_task_group() as tg:
         for i, awaitable in enumerate(awaitables):
             tg.start_soon(runner, awaitable, i)
+
     return tuple(results)
+
+
+__all__ = [
+    "hash_slot",
+    "EncodingInsensitiveDict",
+]

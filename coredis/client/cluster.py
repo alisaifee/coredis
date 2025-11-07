@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import contextvars
 import functools
@@ -14,7 +13,7 @@ from typing import TYPE_CHECKING, Any, cast, overload
 from anyio import get_cancelled_exc_class, sleep
 from deprecated.sphinx import versionadded
 
-from coredis._utils import b, hash_slot
+from coredis._utils import b, gather, hash_slot
 from coredis.cache import AbstractCache
 from coredis.client.basic import Client, Redis
 from coredis.commands._key_spec import KeySpec
@@ -39,6 +38,7 @@ from coredis.response._callbacks import AsyncPreProcessingCallback, NoopCallback
 from coredis.retry import CompositeRetryPolicy, ConstantRetryPolicy, RetryPolicy
 from coredis.typing import (
     AnyStr,
+    AsyncGenerator,
     AsyncIterator,
     Awaitable,
     Callable,
@@ -55,6 +55,7 @@ from coredis.typing import (
     RedisCommandP,
     RedisValueT,
     ResponseType,
+    Self,
     StringT,
     TypeAdapter,
     TypeVar,
@@ -597,7 +598,7 @@ class RedisCluster(
         the :func:`coredis.ConnectionPool.from_url`.
         """
         if decode_responses:
-            return cls(  # type: ignore
+            return cls(
                 decode_responses=True,
                 protocol_version=protocol_version,
                 verify_version=verify_version,
@@ -618,7 +619,7 @@ class RedisCluster(
                 ),
             )
         else:
-            return cls(  # type: ignore
+            return cls(
                 decode_responses=False,
                 protocol_version=protocol_version,
                 verify_version=verify_version,
@@ -639,14 +640,16 @@ class RedisCluster(
                 ),
             )
 
-    async def initialize(self) -> RedisCluster[AnyStr]:
+    @contextlib.asynccontextmanager
+    async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         if self.refresh_table_asap:
             self.connection_pool.initialized = False
-        # await super().initialize()
-        if self.cache:
-            self.cache = await self.cache.initialize(self)
-        self.refresh_table_asap = False
-        return self
+        async with self.connection_pool:
+            await self._populate_module_versions()
+            if self.cache:
+                await self.cache.initialize(self)
+            self.refresh_table_asap = False
+            yield self
 
     def __repr__(self) -> str:
         servers = list(
@@ -693,8 +696,7 @@ class RedisCluster(
 
     async def _ensure_initialized(self) -> None:
         if not self.connection_pool.initialized or self.refresh_table_asap:
-            # await self
-            pass
+            await self.connection_pool.initialize()
 
     def _determine_slots(
         self, command: bytes, *args: RedisValueT, **options: Unpack[ExecutionParameters]
@@ -758,12 +760,10 @@ class RedisCluster(
         return None
 
     async def on_connection_error(self, _: BaseException) -> None:
-        self.connection_pool.disconnect()
         self.connection_pool.reset()
         self.refresh_table_asap = True
 
     async def on_cluster_down_error(self, _: BaseException) -> None:
-        self.connection_pool.disconnect()
         self.connection_pool.reset()
         self.refresh_table_asap = True
 
@@ -816,13 +816,10 @@ class RedisCluster(
                         **kwargs,
                     )
 
-            results = await asyncio.gather(*tasks.values(), return_exceptions=True)
+            results = await gather(*tasks.values(), return_exceptions=True)
             if self.noreply:
                 return None  # type: ignore
-            return cast(
-                R,
-                self._merge_result(command.name, dict(zip(tasks.keys(), results))),
-            )
+            return self._merge_result(command.name, dict(zip(tasks.keys(), results)))
         else:
             node = None
             slots = None
@@ -1164,7 +1161,7 @@ class RedisCluster(
             **kwargs,
         )
 
-    async def pipeline(
+    def pipeline(
         self,
         transaction: bool = False,
         watches: Parameters[StringT] | None = None,
@@ -1189,11 +1186,10 @@ class RedisCluster(
          :paramref:`RedisCluster.stream_timeout`
 
         """
-        await self.connection_pool.initialize()
 
         from coredis.pipeline import ClusterPipeline
 
-        return ClusterPipeline[AnyStr](  # type: ignore
+        return ClusterPipeline[AnyStr](
             client=self,
             transaction=transaction,
             watches=watches,
@@ -1208,8 +1204,9 @@ class RedisCluster(
     ) -> AsyncIterator[AnyStr]:
         await self._ensure_initialized()
         for node in self.primaries:
-            cursor = None
-            while cursor != 0:
-                cursor, data = await node.scan(cursor or 0, match, count, type_)
-                for item in data:
-                    yield item
+            async with node:
+                cursor = None
+                while cursor != 0:
+                    cursor, data = await node.scan(cursor or 0, match, count, type_)
+                    for item in data:
+                        yield item

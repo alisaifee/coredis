@@ -187,7 +187,7 @@ class ConnectionPool(AsyncContextManagerMixin):
         *,
         connection_class: type[BaseConnection] | None = None,
         max_connections: int | None = None,
-        max_block_time: float | None = None,
+        timeout: float | None = None,
         idle_check_interval: int = 1,
         **connection_kwargs: Any,
     ) -> None:
@@ -204,7 +204,7 @@ class ConnectionPool(AsyncContextManagerMixin):
         self.connection_class = connection_class or Connection
         self.connection_kwargs = connection_kwargs
         self.max_connections = max_connections or 64
-        self.max_block_time = max_block_time
+        self.timeout = timeout
         self.idle_check_interval = idle_check_interval
         self.decode_responses = bool(self.connection_kwargs.get("decode_responses", False))
         self.encoding = str(self.connection_kwargs.get("encoding", "utf-8"))
@@ -235,7 +235,7 @@ class ConnectionPool(AsyncContextManagerMixin):
         """
         Gets a dedicated connection from the pool, or creates a new one if all are busy.
         """
-        with fail_after(self.max_block_time):
+        with fail_after(self.timeout):
             await self._capacity.acquire()
         if self._free_connections:
             connection = self._free_connections.pop()

@@ -258,11 +258,7 @@ class Client(
         return (self._module_info or {}).get(module)
 
     def _ensure_server_version(self, version: str | None) -> None:
-        if not self.verify_version or Config.optimized:
-            return
-        if not version:
-            return
-        if not self.server_version and version:
+        if self.verify_version and not Config.optimized and not self.server_version and version:
             try:
                 self.server_version = Version(nativestr(version))
             except InvalidVersion:

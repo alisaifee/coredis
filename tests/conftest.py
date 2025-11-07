@@ -20,7 +20,6 @@ from coredis._utils import EncodingInsensitiveDict, b, hash_slot, nativestr
 from coredis.cache import TrackingCache
 from coredis.client.basic import Redis
 from coredis.credentials import UserPassCredentialProvider
-from coredis.pool.basic import ConnectionPool
 from coredis.response._callbacks import NoopCallback
 from coredis.typing import (
     RUNTIME_TYPECHECKS,
@@ -255,14 +254,18 @@ async def remapped_slots(client, request):
         moves[slot] = destinations[slot].node_id
     try:
         for slot in moves.keys():
-            [await p.cluster_setslot(slot, node=moves[slot]) for p in client.primaries]
+            for p in client.primaries:
+                async with p:
+                    await p.cluster_setslot(slot, node=moves[slot])
         yield
     finally:
         if originals:
             await client.flushall()
 
             for slot in originals.keys():
-                [await p.cluster_setslot(slot, node=originals[slot]) for p in client.primaries]
+                for p in client.primaries:
+                    async with p:
+                        await p.cluster_setslot(slot, node=originals[slot])
 
 
 def check_redis_cluster_ready(host, port):
@@ -472,12 +475,6 @@ async def redis_basic(redis_basic_server, request):
         "localhost",
         6379,
         decode_responses=True,
-        connection_pool=ConnectionPool(
-            host="localhost",
-            port=6379,
-            decode_responses=True,
-            **get_client_test_args(request),
-        ),
         **get_client_test_args(request),
     )
     await check_test_constraints(request, client)
@@ -726,7 +723,8 @@ async def redis_cluster_noreplica(redis_cluster_noreplica_server, request):
         await cluster.flushdb()
 
         for primary in cluster.primaries:
-            await set_default_test_config(primary)
+            async with primary:
+                await set_default_test_config(primary)
 
         async with remapped_slots(cluster, request):
             yield cluster
@@ -750,7 +748,8 @@ async def redis_cluster_ssl(redis_ssl_cluster_server, request):
         await cluster.flushdb()
 
         for primary in cluster.primaries:
-            await set_default_test_config(primary)
+            async with primary:
+                await set_default_test_config(primary)
         yield cluster
 
 
@@ -807,7 +806,8 @@ async def redis_stack_cluster(redis_stack_cluster_server, request):
         await cluster.flushdb()
 
         for primary in cluster.primaries:
-            await set_default_test_config(primary)
+            async with primary:
+                await set_default_test_config(primary)
 
         async with remapped_slots(cluster, request):
             yield cluster

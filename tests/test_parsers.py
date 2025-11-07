@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-import pytest
+import math
 
-from coredis import BaseConnection
+import pytest
+from anyio import create_memory_object_stream
+
 from coredis._utils import b
 from coredis.exceptions import (
     ConnectionError,
@@ -13,26 +15,14 @@ from coredis.exceptions import (
 from coredis.parser import NOT_ENOUGH_DATA, Parser
 
 
-class DummyConnection(BaseConnection):
-    def __init__(self, *a, **k):
-        super().__init__(*a, **k)
-
-    def data_received(self, data):
-        self._parser.feed(data)
-
-    async def _connect(self) -> None:
-        pass
+@pytest.fixture
+def object_stream(request):
+    return create_memory_object_stream(math.inf)
 
 
 @pytest.fixture
-def connection(request):
-    return DummyConnection(decode_responses=request.getfixturevalue("decode"))
-
-
-@pytest.fixture
-def parser(connection):
-    parser = Parser()
-    parser.on_connect(connection)
+def parser(object_stream):
+    parser = Parser(object_stream[0])
     return parser
 
 
@@ -254,16 +244,14 @@ class TestPyParser:
         ]
 
     def test_simple_push_array(self, parser, decode):
-        parser.feed(b">2\r\n$2\r\nco\r\n$5\r\nredis\r\n")
-        assert parser.get_response(
-            decode=decode, encoding="latin-1", push_message_types={b"co"}
-        ) == [
-            self.encoded_value(decode, b"co"),
+        parser.feed(b">2\r\n$7\r\nmessage\r\n$5\r\nredis\r\n")
+        parser.get_response(decode=decode, encoding="latin-1") == [
+            self.encoded_value(decode, b"message"),
             self.encoded_value(decode, b"redis"),
         ]
 
-    def test_interleaved_simple_push_array(self, parser, decode):
-        parser.feed(b":3\r\n>2\r\n:1\r\n:2\r\n:4\r\n")
+    def test_interleaved_simple_push_array(self, parser, decode, object_stream):
+        parser.feed(b":3\r\n>2\r\n$7\r\nmessage\r\n$5\r\nredis\r\n:4\r\n")
         assert (
             parser.get_response(
                 decode=decode,
@@ -278,7 +266,10 @@ class TestPyParser:
             )
             == 4
         )
-        assert parser.push_messages.get_nowait() == [1, 2]
+        assert object_stream[1].receive_nowait() == [
+            self.encoded_value(decode, b"message"),
+            self.encoded_value(decode, b"redis"),
+        ]
 
     def test_nil_map(self, parser, decode):
         parser.feed(b"%-1\r\n")

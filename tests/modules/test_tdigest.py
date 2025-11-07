@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import asyncio
-
 import pytest
 
 from coredis import Redis
+from coredis._utils import gather
 from tests.conftest import module_targets
 
 
@@ -14,7 +13,7 @@ class TestTdigest:
     async def test_create(self, client: Redis, _s):
         await client.tdigest.create("digest")
         await client.tdigest.create("digest_lowcompress", 1)
-        info = await asyncio.gather(
+        info = await gather(
             client.tdigest.info("digest"),
             client.tdigest.info("digest_lowcompress"),
         )
@@ -88,11 +87,13 @@ class TestTdigest:
 
     @pytest.mark.parametrize("transaction", [True, False])
     async def test_pipeline(self, client: Redis, transaction: bool):
-        p = await client.pipeline(transaction=transaction)
-        p.tdigest.create("digest1{a}")
-        p.tdigest.create("digest2{a}")
-        p.tdigest.add("digest1{a}", [1, 2, 3])
-        p.tdigest.add("digest2{a}", [4, 5, 6])
-        p.tdigest.merge("digest1{a}", ["digest2{a}"])
-        p.tdigest.quantile("digest1{a}", [0, 0.5, 1])
-        assert (True, True, True, True, True, (1.0, 4.0, 6.0)) == await p.execute()
+        async with client.pipeline(transaction=transaction) as p:
+            results = [
+                p.tdigest.create("digest1{a}"),
+                p.tdigest.create("digest2{a}"),
+                p.tdigest.add("digest1{a}", [1, 2, 3]),
+                p.tdigest.add("digest2{a}", [4, 5, 6]),
+                p.tdigest.merge("digest1{a}", ["digest2{a}"]),
+                p.tdigest.quantile("digest1{a}", [0, 0.5, 1]),
+            ]
+        assert await gather(*results) == (True, True, True, True, True, (1.0, 4.0, 6.0))

@@ -271,7 +271,6 @@ class TestNodeInvalidatingCache(CommonExamples):
 
 @targets(
     "redis_cluster",
-    "redis_cluster_blocking",
     "redis_cluster_raw",
 )
 class TestClusterInvalidatingCache(CommonExamples):
