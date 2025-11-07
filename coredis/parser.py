@@ -67,16 +67,20 @@ class PubSubMessageTypes(CaseAndEncodingInsensitiveEnum):
 PUBLISH_MESSAGE_TYPES = {
     PubSubMessageTypes.MESSAGE.value,
     PubSubMessageTypes.PMESSAGE.value,
+    PubSubMessageTypes.SMESSAGE.value,
 }
 SUBUNSUB_MESSAGE_TYPES = {
     PubSubMessageTypes.SUBSCRIBE.value,
+    PubSubMessageTypes.SSUBSCRIBE.value,
     PubSubMessageTypes.PSUBSCRIBE.value,
     PubSubMessageTypes.UNSUBSCRIBE.value,
+    PubSubMessageTypes.SUNSUBSCRIBE.value,
     PubSubMessageTypes.PUNSUBSCRIBE.value,
 }
 UNSUBSCRIBE_MESSAGE_TYPES = {
     PubSubMessageTypes.UNSUBSCRIBE.value,
     PubSubMessageTypes.PUNSUBSCRIBE.value,
+    PubSubMessageTypes.SUNSUBSCRIBE.value,
 }
 PUSH_MESSAGE_TYPES = PUBLISH_MESSAGE_TYPES | SUBUNSUB_MESSAGE_TYPES
 

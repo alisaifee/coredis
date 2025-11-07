@@ -12,7 +12,7 @@ from anyio import Lock, fail_after
 from typing_extensions import Self
 
 from coredis._utils import b, hash_slot
-from coredis.connection import ClusterConnection, Connection
+from coredis.connection import BaseConnection, ClusterConnection, Connection
 from coredis.exceptions import ConnectionError, RedisClusterException
 from coredis.globals import READONLY_COMMANDS
 from coredis.pool.basic import ConnectionPool
@@ -205,7 +205,7 @@ class ClusterConnectionPool(ConnectionPool):
         except QueueEmpty:
             connection = None
 
-        if not connection:
+        if not connection or not connection.is_connected:
             connection = await self._make_node_connection(node)
         else:
             if connection.is_connected and connection.needs_handshake:
@@ -265,7 +265,7 @@ class ClusterConnectionPool(ConnectionPool):
 
         return ConnectionQueue[Connection](q_size)
 
-    def release(self, connection: Connection) -> None:
+    def release(self, connection: BaseConnection) -> None:
         """Releases the connection back to the pool"""
         assert isinstance(connection, ClusterConnection)
 
