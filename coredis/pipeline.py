@@ -326,6 +326,7 @@ class NodeCommands:
                         transaction_result[idx],
                         version=connection.protocol_version,
                     )
+                    c.response = await_result(c.result)
             elif isinstance(multi_result, BaseException):
                 raise multi_result
 
