@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, Any, Generator, cast
 
 from anyio import (
     ClosedResourceError,
-    EndOfStream,
     Event,
     Lock,
     connect_tcp,
@@ -267,9 +266,9 @@ class BaseConnection:
             async with (
                 self.connection,
                 self._parser.push_messages,
-                create_task_group() as self._task_group,
+                create_task_group() as tg,
             ):
-                self._task_group.start_soon(self.listen_for_responses)
+                tg.start_soon(self.listen_for_responses)
                 # setup connection
                 await self.on_connect()
                 # run any user callbacks. right now the only internal callback
@@ -283,7 +282,6 @@ class BaseConnection:
         except Exception as e:
             logger.exception("Connection closed unexpectedly!")
             self._last_error = e
-            raise
         finally:
             self._parser.on_disconnect()
             disconnect_exc = self._last_error or ConnectionError("Connection lost!")
@@ -306,11 +304,7 @@ class BaseConnection:
             if isinstance(response, NotEnoughData):
                 # Need more bytes; read once, feed, and retry
                 with move_on_after(self.max_idle_time) as scope:
-                    try:
-                        data = await self.connection.receive()
-                    except (EndOfStream, ConnectionError) as exc:
-                        self._last_error = exc
-                        return
+                    data = await self.connection.receive()
                     self._parser.feed(data)
                 if scope.cancelled_caught:  # this will cleanup the connection gracefully
                     break
@@ -428,15 +422,6 @@ class BaseConnection:
                 await self.try_legacy_auth()
             self.needs_handshake = False
 
-    def disconnect(self) -> None:
-        async def _disconnect() -> None:
-            if self._connection:
-                await self._connection.send_eof()
-                self._connection = None
-
-        if self._task_group:
-            self._task_group.start_soon(_disconnect)
-
     async def on_connect(self) -> None:
         await self.perform_handshake()
 
@@ -485,7 +470,7 @@ class BaseConnection:
             except ClosedResourceError as err:
                 self._last_error = err
                 self._connection = None
-                raise ConnectionError(str(err)) from err
+                raise ConnectionError(f"Failed to send data: {data.decode()}!") from err
 
     async def send_command(
         self,
