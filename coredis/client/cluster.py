@@ -1204,8 +1204,9 @@ class RedisCluster(
     ) -> AsyncIterator[AnyStr]:
         await self._ensure_initialized()
         for node in self.primaries:
-            cursor = None
-            while cursor != 0:
-                cursor, data = await node.scan(cursor or 0, match, count, type_)
-                for item in data:
-                    yield item
+            async with node:
+                cursor = None
+                while cursor != 0:
+                    cursor, data = await node.scan(cursor or 0, match, count, type_)
+                    for item in data:
+                        yield item
