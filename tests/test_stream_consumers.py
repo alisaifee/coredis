@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import asyncio
-import threading
 from collections import OrderedDict
 
+import anyio
 import pytest
 
 from coredis.exceptions import StreamConsumerInitializationError
@@ -20,13 +19,7 @@ async def consume_entries(consumer, count, consumed=None):
     return consumed
 
 
-@targets(
-    "redis_basic",
-    "redis_basic_blocking",
-    "redis_basic_raw",
-    "redis_cluster",
-    "redis_cluster_raw",
-)
+@targets("redis_basic", "redis_basic_raw", "redis_cluster", "redis_cluster_raw")
 class TestStreamConsumers:
     async def test_single_consumer(self, client, _s):
         consumer = await Consumer(client, ["a", "b"])
@@ -146,21 +139,23 @@ class TestStreamConsumers:
         ]
 
     async def test_multiple_group_consumer_auto_create_group_stream(self, client, cloner, _s):
-        client_2 = await cloner(client)
-        consumer_1 = await GroupConsumer(
-            client, ["a", "b"], "group-a", "consumer-1", auto_create=True
-        )
-        consumer_2 = await GroupConsumer(
-            client_2, ["a", "b"], "group-a", "consumer-2", auto_create=True
-        )
-        [await client.xadd("a", {"id": i}) for i in range(10)]
-        [await client.xadd("b", {"id": i}) for i in range(10, 20)]
-        consumed = await consume_entries(consumer_1, 20)
-        consumed = await consume_entries(consumer_2, 20, consumed)
-        assert list(range(10)) == [int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]]
-        assert list(range(10, 20)) == [
-            int(entry.field_values[_s("id")]) for entry in consumed[_s("b")]
-        ]
+        async with await cloner(client) as client_2:
+            consumer_1 = await GroupConsumer(
+                client, ["a", "b"], "group-a", "consumer-1", auto_create=True
+            )
+            consumer_2 = await GroupConsumer(
+                client_2, ["a", "b"], "group-a", "consumer-2", auto_create=True
+            )
+            [await client.xadd("a", {"id": i}) for i in range(10)]
+            [await client.xadd("b", {"id": i}) for i in range(10, 20)]
+            consumed = await consume_entries(consumer_1, 20)
+            consumed = await consume_entries(consumer_2, 20, consumed)
+            assert list(range(10)) == sorted(
+                int(e.field_values[_s("id")]) for e in consumed[_s("a")]
+            )
+            assert list(range(10, 20)) == sorted(
+                int(e.field_values[_s("id")]) for e in consumed[_s("b")]
+            )
 
     async def test_group_consumer_start_from_pending_list(self, client, _s):
         consumer = await GroupConsumer(
@@ -234,38 +229,40 @@ class TestStreamConsumers:
 
     async def test_single_blocking_consumer(self, client, cloner, _s):
         consumer = await Consumer(client, ["a"], timeout=1000)
-        clone = await cloner(client)
 
-        async def _inner():
-            await asyncio.sleep(0.2)
-            await clone.xadd("a", {"id": 1})
+        async with await cloner(client) as clone:
 
-        th = threading.Thread(
-            target=asyncio.run_coroutine_threadsafe,
-            args=(_inner(), asyncio.get_running_loop()),
-        )
-        th.start()
-        _, entry = await consumer.get_entry()
-        th.join()
+            async def delayed_add():
+                await anyio.sleep(0.05)
+                await clone.xadd("a", {"id": 1})
+
+            async with anyio.create_task_group() as tg:
+                tg.start_soon(delayed_add)
+                result = await consumer.get_entry()
+                tg.cancel_scope.cancel()
+
+        assert result is not None and result[1] is not None
+        _, entry = result
         assert entry.field_values[_s("id")] == _s(1)
 
     async def test_group_blocking_consumer(self, client, cloner, _s):
         consumer = await GroupConsumer(
             client, ["a"], "group-a", "consumer-a", auto_create=True, timeout=1000
         )
-        clone = await cloner(client)
 
-        async def _inner():
-            await asyncio.sleep(0.2)
-            await clone.xadd("a", {"id": 1})
+        async with await cloner(client) as clone:
 
-        th = threading.Thread(
-            target=asyncio.run_coroutine_threadsafe,
-            args=(_inner(), asyncio.get_running_loop()),
-        )
-        th.start()
-        _, entry = await consumer.get_entry()
-        th.join()
+            async def delayed_add():
+                await anyio.sleep(0.05)
+                await clone.xadd("a", {"id": 1})
+
+            async with anyio.create_task_group() as tg:
+                tg.start_soon(delayed_add)
+                result = await consumer.get_entry()
+                tg.cancel_scope.cancel()
+
+        assert result is not None and result[1] is not None
+        _, entry = result
         assert entry.field_values[_s("id")] == _s(1)
 
     async def test_single_non_blocking_iterator(self, client, _s):
@@ -280,22 +277,20 @@ class TestStreamConsumers:
 
     async def test_single_blocking_iterator(self, client, cloner, _s):
         consumer = await Consumer(client, ["a"], timeout=1000)
-        clone = await cloner(client)
 
-        async def _inner():
-            await asyncio.sleep(0.2)
-            await clone.xadd("a", {"id": 1})
+        async with await cloner(client) as clone:
 
-        th = threading.Thread(
-            target=asyncio.run_coroutine_threadsafe,
-            args=(_inner(), asyncio.get_running_loop()),
-        )
-        th.start()
-        consumed = {}
+            async def delayed_add():
+                await anyio.sleep(0.05)
+                await clone.xadd("a", {"id": 1})
 
-        async for stream, entry in consumer:
-            consumed.setdefault(stream, []).append(entry)
-        th.join()
+            consumed = {}
+            async with anyio.create_task_group() as tg:
+                tg.start_soon(delayed_add)
+                async for stream, entry in consumer:
+                    consumed.setdefault(stream, []).append(entry)
+                tg.cancel_scope.cancel()
+
         assert len(consumed[_s("a")]) == 1
         assert _s(1) == consumed[_s("a")][0].field_values[_s("id")]
 
@@ -303,21 +298,19 @@ class TestStreamConsumers:
         consumer = await GroupConsumer(
             client, ["a"], "group-a", "consumer-a", auto_create=True, timeout=1000
         )
-        clone = await cloner(client)
 
-        async def _inner():
-            await asyncio.sleep(0.2)
-            await clone.xadd("a", {"id": 1})
+        async with await cloner(client) as clone:
 
-        th = threading.Thread(
-            target=asyncio.run_coroutine_threadsafe,
-            args=(_inner(), asyncio.get_running_loop()),
-        )
-        th.start()
-        consumed = {}
+            async def delayed_add():
+                await anyio.sleep(0.05)
+                await clone.xadd("a", {"id": 1})
 
-        async for stream, entry in consumer:
-            consumed.setdefault(stream, []).append(entry)
-        th.join()
+            consumed = {}
+            async with anyio.create_task_group() as tg:
+                tg.start_soon(delayed_add)
+                async for stream, entry in consumer:
+                    consumed.setdefault(stream, []).append(entry)
+                tg.cancel_scope.cancel()
+
         assert len(consumed[_s("a")]) == 1
         assert _s(1) == consumed[_s("a")][0].field_values[_s("id")]

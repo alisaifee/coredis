@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import asyncio
-
 import pytest
 
 from coredis import Redis
+from coredis._utils import gather
 from coredis.exceptions import ResponseError
 from tests.conftest import module_targets
 
@@ -16,7 +15,7 @@ class TestBloomFilter:
         with pytest.raises(ResponseError):
             await client.bf.reserve("filter", 0.1, 1000)
         assert await client.bf.reserve("filter_ex", 0.1, 1000, 3)
-        info = await asyncio.gather(
+        info = await gather(
             client.bf.info("filter"),
             client.bf.info("filter_ex"),
         )
@@ -89,14 +88,16 @@ class TestBloomFilter:
 
     @pytest.mark.parametrize("transaction", [True, False])
     async def test_pipeline(self, client: Redis, transaction: bool):
-        p = await client.pipeline(transaction=transaction)
-        p.bf.add("filter", 1)
-        p.bf.add("filter", 2)
-        p.bf.exists("filter", 2)
-        p.bf.mexists("filter", [1, 2, 3])
-        assert (
+        async with client.pipeline(transaction=transaction) as p:
+            results = [
+                p.bf.add("filter", 1),
+                p.bf.add("filter", 2),
+                p.bf.exists("filter", 2),
+                p.bf.mexists("filter", [1, 2, 3]),
+            ]
+        assert await gather(*results) == (
             True,
             True,
             True,
             (True, True, False),
-        ) == await p.execute()
+        )

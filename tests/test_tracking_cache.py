@@ -180,11 +180,7 @@ class CommonExamples:
         }
 
 
-@targets(
-    "redis_basic",
-    "redis_basic_blocking",
-    "redis_basic_raw",
-)
+@targets("redis_basic", "redis_basic_raw")
 class TestProxyInvalidatingCache(CommonExamples):
     async def test_uninitialized_cache(self, client, cloner, _s):
         cache = self.cache(max_keys=1, max_idle_seconds=1, max_size_bytes=-1)
@@ -275,7 +271,6 @@ class TestNodeInvalidatingCache(CommonExamples):
 
 @targets(
     "redis_cluster",
-    "redis_cluster_blocking",
     "redis_cluster_raw",
 )
 class TestClusterInvalidatingCache(CommonExamples):

@@ -5,7 +5,7 @@ import asyncio
 from tests.conftest import targets
 
 
-@targets("redis_basic", "redis_basic_blocking")
+@targets("redis_basic")
 class TestMonitor:
     async def test_explicit_fetch(self, client, cloner):
         monitored = await cloner(client)

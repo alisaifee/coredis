@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import asyncio
-
 import pytest
 
 from coredis import Redis
+from coredis._utils import gather
 from coredis.exceptions import ResponseError
 from tests.conftest import module_targets
 
@@ -14,7 +13,7 @@ class TestCountMinSketch:
     async def test_init(self, client: Redis, _s):
         assert await client.cms.initbydim("sketch", 2, 50)
         assert await client.cms.initbyprob("sketchprob", 0.042, 0.42)
-        infos = await asyncio.gather(client.cms.info("sketch"), client.cms.info("sketchprob"))
+        infos = await gather(client.cms.info("sketch"), client.cms.info("sketchprob"))
         assert infos[0][_s("width")] == 2
         assert infos[0][_s("depth")] == 50
         assert infos[1][_s("width")] == 48
@@ -98,9 +97,11 @@ class TestCountMinSketch:
 
     @pytest.mark.parametrize("transaction", [True, False])
     async def test_pipeline(self, client: Redis, transaction: bool):
-        p = await client.pipeline(transaction=transaction)
-        p.cms.initbydim("sketch", 2, 50)
-        p.cms.incrby("sketch", {"fu": 1, "bar": 2})
-        p.cms.incrby("sketch", {"fu": 3})
-        p.cms.query("sketch", ["fu", "bar"])
-        assert (True, (1, 2), (4,), (4, 2)) == await p.execute()
+        async with client.pipeline(transaction=transaction) as p:
+            results = [
+                p.cms.initbydim("sketch", 2, 50),
+                p.cms.incrby("sketch", {"fu": 1, "bar": 2}),
+                p.cms.incrby("sketch", {"fu": 3}),
+                p.cms.query("sketch", ["fu", "bar"]),
+            ]
+        assert await gather(*results) == (True, (1, 2), (4,), (4, 2))

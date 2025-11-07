@@ -1,7 +1,7 @@
 [build-system]
 build-backend = "hatchling.build"
 requires = [
-  "async_timeout>4,<6",
+  "anyio>=4.11.0",
   "hatchling>=1.14.0",
   "hatch-mypyc>=0.1.0",
   "hatch-vcs>=0.4.0",
@@ -22,7 +22,8 @@ authors = [
   {name = "Ali-Akber Saifee", email = "ali@indydevs.org"}
 ]
 maintainers = [
-  {name = "Ali-Akber Saifee", email = "ali@indydevs.org"}
+  {name = "Ali-Akber Saifee", email = "ali@indydevs.org"},
+  {name = "Graeme Holliday", email = "graeme@tastyware.dev"}
 ]
 keywords = ["Redis", "key-value store", "asyncio"]
 classifiers = [
@@ -39,12 +40,13 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-  "async_timeout>4,<6",
+  "anyio>=4.11.0",
   "beartype>=0.20",
   "deprecated>=1.2",
   "typing_extensions>=4.13",
   "packaging>=21,<26",
   "pympler>1,<2",
+  "exceptiongroup>=1.3.0",
 ]
 
 [project.optional-dependencies]
@@ -71,7 +73,8 @@ test = [
   "redis",
   "aiobotocore>=2.15.2",
   "asyncache>=0.3.1",
-  "moto"
+  "moto",
+  "trio>=0.31.0",
 ]
 
 dev = [
@@ -178,7 +181,6 @@ exclude = ["coredis/_py_312_typing.py"]
 
 [[tool.mypy.overrides]]
 module = [
-    "async_timeout",
     "beartype",
     "asyncache",
     "aiobotocore.*",
@@ -220,4 +222,3 @@ MYPYC_OPT_LEVEL = "3"
 [tool.cibuildwheel.linux.environment]
 HATCH_BUILD_HOOKS_ENABLE = "1"
 MYPYC_OPT_LEVEL = "3"
-

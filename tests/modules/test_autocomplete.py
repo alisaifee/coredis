@@ -5,6 +5,7 @@ from unittest.mock import ANY
 import pytest
 
 from coredis import Redis
+from coredis._utils import gather
 from coredis.modules.response.types import AutocompleteSuggestion
 from tests.conftest import module_targets
 
@@ -62,15 +63,17 @@ class TestAutocomplete:
 
     @pytest.mark.parametrize("transaction", [True, False])
     async def test_pipeline(self, client: Redis, transaction: bool, _s):
-        p = await client.pipeline(transaction=transaction)
-        p.autocomplete.sugadd("suggest", "hello", 1)
-        p.autocomplete.sugadd("suggest", "hello world", 1)
-        p.autocomplete.suglen("suggest")
-        p.autocomplete.sugget("suggest", "hel")
-        p.autocomplete.sugdel("suggest", "hello")
-        p.autocomplete.sugdel("suggest", "hello world")
-        p.autocomplete.suglen("suggest")
-        assert (
+        async with client.pipeline(transaction=transaction) as p:
+            results = [
+                p.autocomplete.sugadd("suggest", "hello", 1),
+                p.autocomplete.sugadd("suggest", "hello world", 1),
+                p.autocomplete.suglen("suggest"),
+                p.autocomplete.sugget("suggest", "hel"),
+                p.autocomplete.sugdel("suggest", "hello"),
+                p.autocomplete.sugdel("suggest", "hello world"),
+                p.autocomplete.suglen("suggest"),
+            ]
+        assert await gather(*results) == (
             1,
             2,
             2,
@@ -81,4 +84,4 @@ class TestAutocomplete:
             1,
             1,
             0,
-        ) == await p.execute()
+        )
