@@ -264,8 +264,12 @@ class BaseConnection:
 
         self._connection = await self._connect()
         try:
-            async with self.connection, self._parser.push_messages, create_task_group() as tg:
-                tg.start_soon(self.listen_for_responses)
+            async with (
+                self.connection,
+                self._parser.push_messages,
+                create_task_group() as self._task_group,
+            ):
+                self._task_group.start_soon(self.listen_for_responses)
                 # setup connection
                 await self.on_connect()
                 # run any user callbacks. right now the only internal callback
@@ -423,6 +427,15 @@ class BaseConnection:
                 warnings.warn(warning, category=UserWarning)
                 await self.try_legacy_auth()
             self.needs_handshake = False
+
+    def disconnect(self) -> None:
+        async def _disconnect() -> None:
+            if self._connection:
+                await self._connection.send_eof()
+                self._connection = None
+
+        if self._task_group:
+            self._task_group.start_soon(_disconnect)
 
     async def on_connect(self) -> None:
         await self.perform_handshake()
