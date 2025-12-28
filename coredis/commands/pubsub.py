@@ -47,7 +47,6 @@ from coredis.typing import (
     MutableMapping,
     Parameters,
     RedisValueT,
-    ResponsePrimitive,
     ResponseType,
     Self,
     StringT,
@@ -100,6 +99,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         self._subscribed = Event()
         self.channels = {}
         self.patterns = {}
+        self.tries = 0
 
     @property
     def connection(self) -> BaseConnection:
@@ -148,35 +148,31 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
                 logger.error(error)
             logger.warning("Retrying...")
 
-        MAX_TRIES = 10
-        done = False
-        tries = 0
-        while not done and tries < MAX_TRIES:
+        started = False
+        while True:
             # retry with exponential backoff
-            await sleep(tries**2)
-            tries += 1
+            await sleep(self.tries**2)
+            self.tries += 1
             with catch({(ConnectionError, ConnectionFailed, EndOfStream): handle_exception_group}):
                 async with self.connection_pool.acquire() as self._connection:
                     async with create_task_group() as tg:
                         self._current_scope = tg.cancel_scope
                         tg.start_soon(self._consumer)
                         tg.start_soon(self._keepalive)
-                        if tries == 1:
+                        if not started:
                             task_status.started()
                         else:  # resubscribe
                             if self.channels:
                                 await self.subscribe(*self.channels.keys())
                             if self.patterns:
                                 await self.psubscribe(*self.patterns.keys())
-                    done = True
-
-        if tries >= MAX_TRIES:
-            raise Exception("Pubsub aborted after max reconnection attempts!")
+                    break
 
     async def _keepalive(self) -> None:
         while True:
+            await self.connection.send_command(CommandName.PING)
+            self.tries = 0
             await sleep(30)
-            await (await self.connection.create_request(CommandName.PING))
 
     async def psubscribe(
         self,
@@ -286,7 +282,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
     async def parse_response(
         self, block: bool = True, timeout: float | None = None
-    ) -> ResponseType:
+    ) -> list[ResponseType]:
         """
         Parses the response from a publish/subscribe command
 
@@ -298,7 +294,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         with fail_after(timeout):
             return await self.connection.fetch_push_message(block=block)
 
-    async def handle_message(self, response: ResponseType) -> PubSubMessage | None:
+    async def handle_message(self, response: list[ResponseType]) -> PubSubMessage | None:
         """
         Parses a pub/sub message. If the channel or pattern was subscribed to
         with a message handler, the handler is invoked instead of a parsed
@@ -306,36 +302,35 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
         :meta private:
         """
-        r = cast(list[ResponsePrimitive], response)
-        message_type = b(r[0])
-        message_type_str = nativestr(r[0])
+        message_type = b(response[0])
+        message_type_str = nativestr(response[0])
         message: PubSubMessage
 
         if message_type in SUBUNSUB_MESSAGE_TYPES:
             message = PubSubMessage(
                 type=message_type_str,
-                pattern=cast(StringT, r[1]) if message_type[0] == ord(b"p") else None,
+                pattern=cast(StringT, response[1]) if message_type[0] == ord(b"p") else None,
                 # This field is populated in all cases for backward compatibility
                 # as older versions were incorrectly populating the channel
                 # with the pattern on psubscribe/punsubscribe responses.
-                channel=cast(StringT, r[1]),
-                data=cast(int, r[2]),
+                channel=cast(StringT, response[1]),
+                data=cast(int, response[2]),
             )
 
         elif message_type in PUBLISH_MESSAGE_TYPES:
             if message_type == PubSubMessageTypes.PMESSAGE:
                 message = PubSubMessage(
                     type="pmessage",
-                    pattern=cast(StringT, r[1]),
-                    channel=cast(StringT, r[2]),
-                    data=cast(StringT, r[3]),
+                    pattern=cast(StringT, response[1]),
+                    channel=cast(StringT, response[2]),
+                    data=cast(StringT, response[3]),
                 )
             else:
                 message = PubSubMessage(
                     type="message",
                     pattern=None,
-                    channel=cast(StringT, r[1]),
-                    data=cast(StringT, r[2]),
+                    channel=cast(StringT, response[1]),
+                    data=cast(StringT, response[2]),
                 )
         else:
             raise PubSubError(f"Unknown message type {message_type_str}")  # noqa
@@ -459,13 +454,11 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
             if self._connection:
                 self.connection_pool.release(self._connection)
 
-        MAX_TRIES = 10
-        done = False
-        tries = 0
-        while not done and tries < MAX_TRIES:
+        started = False
+        while not started:
             # retry with exponential backoff
-            await sleep(tries**2)
-            tries += 1
+            await sleep(self.tries**2)
+            self.tries += 1
             with catch(
                 {(ConnectionError, ConnectionFailed, EndOfStream): handle_connection_errors}
             ):
@@ -475,7 +468,7 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                 async with create_task_group() as tg:
                     tg.start_soon(self._consumer)
                     tg.start_soon(self._keepalive)
-                    if tries == 1:
+                    if not started:
                         task_status.started()
                     else:  # resubscribe
                         if self.channels:
@@ -483,10 +476,7 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                         if self.patterns:
                             await self.psubscribe(*self.patterns.keys())
                 self.connection_pool.release(self._connection)
-                done = True
-
-        if tries >= MAX_TRIES:
-            raise Exception("Pubsub aborted after max reconnection attempts!")
+                break
 
 
 @versionadded(version="3.6.0")
@@ -522,7 +512,9 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         self.shard_connections: dict[str, Connection] = {}
         self.node_channel_mapping: dict[str, list[StringT]] = {}
         self.read_from_replicas = read_from_replicas
-        self._shard_messages = StapledObjectStream(*create_memory_object_stream[ResponseType]())
+        self._shard_messages = StapledObjectStream(
+            *create_memory_object_stream[list[ResponseType]]()
+        )
         super().__init__(
             connection_pool,
             ignore_subscribe_messages,
@@ -634,7 +626,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
     async def parse_response(
         self, block: bool = True, timeout: float | None = None
-    ) -> ResponseType:
+    ) -> list[ResponseType]:
         timeout = timeout if timeout and timeout > 0 else None
         with fail_after(timeout):
             return await self._shard_messages.receive()

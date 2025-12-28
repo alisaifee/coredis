@@ -82,7 +82,8 @@ UNSUBSCRIBE_MESSAGE_TYPES = {
     PubSubMessageTypes.PUNSUBSCRIBE.value,
     PubSubMessageTypes.SUNSUBSCRIBE.value,
 }
-PUSH_MESSAGE_TYPES = PUBLISH_MESSAGE_TYPES | SUBUNSUB_MESSAGE_TYPES
+INVALIDATION_TYPES = {b"invalidate"}
+PUSH_MESSAGE_TYPES = PUBLISH_MESSAGE_TYPES | SUBUNSUB_MESSAGE_TYPES | INVALIDATION_TYPES
 
 
 class RESPNode:
@@ -199,7 +200,7 @@ class Parser:
         "WRONGTYPE": WrongTypeError,
     }
 
-    def __init__(self, push_messages: MemoryObjectSendStream[ResponseType]) -> None:
+    def __init__(self, push_messages: MemoryObjectSendStream[list[ResponseType]]) -> None:
         self.push_messages = push_messages
         self.localbuffer: BytesIO = BytesIO(b"")
         self.bytes_read: int = 0
@@ -247,16 +248,14 @@ class Parser:
             response = self.parse(decode, encoding)
             if isinstance(response, NotEnoughData):
                 return response
-            else:
-                if response and response.response_type == RESPDataType.PUSH:
-                    assert isinstance(response.response, list)
-                    if b(response.response[0]) not in PUSH_MESSAGE_TYPES:
-                        logger.debug(f"Unhandled push message: {response.response}")
-                    else:
-                        self.push_messages.send_nowait(response.response)
-                    continue
+            if response and response.response_type == RESPDataType.PUSH:
+                assert isinstance(response.response, list)
+                if b(response.response[0]) in PUSH_MESSAGE_TYPES:
+                    self.push_messages.send_nowait(response.response)
                 else:
-                    break
+                    logger.debug(f"Unhandled push message: {response.response}")
+            else:
+                break
         return response.response if response else None
 
     def parse(

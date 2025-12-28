@@ -7,7 +7,14 @@ from ssl import SSLContext, VerifyMode
 from typing import Any, AsyncGenerator, cast
 from urllib.parse import parse_qs, unquote, urlparse
 
-from anyio import AsyncContextManagerMixin, Semaphore, create_task_group, fail_after
+from anyio import (
+    TASK_STATUS_IGNORED,
+    AsyncContextManagerMixin,
+    Semaphore,
+    create_task_group,
+    fail_after,
+)
+from anyio.abc import TaskStatus
 from typing_extensions import Self
 
 from coredis._utils import query_param_to_bool
@@ -221,9 +228,11 @@ class ConnectionPool(AsyncContextManagerMixin):
             self._free_connections.clear()
             self._used_connections.clear()
 
-    async def wrap_connection(self, connection: BaseConnection) -> None:
+    async def wrap_connection(
+        self, connection: BaseConnection, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
+    ) -> None:
         try:
-            await connection.run()
+            await connection.run(task_status=task_status)
         finally:
             if connection in self._used_connections:
                 self._used_connections.remove(connection)
@@ -241,8 +250,7 @@ class ConnectionPool(AsyncContextManagerMixin):
             connection = self._free_connections.pop()
         else:
             connection = self.connection_class(**self.connection_kwargs)
-            self._task_group.start_soon(self.wrap_connection, connection)
-            await connection._started.wait()
+            await self._task_group.start(self.wrap_connection, connection)
         self._used_connections.add(connection)
         try:
             yield connection

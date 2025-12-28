@@ -4,13 +4,16 @@ import dataclasses
 import weakref
 from abc import ABC, abstractmethod
 from collections import Counter
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
-from anyio import sleep
+from anyio import TASK_STATUS_IGNORED, ConnectionFailed, EndOfStream, create_task_group, sleep
+from anyio.abc import TaskStatus
+from exceptiongroup import BaseExceptionGroup, catch
 
-from coredis._utils import b, make_hashable
+from coredis._utils import b, logger, make_hashable
+from coredis.commands.constants import CommandName
 from coredis.connection import BaseConnection
-from coredis.parser import SUBUNSUB_MESSAGE_TYPES
+from coredis.pool.basic import ConnectionPool
 from coredis.typing import (
     Generic,
     Hashable,
@@ -19,6 +22,7 @@ from coredis.typing import (
     OrderedDict,
     RedisValueT,
     ResponseType,
+    StringT,
     TypeVar,
 )
 
@@ -114,16 +118,6 @@ class AbstractCache(ABC):
     """
 
     @abstractmethod
-    async def initialize(
-        self,
-        client: coredis.client.Redis[Any] | coredis.client.RedisCluster[Any],
-    ) -> AbstractCache:
-        """
-        Associate and initialize this cache with the provided client
-        """
-        ...
-
-    @abstractmethod
     def get(self, command: bytes, key: RedisValueT, *args: RedisValueT) -> ResponseType:
         """
         Fetch the cached response for command/key/args combination
@@ -143,6 +137,13 @@ class AbstractCache(ABC):
     def invalidate(self, *keys: RedisValueT) -> None:
         """
         Invalidate any cached entries for the provided keys
+        """
+        ...
+
+    @abstractmethod
+    def reset(self) -> None:
+        """
+        Reset the cache
         """
         ...
 
@@ -277,7 +278,7 @@ class NodeTrackingCache(AbstractCache):
         self,
         max_keys: int = 2**12,
         max_size_bytes: int = 64 * 1024 * 1024,
-        max_idle_seconds: int = 5,
+        max_idle_seconds: int = 30,
         confidence: float = 100,
         dynamic_confidence: bool = False,
         cache: LRUCache[LRUCache[LRUCache[ResponseType]]] | None = None,
@@ -298,6 +299,7 @@ class NodeTrackingCache(AbstractCache):
          confirmations of correct cached values will increase the confidence by 0.01%
          upto 100.
         """
+        super().__init__()
         self.__protocol_version: Literal[2, 3] | None = None
         self.__max_idle_seconds = max_idle_seconds
         self.__confidence = self.__original_confidence = confidence
@@ -306,6 +308,55 @@ class NodeTrackingCache(AbstractCache):
         self.__cache: LRUCache[LRUCache[LRUCache[ResponseType]]] = cache or LRUCache(
             max_keys, max_size_bytes
         )
+        self.tries = 0
+        self.client_id = None
+
+    async def run(
+        self, pool: ConnectionPool, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
+    ) -> None:
+        def handle_exception_group(group: BaseExceptionGroup) -> None:
+            logger.error("Cache disconnected!")
+            for error in group.exceptions:
+                logger.error(error)
+            logger.warning("Retrying...")
+
+        started = False
+        while True:
+            # retry with exponential backoff
+            await sleep(self.tries**2)
+            self.tries += 1
+            with catch({(ConnectionError, ConnectionFailed, EndOfStream): handle_exception_group}):
+                async with pool.acquire() as self._connection:
+                    if self._connection.tracking_client_id:
+                        await self._connection.update_tracking_client(False)
+                    self.client_id = self._connection.client_id
+                    async with create_task_group() as tg:
+                        tg.start_soon(self._consumer)
+                        tg.start_soon(self._keepalive)
+                        tg.start_soon(self._compact)
+                        if not started:
+                            task_status.started()
+                        else:  # flush cache
+                            self.reset()
+
+    async def _keepalive(self) -> None:
+        while True:
+            await self._connection.send_command(CommandName.PING)
+            self.tries = 0
+            await sleep(30)
+
+    async def _consumer(self) -> None:
+        while True:
+            response = await self._connection.fetch_push_message(True)
+            messages = cast(list[StringT], response[1] or [])
+            for key in messages:
+                self.invalidate(key)
+
+    async def _compact(self) -> None:
+        while True:
+            self.__cache.shrink()
+            self.__stats.compact()
+            await sleep(max(1, self.__max_idle_seconds - 1))
 
     @property
     def confidence(self) -> float:
@@ -334,6 +385,7 @@ class NodeTrackingCache(AbstractCache):
 
     def invalidate(self, *keys: RedisValueT) -> None:
         for key in keys:
+            print("invalidating", key)
             self.__stats.invalidate(key)
             self.__cache.remove(b(key))
 
@@ -348,58 +400,10 @@ class NodeTrackingCache(AbstractCache):
                 max(0.0, self.__confidence * (1.0001 if match else 0.999)),
             )
 
-    def process_message(self, message: ResponseType) -> tuple[ResponseType, ...]:
-        assert isinstance(message, list)
-
-        if self.__protocol_version == 2:
-            assert isinstance(message[0], bytes)
-
-            if b(message[0]) in SUBUNSUB_MESSAGE_TYPES:
-                return ()
-            elif message[2] is not None:
-                assert isinstance(message[2], list)
-
-                return tuple(k for k in message[2])
-        elif message[1] is not None:
-            assert isinstance(message[1], list)
-
-            return tuple(k for k in message[1])
-
-        return ()  # noqa
-
-    async def initialize(
-        self,
-        client: coredis.client.Redis[Any] | coredis.client.RedisCluster[Any],
-    ) -> NodeTrackingCache:
-        self.__protocol_version = client.protocol_version
-        # await super().start(client)
-
-        """
-        if not self.__invalidation_task or self.__invalidation_task.done():
-            self.__invalidation_task = asyncio.create_task(self.__invalidate())
-
-        if not self.__compact_task or self.__compact_task.done():
-            self.__compact_task = asyncio.create_task(self.__compact())
-        """
-
-        return self
-
-    async def __compact(self) -> None:
-        while True:
-            self.__cache.shrink()
-            self.__stats.compact()
-            await sleep(max(1, self.__max_idle_seconds - 1))
-
-    async def __invalidate(self) -> None:
+    def reset(self) -> None:
         self.__cache.clear()
-        while True:
-            try:
-                # key = b(await self.messages.get())
-                # self.invalidate(key)
-                # self.messages.task_done()
-                pass
-            except RuntimeError:  # noqa
-                break
+        self.__stats.compact()
+        self.__confidence = self.__original_confidence
 
 
 class ClusterTrackingCache(AbstractCache):

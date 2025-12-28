@@ -12,6 +12,7 @@ from collections import defaultdict, deque
 from typing import TYPE_CHECKING, Any, Generator, cast
 
 from anyio import (
+    TASK_STATUS_IGNORED,
     ClosedResourceError,
     Event,
     Lock,
@@ -22,7 +23,7 @@ from anyio import (
     fail_after,
     move_on_after,
 )
-from anyio.abc import ByteStream, SocketAttribute
+from anyio.abc import ByteStream, SocketAttribute, TaskStatus
 from anyio.streams.tls import TLSStream
 from typing_extensions import override
 
@@ -199,7 +200,9 @@ class BaseConnection:
 
         self._connection: ByteStream | None = None
         #: Queue that collects any unread push message types
-        push_messages, self._receive_messages = create_memory_object_stream[ResponseType](math.inf)
+        push_messages, self._receive_messages = create_memory_object_stream[list[ResponseType]](
+            math.inf
+        )
         self._parser = Parser(push_messages)
         self.packer: Packer = Packer(self.encoding)
         self.max_idle_time = max_idle_time
@@ -216,7 +219,6 @@ class BaseConnection:
 
         self._requests: deque[Request] = deque()
         self._write_lock = Lock()
-        self._started = Event()
 
     def __repr__(self) -> str:
         return self.describe(self._description_args())
@@ -255,7 +257,7 @@ class BaseConnection:
     @abstractmethod
     async def _connect(self) -> ByteStream: ...
 
-    async def run(self) -> None:
+    async def run(self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
         """
         Establish a connnection to the redis server
         and initiate any post connect callbacks.
@@ -273,7 +275,7 @@ class BaseConnection:
                     task = callback(self)
                     if inspect.isawaitable(task):
                         await task
-                self._started.set()
+                task_status.started()
         # swallow error and end the loop
         except Exception as e:
             logger.exception("Connection closed unexpectedly!")
@@ -442,7 +444,7 @@ class BaseConnection:
             await (await self.create_request(b"CLIENT REPLY", b"OFF", noreply=True))
             self.noreply_set = True
 
-    async def fetch_push_message(self, block: bool = False) -> ResponseType:
+    async def fetch_push_message(self, block: bool = False) -> list[ResponseType]:
         """
         Read the next pending response
         """

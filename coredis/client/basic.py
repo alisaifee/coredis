@@ -8,7 +8,7 @@ from collections import defaultdict
 from ssl import SSLContext
 from typing import TYPE_CHECKING, Any, Coroutine, cast, overload
 
-from anyio import AsyncContextManagerMixin, sleep
+from anyio import AsyncContextManagerMixin, create_task_group, sleep
 from deprecated.sphinx import versionadded
 from exceptiongroup import catch
 from packaging import version
@@ -937,10 +937,10 @@ class Redis(Client[AnyStr]):
 
     @contextlib.asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        async with self.connection_pool:
+        async with self.connection_pool, create_task_group() as tg:
             await self._populate_module_versions()
             if self.cache:
-                await self.cache.initialize(self)
+                await tg.start(self.cache.run, self.connection_pool)
             yield self
 
     async def execute_command(
@@ -978,12 +978,9 @@ class Redis(Client[AnyStr]):
                 use_cached = False
                 reply = None
                 if self.cache:
-                    if connection.tracking_client_id != self.cache.get_client_id(connection):  # type: ignore
-                        self.cache.reset()  # type: ignore
-                        await connection.update_tracking_client(
-                            True,
-                            self.cache.get_client_id(connection),  # type: ignore
-                        )
+                    if connection.tracking_client_id != self.cache.client_id:
+                        self.cache.reset()
+                        await connection.update_tracking_client(True, self.cache.client_id)
                     if command.name not in READONLY_COMMANDS:
                         self.cache.invalidate(*keys)
                     elif cacheable:
