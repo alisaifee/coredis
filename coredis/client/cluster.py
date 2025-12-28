@@ -644,12 +644,12 @@ class RedisCluster(
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         if self.refresh_table_asap:
             self.connection_pool.initialized = False
-        async with self.connection_pool:
-            await self._populate_module_versions()
-            if self.cache:
-                await self.connection_pool._task_group.start(self.cache.run, self.connection_pool)
-            self.refresh_table_asap = False
-            yield self
+        await self.connection_pool.initialize()
+        self.refresh_table_asap = False
+        await self._populate_module_versions()
+        if self.cache:
+            self.cache = await self.cache.initialize(self)
+        return self
 
     def __repr__(self) -> str:
         servers = list(

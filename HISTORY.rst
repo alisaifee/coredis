@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v5.4.0
+------
+Release Date: 2025-12-17
+
+* Bug Fix
+
+  * Fix recursion error when retrying pipeline commands
+    on cluster moved errors
+
 v5.3.0
 ------
 Release Date: 2025-10-10
@@ -2041,6 +2050,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
