@@ -15,10 +15,7 @@ from tests.conftest import targets
 
 
 async def test_init_compose_sentinel(redis_sentinel: Sentinel):
-    print(await redis_sentinel.discover_primary("mymaster"))
-    return
     master = redis_sentinel.primary_for("mymaster")
-    print(master)
     async with master:
         await master.ping()
 
@@ -132,9 +129,7 @@ async def test_replica_round_robin(cluster, sentinel):
 
 async def test_autodecode(redis_sentinel_server: tuple[str, int]):
     sentinel = Sentinel(sentinels=[redis_sentinel_server], decode_responses=True)
-    print(sentinel)
     client = sentinel.primary_for("mymaster")
-    print(client, client.connection_pool)
     async with client:
         assert await client.ping() == "PONG"
     client = sentinel.primary_for("mymaster", decode_responses=False)
@@ -218,7 +213,7 @@ class TestSentinelCommand:
             await p.set("fubar", 1)
 
     @pytest.mark.parametrize(
-        "client_arguments", [{"cache": coredis.cache.TrackingCache(max_size_bytes=-1)}]
+        "client_arguments", [{"cache": coredis.cache.NodeTrackingCache(max_size_bytes=-1)}]
     )
     async def test_sentinel_cache(self, client, client_arguments, mocker, _s):
         await client.primary_for("mymaster").set("fubar", 1)
@@ -235,9 +230,6 @@ class TestSentinelCommand:
         await new_replica.ping()
 
         replica_spy = mocker.spy(coredis.BaseConnection, "create_request")
-
-        assert new_primary.cache.healthy
-        assert new_replica.cache.healthy
 
         assert await new_primary.get("fubar") == _s("1")
         assert await new_replica.get("fubar") == _s("1")

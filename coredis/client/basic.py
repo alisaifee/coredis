@@ -8,7 +8,7 @@ from collections import defaultdict
 from ssl import SSLContext
 from typing import TYPE_CHECKING, Any, Coroutine, cast, overload
 
-from anyio import AsyncContextManagerMixin, create_task_group, sleep
+from anyio import AsyncContextManagerMixin, sleep
 from deprecated.sphinx import versionadded
 from exceptiongroup import catch
 from packaging import version
@@ -16,7 +16,7 @@ from packaging.version import InvalidVersion, Version
 from typing_extensions import Self
 
 from coredis._utils import EncodingInsensitiveDict, logger, nativestr
-from coredis.cache import AbstractCache
+from coredis.cache import AbstractCache, NodeTrackingCache
 from coredis.commands import CommandRequest
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandFlag, CommandName
@@ -94,7 +94,7 @@ class Client(
     ModuleMixin[AnyStr],
     SentinelCommands[AnyStr],
 ):
-    cache: AbstractCache | None
+    cache: NodeTrackingCache | None
     connection_pool: ConnectionPool
     decode_responses: bool
     encoding: str
@@ -937,10 +937,10 @@ class Redis(Client[AnyStr]):
 
     @contextlib.asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        async with self.connection_pool, create_task_group() as tg:
+        async with self.connection_pool:
             await self._populate_module_versions()
             if self.cache:
-                await tg.start(self.cache.run, self.connection_pool)
+                await self.connection_pool._task_group.start(self.cache.run, self.connection_pool)
             yield self
 
     async def execute_command(

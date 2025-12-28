@@ -647,7 +647,7 @@ class RedisCluster(
         async with self.connection_pool:
             await self._populate_module_versions()
             if self.cache:
-                await self.cache.initialize(self)
+                await self.connection_pool._task_group.start(self.cache.run, self.connection_pool)
             self.refresh_table_asap = False
             yield self
 

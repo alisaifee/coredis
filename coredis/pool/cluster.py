@@ -152,20 +152,21 @@ class ClusterConnectionPool(ConnectionPool):
     async def initialize(self) -> None:
         if not self.initialized:
             async with self._init_lock:
-                if not self.initialized:
-                    await self.nodes.initialize()
+                if self.initialized:
+                    return
+                await self.nodes.initialize()
 
-                    if not self.max_connections_per_node and self.max_connections < len(
-                        self.nodes.nodes
-                    ):
-                        warnings.warn(
-                            f"The value of max_connections={self.max_connections} "
-                            "should be atleast equal to the number of nodes "
-                            f"({len(self.nodes.nodes)}) in the cluster and has been increased by "
-                            f"{len(self.nodes.nodes) - self.max_connections} connections."
-                        )
-                        self.max_connections = len(self.nodes.nodes)
-                    self.initialized = True
+                if not self.max_connections_per_node and self.max_connections < len(
+                    self.nodes.nodes
+                ):
+                    warnings.warn(
+                        f"The value of max_connections={self.max_connections} "
+                        "should be atleast equal to the number of nodes "
+                        f"({len(self.nodes.nodes)}) in the cluster and has been increased by "
+                        f"{len(self.nodes.nodes) - self.max_connections} connections."
+                    )
+                    self.max_connections = len(self.nodes.nodes)
+                self.initialized = True
 
     def reset(self) -> None:
         """Resets the connection pool back to a clean state"""
@@ -291,9 +292,6 @@ class ClusterConnectionPool(ConnectionPool):
         raise RedisClusterException("Cant reach a single startup node.")
 
     async def get_connection_by_key(self, key: StringT) -> ClusterConnection:
-        if not key:
-            raise RedisClusterException("No way to dispatch this command to Redis Cluster.")
-
         return await self.get_connection_by_slot(hash_slot(b(key)))
 
     async def get_connection_by_slot(self, slot: int) -> ClusterConnection:

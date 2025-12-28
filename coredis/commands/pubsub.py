@@ -161,6 +161,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
                         tg.start_soon(self._keepalive)
                         if not started:
                             task_status.started()
+                            started = True
                         else:  # resubscribe
                             if self.channels:
                                 await self.subscribe(*self.channels.keys())
@@ -470,6 +471,7 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                     tg.start_soon(self._keepalive)
                     if not started:
                         task_status.started()
+                        started = True
                     else:  # resubscribe
                         if self.channels:
                             await self.subscribe(*self.channels.keys())

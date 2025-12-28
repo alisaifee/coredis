@@ -17,7 +17,7 @@ from pytest_lazy_fixtures import lf
 import coredis
 import coredis.sentinel
 from coredis._utils import EncodingInsensitiveDict, b, hash_slot, nativestr
-from coredis.cache import TrackingCache
+from coredis.cache import ClusterTrackingCache, NodeTrackingCache
 from coredis.client.basic import Redis
 from coredis.credentials import UserPassCredentialProvider
 from coredis.response._callbacks import NoopCallback
@@ -222,7 +222,7 @@ async def set_default_test_config(client, variant=None):
                 await client.acl_log(reset=True)
 
 
-def get_client_test_args(request):
+def get_client_test_args(request) -> dict[str, int]:
     if "client_arguments" in request.fixturenames:
         return request.getfixturevalue("client_arguments")
 
@@ -524,7 +524,7 @@ async def redis_stack_raw(redis_stack_server, request):
 
 @pytest.fixture
 async def redis_stack_cached(redis_stack_server, request):
-    cache = TrackingCache(max_size_bytes=-1)
+    cache = NodeTrackingCache(max_size_bytes=-1)
     client = coredis.Redis(
         *redis_stack_server,
         decode_responses=True,
@@ -628,7 +628,7 @@ async def redis_uds(redis_uds_server, request):
 
 @pytest.fixture
 async def redis_cached(redis_basic_server, request):
-    cache = TrackingCache(max_size_bytes=-1)
+    cache = NodeTrackingCache(max_size_bytes=-1)
     client = coredis.Redis(
         "localhost",
         6379,
@@ -755,7 +755,7 @@ async def redis_cluster_ssl(redis_ssl_cluster_server, request):
 
 @pytest.fixture
 async def redis_cluster_cached(redis_cluster_server, request):
-    cache = TrackingCache(max_size_bytes=-1)
+    cache = ClusterTrackingCache(max_size_bytes=-1)
     cluster = coredis.RedisCluster(
         "localhost",
         7000,

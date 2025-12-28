@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import dataclasses
-import weakref
 from abc import ABC, abstractmethod
 from collections import Counter
 from typing import TYPE_CHECKING, Any, cast
 
-from anyio import TASK_STATUS_IGNORED, ConnectionFailed, EndOfStream, create_task_group, sleep
+from anyio import (
+    TASK_STATUS_IGNORED,
+    ConnectionFailed,
+    EndOfStream,
+    create_task_group,
+    sleep,
+)
 from anyio.abc import TaskStatus
 from exceptiongroup import BaseExceptionGroup, catch
 
@@ -14,10 +19,10 @@ from coredis._utils import b, logger, make_hashable
 from coredis.commands.constants import CommandName
 from coredis.connection import BaseConnection
 from coredis.pool.basic import ConnectionPool
+from coredis.pool.cluster import ClusterConnectionPool
 from coredis.typing import (
     Generic,
     Hashable,
-    Literal,
     ModuleType,
     OrderedDict,
     RedisValueT,
@@ -181,28 +186,28 @@ class LRUCache(Generic[ET]):
     def __init__(self, max_items: int = -1, max_bytes: int = -1):
         self.max_items = max_items
         self.max_bytes = max_bytes
-        self.__cache: OrderedDict[Hashable, ET] = OrderedDict()
+        self._cache: OrderedDict[Hashable, ET] = OrderedDict()
 
         if self.max_bytes > 0 and asizeof is not None:
-            self.max_bytes += asizeof.asizeof(self.__cache)
+            self.max_bytes += asizeof.asizeof(self._cache)
         elif self.max_bytes > 0:
             raise RuntimeError("max_bytes not supported as dependency pympler not available")
 
     def get(self, key: Hashable) -> ET:
-        if key not in self.__cache:
+        if key not in self._cache:
             raise KeyError(key)
-        self.__cache.move_to_end(key)
+        self._cache.move_to_end(key)
 
-        return self.__cache[key]
+        return self._cache[key]
 
     def insert(self, key: Hashable, value: ET) -> None:
-        self.__check_capacity()
-        self.__cache[key] = value
-        self.__cache.move_to_end(key)
+        self._check_capacity()
+        self._cache[key] = value
+        self._cache.move_to_end(key)
 
     def setdefault(self, key: Hashable, value: ET) -> ET:
         try:
-            self.__check_capacity()
+            self._check_capacity()
 
             return self.get(key)
         except KeyError:
@@ -211,11 +216,11 @@ class LRUCache(Generic[ET]):
             return self.get(key)
 
     def remove(self, key: Hashable) -> None:
-        if key in self.__cache:
-            self.__cache.pop(key)
+        if key in self._cache:
+            self._cache.pop(key)
 
     def clear(self) -> None:
-        self.__cache.clear()
+        self._cache.clear()
 
     def popitem(self) -> tuple[Any, Any] | None:
         """
@@ -225,15 +230,15 @@ class LRUCache(Generic[ET]):
         turns out to be an empty LRUCache, remove that.
         """
         try:
-            oldest = next(iter(self.__cache))
-            item = self.__cache[oldest]
+            oldest = next(iter(self._cache))
+            item = self._cache[oldest]
         except StopIteration:
             return None
 
         if isinstance(item, LRUCache):
             if popped := item.popitem():
                 return popped
-        if entry := self.__cache.popitem(last=False):
+        if entry := self._cache.popitem(last=False):
             return entry
         return None
 
@@ -245,7 +250,7 @@ class LRUCache(Generic[ET]):
         """
 
         if self.max_bytes > 0 and asizeof is not None:
-            cur_size = asizeof.asizeof(self.__cache)
+            cur_size = asizeof.asizeof(self._cache)
             while cur_size > self.max_bytes:
                 if (popped := self.popitem()) is None:
                     return
@@ -255,16 +260,16 @@ class LRUCache(Generic[ET]):
         if asizeof is not None:
             return (
                 f"LruCache<max_items={self.max_items}, "
-                f"current_items={len(self.__cache)}, "
+                f"current_items={len(self._cache)}, "
                 f"max_bytes={self.max_bytes}, "
-                f"current_size_bytes={asizeof.asizeof(self.__cache)}>"
+                f"current_size_bytes={asizeof.asizeof(self._cache)}>"
             )
         else:
-            return f"LruCache<max_items={self.max_items}, current_items={len(self.__cache)}, "
+            return f"LruCache<max_items={self.max_items}, current_items={len(self._cache)}, "
 
-    def __check_capacity(self) -> None:
-        if len(self.__cache) == self.max_items:
-            self.__cache.popitem(last=False)
+    def _check_capacity(self) -> None:
+        if len(self._cache) == self.max_items:
+            self._cache.popitem(last=False)
 
 
 class NodeTrackingCache(AbstractCache):
@@ -299,13 +304,11 @@ class NodeTrackingCache(AbstractCache):
          confirmations of correct cached values will increase the confidence by 0.01%
          upto 100.
         """
-        super().__init__()
-        self.__protocol_version: Literal[2, 3] | None = None
-        self.__max_idle_seconds = max_idle_seconds
-        self.__confidence = self.__original_confidence = confidence
-        self.__dynamic_confidence = dynamic_confidence
-        self.__stats = stats or CacheStats()
-        self.__cache: LRUCache[LRUCache[LRUCache[ResponseType]]] = cache or LRUCache(
+        self._max_idle_seconds = max_idle_seconds
+        self._confidence = self._original_confidence = confidence
+        self._dynamic_confidence = dynamic_confidence
+        self._stats = stats or CacheStats()
+        self._cache: LRUCache[LRUCache[LRUCache[ResponseType]]] = cache or LRUCache(
             max_keys, max_size_bytes
         )
         self.tries = 0
@@ -314,6 +317,11 @@ class NodeTrackingCache(AbstractCache):
     async def run(
         self, pool: ConnectionPool, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
     ) -> None:
+        """
+        Run a single connection that listens for invalidation messages,
+        with reconnection logic.
+        """
+
         def handle_exception_group(group: BaseExceptionGroup) -> None:
             logger.error("Cache disconnected!")
             for error in group.exceptions:
@@ -336,6 +344,7 @@ class NodeTrackingCache(AbstractCache):
                         tg.start_soon(self._compact)
                         if not started:
                             task_status.started()
+                            started = True
                         else:  # flush cache
                             self.reset()
 
@@ -354,56 +363,55 @@ class NodeTrackingCache(AbstractCache):
 
     async def _compact(self) -> None:
         while True:
-            self.__cache.shrink()
-            self.__stats.compact()
-            await sleep(max(1, self.__max_idle_seconds - 1))
+            self._cache.shrink()
+            self._stats.compact()
+            await sleep(max(1, self._max_idle_seconds - 1))
 
     @property
     def confidence(self) -> float:
-        return self.__confidence
+        return self._confidence
 
     @property
     def stats(self) -> CacheStats:
-        return self.__stats
+        return self._stats
 
     def get(self, command: bytes, key: RedisValueT, *args: RedisValueT) -> ResponseType:
         try:
-            cached = self.__cache.get(b(key)).get(command).get(make_hashable(*args))
-            self.__stats.hit(key)
+            cached = self._cache.get(b(key)).get(command).get(make_hashable(*args))
+            self._stats.hit(key)
 
             return cached
         except KeyError:
-            self.__stats.miss(key)
+            self._stats.miss(key)
             raise
 
     def put(
         self, command: bytes, key: RedisValueT, *args: RedisValueT, value: ResponseType
     ) -> None:
-        self.__cache.setdefault(b(key), LRUCache()).setdefault(command, LRUCache()).insert(
+        self._cache.setdefault(b(key), LRUCache()).setdefault(command, LRUCache()).insert(
             make_hashable(*args), value
         )
 
     def invalidate(self, *keys: RedisValueT) -> None:
         for key in keys:
-            print("invalidating", key)
-            self.__stats.invalidate(key)
-            self.__cache.remove(b(key))
+            self._stats.invalidate(key)
+            self._cache.remove(b(key))
 
     def feedback(self, command: bytes, key: RedisValueT, *args: RedisValueT, match: bool) -> None:
         if not match:
-            self.__stats.mark_dirty(key)
+            self._stats.mark_dirty(key)
             self.invalidate(key)
 
-        if self.__dynamic_confidence:
-            self.__confidence = min(
+        if self._dynamic_confidence:
+            self._confidence = min(
                 100.0,
-                max(0.0, self.__confidence * (1.0001 if match else 0.999)),
+                max(0.0, self._confidence * (1.0001 if match else 0.999)),
             )
 
     def reset(self) -> None:
-        self.__cache.clear()
-        self.__stats.compact()
-        self.__confidence = self.__original_confidence
+        self._cache.clear()
+        self._stats.compact()
+        self._confidence = self._original_confidence
 
 
 class ClusterTrackingCache(AbstractCache):
@@ -442,70 +450,42 @@ class ClusterTrackingCache(AbstractCache):
          upto 100.
         """
         self.node_caches: dict[str, NodeTrackingCache] = {}
-        self.__protocol_version: Literal[2, 3] | None = None
-        self.__cache: LRUCache[LRUCache[LRUCache[ResponseType]]] = cache or LRUCache(
+        self._cache: LRUCache[LRUCache[LRUCache[ResponseType]]] = cache or LRUCache(
             max_keys, max_size_bytes
         )
-        self.__nodes: list[coredis.client.Redis[Any]] = []
-        self.__max_idle_seconds = max_idle_seconds
-        self.__confidence = self.__original_confidence = confidence
-        self.__dynamic_confidence = dynamic_confidence
-        self.__stats = stats or CacheStats()
-        self.__client: weakref.ReferenceType[coredis.client.RedisCluster[Any]] | None = None
+        self._nodes: list[coredis.client.Redis[Any]] = []
+        self._max_idle_seconds = max_idle_seconds
+        self._confidence = self._original_confidence = confidence
+        self._dynamic_confidence = dynamic_confidence
+        self._stats = stats or CacheStats()
 
-    async def initialize(
-        self,
-        client: coredis.client.Redis[Any] | coredis.client.RedisCluster[Any],
-    ) -> ClusterTrackingCache:
-        import coredis.client
-
-        assert isinstance(client, coredis.client.RedisCluster)
-
-        self.__client = weakref.ref(client)
-        self.__cache.clear()
-
-        for sidecar in self.node_caches.values():
-            # sidecar.shutdown()
-            pass
-        self.node_caches.clear()
-        self.__nodes = list(client.all_nodes)
-
-        for node in self.__nodes:
-            node_cache = NodeTrackingCache(
-                max_idle_seconds=self.__max_idle_seconds,
-                confidence=self.__confidence,
-                dynamic_confidence=self.__dynamic_confidence,
-                cache=self.__cache,
-                stats=self.__stats,
-            )
-            await node_cache.initialize(node)
-            self.node_caches[node_cache.connection.location] = node_cache  # type: ignore
-
-        return self
-
-    @property
-    def client(self) -> coredis.client.RedisCluster[Any] | None:
-        if self.__client:
-            return self.__client()
-
-        return None  # noqa
-
-    @property
-    def healthy(self) -> bool:
-        return bool(
-            self.client
-            and self.client.connection_pool.initialized
-            and self.node_caches
-            and all(cache.healthy for cache in self.node_caches.values())  # type: ignore
-        )
+    async def run(
+        self, pool: ClusterConnectionPool, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
+    ) -> None:
+        self._nodes = [
+            pool.nodes.get_redis_link(node.host, node.port) for node in pool.nodes.all_nodes()
+        ]
+        # TODO: make this work with cluster pool structure
+        async with create_task_group() as tg:
+            for node in self._nodes:
+                node_cache = NodeTrackingCache(
+                    max_idle_seconds=self._max_idle_seconds,
+                    confidence=self._confidence,
+                    dynamic_confidence=self._dynamic_confidence,
+                    cache=self._cache,
+                    stats=self._stats,
+                )
+                await tg.start(node_cache.run, pool)
+                self.node_caches[node_cache._connection.location] = node_cache
+            task_status.started()
 
     @property
     def confidence(self) -> float:
-        return self.__confidence
+        return self._confidence
 
     @property
     def stats(self) -> CacheStats:
-        return self.__stats
+        return self._stats
 
     def get_client_id(self, connection: BaseConnection) -> int | None:
         try:
@@ -515,191 +495,38 @@ class ClusterTrackingCache(AbstractCache):
 
     def get(self, command: bytes, key: RedisValueT, *args: RedisValueT) -> ResponseType:
         try:
-            cached = self.__cache.get(b(key)).get(command).get(make_hashable(*args))
-            self.__stats.hit(key)
+            cached = self._cache.get(b(key)).get(command).get(make_hashable(*args))
+            self._stats.hit(key)
 
             return cached
         except KeyError:
-            self.__stats.miss(key)
+            self._stats.miss(key)
             raise
 
     def put(
         self, command: bytes, key: RedisValueT, *args: RedisValueT, value: ResponseType
     ) -> None:
-        self.__cache.setdefault(b(key), LRUCache()).setdefault(command, LRUCache()).insert(
+        self._cache.setdefault(b(key), LRUCache()).setdefault(command, LRUCache()).insert(
             make_hashable(*args), value
         )
 
     def invalidate(self, *keys: RedisValueT) -> None:
         for key in keys:
-            self.__stats.invalidate(key)
-            self.__cache.remove(b(key))
+            self._stats.invalidate(key)
+            self._cache.remove(b(key))
 
     def feedback(self, command: bytes, key: RedisValueT, *args: RedisValueT, match: bool) -> None:
         if not match:
-            self.__stats.mark_dirty(key)
+            self._stats.mark_dirty(key)
             self.invalidate(key)
 
-        if self.__dynamic_confidence:
-            self.__confidence = min(
+        if self._dynamic_confidence:
+            self._confidence = min(
                 100.0,
-                max(0.0, self.__confidence * (1.0001 if match else 0.999)),
+                max(0.0, self._confidence * (1.0001 if match else 0.999)),
             )
 
     def reset(self) -> None:
-        self.__cache.clear()
-        self.__stats.compact()
-        self.__confidence = self.__original_confidence
-
-    def shutdown(self) -> None:
-        if self.node_caches:
-            for sidecar in self.node_caches.values():
-                sidecar.shutdown()  # type: ignore
-            self.node_caches.clear()
-            self.__nodes.clear()
-
-    def __del__(self) -> None:
-        self.shutdown()
-
-
-class TrackingCache(AbstractCache):
-    """
-    An LRU cache that uses server assisted client caching to ensure local cache entries
-    are invalidated if any operations are performed on the keys by another client.
-
-    This class proxies to either :class:`~coredis.cache.NodeTrackingCache`
-    or :class:`~coredis.cache.ClusterTrackingCache` depending on which type of client
-    it is passed into.
-    """
-
-    def __init__(
-        self,
-        max_keys: int = 2**12,
-        max_size_bytes: int = 64 * 1024 * 1024,
-        max_idle_seconds: int = 5,
-        confidence: float = 100.0,
-        dynamic_confidence: bool = False,
-        cache: LRUCache[LRUCache[LRUCache[ResponseType]]] | None = None,
-        stats: CacheStats | None = None,
-    ) -> None:
-        """
-        :param max_keys: maximum keys to cache. A negative value represents
-         and unbounded cache.
-        :param max_size_bytes: maximum size in bytes for the local cache.
-         A negative value represents an unbounded cache.
-        :param max_idle_seconds: maximum duration to tolerate no updates
-         from the server. When the duration is exceeded the connection
-         and cache will be reset.
-        :param confidence: 0 - 100. Lower values will result in the client
-         discarding and / or validating the cached responses
-        :param dynamic_confidence: Whether to adjust the confidence based on
-         sampled validations. Tainted values drop the confidence by 0.1% and
-         confirmations of correct cached values will increase the confidence by 0.01%
-         upto 100.
-        """
-        self.instance: ClusterTrackingCache | NodeTrackingCache | None = None
-        self.__max_keys = max_keys
-        self.__max_size_bytes = max_size_bytes
-        self.__max_idle_seconds = max_idle_seconds
-        self.__confidence = confidence
-        self.__dynamic_confidence = dynamic_confidence
-        self.__cache: LRUCache[LRUCache[LRUCache[ResponseType]]] = cache or LRUCache(
-            max_keys, max_size_bytes
-        )
-        self.__client: (
-            None
-            | (weakref.ReferenceType[coredis.client.Redis[Any] | coredis.client.RedisCluster[Any],])
-        ) = None
-        self.__stats = stats or CacheStats()
-
-    async def initialize(
-        self,
-        client: coredis.client.Redis[Any] | coredis.client.RedisCluster[Any],
-    ) -> TrackingCache:
-        import coredis.client
-
-        if self.__client and self.__client() != client:
-            copy = self.share()
-
-            return await copy.initialize(client)
-
-        self.__client = weakref.ref(client)
-
-        if not self.instance:
-            if isinstance(client, coredis.client.RedisCluster):
-                self.instance = ClusterTrackingCache(
-                    self.__max_keys,
-                    self.__max_size_bytes,
-                    self.__max_idle_seconds,
-                    confidence=self.__confidence,
-                    dynamic_confidence=self.__dynamic_confidence,
-                    cache=self.__cache,
-                    stats=self.__stats,
-                )
-            else:
-                self.instance = NodeTrackingCache(
-                    self.__max_keys,
-                    self.__max_size_bytes,
-                    self.__max_idle_seconds,
-                    confidence=self.__confidence,
-                    dynamic_confidence=self.__dynamic_confidence,
-                    cache=self.__cache,
-                    stats=self.__stats,
-                )
-        await self.instance.initialize(client)
-
-        return self
-
-    @property
-    def confidence(self) -> float:
-        if not self.instance:
-            return self.__confidence
-
-        return self.instance.confidence
-
-    @property
-    def stats(self) -> CacheStats:
-        return self.__stats
-
-    def get(self, command: bytes, key: RedisValueT, *args: RedisValueT) -> ResponseType:
-        assert self.instance
-
-        return self.instance.get(command, key, *args)
-
-    def put(
-        self, command: bytes, key: RedisValueT, *args: RedisValueT, value: ResponseType
-    ) -> None:
-        if self.instance:
-            self.instance.put(command, key, *args, value=value)
-
-    def invalidate(self, *keys: RedisValueT) -> None:
-        if self.instance:
-            self.instance.invalidate(*keys)
-
-    def feedback(self, command: bytes, key: RedisValueT, *args: RedisValueT, match: bool) -> None:
-        if self.instance:
-            self.instance.feedback(command, key, *args, match=match)
-
-    def share(self) -> TrackingCache:
-        """
-        Create a copy of this cache that can be used to share
-        memory with another client.
-
-        In the example below ``c1`` and ``c2`` have their own
-        instances of :class:`~coredis.cache.TrackingCache` but
-        share the same in-memory local cached responses::
-
-            c1 = await coredis.Redis(cache=TrackingCache())
-            c2 = await coredis.Redis(cache=c1.cache.share())
-        """
-        copy = self.__class__(
-            self.__max_keys,
-            self.__max_size_bytes,
-            self.__max_idle_seconds,
-            self.__confidence,
-            self.__dynamic_confidence,
-            self.__cache,
-            self.__stats,
-        )
-
-        return copy
+        self._cache.clear()
+        self._stats.compact()
+        self._confidence = self._original_confidence

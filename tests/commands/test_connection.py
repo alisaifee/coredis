@@ -77,7 +77,7 @@ class TestConnection:
 
     async def test_client_tracking(self, client, _s, cloner):
         async with await cloner(client) as clone:
-            async with clone.connection_pool.acquire(blocking=True) as clone_connection:
+            async with clone.connection_pool.acquire() as clone_connection:
                 clone_id = clone_connection.client_id
                 assert await client.client_tracking(PureToken.ON, redirect=clone_id, noloop=True)
                 assert clone_id == await client.client_getredir()
