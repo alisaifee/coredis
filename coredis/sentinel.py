@@ -10,7 +10,7 @@ from typing_extensions import Self, override
 
 from coredis import Redis
 from coredis._utils import nativestr
-from coredis.cache import AbstractCache
+from coredis.cache import NodeTrackingCache
 from coredis.connection import Connection
 from coredis.exceptions import (
     ConnectionError,
@@ -137,7 +137,7 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
         min_other_sentinels: int = ...,
         sentinel_kwargs: dict[str, Any] | None = ...,
         decode_responses: Literal[False] = ...,
-        cache: AbstractCache | None = None,
+        cache: NodeTrackingCache | None = None,
         type_adapter: TypeAdapter | None = ...,
         **connection_kwargs: Any,
     ) -> None: ...
@@ -149,7 +149,7 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
         min_other_sentinels: int = ...,
         sentinel_kwargs: dict[str, Any] | None = ...,
         decode_responses: Literal[True] = ...,
-        cache: AbstractCache | None = None,
+        cache: NodeTrackingCache | None = None,
         type_adapter: TypeAdapter | None = None,
         **connection_kwargs: Any,
     ) -> None: ...
@@ -160,7 +160,7 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
         min_other_sentinels: int = 0,
         sentinel_kwargs: dict[str, Any] | None = None,
         decode_responses: bool = False,
-        cache: AbstractCache | None = None,
+        cache: NodeTrackingCache | None = None,
         type_adapter: TypeAdapter | None = None,
         **connection_kwargs: Any,
     ) -> None:

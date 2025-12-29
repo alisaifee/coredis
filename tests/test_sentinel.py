@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import pytest
+from exceptiongroup import ExceptionGroup
 
 import coredis
 from coredis.exceptions import (
     PrimaryNotFoundError,
     ReadOnlyError,
     ReplicaNotFoundError,
-    ReplicationError,
     ResponseError,
 )
 from coredis.sentinel import Sentinel, SentinelConnectionPool
@@ -139,18 +139,21 @@ async def test_autodecode(redis_sentinel_server: tuple[str, int]):
 
 @targets("redis_sentinel", "redis_sentinel_raw", "redis_sentinel_resp2")
 class TestSentinelCommand:
-    async def test_primary_for(self, client, host_ip):
+    async def test_primary_for(self, client: Sentinel, host_ip):
         primary = client.primary_for("mymaster")
-        assert await primary.ping()
-        assert primary.connection_pool.primary_address == (host_ip, 6380)
+        async with primary:
+            assert await primary.ping()
+            assert primary.connection_pool.primary_address == (host_ip, 6380)
 
         # Use internal connection check
         primary = client.primary_for("mymaster", check_connection=True)
-        assert await primary.ping()
+        async with primary:
+            assert await primary.ping()
 
     async def test_replica_for(self, client):
         replica = client.replica_for("mymaster")
-        assert await replica.ping()
+        async with replica:
+            assert await replica.ping()
 
     async def test_ckquorum(self, client):
         assert await client.sentinels[0].sentinel_ckquorum("mymaster")
@@ -177,10 +180,13 @@ class TestSentinelCommand:
     async def test_flush_config(self, client):
         assert await client.sentinels[0].sentinel_flushconfig()
 
-    async def test_role(self, client):
+    async def test_role(self, client: Sentinel):
         assert (await client.sentinels[0].role()).role == "sentinel"
-        assert (await client.primary_for("mymaster").role()).role == "master"
-        assert (await client.replica_for("mymaster").role()).role == "slave"
+        primary = client.primary_for("mymaster")
+        replica = client.replica_for("mymaster")
+        async with primary, replica:
+            assert (await primary.role()).role == "master"
+            assert (await replica.role()).role == "slave"
 
     async def test_infocache(self, client, _s):
         assert await client.sentinels[0].sentinel_flushconfig()
@@ -199,26 +205,35 @@ class TestSentinelCommand:
             [k["is_master"] for k in (await client.sentinels[0].sentinel_replicas("mymaster"))]
         )
 
-    async def test_no_replicas(self, client, mocker):
+    async def test_no_replicas(self, client: Sentinel, mocker):
         p = client.replica_for("mymaster")
         replica_rotate = mocker.patch.object(p.connection_pool, "rotate_replicas")
-        replica_rotate.return_value = []
-        with pytest.raises(ReplicaNotFoundError):
-            await p.ping()
+
+        async def async_iter(items):
+            for item in items:
+                yield item
+
+        replica_rotate.return_value = async_iter([])
+        with pytest.raises(ExceptionGroup) as group:
+            async with p:
+                await p.ping()
+        assert isinstance(group._excinfo[1].exceptions[0], ReplicaNotFoundError)
 
     async def test_write_to_replica(self, client):
-        p = await client.replica_for("mymaster")
-        await p.ping()
-        with pytest.raises(ReadOnlyError):
-            await p.set("fubar", 1)
+        p = client.replica_for("mymaster")
+        async with p:
+            await p.ping()
+            with pytest.raises(ReadOnlyError):
+                await p.set("fubar", 1)
 
     @pytest.mark.parametrize(
         "client_arguments", [{"cache": coredis.cache.NodeTrackingCache(max_size_bytes=-1)}]
     )
-    async def test_sentinel_cache(self, client, client_arguments, mocker, _s):
-        await client.primary_for("mymaster").set("fubar", 1)
-
-        assert await client.primary_for("mymaster").get("fubar") == _s("1")
+    async def test_sentinel_cache(self, client: Sentinel, client_arguments, mocker, _s):
+        primary = client.primary_for("mymaster")
+        async with primary:
+            await primary.set("fubar", 1)
+            assert await primary.get("fubar") == _s("1")
 
         new_primary = client.primary_for("mymaster")
         new_replica = client.replica_for("mymaster")
@@ -226,25 +241,29 @@ class TestSentinelCommand:
         assert new_primary.cache
         assert new_replica.cache
 
-        await new_primary.ping()
-        await new_replica.ping()
+        async with new_primary, new_replica:
+            await new_primary.ping()
+            await new_replica.ping()
 
-        replica_spy = mocker.spy(coredis.BaseConnection, "create_request")
+            replica_spy = mocker.spy(coredis.BaseConnection, "create_request")
 
-        assert await new_primary.get("fubar") == _s("1")
-        assert await new_replica.get("fubar") == _s("1")
+            assert await new_primary.get("fubar") == _s("1")
+            assert await new_replica.get("fubar") == _s("1")
 
-        assert replica_spy.call_count == 0
+            assert replica_spy.call_count == 0
 
     @pytest.mark.xfail
-    async def test_replication(self, client):
-        with client.primary_for("mymaster").ensure_replication(1) as primary:
-            await primary.set("fubar", 1)
-
-        with pytest.raises(ReplicationError):
-            with client.primary_for("mymaster").ensure_replication(2) as primary:
+    async def test_replication(self, client: Sentinel):
+        primary = client.primary_for("mymaster")
+        async with primary:
+            with primary.ensure_replication(1):
                 await primary.set("fubar", 1)
 
+            with primary.ensure_replication(2):
+                await primary.set("fubar", 1)
+
+        replica = client.replica_for("mymaster")
         with pytest.raises(ResponseError):
-            with client.replica_for("mymaster").ensure_replication(2) as replica:
-                await replica.set("fubar", 1)
+            async with replica:
+                with replica.ensure_replication(2):
+                    await replica.set("fubar", 1)

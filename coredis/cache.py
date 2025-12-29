@@ -312,7 +312,7 @@ class NodeTrackingCache(AbstractCache):
             max_keys, max_size_bytes
         )
         self.tries = 0
-        self.client_id = None
+        self.client_id: int | None = None
 
     async def run(
         self, pool: ConnectionPool, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
