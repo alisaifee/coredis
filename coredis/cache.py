@@ -376,15 +376,16 @@ class NodeTrackingCache(AbstractCache):
     performed on the keys by another client.
     """
 
-    def __init__(self, cache: AbstractCache | None = None) -> None:
+    def __init__(
+        self, cache: AbstractCache | None = None, compact_interval_seconds: int = 300
+    ) -> None:
         """
         :param cache: AbstractCache instance to wrap
-        :param compact_interval_seconds: maximum duration to tolerate no updates
-         from the server. When the duration is exceeded the connection
-         and cache will be reset.
+        :param compact_interval_seconds: frequency to check if cache is too big and shrink it
         """
         self._cache = cache or LRUCache()
         self.client_id: int | None = None
+        self.compact_interval = compact_interval_seconds
 
     async def run(
         self, pool: ConnectionPool, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
@@ -415,6 +416,7 @@ class NodeTrackingCache(AbstractCache):
                     async with create_task_group() as tg:
                         tg.start_soon(self._consumer)
                         tg.start_soon(self._keepalive)
+                        tg.start_soon(self._compact)
                         if not started:
                             task_status.started()
                             started = True
@@ -432,6 +434,11 @@ class NodeTrackingCache(AbstractCache):
             messages = cast(list[StringT], response[1] or [])
             for key in messages:
                 self._cache.invalidate(key)
+
+    async def _compact(self) -> None:
+        while True:
+            await sleep(self.compact_interval)
+            self.shrink()
 
     def get(self, command: bytes, key: RedisValueT, *args: RedisValueT) -> ResponseType:
         return self._cache.get(command, key, *args)
