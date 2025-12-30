@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, AsyncGenerator, cast
+from typing import TYPE_CHECKING, Any, AsyncGenerator, cast
 
 from anyio import (
     TASK_STATUS_IGNORED,
@@ -12,6 +12,7 @@ from anyio import (
     Event,
     create_memory_object_stream,
     create_task_group,
+    current_time,
     fail_after,
     move_on_after,
     sleep,
@@ -61,6 +62,7 @@ PoolT = TypeVar("PoolT", bound="coredis.pool.ConnectionPool")
 #: Callables for message handler callbacks. The callbacks
 #:  can be sync or async.
 SubscriptionCallback = Callable[[PubSubMessage], Awaitable[None]] | Callable[[PubSubMessage], None]
+_retryable_errors = (ConnectionError, ConnectionFailed, EndOfStream)
 
 
 class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
@@ -125,7 +127,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         # auto-reconnection for long-lived pubsub instances
         async with create_task_group() as tg:
-            await tg.start(self._manage_connection)
+            await tg.start(self.run)
             # initialize subscriptions
             if self._initial_channel_subscriptions:
                 await self.subscribe(**self._initial_channel_subscriptions)
@@ -139,21 +141,21 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
             self.patterns.clear()
             self._current_scope.cancel()
 
-    async def _manage_connection(
-        self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
-    ) -> None:
-        def handle_exception_group(group: BaseExceptionGroup) -> None:
-            logger.error("Pubsub disconnected!")
-            for error in group.exceptions:
-                logger.error(error)
-            logger.warning("Retrying...")
+    async def run(self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
+        start_time, started, tries = current_time(), False, 0
 
-        started = False
+        def handle_error(*args: Any) -> None:
+            nonlocal tries, start_time
+            if current_time() - start_time > 10:
+                tries = 0
+            else:
+                tries += 1
+            logger.warning("Cache connection lost, retrying...")
+
         while True:
             # retry with exponential backoff
-            await sleep(self.tries**2)
-            self.tries += 1
-            with catch({(ConnectionError, ConnectionFailed, EndOfStream): handle_exception_group}):
+            await sleep(min(tries**2, 300))
+            with catch({_retryable_errors: handle_error}):
                 async with self.connection_pool.acquire() as self._connection:
                     async with create_task_group() as tg:
                         self._current_scope = tg.cancel_scope
@@ -172,8 +174,18 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
     async def _keepalive(self) -> None:
         while True:
             await self.connection.send_command(CommandName.PING)
-            self.tries = 0
-            await sleep(30)
+            await sleep(15)
+
+    async def _consumer(self) -> None:
+        while True:
+            if self._subscribed.is_set():
+                if response := await self._retry_policy.call_with_retries(
+                    lambda: self.parse_response(block=True),
+                ):
+                    msg = await self.handle_message(response)
+                    self._send_stream.send_nowait(msg)
+            else:
+                await self._subscribed.wait()
 
     async def psubscribe(
         self,
@@ -361,17 +373,6 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
         return message
 
-    async def _consumer(self) -> None:
-        while True:
-            if self._subscribed.is_set():
-                if response := await self._retry_policy.call_with_retries(
-                    lambda: self.parse_response(block=True),
-                ):
-                    msg = await self.handle_message(response)
-                    self._send_stream.send_nowait(msg)
-            else:
-                await self._subscribed.wait()
-
     def _filter_ignored_messages(
         self,
         message: PubSubMessage | None,
@@ -448,9 +449,8 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
     """
 
-    async def _manage_connection(
-        self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
-    ) -> None:
+    # TODO: rework this
+    async def run(self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
         def handle_connection_errors(group: BaseExceptionGroup) -> None:
             if self._connection:
                 self.connection_pool.release(self._connection)

@@ -14,7 +14,7 @@ from anyio import get_cancelled_exc_class, sleep
 from deprecated.sphinx import versionadded
 
 from coredis._utils import b, gather, hash_slot
-from coredis.cache import ClusterTrackingCache
+from coredis.cache import AbstractCache, ClusterTrackingCache
 from coredis.client.basic import Client, Redis
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName, NodeFlag
@@ -205,7 +205,7 @@ class RedisCluster(
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         non_atomic_cross_slot: bool = ...,
-        cache: ClusterTrackingCache | None = ...,
+        cache: AbstractCache | None = ...,
         noreply: bool = ...,
         noevict: bool = ...,
         notouch: bool = ...,
@@ -244,7 +244,7 @@ class RedisCluster(
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         non_atomic_cross_slot: bool = ...,
-        cache: ClusterTrackingCache | None = ...,
+        cache: AbstractCache | None = ...,
         noreply: bool = ...,
         noevict: bool = ...,
         notouch: bool = ...,
@@ -282,7 +282,7 @@ class RedisCluster(
         protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
         non_atomic_cross_slot: bool = True,
-        cache: ClusterTrackingCache | None = None,
+        cache: AbstractCache | None = None,
         noreply: bool = False,
         noevict: bool = False,
         notouch: bool = False,
@@ -508,7 +508,7 @@ class RedisCluster(
             self.__class__.RESULT_CALLBACKS.copy()
         )
         self.non_atomic_cross_slot = non_atomic_cross_slot
-        self.cache = cache  # type: ignore
+        self.cache = ClusterTrackingCache(cache=cache)  # type: ignore
         self._decodecontext: contextvars.ContextVar[bool | None,] = contextvars.ContextVar(
             "decode", default=None
         )
@@ -532,7 +532,7 @@ class RedisCluster(
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         type_adapter: TypeAdapter | None = ...,
-        cache: ClusterTrackingCache | None = ...,
+        cache: AbstractCache | None = ...,
         **kwargs: Any,
     ) -> RedisCluster[bytes]: ...
 
@@ -552,7 +552,7 @@ class RedisCluster(
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         type_adapter: TypeAdapter | None = ...,
-        cache: ClusterTrackingCache | None = ...,
+        cache: AbstractCache | None = ...,
         **kwargs: Any,
     ) -> RedisCluster[str]: ...
 
@@ -569,7 +569,7 @@ class RedisCluster(
         noreply: bool = False,
         noevict: bool = False,
         notouch: bool = False,
-        cache: ClusterTrackingCache | None = None,
+        cache: AbstractCache | None = None,
         retry_policy: RetryPolicy = CompositeRetryPolicy(
             ConstantRetryPolicy((ClusterDownError,), 2, 0.1),
             ConstantRetryPolicy(

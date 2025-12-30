@@ -5,7 +5,7 @@ from contextlib import AsyncExitStack
 import pytest
 from anyio import sleep
 
-from coredis.cache import ClusterTrackingCache, NodeTrackingCache
+from coredis.cache import ClusterTrackingCache, LRUCache
 from coredis.client.basic import Redis
 from tests.conftest import targets
 
@@ -13,7 +13,7 @@ from tests.conftest import targets
 class CommonExamples:
     async def test_single_entry_cache(self, client: Redis, cloner, _s):
         await client.flushall()
-        cache = NodeTrackingCache(max_keys=1, max_size_bytes=-1)
+        cache = LRUCache(max_keys=1, max_size_bytes=-1)
         cached: Redis = await cloner(client, cache=cache)
         async with cached:
             assert not await cached.get("fubar")
@@ -28,7 +28,7 @@ class CommonExamples:
 
     @pytest.mark.nopypy
     async def test_max_size(self, client, cloner, _s):
-        cache = NodeTrackingCache(max_keys=1, max_size_bytes=1)
+        cache = LRUCache(max_keys=1, max_size_bytes=1)
         cached = await cloner(client, cache=cache)
         async with cached:
             await client.set("fubar", 1)
@@ -38,10 +38,10 @@ class CommonExamples:
     @pytest.mark.pypyonly
     async def test_max_size_skipped(self, client, cloner, _s):
         with pytest.raises(RuntimeError):
-            NodeTrackingCache(max_keys=1, max_size_bytes=1)
+            LRUCache(max_keys=1, max_size_bytes=1)
 
     async def test_eviction(self, client, cloner, _s):
-        cache = NodeTrackingCache(max_keys=1, max_size_bytes=-1)
+        cache = LRUCache(max_keys=1, max_size_bytes=-1)
         cached = await cloner(client, cache=cache)
         async with cached:
             assert not await cached.get("fubar")
@@ -68,7 +68,7 @@ class CommonExamples:
         ],
     )
     async def test_confidence(self, client: Redis, cloner, mocker, _s, confidence, expectation):
-        cache = NodeTrackingCache(confidence=confidence, max_size_bytes=-1)
+        cache = LRUCache(confidence=confidence, max_size_bytes=-1)
         cached = await cloner(client, cache=cache)
         async with cached:
             await client.mset({f"fubar{i}": i for i in range(100)})
@@ -79,7 +79,7 @@ class CommonExamples:
             assert create_request.call_count < 100 + expectation
 
     async def test_feedback(self, client, cloner, mocker, _s):
-        cache = NodeTrackingCache(confidence=0, max_size_bytes=-1)
+        cache = LRUCache(confidence=0, max_size_bytes=-1)
         cached = await cloner(client, cache=cache)
 
         async with cached:
@@ -93,7 +93,7 @@ class CommonExamples:
             assert feedback.call_count == 10
 
     async def test_feedback_adjust(self, client, cloner, mocker, _s):
-        cache = NodeTrackingCache(confidence=50, dynamic_confidence=True, max_size_bytes=-1)
+        cache = LRUCache(confidence=50, dynamic_confidence=True, max_size_bytes=-1)
         cached = await cloner(client, cache=cache)
 
         async with cached:
@@ -118,11 +118,9 @@ class CommonExamples:
             assert cache.confidence == 50
 
     async def test_shared_cache(self, client, cloner, mocker, _s):
-        cache = NodeTrackingCache(max_size_bytes=-1)
+        cache = LRUCache(max_size_bytes=-1)
         cached = await cloner(client, cache=cache)
-        clones = [
-            await cloner(client, cache=NodeTrackingCache(cache=cache._cache)) for _ in range(5)
-        ]
+        clones = [await cloner(client, cache=cache) for _ in range(5)]
         async with AsyncExitStack() as stack:
             await stack.enter_async_context(cached)
             for c in clones:
@@ -140,7 +138,7 @@ class CommonExamples:
             assert spy.call_count < 5, spy.call_args
 
     async def test_stats(self, client, cloner, mocker, _s):
-        cache = NodeTrackingCache(confidence=0, max_size_bytes=-1)
+        cache = LRUCache(confidence=0, max_size_bytes=-1)
         cached = await cloner(client, cache=cache)
         async with cached:
             await client.set("barbar", "test")
@@ -194,12 +192,11 @@ class CommonExamples:
 @targets("redis_basic", "redis_basic_raw")
 class TestProxyInvalidatingCache(CommonExamples):
     async def test_uninitialized_cache(self, client, cloner, _s):
-        cache = NodeTrackingCache(max_keys=1, max_idle_seconds=1, max_size_bytes=-1)
-        assert not cache.client_id
+        cache = LRUCache(max_keys=1, max_size_bytes=-1)
         assert cache.confidence == 100
         cached = await cloner(client, cache=cache)
         async with cached:
-            assert cache.client_id
+            assert cached.cache.client_id
             await sleep(0.2)  # can be flaky if we close immediately
 
 
@@ -271,7 +268,7 @@ class TestClusterInvalidatingCache(CommonExamples):
 
     async def test_reinitialize_cluster(self, client, cloner, _s):
         await client.set("fubar", 1)
-        cache = self.cache(max_keys=1, max_idle_seconds=1, max_size_bytes=-1)
+        cache = self.cache(max_keys=1, compact_interval_seconds=1, max_size_bytes=-1)
         cached = await cloner(client, cache=cache)
         pre = dict(cached.cache.node_caches)
         assert await cached.get("fubar") == _s("1")

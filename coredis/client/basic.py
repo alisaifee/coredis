@@ -16,7 +16,7 @@ from packaging.version import InvalidVersion, Version
 from typing_extensions import Self
 
 from coredis._utils import EncodingInsensitiveDict, logger, nativestr
-from coredis.cache import NodeTrackingCache
+from coredis.cache import AbstractCache, NodeTrackingCache
 from coredis.commands import CommandRequest
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandFlag, CommandName
@@ -577,7 +577,7 @@ class Redis(Client[AnyStr]):
         client_name: str | None = ...,
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
-        cache: NodeTrackingCache | None = ...,
+        cache: AbstractCache | None = ...,
         noreply: bool = ...,
         noevict: bool = ...,
         notouch: bool = ...,
@@ -616,7 +616,7 @@ class Redis(Client[AnyStr]):
         client_name: str | None = ...,
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
-        cache: NodeTrackingCache | None = ...,
+        cache: AbstractCache | None = ...,
         noreply: bool = ...,
         noevict: bool = ...,
         notouch: bool = ...,
@@ -654,7 +654,7 @@ class Redis(Client[AnyStr]):
         client_name: str | None = None,
         protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
-        cache: NodeTrackingCache | None = None,
+        cache: AbstractCache | None = None,
         noreply: bool = False,
         noevict: bool = False,
         notouch: bool = False,
@@ -818,7 +818,7 @@ class Redis(Client[AnyStr]):
             type_adapter=type_adapter,
             **kwargs,
         )
-        self.cache = cache
+        self.cache = NodeTrackingCache(cache=cache)
         self._decodecontext: contextvars.ContextVar[bool | None,] = contextvars.ContextVar(
             "decode", default=None
         )
@@ -840,7 +840,7 @@ class Redis(Client[AnyStr]):
         noevict: bool = ...,
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
-        cache: NodeTrackingCache | None = ...,
+        cache: AbstractCache | None = ...,
         **kwargs: Any,
     ) -> Redis[bytes]: ...
 
@@ -858,7 +858,7 @@ class Redis(Client[AnyStr]):
         noevict: bool = ...,
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
-        cache: NodeTrackingCache | None = ...,
+        cache: AbstractCache | None = ...,
         **kwargs: Any,
     ) -> Redis[str]: ...
 
@@ -876,7 +876,7 @@ class Redis(Client[AnyStr]):
         notouch: bool = False,
         retry_policy: RetryPolicy = ConstantRetryPolicy((ConnectionError, TimeoutError), 2, 0.01),
         type_adapter: TypeAdapter | None = None,
-        cache: NodeTrackingCache | None = None,
+        cache: AbstractCache | None = None,
         **kwargs: Any,
     ) -> RedisT:
         """
