@@ -21,6 +21,5 @@ The implementation uses the following LUA scripts:
 
    .. literalinclude:: ../../../coredis/recipes/locks/extend.lua
 
-.. autoclass:: coredis.recipes.locks.LuaLock
+.. autoclass:: coredis.recipes.locks.Lock
    :class-doc-from: both
-

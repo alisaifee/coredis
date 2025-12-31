@@ -20,4 +20,3 @@ on using IAM to authenticate with Elasticache.
 .. autoclass:: coredis.recipes.credentials.ElastiCacheIAMProvider
    :class-doc-from: both
    :no-index:
-

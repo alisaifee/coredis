@@ -16,7 +16,7 @@ Clients
 Redis Command related types
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The following classes and types are used in the internals of coredis
-to wire arguments to python command functions representing redis commands
+to wire arguments to Python command functions representing Redis commands
 to the expected RESP syntax and eventually send it to a connection  and back
 to the client with a pythonic response mapped from the RESP response
 

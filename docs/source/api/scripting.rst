@@ -9,13 +9,13 @@ LUA Scripts
    :class-doc-from: both
    :special-members: __call__
 
-
 Redis Functions
 ^^^^^^^^^^^^^^^
 .. autoclass:: coredis.commands.Library
    :class-doc-from: both
 
+.. autofunction:: coredis.commands.wraps
+
 .. autoclass:: coredis.commands.Function
    :class-doc-from: both
    :special-members: __call__
-

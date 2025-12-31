@@ -39,11 +39,11 @@ value of :paramref:`~coredis.RedisCluster.ensure_replication.timeout_ms`),
 else raise a :exc:`~coredis.exceptions.ReplicationError`::
 
     import asyncio
-    import coredis
+    from coredis import RedisCluster
 
 
     async def test():
-        client = coredis.RedisCluster("localhost", 7000)
+        client = RedisCluster("localhost", 7000, startup_nodes=[...])
         with client.ensure_replication(replicas=2):
             await client.set("fubar", 1)
 
