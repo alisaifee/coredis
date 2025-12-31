@@ -81,7 +81,7 @@ R = TypeVar("R")
 
 if TYPE_CHECKING:
     import coredis.pipeline
-    from coredis.recipes.locks.lua_lock import Lock
+    from coredis.recipes import Lock
 
 ClientT = TypeVar("ClientT", bound="Client[Any]")
 RedisT = TypeVar("RedisT", bound="Redis[Any]")
@@ -1160,7 +1160,7 @@ class Redis(Client[AnyStr]):
          continue trying forever. ``blocking_timeout`` can be specified as a
          :class:`float` or :class:`int`, both representing the number of seconds to wait.
         """
-        from coredis.recipes.locks import Lock
+        from coredis.recipes import Lock
 
         return Lock(self, name, timeout, sleep, blocking, blocking_timeout)
 

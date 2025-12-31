@@ -14,7 +14,7 @@ requires = [
 [project]
 name = "coredis"
 dynamic = ["version"]
-description = "Python async client for Redis key-value store"
+description = "Fast, async, fully-typed Redis client with support for cluster and sentinel"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -25,18 +25,33 @@ maintainers = [
   {name = "Ali-Akber Saifee", email = "ali@indydevs.org"},
   {name = "Graeme Holliday", email = "graeme@tastyware.dev"}
 ]
-keywords = ["Redis", "key-value store", "asyncio"]
+keywords = ["Redis", "key-value store", "asyncio", "Trio", "anyio"]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
+  "Framework :: AsyncIO",
+  "Framework :: AnyIO",
+  "Framework :: Trio",
   "Intended Audience :: Developers",
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: MacOS :: MacOS X",
+  "Operating System :: Microsoft :: Windows",
   "Operating System :: OS Independent",
+  "Operating System :: Unix",
+  "Operating System :: POSIX :: Linux",
   "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
   "Programming Language :: Python :: Implementation :: PyPy",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: System :: Distributed Computing",
+  "Typing :: Typed",
 ]
 requires-python = ">=3.10"
 dependencies = [

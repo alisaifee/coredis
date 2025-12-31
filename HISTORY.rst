@@ -3,6 +3,31 @@
 Changelog
 =========
 
+v6.0.0rc1
+---------
+Release Date: TBD
+
+* Feature
+
+  * Migrates entire library to ``anyio``, adding structured concurrency and Trio support.
+    * Almost all objects (clients, connection pools, PubSub, pipelines) now require use of
+      an async context manager for initialization/cleanup.
+    * Test suite now runs tests on both asyncio and Trio backends
+    * Caching is simplified, and users should replace ``TrackingCache`` instances with a
+      ``LRUCache`` instance instead.
+    * All connection types use ``anyio`` APIs.
+    * ``Pipeline.execute()`` no longer exists. Instead, pipelines auto-execute when leaving
+      their context manager. Results can be accessed afterwards in a type-safe way.
+  * All connection pools are now blocking.
+  * ``Library.wraps`` is now just ``wraps`` and supports callbacks. It also optimistically
+    calls FCALL in pipelines instead of checking the function exists first.
+  * EVALSHA and FCALL commands now support optional callbacks
+  * When defining type stubs for FFI for Lua scripts or library functions, keys can only
+    be distinguished from arguments by annotating them with the ``KeyT`` type.
+  * Removes ``Monitor`` wrapper
+  * Client now includes ``Redis.lock`` as a convenient way to access the ``LuaLock``
+    recipe, and the class is now just called ``Lock``.
+
 v5.4.0
 ------
 Release Date: 2025-12-17

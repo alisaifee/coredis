@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from moto import mock_aws
 
-from coredis.recipes.credentials import ElastiCacheIAMProvider
+from coredis.recipes import ElastiCacheIAMProvider
 
 
 class TestElastiCacheIAMProvider:

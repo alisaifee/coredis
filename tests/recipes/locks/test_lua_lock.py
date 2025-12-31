@@ -6,7 +6,7 @@ import uuid
 import pytest
 
 from coredis.exceptions import LockError
-from coredis.recipes.locks import Lock
+from coredis.recipes import Lock
 from tests.conftest import targets
 
 

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import datetime
 import itertools
+from collections.abc import Callable
 from typing import overload
 
-from beartype.typing import Callable
 from deprecated.sphinx import versionadded
 
 from coredis._json import json

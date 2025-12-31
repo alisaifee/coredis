@@ -26,13 +26,14 @@ coredis
       :alt: Code coverage
       :class: header-badge
 
-coredis is an async redis client with support for redis server, cluster & sentinel.
+Fast, async, fully-typed Redis client with support for cluster and sentinel
+
 The client API uses the specifications in the Redis command documentation to define the API by using the following conventions:
 
 The coredis :ref:`api/clients:clients` use the specifications in
 the `Redis command documentation <https://redis.io/commands>`__ to define the API by using the following conventions:
 
-- Arguments retain naming from redis as much as possible
+- Arguments retain naming from Redis as much as possible
 - **Only** optional variadic arguments are mapped to position or keyword variadic arguments. When
   the variable length arguments are not optional the expected argument is an
   iterable of type :class:`~coredis.typing.Parameters` or :class:`~typing.Mapping`.
@@ -50,7 +51,7 @@ Feature Summary
 
   * :class:`~coredis.Redis`
   * :class:`~coredis.RedisCluster`
-  * :class:`~coredis.sentinel.Sentinel`
+  * :class:`~coredis.Sentinel`
 
 * Application patterns
 
@@ -168,7 +169,8 @@ The test matrix status can be reviewed `here <https://github.com/alisaifee/cored
 
 coredis is additionally tested against:
 
-- :pypi:`uvloop` >= `0.15.0`.
+- :pypi:`uvloop` >= `0.15.0`
+- :pypi:`trio`
 
 Supported python versions
 -------------------------
