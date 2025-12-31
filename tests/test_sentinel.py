@@ -1,92 +1,27 @@
 from __future__ import annotations
 
 import pytest
+from exceptiongroup import ExceptionGroup
 
 import coredis
 from coredis.exceptions import (
-    ConnectionError,
     PrimaryNotFoundError,
     ReadOnlyError,
     ReplicaNotFoundError,
-    ReplicationError,
     ResponseError,
-    TimeoutError,
 )
 from coredis.sentinel import Sentinel, SentinelConnectionPool
 from tests.conftest import targets
 
-pytestmarks = pytest.mark.asyncio
+
+async def test_init_compose_sentinel(redis_sentinel: Sentinel):
+    master = redis_sentinel.primary_for("mymaster")
+    async with master:
+        await master.ping()
 
 
-class SentinelTestClient:
-    def __init__(self, cluster, id):
-        self.cluster = cluster
-        self.id = id
-
-    async def sentinel_masters(self):
-        self.cluster.connection_error_if_down(self)
-        self.cluster.timeout_if_down(self)
-
-        return {self.cluster.service_name: self.cluster.primary}
-
-    async def sentinel_replicas(self, primary_name):
-        self.cluster.connection_error_if_down(self)
-        self.cluster.timeout_if_down(self)
-
-        if primary_name != self.cluster.service_name:
-            return []
-
-        return self.cluster.replicas
-
-
-class SentinelTestCluster:
-    def __init__(self, service_name="mymaster", ip="127.0.0.1", port=6379):
-        self.clients = {}
-        self.primary = {
-            "ip": ip,
-            "port": port,
-            "is_master": True,
-            "is_sdown": False,
-            "is_odown": False,
-            "num-other-sentinels": 0,
-        }
-        self.service_name = service_name
-        self.replicas = []
-        self.nodes_down = set()
-        self.nodes_timeout = set()
-
-    def connection_error_if_down(self, node):
-        if node.id in self.nodes_down:
-            raise ConnectionError
-
-    def timeout_if_down(self, node):
-        if node.id in self.nodes_timeout:
-            raise TimeoutError
-
-    def client(self, host, port, **kwargs):
-        return SentinelTestClient(self, (host, port))
-
-
-@pytest.fixture()
-def cluster(request):
-    def teardown():
-        coredis.sentinel.Redis = saved_Redis
-
-    cluster = SentinelTestCluster()
-    saved_Redis = coredis.sentinel.Redis
-    coredis.sentinel.Redis = cluster.client
-    request.addfinalizer(teardown)
-
-    return cluster
-
-
-@pytest.fixture()
-def sentinel(request, cluster):
-    return Sentinel([("foo", 26379), ("bar", 26379)])
-
-
-async def test_discover_primary(sentinel):
-    address = await sentinel.discover_primary("mymaster")
+async def test_discover_primary(redis_sentinel: Sentinel):
+    address = await redis_sentinel.discover_primary("mymaster")
     assert address == ("127.0.0.1", 6379)
 
 
@@ -95,7 +30,7 @@ async def test_discover_primary_error(sentinel):
         await sentinel.discover_primary("xxx")
 
 
-async def test_discover_primary_sentinel_down(cluster, sentinel):
+async def test_discover_primary_sentinel_down(cluster, sentinel: Sentinel):
     # Put first sentinel 'foo' down
     cluster.nodes_down.add(("foo", 26379))
     address = await sentinel.discover_primary("mymaster")
@@ -104,7 +39,7 @@ async def test_discover_primary_sentinel_down(cluster, sentinel):
     assert sentinel.sentinels[0].id == ("bar", 26379)
 
 
-async def test_discover_primary_sentinel_timeout(cluster, sentinel):
+async def test_discover_primary_sentinel_timeout(cluster, sentinel: Sentinel):
     # Put first sentinel 'foo' down
     cluster.nodes_timeout.add(("foo", 26379))
     address = await sentinel.discover_primary("mymaster")
@@ -174,11 +109,12 @@ async def test_discover_replicas(cluster, sentinel):
     ]
 
 
-async def test_replica_for_slave_not_found_error(cluster, sentinel):
+async def test_replica_for_slave_not_found_error(cluster, sentinel: Sentinel):
     cluster.primary["is_odown"] = True
     replica = sentinel.replica_for("mymaster", db=9)
-    with pytest.raises(ReplicaNotFoundError):
-        await replica.ping()
+    async with replica:
+        with pytest.raises(ReplicaNotFoundError):
+            await replica.ping()
 
 
 async def test_replica_round_robin(cluster, sentinel):
@@ -187,30 +123,37 @@ async def test_replica_round_robin(cluster, sentinel):
         {"ip": "replica1", "port": 6379, "is_odown": False, "is_sdown": False},
     ]
     pool = SentinelConnectionPool("mymaster", sentinel)
-    rotator = await pool.rotate_replicas()
-    assert set(rotator) == {("replica0", 6379), ("replica1", 6379)}
+    async for rotator in pool.rotate_replicas():
+        assert rotator in {("replica0", 6379), ("replica1", 6379)}
 
 
-async def test_autodecode(redis_sentinel_server):
+async def test_autodecode(redis_sentinel_server: tuple[str, int]):
     sentinel = Sentinel(sentinels=[redis_sentinel_server], decode_responses=True)
-    assert await sentinel.primary_for("mymaster").ping() == "PONG"
-    assert await sentinel.primary_for("mymaster", decode_responses=False).ping() == b"PONG"
+    client = sentinel.primary_for("mymaster")
+    async with client:
+        assert await client.ping() == "PONG"
+    client = sentinel.primary_for("mymaster", decode_responses=False)
+    async with client:
+        assert await client.ping() == b"PONG"
 
 
 @targets("redis_sentinel", "redis_sentinel_raw", "redis_sentinel_resp2")
 class TestSentinelCommand:
-    async def test_primary_for(self, client, host_ip):
+    async def test_primary_for(self, client: Sentinel, host_ip):
         primary = client.primary_for("mymaster")
-        assert await primary.ping()
-        assert primary.connection_pool.primary_address == (host_ip, 6380)
+        async with primary:
+            assert await primary.ping()
+            assert primary.connection_pool.primary_address == (host_ip, 6380)
 
         # Use internal connection check
         primary = client.primary_for("mymaster", check_connection=True)
-        assert await primary.ping()
+        async with primary:
+            assert await primary.ping()
 
     async def test_replica_for(self, client):
         replica = client.replica_for("mymaster")
-        assert await replica.ping()
+        async with replica:
+            assert await replica.ping()
 
     async def test_ckquorum(self, client):
         assert await client.sentinels[0].sentinel_ckquorum("mymaster")
@@ -237,10 +180,13 @@ class TestSentinelCommand:
     async def test_flush_config(self, client):
         assert await client.sentinels[0].sentinel_flushconfig()
 
-    async def test_role(self, client):
+    async def test_role(self, client: Sentinel):
         assert (await client.sentinels[0].role()).role == "sentinel"
-        assert (await client.primary_for("mymaster").role()).role == "master"
-        assert (await client.replica_for("mymaster").role()).role == "slave"
+        primary = client.primary_for("mymaster")
+        replica = client.replica_for("mymaster")
+        async with primary, replica:
+            assert (await primary.role()).role == "master"
+            assert (await replica.role()).role == "slave"
 
     async def test_infocache(self, client, _s):
         assert await client.sentinels[0].sentinel_flushconfig()
@@ -259,26 +205,35 @@ class TestSentinelCommand:
             [k["is_master"] for k in (await client.sentinels[0].sentinel_replicas("mymaster"))]
         )
 
-    async def test_no_replicas(self, client, mocker):
+    async def test_no_replicas(self, client: Sentinel, mocker):
         p = client.replica_for("mymaster")
         replica_rotate = mocker.patch.object(p.connection_pool, "rotate_replicas")
-        replica_rotate.return_value = []
-        with pytest.raises(ReplicaNotFoundError):
-            await p.ping()
+
+        async def async_iter(items):
+            for item in items:
+                yield item
+
+        replica_rotate.return_value = async_iter([])
+        with pytest.raises(ExceptionGroup) as group:
+            async with p:
+                await p.ping()
+        assert isinstance(group._excinfo[1].exceptions[0], ReplicaNotFoundError)
 
     async def test_write_to_replica(self, client):
-        p = await client.replica_for("mymaster")
-        await p.ping()
-        with pytest.raises(ReadOnlyError):
-            await p.set("fubar", 1)
+        p = client.replica_for("mymaster")
+        async with p:
+            await p.ping()
+            with pytest.raises(ReadOnlyError):
+                await p.set("fubar", 1)
 
     @pytest.mark.parametrize(
-        "client_arguments", [{"cache": coredis.cache.TrackingCache(max_size_bytes=-1)}]
+        "client_arguments", [{"cache": coredis.cache.NodeTrackingCache(max_size_bytes=-1)}]
     )
-    async def test_sentinel_cache(self, client, client_arguments, mocker, _s):
-        await client.primary_for("mymaster").set("fubar", 1)
-
-        assert await client.primary_for("mymaster").get("fubar") == _s("1")
+    async def test_sentinel_cache(self, client: Sentinel, client_arguments, mocker, _s):
+        primary = client.primary_for("mymaster")
+        async with primary:
+            await primary.set("fubar", 1)
+            assert await primary.get("fubar") == _s("1")
 
         new_primary = client.primary_for("mymaster")
         new_replica = client.replica_for("mymaster")
@@ -286,28 +241,29 @@ class TestSentinelCommand:
         assert new_primary.cache
         assert new_replica.cache
 
-        await new_primary.ping()
-        await new_replica.ping()
+        async with new_primary, new_replica:
+            await new_primary.ping()
+            await new_replica.ping()
 
-        replica_spy = mocker.spy(coredis.BaseConnection, "create_request")
+            replica_spy = mocker.spy(coredis.BaseConnection, "create_request")
 
-        assert new_primary.cache.healthy
-        assert new_replica.cache.healthy
+            assert await new_primary.get("fubar") == _s("1")
+            assert await new_replica.get("fubar") == _s("1")
 
-        assert await new_primary.get("fubar") == _s("1")
-        assert await new_replica.get("fubar") == _s("1")
-
-        assert replica_spy.call_count == 0
+            assert replica_spy.call_count == 0
 
     @pytest.mark.xfail
-    async def test_replication(self, client):
-        with client.primary_for("mymaster").ensure_replication(1) as primary:
-            await primary.set("fubar", 1)
-
-        with pytest.raises(ReplicationError):
-            with client.primary_for("mymaster").ensure_replication(2) as primary:
+    async def test_replication(self, client: Sentinel):
+        primary = client.primary_for("mymaster")
+        async with primary:
+            with primary.ensure_replication(1):
                 await primary.set("fubar", 1)
 
+            with primary.ensure_replication(2):
+                await primary.set("fubar", 1)
+
+        replica = client.replica_for("mymaster")
         with pytest.raises(ResponseError):
-            with client.replica_for("mymaster").ensure_replication(2) as replica:
-                await replica.set("fubar", 1)
+            async with replica:
+                with replica.ensure_replication(2):
+                    await replica.set("fubar", 1)

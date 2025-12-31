@@ -2,6 +2,7 @@
 -- ARGS[1] - token
 -- ARGS[2] - additional milliseconds
 -- return 1 if the locks time was extended, otherwise 0
+
 local token = redis.call('get', KEYS[1])
 if not token or token ~= ARGV[1] then
     return 0

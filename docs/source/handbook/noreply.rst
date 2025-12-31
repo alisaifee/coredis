@@ -13,12 +13,14 @@ For example::
     import coredis
 
     client = coredis.Redis(noreply=True)
-    assert await client.set("fubar", 1) is None
-    assert await client.hset("hash_fubar", {"a": 1, "b": 2}) is None
+    async with client:
+        assert await client.set("fubar", 1) is None
+        assert await client.hset("hash_fubar", {"a": 1, "b": 2}) is None
 
     other_client = coredis.Redis()
-    assert await other_client.get("fubar") == b"1"
-    assert await other_client.hgetall("hash_fubar") == {b"a": b"1", b"b": b"2"}
+    async with other_client:
+        assert await other_client.get("fubar") == b"1"
+        assert await other_client.hgetall("hash_fubar") == {b"a": b"1", b"b": b"2"}
 
 
 The mode can also be enabled temporarily through the :meth:`~coredis.Redis.ignore_replies` context manager::
@@ -26,10 +28,10 @@ The mode can also be enabled temporarily through the :meth:`~coredis.Redis.ignor
     import coredis
 
     client = coredis.Redis()
-
-    with client.ignore_replies():
-        assert await client.set("fubar", 1) is None
-    assert await client.get("fubar") == b"1"
+    async with client:
+        with client.ignore_replies():
+            assert await client.set("fubar", 1) is None
+        assert await client.get("fubar") == b"1"
 
 
 .. danger:: When the client is used with the the ``noreply`` option there are no guarantees

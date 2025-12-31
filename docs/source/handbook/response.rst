@@ -14,5 +14,3 @@ can be set to ``2``.
 .. code-block:: python
 
     r = coredis.Redis(protocol_version=2)
-
-

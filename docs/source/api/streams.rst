@@ -15,4 +15,3 @@ Stream Consumers
 .. autoclass:: coredis.stream.StreamParameters
    :show-inheritance:
    :no-inherited-members:
-

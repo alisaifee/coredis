@@ -5,13 +5,7 @@ Caching
 Built in caches
 ^^^^^^^^^^^^^^^
 
-.. autoclass:: coredis.cache.TrackingCache
-   :class-doc-from: both
-
-.. autoclass:: coredis.cache.NodeTrackingCache
-   :class-doc-from: both
-
-.. autoclass:: coredis.cache.ClusterTrackingCache
+.. autoclass:: coredis.cache.LRUCache
    :class-doc-from: both
 
 Implementing a custom cache
@@ -22,3 +16,11 @@ must implement :class:`~coredis.cache.AbstractCache`
 .. autoclass:: coredis.cache.AbstractCache
 .. autoclass:: coredis.cache.CacheStats
 
+Internal cache wrappers
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: coredis.cache.NodeTrackingCache
+   :class-doc-from: both
+
+.. autoclass:: coredis.cache.ClusterTrackingCache
+   :class-doc-from: both

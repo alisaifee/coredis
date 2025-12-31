@@ -24,8 +24,6 @@ To access the :class:`~coredis.modules.Json` command group from the :class:`core
     json = coredis.modules.Json(client)
     await json.get("key", "$")
 
-
-
 RedisJSON
 ^^^^^^^^^
 .. autoclass:: coredis.modules.Json
@@ -81,5 +79,3 @@ Autocomplete
 TimeSeries
 ^^^^^^^^^^
 .. autoclass:: coredis.modules.TimeSeries
-
-

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import logging
 from collections import UserDict
-from typing import Any
+from typing import Any, Awaitable, overload
+
+from anyio import create_task_group
 
 from coredis.typing import (
     Hashable,
@@ -12,6 +15,9 @@ from coredis.typing import (
     StringT,
     TypeVar,
 )
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 T = TypeVar("T")
 U = TypeVar("U")
@@ -138,7 +144,7 @@ def make_hashable(*args: Any) -> tuple[Hashable, ...]:
     )
 
 
-def query_param_to_bool(value: Any | None) -> bool | None:
+def query_param_to_bool(value: Any) -> bool | None:
     if value is None or value in ("", b""):
         return None
     if isinstance(value, (int, float, bool, str, bytes)):
@@ -432,6 +438,110 @@ def hash_slot(key: bytes) -> int:
             key = key[start + 1 : end]
 
     return crc16(key) % 16384
+
+
+T1 = TypeVar("T1")
+T2 = TypeVar("T2")
+T3 = TypeVar("T3")
+T4 = TypeVar("T4")
+T5 = TypeVar("T5")
+T6 = TypeVar("T6")
+
+
+@overload
+async def gather(
+    awaitable1: Awaitable[T1],
+    awaitable2: Awaitable[T2],
+    /,
+    *,
+    return_exceptions: bool = False,
+) -> tuple[T1, T2]: ...
+
+
+@overload
+async def gather(
+    awaitable1: Awaitable[T1],
+    awaitable2: Awaitable[T2],
+    awaitable3: Awaitable[T3],
+    /,
+    *,
+    return_exceptions: bool = False,
+) -> tuple[T1, T2, T3]: ...
+
+
+@overload
+async def gather(
+    awaitable1: Awaitable[T1],
+    awaitable2: Awaitable[T2],
+    awaitable3: Awaitable[T3],
+    awaitable4: Awaitable[T4],
+    /,
+    *,
+    return_exceptions: bool = False,
+) -> tuple[T1, T2, T3, T4]: ...
+
+
+@overload
+async def gather(
+    awaitable1: Awaitable[T1],
+    awaitable2: Awaitable[T2],
+    awaitable3: Awaitable[T3],
+    awaitable4: Awaitable[T4],
+    awaitable5: Awaitable[T5],
+    /,
+    *,
+    return_exceptions: bool = False,
+) -> tuple[T1, T2, T3, T4, T5]: ...
+
+
+@overload
+async def gather(
+    awaitable1: Awaitable[T1],
+    awaitable2: Awaitable[T2],
+    awaitable3: Awaitable[T3],
+    awaitable4: Awaitable[T4],
+    awaitable5: Awaitable[T5],
+    awaitable6: Awaitable[T6],
+    /,
+    *,
+    return_exceptions: bool = False,
+) -> tuple[T1, T2, T3, T4, T5, T6]: ...
+
+
+@overload
+async def gather(
+    *awaitables: Awaitable[T1],
+    return_exceptions: bool = False,
+) -> tuple[T1, ...]: ...
+
+
+async def gather(*awaitables: Awaitable[Any], return_exceptions: bool = False) -> tuple[Any, ...]:
+    if not awaitables:
+        return ()
+    if len(awaitables) == 1:
+        try:
+            return (await awaitables[0],)
+        except Exception as exc:
+            if return_exceptions:
+                return (exc,)
+            else:
+                raise
+
+    results: list[Any] = [None] * len(awaitables)
+
+    async def runner(awaitable: Awaitable[Any], i: int) -> None:
+        try:
+            results[i] = await awaitable
+        except Exception as exc:
+            if not return_exceptions:
+                raise
+            results[i] = exc
+
+    async with create_task_group() as tg:
+        for i, awaitable in enumerate(awaitables):
+            tg.start_soon(runner, awaitable, i)
+
+    return tuple(results)
 
 
 __all__ = [

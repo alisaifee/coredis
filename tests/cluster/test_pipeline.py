@@ -4,6 +4,7 @@ import asyncio
 
 import pytest
 
+from coredis._utils import gather
 from coredis.exceptions import (
     AuthorizationError,
     ClusterCrossSlotError,
@@ -20,28 +21,28 @@ from tests.conftest import targets
 @targets("redis_cluster")
 class TestPipeline:
     async def test_empty_pipeline(self, client):
-        async with await client.pipeline() as pipe:
-            assert await pipe.execute() == ()
+        async with client.pipeline():
+            pass
 
-    async def test_pipeline(self, client):
-        async with await client.pipeline() as pipe:
-            pipe.set("a", "a1")
-            pipe.get("a")
-            pipe.zadd("z", dict(z1=1))
-            pipe.zadd("z", dict(z2=4))
-            pipe.zincrby("z", "z1", 1)
-            pipe.zrange("z", 0, 5, withscores=True)
-            assert await pipe.execute() == (
-                True,
-                "a1",
-                True,
-                True,
-                2.0,
-                (("z1", 2.0), ("z2", 4)),
-            )
+    async def test_pipeline_simple(self, client):
+        async with client.pipeline() as pipe:
+            a = pipe.set("a", "a1")
+            b = pipe.get("a")
+            c = pipe.zadd("z", dict(z1=1))
+            d = pipe.zadd("z", dict(z2=4))
+            e = pipe.zincrby("z", "z1", 1)
+            f = pipe.zrange("z", 0, 5, withscores=True)
+        assert await gather(a, b, c, d, e, f) == (
+            True,
+            "a1",
+            True,
+            True,
+            2.0,
+            (("z1", 2.0), ("z2", 4)),
+        )
 
     async def test_pipeline_length(self, client):
-        async with await client.pipeline() as pipe:
+        async with client.pipeline() as pipe:
             # Initially empty.
             assert len(pipe) == 0
             assert pipe
@@ -59,31 +60,31 @@ class TestPipeline:
             assert pipe
 
     async def test_pipeline_no_transaction(self, client):
-        async with await client.pipeline(transaction=False) as pipe:
-            pipe.set("a", "a1")
-            pipe.set("b", "b1")
-            pipe.set("c", "c1")
-            assert await pipe.execute() == (
-                True,
-                True,
-                True,
-            )
-            assert await client.get("a") == "a1"
-            assert await client.get("b") == "b1"
-            assert await client.get("c") == "c1"
+        async with client.pipeline(transaction=False) as pipe:
+            a = pipe.set("a", "a1")
+            b = pipe.set("b", "b1")
+            c = pipe.set("c", "c1")
+        assert await gather(a, b, c) == (
+            True,
+            True,
+            True,
+        )
+        assert await client.get("a") == "a1"
+        assert await client.get("b") == "b1"
+        assert await client.get("c") == "c1"
 
     async def test_pipeline_no_permission(self, client, user_client):
         no_perm_client = await user_client("testuser", "on", "+@all", "-MULTI")
-        async with await no_perm_client.pipeline(transaction=True) as pipe:
-            pipe.get("fubar")
+        async with no_perm_client:
             with pytest.raises(AuthorizationError):
-                await pipe.execute()
+                async with no_perm_client.pipeline(transaction=True) as pipe:
+                    pipe.get("fubar")
 
     async def test_unwatch(self, client):
         await client.set("a{fubar}", "1")
         await client.set("b{fubar}", "2")
 
-        async with await client.pipeline() as pipe:
+        async with client.pipeline() as pipe:
             await pipe.watch("a{fubar}", "b{fubar}")
             await client.set("b{fubar}", "3")
             await pipe.unwatch()
@@ -93,7 +94,7 @@ class TestPipeline:
 
     @pytest.mark.xfail
     async def test_pipeline_transaction_with_watch_on_construction(self, client):
-        pipe = await client.pipeline(transaction=True, watches=["a{fu}"])
+        pipe = client.pipeline(transaction=True, watches=["a{fu}"])
 
         async def overwrite():
             i = 0
@@ -116,7 +117,7 @@ class TestPipeline:
             task.cancel()
 
     async def test_pipeline_transaction_with_watch(self, client):
-        pipe = await client.pipeline(transaction=False)
+        pipe = client.pipeline(transaction=False)
         await pipe.watch("a{fu}")
         await pipe.watch("b{fu}")
         pipe.multi()
@@ -125,7 +126,7 @@ class TestPipeline:
         assert (True,) == await pipe.execute()
 
     async def test_pipeline_transaction_with_watch_inline_fail(self, client):
-        async with await client.pipeline(transaction=False) as pipe:
+        async with client.pipeline(transaction=False) as pipe:
             await pipe.watch("a{fu}")
             await pipe.watch("b{fu}")
             pipe.multi()
@@ -135,7 +136,7 @@ class TestPipeline:
                 await pipe.execute()
 
     async def test_pipeline_transaction(self, client):
-        async with await client.pipeline(transaction=True) as pipe:
+        async with client.pipeline(transaction=True) as pipe:
             pipe.set("a{fu}", "a1")
             pipe.set("b{fu}", "b1")
             pipe.set("c{fu}", "c1")
@@ -150,7 +151,7 @@ class TestPipeline:
 
     async def test_pipeline_transaction_cross_slot(self, client):
         with pytest.raises(ClusterTransactionError):
-            async with await client.pipeline(transaction=True) as pipe:
+            async with client.pipeline(transaction=True) as pipe:
                 pipe.set("a{fu}", "a1")
                 pipe.set("b{fu}", "b1")
                 pipe.set("c{fu}", "c1")
@@ -160,7 +161,7 @@ class TestPipeline:
         assert await client.exists(["a{bar}"]) == 0
 
     async def test_pipeline_eval(self, client):
-        async with await client.pipeline(transaction=False) as pipe:
+        async with client.pipeline(transaction=False) as pipe:
             pipe.eval(
                 "return {KEYS[1],KEYS[2],ARGV[1],ARGV[2]}",
                 [
@@ -184,7 +185,7 @@ class TestPipeline:
         to the list of returned values
         """
         await client.set("c", "a")
-        async with await client.pipeline() as pipe:
+        async with client.pipeline() as pipe:
             pipe.set("a", "1")
             pipe.set("b", 2)
             # pipe.set("b", "2")
@@ -214,7 +215,7 @@ class TestPipeline:
 
     async def test_exec_error_raised(self, client):
         await client.set("c", "a")
-        async with await client.pipeline() as pipe:
+        async with client.pipeline() as pipe:
             pipe.set("a", "1")
             pipe.set("b", "2")
             pipe.lpush("c", ["3"])
@@ -229,7 +230,7 @@ class TestPipeline:
             assert await client.get("z") == "zzz"
 
     async def test_parse_error_raised(self, client):
-        async with await client.pipeline() as pipe:
+        async with client.pipeline() as pipe:
             # the zrem is invalid because we don't pass any keys to it
             pipe.set("a", "1")
             pipe.zrem("b", [])
@@ -246,7 +247,7 @@ class TestPipeline:
 
     @pytest.mark.parametrize("cluster_remap_keyslots", [("a{fu}", "b{fu}", "c{bar}", "d{bar}")])
     async def test_moved_error_retried(self, client, cluster_remap_keyslots, _s):
-        async with await client.pipeline() as pipe:
+        async with client.pipeline() as pipe:
             pipe.set("a{fu}", 1)
             pipe.get("a{fu}")
 
@@ -265,7 +266,7 @@ class TestPipeline:
     )
     async def test_no_key_command(self, client, function, args, kwargs):
         with pytest.raises(RedisClusterException) as exc:
-            async with await client.pipeline() as pipe:
+            async with client.pipeline() as pipe:
                 function(pipe, *args, **kwargs)
                 await pipe.execute()
         exc.match("No way to dispatch (.*?) to Redis Cluster. Missing key")
@@ -279,7 +280,7 @@ class TestPipeline:
     )
     async def test_multi_key_cross_slot_commands(self, client, function, args, kwargs):
         with pytest.raises(ClusterCrossSlotError) as exc:
-            async with await client.pipeline() as pipe:
+            async with client.pipeline() as pipe:
                 function(pipe, *args, **kwargs)
                 await pipe.execute()
         exc.match("Keys in request don't hash to the same slot")
@@ -292,7 +293,7 @@ class TestPipeline:
         ],
     )
     async def test_multi_key_non_cross_slot(self, client, function, args, kwargs, expectation):
-        async with await client.pipeline() as pipe:
+        async with client.pipeline() as pipe:
             pipe.set("x{fu}", 1)
             function(pipe, *args, **kwargs)
             res = await pipe.execute()
@@ -300,7 +301,7 @@ class TestPipeline:
         assert await client.get("x{fu}") == "1"
 
     async def test_multi_node_pipeline(self, client):
-        async with await client.pipeline() as pipe:
+        async with client.pipeline() as pipe:
             pipe.set("x{foo}", 1)
             pipe.set("x{bar}", 1)
             pipe.set("x{baz}", 1)
@@ -310,7 +311,7 @@ class TestPipeline:
     async def test_multi_node_pipeline_partially_correct(self, client):
         await client.lpush("list{baz}", [1, 2, 3])
         with pytest.raises(ClusterCrossSlotError) as exc:
-            async with await client.pipeline() as pipe:
+            async with client.pipeline() as pipe:
                 pipe.set("x{foo}", 1)
                 pipe.set("x{bar}", 1)
 
@@ -322,82 +323,17 @@ class TestPipeline:
         assert await client.get("x{bar}") is None
         assert await client.get("x{baz}") is None
 
-    async def test_transaction_callable(self, client, cloner):
-        clone = await cloner(client)
-
-        async def _incr():
-            for i in range(10):
-                await clone.incr("a{fubar}")
-
-        await client.set("a{fubar}", "1")
-        await client.set("b{fubar}", "2")
-
-        async def my_transaction(pipe):
-            await asyncio.sleep(0)
-            a_value = await pipe.get("a{fubar}")
-            b_value = await pipe.get("b{fubar}")
-            pipe.multi()
-            pipe.set("c{fubar}", str(int(a_value) + int(b_value)))
-
-        results = await asyncio.gather(
-            client.transaction(my_transaction, "a{fubar}", "b{fubar}", watch_delay=0.01),
-            _incr(),
-        )
-        assert results[0] == (True,)
-        assert int(await client.get("c{fubar}")) > 3
-
-    async def test_transaction_callable_access_other_node(self, client, cloner):
-        clone = await cloner(client)
-
-        async def _incr():
-            for i in range(10):
-                await clone.incr("a{fubar}")
-
-        await client.set("a{fubar}", "1")
-        await client.set("b{fubar}", "2")
-        await client.set("c{bazbaz}", "3")
-
-        async def my_transaction(pipe):
-            await asyncio.sleep(0)
-            a_value = await pipe.get("a{fubar}")
-            b_value = await pipe.get("b{fubar}")
-            c_value = await pipe.get("c{bazbaz}")
-
-            pipe.multi()
-
-            pipe.set("c{fubar}", str(int(a_value) + int(b_value) + int(c_value)))
-
-        results = await asyncio.gather(
-            client.transaction(my_transaction, "a{fubar}", "b{fubar}", watch_delay=0.01),
-            _incr(),
-        )
-        assert results[0] == (True,)
-        assert int(await client.get("c{fubar}")) > 3
-
-    async def test_transaction_callable_crossslot_fail(self, client, cloner):
-        async def my_transaction(pipe):
-            pipe.multi()
-            pipe.get("a{bazbaz}")
-
-        with pytest.raises(ClusterCrossSlotError):
-            await client.transaction(
-                my_transaction, "a{fubar}", "b{fubar}", "c{bazbaz}", watch_delay=0.01
-            )
-
-        with pytest.raises(ClusterTransactionError):
-            await client.transaction(my_transaction, "a{fubar}", "b{fubar}", watch_delay=0.01)
-
     async def test_pipeline_timeout(self, client):
         await client.hset("hash", {str(i): i for i in range(4096)})
         await client.ping()
-        pipeline = await client.pipeline(timeout=0.01)
+        pipeline = client.pipeline(timeout=0.01)
         for i in range(20):
             pipeline.hgetall("hash")
         with pytest.raises(TimeoutError):
             await pipeline.execute()
 
         await client.ping()
-        pipeline = await client.pipeline(timeout=5)
+        pipeline = client.pipeline(timeout=5)
         for i in range(20):
             pipeline.hgetall("hash")
         await pipeline.execute()

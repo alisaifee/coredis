@@ -88,5 +88,3 @@ As an example:
     Traceback (most recent call last):
       File "<@beartype(coredis.commands.core.CoreCommands.set) at 0x10c403130>", line 33, in set
     beartype.roar.BeartypeCallHintParamViolation: @beartyped coroutine CoreCommands.set() parameter key=1 violates type hint typing.Union[str, bytes], as 1 not str or bytes.
-
-

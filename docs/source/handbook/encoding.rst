@@ -14,11 +14,12 @@ The behavior of the client can also be temporarily changed by using the :meth:`~
 context manager. For example::
 
     client = coredis.Redis(decoding=True, encoding='utf-8')
-    await client.set("fubar", "baz")
-    with client.decoding(False):
-        assert await client.get("fubar") == b"baz"
-        with client.decoding(True):
-            assert await client.get("fubar") == "baz"
+    async with client:
+        await client.set("fubar", "baz")
+        with client.decoding(False):
+            assert await client.get("fubar") == b"baz"
+            with client.decoding(True):
+                assert await client.get("fubar") == "baz"
 
 
 .. note:: In certain cases (exclusively for utility commands such as :meth:`coredis.Redis.info`)

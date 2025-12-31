@@ -3,15 +3,15 @@ Pipelines
 
 Pipelines expose an identical API to :class:`~coredis.Redis`, however
 the awaitable returned by calling a pipeline method can only be awaited
-after the entire pipeline has successfully executed by calling
-:meth:`~coredis.pipeline.Pipeline.execute`
+after the entire pipeline has successfully executed, that is, after
+exiting the pipeline's async context manager:
 
 For example:
 
 .. code-block:: python
 
     async def example(client):
-        async with await client.pipeline(transaction=True) as pipe:
+        async with client.pipeline(transaction=True) as pipe:
             # commands is a tuple of awaitables
             commands = (
                 pipe.flushdb(),
@@ -19,11 +19,9 @@ For example:
                 pipe.set("bar", "foo"),
                 pipe.keys("*"),
             )
-            results = await pipe.execute()
-            # results are in order corresponding to your command
-            assert results == (True, True, True, set([b"bar", b"foo"]))
-            # results can also be retrieved from the returns of each command
-            assert await asyncio.gather(*commands) == (True, True, True, set[b"bar", b"foo"])
+        # results can be retrieved from the returns of each command
+        # notice this is OUTSIDE of the pipeline block
+        assert await asyncio.gather(*commands) == (True, True, True, {b"bar", b"foo"})
 
 
 Atomicity & Transactions
@@ -54,9 +52,9 @@ could do something like this:
 .. code-block:: python
 
     async def example():
-        async with await r.pipeline() as pipe:
-            while True:
-                try:
+        while True:
+            try:
+                async with r.pipeline(transaction=False) as pipe:
                     # put a WATCH on the key that holds our sequence value
                     await pipe.watch("OUR-SEQUENCE-KEY")
                     # after WATCHing, the pipeline is put into immediate execution
@@ -68,16 +66,15 @@ could do something like this:
                     pipe.multi()
                     # This call doesn't need to be awaited as it is part of the pipeline
                     pipe.set("OUR-SEQUENCE-KEY", next_value)
-                    # and finally, execute the pipeline (the set command)
-                    await pipe.execute()
-                    # if a WatchError wasn"t raised during execution, everything
-                    # we just did happened atomically.
-                    break
-                except WatchError:
-                    # another client must have changed "OUR-SEQUENCE-KEY" between
-                    # the time we started WATCHing it and the pipeline"s execution.
-                    # our best bet is to just retry.
-                    continue
+            except WatchError:
+                # another client must have changed "OUR-SEQUENCE-KEY" between
+                # the time we started WATCHing it and the pipeline"s execution.
+                # our best bet is to just retry.
+                continue
+            else:
+                # if a WatchError wasn"t raised during execution, everything
+                # we just did happened atomically.
+                break
 
 Note that, because the Pipeline must bind to a single connection for the
 duration of a :rediscommand:`WATCH`, care must be taken to ensure that the connection is
@@ -89,36 +86,15 @@ explicitly calling :meth:`~coredis.pipeline.Pipeline.clear`:
 .. code-block:: python
 
     async def example():
-        async with await r.pipeline() as pipe:
-            while 1:
-                try:
+        while 1:
+            try:
+                async with r.pipeline() as pipe:
                     await pipe.watch("OUR-SEQUENCE-KEY")
                     ...
-                    await pipe.execute()
-                    break
-                except WatchError:
-                    continue
-                finally:
-                    await pipe.clear()
-
-A convenience method :meth:`~coredis.Redis.transaction` exists for handling all the
-boilerplate of handling and retrying watch errors. It takes a callable that
-should expect a single parameter, a pipeline object, and any number of keys to
-be watched. Our client-side :rediscommand:`INCR` command above can be written like this,
-which is much easier to read:
-
-.. code-block:: python
-
-    async def client_side_incr(pipe) -> int:
-        current_value = await pipe.get("OUR-SEQUENCE-KEY") or 0
-        next_value = int(current_value) + 1
-        pipe.multi()
-        await pipe.set("OUR-SEQUENCE-KEY", next_value)
-        return next_value
-
-    await r.transaction(client_side_incr, "OUR-SEQUENCE-KEY")
-    # (True,)
-    await r.transaction(client_side_incr, "OUR-SEQUENCE-KEY", value_from_callable=True)
-    # 2
-
-
+                    pipe.multi()
+                    pipe.set(...)
+                    ...
+            except WatchError:
+                continue
+            else:
+                break

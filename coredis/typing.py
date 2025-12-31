@@ -25,6 +25,7 @@ from collections.abc import (
 from types import GenericAlias, ModuleType, UnionType
 from typing import (
     TYPE_CHECKING,
+    Annotated,
     Any,
     AnyStr,
     ClassVar,
@@ -137,7 +138,7 @@ class ExecutionParameters(TypedDict):
 
 
 #: Represents the acceptable types of a redis key
-KeyT = str | bytes
+KeyT = Annotated[str | bytes, "KeyT"]
 
 
 class Serializable(Generic[R]):

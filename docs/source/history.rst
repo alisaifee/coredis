@@ -9,6 +9,8 @@ performing async python clients. Since it had become unmaintained as of October 
 The initial intention of the fork was add python 3.10 compatibility and
 `coredis 2.x <https://github.com/alisaifee/coredis/tree/2.x>`__ is drop-in backward compatible with **aredis** and adds support up to python 3.10.
 
+In August 2025, `Graeme Holliday <https://github.com/Graeme22>`_ opened a PR that
+would eventually restructure coredis to use structured concurrency and add Trio support.
 
 Divergence from aredis & redis-py
 ---------------------------------
@@ -26,6 +28,8 @@ client, this inherently means that **coredis** diverges from both, most notable 
 
   .. automethod:: coredis.Redis.expire
      :noindex:
+- Type hints are significantly better than redis-py's, which are terrible for the async client,
+  and maintainers have indicated they don't care to address the problem
 
 Default RESP3
 -------------
@@ -33,7 +37,6 @@ Default RESP3
 **coredis** version ``3.x`` supported selecting the protocol version to use when parsing responses
 from the redis server and defaulted to the legacy ``RESP`` protocol. Since **coredis** has dropped
 support for redis server versions below ``6.0`` the default protocol version is now :term:`RESP3`.
-
 
 Parsers
 -------
