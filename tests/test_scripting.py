@@ -205,11 +205,11 @@ class TestScripting:
 
         class Wrapper:
             @classmethod
-            @scrpt.wraps(key_spec=["key"], client_arg="client", runtime_checks=True)
+            @scrpt.wraps(client_arg="client", runtime_checks=True)
             async def default_get(
                 cls,
                 client: Client[AnyStr] | None,
-                key: str,
+                key: KeyT,
                 default: str = "coredis",
             ) -> str: ...
 
