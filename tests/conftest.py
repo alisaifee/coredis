@@ -536,7 +536,6 @@ async def redis_stack_cached(redis_stack_server, request):
         await client.flushall()
         await set_default_test_config(client)
         yield client
-    cache.shutdown()
 
 
 @pytest.fixture
@@ -641,7 +640,6 @@ async def redis_cached(redis_basic_server, request):
         await client.flushall()
         await set_default_test_config(client)
         yield client
-    cache.shutdown()
 
 
 @pytest.fixture
@@ -772,7 +770,6 @@ async def redis_cluster_cached(redis_cluster_server, request):
             async with primary:
                 await set_default_test_config(primary)
         yield cluster
-    cache.shutdown()
 
 
 @pytest.fixture
