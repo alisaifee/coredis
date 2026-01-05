@@ -227,7 +227,7 @@ class TestSentinelCommand:
                 await p.set("fubar", 1)
 
     @pytest.mark.parametrize(
-        "client_arguments", [{"cache": coredis.cache.NodeTrackingCache(max_size_bytes=-1)}]
+        "client_arguments", [{"cache": coredis.cache.NodeTrackingCache()}]
     )
     async def test_sentinel_cache(self, client: Sentinel, client_arguments, mocker, _s):
         primary = client.primary_for("mymaster")
