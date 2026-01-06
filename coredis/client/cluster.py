@@ -508,7 +508,7 @@ class RedisCluster(
             self.__class__.RESULT_CALLBACKS.copy()
         )
         self.non_atomic_cross_slot = non_atomic_cross_slot
-        self.cache = ClusterTrackingCache(cache=cache)  # type: ignore
+        self.cache = ClusterTrackingCache(cache=cache) if cache else None
         self._decodecontext: contextvars.ContextVar[bool | None,] = contextvars.ContextVar(
             "decode", default=None
         )

@@ -818,7 +818,7 @@ class Redis(Client[AnyStr]):
             type_adapter=type_adapter,
             **kwargs,
         )
-        self.cache = NodeTrackingCache(cache=cache)
+        self.cache = NodeTrackingCache(cache=cache) if cache else None
         self._decodecontext: contextvars.ContextVar[bool | None,] = contextvars.ContextVar(
             "decode", default=None
         )
