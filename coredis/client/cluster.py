@@ -644,12 +644,13 @@ class RedisCluster(
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         if self.refresh_table_asap:
             self.connection_pool.initialized = False
-        await self.connection_pool.initialize()
-        self.refresh_table_asap = False
-        await self._populate_module_versions()
-        if self.cache:
-            await self.connection_pool._task_group.start(self.cache.run, self.connection_pool)
-        yield self
+        async with self.connection_pool:
+            await self.connection_pool.initialize()
+            self.refresh_table_asap = False
+            await self._populate_module_versions()
+            if self.cache:
+                await self.connection_pool._task_group.start(self.cache.run, self.connection_pool)
+            yield self
 
     def __repr__(self) -> str:
         servers = list(
@@ -949,7 +950,7 @@ class RedisCluster(
                 reply = None
                 if self.cache:
                     if r.tracking_client_id != self.cache.get_client_id(r):  # type: ignore
-                        # self.cache.reset()
+                        self.cache.reset()
                         await r.update_tracking_client(True, self.cache.get_client_id(r))  # type: ignore
                     if command.name not in READONLY_COMMANDS:
                         self.cache.invalidate(*keys)
