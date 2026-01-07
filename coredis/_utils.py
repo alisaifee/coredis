@@ -440,6 +440,17 @@ def hash_slot(key: bytes) -> int:
     return crc16(key) % 16384
 
 
+async def _runner(
+    awaitable: Awaitable[Any], results: list[Any], i: int, return_exceptions: bool
+) -> None:
+    try:
+        results[i] = await awaitable
+    except Exception as exc:
+        if not return_exceptions:
+            raise
+        results[i] = exc
+
+
 T1 = TypeVar("T1")
 T2 = TypeVar("T2")
 T3 = TypeVar("T3")
@@ -513,17 +524,6 @@ async def gather(
     *awaitables: Awaitable[T1],
     return_exceptions: bool = False,
 ) -> tuple[T1, ...]: ...
-
-
-async def _runner(
-    awaitable: Awaitable[Any], results: list[Any], i: int, return_exceptions: bool
-) -> None:
-    try:
-        results[i] = await awaitable
-    except Exception as exc:
-        if not return_exceptions:
-            raise
-        results[i] = exc
 
 
 async def gather(*awaitables: Awaitable[Any], return_exceptions: bool = False) -> tuple[Any, ...]:
