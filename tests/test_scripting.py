@@ -4,10 +4,10 @@ import pytest
 from beartype.roar import BeartypeCallHintParamViolation
 
 from coredis import PureToken
-from coredis._utils import gather
 from coredis.client import Client
 from coredis.client.basic import Redis
 from coredis.commands import Script
+from coredis.concurrency import gather
 from coredis.exceptions import NoScriptError, NotBusyError, ResponseError
 from coredis.typing import AnyStr, KeyT, RedisValueT
 from tests.conftest import targets

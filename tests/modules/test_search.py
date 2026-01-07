@@ -7,7 +7,7 @@ import numpy
 import pytest
 
 from coredis import PureToken, Redis
-from coredis._utils import gather
+from coredis.concurrency import gather
 from coredis.exceptions import ResponseError
 from coredis.modules.response.types import (
     SearchAggregationResult,

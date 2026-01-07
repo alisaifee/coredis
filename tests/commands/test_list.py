@@ -4,7 +4,7 @@ import anyio
 import pytest
 
 from coredis import PureToken
-from coredis._utils import gather
+from coredis.concurrency import gather
 from tests.conftest import server_deprecation_warning, targets
 
 

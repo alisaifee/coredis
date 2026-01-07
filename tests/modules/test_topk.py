@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from coredis import Redis
-from coredis._utils import gather
+from coredis.concurrency import gather
 from tests.conftest import module_targets
 
 

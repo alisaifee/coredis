@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import os
 import random
 import threading
@@ -12,6 +11,7 @@ from anyio import Lock, fail_after
 from typing_extensions import Self
 
 from coredis._utils import b, hash_slot
+from coredis.concurrency import Queue, QueueEmpty, QueueFull
 from coredis.connection import BaseConnection, ClusterConnection, Connection
 from coredis.exceptions import ConnectionError, RedisClusterException
 from coredis.globals import READONLY_COMMANDS
@@ -25,8 +25,6 @@ from coredis.typing import (
     RedisValueT,
     StringT,
 )
-
-from ._utils import ConnectionQueue, QueueEmpty, QueueFull
 
 
 class ClusterConnectionPool(ConnectionPool):
@@ -49,7 +47,7 @@ class ClusterConnectionPool(ConnectionPool):
     connection_class: type[ClusterConnection]
 
     _created_connections_per_node: dict[str, int]
-    _cluster_available_connections: dict[str, ConnectionQueue[Connection]]
+    _cluster_available_connections: dict[str, Queue[Connection]]
 
     def __init__(
         self,
@@ -245,7 +243,7 @@ class ClusterConnectionPool(ConnectionPool):
 
         return connection
 
-    def __node_pool(self, node: str) -> ConnectionQueue[Connection]:
+    def __node_pool(self, node: str) -> Queue[Connection]:
         if not self._cluster_available_connections.get(node):
             self._cluster_available_connections[node] = self.__default_node_queue()
 
@@ -253,7 +251,7 @@ class ClusterConnectionPool(ConnectionPool):
 
     def __default_node_queue(
         self,
-    ) -> ConnectionQueue[Connection]:
+    ) -> Queue[Connection]:
         q_size = max(
             1,
             int(
@@ -263,7 +261,7 @@ class ClusterConnectionPool(ConnectionPool):
             ),
         )
 
-        return ConnectionQueue[Connection](q_size)
+        return Queue[Connection](q_size)
 
     def release(self, connection: BaseConnection) -> None:
         """Releases the connection back to the pool"""
@@ -306,11 +304,8 @@ class ClusterConnectionPool(ConnectionPool):
 
     async def get_connection_by_node(self, node: ManagedNode) -> ClusterConnection:
         """Gets a connection by node"""
-        try:
-            with fail_after(self.timeout):
-                connection = await self.__node_pool(node.name).get()
-        except asyncio.TimeoutError:
-            raise ConnectionError("No connection available.")
+        with fail_after(self.timeout):
+            connection = await self.__node_pool(node.name).get()
 
         if not connection or not connection.is_connected:
             connection = await self._make_node_connection(node)

@@ -5,7 +5,7 @@ from unittest.mock import ANY
 import pytest
 
 from coredis import PureToken, Redis
-from coredis._utils import gather
+from coredis.concurrency import gather
 from coredis.exceptions import ResponseError
 from coredis.modules.response.types import GraphNode, GraphQueryResult
 from tests.conftest import module_targets

@@ -5,7 +5,7 @@ from unittest.mock import ANY
 import pytest
 
 from coredis import Redis
-from coredis._utils import gather
+from coredis.concurrency import gather
 from coredis.modules.response.types import AutocompleteSuggestion
 from tests.conftest import module_targets
 
