@@ -515,31 +515,25 @@ async def gather(
 ) -> tuple[T1, ...]: ...
 
 
+async def _runner(
+    awaitable: Awaitable[Any], results: list[Any], i: int, return_exceptions: bool
+) -> None:
+    try:
+        results[i] = await awaitable
+    except Exception as exc:
+        if not return_exceptions:
+            raise
+        results[i] = exc
+
+
 async def gather(*awaitables: Awaitable[Any], return_exceptions: bool = False) -> tuple[Any, ...]:
     if not awaitables:
         return ()
-    if len(awaitables) == 1:
-        try:
-            return (await awaitables[0],)
-        except Exception as exc:
-            if return_exceptions:
-                return (exc,)
-            else:
-                raise
-
     results: list[Any] = [None] * len(awaitables)
-
-    async def runner(awaitable: Awaitable[Any], i: int) -> None:
-        try:
-            results[i] = await awaitable
-        except Exception as exc:
-            if not return_exceptions:
-                raise
-            results[i] = exc
 
     async with create_task_group() as tg:
         for i, awaitable in enumerate(awaitables):
-            tg.start_soon(runner, awaitable, i)
+            tg.start_soon(_runner, awaitable, results, i, return_exceptions)
 
     return tuple(results)
 

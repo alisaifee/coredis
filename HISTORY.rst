@@ -10,6 +10,7 @@ Release Date: TBD
 * Feature
 
   * Migrates entire library to ``anyio``, adding structured concurrency and Trio support.
+
     * Almost all objects (clients, connection pools, PubSub, pipelines) now require use of
       an async context manager for initialization/cleanup.
     * Test suite now runs tests on both asyncio and Trio backends
