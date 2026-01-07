@@ -949,9 +949,9 @@ class RedisCluster(
                 use_cached = False
                 reply = None
                 if self.cache:
-                    if r.tracking_client_id != self.cache.get_client_id(r):  # type: ignore
+                    if r.tracking_client_id != self.cache.get_client_id(r):
                         self.cache.reset()
-                        await r.update_tracking_client(True, self.cache.get_client_id(r))  # type: ignore
+                        await r.update_tracking_client(True, self.cache.get_client_id(r))
                     if command.name not in READONLY_COMMANDS:
                         self.cache.invalidate(*keys)
                     elif cacheable:

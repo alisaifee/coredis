@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 from abc import ABC, abstractmethod
 from collections import Counter
+from contextlib import AsyncExitStack
 from typing import TYPE_CHECKING, Any, cast
 
 from anyio import (
@@ -42,7 +43,6 @@ except (AttributeError, KeyError):
 
 if TYPE_CHECKING:
     import coredis.client
-
 _retryable_errors = (ConnectionError, ConnectionFailed, EndOfStream)
 
 
@@ -369,7 +369,22 @@ class LRUCache(AbstractCache):
         self._stats.compact()
 
 
-class NodeTrackingCache(AbstractCache):
+class TrackingCache(AbstractCache):
+    @abstractmethod
+    async def run(
+        self, pool: ConnectionPool, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
+    ) -> None:
+        pass
+
+    @abstractmethod
+    def get_client_id(
+        self,
+        connection: coredis.connection.BaseConnection,
+    ) -> int | None:
+        pass
+
+
+class NodeTrackingCache(TrackingCache):
     """
     Wraps an AbstractCache instance to use server assisted client caching
     to ensure local cache entries are invalidated if any operations are
@@ -386,6 +401,12 @@ class NodeTrackingCache(AbstractCache):
         self._cache = cache or LRUCache()
         self.client_id: int | None = None
         self.compact_interval = compact_interval_seconds
+
+    def get_client_id(
+        self,
+        connection: coredis.connection.BaseConnection,
+    ) -> int | None:
+        return self.client_id
 
     async def run(
         self, pool: ConnectionPool, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
@@ -413,10 +434,10 @@ class NodeTrackingCache(AbstractCache):
                         await self._connection.update_tracking_client(False)
                     self.client_id = self._connection.client_id
                     start_time = current_time()
-                    async with create_task_group() as tg:
-                        tg.start_soon(self._consumer)
-                        tg.start_soon(self._keepalive)
-                        tg.start_soon(self._compact)
+                    async with create_task_group() as self._tg:
+                        self._tg.start_soon(self._consumer)
+                        self._tg.start_soon(self._keepalive)
+                        self._tg.start_soon(self._compact)
                         if not started:
                             task_status.started()
                             started = True
@@ -469,7 +490,7 @@ class NodeTrackingCache(AbstractCache):
         self._cache.feedback(command, key, *args, match=match)
 
 
-class ClusterTrackingCache:
+class ClusterTrackingCache(TrackingCache):
     """
     An LRU cache for redis cluster that uses server assisted client caching
     to ensure local cache entries are invalidated if any operations are performed
@@ -479,6 +500,14 @@ class ClusterTrackingCache:
     in the cluster to listen to invalidation events
     """
 
+    def get_client_id(
+        self,
+        connection: coredis.connection.BaseConnection,
+    ) -> int | None:
+        if cache := self.node_caches.get(connection.location):
+            return cache.client_id
+        return None
+
     def __init__(self, cache: AbstractCache | None = None) -> None:
         """ """
         self.node_caches: dict[str, NodeTrackingCache] = {}
@@ -486,15 +515,51 @@ class ClusterTrackingCache:
         self._nodes: list[coredis.client.Redis[Any]] = []
 
     async def run(
-        self, pool: ClusterConnectionPool, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
+        self, pool: ConnectionPool, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
     ) -> None:
+        assert isinstance(pool, ClusterConnectionPool)
         self._nodes = [
             pool.nodes.get_redis_link(node.host, node.port) for node in pool.nodes.all_nodes()
         ]
-        # TODO: make this work with cluster pool structure
-        async with create_task_group() as tg:
+        async with AsyncExitStack() as stack:
+            nodes = []
             for node in self._nodes:
-                node_cache = NodeTrackingCache(cache=self._cache)
-                await tg.start(node_cache.run, pool)
-                self.node_caches[node_cache._connection.location] = node_cache
-            task_status.started()
+                nodes.append(await stack.enter_async_context(node))
+
+            async with create_task_group() as tg:
+                self._task_group = tg
+
+                for node in nodes:
+                    node_cache = NodeTrackingCache(cache=self._cache)
+                    await tg.start(node_cache.run, node.connection_pool)
+                    self.node_caches[node_cache._connection.location] = node_cache
+
+                task_status.started()
+
+    def get(self, command: bytes, key: RedisValueT, *args: RedisValueT) -> ResponseType:
+        return self._cache.get(command, key, *args)
+
+    def put(
+        self, command: bytes, key: RedisValueT, *args: RedisValueT, value: ResponseType
+    ) -> None:
+        self._cache.put(command, key, *args, value=value)
+
+    def invalidate(self, *keys: RedisValueT) -> None:
+        self._cache.invalidate(*keys)
+
+    def reset(self) -> None:
+        self._cache.reset()
+
+    def shrink(self) -> None:
+        self._cache.shrink()
+
+    @property
+    def stats(self) -> CacheStats:
+        return self._cache.stats
+
+    @property
+    def confidence(self) -> float:
+        return self._cache.confidence
+
+    def feedback(self, command: bytes, key: RedisValueT, *args: RedisValueT, match: bool) -> None:
+        self._cache.feedback(command, key, *args, match=match)

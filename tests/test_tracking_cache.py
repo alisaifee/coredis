@@ -5,7 +5,7 @@ from contextlib import AsyncExitStack
 import pytest
 from anyio import sleep
 
-from coredis.cache import ClusterTrackingCache, LRUCache
+from coredis.cache import LRUCache
 from coredis.client.basic import Redis
 from tests.conftest import targets
 
@@ -190,13 +190,13 @@ class CommonExamples:
 
 
 @targets("redis_basic", "redis_basic_raw")
-class TestProxyInvalidatingCache(CommonExamples):
+class TestInvalidatingCache(CommonExamples):
     async def test_uninitialized_cache(self, client, cloner, _s):
         cache = LRUCache(max_keys=1, max_size_bytes=-1)
         assert cache.confidence == 100
         cached = await cloner(client, cache=cache)
         async with cached:
-            assert cached.cache.client_id
+            assert cached.cache.get_client_id(cached)
             await sleep(0.2)  # can be flaky if we close immediately
 
 
@@ -204,77 +204,12 @@ class TestProxyInvalidatingCache(CommonExamples):
     "redis_cluster",
     "redis_cluster_raw",
 )
-class TestClusterProxyInvalidatingCache(CommonExamples):
-    async def test_uninitialized_cache(self, client, cloner, _s):
-        cache = self.cache(max_keys=1, max_size_bytes=-1)
-        assert not cache.get_client_id(await client.connection_pool.get_random_connection())
-        assert cache.confidence == 100
-        _ = await cloner(client, cache=cache)
-        assert cache.get_client_id(await client.connection_pool.get_random_connection()) > 0
-
-    async def test_single_entry_cache_tracker_disconnected(self, client, cloner, _s):
-        cache = self.cache(max_keys=1, max_size_bytes=-1)
-        cached = await cloner(client, cache=cache)
-        assert not await client.get("fubar")
-        await client.set("fubar", 1)
-        await sleep(0.2)
-        assert await cached.get("fubar") == _s("1")
-        await client.incr("fubar")
-        [ncache.connection.disconnect() for ncache in cache.instance.node_caches.values()]
-        await sleep(0.2)
-        assert await cached.get("fubar") == _s("2")
-
-    async def test_reinitialize_cluster(self, client, cloner, _s):
-        await client.set("fubar", 1)
-        cache = self.cache(max_keys=1, max_idle_seconds=1, max_size_bytes=-1)
-        cached = await cloner(client, cache=cache)
-        pre = dict(cached.cache.instance.node_caches)
-        assert await cached.get("fubar") == _s("1")
-        cached.connection_pool.disconnect()
-        cached.connection_pool.reset()
-        await sleep(0.1)
-        assert await cached.get("fubar") == _s("1")
-        post = cached.cache.instance.node_caches
-        assert pre != post
-
-
-@targets(
-    "redis_cluster",
-    "redis_cluster_raw",
-)
 class TestClusterInvalidatingCache(CommonExamples):
-    @property
-    def cache(self):
-        return ClusterTrackingCache
-
     async def test_uninitialized_cache(self, client, cloner, _s):
-        cache = self.cache(max_keys=1, max_size_bytes=-1)
-        assert not cache.get_client_id(await client.connection_pool.get_random_connection())
+        cache = LRUCache(max_keys=1, max_size_bytes=-1)
         assert cache.confidence == 100
-        _ = await cloner(client, cache=cache)
-        assert cache.get_client_id(await client.connection_pool.get_random_connection()) > 0
-
-    async def test_single_entry_cache_tracker_disconnected(self, client, cloner, _s):
-        cache = self.cache(max_keys=1, max_size_bytes=-1)
         cached = await cloner(client, cache=cache)
-        assert not await client.get("fubar")
-        await client.set("fubar", 1)
-        await sleep(0.2)
-        assert await cached.get("fubar") == _s("1")
-        await client.incr("fubar")
-        [ncache.connection.disconnect() for ncache in cache.node_caches.values()]
-        await sleep(0.2)
-        assert await cached.get("fubar") == _s("2")
-
-    async def test_reinitialize_cluster(self, client, cloner, _s):
-        await client.set("fubar", 1)
-        cache = self.cache(max_keys=1, compact_interval_seconds=1, max_size_bytes=-1)
-        cached = await cloner(client, cache=cache)
-        pre = dict(cached.cache.node_caches)
-        assert await cached.get("fubar") == _s("1")
-        cached.connection_pool.disconnect()
-        cached.connection_pool.reset()
-        await sleep(0.1)
-        assert await cached.get("fubar") == _s("1")
-        post = cached.cache.node_caches
-        assert pre != post
+        async with cached:
+            assert (
+                cached.cache.get_client_id(await client.connection_pool.get_random_connection()) > 0
+            )

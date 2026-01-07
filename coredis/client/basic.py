@@ -16,7 +16,7 @@ from packaging.version import InvalidVersion, Version
 from typing_extensions import Self
 
 from coredis._utils import EncodingInsensitiveDict, logger, nativestr
-from coredis.cache import AbstractCache, NodeTrackingCache
+from coredis.cache import AbstractCache, NodeTrackingCache, TrackingCache
 from coredis.commands import CommandRequest
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandFlag, CommandName
@@ -94,7 +94,7 @@ class Client(
     ModuleMixin[AnyStr],
     SentinelCommands[AnyStr],
 ):
-    cache: NodeTrackingCache | None
+    cache: TrackingCache | None
     connection_pool: ConnectionPool
     decode_responses: bool
     encoding: str
@@ -978,9 +978,11 @@ class Redis(Client[AnyStr]):
                 use_cached = False
                 reply = None
                 if self.cache:
-                    if connection.tracking_client_id != self.cache.client_id:
+                    if connection.tracking_client_id != self.cache.get_client_id(connection):
                         self.cache.reset()
-                        await connection.update_tracking_client(True, self.cache.client_id)
+                        await connection.update_tracking_client(
+                            True, self.cache.get_client_id(connection)
+                        )
                     if command.name not in READONLY_COMMANDS:
                         self.cache.invalidate(*keys)
                     elif cacheable:
