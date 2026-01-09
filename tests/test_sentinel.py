@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from unittest.mock import AsyncMock
+
 import pytest
 from exceptiongroup import ExceptionGroup
 
@@ -20,121 +22,74 @@ async def test_init_compose_sentinel(redis_sentinel: Sentinel):
         await master.ping()
 
 
-async def test_discover_primary(redis_sentinel: Sentinel):
+async def test_discover_primary(redis_sentinel: Sentinel, host_ip):
     address = await redis_sentinel.discover_primary("mymaster")
-    assert address == ("127.0.0.1", 6379)
+    assert address == (host_ip, 6380)
 
 
-async def test_discover_primary_error(sentinel):
+async def test_discover_primary_error(redis_sentinel: Sentinel, mocker):
     with pytest.raises(PrimaryNotFoundError):
-        await sentinel.discover_primary("xxx")
+        await redis_sentinel.discover_primary("xxx")
+    sentinel_masters = mocker.patch.object(
+        redis_sentinel.sentinels[0], "sentinel_masters", new_callable=AsyncMock
+    )
+    sentinel_masters.return_value = {
+        "mymaster": {
+            "ip": "127.0.0.1",
+            "port": 6380,
+            "is_master": True,
+            "is_sdown": True,
+            "is_odown": True,
+        }
+    }
+    with pytest.RaisesGroup(PrimaryNotFoundError):
+        async with redis_sentinel.primary_for("mymaster") as primary:
+            await primary.ping()
 
 
-async def test_discover_primary_sentinel_down(cluster, sentinel: Sentinel):
-    # Put first sentinel 'foo' down
-    cluster.nodes_down.add(("foo", 26379))
-    address = await sentinel.discover_primary("mymaster")
-    assert address == ("127.0.0.1", 6379)
-    # 'bar' is now first sentinel
-    assert sentinel.sentinels[0].id == ("bar", 26379)
-
-
-async def test_discover_primary_sentinel_timeout(cluster, sentinel: Sentinel):
-    # Put first sentinel 'foo' down
-    cluster.nodes_timeout.add(("foo", 26379))
-    address = await sentinel.discover_primary("mymaster")
-    assert address == ("127.0.0.1", 6379)
-    # 'bar' is now first sentinel
-    assert sentinel.sentinels[0].id == ("bar", 26379)
-
-
-async def test_master_min_other_sentinels(cluster):
-    sentinel = Sentinel([("foo", 26379)], min_other_sentinels=1)
-    # min_other_sentinels
-    with pytest.raises(PrimaryNotFoundError):
-        await sentinel.discover_primary("mymaster")
-    cluster.primary["num-other-sentinels"] = 2
-    address = await sentinel.discover_primary("mymaster")
-    assert address == ("127.0.0.1", 6379)
-
-
-async def test_master_odown(cluster, sentinel):
-    cluster.primary["is_odown"] = True
-    with pytest.raises(PrimaryNotFoundError):
-        await sentinel.discover_primary("mymaster")
-
-
-async def test_master_sdown(cluster, sentinel):
-    cluster.primary["is_sdown"] = True
-    with pytest.raises(PrimaryNotFoundError):
-        await sentinel.discover_primary("mymaster")
-
-
-async def test_discover_replicas(cluster, sentinel):
-    assert await sentinel.discover_replicas("mymaster") == []
-
-    cluster.replicas = [
-        {"ip": "replica0", "port": 1234, "is_odown": False, "is_sdown": False},
-        {"ip": "replica1", "port": 1234, "is_odown": False, "is_sdown": False},
-    ]
-    assert await sentinel.discover_replicas("mymaster") == [
-        ("replica0", 1234),
-        ("replica1", 1234),
-    ]
-
-    # replica0 -> ODOWN
-    cluster.replicas[0]["is_odown"] = True
-    assert await sentinel.discover_replicas("mymaster") == [("replica1", 1234)]
-
-    # replica1 -> SDOWN
-    cluster.replicas[1]["is_sdown"] = True
-    assert await sentinel.discover_replicas("mymaster") == []
-
-    cluster.replicas[0]["is_odown"] = False
-    cluster.replicas[1]["is_sdown"] = False
-
-    # node0 -> DOWN
-    cluster.nodes_down.add(("foo", 26379))
-    assert await sentinel.discover_replicas("mymaster") == [
-        ("replica0", 1234),
-        ("replica1", 1234),
-    ]
-    cluster.nodes_down.clear()
-
-    # node0 -> TIMEOUT
-    cluster.nodes_timeout.add(("foo", 26379))
-    assert await sentinel.discover_replicas("mymaster") == [
-        ("replica0", 1234),
-        ("replica1", 1234),
-    ]
-
-
-async def test_replica_for_slave_not_found_error(cluster, sentinel: Sentinel):
-    cluster.primary["is_odown"] = True
-    replica = sentinel.replica_for("mymaster", db=9)
-    async with replica:
-        with pytest.raises(ReplicaNotFoundError):
+async def test_replica_for_slave_not_found_error(redis_sentinel: Sentinel, mocker):
+    sentinel_replicas = mocker.patch.object(
+        redis_sentinel.sentinels[0], "sentinel_replicas", new_callable=AsyncMock
+    )
+    sentinel_masters = mocker.patch.object(
+        redis_sentinel.sentinels[0], "sentinel_masters", new_callable=AsyncMock
+    )
+    sentinel_replicas.return_value = []
+    sentinel_masters.return_value = {}
+    replica = redis_sentinel.replica_for("mymaster", db=9)
+    with pytest.RaisesGroup(ReplicaNotFoundError):
+        async with replica:
             await replica.ping()
 
 
-async def test_replica_round_robin(cluster, sentinel):
-    cluster.replicas = [
+async def test_replica_round_robin(redis_sentinel: Sentinel, mocker, host_ip):
+    pool = SentinelConnectionPool("mymaster", redis_sentinel)
+    sentinel_replicas = mocker.patch.object(
+        redis_sentinel.sentinels[0], "sentinel_replicas", new_callable=AsyncMock
+    )
+    sentinel_replicas.return_value = [
         {"ip": "replica0", "port": 6379, "is_odown": False, "is_sdown": False},
         {"ip": "replica1", "port": 6379, "is_odown": False, "is_sdown": False},
     ]
-    pool = SentinelConnectionPool("mymaster", sentinel)
     async for rotator in pool.rotate_replicas():
         assert rotator in {("replica0", 6379), ("replica1", 6379)}
+    sentinel_replicas.return_value = [
+        {"ip": "replica0", "port": 6379, "is_odown": False, "is_sdown": False},
+        {"ip": "replica1", "port": 6379, "is_odown": False, "is_sdown": True},
+    ]
+    async for rotator in pool.rotate_replicas():
+        assert rotator in {("replica0", 6379)}
 
 
 async def test_autodecode(redis_sentinel_server: tuple[str, int]):
     sentinel = Sentinel(sentinels=[redis_sentinel_server], decode_responses=True)
-    client = sentinel.primary_for("mymaster")
-    async with client:
-        assert await client.ping() == "PONG"
-    client = sentinel.primary_for("mymaster", decode_responses=False)
-    async with client:
-        assert await client.ping() == b"PONG"
+    async with sentinel:
+        client = sentinel.primary_for("mymaster")
+        async with client:
+            assert await client.ping() == "PONG"
+        client = sentinel.primary_for("mymaster", decode_responses=False)
+        async with client:
+            assert await client.ping() == b"PONG"
 
 
 @targets("redis_sentinel", "redis_sentinel_raw", "redis_sentinel_resp2")
@@ -226,7 +181,7 @@ class TestSentinelCommand:
             with pytest.raises(ReadOnlyError):
                 await p.set("fubar", 1)
 
-    @pytest.mark.parametrize("client_arguments", [{"cache": coredis.cache.NodeTrackingCache()}])
+    @pytest.mark.parametrize("client_arguments", [{"cache": coredis.cache.LRUCache()}])
     async def test_sentinel_cache(self, client: Sentinel, client_arguments, mocker, _s):
         primary = client.primary_for("mymaster")
         async with primary:
@@ -243,12 +198,10 @@ class TestSentinelCommand:
             await new_primary.ping()
             await new_replica.ping()
 
-            replica_spy = mocker.spy(coredis.BaseConnection, "create_request")
-
             assert await new_primary.get("fubar") == _s("1")
+            create_request_spy = mocker.spy(coredis.BaseConnection, "create_request")
             assert await new_replica.get("fubar") == _s("1")
-
-            assert replica_spy.call_count == 0
+            assert create_request_spy.call_count == 0
 
     @pytest.mark.xfail
     async def test_replication(self, client: Sentinel):

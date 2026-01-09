@@ -108,12 +108,12 @@ class SentinelConnectionPool(ConnectionPool):
             for _ in range(len(replicas)):
                 self.replica_counter = (self.replica_counter + 1) % len(replicas)
                 yield replicas[self.replica_counter]
-        # Fallback to primary
-        try:
-            yield await self.get_primary_address()
-        except PrimaryNotFoundError:
-            pass
-        raise ReplicaNotFoundError(f"No replica found for {self.service_name!r}")
+        else:
+            try:
+                yield await self.get_primary_address()
+            except PrimaryNotFoundError:
+                pass
+            raise ReplicaNotFoundError(f"No replica found for {self.service_name!r}")
 
 
 class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
