@@ -88,6 +88,7 @@ class TestString:
         assert await client.getdel("a") == _s("1")
         assert await client.getdel("a") is None
 
+    @pytest.mark.nodragonfly
     async def test_getex(self, client, redis_server_time, _s):
         await client.set("a", "1")
         assert await client.getex("a") == _s("1")
@@ -205,11 +206,13 @@ class TestString:
         assert await client.set("a", "1", ex=expire_at)
         assert 0 < await client.ttl("a") <= 60
 
+    @pytest.mark.nodragonfly
     async def test_set_exat(self, client, redis_server_time, _s):
         expire_at = await redis_server_time(client) + datetime.timedelta(minutes=1)
         assert await client.set("a", "1", exat=expire_at)
         assert 0 < await client.ttl("a") <= 61
 
+    @pytest.mark.nodragonfly
     async def test_set_pxat(self, client, redis_server_time, _s):
         expire_at = await redis_server_time(client) + datetime.timedelta(minutes=1)
         assert await client.set("a", "1", pxat=expire_at)
