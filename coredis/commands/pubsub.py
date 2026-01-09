@@ -20,7 +20,7 @@ from anyio import (
 from anyio.abc import TaskStatus
 from anyio.streams.stapled import StapledObjectStream
 from deprecated.sphinx import versionadded
-from exceptiongroup import BaseExceptionGroup, catch
+from exceptiongroup import catch
 
 from coredis._utils import b, hash_slot, logger, nativestr
 from coredis.commands.constants import CommandName
@@ -449,24 +449,24 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
     """
 
-    # TODO: rework this
     async def run(self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
-        def handle_connection_errors(group: BaseExceptionGroup) -> None:
-            if self._connection:
-                self.connection_pool.release(self._connection)
+        start_time, started, tries = current_time(), False, 0
 
-        started = False
-        while not started:
-            # retry with exponential backoff
-            await sleep(self.tries**2)
-            self.tries += 1
-            with catch(
-                {(ConnectionError, ConnectionFailed, EndOfStream): handle_connection_errors}
-            ):
+        def handle_error(*args: Any) -> None:
+            nonlocal tries, start_time
+            if current_time() - start_time > 10:
+                tries = 0
+            else:
+                tries += 1
+
+        while True:
+            await sleep(min(tries**2, 300))
+            with catch({(ConnectionError, ConnectionFailed, EndOfStream): handle_error}):
                 self._connection = await self.connection_pool.get_connection(
                     command_name=b"pubsub", acquire=True
                 )
                 async with create_task_group() as tg:
+                    self._current_scope = tg.cancel_scope
                     tg.start_soon(self._consumer)
                     tg.start_soon(self._keepalive)
                     if not started:
