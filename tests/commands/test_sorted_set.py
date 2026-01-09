@@ -77,6 +77,7 @@ class TestSortedSet:
         assert await client.zcount("a{foo}", 1, 2) == 2
         assert await client.zcount("a{foo}", 10, 20) == 0
 
+    @pytest.mark.nodragonfly
     async def test_zdiff(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3))
         await client.zadd("b{foo}", dict(a1=1, a2=2))
@@ -103,6 +104,7 @@ class TestSortedSet:
         assert await client.zlexcount("a{foo}", "-", "+") == 7
         assert await client.zlexcount("a{foo}", "[b", "[f") == 5
 
+    @pytest.mark.nodragonfly
     async def test_zinter_sum(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=1, a3=1))
         await client.zadd("b{foo}", dict(a1=2, a2=2, a3=2))
@@ -116,6 +118,7 @@ class TestSortedSet:
             (_s("a1"), 9),
         )
 
+    @pytest.mark.nodragonfly
     async def test_zinter_max(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=1, a3=1))
         await client.zadd("b{foo}", dict(a1=2, a2=2, a3=2))
@@ -200,6 +203,7 @@ class TestSortedSet:
         assert await client.zintercard(["a{foo}", "b{foo}"]) == 1
         assert await client.zintercard(["a{foo}"], limit=1) == 1
 
+    @pytest.mark.nodragonfly
     async def test_zpopmax(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3))
         assert (await client.zpopmax("a{foo}")) == (_s("a3"), 3)
@@ -209,6 +213,7 @@ class TestSortedSet:
             (_s("a1"), 1),
         )
 
+    @pytest.mark.nodragonfly
     async def test_zpopmin(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3))
         assert (await client.zpopmin("a{foo}")) == (_s("a1"), 1)
@@ -593,6 +598,7 @@ class TestSortedSet:
         assert await client.zscore("a{foo}", "a2") == 2.0
         assert await client.zscore("a{foo}", "a4") is None
 
+    @pytest.mark.nodragonfly
     async def test_zunion_sum(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=1, a3=1))
         await client.zadd("b{foo}", dict(a1=2, a2=2, a3=2))
