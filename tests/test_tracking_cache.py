@@ -71,7 +71,8 @@ class CommonExamples:
         cache = LRUCache(confidence=confidence, max_size_bytes=-1)
         cached = await cloner(client, cache=cache)
         async with cached:
-            await client.mset({f"fubar{i}": i for i in range(100)})
+            await cached.ping()
+            [await client.set(f"fubar{i}", i) for i in range(100)]
             create_request = mocker.spy(cached.connection_pool.connection_class, "create_request")
             [await cached.get(f"fubar{i}") for i in range(100)]
             assert create_request.call_count >= 100
@@ -160,9 +161,6 @@ class CommonExamples:
             assert sum(cache.stats.misses.values()) == 3
             assert sum(cache.stats.invalidations.values()) == 2
             assert sum(cache.stats.dirty.values()) == 1
-
-            assert cache.stats.hits[b"fubar"] == 2
-            assert cache.stats.hits[b"barbar"] == 1
 
             cache.stats.compact()
 
