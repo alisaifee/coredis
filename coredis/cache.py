@@ -370,6 +370,13 @@ class LRUCache(AbstractCache):
 
 
 class TrackingCache(AbstractCache):
+    """
+    Abstract layout of a tracking cache to be used internally
+    by coredis clients (Redis/RedisCluster)
+    """
+
+    _cache: AbstractCache
+
     @abstractmethod
     async def run(
         self, pool: ConnectionPool, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
@@ -382,6 +389,34 @@ class TrackingCache(AbstractCache):
         connection: coredis.connection.BaseConnection,
     ) -> int | None:
         pass
+
+    def get(self, command: bytes, key: RedisValueT, *args: RedisValueT) -> ResponseType:
+        return self._cache.get(command, key, *args)
+
+    def put(
+        self, command: bytes, key: RedisValueT, *args: RedisValueT, value: ResponseType
+    ) -> None:
+        self._cache.put(command, key, *args, value=value)
+
+    def invalidate(self, *keys: RedisValueT) -> None:
+        self._cache.invalidate(*keys)
+
+    def reset(self) -> None:
+        self._cache.reset()
+
+    def shrink(self) -> None:
+        self._cache.shrink()
+
+    @property
+    def stats(self) -> CacheStats:
+        return self._cache.stats
+
+    @property
+    def confidence(self) -> float:
+        return self._cache.confidence
+
+    def feedback(self, command: bytes, key: RedisValueT, *args: RedisValueT, match: bool) -> None:
+        self._cache.feedback(command, key, *args, match=match)
 
 
 class NodeTrackingCache(TrackingCache):
@@ -461,34 +496,6 @@ class NodeTrackingCache(TrackingCache):
             await sleep(self.compact_interval)
             self.shrink()
 
-    def get(self, command: bytes, key: RedisValueT, *args: RedisValueT) -> ResponseType:
-        return self._cache.get(command, key, *args)
-
-    def put(
-        self, command: bytes, key: RedisValueT, *args: RedisValueT, value: ResponseType
-    ) -> None:
-        self._cache.put(command, key, *args, value=value)
-
-    def invalidate(self, *keys: RedisValueT) -> None:
-        self._cache.invalidate(*keys)
-
-    def reset(self) -> None:
-        self._cache.reset()
-
-    def shrink(self) -> None:
-        self._cache.shrink()
-
-    @property
-    def stats(self) -> CacheStats:
-        return self._cache.stats
-
-    @property
-    def confidence(self) -> float:
-        return self._cache.confidence
-
-    def feedback(self, command: bytes, key: RedisValueT, *args: RedisValueT, match: bool) -> None:
-        self._cache.feedback(command, key, *args, match=match)
-
 
 class ClusterTrackingCache(TrackingCache):
     """
@@ -533,33 +540,4 @@ class ClusterTrackingCache(TrackingCache):
                     node_cache = NodeTrackingCache(cache=self._cache)
                     await tg.start(node_cache.run, node.connection_pool)
                     self.node_caches[node_cache._connection.location] = node_cache
-
                 task_status.started()
-
-    def get(self, command: bytes, key: RedisValueT, *args: RedisValueT) -> ResponseType:
-        return self._cache.get(command, key, *args)
-
-    def put(
-        self, command: bytes, key: RedisValueT, *args: RedisValueT, value: ResponseType
-    ) -> None:
-        self._cache.put(command, key, *args, value=value)
-
-    def invalidate(self, *keys: RedisValueT) -> None:
-        self._cache.invalidate(*keys)
-
-    def reset(self) -> None:
-        self._cache.reset()
-
-    def shrink(self) -> None:
-        self._cache.shrink()
-
-    @property
-    def stats(self) -> CacheStats:
-        return self._cache.stats
-
-    @property
-    def confidence(self) -> float:
-        return self._cache.confidence
-
-    def feedback(self, command: bytes, key: RedisValueT, *args: RedisValueT, match: bool) -> None:
-        self._cache.feedback(command, key, *args, match=match)
