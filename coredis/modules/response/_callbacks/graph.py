@@ -3,8 +3,8 @@ from __future__ import annotations
 import enum
 from typing import TYPE_CHECKING, Any
 
+from coredis._concurrency import gather
 from coredis._utils import b, nativestr
-from coredis.concurrency import gather
 from coredis.modules.response.types import (
     GraphNode,
     GraphPath,

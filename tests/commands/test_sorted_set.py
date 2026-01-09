@@ -4,7 +4,7 @@ import anyio
 import pytest
 
 from coredis import PureToken
-from coredis.concurrency import gather
+from coredis._concurrency import gather
 from coredis.exceptions import CommandSyntaxError, DataError
 from tests.conftest import server_deprecation_warning, targets
 

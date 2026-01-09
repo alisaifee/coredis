@@ -4,9 +4,9 @@ from decimal import Decimal
 
 import pytest
 
+from coredis._concurrency import gather
 from coredis.client.basic import Redis
 from coredis.commands.request import CommandRequest
-from coredis.concurrency import gather
 from coredis.exceptions import (
     AuthorizationError,
     RedisError,

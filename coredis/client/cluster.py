@@ -13,13 +13,13 @@ from typing import TYPE_CHECKING, Any, cast, overload
 from anyio import get_cancelled_exc_class, sleep
 from deprecated.sphinx import versionadded
 
+from coredis._concurrency import gather
 from coredis._utils import b, hash_slot
 from coredis.cache import AbstractCache, ClusterTrackingCache
 from coredis.client.basic import Client, Redis
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName, NodeFlag
 from coredis.commands.pubsub import ClusterPubSub, ShardedPubSub, SubscriptionCallback
-from coredis.concurrency import gather
 from coredis.connection import RedisSSLContext
 from coredis.exceptions import (
     AskError,

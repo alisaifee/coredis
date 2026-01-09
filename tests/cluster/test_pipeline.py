@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from coredis.concurrency import gather
+from coredis._concurrency import gather
 from coredis.exceptions import (
     AuthorizationError,
     ClusterCrossSlotError,

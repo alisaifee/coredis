@@ -8,7 +8,7 @@ import anyio
 import pytest
 
 from coredis import PureToken, Redis
-from coredis.concurrency import gather
+from coredis._concurrency import gather
 from tests.conftest import module_targets
 
 

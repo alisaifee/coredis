@@ -10,8 +10,8 @@ from typing import Any, AsyncGenerator, cast
 from anyio import Lock, fail_after
 from typing_extensions import Self
 
+from coredis._concurrency import Queue, QueueEmpty, QueueFull
 from coredis._utils import b, hash_slot
-from coredis.concurrency import Queue, QueueEmpty, QueueFull
 from coredis.connection import BaseConnection, ClusterConnection, Connection
 from coredis.exceptions import ConnectionError, RedisClusterException
 from coredis.globals import READONLY_COMMANDS
