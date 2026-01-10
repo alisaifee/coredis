@@ -83,6 +83,7 @@ test = [
   "asyncache>=0.3.1",
   "moto",
   "trio>=0.31.0",
+  "uvloop"
 ]
 
 dev = [
@@ -118,6 +119,10 @@ docs = [
   "botocore",
   "cachetools",
   {include-group = "dev"},
+]
+
+orjson = [
+  "orjson"
 ]
 
 [project.urls]
