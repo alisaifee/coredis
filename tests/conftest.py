@@ -57,13 +57,17 @@ SERVER_DEFAULT_ARGS = {
     "7.2": None,
 }
 
+def get_backends():
+    backend = os.environ.get("COREDIS_ANYIO_BACKEND", None) or "asyncio"
+    if backend == "all":
+        return "asyncio", "trio"
+    elif backend == "asyncio":
+        return (("asyncio", {"use_uvloop": os.environ.get("COREDIS_UVLOOP", False)}),)
+    return backend,
 
-@pytest.fixture(scope="session", autouse=True)
-def uvloop():
-    if os.environ.get("COREDIS_UVLOOP") == "True":
-        import uvloop
-
-        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+@pytest.fixture(scope="module", params=get_backends())
+def anyio_backend(request: Any) -> Any:
+    return request.param
 
 
 @total_ordering
