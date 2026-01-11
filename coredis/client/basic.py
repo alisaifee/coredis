@@ -127,7 +127,6 @@ class Client(
         ssl_ca_certs: str | None = None,
         max_connections: int | None = None,
         max_idle_time: int | None = None,
-        idle_check_interval: float = 1,
         client_name: str | None = None,
         protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
@@ -150,7 +149,6 @@ class Client(
                 "max_connections": max_connections,
                 "decode_responses": decode_responses,
                 "max_idle_time": max_idle_time,
-                "idle_check_interval": idle_check_interval,
                 "client_name": client_name,
                 "protocol_version": protocol_version,
                 "noreply": noreply,
@@ -573,7 +571,6 @@ class Redis(Client[AnyStr]):
         ssl_ca_certs: str | None = ...,
         max_connections: int | None = ...,
         max_idle_time: int | None = ...,
-        idle_check_interval: float = ...,
         client_name: str | None = ...,
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
@@ -612,7 +609,6 @@ class Redis(Client[AnyStr]):
         ssl_ca_certs: str | None = ...,
         max_connections: int | None = ...,
         max_idle_time: int | None = ...,
-        idle_check_interval: float = ...,
         client_name: str | None = ...,
         protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
@@ -650,7 +646,6 @@ class Redis(Client[AnyStr]):
         ssl_ca_certs: str | None = None,
         max_connections: int | None = None,
         max_idle_time: int | None = None,
-        idle_check_interval: float = 1,
         client_name: str | None = None,
         protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
@@ -760,8 +755,6 @@ class Redis(Client[AnyStr]):
          :paramref:`connection_pool` is not ``None``.
         :param max_idle_time: Maximum number of a seconds an unused connection is cached
          before it is disconnected.
-        :param idle_check_interval: Periodicity of idle checks (seconds) to release idle
-         connections.
         :param client_name: The client name to identifiy with the redis server
         :param protocol_version: Whether to use the RESP (``2``) or RESP3 (``3``)
          protocol for parsing responses from the server (Default ``3``).
@@ -807,7 +800,6 @@ class Redis(Client[AnyStr]):
             ssl_ca_certs=ssl_ca_certs,
             max_connections=max_connections,
             max_idle_time=max_idle_time,
-            idle_check_interval=idle_check_interval,
             client_name=client_name,
             protocol_version=protocol_version,
             verify_version=verify_version,

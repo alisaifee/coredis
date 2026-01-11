@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, Generator, cast
 from anyio import (
     TASK_STATUS_IGNORED,
     ClosedResourceError,
+    EndOfStream,
     Event,
     Lock,
     connect_tcp,
@@ -280,6 +281,7 @@ class BaseConnection:
         except Exception as e:
             logger.exception("Connection closed unexpectedly!")
             self._last_error = e
+            raise
         finally:
             self._parser.on_disconnect()
             disconnect_exc = self._last_error or ConnectionError("Connection lost!")
@@ -302,7 +304,10 @@ class BaseConnection:
             if isinstance(response, NotEnoughData):
                 # Need more bytes; read once, feed, and retry
                 with move_on_after(self.max_idle_time) as scope:
-                    data = await self.connection.receive()
+                    try:
+                        data = await self.connection.receive()
+                    except EndOfStream:  # just finish exception loop
+                        return
                     self._parser.feed(data)
                 if scope.cancelled_caught:  # this will cleanup the connection gracefully
                     break

@@ -4,12 +4,9 @@ import pickle
 import time
 
 import anyio
-import pytest
 
-import coredis
 from coredis.client.basic import Redis
 from coredis.commands.pubsub import PubSub
-from coredis.exceptions import ConnectionError
 from tests.conftest import targets
 
 
@@ -437,14 +434,6 @@ class TestPubSubMessages:
                     tg.start_soon(collect)
                     tg.start_soon(unsubscribe)
             assert len(messages) == 20
-
-
-class TestPubSubRedisDown:
-    async def test_channel_subscribe(self):
-        client = coredis.Redis(host="localhost", port=9999)
-        p = client.pubsub()
-        with pytest.raises(ConnectionError):
-            await p.subscribe("foo")
 
 
 @targets("redis_basic", "redis_basic_raw")

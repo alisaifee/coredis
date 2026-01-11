@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from coredis import PureToken
-from coredis.commands.function import Library
+from coredis.commands.function import Library, wraps
 from coredis.commands.request import CommandRequest
 from coredis.exceptions import NotBusyError, ResponseError
 from coredis.typing import KeyT, RedisValueT, StringT
@@ -184,21 +184,18 @@ class TestLibrary:
             def __init__(self, client):
                 super().__init__(client, "coredis")
 
-            @Library.wraps("echo_key")
+            @wraps()
             def echo_key(self, key: KeyT) -> CommandRequest[StringT]: ...
 
-            @Library.wraps("return_arg")
+            @wraps()
             def return_arg(self, value: RedisValueT) -> CommandRequest[RedisValueT]: ...
 
-            @Library.wraps("default_get")
-            def default_get(self, key: KeyT, value: RedisValueT) -> CommandRequest[RedisValueT]: ...
-
-            @Library.wraps("default_get", key_spec=["quay"])
-            def default_get_variadic(
-                self, quay: str, *values: RedisValueT
+            @wraps()
+            def default_get(
+                self, key: KeyT, *values: RedisValueT
             ) -> CommandRequest[RedisValueT]: ...
 
-            @Library.wraps("hmmerge")
+            @wraps()
             def hmmerge(
                 self, key: KeyT, **values: RedisValueT
             ) -> CommandRequest[list[RedisValueT]]: ...
@@ -207,9 +204,9 @@ class TestLibrary:
         assert await lib.echo_key("bar") == _s("bar")
         assert await lib.return_arg(1) == 10
         assert await lib.default_get("bar", "fu") == _s("fu")
-        assert await lib.default_get_variadic("bar", "fu", "bar", "baz") == _s("fubarbaz")
+        assert await lib.default_get("bar", "fu", "bar", "baz") == _s("fubarbaz")
         assert await client.set("bar", "fubar")
-        assert await lib.default_get_variadic("bar", "fu", "bar", "baz") == _s("fubar")
+        assert await lib.default_get("bar", "fu", "bar", "baz") == _s("fubar")
         await client.hset("hbar", {"fu": "whut?"})
         assert await lib.hmmerge("hbar", fu="bar", bar="fu", baz="fubar") == [
             _s("whut?"),
@@ -226,10 +223,10 @@ class TestLibrary:
             def __init__(self, client):
                 super().__init__(client, "coredis")
 
-            @Library.wraps("echo_key")
+            @wraps()
             def echo_key(self, key: KeyT) -> CommandRequest[StringT]: ...
 
-            @Library.wraps("return_arg")
+            @wraps()
             def return_arg(self, value: RedisValueT) -> CommandRequest[RedisValueT]: ...
 
         fcall = mocker.spy(client, "fcall")
@@ -251,26 +248,18 @@ class TestLibrary:
             def __init__(self, client):
                 super().__init__(client, "coredis")
 
-            @Library.wraps("echo_key", readonly=False)
+            @wraps(readonly=True)
             def echo_key(self, key: KeyT) -> CommandRequest[StringT]: ...
 
-            @Library.wraps("echo_key", readonly=True)
-            def echo_key_ro(self, key: KeyT) -> CommandRequest[StringT]: ...
-
-            @Library.wraps("return_arg", readonly=False)
+            @wraps(readonly=True)
             def return_arg(self, value: RedisValueT) -> CommandRequest[RedisValueT]: ...
-
-            @Library.wraps("return_arg", readonly=True)
-            def return_arg_ro(self, value: RedisValueT) -> CommandRequest[RedisValueT]: ...
 
         fcall = mocker.spy(client, "fcall")
         fcall_ro = mocker.spy(client, "fcall_ro")
         lib = await Coredis(client)
         assert await lib.echo_key("bar") == _s("bar")
-        assert await lib.echo_key_ro("bar") == _s("bar")
-        assert await lib.return_arg(1) == 10
         with pytest.raises(ResponseError):
-            await lib.return_arg_ro(1) == 10
+            await lib.return_arg(1) == 10
 
         assert fcall.call_count == 2
         assert fcall_ro.call_count == 2

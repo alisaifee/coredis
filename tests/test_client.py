@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import ssl
-from ssl import SSLError
 
 import anyio
 import pytest
 from anyio import create_task_group, fail_after, sleep
+from exceptiongroup import ExceptionGroup
 from packaging.version import Version
 
 import coredis
@@ -227,13 +227,18 @@ class TestSSL:
             keyfile="./tests/tls/invalid-client.key",
         )
 
-        with pytest.raises(ConnectionError, match="decrypt error") as exc_info:
+        with pytest.raises(ExceptionGroup) as exc_info:
             async with coredis.Redis(
                 port=8379,
                 ssl_context=context,
             ):
                 pass
-            assert isinstance(exc_info.value.__cause__, SSLError)
+        # pretty deeply nested!
+        subgroup = exc_info.value.exceptions[0]
+        assert isinstance(subgroup, ExceptionGroup)
+        actual_error = subgroup.exceptions[0]
+        assert "decrypt error" in str(actual_error)
+        assert isinstance(actual_error, ssl.SSLError)
 
     async def test_ssl_no_verify_client(self, redis_ssl_server_no_client_auth):
         with pytest.raises(ConnectionError, match="certificate verify failed"):

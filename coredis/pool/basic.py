@@ -44,7 +44,6 @@ class ConnectionPool(AsyncContextManagerMixin):
         "max_connections": int,
         "max_idle_time": int,
         "protocol_version": int,
-        "idle_check_interval": int,
         "noreply": bool,
         "noevict": bool,
         "notouch": bool,
@@ -195,7 +194,6 @@ class ConnectionPool(AsyncContextManagerMixin):
         connection_class: type[BaseConnection] | None = None,
         max_connections: int | None = None,
         timeout: float | None = None,
-        idle_check_interval: int = 1,
         **connection_kwargs: Any,
     ) -> None:
         """
@@ -212,7 +210,6 @@ class ConnectionPool(AsyncContextManagerMixin):
         self.connection_kwargs = connection_kwargs
         self.max_connections = max_connections or 64
         self.timeout = timeout
-        self.idle_check_interval = idle_check_interval
         self.decode_responses = bool(self.connection_kwargs.get("decode_responses", False))
         self.encoding = str(self.connection_kwargs.get("encoding", "utf-8"))
         self._used_connections: set[BaseConnection] = set()

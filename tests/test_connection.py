@@ -49,12 +49,28 @@ async def test_connect_tcp_keepalive_options(redis_basic):
         socket_keepalive=True,
         socket_keepalive_options={socket.TCP_KEEPINTVL: 1, socket.TCP_KEEPCNT: 3},
     )
-    await conn._connect()
-    async with conn.connection:
+    async with create_task_group() as tg:
+        await tg.start(conn.run)
         sock = conn.connection.extra(SocketAttribute.raw_socket)
         assert sock.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE) == 1
         for k, v in ((socket.TCP_KEEPINTVL, 1), (socket.TCP_KEEPCNT, 3)):
             assert sock.getsockopt(socket.SOL_TCP, k) == v
+        tg.cancel_scope.cancel()
+
+
+@pytest.mark.os("darwin")
+async def test_connect_tcp_keepalive_options_mac(redis_basic):
+    conn = Connection(
+        socket_keepalive=True,
+        socket_keepalive_options={socket.TCP_KEEPINTVL: 1, socket.TCP_KEEPCNT: 3},
+    )
+    async with create_task_group() as tg:
+        await tg.start(conn.run)
+        sock = conn.connection.extra(SocketAttribute.raw_socket)
+        assert sock.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE) == 8
+        for k, v in ((socket.TCP_KEEPINTVL, 1), (socket.TCP_KEEPCNT, 3)):
+            assert sock.getsockopt(socket.SOL_TCP, k) == v
+        tg.cancel_scope.cancel()
 
 
 @pytest.mark.parametrize("option", ["UNKNOWN", 999])

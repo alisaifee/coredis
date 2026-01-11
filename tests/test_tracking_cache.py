@@ -13,7 +13,7 @@ from tests.conftest import targets
 class CommonExamples:
     async def test_single_entry_cache(self, client: Redis, cloner, _s):
         await client.flushall()
-        cache = LRUCache(max_keys=1, max_size_bytes=-1)
+        cache = LRUCache(max_keys=1)
         cached: Redis = await cloner(client, cache=cache)
         async with cached:
             assert not await cached.get("fubar")
@@ -26,22 +26,8 @@ class CommonExamples:
             cache.reset()
             assert await cached.get("fubar") == _s("2")
 
-    @pytest.mark.nopypy
-    async def test_max_size(self, client, cloner, _s):
-        cache = LRUCache(max_keys=1, max_size_bytes=1)
-        cached = await cloner(client, cache=cache)
-        async with cached:
-            await client.set("fubar", 1)
-            assert _s(1) == await cached.get("fubar")
-            assert _s(1) == await cached.get("fubar")
-
-    @pytest.mark.pypyonly
-    async def test_max_size_skipped(self, client, cloner, _s):
-        with pytest.raises(RuntimeError):
-            LRUCache(max_keys=1, max_size_bytes=1)
-
     async def test_eviction(self, client, cloner, _s):
-        cache = LRUCache(max_keys=1, max_size_bytes=-1)
+        cache = LRUCache(max_keys=1)
         cached = await cloner(client, cache=cache)
         async with cached:
             assert not await cached.get("fubar")
@@ -68,7 +54,7 @@ class CommonExamples:
         ],
     )
     async def test_confidence(self, client: Redis, cloner, mocker, _s, confidence, expectation):
-        cache = LRUCache(confidence=confidence, max_size_bytes=-1)
+        cache = LRUCache(confidence=confidence)
         cached = await cloner(client, cache=cache)
         async with cached:
             await cached.ping()
@@ -80,7 +66,7 @@ class CommonExamples:
             assert create_request.call_count < 100 + expectation
 
     async def test_feedback(self, client, cloner, mocker, _s):
-        cache = LRUCache(confidence=0, max_size_bytes=-1)
+        cache = LRUCache(confidence=0)
         cached = await cloner(client, cache=cache)
 
         async with cached:
@@ -94,7 +80,7 @@ class CommonExamples:
             assert feedback.call_count == 10
 
     async def test_feedback_adjust(self, client, cloner, mocker, _s):
-        cache = LRUCache(confidence=50, dynamic_confidence=True, max_size_bytes=-1)
+        cache = LRUCache(confidence=50, dynamic_confidence=True)
         cached = await cloner(client, cache=cache)
 
         async with cached:
@@ -119,7 +105,7 @@ class CommonExamples:
             assert cache.confidence == 50
 
     async def test_shared_cache(self, client, cloner, mocker, _s):
-        cache = LRUCache(max_size_bytes=-1)
+        cache = LRUCache()
         cached = await cloner(client, cache=cache)
         clones = [await cloner(client, cache=cache) for _ in range(5)]
         async with AsyncExitStack() as stack:
@@ -139,7 +125,7 @@ class CommonExamples:
             assert spy.call_count < 5, spy.call_args
 
     async def test_stats(self, client, cloner, mocker, _s):
-        cache = LRUCache(confidence=0, max_size_bytes=-1)
+        cache = LRUCache(confidence=0)
         cached = await cloner(client, cache=cache)
         async with cached:
             await client.set("barbar", "test")
@@ -190,7 +176,7 @@ class CommonExamples:
 @targets("redis_basic", "redis_basic_raw")
 class TestInvalidatingCache(CommonExamples):
     async def test_uninitialized_cache(self, client, cloner, _s):
-        cache = LRUCache(max_keys=1, max_size_bytes=-1)
+        cache = LRUCache(max_keys=1)
         assert cache.confidence == 100
         cached = await cloner(client, cache=cache)
         async with cached:
@@ -204,7 +190,7 @@ class TestInvalidatingCache(CommonExamples):
 )
 class TestClusterInvalidatingCache(CommonExamples):
     async def test_uninitialized_cache(self, client, cloner, _s):
-        cache = LRUCache(max_keys=1, max_size_bytes=-1)
+        cache = LRUCache(max_keys=1)
         assert cache.confidence == 100
         cached = await cloner(client, cache=cache)
         async with cached:

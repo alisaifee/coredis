@@ -23,23 +23,11 @@ from coredis.exceptions import ConnectionError
 from coredis.pool.basic import ConnectionPool
 from coredis.pool.cluster import ClusterConnectionPool
 from coredis.typing import (
-    Generic,
-    Hashable,
-    ModuleType,
     OrderedDict,
     RedisValueT,
     ResponseType,
     StringT,
-    TypeVar,
 )
-
-asizeof: ModuleType | None = None
-
-try:
-    from pympler import asizeof
-except (AttributeError, KeyError):
-    # Not available in pypy
-    pass
 
 if TYPE_CHECKING:
     import coredis.client
@@ -155,13 +143,6 @@ class AbstractCache(ABC):
         """
         ...
 
-    @abstractmethod
-    def shrink(self) -> None:
-        """
-        Shrink the cache to an acceptable size
-        """
-        ...
-
     @property
     @abstractmethod
     def stats(self) -> CacheStats:
@@ -189,135 +170,62 @@ class AbstractCache(ABC):
         ...
 
 
-ET = TypeVar("ET")
-
-
-class BoundedStorage(Generic[ET]):
-    """
-    Low-level LRU container.
-    """
-
-    def __init__(self, max_items: int = -1, max_bytes: int = -1):
-        self.max_items = max_items
-        self.max_bytes = max_bytes
-        self._cache: OrderedDict[Hashable, ET] = OrderedDict()
-
-        if self.max_bytes > 0 and asizeof is not None:
-            self.max_bytes += asizeof.asizeof(self._cache)
-        elif self.max_bytes > 0:
-            raise RuntimeError("max_bytes not supported as dependency pympler not available")
-
-    def get(self, key: Hashable) -> ET:
-        if key not in self._cache:
-            raise KeyError(key)
-        self._cache.move_to_end(key)
-
-        return self._cache[key]
-
-    def insert(self, key: Hashable, value: ET) -> None:
-        self._check_capacity()
-        self._cache[key] = value
-        self._cache.move_to_end(key)
-
-    def setdefault(self, key: Hashable, value: ET) -> ET:
-        try:
-            self._check_capacity()
-
-            return self.get(key)
-        except KeyError:
-            self.insert(key, value)
-
-            return self.get(key)
-
-    def remove(self, key: Hashable) -> None:
-        if key in self._cache:
-            self._cache.pop(key)
-
-    def clear(self) -> None:
-        self._cache.clear()
-
-    def popitem(self) -> tuple[Any, Any] | None:
-        """
-        Recursively remove the oldest entry. If
-        the oldest entry is another BoundedStorage trigger
-        the removal of its oldest entry and if that
-        turns out to be an empty BoundedStorage, remove that.
-        """
-        try:
-            oldest = next(iter(self._cache))
-            item = self._cache[oldest]
-        except StopIteration:
-            return None
-
-        if isinstance(item, BoundedStorage):
-            if popped := item.popitem():
-                return popped
-        if entry := self._cache.popitem(last=False):
-            return entry
-        return None
-
-    def shrink(self) -> None:
-        """
-        Remove old entries until the size of the cache
-        is less than :paramref:`BoundedStorage.max_bytes` or if
-        there is nothing left to remove.
-        """
-
-        if self.max_bytes > 0 and asizeof is not None:
-            cur_size = asizeof.asizeof(self._cache)
-            while cur_size > self.max_bytes:
-                if (popped := self.popitem()) is None:
-                    return
-                cur_size -= asizeof.asizeof(popped[0]) + asizeof.asizeof(popped[1])
-
-    def __repr__(self) -> str:
-        if asizeof is not None:
-            return (
-                f"BoundedStorage<max_items={self.max_items}, "
-                f"current_items={len(self._cache)}, "
-                f"max_bytes={self.max_bytes}, "
-                f"current_size_bytes={asizeof.asizeof(self._cache)}>"
-            )
-        else:
-            return f"LruCache<max_items={self.max_items}, current_items={len(self._cache)}, "
-
-    def _check_capacity(self) -> None:
-        if len(self._cache) == self.max_items:
-            self._cache.popitem(last=False)
-
-
 class LRUCache(AbstractCache):
-    """
-    Concrete implementation of AbstractCache using an LRU eviction policy.
-    Maintains storage, statistics, and confidence levels.
-    """
-
     def __init__(
         self,
         max_keys: int = 2**12,
-        max_size_bytes: int = 64 * 1024 * 1024,
         confidence: float = 100,
         dynamic_confidence: bool = False,
     ) -> None:
-        """
-        :param max_keys: maximum keys to cache. A negative value represents
-         and unbounded cache.
-        :param max_size_bytes: maximum size in bytes for the local cache.
-         A negative value represents an unbounded cache.
-        :param confidence: 0 - 100. Lower values will result in the client
-         discarding and / or validating the cached responses
-        :param dynamic_confidence: Whether to adjust the confidence based on
-         sampled validations. Tainted values drop the confidence by 0.1% and
-         confirmations of correct cached values will increase the confidence by 0.01%
-         up to 100.
-        """
         self._confidence = self._original_confidence = confidence
         self._dynamic_confidence = dynamic_confidence
         self._stats = CacheStats()
-        # Nesting: Key -> Command -> Args -> Response
-        self._storage: BoundedStorage[BoundedStorage[BoundedStorage[ResponseType]]] = (
-            BoundedStorage(max_keys, max_size_bytes)
-        )
+        self.max_keys = max_keys
+        # key -> (command, args) -> response
+        self._storage: OrderedDict[bytes, dict[tuple, ResponseType]] = OrderedDict()
+
+    def put(
+        self, command: bytes, key: RedisValueT, *args: RedisValueT, value: ResponseType
+    ) -> None:
+        key_bytes = b(key)
+        composite_key = (command, make_hashable(*args))
+
+        if key_bytes not in self._storage and len(self._storage) >= self.max_keys:
+            if self._storage:
+                self._storage.popitem(last=False)
+
+        # Get or create the key's cache dict
+        if key_bytes not in self._storage:
+            self._storage[key_bytes] = {}
+
+        self._storage[key_bytes][composite_key] = value
+        self._storage.move_to_end(key_bytes)
+
+    def get(self, command: bytes, key: RedisValueT, *args: RedisValueT) -> ResponseType:
+        key_bytes = b(key)
+        if key_bytes not in self._storage:
+            self._stats.miss(key)
+            raise KeyError(key)
+
+        # Move to end for LRU
+        self._storage.move_to_end(key_bytes)
+        composite_key = (command, make_hashable(*args))
+        if composite_key not in self._storage[key_bytes]:
+            self._stats.miss(key)
+            raise KeyError(key)
+
+        self._stats.hit(key)
+        return self._storage[key_bytes][composite_key]
+
+    def invalidate(self, *keys: RedisValueT) -> None:
+        for key in keys:
+            self._stats.invalidate(key)
+            self._storage.pop(b(key), None)
+
+    def reset(self) -> None:
+        self._storage.clear()
+        self._stats.compact()
+        self._confidence = self._original_confidence
 
     @property
     def stats(self) -> CacheStats:
@@ -326,27 +234,6 @@ class LRUCache(AbstractCache):
     @property
     def confidence(self) -> float:
         return self._confidence
-
-    def get(self, command: bytes, key: RedisValueT, *args: RedisValueT) -> ResponseType:
-        try:
-            cached = self._storage.get(b(key)).get(command).get(make_hashable(*args))
-            self._stats.hit(key)
-            return cached
-        except KeyError:
-            self._stats.miss(key)
-            raise
-
-    def put(
-        self, command: bytes, key: RedisValueT, *args: RedisValueT, value: ResponseType
-    ) -> None:
-        self._storage.setdefault(b(key), BoundedStorage()).setdefault(
-            command, BoundedStorage()
-        ).insert(make_hashable(*args), value)
-
-    def invalidate(self, *keys: RedisValueT) -> None:
-        for key in keys:
-            self._stats.invalidate(key)
-            self._storage.remove(b(key))
 
     def feedback(self, command: bytes, key: RedisValueT, *args: RedisValueT, match: bool) -> None:
         if not match:
@@ -358,15 +245,6 @@ class LRUCache(AbstractCache):
                 100.0,
                 max(0.0, self._confidence * (1.0001 if match else 0.999)),
             )
-
-    def reset(self) -> None:
-        self._storage.clear()
-        self._stats.compact()
-        self._confidence = self._original_confidence
-
-    def shrink(self) -> None:
-        self._storage.shrink()
-        self._stats.compact()
 
 
 class TrackingCache(AbstractCache):
@@ -404,9 +282,6 @@ class TrackingCache(AbstractCache):
     def reset(self) -> None:
         self._cache.reset()
 
-    def shrink(self) -> None:
-        self._cache.shrink()
-
     @property
     def stats(self) -> CacheStats:
         return self._cache.stats
@@ -426,16 +301,13 @@ class NodeTrackingCache(TrackingCache):
     performed on the keys by another client.
     """
 
-    def __init__(
-        self, cache: AbstractCache | None = None, compact_interval_seconds: int = 300
-    ) -> None:
+    def __init__(self, cache: AbstractCache | None = None) -> None:
         """
         :param cache: AbstractCache instance to wrap
         :param compact_interval_seconds: frequency to check if cache is too big and shrink it
         """
         self._cache = cache or LRUCache()
         self.client_id: int | None = None
-        self.compact_interval = compact_interval_seconds
 
     def get_client_id(
         self,
@@ -472,7 +344,6 @@ class NodeTrackingCache(TrackingCache):
                     async with create_task_group() as self._tg:
                         self._tg.start_soon(self._consumer)
                         self._tg.start_soon(self._keepalive)
-                        self._tg.start_soon(self._compact)
                         if not started:
                             task_status.started()
                             started = True
@@ -491,11 +362,6 @@ class NodeTrackingCache(TrackingCache):
             for key in messages:
                 self._cache.invalidate(key)
 
-    async def _compact(self) -> None:
-        while True:
-            await sleep(self.compact_interval)
-            self.shrink()
-
 
 class ClusterTrackingCache(TrackingCache):
     """
@@ -507,10 +373,7 @@ class ClusterTrackingCache(TrackingCache):
     in the cluster to listen to invalidation events
     """
 
-    def get_client_id(
-        self,
-        connection: coredis.connection.BaseConnection,
-    ) -> int | None:
+    def get_client_id(self, connection: coredis.connection.BaseConnection) -> int | None:
         if cache := self.node_caches.get(connection.location):
             return cache.client_id
         return None

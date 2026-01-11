@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from exceptiongroup import ExceptionGroup
 
 import coredis
 from coredis.credentials import UserPassCredentialProvider
@@ -19,8 +20,9 @@ from coredis.exceptions import AuthenticationError, ConnectionError
 async def test_invalid_authentication(redis_auth, username, password):
     client = coredis.Redis("localhost", 6389, username=username, password=password)
     async with client:
-        with pytest.raises(AuthenticationError):
+        with pytest.raises(ExceptionGroup) as e:
             await client.ping()
+        assert isinstance(e.value.exceptions[0], AuthenticationError)
 
 
 @pytest.mark.parametrize(
@@ -39,8 +41,9 @@ async def test_invalid_authentication_cred_provider(redis_auth_cred_provider, us
         credential_provider=UserPassCredentialProvider(username=username, password=password),
     )
     async with client:
-        with pytest.raises(AuthenticationError):
+        with pytest.raises(ExceptionGroup) as e:
             await client.ping()
+        assert isinstance(e.value.exceptions[0], AuthenticationError)
 
 
 async def test_valid_authentication(redis_auth):
@@ -74,7 +77,7 @@ async def test_legacy_authentication(redis_auth):
         with pytest.raises(ConnectionError):
             async with coredis.Redis("localhost", 6389, password="sekret") as client:
                 await client.ping()
-        with pytest.raises(AuthenticationError):
+        with pytest.raises(ExceptionGroup) as e:
             async with coredis.Redis(
                 "localhost",
                 6389,
@@ -83,6 +86,7 @@ async def test_legacy_authentication(redis_auth):
                 protocol_version=2,
             ) as client:
                 await client.ping()
+        assert isinstance(e.value.exceptions[0], AuthenticationError)
 
         async with coredis.Redis(
             "localhost", 6389, password="sekret", protocol_version=2
@@ -106,13 +110,14 @@ async def test_legacy_authentication_cred_provider(redis_auth_cred_provider, moc
                 6389,
                 credential_provider=UserPassCredentialProvider(password="sekret"),
             ).ping()
-        with pytest.raises(AuthenticationError):
+        with pytest.raises(ExceptionGroup) as e:
             await coredis.Redis(
                 "localhost",
                 6389,
                 credential_provider=UserPassCredentialProvider(username="bogus", password="sekret"),
                 protocol_version=2,
             ).ping()
+        assert isinstance(e.value.exceptions[0], AuthenticationError)
 
         assert (
             b"PONG"

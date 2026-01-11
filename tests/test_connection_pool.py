@@ -9,24 +9,15 @@ from anyio import move_on_after, sleep
 import coredis
 from coredis._utils import query_param_to_bool
 from coredis.connection import Connection, UnixDomainSocketConnection
-from coredis.exceptions import (
-    ConnectionError,
-    RedisError,
-)
+from coredis.exceptions import RedisError
 
 
 class TestConnectionPool:
-    def get_pool(
-        self,
-        connection_class=Connection,
-        connection_kwargs=None,
-        max_connections=None,
-    ):
+    def get_pool(self, connection_class=Connection, connection_kwargs=None, max_connections=None):
         connection_kwargs = connection_kwargs or {}
         pool = coredis.ConnectionPool(
             connection_class=connection_class,
             max_connections=max_connections,
-            blocking=False,
             **connection_kwargs,
         )
         return pool
@@ -34,31 +25,32 @@ class TestConnectionPool:
     async def test_multiple_connections(self):
         pool = self.get_pool()
         async with pool:
-            c1 = await pool.acquire(blocking=True)
-            c2 = await pool.acquire(blocking=True)
-            assert c1 != c2
+            async with pool.acquire() as c1, pool.acquire() as c2:
+                assert c1 != c2
 
     async def test_max_connections(self):
         pool = self.get_pool(max_connections=2)
         async with pool:
-            await pool.acquire(blocking=True)
-            await pool.acquire(blocking=True)
-            with pytest.raises(ConnectionError):
-                await pool.acquire(blocking=True)
+            async with pool.acquire(), pool.acquire():
+                with move_on_after(1) as scope:
+                    async with pool.acquire():
+                        pass
+                assert scope.cancelled_caught
 
     async def test_pool_disconnect(self):
         pool = self.get_pool(max_connections=3)
         async with pool:
-            await pool.acquire(blocking=True)
-            await pool.acquire(blocking=True)
-            await pool.acquire(blocking=True)
-        assert pool._connections == set()
+            async with pool.acquire(), pool.acquire(), pool.acquire():
+                pass
+        assert pool._used_connections == set()
 
     async def test_reuse_previously_released_connection(self):
         pool = self.get_pool()
         async with pool:
-            c1 = await pool.acquire()
-            c2 = await pool.acquire()
+            async with pool.acquire() as c1:
+                pass
+            async with pool.acquire() as c2:
+                pass
         assert c1 == c2
 
     def test_repr_contains_db_info_tcp(self):
@@ -77,93 +69,12 @@ class TestConnectionPool:
         assert repr(pool) == expected
 
     async def test_connection_idle_check(self):
-        rs = coredis.Redis(
-            host="127.0.0.1",
-            port=6379,
-            db=0,
-            max_idle_time=0.2,
-        )
+        rs = coredis.Redis(host="127.0.0.1", port=6379, db=0, max_idle_time=0.2)
         async with rs:
             await rs.info()
-            assert len(rs.connection_pool._connections) >= 1
+            assert len(rs.connection_pool._free_connections) >= 1
             await sleep(0.3)
-            assert len(rs.connection_pool._connections) == 0
-
-
-class TestBlockingConnectionPool:
-    def get_pool(
-        self,
-        connection_kwargs=None,
-        max_connections=None,
-        connection_class=Connection,
-        max_idle_time=None,
-    ):
-        connection_kwargs = connection_kwargs or {}
-        pool = coredis.ConnectionPool(
-            connection_class=connection_class,
-            max_connections=max_connections,
-            blocking=True,
-            max_idle_time=max_idle_time,
-            **connection_kwargs,
-        )
-
-        return pool
-
-    async def test_multiple_connections(self):
-        pool = self.get_pool()
-        async with pool:
-            c1 = await pool.acquire(blocking=True)
-            c2 = await pool.acquire(blocking=True)
-            assert c1 != c2
-
-    async def test_max_connections_timeout(self):
-        pool = self.get_pool(max_connections=2)
-        async with pool:
-            with move_on_after(1) as scope:
-                await pool.acquire(blocking=True)
-                await pool.acquire(blocking=True)
-                await pool.acquire(blocking=True)
-            assert scope.cancelled_caught
-
-    async def test_pool_disconnect(self):
-        pool = self.get_pool()
-        async with pool:
-            await pool.acquire(blocking=True)
-            await pool.acquire(blocking=True)
-            await pool.acquire(blocking=True)
-        assert pool._connections == set()
-
-    def test_repr_contains_db_info_tcp(self):
-        connection_kwargs = {"host": "localhost", "port": 6379, "db": 1}
-        pool = self.get_pool(
-            connection_kwargs=connection_kwargs, connection_class=coredis.Connection
-        )
-        expected = "ConnectionPool<Connection<host=localhost,port=6379,db=1>>"
-        assert repr(pool) == expected
-
-    def test_repr_contains_db_info_unix(self):
-        connection_kwargs = {"path": "/abc", "db": 1}
-        pool = self.get_pool(
-            connection_kwargs=connection_kwargs,
-            connection_class=UnixDomainSocketConnection,
-        )
-        expected = "ConnectionPool<UnixDomainSocketConnection<path=/abc,db=1>>"
-        assert repr(pool) == expected
-
-    async def test_connection_idle_check(self):
-        rs = coredis.Redis(
-            host="127.0.0.1",
-            port=6379,
-            db=0,
-            connection_pool=coredis.ConnectionPool(
-                blocking=True, max_idle_time=0.2, host="127.0.01", port=6379
-            ),
-        )
-        async with rs:
-            await rs.info()
-            assert len(rs.connection_pool._connections) >= 1
-            await sleep(0.3)
-            assert len(rs.connection_pool._connections) == 0
+            assert len(rs.connection_pool._free_connections) == 0
 
 
 class TestConnectionPoolURLParsing:
@@ -176,7 +87,6 @@ class TestConnectionPoolURLParsing:
             "db": 0,
             "username": None,
             "password": None,
-            "max_idle_time": None,
         }
 
     def test_hostname(self):
@@ -188,7 +98,6 @@ class TestConnectionPoolURLParsing:
             "db": 0,
             "username": None,
             "password": None,
-            "max_idle_time": None,
         }
 
     def test_quoted_hostname(self):
@@ -202,7 +111,6 @@ class TestConnectionPoolURLParsing:
             "db": 0,
             "username": None,
             "password": None,
-            "max_idle_time": None,
         }
 
     def test_port(self):
@@ -214,7 +122,6 @@ class TestConnectionPoolURLParsing:
             "db": 0,
             "username": None,
             "password": None,
-            "max_idle_time": None,
         }
 
     def test_password(self):
@@ -226,7 +133,6 @@ class TestConnectionPoolURLParsing:
             "db": 0,
             "username": "",
             "password": "mypassword",
-            "max_idle_time": None,
         }
 
     def test_quoted_password(self):
@@ -240,7 +146,6 @@ class TestConnectionPoolURLParsing:
             "db": 0,
             "username": None,
             "password": "/mypass/+ word=$+",
-            "max_idle_time": None,
         }
 
     def test_db_as_argument(self):
@@ -252,7 +157,6 @@ class TestConnectionPoolURLParsing:
             "db": 1,
             "username": None,
             "password": None,
-            "max_idle_time": None,
         }
 
     def test_db_in_path(self):
@@ -264,7 +168,6 @@ class TestConnectionPoolURLParsing:
             "db": 2,
             "username": None,
             "password": None,
-            "max_idle_time": None,
         }
 
     def test_db_in_querystring(self):
@@ -276,7 +179,6 @@ class TestConnectionPoolURLParsing:
             "db": 3,
             "username": None,
             "password": None,
-            "max_idle_time": None,
         }
 
     def test_extra_typed_querystring_options(self):
@@ -293,7 +195,6 @@ class TestConnectionPoolURLParsing:
             "connect_timeout": 10.0,
             "username": None,
             "password": None,
-            "max_idle_time": None,
         }
 
     def test_boolean_parsing(self):
@@ -335,11 +236,7 @@ class TestConnectionPoolURLParsing:
 
     def test_max_idle_times_querystring_option(self):
         pool = coredis.ConnectionPool.from_url("redis://localhost?max_idle_time=5")
-        assert pool.max_idle_time == 5
-
-    def test_idle_check_interval_querystring_option(self):
-        pool = coredis.ConnectionPool.from_url("redis://localhost?idle_check_interval=1")
-        assert pool.idle_check_interval == 1
+        assert pool.connection_kwargs["max_idle_time"] == 5
 
     def test_extra_querystring_options(self):
         pool = coredis.ConnectionPool.from_url("redis://localhost?a=1&b=2")
@@ -352,7 +249,6 @@ class TestConnectionPoolURLParsing:
             "password": None,
             "a": "1",
             "b": "2",
-            "max_idle_time": None,
         }
 
     def test_client_creates_connection_pool(self):
@@ -369,7 +265,6 @@ class TestConnectionPoolURLParsing:
             "noreply": False,
             "noevict": False,
             "notouch": False,
-            "max_idle_time": None,
         }
 
 
@@ -382,7 +277,6 @@ class TestConnectionPoolUnixSocketURLParsing:
             "db": 0,
             "username": None,
             "password": None,
-            "max_idle_time": None,
         }
 
     def test_password(self):
@@ -393,7 +287,6 @@ class TestConnectionPoolUnixSocketURLParsing:
             "db": 0,
             "username": "",
             "password": "mypassword",
-            "max_idle_time": None,
         }
 
     def test_quoted_password(self):
@@ -406,7 +299,6 @@ class TestConnectionPoolUnixSocketURLParsing:
             "db": 0,
             "username": None,
             "password": "/mypass/+ word=$+",
-            "max_idle_time": None,
         }
 
     def test_quoted_path(self):
@@ -420,7 +312,6 @@ class TestConnectionPoolUnixSocketURLParsing:
             "db": 0,
             "username": None,
             "password": "mypassword",
-            "max_idle_time": None,
         }
 
     def test_db_as_argument(self):
@@ -431,7 +322,6 @@ class TestConnectionPoolUnixSocketURLParsing:
             "db": 1,
             "username": None,
             "password": None,
-            "max_idle_time": None,
         }
 
     def test_db_in_querystring(self):
@@ -442,7 +332,6 @@ class TestConnectionPoolUnixSocketURLParsing:
             "db": 2,
             "username": None,
             "password": None,
-            "max_idle_time": None,
         }
 
     def test_max_connections_querystring_option(self):
@@ -451,11 +340,7 @@ class TestConnectionPoolUnixSocketURLParsing:
 
     def test_max_idle_times_querystring_option(self):
         pool = coredis.ConnectionPool.from_url("unix:///localhost?max_idle_time=5")
-        assert pool.max_idle_time == 5
-
-    def test_idle_check_interval_querystring_option(self):
-        pool = coredis.ConnectionPool.from_url("unix:///localhost?idle_check_interval=1")
-        assert pool.idle_check_interval == 1
+        assert pool.connection_kwargs["max_idle_time"] == 5
 
     def test_extra_querystring_options(self):
         pool = coredis.ConnectionPool.from_url("unix:///socket?a=1&b=2")
@@ -467,7 +352,6 @@ class TestConnectionPoolUnixSocketURLParsing:
             "password": None,
             "a": "1",
             "b": "2",
-            "max_idle_time": None,
         }
 
 
@@ -482,7 +366,6 @@ class TestSSLConnectionURLParsing:
             "db": 0,
             "username": None,
             "password": None,
-            "max_idle_time": None,
         }
 
     @pytest.mark.parametrize(
@@ -528,15 +411,13 @@ class TestConnection:
         """
         client = coredis.Redis()
         async with client:
-            async with client.pipeline() as pipe:
-                pipe.create_request(
-                    b"DEBUG", b"ERROR", b"LOADING fake message", callback=lambda r, **k: r
-                )
-                with pytest.raises(RedisError):
-                    await pipe._execute()
-                pool = client.connection_pool
-                assert len(pool._connections) >= 1
-                return
+            with pytest.raises(RedisError):
+                async with client.pipeline() as pipe:
+                    pipe.create_request(
+                        b"DEBUG", b"ERROR", b"LOADING fake message", callback=lambda r, **k: r
+                    )
+                    pool = client.connection_pool
+                    assert len(pool._used_connections) >= 1
 
     def test_connect_from_url_tcp(self):
         connection = coredis.Redis.from_url("redis://localhost")
