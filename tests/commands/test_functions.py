@@ -154,7 +154,6 @@ class TestLibrary:
         assert await library["return_arg"](args=(1.0, 2.0, 3.0), keys=["A"]) == 10
 
     @pytest.mark.parametrize("client_arguments", [{"readonly": True}])
-    @pytest.mark.clusteronly
     async def test_call_library_function_ro(
         self, client, simple_library, _s, client_arguments, mocker
     ):
@@ -184,7 +183,7 @@ class TestLibrary:
             def __init__(self, client):
                 super().__init__(client, "coredis")
 
-            @wraps()
+            @wraps(readonly=True)
             def echo_key(self, key: KeyT) -> CommandRequest[StringT]: ...
 
             @wraps()
@@ -215,7 +214,6 @@ class TestLibrary:
         ]
 
     @pytest.mark.parametrize("client_arguments", [{"readonly": True}])
-    @pytest.mark.clusteronly
     async def test_subclass_wrap_ro_defaults(
         selfself, client, simple_library, _s, client_arguments, mocker
     ):
@@ -223,7 +221,7 @@ class TestLibrary:
             def __init__(self, client):
                 super().__init__(client, "coredis")
 
-            @wraps()
+            @wraps(readonly=True)
             def echo_key(self, key: KeyT) -> CommandRequest[StringT]: ...
 
             @wraps()
@@ -240,7 +238,6 @@ class TestLibrary:
         assert fcall_ro.call_count == 1
 
     @pytest.mark.parametrize("client_arguments", [{"readonly": True}])
-    @pytest.mark.clusteronly
     async def test_subclass_wrap_ro_forced(
         selfself, client, simple_library, _s, client_arguments, mocker
     ):
@@ -261,5 +258,5 @@ class TestLibrary:
         with pytest.raises(ResponseError):
             await lib.return_arg(1) == 10
 
-        assert fcall.call_count == 2
+        assert fcall.call_count == 0
         assert fcall_ro.call_count == 2
