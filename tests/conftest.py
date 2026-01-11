@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import os
 import platform
+import re
 import socket
 import time
 from functools import total_ordering
@@ -11,6 +12,7 @@ from typing import Any, Generator
 
 import pytest
 import redis
+from exceptiongroup import BaseExceptionGroup
 from packaging import version
 from pytest_lazy_fixtures import lf
 
@@ -1151,3 +1153,73 @@ def pytest_collection_modifyitems(items):
 
                 for token in tokens:
                     item.add_marker(getattr(pytest.mark, token))
+
+
+@contextlib.contextmanager
+def raises_in_group(
+    expected_exception: type[Exception] | tuple[type[Exception], ...],
+    match: str | None = None,
+):
+    # Normalize to tuple
+    if not isinstance(expected_exception, tuple):
+        expected_exception = (expected_exception,)
+
+    exception_caught = None
+
+    try:
+        yield
+    except BaseExceptionGroup as eg:
+        # Search for expected exception in the exception group
+        exception_caught = _find_exception_in_group(eg, expected_exception)
+        if exception_caught is None:
+            raise AssertionError(
+                f"Expected exception {expected_exception} not found in ExceptionGroup. "
+                f"ExceptionGroup contains: {_format_exception_group(eg)}"
+            )
+    except BaseException as e:
+        # Check if it's the expected exception type
+        if not isinstance(e, expected_exception):
+            raise AssertionError(f"Expected {expected_exception} but got {type(e).__name__}: {e}")
+        exception_caught = e
+    else:
+        raise AssertionError(f"Expected {expected_exception} but no exception was raised")
+
+    # Check the match pattern if provided
+    if match is not None and exception_caught is not None:
+        exception_message = str(exception_caught)
+        if not re.search(match, exception_message):
+            raise AssertionError(
+                f"Exception message '{exception_message}' does not match pattern '{match}'"
+            )
+
+    return exception_caught
+
+
+def _find_exception_in_group(
+    eg: BaseExceptionGroup, expected_types: tuple[type[Exception], ...]
+) -> Exception | None:
+    """
+    Recursively search for an exception of the expected type in an ExceptionGroup.
+
+    Returns the first matching exception found, or None if no match.
+    """
+    for exc in eg.exceptions:
+        if isinstance(exc, BaseExceptionGroup):
+            # Recursively search nested groups
+            found = _find_exception_in_group(exc, expected_types)
+            if found is not None:
+                return found
+        elif isinstance(exc, expected_types):
+            return exc
+    return None
+
+
+def _format_exception_group(eg: BaseExceptionGroup) -> str:
+    """Format exception group contents for error messages."""
+    exception_types = []
+    for exc in eg.exceptions:
+        if isinstance(exc, BaseExceptionGroup):
+            exception_types.append(f"ExceptionGroup({_format_exception_group(exc)})")
+        else:
+            exception_types.append(type(exc).__name__)
+    return ", ".join(exception_types)

@@ -3,7 +3,6 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
-from exceptiongroup import ExceptionGroup
 
 import coredis
 from coredis.exceptions import (
@@ -13,7 +12,7 @@ from coredis.exceptions import (
     ResponseError,
 )
 from coredis.sentinel import Sentinel, SentinelConnectionPool
-from tests.conftest import targets
+from tests.conftest import raises_in_group, targets
 
 
 async def test_init_compose_sentinel(redis_sentinel: Sentinel):
@@ -169,10 +168,9 @@ class TestSentinelCommand:
                 yield item
 
         replica_rotate.return_value = async_iter([])
-        with pytest.raises(ExceptionGroup) as group:
+        with raises_in_group(ReplicaNotFoundError):
             async with p:
                 await p.ping()
-        assert isinstance(group._excinfo[1].exceptions[0], ReplicaNotFoundError)
 
     async def test_write_to_replica(self, client):
         p = client.replica_for("mymaster")
