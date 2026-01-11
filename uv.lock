@@ -516,7 +516,7 @@ ci = [
     { name = "ruff" },
     { name = "trio" },
     { name = "types-deprecated" },
-    { name = "uvloop" },
+    { name = "uvloop", marker = "platform_python_implementation != 'PyPy'" },
 ]
 dev = [
     { name = "aiobotocore" },
@@ -545,7 +545,7 @@ dev = [
     { name = "ruff" },
     { name = "trio" },
     { name = "types-deprecated" },
-    { name = "uvloop" },
+    { name = "uvloop", marker = "platform_python_implementation != 'PyPy'" },
 ]
 docs = [
     { name = "aiobotocore" },
@@ -587,7 +587,7 @@ docs = [
     { name = "sphinxext-opengraph" },
     { name = "trio" },
     { name = "types-deprecated" },
-    { name = "uvloop" },
+    { name = "uvloop", marker = "platform_python_implementation != 'PyPy'" },
 ]
 orjson = [
     { name = "orjson" },
@@ -611,7 +611,7 @@ test = [
     { name = "pytest-reverse" },
     { name = "redis" },
     { name = "trio" },
-    { name = "uvloop" },
+    { name = "uvloop", marker = "platform_python_implementation != 'PyPy'" },
 ]
 
 [package.metadata]
@@ -657,7 +657,7 @@ ci = [
     { name = "ruff" },
     { name = "trio", specifier = ">=0.31.0" },
     { name = "types-deprecated" },
-    { name = "uvloop" },
+    { name = "uvloop", marker = "platform_python_implementation != 'PyPy'" },
 ]
 dev = [
     { name = "aiobotocore", specifier = ">=2.15.2" },
@@ -686,7 +686,7 @@ dev = [
     { name = "ruff" },
     { name = "trio", specifier = ">=0.31.0" },
     { name = "types-deprecated" },
-    { name = "uvloop" },
+    { name = "uvloop", marker = "platform_python_implementation != 'PyPy'" },
 ]
 docs = [
     { name = "aiobotocore", specifier = ">=2.15.2" },
@@ -727,7 +727,7 @@ docs = [
     { name = "sphinxext-opengraph", specifier = "==0.13.0" },
     { name = "trio", specifier = ">=0.31.0" },
     { name = "types-deprecated" },
-    { name = "uvloop" },
+    { name = "uvloop", marker = "platform_python_implementation != 'PyPy'" },
 ]
 orjson = [{ name = "orjson" }]
 test = [
@@ -748,7 +748,7 @@ test = [
     { name = "pytest-reverse" },
     { name = "redis" },
     { name = "trio", specifier = ">=0.31.0" },
-    { name = "uvloop" },
+    { name = "uvloop", marker = "platform_python_implementation != 'PyPy'" },
 ]
 
 [[package]]

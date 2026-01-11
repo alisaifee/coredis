@@ -83,7 +83,7 @@ test = [
   "asyncache>=0.3.1",
   "moto",
   "trio>=0.31.0",
-  "uvloop"
+  "uvloop; platform.python_implementation != 'PyPy'",
 ]
 
 dev = [
