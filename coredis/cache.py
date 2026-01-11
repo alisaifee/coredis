@@ -182,7 +182,7 @@ class LRUCache(AbstractCache):
         self._stats = CacheStats()
         self.max_keys = max_keys
         # key -> (command, args) -> response
-        self._storage: OrderedDict[bytes, dict[tuple, ResponseType]] = OrderedDict()
+        self._storage: OrderedDict[bytes, dict[tuple[bytes, Any], ResponseType]] = OrderedDict()
 
     def put(
         self, command: bytes, key: RedisValueT, *args: RedisValueT, value: ResponseType
