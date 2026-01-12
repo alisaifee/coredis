@@ -8,8 +8,6 @@ from typing import TYPE_CHECKING, Any, cast
 
 from anyio import (
     TASK_STATUS_IGNORED,
-    ConnectionFailed,
-    EndOfStream,
     create_task_group,
     current_time,
     sleep,
@@ -19,7 +17,7 @@ from exceptiongroup import catch
 
 from coredis._utils import b, logger, make_hashable
 from coredis.commands.constants import CommandName
-from coredis.exceptions import ConnectionError
+from coredis.exceptions import RETRYABLE
 from coredis.pool.basic import ConnectionPool
 from coredis.pool.cluster import ClusterConnectionPool
 from coredis.typing import (
@@ -31,7 +29,6 @@ from coredis.typing import (
 
 if TYPE_CHECKING:
     import coredis.client
-_retryable_errors = (ConnectionError, ConnectionFailed, EndOfStream)
 
 
 @dataclasses.dataclass
@@ -335,7 +332,7 @@ class NodeTrackingCache(TrackingCache):
         while True:
             # retry with exponential backoff
             await sleep(min(tries**2, 300))
-            with catch({_retryable_errors: handle_error}):
+            with catch({RETRYABLE: handle_error}):
                 async with pool.acquire() as self._connection:
                     if self._connection.tracking_client_id:
                         await self._connection.update_tracking_client(False)

@@ -24,7 +24,6 @@ from anyio import (
     move_on_after,
 )
 from anyio.abc import ByteStream, SocketAttribute, TaskStatus
-from anyio.streams.tls import TLSStream
 from typing_extensions import override
 
 import coredis
@@ -36,6 +35,7 @@ from coredis.credentials import (
     UserPassCredentialProvider,
 )
 from coredis.exceptions import (
+    RETRYABLE,
     AuthenticationRequiredError,
     ConnectionError,
     RedisError,
@@ -43,6 +43,7 @@ from coredis.exceptions import (
     UnknownCommandError,
 )
 from coredis.parser import NotEnoughData, Parser
+from coredis.retry import ExponentialBackoffRetryPolicy
 from coredis.tokens import PureToken
 from coredis.typing import (
     Awaitable,
@@ -262,7 +263,8 @@ class BaseConnection:
         and initiate any post connect callbacks.
         """
 
-        self._connection = await self._connect()
+        retry = ExponentialBackoffRetryPolicy(RETRYABLE, 3, 0.5)
+        self._connection = await retry.call_with_retries(self._connect)
         try:
             async with self.connection, self._parser.push_messages, create_task_group() as tg:
                 tg.start_soon(self.listen_for_responses)
@@ -605,14 +607,16 @@ class Connection(BaseConnection):
     @override
     async def _connect(self) -> ByteStream:
         with fail_after(self._connect_timeout):
-            connection: ByteStream = await connect_tcp(self.host, self.port)
             if self.ssl_context:
-                connection = await TLSStream.wrap(  # TODO: standard_compatible False, for debugging
-                    connection,
+                connection: ByteStream = await connect_tcp(
+                    self.host,
+                    self.port,
+                    tls=True,
                     ssl_context=self.ssl_context,
-                    standard_compatible=True,
-                    server_side=False,
+                    tls_standard_compatible=False,
                 )
+            else:
+                connection = await connect_tcp(self.host, self.port)
             sock = connection.extra(SocketAttribute.raw_socket, default=None)
             if sock is not None:
                 if self.socket_keepalive:  # TCP_KEEPALIVE

@@ -25,7 +25,7 @@ from exceptiongroup import catch
 from coredis._utils import b, hash_slot, logger, nativestr
 from coredis.commands.constants import CommandName
 from coredis.connection import BaseConnection, Connection
-from coredis.exceptions import ConnectionError, PubSubError, TimeoutError
+from coredis.exceptions import RETRYABLE, ConnectionError, PubSubError, TimeoutError
 from coredis.parser import (
     PUBLISH_MESSAGE_TYPES,
     SUBUNSUB_MESSAGE_TYPES,
@@ -62,7 +62,6 @@ PoolT = TypeVar("PoolT", bound="coredis.pool.ConnectionPool")
 #: Callables for message handler callbacks. The callbacks
 #:  can be sync or async.
 SubscriptionCallback = Callable[[PubSubMessage], Awaitable[None]] | Callable[[PubSubMessage], None]
-_retryable_errors = (ConnectionError, ConnectionFailed, EndOfStream)
 
 
 class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
@@ -155,7 +154,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         while True:
             # retry with exponential backoff
             await sleep(min(tries**2, 300))
-            with catch({_retryable_errors: handle_error}):
+            with catch({RETRYABLE: handle_error}):
                 async with self.connection_pool.acquire() as self._connection:
                     async with create_task_group() as tg:
                         self._current_scope = tg.cancel_scope
