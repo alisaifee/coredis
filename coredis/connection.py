@@ -608,7 +608,10 @@ class Connection(BaseConnection):
             connection: ByteStream = await connect_tcp(self.host, self.port)
             if self.ssl_context:
                 connection = await TLSStream.wrap(  # TODO: standard_compatible False, for debugging
-                    connection, ssl_context=self.ssl_context, standard_compatible=True
+                    connection,
+                    ssl_context=self.ssl_context,
+                    standard_compatible=True,
+                    server_side=False,
                 )
             sock = connection.extra(SocketAttribute.raw_socket, default=None)
             if sock is not None:
