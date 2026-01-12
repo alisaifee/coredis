@@ -6,7 +6,6 @@ import math
 import os
 import socket
 import ssl
-import warnings
 from abc import abstractmethod
 from collections import defaultdict, deque
 from typing import TYPE_CHECKING, Any, Generator, cast
@@ -48,7 +47,6 @@ from coredis.typing import (
     Awaitable,
     Callable,
     ClassVar,
-    Literal,
     RedisValueT,
     ResponseType,
     TypeVar,
@@ -171,7 +169,6 @@ class BaseConnection:
         decode_responses: bool = False,
         *,
         client_name: str | None = None,
-        protocol_version: Literal[2, 3] = 3,
         noreply: bool = False,
         noevict: bool = False,
         notouch: bool = False,
@@ -189,8 +186,6 @@ class BaseConnection:
         ] = list()
         self.encoding = encoding
         self.decode_responses = decode_responses
-        #: Whether the connection should use RESP or RESP3
-        self.protocol_version = protocol_version
         self.server_version: str | None = None
         self.client_name = client_name
         #: id for this connection as returned by the redis server
@@ -362,7 +357,7 @@ class BaseConnection:
         if not self.needs_handshake:
             return
 
-        hello_command_args: list[int | str | bytes] = [self.protocol_version]
+        hello_command_args: list[int | str | bytes] = [3]
         if creds := (
             await self.credential_provider.get_credentials()
             if self.credential_provider
@@ -384,15 +379,10 @@ class BaseConnection:
                 await self.create_request(b"HELLO", *hello_command_args, decode=False)
             )
             assert isinstance(hello_resp, (list, dict))
-            if self.protocol_version == 3:
-                resp3 = cast(dict[bytes, RedisValueT], hello_resp)
-                assert resp3[b"proto"] == 3
-                self.server_version = nativestr(resp3[b"version"])
-                self.client_id = int(resp3[b"id"])
-            else:
-                resp = cast(list[RedisValueT], hello_resp)
-                self.server_version = nativestr(resp[3])
-                self.client_id = int(resp[7])
+            resp3 = cast(dict[bytes, RedisValueT], hello_resp)
+            assert resp3[b"proto"] == 3
+            self.server_version = nativestr(resp3[b"version"])
+            self.client_id = int(resp3[b"id"])
             if self.server_version >= "7.2":
                 await self.create_request(
                     b"CLIENT SETINFO",
@@ -410,21 +400,9 @@ class BaseConnection:
             self.server_version = None
             self.client_id = None
         except UnknownCommandError:  # noqa
-            # This should only happen for redis servers < 6 or forks of redis
-            # that are not > 6 compliant.
-            warning = (
-                "The server responded with no support for the `HELLO` command"
-                " and therefore a handshake could not be performed"
+            raise ConnectionError(
+                "Unable to use RESP3 due to missing `HELLO` implementation the server."
             )
-            if self.protocol_version == 3:
-                raise ConnectionError(
-                    "Unable to use RESP3 due to missing `HELLO` implementation "
-                    "the server. Use `protocol_version=2` when constructing the client."
-                )
-            else:
-                warnings.warn(warning, category=UserWarning)
-                await self.try_legacy_auth()
-            self.needs_handshake = False
 
     async def on_connect(self) -> None:
         await self.perform_handshake()
@@ -570,7 +548,6 @@ class Connection(BaseConnection):
         socket_keepalive_options: dict[int, int | bytes] | None = None,
         *,
         client_name: str | None = None,
-        protocol_version: Literal[2, 3] = 3,
         noreply: bool = False,
         noevict: bool = False,
         notouch: bool = False,
@@ -581,7 +558,6 @@ class Connection(BaseConnection):
             encoding,
             decode_responses,
             client_name=client_name,
-            protocol_version=protocol_version,
             noreply=noreply,
             noevict=noevict,
             notouch=notouch,
@@ -640,7 +616,6 @@ class UnixDomainSocketConnection(BaseConnection):
         decode_responses: bool = False,
         *,
         client_name: str | None = None,
-        protocol_version: Literal[2, 3] = 3,
         max_idle_time: int | None = None,
         **_: RedisValueT,
     ) -> None:
@@ -649,7 +624,6 @@ class UnixDomainSocketConnection(BaseConnection):
             encoding,
             decode_responses,
             client_name=client_name,
-            protocol_version=protocol_version,
             max_idle_time=max_idle_time,
         )
         self.path = path
@@ -690,7 +664,6 @@ class ClusterConnection(Connection):
         socket_keepalive_options: dict[int, int | bytes] | None = None,
         *,
         client_name: str | None = None,
-        protocol_version: Literal[2, 3] = 3,
         read_from_replicas: bool = False,
         noreply: bool = False,
         noevict: bool = False,
@@ -713,7 +686,6 @@ class ClusterConnection(Connection):
             socket_keepalive=socket_keepalive,
             socket_keepalive_options=socket_keepalive_options,
             client_name=client_name,
-            protocol_version=protocol_version,
             noreply=noreply,
             noevict=noevict,
             notouch=notouch,

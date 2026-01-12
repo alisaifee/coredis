@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import cast
-
 from coredis._utils import EncodingInsensitiveDict, nativestr
 from coredis.response._callbacks import ResponseCallback
 from coredis.response._callbacks.server import InfoCallback
@@ -80,17 +78,10 @@ def parse_sentinel_state(
 class PrimaryCallback(
     ResponseCallback[
         ResponseType,
-        dict[ResponsePrimitive, ResponsePrimitive],
         dict[str, ResponsePrimitive],
     ]
 ):
     def transform(
-        self,
-        response: ResponseType,
-    ) -> dict[str, ResponsePrimitive]:
-        return parse_sentinel_state(cast(list[ResponsePrimitive], response)).stringify_keys()
-
-    def transform_3(
         self,
         response: dict[ResponsePrimitive, ResponsePrimitive],
     ) -> dict[str, ResponsePrimitive]:
@@ -100,23 +91,10 @@ class PrimaryCallback(
 class PrimariesCallback(
     ResponseCallback[
         list[ResponseType],
-        list[ResponseType],
         dict[str, dict[str, ResponsePrimitive]],
     ]
 ):
     def transform(
-        self,
-        response: list[ResponseType] | dict[ResponsePrimitive, ResponsePrimitive],
-    ) -> dict[str, dict[str, ResponsePrimitive]]:
-        result: dict[str, dict[str, ResponseType]] = {}
-
-        for item in response:
-            state = PrimaryCallback()(item)
-            result[str(state["name"])] = state
-
-        return result
-
-    def transform_3(
         self,
         response: list[ResponseType],
     ) -> dict[str, dict[str, ResponsePrimitive]]:
@@ -130,19 +108,10 @@ class PrimariesCallback(
 class SentinelsStateCallback(
     ResponseCallback[
         list[ResponseType],
-        list[ResponseType],
         tuple[dict[str, ResponsePrimitive], ...],
     ]
 ):
     def transform(
-        self,
-        response: list[ResponseType],
-    ) -> tuple[dict[str, ResponsePrimitive], ...]:
-        return tuple(
-            parse_sentinel_state([nativestr(i) for i in item]).stringify_keys() for item in response
-        )
-
-    def transform_3(
         self,
         response: list[ResponseType],
     ) -> tuple[dict[str, ResponsePrimitive], ...]:
@@ -153,7 +122,6 @@ class SentinelsStateCallback(
 
 class GetPrimaryCallback(
     ResponseCallback[
-        list[ResponsePrimitive],
         list[ResponsePrimitive],
         tuple[str, int] | None,
     ]
@@ -167,7 +135,6 @@ class GetPrimaryCallback(
 
 class SentinelInfoCallback(
     ResponseCallback[
-        list[ResponseType],
         list[ResponseType],
         dict[AnyStr, dict[int, dict[str, ResponsePrimitive]]],
     ]

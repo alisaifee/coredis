@@ -15,7 +15,6 @@ from coredis.typing import (
 class SortCallback(
     ResponseCallback[
         int | list[AnyStr],
-        int | list[AnyStr],
         int | tuple[AnyStr, ...],
     ]
 ):
@@ -28,9 +27,7 @@ class SortCallback(
         return response
 
 
-class ScanCallback(
-    ResponseCallback[list[ResponseType], list[ResponseType], tuple[int, tuple[AnyStr, ...]]]
-):
+class ScanCallback(ResponseCallback[list[ResponseType], tuple[int, tuple[AnyStr, ...]]]):
     def guard(self, response: list[ResponseType]) -> TypeGuard[tuple[StringT, list[AnyStr]]]:
         return isinstance(response[0], (str, bytes)) and isinstance(response[1], list)
 

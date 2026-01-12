@@ -43,7 +43,6 @@ class ConnectionPool(AsyncContextManagerMixin):
         "connect_timeout": float,
         "max_connections": int,
         "max_idle_time": int,
-        "protocol_version": int,
         "noreply": bool,
         "noevict": bool,
         "notouch": bool,

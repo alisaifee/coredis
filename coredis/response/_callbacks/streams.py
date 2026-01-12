@@ -19,7 +19,7 @@ from coredis.typing import (
 )
 
 
-class StreamRangeCallback(ResponseCallback[ResponseType, ResponseType, tuple[StreamEntry, ...]]):
+class StreamRangeCallback(ResponseCallback[ResponseType, tuple[StreamEntry, ...]]):
     def transform(
         self,
         response: ResponseType,
@@ -27,9 +27,7 @@ class StreamRangeCallback(ResponseCallback[ResponseType, ResponseType, tuple[Str
         return tuple(StreamEntry(r[0], flat_pairs_to_ordered_dict(r[1])) for r in response)
 
 
-class ClaimCallback(
-    ResponseCallback[ResponseType, ResponseType, tuple[AnyStr, ...] | tuple[StreamEntry, ...]]
-):
+class ClaimCallback(ResponseCallback[ResponseType, tuple[AnyStr, ...] | tuple[StreamEntry, ...]]):
     def transform(
         self,
         response: ResponseType,
@@ -42,7 +40,6 @@ class ClaimCallback(
 
 class AutoClaimCallback(
     ResponseCallback[
-        ResponseType,
         ResponseType,
         tuple[AnyStr, tuple[AnyStr, ...]]
         | tuple[AnyStr, tuple[StreamEntry, ...], tuple[AnyStr, ...]],
@@ -66,9 +63,9 @@ class AutoClaimCallback(
 
 
 class MultiStreamRangeCallback(
-    ResponseCallback[ResponseType, ResponseType, dict[AnyStr, tuple[StreamEntry, ...]] | None]
+    ResponseCallback[ResponseType, dict[AnyStr, tuple[StreamEntry, ...]] | None]
 ):
-    def transform_3(
+    def transform(
         self,
         response: ResponseType,
     ) -> dict[AnyStr, tuple[StreamEntry, ...]] | None:
@@ -83,25 +80,8 @@ class MultiStreamRangeCallback(
             return mapping
         return None
 
-    def transform(
-        self,
-        response: ResponseType,
-    ) -> dict[AnyStr, tuple[StreamEntry, ...]] | None:
-        if response:
-            mapping: dict[AnyStr, tuple[StreamEntry, ...]] = {}
 
-            for stream_id, entries in response:
-                mapping[stream_id] = tuple(
-                    StreamEntry(r[0], flat_pairs_to_ordered_dict(r[1])) for r in entries
-                )
-
-            return mapping
-        return None
-
-
-class PendingCallback(
-    ResponseCallback[ResponseType, ResponseType, StreamPending | tuple[StreamPendingExt, ...]]
-):
+class PendingCallback(ResponseCallback[ResponseType, StreamPending | tuple[StreamPendingExt, ...]]):
     def transform(
         self,
         response: ResponseType,
@@ -117,7 +97,7 @@ class PendingCallback(
             return tuple(StreamPendingExt(sub[0], sub[1], sub[2], sub[3]) for sub in response)
 
 
-class XInfoCallback(ResponseCallback[ResponseType, ResponseType, tuple[dict[AnyStr, AnyStr], ...]]):
+class XInfoCallback(ResponseCallback[ResponseType, tuple[dict[AnyStr, AnyStr], ...]]):
     def transform(
         self,
         response: ResponseType,
@@ -125,7 +105,7 @@ class XInfoCallback(ResponseCallback[ResponseType, ResponseType, tuple[dict[AnyS
         return tuple(flat_pairs_to_dict(row) for row in response)
 
 
-class StreamInfoCallback(ResponseCallback[ResponseType, ResponseType, StreamInfo]):
+class StreamInfoCallback(ResponseCallback[ResponseType, StreamInfo]):
     def transform(
         self,
         response: ResponseType,

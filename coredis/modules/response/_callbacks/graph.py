@@ -57,7 +57,7 @@ SCALAR_MAPPING = {
 
 
 class QueryCallback(
-    ResponseCallback[ResponseType, ResponseType, GraphQueryResult[AnyStr]],
+    ResponseCallback[ResponseType, GraphQueryResult[AnyStr]],
     Generic[AnyStr],
 ):
     properties: dict[int, StringT]
@@ -209,9 +209,7 @@ class QueryCallback(
             return GraphPath(nodes, relations)
 
 
-class GraphSlowLogCallback(
-    ResponseCallback[ResponseType, ResponseType, tuple[GraphSlowLogInfo, ...]]
-):
+class GraphSlowLogCallback(ResponseCallback[ResponseType, tuple[GraphSlowLogInfo, ...]]):
     def transform(
         self,
         response: ResponseType,
@@ -221,7 +219,6 @@ class GraphSlowLogCallback(
 
 class ConfigGetCallback(
     ResponseCallback[
-        ResponseType,
         ResponseType,
         ResponsePrimitive | dict[AnyStr, ResponsePrimitive],
     ]

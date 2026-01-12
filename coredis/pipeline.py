@@ -291,7 +291,6 @@ class NodeCommands:
                 c.result = e
 
     async def read(self) -> None:
-        connection = self.connection
         success = True
         multi_result = None
         if self.multi_cmd:
@@ -324,7 +323,6 @@ class NodeCommands:
                         await c.callback.pre_process(self.client, transaction_result[idx])
                     c.result = c.callback(
                         transaction_result[idx],
-                        version=connection.protocol_version,
                     )
                     c.response = await_result(c.result)
             elif isinstance(multi_result, BaseException):
@@ -519,7 +517,6 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
             )
             return callback(
                 await request,
-                version=self.connection.protocol_version,
             )
         except (ConnectionError, TimeoutError):
             # if we're not already watching, we can safely retry the command
@@ -528,7 +525,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
                     request = await self.connection.create_request(
                         command.name, *command.arguments, decode=kwargs.get("decode")
                     )
-                    return callback(await request, version=self.connection.protocol_version)
+                    return callback(await request)
                 raise
             except ConnectionError:
                 # the retry failed so cleanup.
@@ -623,7 +620,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
             if not isinstance(r, Exception):
                 if isinstance(cmd.callback, AsyncPreProcessingCallback):
                     await cmd.callback.pre_process(self.client, r)
-                r = cmd.callback(r, version=connection.protocol_version, **cmd.execution_parameters)
+                r = cmd.callback(r, **cmd.execution_parameters)
                 cmd.response = await_result(r)
             data.append(r)
         return tuple(data)
@@ -659,7 +656,6 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
                     await cmd.callback.pre_process(self.client, res, **cmd.execution_parameters)
                 resp = cmd.callback(
                     res,
-                    version=connection.protocol_version,
                     **cmd.execution_parameters,
                 )
                 cmd.response = await_result(resp)
@@ -1010,7 +1006,6 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
         # Release all connections back to the pool only if safe (no unread buffer).
         # If an error occurred, do not release to avoid buffer mismatches.
         for n in nodes.values():
-            protocol_version = n.connection.protocol_version
             self.connection_pool.release(n.connection)
 
         # Retry MOVED/ASK/connection errors one by one if allowed.
@@ -1035,7 +1030,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
             if not isinstance(c.result, RedisError):
                 if isinstance(c.callback, AsyncPreProcessingCallback):
                     await c.callback.pre_process(self.client, c.result)
-                r = c.callback(c.result, version=protocol_version)
+                r = c.callback(c.result)
             c.response = await_result(r)
             response.append(r)
         if raise_on_error:
@@ -1108,7 +1103,6 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
             return callback(
                 await request,
-                version=conn.protocol_version,
             )
         except (ConnectionError, TimeoutError):
             # conn.disconnect()
@@ -1118,7 +1112,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
                     request = await conn.create_request(
                         command.name, *command.arguments, decode=kwargs.get("decode")
                     )
-                    return callback(await request, version=conn.protocol_version)
+                    return callback(await request)
                 else:
                     raise
             except ConnectionError:
@@ -1153,7 +1147,6 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
         return SimpleStringCallback()(
             cast(StringT, await request),
-            version=conn.protocol_version,
         )
 
     async def _unwatch(self, conn: BaseConnection) -> bool:

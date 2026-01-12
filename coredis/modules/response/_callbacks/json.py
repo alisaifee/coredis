@@ -7,7 +7,7 @@ from coredis.response._callbacks import ResponseCallback
 from coredis.typing import JsonType, ResponseType
 
 
-class JsonCallback(ResponseCallback[ResponseType, ResponseType, JsonType]):
+class JsonCallback(ResponseCallback[ResponseType, JsonType]):
     def transform(
         self,
         response: ResponseType,

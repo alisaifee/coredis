@@ -21,30 +21,23 @@ from coredis.typing import (
 
 class SearchConfigCallback(
     ResponseCallback[
-        list[list[ResponsePrimitive]],
         dict[AnyStr, ResponseType] | list[list[ResponsePrimitive]],
         dict[AnyStr, ResponsePrimitive],
     ]
 ):
     def transform(
         self,
-        response: list[list[ResponsePrimitive]],
-    ) -> dict[AnyStr, ResponsePrimitive]:
-        command_arguments = []
-        for item in response:
-            try:
-                v = (item[0], json.loads(item[1]))
-            except (ValueError, TypeError):
-                v = item
-            command_arguments.append(v)
-        return dict(command_arguments)
-
-    def transform_3(
-        self,
         response: dict[AnyStr, ResponseType] | list[list[ResponsePrimitive]],
     ) -> dict[AnyStr, ResponsePrimitive]:
         if isinstance(response, list):
-            return self.transform(response)
+            command_arguments = []
+            for item in response:
+                try:
+                    v = (item[0], json.loads(item[1]))
+                except (ValueError, TypeError):
+                    v = item
+                command_arguments.append(v)
+            return dict(command_arguments)
         else:
             config = {}
             for item, value in response.items():
@@ -57,63 +50,56 @@ class SearchConfigCallback(
 
 class SearchResultCallback(
     ResponseCallback[
-        list[ResponseType],
         list[ResponseType] | dict[AnyStr, ResponseType],
         SearchResult[AnyStr],
     ]
 ):
     def transform(
         self,
-        response: list[ResponseType],
-    ) -> SearchResult[AnyStr]:
-        if self.options.get("nocontent"):
-            return SearchResult[AnyStr](
-                response[0],
-                tuple(SearchDocument(i, None, None, None, None, {}) for i in response[1:]),
-            )
-        step = 2
-        results = []
-        score_idx = payload_idx = sort_key_idx = 0
-        if self.options.get("withscores"):
-            score_idx = 1
-            step += 1
-        if self.options.get("withpayloads"):
-            payload_idx = score_idx + 1
-            step += 1
-        if self.options.get("withsortkeys"):
-            sort_key_idx = payload_idx + 1
-            step += 1
-
-        for k in range(1, len(response) - 1, step):
-            section = response[k : k + step]
-            score_explain = None
-            if self.options.get("explainscore"):
-                score = section[score_idx][0]
-                score_explain = section[score_idx][1]
-            else:
-                score = section[score_idx] if score_idx else None
-            fields = EncodingInsensitiveDict(flat_pairs_to_dict(section[-1]))
-            if "$" in fields:
-                fields = json.loads(fields.pop("$"))
-            results.append(
-                SearchDocument(
-                    section[0],
-                    float(score) if score else None,
-                    score_explain,
-                    section[payload_idx] if payload_idx else None,
-                    section[sort_key_idx] if sort_key_idx else None,
-                    fields,
-                )
-            )
-        return SearchResult[AnyStr](response[0], tuple(results))
-
-    def transform_3(
-        self,
         response: list[ResponseType] | dict[AnyStr, ResponseType],
     ) -> SearchResult[AnyStr]:
         results = []
         if isinstance(response, list):
-            return self.transform(response)
+            if self.options.get("nocontent"):
+                return SearchResult[AnyStr](
+                    response[0],
+                    tuple(SearchDocument(i, None, None, None, None, {}) for i in response[1:]),
+                )
+            step = 2
+            results = []
+            score_idx = payload_idx = sort_key_idx = 0
+            if self.options.get("withscores"):
+                score_idx = 1
+                step += 1
+            if self.options.get("withpayloads"):
+                payload_idx = score_idx + 1
+                step += 1
+            if self.options.get("withsortkeys"):
+                sort_key_idx = payload_idx + 1
+                step += 1
+
+            for k in range(1, len(response) - 1, step):
+                section = response[k : k + step]
+                score_explain = None
+                if self.options.get("explainscore"):
+                    score = section[score_idx][0]
+                    score_explain = section[score_idx][1]
+                else:
+                    score = section[score_idx] if score_idx else None
+                fields = EncodingInsensitiveDict(flat_pairs_to_dict(section[-1]))
+                if "$" in fields:
+                    fields = json.loads(fields.pop("$"))
+                results.append(
+                    SearchDocument(
+                        section[0],
+                        float(score) if score else None,
+                        score_explain,
+                        section[payload_idx] if payload_idx else None,
+                        section[sort_key_idx] if sort_key_idx else None,
+                        fields,
+                    )
+                )
+            return SearchResult[AnyStr](response[0], tuple(results))
         else:
             response = EncodingInsensitiveDict(response)
             for result in response["results"]:
@@ -141,24 +127,11 @@ class SearchResultCallback(
 
 class AggregationResultCallback(
     ResponseCallback[
-        list[ResponseType],
         dict[AnyStr, ResponseType] | list[ResponseType],
         SearchAggregationResult[AnyStr],
     ]
 ):
     def transform(
-        self,
-        response: list[ResponseType],
-    ) -> SearchAggregationResult:
-        return SearchAggregationResult[AnyStr](
-            [
-                flat_pairs_to_dict(k, partial(self.try_json, self.options))
-                for k in (response[1:] if not self.options.get("with_cursor") else response[0][1:])
-            ],
-            response[1] if self.options.get("with_cursor") else None,
-        )
-
-    def transform_3(
         self,
         response: dict[AnyStr, ResponseType] | list[ResponseType],
     ) -> SearchAggregationResult:
@@ -180,7 +153,15 @@ class AggregationResultCallback(
                 cursor,
             )
         else:
-            return self.transform(response)
+            return SearchAggregationResult[AnyStr](
+                [
+                    flat_pairs_to_dict(k, partial(self.try_json, self.options))
+                    for k in (
+                        response[1:] if not self.options.get("with_cursor") else response[0][1:]
+                    )
+                ],
+                response[1] if self.options.get("with_cursor") else None,
+            )
 
     @staticmethod
     def try_json(options, value):
@@ -194,28 +175,21 @@ class AggregationResultCallback(
 
 class SpellCheckCallback(
     ResponseCallback[
-        list[ResponseType],
         dict[AnyStr, ResponseType] | list[ResponseType],
         dict[AnyStr, OrderedDict[AnyStr, float]],
     ]
 ):
     def transform(
         self,
-        response: list[ResponseType],
-    ) -> dict[AnyStr, OrderedDict[AnyStr, float]]:
-        return {
-            result[1]: OrderedDict(
-                (suggestion[1], float(suggestion[0])) for suggestion in result[2]
-            )
-            for result in response
-        }
-
-    def transform_3(
-        self,
         response: dict[AnyStr, ResponseType] | list[ResponseType],
     ) -> dict[AnyStr, OrderedDict[AnyStr, float]]:
         # For older versions of redis search that didn't support RESP3
         if isinstance(response, list):
-            return self.transform(response)
+            return {
+                result[1]: OrderedDict(
+                    (suggestion[1], float(suggestion[0])) for suggestion in result[2]
+                )
+                for result in response
+            }
         response = EncodingInsensitiveDict(response)
         return {key: OrderedDict(ChainMap(*result)) for key, result in response["results"].items()}

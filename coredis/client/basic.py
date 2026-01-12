@@ -98,9 +98,8 @@ class Client(
     connection_pool: ConnectionPool
     decode_responses: bool
     encoding: str
-    protocol_version: Literal[2, 3]
     server_version: Version | None
-    callback_storage: dict[type[ResponseCallback[Any, Any, Any]], dict[str, Any]]
+    callback_storage: dict[type[ResponseCallback[Any, Any]], dict[str, Any]]
     type_adapter: TypeAdapter
 
     def __init__(
@@ -128,7 +127,6 @@ class Client(
         max_connections: int | None = None,
         max_idle_time: int | None = None,
         client_name: str | None = None,
-        protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
         noreply: bool = False,
         retry_policy: RetryPolicy = NoRetryPolicy(),
@@ -150,7 +148,6 @@ class Client(
                 "decode_responses": decode_responses,
                 "max_idle_time": max_idle_time,
                 "client_name": client_name,
-                "protocol_version": protocol_version,
                 "noreply": noreply,
                 "noevict": noevict,
                 "notouch": notouch,
@@ -183,14 +180,6 @@ class Client(
         self.connection_pool = connection_pool
         self.encoding = connection_pool.encoding
         self.decode_responses = connection_pool.decode_responses
-        connection_protocol_version = (
-            connection_pool.connection_kwargs.get("protocol_version") or protocol_version
-        )
-        assert connection_protocol_version in {
-            2,
-            3,
-        }, "Protocol version can only be one of {2,3}"
-        self.protocol_version = connection_protocol_version
         self.server_version: Version | None = None
         self.verify_version = verify_version
         self.__noreply = noreply
@@ -572,7 +561,6 @@ class Redis(Client[AnyStr]):
         max_connections: int | None = ...,
         max_idle_time: int | None = ...,
         client_name: str | None = ...,
-        protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         cache: AbstractCache | None = ...,
         noreply: bool = ...,
@@ -610,7 +598,6 @@ class Redis(Client[AnyStr]):
         max_connections: int | None = ...,
         max_idle_time: int | None = ...,
         client_name: str | None = ...,
-        protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         cache: AbstractCache | None = ...,
         noreply: bool = ...,
@@ -647,7 +634,6 @@ class Redis(Client[AnyStr]):
         max_connections: int | None = None,
         max_idle_time: int | None = None,
         client_name: str | None = None,
-        protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
         cache: AbstractCache | None = None,
         noreply: bool = False,
@@ -660,6 +646,11 @@ class Redis(Client[AnyStr]):
         """
 
         Changes
+          - .. versionremoved:: 6.0.0
+            - :paramref:`protocol_version` removed (and therefore support for RESP2)
+
+          - .. versionadded:: 6.0.0
+            -  TODO: Add stuff
           - .. versionadded:: 4.12.0
 
             - :paramref:`retry_policy`
@@ -756,9 +747,6 @@ class Redis(Client[AnyStr]):
         :param max_idle_time: Maximum number of a seconds an unused connection is cached
          before it is disconnected.
         :param client_name: The client name to identifiy with the redis server
-        :param protocol_version: Whether to use the RESP (``2``) or RESP3 (``3``)
-         protocol for parsing responses from the server (Default ``3``).
-         (See :ref:`handbook/response:redis response`)
         :param verify_version: Validate redis server version against the documented
          version introduced before executing a command and raises a
          :exc:`CommandNotSupportedError` error if the required version is higher than
@@ -801,7 +789,6 @@ class Redis(Client[AnyStr]):
             max_connections=max_connections,
             max_idle_time=max_idle_time,
             client_name=client_name,
-            protocol_version=protocol_version,
             verify_version=verify_version,
             noreply=noreply,
             noevict=noevict,
@@ -826,7 +813,6 @@ class Redis(Client[AnyStr]):
         db: int | None = ...,
         *,
         decode_responses: Literal[False] = ...,
-        protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         noreply: bool = ...,
         noevict: bool = ...,
@@ -844,7 +830,6 @@ class Redis(Client[AnyStr]):
         db: int | None = ...,
         *,
         decode_responses: Literal[True] = ...,
-        protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         noreply: bool = ...,
         noevict: bool = ...,
@@ -861,7 +846,6 @@ class Redis(Client[AnyStr]):
         db: int | None = None,
         *,
         decode_responses: bool = False,
-        protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
         noreply: bool = False,
         noevict: bool = False,
@@ -889,7 +873,6 @@ class Redis(Client[AnyStr]):
         if decode_responses:
             return cls(
                 decode_responses=True,
-                protocol_version=protocol_version,
                 verify_version=verify_version,
                 noreply=noreply,
                 retry_policy=retry_policy,
@@ -899,7 +882,6 @@ class Redis(Client[AnyStr]):
                     url,
                     db=db,
                     decode_responses=decode_responses,
-                    protocol_version=protocol_version,
                     noreply=noreply,
                     noevict=noevict,
                     notouch=notouch,
@@ -909,7 +891,6 @@ class Redis(Client[AnyStr]):
         else:
             return cls(
                 decode_responses=False,
-                protocol_version=protocol_version,
                 verify_version=verify_version,
                 noreply=noreply,
                 retry_policy=retry_policy,
@@ -919,7 +900,6 @@ class Redis(Client[AnyStr]):
                     url,
                     db=db,
                     decode_responses=decode_responses,
-                    protocol_version=protocol_version,
                     noreply=noreply,
                     noevict=noevict,
                     notouch=notouch,
@@ -1017,7 +997,7 @@ class Redis(Client[AnyStr]):
                             *command.arguments,
                             value=reply,
                         )
-                return callback(cached_reply if cache_hit else reply, version=self.protocol_version)
+                return callback(cached_reply if cache_hit else reply)
             finally:
                 self._ensure_server_version(connection.server_version)
 

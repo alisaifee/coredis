@@ -302,8 +302,6 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         :meta private:
         """
         timeout = timeout if timeout and timeout > 0 else None
-        if self.connection.protocol_version != 3:
-            raise NotImplementedError()
         with fail_after(timeout):
             return await self.connection.fetch_push_message(block=block)
 

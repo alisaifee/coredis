@@ -136,7 +136,7 @@ async def get_version(client):
     return REDIS_VERSIONS[str(client)]
 
 
-async def check_test_constraints(request, client, protocol=3):
+async def check_test_constraints(request, client):
     async with client:
         await get_version(client)
         await get_module_versions(client)
@@ -190,12 +190,6 @@ async def check_test_constraints(request, client, protocol=3):
 
         if marker.name == "os" and not marker.args[0].lower() == platform.system().lower():
             return pytest.skip(f"Skipped for {platform.system()}")
-
-        if protocol == 3 and client_version < version.parse("6.0.0"):
-            return pytest.skip(f"Skipped RESP3 for {client_version}")
-
-        if marker.name == "noresp3" and protocol == 3:
-            return pytest.skip("Skipped for RESP3")
 
         if marker.name == "nodragonfly" and SERVER_TYPES.get(str(client)) == "dragonfly":
             return pytest.skip("Skipped for Dragonfly")
@@ -481,22 +475,6 @@ async def redis_basic(redis_basic_server, request):
         "localhost",
         6379,
         decode_responses=True,
-        **get_client_test_args(request),
-    )
-    await check_test_constraints(request, client)
-    async with client:
-        await client.flushall()
-        await set_default_test_config(client)
-        yield client
-
-
-@pytest.fixture
-async def redis_basic_resp2(redis_basic_server, request):
-    client = coredis.Redis(
-        "localhost",
-        6379,
-        decode_responses=True,
-        protocol_version=2,
         **get_client_test_args(request),
     )
     await check_test_constraints(request, client)
@@ -845,25 +823,6 @@ async def redis_sentinel_raw(redis_sentinel_server, request):
 
 
 @pytest.fixture
-async def redis_sentinel_resp2(redis_sentinel_server, request):
-    sentinel = coredis.sentinel.Sentinel(
-        [redis_sentinel_server],
-        sentinel_kwargs={},
-        decode_responses=True,
-        protocol_version=2,
-        **get_client_test_args(request),
-    )
-    async with sentinel:
-        master = sentinel.primary_for("mymaster")
-        await check_test_constraints(request, master)
-        async with master:
-            await set_default_test_config(sentinel)
-            await master.flushall()
-
-            yield sentinel
-
-
-@pytest.fixture
 async def redis_sentinel_auth(redis_sentinel_auth_server, request):
     sentinel = coredis.sentinel.Sentinel(
         [redis_sentinel_auth_server],
@@ -1030,7 +989,6 @@ def module_targets():
     ) >= version.parse("8.0.0"):
         targets = [
             "redis_basic",
-            "redis_basic_resp2",
             "redis_basic_raw",
             "redis_cached",
             "redis_cluster",
@@ -1087,7 +1045,6 @@ def cloner():
             c_kwargs.update(connection_kwargs)
             c = client.__class__(
                 decode_responses=client.decode_responses,
-                protocol_version=client.protocol_version,
                 encoding=client.encoding,
                 connection_pool=client.connection_pool.__class__(**c_kwargs),
                 **kwargs,
@@ -1097,7 +1054,6 @@ def cloner():
                 client.connection_pool.nodes.startup_nodes[0].host,
                 client.connection_pool.nodes.startup_nodes[0].port,
                 decode_responses=client.decode_responses,
-                protocol_version=client.protocol_version,
                 encoding=client.encoding,
                 **kwargs,
             )
