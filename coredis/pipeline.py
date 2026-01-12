@@ -824,10 +824,6 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
                     self._watched_connection = None
         return True
 
-    def __del__(self) -> None:
-        if self._watched_connection:
-            self.connection_pool.release(self._watched_connection)
-
     def __len__(self) -> int:
         return len(self.command_stack)
 
@@ -837,7 +833,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         yield self
-        await self.execute()
+        await self._execute()
 
     def execute_command(
         self,
@@ -875,7 +871,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
             msg = f"Command # {number} ({cmd} {args}) of pipeline caused error: {exception.args[0]}"
             exception.args = (msg,) + exception.args[1:]
 
-    async def execute(self, raise_on_error: bool = True) -> tuple[object, ...]:
+    async def _execute(self) -> tuple[object, ...]:
         """
         Execute all queued commands in the cluster pipeline. Returns a tuple of results.
         """
@@ -889,7 +885,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
         else:
             execute = self.send_cluster_commands
         try:
-            return await execute(raise_on_error)
+            return await execute(self._raise_on_error)
         finally:
             await self.clear()
 
@@ -1022,7 +1018,6 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
             (c for c in attempt if isinstance(c.result, ERRORS_ALLOW_RETRY)),
             key=lambda x: x.position,
         )
-
         if attempt and allow_redirections:
             await self.connection_pool.nodes.increment_reinitialize_counter(len(attempt))
             for c in attempt:
@@ -1041,12 +1036,10 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
                 if isinstance(c.callback, AsyncPreProcessingCallback):
                     await c.callback.pre_process(self.client, c.result)
                 r = c.callback(c.result, version=protocol_version)
-                c.response = await_result(r)
+            c.response = await_result(r)
             response.append(r)
-
         if raise_on_error:
             self.raise_first_error()
-
         return tuple(response)
 
     def _determine_slot(

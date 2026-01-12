@@ -1165,6 +1165,8 @@ class RedisCluster(
     def pipeline(
         self,
         transaction: bool = False,
+        *,
+        raise_on_error: bool = True,
         watches: Parameters[StringT] | None = None,
         timeout: float | None = None,
     ) -> coredis.pipeline.ClusterPipeline[AnyStr]:
@@ -1181,6 +1183,9 @@ class RedisCluster(
           part of the pipeline.
 
         :param transaction: indicates whether all commands should be executed atomically.
+        :param raise_on_error: Whether to raise errors upon executing the pipeline.
+         If set to `False` errors will be accumulated and retrievable from the individual
+         commands that had errors.
         :param watches: If :paramref:`transaction` is True these keys are watched for external
          changes during the transaction.
         :param timeout: If specified this value will take precedence over
@@ -1192,6 +1197,7 @@ class RedisCluster(
 
         return ClusterPipeline[AnyStr](
             client=self,
+            raise_on_error=raise_on_error,
             transaction=transaction,
             watches=watches,
             timeout=timeout,

@@ -1107,8 +1107,9 @@ class Redis(Client[AnyStr]):
 
     def pipeline(
         self,
-        raise_on_error: bool = True,
         transaction: bool = True,
+        *,
+        raise_on_error: bool = True,
         timeout: float | None = None,
     ) -> coredis.pipeline.Pipeline[AnyStr]:
         """
@@ -1116,6 +1117,9 @@ class Redis(Client[AnyStr]):
         batch execution.
 
         :param transaction: indicates whether all commands should be executed atomically.
+        :param raise_on_error: Whether to raise errors upon executing the pipeline.
+         If set to `False` errors will be accumulated and retrievable from the individual
+         commands that had errors.
         :param timeout: If specified this value will take precedence over
          :paramref:`Redis.stream_timeout`
         """
