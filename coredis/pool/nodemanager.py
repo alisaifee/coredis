@@ -56,7 +56,7 @@ class NodeManager:
         skip_full_coverage_check: bool = False,
         nodemanager_follow_cluster: bool = True,
         decode_responses: bool = False,
-        **connection_kwargs: Any | None,
+        **connection_kwargs: Any,
     ) -> None:
         """
         :skip_full_coverage_check:
@@ -335,6 +335,3 @@ class NodeManager:
         self.startup_nodes.clear()
         for n in self.nodes.values():
             self.startup_nodes.append(n)
-
-    async def reset(self) -> None:
-        await self.initialize()

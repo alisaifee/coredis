@@ -60,8 +60,6 @@ class ClusterConnectionPool(ConnectionPool):
         nodemanager_follow_cluster: bool = True,
         readonly: bool = False,
         read_from_replicas: bool = False,
-        max_idle_time: int = 0,
-        idle_check_interval: int = 1,
         timeout: int = 20,
         **connection_kwargs: Any,
     ):
@@ -117,8 +115,6 @@ class ClusterConnectionPool(ConnectionPool):
         self.connection_kwargs = connection_kwargs
         self.connection_kwargs["read_from_replicas"] = read_from_replicas
         self.read_from_replicas = read_from_replicas or readonly
-        self.max_idle_time = max_idle_time
-        self.idle_check_interval = idle_check_interval
         self.reset()
 
         if "stream_timeout" not in self.connection_kwargs:
@@ -237,10 +233,6 @@ class ClusterConnectionPool(ConnectionPool):
         # Must store node in the connection to make it easier to track
         connection.node = node
 
-        if self.max_idle_time and self.max_idle_time > 0:
-            # TODO: disconnect idle connections
-            pass
-
         return connection
 
     def __node_pool(self, node: str) -> Queue[Connection]:
@@ -254,11 +246,9 @@ class ClusterConnectionPool(ConnectionPool):
     ) -> Queue[Connection]:
         q_size = max(
             1,
-            int(
-                self.max_connections
-                if self.max_connections_per_node
-                else self.max_connections / len(self.nodes.nodes)
-            ),
+            self.max_connections
+            if self.max_connections_per_node
+            else self.max_connections // len(self.nodes.nodes),
         )
 
         return Queue[Connection](q_size)
