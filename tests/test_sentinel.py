@@ -9,7 +9,7 @@ from coredis.exceptions import (
     PrimaryNotFoundError,
     ReadOnlyError,
     ReplicaNotFoundError,
-    ResponseError,
+    ReplicationError,
 )
 from coredis.sentinel import Sentinel, SentinelConnectionPool
 from tests.conftest import targets
@@ -208,11 +208,6 @@ class TestSentinelCommand:
             with primary.ensure_replication(1):
                 await primary.set("fubar", 1)
 
-            with primary.ensure_replication(2):
-                await primary.set("fubar", 1)
-
-        replica = client.replica_for("mymaster")
-        with pytest.raises(ResponseError):
-            async with replica:
-                with replica.ensure_replication(2):
-                    await replica.set("fubar", 1)
+            with pytest.RaisesGroup(ReplicationError, allow_unwrapped=True, flatten_subgroups=True):
+                with primary.ensure_replication(2):
+                    await primary.set("fubar", 1)

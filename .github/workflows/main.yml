@@ -36,7 +36,7 @@ jobs:
           exit 1
         fi;
   test:
-    name: Test (Python ${{ matrix.python-version }}, Anyio ${{ matrix.anyio-backend || 'asyncio' }}, Redis ${{ matrix.redis-version }}${{ matrix.uvloop == 'True' && ', uvloop' || ''}}${{ matrix.orjson == 'True' && ', orjson' || ''}}${{ matrix.extensions == 'True' && ', compiled' || ''}}${{ matrix.label && format(', {0}', matrix.label) || '' }})
+    name: Test (Python ${{ matrix.python-version }}, ${{ matrix.anyio-backend || 'asyncio' }}, Redis ${{ matrix.redis-version }}${{ matrix.uvloop == 'True' && ', uvloop' || ''}}${{ matrix.orjson == 'True' && ', orjson' || ''}}${{ matrix.extensions == 'True' && ', compiled' || ''}}${{ matrix.label && format(', {0}', matrix.label) || '' }})
     runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.redis-version == 'next' }}
     strategy:

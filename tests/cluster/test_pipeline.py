@@ -327,13 +327,13 @@ class TestPipeline:
         await client.hset("hash", {str(i): i for i in range(4096)})
         await client.ping()
         pipeline = client.pipeline(timeout=0.01)
-        for i in range(20):
+        for i in range(500):
             pipeline.hgetall("hash")
         with pytest.raises(TimeoutError):
             await pipeline.execute()
 
         await client.ping()
         pipeline = client.pipeline(timeout=5)
-        for i in range(20):
+        for i in range(500):
             pipeline.hgetall("hash")
         await pipeline.execute()

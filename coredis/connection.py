@@ -25,7 +25,6 @@ from anyio import (
 )
 from anyio.abc import ByteStream, SocketAttribute, TaskStatus
 from anyio.streams.tls import TLSStream
-from exceptiongroup import BaseExceptionGroup, catch
 from typing_extensions import override
 
 import coredis
@@ -37,7 +36,6 @@ from coredis.credentials import (
     UserPassCredentialProvider,
 )
 from coredis.exceptions import (
-    AuthenticationFailureError,
     AuthenticationRequiredError,
     ConnectionError,
     RedisError,
@@ -209,15 +207,15 @@ class BaseConnection:
         self.packer: Packer = Packer(self.encoding)
         self.max_idle_time = max_idle_time
 
-        self.noreply: bool = noreply
-        self.noreply_set: bool = False
+        self.noreply = noreply
+        self.noreply_set = False
 
-        self.noevict: bool = noevict
-        self.notouch: bool = notouch
+        self.noevict = noevict
+        self.notouch = notouch
 
-        self.needs_handshake: bool = True
+        self.needs_handshake = True
         self._last_error: BaseException | None = None
-        self._connection_error: BaseException | None = None
+        self._connected = False
 
         self._requests: deque[Request] = deque()
         self._write_lock = Lock()
@@ -245,7 +243,7 @@ class BaseConnection:
         Whether the connection is established and initial handshakes were
         performed without error
         """
-        return self._connection is not None and self._connection_error is None
+        return self._connected
 
     def register_connect_callback(
         self,
@@ -259,14 +257,6 @@ class BaseConnection:
     @abstractmethod
     async def _connect(self) -> ByteStream: ...
 
-    def _process_error(self, exc: BaseExceptionGroup) -> None:
-        logger.exception("Connection closed unexpectedly!")
-        self._last_error = exc
-
-    def _raise_error(self, exc: BaseExceptionGroup) -> None:
-        self._process_error(exc)
-        raise exc
-
     async def run(self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
         """
         Establish a connnection to the redis server
@@ -275,26 +265,27 @@ class BaseConnection:
 
         self._connection = await self._connect()
         try:
-            with catch(
-                {
-                    (
-                        AuthenticationRequiredError,
-                        AuthenticationFailureError,
-                    ): self._raise_error,
-                    Exception: self._process_error,
-                }
-            ):
-                async with self.connection, self._parser.push_messages, create_task_group() as tg:
-                    tg.start_soon(self.listen_for_responses)
-                    # setup connection
-                    await self.on_connect()
-                    # run any user callbacks. right now the only internal callback
-                    # is for pubsub channel/pattern resubscription
-                    for callback in self._connect_callbacks:
-                        task = callback(self)
-                        if inspect.isawaitable(task):
-                            await task
-                    task_status.started()
+            async with self.connection, self._parser.push_messages, create_task_group() as tg:
+                tg.start_soon(self.listen_for_responses)
+                # setup connection
+                await self.on_connect()
+                # run any user callbacks. right now the only internal callback
+                # is for pubsub channel/pattern resubscription
+                for callback in self._connect_callbacks:
+                    task = callback(self)
+                    if inspect.isawaitable(task):
+                        await task
+                self._connected = True
+                task_status.started()
+        except Exception as e:
+            logger.exception("Connection closed unexpectedly!")
+            self._last_error = e
+            # swallow the error unless connection hasn't been established;
+            # it will usually be raised when accessing command results.
+            # we want the connection to die, but we don't always want to
+            # raise it and corrupt the connection pool.
+            if not self._connected:
+                raise
         finally:
             self._parser.on_disconnect()
             disconnect_exc = self._last_error or ConnectionError("Connection lost!")
