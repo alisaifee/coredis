@@ -284,14 +284,12 @@ class TestPipeline:
         assert await client.get(key) == "1"
 
     async def test_pipeline_timeout(self, client: Redis[str]):
-        await client.hset("hash", {str(i): i for i in range(4096)})
-        await client.ping()
+        await client.hset("hash", {str(i): bytes(1024) for i in range(1024)})
         with pytest.raises(TimeoutError):
             async with client.pipeline(timeout=0.01) as pipe:
                 for _ in range(20):
                     pipe.hgetall("hash")
 
-        await client.ping()
         async with client.pipeline(timeout=5) as pipe:
             for _ in range(20):
                 pipe.hgetall("hash")
