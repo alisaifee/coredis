@@ -54,6 +54,11 @@ from coredis.typing import (
     TypeVar,
 )
 
+CERT_REQS = {
+    "none": ssl.CERT_NONE,
+    "optional": ssl.CERT_OPTIONAL,
+    "required": ssl.CERT_REQUIRED,
+}
 R = TypeVar("R")
 
 if TYPE_CHECKING:
@@ -129,12 +134,6 @@ class RedisSSLContext:
         if cert_reqs is None:
             self.cert_reqs = ssl.CERT_OPTIONAL
         elif isinstance(cert_reqs, str):
-            CERT_REQS = {
-                "none": ssl.CERT_NONE,
-                "optional": ssl.CERT_OPTIONAL,
-                "required": ssl.CERT_REQUIRED,
-            }
-
             self.cert_reqs = CERT_REQS[cert_reqs]
         else:
             self.cert_reqs = cert_reqs
@@ -608,11 +607,8 @@ class Connection(BaseConnection):
         with fail_after(self._connect_timeout):
             connection: ByteStream = await connect_tcp(self.host, self.port)
             if self.ssl_context:
-                connection = await TLSStream.wrap(
-                    connection,
-                    ssl_context=self.ssl_context,
-                    standard_compatible=False,
-                    server_side=False,
+                connection = await TLSStream.wrap(  # TODO: standard_compatible False, for debugging
+                    connection, ssl_context=self.ssl_context, standard_compatible=True
                 )
             sock = connection.extra(SocketAttribute.raw_socket, default=None)
             if sock is not None:
