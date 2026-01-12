@@ -512,6 +512,7 @@ ci = [
     { name = "pytest-rerunfailures" },
     { name = "pytest-reverse" },
     { name = "pytest-sentry" },
+    { name = "pytest-timeout" },
     { name = "redis" },
     { name = "ruff" },
     { name = "trio" },
@@ -652,6 +653,7 @@ ci = [
     { name = "pytest-rerunfailures" },
     { name = "pytest-reverse" },
     { name = "pytest-sentry" },
+    { name = "pytest-timeout" },
     { name = "redis" },
     { name = "redis", specifier = ">=4.2.0" },
     { name = "ruff" },
@@ -2134,6 +2136,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/66/44/dbe8420883c6bd89247339f521580ae9c91838bfee0159d5183161063483/pytest_sentry-0.3.3.tar.gz", hash = "sha256:c14ff1b0a00fb62fb83c9523fe03ee00896ac61829a3b20a7a57b1d4524e3336", size = 9346, upload-time = "2025-02-24T18:20:28.74Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8e/4f/ebacd5c58186bad0f61312771ed344448dd4e9967ef627f31b5b7ac85d92/pytest_sentry-0.3.3-py3-none-any.whl", hash = "sha256:acf2b76cf5eb3213371f5d29868dab0e35e0653012d5e87af9da82f043cdfb87", size = 8514, upload-time = "2025-02-24T18:20:27.042Z" },
+]
+
+[[package]]
+name = "pytest-timeout"
+version = "2.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ac/82/4c9ecabab13363e72d880f2fb504c5f750433b2b6f16e99f4ec21ada284c/pytest_timeout-2.4.0.tar.gz", hash = "sha256:7e68e90b01f9eff71332b25001f85c75495fc4e3a836701876183c4bcfd0540a", size = 17973, upload-time = "2025-05-05T19:44:34.99Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fa/b6/3127540ecdf1464a00e5a01ee60a1b09175f6913f0644ac748494d9c4b21/pytest_timeout-2.4.0-py3-none-any.whl", hash = "sha256:c42667e5cdadb151aeb5b26d114aff6bdf5a907f176a007a30b940d3d865b5c2", size = 14382, upload-time = "2025-05-05T19:44:33.502Z" },
 ]
 
 [[package]]

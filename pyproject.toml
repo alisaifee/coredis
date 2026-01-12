@@ -102,6 +102,7 @@ dev = [
 ci = [
   "pytest-rerunfailures",
   "pytest-sentry",
+  "pytest-timeout",
   {include-group = "dev"},
 ]
 
