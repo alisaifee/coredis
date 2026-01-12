@@ -292,11 +292,10 @@ class TestPipeline:
     async def test_pipeline_timeout(self, client):
         await client.hset("hash", {str(i): i for i in range(4096)})
         await client.ping()
-        results = []
         with pytest.raises(TimeoutError):
             async with client.pipeline(timeout=0.01) as pipeline:
                 for _ in range(500):
-                    results.append(pipeline.hgetall("hash"))
+                    pipeline.hgetall("hash")
         async with client.pipeline(timeout=5) as pipeline:
             for _ in range(500):
                 pipeline.hgetall("hash")

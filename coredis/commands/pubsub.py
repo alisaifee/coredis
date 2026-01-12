@@ -620,7 +620,6 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                     message = await connection.fetch_push_message(True)
                     await self._shard_messages.send(message)
             except (ConnectionError, ConnectionFailed, EndOfStream):
-                self.connection_pool.release(connection)
                 self.shard_connections.pop(node_id)
                 if active_channels := set(self.channels) & set(self.node_channel_mapping[node_id]):
                     self._task_group.start_soon(self.subscribe, *active_channels)
