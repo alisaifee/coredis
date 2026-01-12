@@ -154,7 +154,7 @@ class NodeManager:
             "protocol_version",
         )
         connection_kwargs = {k: v for k, v in self.connection_kwargs.items() if k in allowed_keys}
-        return Redis(host=host, port=port, **connection_kwargs)  # type: ignore
+        return Redis(host=host, port=port, **connection_kwargs)
 
     async def initialize(self) -> None:
         """
