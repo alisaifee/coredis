@@ -25,6 +25,7 @@ from anyio import (
 )
 from anyio.abc import ByteStream, SocketAttribute, TaskStatus
 from anyio.streams.tls import TLSStream
+from exceptiongroup import BaseExceptionGroup, catch
 from typing_extensions import override
 
 import coredis
@@ -36,6 +37,7 @@ from coredis.credentials import (
     UserPassCredentialProvider,
 )
 from coredis.exceptions import (
+    AuthenticationFailureError,
     AuthenticationRequiredError,
     ConnectionError,
     RedisError,
@@ -257,6 +259,14 @@ class BaseConnection:
     @abstractmethod
     async def _connect(self) -> ByteStream: ...
 
+    def _process_error(self, exc: BaseExceptionGroup) -> None:
+        logger.exception("Connection closed unexpectedly!")
+        self._last_error = exc
+
+    def _raise_error(self, exc: BaseExceptionGroup) -> None:
+        self._process_error(exc)
+        raise exc
+
     async def run(self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
         """
         Establish a connnection to the redis server
@@ -265,22 +275,26 @@ class BaseConnection:
 
         self._connection = await self._connect()
         try:
-            async with self.connection, self._parser.push_messages, create_task_group() as tg:
-                tg.start_soon(self.listen_for_responses)
-                # setup connection
-                await self.on_connect()
-                # run any user callbacks. right now the only internal callback
-                # is for pubsub channel/pattern resubscription
-                for callback in self._connect_callbacks:
-                    task = callback(self)
-                    if inspect.isawaitable(task):
-                        await task
-                task_status.started()
-        # swallow error and end the loop
-        except Exception as e:
-            logger.exception("Connection closed unexpectedly!")
-            self._last_error = e
-            # raise
+            with catch(
+                {
+                    (
+                        AuthenticationRequiredError,
+                        AuthenticationFailureError,
+                    ): self._raise_error,
+                    Exception: self._process_error,
+                }
+            ):
+                async with self.connection, self._parser.push_messages, create_task_group() as tg:
+                    tg.start_soon(self.listen_for_responses)
+                    # setup connection
+                    await self.on_connect()
+                    # run any user callbacks. right now the only internal callback
+                    # is for pubsub channel/pattern resubscription
+                    for callback in self._connect_callbacks:
+                        task = callback(self)
+                        if inspect.isawaitable(task):
+                            await task
+                    task_status.started()
         finally:
             self._parser.on_disconnect()
             disconnect_exc = self._last_error or ConnectionError("Connection lost!")
@@ -303,11 +317,7 @@ class BaseConnection:
             if isinstance(response, NotEnoughData):
                 # Need more bytes; read once, feed, and retry
                 with move_on_after(self.max_idle_time) as scope:
-                    # try:
                     data = await self.connection.receive()
-                    # just return, this is the only task in connection's task group
-                    # except (BrokenResourceError, EndOfStream):
-                    # return
                     self._parser.feed(data)
                 if scope.cancelled_caught:  # this will cleanup the connection gracefully
                     break
