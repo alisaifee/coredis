@@ -12,7 +12,7 @@ from coredis.exceptions import (
     ResponseError,
 )
 from coredis.sentinel import Sentinel, SentinelConnectionPool
-from tests.conftest import raises_in_group, targets
+from tests.conftest import targets
 
 
 async def test_init_compose_sentinel(redis_sentinel: Sentinel):
@@ -168,7 +168,7 @@ class TestSentinelCommand:
                 yield item
 
         replica_rotate.return_value = async_iter([])
-        with raises_in_group(ReplicaNotFoundError):
+        with pytest.RaisesGroup(ReplicaNotFoundError, allow_unwrapped=True, flatten_subgroups=True):
             async with p:
                 await p.ping()
 

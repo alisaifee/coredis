@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, Generator, cast
 
 from anyio import (
     TASK_STATUS_IGNORED,
+    BrokenResourceError,
     ClosedResourceError,
     EndOfStream,
     Event,
@@ -306,7 +307,8 @@ class BaseConnection:
                 with move_on_after(self.max_idle_time) as scope:
                     try:
                         data = await self.connection.receive()
-                    except EndOfStream:  # just finish exception loop
+                    # just return, this is the only task in connection's task group
+                    except (BrokenResourceError, EndOfStream):
                         return
                     self._parser.feed(data)
                 if scope.cancelled_caught:  # this will cleanup the connection gracefully

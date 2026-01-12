@@ -15,7 +15,7 @@ from coredis.exceptions import (
     UnknownCommandError,
 )
 from coredis.typing import RedisCommand
-from tests.conftest import raises_in_group, targets
+from tests.conftest import targets
 
 
 @targets(
@@ -225,7 +225,7 @@ class TestSSL:
             keyfile="./tests/tls/invalid-client.key",
         )
 
-        with raises_in_group(ssl.SSLError, match="decrypt error"):
+        with pytest.RaisesGroup(ssl.SSLError, match="decrypt error", flatten_subgroups=True):
             async with coredis.Redis(
                 port=8379,
                 ssl_context=context,
@@ -233,7 +233,9 @@ class TestSSL:
                 pass
 
     async def test_ssl_no_verify_client(self, redis_ssl_server_no_client_auth):
-        with raises_in_group(ssl.SSLCertVerificationError, match="certificate verify failed"):
+        with pytest.RaisesGroup(
+            ssl.SSLCertVerificationError, match="certificate verify failed", flatten_subgroups=True
+        ):
             async with coredis.Redis(port=7379, ssl=True, ssl_cert_reqs="required") as client:
                 await client.ping()
         async with coredis.Redis(port=7379, ssl=True, ssl_cert_reqs="none") as client:
