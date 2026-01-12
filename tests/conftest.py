@@ -61,7 +61,7 @@ def get_backends():
     if backend == "all":
         return "asyncio", "trio"
     elif backend == "asyncio":
-        return (("asyncio", {"use_uvloop": os.environ.get("COREDIS_UVLOOP", False)}),)
+        return (("asyncio", {"use_uvloop": os.environ.get("COREDIS_UVLOOP", None) == "True"}),)
     return (backend,)
 
 
