@@ -31,6 +31,14 @@ Release Date: TBD
   * Client now includes ``Redis.lock`` as a convenient way to access the ``LuaLock``
     recipe, and the class is now just called ``Lock``.
 
+v5.5.0
+------
+Release Date: 2026-01-12
+
+* Compatibility
+
+  * Deprecate support for legacy RESP2 protocol
+
 v5.4.0
 ------
 Release Date: 2025-12-17
@@ -2078,6 +2086,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 

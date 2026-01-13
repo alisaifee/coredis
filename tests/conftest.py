@@ -1094,7 +1094,8 @@ def pytest_collection_modifyitems(items):
                 tokens = client_name.replace("redis_", "").split("_")
 
                 for token in tokens:
-                    item.add_marker(getattr(pytest.mark, token))
+                    if token in item.config.getini("markers"):
+                        item.add_marker(getattr(pytest.mark, token))
             elif client_name.startswith("dragonfly"):
                 item.add_marker(getattr(pytest.mark, "dragonfly"))
                 tokens = client_name.replace("dragonfly_", "").split("_")
