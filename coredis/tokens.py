@@ -107,6 +107,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``BZMPOP``
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     #:  - ``TS.ADD``
     #:  - ``TS.ALTER``
     #:  - ``TS.CREATE``
@@ -126,6 +127,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``BZMPOP``
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     #:  - ``TS.ADD``
     #:  - ``TS.ALTER``
     #:  - ``TS.CREATE``
@@ -279,6 +281,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``CLUSTER SLOT-STATS``
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     #:  - ``FT.SEARCH``
     #:  - ``GEORADIUS``
     #:  - ``GEORADIUSBYMEMBER``
@@ -294,6 +297,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``CLUSTER SLOT-STATS``
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     #:  - ``FT.SEARCH``
     #:  - ``GEORADIUS``
     #:  - ``GEORADIUSBYMEMBER``
@@ -715,6 +719,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     #:  - ``TS.ADD``
     #:  - ``TS.ALTER``
     #:  - ``TS.CREATE``
@@ -919,6 +924,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     #:  - ``TS.CREATERULE``
     #:  - ``TS.MRANGE``
     #:  - ``TS.MREVRANGE``
@@ -929,6 +935,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     #:  - ``TS.CREATERULE``
     #:  - ``TS.MRANGE``
     #:  - ``TS.MREVRANGE``
@@ -938,6 +945,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``FT.HYBRID``
     #:  - ``TS.CREATERULE``
     #:  - ``TS.MRANGE``
     #:  - ``TS.MREVRANGE``
@@ -995,7 +1003,6 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``TS.MRANGE``
     #:  - ``TS.MREVRANGE``
     #:  - ``TS.RANGE``
-    #:  - ``TS.REVRANGE``
     BUCKETTIMESTAMP = b"BUCKETTIMESTAMP"
 
     #: Used by:
@@ -1016,6 +1023,37 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``TS.REVRANGE``
+    END = b"END"
+
+    #: Used by:
+    #:
+    #:  - ``TS.REVRANGE``
+    HYPHEN_MINUS = b"-"
+
+    #: Used by:
+    #:
+    #:  - ``TS.REVRANGE``
+    MID = b"MID"
+
+    #: Used by:
+    #:
+    #:  - ``TS.REVRANGE``
+    PLUS_SIGN = b"+"
+
+    #: Used by:
+    #:
+    #:  - ``TS.REVRANGE``
+    START = b"START"
+
+    #: Used by:
+    #:
+    #:  - ``TS.REVRANGE``
+    TILDE = b"~"
+
+    #: Used by:
+    #:
+    #:  - ``FT.HYBRID``
     #:  - ``TS.MRANGE``
     #:  - ``TS.MREVRANGE``
     GROUPBY = b"GROUPBY"
@@ -1033,6 +1071,11 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``TS.MRANGE``
     #:  - ``TS.MREVRANGE``
     WITHLABELS = b"WITHLABELS"
+
+    #: Used by:
+    #:
+    #:  - ``TS.MREVRANGE``
+    LATEST = b"LATEST"
 
     #: Used by:
     #:
@@ -1175,6 +1218,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     #:  - ``FT.SEARCH``
     LIMIT = b"LIMIT"
 
@@ -1191,6 +1235,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     #:  - ``FT.SEARCH``
     PARAMS = b"PARAMS"
 
@@ -1224,46 +1269,55 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     COUNT_DISTINCT = b"COUNT_DISTINCT"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     COUNT_DISTINCTISH = b"COUNT_DISTINCTISH"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     FIRST_VALUE = b"FIRST_VALUE"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     LOADALL = b"LOAD *"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     QUANTILE = b"QUANTILE"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     RANDOM_SAMPLE = b"RANDOM_SAMPLE"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     REDUCE = b"REDUCE"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     STDDEV = b"STDDEV"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     TOLIST = b"TOLIST"
 
     #: Used by:
@@ -1288,8 +1342,49 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``FT.HYBRID``
     #:  - ``FT.PROFILE``
     SEARCH = b"SEARCH"
+
+    #: Used by:
+    #:
+    #:  - ``FT.HYBRID``
+    ADHOC = b"ADHOC"
+
+    #: Used by:
+    #:
+    #:  - ``FT.HYBRID``
+    BATCHES = b"BATCHES"
+
+    #: Used by:
+    #:
+    #:  - ``FT.HYBRID``
+    COMBINE = b"COMBINE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.HYBRID``
+    KNN = b"KNN"
+
+    #: Used by:
+    #:
+    #:  - ``FT.HYBRID``
+    LINEAR = b"LINEAR"
+
+    #: Used by:
+    #:
+    #:  - ``FT.HYBRID``
+    NOSORT = b"NOSORT"
+
+    #: Used by:
+    #:
+    #:  - ``FT.HYBRID``
+    RRF = b"RRF"
+
+    #: Used by:
+    #:
+    #:  - ``FT.HYBRID``
+    VSIM = b"VSIM"
 
     #: Used by:
     #:
@@ -1336,6 +1431,7 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``BZMPOP``
     #:  - ``FT.AGGREGATE``
     #:  - ``FT.CURSOR READ``
+    #:  - ``FT.HYBRID``
     #:  - ``GEORADIUS``
     #:  - ``GEORADIUSBYMEMBER``
     #:  - ``GEORADIUSBYMEMBER_RO``
@@ -1492,6 +1588,7 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``FAILOVER``
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     #:  - ``FT.SEARCH``
     TIMEOUT = b"TIMEOUT"
 
@@ -1772,6 +1869,7 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``FT.HYBRID``
     #:  - ``VSIM``
     EPSILON = b"EPSILON"
 
@@ -1779,6 +1877,7 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``FT.AGGREGATE``
     #:  - ``FT.CREATE``
+    #:  - ``FT.HYBRID``
     #:  - ``FT.SEARCH``
     #:  - ``TS.MGET``
     #:  - ``TS.MRANGE``
@@ -1887,6 +1986,7 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     #:  - ``TS.DECRBY``
     #:  - ``TS.INCRBY``
     TIMESTAMP = b"TIMESTAMP"
@@ -1918,8 +2018,14 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``TS.REVRANGE``
+    BUCKETTIMESTAMP = b"BUCKETTIMESTAMP"
+
+    #: Used by:
+    #:
     #:  - ``FT.AGGREGATE``
     #:  - ``FT.CREATE``
+    #:  - ``FT.HYBRID``
     #:  - ``FT.SEARCH``
     AS = b"AS"
 
@@ -2026,6 +2132,7 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``FT.HYBRID``
     #:  - ``FT.SEARCH``
     SCORER = b"SCORER"
 
@@ -2042,77 +2149,92 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     #:  - ``FT.SEARCH``
     SORTBY = b"SORTBY"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     ABS = b"ABS"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     APPLY = b"APPLY"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     CEIL = b"CEIL"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     CONTAINS = b"CONTAINS"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     DAY = b"DAY"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     DAYOFMONTH = b"DAYOFMONTH"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     DAYOFWEEK = b"DAYOFWEEK"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     DAYOFYEAR = b"DAYOFYEAR"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     EXISTS = b"EXISTS"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     EXP = b"EXP"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     FLOOR = b"FLOOR"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     FMT = b"FMT"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     FORMAT = b"FORMAT"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     GEODISTANCE = b"GEODISTANCE"
 
     #: Used by:
@@ -2123,31 +2245,37 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     HOUR = b"HOUR"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     LOAD = b"LOAD"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     LOG = b"LOG"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     LOG2 = b"LOG2"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     LOWER = b"LOWER"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     MATCHED_TERMS = b"MATCHED_TERMS"
 
     #: Used by:
@@ -2159,6 +2287,7 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     MAX_TERMS_100 = b"MAX_TERMS=100"
 
     #: Used by:
@@ -2169,89 +2298,157 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     MINUTE = b"MINUTE"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     MONTH = b"MONTH"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     MONTHOFYEAR = b"MONTHOFYEAR"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     OFFSET = b"OFFSET"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     PARSETIME = b"PARSETIME"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     S = b"S"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     S1 = b"S1"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     S2 = b"S2"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     SPLIT = b"SPLIT"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     SQRT = b"SQRT"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     STARTSWITH = b"STARTSWITH"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     STRLEN = b"STRLEN"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     SUBSTR = b"SUBSTR"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     TIMEFMT = b"TIMEFMT"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     TIMESHARING = b"TIMESHARING"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     UPPER = b"UPPER"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     X = b"X"
 
     #: Used by:
     #:
     #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     YEAR = b"YEAR"
+
+    #: Used by:
+    #:
+    #:  - ``FT.HYBRID``
+    ALPHA = b"ALPHA"
+
+    #: Used by:
+    #:
+    #:  - ``FT.HYBRID``
+    BATCH_SIZE = b"BATCH_SIZE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.HYBRID``
+    BETA = b"BETA"
+
+    #: Used by:
+    #:
+    #:  - ``FT.HYBRID``
+    CONSTANT = b"CONSTANT"
+
+    #: Used by:
+    #:
+    #:  - ``FT.HYBRID``
+    EF_RUNTIME = b"EF_RUNTIME"
+
+    #: Used by:
+    #:
+    #:  - ``FT.HYBRID``
+    K = b"K"
+
+    #: Used by:
+    #:
+    #:  - ``FT.HYBRID``
+    POLICY = b"POLICY"
+
+    #: Used by:
+    #:
+    #:  - ``FT.HYBRID``
+    RADIUS = b"RADIUS"
+
+    #: Used by:
+    #:
+    #:  - ``FT.HYBRID``
+    WINDOW = b"WINDOW"
+
+    #: Used by:
+    #:
+    #:  - ``FT.HYBRID``
+    YIELD_SCORE_AS = b"YIELD_SCORE_AS"

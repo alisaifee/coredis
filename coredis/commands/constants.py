@@ -439,6 +439,7 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     VGETATTR = b"VGETATTR"  # Since redis: 8.0.0
     VRANDMEMBER = b"VRANDMEMBER"  # Since redis: 8.0.0
     VISMEMBER = b"VISMEMBER"  # Since redis: 8.2.0
+    VRANGE = b"VRANGE"  # Since redis: 8.4.0
 
     #: Commands for json
     JSON_DEL = b"JSON.DEL"  # Since RedisJSON: 1.0.0
@@ -569,6 +570,7 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     FT_DROPINDEX = b"FT.DROPINDEX"  # Since search: 2.0.0
     FT__LIST = b"FT._LIST"  # Since search: 2.0.0
     FT_PROFILE = b"FT.PROFILE"  # Since search: 2.2.0
+    FT_HYBRID = b"FT.HYBRID"  # Since search: 8.4.4
     FT_CONFIG_SET = b"FT.CONFIG SET"  # Deprecated in search: 8.0.0
     FT_CONFIG_GET = b"FT.CONFIG GET"  # Deprecated in search: 8.0.0
     FT_CONFIG_HELP = b"FT.CONFIG HELP"  # Deprecated in search: 8.0.0

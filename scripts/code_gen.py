@@ -10,6 +10,7 @@ import re  # noqa
 import shutil
 import subprocess
 import typing  # noqa
+import unicodedata
 from typing import *  # noqa
 
 import click
@@ -673,6 +674,8 @@ def is_deprecated(command, kls):
 
 
 def sanitized(x, command=None, ignore_reserved_words=False):
+    if not x[0].isalpha():
+        return sanitized(unicodedata.name(x))
     cleansed_name = (
         x.lower().strip().replace("-", "_").replace(":", "_").replace(" ", "_").replace(".", "_")
     )
@@ -690,6 +693,7 @@ def sanitized(x, command=None, ignore_reserved_words=False):
         list(globals()["__builtins__"].__dict__.keys()) + ["async", "return", "if", "else", "for"]
     ):
         cleansed_name = cleansed_name + "_"
+
 
     return cleansed_name
 
@@ -1807,7 +1811,7 @@ def code_gen(ctx, debug: bool):
 
         core_command_file = os.path.join(cur_dir, "commands.json")
         os.system("docker-compose down --remove-orphans")
-        os.system("REDIS_VERSION=8.0-rc1 docker-compose up redis-basic -d")
+        os.system("REDIS_VERSION=8.2 docker-compose up redis-basic -d")
         script = open("/var/tmp/redis/utils/generate-commands-json.py").read()
         script = script.replace("docs.pop('summary')", "docs.pop('summary', None)")
         script = script.replace("docs.pop('since')", "docs.pop('since', None)")

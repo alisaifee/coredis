@@ -3860,6 +3860,16 @@ Check if an element exists in a vector set
 
 
 
+VRANGE [X]
+**********
+
+Return elements in a lexicographical range
+
+- Documentation: `VRANGE <https://redis.io/commands/vrange>`_
+
+- Not Implemented
+
+
 
 
 
@@ -4632,20 +4642,6 @@ Unloads a module.
 
 
 
-MONITOR
-*******
-
-Listens for all requests received by the server in real-time.
-
-- Documentation: `MONITOR <https://redis.io/commands/monitor>`_
-- Implementation: :meth:`~coredis.Redis.monitor`
-
-
-
-
-
-
-
 REPLICAOF
 *********
 
@@ -4790,6 +4786,16 @@ Returns the server time.
 
 
 
+
+
+MONITOR [X]
+***********
+
+Listens for all requests received by the server in real-time.
+
+- Documentation: `MONITOR <https://redis.io/commands/monitor>`_
+
+- Not Implemented
 
 
 
