@@ -180,16 +180,6 @@ class Client(
         self.connection_pool = connection_pool
         self.encoding = connection_pool.encoding
         self.decode_responses = connection_pool.decode_responses
-        connection_protocol_version = (
-            connection_pool.connection_kwargs.get("protocol_version") or protocol_version
-        )
-        assert connection_protocol_version in {
-            2,
-            3,
-        }, "Protocol version can only be one of {2,3}"
-        if connection_protocol_version == 2:
-            warnings.warn("Support for RESP2 will be removed in version 6.x", DeprecationWarning)
-        self.protocol_version = connection_protocol_version
         self.server_version: Version | None = None
         self.verify_version = verify_version
         self.__noreply = noreply
