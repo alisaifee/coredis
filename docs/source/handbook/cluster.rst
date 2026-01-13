@@ -43,8 +43,8 @@ else raise a :exc:`~coredis.exceptions.ReplicationError`::
 
 
     async def test():
-        client = RedisCluster("localhost", 7000, startup_nodes=[...])
-        with client.ensure_replication(replicas=2):
-            await client.set("fubar", 1)
+        async with RedisCluster("localhost", 7000, startup_nodes=[...]) as client:
+            with client.ensure_replication(replicas=2):
+                await client.set("fubar", 1)
 
     asyncio.run(test())

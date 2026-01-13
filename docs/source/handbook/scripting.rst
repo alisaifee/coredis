@@ -53,10 +53,10 @@ that points to a completely different Redis server.
 
 .. code-block:: python
 
-    r2 = coredis.Redis('redis2.example.com')
-    await r2.set('foo', 3)
-    multiply(keys=['foo'], args=[5], client=r2)
-    # 15
+    async with coredis.Redis() as r2:
+        await r2.set('foo', 3)
+        await multiply(keys=['foo'], args=[5], client=r2)
+        # 15
 
 The Script object ensures that the LUA script is loaded into Redis's script
 cache. In the event of a ``NOSCRIPT`` error, it will load the script and retry
@@ -69,11 +69,11 @@ execution.
 
 .. code-block:: python
 
-    pipe = await r.pipeline()
-    await pipe.set('foo', 5)
-    await multiply(keys=['foo'], args=[5], client=pipe)
-    await pipe.execute()
-    # [True, 25]
+    async with r.pipeline() as pipe:
+        r1 = pipe.set('foo', 5)
+        r2 = multiply(keys=['foo'], args=[5], client=pipe)
+    assert await r1
+    assert 25 == await r2
 
 Library Functions
 ^^^^^^^^^^^^^^^^^
@@ -184,23 +184,24 @@ Using the same example ``mylib`` lua library, this could be mapped to a python c
 
     from typing import List
     import coredis
-    from coredis.commands import Library
+    from coredis.commands import Library, wraps
+    from coredis.commands.functions import wraps
     from coredis.typing import KeyT, ValueT
 
     class MyLib(Library):
         NAME = "mylib"  # the name in the class variable is considered by the superclass constructor
         CODE = open("/var/tmp/library.lua").read()  # the code in the class variable is considered by the superclass constructor
 
-        @Library.wraps("echo")
+        @wraps()
         def echo(self, value: str) -> str: ...
 
-        @Library.wraps("ping")
+        @wraps()
         def ping(self) -> str: ...
 
-        @Library.wraps("get")
+        @wraps()
         def get(self, key: KeyT) -> ValueT: ...
 
-        @Library.wraps("hmmget")
+        @wraps()
         def hmmget(self, *keys: KeyT, **fields_with_defaults: ValueT) -> List[ValueT]: ...
             """
             Return values of ``fields_with_defaults`` on a first come first serve

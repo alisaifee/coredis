@@ -183,7 +183,8 @@ def wraps(
     decorator::
 
         import coredis
-        from coredis.commands import Library, wraps
+        from coredis.commands import Library
+        from coredis.commands.function import wraps
         from coredis.typing import KeyT, ValueT
 
         class MyAwesomeLibrary(Library):
