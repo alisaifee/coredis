@@ -174,6 +174,17 @@ class LRUCache(AbstractCache):
         confidence: float = 100,
         dynamic_confidence: bool = False,
     ) -> None:
+        """
+        Implementation of an LRU cache that can be used
+        with :class:`coredis.Redis`  or :class:`coredis.RedisCluster`
+
+        :param max_keys: maximum keys to cache. A negative value represents and unbounded cache.
+        :param confidence: 0 - 100. Lower values will result in the client discarding
+         and / or validating the cached responses
+        :param dynamic_confidence: Whether to adjust the confidence based on sampled validations.
+         Tainted values drop the confidence by 0.1% and confirmations of correct cached values
+         will increase the confidence by 0.01% upto 100.
+        """
         self._confidence = self._original_confidence = confidence
         self._dynamic_confidence = dynamic_confidence
         self._stats = CacheStats()

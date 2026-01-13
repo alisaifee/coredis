@@ -34,7 +34,7 @@ a :class:`~coredis.cache.AbstractCache` instance or using the provided implement
 
 For example::
 
-    import trio
+    import asyncio
     import coredis
     from coredis.cache import LRUCache
 
@@ -49,20 +49,16 @@ For example::
         async with cached_client, regular_client:
             assert not await cached_client.get("fubar") # None response cached
             await regular_client.set("fubar", "bar") # <- triggers a push message to cached_client
-            await trio.sleep(0.01)
+            await asyncio.sleep(0.01)
             assert b"bar" == await cached_client.get("fubar") # Cache should be invalidated
             assert b"bar" == await cached_client.get("fubar") # Fetched from local cache
             await cached_client.delete(["fubar"]) # Invalidates local cache immediately
             assert not await cached_client.get("fubar")
 
-    trio.run(test())
+    asyncio.run(test())
 
 :class:`~coredis.cache.LRUCache` exposes a few configuration options to fine tune
 the cache. Specifically the following constructor arguments might be of interest:
-
-:paramref:`~coredis.cache.LRUCache.max_size_bytes`
-    Maximum size in bytes that the cache should be allowed to grow to. The cache
-    will periodically shrink the cache in an LRU manner until it is below the threshold.
 
 :paramref:`~coredis.cache.LRUCache.max_keys`
     Maximum number of redis keys to track. This does not map directly to the number of
