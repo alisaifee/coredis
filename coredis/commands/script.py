@@ -193,7 +193,8 @@ class Script(Generic[AnyStr]):
             @client.register_script("return {KEYS[1], ARGV[1]}").wraps()
             async def echo_key_value(key: KeyT, value: ValueT) -> list[ValueT]: ...
 
-            res = await echo_key_value("co", "redis")
+            async with client:
+                res = await echo_key_value("co", "redis")
             # [b"co", b"redis"]
 
         Alternatively, the following example builds a class method that requires
@@ -216,10 +217,11 @@ class Script(Generic[AnyStr]):
                 )
                 def echo_arg(cls, client, value): ...
 
-            echoed = await ScriptProvider.echo_key(Redis(), "coredis")
-            # b"coredis"
-            echoed = await ScriptProvider.echo_value(Redis(), "coredis")
-            # b"coredis"
+            async with Redis() as client:
+                echoed = await ScriptProvider.echo_key(client, "coredis")
+                # b"coredis"
+                echoed = await ScriptProvider.echo_value(client, "coredis")
+                # b"coredis"
 
         You can also pass a custom callback to execute on the return type, which will
         be inferred as the return type rather than the annotation::
