@@ -18,7 +18,6 @@ from coredis.typing import (
     Generic,
     Hashable,
     Iterable,
-    Literal,
     Mapping,
     ParamSpec,
     Protocol,
@@ -39,7 +38,6 @@ P = ParamSpec("P")
 CR_co = TypeVar("CR_co", covariant=True)
 CK_co = TypeVar("CK_co", covariant=True)
 
-RESP = TypeVar("RESP")
 RESP3 = TypeVar("RESP3")
 
 if TYPE_CHECKING:
@@ -52,7 +50,6 @@ class ResponseCallbackMeta(ABCMeta):
     ) -> ResponseCallbackMeta:
         kls = super().__new__(cls, name, bases, namespace)
         setattr(kls, "transform", add_runtime_checks(getattr(kls, "transform")))
-        setattr(kls, "transform_3", add_runtime_checks(getattr(kls, "transform_3")))
         return kls
 
 
@@ -62,36 +59,26 @@ class ClusterCallbackMeta(ABCMeta):
     ) -> ClusterCallbackMeta:
         kls = super().__new__(cls, name, bases, namespace)
         setattr(kls, "combine", add_runtime_checks(getattr(kls, "combine")))
-        setattr(kls, "combine_3", add_runtime_checks(getattr(kls, "combine_3")))
         return kls
 
 
-class ResponseCallback(ABC, Generic[RESP, RESP3, R], metaclass=ResponseCallbackMeta):
-    version: Literal[2, 3]
-
+class ResponseCallback(ABC, Generic[RESP3, R], metaclass=ResponseCallbackMeta):
     def __init__(self, **options: Any) -> None:
         self.options = options
 
     def __call__(
         self,
-        response: RESP | RESP3 | ResponseError,
-        version: Literal[2, 3] = 2,
+        response: RESP3 | ResponseError,
     ) -> R:
-        self.version = version
         if isinstance(response, ResponseError):
             exc_to_response = self.handle_exception(response)
             if exc_to_response:
                 return exc_to_response
-        if version == 3:
-            return self.transform_3(cast(RESP3, response))
-        return self.transform(cast(RESP, response))
+        return self.transform(response)
 
     @abstractmethod
-    def transform(self, response: RESP) -> R:
+    def transform(self, response: RESP3) -> R:
         pass
-
-    def transform_3(self, response: RESP3) -> R:
-        return self.transform(cast(RESP, response))
 
     def handle_exception(self, exc: BaseException) -> R | None:
         return exc  # type: ignore
@@ -102,7 +89,7 @@ class AsyncPreProcessingCallback(Protocol):
     async def pre_process(self, client: Client[Any], response: ResponseType) -> None: ...
 
 
-class NoopCallback(ResponseCallback[R, R, R]):
+class NoopCallback(ResponseCallback[R, R]):
     def transform(self, response: R) -> R:
         return response
 
@@ -111,10 +98,7 @@ class ClusterMultiNodeCallback(ABC, Generic[R], metaclass=ClusterCallbackMeta):
     def __call__(
         self,
         responses: Mapping[str, R | ResponseError],
-        version: int = 2,
     ) -> R:
-        if version == 3:
-            return self.combine_3(responses)
         return self.combine(responses)
 
     @property
@@ -124,9 +108,6 @@ class ClusterMultiNodeCallback(ABC, Generic[R], metaclass=ClusterCallbackMeta):
     @abstractmethod
     def combine(self, responses: Mapping[str, R], **options: Any) -> R:
         pass
-
-    def combine_3(self, responses: Mapping[str, R], **options: Any) -> R:
-        return self.combine(responses, **options)
 
     @classmethod
     def raise_any(cls, values: Iterable[R]) -> None:
@@ -250,7 +231,7 @@ class ClusterConcatenateTuples(ClusterMultiNodeCallback[tuple[R, ...]]):
         return "the concatenations of the results"
 
 
-class SimpleStringCallback(ResponseCallback[StringT | None, StringT | None, bool]):
+class SimpleStringCallback(ResponseCallback[StringT | None, bool]):
     def __init__(
         self,
         raise_on_error: type[Exception] | None = None,
@@ -276,14 +257,14 @@ class SimpleStringCallback(ResponseCallback[StringT | None, StringT | None, bool
         return success
 
 
-class IntCallback(ResponseCallback[int, int, int]):
+class IntCallback(ResponseCallback[int, int]):
     def transform(self, response: ResponsePrimitive, **options: Any) -> int:
         if isinstance(response, int):
             return response
         raise ValueError(f"Unable to map {response!r} to int")
 
 
-class AnyStrCallback(ResponseCallback[StringT, StringT, AnyStr]):
+class AnyStrCallback(ResponseCallback[StringT, AnyStr]):
     def transform(self, response: StringT, **options: Any) -> AnyStr:
         if isinstance(response, (bytes, str)):
             return cast(AnyStr, response)
@@ -291,7 +272,7 @@ class AnyStrCallback(ResponseCallback[StringT, StringT, AnyStr]):
         raise ValueError(f"Unable to map {response!r} to AnyStr")
 
 
-class FloatCallback(ResponseCallback[StringT | int | float, StringT | int | float, float]):
+class FloatCallback(ResponseCallback[StringT | int | float, float]):
     def transform(self, response: ResponseType, **options: Any) -> float:
         if isinstance(response, float):
             return response
@@ -301,14 +282,14 @@ class FloatCallback(ResponseCallback[StringT | int | float, StringT | int | floa
         raise ValueError(f"Unable to map {response} to float")
 
 
-class BoolCallback(ResponseCallback[int | bool, int | bool, bool]):
+class BoolCallback(ResponseCallback[int | bool, bool]):
     def transform(self, response: ResponseType, **options: Any) -> bool:
         if isinstance(response, bool):
             return response
         return bool(response)
 
 
-class SimpleStringOrIntCallback(ResponseCallback[RedisValueT, RedisValueT, bool | int]):
+class SimpleStringOrIntCallback(ResponseCallback[RedisValueT, bool | int]):
     def transform(self, response: RedisValueT, **options: Any) -> bool | int:
         if isinstance(response, (int, bool)):
             return response
@@ -317,7 +298,7 @@ class SimpleStringOrIntCallback(ResponseCallback[RedisValueT, RedisValueT, bool 
         raise ValueError(f"Unable to map {response!r} to bool")
 
 
-class TupleCallback(ResponseCallback[list[ResponseType], list[ResponseType], tuple[CR_co, ...]]):
+class TupleCallback(ResponseCallback[list[ResponseType], tuple[CR_co, ...]]):
     def transform(self, response: ResponseType, **options: Any) -> tuple[CR_co, ...]:
         if isinstance(response, list):
             return cast(tuple[CR_co, ...], tuple(response))
@@ -326,7 +307,6 @@ class TupleCallback(ResponseCallback[list[ResponseType], list[ResponseType], tup
 
 class ItemOrTupleCallback(
     ResponseCallback[
-        list[ResponseType] | ResponsePrimitive,
         list[ResponseType] | ResponsePrimitive,
         tuple[CR_co, ...] | CR_co,
     ]
@@ -339,19 +319,19 @@ class ItemOrTupleCallback(
         return cast(CR_co, response)
 
 
-class MixedTupleCallback(ResponseCallback[list[ResponseType], list[ResponseType], tuple[R, S]]):
+class MixedTupleCallback(ResponseCallback[list[ResponseType], tuple[R, S]]):
     def transform(self, response: ResponseType, **options: Any) -> tuple[R, S]:
         if isinstance(response, list):
             return cast(tuple[R, S], tuple(response))
         raise ValueError(f"Unable to map {response!r} to tuple")
 
 
-class ListCallback(ResponseCallback[list[ResponseType], list[ResponseType], list[CR_co]]):
+class ListCallback(ResponseCallback[list[ResponseType], list[CR_co]]):
     def transform(self, response: list[ResponseType], **options: Any) -> list[CR_co]:
         return cast(list[CR_co], response)
 
 
-class DateTimeCallback(ResponseCallback[int | float, int | float, datetime.datetime]):
+class DateTimeCallback(ResponseCallback[int | float, datetime.datetime]):
     def transform(
         self,
         response: int | float,
@@ -364,7 +344,6 @@ class DateTimeCallback(ResponseCallback[int | float, int | float, datetime.datet
 
 class DictCallback(
     ResponseCallback[
-        Sequence[ResponseType] | dict[ResponsePrimitive, ResponseType],
         Sequence[ResponseType] | dict[ResponsePrimitive, ResponseType],
         dict[CK_co, CR_co],
     ]
@@ -384,7 +363,9 @@ class DictCallback(
         response: Sequence[ResponseType] | dict[ResponsePrimitive, ResponseType],
         **options: Any,
     ) -> dict[CK_co, CR_co]:
-        if isinstance(response, list):
+        if isinstance(response, dict):
+            return cast(dict[CK_co, CR_co], response)
+        elif isinstance(response, list):
             if self.flat:
                 if self.recursive:
                     return cast(dict[CK_co, CR_co], self.recursive_transformer(response))
@@ -394,15 +375,6 @@ class DictCallback(
             else:
                 return dict(r for r in response)
         raise ValueError(f"Unable to map {response!r} to mapping")
-
-    def transform_3(
-        self,
-        response: Sequence[ResponseType] | dict[ResponsePrimitive, ResponseType],
-        **options: Any,
-    ) -> dict[CK_co, CR_co]:
-        if isinstance(response, dict):
-            return cast(dict[CK_co, CR_co], response)
-        return self.transform(response, **options)
 
     def recursive_transformer(
         self, item: Sequence[ResponseType] | dict[ResponsePrimitive, ResponseType]
@@ -428,8 +400,7 @@ class DictCallback(
 
 class SetCallback(
     ResponseCallback[
-        list[ResponsePrimitive],
-        set[ResponsePrimitive],
+        list[ResponsePrimitive] | set[ResponsePrimitive],
         set[CR_co],
     ]
 ):
@@ -440,22 +411,13 @@ class SetCallback(
     ) -> set[CR_co]:
         if isinstance(response, list):
             return cast(set[CR_co], set(response))
-        raise ValueError(f"Unable to map {response} to set")
-
-    def transform_3(
-        self,
-        response: list[ResponsePrimitive] | set[ResponsePrimitive],
-        **options: Any,
-    ) -> set[CR_co]:
-        if isinstance(response, set):
+        elif isinstance(response, set):
             return cast(set[CR_co], response)
-        else:
-            return self.transform(response)
+        raise ValueError(f"Unable to map {response} to set")
 
 
 class OneOrManyCallback(
     ResponseCallback[
-        CR_co | list[CR_co | None] | None,
         CR_co | list[CR_co | None] | None,
         CR_co | list[CR_co | None] | None,
     ]
@@ -468,14 +430,14 @@ class OneOrManyCallback(
         return response
 
 
-class BoolsCallback(ResponseCallback[ResponseType, ResponseType, tuple[bool, ...]]):
+class BoolsCallback(ResponseCallback[ResponseType, tuple[bool, ...]]):
     def transform(self, response: ResponseType, **options: Any) -> tuple[bool, ...]:
         if isinstance(response, list):
             return tuple(BoolCallback()(r) for r in response)
         return ()
 
 
-class FloatsCallback(ResponseCallback[ResponseType, ResponseType, tuple[float, ...]]):
+class FloatsCallback(ResponseCallback[ResponseType, tuple[float, ...]]):
     def transform(self, response: ResponseType, **options: Any) -> tuple[float, ...]:
         if isinstance(response, list):
             return tuple(FloatCallback()(r) for r in response)
@@ -484,7 +446,6 @@ class FloatsCallback(ResponseCallback[ResponseType, ResponseType, tuple[float, .
 
 class OptionalFloatCallback(
     ResponseCallback[
-        StringT | int | float | None,
         StringT | int | float | None,
         float | None,
     ]
@@ -499,7 +460,7 @@ class OptionalFloatCallback(
         return FloatCallback()(response)
 
 
-class OptionalIntCallback(ResponseCallback[int | None, int | None, int | None]):
+class OptionalIntCallback(ResponseCallback[int | None, int | None]):
     def transform(self, response: int | None, **options: Any) -> int | None:
         if response is None:
             return None
@@ -512,7 +473,6 @@ class OptionalAnyStrCallback(
     ResponseCallback[
         StringT | None,
         AnyStr | None,
-        AnyStr | None,
     ]
 ):
     def transform(self, response: StringT | None, **options: Any) -> AnyStr | None:
@@ -523,14 +483,12 @@ class OptionalAnyStrCallback(
         raise ValueError(f"Unable to map {response} to AnyStr")
 
 
-class OptionalListCallback(
-    ResponseCallback[list[ResponseType], list[ResponseType], list[CR_co] | None]
-):
+class OptionalListCallback(ResponseCallback[list[ResponseType], list[CR_co] | None]):
     def transform(self, response: ResponseType, **options: Any) -> list[CR_co] | None:
         return cast(list[CR_co], response)
 
 
-class FirstValueCallback(ResponseCallback[list[CR_co], list[CR_co], CR_co]):
+class FirstValueCallback(ResponseCallback[list[CR_co], CR_co]):
     def transform(self, response: list[CR_co], **options: Any) -> CR_co:
         if response:
             return response[0]

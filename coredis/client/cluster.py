@@ -203,7 +203,6 @@ class RedisCluster(
         decode_responses: Literal[False] = ...,
         connection_pool: ClusterConnectionPool | None = ...,
         connection_pool_cls: type[ClusterConnectionPool] = ...,
-        protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         non_atomic_cross_slot: bool = ...,
         cache: AbstractCache | None = ...,
@@ -242,7 +241,6 @@ class RedisCluster(
         decode_responses: Literal[True] = ...,
         connection_pool: ClusterConnectionPool | None = ...,
         connection_pool_cls: type[ClusterConnectionPool] = ...,
-        protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         non_atomic_cross_slot: bool = ...,
         cache: AbstractCache | None = ...,
@@ -280,7 +278,6 @@ class RedisCluster(
         decode_responses: bool = False,
         connection_pool: ClusterConnectionPool | None = None,
         connection_pool_cls: type[ClusterConnectionPool] = ClusterConnectionPool,
-        protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
         non_atomic_cross_slot: bool = True,
         cache: AbstractCache | None = None,
@@ -304,6 +301,11 @@ class RedisCluster(
         """
 
         Changes
+          - .. versionremoved:: 6.0.0
+            - :paramref:`protocol_version` removed (and therefore support for RESP2)
+
+          - .. versionadded:: 6.0.0
+            -
           - .. versionadded:: 4.12.0
 
             - :paramref:`retry_policy`
@@ -412,9 +414,6 @@ class RedisCluster(
          a new pool will be assigned to this client.
         :param connection_pool_cls: The connection pool class to use when constructing
          a connection pool for this instance.
-        :param protocol_version: Whether to use the RESP (``2``) or RESP3 (``3``)
-         protocol for parsing responses from the server (Default ``3``).
-         (See :ref:`handbook/response:redis response`)
         :param verify_version: Validate redis server version against the documented
          version introduced before executing a command and raises a
          :exc:`CommandNotSupportedError` error if the required version is higher than
@@ -476,7 +475,6 @@ class RedisCluster(
                 read_from_replicas=readonly or read_from_replicas,
                 encoding=encoding,
                 decode_responses=decode_responses,
-                protocol_version=protocol_version,
                 noreply=noreply,
                 noevict=noevict,
                 notouch=notouch,
@@ -493,7 +491,6 @@ class RedisCluster(
             encoding=encoding,
             decode_responses=decode_responses,
             verify_version=verify_version,
-            protocol_version=protocol_version,
             noreply=noreply,
             noevict=noevict,
             notouch=notouch,
@@ -526,7 +523,6 @@ class RedisCluster(
         db: int | None = ...,
         skip_full_coverage_check: bool = ...,
         decode_responses: Literal[False] = ...,
-        protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         noreply: bool = ...,
         noevict: bool = ...,
@@ -546,7 +542,6 @@ class RedisCluster(
         db: int | None = ...,
         skip_full_coverage_check: bool = ...,
         decode_responses: Literal[True],
-        protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         noreply: bool = ...,
         noevict: bool = ...,
@@ -565,7 +560,6 @@ class RedisCluster(
         db: int | None = None,
         skip_full_coverage_check: bool = False,
         decode_responses: bool = False,
-        protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
         noreply: bool = False,
         noevict: bool = False,
@@ -601,7 +595,6 @@ class RedisCluster(
         if decode_responses:
             return cls(
                 decode_responses=True,
-                protocol_version=protocol_version,
                 verify_version=verify_version,
                 noreply=noreply,
                 retry_policy=retry_policy,
@@ -612,7 +605,6 @@ class RedisCluster(
                     db=db,
                     skip_full_coverage_check=skip_full_coverage_check,
                     decode_responses=decode_responses,
-                    protocol_version=protocol_version,
                     noreply=noreply,
                     noevict=noevict,
                     notouch=notouch,
@@ -622,7 +614,6 @@ class RedisCluster(
         else:
             return cls(
                 decode_responses=False,
-                protocol_version=protocol_version,
                 verify_version=verify_version,
                 noreply=noreply,
                 retry_policy=retry_policy,
@@ -633,7 +624,6 @@ class RedisCluster(
                     db=db,
                     skip_full_coverage_check=skip_full_coverage_check,
                     decode_responses=decode_responses,
-                    protocol_version=protocol_version,
                     noreply=noreply,
                     noevict=noevict,
                     notouch=notouch,
@@ -732,7 +722,7 @@ class RedisCluster(
         assert command in self.result_callbacks
         return cast(
             R,
-            self.result_callbacks[command](res, version=self.protocol_version, **kwargs),
+            self.result_callbacks[command](res, **kwargs),
         )
 
     def determine_node(
@@ -993,7 +983,6 @@ class RedisCluster(
                         )
                     response = callback(
                         cached_reply if cache_hit else reply,
-                        version=self.protocol_version,
                     )
                     if self.cache and cacheable:
                         if cache_hit and not use_cached:

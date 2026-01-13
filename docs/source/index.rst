@@ -152,21 +152,6 @@ Compatibility
 **coredis** is tested against redis versions >= ``7.0``
 The test matrix status can be reviewed `here <https://github.com/alisaifee/coredis/actions/workflows/main.yml>`__
 
-.. note:: Though **coredis** officially only supports :redis-version:`6.0.0` and above it is known to work with lower
-   versions.
-
-   A known compatibility issue with older redis versions is the lack of support for :term:`RESP3` and
-   the :rediscommand:`HELLO` command. The default :class:`~coredis.Redis` and :class:`~coredis.RedisCluster` clients
-   do not work in this scenario as the :rediscommand:`HELLO` command is used for initial handshaking to confirm that
-   the default ``RESP3`` protocol version can be used and to perform authentication if necessary.
-
-   This can be worked around by passing ``2`` to :paramref:`coredis.Redis.protocol_version` to downgrade to :term:`RESP`
-   (see :ref:`handbook/response:redis response`).
-
-   When using :term:`RESP` **coredis** will also fall back to the legacy :rediscommand:`AUTH` command if the
-   :rediscommand:`HELLO` is not supported.
-
-
 coredis is additionally tested against:
 
 - :pypi:`uvloop` >= `0.15.0`

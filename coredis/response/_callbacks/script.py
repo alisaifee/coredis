@@ -16,7 +16,7 @@ from coredis.typing import (
 
 
 class FunctionListCallback(
-    ResponseCallback[list[ResponseType], list[ResponseType], Mapping[AnyStr, LibraryDefinition]]
+    ResponseCallback[list[ResponseType], Mapping[AnyStr, LibraryDefinition]]
 ):
     def transform(
         self,
@@ -48,7 +48,6 @@ class FunctionListCallback(
 
 class FunctionStatsCallback(
     ResponseCallback[
-        list[ResponseType],
         dict[
             AnyStr,
             AnyStr | dict[AnyStr, dict[AnyStr, ResponsePrimitive]] | None,
@@ -60,22 +59,6 @@ class FunctionStatsCallback(
     ]
 ):
     def transform(
-        self,
-        response: list[ResponseType],
-    ) -> dict[AnyStr, AnyStr | dict[AnyStr, dict[AnyStr, ResponsePrimitive]] | None]:
-        transformed = flat_pairs_to_dict(response)
-        key = cast(AnyStr, b"engines" if b"engines" in transformed else "engines")
-        engines = flat_pairs_to_dict(cast(list[AnyStr], transformed.pop(key)))
-        engines_transformed = {}
-        for engine, stats in engines.items():
-            engines_transformed[engine] = flat_pairs_to_dict(cast(list[AnyStr], stats))
-        transformed[key] = engines_transformed  # type: ignore
-        return cast(
-            dict[AnyStr, AnyStr | dict[AnyStr, dict[AnyStr, ResponsePrimitive]]],
-            transformed,
-        )
-
-    def transform_3(
         self,
         response: dict[
             AnyStr,

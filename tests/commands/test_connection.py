@@ -12,7 +12,6 @@ from tests.conftest import targets
 
 @targets(
     "redis_basic",
-    "redis_basic_resp2",
     "redis_basic_raw",
     "valkey",
     "redict",
@@ -36,12 +35,12 @@ class TestConnection:
         assert resp[_s("server")] is not None
 
     async def test_hello_extended(self, client, _s):
-        resp = await client.hello(client.protocol_version)
-        assert resp[_s("proto")] == client.protocol_version
-        await client.hello(client.protocol_version, setname="coredis")
+        resp = await client.hello(3)
+        assert resp[_s("proto")] == 3
+        await client.hello(3, setname="coredis")
         assert await client.client_getname() == _s("coredis")
         with pytest.raises(AuthenticationFailureError):
-            await client.hello(client.protocol_version, username="no", password="body")
+            await client.hello(3, username="no", password="body")
 
     async def test_ping_custom_message(self, client, _s):
         resp = await client.ping(message="PANG")

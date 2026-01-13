@@ -91,7 +91,7 @@ async def test_autodecode(redis_sentinel_server: tuple[str, int]):
             assert await client.ping() == b"PONG"
 
 
-@targets("redis_sentinel", "redis_sentinel_raw", "redis_sentinel_resp2")
+@targets("redis_sentinel", "redis_sentinel_raw")
 class TestSentinelCommand:
     async def test_primary_for(self, client: Sentinel, host_ip):
         primary = client.primary_for("mymaster")

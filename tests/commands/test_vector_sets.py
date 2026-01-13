@@ -34,7 +34,6 @@ async def sample_data(client):
     "redis_basic_raw",
     "redis_cluster",
     "redis_cluster_raw",
-    "redis_basic_resp2",
 )
 @pytest.mark.min_server_version("8.0.0")
 class TestVectorSets:

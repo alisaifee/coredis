@@ -178,8 +178,8 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
         :param sentinel_kwargs: is a dictionary of connection arguments used when
          connecting to sentinel instances. Any argument that can be passed to
          a normal Redis connection can be specified here. If :paramref:`sentinel_kwargs` is
-         not specified, ``stream_timeout``, ``socket_keepalive``, ``decode_responses``
-         and ``protocol_version`` options specified in :paramref:`connection_kwargs` will be used.
+         not specified, ``stream_timeout``, ``socket_keepalive`` and ``decode_responses``
+         options specified in :paramref:`connection_kwargs` will be used.
         :param cache: If provided the cache will be shared between both primaries and replicas
          returned by this sentinel.
         :param type_adapter: The adapter to use for serializing / deserializing customs types
@@ -201,7 +201,6 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
                     "socket_timeout",
                     "socket_keepalive",
                     "encoding",
-                    "protocol_version",
                 }
             }
         self.sentinel_kwargs = sentinel_kwargs
