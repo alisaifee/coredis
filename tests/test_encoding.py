@@ -10,8 +10,9 @@ import coredis
 @pytest.fixture
 async def redis_no_decode(redis_basic_server):
     client = coredis.Redis()
-    await client.flushdb()
-    return client
+    async with client:
+        await client.flushdb()
+        yield client
 
 
 class TestEncoding:

@@ -12,16 +12,17 @@ of :class:`Redis` or :class:`RedisCluster`.
 For example::
 
     client = coredis.Redis()
-    # RedisJSON
-    await client.json.get("key")
-    # RediSearch
-    await client.search.search("index", "*")
-    # RedisBloom:BloomFilter
-    await client.bf.reserve("bf", 0.001, 1000)
-    # RedisBloom:CuckooFilter
-    await client.cf.reserve("cf", 1000)
-    # RedisTimeSeries
-    await client.timeseries.add("ts", 1, 1)
+    async with client:
+        # RedisJSON
+        await client.json.get("key")
+        # RediSearch
+        await client.search.search("index", "*")
+        # RedisBloom:BloomFilter
+        await client.bf.reserve("bf", 0.001, 1000)
+        # RedisBloom:CuckooFilter
+        await client.cf.reserve("cf", 1000)
+        # RedisTimeSeries
+        await client.timeseries.add("ts", 1, 1)
 
 
 Module commands can also be used in :ref:`handbook/pipelines:pipelines` (and transactions)
@@ -29,17 +30,14 @@ by accessing them via the command group property in the same way as described ab
 
 For example::
 
-    pipeline = await client.pipeline()
-
-    await pipeline.json.get("key")
-    await pipeline.json.get("key")
-    await pipeline.search.search("index", "*")
-    await pipeline.bf.reserve("bf", 0.001, 1000)
-    await pipeline.cf.reserve("cf", 1000)
-    await pipeline.timeseries.add("ts", 1, 1)
-    await pipeline.graph.query("graph", "CREATE (:Node {name: 'Node'})")
-
-    await pipeline.execute()
+    async with client.pipeline(transaction=True) as pipe:
+        pipe.json.get("key")
+        pipe.json.get("key")
+        pipe.search.search("index", "*")
+        pipe.bf.reserve("bf", 0.001, 1000)
+        pipe.cf.reserve("cf", 1000)
+        pipe.timeseries.add("ts", 1, 1)
+        pipe.graph.query("graph", "CREATE (:Node {name: 'Node'})")
 
 
 RedisJSON
@@ -55,17 +53,18 @@ Get/set operations::
     import coredis
     client = coredis.Redis()
 
-    await client.json.set(
-        "key1", ".", {"a": 1, "b": [1, 2, 3], "c": "str"}
-    )
-    assert 1 == await client.json.get("key1", ".a")
-    assert [1,2,3] == await client.json.get("key1", ".b")
-    assert "str" == await client.json.get("key1", ".c")
+    async with client:
+        await client.json.set(
+            "key1", ".", {"a": 1, "b": [1, 2, 3], "c": "str"}
+        )
+        assert 1 == await client.json.get("key1", ".a")
+        assert [1,2,3] == await client.json.get("key1", ".b")
+        assert "str" == await client.json.get("key1", ".c")
 
-    await client.json.set("key2", ".", {"a": 2, "b": [4,5,6], "c": ["str"]})
+        await client.json.set("key2", ".", {"a": 2, "b": [4,5,6], "c": ["str"]})
 
-    # multi get
-    assert ["str", ["str"]] == await client.json.mget(["key1", "key2"], ".c")
+        # multi get
+        assert ["str", ["str"]] == await client.json.mget(["key1", "key2"], ".c")
 
 Clear versus Delete::
 
@@ -144,48 +143,46 @@ some common field definitions::
     import coredis
     import coredis.modules
     client = coredis.Redis(decode_responses=True)
+    async with client:
+        # Create an index on json documents
+        await client.search.create("json_index", on=coredis.PureToken.JSON, schema = [
+            coredis.modules.search.Field('$.name', coredis.PureToken.TEXT, alias='name'),
+            coredis.modules.search.Field('$.country', coredis.PureToken.TEXT, alias='country'),
+            coredis.modules.search.Field('$.population', coredis.PureToken.NUMERIC, alias='population'),
+            coredis.modules.search.Field("$.location", coredis.PureToken.GEO, alias='location'),
+            coredis.modules.search.Field('$.iso_tags', coredis.PureToken.TAG, alias='iso_tags'),
+            coredis.modules.search.Field('$.summary_vector', coredis.PureToken.VECTOR, alias='summary_vector',
+                algorithm="FLAT",
+                attributes={
+                    "DIM": 768,
+                    "DISTANCE_METRIC": "COSINE",
+                    "TYPE": "FLOAT32",
+                }
+            )
 
-    # Create an index on json documents
-    await client.search.create("json_index", on=coredis.PureToken.JSON, schema = [
-        coredis.modules.search.Field('$.name', coredis.PureToken.TEXT, alias='name'),
-        coredis.modules.search.Field('$.country', coredis.PureToken.TEXT, alias='country'),
-        coredis.modules.search.Field('$.population', coredis.PureToken.NUMERIC, alias='population'),
-        coredis.modules.search.Field("$.location", coredis.PureToken.GEO, alias='location'),
-        coredis.modules.search.Field('$.iso_tags', coredis.PureToken.TAG, alias='iso_tags'),
-        coredis.modules.search.Field('$.summary_vector', coredis.PureToken.VECTOR, alias='summary_vector',
-            algorithm="FLAT",
-            attributes={
-                "DIM": 768,
-                "DISTANCE_METRIC": "COSINE",
-                "TYPE": "FLOAT32",
-            }
-        )
+        ], prefixes=['json:city:'])
 
-    ], prefixes=['json:city:'])
-
-    # or on all hashes that start with a prefix ``city:``
-    await client.search.create("hash_index", on=coredis.PureToken.HASH, schema = [
-        coredis.modules.search.Field('name', coredis.PureToken.TEXT),
-        coredis.modules.search.Field('country', coredis.PureToken.TEXT),
-        coredis.modules.search.Field('population', coredis.PureToken.NUMERIC),
-        coredis.modules.search.Field("location", coredis.PureToken.GEO),
-        coredis.modules.search.Field('iso_tags', coredis.PureToken.TAG, separator=","),
-        coredis.modules.search.Field('summary_vector', coredis.PureToken.VECTOR,
-            algorithm="FLAT",
-            attributes={
-                "DIM": 768,
-                "DISTANCE_METRIC": "COSINE",
-                "TYPE": "FLOAT32",
-            }
-        )
-    ], prefixes=['city:'])
+        # or on all hashes that start with a prefix ``city:``
+        await client.search.create("hash_index", on=coredis.PureToken.HASH, schema = [
+            coredis.modules.search.Field('name', coredis.PureToken.TEXT),
+            coredis.modules.search.Field('country', coredis.PureToken.TEXT),
+            coredis.modules.search.Field('population', coredis.PureToken.NUMERIC),
+            coredis.modules.search.Field("location", coredis.PureToken.GEO),
+            coredis.modules.search.Field('iso_tags', coredis.PureToken.TAG, separator=","),
+            coredis.modules.search.Field('summary_vector', coredis.PureToken.VECTOR,
+                algorithm="FLAT",
+                attributes={
+                    "DIM": 768,
+                    "DISTANCE_METRIC": "COSINE",
+                    "TYPE": "FLOAT32",
+                }
+            )
+        ], prefixes=['city:'])
 
 To populate the indices we can add some sample city data (a sample that can be used for the above
 index definition can be found `in the coredis repository <https://raw.githubusercontent.com/alisaifee/coredis/master/tests/modules/data/city_index.json>`__)
 using a pipeline for performance::
 
-
-    pipeline = await client.pipeline()
 
     import requests
     import numpy
@@ -194,26 +191,25 @@ using a pipeline for performance::
         "https://raw.githubusercontent.com/alisaifee/coredis/master/tests/modules/data/city_index.json"
     ).json()
 
-    for name, fields in cities.items():
-        await pipeline.json.set(f"json:city:{name}", f".", {
-            "name": name,
-            "country": fields["country"],
-            "population": int(fields["population"]),
-            "location": f"{fields['lng']},{fields['lat']}",
-            "iso_tags": fields["iso_tags"],
-            "summary_vector": fields["summary_vector"],
-        })
+    async with client.pipeline(transaction=False) as pipe:
+        for name, fields in cities.items():
+            pipe.json.set(f"json:city:{name}", f".", {
+                "name": name,
+                "country": fields["country"],
+                "population": int(fields["population"]),
+                "location": f"{fields['lng']},{fields['lat']}",
+                "iso_tags": fields["iso_tags"],
+                "summary_vector": fields["summary_vector"],
+            })
 
-        await pipeline.hset(f"city:{name}", {
-            "name": name,
-            "country": fields["country"],
-            "population": fields["population"],
-            "location": f"{fields['lng']},{fields['lat']}",
-            "iso_tags": ",".join(fields["iso_tags"]),
-            "summary_vector": numpy.asarray(fields["summary_vector"]).astype(numpy.float32).tobytes(),
-        })
-
-    await pipeline.execute()
+            pipe.hset(f"city:{name}", {
+                "name": name,
+                "country": fields["country"],
+                "population": fields["population"],
+                "location": f"{fields['lng']},{fields['lat']}",
+                "iso_tags": ",".join(fields["iso_tags"]),
+                "summary_vector": numpy.asarray(fields["summary_vector"]).astype(numpy.float32).tobytes(),
+            })
 
 .. note:: Take special note of how the ``population`` (numeric field), ``iso_tags`` (tag field) & ``summary_vector`` (vector field)
    fields are handled differently in the case of hashes vs json documents.
@@ -412,23 +408,23 @@ BloomFilter
 
 .. code-block::
 
-  import coredis
-  client = coredis.Redis()
+    import coredis
+    client = coredis.Redis()
+    async with client:
+        # create filter
+        await client.bf.reserve("filter", 0.1, 1000)
 
-  # create filter
-  await client.bf.reserve("filter", 0.1, 1000)
+        # add items
+        await client.bf.add("filter", 1)
+        await client.bf.madd("filter", [2,3,4])
 
-  # add items
-  await client.bf.add("filter", 1)
-  await client.bf.madd("filter", [2,3,4])
+        # test for inclusion
+        assert await client.bf.exists("filter", 1)
+        assert (True, False) == await client.bf.mexists("filter", [2,5])
 
-  # test for inclusion
-  assert await client.bf.exists("filter", 1)
-  assert (True, False) == await client.bf.mexists("filter", [2,5])
-
-  # or
-  assert await coredis.modules.BloomFilter(client).exists("filter", 1)
-  ...
+        # or
+        assert await coredis.modules.BloomFilter(client).exists("filter", 1)
+        ...
 
 For more details refer to the API documentation for :class:`~coredis.modules.BloomFilter`
 
@@ -438,9 +434,6 @@ CuckooFilter
 :attr:`Redis.cf` / :attr:`RedisCluster.cf`
 
 .. code-block::
-
-  import coredis
-  client = coredis.Redis()
 
   # create filter
   await client.cf.reserve("filter", 1000)
@@ -469,9 +462,6 @@ CountMinSketch
 
 .. code-block::
 
-  import coredis
-  client = coredis.Redis()
-
   # create a sketch
   await client.cms.initbydim("sketch", 2, 50)
 
@@ -490,12 +480,9 @@ TopK
 
 .. code-block::
 
-  import coredis
   import string
   import itertools
   import random
-
-  client = coredis.Redis()
 
   # create a top-3
   await client.topk.reserve("top3", 3)
@@ -516,10 +503,6 @@ TDigest
 :attr:`Redis.tdigest` / :attr:`RedisCluster.tdigest`
 
 .. code-block::
-
-    import coredis
-
-    client = coredis.Redis()
 
     # create a digest
     await client.tdigest.create("digest")
@@ -559,8 +542,9 @@ Create a few timeseries with different labels (:meth:`~modules.TimeSeries.create
     rooms = {"bedroom", "lounge", "bathroom"}
     client = coredis.Redis(port=9379)
 
-    for room in rooms:
-        assert await client.timeseries.create(f"temp:{room}", labels={"room": room})
+    async with client:
+        for room in rooms:
+            assert await client.timeseries.create(f"temp:{room}", labels={"room": room})
 
 Create compaction rules for hourly and daily averages (:meth:`~modules.TimeSeries.createrule`)::
 
@@ -585,13 +569,11 @@ Populate a year of random sample data (:meth:`~modules.TimeSeries.add`)::
 
     import random
     cur = datetime.fromtimestamp(0)
-    pipeline = await client.pipeline()
-    while cur < datetime(1971, 1, 1, 0, 0, 0):
-        cur += timedelta(minutes=random.randint(1, 60))
-        for room in rooms:
-            await pipeline.timeseries.add(f"temp:{room}", cur, random.randint(15, 30))
-
-    await pipeline.execute()
+    async with client.pipeline(transaction=True) as pipe:
+        while cur < datetime(1971, 1, 1, 0, 0, 0):
+            cur += timedelta(minutes=random.randint(1, 60))
+            for room in rooms:
+                pipe.timeseries.add(f"temp:{room}", cur, random.randint(15, 30))
 
 Query for the latest temperature in each room (:meth:`~modules.TimeSeries.get`)::
 

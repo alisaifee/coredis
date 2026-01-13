@@ -4,17 +4,17 @@ import functools
 import inspect
 import itertools
 import weakref
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar, cast, get_args, overload
 
 from deprecated.sphinx import versionadded
 
 from coredis._utils import EncodingInsensitiveDict, nativestr
 from coredis.commands.request import CommandRequest
 from coredis.exceptions import FunctionError
+from coredis.response._callbacks import NoopCallback
 from coredis.typing import (
     TYPE_CHECKING,
     AnyStr,
-    Awaitable,
     Callable,
     Generator,
     Generic,
@@ -23,8 +23,8 @@ from coredis.typing import (
     P,
     Parameters,
     R,
-    ResponseType,
     StringT,
+    T_co,
     TypeVar,
     ValueT,
     add_runtime_checks,
@@ -139,206 +139,221 @@ class Library(Generic[AnyStr]):
     def __getitem__(self, function: str) -> Function[AnyStr] | None:
         return cast(Function[AnyStr] | None, self._functions.get(function))
 
-    @classmethod
-    @versionadded(version="3.5.0")
-    def wraps(
-        cls,
-        function_name: str,
-        key_spec: list[KeyT] | None = None,
-        param_is_key: Callable[[inspect.Parameter], bool] = lambda p: (
-            p.annotation in {"KeyT", KeyT}
-        ),
-        runtime_checks: bool = False,
-        readonly: bool | None = None,
-    ) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, CommandRequest[R]]]:
-        """
-        Decorator for wrapping methods of subclasses of :class:`Library`
-        as entry points to the functions contained in the library. This allows
-        exposing a strict signature instead of that which :meth:`Function.__call__`
-        provides. The callable being decorated should **not** have an implementation as
-        it will never be called.
 
-        The main objective of the decorator is to allow you to represent a lua library of
-        functions as a python class having strict (and type safe) methods as entry points.
-        Internally the decorator separates ``keys`` from ``args`` before calling
-        :meth:`coredis.Redis.fcall`.
-
-        Mapping the decorated method's arguments to key providers is done either by
-        using :paramref:`key_spec` or :paramref:`param_is_key`. All other parameters of the
-        decorated method are assumed to be ``args`` consumed by the lua function.
+@overload
+def wraps(
+    callback: None = None,
+    runtime_checks: bool = ...,
+    readonly: bool = ...,
+) -> Callable[[Callable[P, R]], Callable[P, CommandRequest[R]]]: ...
 
 
-        The following example demonstrates most of the functionality provided by the
-        decorator::
+@overload
+def wraps(
+    callback: Callable[..., T_co],
+    runtime_checks: bool = ...,
+    readonly: bool = ...,
+) -> Callable[[Callable[P, Any]], Callable[P, CommandRequest[T_co]]]: ...
 
-            import coredis
-            from coredis.commands import Library
-            from coredis.typing import KeyT, RedisValueT
-            from typing import List
 
-            class MyAwesomeLibrary(Library):
-                NAME = "mylib"
-                CODE = \"\"\"
-                #!lua name=mylib
+@versionadded(version="3.5.0")
+def wraps(
+    callback: Callable[..., T_co] | None = None,
+    runtime_checks: bool = False,
+    readonly: bool = False,
+) -> Callable[[Callable[P, Any]], Callable[P, CommandRequest[Any]]]:
+    """
+    Decorator for wrapping methods of subclasses of :class:`Library`
+    as entry points to the functions contained in the library. This allows
+    exposing a strict signature instead of that which :meth:`Function.__call__`
+    provides. The callable being decorated should **not** have an implementation as
+    it will never be called. The name of the function decorated must match the foreign
+    (Lua) function's name.
 
-                redis.register_function('echo', function(k, a)
-                    return a[1]
-                end)
-                redis.register_function('ping', function()
-                    return "PONG"
-                end)
-                redis.register_function('get', function(k, a)
-                    return redis.call("GET", k[1])
-                end)
-                redis.register_function('hmget', function(k, a)
-                    local values = {}
-                    local fields = {}
-                    local response = {}
-                    local i = 1
-                    local j = 1
+    The main objective of the decorator is to allow you to represent a lua library of
+    functions as a python class having strict (and type safe) methods as entry points.
+    Internally the decorator separates ``keys`` from ``args`` before calling
+    :meth:`coredis.Redis.fcall`.
 
-                    while a[i] do
-                        fields[j] = a[i]
-                        i = i + 2
-                        j = j + 1
-                    end
+    Mapping the decorated method's arguments to key providers is done by type
+    annotations: all parameters annotated as `KeyT` will be passed as keys, and the
+    rest will be passed as arguments.
 
-                    for idx, key in ipairs(k) do
-                        values = redis.call("HMGET", key, unpack(fields))
-                        for idx, value in ipairs(values) do
-                            if not response[idx] and value then
-                                response[idx] = value
-                            end
-                        end
-                    end
-                    for idx, value in ipairs(fields) do
-                        if not response[idx] then
-                            response[idx] = a[idx*2]
-                        end
-                    end
-                    return response
-                end)
-                \"\"\"
+    The following example demonstrates most of the functionality provided by the
+    decorator::
 
-                @Library.wraps("echo")
-                def echo(self, value: ValueT) -> CommandRequest[RedisValueT]: ...
+        import coredis
+        from coredis.commands import Library, wraps
+        from coredis.typing import KeyT, ValueT
 
-                @Library.wraps("ping"print(c)
-                )
-                def ping(self) -> CommandRequest[str]: ...
+        class MyAwesomeLibrary(Library):
+            NAME = "mylib"
+            CODE = \"\"\"
+            #!lua name=mylib
 
-                @Library.wraps("get")
-                def get(self, key: KeyT) -> CommandRequest[ValueT]: ...
+            redis.register_function('echo', function(k, a)
+              return a[1]
+            end)
+            redis.register_function('ping', function()
+              return "PONG"
+            end)
+            redis.register_function {
+              function_name = 'get',
+              callback = function(k, a)
+                return redis.call("GET", k[1])
+              end,
+              flags = { 'no-writes' }  -- mark as read-only
+            }
+            redis.register_function('hmmget', function(k, a)
+              local values = {}
+              local fields = {}
+              local response = {}
+              local i = 1
+              local j = 1
 
-                @Library.wraps("hmmget")
-                def hmmget(self, *keys: KeyT, **fields_with_values: RedisValueT):
-                \"\"\"
-                Return values of ``fields_with_values`` on a first come first serve
-                basis from the hashes at ``keys``. Since ``fields_with_values`` is a mapping
-                the keys are mapped to hash fields and the values are used
-                as defaults if they are not found in any of the hashes at ``keys``
-                \"\"\"
-                ...
+              while a[i] do
+                fields[j] = a[i]
+                i = i + 2
+                j = j + 1
+              end
 
-            client = coredis.Redis()
+              for idx, key in ipairs(k) do
+                values = redis.call("HMGET", key, unpack(fields))
+                for idx, value in ipairs(values) do
+                  if not response[idx] and value then
+                    response[idx] = value
+                  end
+                end
+              end
+              for idx, value in ipairs(fields) do
+                if not response[idx] then
+                  response[idx] = a[idx*2]
+                end
+              end
+              return response
+            end)
+            \"\"\"
+
+            @wraps()
+            def echo(self, value: ValueT) -> ValueT: ...
+
+            @wraps()
+            def ping(self) -> bytes: ...
+
+            @wraps(readonly=True)
+            def get(self, key: KeyT) -> ValueT: ...
+
+            @wraps()
+            def hmmget(self, *keys: KeyT, **fields_with_values: int) -> list[ValueT]: ...
+
+        client = coredis.Redis()
+        async with client:
             lib = await MyAwesomeLibrary(client, replace=True)
             await client.set("hello", "world")
             # True
             await lib.echo("hello world")
             # b"hello world"
             await lib.ping()
-            # b"pong"
+            # b"PONG"
             await lib.get("hello")
-            # b"hello"
-            await client.hset("k1", {"c": 3, "d": 4})
-            await client.hset("k2", {"a": 1, "b": 2})
-            await lib.hmmget("k1", "k2", a=-1, b=-2, c=-3, d=-4, e=-5)
+            # b"world"
+
+            async with client.pipeline(transaction=False) as pipe:
+                pipe.hset("k1", {"c": 3, "d": 4})
+                pipe.hset("k2", {"a": 1, "b": 2})
+                res = MyAwesomeLibrary(pipe).hmmget("k1", "k2", a=-1, b=-2, c=-3, d=-4, e=-5)
+            print(await res)
             # [b"1", b"2", b"3", b"4", b"-5"]
 
-        :param key_spec: list of parameters of the decorated method that will
-         be passed as the :paramref:`keys` argument to :meth:`__call__`. If provided
-         this parameter takes precedence over using :paramref:`param_is_key` to
-         determine if a parameter is a key provider.
-        :param param_is_key: a callable that accepts a single argument of type
-         :class:`inspect.Parameter` and returns ``True`` if the parameter points to a key
-         that should be appended to the :paramref:`__call__.keys` argument of
-         :meth:`__call__`. The default implementation marks a parameter as a key
-         provider if it is of type :data:`coredis.typing.KeyT` and is only used
-         if :paramref:`key_spec` is ``None``.
-        :param runtime_checks: Whether to enable runtime type checking of input arguments
-         and return values. (requires :pypi:`beartype`). If :data:`False` the function will
-         still get runtime type checking if the environment configuration ``COREDIS_RUNTIME_CHECKS``
-         is set - for details see :ref:`handbook/typing:runtime type checking`.
-        :param readonly: If ``True`` forces this function to use :meth:`coredis.Redis.fcall_ro`
+    :param callback: a custom callback to execute on the returned value. When provided,
+     the callback's type will be inferred as the return type instead of the type from
+     the stub.
+    :param runtime_checks: Whether to enable runtime type checking of input arguments
+     and return values. (requires :pypi:`beartype`). If :data:`False` the function will
+     still get runtime type checking if the environment configuration ``COREDIS_RUNTIME_CHECKS``
+     is set - for details see :ref:`handbook/typing:runtime type checking`.
+    :param readonly: If ``True`` forces this function to use :meth:`coredis.Redis.fcall_ro`
 
-        :return: A function that has a signature mirroring the decorated function.
-        """
+    :return: A function that has a signature mirroring the decorated function.
+    """
+    callback = callback or NoopCallback()
 
-        def wrapper(func: Callable[P, Awaitable[R]]) -> Callable[P, CommandRequest[R]]:
-            sig = inspect.signature(func)
-            first_arg: str = list(sig.parameters.keys())[0]
-            runtime_check_wrapper = add_runtime_checks if not runtime_checks else safe_beartype
-            key_params = (
-                key_spec if key_spec else [n for n, p in sig.parameters.items() if param_is_key(p)]
-            )
-            arg_fetch: dict[str, Callable[..., Parameters[Any]]] = {
-                n: (
-                    (lambda v: [v])
-                    if p.kind
-                    in {
-                        inspect.Parameter.POSITIONAL_ONLY,
-                        inspect.Parameter.KEYWORD_ONLY,
-                        inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                    }
-                    else (
-                        (lambda v: list(itertools.chain.from_iterable(v.items())))
-                        if p.kind == inspect.Parameter.VAR_KEYWORD
-                        else lambda v: list(v)
-                    )
+    def wrapper(func: Callable[P, Any]) -> Callable[P, CommandRequest[T_co]]:
+        sig = inspect.signature(func)
+        first_arg: str = list(sig.parameters.keys())[0]
+        runtime_check_wrapper = add_runtime_checks if not runtime_checks else safe_beartype
+        key_params = [
+            n
+            for n, p in sig.parameters.items()
+            if p.annotation == "KeyT" or "KeyT" in get_args(p.annotation)
+        ]
+        arg_fetch: dict[str, Callable[..., Parameters[Any]]] = {
+            n: (
+                (lambda v: [v])
+                if p.kind
+                in {
+                    inspect.Parameter.POSITIONAL_ONLY,
+                    inspect.Parameter.KEYWORD_ONLY,
+                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                }
+                else (
+                    (lambda v: list(itertools.chain.from_iterable(v.items())))
+                    if p.kind == inspect.Parameter.VAR_KEYWORD
+                    else lambda v: list(v)
                 )
-                for n, p in sig.parameters.items()
-            }
+            )
+            for n, p in sig.parameters.items()
+        }
 
-            def split_args(
-                *a: P.args, **k: P.kwargs
-            ) -> tuple[Library[AnyStr], Parameters[KeyT], Parameters[ValueT]]:
-                bound_arguments = sig.bind(*a, **k)
-                bound_arguments.apply_defaults()
-                arguments: dict[str, Any] = bound_arguments.arguments
-                instance: Library[AnyStr] = arguments.pop(first_arg)
-                if not isinstance(instance, Library):
-                    raise RuntimeError(
-                        f"{instance.__class__.__name__} is not a subclass of"
-                        " coredis.commands.function.Library therefore it's methods cannot be bound "
-                        " to a redis library using ``Library.wrap``."
-                        " Please refer to the documentation at https://coredis.readthedocs.org/"
-                        " for instructions on how to bind a class to a redis library."
-                    )
-                keys: list[KeyT] = []
-                args: list[ValueT] = []
-                for name in sig.parameters:
-                    if name == first_arg:
-                        continue
-                    values = arg_fetch[name](arguments[name])
-                    if name in key_params:
-                        keys.extend(values)
-                    else:
-                        args.extend(values)
-                return instance, keys, args
+        def split_args(
+            *a: P.args, **k: P.kwargs
+        ) -> tuple[Library[AnyStr], Parameters[KeyT], Parameters[ValueT]]:
+            bound_arguments = sig.bind(*a, **k)
+            bound_arguments.apply_defaults()
+            arguments: dict[str, Any] = bound_arguments.arguments
+            instance = arguments.pop(first_arg)
+            if not isinstance(instance, Library):
+                raise RuntimeError(
+                    f"{instance.__class__.__name__} is not a subclass of"
+                    " coredis.commands.function.Library therefore it's methods cannot be bound "
+                    " to a redis library using ``Library.wrap``."
+                    " Please refer to the documentation at https://coredis.readthedocs.org/"
+                    " for instructions on how to bind a class to a redis library."
+                )
+            keys: list[KeyT] = []
+            args: list[ValueT] = []
+            for name in sig.parameters:
+                if name == first_arg:
+                    continue
+                values = arg_fetch[name](arguments[name])
+                if name in key_params:
+                    keys.extend(values)
+                else:
+                    args.extend(values)
+            return instance, keys, args
 
-            @runtime_check_wrapper
-            @functools.wraps(func)
-            def _inner(*args: P.args, **kwargs: P.kwargs) -> CommandRequest[R]:
-                instance, keys, arguments = split_args(*args, **kwargs)
-                if (func := instance.functions.get(function_name, None)) is None:
+        @runtime_check_wrapper
+        @functools.wraps(func)
+        def _inner(*args: P.args, **kwargs: P.kwargs) -> CommandRequest[T_co]:
+            instance, keys, arguments = split_args(*args, **kwargs)
+            if (fn := instance.functions.get(func.__name__, None)) is None:
+                if not hasattr(instance.client, "clear"):
                     raise AttributeError(
-                        f"Library {instance.name} has no registered function {function_name}"
+                        f"Library {instance.name} has no registered function {func.__name__}"
                     )
-                return cast(CommandRequest[R], func(keys, arguments, readonly=readonly))
+                # for pipelines, optimistically assume the function is registered
+                if readonly:
+                    return instance.client.fcall_ro(
+                        func.__name__, keys or [], arguments or [], callback=callback
+                    )
+                return instance.client.fcall(
+                    func.__name__, keys or [], arguments or [], callback=callback
+                )
+            return fn(keys, arguments, readonly=readonly, callback=callback)
 
-            return _inner
+        return _inner
 
-        return wrapper
+    return wrapper
 
 
 class Function(Generic[AnyStr]):
@@ -373,21 +388,15 @@ class Function(Generic[AnyStr]):
         assert c
         return c
 
-    async def initialize(self) -> Function[AnyStr]:
-        await self.library
-        return self
-
-    def __await__(self) -> Generator[Any, None, Function[AnyStr]]:
-        return self.initialize().__await__()
-
     def __call__(
         self,
         keys: Parameters[KeyT] | None = None,
         args: Parameters[ValueT] | None = None,
+        callback: Callable[..., T_co] = NoopCallback(),
         *,
         client: coredis.client.Client[AnyStr] | None = None,
         readonly: bool | None = None,
-    ) -> CommandRequest[ResponseType]:
+    ) -> CommandRequest[T_co]:
         """
         Wrapper to call :meth:`~coredis.Redis.fcall` with the
         function named :paramref:`Function.name` registered under
@@ -403,6 +412,6 @@ class Function(Generic[AnyStr]):
             readonly = self.readonly
 
         if readonly:
-            return client.fcall_ro(self.name, keys or [], args or [])
+            return client.fcall_ro(self.name, keys or [], args or [], callback=callback)
         else:
-            return client.fcall(self.name, keys or [], args or [])
+            return client.fcall(self.name, keys or [], args or [], callback=callback)

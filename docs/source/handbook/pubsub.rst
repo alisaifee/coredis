@@ -19,40 +19,18 @@ or :meth:`~coredis.commands.PubSub.psubscribe` methods.
 
 Upon instantiation::
 
-    consumer = await client.pubsub(
+    async with client.pubsub(
         channels=["my-first-channel", "my-second-channel"], patterns=["my-*"]
-    )
-
-.. note:: If the newly created pubsub instance can't be awaited because
-   it is done in a synchronous context, the initial subscriptions will occur
-   on the first async call to the instance. If explicit initialization is preferred
-   the instance can be awaited when the async context is available or through a call
-   to :meth:`~coredis.commands.PubSub.initialize`.
-
-   For example::
-
-       consumer = client.pubsub(
-           channels=["my-first-channel", "my-second-channel"],
-           patterns=["my-*"]
-       )
-       assert not consumer.subscribed
-       # later in an async context
-       await consumer
-       #  or
-       await consumer.initialize()
-       # or simply use the instance
-       await consumer.get_message()
-
+    ) as consumer:
+        ...
 
 or explicitly::
 
-    consumer = client.pubsub()
-    await consumer.subscribe("my-first-channel", "my-second-channel", ...)
-    await consumer.psubscribe("my-*")
+    async with client.pubsub() as consumer:
+        await consumer.subscribe("my-first-channel", "my-second-channel", ...)
+        await consumer.psubscribe("my-*")
 
-
-The recommended way of using a pubsub instance is with the async context manager
-which automatically manages unsubscribing and connection cleanup on exit::
+The async context manager automatically manages unsubscribing and cleanup on exit::
 
     async with client.pubsub(
         channels=["my-first-channel", "my-second-channel"], patterns=["my-*"]
@@ -61,8 +39,6 @@ which automatically manages unsubscribing and connection cleanup on exit::
             print(message)
     # remaining subscriptions are unsubscribed and connection is released
     # back to the connection pool when the context manager exits.
-
-
 
 If desired unsubscription can also be done explicitly by calling
 :meth:`~coredis.commands.PubSub.unsubscribe` for channels
@@ -82,8 +58,6 @@ exit when the consumer has no subscriptions)::
             else:
                 print(message["data"])
 
-
-
 Consuming Messages
 ^^^^^^^^^^^^^^^^^^
 
@@ -101,11 +75,9 @@ will be a typed dictionary defined as:
 
 With the iterator::
 
-    consumer.subscribe("my-channel")
-    async for message in consumer.messages:
+    await consumer.subscribe("my-channel")
+    async for message in consumer:
         # do something with the message
-
-
 
 .. note:: Unsubscribing from all subscribed channels will result in the iterator
    ending (i.e. raising :exc:`StopAsyncIteration`)
@@ -165,18 +137,7 @@ PubSub instances remember what channels and patterns they are subscribed to. In
 the event of a disconnection such as a network error or timeout, the
 PubSub instance will re-subscribe to all prior channels and patterns when
 reconnecting. Messages that were published while the client was disconnected
-cannot be delivered. When you're finished with a PubSub object, call the
-:meth:`~coredis.commands.PubSub.aclose` method to shutdown the connection and unsubscribe.
-
-.. note:: This isn't necessary if using the pubsub instance with the async context manager
-   since that automatically calls :meth:`~coredis.commands.PubSub.aclose` when the context
-   manager exits.
-
-.. code-block:: python
-
-    consumer = client.pubsub()
-    ...
-    await consumer.aclose()
+cannot be delivered.
 
 The Pub/Sub support commands :rediscommand:`PUBSUB-CHANNELS`, :rediscommand:`PUBSUB-NUMSUB` and :rediscommand:`PUBSUB-NUMPAT` are also
 supported:

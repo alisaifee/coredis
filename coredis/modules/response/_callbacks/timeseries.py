@@ -21,7 +21,6 @@ from coredis.typing import (
 class SampleCallback(
     ResponseCallback[
         list[RedisValueT],
-        list[RedisValueT],
         tuple[int, float] | tuple[()],
     ]
 ):
@@ -34,7 +33,6 @@ class SampleCallback(
 
 class SamplesCallback(
     ResponseCallback[
-        list[list[RedisValueT]] | None,
         list[list[RedisValueT]] | None,
         tuple[tuple[int, float], ...] | tuple[()],
     ],
@@ -67,7 +65,6 @@ class TimeSeriesInfoCallback(DictCallback[AnyStr, ResponseType]):
 class TimeSeriesCallback(
     ResponseCallback[
         ResponseType,
-        ResponseType,
         dict[AnyStr, tuple[dict[AnyStr, AnyStr], tuple[int, float] | tuple[()]]],
     ]
 ):
@@ -86,7 +83,6 @@ class TimeSeriesCallback(
 class TimeSeriesMultiCallback(
     ResponseCallback[
         ResponseType,
-        ResponseType,
         dict[
             AnyStr,
             tuple[dict[AnyStr, AnyStr], tuple[tuple[int, float], ...] | tuple[()]],
@@ -94,30 +90,6 @@ class TimeSeriesMultiCallback(
     ]
 ):
     def transform(
-        self,
-        response: ResponseType,
-    ) -> dict[
-        AnyStr,
-        tuple[dict[AnyStr, AnyStr], tuple[tuple[int, float], ...] | tuple[()]],
-    ]:
-        if self.options.get("grouped"):
-            return {
-                r[0]: (
-                    flat_pairs_to_dict(r[1][0]) if r[1] else {},
-                    tuple(SampleCallback().transform(t) for t in r[2]),
-                )
-                for r in cast(Any, response)
-            }
-        else:
-            return {
-                r[0]: (
-                    dict(r[1]),
-                    tuple(SampleCallback().transform(t) for t in r[2]),
-                )
-                for r in cast(Any, response)
-            }
-
-    def transform_3(
         self,
         response: ResponseType,
     ) -> dict[
@@ -142,7 +114,22 @@ class TimeSeriesMultiCallback(
                     for k, r in response.items()
                 }
         else:
-            return self.transform(response)
+            if self.options.get("grouped"):
+                return {
+                    r[0]: (
+                        flat_pairs_to_dict(r[1][0]) if r[1] else {},
+                        tuple(SampleCallback().transform(t) for t in r[2]),
+                    )
+                    for r in cast(Any, response)
+                }
+            else:
+                return {
+                    r[0]: (
+                        dict(r[1]),
+                        tuple(SampleCallback().transform(t) for t in r[2]),
+                    )
+                    for r in cast(Any, response)
+                }
 
 
 class ClusterMergeTimeSeries(ClusterMergeMapping[AnyStr, tuple[Any, ...]]):

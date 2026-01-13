@@ -4,12 +4,13 @@ import functools
 import hashlib
 import inspect
 import itertools
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, cast, get_args, overload
 
 from deprecated.sphinx import versionadded
 
 from coredis._utils import b
 from coredis.exceptions import NoScriptError
+from coredis.response._callbacks import NoopCallback
 from coredis.retry import ConstantRetryPolicy, retryable
 from coredis.typing import (
     AnyStr,
@@ -23,6 +24,7 @@ from coredis.typing import (
     RedisValueT,
     ResponseType,
     StringT,
+    T_co,
     ValueT,
     add_runtime_checks,
     safe_beartype,
@@ -79,7 +81,8 @@ class Script(Generic[AnyStr]):
         args: Parameters[ValueT] | None = None,
         client: coredis.client.Client[AnyStr] | None = None,
         readonly: bool | None = None,
-    ) -> Awaitable[ResponseType]:
+        callback: Callable[..., T_co] = NoopCallback(),
+    ) -> Awaitable[T_co]:
         """
         Executes the script registered in :paramref:`Script.script` using
         :meth:`coredis.Redis.evalsha`. Additionally, if the script was not yet
@@ -110,12 +113,12 @@ class Script(Generic[AnyStr]):
         if isinstance(client, Pipeline):
             # make sure this script is good to go on pipeline
             cast(Pipeline[AnyStr], client).scripts.add(self)
-            return method(self.sha, keys=keys, args=args)
+            return method(self.sha, keys=keys, args=args, callback=callback)
         else:
             return retryable(
                 ConstantRetryPolicy((NoScriptError,), 1, 0),
                 failure_hook=lambda _: client.script_load(self.script),
-            )(method)(self.sha, keys=keys, args=args)
+            )(method)(self.sha, keys=keys, args=args, callback=callback)
 
     async def execute(
         self,
@@ -131,17 +134,32 @@ class Script(Generic[AnyStr]):
         """
         return await self(keys, args, client, readonly)
 
+    @overload
+    def wraps(
+        self,
+        callback: None = None,
+        client_arg: str | None = ...,
+        runtime_checks: bool = ...,
+        readonly: bool = ...,
+    ) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]: ...
+
+    @overload
+    def wraps(
+        self,
+        callback: Callable[..., T_co],
+        client_arg: str | None = ...,
+        runtime_checks: bool = ...,
+        readonly: bool = ...,
+    ) -> Callable[[Callable[P, Awaitable[Any]]], Callable[P, Awaitable[T_co]]]: ...
+
     @versionadded(version="3.5.0")
     def wraps(
         self,
-        key_spec: list[str] | None = None,
-        param_is_key: Callable[[inspect.Parameter], bool] = lambda p: (
-            p.annotation in {"KeyT", KeyT}
-        ),
+        callback: Callable[..., T_co] | None = None,
         client_arg: str | None = None,
         runtime_checks: bool = False,
-        readonly: bool | None = None,
-    ) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
+        readonly: bool = False,
+    ) -> Any:
         """
         Decorator for wrapping a regular python function, method or classmethod
         signature with a :class:`~coredis.commands.script.Script`. This allows
@@ -151,10 +169,11 @@ class Script(Generic[AnyStr]):
 
         The main objective of the decorator is to allow you to have strict (and type safe)
         signatures for wrappers for lua scripts. Internally the decorator separates
-        ``keys`` from ``args`` before calling :meth:`coredis.Redis.evalsha`. Mapping the
-        decorated methods arguments to key providers is done either by using :paramref:`key_spec`
-        or :paramref:`param_is_key`. All other paramters of the decorated function are assumed
-        to be ``args`` consumed by the lua script.
+        ``keys`` from ``args`` before calling :meth:`coredis.Redis.evalsha`.
+
+        Mapping the decorated method's arguments to key providers is done by type
+        annotations: all parameters annotated as `KeyT` will be passed as keys, and the
+        rest will be passed as arguments.
 
         By default the decorated method is bound to the :class:`coredis.client.Redis`
         or :class:`coredis.client.RedisCluster` instance that the :class:`Script` instance
@@ -168,15 +187,14 @@ class Script(Generic[AnyStr]):
         passed to redis as an ``arg``::
 
             import coredis
-            from coredis.typing import KeyT, RedisValueT
-            from typing import List
+            from coredis.typing import KeyT, ValueT
 
             client = coredis.Redis()
             @client.register_script("return {KEYS[1], ARGV[1]}").wraps()
-            async def echo_key_value(key: KeyT, value: RedisValueT) -> List[RedisValueT]: ...
+            async def echo_key_value(key: KeyT, value: ValueT) -> list[ValueT]: ...
 
-            k, v = await echo_key_value("co", "redis")
-            # (b"co", b"redis")
+            res = await echo_key_value("co", "redis")
+            # [b"co", b"redis"]
 
         Alternatively, the following example builds a class method that requires
         the ``client`` to be passed in explicitly::
@@ -203,16 +221,28 @@ class Script(Generic[AnyStr]):
             echoed = await ScriptProvider.echo_value(Redis(), "coredis")
             # b"coredis"
 
-        :param key_spec: list of parameters of the decorated method that will
-         be passed as the :paramref:`keys` argument to :meth:`__call__`. If provided
-         this parameter takes precedence over using :paramref:`param_is_key` to determine if
-         a parameter is a key provider.
-        :param param_is_key: a callable that accepts a single argument of type
-         :class:`inspect.Parameter` and returns ``True`` if the parameter points
-         to a key that should be appended to the :paramref:`__call__.keys` argument
-         of :meth:`__call__`. The default implementation marks a parameter as a key
-         provider if it is of type :data:`coredis.typing.KeyT` and is only used if
-         :paramref:`key_spec` is ``None``.
+        You can also pass a custom callback to execute on the return type, which will
+        be inferred as the return type rather than the annotation::
+
+            class MyCallback(ResponseCallback[Any, Any, int]):
+                def transform(self, response: ResponseType) -> int:
+                    return sum([ord(c) for c in str(response)])
+
+            client = coredis.Redis(decode_responses=True)
+            async with client:
+                script = client.register_script("return {KEYS[1], ARGV[1]}")
+
+                # we use Any since return type will come from callback
+                @script.wraps(callback=MyCallback())
+                async def echo_key_value(key: KeyT, value: ValueT) -> Any: ...
+
+                res = await echo_key_value("co", "redis")
+                reveal_type(res)  # int
+                # 1161
+
+        :param callback: a custom callback to execute on the returned value. When provided,
+         the callback's type will be inferred as the return type instead of the type from
+         the stub.
         :param client_arg: The parameter of the decorator that will contain a client instance
          to be used to execute the script.
         :param runtime_checks: Whether to enable runtime type checking of input arguments
@@ -224,15 +254,18 @@ class Script(Generic[AnyStr]):
 
         :return: A function that has a signature mirroring the decorated function.
         """
+        callback = callback or NoopCallback()
 
-        def wrapper(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
+        def wrapper(func: Callable[P, Awaitable[Any]]) -> Callable[P, Awaitable[T_co]]:
             sig = inspect.signature(func)
             first_arg = list(sig.parameters.keys())[0]
             runtime_check_wrapper = add_runtime_checks if not runtime_checks else safe_beartype
             script_instance = self
-            key_params = (
-                key_spec if key_spec else [n for n, p in sig.parameters.items() if param_is_key(p)]
-            )
+            key_params = [
+                n
+                for n, p in sig.parameters.items()
+                if p.annotation == "KeyT" or "KeyT" in get_args(p.annotation)
+            ]
             arg_fetch: dict[str, Callable[..., Parameters[Any]]] = {
                 n: (
                     (lambda v: [v])
@@ -285,11 +318,9 @@ class Script(Generic[AnyStr]):
             async def __inner(
                 *args: P.args,
                 **kwargs: P.kwargs,
-            ) -> R:
+            ) -> T_co:
                 keys, arguments, client = split_args(sig.bind(*args, **kwargs))
-                # TODO: atleast lie with a cast.
-                #  mypy doesn't like the cast
-                return await script_instance(keys, arguments, client, readonly)  # type: ignore
+                return await script_instance(keys, arguments, client, readonly, callback=callback)  # type: ignore
 
             return __inner
 

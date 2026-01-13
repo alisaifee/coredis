@@ -31,7 +31,6 @@ Custom types
 .. autoclass:: coredis.typing.TypeAdapter
    :class-doc-from: both
 
-
 Redis Response (RESP) descriptions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -54,7 +53,6 @@ to the returns documented in the client API at :ref:`api/clients:clients`.
 .. type:: coredis.typing.ResponseType
 
    The total structure of any response for any redis command.
-
 
 Response Types
 ^^^^^^^^^^^^^^
@@ -85,4 +83,3 @@ returned by redis - to avoid errors in indexing.
 .. automodule:: coredis.modules.response.types
    :no-inherited-members:
    :show-inheritance:
-

@@ -7,7 +7,7 @@ Elasticache IAM Credential Provider
 
 The implementation is based on `the Elasticache IAM provider described in redis docs <https://redis-py.readthedocs.io/en/stable/examples/connection_examples.html#Connecting-to-a-redis-instance-with-ElastiCache-IAM-credential-provider\.>`__
 
-The :class:`~coredis.recipes.credentials.ElastiCacheIAMProvider` implements the
+The :class:`~coredis.recipes.ElastiCacheIAMProvider` implements the
 :class:`~coredis.credentials.AbstractCredentialProvider` interface.
 It uses :pypi:`aiobotocore` to generate a short-lived authentication token
 which can be used to authenticate with an IAM enabled Elasticache cluster.
@@ -17,7 +17,6 @@ of unnecessary requests.
 See https://docs.aws.amazon.com/AmazonElastiCache/latest/dg/auth-iam.html for more details
 on using IAM to authenticate with Elasticache.
 
-.. autoclass:: coredis.recipes.credentials.ElastiCacheIAMProvider
+.. autoclass:: coredis.recipes.ElastiCacheIAMProvider
    :class-doc-from: both
    :no-index:
-

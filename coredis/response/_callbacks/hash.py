@@ -15,7 +15,6 @@ from coredis.typing import (
 class HScanCallback(
     ResponseCallback[
         list[ResponseType],
-        list[ResponseType],
         tuple[int, dict[AnyStr, AnyStr] | tuple[AnyStr, ...]],
     ]
 ):
@@ -36,27 +35,11 @@ class HScanCallback(
 
 class HRandFieldCallback(
     ResponseCallback[
-        AnyStr | list[AnyStr] | None,
         AnyStr | list[AnyStr] | list[list[AnyStr]] | None,
         AnyStr | tuple[AnyStr, ...] | dict[AnyStr, AnyStr] | None,
     ]
 ):
     def transform(
-        self,
-        response: AnyStr | list[AnyStr] | None,
-    ) -> AnyStr | tuple[AnyStr, ...] | dict[AnyStr, AnyStr] | None:
-        if not response:
-            return None
-        if self.options.get("count"):
-            assert isinstance(response, list)
-            if self.options.get("withvalues"):
-                return flat_pairs_to_dict(response)
-            else:
-                return tuple(response)
-        assert isinstance(response, (str, bytes))
-        return response
-
-    def transform_3(
         self,
         response: AnyStr | list[AnyStr] | list[list[AnyStr]] | None,
     ) -> AnyStr | tuple[AnyStr, ...] | dict[AnyStr, AnyStr] | None:
@@ -71,14 +54,8 @@ class HRandFieldCallback(
         return response
 
 
-class HGetAllCallback(ResponseCallback[list[AnyStr], dict[AnyStr, AnyStr], dict[AnyStr, AnyStr]]):
+class HGetAllCallback(ResponseCallback[dict[AnyStr, AnyStr], dict[AnyStr, AnyStr]]):
     def transform(
-        self,
-        response: list[AnyStr],
-    ) -> dict[AnyStr, AnyStr]:
-        return flat_pairs_to_dict(response) if response else {}
-
-    def transform_3(
         self,
         response: dict[AnyStr, AnyStr],
     ) -> dict[AnyStr, AnyStr]:

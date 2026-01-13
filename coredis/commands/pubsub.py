@@ -1,21 +1,37 @@
 from __future__ import annotations
 
-import asyncio
 import inspect
-from asyncio import CancelledError
-from contextlib import suppress
-from functools import partial
-from types import TracebackType
-from typing import TYPE_CHECKING, Any, cast
+from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING, Any, AsyncGenerator, cast
 
-import async_timeout
+from anyio import (
+    TASK_STATUS_IGNORED,
+    AsyncContextManagerMixin,
+    ConnectionFailed,
+    EndOfStream,
+    Event,
+    create_memory_object_stream,
+    create_task_group,
+    current_time,
+    fail_after,
+    move_on_after,
+    sleep,
+)
+from anyio.abc import TaskStatus
+from anyio.streams.stapled import StapledObjectStream
 from deprecated.sphinx import versionadded
+from exceptiongroup import catch
 
-from coredis._enum import CaseAndEncodingInsensitiveEnum
-from coredis._utils import b, hash_slot, nativestr
+from coredis._utils import b, hash_slot, logger, nativestr
 from coredis.commands.constants import CommandName
 from coredis.connection import BaseConnection, Connection
-from coredis.exceptions import ConnectionError, PubSubError, TimeoutError
+from coredis.exceptions import RETRYABLE, ConnectionError, PubSubError, TimeoutError
+from coredis.parser import (
+    PUBLISH_MESSAGE_TYPES,
+    SUBUNSUB_MESSAGE_TYPES,
+    UNSUBSCRIBE_MESSAGE_TYPES,
+    PubSubMessageTypes,
+)
 from coredis.response.types import PubSubMessage
 from coredis.retry import (
     CompositeRetryPolicy,
@@ -27,13 +43,11 @@ from coredis.typing import (
     AnyStr,
     Awaitable,
     Callable,
-    Generator,
     Generic,
     Mapping,
     MutableMapping,
     Parameters,
     RedisValueT,
-    ResponsePrimitive,
     ResponseType,
     Self,
     StringT,
@@ -41,48 +55,16 @@ from coredis.typing import (
 )
 
 if TYPE_CHECKING:
-    import coredis.client
-    import coredis.connection
     import coredis.pool
 
 T = TypeVar("T")
-
-
 PoolT = TypeVar("PoolT", bound="coredis.pool.ConnectionPool")
-
 #: Callables for message handler callbacks. The callbacks
 #:  can be sync or async.
 SubscriptionCallback = Callable[[PubSubMessage], Awaitable[None]] | Callable[[PubSubMessage], None]
 
 
-class PubSubMessageTypes(CaseAndEncodingInsensitiveEnum):
-    MESSAGE = b"message"
-    PMESSAGE = b"pmessage"
-    SMESSAGE = b"smessage"
-    SUBSCRIBE = b"subscribe"
-    UNSUBSCRIBE = b"unsubscribe"
-    PSUBSCRIBE = b"psubscribe"
-    PUNSUBSCRIBE = b"punsubscribe"
-    SSUBSCRIBE = b"ssubscribe"
-    SUNSUBSCRIBE = b"sunsubscribe"
-
-
-class BasePubSub(Generic[AnyStr, PoolT]):
-    PUBLISH_MESSAGE_TYPES = {
-        PubSubMessageTypes.MESSAGE.value,
-        PubSubMessageTypes.PMESSAGE.value,
-    }
-    SUBUNSUB_MESSAGE_TYPES = {
-        PubSubMessageTypes.SUBSCRIBE.value,
-        PubSubMessageTypes.PSUBSCRIBE.value,
-        PubSubMessageTypes.UNSUBSCRIBE.value,
-        PubSubMessageTypes.PUNSUBSCRIBE.value,
-    }
-    UNSUBSCRIBE_MESSAGE_TYPES = {
-        PubSubMessageTypes.UNSUBSCRIBE.value,
-        PubSubMessageTypes.PUNSUBSCRIBE.value,
-    }
-
+class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
     channels: MutableMapping[StringT, SubscriptionCallback | None]
     patterns: MutableMapping[StringT, SubscriptionCallback | None]
 
@@ -98,11 +80,11 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         patterns: Parameters[StringT] | None = None,
         pattern_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
+        max_buffer_size: int = 1024,
     ):
-        self.initialized = False
         self.connection_pool = connection_pool
         self.ignore_subscribe_messages = ignore_subscribe_messages
-        self.connection: coredis.connection.Connection | None = None
+        self._connection: coredis.BaseConnection | None = None
         self._retry_policy = retry_policy or NoRetryPolicy()
         self._initial_channel_subscriptions = {
             **{nativestr(channel): None for channel in channels or []},
@@ -112,44 +94,97 @@ class BasePubSub(Generic[AnyStr, PoolT]):
             **{nativestr(pattern): None for pattern in patterns or []},
             **{nativestr(k): v for k, v in (pattern_handlers or {}).items()},
         }
-        self._message_queue: asyncio.Queue[PubSubMessage | None] = asyncio.Queue()
-        self._consumer_task: asyncio.Task[None] | None = None
-        self._subscribed = asyncio.Event()
-        self.reset()
+        self._send_stream, self._receive_stream = create_memory_object_stream[PubSubMessage | None](
+            max_buffer_size=max_buffer_size
+        )
+        self._subscribed = Event()
+        self.channels = {}
+        self.patterns = {}
+        self.tries = 0
+
+    @property
+    def connection(self) -> BaseConnection:
+        if not self._connection:
+            raise Exception("Connection not initialized correctly!")
+        return self._connection
 
     @property
     def subscribed(self) -> bool:
         """Indicates if there are subscriptions to any channels or patterns"""
         return bool(self.channels or self.patterns)
 
-    async def initialize(self) -> Self:
-        """
-        Ensures the pubsub instance is ready to consume messages
-        by establishing a connection to the redis server, setting up any
-        initial channel or pattern subscriptions that were specified during
-        instantiation and starting the consumer background task.
+    def __aiter__(self) -> Self:
+        return self
 
-        The method can be called multiple times without any
-        risk as it will skip initialization if the consumer is already
-        initialized.
+    async def __anext__(self) -> PubSubMessage:
+        while self._subscribed.is_set():
+            if message := await self.get_message():
+                return message
+        raise StopAsyncIteration()
 
-        .. important:: This method doesn't need to be called explicitly
-           as it will always be called internally before any relevant
-           documented interaction.
-
-        :return: the instance itself
-        """
-        if not self.initialized:
-            self.connection = await self.connection_pool.get_connection()
-            self.initialized = True
+    @asynccontextmanager
+    async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
+        # auto-reconnection for long-lived pubsub instances
+        async with create_task_group() as tg:
+            await tg.start(self.run)
+            # initialize subscriptions
             if self._initial_channel_subscriptions:
                 await self.subscribe(**self._initial_channel_subscriptions)
             if self._initial_pattern_subscriptions:
                 await self.psubscribe(**self._initial_pattern_subscriptions)
-            self.connection.register_connect_callback(self.on_connect)
-            if not self._consumer_task or self._consumer_task.done():
-                self._consumer_task = asyncio.create_task(self._consumer())
-        return self
+            yield self
+            # cleanup
+            await self.unsubscribe()
+            await self.punsubscribe()
+            self.channels.clear()
+            self.patterns.clear()
+            self._current_scope.cancel()
+
+    async def run(self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
+        start_time, started, tries = current_time(), False, 0
+
+        def handle_error(*args: Any) -> None:
+            nonlocal tries, start_time
+            if current_time() - start_time > 10:
+                tries = 0
+            else:
+                tries += 1
+            logger.warning("Cache connection lost, retrying...")
+
+        while True:
+            # retry with exponential backoff
+            await sleep(min(tries**2, 300))
+            with catch({RETRYABLE: handle_error}):
+                async with self.connection_pool.acquire() as self._connection:
+                    async with create_task_group() as tg:
+                        self._current_scope = tg.cancel_scope
+                        tg.start_soon(self._consumer)
+                        tg.start_soon(self._keepalive)
+                        if not started:
+                            task_status.started()
+                            started = True
+                        else:  # resubscribe
+                            if self.channels:
+                                await self.subscribe(*self.channels.keys())
+                            if self.patterns:
+                                await self.psubscribe(*self.patterns.keys())
+                    break
+
+    async def _keepalive(self) -> None:
+        while True:
+            await self.connection.send_command(CommandName.PING)
+            await sleep(15)
+
+    async def _consumer(self) -> None:
+        while True:
+            if self._subscribed.is_set():
+                if response := await self._retry_policy.call_with_retries(
+                    lambda: self.parse_response(block=True),
+                ):
+                    msg = await self.handle_message(response)
+                    self._send_stream.send_nowait(msg)
+            else:
+                await self._subscribed.wait()
 
     async def psubscribe(
         self,
@@ -201,9 +236,6 @@ class BasePubSub(Generic[AnyStr, PoolT]):
         for channel, handler in channel_handlers.items():
             new_channels[self.encode(channel)] = handler
         await self.execute_command(CommandName.SUBSCRIBE, *new_channels.keys())
-        # update the channels dict AFTER we send the command. we don't want to
-        # subscribe twice to these channels, once for the command and again
-        # for the reconnection.
         self.channels.update(new_channels)
         self._subscribed.set()
 
@@ -229,37 +261,11 @@ class BasePubSub(Generic[AnyStr, PoolT]):
          on the connection. If the ``None`` the command will block forever.
         """
 
-        try:
-            await self.initialize()
-            async with async_timeout.timeout(timeout):
-                return self._filter_ignored_messages(
-                    await self._message_queue.get(), ignore_subscribe_messages
-                )
-        except asyncio.TimeoutError:
-            return None
-
-    async def on_connect(self, connection: BaseConnection) -> None:
-        """
-        Re-subscribe to any channels and patterns previously subscribed to
-
-        :meta private:
-        """
-
-        if self.channels:
-            await self.subscribe(
-                **{
-                    k.decode(self.connection_pool.encoding) if isinstance(k, bytes) else k: v
-                    for k, v in self.channels.items()
-                }
+        with move_on_after(timeout):
+            return self._filter_ignored_messages(
+                await self._receive_stream.receive(), ignore_subscribe_messages
             )
-
-        if self.patterns:
-            await self.psubscribe(
-                **{
-                    k.decode(self.connection_pool.encoding) if isinstance(k, bytes) else k: v
-                    for k, v in self.patterns.items()
-                }
-            )
+        return None
 
     def encode(self, value: StringT) -> StringT:
         """
@@ -278,46 +284,27 @@ class BasePubSub(Generic[AnyStr, PoolT]):
 
     async def execute_command(
         self, command: bytes, *args: RedisValueT, **options: RedisValueT
-    ) -> ResponseType | None:
+    ) -> None:
         """
         Executes a publish/subscribe command
 
         :meta private:
         """
-        await self.initialize()
-
-        if self.connection is None:
-            self.connection = await self.connection_pool.get_connection()
-            self.connection.register_connect_callback(self.on_connect)
-        assert self.connection
-        return await self._execute(self.connection, self.connection.send_command, command, *args)
+        await self.connection.send_command(command, *args)
 
     async def parse_response(
         self, block: bool = True, timeout: float | None = None
-    ) -> ResponseType:
+    ) -> list[ResponseType]:
         """
         Parses the response from a publish/subscribe command
 
         :meta private:
         """
-        await self.initialize()
+        timeout = timeout if timeout and timeout > 0 else None
+        with fail_after(timeout):
+            return await self.connection.fetch_push_message(block=block)
 
-        assert self.connection
-        coro = self._execute(
-            self.connection,
-            partial(
-                self.connection.fetch_push_message,
-                block=block,
-                push_message_types=self.SUBUNSUB_MESSAGE_TYPES | self.PUBLISH_MESSAGE_TYPES,
-            ),
-        )
-
-        try:
-            return await asyncio.wait_for(coro, timeout if (timeout and timeout > 0) else None)
-        except asyncio.TimeoutError:
-            return None
-
-    async def handle_message(self, response: ResponseType) -> PubSubMessage | None:
+    async def handle_message(self, response: list[ResponseType]) -> PubSubMessage | None:
         """
         Parses a pub/sub message. If the channel or pattern was subscribed to
         with a message handler, the handler is invoked instead of a parsed
@@ -325,49 +312,48 @@ class BasePubSub(Generic[AnyStr, PoolT]):
 
         :meta private:
         """
-        r = cast(list[ResponsePrimitive], response)
-        message_type = b(r[0])
-        message_type_str = nativestr(r[0])
+        message_type = b(response[0])
+        message_type_str = nativestr(response[0])
         message: PubSubMessage
 
-        if message_type in self.SUBUNSUB_MESSAGE_TYPES:
+        if message_type in SUBUNSUB_MESSAGE_TYPES:
             message = PubSubMessage(
                 type=message_type_str,
-                pattern=cast(StringT, r[1]) if message_type[0] == ord(b"p") else None,
+                pattern=cast(StringT, response[1]) if message_type[0] == ord(b"p") else None,
                 # This field is populated in all cases for backward compatibility
                 # as older versions were incorrectly populating the channel
                 # with the pattern on psubscribe/punsubscribe responses.
-                channel=cast(StringT, r[1]),
-                data=cast(int, r[2]),
+                channel=cast(StringT, response[1]),
+                data=cast(int, response[2]),
             )
 
-        elif message_type in self.PUBLISH_MESSAGE_TYPES:
+        elif message_type in PUBLISH_MESSAGE_TYPES:
             if message_type == PubSubMessageTypes.PMESSAGE:
                 message = PubSubMessage(
                     type="pmessage",
-                    pattern=cast(StringT, r[1]),
-                    channel=cast(StringT, r[2]),
-                    data=cast(StringT, r[3]),
+                    pattern=cast(StringT, response[1]),
+                    channel=cast(StringT, response[2]),
+                    data=cast(StringT, response[3]),
                 )
             else:
                 message = PubSubMessage(
                     type="message",
                     pattern=None,
-                    channel=cast(StringT, r[1]),
-                    data=cast(StringT, r[2]),
+                    channel=cast(StringT, response[1]),
+                    data=cast(StringT, response[2]),
                 )
         else:
             raise PubSubError(f"Unknown message type {message_type_str}")  # noqa
 
         # if this is an unsubscribe message, remove it from memory
-        if message_type in self.UNSUBSCRIBE_MESSAGE_TYPES:
+        if message_type in UNSUBSCRIBE_MESSAGE_TYPES:
             if message_type == PubSubMessageTypes.PUNSUBSCRIBE:
                 subscribed_dict = self.patterns
             else:
                 subscribed_dict = self.channels
             subscribed_dict.pop(message["channel"], None)
 
-        if message_type in self.PUBLISH_MESSAGE_TYPES:
+        if message_type in PUBLISH_MESSAGE_TYPES:
             handler = None
             if message_type == PubSubMessageTypes.PMESSAGE and message["pattern"]:
                 handler = self.patterns.get(message["pattern"], None)
@@ -380,23 +366,9 @@ class BasePubSub(Generic[AnyStr, PoolT]):
                     await handler_response
                 return None
         if not (self.channels or self.patterns):
-            self._subscribed.clear()
+            self._subscribed = Event()
 
         return message
-
-    async def _consumer(self) -> None:
-        while self.initialized:
-            try:
-                if self.subscribed:
-                    if response := await self._retry_policy.call_with_retries(
-                        lambda: self.parse_response(block=True),
-                        failure_hook=self.reset_connections,
-                    ):
-                        self._message_queue.put_nowait(await self.handle_message(response))
-                else:
-                    await self._subscribed.wait()
-            except ConnectionError:
-                await asyncio.sleep(0)
 
     def _filter_ignored_messages(
         self,
@@ -405,95 +377,11 @@ class BasePubSub(Generic[AnyStr, PoolT]):
     ) -> PubSubMessage | None:
         if (
             message
-            and b(message["type"]) in self.SUBUNSUB_MESSAGE_TYPES
+            and b(message["type"]) in SUBUNSUB_MESSAGE_TYPES
             and (self.ignore_subscribe_messages or ignore_subscribe_messages)
         ):
             return None
         return message
-
-    async def _execute(
-        self,
-        connection: BaseConnection,
-        command: Callable[..., Awaitable[None]] | Callable[..., Awaitable[ResponseType]],
-        *args: RedisValueT,
-    ) -> ResponseType | None:
-        try:
-            return await command(*args)
-        except asyncio.CancelledError:
-            # do not retry if coroutine is cancelled
-            if await connection.can_read():  # noqa
-                connection.disconnect()
-            raise
-
-    def __await__(self) -> Generator[Any, None, Self]:
-        return self.initialize().__await__()
-
-    def __aiter__(self) -> Self:
-        return self
-
-    async def __anext__(self) -> PubSubMessage:
-        await self.initialize()
-        while self.subscribed:
-            if message := await self.get_message():
-                return message
-            else:
-                continue
-        raise StopAsyncIteration()
-
-    async def __aenter__(self) -> Self:
-        await self.initialize()
-        return self
-
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
-        await self.aclose()
-
-    async def aclose(self) -> None:
-        """
-        Unsubscribe from any channels or patterns & close and return
-        connections to the pool
-        """
-        if self.connection:
-            await self.unsubscribe()
-            await self.punsubscribe()
-        self.close()
-
-    def close(self) -> None:
-        self.reset()
-
-    def __del__(self) -> None:
-        self.reset()
-
-    def reset(self) -> None:
-        """
-        Clear subscriptions and disconnect and release any
-        connection(s) back to the connection pool.
-
-        :meta private:
-        """
-        if self.connection:
-            self.connection.disconnect()
-            self.connection.clear_connect_callbacks()
-            self.connection_pool.release(self.connection)
-            self.connection = None
-        if self._consumer_task:
-            try:
-                self._consumer_task.cancel()
-            except RuntimeError:  # noqa
-                pass
-            self._consumer_task = None
-
-        self.channels = {}
-        self.patterns = {}
-        self.initialized = False
-        self._subscribed.clear()
-
-    async def reset_connections(self, exc: BaseException | None = None) -> None:
-        pass
 
 
 class PubSub(BasePubSub[AnyStr, "coredis.pool.ConnectionPool"]):
@@ -558,51 +446,36 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
     """
 
-    async def execute_command(
-        self, command: bytes, *args: RedisValueT, **options: RedisValueT
-    ) -> ResponseType | None:
-        await self.initialize()
-        assert self.connection
-        return await self._execute(self.connection, self.connection.send_command, command, *args)
+    async def run(self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
+        start_time, started, tries = current_time(), False, 0
 
-    async def initialize(self) -> Self:
-        """
-        Ensures the pubsub instance is ready to consume messages
-        by establishing a connection to a random cluster node, setting up any
-        initial channel or pattern subscriptions that were specified during
-        instantiation and starting the consumer background task.
+        def handle_error(*args: Any) -> None:
+            nonlocal tries, start_time
+            if current_time() - start_time > 10:
+                tries = 0
+            else:
+                tries += 1
 
-        The method can be called multiple times without any
-        risk as it will skip initialization if the consumer is already
-        initialized.
-
-        .. important:: This method doesn't need to be called explicitly
-           as it will always be called internally before any relevant
-           documented interaction.
-
-        :return: the instance itself
-        """
-        if not self.initialized:
-            if self.connection is None:
-                await self.reset_connections(None)
-            self.initialized = True
-            if self._initial_channel_subscriptions:
-                await self.subscribe(**self._initial_channel_subscriptions)
-            if self._initial_pattern_subscriptions:
-                await self.psubscribe(**self._initial_pattern_subscriptions)
-            if not self._consumer_task or self._consumer_task.done():
-                self._consumer_task = asyncio.create_task(self._consumer())
-        return self
-
-    async def reset_connections(self, exc: BaseException | None = None) -> None:
-        if self.connection:
-            self.connection.disconnect()
-            self.connection_pool.initialized = False
-
-        await self.connection_pool.initialize()
-
-        self.connection = await self.connection_pool.get_connection(b"pubsub")
-        self.connection.register_connect_callback(self.on_connect)
+        while True:
+            await sleep(min(tries**2, 300))
+            with catch({(ConnectionError, ConnectionFailed, EndOfStream): handle_error}):
+                self._connection = await self.connection_pool.get_connection(
+                    command_name=b"pubsub", acquire=True
+                )
+                async with create_task_group() as tg:
+                    self._current_scope = tg.cancel_scope
+                    tg.start_soon(self._consumer)
+                    tg.start_soon(self._keepalive)
+                    if not started:
+                        task_status.started()
+                        started = True
+                    else:  # resubscribe
+                        if self.channels:
+                            await self.subscribe(*self.channels.keys())
+                        if self.patterns:
+                            await self.psubscribe(*self.patterns.keys())
+                self.connection_pool.release(self._connection)
+                break
 
 
 @versionadded(version="3.6.0")
@@ -626,16 +499,6 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
     For more details see :ref:`handbook/pubsub:sharded pub/sub`
     """
 
-    PUBLISH_MESSAGE_TYPES = {
-        PubSubMessageTypes.MESSAGE.value,
-        PubSubMessageTypes.SMESSAGE.value,
-    }
-    SUBUNSUB_MESSAGE_TYPES = {
-        PubSubMessageTypes.SSUBSCRIBE.value,
-        PubSubMessageTypes.SUNSUBSCRIBE.value,
-    }
-    UNSUBSCRIBE_MESSAGE_TYPES = {PubSubMessageTypes.SUNSUBSCRIBE.value}
-
     def __init__(
         self,
         connection_pool: coredis.pool.ClusterConnectionPool,
@@ -646,9 +509,11 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
     ):
         self.shard_connections: dict[str, Connection] = {}
-        self.channel_connection_mapping: dict[StringT, Connection] = {}
-        self.pending_tasks: dict[str, asyncio.Task[ResponseType]] = {}
+        self.node_channel_mapping: dict[str, list[StringT]] = {}
         self.read_from_replicas = read_from_replicas
+        self._shard_messages = StapledObjectStream(
+            *create_memory_object_stream[list[ResponseType]]()
+        )
         super().__init__(
             connection_pool,
             ignore_subscribe_messages,
@@ -671,14 +536,13 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
          :meth:`get_message`.
         """
 
-        await self.initialize()
         new_channels: MutableMapping[StringT, SubscriptionCallback | None] = {}
         new_channels.update(dict.fromkeys(map(self.encode, channels)))
 
         for channel, handler in channel_handlers.items():
             new_channels[self.encode(channel)] = handler
         for new_channel in new_channels.keys():
-            await self.execute_command(CommandName.SSUBSCRIBE, new_channel, sharded=True)
+            await self.execute_command(CommandName.SSUBSCRIBE, new_channel)
         self.channels.update(new_channels)
         self._subscribed.set()
 
@@ -690,7 +554,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         """
 
         for channel in channels or list(self.channels.keys()):
-            await self.execute_command(CommandName.SUNSUBSCRIBE, channel, sharded=True)
+            await self.execute_command(CommandName.SUNSUBSCRIBE, channel)
 
     async def psubscribe(
         self,
@@ -714,9 +578,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
     async def execute_command(
         self, command: bytes, *args: RedisValueT, **options: RedisValueT
-    ) -> ResponseType | None:
-        await self.initialize()
-
+    ) -> None:
         assert isinstance(args[0], (bytes, str))
         channel = nativestr(args[0])
         slot = hash_slot(b(channel))
@@ -729,177 +591,50 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                     channel=channel,
                     node_type="replica" if self.read_from_replicas else "primary",
                 )
-                # register a callback that re-subscribes to any channels we
-                # were listening to when we were disconnected
-                self.shard_connections[key].register_connect_callback(self.on_connect)
-
-            self.channel_connection_mapping[args[0]] = self.shard_connections[key]
-            assert self.shard_connections[key]
-            return await self._execute(
-                self.shard_connections[key],
-                self.shard_connections[key].send_command,
-                command,
-                *args,
-            )
+                self._task_group.start_soon(self._shard_listener, key)
+            self.node_channel_mapping.setdefault(key, []).append(args[0])
+            return await self.shard_connections[key].send_command(command, *args)
         raise PubSubError(f"Unable to determine shard for channel {args[0]!r}")
 
-    async def initialize(self) -> Self:
-        """
-        Ensures the sharded pubsub instance is ready to consume messages
-        by ensuring the connection pool is initialized, setting up any
-        initial channel subscriptions that were specified during
-        instantiation and starting the consumer background task.
-
-        The method can be called multiple times without any
-        risk as it will skip initialization if the consumer is already
-        initialized.
-
-        .. important:: This method doesn't need to be called explicitly
-           as it will always be called internally before any relevant
-           documented interaction.
-
-        :return: the instance itself
-        """
-        if not self.initialized:
-            await self.connection_pool.initialize()
-            self.initialized = True
+    @asynccontextmanager
+    async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
+        async with create_task_group() as self._task_group:
             if self._initial_channel_subscriptions:
                 await self.subscribe(**self._initial_channel_subscriptions)
-            if not self._consumer_task or self._consumer_task.done():
-                self._consumer_task = asyncio.create_task(self._consumer())
-        return self
+            self._task_group.start_soon(self._consumer)
+            yield self
+            await self.unsubscribe()
+            self._task_group.cancel_scope.cancel()
+            self.reset()
 
-    async def reset_connections(self, exc: BaseException | None = None) -> None:
-        for connection in self.shard_connections.values():
-            connection.disconnect()
-            connection.clear_connect_callbacks()
-            self.connection_pool.release(connection)
-        self.shard_connections.clear()
-        for _, task in self.pending_tasks.items():
-            if not task.done():
-                task.cancel()
-                with suppress(CancelledError):
-                    await task
-        self.pending_tasks.clear()
-        self.connection_pool.disconnect()
-        self.connection_pool.reset()
-        self.connection_pool.initialized = False
-        await self.connection_pool.initialize()
-        for channel in self.channels:
-            slot = hash_slot(b(channel))
-            node = self.connection_pool.nodes.node_from_slot(slot)
-            if node and node.node_id:
-                key = node.node_id
-                self.shard_connections[key] = await self.connection_pool.get_connection(
-                    b"pubsub",
-                    channel=channel,
-                    node_type="replica" if self.read_from_replicas else "primary",
-                )
-                # register a callback that re-subscribes to any channels we
-                # were listening to when we were disconnected
-                self.shard_connections[key].register_connect_callback(self.on_connect)
-                self.channel_connection_mapping[channel] = self.shard_connections[key]
+    async def _shard_listener(self, node_id: str) -> None:
+        while True:
+            connection = self.shard_connections.get(node_id, None)
+            if not connection:
+                break
+            try:
+                with move_on_after(2):
+                    message = await connection.fetch_push_message(True)
+                    await self._shard_messages.send(message)
+            except (ConnectionError, ConnectionFailed, EndOfStream):
+                self.shard_connections.pop(node_id)
+                if active_channels := set(self.channels) & set(self.node_channel_mapping[node_id]):
+                    self._task_group.start_soon(self.subscribe, *active_channels)
+                break
 
     async def parse_response(
         self, block: bool = True, timeout: float | None = None
-    ) -> ResponseType:
-        if not self.shard_connections:
-            raise RuntimeError(
-                "pubsub connection not set: did you forget to call subscribe() or psubscribe()?"
-            )
-        result = None
-        # Check any stashed results first.
-        if self.pending_tasks:
-            for node_id, task in list(self.pending_tasks.items()):
-                self.pending_tasks.pop(node_id)
-                if task.done():
-                    result = task.result()
-                    break
-                else:
-                    done, pending = await asyncio.wait(
-                        [task],
-                        timeout=0.001,
-                        return_when=asyncio.FIRST_COMPLETED,
-                    )
-                    if done:
-                        result = done.pop().result()
-                        break
-                    else:
-                        task.cancel()
-                        with suppress(CancelledError):
-                            await task
-        # If there were no pending results check the shards
-        if not result:
-            broken_connections = [c for c in self.shard_connections.values() if not c.is_connected]
-            if broken_connections:
-                for connection in broken_connections:
-                    try:
-                        await connection.connect()
-                    except:  # noqa
-                        raise ConnectionError("Shard connections not stable")
-            tasks: dict[str, asyncio.Task[ResponseType]] = {
-                node_id: asyncio.create_task(
-                    connection.fetch_push_message(
-                        push_message_types=self.SUBUNSUB_MESSAGE_TYPES | self.PUBLISH_MESSAGE_TYPES,
-                    ),
-                )
-                for node_id, connection in self.shard_connections.items()
-                if node_id not in self.pending_tasks
-            }
-            if tasks:
-                done, pending = await asyncio.wait(
-                    tasks.values(),
-                    timeout=timeout if (timeout and timeout > 0) else None,
-                    return_when=asyncio.FIRST_COMPLETED,
-                )
-                if done:
-                    done_task = done.pop()
-                    result = done_task.result()
-
-                # Stash any other tasks for the next iteration
-                for task in list(done) + list(pending):
-                    for node_id, scheduled in tasks.items():
-                        if task == scheduled:
-                            self.pending_tasks[node_id] = task
-        return result
-
-    async def on_connect(self, connection: BaseConnection) -> None:
-        """
-        Re-subscribe to any channels previously subscribed to
-
-        :meta private:
-        """
-        for channel, handler in self.channels.items():
-            if self.channel_connection_mapping[channel] == connection:
-                await self.subscribe(
-                    **{
-                        (
-                            channel.decode(self.connection_pool.encoding)
-                            if isinstance(channel, bytes)
-                            else channel
-                        ): handler
-                    }
-                )
+    ) -> list[ResponseType]:
+        timeout = timeout if timeout and timeout > 0 else None
+        with fail_after(timeout):
+            return await self._shard_messages.receive()
 
     def reset(self) -> None:
         for connection in self.shard_connections.values():
-            connection.disconnect()
             connection.clear_connect_callbacks()
             self.connection_pool.release(connection)
-        for _, task in self.pending_tasks.items():
-            task.cancel()
-        self.pending_tasks.clear()
         self.shard_connections.clear()
         self.channels = {}
         self.patterns = {}
         self.initialized = False
-        self._subscribed.clear()
-
-    async def aclose(self) -> None:
-        """
-        Unsubscribe from any channels & close and return
-        connections to the pool
-        """
-        if self.shard_connections:
-            await self.unsubscribe()
-        self.close()
+        self._subscribed = Event()

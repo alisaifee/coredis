@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import asyncio
-
 import pytest
 
 from coredis import Redis
+from coredis._concurrency import gather
 from coredis.exceptions import ResponseError
 from tests.conftest import module_targets
 
@@ -16,7 +15,7 @@ class TestCuckooFilter:
         with pytest.raises(ResponseError):
             await client.cf.reserve("filter", 1000)
         assert await client.cf.reserve("filter_bucket", 1000, 3)
-        info = await asyncio.gather(
+        info = await gather(
             client.cf.info("filter"),
             client.cf.info("filter_bucket"),
         )
@@ -87,12 +86,13 @@ class TestCuckooFilter:
 
     @pytest.mark.parametrize("transaction", [True, False])
     async def test_pipeline(self, client: Redis, transaction: bool):
-        p = await client.pipeline(transaction=transaction)
-        p.cf.add("filter", 1)
-        p.cf.add("filter", 2)
-        p.cf.exists("filter", 2)
-        p.cf.mexists("filter", [1, 2, 3])
-        p.cf.delete("filter", 2)
-        p.cf.exists("filter", 2)
-
-        assert (True, True, True, (True, True, False), True, False) == await p.execute()
+        async with client.pipeline(transaction=transaction) as p:
+            results = [
+                p.cf.add("filter", 1),
+                p.cf.add("filter", 2),
+                p.cf.exists("filter", 2),
+                p.cf.mexists("filter", [1, 2, 3]),
+                p.cf.delete("filter", 2),
+                p.cf.exists("filter", 2),
+            ]
+        assert await gather(*results) == (True, True, True, (True, True, False), True, False)

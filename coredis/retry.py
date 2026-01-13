@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-import asyncio
-import logging
 from abc import ABC, abstractmethod
 from functools import wraps
 from typing import Any
 
-from coredis.typing import Awaitable, Callable, P, R
+from anyio import sleep
 
-logger = logging.getLogger(__name__)
+from coredis._utils import logger
+from coredis.typing import Awaitable, Callable, P, R
 
 
 class RetryPolicy(ABC):
@@ -110,7 +109,7 @@ class ConstantRetryPolicy(RetryPolicy):
 
     async def delay(self, attempt_number: int) -> None:
         if attempt_number > 0:
-            await asyncio.sleep(self.__delay)
+            await sleep(self.__delay)
 
 
 class ExponentialBackoffRetryPolicy(RetryPolicy):
@@ -134,7 +133,7 @@ class ExponentialBackoffRetryPolicy(RetryPolicy):
 
     async def delay(self, attempt_number: int) -> None:
         if attempt_number > 0:
-            await asyncio.sleep(pow(2, attempt_number) * self.__initial_delay)
+            await sleep(pow(2, attempt_number) * self.__initial_delay)
 
 
 class CompositeRetryPolicy(RetryPolicy):

@@ -7,6 +7,7 @@ import numpy
 import pytest
 
 from coredis import PureToken, Redis
+from coredis._concurrency import gather
 from coredis.exceptions import ResponseError
 from coredis.modules.response.types import (
     SearchAggregationResult,
@@ -608,14 +609,16 @@ class TestSearch:
             on=PureToken.HASH,
             prefixes=["{search}:"],
         )
-        p = await client.pipeline()
-        p.hset("{search}:doc:1", {"name": "hello"})
-        p.hset("{search}:doc:2", {"name": "world"})
-        p.search.search(
-            "{search}:idx",
-            "@name:hello",
-        )
-        assert (
+        async with client.pipeline() as p:
+            results = [
+                p.hset("{search}:doc:1", {"name": "hello"}),
+                p.hset("{search}:doc:2", {"name": "world"}),
+                p.search.search(
+                    "{search}:idx",
+                    "@name:hello",
+                ),
+            ]
+        assert await gather(*results) == (
             1,
             1,
             SearchResult(
@@ -626,7 +629,7 @@ class TestSearch:
                     ),
                 ),
             ),
-        ) == await p.execute()
+        )
 
 
 @pytest.mark.min_module_version("search", "2.6.1")
@@ -853,15 +856,18 @@ class TestAggregation:
             on=PureToken.HASH,
             prefixes=["{search}:"],
         )
-        p = await client.pipeline()
-        p.hset("{search}:doc:1", {"name": "hello"})
-        p.hset("{search}:doc:2", {"name": "world"})
-        p.search.aggregate(
-            "{search}:idx",
-            "*",
-            transforms=[Group("@name", [Reduce("count", [0], "count")])],
-        )
-        assert (
+        async with client.pipeline() as p:
+            results = [
+                p.hset("{search}:doc:1", {"name": "hello"}),
+                p.hset("{search}:doc:2", {"name": "world"}),
+                p.search.aggregate(
+                    "{search}:idx",
+                    "*",
+                    transforms=[Group("@name", [Reduce("count", [0], "count")])],
+                ),
+            ]
+
+        assert await gather(*results) == (
             1,
             1,
             SearchAggregationResult(
@@ -871,4 +877,4 @@ class TestAggregation:
                 ],
                 None,
             ),
-        ) == await p.execute()
+        )

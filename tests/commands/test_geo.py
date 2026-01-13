@@ -2,24 +2,21 @@ from __future__ import annotations
 
 import pytest
 
-from coredis import PureToken
+from coredis import PureToken, Redis
 from coredis.exceptions import CommandSyntaxError, DataError
 from tests.conftest import server_deprecation_warning, targets
 
 
 @targets(
     "redis_basic",
-    "redis_basic_resp2",
-    "redis_basic_blocking",
     "redis_basic_raw",
     "redis_cluster",
-    "redis_cluster_blocking",
     "redis_cluster_raw",
     "valkey",
     "redict",
 )
 class TestGeo:
-    async def test_geoadd(self, client, _s):
+    async def test_geoadd(self, client: Redis[str], _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (
@@ -265,7 +262,7 @@ class TestGeo:
             order=PureToken.DESC,
         ) == (_s("place2"), _s("place1"))
 
-    async def test_geosearch_with(self, client, _s):
+    async def test_geosearch_with(self, client: Redis[str], _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (

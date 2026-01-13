@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from coredis import PureToken, Redis
+from coredis._concurrency import gather
 from coredis.exceptions import ResponseError
 from tests.conftest import module_targets
 
@@ -831,25 +832,27 @@ class TestJson:
 
     @pytest.mark.parametrize("transaction", [True, False])
     async def test_pipeline(self, client: Redis, transaction: bool):
-        p = await client.pipeline(transaction=transaction)
-        p.json.set(
-            "key",
-            LEGACY_ROOT_PATH,
-            {"a": 1, "b": [2], "c": {"d": "3"}, "e": {"f": [{"g": 4, "h": True}]}},
-        )
-        p.json.numincrby("key", "$.a", 1)
-        p.json.arrappend("key", [1], "..*")
-        p.json.strappend("key", "bar", "..*")
-        p.json.toggle("key", "..*")
-        p.json.toggle("key", "..*")
-        assert (
+        async with client.pipeline(transaction=transaction) as p:
+            results = [
+                p.json.set(
+                    "key",
+                    LEGACY_ROOT_PATH,
+                    {"a": 1, "b": [2], "c": {"d": "3"}, "e": {"f": [{"g": 4, "h": True}]}},
+                ),
+                p.json.numincrby("key", "$.a", 1),
+                p.json.arrappend("key", [1], "..*"),
+                p.json.strappend("key", "bar", "..*"),
+                p.json.toggle("key", "..*"),
+                p.json.toggle("key", "..*"),
+            ]
+        assert await gather(*results) == (
             True,
             [2],
             2,
             4,
             False,
             True,
-        ) == await p.execute()
+        )
         assert {
             "a": 2,
             "b": [2, 1],

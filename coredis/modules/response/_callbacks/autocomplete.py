@@ -8,7 +8,6 @@ from coredis.typing import AnyStr, ResponseType
 class AutocompleteCallback(
     ResponseCallback[
         list[ResponseType],
-        list[ResponseType],
         tuple[AutocompleteSuggestion[AnyStr], ...] | tuple[()],
     ]
 ):

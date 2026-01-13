@@ -1,20 +1,19 @@
 [build-system]
 build-backend = "hatchling.build"
 requires = [
-  "async_timeout>4,<6",
+  "anyio>=4.11.0",
   "hatchling>=1.14.0",
   "hatch-mypyc>=0.1.0",
   "hatch-vcs>=0.4.0",
   "mypy==1.18.1",
   "types-deprecated",
-  "pympler>1,<2",
   "beartype>=0.20",
 ]
 
 [project]
 name = "coredis"
 dynamic = ["version"]
-description = "Python async client for Redis key-value store"
+description = "Fast, async, fully-typed Redis client with support for cluster and sentinel"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -22,29 +21,40 @@ authors = [
   {name = "Ali-Akber Saifee", email = "ali@indydevs.org"}
 ]
 maintainers = [
-  {name = "Ali-Akber Saifee", email = "ali@indydevs.org"}
+  {name = "Ali-Akber Saifee", email = "ali@indydevs.org"},
+  {name = "Graeme Holliday", email = "graeme@tastyware.dev"}
 ]
-keywords = ["Redis", "key-value store", "asyncio"]
+keywords = ["Redis", "key-value store", "asyncio", "Trio", "anyio"]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
+  "Framework :: AsyncIO",
+  "Framework :: AnyIO",
+  "Framework :: Trio",
   "Intended Audience :: Developers",
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: System Administrators",
   "Operating System :: OS Independent",
   "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
   "Programming Language :: Python :: Implementation :: PyPy",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: System :: Distributed Computing",
+  "Typing :: Typed",
 ]
 requires-python = ">=3.10"
 dependencies = [
-  "async_timeout>4,<6",
+  "anyio>=4.11.0",
   "beartype>=0.20",
   "deprecated>=1.2",
   "typing_extensions>=4.13",
   "packaging>=21,<26",
-  "pympler>1,<2",
+  "exceptiongroup>=1.3.0",
 ]
 
 [project.optional-dependencies]
@@ -71,7 +81,9 @@ test = [
   "redis",
   "aiobotocore>=2.15.2",
   "asyncache>=0.3.1",
-  "moto"
+  "moto",
+  "trio>=0.31.0",
+  "uvloop; platform.python_implementation != 'PyPy'",
 ]
 
 dev = [
@@ -90,6 +102,7 @@ dev = [
 ci = [
   "pytest-rerunfailures",
   "pytest-sentry",
+  "pytest-timeout",
   {include-group = "dev"},
 ]
 
@@ -107,6 +120,10 @@ docs = [
   "botocore",
   "cachetools",
   {include-group = "dev"},
+]
+
+orjson = [
+  "orjson"
 ]
 
 [project.urls]
@@ -178,14 +195,12 @@ exclude = ["coredis/_py_312_typing.py"]
 
 [[tool.mypy.overrides]]
 module = [
-    "async_timeout",
     "beartype",
     "asyncache",
     "aiobotocore.*",
     "botocore.*",
     "cachetools",
     "deprecated",
-    "pympler",
 ]
 ignore_errors = true
 ignore_missing_imports = true
@@ -220,4 +235,3 @@ MYPYC_OPT_LEVEL = "3"
 [tool.cibuildwheel.linux.environment]
 HATCH_BUILD_HOOKS_ENABLE = "1"
 MYPYC_OPT_LEVEL = "3"
-

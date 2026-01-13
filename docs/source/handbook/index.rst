@@ -17,7 +17,6 @@ Handbook
     modules
     connections
     encoding
-    response
     optimization
     typing
     development

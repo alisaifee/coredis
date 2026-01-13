@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-import asyncio
 import contextvars
-import importlib.resources
 import math
 import time
 import uuid
 import warnings
+from pathlib import Path
 from types import TracebackType
 from typing import cast
+
+from anyio import sleep
 
 from coredis.client import Redis, RedisCluster
 from coredis.commands import Script
@@ -22,13 +23,11 @@ from coredis.exceptions import (
 from coredis.tokens import PureToken
 from coredis.typing import AnyStr, Generic, KeyT, StringT
 
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore", DeprecationWarning)
-    EXTEND_SCRIPT = Script(script=importlib.resources.read_text(__package__, "extend.lua"))
-    RELEASE_SCRIPT = Script(script=importlib.resources.read_text(__package__, "release.lua"))
+EXTEND_SCRIPT = Script(script=(Path(__file__).parent / "lua/extend.lua").read_text())
+RELEASE_SCRIPT = Script(script=(Path(__file__).parent / "lua/release.lua").read_text())
 
 
-class LuaLock(Generic[AnyStr]):
+class Lock(Generic[AnyStr]):
     """
     A shared, distributed Lock using LUA scripts.
 
@@ -40,31 +39,22 @@ class LuaLock(Generic[AnyStr]):
         import asyncio
         import coredis
         from coredis.exceptions import LockError
-        from coredis.recipes.locks import LuaLock
 
-        async def test():
-            client = coredis.Redis()
-            async with LuaLock(client, "mylock", timeout=1.0):
+        client = coredis.Redis()
+        async with client:
+            async with client.lock("mylock", timeout=1.0):
                 # do stuff
                 await asyncio.sleep(0.5)
                 # lock is implictly released when the context manager exits
             try:
-                async with LuaLock(client, "mylock", timeout=1.0):
+                async with client.lock("mylock", timeout=1.0):
                     # do stuff that takes too long
                     await asyncio.sleep(1)
                     # lock will raise upon exiting the context manager
             except LockError as err:
                 # roll back stuff
                 print(f"Expected error: {err}")
-            lock = LuaLock(client, "mylock", timeout=1.0)
-            await lock.acquire()
-            # do stuff
-            await asyncio.sleep(0.5)
-            # do more stuff
-            await lock.extend(1.0)
-            await lock.release()
 
-        asyncio.run(test())
     """
 
     @classmethod
@@ -129,7 +119,7 @@ class LuaLock(Generic[AnyStr]):
 
     async def __aenter__(
         self,
-    ) -> LuaLock[AnyStr]:
+    ) -> Lock[AnyStr]:
         if await self.acquire():
             return self
         raise LockAcquisitionError("Could not acquire lock")
@@ -173,7 +163,7 @@ class LuaLock(Generic[AnyStr]):
 
             if stop_trying_at is not None and time.time() > stop_trying_at:
                 return False
-            await asyncio.sleep(self.sleep)
+            await sleep(self.sleep)
 
     async def release(self) -> None:
         """

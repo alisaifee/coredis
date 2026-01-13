@@ -50,9 +50,10 @@ class TestScripting:
         clone = await cloner(client, read_from_replicas=True)
         await client.set("a", 2)
         # 2 * 3 == 6
-        assert await clone.eval_ro(multiply_script, ["a"], [3]) == 6
-        with pytest.raises(ResponseError, match="Write commands are not allowed"):
-            await clone.eval_ro(multiply_and_set_script, ["a"], [3])
+        async with clone:
+            assert await clone.eval_ro(multiply_script, ["a"], [3]) == 6
+            with pytest.raises(ResponseError, match="Write commands are not allowed"):
+                await clone.eval_ro(multiply_and_set_script, ["a"], [3])
 
     async def test_eval_same_slot(self, client):
         await client.set("A{foo}", 2)

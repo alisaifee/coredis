@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import asyncio
 import enum
 from typing import TYPE_CHECKING, Any
 
+from coredis._concurrency import gather
 from coredis._utils import b, nativestr
 from coredis.modules.response.types import (
     GraphNode,
@@ -57,7 +57,7 @@ SCALAR_MAPPING = {
 
 
 class QueryCallback(
-    ResponseCallback[ResponseType, ResponseType, GraphQueryResult[AnyStr]],
+    ResponseCallback[ResponseType, GraphQueryResult[AnyStr]],
     Generic[AnyStr],
 ):
     properties: dict[int, StringT]
@@ -91,7 +91,7 @@ class QueryCallback(
                     entity, max_label_id, max_relation_id, max_property_id
                 )
         if any(k != -1 for k in [max_label_id, max_relation_id, max_property_id]):
-            self.labels, self.relationships, self.properties = await asyncio.gather(
+            self.labels, self.relationships, self.properties = await gather(
                 self.fetch_mapping(max_label_id, "labels", client),
                 self.fetch_mapping(max_relation_id, "relationships", client),
                 self.fetch_mapping(max_property_id, "properties", client),
@@ -209,9 +209,7 @@ class QueryCallback(
             return GraphPath(nodes, relations)
 
 
-class GraphSlowLogCallback(
-    ResponseCallback[ResponseType, ResponseType, tuple[GraphSlowLogInfo, ...]]
-):
+class GraphSlowLogCallback(ResponseCallback[ResponseType, tuple[GraphSlowLogInfo, ...]]):
     def transform(
         self,
         response: ResponseType,
@@ -221,7 +219,6 @@ class GraphSlowLogCallback(
 
 class ConfigGetCallback(
     ResponseCallback[
-        ResponseType,
         ResponseType,
         ResponsePrimitive | dict[AnyStr, ResponsePrimitive],
     ]

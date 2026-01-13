@@ -17,5 +17,3 @@ PubSub
    :class-doc-from: both
 
 .. autodata:: coredis.commands.pubsub.SubscriptionCallback
-
-

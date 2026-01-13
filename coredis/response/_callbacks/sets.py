@@ -11,9 +11,7 @@ from coredis.typing import (
 )
 
 
-class SScanCallback(
-    ResponseCallback[list[ResponseType], list[ResponseType], tuple[int, set[AnyStr]]]
-):
+class SScanCallback(ResponseCallback[list[ResponseType], tuple[int, set[AnyStr]]]):
     def transform(
         self,
         response: list[ResponseType],
@@ -26,7 +24,6 @@ class SScanCallback(
 class ItemOrSetCallback(
     ResponseCallback[
         AnyStr | list[ResponsePrimitive] | set[ResponsePrimitive],
-        AnyStr | set[ResponsePrimitive],
         AnyStr | set[AnyStr],
     ]
 ):

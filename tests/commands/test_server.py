@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import asyncio
 import datetime
 
+import anyio
 import pytest
 from pytest import approx
 
@@ -15,11 +15,8 @@ from tests.conftest import targets
 
 @targets(
     "redis_basic",
-    "redis_basic_resp2",
-    "redis_basic_blocking",
     "redis_basic_raw",
     "redis_cluster",
-    "redis_cluster_blocking",
     "valkey",
     "redict",
 )
@@ -126,13 +123,14 @@ class TestServer:
         await client.set("a", "foo")
         await client.set("b", "bar")
         db1 = await cloner(client, connection_kwargs={"db": 1})
-        await db1.set("a", "foo")
-        await db1.set("b", "bar")
-        assert len(await client.keys()) == 2
-        assert len(await db1.keys()) == 2
-        assert await client.flushall(mode)
-        assert len(await client.keys()) == 0
-        assert len(await db1.keys()) == 0
+        async with db1:
+            await db1.set("a", "foo")
+            await db1.set("b", "bar")
+            assert len(await client.keys()) == 2
+            assert len(await db1.keys()) == 2
+            assert await client.flushall(mode)
+            assert len(await client.keys()) == 0
+            assert len(await db1.keys()) == 0
 
     @pytest.mark.parametrize(
         "mode",
@@ -337,7 +335,7 @@ class TestServer:
     @pytest.mark.xfail
     async def test_quit(self, client):
         assert await client.quit()
-        await asyncio.sleep(0.1)
+        await anyio.sleep(0.1)
         assert not client.connection_pool.peek_available().is_connected
 
 

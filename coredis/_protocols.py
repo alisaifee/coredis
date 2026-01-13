@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import asyncio
-
+from anyio.streams.memory import MemoryObjectSendStream
 from typing_extensions import runtime_checkable
 
 from coredis.response._callbacks import NoopCallback
@@ -47,4 +46,4 @@ class AbstractExecutor(Protocol):
 class ConnectionP(Protocol):
     decode_responses: bool
     encoding: str
-    push_messages: asyncio.Queue[ResponseType]
+    push_messages: MemoryObjectSendStream[ResponseType]

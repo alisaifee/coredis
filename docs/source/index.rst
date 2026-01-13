@@ -26,13 +26,14 @@ coredis
       :alt: Code coverage
       :class: header-badge
 
-coredis is an async redis client with support for redis server, cluster & sentinel.
+Fast, async, fully-typed Redis client with support for cluster and sentinel
+
 The client API uses the specifications in the Redis command documentation to define the API by using the following conventions:
 
 The coredis :ref:`api/clients:clients` use the specifications in
 the `Redis command documentation <https://redis.io/commands>`__ to define the API by using the following conventions:
 
-- Arguments retain naming from redis as much as possible
+- Arguments retain naming from Redis as much as possible
 - **Only** optional variadic arguments are mapped to position or keyword variadic arguments. When
   the variable length arguments are not optional the expected argument is an
   iterable of type :class:`~coredis.typing.Parameters` or :class:`~typing.Mapping`.
@@ -50,7 +51,7 @@ Feature Summary
 
   * :class:`~coredis.Redis`
   * :class:`~coredis.RedisCluster`
-  * :class:`~coredis.sentinel.Sentinel`
+  * :class:`~coredis.Sentinel`
 
 * Application patterns
 
@@ -106,21 +107,23 @@ Single Node or Cluster client
         client = Redis(host='127.0.0.1', port=6379, db=0)
         # or with redis cluster
         # client = RedisCluster(startup_nodes=[{"host": "127.0.01", "port": 7001}])
-        await client.flushdb()
-        await client.set('foo', 1)
-        assert await client.exists(['foo']) == 1
-        assert await client.incr('foo') == 2
-        assert await client.incrby('foo', increment=100) == 102
-        assert int(await client.get('foo')) == 102
+        async with client:
+            await client.flushdb()
+            await client.set('foo', 1)
+            assert await client.exists(['foo']) == 1
+            assert await client.incr('foo') == 2
+            assert await client.incrby('foo', increment=100) == 102
+            assert int(await client.get('foo')) == 102
 
-        assert await client.expire('foo', 1)
-        await asyncio.sleep(0.1)
-        assert await client.ttl('foo') == 1
-        assert await client.pttl('foo') < 1000
-        await asyncio.sleep(1)
-        assert not await client.exists(['foo'])
+            assert await client.expire('foo', 1)
+            await asyncio.sleep(0.1)
+            assert await client.ttl('foo') == 1
+            assert await client.pttl('foo') < 1000
+            await asyncio.sleep(1)
+            assert not await client.exists(['foo'])
 
     asyncio.run(example())
+    # OR trio.run(example())
 
 Sentinel
 --------
@@ -132,11 +135,13 @@ Sentinel
 
     async def example():
         sentinel = Sentinel(sentinels=[("localhost", 26379)])
-        primary = sentinel.primary_for("myservice")
-        replica = sentinel.replica_for("myservice")
+        async with sentinel:
+            primary = sentinel.primary_for("myservice")
+            replica = sentinel.replica_for("myservice")
 
-        assert await primary.set("fubar", 1)
-        assert int(await replica.get("fubar")) == 1
+            async with primary, replica:
+                assert await primary.set("fubar", 1)
+                assert int(await replica.get("fubar")) == 1
 
     asyncio.run(example())
 
@@ -147,24 +152,10 @@ Compatibility
 **coredis** is tested against redis versions >= ``7.0``
 The test matrix status can be reviewed `here <https://github.com/alisaifee/coredis/actions/workflows/main.yml>`__
 
-.. note:: Though **coredis** officially only supports :redis-version:`6.0.0` and above it is known to work with lower
-   versions.
-
-   A known compatibility issue with older redis versions is the lack of support for :term:`RESP3` and
-   the :rediscommand:`HELLO` command. The default :class:`~coredis.Redis` and :class:`~coredis.RedisCluster` clients
-   do not work in this scenario as the :rediscommand:`HELLO` command is used for initial handshaking to confirm that
-   the default ``RESP3`` protocol version can be used and to perform authentication if necessary.
-
-   This can be worked around by passing ``2`` to :paramref:`coredis.Redis.protocol_version` to downgrade to :term:`RESP`
-   (see :ref:`handbook/response:redis response`).
-
-   When using :term:`RESP` **coredis** will also fall back to the legacy :rediscommand:`AUTH` command if the
-   :rediscommand:`HELLO` is not supported.
-
-
 coredis is additionally tested against:
 
-- :pypi:`uvloop` >= `0.15.0`.
+- :pypi:`uvloop` >= `0.15.0`
+- :pypi:`trio`
 
 Supported python versions
 -------------------------

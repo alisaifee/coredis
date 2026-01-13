@@ -1,17 +1,18 @@
 from __future__ import annotations
 
-import asyncio
 import os
 import random
 import threading
-import time
 import warnings
-from typing import Any, cast
+from contextlib import asynccontextmanager
+from typing import Any, AsyncGenerator, cast
 
-import async_timeout
+from anyio import Lock, fail_after
+from typing_extensions import Self
 
+from coredis._concurrency import Queue, QueueEmpty, QueueFull
 from coredis._utils import b, hash_slot
-from coredis.connection import ClusterConnection, Connection
+from coredis.connection import BaseConnection, ClusterConnection, Connection
 from coredis.exceptions import ConnectionError, RedisClusterException
 from coredis.globals import READONLY_COMMANDS
 from coredis.pool.basic import ConnectionPool
@@ -40,21 +41,18 @@ class ClusterConnectionPool(ConnectionPool):
         "reinitialize_steps": int,
         "skip_full_coverage_check": bool,
         "read_from_replicas": bool,
-        "blocking": bool,
     }
 
     nodes: NodeManager
     connection_class: type[ClusterConnection]
 
     _created_connections_per_node: dict[str, int]
-    _cluster_available_connections: dict[str, asyncio.Queue[Connection | None]]
-    _cluster_in_use_connections: dict[str, set[Connection]]
+    _cluster_available_connections: dict[str, Queue[Connection]]
 
     def __init__(
         self,
         startup_nodes: Iterable[Node] | None = None,
         connection_class: type[ClusterConnection] = ClusterConnection,
-        queue_class: type[asyncio.Queue[Connection | None]] = asyncio.LifoQueue,
         max_connections: int | None = None,
         max_connections_per_node: bool = False,
         reinitialize_steps: int | None = None,
@@ -62,11 +60,8 @@ class ClusterConnectionPool(ConnectionPool):
         nodemanager_follow_cluster: bool = True,
         readonly: bool = False,
         read_from_replicas: bool = False,
-        max_idle_time: int = 0,
-        idle_check_interval: int = 1,
-        blocking: bool = False,
         timeout: int = 20,
-        **connection_kwargs: Any | None,
+        **connection_kwargs: Any,
     ):
         """
 
@@ -82,13 +77,9 @@ class ClusterConnectionPool(ConnectionPool):
         :param max_connections: Maximum number of connections to allow concurrently from this
          client. If the value is ``None`` it will default to 32.
         :param max_connections_per_node: Whether to use the value of :paramref:`max_connections`
-         on a per node basis or cluster wide. If ``False`` and :paramref:`blocking` is ``True``
-         the per-node connection pools will have a maximum size of :paramref:`max_connections`
-         divided by the number of nodes in the cluster.
-        :param blocking: If ``True`` the client will block at most :paramref:`timeout` seconds
-         if :paramref:`max_connections` is reachd when trying to obtain a connection
-        :param timeout: Number of seconds to block if :paramref:`block` is ``True`` when trying to
-         obtain a connection.
+         on a per node basis or cluster wide. If ``False``  the per-node connection pools will have
+         a maximum size of :paramref:`max_connections` divided by the number of nodes in the cluster.
+        :param timeout: Number of seconds to block when trying to obtain a connection.
         :param skip_full_coverage_check:
             Skips the check of cluster-require-full-coverage config, useful for clusters
             without the :rediscommand:`CONFIG` command (For example with AWS Elasticache)
@@ -100,24 +91,18 @@ class ClusterConnectionPool(ConnectionPool):
         """
         super().__init__(
             connection_class=connection_class,
-            max_connections=max_connections,
-            max_idle_time=max_idle_time,
-            idle_check_interval=idle_check_interval,
             **connection_kwargs,
         )
-        self.queue_class = queue_class
-        # Special case to make from_url method compliant with cluster setting.
-        # from_url method will send in the ip and port through a different variable then the
-        # regular startup_nodes variable.
+        self.initialized = False
 
         if startup_nodes is None:
             host = connection_kwargs.pop("host", None)
             port = connection_kwargs.pop("port", None)
+
             if host and port:
                 startup_nodes = [Node(host=str(host), port=int(port))]
-        self.blocking = blocking
-        self.blocking_timeout = timeout
-        self.max_connections = max_connections or 2**31
+        self.timeout = timeout
+        self.max_connections = max_connections or 64
         self.max_connections_per_node = max_connections_per_node
         self.nodes = NodeManager(
             startup_nodes,
@@ -125,18 +110,16 @@ class ClusterConnectionPool(ConnectionPool):
             skip_full_coverage_check=skip_full_coverage_check,
             max_connections=self.max_connections,
             nodemanager_follow_cluster=nodemanager_follow_cluster,
-            **connection_kwargs,  # type: ignore
+            **connection_kwargs,
         )
         self.connection_kwargs = connection_kwargs
         self.connection_kwargs["read_from_replicas"] = read_from_replicas
         self.read_from_replicas = read_from_replicas or readonly
-        self.max_idle_time = max_idle_time
-        self.idle_check_interval = idle_check_interval
         self.reset()
 
         if "stream_timeout" not in self.connection_kwargs:
             self.connection_kwargs["stream_timeout"] = None
-        self._init_lock = asyncio.Lock()
+        self._init_lock = Lock()
 
     def __repr__(self) -> str:
         """
@@ -151,56 +134,41 @@ class ClusterConnectionPool(ConnectionPool):
             ),
         )
 
+    @asynccontextmanager
+    async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
+        async with super().__asynccontextmanager__():
+            await self.initialize()
+            try:
+                yield self
+            finally:
+                self.reset()
+
     async def initialize(self) -> None:
         if not self.initialized:
             async with self._init_lock:
-                if not self.initialized:
-                    await self.nodes.initialize()
-                    if not self.max_connections_per_node and self.max_connections < len(
-                        self.nodes.nodes
-                    ):
-                        warnings.warn(
-                            f"The value of max_connections={self.max_connections} "
-                            "should be atleast equal to the number of nodes "
-                            f"({len(self.nodes.nodes)}) in the cluster and has been increased by "
-                            f"{len(self.nodes.nodes) - self.max_connections} connections."
-                        )
-                        self.max_connections = len(self.nodes.nodes)
-                    await super().initialize()
+                if self.initialized:
+                    return
+                await self.nodes.initialize()
 
-    async def disconnect_on_idle_time_exceeded(self, connection: Connection) -> None:
-        assert isinstance(connection, ClusterConnection)
-        while True:
-            if (
-                time.time() - connection.last_active_at > self.max_idle_time
-                and not connection.requests_pending
-            ):
-                connection.disconnect()
-                node = connection.node
-                if node.name in self._created_connections_per_node:
-                    self._created_connections_per_node[node.name] -= 1
-                break
-            await asyncio.sleep(self.idle_check_interval)
+                if not self.max_connections_per_node and self.max_connections < len(
+                    self.nodes.nodes
+                ):
+                    warnings.warn(
+                        f"The value of max_connections={self.max_connections} "
+                        "should be atleast equal to the number of nodes "
+                        f"({len(self.nodes.nodes)}) in the cluster and has been increased by "
+                        f"{len(self.nodes.nodes) - self.max_connections} connections."
+                    )
+                    self.max_connections = len(self.nodes.nodes)
+                self.initialized = True
 
     def reset(self) -> None:
         """Resets the connection pool back to a clean state"""
         self.pid = os.getpid()
         self._created_connections_per_node = {}
         self._cluster_available_connections = {}
-        self._cluster_in_use_connections = {}
         self._check_lock = threading.Lock()
         self.initialized = False
-
-    def checkpid(self) -> None:  # noqa
-        if self.pid != os.getpid():
-            with self._check_lock:
-                if self.pid == os.getpid():
-                    # another thread already did the work while we waited
-                    # on the lockself.
-
-                    return
-                self.disconnect()
-                self.reset()
 
     async def get_connection(
         self,
@@ -221,30 +189,29 @@ class ClusterConnectionPool(ConnectionPool):
             return await self.get_random_connection()
 
         slot = hash_slot(b(routing_key))
+
         if node_type == "replica":
             node = self.get_replica_node_by_slot(slot)
         else:
             node = self.get_primary_node_by_slot(slot)
-        self.checkpid()
 
         try:
             connection = self.__node_pool(node.name).get_nowait()
-        except asyncio.QueueEmpty:
+        except QueueEmpty:
             connection = None
-        if not connection:
-            connection = self._make_node_connection(node)
+
+        if not connection or not connection.is_connected:
+            connection = await self._make_node_connection(node)
         else:
             if connection.is_connected and connection.needs_handshake:
                 await connection.perform_handshake()
 
-        if acquire:
-            self._cluster_in_use_connections.setdefault(node.name, set())
-            self._cluster_in_use_connections[node.name].add(connection)
-        else:
+        if not acquire:
             self.__node_pool(node.name).put_nowait(connection)
+
         return connection
 
-    def _make_node_connection(self, node: ManagedNode) -> Connection:
+    async def _make_node_connection(self, node: ManagedNode) -> Connection:
         """Creates a new connection to a node"""
 
         if self.count_all_num_connections(node) >= self.max_connections:
@@ -260,97 +227,41 @@ class ClusterConnectionPool(ConnectionPool):
         connection = self.connection_class(
             host=node.host,
             port=node.port,
-            **self.connection_kwargs,  # type: ignore
+            **self.connection_kwargs,
         )
-
-        # Must store node in the connection to make it eaiser to track
+        await self._task_group.start(connection.run)
+        # Must store node in the connection to make it easier to track
         connection.node = node
-
-        if self.max_idle_time > self.idle_check_interval > 0:
-            # do not await the future
-            asyncio.ensure_future(self.disconnect_on_idle_time_exceeded(connection))
 
         return connection
 
-    def __node_pool(self, node: str) -> asyncio.Queue[Connection | None]:
+    def __node_pool(self, node: str) -> Queue[Connection]:
         if not self._cluster_available_connections.get(node):
             self._cluster_available_connections[node] = self.__default_node_queue()
+
         return self._cluster_available_connections[node]
 
     def __default_node_queue(
         self,
-    ) -> asyncio.Queue[Connection | None]:
+    ) -> Queue[Connection]:
         q_size = max(
             1,
-            int(
-                self.max_connections
-                if self.max_connections_per_node
-                else self.max_connections / len(self.nodes.nodes)
-            ),
+            self.max_connections
+            if self.max_connections_per_node
+            else self.max_connections // len(self.nodes.nodes),
         )
 
-        q: asyncio.Queue[Connection | None] = self.queue_class(q_size)
+        return Queue[Connection](q_size)
 
-        # If the queue is non-blocking, we don't need to pre-populate it
-        if not self.blocking:
-            return q
-
-        if q_size > 2**16:  # noqa
-            raise RuntimeError(
-                f"Requested unsupported value of max_connections: {q_size} in blocking mode"
-            )
-
-        while True:
-            try:
-                q.put_nowait(None)
-            except asyncio.QueueFull:
-                break
-        return q
-
-    def release(self, connection: Connection) -> None:
+    def release(self, connection: BaseConnection) -> None:
         """Releases the connection back to the pool"""
         assert isinstance(connection, ClusterConnection)
 
-        self.checkpid()
-
         if connection.pid == self.pid:
-            # Remove the current connection from _in_use_connection and add it back to the available
-            # pool. There is cases where the connection is to be removed but it will not exist and
-            # there must be a safe way to remove
-            i_c = self._cluster_in_use_connections.get(connection.node.name, set())
-
-            if connection in i_c:
-                i_c.remove(connection)
-            else:
-                pass
             try:
                 self.__node_pool(connection.node.name).put_nowait(connection)
-            except asyncio.QueueFull:
-                connection.disconnect()
-                # reduce node connection count in case of too many connection error raised
-                if connection.node.name in self._created_connections_per_node:
-                    self._created_connections_per_node[connection.node.name] -= 1
-
-    def disconnect(self) -> None:
-        """Closes all connections in the pool"""
-        for node_connections in self._cluster_in_use_connections.values():
-            for connection in node_connections:
-                connection.disconnect()
-        for node, available_connections in self._cluster_available_connections.items():
-            removed = 0
-            while True:
-                try:
-                    _connection = available_connections.get_nowait()
-                    if _connection:
-                        _connection.disconnect()
-                        if node in self._created_connections_per_node:
-                            self._created_connections_per_node[node] -= 1
-                    removed += 1
-                except asyncio.QueueEmpty:
-                    break
-            # Refill queue with empty slots
-            for _ in range(removed):
-                available_connections.put_nowait(None)
+            except QueueFull:
+                pass
 
     def count_all_num_connections(self, node: ManagedNode) -> int:
         if self.max_connections_per_node:
@@ -360,16 +271,15 @@ class ClusterConnectionPool(ConnectionPool):
 
     async def get_random_connection(self, primary: bool = False) -> ClusterConnection:
         """Opens new connection to random redis server in the cluster"""
+
         for node in self.nodes.random_startup_node_iter(primary):
             connection = await self.get_connection_by_node(node)
+
             if connection:
                 return connection
         raise RedisClusterException("Cant reach a single startup node.")
 
     async def get_connection_by_key(self, key: StringT) -> ClusterConnection:
-        if not key:
-            raise RedisClusterException("No way to dispatch this command to Redis Cluster.")
-
         return await self.get_connection_by_slot(hash_slot(b(key)))
 
     async def get_connection_by_slot(self, slot: int) -> ClusterConnection:
@@ -377,8 +287,6 @@ class ClusterConnectionPool(ConnectionPool):
         Determines what server a specific slot belongs to and return a redis
         object that is connected
         """
-        self.checkpid()
-
         try:
             return await self.get_connection_by_node(self.get_node_by_slot(slot))
         except KeyError:
@@ -386,24 +294,12 @@ class ClusterConnectionPool(ConnectionPool):
 
     async def get_connection_by_node(self, node: ManagedNode) -> ClusterConnection:
         """Gets a connection by node"""
-        self.checkpid()
+        with fail_after(self.timeout):
+            connection = await self.__node_pool(node.name).get()
 
-        if not self.blocking:
-            try:
-                connection = self.__node_pool(node.name).get_nowait()
-            except asyncio.QueueEmpty:
-                connection = None
-        else:
-            try:
-                async with async_timeout.timeout(self.blocking_timeout):
-                    connection = await self.__node_pool(node.name).get()
-            except asyncio.TimeoutError:
-                raise ConnectionError("No connection available.")
+        if not connection or not connection.is_connected:
+            connection = await self._make_node_connection(node)
 
-        if not connection:
-            connection = self._make_node_connection(node)
-
-        self._cluster_in_use_connections.setdefault(node.name, set()).add(connection)
         return cast(ClusterConnection, connection)
 
     def get_primary_node_by_slot(self, slot: int) -> ManagedNode:
@@ -411,6 +307,7 @@ class ClusterConnectionPool(ConnectionPool):
 
     def get_primary_node_by_slots(self, slots: list[int]) -> ManagedNode:
         nodes = {self.nodes.slots[slot][0].node_id for slot in slots}
+
         if len(nodes) == 1:
             return self.nodes.slots[slots[0]][0]
         else:
@@ -423,8 +320,10 @@ class ClusterConnectionPool(ConnectionPool):
         self, slots: list[int], replica_only: bool = False
     ) -> ManagedNode:
         nodes = {self.nodes.slots[slot][0].node_id for slot in slots}
+
         if len(nodes) == 1:
             slot = slots[0]
+
             if replica_only:
                 return random.choice(
                     [node for node in self.nodes.slots[slot] if node.server_type != "primary"]
@@ -437,81 +336,11 @@ class ClusterConnectionPool(ConnectionPool):
     def get_node_by_slot(self, slot: int, command: bytes | None = None) -> ManagedNode:
         if self.read_from_replicas and command in READONLY_COMMANDS:
             return self.get_replica_node_by_slot(slot)
+
         return self.get_primary_node_by_slot(slot)
 
     def get_node_by_slots(self, slots: list[int], command: bytes | None = None) -> ManagedNode:
         if self.read_from_replicas and command in READONLY_COMMANDS:
             return self.get_replica_node_by_slots(slots)
+
         return self.get_primary_node_by_slots(slots)
-
-
-class BlockingClusterConnectionPool(ClusterConnectionPool):
-    """
-    .. versionadded:: 4.3.0
-
-    Blocking connection pool for :class:`~coredis.RedisCluster` client
-
-    .. note:: This is just a convenience subclass of :class:`~coredis.pool.ClusterConnectionPool`
-       that sets :paramref:`~coredis.pool.ClusterConnectionPool.blocking` to ``True``
-    """
-
-    def __init__(
-        self,
-        startup_nodes: Iterable[Node] | None = None,
-        connection_class: type[ClusterConnection] = ClusterConnection,
-        queue_class: type[asyncio.Queue[Connection | None]] = asyncio.LifoQueue,
-        max_connections: int | None = None,
-        max_connections_per_node: bool = False,
-        reinitialize_steps: int | None = None,
-        skip_full_coverage_check: bool = False,
-        nodemanager_follow_cluster: bool = True,
-        readonly: bool = False,
-        read_from_replicas: bool = False,
-        max_idle_time: int = 0,
-        idle_check_interval: int = 1,
-        timeout: int = 20,
-        **connection_kwargs: Any | None,
-    ):
-        """
-
-        Changes
-          - .. versionchanged:: 4.4.0
-
-            - :paramref:`nodemanager_follow_cluster` now defaults to ``True``
-
-          - .. deprecated:: 4.4.0
-
-            - :paramref:`readonly` renamed to :paramref:`read_from_replicas`
-
-        :param max_connections: Maximum number of connections to allow concurrently from this
-         client.
-        :param max_connections_per_node: Whether to use the value of :paramref:`max_connections`
-         on a per node basis or cluster wide. If ``False`` the per-node connection pools will have
-         a maximum size of :paramref:`max_connections` divided by the number of nodes in the
-         cluster.
-        :param timeout: Number of seconds to block when trying to obtain a connection.
-        :param skip_full_coverage_check:
-            Skips the check of cluster-require-full-coverage config, useful for clusters
-            without the CONFIG command (like aws)
-        :param nodemanager_follow_cluster:
-            The node manager will during initialization try the last set of nodes that
-            it was operating on. This will allow the client to drift along side the cluster
-            if the cluster nodes move around alot.
-        """
-        super().__init__(
-            startup_nodes=startup_nodes,
-            connection_class=connection_class,
-            queue_class=queue_class,
-            max_connections=max_connections,
-            max_connections_per_node=max_connections_per_node,
-            reinitialize_steps=reinitialize_steps,
-            skip_full_coverage_check=skip_full_coverage_check,
-            nodemanager_follow_cluster=nodemanager_follow_cluster,
-            readonly=readonly,
-            read_from_replicas=read_from_replicas,
-            max_idle_time=max_idle_time,
-            idle_check_interval=idle_check_interval,
-            timeout=timeout,
-            blocking=True,
-            **connection_kwargs,
-        )

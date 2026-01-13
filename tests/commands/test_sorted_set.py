@@ -1,21 +1,18 @@
 from __future__ import annotations
 
-import asyncio
-
+import anyio
 import pytest
 
 from coredis import PureToken
+from coredis._concurrency import gather
 from coredis.exceptions import CommandSyntaxError, DataError
 from tests.conftest import server_deprecation_warning, targets
 
 
 @targets(
     "redis_basic",
-    "redis_basic_resp2",
-    "redis_basic_blocking",
     "redis_basic_raw",
     "redis_cluster",
-    "redis_cluster_blocking",
     "redis_cluster_raw",
     "redis_cached",
     "redis_cluster_cached",
@@ -717,10 +714,11 @@ class TestSortedSet:
 
         async def _delayadd():
             clone = await cloner(client)
-            await asyncio.sleep(0.1)
-            return await clone.zadd("a{foo}", dict(a1=42))
+            async with clone:
+                await anyio.sleep(0.1)
+                return await clone.zadd("a{foo}", dict(a1=42))
 
-        result = await asyncio.gather(client.bzmpop(["a{foo}"], 1, PureToken.MIN), _delayadd())
+        result = await gather(client.bzmpop(["a{foo}"], 1, PureToken.MIN), _delayadd())
         assert result[0][1] == ((_s("a1"), 42.0),)
 
     @pytest.mark.nodragonfly

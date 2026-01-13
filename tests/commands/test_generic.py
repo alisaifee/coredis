@@ -12,11 +12,8 @@ from tests.conftest import targets
 
 @targets(
     "redis_basic",
-    "redis_basic_resp2",
-    "redis_basic_blocking",
     "redis_basic_raw",
     "redis_cluster",
-    "redis_cluster_blocking",
     "redis_cluster_raw",
     "redis_cached",
     "redis_cluster_cached",
@@ -36,16 +33,17 @@ class TestGeneric:
         await client.set("score{fu}:1", "8")
         await client.set("score{fu}:2", "3")
         await client.set("score{fu}:3", "5")
-        assert await clone.sort_ro("a{fu}") == (_s("1"), _s("2"), _s("3"), _s("4"))
-        assert await clone.sort_ro("a{fu}", offset=1, count=2) == (_s("2"), _s("3"))
-        assert await clone.sort_ro("a{fu}", order=PureToken.DESC, offset=1, count=2) == (
-            _s("3"),
-            _s("2"),
-        )
-        assert await clone.sort_ro("a{fu}", alpha=True, offset=1, count=2) == (
-            _s("2"),
-            _s("3"),
-        )
+        async with clone:
+            assert await clone.sort_ro("a{fu}") == (_s("1"), _s("2"), _s("3"), _s("4"))
+            assert await clone.sort_ro("a{fu}", offset=1, count=2) == (_s("2"), _s("3"))
+            assert await clone.sort_ro("a{fu}", order=PureToken.DESC, offset=1, count=2) == (
+                _s("3"),
+                _s("2"),
+            )
+            assert await clone.sort_ro("a{fu}", alpha=True, offset=1, count=2) == (
+                _s("2"),
+                _s("3"),
+            )
 
     async def test_sort_limited(self, client, _s):
         await client.rpush("a", ["3", "2", "1", "4"])
@@ -242,58 +240,33 @@ class TestGeneric:
     @pytest.mark.novalkey
     @pytest.mark.noredict
     async def test_migrate_single_key_with_auth(self, client, redis_auth, _s):
-        auth_connection = await redis_auth.connection_pool.get_connection()
-        await client.set("a", "1")
+        async with redis_auth.connection_pool.acquire() as auth_connection:
+            await client.set("a", "1")
 
-        with pytest.raises(DataError):
-            await client.migrate("172.17.0.1", auth_connection.port, 0, 100)
+            with pytest.raises(DataError):
+                await client.migrate("172.17.0.1", auth_connection.port, 0, 100)
 
-        assert not await client.migrate("172.17.0.1", auth_connection.port, 0, 100, "b")
-        assert await client.migrate("172.17.0.1", auth_connection.port, 0, 100, "a", auth="sekret")
-        assert await redis_auth.get("a") == "1"
-        await client.set("b", "2")
-        assert await client.migrate(
-            "172.17.0.1",
-            auth_connection.port,
-            0,
-            100,
-            "b",
-            username="default",
-            password="sekret",
-        )
-        assert await redis_auth.get("b") == "2"
-        assert not await client.get("a")
-        assert not await client.get("b")
+            assert not await client.migrate("172.17.0.1", auth_connection.port, 0, 100, "b")
+            assert await client.migrate(
+                "172.17.0.1", auth_connection.port, 0, 100, "a", auth="sekret"
+            )
+            assert await redis_auth.get("a") == "1"
+            await client.set("b", "2")
+            assert await client.migrate(
+                "172.17.0.1",
+                auth_connection.port,
+                0,
+                100,
+                "b",
+                username="default",
+                password="sekret",
+            )
+            assert await redis_auth.get("b") == "2"
+            assert not await client.get("a")
+            assert not await client.get("b")
 
-        await client.set("c", "3")
-        assert await client.migrate(
-            "172.17.0.1",
-            auth_connection.port,
-            0,
-            100,
-            "c",
-            username="default",
-            password="sekret",
-            copy=True,
-        )
-        assert await client.get("c") == _s(3)
-        assert await redis_auth.get("c") == "3"
-        await client.set("c", 4)
-        assert await client.migrate(
-            "172.17.0.1",
-            auth_connection.port,
-            0,
-            100,
-            "c",
-            username="default",
-            password="sekret",
-            copy=True,
-            replace=True,
-        )
-        assert await redis_auth.get("c") == "4"
-
-        with pytest.raises(ResponseError, match="BUSYKEY"):
-            await client.migrate(
+            await client.set("c", "3")
+            assert await client.migrate(
                 "172.17.0.1",
                 auth_connection.port,
                 0,
@@ -303,31 +276,58 @@ class TestGeneric:
                 password="sekret",
                 copy=True,
             )
-        await redis_auth.flushall()
-        with pytest.raises(ResponseError, match="WRONGPASS"):
-            await client.migrate(
+            assert await client.get("c") == _s(3)
+            assert await redis_auth.get("c") == "3"
+            await client.set("c", 4)
+            assert await client.migrate(
                 "172.17.0.1",
                 auth_connection.port,
                 0,
                 100,
                 "c",
-                auth="Sekrets",
+                username="default",
+                password="sekret",
+                copy=True,
+                replace=True,
             )
+            assert await redis_auth.get("c") == "4"
+
+            with pytest.raises(ResponseError, match="BUSYKEY"):
+                await client.migrate(
+                    "172.17.0.1",
+                    auth_connection.port,
+                    0,
+                    100,
+                    "c",
+                    username="default",
+                    password="sekret",
+                    copy=True,
+                )
+            await redis_auth.flushall()
+            with pytest.raises(ResponseError, match="WRONGPASS"):
+                await client.migrate(
+                    "172.17.0.1",
+                    auth_connection.port,
+                    0,
+                    100,
+                    "c",
+                    auth="Sekrets",
+                )
 
     @pytest.mark.nocluster
     @pytest.mark.novalkey
     @pytest.mark.noredict
     async def test_migrate_multiple_keys_with_auth(self, client, redis_auth, _s):
-        auth_connection = await redis_auth.connection_pool.get_connection()
-        await client.set("a", "1")
-        await client.set("c", "2")
-        assert not await client.migrate("172.17.0.1", auth_connection.port, 0, 100, "d", "b")
-        assert await client.migrate(
-            "172.17.0.1", auth_connection.port, 0, 100, "a", "c", auth="sekret"
-        )
+        async with redis_auth.connection_pool.acquire() as auth_connection:
+            await client.set("a", "1")
+            await client.set("c", "2")
+            assert not await client.migrate("172.17.0.1", auth_connection.port, 0, 100, "d", "b")
+            assert await client.migrate(
+                "172.17.0.1", auth_connection.port, 0, 100, "a", "c", auth="sekret"
+            )
 
-        assert await redis_auth.get("a") == "1"
-        assert await redis_auth.get("c") == "2"
+            assert await redis_auth.get("a") == "1"
+            assert await redis_auth.get("c") == "2"
 
     @pytest.mark.nocluster
     async def test_move(self, client, cloner, _s):
@@ -335,7 +335,8 @@ class TestGeneric:
         await client.set("foo", 1)
         assert await client.move("foo", 1)
         assert not await client.get("foo")
-        assert await clone.get("foo") == _s(1)
+        async with clone:
+            assert await clone.get("foo") == _s(1)
 
     async def test_copy(self, client, _s):
         await client.set("a{foo}", "foo")
@@ -354,7 +355,8 @@ class TestGeneric:
         await client.set("foo", 1)
         assert await client.copy("foo", "bar", db=1)
         assert not await client.get("bar")
-        assert await clone.get("bar") == _s(1)
+        async with clone:
+            assert await clone.get("bar") == _s(1)
 
     @pytest.mark.min_server_version("7.0.0")
     async def test_object_encoding_listpack(self, client, _s):
@@ -373,6 +375,7 @@ class TestGeneric:
         assert isinstance(await client.object_freq("a"), int)
 
     @pytest.mark.novalkey
+    @pytest.mark.noredict
     async def test_object_idletime(self, client, _s):
         await client.set("a", "foo")
         assert isinstance(await client.object_idletime("a"), int)

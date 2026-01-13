@@ -11,7 +11,6 @@ class GeoSearchCallback(
     Generic[AnyStr],
     ResponseCallback[
         ResponseType,
-        ResponseType,
         tuple[AnyStr | GeoSearchResult, ...],
     ],
 ):
@@ -44,9 +43,7 @@ class GeoSearchCallback(
         return tuple(results)
 
 
-class GeoCoordinatessCallback(
-    ResponseCallback[ResponseType, ResponseType, tuple[GeoCoordinates | None, ...]]
-):
+class GeoCoordinatessCallback(ResponseCallback[ResponseType, tuple[GeoCoordinates | None, ...]]):
     def transform(
         self, response: ResponseType, **options: Any
     ) -> tuple[GeoCoordinates | None, ...]:

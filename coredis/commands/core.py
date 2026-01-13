@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import itertools
+from collections.abc import Callable
 from typing import overload
 
 from deprecated.sphinx import versionadded
@@ -157,6 +158,7 @@ from coredis.typing import (
     ResponsePrimitive,
     ResponseType,
     StringT,
+    T_co,
     ValueT,
 )
 
@@ -6167,16 +6169,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         sha1: StringT,
         keys: Parameters[KeyT] | None = None,
         args: Parameters[ValueT] | None = None,
-    ) -> CommandRequest[ResponseType]:
+        callback: Callable[..., T_co] = NoopCallback(),
+    ) -> CommandRequest[T_co]:
         _keys: list[KeyT] = list(keys) if keys else []
         command_arguments: CommandArgList = [sha1, len(_keys), *_keys]
 
         if args:
             command_arguments.extend(args)
 
-        return self.create_request(
-            command, *command_arguments, callback=NoopCallback[ResponseType]()
-        )
+        return self.create_request(command, *command_arguments, callback=callback)
 
     @redis_command(CommandName.EVALSHA, group=CommandGroup.SCRIPTING)
     def evalsha(
@@ -6184,7 +6185,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         sha1: StringT,
         keys: Parameters[KeyT] | None = None,
         args: Parameters[ValueT] | None = None,
-    ) -> CommandRequest[ResponseType]:
+        callback: Callable[..., T_co] = NoopCallback(),
+    ) -> CommandRequest[T_co]:
         """
         Execute the Lua script cached by it's :paramref:`sha` ref with the
         key names and argument values in :paramref:`keys` and :paramref:`args`.
@@ -6193,7 +6195,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The result of the script as redis returns it
         """
 
-        return self._evalsha(CommandName.EVALSHA, sha1, keys, args)
+        return self._evalsha(CommandName.EVALSHA, sha1, keys, args, callback=callback)
 
     @versionadded(version="3.0.0")
     @redis_command(
@@ -6207,7 +6209,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         sha1: StringT,
         keys: Parameters[KeyT] | None = None,
         args: Parameters[ValueT] | None = None,
-    ) -> CommandRequest[ResponseType]:
+        callback: Callable[..., T_co] = NoopCallback(),
+    ) -> CommandRequest[T_co]:
         """
         Read-only variant of :meth:`~Redis.evalsha` that cannot execute commands
         that modify data.
@@ -6215,7 +6218,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The result of the script as redis returns it
         """
 
-        return self._evalsha(CommandName.EVALSHA_RO, sha1, keys, args)
+        return self._evalsha(CommandName.EVALSHA_RO, sha1, keys, args, callback=callback)
 
     @versionadded(version="3.0.0")
     @redis_command(
@@ -6308,7 +6311,6 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :return: The SHA1 digest of the script added into the script cache
         """
-
         return self.create_request(
             CommandName.SCRIPT_LOAD, script, callback=AnyStrCallback[AnyStr]()
         )
@@ -6324,7 +6326,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         function: StringT,
         keys: Parameters[KeyT] | None = None,
         args: Parameters[ValueT] | None = None,
-    ) -> CommandRequest[ResponseType]:
+        callback: Callable[..., T_co] = NoopCallback(),
+    ) -> CommandRequest[T_co]:
         """
         Invoke a function
         """
@@ -6336,9 +6339,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             *(args or []),
         ]
 
-        return self.create_request(
-            CommandName.FCALL, *command_arguments, callback=NoopCallback[ResponseType]()
-        )
+        return self.create_request(CommandName.FCALL, *command_arguments, callback=callback)
 
     @versionadded(version="3.1.0")
     @redis_command(
@@ -6352,7 +6353,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         function: StringT,
         keys: Parameters[KeyT] | None = None,
         args: Parameters[ValueT] | None = None,
-    ) -> CommandRequest[ResponseType]:
+        callback: Callable[..., T_co] = NoopCallback(),
+    ) -> CommandRequest[T_co]:
         """
         Read-only variant of :meth:`~coredis.Redis.fcall`
         """
@@ -6364,11 +6366,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             *(args or []),
         ]
 
-        return self.create_request(
-            CommandName.FCALL_RO,
-            *command_arguments,
-            callback=NoopCallback[ResponseType](),
-        )
+        return self.create_request(CommandName.FCALL_RO, *command_arguments, callback=callback)
 
     @versionadded(version="3.1.0")
     @redis_command(

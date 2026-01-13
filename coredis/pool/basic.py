@@ -1,16 +1,21 @@
 from __future__ import annotations
 
-import asyncio
-import os
-import threading
-import time
 import warnings
-from itertools import chain
+from collections import deque
+from contextlib import asynccontextmanager
 from ssl import SSLContext, VerifyMode
-from typing import Any, cast
+from typing import Any, AsyncGenerator, cast
 from urllib.parse import parse_qs, unquote, urlparse
 
-import async_timeout
+from anyio import (
+    TASK_STATUS_IGNORED,
+    AsyncContextManagerMixin,
+    Semaphore,
+    create_task_group,
+    fail_after,
+)
+from anyio.abc import TaskStatus
+from typing_extensions import Self
 
 from coredis._utils import query_param_to_bool
 from coredis.connection import (
@@ -19,14 +24,15 @@ from coredis.connection import (
     RedisSSLContext,
     UnixDomainSocketConnection,
 )
-from coredis.exceptions import ConnectionError
-from coredis.typing import Callable, ClassVar, RedisValueT, TypeVar
+from coredis.typing import Callable, ClassVar, TypeVar
 
 _CPT = TypeVar("_CPT", bound="ConnectionPool")
 
 
-class ConnectionPool:
-    """Generic connection pool"""
+class ConnectionPool(AsyncContextManagerMixin):
+    """
+    Generic connection pool
+    """
 
     #: Mapping of querystring arguments to their parser functions
     URL_QUERY_ARGUMENT_PARSERS: ClassVar[
@@ -37,8 +43,6 @@ class ConnectionPool:
         "connect_timeout": float,
         "max_connections": int,
         "max_idle_time": int,
-        "protocol_version": int,
-        "idle_check_interval": int,
         "noreply": bool,
         "noevict": bool,
         "notouch": bool,
@@ -180,14 +184,16 @@ class ConnectionPool:
 
         return cls(**kwargs)
 
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}<{self.connection_class.describe(self.connection_kwargs)}>"
+
     def __init__(
         self,
         *,
-        connection_class: type[Connection] | None = None,
+        connection_class: type[BaseConnection] | None = None,
         max_connections: int | None = None,
-        max_idle_time: int = 0,
-        idle_check_interval: int = 1,
-        **connection_kwargs: Any | None,
+        timeout: float | None = None,
+        **connection_kwargs: Any,
     ) -> None:
         """
         Creates a connection pool. If :paramref:`max_connections` is set, then this
@@ -201,253 +207,52 @@ class ConnectionPool:
         """
         self.connection_class = connection_class or Connection
         self.connection_kwargs = connection_kwargs
-        self.max_connections = max_connections or 2**31
-        self.max_idle_time = max_idle_time
-        self.idle_check_interval = idle_check_interval
-        self.initialized = False
-        self.reset()
+        self.max_connections = max_connections or 64
+        self.timeout = timeout
         self.decode_responses = bool(self.connection_kwargs.get("decode_responses", False))
         self.encoding = str(self.connection_kwargs.get("encoding", "utf-8"))
+        self._used_connections: set[BaseConnection] = set()
+        self._free_connections: deque[BaseConnection] = deque()
+        self._capacity = Semaphore(self.max_connections, max_value=self.max_connections)
 
-    async def initialize(self) -> None:
-        self.initialized = True
+    @asynccontextmanager
+    async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
+        async with create_task_group() as tg:
+            self._task_group = tg
+            yield self
+            self._task_group.cancel_scope.cancel()
+            self._free_connections.clear()
+            self._used_connections.clear()
 
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}<{self.connection_class.describe(self.connection_kwargs)}>"
-
-    def __del__(self) -> None:
-        self.disconnect()
-
-    async def disconnect_on_idle_time_exceeded(self, connection: Connection) -> None:
-        while True:
-            if (
-                time.time() - connection.last_active_at > self.max_idle_time
-                and not connection.requests_pending
-            ):
-                connection.disconnect()
-                if connection in self._available_connections:
-                    self._available_connections.remove(connection)
-                self._created_connections -= 1
-                break
-            await asyncio.sleep(self.idle_check_interval)
-
-    def reset(self) -> None:
-        self.pid = os.getpid()
-        self._created_connections = 0
-        self._available_connections: list[Connection] = []
-        self._in_use_connections: set[Connection] = set()
-        self._check_lock = threading.Lock()
-
-    def checkpid(self) -> None:  # noqa
-        if self.pid != os.getpid():
-            with self._check_lock:
-                # Double check
-                if self.pid == os.getpid():
-                    return
-                self.disconnect()
-                self.reset()
-
-    def peek_available(self) -> BaseConnection | None:
-        return self._available_connections[0] if self._available_connections else None
-
-    async def get_connection(
-        self,
-        command_name: bytes | None = None,
-        *args: RedisValueT,
-        acquire: bool = True,
-        **kwargs: RedisValueT | None,
-    ) -> Connection:
-        """Gets a connection from the pool"""
-        self.checkpid()
+    async def wrap_connection(
+        self, connection: BaseConnection, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
+    ) -> None:
         try:
-            connection = self._available_connections.pop()
-            if connection.is_connected and connection.needs_handshake:
-                await connection.perform_handshake()
-        except IndexError:
-            if self._created_connections >= self.max_connections:
-                raise ConnectionError("Too many connections")
-            connection = self._make_connection(**kwargs)
+            await connection.run(task_status=task_status)
+        finally:
+            if connection in self._used_connections:
+                self._used_connections.remove(connection)
+            elif connection in self._free_connections:
+                self._free_connections.remove(connection)
 
-        if acquire:
-            self._in_use_connections.add(connection)
+    @asynccontextmanager
+    async def acquire(self) -> AsyncGenerator[BaseConnection]:
+        """
+        Gets a dedicated connection from the pool, or creates a new one if all are busy.
+        """
+        with fail_after(self.timeout):
+            await self._capacity.acquire()
+        if self._free_connections:
+            connection = self._free_connections.pop()
         else:
-            self._available_connections.append(connection)
-
-        return connection
-
-    def release(self, connection: Connection) -> None:
-        """
-        Releases the :paramref:`connection` back to the pool
-        """
-        self.checkpid()
-
-        if connection.pid == self.pid:
-            self._in_use_connections.remove(connection)
-            self._available_connections.append(connection)
-
-    def disconnect(self) -> None:
-        """Closes all connections in the pool"""
-        all_conns = chain(self._available_connections, self._in_use_connections)
-
-        for connection in all_conns:
-            connection.disconnect()
-            self._created_connections -= 1
-
-    def _make_connection(self, **options: RedisValueT | None) -> Connection:
-        """
-        Creates a new connection
-        """
-
-        self._created_connections += 1
-        connection = self.connection_class(
-            **self.connection_kwargs,  # type: ignore
-        )
-
-        if self.max_idle_time > self.idle_check_interval > 0:
-            # do not await the future
-            asyncio.ensure_future(self.disconnect_on_idle_time_exceeded(connection))
-
-        return connection
-
-
-class BlockingConnectionPool(ConnectionPool):
-    """
-    Blocking connection pool::
-
-        >>> from coredis import Redis
-        >>> client = Redis(connection_pool=BlockingConnectionPool())
-
-    It performs the same function as the default
-    :class:`~coredis.ConnectionPool`, in that, it maintains a pool of reusable
-    connections that can be shared by multiple redis clients.
-
-    The difference is that, in the event that a client tries to get a
-    connection from the pool when all of the connections are in use, rather than
-    raising a :exc:`~coredis.ConnectionError` (as the default
-    :class:`~coredis.ConnectionPool` implementation does), it
-    makes the client blocks for a specified number of seconds until
-    a connection becomes available.
-
-    Use :paramref:`max_connections` to increase / decrease the pool size::
-
-        >>> pool = BlockingConnectionPool(max_connections=10)
-
-    Use :paramref:`timeout` to tell it either how many seconds to wait for a
-    connection to become available, or to block forever::
-
-        >>> # Block forever.
-        >>> pool = BlockingConnectionPool(timeout=None)
-        >>> # Raise a ``ConnectionError`` after five seconds if a connection is
-        >>> # not available.
-        >>> pool = BlockingConnectionPool(timeout=5)
-    """
-
-    def __init__(
-        self,
-        connection_class: type[Connection] | None = None,
-        queue_class: type[asyncio.Queue[Connection | None]] = asyncio.LifoQueue,
-        max_connections: int | None = None,
-        timeout: int = 20,
-        max_idle_time: int = 0,
-        idle_check_interval: int = 1,
-        **connection_kwargs: RedisValueT | None,
-    ):
-        self.timeout = timeout
-        self.queue_class = queue_class
-        self.total_wait = 0
-        self.total_allocated = 0
-        max_connections = max_connections or 50
-
-        super().__init__(
-            connection_class=connection_class or Connection,
-            max_connections=max_connections,
-            max_idle_time=max_idle_time,
-            idle_check_interval=idle_check_interval,
-            **connection_kwargs,
-        )
-
-    async def disconnect_on_idle_time_exceeded(self, connection: Connection) -> None:
-        while True:
-            if time.time() - connection.last_active_at > self.max_idle_time:
-                # Unlike the non blocking pool, we don't free the connection object,
-                # but always reuse it
-                connection.disconnect()
-
-                break
-            await asyncio.sleep(self.idle_check_interval)
-
-    def reset(self) -> None:
-        self._pool: asyncio.Queue[Connection | None] = self.queue_class(self.max_connections)
-
-        while True:
-            try:
-                self._pool.put_nowait(None)
-            except asyncio.QueueFull:
-                break
-
-        super().reset()
-
-    def peek_available(self) -> BaseConnection | None:
-        return (
-            self._pool._queue[-1]  # type: ignore
-            if (self._pool and not self._pool.empty())
-            else None
-        )
-
-    async def get_connection(
-        self,
-        command_name: bytes | None = None,
-        *args: RedisValueT,
-        acquire: bool = True,
-        **kwargs: RedisValueT | None,
-    ) -> Connection:
-        """Gets a connection from the pool"""
-        self.checkpid()
-
+            connection = self.connection_class(**self.connection_kwargs)
+            await self._task_group.start(self.wrap_connection, connection)
+        self._used_connections.add(connection)
         try:
-            async with async_timeout.timeout(self.timeout):
-                connection = await self._pool.get()
-            if connection and connection.is_connected and connection.needs_handshake:
-                await connection.perform_handshake()
-        except asyncio.TimeoutError:
-            raise ConnectionError("No connection available.")
-        if connection is None:
-            connection = self._make_connection()
-
-        if acquire:
-            self._in_use_connections.add(connection)
-        else:
-            self._pool.put_nowait(connection)
-
-        return connection
-
-    def release(self, connection: Connection) -> None:
-        """Releases the connection back to the pool"""
-        _connection: Connection | None = connection
-
-        self.checkpid()
-
-        if _connection and _connection.pid == self.pid:
-            self._in_use_connections.remove(_connection)
-            try:
-                self._pool.put_nowait(_connection)
-            except asyncio.QueueFull:
-                _connection.disconnect()
-
-    def disconnect(self) -> None:
-        """Closes all connections in the pool"""
-        pooled_connections: list[Connection | None] = []
-
-        while True:
-            try:
-                pooled_connections.append(self._pool.get_nowait())
-            except asyncio.QueueEmpty:
-                break
-        for conn in pooled_connections:
-            self._pool.put_nowait(conn)
-
-        all_conns = chain(pooled_connections, self._in_use_connections)
-
-        for connection in all_conns:
-            if connection is not None:
-                connection.disconnect()
+            yield connection
+        finally:
+            self._capacity.release()
+        # if we're here there wasn't an error
+        if connection in self._used_connections:
+            self._used_connections.remove(connection)
+            self._free_connections.append(connection)

@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import asyncio
-
 import pytest
 
 from coredis import Redis
+from coredis._concurrency import gather
 from tests.conftest import module_targets
 
 
@@ -13,7 +12,7 @@ class TestTopK:
     async def test_reserve(self, client: Redis, _s):
         assert await client.topk.reserve("topk", 3)
         assert await client.topk.reserve("topkcustom", 3, 16, 14, 0.8)
-        infos = await asyncio.gather(client.topk.info("topk"), client.topk.info("topkcustom"))
+        infos = await gather(client.topk.info("topk"), client.topk.info("topkcustom"))
         assert infos[0][_s("width")] == 8
         assert infos[0][_s("depth")] == 7
         assert infos[1][_s("width")] == 16
@@ -49,8 +48,10 @@ class TestTopK:
 
     @pytest.mark.parametrize("transaction", [True, False])
     async def test_pipeline(self, client: Redis, transaction: bool):
-        p = await client.pipeline(transaction=transaction)
-        p.topk.reserve("topk", 3)
-        p.topk.add("topk", ["1", "2", "3"])
-        p.topk.query("topk", ["1", "2", "3"])
-        assert (True, (None, None, None), (True, True, True)) == await p.execute()
+        async with client.pipeline(transaction=transaction) as p:
+            results = [
+                p.topk.reserve("topk", 3),
+                p.topk.add("topk", ["1", "2", "3"]),
+                p.topk.query("topk", ["1", "2", "3"]),
+            ]
+        assert await gather(*results) == (True, (None, None, None), (True, True, True))

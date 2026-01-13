@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import re
+from ssl import SSLError
+
+from anyio import BrokenResourceError, ConnectionFailed, EndOfStream
 
 from coredis.typing import RedisValueT
 
@@ -358,3 +361,12 @@ class StreamConsumerInitializationError(StreamConsumerError):
     Raised when a stream consumer could not be initialized
     based on the configuration provided
     """
+
+
+RETRYABLE = (
+    BrokenResourceError,
+    ConnectionError,
+    ConnectionFailed,
+    EndOfStream,
+    SSLError,
+)

@@ -56,7 +56,7 @@ class NodeManager:
         skip_full_coverage_check: bool = False,
         nodemanager_follow_cluster: bool = True,
         decode_responses: bool = False,
-        **connection_kwargs: Any | None,
+        **connection_kwargs: Any,
     ) -> None:
         """
         :skip_full_coverage_check:
@@ -151,10 +151,9 @@ class NodeManager:
             "ssl_context",
             "parser_class",
             "loop",
-            "protocol_version",
         )
         connection_kwargs = {k: v for k, v in self.connection_kwargs.items() if k in allowed_keys}
-        return Redis(host=host, port=port, **connection_kwargs)  # type: ignore
+        return Redis(host=host, port=port, **connection_kwargs)
 
     async def initialize(self) -> None:
         """
@@ -185,9 +184,9 @@ class NodeManager:
             cluster_slots = {}
             try:
                 if node:
-                    r = self.get_redis_link(host=node.host, port=node.port)
-                    cluster_slots = await r.cluster_slots()
-                    self.startup_nodes_reachable = True
+                    async with self.get_redis_link(host=node.host, port=node.port) as r:
+                        cluster_slots = await r.cluster_slots()
+                        self.startup_nodes_reachable = True
             except RedisError as err:
                 startup_node_errors.setdefault(str(err), []).append(node.name)
                 continue
@@ -288,9 +287,9 @@ class NodeManager:
 
     async def node_require_full_coverage(self, node: ManagedNode) -> bool:
         try:
-            r_node = self.get_redis_link(host=node.host, port=node.port)
-            node_config = await r_node.config_get(["cluster-require-full-coverage"])
-            return "yes" in node_config.values()
+            async with self.get_redis_link(host=node.host, port=node.port) as r_node:
+                node_config = await r_node.config_get(["cluster-require-full-coverage"])
+                return "yes" in node_config.values()
         except ResponseError as err:
             warnings.warn(
                 "Unable to determine whether the cluster requires full coverage "
@@ -335,6 +334,3 @@ class NodeManager:
         self.startup_nodes.clear()
         for n in self.nodes.values():
             self.startup_nodes.append(n)
-
-    async def reset(self) -> None:
-        await self.initialize()

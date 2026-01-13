@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections import UserDict
 from typing import Any
 
@@ -12,6 +13,9 @@ from coredis.typing import (
     StringT,
     TypeVar,
 )
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 T = TypeVar("T")
 U = TypeVar("U")
@@ -138,7 +142,7 @@ def make_hashable(*args: Any) -> tuple[Hashable, ...]:
     )
 
 
-def query_param_to_bool(value: Any | None) -> bool | None:
+def query_param_to_bool(value: Any) -> bool | None:
     if value is None or value in ("", b""):
         return None
     if isinstance(value, (int, float, bool, str, bytes)):

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import contextvars
 import functools
@@ -11,10 +10,12 @@ from abc import ABCMeta
 from ssl import SSLContext
 from typing import TYPE_CHECKING, Any, cast, overload
 
+from anyio import get_cancelled_exc_class, sleep
 from deprecated.sphinx import versionadded
 
+from coredis._concurrency import gather
 from coredis._utils import b, hash_slot
-from coredis.cache import AbstractCache
+from coredis.cache import AbstractCache, ClusterTrackingCache
 from coredis.client.basic import Client, Redis
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName, NodeFlag
@@ -30,7 +31,6 @@ from coredis.exceptions import (
     RedisClusterException,
     TimeoutError,
     TryAgainError,
-    WatchError,
 )
 from coredis.globals import CACHEABLE_COMMANDS, MODULE_GROUPS, READONLY_COMMANDS
 from coredis.pool import ClusterConnectionPool
@@ -39,6 +39,7 @@ from coredis.response._callbacks import AsyncPreProcessingCallback, NoopCallback
 from coredis.retry import CompositeRetryPolicy, ConstantRetryPolicy, RetryPolicy
 from coredis.typing import (
     AnyStr,
+    AsyncGenerator,
     AsyncIterator,
     Awaitable,
     Callable,
@@ -55,6 +56,7 @@ from coredis.typing import (
     RedisCommandP,
     RedisValueT,
     ResponseType,
+    Self,
     StringT,
     TypeAdapter,
     TypeVar,
@@ -201,7 +203,6 @@ class RedisCluster(
         decode_responses: Literal[False] = ...,
         connection_pool: ClusterConnectionPool | None = ...,
         connection_pool_cls: type[ClusterConnectionPool] = ...,
-        protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         non_atomic_cross_slot: bool = ...,
         cache: AbstractCache | None = ...,
@@ -240,7 +241,6 @@ class RedisCluster(
         decode_responses: Literal[True] = ...,
         connection_pool: ClusterConnectionPool | None = ...,
         connection_pool_cls: type[ClusterConnectionPool] = ...,
-        protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         non_atomic_cross_slot: bool = ...,
         cache: AbstractCache | None = ...,
@@ -278,7 +278,6 @@ class RedisCluster(
         decode_responses: bool = False,
         connection_pool: ClusterConnectionPool | None = None,
         connection_pool_cls: type[ClusterConnectionPool] = ClusterConnectionPool,
-        protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
         non_atomic_cross_slot: bool = True,
         cache: AbstractCache | None = None,
@@ -302,6 +301,11 @@ class RedisCluster(
         """
 
         Changes
+          - .. versionremoved:: 6.0.0
+            - :paramref:`protocol_version` removed (and therefore support for RESP2)
+
+          - .. versionadded:: 6.0.0
+            -
           - .. versionadded:: 4.12.0
 
             - :paramref:`retry_policy`
@@ -410,9 +414,6 @@ class RedisCluster(
          a new pool will be assigned to this client.
         :param connection_pool_cls: The connection pool class to use when constructing
          a connection pool for this instance.
-        :param protocol_version: Whether to use the RESP (``2``) or RESP3 (``3``)
-         protocol for parsing responses from the server (Default ``3``).
-         (See :ref:`handbook/response:redis response`)
         :param verify_version: Validate redis server version against the documented
          version introduced before executing a command and raises a
          :exc:`CommandNotSupportedError` error if the required version is higher than
@@ -474,7 +475,6 @@ class RedisCluster(
                 read_from_replicas=readonly or read_from_replicas,
                 encoding=encoding,
                 decode_responses=decode_responses,
-                protocol_version=protocol_version,
                 noreply=noreply,
                 noevict=noevict,
                 notouch=notouch,
@@ -491,7 +491,6 @@ class RedisCluster(
             encoding=encoding,
             decode_responses=decode_responses,
             verify_version=verify_version,
-            protocol_version=protocol_version,
             noreply=noreply,
             noevict=noevict,
             notouch=notouch,
@@ -507,7 +506,7 @@ class RedisCluster(
             self.__class__.RESULT_CALLBACKS.copy()
         )
         self.non_atomic_cross_slot = non_atomic_cross_slot
-        self.cache = cache
+        self.cache = ClusterTrackingCache(cache=cache) if cache else None
         self._decodecontext: contextvars.ContextVar[bool | None,] = contextvars.ContextVar(
             "decode", default=None
         )
@@ -524,7 +523,6 @@ class RedisCluster(
         db: int | None = ...,
         skip_full_coverage_check: bool = ...,
         decode_responses: Literal[False] = ...,
-        protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         noreply: bool = ...,
         noevict: bool = ...,
@@ -544,7 +542,6 @@ class RedisCluster(
         db: int | None = ...,
         skip_full_coverage_check: bool = ...,
         decode_responses: Literal[True],
-        protocol_version: Literal[2, 3] = ...,
         verify_version: bool = ...,
         noreply: bool = ...,
         noevict: bool = ...,
@@ -563,7 +560,6 @@ class RedisCluster(
         db: int | None = None,
         skip_full_coverage_check: bool = False,
         decode_responses: bool = False,
-        protocol_version: Literal[2, 3] = 3,
         verify_version: bool = True,
         noreply: bool = False,
         noevict: bool = False,
@@ -599,7 +595,6 @@ class RedisCluster(
         if decode_responses:
             return cls(
                 decode_responses=True,
-                protocol_version=protocol_version,
                 verify_version=verify_version,
                 noreply=noreply,
                 retry_policy=retry_policy,
@@ -610,7 +605,6 @@ class RedisCluster(
                     db=db,
                     skip_full_coverage_check=skip_full_coverage_check,
                     decode_responses=decode_responses,
-                    protocol_version=protocol_version,
                     noreply=noreply,
                     noevict=noevict,
                     notouch=notouch,
@@ -620,7 +614,6 @@ class RedisCluster(
         else:
             return cls(
                 decode_responses=False,
-                protocol_version=protocol_version,
                 verify_version=verify_version,
                 noreply=noreply,
                 retry_policy=retry_policy,
@@ -631,7 +624,6 @@ class RedisCluster(
                     db=db,
                     skip_full_coverage_check=skip_full_coverage_check,
                     decode_responses=decode_responses,
-                    protocol_version=protocol_version,
                     noreply=noreply,
                     noevict=noevict,
                     notouch=notouch,
@@ -639,15 +631,16 @@ class RedisCluster(
                 ),
             )
 
-    async def initialize(self) -> RedisCluster[AnyStr]:
+    @contextlib.asynccontextmanager
+    async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         if self.refresh_table_asap:
             self.connection_pool.initialized = False
-        await self.connection_pool.initialize()
-        self.refresh_table_asap = False
-        await self._populate_module_versions()
-        if self.cache:
-            self.cache = await self.cache.initialize(self)
-        return self
+        async with self.connection_pool:
+            self.refresh_table_asap = False
+            await self._populate_module_versions()
+            if self.cache:
+                await self.connection_pool._task_group.start(self.cache.run, self.connection_pool)
+            yield self
 
     def __repr__(self) -> str:
         servers = list(
@@ -694,7 +687,7 @@ class RedisCluster(
 
     async def _ensure_initialized(self) -> None:
         if not self.connection_pool.initialized or self.refresh_table_asap:
-            await self
+            await self.connection_pool.initialize()
 
     def _determine_slots(
         self, command: bytes, *args: RedisValueT, **options: Unpack[ExecutionParameters]
@@ -729,7 +722,7 @@ class RedisCluster(
         assert command in self.result_callbacks
         return cast(
             R,
-            self.result_callbacks[command](res, version=self.protocol_version, **kwargs),
+            self.result_callbacks[command](res, **kwargs),
         )
 
     def determine_node(
@@ -758,12 +751,10 @@ class RedisCluster(
         return None
 
     async def on_connection_error(self, _: BaseException) -> None:
-        self.connection_pool.disconnect()
         self.connection_pool.reset()
         self.refresh_table_asap = True
 
     async def on_cluster_down_error(self, _: BaseException) -> None:
-        self.connection_pool.disconnect()
         self.connection_pool.reset()
         self.refresh_table_asap = True
 
@@ -816,13 +807,10 @@ class RedisCluster(
                         **kwargs,
                     )
 
-            results = await asyncio.gather(*tasks.values(), return_exceptions=True)
+            results = await gather(*tasks.values(), return_exceptions=True)
             if self.noreply:
                 return None  # type: ignore
-            return cast(
-                R,
-                self._merge_result(command.name, dict(zip(tasks.keys(), results))),
-            )
+            return self._merge_result(command.name, dict(zip(tasks.keys(), results)))
         else:
             node = None
             slots = None
@@ -907,7 +895,8 @@ class RedisCluster(
         while remaining_attempts > 0:
             remaining_attempts -= 1
             if self.refresh_table_asap and not slots:
-                await self
+                # await self
+                pass
             if asking and redirect_addr:
                 node = self.connection_pool.nodes.nodes[redirect_addr]
                 r = await self.connection_pool.get_connection_by_node(node)
@@ -983,11 +972,7 @@ class RedisCluster(
                         self.connection_pool.release(r)
 
                     reply = await request
-                    maybe_wait = [
-                        await self._ensure_wait(command, r),
-                        await self._ensure_persistence(command, r),
-                    ]
-                    await asyncio.gather(*maybe_wait)
+                    await self._ensure_wait_and_persist(command, r)
                 if self.noreply:
                     return  # type: ignore
                 else:
@@ -998,7 +983,6 @@ class RedisCluster(
                         )
                     response = callback(
                         cached_reply if cache_hit else reply,
-                        version=self.protocol_version,
                     )
                     if self.cache and cacheable:
                         if cache_hit and not use_cached:
@@ -1016,7 +1000,7 @@ class RedisCluster(
                                 value=reply,
                             )
                     return response
-            except (RedisClusterException, BusyLoadingError, asyncio.CancelledError):
+            except (RedisClusterException, BusyLoadingError, get_cancelled_exc_class()):
                 raise
             except MovedError as e:
                 # Reinitialize on ever x number of MovedError.
@@ -1031,7 +1015,7 @@ class RedisCluster(
                 self.connection_pool.nodes.slots[e.slot_id][0] = node
             except TryAgainError:
                 if remaining_attempts < self.MAX_RETRIES / 2:
-                    await asyncio.sleep(0.05)
+                    await sleep(0.05)
             except AskError as e:
                 redirect_addr, asking = f"{e.host}:{e.port}", True
             finally:
@@ -1167,9 +1151,11 @@ class RedisCluster(
             **kwargs,
         )
 
-    async def pipeline(
+    def pipeline(
         self,
-        transaction: bool | None = None,
+        transaction: bool = False,
+        *,
+        raise_on_error: bool = True,
         watches: Parameters[StringT] | None = None,
         timeout: float | None = None,
     ) -> coredis.pipeline.ClusterPipeline[AnyStr]:
@@ -1186,69 +1172,25 @@ class RedisCluster(
           part of the pipeline.
 
         :param transaction: indicates whether all commands should be executed atomically.
+        :param raise_on_error: Whether to raise errors upon executing the pipeline.
+         If set to `False` errors will be accumulated and retrievable from the individual
+         commands that had errors.
         :param watches: If :paramref:`transaction` is True these keys are watched for external
          changes during the transaction.
         :param timeout: If specified this value will take precedence over
          :paramref:`RedisCluster.stream_timeout`
 
         """
-        await self.connection_pool.initialize()
 
         from coredis.pipeline import ClusterPipeline
 
         return ClusterPipeline[AnyStr](
             client=self,
+            raise_on_error=raise_on_error,
             transaction=transaction,
             watches=watches,
             timeout=timeout,
         )
-
-    async def transaction(
-        self,
-        func: Callable[
-            [coredis.pipeline.ClusterPipeline[AnyStr]],
-            Coroutine[Any, Any, Any],
-        ],
-        *watches: StringT,
-        value_from_callable: bool = False,
-        watch_delay: float | None = None,
-        **kwargs: Any,
-    ) -> Any:
-        """
-        Convenience method for executing the callable :paramref:`func` as a
-        transaction while watching all keys specified in :paramref:`watches`.
-
-        :param func: callable should expect a single argument which is a
-         :class:`coredis.pipeline.ClusterPipeline` object retrieved by calling
-         :meth:`~coredis.RedisCluster.pipeline`.
-        :param watches: The keys to watch during the transaction. The keys should route
-         to the same node as the keys touched by the commands in :paramref:`func`
-        :param value_from_callable: Whether to return the result of transaction or the value
-         returned from :paramref:`func`
-
-        .. warning:: Cluster transactions can only be run with commands that
-           route to the same slot.
-
-        .. versionchanged:: 4.9.0
-
-           When the transaction is started with :paramref:`watches` the
-           :class:`~coredis.pipeline.ClusterPipeline` instance passed to :paramref:`func`
-           will not start queuing commands until a call to
-           :meth:`~coredis.pipeline.ClusterPipeline.multi` is made. This makes the cluster
-           implementation consistent with :meth:`coredis.Redis.transaction`
-        """
-        async with await self.pipeline(True) as pipe:
-            while True:
-                try:
-                    if watches:
-                        await pipe.watch(*watches)
-                    func_value = await func(pipe)
-                    exec_value = await pipe.execute()
-                    return func_value if value_from_callable else exec_value
-                except WatchError:
-                    if watch_delay is not None and watch_delay > 0:
-                        await asyncio.sleep(watch_delay)
-                    continue
 
     async def scan_iter(
         self,
@@ -1258,8 +1200,9 @@ class RedisCluster(
     ) -> AsyncIterator[AnyStr]:
         await self._ensure_initialized()
         for node in self.primaries:
-            cursor = None
-            while cursor != 0:
-                cursor, data = await node.scan(cursor or 0, match, count, type_)
-                for item in data:
-                    yield item
+            async with node:
+                cursor = None
+                while cursor != 0:
+                    cursor, data = await node.scan(cursor or 0, match, count, type_)
+                    for item in data:
+                        yield item

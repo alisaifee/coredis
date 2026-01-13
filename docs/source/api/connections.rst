@@ -7,27 +7,16 @@ Connection Pools
 
 :mod:`coredis`
 
-
 .. autoclass:: coredis.ConnectionPool
    :class-doc-from: both
 
-.. autoclass:: coredis.BlockingConnectionPool
-   :class-doc-from: both
-   :show-inheritance:
-
 .. autoclass:: coredis.ClusterConnectionPool
-   :class-doc-from: both
-   :show-inheritance:
-
-.. autoclass:: coredis.BlockingClusterConnectionPool
    :class-doc-from: both
    :show-inheritance:
 
 .. autoclass:: coredis.sentinel.SentinelConnectionPool
    :class-doc-from: both
    :show-inheritance:
-
-
 
 Connection Classes
 ^^^^^^^^^^^^^^^^^^
@@ -54,4 +43,3 @@ All connection classes derive from the same base-class:
 .. autoclass:: coredis.BaseConnection
    :show-inheritance:
    :class-doc-from: both
-

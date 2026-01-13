@@ -17,7 +17,7 @@ from coredis.typing import (
 )
 
 
-class TimeCallback(ResponseCallback[list[AnyStr], list[AnyStr], datetime.datetime]):
+class TimeCallback(ResponseCallback[list[AnyStr], datetime.datetime]):
     def transform(
         self,
         response: list[AnyStr],
@@ -27,7 +27,7 @@ class TimeCallback(ResponseCallback[list[AnyStr], list[AnyStr], datetime.datetim
         )
 
 
-class SlowlogCallback(ResponseCallback[ResponseType, ResponseType, tuple[SlowLogInfo, ...]]):
+class SlowlogCallback(ResponseCallback[ResponseType, tuple[SlowLogInfo, ...]]):
     def transform(
         self,
         response: ResponseType,
@@ -45,7 +45,7 @@ class SlowlogCallback(ResponseCallback[ResponseType, ResponseType, tuple[SlowLog
         )
 
 
-class ClientInfoCallback(ResponseCallback[ResponseType, ResponseType, ClientInfo]):
+class ClientInfoCallback(ResponseCallback[ResponseType, ClientInfo]):
     INT_FIELDS: ClassVar = {
         "id",
         "fd",
@@ -81,7 +81,7 @@ class ClientInfoCallback(ResponseCallback[ResponseType, ResponseType, ClientInfo
         return info
 
 
-class ClientListCallback(ResponseCallback[ResponseType, ResponseType, tuple[ClientInfo, ...]]):
+class ClientListCallback(ResponseCallback[ResponseType, tuple[ClientInfo, ...]]):
     def transform(
         self,
         response: ResponseType,
@@ -89,7 +89,7 @@ class ClientListCallback(ResponseCallback[ResponseType, ResponseType, tuple[Clie
         return tuple(ClientInfoCallback()(c) for c in response.splitlines())
 
 
-class DebugCallback(ResponseCallback[ResponseType, ResponseType, dict[str, str | int]]):
+class DebugCallback(ResponseCallback[ResponseType, dict[str, str | int]]):
     INT_FIELDS: ClassVar = {"refcount", "serializedlength", "lru", "lru_seconds_idle"}
 
     def transform(
@@ -116,7 +116,6 @@ class DebugCallback(ResponseCallback[ResponseType, ResponseType, dict[str, str |
 
 class InfoCallback(
     ResponseCallback[
-        StringT,
         StringT,
         dict[str, ResponseType],
     ]
@@ -179,7 +178,7 @@ class InfoCallback(
         return info
 
 
-class RoleCallback(ResponseCallback[ResponseType, ResponseType, RoleInfo]):
+class RoleCallback(ResponseCallback[ResponseType, RoleInfo]):
     def transform(
         self,
         response: ResponseType,
@@ -217,7 +216,7 @@ class RoleCallback(ResponseCallback[ResponseType, ResponseType, RoleInfo]):
 
 
 class LatencyHistogramCallback(
-    ResponseCallback[ResponseType, ResponseType, dict[AnyStr, dict[AnyStr, RedisValueT]]]
+    ResponseCallback[ResponseType, dict[AnyStr, dict[AnyStr, RedisValueT]]]
 ):
     def transform(
         self,
@@ -231,9 +230,7 @@ class LatencyHistogramCallback(
         return histogram
 
 
-class LatencyCallback(
-    ResponseCallback[ResponseType, ResponseType, dict[AnyStr, tuple[int, int, int]]]
-):
+class LatencyCallback(ResponseCallback[ResponseType, dict[AnyStr, tuple[int, int, int]]]):
     def transform(
         self,
         response: ResponseType,

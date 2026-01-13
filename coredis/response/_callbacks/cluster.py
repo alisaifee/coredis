@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from coredis._utils import EncodingInsensitiveDict, nativestr
+from coredis._utils import nativestr
 from coredis.response._callbacks import ResponseCallback
-from coredis.response._utils import flat_pairs_to_dict
 from coredis.response.types import ClusterNode, ClusterNodeDetail
 from coredis.typing import (
     AnyStr,
@@ -13,27 +12,15 @@ from coredis.typing import (
 )
 
 
-class ClusterLinksCallback(
-    ResponseCallback[ResponseType, ResponseType, list[dict[AnyStr, ResponsePrimitive]]]
-):
+class ClusterLinksCallback(ResponseCallback[ResponseType, list[dict[AnyStr, ResponsePrimitive]]]):
     def transform(
-        self,
-        response: ResponseType,
-    ) -> list[dict[AnyStr, ResponsePrimitive]]:
-        transformed: list[dict[AnyStr, ResponsePrimitive]] = []
-
-        for item in response:
-            transformed.append(flat_pairs_to_dict(item))
-        return transformed
-
-    def transform_3(
         self,
         response: ResponseType,
     ) -> list[dict[AnyStr, ResponsePrimitive]]:
         return response
 
 
-class ClusterInfoCallback(ResponseCallback[ResponseType, ResponseType, dict[str, str]]):
+class ClusterInfoCallback(ResponseCallback[ResponseType, dict[str, str]]):
     def transform(
         self,
         response: ResponseType,
@@ -43,7 +30,7 @@ class ClusterInfoCallback(ResponseCallback[ResponseType, ResponseType, dict[str,
 
 
 class ClusterSlotsCallback(
-    ResponseCallback[ResponseType, ResponseType, dict[tuple[int, int], tuple[ClusterNode, ...]]]
+    ResponseCallback[ResponseType, dict[tuple[int, int], tuple[ClusterNode, ...]]]
 ):
     def transform(
         self,
@@ -68,7 +55,7 @@ class ClusterSlotsCallback(
         )
 
 
-class ClusterNodesCallback(ResponseCallback[ResponseType, ResponseType, list[ClusterNodeDetail]]):
+class ClusterNodesCallback(ResponseCallback[ResponseType, list[ClusterNodeDetail]]):
     def transform(
         self,
         response: ResponseType,
@@ -156,27 +143,10 @@ class ClusterNodesCallback(ResponseCallback[ResponseType, ResponseType, list[Clu
 class ClusterShardsCallback(
     ResponseCallback[
         ResponseType,
-        ResponseType,
         list[dict[AnyStr, list[RedisValueT] | Mapping[AnyStr, RedisValueT]]],
     ]
 ):
     def transform(
-        self,
-        response: ResponseType,
-    ) -> list[dict[AnyStr, list[RedisValueT] | Mapping[AnyStr, RedisValueT]]]:
-        shard_mapping: list[dict[AnyStr, list[RedisValueT] | Mapping[AnyStr, RedisValueT]]] = []
-
-        for shard in response:
-            transformed = EncodingInsensitiveDict(flat_pairs_to_dict(shard))
-            node_mapping: list[dict[AnyStr, RedisValueT]] = []
-            for node in transformed["nodes"]:
-                node_mapping.append(flat_pairs_to_dict(node))
-
-            transformed["nodes"] = node_mapping
-            shard_mapping.append(transformed.__wrapped__)  # type: ignore
-        return shard_mapping
-
-    def transform_3(
         self,
         response: ResponseType,
     ) -> list[dict[AnyStr, list[RedisValueT] | Mapping[AnyStr, RedisValueT]]]:

@@ -12,10 +12,11 @@ Sentinel connection to discover the primary and replicas network addresses:
 
     from coredis.sentinel import Sentinel
     sentinel = Sentinel([('localhost', 26379)], stream_timeout=0.1)
-    await sentinel.discover_primary('myredis')
-    # ('127.0.0.1', 6379)
-    await sentinel.discover_replicas('myredis')
-    # [('127.0.0.1', 6380)]
+    async with sentinel:
+        await sentinel.discover_primary('myredis')
+        # ('127.0.0.1', 6379)
+        await sentinel.discover_replicas('myredis')
+        # [('127.0.0.1', 6380)]
 
 You can also create Redis client connections from a Sentinel instance. You can
 connect to either the primary (for write operations) or a replica (for read-only
@@ -25,9 +26,10 @@ operations).
 
     primary = sentinel.primary_for('myredis', stream_timeout=0.1)
     replica = sentinel.replica_for('myredis', stream_timeout=0.1)
-    primary.set('foo', 'bar')
-    replica.get('foo')
-    # 'bar'
+    async with primary, replica:
+        await primary.set('foo', 'bar')
+        await replica.get('foo')
+        # 'bar'
 
 The primary and replica objects are normal :class:`~coredis.Redis` instances with
 their connection pool bound to the Sentinel instance via :class:`~coredis.sentinel.SentinelConnectionPool`.
