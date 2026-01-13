@@ -10,18 +10,6 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
-    #:  - ``GRAPH.CONSTRAINT CREATE``
-    #:  - ``GRAPH.CONTRAINT DROP``
-    UNIQUE = b"UNIQUE"
-
-    #: Used by:
-    #:
-    #:  - ``GRAPH.CONSTRAINT CREATE``
-    #:  - ``GRAPH.CONTRAINT DROP``
-    MANDATORY = b"MANDATORY"
-
-    #: Used by:
-    #:
     #:  - ``ACL LOG``
     RESET = b"RESET"
 
@@ -1321,25 +1309,6 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
-    #:  - ``CLUSTER SETSLOT``
-    #:  - ``GRAPH.CONSTRAINT CREATE``
-    #:  - ``GRAPH.CONTRAINT DROP``
-    NODE = b"NODE"
-
-    #: Used by:
-    #:
-    #:  - ``GRAPH.CONSTRAINT CREATE``
-    #:  - ``GRAPH.CONTRAINT DROP``
-    RELATIONSHIP = b"RELATIONSHIP"
-
-    #: Used by:
-    #:
-    #:  - ``GRAPH.CONSTRAINT CREATE``
-    #:  - ``GRAPH.CONTRAINT DROP``
-    PROPERTIES = b"PROPERTIES"
-
-    #: Used by:
-    #:
     #:  - ``BITFIELD``
     #:  - ``BITFIELD_RO``
     #:  - ``SORT``
@@ -1464,6 +1433,11 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``CLUSTER SETSLOT``
+    NODE = b"NODE"
+
+    #: Used by:
+    #:
     #:  - ``CLUSTER SLOT-STATS``
     #:  - ``SINTERCARD``
     #:  - ``SORT``
@@ -1519,9 +1493,6 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``FAILOVER``
     #:  - ``FT.AGGREGATE``
     #:  - ``FT.SEARCH``
-    #:  - ``GRAPH.PROFILE``
-    #:  - ``GRAPH.QUERY``
-    #:  - ``GRAPH.RO_QUERY``
     TIMEOUT = b"TIMEOUT"
 
     #: Used by:

@@ -75,12 +75,6 @@ MODULES = {
         "group": "timeseries",
         "module": "timeseries",
     },
-    "graph": {
-        "repo": "https://github.com/RedisGraph/RedisGraph/",
-        "prefix": "graph",
-        "group": "graph",
-        "module": "graph",
-    },
     "search": {
         "repo": "https://github.com/RediSearch/RediSearch/",
         "prefix": "ft",
@@ -527,28 +521,8 @@ def compare_signatures(s1, s2, eval_forward_annotations=True, with_return=True):
 
 
 def get_token_mapping():
-    pure_token_mapping = collections.OrderedDict(
-        {
-            ("unique", "UNIQUE"): {"GRAPH.CONTRAINT DROP", "GRAPH.CONSTRAINT CREATE"},
-            ("mandatory", "MANDATORY"): {
-                "GRAPH.CONTRAINT DROP",
-                "GRAPH.CONSTRAINT CREATE",
-            },
-        }
-    )
-    prefix_token_mapping = collections.OrderedDict(
-        {
-            ("node", "NODE"): {"GRAPH.CONTRAINT DROP", "GRAPH.CONSTRAINT CREATE"},
-            ("relationship", "RELATIONSHIP"): {
-                "GRAPH.CONTRAINT DROP",
-                "GRAPH.CONSTRAINT CREATE",
-            },
-            ("properties", "PROPERTIES"): {
-                "GRAPH.CONTRAINT DROP",
-                "GRAPH.CONSTRAINT CREATE",
-            },
-        }
-    )
+    pure_token_mapping = collections.OrderedDict()
+    prefix_token_mapping = collections.OrderedDict()
 
     for name in ["commands", *MODULES.keys()]:
         commands = get_commands(name + ".json")
@@ -2514,16 +2488,6 @@ def cluster_key_extraction(path):
     all["FT.SUGDEL"] = fixed_args["first"]
     all["FT.SUGGET"] = fixed_args["first"]
     all["FT.SUGLEN"] = fixed_args["first"]
-
-    # RedisGraph
-    all["GRAPH.QUERY"] = fixed_args["first"]
-    all["GRAPH.DELETE"] = fixed_args["first"]
-    all["GRAPH.EXPLAIN"] = fixed_args["first"]
-    all["GRAPH.PROFILE"] = fixed_args["first"]
-    all["GRAPH.SLOWLOG"] = fixed_args["first"]
-    all["GRAPH.CONSTRAINT CREATE"] = fixed_args["first"]
-    all["GRAPH.CONSTRAINT DROP"] = fixed_args["first"]
-    all["GRAPH.RO_QUERY"] = fixed_args["first"]
 
     key_spec_template = """
 from __future__ import annotations

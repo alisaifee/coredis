@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from deprecated.sphinx import deprecated, versionadded
+from deprecated.sphinx import versionadded
 
 from coredis.commands import CommandMixin
 from coredis.typing import AnyStr
@@ -14,7 +14,6 @@ from .filters import (
     TDigest,
     TopK,
 )
-from .graph import Graph
 from .json import Json, RedisJSON
 from .search import RediSearch, Search
 from .timeseries import RedisTimeSeries, TimeSeries
@@ -92,18 +91,6 @@ class ModuleMixin(CommandMixin[AnyStr]):
         Property to access :class:`~coredis.modules.Autocomplete` commands.
         """
         return Autocomplete(self)
-
-    @property
-    @versionadded(version="4.12.0")
-    @deprecated(
-        "RedisGraph has been discontinued and support for it's commands will be removed in 6.0",
-        version="5.2.1",
-    )
-    def graph(self) -> Graph[AnyStr]:
-        """
-        Property to access :class:`~coredis.modules.Graph` commands.
-        """
-        return Graph(self)
 
 
 __all__ = [

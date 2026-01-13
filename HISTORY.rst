@@ -30,6 +30,7 @@ Release Date: TBD
   * Removes ``Monitor`` wrapper
   * Client now includes ``Redis.lock`` as a convenient way to access the ``LuaLock``
     recipe, and the class is now just called ``Lock``.
+  * Remove RedisGraph module support
 
 v5.5.0
 ------
