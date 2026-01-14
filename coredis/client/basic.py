@@ -1161,8 +1161,7 @@ class Redis(Client[AnyStr]):
         while True:
             with catch({WatchError: lambda _: logger.warning(msg)}):
                 async with self.pipeline(transaction=False) as pipe:
-                    if watches:
-                        await pipe.watch(*watches)
-                    return await func(pipe)
+                    async with pipe.watch(*watches):
+                        return await func(pipe)
             if watch_delay:
                 await sleep(watch_delay)

@@ -21,9 +21,8 @@ from coredis.typing import (
     Callable,
     ClassVar,
     Iterable,
+    KeyT,
     Node,
-    RedisValueT,
-    StringT,
 )
 
 
@@ -170,30 +169,23 @@ class ClusterConnectionPool(ConnectionPool):
         self._check_lock = threading.Lock()
         self.initialized = False
 
-    async def get_connection(
+    async def __get_connection(
         self,
-        command_name: bytes | None = None,
-        *keys: RedisValueT,
         acquire: bool = True,
-        **options: RedisValueT | None,
+        **options: Any,
     ) -> Connection:
-        # Only pubsub command/connection should be allowed here
-
-        if command_name != b"pubsub":
-            raise RedisClusterException("Only 'pubsub' commands can use get_connection()")
-
         routing_key = options.pop("channel", None)
-        node_type = options.pop("node_type", "primary")
+        primary = options.pop("primary", True)
 
         if not routing_key:
-            return await self.get_random_connection()
+            return await self.__get_random_connection(primary=primary)
 
         slot = hash_slot(b(routing_key))
 
-        if node_type == "replica":
-            node = self.get_replica_node_by_slot(slot)
+        if primary:
+            node = self.get_primary_node_by_slots([slot])
         else:
-            node = self.get_primary_node_by_slot(slot)
+            node = self.get_replica_node_by_slots([slot])
 
         try:
             connection = self.__node_pool(node.name).get_nowait()
@@ -201,7 +193,7 @@ class ClusterConnectionPool(ConnectionPool):
             connection = None
 
         if not connection or not connection.is_connected:
-            connection = await self._make_node_connection(node)
+            connection = await self.__make_node_connection(node)
         else:
             if connection.is_connected and connection.needs_handshake:
                 await connection.perform_handshake()
@@ -211,13 +203,13 @@ class ClusterConnectionPool(ConnectionPool):
 
         return connection
 
-    async def _make_node_connection(self, node: ManagedNode) -> Connection:
+    async def __make_node_connection(self, node: ManagedNode) -> Connection:
         """Creates a new connection to a node"""
 
-        if self.count_all_num_connections(node) >= self.max_connections:
+        if self.__count_all_num_connections(node) >= self.max_connections:
             if self.max_connections_per_node:
                 raise ConnectionError(
-                    f"Too many connection ({self.count_all_num_connections(node)}) for node: {node.name}"
+                    f"Too many connection ({self.__count_all_num_connections(node)}) for node: {node.name}"
                 )
 
             raise ConnectionError("Too many connections")
@@ -253,6 +245,24 @@ class ClusterConnectionPool(ConnectionPool):
 
         return Queue[Connection](q_size)
 
+    @asynccontextmanager
+    async def acquire(
+        self,
+        acquire: bool = False,
+        node: ManagedNode | None = None,
+        **options: Any,
+    ) -> AsyncGenerator[BaseConnection]:
+        connection: BaseConnection
+        if node:
+            connection = await self.__get_connection_by_node(node)
+        else:
+            connection = await self.__get_connection(acquire=acquire, **options)
+        if not acquire:
+            self.release(connection)
+        yield connection
+        if acquire:
+            self.release(connection)
+
     def release(self, connection: BaseConnection) -> None:
         """Releases the connection back to the pool"""
         assert isinstance(connection, ClusterConnection)
@@ -263,47 +273,31 @@ class ClusterConnectionPool(ConnectionPool):
             except QueueFull:
                 pass
 
-    def count_all_num_connections(self, node: ManagedNode) -> int:
+    def __count_all_num_connections(self, node: ManagedNode) -> int:
         if self.max_connections_per_node:
             return self._created_connections_per_node.get(node.name, 0)
 
         return sum(i for i in self._created_connections_per_node.values())
 
-    async def get_random_connection(self, primary: bool = False) -> ClusterConnection:
+    async def __get_random_connection(self, primary: bool = False) -> ClusterConnection:
         """Opens new connection to random redis server in the cluster"""
 
         for node in self.nodes.random_startup_node_iter(primary):
-            connection = await self.get_connection_by_node(node)
+            connection = await self.__get_connection_by_node(node)
 
             if connection:
                 return connection
         raise RedisClusterException("Cant reach a single startup node.")
 
-    async def get_connection_by_key(self, key: StringT) -> ClusterConnection:
-        return await self.get_connection_by_slot(hash_slot(b(key)))
-
-    async def get_connection_by_slot(self, slot: int) -> ClusterConnection:
-        """
-        Determines what server a specific slot belongs to and return a redis
-        object that is connected
-        """
-        try:
-            return await self.get_connection_by_node(self.get_node_by_slot(slot))
-        except KeyError:
-            return await self.get_random_connection()
-
-    async def get_connection_by_node(self, node: ManagedNode) -> ClusterConnection:
+    async def __get_connection_by_node(self, node: ManagedNode) -> ClusterConnection:
         """Gets a connection by node"""
         with fail_after(self.timeout):
             connection = await self.__node_pool(node.name).get()
 
         if not connection or not connection.is_connected:
-            connection = await self._make_node_connection(node)
+            connection = await self.__make_node_connection(node)
 
         return cast(ClusterConnection, connection)
-
-    def get_primary_node_by_slot(self, slot: int) -> ManagedNode:
-        return self.get_primary_node_by_slots([slot])
 
     def get_primary_node_by_slots(self, slots: list[int]) -> ManagedNode:
         nodes = {self.nodes.slots[slot][0].node_id for slot in slots}
@@ -312,9 +306,6 @@ class ClusterConnectionPool(ConnectionPool):
             return self.nodes.slots[slots[0]][0]
         else:
             raise RedisClusterException(f"Unable to map slots {slots} to a single node")
-
-    def get_replica_node_by_slot(self, slot: int) -> ManagedNode:
-        return self.get_replica_node_by_slots([slot])
 
     def get_replica_node_by_slots(
         self, slots: list[int], replica_only: bool = False
@@ -335,12 +326,15 @@ class ClusterConnectionPool(ConnectionPool):
 
     def get_node_by_slot(self, slot: int, command: bytes | None = None) -> ManagedNode:
         if self.read_from_replicas and command in READONLY_COMMANDS:
-            return self.get_replica_node_by_slot(slot)
+            return self.get_replica_node_by_slots([slot])
 
-        return self.get_primary_node_by_slot(slot)
+        return self.get_primary_node_by_slots([slot])
 
     def get_node_by_slots(self, slots: list[int], command: bytes | None = None) -> ManagedNode:
         if self.read_from_replicas and command in READONLY_COMMANDS:
             return self.get_replica_node_by_slots(slots)
 
         return self.get_primary_node_by_slots(slots)
+
+    def get_node_by_keys(self, keys: list[KeyT]) -> ManagedNode:
+        return self.get_node_by_slots(list(self.nodes.keys_to_slots(*keys)))

@@ -194,6 +194,5 @@ class TestClusterInvalidatingCache(CommonExamples):
         assert cache.confidence == 100
         cached = await cloner(client, cache=cache)
         async with cached:
-            assert (
-                cached.cache.get_client_id(await client.connection_pool.get_random_connection()) > 0
-            )
+            async with client.connection_pool.acquire(True, node=None) as connection:
+                assert cached.cache.get_client_id(connection) > 0

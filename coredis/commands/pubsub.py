@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 import inspect
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 from typing import TYPE_CHECKING, Any, AsyncGenerator, cast
 
 from anyio import (
     TASK_STATUS_IGNORED,
     AsyncContextManagerMixin,
-    ConnectionFailed,
-    EndOfStream,
     Event,
     create_memory_object_stream,
     create_task_group,
@@ -24,7 +22,7 @@ from exceptiongroup import catch
 
 from coredis._utils import b, hash_slot, logger, nativestr
 from coredis.commands.constants import CommandName
-from coredis.connection import BaseConnection, Connection
+from coredis.connection import BaseConnection
 from coredis.exceptions import RETRYABLE, ConnectionError, PubSubError, TimeoutError
 from coredis.parser import (
     PUBLISH_MESSAGE_TYPES,
@@ -458,24 +456,22 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
         while True:
             await sleep(min(tries**2, 300))
-            with catch({(ConnectionError, ConnectionFailed, EndOfStream): handle_error}):
-                self._connection = await self.connection_pool.get_connection(
-                    command_name=b"pubsub", acquire=True
-                )
-                async with create_task_group() as tg:
-                    self._current_scope = tg.cancel_scope
-                    tg.start_soon(self._consumer)
-                    tg.start_soon(self._keepalive)
-                    if not started:
-                        task_status.started()
-                        started = True
-                    else:  # resubscribe
-                        if self.channels:
-                            await self.subscribe(*self.channels.keys())
-                        if self.patterns:
-                            await self.psubscribe(*self.patterns.keys())
-                self.connection_pool.release(self._connection)
-                break
+            with catch({RETRYABLE: handle_error}):
+                async with self.connection_pool.acquire(acquire=True) as self._connection:
+                    async with create_task_group() as tg:
+                        self._current_scope = tg.cancel_scope
+                        tg.start_soon(self._consumer)
+                        tg.start_soon(self._keepalive)
+                        if not started:
+                            task_status.started()
+                            started = True
+                        else:  # resubscribe
+                            if self.channels:
+                                await self.subscribe(*self.channels.keys())
+                            if self.patterns:
+                                await self.psubscribe(*self.patterns.keys())
+                    self.connection_pool.release(self._connection)
+                    break
 
 
 @versionadded(version="3.6.0")
@@ -508,7 +504,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         channels: Parameters[StringT] | None = None,
         channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
     ):
-        self.shard_connections: dict[str, Connection] = {}
+        self.shard_connections: dict[str, BaseConnection] = {}
         self.node_channel_mapping: dict[str, list[StringT]] = {}
         self.read_from_replicas = read_from_replicas
         self._shard_messages = StapledObjectStream(
@@ -585,42 +581,63 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         node = self.connection_pool.nodes.node_from_slot(slot)
         if node and node.node_id:
             key = node.node_id
-            if self.shard_connections.get(key) is None:
-                self.shard_connections[key] = await self.connection_pool.get_connection(
-                    b"pubsub",
-                    channel=channel,
-                    node_type="replica" if self.read_from_replicas else "primary",
-                )
-                self._task_group.start_soon(self._shard_listener, key)
-            self.node_channel_mapping.setdefault(key, []).append(args[0])
             return await self.shard_connections[key].send_command(command, *args)
         raise PubSubError(f"Unable to determine shard for channel {args[0]!r}")
 
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        async with create_task_group() as self._task_group:
+        async with create_task_group() as tg:
+            await tg.start(self.run)
+            # initialize subscriptions
             if self._initial_channel_subscriptions:
                 await self.subscribe(**self._initial_channel_subscriptions)
-            self._task_group.start_soon(self._consumer)
             yield self
-            await self.unsubscribe()
-            self._task_group.cancel_scope.cancel()
+            # cleanu self.unsubscribe()
+            self.channels.clear()
+            self._current_scope.cancel()
             self.reset()
 
-    async def _shard_listener(self, node_id: str) -> None:
+    async def run(self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
+        start_time, started, tries = current_time(), False, 0
+
+        def handle_error(*args: Any) -> None:
+            nonlocal tries, start_time
+            if current_time() - start_time > 10:
+                tries = 0
+            else:
+                tries += 1
+
         while True:
-            connection = self.shard_connections.get(node_id, None)
-            if not connection:
+            await sleep(min(tries**2, 300))
+            with catch({RETRYABLE: handle_error}):
+                stack = AsyncExitStack()
+                self.shard_connections = {
+                    node.node_id: await stack.enter_async_context(
+                        self.connection_pool.acquire(acquire=True, node=node)
+                    )
+                    for node in self.connection_pool.nodes.all_primaries()
+                    if node.node_id
+                }
+                async with create_task_group() as tg:
+                    self._current_scope = tg.cancel_scope
+                    tg.start_soon(self._consumer)
+                    [
+                        tg.start_soon(self._shard_listener, connection)
+                        for connection in self.shard_connections.values()
+                    ]
+                    if not started:
+                        task_status.started()
+                        started = True
+                    else:  # resubscribe
+                        if self.channels:
+                            await self.subscribe(*self.channels.keys())
                 break
-            try:
-                with move_on_after(2):
-                    message = await connection.fetch_push_message(True)
-                    await self._shard_messages.send(message)
-            except (ConnectionError, ConnectionFailed, EndOfStream):
-                self.shard_connections.pop(node_id)
-                if active_channels := set(self.channels) & set(self.node_channel_mapping[node_id]):
-                    self._task_group.start_soon(self.subscribe, *active_channels)
-                break
+
+    async def _shard_listener(self, connection: BaseConnection) -> None:
+        while True:
+            with move_on_after(2):
+                message = await connection.fetch_push_message(True)
+                await self._shard_messages.send(message)
 
     async def parse_response(
         self, block: bool = True, timeout: float | None = None
@@ -632,7 +649,6 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
     def reset(self) -> None:
         for connection in self.shard_connections.values():
             connection.clear_connect_callbacks()
-            self.connection_pool.release(connection)
         self.shard_connections.clear()
         self.channels = {}
         self.patterns = {}

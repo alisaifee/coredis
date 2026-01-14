@@ -93,6 +93,14 @@ class NodeManager:
                 mapping.setdefault(node.name, {}).setdefault(hash_slot(b(k)), []).append(k)
         return mapping
 
+    def keys_to_slots(self, *keys: RedisValueT) -> set[int]:
+        slots = set()
+        for k in keys:
+            node = self.node_from_slot(hash_slot(b(k)))
+            if node:
+                slots.add(hash_slot(b(k)))
+        return slots
+
     def node_from_slot(self, slot: int) -> ManagedNode | None:
         for node in self.slots[slot]:
             if node.server_type == "primary":

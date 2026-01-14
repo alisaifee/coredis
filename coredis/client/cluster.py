@@ -891,137 +891,137 @@ class RedisCluster(
             try_random_node = False
             try_random_type = NodeFlag.ALL
         remaining_attempts = int(self.MAX_RETRIES)
+        quick_release = self.should_quick_release(command)
 
+        shared = quick_release and not (self.requires_wait or self.requires_waitaof)
         while remaining_attempts > 0:
             remaining_attempts -= 1
             if self.refresh_table_asap and not slots:
                 # await self
                 pass
+            _node = None
             if asking and redirect_addr:
-                node = self.connection_pool.nodes.nodes[redirect_addr]
-                r = await self.connection_pool.get_connection_by_node(node)
+                _node = self.connection_pool.nodes.nodes[redirect_addr]
             elif try_random_node:
-                r = await self.connection_pool.get_random_connection(
-                    primary=try_random_type == NodeFlag.PRIMARIES
-                )
+                _node = None
                 if slots:
                     try_random_node = False
             elif node:
-                r = await self.connection_pool.get_connection_by_node(node)
+                _node = node
             elif slots:
                 if self.refresh_table_asap:
                     # MOVED
-                    node = self.connection_pool.get_primary_node_by_slots(slots)
+                    _node = self.connection_pool.get_primary_node_by_slots(slots)
                 else:
-                    node = self.connection_pool.get_node_by_slots(slots)
-                r = await self.connection_pool.get_connection_by_node(node)
+                    _node = self.connection_pool.get_node_by_slots(slots, command=command.name)
             else:
                 continue
-            quick_release = self.should_quick_release(command)
-            released = False
-            try:
-                if asking:
-                    request = await r.create_request(
-                        CommandName.ASKING, noreply=self.noreply, decode=False
+            async with self.connection_pool.acquire(
+                not shared, _node, primary=not node and try_random_type == NodeFlag.PRIMARIES
+            ) as r:
+                try:
+                    if asking:
+                        request = await r.create_request(
+                            CommandName.ASKING, noreply=self.noreply, decode=False
+                        )
+                        await request
+                        asking = False
+                    keys = KeySpec.extract_keys(command.name, *command.arguments)
+                    cacheable = (
+                        self.cache
+                        and command.name in CACHEABLE_COMMANDS
+                        and len(keys) == 1
+                        and not self.noreply
+                        and self._decodecontext.get() is None
                     )
-                    await request
-                    asking = False
-                keys = KeySpec.extract_keys(command.name, *command.arguments)
-                cacheable = (
-                    self.cache
-                    and command.name in CACHEABLE_COMMANDS
-                    and len(keys) == 1
-                    and not self.noreply
-                    and self._decodecontext.get() is None
-                )
-                cache_hit = False
-                cached_reply = None
-                use_cached = False
-                reply = None
-                if self.cache:
-                    if r.tracking_client_id != self.cache.get_client_id(r):
-                        self.cache.reset()
-                        await r.update_tracking_client(True, self.cache.get_client_id(r))
-                    if command.name not in READONLY_COMMANDS:
-                        self.cache.invalidate(*keys)
-                    elif cacheable:
-                        try:
-                            cached_reply = cast(
-                                R,
-                                self.cache.get(
+                    cache_hit = False
+                    cached_reply = None
+                    use_cached = False
+                    reply = None
+                    if self.cache:
+                        if r.tracking_client_id != self.cache.get_client_id(r):
+                            self.cache.reset()
+                            await r.update_tracking_client(True, self.cache.get_client_id(r))
+                        if command.name not in READONLY_COMMANDS:
+                            self.cache.invalidate(*keys)
+                        elif cacheable:
+                            try:
+                                cached_reply = cast(
+                                    R,
+                                    self.cache.get(
+                                        command.name,
+                                        keys[0],
+                                        *command.arguments,
+                                    ),
+                                )
+                                use_cached = random.random() * 100.0 < min(
+                                    100.0, self.cache.confidence
+                                )
+                                cache_hit = True
+                            except KeyError:
+                                pass
+
+                    if not (use_cached and cached_reply):
+                        request = await r.create_request(
+                            command.name,
+                            *command.arguments,
+                            noreply=self.noreply,
+                            decode=kwargs.get("decode", self._decodecontext.get()),
+                            encoding=self._encodingcontext.get(),
+                        )
+                        reply = await request
+                        await self._ensure_wait_and_persist(command, r)
+                    if self.noreply:
+                        return  # type: ignore
+                    else:
+                        if isinstance(callback, AsyncPreProcessingCallback):
+                            await callback.pre_process(
+                                self,
+                                reply,
+                            )
+                        response = callback(
+                            cached_reply if cache_hit else reply,
+                        )
+                        if self.cache and cacheable:
+                            if cache_hit and not use_cached:
+                                self.cache.feedback(
                                     command.name,
                                     keys[0],
                                     *command.arguments,
-                                ),
-                            )
-                            use_cached = random.random() * 100.0 < min(100.0, self.cache.confidence)
-                            cache_hit = True
-                        except KeyError:
-                            pass
+                                    match=cached_reply == reply,
+                                )
+                            if not cache_hit:
+                                self.cache.put(
+                                    command.name,
+                                    keys[0],
+                                    *command.arguments,
+                                    value=reply,
+                                )
+                        return response
+                except (RedisClusterException, BusyLoadingError, get_cancelled_exc_class()):
+                    raise
+                except MovedError as e:
+                    # Reinitialize on ever x number of MovedError.
+                    # This counter will increase faster when the same client object
+                    # is shared between multiple threads. To reduce the frequency you
+                    # can set the variable 'reinitialize_steps' in the constructor.
+                    self.refresh_table_asap = True
+                    await self.connection_pool.nodes.increment_reinitialize_counter()
 
-                if not (use_cached and cached_reply):
-                    request = await r.create_request(
-                        command.name,
-                        *command.arguments,
-                        noreply=self.noreply,
-                        decode=kwargs.get("decode", self._decodecontext.get()),
-                        encoding=self._encodingcontext.get(),
+                    node = self.connection_pool.nodes.set_node(
+                        e.host, e.port, server_type="primary"
                     )
-                    if quick_release and not (self.requires_wait or self.requires_waitaof):
-                        released = True
-                        self.connection_pool.release(r)
-
-                    reply = await request
-                    await self._ensure_wait_and_persist(command, r)
-                if self.noreply:
-                    return  # type: ignore
-                else:
-                    if isinstance(callback, AsyncPreProcessingCallback):
-                        await callback.pre_process(
-                            self,
-                            reply,
-                        )
-                    response = callback(
-                        cached_reply if cache_hit else reply,
-                    )
-                    if self.cache and cacheable:
-                        if cache_hit and not use_cached:
-                            self.cache.feedback(
-                                command.name,
-                                keys[0],
-                                *command.arguments,
-                                match=cached_reply == reply,
-                            )
-                        if not cache_hit:
-                            self.cache.put(
-                                command.name,
-                                keys[0],
-                                *command.arguments,
-                                value=reply,
-                            )
-                    return response
-            except (RedisClusterException, BusyLoadingError, get_cancelled_exc_class()):
-                raise
-            except MovedError as e:
-                # Reinitialize on ever x number of MovedError.
-                # This counter will increase faster when the same client object
-                # is shared between multiple threads. To reduce the frequency you
-                # can set the variable 'reinitialize_steps' in the constructor.
-                self.refresh_table_asap = True
-                await self.connection_pool.nodes.increment_reinitialize_counter()
-
-                node = self.connection_pool.nodes.set_node(e.host, e.port, server_type="primary")
-                try_random_node = False
-                self.connection_pool.nodes.slots[e.slot_id][0] = node
-            except TryAgainError:
-                if remaining_attempts < self.MAX_RETRIES / 2:
-                    await sleep(0.05)
-            except AskError as e:
-                redirect_addr, asking = f"{e.host}:{e.port}", True
-            finally:
-                self._ensure_server_version(r.server_version)
-                if not released:
-                    self.connection_pool.release(r)
+                    try_random_node = False
+                    self.connection_pool.nodes.slots[e.slot_id][0] = node
+                except TryAgainError:
+                    if remaining_attempts < self.MAX_RETRIES / 2:
+                        await sleep(0.05)
+                except AskError as e:
+                    redirect_addr, asking = f"{e.host}:{e.port}", True
+                finally:
+                    self._ensure_server_version(r.server_version)
+                    # if not released:
+                    #    self.connection_pool.release(r)
 
         raise ClusterError("Maximum retries exhausted.")
 
@@ -1156,7 +1156,6 @@ class RedisCluster(
         transaction: bool = False,
         *,
         raise_on_error: bool = True,
-        watches: Parameters[StringT] | None = None,
         timeout: float | None = None,
     ) -> coredis.pipeline.ClusterPipeline[AnyStr]:
         """
@@ -1188,7 +1187,6 @@ class RedisCluster(
             client=self,
             raise_on_error=raise_on_error,
             transaction=transaction,
-            watches=watches,
             timeout=timeout,
         )
 
