@@ -18,6 +18,7 @@ Fast, async, fully-typed Redis client with support for cluster and sentinel
 - Fully typed, even when using pipelines, Lua scripts, and libraries
 - Redis [Cluster](https://coredis.readthedocs.org/en/latest/handbook/cluster.html#redis-cluster) and [Sentinel](https://coredis.readthedocs.org/en/latest/api/clients.html#sentinel) support
 - Built with structured concurrency on `anyio`, supports both `asyncio` and `trio`
+- Smart command routing: multiplexing when possible, [pooling](https://coredis.readthedocs.io/en/latest/handbook/connections.html#connection-pools) otherwise
 - Server-assisted [client-side caching](https://coredis.readthedocs.org/en/latest/handbook/caching.html) implementation
 - [Redis Stack modules](https://coredis.readthedocs.org/en/latest/handbook/modules.html) support
 - [Redis PubSub](https://coredis.readthedocs.org/en/latest/handbook/pubsub.html)

@@ -107,6 +107,10 @@ class QueueFull(Exception): ...
 
 
 class Queue(Generic[T1]):
+    """
+    Generic LIFO queue (stack) for use with connections.
+    """
+
     def __init__(self, maxsize: int = 0):
         self._maxsize = maxsize
         self._queue: deque[T1 | None] = deque(
@@ -122,7 +126,7 @@ class Queue(Generic[T1]):
     def full(self) -> bool:
         return self._maxsize > 0 and len(self._queue) >= self._maxsize
 
-    async def put(self, item: T1) -> None:
+    async def put(self, item: T1 | None) -> None:
         async with self._lock:
             while self.full():
                 ev = Event()
@@ -132,10 +136,18 @@ class Queue(Generic[T1]):
             if self._getters:
                 self._getters.popleft().set()
 
-    def put_nowait(self, item: T1) -> None:
+    def put_nowait(self, item: T1 | None) -> None:
         if self.full():
             raise QueueFull()
         self._queue.append(item)
+        if self._getters:
+            ev = self._getters.popleft()
+            ev.set()
+
+    def append_nowait(self, item: T1 | None) -> None:
+        if self.full():
+            raise QueueFull()
+        self._queue.appendleft(item)
         if self._getters:
             ev = self._getters.popleft()
             ev.set()
@@ -160,3 +172,15 @@ class Queue(Generic[T1]):
             self._putters.popleft().set()
 
         return item
+
+    def remove(self, item: T1) -> None:
+        self._queue.remove(item)
+
+    def __len__(self) -> int:
+        return len(self._queue)
+
+    def __bool__(self) -> bool:
+        return not self.empty()
+
+    def __contains__(self, item: T1) -> bool:
+        return item in self._queue
