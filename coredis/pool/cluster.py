@@ -182,11 +182,9 @@ class ClusterConnectionPool(ConnectionPool):
             connection = await self.__get_connection_by_node(node)
         else:
             connection = await self.__get_connection(**options)
-        try:
-            self._in_use_connections.add(connection)
-            yield connection
-        finally:
-            self.release(connection)
+        self._in_use_connections.add(connection)
+        yield connection
+        self.release(connection)
 
     def release(self, connection: BaseConnection) -> None:
         """Releases the connection back to the pool"""
@@ -206,6 +204,7 @@ class ClusterConnectionPool(ConnectionPool):
         self.pid = os.getpid()
         self._created_connections_per_node = {}
         self._cluster_available_connections = {}
+        self._in_use_connections.clear()
         self._check_lock = threading.Lock()
         self.initialized = False
 
