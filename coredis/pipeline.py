@@ -473,17 +473,6 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         yield
         await self._execute()
 
-    async def __unwatch(self) -> bool:
-        """
-        Remove all key watches and return to buffered mode.
-        """
-        if not self.watches:
-            return False
-        return await self.immediate_execute_command(
-            RedisCommand(name=CommandName.UNWATCH, arguments=()),
-            callback=SimpleStringCallback(),
-        )
-
     def execute_command(
         self,
         command: RedisCommandP,
