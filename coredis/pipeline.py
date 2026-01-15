@@ -45,7 +45,6 @@ from coredis.response._callbacks import (
     AsyncPreProcessingCallback,
     BoolsCallback,
     NoopCallback,
-    SimpleStringCallback,
 )
 from coredis.retry import ConstantRetryPolicy, retryable
 from coredis.typing import (
@@ -465,6 +464,8 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         """
         The given keys will be watched for changes within this context.
         """
+        if self.command_stack:
+            raise WatchError("Unable to add a watch after pipeline commands have been added")
         self.watches.extend(keys)
         await self.immediate_execute_command(
             RedisCommand(CommandName.WATCH, arguments=tuple(self.watches))
@@ -773,6 +774,8 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
     @asynccontextmanager
     async def watch(self, *keys: KeyT) -> AsyncGenerator[None]:
+        if self.command_stack:
+            raise WatchError("Unable to add a watch after pipeline commands have been added")
         try:
             self._watched_node = self.connection_pool.get_node_by_keys(list(keys))
         except RedisClusterException:
