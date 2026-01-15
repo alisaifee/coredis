@@ -184,9 +184,11 @@ class ClusterConnectionPool(ConnectionPool):
             connection = await self.__get_connection(**options)
         if shared:
             self.release(connection)
-        yield connection
-        if not shared:
-            self.release(connection)
+        try:
+            yield connection
+        finally:
+            if not shared:
+                self.release(connection)
 
     def release(self, connection: BaseConnection) -> None:
         """Releases the connection back to the pool"""
