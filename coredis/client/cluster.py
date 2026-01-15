@@ -917,7 +917,7 @@ class RedisCluster(
             else:
                 continue
             async with self.connection_pool.acquire(
-                not shared, _node, primary=not node and try_random_type == NodeFlag.PRIMARIES
+                shared, _node, primary=not node and try_random_type == NodeFlag.PRIMARIES
             ) as r:
                 try:
                     if asking:

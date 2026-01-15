@@ -161,6 +161,43 @@ class ClusterConnectionPool(ConnectionPool):
                     self.max_connections = len(self.nodes.nodes)
                 self.initialized = True
 
+    @asynccontextmanager
+    async def acquire(
+        self,
+        shared: bool = False,
+        node: ManagedNode | None = None,
+        primary: bool = True,
+        **options: Any,
+    ) -> AsyncGenerator[BaseConnection]:
+        """
+        Acquires a connection from the cluster pool. If no node
+        is specified a random node is picked.
+        :param shared: Whether the connection can be shared with other
+         requests or is required for dedicated/blocking use.
+        :param node:  The node for which to get a connection from
+        :param primary: If False a connection from the replica will be returned
+        """
+        connection: BaseConnection
+        if node:
+            connection = await self.__get_connection_by_node(node)
+        else:
+            connection = await self.__get_connection(**options)
+        if shared:
+            self.release(connection)
+        yield connection
+        if not shared:
+            self.release(connection)
+
+    def release(self, connection: BaseConnection) -> None:
+        """Releases the connection back to the pool"""
+        assert isinstance(connection, ClusterConnection)
+
+        if connection.pid == self.pid:
+            try:
+                self.__node_pool(connection.node.name).put_nowait(connection)
+            except QueueFull:
+                pass
+
     def reset(self) -> None:
         """Resets the connection pool back to a clean state"""
         self.pid = os.getpid()
@@ -171,11 +208,10 @@ class ClusterConnectionPool(ConnectionPool):
 
     async def __get_connection(
         self,
-        acquire: bool = True,
+        primary: bool = True,
         **options: Any,
     ) -> Connection:
         routing_key = options.pop("channel", None)
-        primary = options.pop("primary", True)
 
         if not routing_key:
             return await self.__get_random_connection(primary=primary)
@@ -197,10 +233,6 @@ class ClusterConnectionPool(ConnectionPool):
         else:
             if connection.is_connected and connection.needs_handshake:
                 await connection.perform_handshake()
-
-        if not acquire:
-            self.__node_pool(node.name).put_nowait(connection)
-
         return connection
 
     async def __make_node_connection(self, node: ManagedNode) -> Connection:
@@ -244,34 +276,6 @@ class ClusterConnectionPool(ConnectionPool):
         )
 
         return Queue[Connection](q_size)
-
-    @asynccontextmanager
-    async def acquire(
-        self,
-        acquire: bool = False,
-        node: ManagedNode | None = None,
-        **options: Any,
-    ) -> AsyncGenerator[BaseConnection]:
-        connection: BaseConnection
-        if node:
-            connection = await self.__get_connection_by_node(node)
-        else:
-            connection = await self.__get_connection(acquire=acquire, **options)
-        if not acquire:
-            self.release(connection)
-        yield connection
-        if acquire:
-            self.release(connection)
-
-    def release(self, connection: BaseConnection) -> None:
-        """Releases the connection back to the pool"""
-        assert isinstance(connection, ClusterConnection)
-
-        if connection.pid == self.pid:
-            try:
-                self.__node_pool(connection.node.name).put_nowait(connection)
-            except QueueFull:
-                pass
 
     def __count_all_num_connections(self, node: ManagedNode) -> int:
         if self.max_connections_per_node:

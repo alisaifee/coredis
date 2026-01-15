@@ -250,7 +250,7 @@ class NodeCommands(AsyncContextManagerMixin):
     async def __asynccontextmanager__(self) -> AsyncGenerator[None]:
         if not self._connection:
             async with self.client.connection_pool.acquire(
-                False, node=self.node
+                shared=False, node=self.node
             ) as self.connection:
                 yield
         else:
@@ -779,7 +779,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
             raise ClusterTransactionError("Keys for watch don't hash to the same node")
         self.watches.extend(keys)
         async with self.connection_pool.acquire(
-            False, node=self._watched_node
+            shared=False, node=self._watched_node
         ) as self._watched_connection:
             await (await self._watched_connection.create_request(CommandName.WATCH, *keys))
             self.explicit_transaction = True

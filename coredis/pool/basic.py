@@ -236,7 +236,7 @@ class ConnectionPool(AsyncContextManagerMixin):
                 self._free_connections.remove(connection)
 
     @asynccontextmanager
-    async def acquire(self, acquire: bool = False, **_: Any) -> AsyncGenerator[BaseConnection]:
+    async def acquire(self) -> AsyncGenerator[BaseConnection]:
         """
         Gets a dedicated connection from the pool, or creates a new one if all are busy.
         """
