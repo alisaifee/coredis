@@ -496,26 +496,12 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
 
         :meta private:
         """
-        try:
-            request = await self.connection.create_request(
-                command.name, *command.arguments, decode=kwargs.get("decode")
-            )
-            return callback(
-                await request,
-            )
-        except (ConnectionError, TimeoutError):
-            # if we're not already watching, we can safely retry the command
-            try:
-                if not self.watches:
-                    request = await self.connection.create_request(
-                        command.name, *command.arguments, decode=kwargs.get("decode")
-                    )
-                    return callback(await request)
-                raise
-            except ConnectionError:
-                # the retry failed so cleanup.
-                await self.clear()
-                raise
+        request = await self.connection.create_request(
+            command.name, *command.arguments, decode=kwargs.get("decode")
+        )
+        return callback(
+            await request,
+        )
 
     def pipeline_execute_command(
         self,
