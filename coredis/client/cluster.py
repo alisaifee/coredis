@@ -893,7 +893,7 @@ class RedisCluster(
         remaining_attempts = int(self.MAX_RETRIES)
         quick_release = self.should_quick_release(command)
 
-        shared = quick_release and not (self.requires_wait or self.requires_waitaof)
+        shareable = quick_release and not (self.requires_wait or self.requires_waitaof)
         while remaining_attempts > 0:
             remaining_attempts -= 1
             if self.refresh_table_asap and not slots:
@@ -917,7 +917,7 @@ class RedisCluster(
             else:
                 continue
             async with self.connection_pool.acquire(
-                shared, _node, primary=not node and try_random_type == NodeFlag.PRIMARIES
+                _node, primary=not node and try_random_type == NodeFlag.PRIMARIES
             ) as r:
                 try:
                     if asking:
@@ -969,6 +969,9 @@ class RedisCluster(
                             decode=kwargs.get("decode", self._decodecontext.get()),
                             encoding=self._encodingcontext.get(),
                         )
+
+                        if shareable:
+                            self.connection_pool.release(r)
                         reply = await request
                         await self._ensure_wait_and_persist(command, r)
                     if self.noreply:
@@ -1020,8 +1023,6 @@ class RedisCluster(
                     redirect_addr, asking = f"{e.host}:{e.port}", True
                 finally:
                     self._ensure_server_version(r.server_version)
-                    # if not released:
-                    #    self.connection_pool.release(r)
 
         raise ClusterError("Maximum retries exhausted.")
 

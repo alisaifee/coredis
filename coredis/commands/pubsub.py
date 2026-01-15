@@ -457,7 +457,7 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         while True:
             await sleep(min(tries**2, 300))
             with catch({RETRYABLE: handle_error}):
-                async with self.connection_pool.acquire(shared=False) as self._connection:
+                async with self.connection_pool.acquire() as self._connection:
                     async with create_task_group() as tg:
                         self._current_scope = tg.cancel_scope
                         tg.start_soon(self._consumer)
@@ -613,7 +613,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                 stack = AsyncExitStack()
                 self.shard_connections = {
                     node.node_id: await stack.enter_async_context(
-                        self.connection_pool.acquire(shared=False, node=node)
+                        self.connection_pool.acquire(node=node)
                     )
                     for node in self.connection_pool.nodes.all_primaries()
                     if node.node_id

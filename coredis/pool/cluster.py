@@ -111,6 +111,7 @@ class ClusterConnectionPool(ConnectionPool):
             nodemanager_follow_cluster=nodemanager_follow_cluster,
             **connection_kwargs,
         )
+        self._in_use_connections: set[BaseConnection] = set()
         self.connection_kwargs = connection_kwargs
         self.connection_kwargs["read_from_replicas"] = read_from_replicas
         self.read_from_replicas = read_from_replicas or readonly
@@ -164,7 +165,6 @@ class ClusterConnectionPool(ConnectionPool):
     @asynccontextmanager
     async def acquire(
         self,
-        shared: bool = False,
         node: ManagedNode | None = None,
         primary: bool = True,
         **options: Any,
@@ -182,21 +182,22 @@ class ClusterConnectionPool(ConnectionPool):
             connection = await self.__get_connection_by_node(node)
         else:
             connection = await self.__get_connection(**options)
-        if shared:
-            self.release(connection)
         try:
+            self._in_use_connections.add(connection)
             yield connection
         finally:
-            if not shared:
-                self.release(connection)
+            self.release(connection)
 
     def release(self, connection: BaseConnection) -> None:
         """Releases the connection back to the pool"""
         assert isinstance(connection, ClusterConnection)
+        if connection not in self._in_use_connections:
+            return
 
         if connection.pid == self.pid:
             try:
                 self.__node_pool(connection.node.name).put_nowait(connection)
+                self._in_use_connections.remove(connection)
             except QueueFull:
                 pass
 
