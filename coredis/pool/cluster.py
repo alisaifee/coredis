@@ -195,7 +195,7 @@ class ClusterConnectionPool(ConnectionPool):
         if connection.pid == self.pid:
             try:
                 self.__node_pool(connection.node.name).put_nowait(connection)
-                self._in_use_connections.remove(connection)
+                self._in_use_connections.discard(connection)
             except QueueFull:
                 pass
 
