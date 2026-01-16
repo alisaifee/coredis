@@ -10,8 +10,7 @@ from typing import Any, AsyncGenerator, cast
 from anyio import Lock, fail_after
 from typing_extensions import Self
 
-from coredis._concurrency import Queue, QueueEmpty, QueueFull
-from coredis._utils import b, hash_slot
+from coredis._concurrency import Queue, QueueFull
 from coredis.connection import BaseConnection, ClusterConnection, Connection
 from coredis.exceptions import ConnectionError, RedisClusterException
 from coredis.globals import READONLY_COMMANDS
@@ -181,7 +180,7 @@ class ClusterConnectionPool(ConnectionPool):
         if node:
             connection = await self.__get_connection_by_node(node)
         else:
-            connection = await self.__get_connection(**options)
+            connection = await self.__get_random_connection(primary=primary)
         self._in_use_connections.add(connection)
         yield connection
         self.release(connection)
@@ -207,35 +206,6 @@ class ClusterConnectionPool(ConnectionPool):
         self._in_use_connections.clear()
         self._check_lock = threading.Lock()
         self.initialized = False
-
-    async def __get_connection(
-        self,
-        primary: bool = True,
-        **options: Any,
-    ) -> Connection:
-        routing_key = options.pop("channel", None)
-
-        if not routing_key:
-            return await self.__get_random_connection(primary=primary)
-
-        slot = hash_slot(b(routing_key))
-
-        if primary:
-            node = self.get_primary_node_by_slots([slot])
-        else:
-            node = self.get_replica_node_by_slots([slot])
-
-        try:
-            connection = self.__node_pool(node.name).get_nowait()
-        except QueueEmpty:
-            connection = None
-
-        if not connection or not connection.is_connected:
-            connection = await self.__make_node_connection(node)
-        else:
-            if connection.is_connected and connection.needs_handshake:
-                await connection.perform_handshake()
-        return connection
 
     async def __make_node_connection(self, node: ManagedNode) -> Connection:
         """Creates a new connection to a node"""
