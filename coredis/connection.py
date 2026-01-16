@@ -28,6 +28,7 @@ from typing_extensions import override
 import coredis
 from coredis._packer import Packer
 from coredis._utils import logger, nativestr
+from coredis.commands.constants import CommandName
 from coredis.credentials import (
     AbstractCredentialProvider,
     UserPass,
@@ -288,7 +289,7 @@ class BaseConnection:
             while self._requests:
                 request = self._requests.popleft()
                 request.fail(disconnect_exc)
-            self._connection = None
+            self._connected, self._connection = False, None
 
     async def listen_for_responses(self) -> None:
         """
@@ -479,7 +480,6 @@ class BaseConnection:
         """
         Send a command to the redis server
         """
-        from coredis.commands.constants import CommandName
 
         cmd_list = []
         if self.is_connected and noreply and not self.noreply:
