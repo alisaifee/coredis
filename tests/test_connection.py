@@ -3,7 +3,7 @@ from __future__ import annotations
 import socket
 
 import pytest
-from anyio import create_task_group
+from anyio import create_task_group, move_on_after, sleep
 from anyio.abc import SocketAttribute
 
 from coredis import Connection, UnixDomainSocketConnection
@@ -100,3 +100,13 @@ async def test_stream_timeout(redis_basic):
         with pytest.raises(TimeoutError):
             await req
         tg.cancel_scope.cancel()
+
+async def test_request_cancellation(redis_basic):
+    conn = Connection()
+    async with create_task_group() as tg:
+        await tg.start(conn.run)
+        request = await conn.create_request(b"blpop", 1, "key", 1)
+        with move_on_after(0.01):
+            await request
+        await sleep(0.01)
+        assert not conn.is_connected
