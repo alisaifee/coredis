@@ -13,6 +13,7 @@ from weakref import ProxyType, proxy
 
 from anyio import (
     TASK_STATUS_IGNORED,
+    CancelScope,
     ClosedResourceError,
     Event,
     Lock,
@@ -104,7 +105,7 @@ class Request:
                 )
             return self._result_or_exc()
         except get_cancelled_exc_class():
-            await self.connection.disconnect()
+            self.connection.terminate()
             raise
 
     def _result_or_exc(self) -> ResponseType:
@@ -221,6 +222,7 @@ class BaseConnection:
 
         self._requests: deque[Request] = deque()
         self._write_lock = Lock()
+        self._connection_cancel_scope: CancelScope | None = None
 
     def __repr__(self) -> str:
         return self.describe(self._description_args())
@@ -269,6 +271,7 @@ class BaseConnection:
         self._connection = await retry.call_with_retries(self._connect)
         try:
             async with self.connection, self._parser.push_messages, create_task_group() as tg:
+                self._connection_cancel_scope = tg.cancel_scope
                 tg.start_soon(self.listen_for_responses)
                 # setup connection
                 await self.on_connect()
@@ -291,17 +294,20 @@ class BaseConnection:
                 raise
         finally:
             disconnect_exc = self._last_error or ConnectionError("Connection lost!")
+            self._parser.on_disconnect()
             while self._requests:
                 request = self._requests.popleft()
                 request.fail(disconnect_exc)
-            await self.disconnect()
+            self._connection, self._connected, self._connection_cancel_scope = None, False, None
 
-    async def disconnect(self) -> None:
-        self._parser.on_disconnect()
-        if self._connection:
-            await self._connection.aclose()
-            self._connection = None
-        self._connected = False
+    def terminate(self) -> None:
+        """
+        Terminates the connection prematurely
+
+        :meta private:
+        """
+        if self._connection_cancel_scope:
+            self._connection_cancel_scope.cancel()
 
     async def listen_for_responses(self) -> None:
         """
