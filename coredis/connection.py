@@ -9,6 +9,7 @@ import ssl
 from abc import abstractmethod
 from collections import defaultdict, deque
 from typing import TYPE_CHECKING, Any, Generator, cast
+from weakref import ProxyType, proxy
 
 from anyio import (
     TASK_STATUS_IGNORED,
@@ -20,6 +21,7 @@ from anyio import (
     create_memory_object_stream,
     create_task_group,
     fail_after,
+    get_cancelled_exc_class,
     move_on_after,
 )
 from anyio.abc import ByteStream, SocketAttribute, TaskStatus
@@ -66,6 +68,7 @@ if TYPE_CHECKING:
 
 @dataclasses.dataclass
 class Request:
+    connection: ProxyType[BaseConnection]
     command: bytes
     decode: bool
     encoding: str | None = None
@@ -89,16 +92,20 @@ class Request:
 
     async def get_result(self) -> ResponseType:
         # return now if response available
-        if self._event.is_set():
+        try:
+            if self._event.is_set():
+                return self._result_or_exc()
+            # add response timeout
+            with move_on_after(self.response_timeout) as scope:
+                await self._event.wait()
+            if scope.cancelled_caught and not self._event.is_set():
+                self._exc = TimeoutError(
+                    f"command {nativestr(self.command)} timed out after {self.response_timeout} seconds"
+                )
             return self._result_or_exc()
-        # add response timeout
-        with move_on_after(self.response_timeout) as scope:
-            await self._event.wait()
-        if scope.cancelled_caught and not self._event.is_set():
-            self._exc = TimeoutError(
-                f"command {nativestr(self.command)} timed out after {self.response_timeout} seconds"
-            )
-        return self._result_or_exc()
+        except get_cancelled_exc_class():
+            await self.connection.disconnect()
+            raise
 
     def _result_or_exc(self) -> ResponseType:
         if self._exc is not None:
@@ -283,12 +290,18 @@ class BaseConnection:
             if not self._connected:
                 raise
         finally:
-            self._parser.on_disconnect()
             disconnect_exc = self._last_error or ConnectionError("Connection lost!")
             while self._requests:
                 request = self._requests.popleft()
                 request.fail(disconnect_exc)
+            await self.disconnect()
+
+    async def disconnect(self) -> None:
+        self._parser.on_disconnect()
+        if self._connection:
+            await self._connection.aclose()
             self._connection = None
+        self._connected = False
 
     async def listen_for_responses(self) -> None:
         """
@@ -487,6 +500,7 @@ class BaseConnection:
         cmd_list.extend(self.packer.pack_command(command, *args))
         request_timeout: float | None = timeout or self._stream_timeout
         request = Request(
+            proxy(self),
             command,
             bool(decode) if decode is not None else self.decode_responses,
             encoding or self.encoding,
@@ -513,6 +527,7 @@ class BaseConnection:
         request_timeout: float | None = timeout or self._stream_timeout
         requests = [
             Request(
+                proxy(self),
                 cmd.command,
                 bool(cmd.decode) if cmd.decode is not None else self.decode_responses,
                 cmd.encoding or self.encoding,
