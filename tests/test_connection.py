@@ -101,11 +101,12 @@ async def test_stream_timeout(redis_basic):
             await req
         tg.cancel_scope.cancel()
 
+
 async def test_request_cancellation(redis_basic):
     conn = Connection()
     async with create_task_group() as tg:
         await tg.start(conn.run)
-        request = await conn.create_request(b"blpop", 1, "key", 1)
+        request = await conn.create_request(b"blpop", 1, "key", 1, disconnect_on_cancellation=True)
         with move_on_after(0.01):
             await request
         await sleep(0.01)

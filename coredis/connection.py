@@ -76,6 +76,7 @@ class Request:
     encoding: str | None = None
     raise_exceptions: bool = True
     response_timeout: float | None = None
+    disconnect_on_cancellation: bool = False
     _event: Event = dataclasses.field(default_factory=Event)
     _exc: BaseException | None = None
     _result: ResponseType | None = None
@@ -93,21 +94,26 @@ class Request:
             self._event.set()
 
     async def get_result(self) -> ResponseType:
-        # return now if response available
+        incomplete = False
         try:
+            # return now if response available
             if self._event.is_set():
                 return self._result_or_exc()
             # add response timeout
             with move_on_after(self.response_timeout) as scope:
                 await self._event.wait()
             if scope.cancelled_caught and not self._event.is_set():
+                incomplete = True
                 self._exc = TimeoutError(
                     f"command {nativestr(self.command)} timed out after {self.response_timeout} seconds"
                 )
             return self._result_or_exc()
         except get_cancelled_exc_class():
-            self.connection.terminate()
+            incomplete = True
             raise
+        finally:
+            if incomplete and self.connection and self.disconnect_on_cancellation:
+                self.connection.terminate(f"{nativestr(self.command)} was cancelled")
 
     def _result_or_exc(self) -> ResponseType:
         if self._exc is not None:
@@ -295,20 +301,23 @@ class BaseConnection:
                 raise
         finally:
             disconnect_exc = self._last_error or ConnectionError("Connection lost!")
+            # TODO: This isn't sufficient to reset the state of the parser to
+            #  be reusable since the memory object stream it's tied to is now
+            #  closed.
             self._parser.on_disconnect()
             while self._requests:
                 request = self._requests.popleft()
                 request.fail(disconnect_exc)
             self._connection, self._connected, self._connection_cancel_scope = None, False, None
 
-    def terminate(self) -> None:
+    def terminate(self, reason: str | None = None) -> None:
         """
         Terminates the connection prematurely
 
         :meta private:
         """
         if self._connection_cancel_scope:
-            self._connection_cancel_scope.cancel()
+            self._connection_cancel_scope.cancel(reason)
 
     async def listen_for_responses(self) -> None:
         """
@@ -495,6 +504,7 @@ class BaseConnection:
         encoding: str | None = None,
         raise_exceptions: bool = True,
         timeout: float | None = None,
+        disconnect_on_cancellation: bool = False,
     ) -> Request:
         """
         Send a command to the redis server
@@ -512,6 +522,7 @@ class BaseConnection:
             encoding or self.encoding,
             raise_exceptions,
             request_timeout,
+            disconnect_on_cancellation,
         )
         async with self._write_lock:
             if not (self.noreply_set or noreply):
@@ -526,6 +537,7 @@ class BaseConnection:
         commands: list[CommandInvocation],
         raise_exceptions: bool = True,
         timeout: float | None = None,
+        disconnect_on_cancellation: bool = False,
     ) -> list[Request]:
         """
         Send multiple commands to the redis server
@@ -539,6 +551,7 @@ class BaseConnection:
                 cmd.encoding or self.encoding,
                 raise_exceptions,
                 request_timeout,
+                disconnect_on_cancellation,
             )
             for cmd in commands
         ]
