@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import warnings
-from collections import deque
 from contextlib import asynccontextmanager
 from ssl import SSLContext, VerifyMode
 from typing import Any, AsyncGenerator, cast
@@ -10,13 +9,13 @@ from urllib.parse import parse_qs, unquote, urlparse
 from anyio import (
     TASK_STATUS_IGNORED,
     AsyncContextManagerMixin,
-    Semaphore,
     create_task_group,
     fail_after,
 )
 from anyio.abc import TaskStatus
 from typing_extensions import Self
 
+from coredis._concurrency import Queue
 from coredis._utils import query_param_to_bool
 from coredis.connection import (
     BaseConnection,
@@ -211,9 +210,7 @@ class ConnectionPool(AsyncContextManagerMixin):
         self.timeout = timeout
         self.decode_responses = bool(self.connection_kwargs.get("decode_responses", False))
         self.encoding = str(self.connection_kwargs.get("encoding", "utf-8"))
-        self._used_connections: set[BaseConnection] = set()
-        self._free_connections: deque[BaseConnection] = deque()
-        self._capacity = Semaphore(self.max_connections, max_value=self.max_connections)
+        self._connections: Queue[BaseConnection] = Queue(self.max_connections)
 
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
@@ -221,8 +218,6 @@ class ConnectionPool(AsyncContextManagerMixin):
             self._task_group = tg
             yield self
             self._task_group.cancel_scope.cancel()
-            self._free_connections.clear()
-            self._used_connections.clear()
 
     async def wrap_connection(
         self, connection: BaseConnection, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
@@ -230,29 +225,39 @@ class ConnectionPool(AsyncContextManagerMixin):
         try:
             await connection.run(task_status=task_status)
         finally:
-            if connection in self._used_connections:
-                self._used_connections.remove(connection)
-            elif connection in self._free_connections:
-                self._free_connections.remove(connection)
+            if connection in self._connections:
+                self._connections.remove(connection)
+                self._connections.append_nowait(None)
+
+    def release(self, connection: BaseConnection) -> None:
+        """
+        Checks connection for liveness and releases it back to the pool.
+        """
+        if connection.is_connected:
+            self._connections.put_nowait(connection)
+
+    async def get_connection(self) -> BaseConnection:
+        """
+        Gets or create a connection from the pool. Be careful to only release the
+        connection AFTER all commands are sent, or race conditions are possible.
+        """
+        with fail_after(self.timeout):
+            # if stack has a connection, use that
+            connection = await self._connections.get()
+            # if None, we need to create a new connection
+            if connection is None:
+                connection = self.connection_class(**self.connection_kwargs)
+                await self._task_group.start(self.wrap_connection, connection)
+            return connection
 
     @asynccontextmanager
     async def acquire(self) -> AsyncGenerator[BaseConnection]:
         """
-        Gets a dedicated connection from the pool, or creates a new one if all are busy.
+        Gets or creates a connection from the pool, then release it afterwards.
+        Multiplexing is automatic if you exit the context manager before
+        waiting for command results. Be careful to only release the connection
+        AFTER all commands are sent, or race conditions are possible.
         """
-        with fail_after(self.timeout):
-            await self._capacity.acquire()
-        if self._free_connections:
-            connection = self._free_connections.pop()
-        else:
-            connection = self.connection_class(**self.connection_kwargs)
-            await self._task_group.start(self.wrap_connection, connection)
-        self._used_connections.add(connection)
-        try:
-            yield connection
-        finally:
-            self._capacity.release()
-        # if we're here there wasn't an error
-        if connection in self._used_connections:
-            self._used_connections.remove(connection)
-            self._free_connections.append(connection)
+        connection = await self.get_connection()
+        yield connection
+        self.release(connection)
