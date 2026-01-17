@@ -154,6 +154,4 @@ jobs:
         echo "CI: $CI"
         uv run --group $UV_GROUP pytest --timeout=60 --reverse --reruns 2 --cov=coredis --cov-report=xml ${{ matrix.test_params }}
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4.2.0
-      env:
-        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      uses: codecov/codecov-action@v5
