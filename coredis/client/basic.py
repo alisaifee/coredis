@@ -81,7 +81,7 @@ R = TypeVar("R")
 
 if TYPE_CHECKING:
     import coredis.pipeline
-    from coredis.recipes import Lock
+    from coredis.lock import Lock
 
 ClientT = TypeVar("ClientT", bound="Client[Any]")
 RedisT = TypeVar("RedisT", bound="Redis[Any]")
@@ -1126,7 +1126,7 @@ class Redis(Client[AnyStr]):
     ) -> Lock[AnyStr]:
         """
         Return a lock instance which can be used to guard resource access across
-        multiple machines.
+        multiple clients.
 
         :param name: key for the lock
         :param timeout: indicates a maximum life for the lock.
@@ -1147,7 +1147,7 @@ class Redis(Client[AnyStr]):
          continue trying forever. ``blocking_timeout`` can be specified as a
          :class:`float` or :class:`int`, both representing the number of seconds to wait.
         """
-        from coredis.recipes import Lock
+        from coredis.lock import Lock
 
         return Lock(self, name, timeout, sleep, blocking, blocking_timeout)
 

@@ -19,3 +19,4 @@ API Documentation
     utilities
     errors
     credentials
+    lock
