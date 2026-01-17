@@ -179,8 +179,5 @@ class Queue(Generic[T1]):
     def __len__(self) -> int:
         return len(self._queue)
 
-    def __bool__(self) -> bool:
-        return not self.empty()
-
     def __contains__(self, item: T1) -> bool:
         return item in self._queue
