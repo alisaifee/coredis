@@ -31,6 +31,8 @@ Release Date: TBD
   * Client now includes ``Redis.lock`` as a convenient way to access the ``LuaLock``
     recipe, and the class is now just called ``Lock``.
   * Remove RedisGraph module support
+  * Remove explicit management of ``watch``, ``unwatch`` and ``multi`` in pipelines.
+    Replaced with the ``pipeline.watch`` async context manager
 
 v5.5.0
 ------

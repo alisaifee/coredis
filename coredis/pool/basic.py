@@ -236,7 +236,7 @@ class ConnectionPool(AsyncContextManagerMixin):
         if connection.is_connected:
             self._connections.put_nowait(connection)
 
-    async def get_connection(self) -> BaseConnection:
+    async def get_connection(self, **_: Any) -> BaseConnection:
         """
         Gets or create a connection from the pool. Be careful to only release the
         connection AFTER all commands are sent, or race conditions are possible.
@@ -251,7 +251,7 @@ class ConnectionPool(AsyncContextManagerMixin):
             return connection
 
     @asynccontextmanager
-    async def acquire(self) -> AsyncGenerator[BaseConnection]:
+    async def acquire(self, **_: Any) -> AsyncGenerator[BaseConnection]:
         """
         Gets or creates a connection from the pool, then release it afterwards.
         Multiplexing is automatic if you exit the context manager before

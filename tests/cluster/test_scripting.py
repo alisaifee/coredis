@@ -97,9 +97,9 @@ class TestScripting:
         await client.set("a", 2)
         sha = await client.script_load(multiply_script)
         # 2 * 3 == 6
-        get_primary_node_by_slot = mocker.spy(client.connection_pool, "get_primary_node_by_slot")
+        get_primary_node_by_slots = mocker.spy(client.connection_pool, "get_primary_node_by_slots")
         assert await client.evalsha_ro(sha, ["a"], [3]) == 6
-        get_primary_node_by_slot.assert_not_called()
+        get_primary_node_by_slots.assert_not_called()
 
     async def test_evalsha_script_not_loaded(self, client):
         await client.set("a", 2)

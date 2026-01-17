@@ -891,34 +891,35 @@ class RedisCluster(
             try_random_node = False
             try_random_type = NodeFlag.ALL
         remaining_attempts = int(self.MAX_RETRIES)
+        quick_release = self.should_quick_release(command)
+        should_block = not quick_release or self.requires_wait or self.requires_waitaof
 
         while remaining_attempts > 0:
             remaining_attempts -= 1
+            released = False
             if self.refresh_table_asap and not slots:
                 # await self
                 pass
+            _node = None
             if asking and redirect_addr:
-                node = self.connection_pool.nodes.nodes[redirect_addr]
-                r = await self.connection_pool.get_connection_by_node(node)
+                _node = self.connection_pool.nodes.nodes[redirect_addr]
             elif try_random_node:
-                r = await self.connection_pool.get_random_connection(
-                    primary=try_random_type == NodeFlag.PRIMARIES
-                )
+                _node = None
                 if slots:
                     try_random_node = False
             elif node:
-                r = await self.connection_pool.get_connection_by_node(node)
+                _node = node
             elif slots:
                 if self.refresh_table_asap:
                     # MOVED
-                    node = self.connection_pool.get_primary_node_by_slots(slots)
+                    _node = self.connection_pool.get_primary_node_by_slots(slots)
                 else:
-                    node = self.connection_pool.get_node_by_slots(slots)
-                r = await self.connection_pool.get_connection_by_node(node)
+                    _node = self.connection_pool.get_node_by_slots(slots, command=command.name)
             else:
                 continue
-            quick_release = self.should_quick_release(command)
-            released = False
+            r = await self.connection_pool.get_connection(
+                _node, primary=not node and try_random_type == NodeFlag.PRIMARIES
+            )
             try:
                 if asking:
                     request = await r.create_request(
@@ -960,7 +961,6 @@ class RedisCluster(
                             pass
 
                 if not (use_cached and cached_reply):
-                    should_block = not quick_release or self.requires_wait or self.requires_waitaof
                     request = await r.create_request(
                         command.name,
                         *command.arguments,
@@ -969,6 +969,9 @@ class RedisCluster(
                         encoding=self._encodingcontext.get(),
                         disconnect_on_cancellation=should_block,
                     )
+                    # TODO: Fix this! using both the release & should_block
+                    #  flags to decide release logic is fragile. We should be
+                    #  releasing early even in the cached response flow.
                     if not should_block:
                         released = True
                         self.connection_pool.release(r)
@@ -1021,9 +1024,9 @@ class RedisCluster(
             except AskError as e:
                 redirect_addr, asking = f"{e.host}:{e.port}", True
             finally:
-                self._ensure_server_version(r.server_version)
-                if not released:
+                if r and not released:
                     self.connection_pool.release(r)
+                self._ensure_server_version(r.server_version)
 
         raise ClusterError("Maximum retries exhausted.")
 
@@ -1158,7 +1161,6 @@ class RedisCluster(
         transaction: bool = False,
         *,
         raise_on_error: bool = True,
-        watches: Parameters[StringT] | None = None,
         timeout: float | None = None,
     ) -> coredis.pipeline.ClusterPipeline[AnyStr]:
         """
@@ -1190,7 +1192,6 @@ class RedisCluster(
             client=self,
             raise_on_error=raise_on_error,
             transaction=transaction,
-            watches=watches,
             timeout=timeout,
         )
 

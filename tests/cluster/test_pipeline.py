@@ -78,10 +78,8 @@ class TestPipeline:
         await client.set("b{fubar}", "2")
 
         async with client.pipeline() as pipe:
-            await pipe.watch("a{fubar}", "b{fubar}")
-            await client.set("b{fubar}", "3")
-            await pipe.unwatch()
-            assert not pipe.watching
+            async with pipe.watch("a{fubar}", "b{fubar}"):
+                await client.set("b{fubar}", "3")
             res = pipe.get("a{fubar}")
         assert await res == "1"
 
@@ -110,21 +108,17 @@ class TestPipeline:
 
     async def test_pipeline_transaction_with_watch(self, client):
         async with client.pipeline(transaction=False) as pipe:
-            await pipe.watch("a{fu}")
-            await pipe.watch("b{fu}")
-            pipe.multi()
-            await client.set("d{fu}", 1)
-            res = pipe.set("a{fu}", 2)
+            async with pipe.watch("a{fu}", "b{fu}"):
+                await client.set("d{fu}", 1)
+                res = pipe.set("a{fu}", 2)
         assert await res
 
     async def test_pipeline_transaction_with_watch_inline_fail(self, client):
         with pytest.raises(WatchError):
             async with client.pipeline(transaction=False) as pipe:
-                await pipe.watch("a{fu}")
-                await pipe.watch("b{fu}")
-                pipe.multi()
-                await client.set("a{fu}", 1)
-                pipe.set("a{fu}", 2)
+                async with pipe.watch("a{fu}", "b{fu}"):
+                    await client.set("a{fu}", 1)
+                    pipe.set("a{fu}", 2)
 
     async def test_pipeline_transaction(self, client):
         async with client.pipeline(transaction=True) as pipe:

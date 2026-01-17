@@ -35,8 +35,8 @@ atomically as a group by using the :paramref:`~coredis.Redis.pipeline.transactio
 
 A common issue occurs when requiring atomic transactions but needing to
 retrieve values in Redis prior for use within the transaction. For instance,
-let"s assume that the :rediscommand:`INCR` command didn"t exist and we need to build an atomic
-version of :rediscommand:`INCR` in Python.
+let"s assume that the :rediscommand:`INCR` command didn't exist and we need to
+build an atomic version of :rediscommand:`INCR` in Python.
 
 The completely naive implementation could :rediscommand:`GET` the value, increment it in
 Python, and :rediscommand:`SET` the new value back. However, this is not atomic because
@@ -51,24 +51,18 @@ could do something like this:
 
 .. code-block:: python
 
-    async def example():
+    async def incr(client: coredis.Redis, key: str) -> int:
         while True:
             try:
-                async with r.pipeline(transaction=False) as pipe:
+                async with client.pipeline(transaction=False) as pipe:
                     # put a WATCH on the key that holds our sequence value
-                    await pipe.watch("OUR-SEQUENCE-KEY")
-                    # after WATCHing, the pipeline is put into immediate execution
-                    # mode until we tell it to start buffering commands again.
-                    # this allows us to get the current value of our sequence
-                    current_value = await pipe.get("OUR-SEQUENCE-KEY")
-                    next_value = int(current_value) + 1
-                    # now we can put the pipeline back into buffered mode with MULTI
-                    pipe.multi()
-                    # This call doesn't need to be awaited as it is part of the pipeline
-                    pipe.set("OUR-SEQUENCE-KEY", next_value)
+                    async with pipe.watch(key):
+                        current_value = await client.get(key)
+                        next_value = int(current_value) + 1
+                        pipe.set(key, next_value)
             except WatchError:
-                # another client must have changed "OUR-SEQUENCE-KEY" between
-                # the time we started WATCHing it and the pipeline"s execution.
+                # another client must have changed the value between
+                # the time we started watching it and the pipeline"s execution.
                 # our best bet is to just retry.
                 continue
             else:
@@ -76,25 +70,4 @@ could do something like this:
                 # we just did happened atomically.
                 break
 
-Note that, because the Pipeline must bind to a single connection for the
-duration of a :rediscommand:`WATCH`, care must be taken to ensure that the connection is
-returned to the connection pool by calling the :meth:`~coredis.pipeline.Pipeline.clear` method. If the
-:class:`~coredis.pipeline.Pipeline` is used as a context manager (as in the example above) :meth:`~coredis.pipeline.Pipeline.clear`
-will be called automatically. Of course you can do this the manual way by
-explicitly calling :meth:`~coredis.pipeline.Pipeline.clear`:
 
-.. code-block:: python
-
-    async def example():
-        while 1:
-            try:
-                async with r.pipeline() as pipe:
-                    await pipe.watch("OUR-SEQUENCE-KEY")
-                    ...
-                    pipe.multi()
-                    pipe.set(...)
-                    ...
-            except WatchError:
-                continue
-            else:
-                break
