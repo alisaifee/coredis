@@ -105,13 +105,13 @@ jobs:
             test_params: "-m dragonfly"
             label: "Dragonfly"
           - python-version: "3.13"
-            redis-version: 7.0
-            test_params: "-m valkey"
-            label: "Valkey"
-          - python-version: "3.13"
             redis-version: 8.0
             test_params: "-m valkey"
-            label: "Valkey"
+            label: "Valkey 8"
+          - python-version: "3.13"
+            redis-version: latest
+            test_params: "-m valkey"
+            label: "Valkey latest"
           - python-version: "3.13"
             redis-version: "7.0"
             test_params: "-m redict"
