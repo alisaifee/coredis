@@ -94,26 +94,24 @@ class Request:
             self._event.set()
 
     async def get_result(self) -> ResponseType:
-        incomplete = False
         try:
             # return now if response available
             if self._event.is_set():
                 return self._result_or_exc()
             # add response timeout
-            with move_on_after(self.response_timeout) as scope:
+            with fail_after(self.response_timeout):
                 await self._event.wait()
-            if scope.cancelled_caught and not self._event.is_set():
-                incomplete = True
-                self._exc = TimeoutError(
-                    f"command {nativestr(self.command)} timed out after {self.response_timeout} seconds"
-                )
-            return self._result_or_exc()
+        except TimeoutError as err:
+            self._exc = err
+            self._handle_response_cancellation(f"{nativestr(self.command)} timed out")
         except get_cancelled_exc_class():
-            incomplete = True
+            self._handle_response_cancellation(f"{nativestr(self.command)} was cancelled")
             raise
-        finally:
-            if incomplete and self.connection and self.disconnect_on_cancellation:
-                self.connection.terminate(f"{nativestr(self.command)} was cancelled")
+        return self._result_or_exc()
+
+    def _handle_response_cancellation(self, reason: str) -> None:
+        if self.connection and self.disconnect_on_cancellation:
+            self.connection.terminate(reason)
 
     def _result_or_exc(self) -> ResponseType:
         if self._exc is not None:
