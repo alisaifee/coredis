@@ -12,7 +12,7 @@ from typing_extensions import Self
 
 from coredis._concurrency import Queue, QueueFull
 from coredis.connection import BaseConnection, ClusterConnection, Connection
-from coredis.exceptions import ConnectionError, RedisClusterException
+from coredis.exceptions import RedisClusterException
 from coredis.globals import READONLY_COMMANDS
 from coredis.pool.basic import ConnectionPool
 from coredis.pool.nodemanager import ManagedNode, NodeManager
@@ -44,7 +44,6 @@ class ClusterConnectionPool(ConnectionPool):
     nodes: NodeManager
     connection_class: type[ClusterConnection]
 
-    _created_connections_per_node: dict[str, int]
     _cluster_available_connections: dict[str, Queue[Connection]]
 
     def __init__(
@@ -110,7 +109,6 @@ class ClusterConnectionPool(ConnectionPool):
             nodemanager_follow_cluster=nodemanager_follow_cluster,
             **connection_kwargs,
         )
-        self._in_use_connections: set[BaseConnection] = set()
         self.connection_kwargs = connection_kwargs
         self.connection_kwargs["read_from_replicas"] = read_from_replicas
         self.read_from_replicas = read_from_replicas or readonly
@@ -180,7 +178,6 @@ class ClusterConnectionPool(ConnectionPool):
             connection = await self.__get_connection_by_node(node)
         else:
             connection = await self.__get_random_connection(primary=primary)
-        self._in_use_connections.add(connection)
         return connection
 
     @asynccontextmanager
@@ -208,38 +205,21 @@ class ClusterConnectionPool(ConnectionPool):
     def release(self, connection: BaseConnection) -> None:
         """Releases the connection back to the pool"""
         assert isinstance(connection, ClusterConnection)
-        if connection not in self._in_use_connections:
-            return
-
-        if connection.pid == self.pid:
-            try:
-                self.__node_pool(connection.node.name).put_nowait(connection)
-                self._in_use_connections.discard(connection)
-            except QueueFull:
-                pass
+        try:
+            self.__node_pool(connection.node.name).put_nowait(connection)
+        except QueueFull:
+            pass
 
     def reset(self) -> None:
         """Resets the connection pool back to a clean state"""
         self.pid = os.getpid()
-        self._created_connections_per_node = {}
         self._cluster_available_connections = {}
-        self._in_use_connections.clear()
         self._check_lock = threading.Lock()
         self.initialized = False
 
     async def __make_node_connection(self, node: ManagedNode) -> Connection:
         """Creates a new connection to a node"""
 
-        if self.__count_all_num_connections(node) >= self.max_connections:
-            if self.max_connections_per_node:
-                raise ConnectionError(
-                    f"Too many connection ({self.__count_all_num_connections(node)}) for node: {node.name}"
-                )
-
-            raise ConnectionError("Too many connections")
-
-        self._created_connections_per_node.setdefault(node.name, 0)
-        self._created_connections_per_node[node.name] += 1
         connection = self.connection_class(
             host=node.host,
             port=node.port,
@@ -248,13 +228,11 @@ class ClusterConnectionPool(ConnectionPool):
         await self._task_group.start(connection.run)
         # Must store node in the connection to make it easier to track
         connection.node = node
-
         return connection
 
     def __node_pool(self, node: str) -> Queue[Connection]:
-        if not self._cluster_available_connections.get(node):
+        if self._cluster_available_connections.get(node) is None:
             self._cluster_available_connections[node] = self.__default_node_queue()
-
         return self._cluster_available_connections[node]
 
     def __default_node_queue(
@@ -266,14 +244,7 @@ class ClusterConnectionPool(ConnectionPool):
             if self.max_connections_per_node
             else self.max_connections // len(self.nodes.nodes),
         )
-
         return Queue[Connection](q_size)
-
-    def __count_all_num_connections(self, node: ManagedNode) -> int:
-        if self.max_connections_per_node:
-            return self._created_connections_per_node.get(node.name, 0)
-
-        return sum(i for i in self._created_connections_per_node.values())
 
     async def __get_random_connection(self, primary: bool = False) -> ClusterConnection:
         """Opens new connection to random redis server in the cluster"""
