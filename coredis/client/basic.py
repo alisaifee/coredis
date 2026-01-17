@@ -981,6 +981,7 @@ class Redis(Client[AnyStr]):
                     noreply=self.noreply,
                     decode=options.get("decode", self._decodecontext.get()),
                     encoding=self._encodingcontext.get(),
+                    disconnect_on_cancellation=should_block,
                 )
                 # if not blocking, no need to wait for reply
                 if not should_block:

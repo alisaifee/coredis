@@ -960,16 +960,19 @@ class RedisCluster(
                             pass
 
                 if not (use_cached and cached_reply):
+                    should_block = not quick_release or self.requires_wait or self.requires_waitaof
                     request = await r.create_request(
                         command.name,
                         *command.arguments,
                         noreply=self.noreply,
                         decode=kwargs.get("decode", self._decodecontext.get()),
                         encoding=self._encodingcontext.get(),
+                        disconnect_on_cancellation=should_block,
                     )
 
                     if not should_block:
                         self.connection_pool.release(r)
+
                     reply = await request
                     await self._ensure_wait_and_persist(command, r)
                 if self.noreply:
