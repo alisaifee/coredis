@@ -1020,7 +1020,7 @@ class RedisCluster(
             finally:
                 if r and should_block:
                     self.connection_pool.release(r)
-                    self._ensure_server_version(r.server_version)
+                self._ensure_server_version(r.server_version)
 
         raise ClusterError("Maximum retries exhausted.")
 
