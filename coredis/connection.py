@@ -94,19 +94,19 @@ class Request:
             self._event.set()
 
     async def get_result(self) -> ResponseType:
-        try:
-            # return now if response available
-            if self._event.is_set():
-                return self._result_or_exc()
-            # add response timeout
-            with fail_after(self.response_timeout):
-                await self._event.wait()
-        except TimeoutError as err:
-            self._exc = err
-            self._handle_response_cancellation(f"{nativestr(self.command)} timed out")
-        except get_cancelled_exc_class():
-            self._handle_response_cancellation(f"{nativestr(self.command)} was cancelled")
-            raise
+        if not self._event.is_set():
+            try:
+                with move_on_after(self.response_timeout) as scope:
+                    await self._event.wait()
+                if scope.cancelled_caught and not self._event.is_set():
+                    reason = (
+                        f"{nativestr(self.command)} timed out after {self.response_timeout} seconds"
+                    )
+                    self._exc = TimeoutError(reason)
+                    self._handle_response_cancellation(reason)
+            except get_cancelled_exc_class():
+                self._handle_response_cancellation(f"{nativestr(self.command)} was cancelled")
+                raise
         return self._result_or_exc()
 
     def _handle_response_cancellation(self, reason: str) -> None:
