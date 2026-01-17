@@ -896,6 +896,7 @@ class RedisCluster(
 
         while remaining_attempts > 0:
             remaining_attempts -= 1
+            released = False
             if self.refresh_table_asap and not slots:
                 # await self
                 pass
@@ -960,7 +961,6 @@ class RedisCluster(
                             pass
 
                 if not (use_cached and cached_reply):
-                    should_block = not quick_release or self.requires_wait or self.requires_waitaof
                     request = await r.create_request(
                         command.name,
                         *command.arguments,
@@ -969,8 +969,11 @@ class RedisCluster(
                         encoding=self._encodingcontext.get(),
                         disconnect_on_cancellation=should_block,
                     )
-
+                    # TODO: Fix this! using both the release & should_block
+                    #  flags to decide release logic is fragile. We should be
+                    #  releasing early even in the cached response flow.
                     if not should_block:
+                        released = True
                         self.connection_pool.release(r)
 
                     reply = await request
@@ -1021,7 +1024,7 @@ class RedisCluster(
             except AskError as e:
                 redirect_addr, asking = f"{e.host}:{e.port}", True
             finally:
-                if r and should_block:
+                if r and not released:
                     self.connection_pool.release(r)
                 self._ensure_server_version(r.server_version)
 

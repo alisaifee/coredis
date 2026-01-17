@@ -983,6 +983,10 @@ class Redis(Client[AnyStr]):
                     encoding=self._encodingcontext.get(),
                     disconnect_on_cancellation=should_block,
                 )
+                # TODO: Fix this! using both the release & should_block
+                #  flags to decide release logic is fragile. We should be
+                #  releasing early even in the cached response flow.
+
                 # if not blocking, no need to wait for reply
                 if not should_block:
                     released = True
