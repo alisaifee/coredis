@@ -497,9 +497,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         request = await self.connection.create_request(
             command.name, *command.arguments, decode=kwargs.get("decode")
         )
-        return callback(
-            await request,
-        )
+        return callback(await request)
 
     def pipeline_execute_command(
         self,
