@@ -161,16 +161,15 @@ class ClusterConnectionPool(ConnectionPool):
                     self.max_connections = len(self.nodes.nodes)
                 self.initialized = True
 
-    @asynccontextmanager
-    async def acquire(
-        self,
-        node: ManagedNode | None = None,
-        primary: bool = True,
-        **options: Any,
-    ) -> AsyncGenerator[BaseConnection]:
+    async def get_connection(
+        self, node: ManagedNode | None = None, primary: bool = True, **options: Any
+    ) -> BaseConnection:
         """
         Acquires a connection from the cluster pool. If no node
-        is specified a random node is picked.
+        is specified a random node is picked. The connection
+        must be returned back to the pool using the :meth:`release`
+        method.
+
         :param shared: Whether the connection can be shared with other
          requests or is required for dedicated/blocking use.
         :param node:  The node for which to get a connection from
@@ -182,6 +181,27 @@ class ClusterConnectionPool(ConnectionPool):
         else:
             connection = await self.__get_random_connection(primary=primary)
         self._in_use_connections.add(connection)
+        return connection
+
+    @asynccontextmanager
+    async def acquire(
+        self,
+        node: ManagedNode | None = None,
+        primary: bool = True,
+        **options: Any,
+    ) -> AsyncGenerator[BaseConnection]:
+        """
+        Acquires a connection from the cluster pool. If no node
+        is specified a random node is picked. The connection
+        will be automatically released back to the pool when
+        the context manager exits.
+
+        :param shared: Whether the connection can be shared with other
+         requests or is required for dedicated/blocking use.
+        :param node:  The node for which to get a connection from
+        :param primary: If False a connection from the replica will be returned
+        """
+        connection = await self.get_connection(node=node, primary=primary, **options)
         yield connection
         self.release(connection)
 
