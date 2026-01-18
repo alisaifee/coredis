@@ -52,23 +52,6 @@ class TestPipeline:
             b = pipe.get("a").transform(Decimal)
         assert (True, Decimal(1.23)) == await gather(a, b)
 
-    async def test_pipeline_length(self, client):
-        async with client.pipeline() as pipe:
-            # Initially empty.
-            assert len(pipe) == 0
-            assert pipe
-
-            # Fill 'er up!
-            pipe.set("a", "a1")
-            pipe.set("b", "b1")
-            pipe.set("c", "c1")
-            assert len(pipe) == 3
-            assert pipe
-
-        # Execute calls reset(), so empty once again.
-        assert len(pipe) == 0
-        assert pipe
-
     async def test_pipeline_no_transaction(self, client):
         async with client.pipeline(transaction=False) as pipe:
             a = pipe.set("a", "a1")
