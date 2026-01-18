@@ -20,6 +20,7 @@ Handbook
     encoding
     optimization
     typing
+    response
     development
 
 This section contains details on high level concepts
@@ -70,4 +71,5 @@ Implementation Details
 ----------------------
 - :ref:`handbook/connections:connection types`
 - :ref:`handbook/development:development`
+- :ref:`handbook/response:redis response`
 - :ref:`handbook/typing:typing`
