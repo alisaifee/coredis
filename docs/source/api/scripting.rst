@@ -14,7 +14,7 @@ Redis Functions
 .. autoclass:: coredis.commands.Library
    :class-doc-from: both
 
-.. autofunction:: coredis.commands.wraps
+.. autofunction:: coredis.commands.function.wraps
 
 .. autoclass:: coredis.commands.Function
    :class-doc-from: both
