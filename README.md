@@ -36,42 +36,29 @@ $ pip install coredis
 
 ## Getting started
 
-To start, you'll need to connect to your `Redis` instance:
+Here's a simple example that showcases some of coredis' capabilities:
 
 ```python
-import trio
+import anyio
 from coredis import Redis
 
-client = Redis(host='127.0.0.1', port=6379, db=0, decode_responses=True)
-async with client:
-    await client.flushdb()
-    await client.set('foo', 1)
-    assert await client.exists(['foo']) == 1
-    assert await client.incr('foo') == 2
-    assert await client.incrby('foo', increment=100) == 102
-    assert int(await client.get('foo') or 0) == 102
+async def main():
+    client = Redis(host="127.0.0.1", port=6379, decode_responses=True)
+    async with client:
+        # commands are straightforward and accurately typed
+        await client.set("foo", 1)
+        await client.expire("foo", 1)
+        await anyio.sleep(1)
+        assert not await client.exists(["foo"])
 
-    assert await client.expire('foo', 1)
-    await trio.sleep(0.1)
-    assert await client.ttl('foo') == 1
-    assert await client.pttl('foo') < 1000
-    await trio.sleep(1)
-    assert not await client.exists(['foo'])
-```
+        async with client.pipeline(transaction=False) as pipe:
+            pipe.incr("bar")
+            res = pipe.get("bar")
+            pipe.delete(["bar"])
+        # results are accessible after pipeline block exits (and typed!)
+        print(await res)
 
-Sentinel is also supported:
-
-```python
-from coredis.sentinel import Sentinel
-
-sentinel = Sentinel(sentinels=[("localhost", 26379)])
-async with sentinel:
-    primary = sentinel.primary_for("myservice")
-    replica = sentinel.replica_for("myservice")
-
-    async with primary, replica:
-        assert await primary.set("fubar", 1)
-        assert int(await replica.get("fubar")) == 1
+anyio.run(main, backend="trio")  # could also be "asyncio"
 ```
 
 ## Compatibility
@@ -89,19 +76,7 @@ coredis is additionally tested against:
 
 - `uvloop >= 0.15.0`
 - `trio`
-
-### Supported python versions
-
-- 3.10
-- 3.11
-- 3.12
-- 3.13
 - PyPy 3.10
-
-### Redis API compatible databases
-
-**coredis** is known to work with the following databases that have redis protocol compatibility:
-
 - [Dragonfly](https://dragonflydb.io/)
 - [Redict](https://redict.io/)
 - [Valkey](https://github.com/valkey-io/valkey)

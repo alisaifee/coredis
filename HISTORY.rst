@@ -32,8 +32,10 @@ Release Date: 2026-01-18
     * Removed ``__len__`` and ``__bool__`` methods of :class:`coredis.pipeline.Pipeline`
     * Drop support for explicit management of ``watch``, ``unwatch``, ``multi`` in pipelines. This
       is replaced by the :meth:`coredis.pipeline.Pipeline.watch` async context manager.
-  * When defining type stubs for FFI for Lua scripts or library functions, keys can only be distinguished
-    from arguments by annotating them with :class:`coredis.typing.KeyT`.
+  * When defining type stubs for FFI for Lua scripts or library functions, keys can only be
+    distinguished from arguments by annotating them with :class:`coredis.typing.KeyT`. When
+    wrapping a type stub with the ``wraps`` decorator, the ``name`` parameter is no longer
+    present; instead, the stub name must match the Lua function's name.
 
 * Removals
 
