@@ -470,7 +470,6 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                                 await self.subscribe(*self.channels.keys())
                             if self.patterns:
                                 await self.psubscribe(*self.patterns.keys())
-                    self.connection_pool.release(self._connection)
                     break
 
 
