@@ -410,20 +410,12 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{repr(self._connection)}>"
 
-    @property
-    def connection(self) -> BaseConnection:
-        if not self._connection:
-            raise RedisError(
-                "Pipeline not initialized correctly! Make sure to use await or the async context manager."
-            )
-        return self._connection
-
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        pool = self.client.connection_pool
-        async with pool.acquire() as self._connection:
-            yield self
-            await self._execute()
+        yield self
+        await self._execute()
+        if self._connection:
+            self.client.connection_pool.release(self._connection)
 
     def create_request(
         self,
@@ -446,8 +438,8 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         self.command_stack.clear()
         self.scripts = set()
         # Reset connection state if we were watching something.
-        if self.watches and self.connection:
-            await (await self.connection.create_request(CommandName.UNWATCH, decode=False))
+        if self.watches and self._connection:
+            await (await self._connection.create_request(CommandName.UNWATCH, decode=False))
         self.watches.clear()
         self.explicit_transaction = False
 
@@ -458,6 +450,8 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         """
         if self.command_stack:
             raise WatchError("Unable to add a watch after pipeline commands have been added")
+        if not self._connection:
+            self._connection = await self.client.connection_pool.get_connection()
         self.watches.extend(keys)
         await self.immediate_execute_command(
             RedisCommand(CommandName.WATCH, arguments=tuple(self.watches))
@@ -488,7 +482,8 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
 
         :meta private:
         """
-        request = await self.connection.create_request(
+        assert self._connection
+        request = await self._connection.create_request(
             command.name, *command.arguments, decode=kwargs.get("decode")
         )
         return callback(await request)
@@ -670,6 +665,8 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         """
         if not self.command_stack:
             return None
+        if not self._connection:
+            self._connection = await self.client.connection_pool.get_connection()
 
         if self.scripts:
             await self.load_scripts()
@@ -679,7 +676,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
             exec = self._execute_pipeline
 
         try:
-            await exec(self.connection, self.command_stack)
+            await exec(self._connection, self.command_stack)
         except (ConnectionError, TimeoutError, CancelledError) as e:
             # if we were watching a variable, the watch is no longer valid
             # since this connection has died. raise a WatchError, which
