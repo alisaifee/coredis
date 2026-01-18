@@ -15,4 +15,3 @@ use the ``[recipes]`` extra::
     :maxdepth: 2
 
     credentials
-    locks
