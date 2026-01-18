@@ -420,10 +420,12 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
 
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        pool = self.client.connection_pool
-        async with pool.acquire() as self._connection:
-            yield self
-            await self._execute()
+        yield self
+        # acquire can happen in the watch context manager or here
+        if not self._connection:
+            self._connection = await self.client.connection_pool.get_connection()
+        await self._execute()
+        self.client.connection_pool.release(self._connection)
 
     def __len__(self) -> int:
         return len(self.command_stack)
@@ -464,6 +466,8 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         """
         if self.command_stack:
             raise WatchError("Unable to add a watch after pipeline commands have been added")
+        if not self._connection:
+            self._connection = await self.client.connection_pool.get_connection()
         self.watches.extend(keys)
         await self.immediate_execute_command(
             RedisCommand(CommandName.WATCH, arguments=tuple(self.watches))
