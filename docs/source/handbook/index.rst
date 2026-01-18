@@ -12,6 +12,7 @@ Handbook
     streams
     caching
     pipelines
+    locks
     noreply
     scripting
     modules
@@ -63,6 +64,7 @@ Reliability
 -----------
 - :ref:`handbook/pipelines:atomicity & transactions`
 - :ref:`handbook/cluster:replication`
+- :ref:`handbook/locks:locks`
 
 Implementation Details
 ----------------------

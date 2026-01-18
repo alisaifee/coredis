@@ -1,15 +1,15 @@
 from __future__ import annotations
 
+import contextlib
 import contextvars
 import math
 import time
 import uuid
 import warnings
 from pathlib import Path
-from types import TracebackType
 from typing import cast
 
-from anyio import sleep
+from anyio import AsyncContextManagerMixin, sleep
 
 from coredis.client import Redis, RedisCluster
 from coredis.commands import Script
@@ -21,13 +21,13 @@ from coredis.exceptions import (
     ReplicationError,
 )
 from coredis.tokens import PureToken
-from coredis.typing import AnyStr, Generic, KeyT, StringT
+from coredis.typing import AnyStr, AsyncGenerator, Generic, KeyT, Self, StringT
 
 EXTEND_SCRIPT = Script(script=(Path(__file__).parent / "lua/extend.lua").read_text())
 RELEASE_SCRIPT = Script(script=(Path(__file__).parent / "lua/release.lua").read_text())
 
 
-class Lock(Generic[AnyStr]):
+class Lock(Generic[AnyStr], AsyncContextManagerMixin):
     """
     A shared, distributed Lock using LUA scripts.
 
@@ -39,15 +39,15 @@ class Lock(Generic[AnyStr]):
         import asyncio
         import coredis
         from coredis.exceptions import LockError
-
+        from coredis.lock import Lock
         client = coredis.Redis()
         async with client:
-            async with client.lock("mylock", timeout=1.0):
+            async with Lock(client, "mylock", timeout=1.0):
                 # do stuff
                 await asyncio.sleep(0.5)
                 # lock is implictly released when the context manager exits
             try:
-                async with client.lock("mylock", timeout=1.0):
+                async with Lock(client, "mylock", timeout=1.0):
                     # do stuff that takes too long
                     await asyncio.sleep(1)
                     # lock will raise upon exiting the context manager
@@ -117,20 +117,13 @@ class Lock(Generic[AnyStr]):
         if self.timeout and self.sleep > self.timeout:
             raise LockError("'sleep' must be less than 'timeout'")
 
-    async def __aenter__(
-        self,
-    ) -> Lock[AnyStr]:
+    @contextlib.asynccontextmanager
+    async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         if await self.acquire():
-            return self
-        raise LockAcquisitionError("Could not acquire lock")
-
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
-        await self.release()
+            yield self
+            await self.release()
+        else:
+            raise LockAcquisitionError("Could not acquire lock")
 
     async def acquire(
         self,

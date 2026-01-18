@@ -68,6 +68,7 @@ R = TypeVar("R")
 
 if TYPE_CHECKING:
     import coredis.pipeline
+    from coredis.lock import Lock
 
 
 class ClusterMeta(ABCMeta):
@@ -1194,6 +1195,39 @@ class RedisCluster(
             transaction=transaction,
             timeout=timeout,
         )
+
+    def lock(
+        self,
+        name: StringT,
+        timeout: float | None = None,
+        sleep: float = 0.1,
+        blocking: bool = True,
+        blocking_timeout: float | None = None,
+    ) -> Lock[AnyStr]:
+        """
+        Return a lock instance which can be used to guard resource access across
+        multiple clients.
+
+        :param name: key for the lock
+        :param timeout: indicates a maximum life for the lock.
+         By default, it will remain locked until :meth:`~coredis.lock.Lock.release`
+         is called.
+
+        :param sleep: indicates the amount of time to sleep per loop iteration
+         when the lock is in blocking mode and another client is currently
+         holding the lock.
+
+        :param blocking: indicates whether calling :meth:`~coredis.lock.Lock.acquire` should block until
+         the lock has been acquired or to fail immediately, causing :meth:`acquire`
+         to return ``False`` and the lock not being acquired. Defaults to ``True``.
+
+        :param blocking_timeout: indicates the maximum amount of time in seconds to
+         spend trying to acquire the lock. A value of ``None`` indicates
+         continue trying forever.
+        """
+        from coredis.lock import Lock
+
+        return Lock(self, name, timeout, sleep, blocking, blocking_timeout)
 
     async def scan_iter(
         self,

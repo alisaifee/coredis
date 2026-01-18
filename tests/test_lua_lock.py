@@ -6,7 +6,7 @@ import uuid
 import pytest
 
 from coredis.exceptions import LockError
-from coredis.recipes import Lock
+from coredis.lock import Lock
 from tests.conftest import targets
 
 
@@ -23,6 +23,12 @@ def lock_name():
     "redis_cluster_raw",
 )
 class TestLock:
+    async def test_client_construction(self, client, _s, lock_name):
+        lock = client.lock(lock_name, blocking=False)
+        assert await lock.acquire()
+        await lock.release()
+        assert await client.get(lock_name) is None
+
     async def test_lock(self, client, _s, lock_name):
         lock = Lock(client, lock_name, blocking=False)
         assert await lock.acquire()

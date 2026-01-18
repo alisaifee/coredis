@@ -28,8 +28,9 @@ Release Date: TBD
     be distinguished from arguments by annotating them with the ``KeyT`` type.
   * EVALSHA and FCALL commands now support optional callbacks
   * Removes ``Monitor`` wrapper
-  * Client now includes ``Redis.lock`` as a convenient way to access the ``LuaLock``
-    recipe, and the class is now just called ``Lock``.
+  * Client now includes the ``lock`` method as a convenient way to access the ``LuaLock``
+    implementation (previously a recipe). The class is now just called ``Lock`` and
+    moved to the `coredis.lock` submodule.
   * Remove RedisGraph module support
   * Remove explicit management of ``watch``, ``unwatch`` and ``multi`` in pipelines.
     Replaced with the ``pipeline.watch`` async context manager
