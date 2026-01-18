@@ -1,0 +1,3 @@
+* Removed
+
+  * Removed ``__len__`` and ``__bool__`` methods of :class:`coredis.pipeline.Pipeline`
