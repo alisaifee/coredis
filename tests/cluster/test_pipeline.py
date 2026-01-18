@@ -41,17 +41,6 @@ class TestPipeline:
             (("z1", 2.0), ("z2", 4)),
         )
 
-    async def test_pipeline_length(self, client):
-        async with client.pipeline() as pipe:
-            # Initially empty.
-            assert len(pipe) == 0
-            assert pipe
-
-            pipe.set("a", "a1")
-            pipe.set("b", "b1")
-            pipe.set("c", "c1")
-            assert len(pipe) == 3
-
     async def test_pipeline_no_transaction(self, client):
         async with client.pipeline(transaction=False) as pipe:
             a = pipe.set("a", "a1")

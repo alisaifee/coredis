@@ -427,12 +427,6 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         await self._execute()
         self.client.connection_pool.release(self._connection)
 
-    def __len__(self) -> int:
-        return len(self.command_stack)
-
-    def __bool__(self) -> bool:
-        return True
-
     def create_request(
         self,
         name: bytes,
@@ -775,12 +769,6 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
             yield
             await self._execute()
             await (await self._watched_connection.create_request(CommandName.UNWATCH, decode=False))
-
-    def __len__(self) -> int:
-        return len(self.command_stack)
-
-    def __bool__(self) -> bool:
-        return True
 
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
