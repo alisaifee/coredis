@@ -3,6 +3,44 @@
 Changelog
 =========
 
+v6.0.0rc1
+---------
+Release Date: 2026-01-18
+
+* Features
+
+  * Migrate entire library to :pypi:`anyio`, adding structured concurrency and :pypi:`trio` support.
+  * Pipelines auto-execute when exiting their context manager; results are accessible in a type-safe way.
+  * ``Library.wraps`` renamed to :func:`coredis.commands.function.wraps` and now supports callbacks.
+  * :class:`~coredis.commands.Script` and :class:`~coredis.commands.Function` can now be called with
+    optional callbacks to transform the raw response from redis before returning it. This is supported
+    by their associated ``wraps`` decorators as well.
+  * :meth:`coredis.Redis.lock` & :meth:`coredis.RedisCluster.lock` added as a convenient accessors
+    for the Lua-based lock: :class:`coredis.lock.Lock` (Previously found in ``coredis.recipes.LuaLock``).
+
+* Breaking Changes
+
+  * Almost all classes (clients, connection pools, PubSub, pipelines) now require being used with
+    their async context managers for initialization/cleanup.
+  * Users should replace ``TrackingCache`` with :class:`coredis.cache.LRUCache` when providing a cache
+    instance to the clients. Cache size can no longer be bound by byte size and only ``max_keys`` is supported.
+  * All connection pools are now blocking.
+  * Pipelines
+
+    * Pipelines no longer expose an explicit ``execute()`` method and instead auto-execute when leaving
+      their context manager.
+    * Removed ``__len__`` and ``__bool__`` methods of :class:`coredis.pipeline.Pipeline`
+    * Drop support for explicit management of ``watch``, ``unwatch``, ``multi`` in pipelines. This
+      is replaced by the :meth:`coredis.pipeline.Pipeline.watch` async context manager.
+  * When defining type stubs for FFI for Lua scripts or library functions, keys can only be distinguished
+    from arguments by annotating them with :class:`coredis.typing.KeyT`.
+
+* Removals
+
+  * Drop support for ``RESP2``.
+  * Remove ``Monitor`` wrapper.
+  * Remove ``RedisGraph`` module support.
+
 v5.5.0
 ------
 Release Date: 2026-01-12
