@@ -9,7 +9,6 @@ import ssl
 from abc import abstractmethod
 from collections import defaultdict, deque
 from typing import TYPE_CHECKING, Any, Generator, cast
-from weakref import ProxyType, proxy
 
 from anyio import (
     TASK_STATUS_IGNORED,
@@ -70,7 +69,7 @@ if TYPE_CHECKING:
 
 @dataclasses.dataclass
 class Request:
-    connection: ProxyType[BaseConnection]
+    connection: BaseConnection
     command: bytes
     decode: bool
     encoding: str | None = None
@@ -95,6 +94,9 @@ class Request:
 
     async def get_result(self) -> ResponseType:
         if not self._event.is_set():
+            # lazy send: if a bunch of requests are enqueued, we don't actually send
+            # them until the first result is awaited.
+            await self.connection.flush()
             try:
                 with move_on_after(self.response_timeout) as scope:
                     await self._event.wait()
@@ -110,7 +112,7 @@ class Request:
         return self._result_or_exc()
 
     def _handle_response_cancellation(self, reason: str) -> None:
-        if self.connection and self.disconnect_on_cancellation:
+        if self.disconnect_on_cancellation:
             self.connection.terminate(reason)
 
     def _result_or_exc(self) -> ResponseType:
@@ -227,6 +229,7 @@ class BaseConnection:
 
         self._requests: deque[Request] = deque()
         self._write_lock = Lock()
+        self._write_buffer: list[bytes] = []
         self._connection_cancel_scope: CancelScope | None = None
 
     def __repr__(self) -> str:
@@ -277,7 +280,7 @@ class BaseConnection:
         try:
             async with self.connection, self._parser.push_messages, create_task_group() as tg:
                 self._connection_cancel_scope = tg.cancel_scope
-                tg.start_soon(self.listen_for_responses)
+                tg.start_soon(self._listen_for_responses)
                 # setup connection
                 await self.on_connect()
                 # run any user callbacks. right now the only internal callback
@@ -317,7 +320,7 @@ class BaseConnection:
         if self._connection_cancel_scope:
             self._connection_cancel_scope.cancel(reason)
 
-    async def listen_for_responses(self) -> None:
+    async def _listen_for_responses(self) -> None:
         """
         Listen on the socket and run the parser, completing pending requests in
         FIFO order.
@@ -345,6 +348,13 @@ class BaseConnection:
                 else:
                     request.resolve(response)
 
+    async def flush(self) -> None:
+        async with self._write_lock:
+            if self._write_buffer:
+                batch = self._write_buffer
+                self._write_buffer = []
+                await self._send_packed_command(batch, timeout=self._stream_timeout)
+
     async def update_tracking_client(self, enabled: bool, client_id: int | None = None) -> bool:
         """
         Associate this connection to :paramref:`client_id` to
@@ -355,10 +365,7 @@ class BaseConnection:
                 [b"ON", b"REDIRECT", client_id] if (enabled and client_id is not None) else [b"OFF"]
             )
 
-            if (
-                await (await self.create_request(b"CLIENT TRACKING", *params, decode=False))
-                != b"OK"
-            ):
+            if await self.create_request(b"CLIENT TRACKING", *params, decode=False) != b"OK":
                 raise ConnectionError("Unable to toggle client tracking")
             self.tracking_client_id = client_id
             return True
@@ -379,7 +386,7 @@ class BaseConnection:
             params = [self.password]
             if self.username:
                 params.insert(0, self.username)
-        await (await self.create_request(b"AUTH", *params, decode=False))
+        await self.create_request(b"AUTH", *params, decode=False)
 
     async def perform_handshake(self) -> None:
         if not self.needs_handshake:
@@ -403,21 +410,19 @@ class BaseConnection:
                 ]
             )
         try:
-            hello_resp = await (
-                await self.create_request(b"HELLO", *hello_command_args, decode=False)
-            )
+            hello_resp = await self.create_request(b"HELLO", *hello_command_args, decode=False)
             assert isinstance(hello_resp, (list, dict))
             resp3 = cast(dict[bytes, RedisValueT], hello_resp)
             assert resp3[b"proto"] == 3
             self.server_version = nativestr(resp3[b"version"])
             self.client_id = int(resp3[b"id"])
             if self.server_version >= "7.2":
-                await self.create_request(
+                self.create_request(
                     b"CLIENT SETINFO",
                     b"LIB-NAME",
                     b"coredis",
                 )
-                await self.create_request(
+                self.create_request(
                     b"CLIENT SETINFO",
                     b"LIB-VER",
                     coredis.__version__,
@@ -436,24 +441,24 @@ class BaseConnection:
         await self.perform_handshake()
 
         if self.db:
-            if await (await self.create_request(b"SELECT", self.db, decode=False)) != b"OK":
+            if await self.create_request(b"SELECT", self.db, decode=False) != b"OK":
                 raise ConnectionError(f"Invalid Database {self.db}")
 
         if self.client_name is not None:
             if (
-                await (await self.create_request(b"CLIENT SETNAME", self.client_name, decode=False))
+                await self.create_request(b"CLIENT SETNAME", self.client_name, decode=False)
                 != b"OK"
             ):
                 raise ConnectionError(f"Failed to set client name: {self.client_name}")
 
         if self.noevict:
-            await (await self.create_request(b"CLIENT NO-EVICT", b"ON"))
+            await self.create_request(b"CLIENT NO-EVICT", b"ON")
 
         if self.notouch:
-            await (await self.create_request(b"CLIENT NO-TOUCH", b"ON"))
+            await self.create_request(b"CLIENT NO-TOUCH", b"ON")
 
         if self.noreply:
-            await (await self.create_request(b"CLIENT REPLY", b"OFF", noreply=True))
+            await self.create_request(b"CLIENT REPLY", b"OFF", noreply=True)
             self.noreply_set = True
 
     async def fetch_push_message(self, block: bool = False) -> list[ResponseType]:
@@ -493,7 +498,7 @@ class BaseConnection:
         async with self._write_lock:
             await self._send_packed_command(self.packer.pack_command(command, *args))
 
-    async def create_request(
+    def create_request(
         self,
         command: bytes,
         *args: RedisValueT,
@@ -501,62 +506,56 @@ class BaseConnection:
         decode: RedisValueT | None = None,
         encoding: str | None = None,
         raise_exceptions: bool = True,
-        timeout: float | None = None,
         disconnect_on_cancellation: bool = False,
     ) -> Request:
         """
-        Send a command to the redis server
+        Queue a command to send to the server
         """
-
         cmd_list = []
         if self.is_connected and noreply and not self.noreply:
             cmd_list = self.packer.pack_command(CommandName.CLIENT_REPLY, PureToken.SKIP)
         cmd_list.extend(self.packer.pack_command(command, *args))
-        request_timeout: float | None = timeout or self._stream_timeout
         request = Request(
-            proxy(self),
+            self,
             command,
             bool(decode) if decode is not None else self.decode_responses,
             encoding or self.encoding,
             raise_exceptions,
-            request_timeout,
+            self._stream_timeout,
             disconnect_on_cancellation,
         )
-        async with self._write_lock:
-            if not (self.noreply_set or noreply):
-                self._requests.append(request)
-            else:
-                request.resolve(None)
-            await self._send_packed_command(cmd_list, timeout=request_timeout)
+        # modifying buffer and requests should happen atomically
+        if not (self.noreply_set or noreply):
+            self._requests.append(request)
+        else:
+            request.resolve(None)
+        self._write_buffer.extend(cmd_list)
         return request
 
-    async def create_requests(
+    def create_requests(
         self,
         commands: list[CommandInvocation],
         raise_exceptions: bool = True,
-        timeout: float | None = None,
         disconnect_on_cancellation: bool = False,
     ) -> list[Request]:
         """
-        Send multiple commands to the redis server
+        Queue multiple commands to send to the server
         """
-        request_timeout: float | None = timeout or self._stream_timeout
         requests = [
             Request(
-                proxy(self),
+                self,
                 cmd.command,
                 bool(cmd.decode) if cmd.decode is not None else self.decode_responses,
                 cmd.encoding or self.encoding,
                 raise_exceptions,
-                request_timeout,
+                self._stream_timeout,
                 disconnect_on_cancellation,
             )
             for cmd in commands
         ]
         packed = self.packer.pack_commands([(cmd.command, *cmd.args) for cmd in commands])
-        async with self._write_lock:
-            self._requests.extend(requests)
-            await self._send_packed_command(packed, timeout=request_timeout)
+        self._write_buffer.extend(packed)
+        self._requests.extend(requests)
         return requests
 
 
@@ -727,13 +726,13 @@ class ClusterConnection(Connection):
             max_idle_time=max_idle_time,
         )
 
-        async def _on_connect(*args: Any) -> None:
+        async def _on_connect(*_: Any) -> None:
             """
             Initialize the connection, authenticate and select a database and send
             `READONLY` if `read_from_replicas` is set during initialization.
             """
 
             if self.read_from_replicas:
-                assert (await (await self.create_request(b"READONLY", decode=False))) == b"OK"
+                assert (await self.create_request(b"READONLY", decode=False)) == b"OK"
 
         self.register_connect_callback(_on_connect)

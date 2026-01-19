@@ -975,7 +975,7 @@ class Redis(Client[AnyStr]):
                     except KeyError:
                         pass
             if not (use_cached and cached_reply):
-                request = await connection.create_request(
+                request = connection.create_request(
                     command.name,
                     *command.arguments,
                     noreply=self.noreply,
