@@ -1006,10 +1006,11 @@ class Redis(Client[AnyStr]):
     ) -> R:
         pool = self.connection_pool
         quick_release = self.should_quick_release(command)
+        should_block = not quick_release or self.requires_wait or self.requires_waitaof
+        released = False
         connection = await pool.get_connection(
             command.name,
             *command.arguments,
-            acquire=not quick_release or self.requires_wait or self.requires_waitaof,
         )
         try:
             keys = KeySpec.extract_keys(command.name, *command.arguments)
@@ -1053,6 +1054,9 @@ class Redis(Client[AnyStr]):
                     decode=options.get("decode", self._decodecontext.get()),
                     encoding=self._encodingcontext.get(),
                 )
+                if not should_block:
+                    released = True
+                    pool.release(connection)
                 maybe_wait = [
                     await self._ensure_wait(command, connection),
                     await self._ensure_persistence(command, connection),
@@ -1081,7 +1085,7 @@ class Redis(Client[AnyStr]):
             raise
         finally:
             self._ensure_server_version(connection.server_version)
-            if not quick_release or self.requires_wait or self.requires_waitaof:
+            if not released:
                 pool.release(connection)
 
     @overload
