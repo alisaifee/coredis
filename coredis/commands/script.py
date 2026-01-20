@@ -109,9 +109,7 @@ class Script(Generic[AnyStr]):
 
         method = client.evalsha_ro if readonly else client.evalsha
 
-        # make sure the Redis server knows about the script
         if isinstance(client, Pipeline):
-            # make sure this script is good to go on pipeline
             cast(Pipeline[AnyStr], client).scripts.add(self)
             return method(self.sha, keys=keys, args=args, callback=callback)
         else:
