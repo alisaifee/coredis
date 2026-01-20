@@ -193,7 +193,7 @@ class TestConnection:
             assert await client.client_kill(identifier=clone_id) > 0
             with pytest.raises(ResponseError, match="No such user"):
                 await client.client_kill(user="noexist") == 0
-
+            await anyio.sleep(1)
             clone_addr = (await clone.client_info())["addr"]
             assert await client.client_kill(addr=clone_addr) == 1
 
@@ -204,17 +204,19 @@ class TestConnection:
             laddr = (await client.client_info())["laddr"]
             resp = await client.client_kill(laddr=laddr, skipme=True)
             assert resp > 0
+            await anyio.sleep(1)
             await clone.ping()
             assert clone_id != (await clone.client_info())["id"]
             assert my_id == (await client.client_info())["id"]
 
     @pytest.mark.min_server_version("7.4.0")
-    async def test_client_kill_filter_maxage(self, client, cloner, _s):
+    async def test_client_kill_filter_maxage(self, client: Redis, cloner, _s):
         async with await cloner(client) as clone:
             my_id = (await client.client_info())["id"]
             clone_id = (await clone.client_info())["id"]
             await anyio.sleep(1)
             assert await client.client_kill(maxage=1, skipme=False) >= 2
+            await anyio.sleep(1)
             assert clone_id != (await clone.client_info())["id"]
             assert my_id != (await client.client_info())["id"]
 

@@ -16,6 +16,7 @@ from anyio import (
     CancelScope,
     ClosedResourceError,
     Event,
+    Lock,
     connect_tcp,
     connect_unix,
     create_memory_object_stream,
@@ -110,7 +111,7 @@ class Request:
         return self._result_or_exc()
 
     def _handle_response_cancellation(self, reason: str) -> None:
-        if self.disconnect_on_cancellation:
+        if self.connection and self.disconnect_on_cancellation:
             self.connection.terminate(reason)
 
     def _result_or_exc(self) -> ResponseType:
@@ -228,6 +229,7 @@ class BaseConnection:
         self._requests: deque[Request] = deque()
         self._flush_needed = Event()
         self._write_buffer: list[bytes] = []
+        self._write_lock = Lock()
         self._connection_cancel_scope: CancelScope | None = None
 
     def __repr__(self) -> str:
@@ -355,9 +357,10 @@ class BaseConnection:
                 # if we never do it, concurrent performance takes a hit.
                 if len(self._requests) > 1:
                     await sleep(0.001)
-                batch = self._write_buffer
-                self._write_buffer = []
-                await self._send_packed_command(batch, timeout=self._stream_timeout)
+                async with self._write_lock:
+                    batch = self._write_buffer
+                    self._write_buffer = []
+                    await self._send_packed_command(batch, timeout=self._stream_timeout)
 
     async def update_tracking_client(self, enabled: bool, client_id: int | None = None) -> bool:
         """
@@ -500,8 +503,8 @@ class BaseConnection:
         Send a command to the redis server. NEVER use this for commands that expect
         responses.
         """
-        packed = self.packer.pack_command(command, *args)
-        await self._send_packed_command(packed, timeout=self._stream_timeout)
+        async with self._write_lock:
+            await self._send_packed_command(self.packer.pack_command(command, *args))
 
     def create_request(
         self,

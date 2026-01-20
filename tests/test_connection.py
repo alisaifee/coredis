@@ -18,7 +18,7 @@ async def test_connect_tcp(redis_basic):
     assert str(conn) == "Connection<host=127.0.0.1,port=6379,db=0>"
     async with create_task_group() as tg:
         await tg.start(conn.run)
-        request = await conn.create_request(b"PING")
+        request = conn.create_request(b"PING")
         res = await request
         assert res == b"PONG"
         assert conn._connection is not None
@@ -34,7 +34,7 @@ async def test_connect_cred_provider(redis_auth_server):
     )
     async with create_task_group() as tg:
         await tg.start(conn.run)
-        request = await conn.create_request(b"PING")
+        request = conn.create_request(b"PING")
         res = await request
         assert res == b"PONG"
         tg.cancel_scope.cancel()
@@ -85,7 +85,7 @@ async def test_connect_unix_socket(redis_uds):
         await tg.start(conn.run)
         assert conn.path == path
         assert str(conn) == f"UnixDomainSocketConnection<path={path},db=0>"
-        req = await conn.create_request(b"PING")
+        req = conn.create_request(b"PING")
         res = await req
         assert res == b"PONG"
         assert conn._connection is not None
@@ -96,7 +96,7 @@ async def test_stream_timeout(redis_basic):
     conn = Connection(stream_timeout=0.01)
     async with create_task_group() as tg:
         await tg.start(conn.run)
-        req = await conn.create_request(b"debug", "sleep", 0.05)
+        req = conn.create_request(b"debug", "sleep", 0.05)
         with pytest.raises(TimeoutError):
             await req
         tg.cancel_scope.cancel()
@@ -106,7 +106,7 @@ async def test_request_cancellation(redis_basic):
     conn = Connection()
     async with create_task_group() as tg:
         await tg.start(conn.run)
-        request = await conn.create_request(b"blpop", 1, "key", 1, disconnect_on_cancellation=True)
+        request = conn.create_request(b"blpop", 1, "key", 1, disconnect_on_cancellation=True)
         with move_on_after(0.01):
             await request
         await sleep(0.01)
