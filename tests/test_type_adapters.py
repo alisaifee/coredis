@@ -154,6 +154,10 @@ class TestTransformers:
         assert (Decimal(1),) == await client.smembers("set").transform(tuple[Decimal])
         assert (Decimal(1),) == await client.smembers("set").transform(tuple[Decimal, ...])
 
+    async def test_explicit_transform_callable(self, client):
+        await client.set("key", 1)
+        assert await client.get("key").transform(lambda value: float(value)) == 1.0
+
     async def test_decorator_errors(self, client):
         with pytest.raises(ValueError):
 

@@ -16,7 +16,7 @@ from coredis.client import Client, RedisCluster
 from coredis.commands import CommandRequest, CommandResponseT
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName, NodeFlag
-from coredis.commands.request import TransformedResponse
+from coredis.commands.request import TransformedResponse, is_type_like
 from coredis.commands.script import Script
 from coredis.connection import (
     BaseConnection,
@@ -149,11 +149,16 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
         self.parent = parent
 
     def transform(
-        self, transformer: type[TransformedResponse]
+        self,
+        transformer: type[TransformedResponse] | Callable[[CommandResponseT], TransformedResponse],
     ) -> CommandRequest[TransformedResponse]:
-        transform_func = functools.partial(
-            self.type_adapter.deserialize,
-            return_type=transformer,
+        transform_func = (
+            functools.partial(
+                self.type_adapter.deserialize,
+                return_type=transformer,
+            )
+            if is_type_like(transformer)
+            else transformer
         )
         return cast(type[PipelineCommandRequest[TransformedResponse]], self.__class__)(
             self.client,

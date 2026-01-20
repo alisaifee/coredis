@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import functools
-from typing import Any, cast
+from types import GenericAlias
+from typing import Any, cast, get_origin
 
 from coredis._protocols import AbstractExecutor
 from coredis.typing import (
@@ -11,6 +12,7 @@ from coredis.typing import (
     Generator,
     Serializable,
     TypeAdapter,
+    TypeIs,
     TypeVar,
     ValueT,
 )
@@ -20,6 +22,14 @@ CommandResponseT = TypeVar("CommandResponseT", covariant=True)
 
 TransformedResponse = TypeVar("TransformedResponse")
 empty_adapter = TypeAdapter()
+
+
+def is_type_like(obj: object) -> TypeIs[type[Any]]:
+    """
+    Return True if ``obj`` is type-like and should be treated as a
+    deserialization target rather than a callable transformer.
+    """
+    return isinstance(obj, type) or isinstance(obj, GenericAlias) or get_origin(obj) is not None
 
 
 class CommandRequest(Awaitable[CommandResponseT]):
@@ -62,12 +72,15 @@ class CommandRequest(Awaitable[CommandResponseT]):
         return self.response
 
     def transform(
-        self, transformer: type[TransformedResponse]
+        self,
+        transformer: type[TransformedResponse] | Callable[[CommandResponseT], TransformedResponse],
     ) -> CommandRequest[TransformedResponse]:
         """
         :param transformer: A type that was registered with the client
          using :meth:`~coredis.typing.TypeAdapter.register_deserializer`
          or decorated by :meth:`~coredis.typing.TypeAdapter.deserializer`
+         or a callable that takes a single argument (the original response)
+         and returns the transformed response.
 
         :return: a command request object that when awaited will return the
          transformed response
@@ -82,11 +95,15 @@ class CommandRequest(Awaitable[CommandResponseT]):
            await client.set("fubar", 1)
            raw: bytes = await client.get("fubar")
            int_value: int = await client.get("fubar").transform(int)
+           float_value: float = await client.get("fubar").transform(lambda value: float(value))
         """
-        transform_func = functools.partial(
-            self.type_adapter.deserialize,
-            return_type=transformer,
+
+        transform_func = (
+            functools.partial(self.type_adapter.deserialize, return_type=transformer)
+            if is_type_like(transformer)
+            else transformer
         )
+
         return cast(type[CommandRequest[TransformedResponse]], self.__class__)(
             self.client,
             self.name,

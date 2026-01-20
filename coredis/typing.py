@@ -62,6 +62,7 @@ from beartype.door import is_bearable, is_subhint
 from typing_extensions import (
     NotRequired,
     Self,
+    TypeIs,
     Unpack,
 )
 
@@ -581,6 +582,7 @@ __all__ = [
     "Sequence",
     "StringT",
     "TypeGuard",
+    "TypeIs",
     "TypedDict",
     "TypeVar",
     "Unpack",

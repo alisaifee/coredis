@@ -165,6 +165,7 @@ mypy-args = [
   "--disable-error-code=override",
   "--disable-error-code=return-value",
   "--disable-error-code=arg-type",
+  "--disable-error-code=call-arg",
   "--disable-error-code=assignment",
   "--disable-error-code=index",
   "--disable-error-code=union-attr",

@@ -71,5 +71,6 @@ Implementation Details
 ----------------------
 - :ref:`handbook/connections:connection types`
 - :ref:`handbook/development:development`
-- :ref:`handbook/response:redis response`
+- :ref:`handbook/response:resp`
+- :ref:`handbook/response:api responses`
 - :ref:`handbook/typing:typing`
