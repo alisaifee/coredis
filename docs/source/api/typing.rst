@@ -57,20 +57,30 @@ to the returns documented in the client API at :ref:`api/clients:clients`.
 Response Types
 ^^^^^^^^^^^^^^
 In most cases the API returns native python types mapped as closely as possible
-to the response from redis. The responses are normalized across :term:`RESP` versions ``2`` and ``3``
-to maintain a consistent signature, i.e. :term:`RESP` responses are reshaped into their :term:`RESP3`
-counterparts, for example:
+to the :term:`RESP3` type from redis:
 
-- If redis returns a map for a command in :term:`RESP3`, coredis will ensure an identically
-  shaped dictionary is returned for :term:`RESP` as well. (E.g. :meth:`~coredis.Redis.hgetall`)
-- If redis returns a double value for a command in :term:`RESP3`, coredis will parse the string
-  value as a python float for :term:`RESP`. (E.g. :meth:`~coredis.Redis.zscore`)
-- If redis returns a set for a command in :term:`RESP3`, coredis will convert the redis array
-  to a python set (E.g. :meth:`~coredis.Redis.smembers`)
+========================= =================
+RESP3 Type                Python type
+========================= =================
+Simple/Bulk String        :class:`bytes` or :class:`str` depending on the configuration of :paramref:`coredis.Redis.decode_responses`
+Simple/Bulk Errors        :exc:`~coredis.exceptions.RedisError`
+Integers                  :class:`int`
+Double                    :class:`float`
+Arrays                    :class:`tuple`
+Nulls                     :class:`NoneType`
+Booleans                  :class:`bool`
+Set                       :class:`set`
+Map                       :class:`dict`
+========================= =================
 
-In certain cases these are "lightly" typed using :class:`~typing.NamedTuple`
-or :class:`~typing.TypedDict` for ease of documentation and in the case of "tuples"
-returned by redis - to avoid errors in indexing.
+
+
+In certain cases the response is too complex and therefore it is "lightly" typed
+using :class:`~typing.NamedTuple` or :class:`~typing.TypedDict` for better documentation
+and type safety.
+
+The types below is a complete representation of responses from **coredis** that are not
+builtin python types.
 
 :mod:`coredis.response.types`
 

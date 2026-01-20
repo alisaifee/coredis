@@ -39,7 +39,7 @@ the `Redis command documentation <https://redis.io/commands>`__ to define the AP
   iterable of type :class:`~coredis.typing.Parameters` or :class:`~typing.Mapping`.
 - Pure tokens used as flags are mapped to boolean arguments
 - ``One of`` arguments accepting pure tokens are collapsed and accept a :class:`~coredis.tokens.PureToken`
-- Responses are mapped as closely from :term:`RESP` <-> python types as possible.
+- Responses are mapped as closely from :term:`RESP3` to python types as possible (See :ref:`api/typing:response types`).
 
 For higher level concepts such as :ref:`handbook/pipelines:pipelines`, :ref:`handbook/scripting:lua scripts`,
 :ref:`handbook/pubsub:pubsub` abstractions are provided to encapsulate recommended patterns.
