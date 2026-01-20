@@ -170,7 +170,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
     async def _keepalive(self) -> None:
         while True:
-            await self.connection.send_command(CommandName.PING)
+            self.connection.create_request(CommandName.PING)
             await sleep(15)
 
     async def _consumer(self) -> None:
@@ -288,7 +288,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
         :meta private:
         """
-        await self.connection.send_command(command, *args)
+        await self.connection.send_pubsub_command(command, *args)
 
     async def parse_response(
         self, block: bool = True, timeout: float | None = None
@@ -580,7 +580,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         node = self.connection_pool.nodes.node_from_slot(slot)
         if node and node.node_id:
             key = node.node_id
-            return await self.shard_connections[key].send_command(command, *args)
+            return await self.shard_connections[key].send_pubsub_command(command, *args)
         raise PubSubError(f"Unable to determine shard for channel {args[0]!r}")
 
     @asynccontextmanager

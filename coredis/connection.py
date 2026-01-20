@@ -9,13 +9,13 @@ import ssl
 from abc import abstractmethod
 from collections import defaultdict, deque
 from typing import TYPE_CHECKING, Any, Generator, cast
+from weakref import ProxyType, proxy
 
 from anyio import (
     TASK_STATUS_IGNORED,
     CancelScope,
     ClosedResourceError,
     Event,
-    Lock,
     connect_tcp,
     connect_unix,
     create_memory_object_stream,
@@ -23,6 +23,7 @@ from anyio import (
     fail_after,
     get_cancelled_exc_class,
     move_on_after,
+    sleep,
 )
 from anyio.abc import ByteStream, SocketAttribute, TaskStatus
 from typing_extensions import override
@@ -69,7 +70,7 @@ if TYPE_CHECKING:
 
 @dataclasses.dataclass
 class Request:
-    connection: BaseConnection
+    connection: ProxyType[BaseConnection]
     command: bytes
     decode: bool
     encoding: str | None = None
@@ -94,9 +95,6 @@ class Request:
 
     async def get_result(self) -> ResponseType:
         if not self._event.is_set():
-            # lazy send: if a bunch of requests are enqueued, we don't actually send
-            # them until the first result is awaited.
-            await self.connection.flush()
             try:
                 with move_on_after(self.response_timeout) as scope:
                     await self._event.wait()
@@ -228,7 +226,7 @@ class BaseConnection:
         self._connected = False
 
         self._requests: deque[Request] = deque()
-        self._write_lock = Lock()
+        self._flush_needed = Event()
         self._write_buffer: list[bytes] = []
         self._connection_cancel_scope: CancelScope | None = None
 
@@ -281,6 +279,7 @@ class BaseConnection:
             async with self.connection, self._parser.push_messages, create_task_group() as tg:
                 self._connection_cancel_scope = tg.cancel_scope
                 tg.start_soon(self._listen_for_responses)
+                tg.start_soon(self._flush_loop)
                 # setup connection
                 await self.on_connect()
                 # run any user callbacks. right now the only internal callback
@@ -333,11 +332,9 @@ class BaseConnection:
             )
             if isinstance(response, NotEnoughData):
                 # Need more bytes; read once, feed, and retry
-                with move_on_after(self.max_idle_time) as scope:
+                with fail_after(self.max_idle_time):
                     data = await self.connection.receive()
                     self._parser.feed(data)
-                if scope.cancelled_caught:  # this will cleanup the connection gracefully
-                    break
                 continue  # loop back and try parsing again
 
             # We have a full response for `head`; now pop and complete it
@@ -348,9 +345,16 @@ class BaseConnection:
                 else:
                     request.resolve(response)
 
-    async def flush(self) -> None:
-        async with self._write_lock:
+    async def _flush_loop(self) -> None:
+        while True:
+            await self._flush_needed.wait()
+            self._flush_needed = Event()
             if self._write_buffer:
+                # multiple pending requests -> more likely to benefit from batching
+                # if we do this always, sequential performance takes a hit.
+                # if we never do it, concurrent performance takes a hit.
+                if len(self._requests) > 1:
+                    await sleep(0.001)
                 batch = self._write_buffer
                 self._write_buffer = []
                 await self._send_packed_command(batch, timeout=self._stream_timeout)
@@ -487,16 +491,17 @@ class BaseConnection:
                 self._connection = None
                 raise ConnectionError(f"Failed to send data: {data.decode()}!") from err
 
-    async def send_command(
+    async def send_pubsub_command(
         self,
         command: bytes,
         *args: RedisValueT,
     ) -> None:
         """
-        Send a command to the redis server
+        Send a command to the redis server. NEVER use this for commands that expect
+        responses.
         """
-        async with self._write_lock:
-            await self._send_packed_command(self.packer.pack_command(command, *args))
+        packed = self.packer.pack_command(command, *args)
+        await self._send_packed_command(packed, timeout=self._stream_timeout)
 
     def create_request(
         self,
@@ -516,7 +521,7 @@ class BaseConnection:
             cmd_list = self.packer.pack_command(CommandName.CLIENT_REPLY, PureToken.SKIP)
         cmd_list.extend(self.packer.pack_command(command, *args))
         request = Request(
-            self,
+            proxy(self),
             command,
             bool(decode) if decode is not None else self.decode_responses,
             encoding or self.encoding,
@@ -530,6 +535,7 @@ class BaseConnection:
         else:
             request.resolve(None)
         self._write_buffer.extend(cmd_list)
+        self._flush_needed.set()
         return request
 
     def create_requests(
@@ -543,7 +549,7 @@ class BaseConnection:
         """
         requests = [
             Request(
-                self,
+                proxy(self),
                 cmd.command,
                 bool(cmd.decode) if cmd.decode is not None else self.decode_responses,
                 cmd.encoding or self.encoding,
@@ -556,6 +562,7 @@ class BaseConnection:
         packed = self.packer.pack_commands([(cmd.command, *cmd.args) for cmd in commands])
         self._write_buffer.extend(packed)
         self._requests.extend(requests)
+        self._flush_needed.set()
         return requests
 
 

@@ -360,7 +360,7 @@ class NodeTrackingCache(TrackingCache):
 
     async def _keepalive(self) -> None:
         while True:
-            await self._connection.send_command(CommandName.PING)
+            self._connection.create_request(CommandName.PING)
             await sleep(15)
 
     async def _consumer(self) -> None:
