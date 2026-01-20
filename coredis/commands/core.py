@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import datetime
 import itertools
-from collections.abc import Callable
 from typing import overload
 
 from deprecated.sphinx import versionadded
@@ -148,6 +147,7 @@ from coredis.response.types import (
 from coredis.tokens import PrefixToken, PureToken
 from coredis.typing import (
     AnyStr,
+    Callable,
     CommandArgList,
     JsonType,
     KeyT,
