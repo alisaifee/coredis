@@ -41,6 +41,17 @@ Release Date: 2026-01-18
   * Remove ``Monitor`` wrapper.
   * Remove ``RedisGraph`` module support.
 
+=======
+v5.6.0
+------
+Release Date: 2026-01-19
+
+* Bug Fix
+
+  * Fix a potential race condition with the Redis client
+    where a non blocking command could be queued on a connection
+    that is already acquired for a blocking command.
+
 v5.5.0
 ------
 Release Date: 2026-01-12
@@ -2096,6 +2107,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
