@@ -13,6 +13,7 @@ Handbook
     caching
     pipelines
     locks
+    retries
     noreply
     scripting
     modules
@@ -66,6 +67,7 @@ Reliability
 - :ref:`handbook/pipelines:atomicity & transactions`
 - :ref:`handbook/cluster:replication`
 - :ref:`handbook/locks:locks`
+- :ref:`handbook/retries:retrying`
 
 Implementation Details
 ----------------------

@@ -8,8 +8,8 @@ Enums
    :no-inherited-members:
    :show-inheritance:
 
-Retries
-^^^^^^^
+Retrying
+^^^^^^^^
 :mod:`coredis.retry`
 
 Utilities for managing errors that can be recovered from by providing retry policies.

@@ -15,11 +15,13 @@ class RetryPolicy(ABC):
     Abstract retry policy
     """
 
-    def __init__(self, retries: int, retryable_exceptions: tuple[type[BaseException], ...]) -> None:
+    def __init__(
+        self, *, retryable_exceptions: tuple[type[BaseException], ...], retries: int
+    ) -> None:
         """
+        :param retryable_exceptions: The exceptions to trigger a retry for
         :param retries: number of times to retry if a :paramref:`retryable_exception`
          is encountered.
-        :param retryable_exceptions: The exceptions to trigger a retry for
         """
         self.retryable_exceptions = retryable_exceptions
         self.retries = retries
@@ -84,7 +86,7 @@ class RetryPolicy(ABC):
 
 class NoRetryPolicy(RetryPolicy):
     def __init__(self) -> None:
-        super().__init__(1, ())
+        super().__init__(retryable_exceptions=(), retries=0)
 
     async def delay(self, attempt_number: int) -> None:
         pass
@@ -105,7 +107,7 @@ class ConstantRetryPolicy(RetryPolicy):
         delay: float,
     ) -> None:
         self.__delay = delay
-        super().__init__(retries, retryable_exceptions)
+        super().__init__(retryable_exceptions=retryable_exceptions, retries=retries)
 
     async def delay(self, attempt_number: int) -> None:
         if attempt_number > 0:
@@ -129,7 +131,7 @@ class ExponentialBackoffRetryPolicy(RetryPolicy):
         initial_delay: float,
     ) -> None:
         self.__initial_delay = initial_delay
-        super().__init__(retries, retryable_exceptions)
+        super().__init__(retryable_exceptions=retryable_exceptions, retries=retries)
 
     async def delay(self, attempt_number: int) -> None:
         if attempt_number > 0:
