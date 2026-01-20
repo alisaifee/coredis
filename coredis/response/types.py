@@ -1,14 +1,8 @@
 from __future__ import annotations
 
-import dataclasses
-import datetime
-import re
-import shlex
 from collections.abc import Set
-from re import Pattern
 
 from coredis.typing import (
-    ClassVar,
     Literal,
     Mapping,
     NamedTuple,
@@ -299,57 +293,6 @@ class LCSResult(NamedTuple):
     matches: tuple[LCSMatch, ...]
     #: Length of longest match
     length: int
-
-
-@dataclasses.dataclass
-class MonitorResult:
-    """
-    Details of issued commands received by the client when
-    listening with the `MONITOR <https://redis.io/commands/monitor>`__
-    command
-    """
-
-    #: Time command was received
-    time: datetime.datetime
-    #: db number
-    db: int
-    #: (host, port) or path if the server is listening on a unix domain socket
-    client_addr: tuple[str, int] | str | None
-    #: The type of the client that send the command
-    client_type: Literal["tcp", "unix", "lua"]
-    #: The name of the command
-    command: str
-    #: Arguments passed to the command
-    args: tuple[str, ...] | None
-
-    EXPR: ClassVar[Pattern[str]] = re.compile(r"\[(\d+) (.*?)\] (.*)$")
-
-    @classmethod
-    def parse_response_string(cls, response: str) -> MonitorResult:
-        command_time, command_data = response.split(" ", 1)
-        match = cls.EXPR.match(command_data)
-        assert match
-        db_id, client_info, command = match.groups()
-        command = shlex.split(command)
-        client_addr = None
-        client_type: Literal["tcp", "unix", "lua"]
-        if client_info == "lua":
-            client_type = "lua"
-        elif client_info.startswith("unix"):
-            client_type = "unix"
-            client_addr = client_info[5:]
-        else:
-            host, port = client_info.rsplit(":", 1)
-            client_addr = (host, int(port))
-            client_type = "tcp"
-        return cls(
-            time=datetime.datetime.fromtimestamp(float(command_time)),
-            db=int(db_id),
-            client_addr=client_addr,
-            client_type=client_type,
-            command=command[0],
-            args=tuple(command[1:]),
-        )
 
 
 class ClusterNode(TypedDict):
