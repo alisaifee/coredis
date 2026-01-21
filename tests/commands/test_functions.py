@@ -5,7 +5,7 @@ import pytest
 from coredis import PureToken
 from coredis.commands.function import Library, wraps
 from coredis.commands.request import CommandRequest
-from coredis.exceptions import NotBusyError, ResponseError
+from coredis.exceptions import FunctionError, NotBusyError, ResponseError
 from coredis.typing import KeyT, RedisValueT, StringT
 from tests.conftest import targets
 
@@ -177,6 +177,35 @@ class TestLibrary:
         assert len(library.functions) == 1
         assert await library["baz"](args=[1, 2, 3]) == 3
 
+    async def test_missing_library(self, client):
+        class Missing(Library):
+            def __init__(self, client):
+                super().__init__(client, name="missing")
+
+        with pytest.raises(FunctionError, match="No library found for missing"):
+            await Missing(client)
+
+        with pytest.raises(FunctionError, match="No library found for missing"):
+            async with client.pipeline() as pipeline:
+                await Missing(pipeline)
+
+    async def test_missing_function(self, client, simple_library):
+        class Coredis(Library):
+            def __init__(self, client):
+                super().__init__(client, name="coredis")
+
+            @wraps()
+            def fail(self, key: KeyT) -> CommandRequest[None]: ...
+
+        with pytest.raises(AttributeError, match="has no registered function fail"):
+            lib = await Coredis(client)
+            await lib.fail("test")
+
+        with pytest.raises(AttributeError, match="has no registered function fail"):
+            async with client.pipeline() as pipeline:
+                lib = await Coredis(pipeline)
+                lib.fail("test")
+
     async def test_subclass_wrap(selfself, client, simple_library, _s):
         class Coredis(Library):
             def __init__(self, client):
@@ -193,6 +222,9 @@ class TestLibrary:
                 self, key: KeyT, *values: RedisValueT
             ) -> CommandRequest[RedisValueT]: ...
 
+            @wraps(function_name="default_get", callback=lambda value: int(value))
+            def default_get_int(self, key: KeyT, *values: RedisValueT) -> CommandRequest[int]: ...
+
             @wraps()
             def hmmerge(
                 self, key: KeyT, **values: RedisValueT
@@ -205,6 +237,9 @@ class TestLibrary:
         assert await lib.default_get("bar", "fu", "bar", "baz") == _s("fubarbaz")
         assert await client.set("bar", "fubar")
         assert await lib.default_get("bar", "fu", "bar", "baz") == _s("fubar")
+        assert await lib.default_get_int("int", "1", "2", "3") == 123
+        assert await client.set("int", "10")
+        assert await lib.default_get_int("int", "1", "2", "3") == 10
         await client.hset("hbar", {"fu": "whut?"})
         assert await lib.hmmerge("hbar", fu="bar", bar="fu", baz="fubar") == [
             _s("whut?"),
@@ -259,3 +294,25 @@ class TestLibrary:
 
         assert fcall.call_count == 0
         assert fcall_ro.call_count == 2
+
+    async def test_pipeline_execution(self, client, simple_library, _s):
+        class Coredis(Library):
+            def __init__(self, client):
+                super().__init__(client, "coredis")
+
+            @wraps()
+            def default_get(
+                self, key: KeyT, *values: RedisValueT
+            ) -> CommandRequest[RedisValueT]: ...
+            @wraps(function_name="default_get", callback=lambda value: int(value))
+            def default_int_get(
+                self, key: KeyT, *values: RedisValueT
+            ) -> CommandRequest[RedisValueT]: ...
+
+        async with client.pipeline() as pipeline:
+            lib = await Coredis(pipeline)
+            r1 = lib.default_get("bar", "fu", "bar")
+            r2 = lib.default_int_get("bar", 1, 2)
+
+        assert await r1 == _s("fubar")
+        assert await r2 == 12

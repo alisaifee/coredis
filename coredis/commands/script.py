@@ -9,9 +9,10 @@ from typing import TYPE_CHECKING, Any, cast, get_args, overload
 from deprecated.sphinx import versionadded
 
 from coredis._utils import b
+from coredis.commands import CommandRequest, CommandResponseT
 from coredis.exceptions import NoScriptError
 from coredis.response._callbacks import NoopCallback
-from coredis.retry import ConstantRetryPolicy, retryable
+from coredis.retry import ConstantRetryPolicy
 from coredis.typing import (
     AnyStr,
     Awaitable,
@@ -24,7 +25,6 @@ from coredis.typing import (
     RedisValueT,
     ResponseType,
     StringT,
-    T_co,
     ValueT,
     add_runtime_checks,
     safe_beartype,
@@ -81,8 +81,8 @@ class Script(Generic[AnyStr]):
         args: Parameters[ValueT] | None = None,
         client: coredis.client.Client[AnyStr] | None = None,
         readonly: bool | None = None,
-        callback: Callable[..., T_co] = NoopCallback(),
-    ) -> Awaitable[T_co]:
+        callback: Callable[..., CommandResponseT] = NoopCallback(),
+    ) -> CommandRequest[CommandResponseT]:
         """
         Executes the script registered in :paramref:`Script.script` using
         :meth:`coredis.Redis.evalsha`. Additionally, if the script was not yet
@@ -94,6 +94,8 @@ class Script(Generic[AnyStr]):
         :param client: The redis client to use instead of :paramref:`Script.client`
         :param readonly: If ``True`` forces the script to be called with
          :meth:`coredis.Redis.evalsha_ro`
+        :param callback: a custom callback to call on the raw response from redis before
+         returning it.
         """
         from coredis.pipeline import Pipeline
 
@@ -111,12 +113,16 @@ class Script(Generic[AnyStr]):
 
         if isinstance(client, Pipeline):
             cast(Pipeline[AnyStr], client).scripts.add(self)
-            return method(self.sha, keys=keys, args=args, callback=callback)
+            return method(self.sha, keys=keys, args=args).transform(callback)
         else:
-            return retryable(
-                ConstantRetryPolicy((NoScriptError,), 1, 0),
-                failure_hook=lambda _: client.script_load(self.script),
-            )(method)(self.sha, keys=keys, args=args, callback=callback)
+            return (
+                method(self.sha, keys=keys, args=args)
+                .retry(
+                    ConstantRetryPolicy((NoScriptError,), 1, 0),
+                    lambda _: client.script_load(self.script),
+                )
+                .transform(callback)
+            )
 
     async def execute(
         self,
@@ -135,7 +141,7 @@ class Script(Generic[AnyStr]):
     @overload
     def wraps(
         self,
-        callback: None = None,
+        *,
         client_arg: str | None = ...,
         runtime_checks: bool = ...,
         readonly: bool = ...,
@@ -144,16 +150,18 @@ class Script(Generic[AnyStr]):
     @overload
     def wraps(
         self,
-        callback: Callable[..., T_co],
+        *,
+        callback: Callable[..., CommandResponseT],
         client_arg: str | None = ...,
         runtime_checks: bool = ...,
         readonly: bool = ...,
-    ) -> Callable[[Callable[P, Awaitable[Any]]], Callable[P, Awaitable[T_co]]]: ...
+    ) -> Callable[[Callable[P, Awaitable[Any]]], Callable[P, Awaitable[CommandResponseT]]]: ...
 
     @versionadded(version="3.5.0")
     def wraps(
         self,
-        callback: Callable[..., T_co] | None = None,
+        *,
+        callback: Callable[..., CommandResponseT] = NoopCallback(),
         client_arg: str | None = None,
         runtime_checks: bool = False,
         readonly: bool = False,
@@ -254,9 +262,8 @@ class Script(Generic[AnyStr]):
 
         :return: A function that has a signature mirroring the decorated function.
         """
-        callback = callback or NoopCallback()
 
-        def wrapper(func: Callable[P, Awaitable[Any]]) -> Callable[P, Awaitable[T_co]]:
+        def wrapper(func: Callable[P, Awaitable[Any]]) -> Callable[P, Awaitable[CommandResponseT]]:
             sig = inspect.signature(func)
             first_arg = list(sig.parameters.keys())[0]
             runtime_check_wrapper = add_runtime_checks if not runtime_checks else safe_beartype
@@ -318,7 +325,7 @@ class Script(Generic[AnyStr]):
             async def __inner(
                 *args: P.args,
                 **kwargs: P.kwargs,
-            ) -> T_co:
+            ) -> CommandResponseT:
                 keys, arguments, client = split_args(sig.bind(*args, **kwargs))
                 return await script_instance(keys, arguments, client, readonly, callback=callback)  # type: ignore
 

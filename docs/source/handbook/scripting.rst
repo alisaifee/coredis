@@ -35,6 +35,8 @@ invoked by calling it like a function. Script instances accept the following opt
   script. If client isn't specified, the client that initially
   created the :class:`coredis.commands.Script` instance (the one that :meth:`~coredis.Redis.register_script` was
   invoked from) will be used.
+* **callback**: A custom callback to call on the raw response from redis beforee
+  returning it.
 
 Continuing the example from above:
 
@@ -43,6 +45,8 @@ Continuing the example from above:
     await r.set('foo', 2)
     await multiply(keys=['foo'], args=[5])
     # 10
+    await multiple(keys=['foo'], args=[5], callback=lambda value: float(value))
+    # 10.0
 
 The value of key 'foo' is set to 2. When multiply is invoked, the 'foo' key is
 passed to the script along with the multiplier value of 5. LUA executes the
@@ -230,3 +234,12 @@ This can now be used as you would expect::
 
         await lib.hmmget("k1", "k2", a=1, b=2, c=3, d=4, e=5, f=6)
         # [b"10", b"20", b"30", b"40", b"5", b"6"]
+
+
+
+
+Libraries can also be used with pipelines::
+
+    async with coredis.Redis() as client:
+        async with client.pipeline() as pipeline:
+            lib = await MyLib(pipeline)

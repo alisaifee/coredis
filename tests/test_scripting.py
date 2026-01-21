@@ -186,6 +186,17 @@ class TestScripting:
         await client.delete(["key"])
         await default_get("key", "coredis") == "coredis"
 
+    async def test_wraps_function_with_callback(self, client):
+        script = client.register_script("return redis.call('GET', KEYS[1]) or ARGV[1]")
+
+        @script.wraps(callback=lambda value: int(value))
+        async def int_get(key: KeyT, default: RedisValueT) -> int: ...
+
+        await client.set("key", 1)
+        await int_get("key", 2) == 1
+        await client.delete(["key"])
+        await int_get("key", 2) == 2
+
     async def test_wraps_function_key_value_type_checking(self, client):
         script = client.register_script("return redis.call('GET', KEYS[1]) or ARGV[1]")
 

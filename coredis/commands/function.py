@@ -9,7 +9,7 @@ from typing import Any, ClassVar, cast, get_args, overload
 from deprecated.sphinx import versionadded
 
 from coredis._utils import EncodingInsensitiveDict, nativestr
-from coredis.commands.request import CommandRequest
+from coredis.commands.request import CommandRequest, CommandResponseT
 from coredis.exceptions import FunctionError
 from coredis.response._callbacks import NoopCallback
 from coredis.typing import (
@@ -24,7 +24,6 @@ from coredis.typing import (
     Parameters,
     R,
     StringT,
-    T_co,
     TypeVar,
     ValueT,
     add_runtime_checks,
@@ -142,7 +141,8 @@ class Library(Generic[AnyStr]):
 
 @overload
 def wraps(
-    callback: None = None,
+    *,
+    function_name: str | None = None,
     runtime_checks: bool = ...,
     readonly: bool = ...,
 ) -> Callable[[Callable[P, R]], Callable[P, CommandRequest[R]]]: ...
@@ -150,15 +150,19 @@ def wraps(
 
 @overload
 def wraps(
-    callback: Callable[..., T_co],
+    *,
+    function_name: str | None = None,
+    callback: Callable[..., CommandResponseT],
     runtime_checks: bool = ...,
     readonly: bool = ...,
-) -> Callable[[Callable[P, Any]], Callable[P, CommandRequest[T_co]]]: ...
+) -> Callable[[Callable[P, Any]], Callable[P, CommandRequest[CommandResponseT]]]: ...
 
 
 @versionadded(version="3.5.0")
 def wraps(
-    callback: Callable[..., T_co] | None = None,
+    *,
+    function_name: str | None = None,
+    callback: Callable[..., CommandResponseT] = NoopCallback(),
     runtime_checks: bool = False,
     readonly: bool = False,
 ) -> Callable[[Callable[P, Any]], Callable[P, CommandRequest[Any]]]:
@@ -266,6 +270,9 @@ def wraps(
             print(await res)
             # [b"1", b"2", b"3", b"4", b"-5"]
 
+    :param function_name: Optional name of the registered library function to map this
+     entrypoint to. If not provided, the name will be inferred from the method that the
+     decorator wraps
     :param callback: a custom callback to execute on the returned value. When provided,
      the callback's type will be inferred as the return type instead of the type from
      the stub.
@@ -277,9 +284,8 @@ def wraps(
 
     :return: A function that has a signature mirroring the decorated function.
     """
-    callback = callback or NoopCallback()
 
-    def wrapper(func: Callable[P, Any]) -> Callable[P, CommandRequest[T_co]]:
+    def wrapper(func: Callable[P, Any]) -> Callable[P, CommandRequest[CommandResponseT]]:
         sig = inspect.signature(func)
         first_arg: str = list(sig.parameters.keys())[0]
         runtime_check_wrapper = add_runtime_checks if not runtime_checks else safe_beartype
@@ -335,22 +341,12 @@ def wraps(
 
         @runtime_check_wrapper
         @functools.wraps(func)
-        def _inner(*args: P.args, **kwargs: P.kwargs) -> CommandRequest[T_co]:
+        def _inner(*args: P.args, **kwargs: P.kwargs) -> CommandRequest[CommandResponseT]:
+            name = function_name or func.__name__
             instance, keys, arguments = split_args(*args, **kwargs)
-            if (fn := instance.functions.get(func.__name__, None)) is None:
-                if not hasattr(instance.client, "clear"):
-                    raise AttributeError(
-                        f"Library {instance.name} has no registered function {func.__name__}"
-                    )
-                # for pipelines, optimistically assume the function is registered
-                if readonly:
-                    return instance.client.fcall_ro(
-                        func.__name__, keys or [], arguments or [], callback=callback
-                    )
-                return instance.client.fcall(
-                    func.__name__, keys or [], arguments or [], callback=callback
-                )
-            return fn(keys, arguments, readonly=readonly, callback=callback)
+            if (fn := instance.functions.get(name, None)) is None:
+                raise AttributeError(f"Library {instance.name} has no registered function {name}")
+            return fn(keys, arguments, readonly=readonly).transform(callback)
 
         return _inner
 
@@ -393,11 +389,11 @@ class Function(Generic[AnyStr]):
         self,
         keys: Parameters[KeyT] | None = None,
         args: Parameters[ValueT] | None = None,
-        callback: Callable[..., T_co] = NoopCallback(),
+        callback: Callable[..., CommandResponseT] = NoopCallback(),
         *,
         client: coredis.client.Client[AnyStr] | None = None,
         readonly: bool | None = None,
-    ) -> CommandRequest[T_co]:
+    ) -> CommandRequest[CommandResponseT]:
         """
         Wrapper to call :meth:`~coredis.Redis.fcall` with the
         function named :paramref:`Function.name` registered under
@@ -405,6 +401,8 @@ class Function(Generic[AnyStr]):
 
         :param keys: The keys this function will reference
         :param args: The arguments expected by the function
+        :param callback: a custom callback to call on the raw response from redis before
+         returning it.
         :param readonly: If ``True`` forces the function to use :meth:`coredis.Redis.fcall_ro`
         """
         if client is None:
@@ -413,6 +411,6 @@ class Function(Generic[AnyStr]):
             readonly = self.readonly
 
         if readonly:
-            return client.fcall_ro(self.name, keys or [], args or [], callback=callback)
+            return client.fcall_ro(self.name, keys or [], args or []).transform(callback)
         else:
-            return client.fcall(self.name, keys or [], args or [], callback=callback)
+            return client.fcall(self.name, keys or [], args or []).transform(callback)
