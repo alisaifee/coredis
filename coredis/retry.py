@@ -206,7 +206,7 @@ class CompositeRetryPolicy(RetryPolicy):
                         await failure_hook(e)
 
                 if will_retry:
-                    logger.info(f"Retry attempt {attempt} due to error: {e}")
+                    logger.info(f"Retry attempt {attempt + 1} due to error: {e}")
                     continue
 
                 raise e

@@ -14,7 +14,7 @@ from coredis.typing import (
     TypeVar,
 )
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("coredis")
 logger.addHandler(logging.NullHandler())
 
 T = TypeVar("T")
@@ -440,5 +440,6 @@ def hash_slot(key: bytes) -> int:
 
 __all__ = [
     "hash_slot",
+    "logger",
     "EncodingInsensitiveDict",
 ]
