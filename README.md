@@ -5,8 +5,8 @@
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/coredis.svg)](https://pypi.python.org/pypi/coredis/)
 
 > [!IMPORTANT]
-> The `master` branch contains the **coredis 6.x** codebase which is **not backward 
-> compatible** with 5.x. If you are looking for the **5.x** implementation, please 
+> The `master` branch contains the **coredis 6.x** codebase which is **not backward
+> compatible** with 5.x. If you are looking for the **5.x** implementation, please
 > refer to the [5.x branch](https://github.com/alisaifee/coredis/tree/5.x).
 
 # coredis
@@ -36,42 +36,57 @@ $ pip install coredis
 
 ## Getting started
 
-To start, you'll need to connect to your `Redis` instance:
+### Single node or cluster
 
 ```python
-import trio
-from coredis import Redis
+import anyio
+import coredis
 
-client = Redis(host='127.0.0.1', port=6379, db=0, decode_responses=True)
-async with client:
-    await client.flushdb()
-    await client.set('foo', 1)
-    assert await client.exists(['foo']) == 1
-    assert await client.incr('foo') == 2
-    assert await client.incrby('foo', increment=100) == 102
-    assert int(await client.get('foo') or 0) == 102
+async def main() -> None:
+    client = coredis.Redis(host='127.0.0.1', port=6379, db=0, decode_responses=True)
+    # or cluster
+    # client = coredis.RedisCluster(startup_nodes=[{"host": "127.0.0.1", "port": 6379}], decode_responses=True)
+    async with client:
+        await client.flushdb()
 
-    assert await client.expire('foo', 1)
-    await trio.sleep(0.1)
-    assert await client.ttl('foo') == 1
-    assert await client.pttl('foo') < 1000
-    await trio.sleep(1)
-    assert not await client.exists(['foo'])
+        await client.set("foo", 1)
+        assert await client.exists(["foo"]) == 1
+        assert await client.incr("foo") == 2
+        assert await client.expire("foo", 1)
+        await anyio.sleep(0.1)
+        assert await client.ttl("foo") == 1
+        await anyio.sleep(1)
+        assert not await client.exists(["foo"])
+
+        async with client.pipeline() as pipeline:
+            pipeline.incr("foo")
+            value = pipeline.get("foo")
+            pipeline.delete(["foo"])
+
+        assert await value == "1"
+
+anyio.run(main, backend="asyncio") # or trio
+
 ```
 
-Sentinel is also supported:
+### Sentinel
 
 ```python
-from coredis.sentinel import Sentinel
+import anyio
+import coredis
 
-sentinel = Sentinel(sentinels=[("localhost", 26379)])
-async with sentinel:
-    primary = sentinel.primary_for("myservice")
-    replica = sentinel.replica_for("myservice")
+async def main() -> None:
+    sentinel = coredis.Sentinel(sentinels=[("localhost", 26379)])
+    async with sentinel:
+        primary: coredis.Redis  = sentinel.primary_for("myservice")
+        replica: coredis.Redis  = sentinel.replica_for("myservice")
 
-    async with primary, replica:
-        assert await primary.set("fubar", 1)
-        assert int(await replica.get("fubar")) == 1
+        async with primary, replica:
+            assert await primary.set("fubar", 1)
+            assert int(await replica.get("fubar")) == 1
+
+anyio.run(main, backend="asyncio") # or trio
+
 ```
 
 ## Compatibility
@@ -112,3 +127,4 @@ coredis is additionally tested against:
 - [Documentation (Latest)](http://coredis.readthedocs.org/en/latest)
 - [Changelog](http://coredis.readthedocs.org/en/stable/release_notes.html)
 - [Project History](http://coredis.readthedocs.org/en/stable/history.html)
+
