@@ -836,22 +836,6 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
         self.watches.clear()
         self.explicit_transaction = False
 
-    #: :meta private:
-    reset_pipeline = clear
-
-    @deprecated(
-        "The reset method in pipelines clashes with the redis ``RESET`` command. Use :meth:`clear` instead",
-        "5.0.0",
-    )
-    def reset(self) -> CommandRequest[None]:
-        """
-        Empties the pipeline and resets / returns the connection
-        back to the pool
-
-        :meta private:
-        """
-        return self.clear()  # type: ignore
-
     @retryable(policy=ConstantRetryPolicy((ClusterDownError,), 3, 0.1))
     async def send_cluster_transaction(self, raise_on_error: bool = True) -> tuple[object, ...]:
         """
