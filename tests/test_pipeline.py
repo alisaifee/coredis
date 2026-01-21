@@ -3,16 +3,11 @@ from __future__ import annotations
 from decimal import Decimal
 
 import pytest
-from anyio import move_on_after
 
 from coredis._concurrency import gather
 from coredis.client.basic import Redis
 from coredis.commands.request import CommandRequest
-from coredis.exceptions import (
-    AuthorizationError,
-    ResponseError,
-    WatchError,
-)
+from coredis.exceptions import AuthorizationError, ResponseError, TimeoutError, WatchError
 from coredis.pipeline import Pipeline
 from coredis.typing import Serializable
 from tests.conftest import targets
@@ -194,11 +189,10 @@ class TestPipeline:
 
     async def test_pipeline_timeout(self, client: Redis[str]):
         await client.hset("hash", {str(i): bytes(1024) for i in range(1024)})
-        with move_on_after(0.01) as scope:
-            async with client.pipeline() as pipe:
+        with pytest.raises(TimeoutError):
+            async with client.pipeline(timeout=0.01) as pipe:
                 for _ in range(20):
                     pipe.hgetall("hash")
-        assert scope.cancelled_caught
 
         async with client.pipeline(timeout=5) as pipe:
             for _ in range(20):

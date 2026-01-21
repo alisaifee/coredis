@@ -16,7 +16,7 @@ from anyio import (
     CancelScope,
     ClosedResourceError,
     Event,
-    Lock,
+    WouldBlock,
     connect_tcp,
     connect_unix,
     create_memory_object_stream,
@@ -227,9 +227,7 @@ class BaseConnection:
         self._connected = False
 
         self._requests: deque[Request] = deque()
-        self._flush_needed = Event()
-        self._write_buffer: list[bytes] = []
-        self._write_lock = Lock()
+        self._buffer_in, self._buffer_out = create_memory_object_stream[list[bytes]](math.inf)
         self._connection_cancel_scope: CancelScope | None = None
 
     def __repr__(self) -> str:
@@ -278,10 +276,15 @@ class BaseConnection:
         retry = ExponentialBackoffRetryPolicy(RETRYABLE, 3, 0.5)
         self._connection = await retry.call_with_retries(self._connect)
         try:
-            async with self.connection, self._parser.push_messages, create_task_group() as tg:
+            async with (
+                self.connection,
+                self._buffer_out,
+                self._receive_messages,
+                create_task_group() as tg,
+            ):
                 self._connection_cancel_scope = tg.cancel_scope
-                tg.start_soon(self._listen_for_responses)
-                tg.start_soon(self._flush_loop)
+                tg.start_soon(self.listen_for_responses)
+                tg.start_soon(self.flush_loop)
                 # setup connection
                 await self.on_connect()
                 # run any user callbacks. right now the only internal callback
@@ -321,7 +324,7 @@ class BaseConnection:
         if self._connection_cancel_scope:
             self._connection_cancel_scope.cancel(reason)
 
-    async def _listen_for_responses(self) -> None:
+    async def listen_for_responses(self) -> None:
         """
         Listen on the socket and run the parser, completing pending requests in
         FIFO order.
@@ -347,20 +350,23 @@ class BaseConnection:
                 else:
                     request.resolve(response)
 
-    async def _flush_loop(self) -> None:
+    async def flush_loop(self) -> None:
+        """
+        Continually empty the buffer and send the data to the server.
+        """
         while True:
-            await self._flush_needed.wait()
-            self._flush_needed = Event()
-            if self._write_buffer:
+            data = await self._buffer_out.receive()
+            if len(self._requests) > 1:
                 # multiple pending requests -> more likely to benefit from batching
                 # if we do this always, sequential performance takes a hit.
                 # if we never do it, concurrent performance takes a hit.
-                if len(self._requests) > 1:
-                    await sleep(0.001)
-                async with self._write_lock:
-                    batch = self._write_buffer
-                    self._write_buffer = []
-                    await self._send_packed_command(batch, timeout=self._stream_timeout)
+                await sleep(1e-3)
+            while True:
+                try:
+                    data.extend(self._buffer_out.receive_nowait())
+                except WouldBlock:
+                    break
+            await self._send_packed_command(data, timeout=self._stream_timeout)
 
     async def update_tracking_client(self, enabled: bool, client_id: int | None = None) -> bool:
         """
@@ -483,7 +489,7 @@ class BaseConnection:
         self, command: list[bytes], timeout: float | None = None
     ) -> None:
         """
-        Sends an already packed command to the Redis server
+        Sends packed command(s) to the Redis server
         """
         with fail_after(timeout):
             data = b"".join(command)
@@ -494,18 +500,6 @@ class BaseConnection:
                 self._connection = None
                 raise ConnectionError(f"Failed to send data: {data.decode()}!") from err
 
-    async def send_pubsub_command(
-        self,
-        command: bytes,
-        *args: RedisValueT,
-    ) -> None:
-        """
-        Send a command to the redis server. NEVER use this for commands that expect
-        responses.
-        """
-        async with self._write_lock:
-            await self._send_packed_command(self.packer.pack_command(command, *args))
-
     def create_request(
         self,
         command: bytes,
@@ -514,6 +508,7 @@ class BaseConnection:
         decode: RedisValueT | None = None,
         encoding: str | None = None,
         raise_exceptions: bool = True,
+        timeout: float | None = None,
         disconnect_on_cancellation: bool = False,
     ) -> Request:
         """
@@ -523,13 +518,14 @@ class BaseConnection:
         if self.is_connected and noreply and not self.noreply:
             cmd_list = self.packer.pack_command(CommandName.CLIENT_REPLY, PureToken.SKIP)
         cmd_list.extend(self.packer.pack_command(command, *args))
+        request_timeout: float | None = timeout or self._stream_timeout
         request = Request(
             proxy(self),
             command,
             bool(decode) if decode is not None else self.decode_responses,
             encoding or self.encoding,
             raise_exceptions,
-            self._stream_timeout,
+            request_timeout,
             disconnect_on_cancellation,
         )
         # modifying buffer and requests should happen atomically
@@ -537,19 +533,20 @@ class BaseConnection:
             self._requests.append(request)
         else:
             request.resolve(None)
-        self._write_buffer.extend(cmd_list)
-        self._flush_needed.set()
+        self._buffer_in.send_nowait(cmd_list)
         return request
 
     def create_requests(
         self,
         commands: list[CommandInvocation],
         raise_exceptions: bool = True,
+        timeout: float | None = None,
         disconnect_on_cancellation: bool = False,
     ) -> list[Request]:
         """
         Queue multiple commands to send to the server
         """
+        request_timeout: float | None = timeout or self._stream_timeout
         requests = [
             Request(
                 proxy(self),
@@ -557,15 +554,14 @@ class BaseConnection:
                 bool(cmd.decode) if cmd.decode is not None else self.decode_responses,
                 cmd.encoding or self.encoding,
                 raise_exceptions,
-                self._stream_timeout,
+                request_timeout,
                 disconnect_on_cancellation,
             )
             for cmd in commands
         ]
         packed = self.packer.pack_commands([(cmd.command, *cmd.args) for cmd in commands])
-        self._write_buffer.extend(packed)
+        self._buffer_in.send_nowait(packed)
         self._requests.extend(requests)
-        self._flush_needed.set()
         return requests
 
 

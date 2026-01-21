@@ -261,7 +261,7 @@ class NodeCommands(AsyncContextManagerMixin):
         # Batch all commands into a single request for efficiency.
         try:
             if self.in_transaction:
-                self.multi_cmd = connection.create_request(CommandName.MULTI)
+                self.multi_cmd = connection.create_request(CommandName.MULTI, timeout=self.timeout)
             requests = connection.create_requests(
                 [
                     CommandInvocation(
@@ -276,9 +276,10 @@ class NodeCommands(AsyncContextManagerMixin):
                     )
                     for cmd in commands
                 ],
+                timeout=self.timeout,
             )
             if self.in_transaction:
-                self.exec_cmd = connection.create_request(CommandName.EXEC)
+                self.exec_cmd = connection.create_request(CommandName.EXEC, timeout=self.timeout)
             for i, cmd in enumerate(commands):
                 cmd.response = requests[i]
         except (ConnectionError, TimeoutError) as e:
@@ -511,6 +512,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
                 for cmd in commands
             ]
             + [CommandInvocation(CommandName.EXEC, (), None, None)],
+            timeout=self.timeout,
         )
 
         errors: list[tuple[int, RedisError | None]] = []
@@ -584,6 +586,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
                 )
                 for cmd in commands
             ],
+            timeout=self.timeout,
         )
         for i, cmd in enumerate(commands):
             cmd.response = requests[i]

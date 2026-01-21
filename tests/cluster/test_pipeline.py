@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-from anyio import move_on_after
 
 from coredis._concurrency import gather
 from coredis.exceptions import (
@@ -12,6 +11,7 @@ from coredis.exceptions import (
     ClusterTransactionError,
     RedisClusterException,
     ResponseError,
+    TimeoutError,
     WatchError,
 )
 from coredis.pipeline import ClusterPipeline
@@ -274,11 +274,10 @@ class TestPipeline:
 
     async def test_pipeline_timeout(self, client):
         await client.hset("hash", {str(i): bytes(1024) for i in range(1024)})
-        with move_on_after(0.01) as scope:
-            async with client.pipeline() as pipeline:
+        with pytest.raises(TimeoutError):
+            async with client.pipeline(timeout=0.01) as pipeline:
                 for _ in range(20):
                     pipeline.hgetall("hash")
-        assert scope.cancelled_caught
         async with client.pipeline(timeout=5) as pipeline:
             for _ in range(20):
                 pipeline.hgetall("hash")
