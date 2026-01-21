@@ -97,7 +97,7 @@ class Script(Generic[AnyStr]):
         :param callback: a custom callback to call on the raw response from redis before
          returning it.
         """
-        from coredis.pipeline import Pipeline
+        from coredis.pipeline import ClusterPipeline, Pipeline
 
         if client is None:
             client = self.registered_client
@@ -111,7 +111,7 @@ class Script(Generic[AnyStr]):
 
         method = client.evalsha_ro if readonly else client.evalsha
 
-        if isinstance(client, Pipeline):
+        if isinstance(client, (ClusterPipeline, Pipeline)):
             cast(Pipeline[AnyStr], client).scripts.add(self)
             return method(self.sha, keys=keys, args=args).transform(callback)
         else:

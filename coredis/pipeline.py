@@ -441,7 +441,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         Clear the pipeline and reset state.
         """
         self.command_stack.clear()
-        self.scripts = set()
+        self.scripts.clear()
         # Reset connection state if we were watching something.
         if self.watches and self._connection:
             await (await self._connection.create_request(CommandName.UNWATCH, decode=False))
@@ -650,8 +650,6 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         # make sure all scripts that are about to be run on this pipeline exist
         scripts = list(self.scripts)
         shas = [s.sha for s in scripts]
-        # we can't use the normal script_* methods because they would just
-        # get buffered in the pipeline.
         exists = await self.immediate_execute_command(
             RedisCommand(CommandName.SCRIPT_EXISTS, tuple(shas)), callback=BoolsCallback()
         )
@@ -733,6 +731,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
         self.watches: list[KeyT] = []
         self.explicit_transaction = False
         self.cache = None
+        self.scripts: set[Script[AnyStr]] = set()
         self.timeout = timeout
         self.type_adapter = client.type_adapter
 
@@ -817,7 +816,8 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
         if not self.command_stack:
             return ()
-
+        if self.scripts:
+            await self.load_scripts()
         if self._transaction or self.explicit_transaction:
             execute = self.send_cluster_transaction
         else:
@@ -829,10 +829,10 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
 
     async def clear(self) -> None:
         """
-        Clear the pipeline, reset state, and release any held connections.
+        Clear the pipeline and reset state.
         """
         self.command_stack = []
-        self.scripts: set[Script[AnyStr]] = set()
+        self.scripts.clear()
         self.watches.clear()
         self.explicit_transaction = False
 
@@ -984,5 +984,16 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
             raise ClusterCrossSlotError(command=command, keys=keys)
         return slots.pop()
 
-    def load_scripts(self) -> None:
-        raise RedisClusterException("method load_scripts() is not implemented")
+    async def load_scripts(self) -> None:
+        shas = [s.sha for s in self.scripts]
+        exists = await self.client.execute_command(
+            RedisCommand(CommandName.SCRIPT_EXISTS, tuple(shas)), callback=BoolsCallback()
+        )
+
+        if not all(exists):
+            for s, exist in zip(self.scripts, exists):
+                if not exist:
+                    s.sha = await self.client.execute_command(
+                        RedisCommand(CommandName.SCRIPT_LOAD, (s.script,)),
+                        callback=AnyStrCallback[AnyStr](),
+                    )

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from coredis._concurrency import gather
 from coredis.exceptions import (
     NoScriptError,
     NotBusyError,
@@ -31,6 +32,11 @@ local message = cmsgpack.unpack(ARGV[1])
 local names = message['name']
 return "hello " .. name
 """
+
+
+@pytest.fixture(autouse=True)
+async def flush_scripts(client):
+    await client.script_flush()
 
 
 @targets("redis_cluster")
@@ -132,3 +138,31 @@ class TestScripting:
         assert await client.script_exists([multiply.sha]) == (True,)
         # test first evalsha
         assert await multiply(keys=["a"], args=[3]) == 6
+
+    async def test_script_object_in_pipeline(self, client):
+        multiply = client.register_script(multiply_script)
+        precalculated_sha = multiply.sha
+        assert precalculated_sha
+        async with client.pipeline() as pipe:
+            a = pipe.set("a", "2")
+            b = pipe.get("a")
+            c = multiply(keys=["a"], args=[3], client=pipe)
+            assert await client.script_exists([multiply.sha]) == (False,)
+        # [SET worked, GET 'a', result of multiple script]
+        assert await gather(a, b, c) == (True, "2", 6)
+        # The script should have been loaded by pipe.execute()
+        assert await client.script_exists([multiply.sha]) == (True,)
+        # The precalculated sha should have been the correct one
+        assert multiply.sha == precalculated_sha
+
+        # purge the script from redis's cache and re-run the pipeline
+        # the multiply script should be reloaded by pipe.execute()
+        await client.script_flush()
+        async with client.pipeline() as pipe:
+            a = pipe.set("a", "2")
+            b = pipe.get("a")
+            c = multiply(keys=["a"], args=[3], client=pipe)
+            assert await client.script_exists([multiply.sha]) == (False,)
+        # [SET worked, GET 'a', result of multiple script]
+        assert await gather(a, b, c) == (True, "2", 6)
+        assert await client.script_exists([multiply.sha]) == (True,)
