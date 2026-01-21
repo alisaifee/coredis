@@ -9,7 +9,6 @@ from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, cast
 
 from anyio import AsyncContextManagerMixin, sleep
-from deprecated.sphinx import deprecated
 
 from coredis._utils import b, hash_slot, nativestr
 from coredis.client import Client, RedisCluster
