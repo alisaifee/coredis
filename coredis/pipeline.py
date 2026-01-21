@@ -17,11 +17,7 @@ from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName, NodeFlag
 from coredis.commands.request import TransformedResponse, is_type_like
 from coredis.commands.script import Script
-from coredis.connection import (
-    BaseConnection,
-    CommandInvocation,
-    Request,
-)
+from coredis.connection import BaseConnection, CommandInvocation, Request
 from coredis.exceptions import (
     AskError,
     ClusterCrossSlotError,
@@ -258,7 +254,7 @@ class NodeCommands(AsyncContextManagerMixin):
             self.connection = self._connection
             yield
 
-    async def write(self) -> None:
+    def write(self) -> None:
         connection = self.connection
         commands = self.commands
 
@@ -269,10 +265,8 @@ class NodeCommands(AsyncContextManagerMixin):
         # Batch all commands into a single request for efficiency.
         try:
             if self.in_transaction:
-                self.multi_cmd = await connection.create_request(
-                    CommandName.MULTI, timeout=self.timeout
-                )
-            requests = await connection.create_requests(
+                self.multi_cmd = connection.create_request(CommandName.MULTI, timeout=self.timeout)
+            requests = connection.create_requests(
                 [
                     CommandInvocation(
                         cmd.name,
@@ -289,9 +283,7 @@ class NodeCommands(AsyncContextManagerMixin):
                 timeout=self.timeout,
             )
             if self.in_transaction:
-                self.exec_cmd = await connection.create_request(
-                    CommandName.EXEC, timeout=self.timeout
-                )
+                self.exec_cmd = connection.create_request(CommandName.EXEC, timeout=self.timeout)
             for i, cmd in enumerate(commands):
                 cmd.response = requests[i]
         except (ConnectionError, TimeoutError) as e:
@@ -443,7 +435,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         self.scripts.clear()
         # Reset connection state if we were watching something.
         if self.watches and self._connection:
-            await (await self._connection.create_request(CommandName.UNWATCH, decode=False))
+            await self._connection.create_request(CommandName.UNWATCH, decode=False)
         self.watches.clear()
         self.explicit_transaction = False
 
@@ -487,7 +479,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         :meta private:
         """
         assert self._connection
-        request = await self._connection.create_request(
+        request = self._connection.create_request(
             command.name, *command.arguments, decode=kwargs.get("decode")
         )
         return callback(await request)
@@ -508,7 +500,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         connection: BaseConnection,
         commands: list[PipelineCommandRequest[Any]],
     ) -> tuple[Any, ...]:
-        requests = await connection.create_requests(
+        requests = connection.create_requests(
             [CommandInvocation(CommandName.MULTI, (), None, None)]
             + [
                 CommandInvocation(
@@ -584,7 +576,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         self, connection: BaseConnection, commands: list[PipelineCommandRequest[Any]]
     ) -> tuple[Any, ...]:
         # build up all commands into a single request to increase network perf
-        requests = await connection.create_requests(
+        requests = connection.create_requests(
             [
                 CommandInvocation(
                     cmd.name,
@@ -760,11 +752,11 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
         async with self.connection_pool.acquire(
             node=self._watched_node
         ) as self._watched_connection:
-            await (await self._watched_connection.create_request(CommandName.WATCH, *keys))
+            await self._watched_connection.create_request(CommandName.WATCH, *keys)
             self.explicit_transaction = True
             yield
             await self._execute()
-            await (await self._watched_connection.create_request(CommandName.UNWATCH, decode=False))
+            await self._watched_connection.create_request(CommandName.UNWATCH, decode=False)
 
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
@@ -865,13 +857,12 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
         node_commands.extend(attempt)
         self.explicit_transaction = True
         async with node_commands:
-            await node_commands.write()
+            node_commands.write()
             try:
                 await node_commands.read()
             except ExecAbortError:
                 if self.explicit_transaction:
-                    request = await node_commands.connection.create_request(CommandName.DISCARD)
-                    await request
+                    await node_commands.connection.create_request(CommandName.DISCARD)
             # If at least one watched key is modified before EXEC, the transaction aborts and EXEC returns null.
 
             if node_commands.exec_cmd and await node_commands.exec_cmd is None:
@@ -915,7 +906,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
         # Write to all nodes, then read from all nodes in sequence.
         for n in nodes.values():
             async with n:
-                await n.write()
+                n.write()
                 await n.read()
 
         # Retry MOVED/ASK/connection errors one by one if allowed.

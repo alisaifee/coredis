@@ -268,12 +268,9 @@ class Client(
         wait_request = None
         aof_request = None
         if wait and wait[0] > 0:
-            wait_request = await connection.create_request(CommandName.WAIT, *wait, decode=False)
-
+            wait_request = connection.create_request(CommandName.WAIT, *wait, decode=False)
         if waitaof and waitaof[0] > 0:
-            aof_request = await connection.create_request(
-                CommandName.WAITAOF, *waitaof, decode=False
-            )
+            aof_request = connection.create_request(CommandName.WAITAOF, *waitaof, decode=False)
         if wait_request and wait:
             wait_result = await wait_request
             if not cast(int, wait_result) >= wait[0]:
@@ -975,7 +972,7 @@ class Redis(Client[AnyStr]):
                     except KeyError:
                         pass
             if not (use_cached and cached_reply):
-                request = await connection.create_request(
+                request = connection.create_request(
                     command.name,
                     *command.arguments,
                     noreply=self.noreply,

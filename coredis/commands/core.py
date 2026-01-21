@@ -6872,7 +6872,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Returns information about the current client connection.
         """
-
         return self.create_request(CommandName.CLIENT_INFO, callback=ClientInfoCallback())
 
     @versionadded(version="3.0.0")

@@ -170,7 +170,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
     async def _keepalive(self) -> None:
         while True:
-            await self.connection.send_command(CommandName.PING)
+            self.connection.create_request(CommandName.PING, noreply=True)
             await sleep(15)
 
     async def _consumer(self) -> None:
@@ -280,15 +280,13 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
         return value
 
-    async def execute_command(
-        self, command: bytes, *args: RedisValueT, **options: RedisValueT
-    ) -> None:
+    async def execute_command(self, command: bytes, *args: RedisValueT) -> None:
         """
         Executes a publish/subscribe command
 
         :meta private:
         """
-        await self.connection.send_command(command, *args)
+        await self.connection.create_request(command, *args, noreply=True)
 
     async def parse_response(
         self, block: bool = True, timeout: float | None = None
@@ -571,16 +569,15 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         """
         raise NotImplementedError("Sharded PubSub does not support subscription by pattern")
 
-    async def execute_command(
-        self, command: bytes, *args: RedisValueT, **options: RedisValueT
-    ) -> None:
+    async def execute_command(self, command: bytes, *args: RedisValueT) -> None:
         assert isinstance(args[0], (bytes, str))
         channel = nativestr(args[0])
         slot = hash_slot(b(channel))
         node = self.connection_pool.nodes.node_from_slot(slot)
         if node and node.node_id:
             key = node.node_id
-            return await self.shard_connections[key].send_command(command, *args)
+            await self.shard_connections[key].create_request(command, *args, noreply=True)
+            return
         raise PubSubError(f"Unable to determine shard for channel {args[0]!r}")
 
     @asynccontextmanager
@@ -627,9 +624,8 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                     if not started:
                         task_status.started()
                         started = True
-                    else:  # resubscribe
-                        if self.channels:
-                            await self.subscribe(*self.channels.keys())
+                    elif self.channels:  # resubscribe
+                        await self.subscribe(*self.channels.keys())
                 break
 
     async def _shard_listener(self, connection: BaseConnection) -> None:

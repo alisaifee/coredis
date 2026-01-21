@@ -923,10 +923,7 @@ class RedisCluster(
             )
             try:
                 if asking:
-                    request = await r.create_request(
-                        CommandName.ASKING, noreply=self.noreply, decode=False
-                    )
-                    await request
+                    await r.create_request(CommandName.ASKING, noreply=self.noreply, decode=False)
                     asking = False
                 keys = KeySpec.extract_keys(command.name, *command.arguments)
                 cacheable = (
@@ -962,7 +959,7 @@ class RedisCluster(
                             pass
 
                 if not (use_cached and cached_reply):
-                    request = await r.create_request(
+                    request = r.create_request(
                         command.name,
                         *command.arguments,
                         noreply=self.noreply,
