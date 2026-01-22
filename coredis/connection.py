@@ -23,7 +23,7 @@ from anyio import (
     get_cancelled_exc_class,
     move_on_after,
 )
-from anyio.abc import ByteStream, SocketAttribute, TaskStatus
+from anyio.abc import ByteStream, SocketAttribute, TaskGroup, TaskStatus
 from exceptiongroup import BaseExceptionGroup, catch
 from typing_extensions import override
 
@@ -213,6 +213,7 @@ class BaseConnection:
         self.noevict = noevict
         self.notouch = notouch
 
+        self._task_group: TaskGroup | None = None
         # The actual connection to the server
         self._connection: ByteStream | None = None
         # Memory object stream that collects any unread push message types
@@ -277,9 +278,15 @@ class BaseConnection:
 
     async def run(self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
         """
-        Establish a connnection to the redis server
-        and initiate any post connect callbacks.
+        Establish a connection to the redis server and initiate any post connect callbacks.
+
+        .. note:: This method can only be called once for an :class:`~coredis.connection.BaseConnection`
+           instance. Once the connection closes either due to cancellation or errors it should be
+           discarded.
+
         """
+        if self._task_group:
+            raise RuntimeError("Connection cannot be reused")
 
         retry = ExponentialBackoffRetryPolicy(RETRYABLE, 3, 0.5)
         self._connection = await retry.call_with_retries(self._connect)
@@ -302,12 +309,11 @@ class BaseConnection:
                     self._write_buffer_out,
                     self._push_message_buffer_in,
                     self._push_message_buffer_out,
-                    create_task_group() as tg,
+                    create_task_group() as self._task_group,
                 ):
                     self._connected = True
-                    self._connection_cancel_scope = tg.cancel_scope
-                    tg.start_soon(self._reader_task)
-                    tg.start_soon(self._writer_task)
+                    self._task_group.start_soon(self._reader_task)
+                    self._task_group.start_soon(self._writer_task)
                     # setup connection
                     await self.on_connect()
                     # run any user callbacks. right now the only internal callback
@@ -318,15 +324,12 @@ class BaseConnection:
                             await task
                     task_status.started()
         finally:
+            self._connection, self._connected = None, False
             disconnect_exc = self._last_error or ConnectionError("Connection lost!")
-            # TODO: This isn't sufficient to reset the state of the parser to
-            #  be reusable since the memory object stream it's tied to is now
-            #  closed.
             self._parser.on_disconnect()
             while self._requests:
                 request = self._requests.popleft()
                 request.fail(disconnect_exc)
-            self._connection, self._connected, self._connection_cancel_scope = None, False, None
 
     def terminate(self, reason: str | None = None) -> None:
         """
@@ -334,8 +337,8 @@ class BaseConnection:
 
         :meta private:
         """
-        if self._connection_cancel_scope:
-            self._connection_cancel_scope.cancel(reason)
+        if self._task_group:
+            self._task_group.cancel_scope.cancel(reason)
 
     async def _reader_task(self) -> None:
         """
