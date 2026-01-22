@@ -279,7 +279,7 @@ class BaseConnection:
             async with (
                 self.connection,
                 self._buffer_out,
-                self._receive_messages,
+                self._parser.push_messages,
                 create_task_group() as tg,
             ):
                 self._connection_cancel_scope = tg.cancel_scope
