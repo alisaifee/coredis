@@ -14,7 +14,6 @@ from weakref import ProxyType, proxy
 from anyio import (
     TASK_STATUS_IGNORED,
     CancelScope,
-    ClosedResourceError,
     Event,
     WouldBlock,
     connect_tcp,
@@ -202,33 +201,41 @@ class BaseConnection:
         self.decode_responses = decode_responses
         self.server_version: str | None = None
         self.client_name = client_name
-        #: id for this connection as returned by the redis server
+        # id for this connection as returned by the redis server
         self.client_id: int | None = None
-        #: client id that the redis server should send any redirected notifications to
+        # client id that the redis server should send any redirected notifications to
         self.tracking_client_id: int | None = None
 
-        self._connection: ByteStream | None = None
-        #: Queue that collects any unread push message types
-        push_messages, self._receive_messages = create_memory_object_stream[list[ResponseType]](
-            math.inf
-        )
-        self._parser = Parser(push_messages)
-        self.packer: Packer = Packer(self.encoding)
+        # maximum time to wait for data from the server before
+        # closing the connection
         self.max_idle_time = max_idle_time
 
         self.noreply = noreply
         self.noreply_set = False
-
         self.noevict = noevict
         self.notouch = notouch
 
-        self.needs_handshake = True
-        self._last_error: BaseException | None = None
-        self._connected = False
+        # The actual connection to the server
+        self._connection: ByteStream | None = None
+        # Memory object stream that collects any unread push message types
+        push_messages, self._receive_messages = create_memory_object_stream[list[ResponseType]](
+            math.inf
+        )
+        self._parser = Parser(push_messages)
+
+        self.packer: Packer = Packer(self.encoding)
 
         self._requests: deque[Request] = deque()
         self._buffer_in, self._buffer_out = create_memory_object_stream[list[bytes]](math.inf)
         self._connection_cancel_scope: CancelScope | None = None
+
+        # whether the `HELLO` handshake needs to be performed
+        self._needs_handshake = True
+
+        # Error flags
+        self._last_error: BaseException | None = None
+        self._connected = False
+        self._transport_failed = False
 
     def __repr__(self) -> str:
         return self.describe(self._description_args())
@@ -253,7 +260,7 @@ class BaseConnection:
         Whether the connection is established and initial handshakes were
         performed without error
         """
-        return self._connected
+        return self._connected and not self._transport_failed
 
     def register_connect_callback(
         self,
@@ -341,7 +348,11 @@ class BaseConnection:
             if isinstance(response, NotEnoughData):
                 # Need more bytes; read once, feed, and retry
                 with fail_after(self.max_idle_time):
-                    data = await self.connection.receive()
+                    try:
+                        data = await self.connection.receive()
+                    except Exception:
+                        self._transport_failed = True
+                        raise
                     self._parser.feed(data)
                 continue  # loop back and try parsing again
 
@@ -405,7 +416,7 @@ class BaseConnection:
         await self.create_request(b"AUTH", *params, decode=False)
 
     async def perform_handshake(self) -> None:
-        if not self.needs_handshake:
+        if not self._needs_handshake:
             return
 
         hello_command_args: list[int | str | bytes] = [3]
@@ -443,7 +454,7 @@ class BaseConnection:
                     b"LIB-VER",
                     coredis.__version__,
                 )
-            self.needs_handshake = False
+            self._needs_handshake = False
         except AuthenticationRequiredError:
             await self.try_legacy_auth()
             self.server_version = None
@@ -498,10 +509,9 @@ class BaseConnection:
             data = b"".join(command)
             try:
                 await self.connection.send(data)
-            except ClosedResourceError as err:
-                self._last_error = err
-                self._connection = None
-                raise ConnectionError(f"Failed to send data: {data.decode()}!") from err
+            except Exception:
+                self._transport_failed = True
+                raise
 
     def create_request(
         self,
