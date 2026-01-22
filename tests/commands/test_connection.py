@@ -192,7 +192,7 @@ class TestConnection:
             clone_id = (await clone.client_info())["id"]
             assert await client.client_kill(identifier=clone_id) > 0
             with pytest.raises(ResponseError, match="No such user"):
-                await client.client_kill(user="noexist") == 0
+                await client.client_kill(user="noexist")
 
             clone_addr = (await clone.client_info())["addr"]
             assert await client.client_kill(addr=clone_addr) == 1
