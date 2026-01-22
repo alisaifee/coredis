@@ -15,7 +15,6 @@ from anyio import (
     TASK_STATUS_IGNORED,
     CancelScope,
     Event,
-    WouldBlock,
     connect_tcp,
     connect_unix,
     create_memory_object_stream,
@@ -23,7 +22,6 @@ from anyio import (
     fail_after,
     get_cancelled_exc_class,
     move_on_after,
-    sleep,
 )
 from anyio.abc import ByteStream, SocketAttribute, TaskStatus
 from exceptiongroup import BaseExceptionGroup, catch
@@ -303,8 +301,8 @@ class BaseConnection:
                 ):
                     self._connected = True
                     self._connection_cancel_scope = tg.cancel_scope
-                    tg.start_soon(self.listen_for_responses)
-                    tg.start_soon(self.flush_loop)
+                    tg.start_soon(self._reader_task)
+                    tg.start_soon(self._writer_task)
                     # setup connection
                     await self.on_connect()
                     # run any user callbacks. right now the only internal callback
@@ -334,7 +332,7 @@ class BaseConnection:
         if self._connection_cancel_scope:
             self._connection_cancel_scope.cancel(reason)
 
-    async def listen_for_responses(self) -> None:
+    async def _reader_task(self) -> None:
         """
         Listen on the socket and run the parser, completing pending requests in
         FIFO order.
@@ -364,23 +362,22 @@ class BaseConnection:
                 else:
                     request.resolve(response)
 
-    async def flush_loop(self) -> None:
+    async def _writer_task(self) -> None:
         """
         Continually empty the buffer and send the data to the server.
         """
         while True:
-            data = await self._buffer_out.receive()
+            requests = await self._buffer_out.receive()
             if len(self._requests) > 1:
-                # multiple pending requests -> more likely to benefit from batching
-                # if we do this always, sequential performance takes a hit.
-                # if we never do it, concurrent performance takes a hit.
-                await sleep(1e-3)
-            while True:
-                try:
-                    data.extend(self._buffer_out.receive_nowait())
-                except WouldBlock:
-                    break
-            await self._send_packed_command(data, timeout=self._stream_timeout)
+                with move_on_after(1e-3):
+                    async for request in self._buffer_out:
+                        requests.extend(request)
+            data = b"".join(requests)
+            try:
+                await self.connection.send(data)
+            except Exception:
+                self._transport_failed = True
+                raise
 
     async def update_tracking_client(self, enabled: bool, client_id: int | None = None) -> bool:
         """
@@ -496,22 +493,7 @@ class BaseConnection:
             timeout = self._stream_timeout if not block else None
             with fail_after(timeout):
                 return await self._receive_messages.receive()
-
         return self._receive_messages.receive_nowait()
-
-    async def _send_packed_command(
-        self, command: list[bytes], timeout: float | None = None
-    ) -> None:
-        """
-        Sends packed command(s) to the Redis server
-        """
-        with fail_after(timeout):
-            data = b"".join(command)
-            try:
-                await self.connection.send(data)
-            except Exception:
-                self._transport_failed = True
-                raise
 
     def create_request(
         self,
