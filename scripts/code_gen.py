@@ -664,7 +664,6 @@ def is_deprecated(command, kls):
                 )
             else:
                 replacement_string[token[1]] = sanitized(token[1], None, ignore_reserved_words=True)
-
         for token, mapped in replacement_string.items():
             replacement = replacement.replace(token, mapped)
 
@@ -674,7 +673,7 @@ def is_deprecated(command, kls):
 
 
 def sanitized(x, command=None, ignore_reserved_words=False):
-    if not x[0].isalpha():
+    if not x[0].isalpha() and x[0] == x:
         return sanitized(unicodedata.name(x))
     cleansed_name = (
         x.lower().strip().replace("-", "_").replace(":", "_").replace(" ", "_").replace(".", "_")
@@ -693,7 +692,6 @@ def sanitized(x, command=None, ignore_reserved_words=False):
         list(globals()["__builtins__"].__dict__.keys()) + ["async", "return", "if", "else", "for"]
     ):
         cleansed_name = cleansed_name + "_"
-
 
     return cleansed_name
 
