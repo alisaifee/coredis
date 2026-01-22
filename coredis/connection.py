@@ -216,15 +216,18 @@ class BaseConnection:
         # The actual connection to the server
         self._connection: ByteStream | None = None
         # Memory object stream that collects any unread push message types
-        push_messages, self._receive_messages = create_memory_object_stream[list[ResponseType]](
+        self._push_message_buffer_in, self._push_message_buffer_out = create_memory_object_stream[
+            list[ResponseType]
+        ](math.inf)
+        # Memory object stream for buffering writes to the socket
+        self._write_buffer_in, self._write_buffer_out = create_memory_object_stream[list[bytes]](
             math.inf
         )
-        self._parser = Parser(push_messages)
 
-        self.packer: Packer = Packer(self.encoding)
+        self._parser = Parser(self._push_message_buffer_in)
+        self._packer: Packer = Packer(self.encoding)
 
         self._requests: deque[Request] = deque()
-        self._buffer_in, self._buffer_out = create_memory_object_stream[list[bytes]](math.inf)
         self._connection_cancel_scope: CancelScope | None = None
 
         # whether the `HELLO` handshake needs to be performed
@@ -295,8 +298,10 @@ class BaseConnection:
             with catch({Exception: handle_errors}):
                 async with (
                     self.connection,
-                    self._buffer_out,
-                    self._parser.push_messages,
+                    self._write_buffer_in,
+                    self._write_buffer_out,
+                    self._push_message_buffer_in,
+                    self._push_message_buffer_out,
                     create_task_group() as tg,
                 ):
                     self._connected = True
@@ -367,10 +372,10 @@ class BaseConnection:
         Continually empty the buffer and send the data to the server.
         """
         while True:
-            requests = await self._buffer_out.receive()
+            requests = await self._write_buffer_out.receive()
             if len(self._requests) > 1:
                 with move_on_after(1e-3):
-                    async for request in self._buffer_out:
+                    async for request in self._write_buffer_out:
                         requests.extend(request)
             data = b"".join(requests)
             try:
@@ -492,8 +497,8 @@ class BaseConnection:
         if block:
             timeout = self._stream_timeout if not block else None
             with fail_after(timeout):
-                return await self._receive_messages.receive()
-        return self._receive_messages.receive_nowait()
+                return await self._push_message_buffer_out.receive()
+        return self._push_message_buffer_out.receive_nowait()
 
     def create_request(
         self,
@@ -513,8 +518,8 @@ class BaseConnection:
             raise ConnectionError("Connection not initialized correctly")
         cmd_list = []
         if noreply and not self.noreply:
-            cmd_list = self.packer.pack_command(CommandName.CLIENT_REPLY, PureToken.SKIP)
-        cmd_list.extend(self.packer.pack_command(command, *args))
+            cmd_list = self._packer.pack_command(CommandName.CLIENT_REPLY, PureToken.SKIP)
+        cmd_list.extend(self._packer.pack_command(command, *args))
         request_timeout: float | None = timeout or self._stream_timeout
         request = Request(
             proxy(self),
@@ -530,7 +535,7 @@ class BaseConnection:
             self._requests.append(request)
         else:
             request.resolve(None)
-        self._buffer_in.send_nowait(cmd_list)
+        self._write_buffer_in.send_nowait(cmd_list)
         return request
 
     def create_requests(
@@ -556,8 +561,8 @@ class BaseConnection:
             )
             for cmd in commands
         ]
-        packed = self.packer.pack_commands([(cmd.command, *cmd.args) for cmd in commands])
-        self._buffer_in.send_nowait(packed)
+        packed = self._packer.pack_commands([(cmd.command, *cmd.args) for cmd in commands])
+        self._write_buffer_in.send_nowait(packed)
         self._requests.extend(requests)
         return requests
 
