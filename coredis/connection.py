@@ -27,6 +27,7 @@ from anyio import (
     sleep,
 )
 from anyio.abc import ByteStream, SocketAttribute, TaskStatus
+from exceptiongroup import BaseExceptionGroup, catch
 from typing_extensions import override
 
 import coredis
@@ -274,35 +275,38 @@ class BaseConnection:
 
         retry = ExponentialBackoffRetryPolicy(RETRYABLE, 3, 0.5)
         self._connection = await retry.call_with_retries(self._connect)
-        try:
-            async with (
-                self.connection,
-                self._buffer_out,
-                self._parser.push_messages,
-                create_task_group() as tg,
-            ):
-                self._connection_cancel_scope = tg.cancel_scope
-                tg.start_soon(self.listen_for_responses)
-                tg.start_soon(self.flush_loop)
-                # setup connection
-                await self.on_connect()
-                # run any user callbacks. right now the only internal callback
-                # is for pubsub channel/pattern resubscription
-                for callback in self._connect_callbacks:
-                    task = callback(self)
-                    if inspect.isawaitable(task):
-                        await task
-                self._connected = True
-                task_status.started()
-        except Exception as e:
+
+        def handle_errors(error: BaseExceptionGroup) -> None:
             logger.exception("Connection closed unexpectedly!")
-            self._last_error = e
+            self._last_error = error.exceptions[-1]
             # swallow the error unless connection hasn't been established;
             # it will usually be raised when accessing command results.
             # we want the connection to die, but we don't always want to
             # raise it and corrupt the connection pool.
             if not self._connected:
                 raise
+
+        try:
+            with catch({Exception: handle_errors}):
+                async with (
+                    self.connection,
+                    self._buffer_out,
+                    self._parser.push_messages,
+                    create_task_group() as tg,
+                ):
+                    self._connected = True
+                    self._connection_cancel_scope = tg.cancel_scope
+                    tg.start_soon(self.listen_for_responses)
+                    tg.start_soon(self.flush_loop)
+                    # setup connection
+                    await self.on_connect()
+                    # run any user callbacks. right now the only internal callback
+                    # is for pubsub channel/pattern resubscription
+                    for callback in self._connect_callbacks:
+                        task = callback(self)
+                        if inspect.isawaitable(task):
+                            await task
+                    task_status.started()
         finally:
             disconnect_exc = self._last_error or ConnectionError("Connection lost!")
             # TODO: This isn't sufficient to reset the state of the parser to
