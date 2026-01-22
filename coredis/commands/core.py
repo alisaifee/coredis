@@ -8457,6 +8457,30 @@ class CoreCommands(CommandMixin[AnyStr]):
             callback=ItemOrTupleCallback[AnyStr | None](),
         )
 
+    @versionadded(version="6.0.0")
+    @redis_command(CommandName.VRANGE, version_introduced="8.4.0", group=CommandGroup.VECTOR_SET)
+    def vrange(
+        self, key: KeyT, start: StringT, end: StringT, count: int | None = None
+    ) -> CommandRequest[tuple[AnyStr, ...]]:
+        """
+        :param key: The key containing the vector set
+        :param start: The starting point of the lexicographical range
+        :param end: The ending point of the lexicographical range.
+        :param count: Maximum number of elements to return. If negative,
+         all elements in the range will be returned.
+
+        :return: The elements in lexicographical order within the range
+        """
+        command_arguments: CommandArgList = [key, start, end]
+        if count is not None:
+            command_arguments.append(count)
+
+        return self.create_request(
+            CommandName.VRANGE,
+            *command_arguments,
+            callback=TupleCallback[AnyStr](),
+        )
+
     @versionadded(version="5.2.0")
     @redis_command(CommandName.VISMEMBER, version_introduced="8.2.0", group=CommandGroup.VECTOR_SET)
     def vismember(self, key: KeyT, element: StringT) -> CommandRequest[bool]:

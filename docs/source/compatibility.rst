@@ -3860,14 +3860,22 @@ Check if an element exists in a vector set
 
 
 
-VRANGE [X]
-**********
+VRANGE
+******
 
 Return elements in a lexicographical range
 
 - Documentation: `VRANGE <https://redis.io/commands/vrange>`_
+- Implementation: :meth:`~coredis.Redis.vrange`
 
-- Not Implemented
+- New in redis: 8.4.0
+
+
+
+- .. versionadded:: 6.0.0
+
+
+
 
 
 
