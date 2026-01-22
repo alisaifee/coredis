@@ -527,8 +527,10 @@ class BaseConnection:
         """
         Queue a command to send to the server
         """
+        if not self.is_connected:
+            raise ConnectionError("Connection not initialized correctly")
         cmd_list = []
-        if self.is_connected and noreply and not self.noreply:
+        if noreply and not self.noreply:
             cmd_list = self.packer.pack_command(CommandName.CLIENT_REPLY, PureToken.SKIP)
         cmd_list.extend(self.packer.pack_command(command, *args))
         request_timeout: float | None = timeout or self._stream_timeout
