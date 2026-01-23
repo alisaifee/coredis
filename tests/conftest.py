@@ -1043,10 +1043,11 @@ def cloner():
         if isinstance(client, coredis.client.Redis):
             c_kwargs = client.connection_pool.connection_kwargs
             c_kwargs.update(connection_kwargs)
+            cache = kwargs.pop("cache", None)
             c = client.__class__(
                 decode_responses=client.decode_responses,
                 encoding=client.encoding,
-                connection_pool=client.connection_pool.__class__(**c_kwargs),
+                connection_pool=client.connection_pool.__class__(cache=cache, **c_kwargs),
                 **kwargs,
             )
         else:

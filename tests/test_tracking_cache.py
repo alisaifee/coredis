@@ -180,7 +180,7 @@ class TestInvalidatingCache(CommonExamples):
         assert cache.confidence == 100
         cached = await cloner(client, cache=cache)
         async with cached:
-            assert cached.cache.get_client_id(cached)
+            assert cached.connection_pool.cache.get_client_id(cached)
             await sleep(0.2)  # can be flaky if we close immediately
 
 
