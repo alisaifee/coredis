@@ -126,7 +126,6 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        # auto-reconnection for long-lived pubsub instances
         async with create_task_group() as tg:
             await tg.start(self.run)
             # initialize subscriptions
@@ -140,6 +139,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
             await self.punsubscribe()
             self.channels.clear()
             self.patterns.clear()
+            self._subscription_waiters.clear()
             self._current_scope.cancel()
 
     async def run(self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
@@ -204,9 +204,8 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
             new_patterns[self.encode(handled_pattern)] = handler
 
         waiters: dict[StringT, Event] = {pattern: Event() for pattern in new_patterns}
-
-        for channel, event in waiters.items():
-            self._subscription_waiters.setdefault(channel, []).append(event)
+        for pattern, event in waiters.items():
+            self._subscription_waiters.setdefault(pattern, []).append(event)
 
         await self.execute_command(CommandName.PSUBSCRIBE, *new_patterns.keys())
         await self._ensure_subscriptions(waiters)
@@ -338,7 +337,8 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
                 data=cast(int, response[2]),
             )
             if message_type in SUBSCRIBE_MESSAGE_TYPES:
-                self._subscription_waiters[target].pop().set()
+                if waiters := self._subscription_waiters.get(target, []):
+                    waiters.pop(-1).set()
 
         elif message_type in PUBLISH_MESSAGE_TYPES:
             if message_type == PubSubMessageTypes.PMESSAGE:
@@ -621,7 +621,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
             if self._initial_channel_subscriptions:
                 await self.subscribe(**self._initial_channel_subscriptions)
             yield self
-            # cleanu self.unsubscribe()
+            await self.unsubscribe()
             self.channels.clear()
             self._current_scope.cancel()
             self.reset()
@@ -681,4 +681,5 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         self.channels = {}
         self.patterns = {}
         self.initialized = False
+        self._subscription_waiters.clear()
         self._subscribed = Event()

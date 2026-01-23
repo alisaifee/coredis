@@ -260,6 +260,35 @@ class TestPubSubSubscribeUnsubscribe:
             # now we're finally unsubscribed
             assert p.subscribed is False
 
+    async def test_subscribe_timeout(self, redis_cluster):
+        async with redis_cluster.pubsub(subscription_timeout=1e-4) as pubsub:
+            with pytest.raises(TimeoutError, match="Subscription timed out"):
+                await pubsub.subscribe(*(f"topic{k}" for k in range(100)))
+        async with redis_cluster.pubsub(subscription_timeout=1e-4) as pubsub:
+            with pytest.raises(TimeoutError, match="Subscription timed out"):
+                await pubsub.psubscribe(*(f"topic{k}-*" for k in range(100)))
+        async with redis_cluster.pubsub(subscription_timeout=1) as pubsub:
+            await pubsub.subscribe(*(f"topic{k}" for k in range(100)))
+        with pytest.RaisesGroup(pytest.RaisesExc(TimeoutError, match="Subscription timed out")):
+            async with redis_cluster.pubsub(
+                subscription_timeout=1e-4,
+                channels=[f"topic{k}" for k in range(100)],
+            ) as pubsub:
+                pass
+
+    async def test_shareded_subscribe_timeout(self, redis_cluster):
+        async with redis_cluster.sharded_pubsub(subscription_timeout=1e-4) as pubsub:
+            with pytest.raises(TimeoutError, match="Subscription timed out"):
+                await pubsub.subscribe(*(f"topic{k}" for k in range(100)))
+        async with redis_cluster.sharded_pubsub(subscription_timeout=1) as pubsub:
+            await pubsub.subscribe(*(f"topic{k}" for k in range(100)))
+        with pytest.RaisesGroup(pytest.RaisesExc(TimeoutError, match="Subscription timed out")):
+            async with redis_cluster.sharded_pubsub(
+                subscription_timeout=1e-4,
+                channels=[f"topic{k}" for k in range(100)],
+            ) as pubsub:
+                pass
+
     async def test_subscribe_property_with_channels(self, redis_cluster):
         kwargs = make_subscribe_test_data(redis_cluster.pubsub(), "channel")
         await self._test_subscribed_property(**kwargs)
