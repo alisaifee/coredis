@@ -182,7 +182,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
                 lambda: self.parse_response(block=True),
             ):
                 msg = await self.handle_message(response)
-                self._send_stream.send_nowait(msg)
+                await self._send_stream.send(msg)
 
     async def psubscribe(
         self,
