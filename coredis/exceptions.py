@@ -62,10 +62,6 @@ class ProtocolError(ConnectionError):
     """
 
 
-class TimeoutError(RedisError):
-    pass
-
-
 class BusyLoadingError(ConnectionError):
     pass
 

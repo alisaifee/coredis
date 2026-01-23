@@ -17,7 +17,6 @@ from coredis.exceptions import (
     PrimaryNotFoundError,
     ReplicaNotFoundError,
     ResponseError,
-    TimeoutError,
 )
 from coredis.pool import ConnectionPool
 from coredis.typing import (

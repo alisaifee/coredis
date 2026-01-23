@@ -43,7 +43,6 @@ from coredis.exceptions import (
     AuthenticationRequiredError,
     ConnectionError,
     RedisError,
-    TimeoutError,
     UnknownCommandError,
 )
 from coredis.parser import NotEnoughData, Parser

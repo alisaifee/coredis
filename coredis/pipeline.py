@@ -29,7 +29,6 @@ from coredis.exceptions import (
     RedisClusterException,
     RedisError,
     ResponseError,
-    TimeoutError,
     TryAgainError,
     WatchError,
 )

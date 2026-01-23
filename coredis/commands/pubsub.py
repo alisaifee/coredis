@@ -23,7 +23,7 @@ from exceptiongroup import catch
 from coredis._utils import b, hash_slot, logger, nativestr
 from coredis.commands.constants import CommandName
 from coredis.connection import BaseConnection
-from coredis.exceptions import RETRYABLE, ConnectionError, PubSubError, TimeoutError
+from coredis.exceptions import RETRYABLE, ConnectionError, PubSubError
 from coredis.parser import (
     PUBLISH_MESSAGE_TYPES,
     SUBUNSUB_MESSAGE_TYPES,

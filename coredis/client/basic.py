@@ -39,7 +39,6 @@ from coredis.exceptions import (
     PersistenceError,
     ReplicationError,
     ResponseError,
-    TimeoutError,
     UnknownCommandError,
     WatchError,
 )

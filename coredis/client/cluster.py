@@ -29,7 +29,6 @@ from coredis.exceptions import (
     ConnectionError,
     MovedError,
     RedisClusterException,
-    TimeoutError,
     TryAgainError,
 )
 from coredis.globals import CACHEABLE_COMMANDS, MODULE_GROUPS, READONLY_COMMANDS
