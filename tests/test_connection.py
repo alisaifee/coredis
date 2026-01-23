@@ -8,7 +8,6 @@ from anyio.abc import SocketAttribute
 
 from coredis import Connection, UnixDomainSocketConnection
 from coredis.credentials import UserPassCredentialProvider
-from coredis.exceptions import TimeoutError
 
 
 async def test_connect_tcp(redis_basic):

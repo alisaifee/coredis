@@ -11,7 +11,6 @@ from coredis.exceptions import (
     ClusterTransactionError,
     RedisClusterException,
     ResponseError,
-    TimeoutError,
     WatchError,
 )
 from coredis.pipeline import ClusterPipeline
