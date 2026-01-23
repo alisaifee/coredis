@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import math
 from collections import defaultdict
 from contextlib import AsyncExitStack, asynccontextmanager
 from typing import TYPE_CHECKING, Any, AsyncGenerator, cast
@@ -80,7 +81,6 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         patterns: Parameters[StringT] | None = None,
         pattern_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
-        max_buffer_size: int = 1024,
         subscription_timeout: float = 1e-1,
     ):
         self.connection_pool = connection_pool
@@ -96,7 +96,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
             **{nativestr(k): v for k, v in (pattern_handlers or {}).items()},
         }
         self._send_stream, self._receive_stream = create_memory_object_stream[PubSubMessage | None](
-            max_buffer_size=max_buffer_size
+            math.inf
         )
         self._subscribed = Event()
         self._subscription_waiters: dict[StringT, list[Event]] = defaultdict(list)
