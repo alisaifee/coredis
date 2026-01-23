@@ -8,7 +8,8 @@ import socket
 import ssl
 from abc import abstractmethod
 from collections import defaultdict, deque
-from typing import TYPE_CHECKING, Any, Generator, cast
+from contextlib import contextmanager
+from typing import TYPE_CHECKING, Any, cast
 from weakref import ProxyType, proxy
 
 from anyio import (
@@ -50,6 +51,7 @@ from coredis.typing import (
     Awaitable,
     Callable,
     ClassVar,
+    Generator,
     RedisValueT,
     ResponseType,
     TypeVar,
@@ -256,6 +258,10 @@ class BaseConnection:
             raise ConnectionError("Connection not initialized correctly!")
         return self._connection
 
+    @contextmanager
+    def ensure_connection(self) -> Generator[ByteStream]:
+        yield self.connection
+
     @property
     def is_connected(self) -> bool:
         """
@@ -311,7 +317,6 @@ class BaseConnection:
                     self._push_message_buffer_out,
                     create_task_group() as self._task_group,
                 ):
-                    self._connected = True
                     self._task_group.start_soon(self._reader_task)
                     self._task_group.start_soon(self._writer_task)
                     # setup connection
@@ -322,6 +327,7 @@ class BaseConnection:
                         task = callback(self)
                         if inspect.isawaitable(task):
                             await task
+                    self._connected = True
                     task_status.started()
         finally:
             self._connection, self._connected = None, False
@@ -517,29 +523,28 @@ class BaseConnection:
         """
         Queue a command to send to the server
         """
-        if not self.is_connected:
-            raise ConnectionError("Connection not initialized correctly")
-        cmd_list = []
-        if noreply and not self.noreply:
-            cmd_list = self._packer.pack_command(CommandName.CLIENT_REPLY, PureToken.SKIP)
-        cmd_list.extend(self._packer.pack_command(command, *args))
-        request_timeout: float | None = timeout or self._stream_timeout
-        request = Request(
-            proxy(self),
-            command,
-            bool(decode) if decode is not None else self.decode_responses,
-            encoding or self.encoding,
-            raise_exceptions,
-            request_timeout,
-            disconnect_on_cancellation,
-        )
-        # modifying buffer and requests should happen atomically
-        if not (self.noreply_set or noreply):
-            self._requests.append(request)
-        else:
-            request.resolve(None)
-        self._write_buffer_in.send_nowait(cmd_list)
-        return request
+        with self.ensure_connection():
+            cmd_list = []
+            if noreply and not self.noreply:
+                cmd_list = self._packer.pack_command(CommandName.CLIENT_REPLY, PureToken.SKIP)
+            cmd_list.extend(self._packer.pack_command(command, *args))
+            request_timeout: float | None = timeout or self._stream_timeout
+            request = Request(
+                proxy(self),
+                command,
+                bool(decode) if decode is not None else self.decode_responses,
+                encoding or self.encoding,
+                raise_exceptions,
+                request_timeout,
+                disconnect_on_cancellation,
+            )
+            # modifying buffer and requests should happen atomically
+            if not (self.noreply_set or noreply):
+                self._requests.append(request)
+            else:
+                request.resolve(None)
+            self._write_buffer_in.send_nowait(cmd_list)
+            return request
 
     def create_requests(
         self,
@@ -551,23 +556,24 @@ class BaseConnection:
         """
         Queue multiple commands to send to the server
         """
-        request_timeout: float | None = timeout or self._stream_timeout
-        requests = [
-            Request(
-                proxy(self),
-                cmd.command,
-                bool(cmd.decode) if cmd.decode is not None else self.decode_responses,
-                cmd.encoding or self.encoding,
-                raise_exceptions,
-                request_timeout,
-                disconnect_on_cancellation,
-            )
-            for cmd in commands
-        ]
-        packed = self._packer.pack_commands([(cmd.command, *cmd.args) for cmd in commands])
-        self._write_buffer_in.send_nowait(packed)
-        self._requests.extend(requests)
-        return requests
+        with self.ensure_connection():
+            request_timeout: float | None = timeout or self._stream_timeout
+            requests = [
+                Request(
+                    proxy(self),
+                    cmd.command,
+                    bool(cmd.decode) if cmd.decode is not None else self.decode_responses,
+                    cmd.encoding or self.encoding,
+                    raise_exceptions,
+                    request_timeout,
+                    disconnect_on_cancellation,
+                )
+                for cmd in commands
+            ]
+            packed = self._packer.pack_commands([(cmd.command, *cmd.args) for cmd in commands])
+            self._write_buffer_in.send_nowait(packed)
+            self._requests.extend(requests)
+            return requests
 
 
 class Connection(BaseConnection):
