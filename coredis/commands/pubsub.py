@@ -20,7 +20,7 @@ from anyio.streams.stapled import StapledObjectStream
 from deprecated.sphinx import versionadded
 from exceptiongroup import catch
 
-from coredis._utils import b, hash_slot, logger, nativestr
+from coredis._utils import b, hash_slot, nativestr
 from coredis.commands.constants import CommandName
 from coredis.connection import BaseConnection
 from coredis.exceptions import RETRYABLE, ConnectionError, PubSubError
@@ -151,7 +151,6 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
                 tries = 0
             else:
                 tries += 1
-            logger.warning("Cache connection lost, retrying...")
 
         while True:
             # retry with exponential backoff
