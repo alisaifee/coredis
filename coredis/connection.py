@@ -16,6 +16,7 @@ from anyio import (
     TASK_STATUS_IGNORED,
     CancelScope,
     Event,
+    WouldBlock,
     connect_tcp,
     connect_unix,
     create_memory_object_stream,
@@ -25,6 +26,7 @@ from anyio import (
     move_on_after,
 )
 from anyio.abc import ByteStream, SocketAttribute, TaskGroup, TaskStatus
+from anyio.lowlevel import checkpoint
 from exceptiongroup import BaseExceptionGroup, catch
 from typing_extensions import override
 
@@ -382,10 +384,12 @@ class BaseConnection:
         """
         while True:
             requests = await self._write_buffer_out.receive()
-            if len(self._requests) > 1:
-                with move_on_after(1e-3):
-                    async for request in self._write_buffer_out:
-                        requests.extend(request)
+            while self._write_buffer_out.statistics().current_buffer_used > 0:
+                try:
+                    requests.extend(self._write_buffer_out.receive_nowait())
+                    await checkpoint()
+                except WouldBlock:
+                    break
             data = b"".join(requests)
             try:
                 await self.connection.send(data)
