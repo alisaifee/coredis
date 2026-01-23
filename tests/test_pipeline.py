@@ -7,7 +7,7 @@ import pytest
 from coredis._concurrency import gather
 from coredis.client.basic import Redis
 from coredis.commands.request import CommandRequest
-from coredis.exceptions import AuthorizationError, ResponseError, TimeoutError, WatchError
+from coredis.exceptions import AuthorizationError, ResponseError, WatchError
 from coredis.pipeline import Pipeline
 from coredis.typing import Serializable
 from tests.conftest import targets
