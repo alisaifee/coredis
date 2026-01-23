@@ -7,7 +7,8 @@ import warnings
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, cast
 
-from anyio import Lock, fail_after
+from anyio import TASK_STATUS_IGNORED, Lock, fail_after
+from anyio.abc import TaskStatus
 from typing_extensions import Self
 
 from coredis._concurrency import Queue, QueueFull
@@ -206,7 +207,8 @@ class ClusterConnectionPool(ConnectionPool):
         """Releases the connection back to the pool"""
         assert isinstance(connection, ClusterConnection)
         try:
-            self.__node_pool(connection.node.name).put_nowait(connection)
+            if connection.is_connected:
+                self.__node_pool(connection.node.name).put_nowait(connection)
         except QueueFull:
             pass
 
@@ -217,6 +219,17 @@ class ClusterConnectionPool(ConnectionPool):
         self._check_lock = threading.Lock()
         self.initialized = False
 
+    async def __wrap_connection(
+        self, connection: ClusterConnection, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
+    ) -> None:
+        try:
+            await connection.run(task_status=task_status)
+        finally:
+            node_pool = self.__node_pool(connection.node.name)
+            if connection in node_pool:
+                node_pool.remove(connection)
+                node_pool.append_nowait(None)
+
     async def __make_node_connection(self, node: ManagedNode) -> Connection:
         """Creates a new connection to a node"""
 
@@ -225,9 +238,8 @@ class ClusterConnectionPool(ConnectionPool):
             port=node.port,
             **self.connection_kwargs,
         )
-        await self._task_group.start(connection.run)
-        # Must store node in the connection to make it easier to track
         connection.node = node
+        await self._task_group.start(self.__wrap_connection, connection)
         return connection
 
     def __node_pool(self, node: str) -> Queue[Connection]:
