@@ -18,8 +18,6 @@ from exceptiongroup import catch
 from coredis._utils import b, logger, make_hashable
 from coredis.commands.constants import CommandName
 from coredis.exceptions import RETRYABLE
-from coredis.pool.basic import ConnectionPool
-from coredis.pool.cluster import ClusterConnectionPool
 from coredis.typing import (
     OrderedDict,
     RedisValueT,
@@ -29,6 +27,8 @@ from coredis.typing import (
 
 if TYPE_CHECKING:
     import coredis.client
+    from coredis.pool.basic import ConnectionPool
+    from coredis.pool.cluster import ClusterConnectionPool
 
 
 @dataclasses.dataclass

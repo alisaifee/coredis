@@ -8,7 +8,6 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from anyio import (
     TASK_STATUS_IGNORED,
-    AsyncContextManagerMixin,
     create_task_group,
     fail_after,
 )
@@ -17,6 +16,7 @@ from typing_extensions import Self
 
 from coredis._concurrency import Queue
 from coredis._utils import query_param_to_bool
+from coredis.cache import AbstractCache, NodeTrackingCache, TrackingCache
 from coredis.connection import (
     BaseConnection,
     Connection,
@@ -28,7 +28,7 @@ from coredis.typing import Callable, ClassVar, TypeVar
 _CPT = TypeVar("_CPT", bound="ConnectionPool")
 
 
-class ConnectionPool(AsyncContextManagerMixin):
+class ConnectionPool:
     """
     Generic connection pool
     """
@@ -51,6 +51,7 @@ class ConnectionPool(AsyncContextManagerMixin):
     def from_url(
         cls: type[_CPT],
         url: str,
+        cache: AbstractCache | None = None,
         db: int | None = None,
         decode_components: bool = False,
         **kwargs: Any,
@@ -189,7 +190,8 @@ class ConnectionPool(AsyncContextManagerMixin):
     def __init__(
         self,
         *,
-        connection_class: type[BaseConnection] | None = None,
+        connection_class: type[BaseConnection] = Connection,
+        cache: AbstractCache | None = None,
         max_connections: int | None = None,
         timeout: float | None = None,
         **connection_kwargs: Any,
@@ -204,20 +206,32 @@ class ConnectionPool(AsyncContextManagerMixin):
         Any additional keyword arguments are passed to the constructor of
         connection_class.
         """
-        self.connection_class = connection_class or Connection
+        self.connection_class = connection_class
         self.connection_kwargs = connection_kwargs
-        self.max_connections = max_connections or 64
+        self.max_connections = max_connections or 1024
         self.timeout = timeout
         self.decode_responses = bool(self.connection_kwargs.get("decode_responses", False))
         self.encoding = str(self.connection_kwargs.get("encoding", "utf-8"))
+        self.cache: TrackingCache | None = NodeTrackingCache(cache) if cache else None
         self._connections: Queue[BaseConnection] = Queue(self.max_connections)
+        self._counter = 0
 
-    @asynccontextmanager
-    async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        async with create_task_group() as tg:
-            self._task_group = tg
-            yield self
+    async def __aenter__(self) -> Self:
+        if self._counter == 0:
+            self._task_group = create_task_group()
+            self._counter += 1
+            await self._task_group.__aenter__()
+            if self.cache:
+                await self._task_group.start(self.cache.run, self)
+        else:
+            self._counter += 1
+        return self
+
+    async def __aexit__(self, *args: Any) -> None:
+        self._counter -= 1
+        if self._counter == 0:
             self._task_group.cancel_scope.cancel()
+            await self._task_group.__aexit__(*args)
 
     async def wrap_connection(
         self, connection: BaseConnection, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED

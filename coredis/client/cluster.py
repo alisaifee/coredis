@@ -15,7 +15,7 @@ from deprecated.sphinx import versionadded
 
 from coredis._concurrency import gather
 from coredis._utils import b, hash_slot
-from coredis.cache import AbstractCache, ClusterTrackingCache
+from coredis.cache import AbstractCache
 from coredis.client.basic import Client, Redis
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName, NodeFlag
@@ -506,7 +506,6 @@ class RedisCluster(
             self.__class__.RESULT_CALLBACKS.copy()
         )
         self.non_atomic_cross_slot = non_atomic_cross_slot
-        self.cache = ClusterTrackingCache(cache=cache) if cache else None
         self._decodecontext: contextvars.ContextVar[bool | None,] = contextvars.ContextVar(
             "decode", default=None
         )
@@ -638,8 +637,6 @@ class RedisCluster(
         async with self.connection_pool:
             self.refresh_table_asap = False
             await self._populate_module_versions()
-            if self.cache:
-                await self.connection_pool._task_group.start(self.cache.run, self.connection_pool)
             yield self
 
     def __repr__(self) -> str:
@@ -856,8 +853,8 @@ class RedisCluster(
                                 *args[1 + key_end :],
                             )
                         )
-            if self.cache and command not in READONLY_COMMANDS:
-                self.cache.invalidate(*keys)
+            if self.connection_pool.cache and command not in READONLY_COMMANDS:
+                self.connection_pool.cache.invalidate(*keys)
         elif node_flag == NodeFlag.SLOT_ID and slot_arguments_range:
             # TODO: fix this nonsense put in place just to support a few cluster commands
             # related to slot management in cluster client which really no one needs to be calling
@@ -881,7 +878,7 @@ class RedisCluster(
         **kwargs: Unpack[ExecutionParameters],
     ) -> R:
         redirect_addr = None
-
+        pool = self.connection_pool
         asking = False
 
         if not node and not slots:
@@ -902,7 +899,7 @@ class RedisCluster(
                 pass
             _node = None
             if asking and redirect_addr:
-                _node = self.connection_pool.nodes.nodes[redirect_addr]
+                _node = pool.nodes.nodes[redirect_addr]
             elif try_random_node:
                 _node = None
                 if slots:
@@ -912,12 +909,12 @@ class RedisCluster(
             elif slots:
                 if self.refresh_table_asap:
                     # MOVED
-                    _node = self.connection_pool.get_primary_node_by_slots(slots)
+                    _node = pool.get_primary_node_by_slots(slots)
                 else:
-                    _node = self.connection_pool.get_node_by_slots(slots, command=command.name)
+                    _node = pool.get_node_by_slots(slots, command=command.name)
             else:
                 continue
-            r = await self.connection_pool.get_connection(
+            r = await pool.get_connection(
                 _node, primary=not node and try_random_type == NodeFlag.PRIMARIES
             )
             try:
@@ -926,7 +923,7 @@ class RedisCluster(
                     asking = False
                 keys = KeySpec.extract_keys(command.name, *command.arguments)
                 cacheable = (
-                    self.cache
+                    pool.cache
                     and command.name in CACHEABLE_COMMANDS
                     and len(keys) == 1
                     and not self.noreply
@@ -936,23 +933,23 @@ class RedisCluster(
                 cached_reply = None
                 use_cached = False
                 reply = None
-                if self.cache:
-                    if r.tracking_client_id != self.cache.get_client_id(r):
-                        self.cache.reset()
-                        await r.update_tracking_client(True, self.cache.get_client_id(r))
+                if pool.cache:
+                    if r.tracking_client_id != pool.cache.get_client_id(r):
+                        pool.cache.reset()
+                        await r.update_tracking_client(True, pool.cache.get_client_id(r))
                     if command.name not in READONLY_COMMANDS:
-                        self.cache.invalidate(*keys)
+                        pool.cache.invalidate(*keys)
                     elif cacheable:
                         try:
                             cached_reply = cast(
                                 R,
-                                self.cache.get(
+                                pool.cache.get(
                                     command.name,
                                     keys[0],
                                     *command.arguments,
                                 ),
                             )
-                            use_cached = random.random() * 100.0 < min(100.0, self.cache.confidence)
+                            use_cached = random.random() * 100.0 < min(100.0, pool.cache.confidence)
                             cache_hit = True
                         except KeyError:
                             pass
@@ -971,7 +968,7 @@ class RedisCluster(
                     #  releasing early even in the cached response flow.
                     if not should_block:
                         released = True
-                        self.connection_pool.release(r)
+                        pool.release(r)
 
                     reply = await request
                     await self._ensure_wait_and_persist(command, r)
@@ -986,16 +983,16 @@ class RedisCluster(
                     response = callback(
                         cached_reply if cache_hit else reply,
                     )
-                    if self.cache and cacheable:
+                    if pool.cache and cacheable:
                         if cache_hit and not use_cached:
-                            self.cache.feedback(
+                            pool.cache.feedback(
                                 command.name,
                                 keys[0],
                                 *command.arguments,
                                 match=cached_reply == reply,
                             )
                         if not cache_hit:
-                            self.cache.put(
+                            pool.cache.put(
                                 command.name,
                                 keys[0],
                                 *command.arguments,
@@ -1010,11 +1007,11 @@ class RedisCluster(
                 # is shared between multiple threads. To reduce the frequency you
                 # can set the variable 'reinitialize_steps' in the constructor.
                 self.refresh_table_asap = True
-                await self.connection_pool.nodes.increment_reinitialize_counter()
+                await pool.nodes.increment_reinitialize_counter()
 
-                node = self.connection_pool.nodes.set_node(e.host, e.port, server_type="primary")
+                node = pool.nodes.set_node(e.host, e.port, server_type="primary")
                 try_random_node = False
-                self.connection_pool.nodes.slots[e.slot_id][0] = node
+                pool.nodes.slots[e.slot_id][0] = node
             except TryAgainError:
                 if remaining_attempts < self.MAX_RETRIES / 2:
                     await sleep(0.05)
@@ -1022,7 +1019,7 @@ class RedisCluster(
                 redirect_addr, asking = f"{e.host}:{e.port}", True
             finally:
                 if r and not released:
-                    self.connection_pool.release(r)
+                    pool.release(r)
                 self._ensure_server_version(r.server_version)
 
         raise ClusterError("Maximum retries exhausted.")

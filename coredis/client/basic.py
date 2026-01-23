@@ -16,7 +16,7 @@ from packaging.version import InvalidVersion, Version
 from typing_extensions import Self
 
 from coredis._utils import EncodingInsensitiveDict, logger, nativestr
-from coredis.cache import AbstractCache, NodeTrackingCache, TrackingCache
+from coredis.cache import AbstractCache
 from coredis.commands import CommandRequest
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandFlag, CommandName
@@ -93,7 +93,6 @@ class Client(
     ModuleMixin[AnyStr],
     SentinelCommands[AnyStr],
 ):
-    cache: TrackingCache | None
     connection_pool: ConnectionPool
     decode_responses: bool
     encoding: str
@@ -792,7 +791,6 @@ class Redis(Client[AnyStr]):
             type_adapter=type_adapter,
             **kwargs,
         )
-        self.cache = NodeTrackingCache(cache=cache) if cache else None
         self._decodecontext: contextvars.ContextVar[bool | None,] = contextvars.ContextVar(
             "decode", default=None
         )
@@ -872,9 +870,9 @@ class Redis(Client[AnyStr]):
                 noreply=noreply,
                 retry_policy=retry_policy,
                 type_adapter=type_adapter,
-                cache=cache,
                 connection_pool=ConnectionPool.from_url(
                     url,
+                    cache=cache,
                     db=db,
                     decode_responses=decode_responses,
                     noreply=noreply,
@@ -890,9 +888,9 @@ class Redis(Client[AnyStr]):
                 noreply=noreply,
                 retry_policy=retry_policy,
                 type_adapter=type_adapter,
-                cache=cache,
                 connection_pool=ConnectionPool.from_url(
                     url,
+                    cache=cache,
                     db=db,
                     decode_responses=decode_responses,
                     noreply=noreply,
@@ -906,8 +904,6 @@ class Redis(Client[AnyStr]):
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         async with self.connection_pool:
             await self._populate_module_versions()
-            if self.cache:
-                await self.connection_pool._task_group.start(self.cache.run, self.connection_pool)
             yield self
 
     async def execute_command(
@@ -948,25 +944,25 @@ class Redis(Client[AnyStr]):
         connection = await pool.get_connection()
         self._ensure_server_version(connection.server_version)
         try:
-            if self.cache:
-                if connection.tracking_client_id != self.cache.get_client_id(connection):
-                    self.cache.reset()
+            if pool.cache:
+                if connection.tracking_client_id != pool.cache.get_client_id(connection):
+                    pool.cache.reset()
                     await connection.update_tracking_client(
-                        True, self.cache.get_client_id(connection)
+                        True, pool.cache.get_client_id(connection)
                     )
                 if command.name not in READONLY_COMMANDS:
-                    self.cache.invalidate(*keys)
+                    pool.cache.invalidate(*keys)
                 elif cacheable:
                     try:
                         cached_reply = cast(
                             R,
-                            self.cache.get(
+                            pool.cache.get(
                                 command.name,
                                 keys[0],
                                 *command.arguments,
                             ),
                         )
-                        use_cached = random.random() * 100.0 < min(100.0, self.cache.confidence)
+                        use_cached = random.random() * 100.0 < min(100.0, pool.cache.confidence)
                         cache_hit = True
                     except KeyError:
                         pass
@@ -993,13 +989,13 @@ class Redis(Client[AnyStr]):
                     return None  # type: ignore
                 if isinstance(callback, AsyncPreProcessingCallback):
                     await callback.pre_process(self, reply)
-            if self.cache and cacheable:
+            if pool.cache and cacheable:
                 if cache_hit and not use_cached:
-                    self.cache.feedback(
+                    pool.cache.feedback(
                         command.name, keys[0], *command.arguments, match=cached_reply == reply
                     )
                 if not cache_hit:
-                    self.cache.put(
+                    pool.cache.put(
                         command.name,
                         keys[0],
                         *command.arguments,

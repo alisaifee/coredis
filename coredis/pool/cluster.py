@@ -11,6 +11,7 @@ from anyio import Lock, fail_after
 from typing_extensions import Self
 
 from coredis._concurrency import Queue, QueueFull
+from coredis.cache import AbstractCache, ClusterTrackingCache
 from coredis.connection import BaseConnection, ClusterConnection, Connection
 from coredis.exceptions import RedisClusterException
 from coredis.globals import READONLY_COMMANDS
@@ -49,6 +50,7 @@ class ClusterConnectionPool(ConnectionPool):
     def __init__(
         self,
         startup_nodes: Iterable[Node] | None = None,
+        cache: AbstractCache | None = None,
         connection_class: type[ClusterConnection] = ClusterConnection,
         max_connections: int | None = None,
         max_connections_per_node: bool = False,
@@ -112,6 +114,7 @@ class ClusterConnectionPool(ConnectionPool):
         self.connection_kwargs = connection_kwargs
         self.connection_kwargs["read_from_replicas"] = read_from_replicas
         self.read_from_replicas = read_from_replicas or readonly
+        self.cache = ClusterTrackingCache(cache) if cache else None
         self.reset()
 
         if "stream_timeout" not in self.connection_kwargs:
@@ -131,14 +134,14 @@ class ClusterConnectionPool(ConnectionPool):
             ),
         )
 
-    @asynccontextmanager
-    async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        async with super().__asynccontextmanager__():
-            await self.initialize()
-            try:
-                yield self
-            finally:
-                self.reset()
+    async def __aenter__(self) -> Self:
+        await super().__aenter__()
+        await self.initialize()
+        return self
+
+    async def __aexit__(self, *args: Any) -> None:
+        self.reset()
+        await super().__aexit__(*args)
 
     async def initialize(self) -> None:
         if not self.initialized:
