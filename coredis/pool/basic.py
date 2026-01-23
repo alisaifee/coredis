@@ -245,7 +245,7 @@ class ConnectionPool(AsyncContextManagerMixin):
             # if stack has a connection, use that
             connection = await self._connections.get()
             # if None, we need to create a new connection
-            if connection is None:
+            if connection is None or not connection.is_connected:
                 connection = self.connection_class(**self.connection_kwargs)
                 await self._task_group.start(self.wrap_connection, connection)
             return connection
