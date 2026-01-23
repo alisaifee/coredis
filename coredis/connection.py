@@ -16,7 +16,6 @@ from anyio import (
     TASK_STATUS_IGNORED,
     CancelScope,
     Event,
-    WouldBlock,
     connect_tcp,
     connect_unix,
     create_memory_object_stream,
@@ -385,11 +384,8 @@ class BaseConnection:
         while True:
             requests = await self._write_buffer_out.receive()
             while self._write_buffer_out.statistics().current_buffer_used > 0:
-                try:
-                    requests.extend(self._write_buffer_out.receive_nowait())
-                    await checkpoint()
-                except WouldBlock:
-                    break
+                requests.extend(self._write_buffer_out.receive_nowait())
+                await checkpoint()
             data = b"".join(requests)
             try:
                 await self.connection.send(data)
