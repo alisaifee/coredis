@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+from collections import defaultdict
 from contextlib import AsyncExitStack, asynccontextmanager
 from typing import TYPE_CHECKING, Any, AsyncGenerator, cast
 
@@ -98,7 +99,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
             max_buffer_size=max_buffer_size
         )
         self._subscribed = Event()
-        self._subscription_waiters: dict[StringT, list[Event]] = {}
+        self._subscription_waiters: dict[StringT, list[Event]] = defaultdict(list)
         self._subscription_timeout: float = subscription_timeout
         self.channels = {}
         self.patterns = {}
@@ -204,7 +205,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
         waiters: dict[StringT, Event] = {pattern: Event() for pattern in new_patterns}
         for pattern, event in waiters.items():
-            self._subscription_waiters.setdefault(pattern, []).append(event)
+            self._subscription_waiters[pattern].append(event)
 
         await self.execute_command(CommandName.PSUBSCRIBE, *new_patterns.keys())
         await self._ensure_subscriptions(waiters)
@@ -242,7 +243,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         waiters: dict[StringT, Event] = {channel: Event() for channel in new_channels}
 
         for channel, event in waiters.items():
-            self._subscription_waiters.setdefault(channel, []).append(event)
+            self._subscription_waiters[channel].append(event)
 
         await self.execute_command(CommandName.SUBSCRIBE, *new_channels.keys())
 
@@ -565,7 +566,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         waiters: dict[StringT, Event] = {channel: Event() for channel in new_channels}
 
         for channel, event in waiters.items():
-            self._subscription_waiters.setdefault(channel, []).append(event)
+            self._subscription_waiters[channel].append(event)
         for channel in new_channels:
             await self.execute_command(CommandName.SSUBSCRIBE, channel)
         await self._ensure_subscriptions(waiters)
