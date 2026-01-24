@@ -68,9 +68,9 @@ class ResponseCallback(ABC, Generic[RESP3, R], metaclass=ResponseCallbackMeta):
 
     def __call__(
         self,
-        response: RESP3 | ResponseError,
+        response: RESP3 | ResponseError | TimeoutError,
     ) -> R:
-        if isinstance(response, ResponseError):
+        if isinstance(response, (ResponseError, TimeoutError)):
             exc_to_response = self.handle_exception(response)
             if exc_to_response:
                 return exc_to_response
@@ -97,7 +97,7 @@ class NoopCallback(ResponseCallback[R, R]):
 class ClusterMultiNodeCallback(ABC, Generic[R], metaclass=ClusterCallbackMeta):
     def __call__(
         self,
-        responses: Mapping[str, R | ResponseError],
+        responses: Mapping[str, R | ResponseError | TimeoutError],
     ) -> R:
         return self.combine(responses)
 

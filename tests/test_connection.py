@@ -123,3 +123,26 @@ async def test_shared_pool(client):
     cid = await client.client_id()
     async with clone:
         assert await clone.client_id() == cid
+
+
+async def test_termination(redis_basic):
+    conn = Connection()
+    async with create_task_group() as tg:
+        await tg.start(conn.run)
+        assert conn.is_connected
+        conn.terminate()
+        await sleep(0.01)
+        assert not conn.is_connected
+
+
+async def test_connection_rerun(redis_basic):
+    conn = Connection()
+    async with create_task_group() as tg:
+        await tg.start(conn.run)
+        assert conn.is_connected
+        with pytest.raises(RuntimeError, match="cannot be reused"):
+            await tg.start(conn.run)
+        tg.cancel_scope.cancel()
+    async with create_task_group() as tg:
+        with pytest.raises(RuntimeError, match="cannot be reused"):
+            await tg.start(conn.run)

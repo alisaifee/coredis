@@ -8,15 +8,14 @@ import socket
 import ssl
 from abc import abstractmethod
 from collections import defaultdict, deque
-from typing import TYPE_CHECKING, Any, Generator, cast
+from contextlib import contextmanager
+from typing import TYPE_CHECKING, Any, cast
 from weakref import ProxyType, proxy
 
 from anyio import (
     TASK_STATUS_IGNORED,
     CancelScope,
-    ClosedResourceError,
     Event,
-    WouldBlock,
     connect_tcp,
     connect_unix,
     create_memory_object_stream,
@@ -24,9 +23,10 @@ from anyio import (
     fail_after,
     get_cancelled_exc_class,
     move_on_after,
-    sleep,
 )
-from anyio.abc import ByteStream, SocketAttribute, TaskStatus
+from anyio.abc import ByteStream, SocketAttribute, TaskGroup, TaskStatus
+from anyio.lowlevel import checkpoint
+from exceptiongroup import BaseExceptionGroup, catch
 from typing_extensions import override
 
 import coredis
@@ -52,6 +52,7 @@ from coredis.typing import (
     Awaitable,
     Callable,
     ClassVar,
+    Generator,
     RedisValueT,
     ResponseType,
     TypeVar,
@@ -201,33 +202,45 @@ class BaseConnection:
         self.decode_responses = decode_responses
         self.server_version: str | None = None
         self.client_name = client_name
-        #: id for this connection as returned by the redis server
+        # id for this connection as returned by the redis server
         self.client_id: int | None = None
-        #: client id that the redis server should send any redirected notifications to
+        # client id that the redis server should send any redirected notifications to
         self.tracking_client_id: int | None = None
 
-        self._connection: ByteStream | None = None
-        #: Queue that collects any unread push message types
-        push_messages, self._receive_messages = create_memory_object_stream[list[ResponseType]](
-            math.inf
-        )
-        self._parser = Parser(push_messages)
-        self.packer: Packer = Packer(self.encoding)
+        # maximum time to wait for data from the server before
+        # closing the connection
         self.max_idle_time = max_idle_time
 
         self.noreply = noreply
         self.noreply_set = False
-
         self.noevict = noevict
         self.notouch = notouch
 
-        self.needs_handshake = True
-        self._last_error: BaseException | None = None
-        self._connected = False
+        self._task_group: TaskGroup | None = None
+        # The actual connection to the server
+        self._connection: ByteStream | None = None
+        # Memory object stream that collects any unread push message types
+        self._push_message_buffer_in, self._push_message_buffer_out = create_memory_object_stream[
+            list[ResponseType]
+        ](math.inf)
+        # Memory object stream for buffering writes to the socket
+        self._write_buffer_in, self._write_buffer_out = create_memory_object_stream[list[bytes]](
+            math.inf
+        )
+
+        self._parser = Parser(self._push_message_buffer_in)
+        self._packer: Packer = Packer(self.encoding)
 
         self._requests: deque[Request] = deque()
-        self._buffer_in, self._buffer_out = create_memory_object_stream[list[bytes]](math.inf)
         self._connection_cancel_scope: CancelScope | None = None
+
+        # whether the `HELLO` handshake needs to be performed
+        self._needs_handshake = True
+
+        # Error flags
+        self._last_error: BaseException | None = None
+        self._connected = False
+        self._transport_failed = False
 
     def __repr__(self) -> str:
         return self.describe(self._description_args())
@@ -246,13 +259,17 @@ class BaseConnection:
             raise ConnectionError("Connection not initialized correctly!")
         return self._connection
 
+    @contextmanager
+    def ensure_connection(self) -> Generator[ByteStream]:
+        yield self.connection
+
     @property
     def is_connected(self) -> bool:
         """
         Whether the connection is established and initial handshakes were
         performed without error
         """
-        return self._connected
+        return self._connected and not self._transport_failed
 
     def register_connect_callback(
         self,
@@ -268,51 +285,61 @@ class BaseConnection:
 
     async def run(self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
         """
-        Establish a connnection to the redis server
-        and initiate any post connect callbacks.
+        Establish a connection to the redis server and initiate any post connect callbacks.
+
+        .. note:: This method can only be called once for an :class:`~coredis.connection.BaseConnection`
+           instance. Once the connection closes either due to cancellation or errors it should be
+           discarded.
+
         """
+        if self._task_group:
+            raise RuntimeError("Connection cannot be reused")
 
         retry = ExponentialBackoffRetryPolicy(RETRYABLE, 3, 0.5)
         self._connection = await retry.call_with_retries(self._connect)
-        try:
-            async with (
-                self.connection,
-                self._buffer_out,
-                self._parser.push_messages,
-                create_task_group() as tg,
-            ):
-                self._connection_cancel_scope = tg.cancel_scope
-                tg.start_soon(self.listen_for_responses)
-                tg.start_soon(self.flush_loop)
-                # setup connection
-                await self.on_connect()
-                # run any user callbacks. right now the only internal callback
-                # is for pubsub channel/pattern resubscription
-                for callback in self._connect_callbacks:
-                    task = callback(self)
-                    if inspect.isawaitable(task):
-                        await task
-                self._connected = True
-                task_status.started()
-        except Exception as e:
+
+        def handle_errors(error: BaseExceptionGroup) -> None:
             logger.exception("Connection closed unexpectedly!")
-            self._last_error = e
+            # TODO: change _last_error to use the whole exception group
+            #  once python 3.10 support is dropped and the library
+            #  consistently uses exception groups
+            self._last_error = error.exceptions[-1]
             # swallow the error unless connection hasn't been established;
             # it will usually be raised when accessing command results.
             # we want the connection to die, but we don't always want to
             # raise it and corrupt the connection pool.
             if not self._connected:
                 raise
+
+        try:
+            with catch({Exception: handle_errors}):
+                async with (
+                    self.connection,
+                    self._write_buffer_in,
+                    self._write_buffer_out,
+                    self._push_message_buffer_in,
+                    self._push_message_buffer_out,
+                    create_task_group() as self._task_group,
+                ):
+                    self._task_group.start_soon(self._reader_task)
+                    self._task_group.start_soon(self._writer_task)
+                    # setup connection
+                    await self.on_connect()
+                    # run any user callbacks. right now the only internal callback
+                    # is for pubsub channel/pattern resubscription
+                    for callback in self._connect_callbacks:
+                        task = callback(self)
+                        if inspect.isawaitable(task):
+                            await task
+                    self._connected = True
+                    task_status.started()
         finally:
+            self._connection, self._connected = None, False
             disconnect_exc = self._last_error or ConnectionError("Connection lost!")
-            # TODO: This isn't sufficient to reset the state of the parser to
-            #  be reusable since the memory object stream it's tied to is now
-            #  closed.
             self._parser.on_disconnect()
             while self._requests:
                 request = self._requests.popleft()
                 request.fail(disconnect_exc)
-            self._connection, self._connected, self._connection_cancel_scope = None, False, None
 
     def terminate(self, reason: str | None = None) -> None:
         """
@@ -320,10 +347,10 @@ class BaseConnection:
 
         :meta private:
         """
-        if self._connection_cancel_scope:
-            self._connection_cancel_scope.cancel(reason)
+        if self._task_group:
+            self._task_group.cancel_scope.cancel(reason)
 
-    async def listen_for_responses(self) -> None:
+    async def _reader_task(self) -> None:
         """
         Listen on the socket and run the parser, completing pending requests in
         FIFO order.
@@ -337,7 +364,11 @@ class BaseConnection:
             if isinstance(response, NotEnoughData):
                 # Need more bytes; read once, feed, and retry
                 with fail_after(self.max_idle_time):
-                    data = await self.connection.receive()
+                    try:
+                        data = await self.connection.receive()
+                    except Exception:
+                        self._transport_failed = True
+                        raise
                     self._parser.feed(data)
                 continue  # loop back and try parsing again
 
@@ -349,23 +380,21 @@ class BaseConnection:
                 else:
                     request.resolve(response)
 
-    async def flush_loop(self) -> None:
+    async def _writer_task(self) -> None:
         """
         Continually empty the buffer and send the data to the server.
         """
         while True:
-            data = await self._buffer_out.receive()
-            if len(self._requests) > 1:
-                # multiple pending requests -> more likely to benefit from batching
-                # if we do this always, sequential performance takes a hit.
-                # if we never do it, concurrent performance takes a hit.
-                await sleep(1e-3)
-            while True:
-                try:
-                    data.extend(self._buffer_out.receive_nowait())
-                except WouldBlock:
-                    break
-            await self._send_packed_command(data, timeout=self._stream_timeout)
+            requests = await self._write_buffer_out.receive()
+            while self._write_buffer_out.statistics().current_buffer_used > 0:
+                requests.extend(self._write_buffer_out.receive_nowait())
+                await checkpoint()
+            data = b"".join(requests)
+            try:
+                await self.connection.send(data)
+            except Exception:
+                self._transport_failed = True
+                raise
 
     async def update_tracking_client(self, enabled: bool, client_id: int | None = None) -> bool:
         """
@@ -401,7 +430,7 @@ class BaseConnection:
         await self.create_request(b"AUTH", *params, decode=False)
 
     async def perform_handshake(self) -> None:
-        if not self.needs_handshake:
+        if not self._needs_handshake:
             return
 
         hello_command_args: list[int | str | bytes] = [3]
@@ -439,7 +468,7 @@ class BaseConnection:
                     b"LIB-VER",
                     coredis.__version__,
                 )
-            self.needs_handshake = False
+            self._needs_handshake = False
         except AuthenticationRequiredError:
             await self.try_legacy_auth()
             self.server_version = None
@@ -480,24 +509,8 @@ class BaseConnection:
         if block:
             timeout = self._stream_timeout if not block else None
             with fail_after(timeout):
-                return await self._receive_messages.receive()
-
-        return self._receive_messages.receive_nowait()
-
-    async def _send_packed_command(
-        self, command: list[bytes], timeout: float | None = None
-    ) -> None:
-        """
-        Sends packed command(s) to the Redis server
-        """
-        with fail_after(timeout):
-            data = b"".join(command)
-            try:
-                await self.connection.send(data)
-            except ClosedResourceError as err:
-                self._last_error = err
-                self._connection = None
-                raise ConnectionError(f"Failed to send data: {data.decode()}!") from err
+                return await self._push_message_buffer_out.receive()
+        return self._push_message_buffer_out.receive_nowait()
 
     def create_request(
         self,
@@ -513,27 +526,28 @@ class BaseConnection:
         """
         Queue a command to send to the server
         """
-        cmd_list = []
-        if self.is_connected and noreply and not self.noreply:
-            cmd_list = self.packer.pack_command(CommandName.CLIENT_REPLY, PureToken.SKIP)
-        cmd_list.extend(self.packer.pack_command(command, *args))
-        request_timeout: float | None = timeout or self._stream_timeout
-        request = Request(
-            proxy(self),
-            command,
-            bool(decode) if decode is not None else self.decode_responses,
-            encoding or self.encoding,
-            raise_exceptions,
-            request_timeout,
-            disconnect_on_cancellation,
-        )
-        # modifying buffer and requests should happen atomically
-        if not (self.noreply_set or noreply):
-            self._requests.append(request)
-        else:
-            request.resolve(None)
-        self._buffer_in.send_nowait(cmd_list)
-        return request
+        with self.ensure_connection():
+            cmd_list = []
+            if noreply and not self.noreply:
+                cmd_list = self._packer.pack_command(CommandName.CLIENT_REPLY, PureToken.SKIP)
+            cmd_list.extend(self._packer.pack_command(command, *args))
+            request_timeout: float | None = timeout or self._stream_timeout
+            request = Request(
+                proxy(self),
+                command,
+                bool(decode) if decode is not None else self.decode_responses,
+                encoding or self.encoding,
+                raise_exceptions,
+                request_timeout,
+                disconnect_on_cancellation,
+            )
+            # modifying buffer and requests should happen atomically
+            if not (self.noreply_set or noreply):
+                self._requests.append(request)
+            else:
+                request.resolve(None)
+            self._write_buffer_in.send_nowait(cmd_list)
+            return request
 
     def create_requests(
         self,
@@ -545,23 +559,24 @@ class BaseConnection:
         """
         Queue multiple commands to send to the server
         """
-        request_timeout: float | None = timeout or self._stream_timeout
-        requests = [
-            Request(
-                proxy(self),
-                cmd.command,
-                bool(cmd.decode) if cmd.decode is not None else self.decode_responses,
-                cmd.encoding or self.encoding,
-                raise_exceptions,
-                request_timeout,
-                disconnect_on_cancellation,
-            )
-            for cmd in commands
-        ]
-        packed = self.packer.pack_commands([(cmd.command, *cmd.args) for cmd in commands])
-        self._buffer_in.send_nowait(packed)
-        self._requests.extend(requests)
-        return requests
+        with self.ensure_connection():
+            request_timeout: float | None = timeout or self._stream_timeout
+            requests = [
+                Request(
+                    proxy(self),
+                    cmd.command,
+                    bool(cmd.decode) if cmd.decode is not None else self.decode_responses,
+                    cmd.encoding or self.encoding,
+                    raise_exceptions,
+                    request_timeout,
+                    disconnect_on_cancellation,
+                )
+                for cmd in commands
+            ]
+            packed = self._packer.pack_commands([(cmd.command, *cmd.args) for cmd in commands])
+            self._write_buffer_in.send_nowait(packed)
+            self._requests.extend(requests)
+            return requests
 
 
 class Connection(BaseConnection):

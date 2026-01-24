@@ -518,14 +518,14 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
             timeout=self.timeout,
         )
 
-        errors: list[tuple[int, RedisError | None]] = []
+        errors: list[tuple[int, RedisError | TimeoutError | None]] = []
         # parse off the response for MULTI
         # NOTE: we need to handle ResponseErrors here and continue
         # so that we read all the additional command messages from
         # the socket
         try:
             await requests[0]
-        except RedisError as e:
+        except (RedisError, TimeoutError) as e:
             errors.append((0, e))
 
         # and all the other commands
@@ -535,13 +535,13 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
                     raise Exception(
                         f"Abnormal response in pipeline for command {cmd.name!r}: {resp!r}"
                     )
-            except RedisError as e:
+            except (RedisError, TimeoutError) as e:
                 self.annotate_exception(e, i + 1, cmd.name, cmd.arguments)
                 errors.append((i + 1, e))
 
         try:
             response = cast(list[ResponseType] | None, await requests[-1])
-        except (ExecAbortError, ResponseError) as e:
+        except (ExecAbortError, ResponseError, TimeoutError) as e:
             if errors and errors[0][1]:
                 raise errors[0][1] from e
             raise
@@ -606,7 +606,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
                 )
                 cmd.response = await_result(resp)
                 response.append(resp)
-            except ResponseError as re:
+            except (ResponseError, TimeoutError) as re:
                 cmd.response = await_result(re)
                 response.append(re)
         if self._raise_on_error:
@@ -619,13 +619,13 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
     ) -> None:
         assert isinstance(response, list)
         for i, r in enumerate(response):
-            if isinstance(r, RedisError):
+            if isinstance(r, (RedisError, TimeoutError)):
                 self.annotate_exception(r, i + 1, commands[i].name, commands[i].arguments)
                 raise r
 
     def annotate_exception(
         self,
-        exception: RedisError | None,
+        exception: RedisError | TimeoutError | None,
         number: int,
         command: bytes,
         args: Iterable[RedisValueT],
@@ -781,13 +781,13 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
         for c in self.command_stack:
             r = c.result
 
-            if isinstance(r, RedisError):
+            if isinstance(r, (RedisError, TimeoutError)):
                 self.annotate_exception(r, c.position + 1, c.name, c.arguments)
                 raise r
 
     def annotate_exception(
         self,
-        exception: RedisError | None,
+        exception: RedisError | TimeoutError | None,
         number: int,
         command: bytes,
         args: Iterable[RedisValueT],
@@ -920,14 +920,14 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
                     c.result = await self.client.execute_command(
                         RedisCommand(c.name, c.arguments), **c.execution_parameters
                     )
-                except RedisError as e:
+                except (RedisError, TimeoutError) as e:
                     c.result = e
 
         # Flatten results to match the original command order.
         response = []
         for c in sorted(self.command_stack, key=lambda x: x.position):
             r = c.result
-            if not isinstance(c.result, RedisError):
+            if not isinstance(c.result, (RedisError, TimeoutError)):
                 if isinstance(c.callback, AsyncPreProcessingCallback):
                     await c.callback.pre_process(self.client, c.result)
                 r = c.callback(c.result)

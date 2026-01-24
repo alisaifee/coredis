@@ -232,23 +232,6 @@ class ConnectionPool:
             self._task_group.cancel_scope.cancel()
             await self._task_group.__aexit__(*args)
 
-    async def wrap_connection(
-        self, connection: BaseConnection, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
-    ) -> None:
-        try:
-            await connection.run(task_status=task_status)
-        finally:
-            if connection in self._connections:
-                self._connections.remove(connection)
-                self._connections.append_nowait(None)
-
-    def release(self, connection: BaseConnection) -> None:
-        """
-        Checks connection for liveness and releases it back to the pool.
-        """
-        if connection.is_connected:
-            self._connections.put_nowait(connection)
-
     async def get_connection(self, **_: Any) -> BaseConnection:
         """
         Gets or create a connection from the pool. Be careful to only release the
@@ -258,9 +241,9 @@ class ConnectionPool:
             # if stack has a connection, use that
             connection = await self._connections.get()
             # if None, we need to create a new connection
-            if connection is None:
+            if connection is None or not connection.is_connected:
                 connection = self.connection_class(**self.connection_kwargs)
-                await self._task_group.start(self.wrap_connection, connection)
+                await self._task_group.start(self.__wrap_connection, connection)
             return connection
 
     @asynccontextmanager
@@ -274,3 +257,20 @@ class ConnectionPool:
         connection = await self.get_connection()
         yield connection
         self.release(connection)
+
+    def release(self, connection: BaseConnection) -> None:
+        """
+        Checks connection for liveness and releases it back to the pool.
+        """
+        if connection.is_connected:
+            self._connections.put_nowait(connection)
+
+    async def __wrap_connection(
+        self, connection: BaseConnection, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
+    ) -> None:
+        try:
+            await connection.run(task_status=task_status)
+        finally:
+            if connection in self._connections:
+                self._connections.remove(connection)
+                self._connections.append_nowait(None)
