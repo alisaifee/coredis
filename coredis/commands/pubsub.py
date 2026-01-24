@@ -99,6 +99,9 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
             math.inf
         )
         self._subscribed = Event()
+        # TODO: there might be some benefit with regards to cleanup
+        #  to extend the same functionality to unsubscribe but the
+        #  it's not currently obvious why.
         self._subscription_waiters: dict[StringT, list[Event]] = defaultdict(list)
         self._subscription_timeout: float = subscription_timeout
         self.channels = {}
