@@ -131,6 +131,7 @@ class Client(
         noevict: bool = False,
         notouch: bool = False,
         type_adapter: TypeAdapter | None = None,
+        cache: AbstractCache | None = None,
         **kwargs: Any,
     ):
         if not connection_pool:
@@ -149,6 +150,7 @@ class Client(
                 "noreply": noreply,
                 "noevict": noevict,
                 "notouch": notouch,
+                "cache": cache,
             }
 
             if unix_socket_path is not None:
@@ -759,6 +761,11 @@ class Redis(Client[AnyStr]):
          when interacting with redis commands.
 
         """
+        if connection_pool and cache:
+            raise Exception(
+                "Cannot specify both 'cache' and 'connection_pool'. Consider passing "
+                "the cache to the pool instead."
+            )
         super().__init__(
             host=host,
             port=port,
@@ -789,6 +796,7 @@ class Redis(Client[AnyStr]):
             notouch=notouch,
             retry_policy=retry_policy,
             type_adapter=type_adapter,
+            cache=cache,
             **kwargs,
         )
         self._decodecontext: contextvars.ContextVar[bool | None,] = contextvars.ContextVar(

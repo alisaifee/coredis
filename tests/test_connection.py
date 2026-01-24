@@ -8,6 +8,7 @@ from anyio.abc import SocketAttribute
 
 from coredis import Connection, UnixDomainSocketConnection
 from coredis.credentials import UserPassCredentialProvider
+from tests.conftest import targets
 
 
 async def test_connect_tcp(redis_basic):
@@ -110,3 +111,15 @@ async def test_request_cancellation(redis_basic):
             await request
         await sleep(0.01)
         assert not conn.is_connected
+
+
+@targets("redis_basic", "redis_cluster")
+async def test_shared_pool(client):
+    clone = client.__class__(
+        decode_responses=client.decode_responses,
+        encoding=client.encoding,
+        connection_pool=client.connection_pool,
+    )
+    cid = await client.client_id()
+    async with clone:
+        assert await clone.client_id() == cid

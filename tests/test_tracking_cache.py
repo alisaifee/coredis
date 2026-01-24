@@ -122,7 +122,45 @@ class CommonExamples:
             await client.set("fubar", "fubar")
             await sleep(0.1)
             assert {await clone.get("fubar") for clone in clones} == {_s("fubar")}
-            assert spy.call_count < 5, spy.call_args
+            assert 0 < spy.call_count < 5, spy.call_args
+
+    async def test_shared_cache_via_pool(self, client, mocker, _s):
+        cache = LRUCache()
+        kwargs = client.connection_pool.connection_kwargs
+        pool = client.connection_pool.__class__(cache=cache, **kwargs)
+        clones = [
+            client.__class__(
+                decode_responses=client.decode_responses,
+                encoding=client.encoding,
+                connection_pool=pool,
+            )
+            for _ in range(5)
+        ]
+        async with AsyncExitStack() as stack:
+            for c in clones:
+                await stack.enter_async_context(c)
+            [await clone.ping() for clone in clones]
+            await client.set("fubar", "test")
+            await clones[0].get("fubar")
+            spy = mocker.spy(pool.connection_class, "create_request")
+            assert {await clone.get("fubar") for clone in clones} == {_s("test")}
+            assert spy.call_count == 0, spy.call_args
+
+            await client.set("fubar", "fubar")
+            await sleep(0.1)
+            assert {await clone.get("fubar") for clone in clones} == {_s("fubar")}
+            assert 0 < spy.call_count < 5, spy.call_args
+
+    async def test_shared_cache_and_client_cache(self, client):
+        kwargs = client.connection_pool.connection_kwargs
+        pool = client.connection_pool.__class__(**kwargs)
+        with pytest.raises(Exception, match="Cannot specify both"):
+            _ = client.__class__(
+                decode_responses=client.decode_responses,
+                encoding=client.encoding,
+                connection_pool=pool,
+                cache=LRUCache(),
+            )
 
     async def test_stats(self, client, cloner, mocker, _s):
         cache = LRUCache(confidence=0)

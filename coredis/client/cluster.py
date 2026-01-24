@@ -438,6 +438,11 @@ class RedisCluster(
 
         if "db" in kwargs:  # noqa
             raise RedisClusterException("Argument 'db' is not possible to use in cluster mode")
+        if connection_pool and cache:
+            raise RedisClusterException(
+                "Cannot specify both 'cache' and 'connection_pool'. Consider passing "
+                "the cache to the connection pool instead."
+            )
 
         if connection_pool:
             pool = connection_pool
@@ -480,6 +485,7 @@ class RedisCluster(
                 notouch=notouch,
                 stream_timeout=stream_timeout,
                 connect_timeout=connect_timeout,
+                cache=cache,
                 **kwargs,
             )
 
@@ -598,9 +604,9 @@ class RedisCluster(
                 noreply=noreply,
                 retry_policy=retry_policy,
                 type_adapter=type_adapter,
-                cache=cache,
                 connection_pool=ClusterConnectionPool.from_url(
                     url,
+                    cache=cache,
                     db=db,
                     skip_full_coverage_check=skip_full_coverage_check,
                     decode_responses=decode_responses,
@@ -617,9 +623,9 @@ class RedisCluster(
                 noreply=noreply,
                 retry_policy=retry_policy,
                 type_adapter=type_adapter,
-                cache=cache,
                 connection_pool=ClusterConnectionPool.from_url(
                     url,
+                    cache=cache,
                     db=db,
                     skip_full_coverage_check=skip_full_coverage_check,
                     decode_responses=decode_responses,

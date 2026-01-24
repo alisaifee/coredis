@@ -51,7 +51,6 @@ class ConnectionPool:
     def from_url(
         cls: type[_CPT],
         url: str,
-        cache: AbstractCache | None = None,
         db: int | None = None,
         decode_components: bool = False,
         **kwargs: Any,
