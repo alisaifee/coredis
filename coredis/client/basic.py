@@ -762,10 +762,7 @@ class Redis(Client[AnyStr]):
 
         """
         if connection_pool and cache:
-            raise Exception(
-                "Cannot specify both 'cache' and 'connection_pool'. Consider passing "
-                "the cache to the pool instead."
-            )
+            raise RuntimeError("Parameters 'cache' and 'connection_pool' are mutually exclusive!")
         super().__init__(
             host=host,
             port=port,

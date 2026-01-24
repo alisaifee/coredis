@@ -439,10 +439,7 @@ class RedisCluster(
         if "db" in kwargs:  # noqa
             raise RedisClusterException("Argument 'db' is not possible to use in cluster mode")
         if connection_pool and cache:
-            raise RedisClusterException(
-                "Cannot specify both 'cache' and 'connection_pool'. Consider passing "
-                "the cache to the connection pool instead."
-            )
+            raise RuntimeError("Parameters 'cache' and 'connection_pool' are mutually exclusive!")
 
         if connection_pool:
             pool = connection_pool
