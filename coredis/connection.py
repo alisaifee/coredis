@@ -269,7 +269,7 @@ class BaseConnection:
         Whether the connection is established and initial handshakes were
         performed without error
         """
-        return self._connected and not self._transport_failed
+        return self._connected and self._connection is not None and not self._transport_failed
 
     def register_connect_callback(
         self,
