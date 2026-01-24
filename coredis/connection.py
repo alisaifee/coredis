@@ -300,6 +300,9 @@ class BaseConnection:
 
         def handle_errors(error: BaseExceptionGroup) -> None:
             logger.exception("Connection closed unexpectedly!")
+            # TODO: change _last_error to use the whole exception group
+            #  once python 3.10 support is dropped and the library
+            #  consistently uses exception groups
             self._last_error = error.exceptions[-1]
             # swallow the error unless connection hasn't been established;
             # it will usually be raised when accessing command results.
