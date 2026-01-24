@@ -81,7 +81,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         patterns: Parameters[StringT] | None = None,
         pattern_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
-        subscription_timeout: float = 1e-1,
+        subscription_timeout: float = 1,
     ):
         self.connection_pool = connection_pool
         self.ignore_subscribe_messages = ignore_subscribe_messages
