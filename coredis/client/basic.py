@@ -1061,6 +1061,7 @@ class Redis(Client[AnyStr]):
         channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         patterns: Parameters[StringT] | None = None,
         pattern_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
+        subscription_timeout: float = 1,
         **kwargs: Any,
     ) -> PubSub[AnyStr]:
         """
@@ -1080,7 +1081,8 @@ class Redis(Client[AnyStr]):
         :param pattern_handlers: Mapping of patterns to automatically subscribe to
          and the associated handlers that will be invoked when a message is received
          on channel matching the pattern.
-
+        :param subscription_timeout: Maximum amount of time in seconds to wait for
+         acknowledgement of subscriptions.
         """
 
         return PubSub[AnyStr](
@@ -1091,6 +1093,7 @@ class Redis(Client[AnyStr]):
             channel_handlers=channel_handlers,
             patterns=patterns,
             pattern_handlers=pattern_handlers,
+            subscription_timeout=subscription_timeout,
             **kwargs,
         )
 

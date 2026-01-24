@@ -4,6 +4,7 @@ import pickle
 import time
 
 import anyio
+import pytest
 
 from coredis.client.basic import Redis
 from coredis.commands.pubsub import PubSub
@@ -267,6 +268,22 @@ class TestPubSubSubscribeUnsubscribe:
             )
 
         assert handled == [_s("foo"), _s("quxx")]
+
+    async def test_subscribe_timeout(self, client: Redis):
+        async with client.pubsub(subscription_timeout=1e-4) as pubsub:
+            with pytest.raises(TimeoutError, match="Subscription timed out"):
+                await pubsub.subscribe(*(f"topic{k}" for k in range(100)))
+        async with client.pubsub(subscription_timeout=1e-4) as pubsub:
+            with pytest.raises(TimeoutError, match="Subscription timed out"):
+                await pubsub.psubscribe(*(f"topic{k}-*" for k in range(100)))
+        async with client.pubsub(subscription_timeout=1) as pubsub:
+            await pubsub.subscribe(*(f"topic{k}" for k in range(100)))
+        with pytest.RaisesGroup(pytest.RaisesExc(TimeoutError, match="Subscription timed out")):
+            async with client.pubsub(
+                subscription_timeout=1e-4,
+                channels=[f"topic{k}" for k in range(100)],
+            ) as pubsub:
+                pass
 
 
 @targets("redis_basic", "redis_basic_raw")
