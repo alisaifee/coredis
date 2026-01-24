@@ -83,6 +83,25 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         pattern_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         subscription_timeout: float = 1,
     ):
+        """
+        :param connection_pool: Connection pool used to acquire
+         a connection to use for the pubsub consumer
+        :param ignore_subscribe_messages: Whether to skip subscription
+         acknowledgement messages
+        :param retry_policy: An explicit retry policy to use in the subscriber.
+        :param channels: channels that the constructed Pubsub instance should
+         automatically subscribe to
+        :param channel_handlers: Mapping of channels to automatically subscribe to
+         and the associated handlers that will be invoked when a message is received
+         on the specific channel.
+        :param patterns: patterns that the constructed Pubsub instance should
+         automatically subscribe to
+        :param pattern_handlers: Mapping of patterns to automatically subscribe to
+         and the associated handlers that will be invoked when a message is received
+         on channel matching the pattern.
+        :param subscription_timeout: Maximum amount of time in seconds to wait for
+         acknowledgement of subscriptions.
+        """
         self.connection_pool = connection_pool
         self.ignore_subscribe_messages = ignore_subscribe_messages
         self._connection: coredis.BaseConnection | None = None
@@ -533,6 +552,20 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         subscription_timeout: float = 1e-1,
     ):
+        """
+        :param connection_pool: Connection pool used to acquire
+         a connection to use for the pubsub consumer
+        :param ignore_subscribe_messages: Whether to skip subscription
+         acknowledgement messages
+        :param retry_policy: An explicit retry policy to use in the subscriber.
+        :param channels: channels that the constructed Pubsub instance should
+         automatically subscribe to
+        :param channel_handlers: Mapping of channels to automatically subscribe to
+         and the associated handlers that will be invoked when a message is received
+         on the specific channel.
+        :param subscription_timeout: Maximum amount of time in seconds to wait for
+         acknowledgement of subscriptions.
+        """
         self.shard_connections: dict[str, BaseConnection] = {}
         self.node_channel_mapping: dict[str, list[StringT]] = {}
         self.read_from_replicas = read_from_replicas
