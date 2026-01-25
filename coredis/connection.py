@@ -14,7 +14,9 @@ from weakref import ProxyType, proxy
 
 from anyio import (
     TASK_STATUS_IGNORED,
+    BrokenResourceError,
     CancelScope,
+    EndOfStream,
     Event,
     connect_tcp,
     connect_unix,
@@ -39,7 +41,6 @@ from coredis.credentials import (
     UserPassCredentialProvider,
 )
 from coredis.exceptions import (
-    RETRYABLE,
     AuthenticationRequiredError,
     ConnectionError,
     RedisError,
@@ -56,6 +57,13 @@ from coredis.typing import (
     RedisValueT,
     ResponseType,
     TypeVar,
+)
+
+RETRYABLE_CONNECTION_ERRORS = (
+    BrokenResourceError,
+    ConnectionError,
+    EndOfStream,
+    ssl.SSLError,
 )
 
 CERT_REQS = {
@@ -269,7 +277,7 @@ class BaseConnection:
         Whether the connection is established and initial handshakes were
         performed without error
         """
-        return self._connected and not self._transport_failed
+        return self._connected and self._connection is not None and not self._transport_failed
 
     def register_connect_callback(
         self,
@@ -295,7 +303,7 @@ class BaseConnection:
         if self._task_group:
             raise RuntimeError("Connection cannot be reused")
 
-        retry = ExponentialBackoffRetryPolicy(RETRYABLE, 3, 0.5)
+        retry = ExponentialBackoffRetryPolicy(RETRYABLE_CONNECTION_ERRORS, 3, 0.5)
         self._connection = await retry.call_with_retries(self._connect)
 
         def handle_errors(error: BaseExceptionGroup) -> None:

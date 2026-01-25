@@ -4,6 +4,7 @@ import sys
 import unittest.mock
 
 import pytest
+from exceptiongroup import ExceptionGroup
 
 from coredis.retry import (
     CompositeRetryPolicy,
@@ -115,3 +116,53 @@ class TestRetryPolicies:
 
         assert failure1.await_count == 2
         assert failure2.await_count == 1
+
+    @pytest.mark.parametrize(
+        "policy",
+        [
+            ConstantRetryPolicy((ZeroDivisionError, ValueError), 2, 0.1),
+            ExponentialBackoffRetryPolicy((ZeroDivisionError, ValueError), 2, 0.1),
+            CompositeRetryPolicy(
+                ConstantRetryPolicy((ZeroDivisionError,), 1, 0.1),
+                ExponentialBackoffRetryPolicy((ValueError,), 1, 0.1),
+            ),
+        ],
+    )
+    async def test_exception_group(self, policy):
+        call = unittest.mock.Mock()
+        failure = {ArithmeticError: unittest.mock.AsyncMock()}
+
+        async def group():
+            call()
+            raise ExceptionGroup("", (ValueError(), ZeroDivisionError()))
+
+        with pytest.raises(ExceptionGroup):
+            await policy.call_with_retries(group, failure_hook=failure)
+        assert call.call_count == 3
+        assert failure[ArithmeticError].call_count == 3
+
+    @pytest.mark.parametrize(
+        "policy, expected_delay",
+        [
+            (ExponentialBackoffRetryPolicy((ZeroDivisionError,), 5, 1), 31),
+            (
+                ExponentialBackoffRetryPolicy((ZeroDivisionError,), 5, 1, max_delay=4),
+                15,
+            ),
+            (
+                ExponentialBackoffRetryPolicy((ZeroDivisionError,), 5, 1, max_delay=4, jitter=True),
+                14,
+            ),
+        ],
+    )
+    async def test_exponential_backoff(self, policy, expected_delay, mocker):
+        async def call():
+            1 / 0
+
+        sleep = mocker.patch("coredis.retry.sleep")
+
+        with pytest.raises(ZeroDivisionError):
+            await policy.call_with_retries(call)
+
+        total_delay = sum([k[0][0] for k in sleep.call_args_list])
+        assert 0 < total_delay <= expected_delay

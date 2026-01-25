@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import math
 from abc import ABC, abstractmethod
 from functools import wraps
+from random import randint
 from typing import Any
 
 from anyio import sleep
+from exceptiongroup import BaseExceptionGroup
 
 from coredis._utils import logger
 from coredis.typing import Awaitable, Callable, P, R
@@ -47,33 +50,46 @@ class RetryPolicy(ABC):
          of exception types to callables, the first exception type that is a parent
          of any encountered exception will be called.
         """
-        last_error: BaseException | None = None
-        for attempt in range(self.retries + 1):
+        last_error: BaseException
+        for attempt in range(1, self.retries + 2):
             try:
-                await self.delay(attempt)
                 if before_hook:
                     await before_hook()
                 return await func()
-            except self.retryable_exceptions as e:
-                logger.info(f"Retry attempt {attempt + 1} due to error: {e}")
-                if failure_hook:
-                    try:
-                        if isinstance(failure_hook, dict):
-                            for exc_type, hook in failure_hook.items():
-                                if isinstance(e, exc_type):
-                                    await hook(e)
-                                    break
-                        else:
-                            await failure_hook(e)
-                    except:  # noqa
-                        pass
-                last_error = e
-        if last_error:
-            raise last_error
-        assert False
+            except BaseException as e:
+                if self.will_retry(e):
+                    logger.info(f"Retry attempt {attempt} due to error: {e}")
+                    if failure_hook:
+                        try:
+                            if isinstance(failure_hook, dict):
+                                for exc_type, hook in failure_hook.items():
+                                    if self._exception_matches(e, exc_type):
+                                        await hook(e)
+                                        break
+                            else:
+                                await failure_hook(e)
+                        except:  # noqa
+                            pass
+                    last_error = e
+                    # no more retries.
+                    if attempt < self.retries + 1:
+                        await self.delay(attempt)
+                else:
+                    raise
+        raise last_error
 
     def will_retry(self, exc: BaseException) -> bool:
-        return isinstance(exc, self.retryable_exceptions)
+        return self._exception_matches(exc, *self.retryable_exceptions)
+
+    def _exception_matches(cls, needle: BaseException, *haystack: type[BaseException]) -> bool:
+        if isinstance(needle, BaseExceptionGroup):
+            for exc in haystack:
+                match, unmatched = needle.split(exc)
+                if match:
+                    return True
+        else:
+            return isinstance(needle, haystack)
+        return False
 
     def __repr__(self) -> str:
         return (
@@ -110,8 +126,7 @@ class ConstantRetryPolicy(RetryPolicy):
         super().__init__(retryable_exceptions=retryable_exceptions, retries=retries)
 
     async def delay(self, attempt_number: int) -> None:
-        if attempt_number > 0:
-            await sleep(self.__delay)
+        await sleep(self.__delay)
 
 
 class ExponentialBackoffRetryPolicy(RetryPolicy):
@@ -119,8 +134,16 @@ class ExponentialBackoffRetryPolicy(RetryPolicy):
     Retry policy that exponentially backs off before retrying up to
     :paramref:`ExponentialBackoffRetryPolicy.retries` if any
     of :paramref:`ExponentialBackoffRetryPolicy.retryable_exceptions` are
-    encountered. :paramref:`ExponentialBckoffRetryPolicy.initial_delay`
-    is used as the initial value for calculating the exponential backoff.
+    encountered. :paramref:`ExponentialBckoffRetryPolicy.base_delay`
+    is used as the base value for calculating the exponential backoff given the attempt.
+
+    For example with ``base_delay`` == 1::
+
+        attempt 1 = 2^(1-1)*1 == 1
+        attempt 2 = 2^(2-1)*1 == 2
+        attempt 3 = 2^(3-1)*1 == 4
+
+    To cap the delay to a maximum value, use :paramref:`max_delay`.
 
     """
 
@@ -128,14 +151,20 @@ class ExponentialBackoffRetryPolicy(RetryPolicy):
         self,
         retryable_exceptions: tuple[type[BaseException], ...],
         retries: int,
-        initial_delay: float,
+        base_delay: float,
+        max_delay: float = math.inf,
+        jitter: bool = False,
     ) -> None:
-        self.__initial_delay = initial_delay
+        self.__base_delay = base_delay
+        self.__max_delay = max_delay
+        self.__jitter = jitter
         super().__init__(retryable_exceptions=retryable_exceptions, retries=retries)
 
     async def delay(self, attempt_number: int) -> None:
-        if attempt_number > 0:
-            await sleep(pow(2, attempt_number) * self.__initial_delay)
+        delay = min(self.__max_delay, pow(2, attempt_number - 1) * self.__base_delay)
+        if self.__jitter:
+            delay = randint(int(self.__base_delay), int(delay))
+        await sleep(delay)
 
 
 class CompositeRetryPolicy(RetryPolicy):
@@ -185,30 +214,27 @@ class CompositeRetryPolicy(RetryPolicy):
                 if before_hook:
                     await before_hook()
                 return await func()
-            except Exception as e:
+            except BaseException as e:
                 will_retry = False
-                attempt = 0
                 for policy in attempts:
                     if policy.will_retry(e) and attempts[policy] < policy.retries:
-                        attempt = attempts[policy]
                         attempts[policy] += 1
                         await policy.delay(attempts[policy])
                         will_retry = True
+                        logger.info(f"Retry attempt {attempts[policy]} due to error: {e}")
                         break
 
                 if failure_hook:
                     if isinstance(failure_hook, dict):
                         for exc_type in failure_hook:
-                            if isinstance(e, exc_type):
+                            if self._exception_matches(e, exc_type):
                                 await failure_hook[exc_type](e)
                                 break
                     else:
                         await failure_hook(e)
 
                 if will_retry:
-                    logger.info(f"Retry attempt {attempt + 1} due to error: {e}")
                     continue
-
                 raise e
 
 

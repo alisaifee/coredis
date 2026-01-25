@@ -1040,14 +1040,15 @@ def _s(client):
 @pytest.fixture
 def cloner():
     async def _cloner(client, connection_kwargs={}, **kwargs):
+        cache = kwargs.pop("cache", None)
+        pool = kwargs.pop("connection_pool", None)
         if isinstance(client, coredis.client.Redis):
             c_kwargs = client.connection_pool.connection_kwargs
             c_kwargs.update(connection_kwargs)
-            cache = kwargs.pop("cache", None)
             c = client.__class__(
                 decode_responses=client.decode_responses,
                 encoding=client.encoding,
-                connection_pool=client.connection_pool.__class__(cache=cache, **c_kwargs),
+                connection_pool=pool or client.connection_pool.__class__(cache=cache, **c_kwargs),
                 **kwargs,
             )
         else:
@@ -1056,6 +1057,8 @@ def cloner():
                 client.connection_pool.nodes.startup_nodes[0].port,
                 decode_responses=client.decode_responses,
                 encoding=client.encoding,
+                cache=cache,
+                connection_pool=pool,
                 **kwargs,
             )
         return c

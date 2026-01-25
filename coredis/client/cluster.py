@@ -1078,6 +1078,7 @@ class RedisCluster(
         channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         patterns: Parameters[StringT] | None = None,
         pattern_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
+        subscription_timeout: float = 1,
         **kwargs: Any,
     ) -> ClusterPubSub[AnyStr]:
         """
@@ -1097,6 +1098,8 @@ class RedisCluster(
         :param pattern_handlers: Mapping of patterns to automatically subscribe to
          and the associated handlers that will be invoked when a message is received
          on channel matching the pattern.
+        :param subscription_timeout: Maximum amount of time in seconds to wait for
+         acknowledgement of subscriptions.
         """
         return ClusterPubSub[AnyStr](
             self.connection_pool,
@@ -1106,6 +1109,7 @@ class RedisCluster(
             channel_handlers=channel_handlers,
             patterns=patterns,
             pattern_handlers=pattern_handlers,
+            subscription_timeout=subscription_timeout,
             **kwargs,
         )
 
@@ -1117,6 +1121,7 @@ class RedisCluster(
         retry_policy: RetryPolicy | None = None,
         channels: Parameters[StringT] | None = None,
         channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
+        subscription_timeout: float = 1,
         **kwargs: Any,
     ) -> ShardedPubSub[AnyStr]:
         """
@@ -1139,6 +1144,8 @@ class RedisCluster(
         :param channel_handlers: Mapping of channels to automatically subscribe to
          and the associated handlers that will be invoked when a message is received
          on the specific channel.
+        :param subscription_timeout: Maximum amount of time in seconds to wait for
+         acknowledgement of subscriptions.
 
         New in :redis-version:`7.0.0`
         """
@@ -1150,6 +1157,7 @@ class RedisCluster(
             retry_policy=retry_policy,
             channels=channels,
             channel_handlers=channel_handlers,
+            subscription_timeout=subscription_timeout,
             **kwargs,
         )
 

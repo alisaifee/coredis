@@ -7,7 +7,7 @@ import warnings
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, cast
 
-from anyio import TASK_STATUS_IGNORED, Lock, fail_after
+from anyio import TASK_STATUS_IGNORED, Lock, create_task_group, fail_after
 from anyio.abc import TaskStatus
 from typing_extensions import Self
 
@@ -136,8 +136,16 @@ class ClusterConnectionPool(ConnectionPool):
         )
 
     async def __aenter__(self) -> Self:
-        await super().__aenter__()
-        await self.initialize()
+        if self._counter == 0:
+            self._task_group = create_task_group()
+            self._counter += 1
+            await self._task_group.__aenter__()
+            # same as parent but do initialize() before cache setup
+            await self.initialize()
+            if self.cache:
+                await self._task_group.start(self.cache.run, self)
+        else:
+            self._counter += 1
         return self
 
     async def __aexit__(self, *args: Any) -> None:

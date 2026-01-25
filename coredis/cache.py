@@ -17,7 +17,7 @@ from exceptiongroup import catch
 
 from coredis._utils import b, logger, make_hashable
 from coredis.commands.constants import CommandName
-from coredis.exceptions import RETRYABLE
+from coredis.connection import RETRYABLE_CONNECTION_ERRORS
 from coredis.typing import (
     OrderedDict,
     RedisValueT,
@@ -342,7 +342,7 @@ class NodeTrackingCache(TrackingCache):
         while True:
             # retry with exponential backoff
             await sleep(min(tries**2, 300))
-            with catch({RETRYABLE: handle_error}):
+            with catch({RETRYABLE_CONNECTION_ERRORS: handle_error}):
                 async with pool.acquire() as self._connection:
                     if self._connection.tracking_client_id:
                         await self._connection.update_tracking_client(False)
