@@ -1,0 +1,6 @@
+* Feature
+
+  * Added ``retry`` chainable method to the response from
+    all commands to allow using retry policies individually
+    with a requests instead of having to apply it on all
+    requests issued by a client.
