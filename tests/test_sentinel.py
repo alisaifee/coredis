@@ -41,7 +41,7 @@ async def test_discover_primary_error(redis_sentinel: Sentinel, mocker):
             "is_odown": True,
         }
     }
-    with pytest.RaisesGroup(PrimaryNotFoundError):
+    with pytest.raises(PrimaryNotFoundError):
         async with redis_sentinel.primary_for("mymaster") as primary:
             await primary.ping()
 
@@ -56,7 +56,7 @@ async def test_replica_for_slave_not_found_error(redis_sentinel: Sentinel, mocke
     sentinel_replicas.return_value = []
     sentinel_masters.return_value = {}
     replica = redis_sentinel.replica_for("mymaster", db=9)
-    with pytest.RaisesGroup(ReplicaNotFoundError):
+    with pytest.raises(ReplicaNotFoundError):
         async with replica:
             await replica.ping()
 
@@ -168,7 +168,7 @@ class TestSentinelCommand:
                 yield item
 
         replica_rotate.return_value = async_iter([])
-        with pytest.RaisesGroup(ReplicaNotFoundError, allow_unwrapped=True, flatten_subgroups=True):
+        with pytest.raises(ReplicaNotFoundError):
             async with p:
                 await p.ping()
 
@@ -205,6 +205,6 @@ class TestSentinelCommand:
             with primary.ensure_replication(1):
                 await primary.set("fubar", 1)
 
-            with pytest.RaisesGroup(ReplicationError, allow_unwrapped=True, flatten_subgroups=True):
+            with pytest.raises(ReplicationError):
                 with primary.ensure_replication(2):
                     await primary.set("fubar", 1)

@@ -269,7 +269,7 @@ class TestPubSubSubscribeUnsubscribe:
                 await pubsub.psubscribe(*(f"topic{k}-*" for k in range(100)))
         async with redis_cluster.pubsub(subscription_timeout=1) as pubsub:
             await pubsub.subscribe(*(f"topic{k}" for k in range(100)))
-        with pytest.RaisesGroup(pytest.RaisesExc(TimeoutError, match="Subscription timed out")):
+        with pytest.raises(TimeoutError, match="Subscription timed out"):
             async with redis_cluster.pubsub(
                 subscription_timeout=1e-4,
                 channels=[f"topic{k}" for k in range(100)],
@@ -282,7 +282,7 @@ class TestPubSubSubscribeUnsubscribe:
                 await pubsub.subscribe(*(f"topic{k}" for k in range(100)))
         async with redis_cluster.sharded_pubsub(subscription_timeout=1) as pubsub:
             await pubsub.subscribe(*(f"topic{k}" for k in range(100)))
-        with pytest.RaisesGroup(pytest.RaisesExc(TimeoutError, match="Subscription timed out")):
+        with pytest.raises(TimeoutError, match="Subscription timed out"):
             async with redis_cluster.sharded_pubsub(
                 subscription_timeout=1e-4,
                 channels=[f"topic{k}" for k in range(100)],

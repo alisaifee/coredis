@@ -226,9 +226,7 @@ class TestSSL:
             keyfile="./tests/tls/invalid-client.key",
         )
 
-        with pytest.RaisesGroup(
-            pytest.RaisesExc(ssl.SSLError, match=re.escape("decrypt error")), flatten_subgroups=True
-        ):
+        with pytest.raises(ssl.SSLError, match=re.escape("decrypt error")):
             async with coredis.Redis(
                 port=8379,
                 ssl_context=context,
@@ -236,11 +234,8 @@ class TestSSL:
                 pass
 
     async def test_ssl_no_verify_client(self, redis_ssl_server_no_client_auth):
-        with pytest.RaisesGroup(
-            pytest.RaisesExc(
-                ssl.SSLCertVerificationError, match=re.escape("certificate verify failed")
-            ),
-            flatten_subgroups=True,
+        with pytest.raises(
+            ssl.SSLCertVerificationError, match=re.escape("certificate verify failed")
         ):
             async with coredis.Redis(port=7379, ssl=True, ssl_cert_reqs="required") as client:
                 await client.ping()
