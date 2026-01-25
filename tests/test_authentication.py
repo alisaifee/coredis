@@ -18,8 +18,8 @@ from coredis.exceptions import AuthenticationError
 )
 async def test_invalid_authentication(redis_auth, username, password):
     client = coredis.Redis("localhost", 6389, username=username, password=password)
-    with pytest.raises(AuthenticationError):
-        async with client:
+    async with client:
+        with pytest.raises(AuthenticationError):
             await client.ping()
 
 
