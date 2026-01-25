@@ -33,13 +33,11 @@ from coredis.connection import (
 )
 from coredis.credentials import AbstractCredentialProvider
 from coredis.exceptions import (
-    AuthenticationError,
-    AuthorizationError,
     ConnectionError,
     PersistenceError,
+    RedisError,
     ReplicationError,
     ResponseError,
-    UnknownCommandError,
     WatchError,
 )
 from coredis.globals import CACHEABLE_COMMANDS, COMMAND_FLAGS, READONLY_COMMANDS
@@ -283,6 +281,7 @@ class Client(
     async def _populate_module_versions(self) -> None:
         if self.noreply or getattr(self, "_module_info", None) is not None:
             return
+        self._module_info = {}
         try:
             modules = await self.module_list()
             self._module_info = defaultdict(lambda: version.Version("0"))
@@ -294,14 +293,18 @@ class Client(
                 ver, minor = divmod(ver, 100)
                 ver, major = divmod(ver, 100)
                 self._module_info[name] = version.Version(f"{major}.{minor}.{patch}")
-        except (UnknownCommandError, AuthenticationError, AuthorizationError):
-            self._module_info = {}
-        except ResponseError as err:
-            warnings.warn(
-                "Unable to determine module support due to response error from "
-                f"`MODULE LIST`: {err}."
+        except ResponseError:
+            logger.warning(
+                "Unable to determine module support due to response error from `MODULE LIST`",
+                exc_info=True,
             )
-            self._module_info = {}
+        except RedisError:
+            # TODO: this is perhaps too broad but is done because this code is on the
+            #  initialization path and we don't want to break initialization due to
+            #  known errors
+            logger.warning(
+                "Unable to determine module support due to unexpected error", exc_info=True
+            )
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{repr(self.connection_pool)}>"
