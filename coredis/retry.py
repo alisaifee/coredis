@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import math
 from abc import ABC, abstractmethod
 from functools import wraps
+from random import randint
 from typing import Any
 
 from anyio import sleep
@@ -132,8 +134,16 @@ class ExponentialBackoffRetryPolicy(RetryPolicy):
     Retry policy that exponentially backs off before retrying up to
     :paramref:`ExponentialBackoffRetryPolicy.retries` if any
     of :paramref:`ExponentialBackoffRetryPolicy.retryable_exceptions` are
-    encountered. :paramref:`ExponentialBckoffRetryPolicy.initial_delay`
-    is used as the initial value for calculating the exponential backoff.
+    encountered. :paramref:`ExponentialBckoffRetryPolicy.base_delay`
+    is used as the base value for calculating the exponential backoff given the attempt.
+
+    For example with ``base_delay`` == 1::
+
+        attempt 1 = 2^(1-1)*1 == 1
+        attempt 2 = 2^(2-1)*1 == 2
+        attempt 3 = 2^(3-1)*1 == 4
+
+    To cap the delay to a maximum value, use :paramref:`max_delay`.
 
     """
 
@@ -141,13 +151,20 @@ class ExponentialBackoffRetryPolicy(RetryPolicy):
         self,
         retryable_exceptions: tuple[type[BaseException], ...],
         retries: int,
-        initial_delay: float,
+        base_delay: float,
+        max_delay: float = math.inf,
+        jitter: bool = False,
     ) -> None:
-        self.__initial_delay = initial_delay
+        self.__base_delay = base_delay
+        self.__max_delay = max_delay
+        self.__jitter = jitter
         super().__init__(retryable_exceptions=retryable_exceptions, retries=retries)
 
     async def delay(self, attempt_number: int) -> None:
-        await sleep(pow(2, attempt_number - 1) * self.__initial_delay)
+        delay = min(self.__max_delay, pow(2, attempt_number - 1) * self.__base_delay)
+        if self.__jitter:
+            delay = randint(int(self.__base_delay), int(delay))
+        await sleep(delay)
 
 
 class CompositeRetryPolicy(RetryPolicy):

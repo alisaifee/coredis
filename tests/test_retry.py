@@ -140,3 +140,29 @@ class TestRetryPolicies:
             await policy.call_with_retries(group, failure_hook=failure)
         assert call.call_count == 3
         assert failure[ArithmeticError].call_count == 3
+
+    @pytest.mark.parametrize(
+        "policy, expected_delay",
+        [
+            (ExponentialBackoffRetryPolicy((ZeroDivisionError,), 5, 1), 31),
+            (
+                ExponentialBackoffRetryPolicy((ZeroDivisionError,), 5, 1, max_delay=4),
+                15,
+            ),
+            (
+                ExponentialBackoffRetryPolicy((ZeroDivisionError,), 5, 1, max_delay=4, jitter=True),
+                14,
+            ),
+        ],
+    )
+    async def test_exponential_backoff(self, policy, expected_delay, mocker):
+        async def call():
+            1 / 0
+
+        sleep = mocker.patch("coredis.retry.sleep")
+
+        with pytest.raises(ZeroDivisionError):
+            await policy.call_with_retries(call)
+
+        total_delay = sum([k[0][0] for k in sleep.call_args_list])
+        assert 0 < total_delay <= expected_delay
