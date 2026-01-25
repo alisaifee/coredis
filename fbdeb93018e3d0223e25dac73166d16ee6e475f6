@@ -1,0 +1,6 @@
+* Feature
+
+  * Improve guarantees of calling subscription methods on PubStub
+    instances. Using a ``subscription_timeout`` the acknowledgement
+    of subscription to a topic or pattern can be guaranteed before
+    proceeding with listening to messages.
