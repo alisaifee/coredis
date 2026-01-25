@@ -14,7 +14,7 @@ from typing_extensions import Self
 from coredis._concurrency import Queue, QueueFull
 from coredis.cache import AbstractCache, ClusterTrackingCache
 from coredis.connection import BaseConnection, ClusterConnection, Connection
-from coredis.exceptions import RedisClusterException
+from coredis.exceptions import RedisClusterException, RedisError
 from coredis.globals import READONLY_COMMANDS
 from coredis.pool.basic import ConnectionPool
 from coredis.pool.nodemanager import ManagedNode, NodeManager
@@ -231,10 +231,17 @@ class ClusterConnectionPool(ConnectionPool):
         self.initialized = False
 
     async def __wrap_connection(
-        self, connection: ClusterConnection, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
+        self,
+        connection: ClusterConnection,
+        *,
+        task_status: TaskStatus[None | Exception] = TASK_STATUS_IGNORED,
     ) -> None:
         try:
             await connection.run(task_status=task_status)
+        except RedisError as error:
+            # Only coredis.exception.RedisError is explictly caught and returned with the task status
+            # As these are clear signals that an error case was handled by the connection
+            task_status.started(error)
         finally:
             node_pool = self.__node_pool(connection.node.name)
             if connection in node_pool:
@@ -250,7 +257,8 @@ class ClusterConnectionPool(ConnectionPool):
             **self.connection_kwargs,
         )
         connection.node = node
-        await self._task_group.start(self.__wrap_connection, connection)
+        if err := await self._task_group.start(self.__wrap_connection, connection):
+            raise err.__cause__ or err
         return connection
 
     def __node_pool(self, node: str) -> Queue[Connection]:
