@@ -49,15 +49,14 @@ class RetryPolicy(ABC):
          of any encountered exception will be called.
         """
         last_error: BaseException
-        for attempt in range(self.retries + 1):
+        for attempt in range(1, self.retries + 2):
             try:
-                await self.delay(attempt)
                 if before_hook:
                     await before_hook()
                 return await func()
             except BaseException as e:
                 if self.will_retry(e):
-                    logger.info(f"Retry attempt {attempt + 1} due to error: {e}")
+                    logger.info(f"Retry attempt {attempt} due to error: {e}")
                     if failure_hook:
                         try:
                             if isinstance(failure_hook, dict):
@@ -70,6 +69,9 @@ class RetryPolicy(ABC):
                         except:  # noqa
                             pass
                     last_error = e
+                    # no more retries.
+                    if attempt < self.retries + 1:
+                        await self.delay(attempt)
                 else:
                     raise
         raise last_error
@@ -122,8 +124,7 @@ class ConstantRetryPolicy(RetryPolicy):
         super().__init__(retryable_exceptions=retryable_exceptions, retries=retries)
 
     async def delay(self, attempt_number: int) -> None:
-        if attempt_number > 0:
-            await sleep(self.__delay)
+        await sleep(self.__delay)
 
 
 class ExponentialBackoffRetryPolicy(RetryPolicy):
@@ -146,8 +147,7 @@ class ExponentialBackoffRetryPolicy(RetryPolicy):
         super().__init__(retryable_exceptions=retryable_exceptions, retries=retries)
 
     async def delay(self, attempt_number: int) -> None:
-        if attempt_number > 0:
-            await sleep(pow(2, attempt_number) * self.__initial_delay)
+        await sleep(pow(2, attempt_number - 1) * self.__initial_delay)
 
 
 class CompositeRetryPolicy(RetryPolicy):
@@ -199,13 +199,12 @@ class CompositeRetryPolicy(RetryPolicy):
                 return await func()
             except BaseException as e:
                 will_retry = False
-                attempt = 0
                 for policy in attempts:
                     if policy.will_retry(e) and attempts[policy] < policy.retries:
-                        attempt = attempts[policy]
                         attempts[policy] += 1
                         await policy.delay(attempts[policy])
                         will_retry = True
+                        logger.info(f"Retry attempt {attempts[policy]} due to error: {e}")
                         break
 
                 if failure_hook:
@@ -218,7 +217,6 @@ class CompositeRetryPolicy(RetryPolicy):
                         await failure_hook(e)
 
                 if will_retry:
-                    logger.info(f"Retry attempt {attempt + 1} due to error: {e}")
                     continue
                 raise e
 
