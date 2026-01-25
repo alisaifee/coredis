@@ -24,8 +24,8 @@ from exceptiongroup import catch
 
 from coredis._utils import b, hash_slot, nativestr
 from coredis.commands.constants import CommandName
-from coredis.connection import BaseConnection
-from coredis.exceptions import RETRYABLE, ConnectionError, PubSubError
+from coredis.connection import RETRYABLE_CONNECTION_ERRORS, BaseConnection
+from coredis.exceptions import ConnectionError, PubSubError
 from coredis.parser import (
     PUBLISH_MESSAGE_TYPES,
     SUBSCRIBE_MESSAGE_TYPES,
@@ -180,7 +180,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         while True:
             # retry with exponential backoff
             await sleep(min(tries**2, 300))
-            with catch({RETRYABLE: handle_error}):
+            with catch({RETRYABLE_CONNECTION_ERRORS: handle_error}):
                 async with self.connection_pool.acquire() as self._connection:
                     async with create_task_group() as tg:
                         self._current_scope = tg.cancel_scope
@@ -504,7 +504,7 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
         while True:
             await sleep(min(tries**2, 300))
-            with catch({RETRYABLE: handle_error}):
+            with catch({RETRYABLE_CONNECTION_ERRORS: handle_error}):
                 async with self.connection_pool.acquire() as self._connection:
                     async with create_task_group() as tg:
                         self._current_scope = tg.cancel_scope
@@ -676,7 +676,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
         while True:
             await sleep(min(tries**2, 300))
-            with catch({RETRYABLE: handle_error}):
+            with catch({RETRYABLE_CONNECTION_ERRORS: handle_error}):
                 stack = AsyncExitStack()
                 self.shard_connections = {
                     node.node_id: await stack.enter_async_context(
