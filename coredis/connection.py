@@ -47,7 +47,6 @@ from coredis.exceptions import (
     UnknownCommandError,
 )
 from coredis.parser import NotEnoughData, Parser
-from coredis.retry import ExponentialBackoffRetryPolicy
 from coredis.tokens import PureToken
 from coredis.typing import (
     Awaitable,
@@ -303,8 +302,7 @@ class BaseConnection:
         if self._task_group:
             raise RuntimeError("Connection cannot be reused")
 
-        retry = ExponentialBackoffRetryPolicy(RETRYABLE_CONNECTION_ERRORS, 3, 0.5)
-        self._connection = await retry.call_with_retries(self._connect)
+        self._connection = await self._connect()
 
         def handle_errors(error: BaseExceptionGroup) -> None:
             logger.exception("Connection closed unexpectedly!")
