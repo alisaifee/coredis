@@ -1,0 +1,4 @@
+* Feature
+
+  * Allow chaininable ``transform`` method to accept inline
+    callbacks to transform the response from the redis server
