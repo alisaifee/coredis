@@ -1,0 +1,4 @@
+* Performance
+
+  * Fixed performance regression introduced in ``6.0.0rc1`` with sending commands
+    to the socket. Performance over concurrent workloads is now at par with 5.x or better
