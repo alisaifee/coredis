@@ -115,7 +115,7 @@ async def city_index(client: Redis):
     return data
 
 
-@retryable(ConstantRetryPolicy((ValueError,), 5, 0.1))
+@retryable(ConstantRetryPolicy((ValueError,), retries=5, delay=0.1))
 async def wait_for_index(index_name, client: Redis, _s):
     info = await client.search.info(index_name)
     if int(info[_s("indexing")]):

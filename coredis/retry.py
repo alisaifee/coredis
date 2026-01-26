@@ -1,16 +1,24 @@
 from __future__ import annotations
 
+import dataclasses
 import math
+import random
+import time
 from abc import ABC, abstractmethod
 from functools import wraps
-from random import randint
 from typing import Any
 
 from anyio import sleep
 from exceptiongroup import BaseExceptionGroup
 
 from coredis._utils import logger
-from coredis.typing import Awaitable, Callable, P, R
+from coredis.typing import Awaitable, Callable, Generator, P, R
+
+
+@dataclasses.dataclass
+class Attempt:
+    attempt: int
+    final: bool
 
 
 class RetryPolicy(ABC):
@@ -19,19 +27,45 @@ class RetryPolicy(ABC):
     """
 
     def __init__(
-        self, *, retryable_exceptions: tuple[type[BaseException], ...], retries: int
+        self,
+        retryable_exceptions: tuple[type[BaseException], ...],
+        retries: int | None,
+        *,
+        deadline: float = math.inf,
     ) -> None:
         """
         :param retryable_exceptions: The exceptions to trigger a retry for
         :param retries: number of times to retry if a :paramref:`retryable_exception`
          is encountered.
+        :param deadline: Stop retrying when the time from the first attempt > deadline
+
+        .. warning:: If :paramref:`retries` is ``None`` and deadline is ``math.inf``
+           this policy effectively becomes an infinite retry policy.
         """
         self.retryable_exceptions = retryable_exceptions
-        self.retries = retries
+        self.__retries = retries
+        self.__deadline = deadline
 
     @abstractmethod
-    async def delay(self, attempt_number: int) -> None:
-        pass
+    def delay(self, attempt_number: int) -> float:
+        """
+        Returns the amount of time to pause after the ``attempt_number`` attempt
+        """
+        raise NotImplementedError()
+
+    def attempts(self) -> Generator[Attempt]:
+        attempt = 1
+        start = time.monotonic()
+        retries_complete = False
+        while True:
+            now = time.monotonic()
+            if retries_complete:
+                break
+            retries_complete = (self.__retries is not None and attempt == self.__retries + 1) or (
+                now + self.delay(attempt) - start >= self.__deadline
+            )
+            yield Attempt(attempt, retries_complete)
+            attempt += 1
 
     async def call_with_retries(
         self,
@@ -50,15 +84,15 @@ class RetryPolicy(ABC):
          of exception types to callables, the first exception type that is a parent
          of any encountered exception will be called.
         """
-        last_error: BaseException
-        for attempt in range(1, self.retries + 2):
+        last_error: BaseException | None = None
+        for attempt in self.attempts():
             try:
                 if before_hook:
                     await before_hook()
                 return await func()
             except BaseException as e:
                 if self.will_retry(e):
-                    logger.info(f"Retry attempt {attempt} due to error: {e}")
+                    logger.info(f"Retry attempt {attempt.attempt} due to error: {e}")
                     if failure_hook:
                         try:
                             if isinstance(failure_hook, dict):
@@ -71,16 +105,17 @@ class RetryPolicy(ABC):
                         except:  # noqa
                             pass
                     last_error = e
-                    # no more retries.
-                    if attempt < self.retries + 1:
-                        await self.delay(attempt)
+                    if not attempt.final:
+                        await sleep(self.delay(attempt.attempt))
                 else:
                     raise
+        assert last_error
         raise last_error
 
     def will_retry(self, exc: BaseException) -> bool:
-        return self._exception_matches(exc, *self.retryable_exceptions)
+        return RetryPolicy._exception_matches(exc, *self.retryable_exceptions)
 
+    @classmethod
     def _exception_matches(cls, needle: BaseException, *haystack: type[BaseException]) -> bool:
         if isinstance(needle, BaseExceptionGroup):
             for exc in haystack:
@@ -94,7 +129,8 @@ class RetryPolicy(ABC):
     def __repr__(self) -> str:
         return (
             f"{self.__class__.__name__}<"
-            f"retries={self.retries}, "
+            f"retries={self.__retries}, "
+            f"deadline={self.__deadline}, "
             f"retryable_exceptions={','.join(e.__name__ for e in self.retryable_exceptions)}"
             ">"
         )
@@ -102,40 +138,44 @@ class RetryPolicy(ABC):
 
 class NoRetryPolicy(RetryPolicy):
     def __init__(self) -> None:
-        super().__init__(retryable_exceptions=(), retries=0)
+        super().__init__(retryable_exceptions=(), retries=0, deadline=0)
 
-    async def delay(self, attempt_number: int) -> None:
-        pass
+    def delay(self, attempt_number: int) -> float:
+        return 0
 
 
 class ConstantRetryPolicy(RetryPolicy):
     """
-    Retry policy that pauses :paramref:`ConstantRetryPolicy.delay`
-    seconds between :paramref:`ConstantRetryPolicy.retries`
-    if any of :paramref:`ConstantRetryPolicy.retryable_exceptions` are
-    encountered.
+    Retry policy that pauses :paramref:`delay`
+    seconds between :paramref:`retries` attempts
+    or until :paramref:`deadline` is met if any of
+    :paramref:`retryable_exceptions` are encountered.
     """
 
     def __init__(
         self,
         retryable_exceptions: tuple[type[BaseException], ...],
-        retries: int,
-        delay: float,
+        retries: int | None,
+        *,
+        deadline: float = math.inf,
+        delay: float = 1,
     ) -> None:
         self.__delay = delay
-        super().__init__(retryable_exceptions=retryable_exceptions, retries=retries)
+        super().__init__(
+            retryable_exceptions=retryable_exceptions, retries=retries, deadline=deadline
+        )
 
-    async def delay(self, attempt_number: int) -> None:
-        await sleep(self.__delay)
+    def delay(self, attempt_number: int) -> float:
+        return self.__delay
 
 
 class ExponentialBackoffRetryPolicy(RetryPolicy):
     """
     Retry policy that exponentially backs off before retrying up to
-    :paramref:`ExponentialBackoffRetryPolicy.retries` if any
-    of :paramref:`ExponentialBackoffRetryPolicy.retryable_exceptions` are
-    encountered. :paramref:`ExponentialBckoffRetryPolicy.base_delay`
-    is used as the base value for calculating the exponential backoff given the attempt.
+    :paramref:`retries` or :paramref:`deadline` if any
+    of :paramref:`retryable_exceptions` are encountered.
+    :paramref:`base_delay` is used as the base value for calculating the
+    exponential backoff given the attempt.
 
     For example with ``base_delay`` == 1::
 
@@ -145,26 +185,33 @@ class ExponentialBackoffRetryPolicy(RetryPolicy):
 
     To cap the delay to a maximum value, use :paramref:`max_delay`.
 
+    If :paramref:`jitter` is true the delay will be randomly varied
+    between :paramref:`base_delay` and the exponential delay for the
+    given attempt
     """
 
     def __init__(
         self,
         retryable_exceptions: tuple[type[BaseException], ...],
-        retries: int,
-        base_delay: float,
+        retries: int | None,
+        *,
+        deadline: float = math.inf,
+        base_delay: float = 1,
         max_delay: float = math.inf,
         jitter: bool = False,
     ) -> None:
         self.__base_delay = base_delay
         self.__max_delay = max_delay
         self.__jitter = jitter
-        super().__init__(retryable_exceptions=retryable_exceptions, retries=retries)
+        super().__init__(
+            retryable_exceptions=retryable_exceptions, retries=retries, deadline=deadline
+        )
 
-    async def delay(self, attempt_number: int) -> None:
-        delay = min(self.__max_delay, pow(2, attempt_number - 1) * self.__base_delay)
+    def delay(self, attempt_number: int) -> float:
+        delay: float = min(self.__max_delay, pow(2, attempt_number - 1) * self.__base_delay)
         if self.__jitter:
-            delay = randint(int(self.__base_delay), int(delay))
-        await sleep(delay)
+            delay = random.uniform(self.__base_delay, delay)
+        return delay
 
 
 class CompositeRetryPolicy(RetryPolicy):
@@ -184,7 +231,7 @@ class CompositeRetryPolicy(RetryPolicy):
         """
         self._retry_policies.add(policy)
 
-    async def delay(self, attempt_number: int) -> None:
+    def delay(self, attempt_number: int) -> float:
         raise NotImplementedError()
 
     async def call_with_retries(
@@ -208,7 +255,10 @@ class CompositeRetryPolicy(RetryPolicy):
          of exception types to callables, the first exception type that is a parent
          of any encountered exception will be called.
         """
-        attempts = {policy: 0 for policy in self._retry_policies}
+        policies = {policy: policy.attempts() for policy in self._retry_policies}
+        for attempts in policies.values():
+            next(attempts)
+
         while True:
             try:
                 if before_hook:
@@ -216,13 +266,16 @@ class CompositeRetryPolicy(RetryPolicy):
                 return await func()
             except BaseException as e:
                 will_retry = False
-                for policy in attempts:
-                    if policy.will_retry(e) and attempts[policy] < policy.retries:
-                        attempts[policy] += 1
-                        await policy.delay(attempts[policy])
-                        will_retry = True
-                        logger.info(f"Retry attempt {attempts[policy]} due to error: {e}")
-                        break
+                for policy in policies:
+                    if policy.will_retry(e):
+                        try:
+                            attempt = next(policies[policy])
+                            logger.info(f"Retry attempt {attempt.attempt} due to error: {e}")
+                            will_retry = True
+                            if not attempt.final:
+                                await sleep(policy.delay(attempt.attempt))
+                        except StopIteration:
+                            break
 
                 if failure_hook:
                     if isinstance(failure_hook, dict):

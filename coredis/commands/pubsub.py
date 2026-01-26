@@ -74,8 +74,8 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         connection_pool: PoolT,
         ignore_subscribe_messages: bool = False,
         retry_policy: RetryPolicy | None = CompositeRetryPolicy(
-            ConstantRetryPolicy((ConnectionError,), 3, 0.1),
-            ConstantRetryPolicy((TimeoutError,), 2, 0.1),
+            ConstantRetryPolicy((ConnectionError,), retries=3, delay=0.1),
+            ConstantRetryPolicy((TimeoutError,), retries=2, delay=0.1),
         ),
         channels: Parameters[StringT] | None = None,
         channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
