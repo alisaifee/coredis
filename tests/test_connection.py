@@ -8,7 +8,6 @@ from anyio.abc import SocketAttribute
 
 from coredis import Connection, UnixDomainSocketConnection
 from coredis.credentials import UserPassCredentialProvider
-from tests.conftest import targets
 
 
 async def test_connect_tcp(redis_basic):
@@ -113,16 +112,31 @@ async def test_request_cancellation(redis_basic):
         assert not conn.is_connected
 
 
-@targets("redis_basic", "redis_cluster")
-async def test_shared_pool(client):
-    clone = client.__class__(
-        decode_responses=client.decode_responses,
-        encoding=client.encoding,
-        connection_pool=client.connection_pool,
+async def test_shared_pool(redis_basic):
+    clone = redis_basic.__class__(
+        decode_responses=redis_basic.decode_responses,
+        encoding=redis_basic.encoding,
+        connection_pool=redis_basic.connection_pool,
     )
-    cid = await client.client_id()
     async with clone:
-        assert await clone.client_id() == cid
+        assert await clone.client_id() == await redis_basic.client_id()
+
+
+async def test_shared_pool_cluster(redis_cluster):
+    clone = redis_cluster.__class__(
+        decode_responses=redis_cluster.decode_responses,
+        encoding=redis_cluster.encoding,
+        connection_pool=redis_cluster.connection_pool,
+    )
+    assert clone.connection_pool is redis_cluster.connection_pool
+    await redis_cluster.get("key{a}")
+    await redis_cluster.get("key{b}")
+    before = {c for c in redis_cluster.connection_pool._connections._queue}
+    async with clone:
+        await clone.get("key{a}")
+        await clone.get("key{b}")
+        after = {c for c in clone.connection_pool._connections._queue}
+        assert before == after
 
 
 async def test_termination(redis_basic):

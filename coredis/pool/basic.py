@@ -190,9 +190,9 @@ class ConnectionPool:
         self,
         *,
         connection_class: type[BaseConnection] = Connection,
-        cache: AbstractCache | None = None,
         max_connections: int | None = None,
         timeout: float | None = None,
+        _cache: AbstractCache | None = None,
         **connection_kwargs: Any,
     ) -> None:
         """
@@ -211,7 +211,7 @@ class ConnectionPool:
         self.timeout = timeout
         self.decode_responses = bool(self.connection_kwargs.get("decode_responses", False))
         self.encoding = str(self.connection_kwargs.get("encoding", "utf-8"))
-        self.cache: TrackingCache | None = NodeTrackingCache(cache) if cache else None
+        self.cache: TrackingCache | None = NodeTrackingCache(_cache) if _cache else None
         self._connections: Queue[BaseConnection] = Queue(self.max_connections)
         self._counter = 0
 

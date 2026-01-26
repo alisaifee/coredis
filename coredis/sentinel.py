@@ -343,7 +343,7 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
             connection_pool=connection_pool_class(
                 service_name,
                 self,
-                cache=self.__cache,
+                _cache=self.__cache,
                 **connection_kwargs,
             ),
             type_adapter=self.__type_adapter,
@@ -399,7 +399,7 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
             connection_pool=connection_pool_class(
                 service_name,
                 self,
-                cache=self.__cache,
+                _cache=self.__cache,
                 **connection_kwargs,
             ),
             type_adapter=self.__type_adapter,

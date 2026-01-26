@@ -482,7 +482,7 @@ class RedisCluster(
                 notouch=notouch,
                 stream_timeout=stream_timeout,
                 connect_timeout=connect_timeout,
-                cache=cache,
+                _cache=cache,
                 **kwargs,
             )
 
@@ -603,13 +603,13 @@ class RedisCluster(
                 type_adapter=type_adapter,
                 connection_pool=ClusterConnectionPool.from_url(
                     url,
-                    cache=cache,
                     db=db,
                     skip_full_coverage_check=skip_full_coverage_check,
                     decode_responses=decode_responses,
                     noreply=noreply,
                     noevict=noevict,
                     notouch=notouch,
+                    _cache=cache,
                     **kwargs,
                 ),
             )
@@ -622,13 +622,13 @@ class RedisCluster(
                 type_adapter=type_adapter,
                 connection_pool=ClusterConnectionPool.from_url(
                     url,
-                    cache=cache,
                     db=db,
                     skip_full_coverage_check=skip_full_coverage_check,
                     decode_responses=decode_responses,
                     noreply=noreply,
                     noevict=noevict,
                     notouch=notouch,
+                    _cache=cache,
                     **kwargs,
                 ),
             )

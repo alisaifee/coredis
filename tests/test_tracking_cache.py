@@ -199,7 +199,7 @@ class TestInvalidatingCache(CommonExamples):
     async def test_shared_cache_via_pool(self, client, cloner, mocker, _s):
         cache = LRUCache()
         kwargs = client.connection_pool.connection_kwargs
-        pool = client.connection_pool.__class__(cache=cache, **kwargs)
+        pool = client.connection_pool.__class__(_cache=cache, **kwargs)
         clones = [await cloner(client, connection_pool=pool) for _ in range(5)]
         async with AsyncExitStack() as stack:
             for c in clones:
@@ -259,7 +259,7 @@ class TestClusterInvalidatingCache(CommonExamples):
         cache = LRUCache()
         pool = ClusterConnectionPool(
             startup_nodes=[{"host": "localhost", "port": 7000}],
-            cache=cache,
+            _cache=cache,
             decode_responses=client.decode_responses,
         )
         client = RedisCluster(connection_pool=pool)

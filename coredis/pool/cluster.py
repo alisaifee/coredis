@@ -51,7 +51,6 @@ class ClusterConnectionPool(ConnectionPool):
     def __init__(
         self,
         startup_nodes: Iterable[Node] | None = None,
-        cache: AbstractCache | None = None,
         connection_class: type[ClusterConnection] = ClusterConnection,
         max_connections: int | None = None,
         max_connections_per_node: bool = False,
@@ -61,6 +60,7 @@ class ClusterConnectionPool(ConnectionPool):
         readonly: bool = False,
         read_from_replicas: bool = False,
         timeout: int = 20,
+        _cache: AbstractCache | None = None,
         **connection_kwargs: Any,
     ):
         """
@@ -115,7 +115,7 @@ class ClusterConnectionPool(ConnectionPool):
         self.connection_kwargs = connection_kwargs
         self.connection_kwargs["read_from_replicas"] = read_from_replicas
         self.read_from_replicas = read_from_replicas or readonly
-        self.cache = ClusterTrackingCache(cache) if cache else None
+        self.cache = ClusterTrackingCache(_cache) if _cache else None
         self.reset()
 
         if "stream_timeout" not in self.connection_kwargs:

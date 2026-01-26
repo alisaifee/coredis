@@ -150,7 +150,7 @@ class Client(
                 "noreply": noreply,
                 "noevict": noevict,
                 "notouch": notouch,
-                "cache": cache,
+                "_cache": cache,
             }
 
             if unix_socket_path is not None:
@@ -877,12 +877,12 @@ class Redis(Client[AnyStr]):
                 type_adapter=type_adapter,
                 connection_pool=ConnectionPool.from_url(
                     url,
-                    cache=cache,
                     db=db,
                     decode_responses=decode_responses,
                     noreply=noreply,
                     noevict=noevict,
                     notouch=notouch,
+                    _cache=cache,
                     **kwargs,
                 ),
             )
@@ -895,12 +895,12 @@ class Redis(Client[AnyStr]):
                 type_adapter=type_adapter,
                 connection_pool=ConnectionPool.from_url(
                     url,
-                    cache=cache,
                     db=db,
                     decode_responses=decode_responses,
                     noreply=noreply,
                     noevict=noevict,
                     notouch=notouch,
+                    _cache=cache,
                     **kwargs,
                 ),
             )

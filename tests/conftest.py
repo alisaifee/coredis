@@ -1048,7 +1048,7 @@ def cloner():
             c = client.__class__(
                 decode_responses=client.decode_responses,
                 encoding=client.encoding,
-                connection_pool=pool or client.connection_pool.__class__(cache=cache, **c_kwargs),
+                connection_pool=pool or client.connection_pool.__class__(_cache=cache, **c_kwargs),
                 **kwargs,
             )
         else:
