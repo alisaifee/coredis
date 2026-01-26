@@ -18,8 +18,6 @@ from exceptiongroup import catch
 from coredis._utils import b, logger, make_hashable
 from coredis.commands.constants import CommandName
 from coredis.connection import RETRYABLE_CONNECTION_ERRORS
-from coredis.pool.basic import ConnectionPool
-from coredis.pool.cluster import ClusterConnectionPool
 from coredis.typing import (
     OrderedDict,
     RedisValueT,
@@ -29,6 +27,7 @@ from coredis.typing import (
 
 if TYPE_CHECKING:
     import coredis.client
+    from coredis.pool.basic import ConnectionPool
 
 
 @dataclasses.dataclass
@@ -395,6 +394,8 @@ class ClusterTrackingCache(TrackingCache):
     async def run(
         self, pool: ConnectionPool, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
     ) -> None:
+        from coredis.pool.cluster import ClusterConnectionPool
+
         assert isinstance(pool, ClusterConnectionPool)
         self._nodes = [
             pool.nodes.get_redis_link(node.host, node.port) for node in pool.nodes.all_nodes()

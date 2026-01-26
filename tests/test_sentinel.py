@@ -189,9 +189,6 @@ class TestSentinelCommand:
         new_primary = client.primary_for("mymaster")
         new_replica = client.replica_for("mymaster")
 
-        assert new_primary.cache
-        assert new_replica.cache
-
         async with new_primary, new_replica:
             await new_primary.ping()
             await new_replica.ping()

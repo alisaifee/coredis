@@ -112,6 +112,33 @@ async def test_request_cancellation(redis_basic):
         assert not conn.is_connected
 
 
+async def test_shared_pool(redis_basic):
+    clone = redis_basic.__class__(
+        decode_responses=redis_basic.decode_responses,
+        encoding=redis_basic.encoding,
+        connection_pool=redis_basic.connection_pool,
+    )
+    async with clone:
+        assert await clone.client_id() == await redis_basic.client_id()
+
+
+async def test_shared_pool_cluster(redis_cluster):
+    clone = redis_cluster.__class__(
+        decode_responses=redis_cluster.decode_responses,
+        encoding=redis_cluster.encoding,
+        connection_pool=redis_cluster.connection_pool,
+    )
+    assert clone.connection_pool is redis_cluster.connection_pool
+    await redis_cluster.get("key{a}")
+    await redis_cluster.get("key{b}")
+    before = {c for c in redis_cluster.connection_pool._connections._queue}
+    async with clone:
+        await clone.get("key{a}")
+        await clone.get("key{b}")
+        after = {c for c in clone.connection_pool._connections._queue}
+        assert before == after
+
+
 async def test_termination(redis_basic):
     conn = Connection()
     async with create_task_group() as tg:

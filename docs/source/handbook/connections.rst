@@ -13,7 +13,17 @@ To explicitly select the type of connection pool used pass in the appropriate cl
 :paramref:`coredis.Redis.connection_pool_cls` or :paramref:`coredis.RedisCluster.connection_pool_cls`.
 
 Connection pools can also be shared between multiple clients through the :paramref:`coredis.Redis.connection_pool`
-or :paramref:`coredis.RedisCluster.connection_pool` parameter.
+or :paramref:`coredis.RedisCluster.connection_pool` parameter::
+
+    import coredis
+
+    pool = coredis.ConnectionPool(max_connections=8)
+    client1 = coredis.Redis(connection_pool=pool)
+    client2 = coredis.Redis(connection_pool=pool)
+
+    async with pool:
+        async with client1, client2:
+            assert await client1.client_id() == await client2.client_id()
 
 ===============
 Connection Pool

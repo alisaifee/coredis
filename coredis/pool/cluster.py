@@ -7,11 +7,12 @@ import warnings
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, cast
 
-from anyio import TASK_STATUS_IGNORED, Lock, fail_after
+from anyio import TASK_STATUS_IGNORED, Lock, create_task_group, fail_after
 from anyio.abc import TaskStatus
 from typing_extensions import Self
 
 from coredis._concurrency import Queue, QueueFull
+from coredis.cache import AbstractCache, ClusterTrackingCache
 from coredis.connection import BaseConnection, ClusterConnection, Connection
 from coredis.exceptions import RedisClusterException
 from coredis.globals import READONLY_COMMANDS
@@ -59,6 +60,7 @@ class ClusterConnectionPool(ConnectionPool):
         readonly: bool = False,
         read_from_replicas: bool = False,
         timeout: int = 20,
+        _cache: AbstractCache | None = None,
         **connection_kwargs: Any,
     ):
         """
@@ -113,6 +115,7 @@ class ClusterConnectionPool(ConnectionPool):
         self.connection_kwargs = connection_kwargs
         self.connection_kwargs["read_from_replicas"] = read_from_replicas
         self.read_from_replicas = read_from_replicas or readonly
+        self.cache = ClusterTrackingCache(_cache) if _cache else None
         self.reset()
 
         if "stream_timeout" not in self.connection_kwargs:
@@ -132,14 +135,22 @@ class ClusterConnectionPool(ConnectionPool):
             ),
         )
 
-    @asynccontextmanager
-    async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        async with super().__asynccontextmanager__():
+    async def __aenter__(self) -> Self:
+        if self._counter == 0:
+            self._task_group = create_task_group()
+            self._counter += 1
+            await self._task_group.__aenter__()
+            # same as parent but do initialize() before cache setup
             await self.initialize()
-            try:
-                yield self
-            finally:
-                self.reset()
+            if self.cache:
+                await self._task_group.start(self.cache.run, self)
+        else:
+            self._counter += 1
+        return self
+
+    async def __aexit__(self, *args: Any) -> None:
+        self.reset()
+        await super().__aexit__(*args)
 
     async def initialize(self) -> None:
         if not self.initialized:
