@@ -327,11 +327,7 @@ class BaseConnection:
                     raise match
                 else:
                     logger.exception("Connection attempt failed unexpectedly!")
-                    # TODO: Perhaps this should be raise ConnectionError() from self._last_error
-                    #  which would allow the connection pool to unwrap the right exception
-                    #  however it looks like raising an exception in an exceptiongroup.catch
-                    #  context results in __cause__ getting clobbered.
-                    raise
+                    raise self._last_error
             else:
                 # If a connection had successfully been established (including handshake)
                 # errors should no longer be raised and it is the responsibility of the
