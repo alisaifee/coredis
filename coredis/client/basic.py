@@ -917,8 +917,6 @@ class Redis(Client[AnyStr]):
             except Exception as err:
                 # Any errors raised during the initialization process
                 # should be raised out of the client's context, not the connection pools.
-                # This also ensures that we don't unnecessarily yield when the client
-                # cannot proceed.
                 initialization_error = err
             else:
                 yield self
