@@ -639,7 +639,6 @@ class RedisCluster(
             self.connection_pool.initialized = False
         async with self.connection_pool:
             self.refresh_table_asap = False
-            await self._populate_module_versions()
             yield self
 
     def __repr__(self) -> str:

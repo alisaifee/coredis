@@ -7,8 +7,6 @@ from typing import TYPE_CHECKING, Any, cast
 
 from packaging import version
 
-from coredis.config import Config
-
 from .._protocols import AbstractExecutor
 from ..commands._utils import redis_command_link
 from ..commands._wrappers import (
@@ -17,7 +15,6 @@ from ..commands._wrappers import (
 )
 from ..commands.constants import CommandFlag, CommandGroup, CommandName
 from ..commands.request import CommandRequest
-from ..exceptions import CommandSyntaxError, ModuleCommandNotSupportedError
 from ..globals import CACHEABLE_COMMANDS, COMMAND_FLAGS, MODULE_GROUPS, MODULES, READONLY_COMMANDS
 from ..typing import (
     AnyStr,
@@ -31,43 +28,6 @@ from ..typing import (
 
 if TYPE_CHECKING:
     import coredis.client
-
-
-def ensure_compatibility(
-    client: coredis.client.Client[Any],
-    module: str,
-    command_details: CommandDetails,
-    kwargs: dict[str, Any],
-) -> None:
-    if (
-        Config.optimized
-        or not command_details.version_introduced
-        or not getattr(client, "verify_version", False)
-        or not getattr(client, "server_version", None)
-        or getattr(client, "noreply", False)
-    ):
-        return
-    if command_details.version_introduced:
-        module_version = client.get_server_module_version(module)
-        if module_version and command_details.version_introduced <= module_version:
-            if command_details.arguments and set(command_details.arguments.keys()).intersection(
-                kwargs.keys()
-            ):
-                for argument, version_introduced in command_details.arguments.items():
-                    if version_introduced and version_introduced > module_version:
-                        raise CommandSyntaxError(
-                            {argument},
-                            (
-                                f"{command_details.command.decode('latin-1')} with `{argument}` "
-                                f"is not supported in {module} version {module_version}"
-                            ),
-                        )
-            return
-        raise ModuleCommandNotSupportedError(
-            command_details.command.decode("latin-1"),
-            module,
-            str(module_version) if module_version else "",
-        )
 
 
 def module_command(
@@ -111,7 +71,6 @@ def module_command(
             is_regular_client = isinstance(client, (Redis, RedisCluster))
             runtime_checking = not getattr(client, "noreply", None) and is_regular_client
             callable = runtime_checkable if runtime_checking else func
-            ensure_compatibility(client, module.NAME, command_details, kwargs)
             return callable(*args, **kwargs)
 
         wrapped.__doc__ = textwrap.dedent(wrapped.__doc__ or "")

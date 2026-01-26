@@ -11,11 +11,10 @@ from typing import TYPE_CHECKING, Any, Coroutine, cast, overload
 from anyio import AsyncContextManagerMixin, sleep
 from deprecated.sphinx import versionadded
 from exceptiongroup import catch
-from packaging import version
 from packaging.version import InvalidVersion, Version
 from typing_extensions import Self
 
-from coredis._utils import EncodingInsensitiveDict, logger, nativestr
+from coredis._utils import logger, nativestr
 from coredis.cache import AbstractCache
 from coredis.commands import CommandRequest
 from coredis.commands._key_spec import KeySpec
@@ -33,13 +32,9 @@ from coredis.connection import (
 )
 from coredis.credentials import AbstractCredentialProvider
 from coredis.exceptions import (
-    AuthenticationError,
-    AuthorizationError,
     ConnectionError,
     PersistenceError,
     ReplicationError,
-    ResponseError,
-    UnknownCommandError,
     WatchError,
 )
 from coredis.globals import CACHEABLE_COMMANDS, COMMAND_FLAGS, READONLY_COMMANDS
@@ -193,7 +188,6 @@ class Client(
             contextvars.ContextVar("waitaof", default=None)
         )
         self.retry_policy = retry_policy
-        self._module_info: dict[str, version.Version] | None = None
         self.callback_storage = defaultdict(dict)
         self.type_adapter = type_adapter or TypeAdapter()
 
@@ -241,9 +235,6 @@ class Client(
             return False
         return True
 
-    def get_server_module_version(self, module: str) -> version.Version | None:
-        return (self._module_info or {}).get(module)
-
     def _ensure_server_version(self, version: str | None) -> None:
         if self.verify_version and not Config.optimized and not self.server_version and version:
             try:
@@ -279,29 +270,6 @@ class Client(
             aof_result = cast(tuple[int, int], await aof_request)
             if not (aof_result[0] >= waitaof[0] and aof_result[1] >= waitaof[1]):
                 raise PersistenceError(command.name, *waitaof)
-
-    async def _populate_module_versions(self) -> None:
-        if self.noreply or getattr(self, "_module_info", None) is not None:
-            return
-        try:
-            modules = await self.module_list()
-            self._module_info = defaultdict(lambda: version.Version("0"))
-            for module in modules:
-                mod = EncodingInsensitiveDict(module)
-                name = nativestr(mod["name"])
-                ver = mod["ver"]
-                ver, patch = divmod(ver, 100)
-                ver, minor = divmod(ver, 100)
-                ver, major = divmod(ver, 100)
-                self._module_info[name] = version.Version(f"{major}.{minor}.{patch}")
-        except (UnknownCommandError, AuthenticationError, AuthorizationError):
-            self._module_info = {}
-        except ResponseError as err:
-            warnings.warn(
-                "Unable to determine module support due to response error from "
-                f"`MODULE LIST`: {err}."
-            )
-            self._module_info = {}
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{repr(self.connection_pool)}>"
@@ -908,7 +876,6 @@ class Redis(Client[AnyStr]):
     @contextlib.asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         async with self.connection_pool:
-            await self._populate_module_versions()
             yield self
 
     async def execute_command(

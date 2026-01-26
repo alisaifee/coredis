@@ -232,8 +232,8 @@ class TestSSL:
             async with coredis.Redis(
                 port=8379,
                 ssl_context=context,
-            ):
-                pass
+            ) as client:
+                await client.ping()
 
     async def test_ssl_no_verify_client(self, redis_ssl_server_no_client_auth):
         with pytest.RaisesGroup(
