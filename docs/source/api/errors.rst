@@ -100,8 +100,6 @@ General Exceptions
    :no-inherited-members:
 .. autoexception:: coredis.exceptions.ResponseError
    :no-inherited-members:
-.. autoexception:: coredis.exceptions.TimeoutError
-   :no-inherited-members:
 .. autoexception:: coredis.exceptions.UnblockedError
    :no-inherited-members:
 .. autoexception:: coredis.exceptions.WatchError
