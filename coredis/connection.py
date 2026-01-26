@@ -327,10 +327,10 @@ class BaseConnection:
                     raise match
                 else:
                     logger.exception("Connection attempt failed unexpectedly!")
-                    # swallow the error unless connection hasn't been established;
-                    # it will usually be raised when accessing command results.
-                    # we want the connection to die, but we don't always want to
-                    # raise it and corrupt the connection pool.
+                    # TODO: Perhaps this should be raise ConnectionError() from self._last_error
+                    #  which would allow the connection pool to unwrap the right exception
+                    #  however it looks like raising an exception in an exceptiongroup.catch
+                    #  context results in __cause__ getting clobbered.
                     raise
             else:
                 # If a connection had successfully been established (including handshake)
