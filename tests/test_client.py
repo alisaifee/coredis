@@ -230,7 +230,9 @@ class TestSSL:
             port=8379,
             ssl_context=context,
         ) as client:
-            with pytest.RaisesGroup(pytest.RaisesExc(ssl.SSLError, match=re.escape("decrypt error"))):
+            with pytest.RaisesGroup(
+                pytest.RaisesExc(ssl.SSLError, match=re.escape("decrypt error"))
+            ):
                 await client.ping()
 
     async def test_ssl_no_verify_client(self, redis_ssl_server_no_client_auth):

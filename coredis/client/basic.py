@@ -34,7 +34,6 @@ from coredis.credentials import AbstractCredentialProvider
 from coredis.exceptions import (
     ConnectionError,
     PersistenceError,
-    RedisError,
     ReplicationError,
     WatchError,
 )
