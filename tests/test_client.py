@@ -234,10 +234,10 @@ class TestSSL:
                 pass
 
     async def test_ssl_no_verify_client(self, redis_ssl_server_no_client_auth):
-        async with coredis.Redis(port=7379, ssl=True, ssl_cert_reqs="required") as client:
-            with pytest.raises(
-                ssl.SSLCertVerificationError, match=re.escape("certificate verify failed")
-            ):
+        with pytest.raises(
+            ssl.SSLCertVerificationError, match=re.escape("certificate verify failed")
+        ):
+            async with coredis.Redis(port=7379, ssl=True, ssl_cert_reqs="required") as client:
                 await client.ping()
         async with coredis.Redis(port=7379, ssl=True, ssl_cert_reqs="none") as client:
             assert await client.ping() == b"PONG"
