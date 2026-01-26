@@ -635,21 +635,11 @@ class RedisCluster(
 
     @contextlib.asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        initialization_error: Exception | None = None
         if self.refresh_table_asap:
             self.connection_pool.initialized = False
         async with self.connection_pool:
-            try:
-                self.refresh_table_asap = False
-                await self._populate_module_versions()
-            except Exception as err:
-                # Any errors raised during the initialization process
-                # should be raised out of the client's context, not the connection pools.
-                initialization_error = err
-            else:
-                yield self
-        if initialization_error is not None:
-            raise initialization_error
+            self.refresh_table_asap = False
+            yield self
 
     def __repr__(self) -> str:
         servers = list(
