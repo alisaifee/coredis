@@ -353,18 +353,21 @@ def redis_uds_server(docker_services):
 @pytest.fixture(scope="session")
 def redis_auth_server(docker_services):
     docker_services.start("redis-auth")
+    docker_services.wait_for_service("redis-auth", 6389, ping_socket)
     yield ["localhost", 6389]
 
 
 @pytest.fixture(scope="session")
 def redis_ssl_server(docker_services):
     docker_services.start("redis-ssl")
+    docker_services.wait_for_service("redis-ssl", 8379, ping_socket)
     yield ["localhost", 8379]
 
 
 @pytest.fixture(scope="session")
 def redis_ssl_server_no_client_auth(docker_services):
     docker_services.start("redis-ssl-no-client-auth")
+    docker_services.wait_for_service("redis-ssl-no-client-auth", 7379, ping_socket)
     yield ["localhost", 7379]
 
 
