@@ -4,7 +4,7 @@ import inspect
 import math
 from collections import defaultdict
 from contextlib import AsyncExitStack, asynccontextmanager
-from typing import TYPE_CHECKING, Any, AsyncGenerator, cast
+from typing import TYPE_CHECKING, AsyncGenerator, cast
 
 from anyio import (
     TASK_STATUS_IGNORED,
@@ -12,7 +12,6 @@ from anyio import (
     Event,
     create_memory_object_stream,
     create_task_group,
-    current_time,
     fail_after,
     move_on_after,
     sleep,
@@ -20,7 +19,6 @@ from anyio import (
 from anyio.abc import TaskStatus
 from anyio.streams.stapled import StapledObjectStream
 from deprecated.sphinx import versionadded
-from exceptiongroup import catch
 
 from coredis._utils import b, hash_slot, nativestr
 from coredis.commands.constants import CommandName
@@ -37,6 +35,7 @@ from coredis.response.types import PubSubMessage
 from coredis.retry import (
     CompositeRetryPolicy,
     ConstantRetryPolicy,
+    ExponentialBackoffRetryPolicy,
     NoRetryPolicy,
     RetryPolicy,
 )
@@ -123,6 +122,11 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         #  it's not currently obvious why.
         self._subscription_waiters: dict[StringT, list[Event]] = defaultdict(list)
         self._subscription_timeout: float = subscription_timeout
+
+        # Used specifically in the forever run task
+        self._runner_retry_policy = ExponentialBackoffRetryPolicy(
+            RETRYABLE_CONNECTION_ERRORS, retries=None, base_delay=1, max_delay=16, jitter=True
+        )
         self.channels = {}
         self.patterns = {}
         self.tries = 0
@@ -168,33 +172,25 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
             self._current_scope.cancel()
 
     async def run(self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
-        start_time, started, tries = current_time(), False, 0
+        started = False
 
-        def handle_error(*args: Any) -> None:
-            nonlocal tries, start_time
-            if current_time() - start_time > 10:
-                tries = 0
-            else:
-                tries += 1
+        async def _run() -> None:
+            nonlocal started
+            async with self.connection_pool.acquire() as self._connection:
+                async with create_task_group() as tg:
+                    self._current_scope = tg.cancel_scope
+                    tg.start_soon(self._consumer)
+                    tg.start_soon(self._keepalive)
+                    if not started:
+                        task_status.started()
+                        started = True
+                    else:  # resubscribe
+                        if self.channels:
+                            await self.subscribe(*self.channels.keys())
+                        if self.patterns:
+                            await self.psubscribe(*self.patterns.keys())
 
-        while True:
-            # retry with exponential backoff
-            await sleep(min(tries**2, 300))
-            with catch({RETRYABLE_CONNECTION_ERRORS: handle_error}):
-                async with self.connection_pool.acquire() as self._connection:
-                    async with create_task_group() as tg:
-                        self._current_scope = tg.cancel_scope
-                        tg.start_soon(self._consumer)
-                        tg.start_soon(self._keepalive)
-                        if not started:
-                            task_status.started()
-                            started = True
-                        else:  # resubscribe
-                            if self.channels:
-                                await self.subscribe(*self.channels.keys())
-                            if self.patterns:
-                                await self.psubscribe(*self.patterns.keys())
-                    break
+        await self._runner_retry_policy.call_with_retries(_run)
 
     async def _keepalive(self) -> None:
         while True:
@@ -493,32 +489,25 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
     """
 
     async def run(self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
-        start_time, started, tries = current_time(), False, 0
+        started = False
 
-        def handle_error(*args: Any) -> None:
-            nonlocal tries, start_time
-            if current_time() - start_time > 10:
-                tries = 0
-            else:
-                tries += 1
+        async def _run() -> None:
+            nonlocal started
+            async with self.connection_pool.acquire() as self._connection:
+                async with create_task_group() as tg:
+                    self._current_scope = tg.cancel_scope
+                    tg.start_soon(self._consumer)
+                    tg.start_soon(self._keepalive)
+                    if not started:
+                        task_status.started()
+                        started = True
+                    else:  # resubscribe
+                        if self.channels:
+                            await self.subscribe(*self.channels.keys())
+                        if self.patterns:
+                            await self.psubscribe(*self.patterns.keys())
 
-        while True:
-            await sleep(min(tries**2, 300))
-            with catch({RETRYABLE_CONNECTION_ERRORS: handle_error}):
-                async with self.connection_pool.acquire() as self._connection:
-                    async with create_task_group() as tg:
-                        self._current_scope = tg.cancel_scope
-                        tg.start_soon(self._consumer)
-                        tg.start_soon(self._keepalive)
-                        if not started:
-                            task_status.started()
-                            started = True
-                        else:  # resubscribe
-                            if self.channels:
-                                await self.subscribe(*self.channels.keys())
-                            if self.patterns:
-                                await self.psubscribe(*self.patterns.keys())
-                    break
+        await self._runner_retry_policy.call_with_retries(_run)
 
 
 @versionadded(version="3.6.0")
@@ -665,39 +654,32 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
             self.reset()
 
     async def run(self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
-        start_time, started, tries = current_time(), False, 0
+        started = False
 
-        def handle_error(*args: Any) -> None:
-            nonlocal tries, start_time
-            if current_time() - start_time > 10:
-                tries = 0
-            else:
-                tries += 1
+        async def _run() -> None:
+            nonlocal started
+            stack = AsyncExitStack()
+            self.shard_connections = {
+                node.node_id: await stack.enter_async_context(
+                    self.connection_pool.acquire(node=node)
+                )
+                for node in self.connection_pool.nodes.all_primaries()
+                if node.node_id
+            }
+            async with create_task_group() as tg:
+                self._current_scope = tg.cancel_scope
+                tg.start_soon(self._consumer)
+                [
+                    tg.start_soon(self._shard_listener, connection)
+                    for connection in self.shard_connections.values()
+                ]
+                if not started:
+                    task_status.started()
+                    started = True
+                elif self.channels:  # resubscribe
+                    await self.subscribe(*self.channels.keys())
 
-        while True:
-            await sleep(min(tries**2, 300))
-            with catch({RETRYABLE_CONNECTION_ERRORS: handle_error}):
-                stack = AsyncExitStack()
-                self.shard_connections = {
-                    node.node_id: await stack.enter_async_context(
-                        self.connection_pool.acquire(node=node)
-                    )
-                    for node in self.connection_pool.nodes.all_primaries()
-                    if node.node_id
-                }
-                async with create_task_group() as tg:
-                    self._current_scope = tg.cancel_scope
-                    tg.start_soon(self._consumer)
-                    [
-                        tg.start_soon(self._shard_listener, connection)
-                        for connection in self.shard_connections.values()
-                    ]
-                    if not started:
-                        task_status.started()
-                        started = True
-                    elif self.channels:  # resubscribe
-                        await self.subscribe(*self.channels.keys())
-                break
+        await self._runner_retry_policy.call_with_retries(_run)
 
     async def _shard_listener(self, connection: BaseConnection) -> None:
         while True:
