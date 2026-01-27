@@ -145,7 +145,7 @@ def wraps(
     function_name: str | None = None,
     runtime_checks: bool = ...,
     readonly: bool = ...,
-    optimistic_execution: bool = ...,
+    verify_existence: bool = ...,
 ) -> Callable[[Callable[P, R]], Callable[P, CommandRequest[R]]]: ...
 
 
@@ -156,7 +156,7 @@ def wraps(
     callback: Callable[..., CommandResponseT],
     runtime_checks: bool = ...,
     readonly: bool = ...,
-    optimistic_execution: bool = ...,
+    verify_existence: bool = ...,
 ) -> Callable[[Callable[P, Any]], Callable[P, CommandRequest[CommandResponseT]]]: ...
 
 
@@ -167,7 +167,7 @@ def wraps(
     callback: Callable[..., CommandResponseT] = NoopCallback(),
     runtime_checks: bool = False,
     readonly: bool = False,
-    optimistic_execution: bool = False,
+    verify_existence: bool = True,
 ) -> Callable[[Callable[P, Any]], Callable[P, CommandRequest[Any]]]:
     """
     Decorator for wrapping methods of subclasses of :class:`Library`
@@ -284,7 +284,7 @@ def wraps(
      still get runtime type checking if the environment configuration ``COREDIS_RUNTIME_CHECKS``
      is set - for details see :ref:`handbook/typing:runtime type checking`.
     :param readonly: If ``True`` forces this function to use :meth:`coredis.Redis.fcall_ro`
-    :param optimistic_execution: If ``True``, skip check to see if the function has already
+    :param verify_existence: If ``False``, skip check to see if the function has already
      been registered and call FCALL directly. Use this when you want to save a round trip
      and already know the function is registered.
 
@@ -351,15 +351,13 @@ def wraps(
             name = function_name or func.__name__
             instance, keys, arguments = split_args(*args, **kwargs)
             if (fn := instance.functions.get(name, None)) is None:
-                if not optimistic_execution:
+                if verify_existence:
                     raise AttributeError(
                         f"Library {instance.name} has no registered function {name}"
                     )
                 if readonly:
-                    return instance.client.fcall_ro(name, keys or [], arguments or []).transform(
-                        callback
-                    )
-                return instance.client.fcall(name, keys or [], arguments or []).transform(callback)
+                    return instance.client.fcall_ro(name, keys, arguments).transform(callback)
+                return instance.client.fcall(name, keys, arguments).transform(callback)
             return fn(keys, arguments, readonly=readonly).transform(callback)
 
         return _inner
