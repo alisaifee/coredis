@@ -255,38 +255,38 @@ class CompositeRetryPolicy(RetryPolicy):
          of exception types to callables, the first exception type that is a parent
          of any encountered exception will be called.
         """
-        policies = {policy: policy.attempts() for policy in self._retry_policies}
-        for attempts in policies.values():
-            next(attempts)
 
+        policy_attempts = {policy: policy.attempts() for policy in self._retry_policies}
+        total_attempts: int = 0
         while True:
             try:
+                total_attempts += 1
                 if before_hook:
                     await before_hook()
                 return await func()
             except BaseException as e:
-                will_retry = False
-                for policy in policies:
+                retry_delays = []
+                for policy, attempts in policy_attempts.items():
                     if policy.will_retry(e):
                         try:
-                            attempt = next(policies[policy])
-                            logger.info(f"Retry attempt {attempt.attempt} due to error: {e}")
-                            will_retry = True
+                            attempt = next(attempts)
                             if not attempt.final:
-                                await sleep(policy.delay(attempt.attempt))
+                                retry_delays.append(policy.delay(attempt.attempt))
                         except StopIteration:
-                            break
+                            pass  # This policy is exhausted
 
                 if failure_hook:
                     if isinstance(failure_hook, dict):
-                        for exc_type in failure_hook:
-                            if self._exception_matches(e, exc_type):
-                                await failure_hook[exc_type](e)
+                        for exc_type, hook in failure_hook.items():
+                            if RetryPolicy._exception_matches(e, exc_type):
+                                await hook(e)
                                 break
                     else:
                         await failure_hook(e)
 
-                if will_retry:
+                if retry_delays:
+                    logger.info(f"Retry attempt {total_attempts} due to error: {e}")
+                    await sleep(max(retry_delays))
                     continue
                 raise e
 
