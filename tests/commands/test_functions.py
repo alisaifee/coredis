@@ -206,7 +206,7 @@ class TestLibrary:
                 lib = await Coredis(pipeline)
                 lib.fail("test")
 
-    async def test_subclass_wrap(selfself, client, simple_library, _s):
+    async def test_subclass_wrap(self, client, simple_library, _s):
         class Coredis(Library):
             def __init__(self, client):
                 super().__init__(client, "coredis")
@@ -249,7 +249,7 @@ class TestLibrary:
 
     @pytest.mark.parametrize("client_arguments", [{"readonly": True}])
     async def test_subclass_wrap_ro_defaults(
-        selfself, client, simple_library, _s, client_arguments, mocker
+        self, client, simple_library, _s, client_arguments, mocker
     ):
         class Coredis(Library):
             def __init__(self, client):
@@ -273,7 +273,7 @@ class TestLibrary:
 
     @pytest.mark.parametrize("client_arguments", [{"readonly": True}])
     async def test_subclass_wrap_ro_forced(
-        selfself, client, simple_library, _s, client_arguments, mocker
+        self, client, simple_library, _s, client_arguments, mocker
     ):
         class Coredis(Library):
             def __init__(self, client):
@@ -316,3 +316,24 @@ class TestLibrary:
 
         assert await r1 == _s("fubar")
         assert await r2 == 12
+
+    async def test_skip_verify(self, client, simple_library, _s):
+        class Coredis(Library):
+            def __init__(self, client):
+                super().__init__(client, "coredis")
+
+            @wraps(readonly=True, verify_existence=False)
+            def echo_key(self, key: KeyT) -> CommandRequest[StringT]: ...
+
+            @wraps(verify_existence=True)
+            def return_arg(self, value: RedisValueT) -> CommandRequest[RedisValueT]: ...
+
+            @wraps(verify_existence=False)
+            def nonexistent(self) -> CommandRequest[RedisValueT]: ...
+
+        lib = Coredis(client)
+        assert await lib.echo_key("bar") == _s("bar")
+        with pytest.raises(AttributeError, match="no registered function"):
+            assert await lib.return_arg(1) == 10
+        with pytest.raises(ResponseError):
+            assert await lib.nonexistent()
