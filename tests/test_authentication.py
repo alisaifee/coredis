@@ -18,8 +18,8 @@ from coredis.exceptions import AuthenticationError
 )
 async def test_invalid_authentication(redis_auth, username, password):
     client = coredis.Redis("localhost", 6389, username=username, password=password)
-    with pytest.RaisesGroup(AuthenticationError, allow_unwrapped=True, flatten_subgroups=True):
-        async with client:
+    async with client:
+        with pytest.raises(AuthenticationError):
             await client.ping()
 
 
@@ -38,8 +38,8 @@ async def test_invalid_authentication_cred_provider(redis_auth_cred_provider, us
         6389,
         credential_provider=UserPassCredentialProvider(username=username, password=password),
     )
-    with pytest.RaisesGroup(AuthenticationError, allow_unwrapped=True, flatten_subgroups=True):
-        async with client:
+    async with client:
+        with pytest.raises(AuthenticationError):
             await client.ping()
 
 

@@ -23,6 +23,7 @@ from coredis.connection import (
     RedisSSLContext,
     UnixDomainSocketConnection,
 )
+from coredis.exceptions import RedisError
 from coredis.typing import Callable, ClassVar, TypeVar
 
 _CPT = TypeVar("_CPT", bound="ConnectionPool")
@@ -243,7 +244,8 @@ class ConnectionPool:
             # if None, we need to create a new connection
             if connection is None or not connection.is_connected:
                 connection = self.connection_class(**self.connection_kwargs)
-                await self._task_group.start(self.__wrap_connection, connection)
+                if err := await self._task_group.start(self.__wrap_connection, connection):
+                    raise err.__cause__ or err
             return connection
 
     @asynccontextmanager
@@ -266,10 +268,17 @@ class ConnectionPool:
             self._connections.put_nowait(connection)
 
     async def __wrap_connection(
-        self, connection: BaseConnection, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
+        self,
+        connection: BaseConnection,
+        *,
+        task_status: TaskStatus[None | Exception] = TASK_STATUS_IGNORED,
     ) -> None:
         try:
             await connection.run(task_status=task_status)
+        except RedisError as error:
+            # Only coredis.exception.RedisError is explictly caught and returned with the task status
+            # As these are clear signals that an error case was handled by the connection
+            task_status.started(error)
         finally:
             if connection in self._connections:
                 self._connections.remove(connection)

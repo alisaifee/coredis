@@ -47,7 +47,6 @@ from coredis.exceptions import (
     UnknownCommandError,
 )
 from coredis.parser import NotEnoughData, Parser
-from coredis.retry import ExponentialBackoffRetryPolicy
 from coredis.tokens import PureToken
 from coredis.typing import (
     Awaitable,
@@ -264,7 +263,7 @@ class BaseConnection:
     @property
     def connection(self) -> ByteStream:
         if not self._connection:
-            raise ConnectionError("Connection not initialized correctly!")
+            raise ConnectionError("Connection not initialized correctly!") from self._last_error
         return self._connection
 
     @contextmanager
@@ -303,21 +302,37 @@ class BaseConnection:
         if self._task_group:
             raise RuntimeError("Connection cannot be reused")
 
-        retry = ExponentialBackoffRetryPolicy(RETRYABLE_CONNECTION_ERRORS, 3, 0.5)
-        self._connection = await retry.call_with_retries(self._connect)
+        try:
+            self._connection = await self._connect()
+        except Exception as connection_error:
+            self._last_error = connection_error
+            if isinstance(connection_error, RedisError):
+                raise
+            else:
+                # Wrap any other errors with a ConnectionError so that upstreams (pools) can
+                # handle them explicitly as being part of connection establishment if they want.
+                raise ConnectionError("Unable to establish a connection") from connection_error
 
         def handle_errors(error: BaseExceptionGroup) -> None:
-            logger.exception("Connection closed unexpectedly!")
             # TODO: change _last_error to use the whole exception group
             #  once python 3.10 support is dropped and the library
             #  consistently uses exception groups
-            self._last_error = error.exceptions[-1]
-            # swallow the error unless connection hasn't been established;
-            # it will usually be raised when accessing command results.
-            # we want the connection to die, but we don't always want to
-            # raise it and corrupt the connection pool.
+            self._last_error = self._last_error or error.exceptions[-1]
+
             if not self._connected:
-                raise
+                # If a RedisError (raised ourselves) has resulted in and exception
+                # before a connection was completely established raise that.
+                # This is due to known handshake errors.
+                if match := error.split(RedisError)[0]:
+                    raise match
+                else:
+                    logger.exception("Connection attempt failed unexpectedly!")
+                    raise self._last_error
+            else:
+                # If a connection had successfully been established (including handshake)
+                # errors should no longer be raised and it is the responsibility of the
+                # downstream to ensure that `is_connected` is tested before using a connection
+                logger.info("Connection closed unexpectedly!")
 
         try:
             with catch({Exception: handle_errors}):
@@ -333,8 +348,6 @@ class BaseConnection:
                     self._task_group.start_soon(self._writer_task)
                     # setup connection
                     await self.on_connect()
-                    # run any user callbacks. right now the only internal callback
-                    # is for pubsub channel/pattern resubscription
                     for callback in self._connect_callbacks:
                         task = callback(self)
                         if inspect.isawaitable(task):
