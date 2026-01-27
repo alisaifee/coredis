@@ -328,7 +328,12 @@ class TestLibrary:
             @wraps(verify_existence=True)
             def return_arg(self, value: RedisValueT) -> CommandRequest[RedisValueT]: ...
 
+            @wraps(verify_existence=False)
+            def nonexistent(self) -> CommandRequest[RedisValueT]: ...
+
         lib = Coredis(client)
         assert await lib.echo_key("bar") == _s("bar")
         with pytest.raises(AttributeError, match="no registered function"):
             assert await lib.return_arg(1) == 10
+        with pytest.raises(ResponseError):
+            assert await lib.nonexistent()
