@@ -181,43 +181,43 @@ error prone interface to the underlying lua functions and would normally require
 mapping and validation before passing the ``keys`` and ``args`` to the function.
 
 This can be better represented by subclassing :class:`~coredis.commands.Library`
-and using the :meth:`~coredis.commands.Library.wraps` decorator to bind python
+and using the :meth:`~coredis.commands.function.wraps` decorator to bind python
 signatures to redis functions.
 
 Using the same example ``mylib`` lua library, this could be mapped to a python class as follows::
 
-    from typing import List
+    from typing import AnyStr, List
     import coredis
-    from coredis.commands import Library, wraps
-    from coredis.commands.functions import wraps
+    from coredis.commands import CommandRequest, Library
+    from coredis.commands.function import wraps
     from coredis.typing import KeyT, ValueT
 
-    class MyLib(Library):
+    class MyLib(Library[AnyStr]):
         NAME = "mylib"  # the name in the class variable is considered by the superclass constructor
         CODE = open("/var/tmp/library.lua").read()  # the code in the class variable is considered by the superclass constructor
 
         @wraps()
-        def echo(self, value: str) -> str: ...
+        def echo(self, value: str) -> CommandRequest[str]: ...  # type: ignore[empty-body]
 
         @wraps()
-        def ping(self) -> str: ...
+        def ping(self) -> CommandRequest[str]: ...  # type: ignore[empty-body]
 
         @wraps()
-        def get(self, key: KeyT) -> ValueT: ...
+        def get(self, key: KeyT) -> CommandRequest[ValueT]: ... # type: ignore[empty-body]
 
         @wraps()
-        def hmmget(self, *keys: KeyT, **fields_with_defaults: ValueT) -> List[ValueT]: ...
+        def hmmget(self, *keys: KeyT, **fields_with_defaults: ValueT) -> CommandRequest[List[ValueT]]:  # type: ignore[empty-body]
             """
             Return values of ``fields_with_defaults`` on a first come first serve
             basis from the hashes at ``keys``. Since ``fields_with_defaults`` is a mapping
             the keys are mapped to hash fields and the values are used
             as defaults if they are not found in any of the hashes at ``keys``
             """
-
+            ...
 The above example uses default arguments with :meth:`~coredis.commands.Library.wraps` to show
 what is possible by simply using the :data:`coredis.typing.KeyT` annotation to map arguments
 of the decorated methods to ``keys`` and the remaining arguments as ``args``. Refer to the
-API documentation of :meth:`coredis.commands.Library.wraps` for details on how to customize
+API documentation of :meth:`coredis.commands.function.wraps` for details on how to customize
 the key/argument mapping behavior.
 
 This can now be used as you would expect::

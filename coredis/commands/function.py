@@ -146,7 +146,7 @@ def wraps(
     runtime_checks: bool = ...,
     readonly: bool = ...,
     verify_existence: bool = ...,
-) -> Callable[[Callable[P, R]], Callable[P, CommandRequest[R]]]: ...
+) -> Callable[[Callable[P, CommandRequest[R]]], Callable[P, CommandRequest[R]]]: ...
 
 
 @overload
@@ -157,7 +157,9 @@ def wraps(
     runtime_checks: bool = ...,
     readonly: bool = ...,
     verify_existence: bool = ...,
-) -> Callable[[Callable[P, Any]], Callable[P, CommandRequest[CommandResponseT]]]: ...
+) -> Callable[
+    [Callable[P, CommandRequest[Any]]], Callable[P, CommandRequest[CommandResponseT]]
+]: ...
 
 
 @versionadded(version="3.5.0")
@@ -168,7 +170,7 @@ def wraps(
     runtime_checks: bool = False,
     readonly: bool = False,
     verify_existence: bool = True,
-) -> Callable[[Callable[P, Any]], Callable[P, CommandRequest[Any]]]:
+) -> Callable[[Callable[P, CommandRequest[Any]]], Callable[P, CommandRequest[Any]]]:
     """
     Decorator for wrapping methods of subclasses of :class:`Library`
     as entry points to the functions contained in the library. This allows
@@ -189,12 +191,14 @@ def wraps(
     The following example demonstrates most of the functionality provided by the
     decorator::
 
+        from typing import AnyStr
+
         import coredis
-        from coredis.commands import Library
+        from coredis.commands import CommandRequest, Library
         from coredis.commands.function import wraps
         from coredis.typing import KeyT, ValueT
 
-        class MyAwesomeLibrary(Library):
+        class MyAwesomeLibrary(Library[AnyStr]):
             NAME = "mylib"
             CODE = \"\"\"
             #!lua name=mylib
@@ -243,35 +247,37 @@ def wraps(
             \"\"\"
 
             @wraps()
-            def echo(self, value: ValueT) -> ValueT: ...
+            def echo(self, value: ValueT) -> CommandRequest[ValueT]: ... # type: ignore[empty-body]
 
             @wraps()
-            def ping(self) -> bytes: ...
+            def ping(self) -> CommandRequest[bytes]: ... # type: ignore[empty-body]
 
             @wraps(readonly=True)
-            def get(self, key: KeyT) -> ValueT: ...
+            def get(self, key: KeyT) -> CommandRequest[ValueT]: ...  # type: ignore[empty-body]
 
             @wraps()
-            def hmmget(self, *keys: KeyT, **fields_with_values: int) -> list[ValueT]: ...
+            def hmmget(self, *keys: KeyT, **fields_with_values: int) -> CommandRequest[list[ValueT]]: ... # type: ignore[empty-body]
 
-        client = coredis.Redis()
-        async with client:
-            lib = await MyAwesomeLibrary(client, replace=True)
-            await client.set("hello", "world")
-            # True
-            await lib.echo("hello world")
-            # b"hello world"
-            await lib.ping()
-            # b"PONG"
-            await lib.get("hello")
-            # b"world"
+        async def run() -> None:
+            client = coredis.Redis()
+            async with client:
+                lib = await MyAwesomeLibrary(client, replace=True)
+                await client.set("hello", "world")
+                # True
+                await lib.echo("hello world")
+                # b"hello world"
+                await lib.ping()
+                # b"PONG"
+                await lib.get("hello")
+                # b"world"
 
-            async with client.pipeline(transaction=False) as pipe:
-                pipe.hset("k1", {"c": 3, "d": 4})
-                pipe.hset("k2", {"a": 1, "b": 2})
-                res = MyAwesomeLibrary(pipe).hmmget("k1", "k2", a=-1, b=-2, c=-3, d=-4, e=-5)
-            print(await res)
-            # [b"1", b"2", b"3", b"4", b"-5"]
+                async with client.pipeline(transaction=False) as pipe:
+                    pipe.hset("k1", {"c": 3, "d": 4})
+                    pipe.hset("k2", {"a": 1, "b": 2})
+                    lib = await MyAwesomeLibrary(pipe)
+                    res = lib.hmmget("k1", "k2", a=-1, b=-2, c=-3, d=-4, e=-5)
+                print(await res)
+                # [b"1", b"2", b"3", b"4", b"-5"]
 
     :param function_name: Optional name of the registered library function to map this
      entrypoint to. If not provided, the name will be inferred from the method that the
@@ -291,7 +297,9 @@ def wraps(
     :return: A function that has a signature mirroring the decorated function.
     """
 
-    def wrapper(func: Callable[P, Any]) -> Callable[P, CommandRequest[CommandResponseT]]:
+    def wrapper(
+        func: Callable[P, CommandRequest[Any]],
+    ) -> Callable[P, CommandRequest[CommandResponseT]]:
         sig = inspect.signature(func)
         first_arg: str = list(sig.parameters.keys())[0]
         runtime_check_wrapper = add_runtime_checks if not runtime_checks else safe_beartype
@@ -329,7 +337,7 @@ def wraps(
                 raise RuntimeError(
                     f"{instance.__class__.__name__} is not a subclass of"
                     " coredis.commands.function.Library therefore it's methods cannot be bound "
-                    " to a redis library using ``Library.wrap``."
+                    " to a redis library using ``coredis.commands.function.wrap``."
                     " Please refer to the documentation at https://coredis.readthedocs.org/"
                     " for instructions on how to bind a class to a redis library."
                 )
