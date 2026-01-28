@@ -1027,12 +1027,13 @@ class Redis(Client[AnyStr]):
 
     def pubsub(
         self,
-        ignore_subscribe_messages: bool = False,
-        retry_policy: RetryPolicy | None = None,
+        *,
         channels: Parameters[StringT] | None = None,
         channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         patterns: Parameters[StringT] | None = None,
         pattern_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
+        ignore_subscribe_messages: bool = False,
+        retry_policy: RetryPolicy | None = None,
         subscription_timeout: float = 1,
         **kwargs: Any,
     ) -> PubSub[AnyStr]:
@@ -1040,9 +1041,6 @@ class Redis(Client[AnyStr]):
         Return a Pub/Sub instance that can be used to subscribe to channels
         and patterns and receive messages that get published to them.
 
-        :param ignore_subscribe_messages: Whether to skip subscription
-         acknowledgement messages
-        :param retry_policy: An explicit retry policy to use in the subscriber.
         :param channels: channels that the constructed Pubsub instance should
          automatically subscribe to
         :param channel_handlers: Mapping of channels to automatically subscribe to
@@ -1053,6 +1051,9 @@ class Redis(Client[AnyStr]):
         :param pattern_handlers: Mapping of patterns to automatically subscribe to
          and the associated handlers that will be invoked when a message is received
          on channel matching the pattern.
+        :param ignore_subscribe_messages: Whether to skip subscription
+         acknowledgement messages
+        :param retry_policy: An explicit retry policy to use in the subscriber.
         :param subscription_timeout: Maximum amount of time in seconds to wait for
          acknowledgement of subscriptions.
         """

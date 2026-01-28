@@ -11,7 +11,7 @@ from ssl import SSLContext
 from typing import TYPE_CHECKING, Any, cast, overload
 
 from anyio import get_cancelled_exc_class, sleep
-from deprecated.sphinx import versionadded
+from deprecated.sphinx import versionadded, versionchanged
 
 from coredis._concurrency import gather
 from coredis._utils import b, hash_slot
@@ -1069,14 +1069,16 @@ class RedisCluster(
             self._decodecontext.set(prev_decode)
             self._encodingcontext.set(prev_encoding)
 
+    @versionchanged(version="6.0.0", reason="All arguments are now keyword only")
     def pubsub(
         self,
-        ignore_subscribe_messages: bool = False,
-        retry_policy: RetryPolicy | None = None,
+        *,
         channels: Parameters[StringT] | None = None,
         channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         patterns: Parameters[StringT] | None = None,
         pattern_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
+        ignore_subscribe_messages: bool = False,
+        retry_policy: RetryPolicy | None = None,
         subscription_timeout: float = 1,
         **kwargs: Any,
     ) -> ClusterPubSub[AnyStr]:
@@ -1084,9 +1086,6 @@ class RedisCluster(
         Return a Pub/Sub instance that can be used to consume messages that get
         published to the subscribed channels or patterns.
 
-        :param ignore_subscribe_messages: Whether to skip subscription
-         acknowledgement messages
-        :param retry_policy: An explicit retry policy to use in the subscriber.
         :param channels: channels that the constructed Pubsub instance should
          automatically subscribe to
         :param channel_handlers: Mapping of channels to automatically subscribe to
@@ -1097,6 +1096,9 @@ class RedisCluster(
         :param pattern_handlers: Mapping of patterns to automatically subscribe to
          and the associated handlers that will be invoked when a message is received
          on channel matching the pattern.
+        :param ignore_subscribe_messages: Whether to skip subscription
+         acknowledgement messages
+        :param retry_policy: An explicit retry policy to use in the subscriber.
         :param subscription_timeout: Maximum amount of time in seconds to wait for
          acknowledgement of subscriptions.
         """
@@ -1113,13 +1115,15 @@ class RedisCluster(
         )
 
     @versionadded(version="3.6.0")
+    @versionchanged(version="6.0.0", reason="All arguments are now keyword only")
     def sharded_pubsub(
         self,
+        *,
+        channels: Parameters[StringT] | None = None,
+        channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         ignore_subscribe_messages: bool = False,
         read_from_replicas: bool = False,
         retry_policy: RetryPolicy | None = None,
-        channels: Parameters[StringT] | None = None,
-        channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         subscription_timeout: float = 1,
         **kwargs: Any,
     ) -> ShardedPubSub[AnyStr]:
@@ -1134,15 +1138,15 @@ class RedisCluster(
         shard of a cluster hence affording horizontally scaling the use of Pub/Sub
         with the cluster itself.
 
-        :param ignore_subscribe_messages: Whether to skip subscription
-         acknowledgement messages
-        :param read_from_replicas: Whether to read messages from replica nodes
-        :param retry_policy: An explicit retry policy to use in the subscriber.
         :param channels: channels that the constructed Pubsub instance should
          automatically subscribe to
         :param channel_handlers: Mapping of channels to automatically subscribe to
          and the associated handlers that will be invoked when a message is received
          on the specific channel.
+        :param ignore_subscribe_messages: Whether to skip subscription
+         acknowledgement messages
+        :param read_from_replicas: Whether to read messages from replica nodes
+        :param retry_policy: An explicit retry policy to use in the subscriber.
         :param subscription_timeout: Maximum amount of time in seconds to wait for
          acknowledgement of subscriptions.
 
