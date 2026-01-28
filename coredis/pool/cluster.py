@@ -258,7 +258,7 @@ class ClusterConnectionPool(ConnectionPool):
         )
         connection.node = node
         if err := await self._task_group.start(self.__wrap_connection, connection):
-            raise err.__cause__ or err
+            raise err
         return connection
 
     def __node_pool(self, node: str) -> Queue[Connection]:

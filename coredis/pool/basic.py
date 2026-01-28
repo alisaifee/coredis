@@ -245,7 +245,7 @@ class ConnectionPool:
             if connection is None or not connection.is_connected:
                 connection = self.connection_class(**self.connection_kwargs)
                 if err := await self._task_group.start(self.__wrap_connection, connection):
-                    raise err.__cause__ or err
+                    raise err
             return connection
 
     @asynccontextmanager
