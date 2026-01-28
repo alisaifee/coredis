@@ -7,7 +7,7 @@ from coredis import PureToken
 from coredis._concurrency import gather
 from coredis.client import Client
 from coredis.client.basic import Redis
-from coredis.commands import Script
+from coredis.commands import CommandRequest, Script
 from coredis.exceptions import NoScriptError, NotBusyError, ResponseError
 from coredis.typing import AnyStr, KeyT, RedisValueT
 from tests.conftest import targets
@@ -156,13 +156,21 @@ class TestScripting:
         with pytest.raises(NotBusyError):
             await client.script_kill()
 
+    async def test_wraps_function_no_args(self, client, cloner, _s):
+        no_args = client.register_script("return 'PONG'")
+
+        @no_args.wraps()
+        def pong() -> CommandRequest[bytes | str]: ...
+
+        assert await pong() == _s("PONG")
+
     async def test_wraps_function_no_keys(self, client):
         no_key_script = client.register_script(
             "return {tonumber(ARGV[1]), tonumber(ARGV[2]), tonumber(ARGV[3])}"
         )
 
         @no_key_script.wraps()
-        def synth_no_key(*args: int) -> list[int]: ...
+        def synth_no_key(*args: int) -> CommandRequest[list[int]]: ...
 
         assert await synth_no_key(1, 2, 3) == [1, 2, 3]
 
@@ -171,7 +179,7 @@ class TestScripting:
         await client.set("co", "redis")
 
         @no_key_script.wraps()
-        async def synth_key_only(key: KeyT) -> str: ...
+        def synth_key_only(key: KeyT) -> CommandRequest[str]: ...
 
         assert await synth_key_only(key="co") == "redis"
 
@@ -179,7 +187,7 @@ class TestScripting:
         script = client.register_script("return redis.call('GET', KEYS[1]) or ARGV[1]")
 
         @script.wraps()
-        async def default_get(key: KeyT, default: RedisValueT) -> RedisValueT: ...
+        def default_get(key: KeyT, default: RedisValueT) -> CommandRequest[RedisValueT]: ...
 
         await client.set("key", "redis")
         await default_get("key", "coredis") == "redis"
@@ -190,7 +198,7 @@ class TestScripting:
         script = client.register_script("return redis.call('GET', KEYS[1]) or ARGV[1]")
 
         @script.wraps(callback=lambda value: int(value))
-        async def int_get(key: KeyT, default: RedisValueT) -> int: ...
+        def int_get(key: KeyT, default: RedisValueT) -> CommandRequest[int]: ...
 
         await client.set("key", 1)
         await int_get("key", 2) == 1
@@ -201,7 +209,7 @@ class TestScripting:
         script = client.register_script("return redis.call('GET', KEYS[1]) or ARGV[1]")
 
         @script.wraps(runtime_checks=True)
-        async def default_get(key: KeyT, default: str) -> str: ...
+        def default_get(key: KeyT, default: str) -> CommandRequest[str]: ...
 
         await client.set("key", "redis")
         assert await default_get("key", "coredis") == "redis"
@@ -217,12 +225,12 @@ class TestScripting:
         class Wrapper:
             @classmethod
             @scrpt.wraps(client_arg="client", runtime_checks=True)
-            async def default_get(
+            def default_get(
                 cls,
                 client: Client[AnyStr] | None,
                 key: KeyT,
                 default: str = "coredis",
-            ) -> str: ...
+            ) -> CommandRequest[str]: ...
 
         await client.set("key", "redis")
         await Wrapper.default_get(client, "key", "coredis") == "redis"

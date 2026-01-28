@@ -45,7 +45,7 @@ Continuing the example from above:
     await r.set('foo', 2)
     await multiply(keys=['foo'], args=[5])
     # 10
-    await multiple(keys=['foo'], args=[5], callback=lambda value: float(value))
+    await multiply(keys=['foo'], args=[5], callback=lambda value: float(value))
     # 10.0
 
 The value of key 'foo' is set to 2. When multiply is invoked, the 'foo' key is

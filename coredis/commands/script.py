@@ -22,7 +22,6 @@ from coredis.typing import (
     P,
     Parameters,
     R,
-    RedisValueT,
     ResponseType,
     StringT,
     ValueT,
@@ -194,10 +193,11 @@ class Script(Generic[AnyStr]):
 
             import coredis
             from coredis.typing import KeyT, ValueT
+            from coredis.commands import Command Request
 
             client = coredis.Redis()
             @client.register_script("return {KEYS[1], ARGV[1]}").wraps()
-            async def echo_key_value(key: KeyT, value: ValueT) -> list[ValueT]: ...
+            def echo_key_value(key: KeyT, value: ValueT) -> CommandRequest[list[ValueT]]: ...
 
             async with client:
                 res = await echo_key_value("co", "redis")
@@ -208,20 +208,20 @@ class Script(Generic[AnyStr]):
 
             from coredis import Redis
             from coredis.commands import Script
+            from coredis.typing import StringT
 
             class ScriptProvider:
                 @classmethod
                 @Script(script="return KEYS[1]").wraps(
-                    key_spec=["key"],
                     client_arg="client"
                 )
-                def echo_key(cls, client, key): ...
+                def echo_key(cls, client, key: KeyT) -> CommandRequest[StringT]: ...
 
                 @classmethod
                 @Script(script="return ARGS[1]").wraps(
                     client_arg="client"
                 )
-                def echo_arg(cls, client, value): ...
+                def echo_arg(cls, client, value) -> CommandRequest[StringT]: ...
 
             async with Redis() as client:
                 echoed = await ScriptProvider.echo_key(client, "coredis")
@@ -242,7 +242,7 @@ class Script(Generic[AnyStr]):
 
                 # we use Any since return type will come from callback
                 @script.wraps(callback=MyCallback())
-                async def echo_key_value(key: KeyT, value: ValueT) -> Any: ...
+                def echo_key_value(key: KeyT, value: ValueT) -> CommandRequest[int]: ...
 
                 res = await echo_key_value("co", "redis")
                 reveal_type(res)  # int
@@ -265,7 +265,9 @@ class Script(Generic[AnyStr]):
 
         def wrapper(func: Callable[P, Awaitable[Any]]) -> Callable[P, Awaitable[CommandResponseT]]:
             sig = inspect.signature(func)
-            first_arg = list(sig.parameters.keys())[0]
+            first_arg = None
+            if args := list(sig.parameters.keys()):
+                first_arg = args[0]
             runtime_check_wrapper = add_runtime_checks if not runtime_checks else safe_beartype
             script_instance = self
             key_params = [
@@ -299,13 +301,13 @@ class Script(Generic[AnyStr]):
                 bound_arguments: inspect.BoundArguments,
             ) -> tuple[
                 Parameters[KeyT],
-                Parameters[RedisValueT],
+                Parameters[ValueT],
                 coredis.client.Client[AnyStr] | None,
             ]:
                 bound_arguments.apply_defaults()
                 arguments = bound_arguments.arguments
                 keys: list[KeyT] = []
-                args: list[RedisValueT] = []
+                args: list[ValueT] = []
                 for name in sig.parameters:
                     if name not in arg_fetch:
                         continue
@@ -322,12 +324,12 @@ class Script(Generic[AnyStr]):
 
             @runtime_check_wrapper
             @functools.wraps(func)
-            async def __inner(
+            def __inner(
                 *args: P.args,
                 **kwargs: P.kwargs,
-            ) -> CommandResponseT:
+            ) -> CommandRequest[CommandResponseT]:
                 keys, arguments, client = split_args(sig.bind(*args, **kwargs))
-                return await script_instance(keys, arguments, client, readonly, callback=callback)  # type: ignore
+                return script_instance(keys, arguments, client, readonly, callback=callback)
 
             return __inner
 
