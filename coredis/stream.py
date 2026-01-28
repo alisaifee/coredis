@@ -97,7 +97,7 @@ class Consumer(Generic[AnyStr]):
                 }
             ]
 
-    async def initialize(self, partial: bool = False) -> Consumer[AnyStr]:
+    async def _initialize(self, partial: bool = False) -> Consumer[AnyStr]:
         if self._initialized and not partial:
             return self
 
@@ -125,11 +125,11 @@ class Consumer(Generic[AnyStr]):
         """
         self.streams.add(stream)
         self.state.setdefault(stream, {"identifier": identifier} if identifier else {})
-        await self.initialize(partial=True)
+        await self._initialize(partial=True)
         return stream in self._initialized_streams
 
     def __await__(self) -> Generator[Any, None, Consumer[AnyStr]]:
-        return self.initialize().__await__()
+        return self._initialize().__await__()
 
     def __aiter__(self) -> Consumer[AnyStr]:
         """
@@ -156,7 +156,7 @@ class Consumer(Generic[AnyStr]):
         previously fetched and buffered, they will be returned before
         making a new request to the server.
         """
-        await self.initialize()
+        await self._initialize()
         cur = None
         cur_stream = None
         for stream, buffer_entries in list(self.buffer.items()):
@@ -248,7 +248,7 @@ class GroupConsumer(Consumer[AnyStr]):
         self.auto_acknowledge = auto_acknowledge
         self.start_from_backlog = start_from_backlog
 
-    async def initialize(self, partial: bool = False) -> GroupConsumer[AnyStr]:
+    async def _initialize(self, partial: bool = False) -> GroupConsumer[AnyStr]:
         if not self._initialized or partial:
             group_presence: dict[KeyT, bool] = {
                 stream: stream in self._initialized_streams for stream in self.streams
@@ -311,7 +311,7 @@ class GroupConsumer(Consumer[AnyStr]):
         return await super().add_stream(stream, identifier)
 
     def __await__(self) -> Generator[Any, None, GroupConsumer[AnyStr]]:
-        return self.initialize().__await__()
+        return self._initialize().__await__()
 
     def __aiter__(self) -> GroupConsumer[AnyStr]:
         """
@@ -326,7 +326,7 @@ class GroupConsumer(Consumer[AnyStr]):
         previously fetched and buffered, they will be returned before
         making a new request to the server.
         """
-        await self.initialize()
+        await self._initialize()
 
         cur = None
         cur_stream = None
