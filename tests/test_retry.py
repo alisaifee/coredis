@@ -6,6 +6,7 @@ import unittest.mock
 import pytest
 from exceptiongroup import ExceptionGroup
 
+import coredis.retry
 from coredis.retry import (
     CompositeRetryPolicy,
     ConstantRetryPolicy,
@@ -18,11 +19,11 @@ class TestRetryPolicies:
     @pytest.mark.parametrize(
         "policy",
         [
-            ConstantRetryPolicy((ZeroDivisionError,), 0, 1),
-            ExponentialBackoffRetryPolicy((ZeroDivisionError,), 0, 1),
+            ConstantRetryPolicy((ZeroDivisionError,), retries=0, delay=1),
+            ExponentialBackoffRetryPolicy((ZeroDivisionError,), retries=0, base_delay=1),
             CompositeRetryPolicy(
-                ConstantRetryPolicy((ZeroDivisionError,), 0, 1),
-                ExponentialBackoffRetryPolicy((AttributeError,), 0, 1),
+                ConstantRetryPolicy((ZeroDivisionError,), retries=0, delay=1),
+                ExponentialBackoffRetryPolicy((AttributeError,), retries=0, base_delay=1),
             ),
         ],
     )
@@ -38,10 +39,10 @@ class TestRetryPolicies:
     @pytest.mark.parametrize(
         "policy",
         [
-            ConstantRetryPolicy((ZeroDivisionError,), 1, 1),
-            ExponentialBackoffRetryPolicy((ZeroDivisionError,), 1, 1),
+            ConstantRetryPolicy((ZeroDivisionError,), retries=1, delay=1),
+            ExponentialBackoffRetryPolicy((ZeroDivisionError,), retries=1, base_delay=1),
             CompositeRetryPolicy(
-                ConstantRetryPolicy((ZeroDivisionError,), 1, 1),
+                ConstantRetryPolicy((ZeroDivisionError,), retries=1, delay=1),
             ),
         ],
     )
@@ -63,10 +64,10 @@ class TestRetryPolicies:
     @pytest.mark.parametrize(
         "policy",
         [
-            ConstantRetryPolicy((ZeroDivisionError,), 1, 1),
-            ExponentialBackoffRetryPolicy((ZeroDivisionError,), 1, 1),
+            ConstantRetryPolicy((ZeroDivisionError,), retries=1, delay=1),
+            ExponentialBackoffRetryPolicy((ZeroDivisionError,), retries=1, base_delay=1),
             CompositeRetryPolicy(
-                ConstantRetryPolicy((ZeroDivisionError,), 1, 1),
+                ConstantRetryPolicy((ZeroDivisionError,), retries=1, delay=1),
             ),
         ],
     )
@@ -103,9 +104,9 @@ class TestRetryPolicies:
         failure1 = unittest.mock.AsyncMock()
         failure2 = unittest.mock.AsyncMock()
         assert 1 == await CompositeRetryPolicy(
-            ConstantRetryPolicy((ZeroDivisionError,), 2, 1),
-            ConstantRetryPolicy((TypeError,), 2, 1),
-            ConstantRetryPolicy((ValueError,), 1, 1),
+            ConstantRetryPolicy((ZeroDivisionError,), retries=2, delay=1),
+            ConstantRetryPolicy((TypeError,), retries=2, delay=1),
+            ConstantRetryPolicy((ValueError,), retries=1, delay=1),
         ).call_with_retries(
             mock.call,
             failure_hook={
@@ -120,11 +121,12 @@ class TestRetryPolicies:
     @pytest.mark.parametrize(
         "policy",
         [
-            ConstantRetryPolicy((ZeroDivisionError, ValueError), 2, 0.1),
-            ExponentialBackoffRetryPolicy((ZeroDivisionError, ValueError), 2, 0.1),
+            ConstantRetryPolicy((ZeroDivisionError, ValueError), retries=2, delay=0.1),
+            ExponentialBackoffRetryPolicy(
+                (ZeroDivisionError, ValueError), retries=2, base_delay=0.1
+            ),
             CompositeRetryPolicy(
-                ConstantRetryPolicy((ZeroDivisionError,), 1, 0.1),
-                ExponentialBackoffRetryPolicy((ValueError,), 1, 0.1),
+                ConstantRetryPolicy((ZeroDivisionError,), retries=2, delay=0.1),
             ),
         ],
     )
@@ -136,21 +138,38 @@ class TestRetryPolicies:
             call()
             raise ExceptionGroup("", (ValueError(), ZeroDivisionError()))
 
+        nested_call = unittest.mock.Mock()
+
+        async def nested_group():
+            nested_call()
+            raise ExceptionGroup(
+                "outer", [ValueError(), ExceptionGroup("inner", (ZeroDivisionError(),))]
+            )
+
         with pytest.raises(ExceptionGroup):
             await policy.call_with_retries(group, failure_hook=failure)
         assert call.call_count == 3
         assert failure[ArithmeticError].call_count == 3
 
+        with pytest.raises(ExceptionGroup):
+            await policy.call_with_retries(nested_group, failure_hook=failure)
+        assert nested_call.call_count == 3
+        assert failure[ArithmeticError].call_count == 6
+
     @pytest.mark.parametrize(
         "policy, expected_delay",
         [
-            (ExponentialBackoffRetryPolicy((ZeroDivisionError,), 5, 1), 31),
+            (ExponentialBackoffRetryPolicy((ZeroDivisionError,), retries=5, base_delay=1), 31),
             (
-                ExponentialBackoffRetryPolicy((ZeroDivisionError,), 5, 1, max_delay=4),
+                ExponentialBackoffRetryPolicy(
+                    (ZeroDivisionError,), retries=5, base_delay=1, max_delay=4
+                ),
                 15,
             ),
             (
-                ExponentialBackoffRetryPolicy((ZeroDivisionError,), 5, 1, max_delay=4, jitter=True),
+                ExponentialBackoffRetryPolicy(
+                    (ZeroDivisionError,), retries=5, base_delay=1, max_delay=4, jitter=True
+                ),
                 14,
             ),
         ],
@@ -166,3 +185,31 @@ class TestRetryPolicies:
 
         total_delay = sum([k[0][0] for k in sleep.call_args_list])
         assert 0 < total_delay <= expected_delay
+
+    @pytest.mark.parametrize(
+        "policy",
+        [
+            ConstantRetryPolicy(
+                (ZeroDivisionError, ValueError), retries=None, deadline=0.5, delay=0.1
+            ),
+            ExponentialBackoffRetryPolicy(
+                (ZeroDivisionError, ValueError), retries=None, deadline=0.5, base_delay=0.1
+            ),
+            CompositeRetryPolicy(
+                ConstantRetryPolicy((ZeroDivisionError,), retries=None, deadline=0.5, delay=0.01),
+                ExponentialBackoffRetryPolicy(
+                    (ZeroDivisionError,), retries=None, deadline=0.5, base_delay=0.1
+                ),
+            ),
+        ],
+    )
+    async def test_retry_with_deadline(self, policy, mocker):
+        def raise_zerodiv():
+            1 / 0
+
+        call = unittest.mock.AsyncMock(side_effect=raise_zerodiv)
+        sleep = mocker.spy(coredis.retry, "sleep")
+        with pytest.raises(ZeroDivisionError):
+            await policy.call_with_retries(call)
+        total_delay = sum([k[0][0] for k in sleep.call_args_list])
+        assert 0 < total_delay <= 0.5

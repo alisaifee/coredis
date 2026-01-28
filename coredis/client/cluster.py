@@ -285,14 +285,14 @@ class RedisCluster(
         noevict: bool = False,
         notouch: bool = False,
         retry_policy: RetryPolicy = CompositeRetryPolicy(
-            ConstantRetryPolicy((ClusterDownError,), 2, 0.1),
+            ConstantRetryPolicy((ClusterDownError,), retries=2, delay=0.1),
             ConstantRetryPolicy(
                 (
                     ConnectionError,
                     TimeoutError,
                 ),
-                2,
-                0.1,
+                retries=2,
+                delay=0.1,
             ),
         ),
         type_adapter: TypeAdapter | None = None,
@@ -568,14 +568,14 @@ class RedisCluster(
         notouch: bool = False,
         cache: AbstractCache | None = None,
         retry_policy: RetryPolicy = CompositeRetryPolicy(
-            ConstantRetryPolicy((ClusterDownError,), 2, 0.1),
+            ConstantRetryPolicy((ClusterDownError,), retries=2, delay=0.1),
             ConstantRetryPolicy(
                 (
                     ConnectionError,
                     TimeoutError,
                 ),
-                2,
-                0.1,
+                retries=2,
+                delay=0.1,
             ),
         ),
         type_adapter: TypeAdapter | None = None,

@@ -9,15 +9,14 @@ from typing import TYPE_CHECKING, Any, cast
 from anyio import (
     TASK_STATUS_IGNORED,
     create_task_group,
-    current_time,
     sleep,
 )
 from anyio.abc import TaskStatus
-from exceptiongroup import catch
 
-from coredis._utils import b, logger, make_hashable
+from coredis._utils import b, make_hashable
 from coredis.commands.constants import CommandName
 from coredis.connection import RETRYABLE_CONNECTION_ERRORS
+from coredis.retry import ExponentialBackoffRetryPolicy
 from coredis.typing import (
     OrderedDict,
     RedisValueT,
@@ -262,6 +261,12 @@ class TrackingCache(AbstractCache):
 
     _cache: AbstractCache
 
+    def __init__(self, cache: AbstractCache) -> None:
+        self._cache = cache
+        self._retry_policy = ExponentialBackoffRetryPolicy(
+            RETRYABLE_CONNECTION_ERRORS, retries=None, base_delay=1, max_delay=16, jitter=True
+        )
+
     @abstractmethod
     async def run(
         self, pool: ConnectionPool, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
@@ -313,7 +318,7 @@ class NodeTrackingCache(TrackingCache):
         :param cache: AbstractCache instance to wrap
         :param compact_interval_seconds: frequency to check if cache is too big and shrink it
         """
-        self._cache = cache or LRUCache()
+        super().__init__(cache or LRUCache())
         self.client_id: int | None = None
 
     def get_client_id(
@@ -329,33 +334,24 @@ class NodeTrackingCache(TrackingCache):
         Run a single connection that listens for invalidation messages,
         with reconnection logic.
         """
-        start_time, started, tries = current_time(), False, 0
+        started = False
 
-        def handle_error(*args: Any) -> None:
-            nonlocal tries, start_time
-            if current_time() - start_time > 10:
-                tries = 0
-            else:
-                tries += 1
-            logger.warning("Cache connection lost, retrying...")
+        async def _run() -> None:
+            nonlocal started
+            async with pool.acquire() as self._connection:
+                if self._connection.tracking_client_id:
+                    await self._connection.update_tracking_client(False)
+                self.client_id = self._connection.client_id
+                async with create_task_group() as self._tg:
+                    self._tg.start_soon(self._consumer)
+                    self._tg.start_soon(self._keepalive)
+                    if not started:
+                        task_status.started()
+                        started = True
+                    else:  # flush cache
+                        self.reset()
 
-        while True:
-            # retry with exponential backoff
-            await sleep(min(tries**2, 300))
-            with catch({RETRYABLE_CONNECTION_ERRORS: handle_error}):
-                async with pool.acquire() as self._connection:
-                    if self._connection.tracking_client_id:
-                        await self._connection.update_tracking_client(False)
-                    self.client_id = self._connection.client_id
-                    start_time = current_time()
-                    async with create_task_group() as self._tg:
-                        self._tg.start_soon(self._consumer)
-                        self._tg.start_soon(self._keepalive)
-                        if not started:
-                            task_status.started()
-                            started = True
-                        else:  # flush cache
-                            self.reset()
+        return await self._retry_policy.call_with_retries(_run)
 
     async def _keepalive(self) -> None:
         while True:
@@ -387,8 +383,8 @@ class ClusterTrackingCache(TrackingCache):
 
     def __init__(self, cache: AbstractCache | None = None) -> None:
         """ """
+        super().__init__(cache or LRUCache())
         self.node_caches: dict[str, NodeTrackingCache] = {}
-        self._cache = cache or LRUCache()
         self._nodes: list[coredis.client.Redis[Any]] = []
 
     async def run(

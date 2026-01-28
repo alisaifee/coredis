@@ -826,7 +826,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
         self.watches.clear()
         self.explicit_transaction = False
 
-    @retryable(policy=ConstantRetryPolicy((ClusterDownError,), 3, 0.1))
+    @retryable(policy=ConstantRetryPolicy((ClusterDownError,), retries=3, delay=0.1))
     async def send_cluster_transaction(self, raise_on_error: bool = True) -> tuple[object, ...]:
         """
         :meta private:
@@ -876,7 +876,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
                 if n.name not in {CommandName.MULTI, CommandName.EXEC}
             )
 
-    @retryable(policy=ConstantRetryPolicy((ClusterDownError,), 3, 0.1))
+    @retryable(policy=ConstantRetryPolicy((ClusterDownError,), retries=3, delay=0.1))
     async def send_cluster_commands(
         self, raise_on_error: bool = True, allow_redirections: bool = True
     ) -> tuple[object, ...]:

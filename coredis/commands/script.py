@@ -117,7 +117,7 @@ class Script(Generic[AnyStr]):
             return (
                 method(self.sha, keys=keys, args=args)
                 .retry(
-                    ConstantRetryPolicy((NoScriptError,), 1, 0),
+                    ConstantRetryPolicy((NoScriptError,), retries=1, delay=0),
                     lambda _: client.script_load(self.script),
                 )
                 .transform(callback)

@@ -604,7 +604,9 @@ class Redis(Client[AnyStr]):
         noreply: bool = False,
         noevict: bool = False,
         notouch: bool = False,
-        retry_policy: RetryPolicy = ConstantRetryPolicy((ConnectionError, TimeoutError), 2, 0.01),
+        retry_policy: RetryPolicy = ConstantRetryPolicy(
+            (ConnectionError, TimeoutError), retries=2, delay=0.01
+        ),
         type_adapter: TypeAdapter | None = None,
         **kwargs: Any,
     ) -> None:
@@ -816,7 +818,9 @@ class Redis(Client[AnyStr]):
         noreply: bool = False,
         noevict: bool = False,
         notouch: bool = False,
-        retry_policy: RetryPolicy = ConstantRetryPolicy((ConnectionError, TimeoutError), 2, 0.01),
+        retry_policy: RetryPolicy = ConstantRetryPolicy(
+            (ConnectionError, TimeoutError), retries=2, delay=0.01
+        ),
         type_adapter: TypeAdapter | None = None,
         cache: AbstractCache | None = None,
         **kwargs: Any,
