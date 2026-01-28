@@ -15,7 +15,7 @@ from anyio.abc import TaskStatus
 
 from coredis._utils import b, make_hashable
 from coredis.commands.constants import CommandName
-from coredis.connection import RETRYABLE_CONNECTION_ERRORS
+from coredis.exceptions import ConnectionError
 from coredis.retry import ExponentialBackoffRetryPolicy
 from coredis.typing import (
     OrderedDict,
@@ -264,7 +264,7 @@ class TrackingCache(AbstractCache):
     def __init__(self, cache: AbstractCache) -> None:
         self._cache = cache
         self._retry_policy = ExponentialBackoffRetryPolicy(
-            RETRYABLE_CONNECTION_ERRORS, retries=None, base_delay=1, max_delay=16, jitter=True
+            (ConnectionError,), retries=None, base_delay=1, max_delay=16, jitter=True
         )
 
     @abstractmethod

@@ -59,8 +59,6 @@ from coredis.typing import (
     TypeVar,
 )
 
-RETRYABLE_CONNECTION_ERRORS = (ConnectionError,)
-
 CERT_REQS = {
     "none": ssl.CERT_NONE,
     "optional": ssl.CERT_OPTIONAL,
