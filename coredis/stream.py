@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import Any
+from contextlib import asynccontextmanager
 
+from anyio import AsyncContextManagerMixin
 from deprecated.sphinx import versionadded
 
 from coredis._utils import EncodingInsensitiveDict, nativestr
@@ -15,12 +16,13 @@ from coredis.response.types import StreamEntry
 from coredis.tokens import PureToken
 from coredis.typing import (
     AnyStr,
+    AsyncGenerator,
     ClassVar,
-    Generator,
     Generic,
     KeyT,
     MutableMapping,
     Parameters,
+    Self,
     StringT,
     TypedDict,
     ValueT,
@@ -38,7 +40,7 @@ class State(TypedDict, total=False):
     pending: bool | None
 
 
-class Consumer(Generic[AnyStr]):
+class Consumer(Generic[AnyStr], AsyncContextManagerMixin):
     state: MutableMapping[KeyT, State]
     DEFAULT_START_ID: ClassVar[bytes] = b"0-0"
 
@@ -81,6 +83,11 @@ class Consumer(Generic[AnyStr]):
         self._initialized = False
         self._initialized_streams: dict[StringT, bool] = {}
 
+    @asynccontextmanager
+    async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
+        await self._initialize()
+        yield self
+
     def chunk_streams(self) -> list[dict[ValueT, StringT]]:
         import coredis.client
 
@@ -97,9 +104,9 @@ class Consumer(Generic[AnyStr]):
                 }
             ]
 
-    async def _initialize(self, partial: bool = False) -> Consumer[AnyStr]:
+    async def _initialize(self, partial: bool = False) -> None:
         if self._initialized and not partial:
-            return self
+            return
 
         for stream in self.streams:
             if partial and self._initialized_streams.get(stream):
@@ -114,7 +121,6 @@ class Consumer(Generic[AnyStr]):
                 pass
             self._initialized_streams[stream] = True
         self._initialized = True
-        return self
 
     async def add_stream(self, stream: StringT, identifier: StringT | None = None) -> bool:
         """
@@ -127,9 +133,6 @@ class Consumer(Generic[AnyStr]):
         self.state.setdefault(stream, {"identifier": identifier} if identifier else {})
         await self._initialize(partial=True)
         return stream in self._initialized_streams
-
-    def __await__(self) -> Generator[Any, None, Consumer[AnyStr]]:
-        return self._initialize().__await__()
 
     def __aiter__(self) -> Consumer[AnyStr]:
         """
@@ -248,7 +251,7 @@ class GroupConsumer(Consumer[AnyStr]):
         self.auto_acknowledge = auto_acknowledge
         self.start_from_backlog = start_from_backlog
 
-    async def _initialize(self, partial: bool = False) -> GroupConsumer[AnyStr]:
+    async def _initialize(self, partial: bool = False) -> None:
         if not self._initialized or partial:
             group_presence: dict[KeyT, bool] = {
                 stream: stream in self._initialized_streams for stream in self.streams
@@ -295,7 +298,6 @@ class GroupConsumer(Consumer[AnyStr]):
                 self.state[stream].setdefault("identifier", ">")
 
             self._initialized = True
-        return self
 
     @versionadded(version="4.12.0")
     async def add_stream(self, stream: StringT, identifier: StringT | None = ">") -> bool:
@@ -309,9 +311,6 @@ class GroupConsumer(Consumer[AnyStr]):
         :return: ``True`` if the stream was added successfully, ``False`` otherwise
         """
         return await super().add_stream(stream, identifier)
-
-    def __await__(self) -> Generator[Any, None, GroupConsumer[AnyStr]]:
-        return self._initialize().__await__()
 
     def __aiter__(self) -> GroupConsumer[AnyStr]:
         """

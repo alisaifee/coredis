@@ -21,26 +21,24 @@ Given either a regular client or a cluster client::
     # or cluster
     # client = coredis.RedisCluster("localhost", 7000)
 
-#. Create the consumer
+#. Create the consumer::
 
-   * Create the consumer in a synchronous context::
 
-      from coredis.stream import Consumer
-      consumer = Consumer(client, streams=["one", "two", "three"])
+     from coredis.stream import Consumer
+     consumer = Consumer(client, streams=["one", "two", "three"])
 
-   * Or, create and initialize the consumer in an async context::
-
-      from coredis.stream import Consumer
-      consumer = await Consumer(client, streams=["one", "two", "three"]
 
 #. Entries can be fetched explicitly by calling :meth:`~coredis.stream.Consumer.get_entry()`::
 
-    stream, entry = await consumer.get_entry()
+    async with client:
+        async with consumer:
+            stream, entry = await consumer.get_entry()
 
 #. or, by using the consumer as an asynchronous iterator::
 
-    async for stream, entry in consumer:
-        # do something with the entry
+    async with client:
+        async for stream, entry in consumer:
+            # do something with the entry
 
 
    .. note:: The iterator will end the moment there are no entries
@@ -48,9 +46,10 @@ Given either a regular client or a cluster client::
 
    The above example can be converted into an infinite iterator over the configured streams::
 
-      while True:
-        async for stream, entry in consumer:
-            # do something with the entry
+      async with client:
+        while True:
+            async for stream, entry in consumer:
+                # do something with the entry
 
 =============
 Configuration
@@ -123,9 +122,10 @@ without ever seeing an entry that the other has fetched::
 
 #. Add some entries to the three streams::
 
-    [await client.xadd("one", {"id": i}) for i in range(10)]
-    [await client.xadd("two", {"id": i}) for i in range(10)]
-    [await client.xadd("three", {"id": i}) for i in range(10)]
+    async with client:
+        [await client.xadd("one", {"id": i}) for i in range(10)]
+        [await client.xadd("two", {"id": i}) for i in range(10)]
+        [await client.xadd("three", {"id": i}) for i in range(10)]
 
 #. Concurrently initiate a full drain with both consumers::
 
@@ -157,43 +157,44 @@ before picking up any new entries from the stream::
     from coredis.stream import GroupConsumer
     import random
 
-    consumer = await GroupConsumer(
-        client,
-        streams=["one"],
-        group = "group-a",
-        consumer = "consumer-1",
-        start_from_backlog = True
-    )
+    async with client:
+        consumer = GroupConsumer(
+            client,
+            streams=["one"],
+            group = "group-a",
+            consumer = "consumer-1",
+            start_from_backlog = True
+        )
 
-    [await client.xadd("one", {"id": i}) for i in range(10)]
+        [await client.xadd("one", {"id": i}) for i in range(10)]
 
 
-    # fetch all ten entries and simulate a bug occurring 50% of the time
-    # when processing the entry
-    async for stream, entry in consumer:
-        if random.random() > 0.5:
-            print("success", await client.xack(stream, consumer.group, [entry.identifier]))
-        else:
-            print("oh nos!")
+        # fetch all ten entries and simulate a bug occurring 50% of the time
+        # when processing the entry
+        async for stream, entry in consumer:
+            if random.random() > 0.5:
+                print("success", await client.xack(stream, consumer.group, [entry.identifier]))
+            else:
+                print("oh nos!")
 
-    pending = await client.xpending("one", "group-a")
-    assert pending.consumers[b"consumer-1"] > 0
+        pending = await client.xpending("one", "group-a")
+        assert pending.consumers[b"consumer-1"] > 0
 
-    # Let's pretend the consumer crashed and started again
-    # and now doesn't have a bug that fails 50% of the time
-    consumer = GroupConsumer(
-        client,
-        streams=["one"],
-        group = "group-a",
-        consumer = "consumer-1",
-        start_from_backlog = True
-    )
+        # Let's pretend the consumer crashed and started again
+        # and now doesn't have a bug that fails 50% of the time
+        consumer = GroupConsumer(
+            client,
+            streams=["one"],
+            group = "group-a",
+            consumer = "consumer-1",
+            start_from_backlog = True
+        )
 
-    async for stream, entry in consumer:
-         await client.xack(stream, consumer.group, [entry.identifier])
+        async for stream, entry in consumer:
+             await client.xack(stream, consumer.group, [entry.identifier])
 
-    pending = await client.xpending("one", "group-a")
-    assert pending.consumers.get(b"consumer-1") is None
+        pending = await client.xpending("one", "group-a")
+        assert pending.consumers.get(b"consumer-1") is None
 
 If no checkpointing is desired the group consumer can be initialized with the
 :paramref:`~coredis.stream.GroupConsumer.auto_acknowledge` parameter set to
