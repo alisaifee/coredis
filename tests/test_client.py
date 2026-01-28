@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import re
 import ssl
+from ssl import SSLError
 
 import anyio
 import pytest
@@ -11,6 +11,7 @@ from packaging.version import Version
 import coredis
 from coredis.exceptions import (
     AuthorizationError,
+    ConnectionError,
     PersistenceError,
     ReplicationError,
     UnknownCommandError,
@@ -230,15 +231,15 @@ class TestSSL:
             port=8379,
             ssl_context=context,
         ) as client:
-            with pytest.raises(ssl.SSLError, match=re.escape("decrypt error")):
+            with pytest.raises(ConnectionError) as exc_info:
                 await client.ping()
+            assert isinstance(exc_info.value.__cause__, SSLError)
 
     async def test_ssl_no_verify_client(self, redis_ssl_server_no_client_auth):
         async with coredis.Redis(port=7379, ssl=True, ssl_cert_reqs="required") as client:
-            with pytest.raises(
-                ssl.SSLCertVerificationError, match=re.escape("certificate verify failed")
-            ):
+            with pytest.raises(ConnectionError) as exc_info:
                 await client.ping()
+            assert isinstance(exc_info.value.__cause__, SSLError)
         async with coredis.Redis(port=7379, ssl=True, ssl_cert_reqs="none") as client:
             assert await client.ping() == b"PONG"
 

@@ -59,8 +59,6 @@ from coredis.typing import (
     TypeVar,
 )
 
-RETRYABLE_CONNECTION_ERRORS = (ConnectionError,)
-
 CERT_REQS = {
     "none": ssl.CERT_NONE,
     "optional": ssl.CERT_OPTIONAL,
@@ -306,7 +304,7 @@ class BaseConnection:
                 raise
             else:
                 # Wrap any other errors with a ConnectionError so that upstreams (pools) can
-                # handle them explicitly as being part of connection establishment if they want.
+                # handle them explicitly as being part of connection creation if they want.
                 raise ConnectionError("Unable to establish a connection") from connection_error
 
         def handle_errors(error: BaseExceptionGroup) -> None:
@@ -314,21 +312,6 @@ class BaseConnection:
             #  once python 3.10 support is dropped and the library
             #  consistently uses exception groups
             self._last_error = self._last_error or error.exceptions[-1]
-
-            if not self._connected:
-                # If a RedisError (raised ourselves) has resulted in and exception
-                # before a connection was completely established raise that.
-                # This is due to known handshake errors.
-                if match := error.split(RedisError)[0]:
-                    raise match
-                else:
-                    logger.exception("Connection attempt failed unexpectedly!")
-                    raise self._last_error
-            else:
-                # If a connection had successfully been established (including handshake)
-                # errors should no longer be raised and it is the responsibility of the
-                # downstream to ensure that `is_connected` is tested before using a connection
-                logger.info("Connection closed unexpectedly!")
 
         try:
             with catch({Exception: handle_errors}):
@@ -351,12 +334,27 @@ class BaseConnection:
                     self._connected = True
                     task_status.started()
         finally:
-            self._connection, self._connected = None, False
             disconnect_exc = self._last_error or ConnectionError("Connection lost!")
             self._parser.on_disconnect()
             while self._requests:
                 request = self._requests.popleft()
                 request.fail(disconnect_exc)
+            self._connection = None
+            if not self._connected:
+                # If a RedisError (raised ourselves) has resulted in an exception
+                # before a connection was completely established raise that.
+                # This is due to known handshake errors.
+                if isinstance(self._last_error, RedisError):
+                    raise self._last_error
+                else:
+                    logger.exception("Connection attempt failed unexpectedly!")
+                    raise ConnectionError("Unable to establish a connection") from self._last_error
+            else:
+                # If a connection had successfully been established (including handshake)
+                # errors should no longer be raised and it is the responsibility of the
+                # downstream to ensure that `is_connected` is tested before using a connection
+                logger.info("Connection closed unexpectedly!")
+                self._connected = False
 
     def terminate(self, reason: str | None = None) -> None:
         """

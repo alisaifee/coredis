@@ -22,7 +22,7 @@ from deprecated.sphinx import versionadded
 
 from coredis._utils import b, hash_slot, nativestr
 from coredis.commands.constants import CommandName
-from coredis.connection import RETRYABLE_CONNECTION_ERRORS, BaseConnection
+from coredis.connection import BaseConnection
 from coredis.exceptions import ConnectionError, PubSubError
 from coredis.parser import (
     PUBLISH_MESSAGE_TYPES,
@@ -125,7 +125,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
         # Used specifically in the forever run task
         self._runner_retry_policy = ExponentialBackoffRetryPolicy(
-            RETRYABLE_CONNECTION_ERRORS, retries=None, base_delay=1, max_delay=16, jitter=True
+            (ConnectionError,), retries=None, base_delay=1, max_delay=16, jitter=True
         )
         self.channels = {}
         self.patterns = {}
