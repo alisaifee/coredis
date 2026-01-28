@@ -12,7 +12,7 @@ from typing import cast
 from anyio import AsyncContextManagerMixin, sleep
 
 from coredis.client import Redis, RedisCluster
-from coredis.commands import Script
+from coredis.commands import CommandRequest, Script
 from coredis.exceptions import (
     LockAcquisitionError,
     LockError,
@@ -59,22 +59,22 @@ class Lock(Generic[AnyStr], AsyncContextManagerMixin):
 
     @classmethod
     @RELEASE_SCRIPT.wraps(client_arg="client")
-    async def lua_release(  # type: ignore[empty-body]
+    def lua_release(  # type: ignore[empty-body]
         cls,
         client: Redis[AnyStr] | RedisCluster[AnyStr],
         name: KeyT,
         expected_token: StringT,
-    ) -> int: ...
+    ) -> CommandRequest[int]: ...
 
     @classmethod
     @EXTEND_SCRIPT.wraps(client_arg="client")
-    async def lua_extend(  # type: ignore[empty-body]
+    def lua_extend(  # type: ignore[empty-body]
         cls,
         client: Redis[AnyStr] | RedisCluster[AnyStr],
         name: KeyT,
         expected_token: StringT,
         additional_time: int,
-    ) -> int: ...
+    ) -> CommandRequest[int]: ...
 
     local: contextvars.ContextVar[StringT | None]
 
