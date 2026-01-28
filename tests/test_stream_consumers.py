@@ -114,6 +114,27 @@ class TestStreamConsumers:
                 int(entry.field_values[_s("id")]) for entry in consumed[_s("b")]
             ]
 
+    async def test_single_consumer_reenter_context(self, client, _s):
+        [await client.xadd("a", {"id": i}) for i in range(5)]
+        [await client.xadd("b", {"id": i}) for i in range(10, 15)]
+        consumer = Consumer(client, ["a", "b"], a={"identifier": "0-0"}, b={"identifier": "0-0"})
+        async with consumer:
+            consumed = await consume_entries(consumer, 10)
+            assert list(range(0, 5)) == [
+                int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]
+            ]
+            assert list(range(10, 15)) == [
+                int(entry.field_values[_s("id")]) for entry in consumed[_s("b")]
+            ]
+        async with consumer:
+            consumed = await consume_entries(consumer, 10)
+            assert list(range(0, 5)) == [
+                int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]
+            ]
+            assert list(range(10, 15)) == [
+                int(entry.field_values[_s("id")]) for entry in consumed[_s("b")]
+            ]
+
     async def test_single_group_consumer(self, client, _s):
         with pytest.raises(StreamConsumerInitializationError):
             async with GroupConsumer(
@@ -135,6 +156,24 @@ class TestStreamConsumers:
             assert list(range(10, 20)) == [
                 int(entry.field_values[_s("id")]) for entry in consumed[_s("b")]
             ]
+
+    async def test_single_group_consumer_reenter_context(self, client, _s):
+        await client.xgroup_create("a", "group-a", "$", mkstream=True)
+        await client.xgroup_create("b", "group-a", "$", mkstream=True)
+
+        consumer = GroupConsumer(
+            client, ["a", "b"], "group-a", "consumer-a", auto_create=False, buffer_size=5
+        )
+        [await client.xadd("a", {"id": i}) for i in range(5)]
+        async with consumer:
+            consumed = await consume_entries(consumer, 2)
+            assert [0, 1] == [int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]]
+
+        await client.xadd("a", {"id": 99})
+
+        async with consumer:
+            consumed = await consume_entries(consumer, 1)
+            assert [99] == [int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]]
 
     async def test_add_stream_to_single_group_consumer(self, client, _s):
         await client.xgroup_create("a", "group-a", "$", mkstream=True)
