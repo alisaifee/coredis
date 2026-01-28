@@ -15,16 +15,16 @@ coredis is an async redis client with support for redis server, cluster & sentin
   - Arguments retain naming from redis as much as possible
   - Only optional variadic arguments are mapped to variadic positional or keyword arguments.
     When the variable length arguments are not optional (which is almost always the case) the expected argument
-    is an iterable of type [Parameters](https://coredis.readthedocs.io/en/latest/api/typing.html#coredis.typing.Parameters) or `Mapping`.
+    is an iterable of type [Parameters](https://coredis.readthedocs.io/en/5.x/api/typing.html#coredis.typing.Parameters) or `Mapping`.
   - Pure tokens used as flags are mapped to boolean arguments
-  - `One of` arguments accepting pure tokens are collapsed and accept a [PureToken](https://coredis.readthedocs.io/en/latest/api/utilities.html#coredis.tokens.PureToken)
+  - `One of` arguments accepting pure tokens are collapsed and accept a [PureToken](https://coredis.readthedocs.io/en/5.x/api/utilities.html#coredis.tokens.PureToken)
 
 - Responses are mapped between RESP and python types as closely as possible.
 
 - For higher level concepts such as Pipelines, LUA Scripts, PubSub & Streams
   abstractions are provided to encapsulate recommended patterns.
-  See the [Handbook](https://coredis.readthedocs.io/en/latest/handbook/index.html)
-  and the [API Documentation](https://coredis.readthedocs.io/en/latest/api/index.html)
+  See the [Handbook](https://coredis.readthedocs.io/en/5.x/handbook/index.html)
+  and the [API Documentation](https://coredis.readthedocs.io/en/5.x/api/index.html)
   for more details.
 
 ______________________________________________________________________
@@ -60,34 +60,34 @@ $ pip install coredis
 
 ### Deployment topologies
 
-- [Redis Cluster](https://coredis.readthedocs.org/en/latest/handbook/cluster.html#redis-cluster)
-- [Sentinel](https://coredis.readthedocs.org/en/latest/api/clients.html#sentinel)
+- [Redis Cluster](https://coredis.readthedocs.org/en/5.x/handbook/cluster.html#redis-cluster)
+- [Sentinel](https://coredis.readthedocs.org/en/5.x/api/clients.html#sentinel)
 
 ### Application patterns
 
-- [Connection Pooling](https://coredis.readthedocs.org/en/latest/handbook/connections.html#connection-pools)
-- [PubSub](https://coredis.readthedocs.org/en/latest/handbook/pubsub.html)
-- [Sharded PubSub](https://coredis.readthedocs.org/en/latest/handbook/pubsub.html#sharded-pub-sub) \[`>= Redis 7.0`\]
-- [Stream Consumers](https://coredis.readthedocs.org/en/latest/handbook/streams.html)
-- [Pipelining](https://coredis.readthedocs.org/en/latest/handbook/pipelines.html)
-- [Client side caching](https://coredis.readthedocs.org/en/latest/handbook/caching.html)
+- [Connection Pooling](https://coredis.readthedocs.org/en/5.x/handbook/connections.html#connection-pools)
+- [PubSub](https://coredis.readthedocs.org/en/5.x/handbook/pubsub.html)
+- [Sharded PubSub](https://coredis.readthedocs.org/en/5.x/handbook/pubsub.html#sharded-pub-sub) \[`>= Redis 7.0`\]
+- [Stream Consumers](https://coredis.readthedocs.org/en/5.x/handbook/streams.html)
+- [Pipelining](https://coredis.readthedocs.org/en/5.x/handbook/pipelines.html)
+- [Client side caching](https://coredis.readthedocs.org/en/5.x/handbook/caching.html)
 
 ### Server side scripting
 
-- [LUA Scripting](https://coredis.readthedocs.org/en/latest/handbook/scripting.html#lua_scripting)
-- [Redis Libraries and functions](https://coredis.readthedocs.org/en/latest/handbook/scripting.html#library-functions) \[`>= Redis 7.0`\]
+- [LUA Scripting](https://coredis.readthedocs.org/en/5.x/handbook/scripting.html#lua_scripting)
+- [Redis Libraries and functions](https://coredis.readthedocs.org/en/5.x/handbook/scripting.html#library-functions) \[`>= Redis 7.0`\]
 
 ### Redis Modules
 
-- [RedisJSON](https://coredis.readthedocs.org/en/latest/handbook/modules.html#redisjson)
-- [RediSearch](https://coredis.readthedocs.org/en/latest/handbook/modules.html#redisearch)
-- [RedisBloom](https://coredis.readthedocs.org/en/latest/handbook/modules.html#redisbloom)
-- [RedisTimeSeries](https://coredis.readthedocs.org/en/latest/handbook/modules.html#redistimeseries)
+- [RedisJSON](https://coredis.readthedocs.org/en/5.x/handbook/modules.html#redisjson)
+- [RediSearch](https://coredis.readthedocs.org/en/5.x/handbook/modules.html#redisearch)
+- [RedisBloom](https://coredis.readthedocs.org/en/5.x/handbook/modules.html#redisbloom)
+- [RedisTimeSeries](https://coredis.readthedocs.org/en/5.x/handbook/modules.html#redistimeseries)
 
 ### Miscellaneous
 
 - Public API annotated with type annotations
-- Optional [Runtime Type Validation](https://coredis.readthedocs.org/en/latest/handbook/typing.html#runtime-type-checking) (via [beartype](https://github.com/beartype/beartype))
+- Optional [Runtime Type Validation](https://coredis.readthedocs.org/en/5.x/handbook/typing.html#runtime-type-checking) (via [beartype](https://github.com/beartype/beartype))
 
 ## Quick start
 
@@ -136,11 +136,11 @@ asyncio.run(example())
 ```
 
 To see a full list of supported redis commands refer to the [Command
-compatibility](https://coredis.readthedocs.io/en/latest/compatibility.html)
+compatibility](https://coredis.readthedocs.io/en/5.x/compatibility.html)
 documentation
 
 Details about supported Redis modules and their commands can be found
-[here](https://coredis.readthedocs.io/en/latest/handbook/modules.html)
+[here](https://coredis.readthedocs.io/en/5.x/handbook/modules.html)
 
 ## Compatibility
 
@@ -171,6 +171,6 @@ coredis is additionally tested against:
 ## References
 
 - [Documentation (Stable)](http://coredis.readthedocs.org/en/stable)
-- [Documentation (Latest)](http://coredis.readthedocs.org/en/latest)
+- [Documentation (5.x)](http://coredis.readthedocs.org/en/5.x)
 - [Changelog](http://coredis.readthedocs.org/en/stable/release_notes.html)
 - [Project History](http://coredis.readthedocs.org/en/stable/history.html)
