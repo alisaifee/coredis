@@ -16,6 +16,7 @@ from anyio import (
     TASK_STATUS_IGNORED,
     BrokenResourceError,
     CancelScope,
+    ClosedResourceError,
     EndOfStream,
     Event,
     connect_tcp,
@@ -58,12 +59,7 @@ from coredis.typing import (
     TypeVar,
 )
 
-RETRYABLE_CONNECTION_ERRORS = (
-    BrokenResourceError,
-    ConnectionError,
-    EndOfStream,
-    ssl.SSLError,
-)
+RETRYABLE_CONNECTION_ERRORS = (ConnectionError,)
 
 CERT_REQS = {
     "none": ssl.CERT_NONE,
@@ -387,6 +383,9 @@ class BaseConnection:
                 with fail_after(self.max_idle_time):
                     try:
                         data = await self.connection.receive()
+                    except (EndOfStream, ClosedResourceError, BrokenResourceError) as err:
+                        self._transport_failed = True
+                        raise ConnectionError("Connection lost while receiving response") from err
                     except Exception:
                         self._transport_failed = True
                         raise
@@ -413,6 +412,9 @@ class BaseConnection:
             data = b"".join(requests)
             try:
                 await self.connection.send(data)
+            except (ClosedResourceError, BrokenResourceError) as err:
+                self._transport_failed = True
+                raise ConnectionError("Connection lost while sending request") from err
             except Exception:
                 self._transport_failed = True
                 raise
@@ -530,7 +532,12 @@ class BaseConnection:
         if block:
             timeout = self._stream_timeout if not block else None
             with fail_after(timeout):
-                return await self._push_message_buffer_out.receive()
+                try:
+                    return await self._push_message_buffer_out.receive()
+                except (EndOfStream, BrokenResourceError, ClosedResourceError) as err:
+                    raise ConnectionError(
+                        "Connection lost while waiting for push messages"
+                    ) from err
         return self._push_message_buffer_out.receive_nowait()
 
     def create_request(
