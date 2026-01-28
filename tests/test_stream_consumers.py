@@ -266,8 +266,9 @@ class TestStreamConsumers:
             assert list(range(15)) == consumed[_s("a")]
             assert list(range(15)) == consumed[_s("b")]
 
-            assert not consumer.state[_s("a")].get("pending")
-            assert not consumer.state[_s("b")].get("pending")
+            # TODO: this is probably a dumb assertion - but we'll come back to it.
+            assert not consumer._state[_s("a")].get("pending")
+            assert not consumer._state[_s("b")].get("pending")
 
             assert (None, None) == await consumer.get_entry()
             assert (None, None) == await consumer.get_entry()
