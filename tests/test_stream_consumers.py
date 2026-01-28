@@ -21,6 +21,35 @@ async def consume_entries(consumer, count, consumed=None):
 
 @targets("redis_basic", "redis_basic_raw", "redis_cluster", "redis_cluster_raw")
 class TestStreamConsumers:
+    async def test_client_xconsumer(self, client, _s):
+        async with client.xconsumer(["a", "b"]) as consumer:
+            [await client.xadd("a", {"id": i}) for i in range(10)]
+            [await client.xadd("b", {"id": i}) for i in range(10, 20)]
+            consumed = await consume_entries(consumer, 20)
+            assert list(range(10)) == [
+                int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]
+            ]
+            assert list(range(10, 20)) == [
+                int(entry.field_values[_s("id")]) for entry in consumed[_s("b")]
+            ]
+
+    async def test_client_xconsumer_group(self, client, _s):
+        await client.xgroup_create("a", "group-a", "$", mkstream=True)
+        await client.xgroup_create("b", "group-a", "$", mkstream=True)
+
+        async with client.xconsumer(
+            ["a", "b"], group="group-a", consumer="consumer-a", auto_create=False
+        ) as consumer:
+            [await client.xadd("a", {"id": i}) for i in range(10)]
+            [await client.xadd("b", {"id": i}) for i in range(10, 20)]
+            consumed = await consume_entries(consumer, 20)
+            assert list(range(10)) == [
+                int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]
+            ]
+            assert list(range(10, 20)) == [
+                int(entry.field_values[_s("id")]) for entry in consumed[_s("b")]
+            ]
+
     async def test_single_consumer(self, client, _s):
         async with Consumer(client, ["a", "b"]) as consumer:
             [await client.xadd("a", {"id": i}) for i in range(10)]

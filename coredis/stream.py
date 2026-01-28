@@ -3,7 +3,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 
 from anyio import AsyncContextManagerMixin
-from deprecated.sphinx import versionadded
+from deprecated.sphinx import versionadded, versionchanged
 
 from coredis._utils import EncodingInsensitiveDict, nativestr
 from coredis.client import Client
@@ -40,6 +40,13 @@ class State(TypedDict, total=False):
     pending: bool | None
 
 
+@versionchanged(
+    version="6.0.0",
+    reason="""
+Consumer instances are no longer awaitable and must be used 
+either as async context managers, or as async iterators.
+""",
+)
 class Consumer(Generic[AnyStr], AsyncContextManagerMixin):
     state: MutableMapping[KeyT, State]
     DEFAULT_START_ID: ClassVar[bytes] = b"0-0"
