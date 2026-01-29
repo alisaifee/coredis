@@ -108,7 +108,7 @@ class TestClient:
         with fail_after(0.1):
             assert _s("PONG") == await client.ping()
 
-    @pytest.mark.parametrize("client_arguments", [{"stream_timeout": 0.1}])
+    @pytest.mark.parametrize("client_arguments", [{"stream_timeout": 0.01}])
     async def test_stream_timeout(self, client, client_arguments, _s):
         with pytest.raises(TimeoutError):
             await client.hset("hash", {bytes(k): k for k in range(4096)})
