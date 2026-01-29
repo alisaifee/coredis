@@ -1,0 +1,6 @@
+* Compatibility
+
+  * The clients no longer check if a module is loaded at initialization.
+    Therefore a module command issued against a server that doesn't have
+    the module will not fail early and instead result in an
+    UnknownCommandError exception by raised.
