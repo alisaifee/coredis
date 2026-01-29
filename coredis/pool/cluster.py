@@ -122,6 +122,7 @@ class ClusterConnectionPool(ConnectionPool):
         self.connection_kwargs = connection_kwargs
         self.connection_kwargs["read_from_replicas"] = read_from_replicas
         self.read_from_replicas = read_from_replicas or readonly
+        # TODO: Use the `max_failures` argument of tracking cache
         self.cache = ClusterTrackingCache(_cache) if _cache else None
         self.reset()
 
@@ -150,6 +151,8 @@ class ClusterConnectionPool(ConnectionPool):
             # same as parent but do initialize() before cache setup
             await self.initialize()
             if self.cache:
+                # TODO: handle cache failure so that the pool doesn't die
+                #  if the cache fails.
                 await self._task_group.start(self.cache.run, self)
         else:
             self._counter += 1
