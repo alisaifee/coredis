@@ -1,0 +1,6 @@
+* Feature
+
+  * Retry policies now allow infinite retries
+    & retry deadlines.
+  * ExponentionBackoffRetryPolicy now supports
+    `jitter`
