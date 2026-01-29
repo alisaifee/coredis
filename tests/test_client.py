@@ -89,7 +89,6 @@ class TestClient:
             with client.decoding(True, encoding="cp424"):
                 assert "א" == await client.get("fubar")
 
-    @pytest.mark.anyio
     async def test_blocking_task_cancellation(self, client, _s):
         cancelled = False
 
@@ -108,6 +107,11 @@ class TestClient:
         assert cancelled
         with fail_after(0.1):
             assert _s("PONG") == await client.ping()
+
+    @pytest.mark.parametrize("client_arguments", [{"stream_timeout": 0.1}])
+    async def test_stream_timeout(self, client, client_arguments, _s):
+        with pytest.raises(TimeoutError):
+            await client.hset("hash", {bytes(k): k for k in range(4096)})
 
 
 @targets(
