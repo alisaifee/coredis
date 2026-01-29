@@ -13,6 +13,13 @@ from tests.conftest import targets
 
 
 class CommonExamples:
+    async def test_cache_health(self, client: Redis, cloner):
+        cache = LRUCache()
+        cached: Redis = await cloner(client, cache=cache)
+        async with cached:
+            assert cached.connection_pool.cache.healthy
+        assert not cached.connection_pool.cache.healthy
+
     async def test_single_entry_cache(self, client: Redis, cloner, _s):
         await client.flushall()
         cache = LRUCache(max_keys=1)

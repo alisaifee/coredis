@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import time
 from abc import ABC, abstractmethod
 from collections import Counter
 from contextlib import AsyncExitStack
@@ -164,6 +165,14 @@ class AbstractCache(ABC):
         """
         ...
 
+    @property
+    @abstractmethod
+    def healthy(self) -> bool:
+        """
+        Whether the cache is healthy and should be taken seriuosly
+        """
+        ...
+
 
 class LRUCache(AbstractCache):
     def __init__(
@@ -252,6 +261,13 @@ class LRUCache(AbstractCache):
                 max(0.0, self._confidence * (1.0001 if match else 0.999)),
             )
 
+    @property
+    def healthy(self) -> bool:
+        """
+        The LRU Cache is always "healthy"
+        """
+        return True
+
 
 class TrackingCache(AbstractCache):
     """
@@ -300,6 +316,8 @@ class TrackingCache(AbstractCache):
 
     @property
     def confidence(self) -> float:
+        if not self.healthy:
+            return 0
         return self._cache.confidence
 
     def feedback(self, command: bytes, key: RedisValueT, *args: RedisValueT, match: bool) -> None:
@@ -313,19 +331,33 @@ class NodeTrackingCache(TrackingCache):
     performed on the keys by another client.
     """
 
-    def __init__(self, cache: AbstractCache | None = None) -> None:
+    _connection: coredis.connection.BaseConnection | None
+
+    def __init__(self, cache: AbstractCache | None = None, max_idle_seconds: int = 5) -> None:
         """
         :param cache: AbstractCache instance to wrap
-        :param compact_interval_seconds: frequency to check if cache is too big and shrink it
+        :param max_idle_seconds: Maximum duration to tolerate no
+         updates from the server before marking the cache as unhealthy.
         """
         super().__init__(cache or LRUCache())
         self.client_id: int | None = None
+        self.__last_checkin: float = 0
+        self.__max_idle_seconds = max_idle_seconds
+        self._connection = None
 
     def get_client_id(
         self,
         connection: coredis.connection.BaseConnection,
     ) -> int | None:
         return self.client_id
+
+    @property
+    def healthy(self) -> bool:
+        return bool(
+            self._connection is not None
+            and self._connection.is_connected
+            and (time.monotonic() - self.__last_checkin) < self.__max_idle_seconds
+        )
 
     async def run(
         self, pool: ConnectionPool, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
@@ -348,6 +380,7 @@ class NodeTrackingCache(TrackingCache):
                     if not started:
                         task_status.started()
                         started = True
+                        self.__last_checkin = time.monotonic()
                     else:  # flush cache
                         self.reset()
 
@@ -355,15 +388,21 @@ class NodeTrackingCache(TrackingCache):
 
     async def _keepalive(self) -> None:
         while True:
-            self._connection.create_request(CommandName.PING, noreply=True)
-            await sleep(15)
+            if self._connection and await self._connection.create_request(CommandName.PING) in {
+                b"OK",
+                "OK",
+            }:
+                self.__last_checkin = time.monotonic()
+            await sleep(min(1, self.__max_idle_seconds - 1))
 
     async def _consumer(self) -> None:
         while True:
-            response = await self._connection.fetch_push_message(True)
-            messages = cast(list[StringT], response[1] or [])
-            for key in messages:
-                self._cache.invalidate(key)
+            if self._connection:
+                response = await self._connection.fetch_push_message(True)
+                self.__last_checkin = time.monotonic()
+                messages = cast(list[StringT], response[1] or [])
+                for key in messages:
+                    self._cache.invalidate(key)
 
 
 class ClusterTrackingCache(TrackingCache):
@@ -381,11 +420,16 @@ class ClusterTrackingCache(TrackingCache):
             return cache.client_id
         return None
 
-    def __init__(self, cache: AbstractCache | None = None) -> None:
+    def __init__(self, cache: AbstractCache | None = None, max_idle_seconds: int = 5) -> None:
         """ """
         super().__init__(cache or LRUCache())
         self.node_caches: dict[str, NodeTrackingCache] = {}
         self._nodes: list[coredis.client.Redis[Any]] = []
+        self._max_idle_seconds = max_idle_seconds
+
+    @property
+    def healthy(self) -> bool:
+        return all(cache.healthy for cache in self.node_caches.values())
 
     async def run(
         self, pool: ConnectionPool, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
@@ -405,7 +449,10 @@ class ClusterTrackingCache(TrackingCache):
                 self._task_group = tg
 
                 for node in nodes:
-                    node_cache = NodeTrackingCache(cache=self._cache)
+                    node_cache = NodeTrackingCache(
+                        cache=self._cache, max_idle_seconds=self._max_idle_seconds
+                    )
                     await tg.start(node_cache.run, node.connection_pool)
+                    assert node_cache._connection
                     self.node_caches[node_cache._connection.location] = node_cache
                 task_status.started()

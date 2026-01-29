@@ -938,7 +938,7 @@ class RedisCluster(
                 cached_reply = None
                 use_cached = False
                 reply = None
-                if pool.cache:
+                if pool.cache and pool.cache.healthy:
                     if r.tracking_client_id != pool.cache.get_client_id(r):
                         pool.cache.reset()
                         await r.update_tracking_client(True, pool.cache.get_client_id(r))
