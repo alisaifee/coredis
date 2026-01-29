@@ -1,0 +1,9 @@
+* Feature
+
+  * Add :meth:`~coredis.Redis.xconsumer`  factory method to
+    create a single or group stream consumer
+
+* Breaking change
+
+  * Stream consumers can no longer be awaited and must be used
+    as context managers to ensure initialization
