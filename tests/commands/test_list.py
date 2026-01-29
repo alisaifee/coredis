@@ -43,7 +43,6 @@ class TestList:
         await client.rpush("c{foo}", ["1"])
         assert await client.blpop(["c{foo}"], timeout=1) == [_s("c{foo}"), _s("1")]
 
-    @pytest.mark.min_server_version("7.0.0")
     @pytest.mark.nodragonfly
     async def test_lmpop(self, client, _s):
         await client.rpush("a{foo}", [1, 2, 3])
@@ -257,7 +256,6 @@ class TestList:
         )
         assert 1 == await client.llen("x{foo}")
 
-    @pytest.mark.min_server_version("7.0.0")
     @pytest.mark.nocluster
     @pytest.mark.nodragonfly
     async def test_blmpop(self, client, cloner, _s):

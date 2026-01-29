@@ -62,13 +62,11 @@ class TestConnection:
         with pytest.raises(NotImplementedError):
             await client.client_reply(PureToken.ON)
 
-    @pytest.mark.min_server_version("7.0.0")
     async def test_client_no_evict(self, client, _s):
         with pytest.warns(UserWarning):
             assert await client.client_no_evict(PureToken.ON)
             assert await client.client_no_evict(PureToken.OFF)
 
-    @pytest.mark.min_server_version("7.1.240")
     async def test_client_no_touch(self, client, _s):
         with pytest.warns(UserWarning):
             assert await client.client_no_touch(PureToken.ON)
@@ -224,7 +222,6 @@ class TestConnection:
         clients = await client.client_list()
         assert "cl=i=ent" in [c["name"] for c in clients]
 
-    @pytest.mark.min_server_version("7.1.240")
     async def test_client_list_after_client_setinfo(self, client, _s):
         with pytest.warns(UserWarning):
             await client.client_setinfo(lib_name="lolwut")

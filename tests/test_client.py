@@ -71,7 +71,6 @@ class TestClient:
             assert not await client.get("fubar")
         assert await client.get("fubar") == _s(1)
 
-    @pytest.mark.min_server_version("7.1.240")
     @pytest.mark.nodragonfly
     async def test_ensure_persistence(self, client, _s):
         with client.ensure_persistence(1, 0, 2000):
@@ -150,7 +149,6 @@ class TestClusterClient:
                 assert await client.set("fubar", 1)
         assert await client.set("fubar", 1)
 
-    @pytest.mark.min_server_version("7.1.240")
     async def test_ensure_persistence_unavailable(self, client, _s, user_client):
         async with await user_client(
             "testuser", "on", "allkeys", "+@all", "-WAITAOF"
@@ -159,7 +157,6 @@ class TestClusterClient:
                 with no_perm_client.ensure_persistence(1, 1, 2000):
                     await no_perm_client.set("fubar", 1)
 
-    @pytest.mark.min_server_version("7.1.240")
     async def test_ensure_persistence(self, client, _s):
         with client.ensure_persistence(1, 1, 2000):
             assert await client.set("fubar", 1)

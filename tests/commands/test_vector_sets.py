@@ -75,6 +75,7 @@ class TestVectorSets:
         assert pytest.approx(0.99, 1e-2) == links_with_scores[-1][_s("a2")]
         assert pytest.approx(0.99, 1e-2) == links_with_scores[-1][_s("a3")]
 
+    @pytest.mark.min_server_version("8.2")
     async def test_vsim(self, client, sample_data, _s):
         assert () == await client.vsim("missing", element="missing")
         with pytest.raises(ResponseError, match="element not found"):
@@ -127,7 +128,7 @@ class TestVectorSets:
             await client.vsim("sample", element="a1", truth=True)
         )[-3:]
 
-    @pytest.mark.min_server_version("8.1.240")
+    @pytest.mark.min_server_version("8.2")
     async def test_vsim_withattribs(self, client, sample_data, _s):
         similarity_with_attribs = await client.vsim("sample", element="a1", withattribs=True)
         assert similarity_with_attribs[_s("a1")] == {"group": "a"}

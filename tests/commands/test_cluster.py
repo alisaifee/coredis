@@ -22,7 +22,6 @@ class TestCluster:
             with pytest.raises(ResponseError, match="Slot 1 is already busy"):
                 await node_client.cluster_addslots([1])
 
-    @pytest.mark.min_server_version("7.0.0")
     async def test_addslots_range(self, client, _s):
         node = client.connection_pool.get_primary_node_by_slots([1])
         async with client.connection_pool.nodes.get_redis_link(node.host, node.port) as node_client:
@@ -46,7 +45,6 @@ class TestCluster:
         async with client.connection_pool.nodes.get_redis_link(node.host, node.port) as node_client:
             assert await node_client.cluster_addslots([1])
 
-    @pytest.mark.min_server_version("7.0.0")
     async def test_cluster_delslots_range(self, client, _s):
         node = client.connection_pool.get_primary_node_by_slots([1])
         node_last = client.connection_pool.get_primary_node_by_slots([16000])
@@ -107,7 +105,6 @@ class TestCluster:
             )
         assert len(replicas) == len(replicas_depr) == 1
 
-    @pytest.mark.min_server_version("7.0.0")
     @pytest.mark.replicated_clusteronly
     async def test_cluster_links(self, client, _s):
         links = []
@@ -142,7 +139,6 @@ class TestCluster:
         known_nodes = (_s(node.node_id) for node in client.connection_pool.nodes.all_nodes())
         assert set(ids) == set(known_nodes)
 
-    @pytest.mark.min_server_version("7.0.0")
     async def test_cluster_shards(self, client, _s):
         shards = await client.cluster_shards()
         assert shards

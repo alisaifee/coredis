@@ -36,7 +36,6 @@ class TestBitmap:
         with pytest.raises(CommandSyntaxError):
             await client.bitcount("a", 1)
 
-    @pytest.mark.min_server_version("7.0")
     async def test_bitcount_index_unit(self, client, _s):
         await client.setbit("a", 5, True)
         assert await client.bitcount("a", 0, -1, index_unit=PureToken.BIT) == 1
@@ -97,7 +96,6 @@ class TestBitmap:
         await client.set(key, b"\x00\x00\x00")
         assert await client.bitpos(key, 1) == -1
 
-    @pytest.mark.min_server_version("7.0")
     async def test_bitpos_unit(self, client, _s):
         key = "key:bitpos"
         await client.set(key, b"\xff\xf0\x00")

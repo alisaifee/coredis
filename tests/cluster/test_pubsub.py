@@ -108,7 +108,6 @@ class TestPubSubSubscribeUnsubscribe:
         kwargs = make_subscribe_test_data(redis_cluster.pubsub(), "channel")
         await self._test_subscribe_unsubscribe(**kwargs)
 
-    @pytest.mark.min_server_version("7.0")
     async def test_sharded_channel_subscribe_unsubscribe(self, redis_cluster):
         kwargs = make_subscribe_test_data(redis_cluster.sharded_pubsub(), "channel", sharded=True)
         await self._test_subscribe_unsubscribe(**kwargs, sharded=True)
@@ -206,7 +205,6 @@ class TestPubSubSubscribeUnsubscribe:
         kwargs = make_subscribe_test_data(redis_cluster.pubsub(), "channel")
         await self._test_resubscribe_on_reconnection(**kwargs)
 
-    @pytest.mark.min_server_version("7.0")
     async def test_sharded_resubscribe_to_channels_on_reconnection(self, redis_cluster):
         kwargs = make_subscribe_test_data(redis_cluster.sharded_pubsub(), "channel", sharded=True)
         await self._test_resubscribe_on_reconnection(**kwargs, sharded=True)
@@ -356,7 +354,6 @@ class TestPubSubMessages:
             message = await wait_for_message(p)
             assert message == make_message("message", "foo", "test message")
 
-    @pytest.mark.min_server_version("7.0")
     @pytest.mark.parametrize(
         "pubsub_arguments",
         [({"read_from_replicas": False}), ({"read_from_replicas": True})],
@@ -504,7 +501,6 @@ class TestPubSubPubSubSubcommands:
             assert {_s("bar"), _s("baz"), _s("foo"), _s("quux")}.issubset(channels)
             await p.unsubscribe()
 
-    @pytest.mark.min_server_version("7.0.0")
     async def test_pubsub_shardchannels(self, client, _s):
         async with client.sharded_pubsub(ignore_subscribe_messages=True) as p:
             await p.subscribe("foo", "bar", "baz", "quux")
@@ -512,7 +508,6 @@ class TestPubSubPubSubSubcommands:
             assert channels == [_s("bar"), _s("baz"), _s("foo"), _s("quux")]
             await p.unsubscribe()
 
-    @pytest.mark.min_server_version("7.0.0")
     async def test_pubsub_shardnumsub(self, client, _s):
         async with (
             client.sharded_pubsub(ignore_subscribe_messages=True) as p1,

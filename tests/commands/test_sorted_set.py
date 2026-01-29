@@ -191,7 +191,6 @@ class TestSortedSet:
             (_s("a1"), 23),
         )
 
-    @pytest.mark.min_server_version("7.0.0")
     async def test_zintercard(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=1, a3=1))
         await client.zadd("b{foo}", dict(a3=2, a4=2, a5=2))
@@ -474,7 +473,6 @@ class TestSortedSet:
         assert await client.zrank("a{foo}", "a2") == 1
         assert await client.zrank("a{foo}", "a6") is None
 
-    @pytest.mark.min_server_version("7.1.240")
     async def test_zrank_with_score(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3, a4=4, a5=5))
         assert await client.zrank("a{foo}", "a1", withscore=True) == (0, 1.0)
@@ -582,7 +580,6 @@ class TestSortedSet:
         assert await client.zrevrank("a{foo}", "a2") == 3
         assert await client.zrevrank("a{foo}", "a6") is None
 
-    @pytest.mark.min_server_version("7.1.240")
     async def test_zrevrank_with_score(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3, a4=4, a5=5))
         assert await client.zrevrank("a{foo}", "a1", withscore=True) == (4, 1.0)
@@ -680,7 +677,6 @@ class TestSortedSet:
             (_s("a1"), 23),
         )
 
-    @pytest.mark.min_server_version("7.0.0")
     @pytest.mark.nodragonfly
     async def test_zmpop(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3))
@@ -695,7 +691,6 @@ class TestSortedSet:
         assert result[0] == _s("b{foo}")
         assert result[1] == ((_s("a3"), 6.0),)
 
-    @pytest.mark.min_server_version("7.0.0")
     @pytest.mark.nocluster
     @pytest.mark.nodragonfly
     async def test_bzmpop(self, client, cloner, _s):

@@ -8206,7 +8206,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.VSIM,
         version_introduced="8.0.0",
         group=CommandGroup.VECTOR_SET,
-        arguments={"withattribs": {"version_introduced": "8.1.240"}},
+        arguments={
+            "withattribs": {"version_introduced": "8.2"},
+            "epsilon": {"version_introduced": "8.2"},
+        },
     )
     def vsim(
         self,

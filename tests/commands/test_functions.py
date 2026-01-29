@@ -66,7 +66,6 @@ async def simple_library(client):
     "redis_cluster_raw",
     "valkey",
 )
-@pytest.mark.min_server_version("7.0.0")
 class TestFunctions:
     async def test_empty_library(self, client, _s):
         assert await client.function_list() == {}
@@ -125,7 +124,6 @@ class TestFunctions:
     "redis_cluster",
     "redis_cluster_raw",
 )
-@pytest.mark.min_server_version("7.0.0")
 class TestLibrary:
     async def test_register_library(self, client, _s):
         library = await client.register_library("coredis", library_definition)

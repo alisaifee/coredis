@@ -111,7 +111,6 @@ class TestString:
         with pytest.raises(CommandSyntaxError):
             await client.getex("a", ex=1, px=1)
 
-    @pytest.mark.min_server_version("7.0.0")
     @pytest.mark.nodragonfly
     async def test_lcs(self, client, _s):
         await client.mset({"a{fu}": "abcdefg", "b{fu}": "abdefg"})
@@ -222,7 +221,6 @@ class TestString:
         assert await client.set("a", "2", get=True) == _s("1")
         assert await client.set("a", "3", condition=PureToken.XX, get=True) == _s("2")
 
-    @pytest.mark.min_server_version("7.0.0")
     async def test_set_get_nx(self, client, _s):
         assert await client.set("a", "1")
         assert await client.set("a", "2", condition=PureToken.NX, get=True) == _s("1")
