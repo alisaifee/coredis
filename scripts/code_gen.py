@@ -2474,6 +2474,7 @@ def cluster_key_extraction(path):
     all["FT.CONFIG GET"] = fixed_args["first"]
     all["FT.CONFIG SET"] = fixed_args["first"]
     all["FT.SEARCH"] = fixed_args["first"]
+    all["FT.HYBRID"] = fixed_args["first"]
     all["FT.AGGREGATE"] = fixed_args["first"]
     all["FT.CURSOR GET"] = fixed_args["first"]
     all["FT.CURSOR DEL"] = fixed_args["first"]

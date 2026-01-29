@@ -475,6 +475,7 @@ class KeySpec:
         b"FT.CONFIG GET": lambda args: (args[1],),
         b"FT.CONFIG SET": lambda args: (args[1],),
         b"FT.SEARCH": lambda args: (args[1],),
+        b"FT.HYBRID": lambda args: (args[1],),
         b"FT.AGGREGATE": lambda args: (args[1],),
         b"FT.CURSOR GET": lambda args: (args[1],),
         b"FT.CURSOR DEL": lambda args: (args[1],),

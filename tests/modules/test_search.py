@@ -594,8 +594,8 @@ class TestSearch:
     @pytest.mark.parametrize(
         "combine",
         [
-            RRFCombine(constant=4, score_alias="rrf_score"),
-            LinearCombine(alpha=1, beta=2, score_alias="linear_score"),
+            RRFCombine(score_alias="rrf_score"),
+            LinearCombine(score_alias="linear_score"),
         ],
         ids=["rrf", "linear"],
     )
@@ -618,6 +618,7 @@ class TestSearch:
             limit=2,
         )
         assert results.total_results > 2
+        assert len(results.results) == 2
         top_result = results.results[0]
         assert {
             _s("query_score"),
