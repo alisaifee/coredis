@@ -44,13 +44,13 @@ class TestClient:
         with pytest.raises(UnknownCommandError):
             await client.execute_command(RedisCommand(b"BOGUS", ()))
 
-    @pytest.mark.nodragonfly
     @pytest.mark.parametrize("client_arguments", [{"db": 1}])
+    @pytest.mark.nodragonfly
     async def test_select_database(self, client, client_arguments):
         assert (await client.client_info())["db"] == 1
 
-    @pytest.mark.nodragonfly
     @pytest.mark.parametrize("client_arguments", [{"client_name": "coredis"}])
+    @pytest.mark.nodragonfly
     async def test_set_client_name(self, client, client_arguments):
         assert (await client.client_info())["name"] == "coredis"
 
@@ -126,6 +126,7 @@ class TestClusterClient:
             await sleep(0.01)
             assert not await client.get("fubar")
 
+    @pytest.mark.nodragonfly
     async def test_noreply_context(self, client, _s):
         with client.ignore_replies():
             assert not await client.set("fubar", 1)

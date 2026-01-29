@@ -57,7 +57,6 @@ class TestPipeline:
         assert await client.get("b") == "b1"
         assert await client.get("c") == "c1"
 
-    @pytest.mark.nodragonfly
     async def test_pipeline_no_permission(self, user_client):
         no_perm_client = await user_client("testuser", "on", "+@all", "-MULTI")
         async with no_perm_client:

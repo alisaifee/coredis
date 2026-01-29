@@ -43,7 +43,6 @@ class TestList:
         await client.rpush("c{foo}", ["1"])
         assert await client.blpop(["c{foo}"], timeout=1) == [_s("c{foo}"), _s("1")]
 
-    @pytest.mark.nodragonfly
     async def test_lmpop(self, client, _s):
         await client.rpush("a{foo}", [1, 2, 3])
         await client.rpush("b{foo}", [4, 5, 6])

@@ -12,6 +12,7 @@ from tests.conftest import targets
     "redis_basic_raw",
     "redis_cluster",
     "redis_cluster_raw",
+    "dragonfly",
     "valkey",
     "redict",
 )

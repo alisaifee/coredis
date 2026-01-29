@@ -81,7 +81,6 @@ class TestSortedSet:
         assert (await client.zdiff(["a{foo}", "b{foo}"])) == (_s("a3"),)
         assert (await client.zdiff(["a{foo}", "b{foo}"], withscores=True)) == ((_s("a3"), 3.0),)
 
-    @pytest.mark.nodragonfly
     async def test_zdiffstore(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3))
         await client.zadd("b{foo}", dict(a1=1, a2=2))
@@ -353,7 +352,6 @@ class TestSortedSet:
         with pytest.raises(CommandSyntaxError):
             await client.zrange("a{foo}", 0, 1, offset=1)
 
-    @pytest.mark.nodragonfly
     async def test_zrangestore(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3))
         assert await client.zrangestore("b{foo}", "a{foo}", 0, 1)
@@ -385,7 +383,6 @@ class TestSortedSet:
         )
         assert await client.zrange("b{foo}", 0, -1) == (_s("a2"),)
 
-    @pytest.mark.nodragonfly
     async def test_zrangebylex(self, client, _s):
         await client.zadd("a{foo}", dict(a=0, b=0, c=0, d=0, e=0, f=0, g=0))
         with server_deprecation_warning("Use :meth:`zrange`", client, "6.2"):
@@ -408,7 +405,6 @@ class TestSortedSet:
                 _s("e"),
             )
 
-    @pytest.mark.nodragonfly
     async def test_zrevrangebylex(self, client, _s):
         await client.zadd("a{foo}", dict(a=0, b=0, c=0, d=0, e=0, f=0, g=0))
         with server_deprecation_warning("Use :meth:`zrange`", client, "6.2"):
@@ -677,7 +673,6 @@ class TestSortedSet:
             (_s("a1"), 23),
         )
 
-    @pytest.mark.nodragonfly
     async def test_zmpop(self, client, _s):
         await client.zadd("a{foo}", dict(a1=1, a2=2, a3=3))
         await client.zadd("b{foo}", dict(a1=4, a2=5, a3=6))
@@ -716,7 +711,6 @@ class TestSortedSet:
         result = await gather(client.bzmpop(["a{foo}"], 1, PureToken.MIN), _delayadd())
         assert result[0][1] == ((_s("a1"), 42.0),)
 
-    @pytest.mark.nodragonfly
     async def test_zmscore(self, client, _s):
         with pytest.raises(DataError):
             await client.zmscore("invalid_key", [])

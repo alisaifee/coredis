@@ -27,6 +27,7 @@ async def get_stream_message(client, stream, message_id):
     "redis_basic_raw",
     "redis_cluster",
     "redis_cluster_raw",
+    "dragonfly",
     "valkey",
     "redict",
 )
@@ -210,6 +211,7 @@ class TestStreams:
         entries = await client.xrevrange("test_stream", end="3", start="2", count=3)
         assert len(entries) == 2 and entries[0][0] == _s("3-0")
 
+    @pytest.mark.nodragonfly
     async def test_xread(self, client, _s):
         for idx in range(1, 10):
             await client.xadd(
@@ -326,6 +328,7 @@ class TestStreams:
         group_info = await client.xinfo_groups("test_stream")
         assert group_info[0][_s("pending")] == 5
 
+    @pytest.mark.nodragonfly
     async def test_xgroup_setid_entriesread(self, client, _s):
         for idx in range(1, 10):
             await client.xadd(
