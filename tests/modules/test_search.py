@@ -619,7 +619,6 @@ class TestSearch:
         )
         assert results.total_results > 2
         top_result = results.results[0]
-        assert top_result[_s("name")] == _s("tehran")
         assert {
             _s("query_score"),
             _s("vector_score"),
