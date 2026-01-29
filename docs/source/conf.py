@@ -133,6 +133,8 @@ texinfo_documents = [
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "redis-py": ("https://redis-py.readthedocs.io/en/latest/", None),
+    "anyio": ("https://anyio.readthedocs.io/en/latest/", None),
+    "trio": ("https://trio.readthedocs.io/en/latest/", None),
 }
 
 # Workaround for https://github.com/sphinx-doc/sphinx/issues/9560
