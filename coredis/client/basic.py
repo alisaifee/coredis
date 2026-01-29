@@ -924,7 +924,7 @@ class Redis(Client[AnyStr]):
         connection = await pool.get_connection()
         self._ensure_server_version(connection.server_version)
         try:
-            if pool.cache:
+            if pool.cache and pool.cache.healthy:
                 if connection.tracking_client_id != pool.cache.get_client_id(connection):
                     pool.cache.reset()
                     await connection.update_tracking_client(
