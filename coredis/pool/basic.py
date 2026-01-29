@@ -197,18 +197,19 @@ class ConnectionPool:
         **connection_kwargs: Any,
     ) -> None:
         """
-        Creates a connection pool. If :paramref:`max_connections` is set, then this
-        object raises :class:`~coredis.ConnectionError` when the pool's limit is reached.
+        Blocking connection pool for single instance redis clients
 
-        By default, TCP connections are created :paramref:`connection_class` is specified.
-        Use :class:`~coredis.UnixDomainSocketConnection` for unix sockets.
-
-        Any additional keyword arguments are passed to the constructor of
-        connection_class.
+        :param connection_class: The connection class to use when creating new connections
+        :param max_connections: Maximum connections to grow the pool.
+         Once the limit is reached clients will block to wait for a connection
+         to be returned to the pool.
+        :param timeout: Number of seconds to block when trying to obtain a connection.
+        :param connection_kwargs: arguments to pass to the :paramref:`connection_class`
+         constructor when creating a new connection
         """
         self.connection_class = connection_class
         self.connection_kwargs = connection_kwargs
-        self.max_connections = max_connections or 1024
+        self.max_connections = max_connections or 64
         self.timeout = timeout
         self.decode_responses = bool(self.connection_kwargs.get("decode_responses", False))
         self.encoding = str(self.connection_kwargs.get("encoding", "utf-8"))

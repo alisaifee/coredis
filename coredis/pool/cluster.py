@@ -59,11 +59,13 @@ class ClusterConnectionPool(ConnectionPool):
         nodemanager_follow_cluster: bool = True,
         readonly: bool = False,
         read_from_replicas: bool = False,
-        timeout: int = 20,
+        timeout: float | None = None,
         _cache: AbstractCache | None = None,
         **connection_kwargs: Any,
     ):
         """
+        Cluster aware connection pool that tracks and manages sub pools for each node
+        in the redis cluster
 
         Changes
           - .. versionchanged:: 4.4.0
@@ -74,20 +76,25 @@ class ClusterConnectionPool(ConnectionPool):
 
             - :paramref:`readonly` renamed to :paramref:`read_from_replicas`
 
+        :param startup_nodes: The initial collection of nodes to use to map the cluster
+         solts to individual primary & replica nodes.
+        :param connection_class: The connection class to use when creating new connections
         :param max_connections: Maximum number of connections to allow concurrently from this
-         client. If the value is ``None`` it will default to 32.
+         client. If the value is ``None`` it will default to 64.
         :param max_connections_per_node: Whether to use the value of :paramref:`max_connections`
          on a per node basis or cluster wide. If ``False``  the per-node connection pools will have
          a maximum size of :paramref:`max_connections` divided by the number of nodes in the cluster.
         :param timeout: Number of seconds to block when trying to obtain a connection.
         :param skip_full_coverage_check:
-            Skips the check of cluster-require-full-coverage config, useful for clusters
-            without the :rediscommand:`CONFIG` command (For example with AWS Elasticache)
-        :param nodemanager_follow_cluster:
-            The node manager will during initialization try the last set of nodes that
-            it was operating on. This will allow the client to drift along side the cluster
-            if the cluster nodes move around alot.
-        :param read_from_replicas: If ``True`` the client will route readonly commands to replicas
+         Skips the check of cluster-require-full-coverage config, useful for clusters
+         without the :rediscommand:`CONFIG` command (For example with AWS Elasticache)
+        :param nodemanager_follow_cluster: The node manager will during initialization try
+         the last set of nodes that it was operating on. This will allow the client to drift
+         along side the cluster if the cluster nodes move around alot.
+        :param read_from_replicas: If ``True`` connections to replicas will be returned for readonly
+         commands
+        :param connection_kwargs: arguments to pass to the :paramref:`connection_class`
+         constructor when creating a new connection
         """
         super().__init__(
             connection_class=connection_class,
