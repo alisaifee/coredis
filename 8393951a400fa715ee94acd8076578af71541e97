@@ -1,0 +1,5 @@
+* Feature
+
+  * Add a ``verify_existence`` flag to library
+  :func:`coredis.commands.function.wraps` to optionally
+  skip local validation and optimistically call it.
