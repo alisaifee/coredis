@@ -85,11 +85,10 @@ class TestFunctions:
         assert await client.fcall("echo_key", ["a"], []) == _s("a")
         assert await client.fcall("return_arg", ["a"], [2]) == 20
 
-    @pytest.mark.xfail
     @pytest.mark.clusteronly
     @pytest.mark.parametrize("client_arguments", [{"read_from_replicas": True}])
     async def test_fcall_ro(self, client, simple_library, _s, client_arguments, mocker):
-        get_primary_node_by_slot = mocker.spy(client.connection_pool, "get_primary_node_by_slot")
+        get_primary_node_by_slot = mocker.spy(client.connection_pool, "get_primary_node_by_slots")
         await client.fcall_ro("echo_key", ["a"], []) == _s("a")
         with pytest.raises(ResponseError):
             await client.fcall_ro("return_arg", ["a"], [2])

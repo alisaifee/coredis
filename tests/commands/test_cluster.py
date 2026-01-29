@@ -56,12 +56,11 @@ class TestCluster:
         ) as node_client:
             assert await node_client.cluster_addslots([16000, 16001])
 
-    @pytest.mark.xfail
     @pytest.mark.replicated_clusteronly
     async def test_readonly_explicit(self, client, _s):
         await client.set("fubar", 1)
         slot = hash_slot(b"fubar")
-        node = client.connection_pool.get_replica_node_by_slot(slot, replica_only=True)
+        node = client.connection_pool.get_replica_node_by_slots([slot], replica_only=True)
         async with client.connection_pool.nodes.get_redis_link(node.host, node.port) as node_client:
             with pytest.raises(MovedError):
                 await node_client.get("fubar")
@@ -91,7 +90,6 @@ class TestCluster:
         assert await client.cluster_countkeysinslot(slot) == 1
         assert await client.cluster_getkeysinslot(slot, 1) == (_s("a"),)
 
-    @pytest.mark.xfail
     @pytest.mark.replicated_clusteronly
     async def test_cluster_nodes(self, client, _s):
         nodes = await client.cluster_nodes()

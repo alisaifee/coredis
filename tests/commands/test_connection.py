@@ -17,7 +17,6 @@ from tests.conftest import targets
     "redict",
 )
 class TestConnection:
-    @pytest.mark.xfail
     async def test_bgsave(self, client):
         await anyio.sleep(0.5)
         assert await client.bgsave()

@@ -198,7 +198,6 @@ class TestSentinelCommand:
             assert await new_replica.get("fubar") == _s("1")
             assert create_request_spy.call_count == 0
 
-    @pytest.mark.xfail
     async def test_replication(self, client: Sentinel):
         primary = client.primary_for("mymaster")
         async with primary:

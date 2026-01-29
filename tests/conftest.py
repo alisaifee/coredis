@@ -275,6 +275,14 @@ def check_redis_cluster_ready(host, port):
         return False
 
 
+def check_sentinel_ready(host, port):
+    try:
+        info = redis.Redis(host, port).sentinel_slaves("mymaster")
+        return info[0]["flags"] == "slave" and info[0]["master-link-status"] == "ok"
+    except Exception:
+        return False
+
+
 def check_sentinel_auth_ready(host, port):
     return ping_socket(host, 36379)
 
@@ -428,7 +436,7 @@ def redis_stack_cluster_server(docker_services):
 @pytest.fixture(scope="session")
 def redis_sentinel_server(docker_services) -> Generator[tuple[str, int], Any, None]:
     docker_services.start("redis-sentinel")
-    docker_services.wait_for_service("redis-sentinel", 26379, ping_socket)
+    docker_services.wait_for_service("redis-sentinel", 26379, check_sentinel_ready)
     yield "localhost", 26379
 
 

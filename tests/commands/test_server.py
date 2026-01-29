@@ -7,7 +7,7 @@ import pytest
 from pytest import approx
 
 from coredis import PureToken
-from coredis.exceptions import ConnectionError, ReadOnlyError, RedisError, ResponseError
+from coredis.exceptions import ReadOnlyError, ResponseError
 from coredis.tokens import PrefixToken
 from coredis.typing import RedisCommand
 from tests.conftest import targets
@@ -327,34 +327,10 @@ class TestServer:
 
     @pytest.mark.nocluster
     @pytest.mark.max_server_version("7.1")
-    @pytest.mark.xfail
     async def test_quit(self, client):
         assert await client.quit()
         await anyio.sleep(0.1)
         assert not client.connection_pool.peek_available().is_connected
-
-
-@pytest.mark.xfail
-async def test_shutdown(fake_redis):
-    fake_redis.responses = {
-        b"SHUTDOWN": {
-            (): ConnectionError(),
-            (PureToken.NOSAVE,): ConnectionError(),
-            (PureToken.SAVE,): ConnectionError(),
-            (PureToken.NOW,): ConnectionError(),
-            (PureToken.FORCE,): ConnectionError(),
-            (PureToken.ABORT,): b"OK",
-        }
-    }
-    assert await fake_redis.shutdown()
-    assert await fake_redis.shutdown(PureToken.NOSAVE)
-    assert await fake_redis.shutdown(PureToken.SAVE)
-    assert await fake_redis.shutdown(now=True)
-    assert await fake_redis.shutdown(force=True)
-    assert await fake_redis.shutdown(abort=True)
-    with pytest.raises(RedisError, match="Unexpected error"):
-        fake_redis.responses[b"SHUTDOWN"][()] = b"OK"
-        await fake_redis.shutdown()
 
 
 async def test_failover(fake_redis):

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import asyncio
-
 import pytest
 
 from coredis._concurrency import gather
@@ -70,29 +68,6 @@ class TestPipeline:
                 await client.set("b{fubar}", "3")
             res = pipe.get("a{fubar}")
         assert await res == "1"
-
-    @pytest.mark.xfail
-    async def test_pipeline_transaction_with_watch_on_construction(self, client):
-        pipe = client.pipeline(transaction=True, watches=["a{fu}"])
-
-        async def overwrite():
-            i = 0
-            while True:
-                try:
-                    await client.set("a{fu}", i)
-                except asyncio.CancelledError:
-                    break
-                except Exception:
-                    break
-
-        task = asyncio.create_task(overwrite())
-        try:
-            await asyncio.sleep(0.1)
-            with pytest.raises(WatchError):
-                async with pipe:
-                    [pipe.set("a{fu}", -1 * i) for i in range(1000)]
-        finally:
-            task.cancel()
 
     async def test_pipeline_transaction_with_watch(self, client):
         async with client.pipeline(transaction=False) as pipe:

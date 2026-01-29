@@ -24,7 +24,6 @@ async def test_connect_tcp(redis_basic):
         tg.cancel_scope.cancel()
 
 
-@pytest.mark.xfail
 async def test_connect_cred_provider(redis_auth_server):
     conn = Connection(
         credential_provider=UserPassCredentialProvider(password="sekret"),
