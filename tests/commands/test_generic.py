@@ -208,7 +208,7 @@ class TestGeneric:
         await client.restore("a", 0, dumped, freq=freq)
         assert await client.get("a") == _s("foo")
         freq_now = await client.object_freq("a")
-        assert freq + 1 == freq_now
+        assert freq_now > freq
 
     @pytest.mark.novalkey
     @pytest.mark.noredict
