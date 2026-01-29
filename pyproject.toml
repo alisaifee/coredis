@@ -21,8 +21,7 @@ authors = [
   {name = "Ali-Akber Saifee", email = "ali@indydevs.org"}
 ]
 maintainers = [
-  {name = "Ali-Akber Saifee", email = "ali@indydevs.org"},
-  {name = "Graeme Holliday", email = "graeme@tastyware.dev"}
+  {name = "Ali-Akber Saifee", email = "ali@indydevs.org"}
 ]
 keywords = ["Redis", "key-value store", "asyncio", "Trio", "anyio"]
 classifiers = [
