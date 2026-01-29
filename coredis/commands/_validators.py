@@ -39,7 +39,7 @@ class MutuallyInclusiveParametersMissing(CommandSyntaxError):
         if leaders:
             message = (
                 f"The [{','.join(arguments)}] parameters(s)"
-                " must be provided together with [{','.join(leaders)}]."
+                f" must be provided together with [{','.join(leaders)}]."
                 f"{' ' + details if details else ''}"
             )
         else:
