@@ -41,7 +41,6 @@ Release Date: 2026-01-18
   * Remove ``Monitor`` wrapper.
   * Remove ``RedisGraph`` module support.
 
-=======
 v5.6.0
 ------
 Release Date: 2026-01-19
