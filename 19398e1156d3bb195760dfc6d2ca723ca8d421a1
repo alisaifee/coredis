@@ -1,0 +1,5 @@
+* Breaking change
+
+  * :meth:`coredis.Redis.pubsub`, :meth:`coredis.RedisCluster.pubsub` &
+    :meth:`coredis.RedisCluster.sharded_pubsub` now only accept keyword
+    arguments.
