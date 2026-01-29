@@ -213,6 +213,7 @@ class ConnectionPool:
         self.timeout = timeout
         self.decode_responses = bool(self.connection_kwargs.get("decode_responses", False))
         self.encoding = str(self.connection_kwargs.get("encoding", "utf-8"))
+        # TODO: Use the `max_failures` argument of tracking cache
         self.cache: TrackingCache | None = NodeTrackingCache(_cache) if _cache else None
         self._connections: Queue[BaseConnection] = Queue(self.max_connections)
         self._counter = 0
@@ -223,6 +224,8 @@ class ConnectionPool:
             self._counter += 1
             await self._task_group.__aenter__()
             if self.cache:
+                # TODO: handle cache failure so that the pool doesn't die
+                #  if the cache fails.
                 await self._task_group.start(self.cache.run, self)
         else:
             self._counter += 1
