@@ -64,6 +64,14 @@ class SearchAggregationResult(Generic[AnyStr]):
 
 
 @dataclasses.dataclass
+class HybridResult(Generic[AnyStr]):
+    total_results: int
+    execution_time: float
+    warnings: list[StringT]
+    results: list[dict[StringT, StringT]]
+
+
+@dataclasses.dataclass
 class AutocompleteSuggestion(Generic[AnyStr]):
     """
     Autocomplete suggestion as returned by `FT.SUGGET <https://redis.io/commands/ft.sugget>`__

@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import dataclasses
 import itertools
+from abc import ABC, abstractmethod
 from collections import OrderedDict
 from datetime import timedelta
 
 from deprecated.sphinx import versionadded
 
 from ..commands._utils import normalized_milliseconds, normalized_seconds
+from ..commands._validators import mutually_exclusive_parameters, mutually_inclusive_parameters
 from ..commands._wrappers import ClusterCommandConfig
 from ..commands.constants import CommandGroup, CommandName, NodeFlag
 from ..commands.request import CommandRequest
@@ -36,11 +38,12 @@ from ..typing import (
 from .base import Module, ModuleGroup, module_command
 from .response._callbacks.search import (
     AggregationResultCallback,
+    HybridSearchCallback,
     SearchConfigCallback,
     SearchResultCallback,
     SpellCheckCallback,
 )
-from .response.types import SearchAggregationResult, SearchResult
+from .response.types import HybridResult, SearchAggregationResult, SearchResult
 
 
 class RediSearch(Module[AnyStr]):
@@ -249,6 +252,74 @@ class Filter:
     @property
     def args(self) -> CommandArgList:
         return [PrefixToken.FILTER, self.expression]
+
+
+@dataclasses.dataclass
+class Combine(ABC):
+    """
+    Method definition for fusing text & vector results to be used with
+    :paramref:`~coredis.modules.Search.hybrid.combine`
+    to specify the ``COMBINE`` method for :meth:`~coredis.modules.Search.hybrid`
+    """
+
+    method: Literal["RRF", "LINEAR"] = dataclasses.field(init=False)
+    window: int | None = None
+    score_alias: StringT | None = None
+
+    @property
+    def args(self) -> CommandArgList:
+        args = [PureToken.COMBINE, self.method]
+        sub_args = self.sub_args
+        if self.window is not None:
+            sub_args.extend([PrefixToken.WINDOW, self.window])
+        if self.score_alias:
+            sub_args.extend([PrefixToken.YIELD_SCORE_AS, self.score_alias])
+        return args + [len(sub_args), *sub_args]
+
+    @property
+    @abstractmethod
+    def sub_args(self) -> CommandArgList: ...
+
+
+@dataclasses.dataclass
+class RRFCombine(Combine):
+    """
+    RRF (Reciprocal Rank Fusion) method
+    to be used in :meth:`~coredis.modules.Search.hybrid`
+    with :paramref:`~coredis.modules.Search.hybrid.combine`
+    """
+
+    method: Literal["RRF"] = dataclasses.field(init=False, default="RRF")
+    constant: int | None = None
+
+    @property
+    def sub_args(self) -> CommandArgList:
+        args: CommandArgList = []
+        if self.constant is not None:
+            args.extend([PrefixToken.CONSTANT, self.constant])
+        return args
+
+
+@dataclasses.dataclass
+class LinearCombine(Combine):
+    """
+    Linear combination with ALPHA and BETA weights
+    to be used in :meth:`~coredis.modules.Search.hybrid`
+    with :paramref:`~coredis.modules.Search.hybrid.combine`
+    """
+
+    method: Literal["LINEAR"] = dataclasses.field(init=False, default="LINEAR")
+    alpha: int | None = None
+    beta: int | None = None
+
+    @property
+    def sub_args(self) -> CommandArgList:
+        args: CommandArgList = []
+        if self.alpha is not None:
+            args.extend([PrefixToken.ALPHA, self.alpha])
+        if self.beta is not None:
+            args.extend([PrefixToken.BETA, self.beta])
+        return args
 
 
 @versionadded(version="4.12")
@@ -959,7 +1030,7 @@ class Search(ModuleGroup[AnyStr]):
         query: StringT,
         *,
         verbatim: bool | None = None,
-        load: None | (Literal["*"] | Parameters[StringT | tuple[StringT, StringT]]) = None,
+        load: Literal["*"] | Parameters[StringT | tuple[StringT, StringT]] | None = None,
         timeout: int | timedelta | None = None,
         transforms: Parameters[Group | Apply | Filter] | None = None,
         sortby: Mapping[StringT, Literal[PureToken.ASC, PureToken.DESC]] | None = None,
@@ -1045,6 +1116,142 @@ class Search(ModuleGroup[AnyStr]):
             CommandName.FT_AGGREGATE,
             *command_arguments,
             callback=AggregationResultCallback[AnyStr](with_cursor=with_cursor, dialect=dialect),
+        )
+
+    @mutually_exclusive_parameters("k", "radius")
+    @mutually_inclusive_parameters("ef_runtime", leaders=["k"])
+    @mutually_inclusive_parameters("epsilon", leaders=["radius"])
+    @module_command(
+        CommandName.FT_HYBRID,
+        module=MODULE,
+        version_introduced="8.4.0",
+        group=COMMAND_GROUP,
+    )
+    def hybrid(
+        self,
+        index: KeyT,
+        search: StringT,
+        vector_field: StringT,
+        vector_data: bytes,
+        *,
+        scorer: StringT | None = None,
+        search_score_alias: StringT | None = None,
+        k: int | None = None,
+        ef_runtime: int | None = None,
+        radius: int | None = None,
+        epsilon: float | None = None,
+        vector_score_alias: StringT | None = None,
+        vector_filter: Filter | None = None,
+        combine: RRFCombine | LinearCombine | None = None,
+        transforms: Parameters[Group | Apply | Filter] | None = None,
+        sortby: Mapping[StringT, Literal[PureToken.ASC, PureToken.DESC]] | None = None,
+        offset: int | None = 0,
+        limit: int | None = None,
+        load: Literal["*"] | Parameters[StringT | tuple[StringT, StringT]] | None = None,
+        timeout: int | timedelta | None = None,
+        parameters: Mapping[StringT, StringT] | None = None,
+    ) -> CommandRequest[HybridResult[AnyStr]]:
+        """
+        Performs hybrid search combining text search and vector similarity with
+        configurable fusion methods.
+
+        :param index: Name of the Redis index to search.
+        :param search: Base filtering query to retrieve documents.
+        :param vector_field: The vector field in the index to search against
+        :param vector_data: The vector data to use for similarity comparison
+        :param scorer: Scoring algorithm to use
+        :param search_score_alias: Alias for the search score
+        :param k: K value for performing K-nearest neighbour search
+        :param ef_runtime: controls the range search accuracy vs. speed tradeoff.
+        :param radius: maximum distance for range matches
+        :param epsilon: precision controls for range matches
+        :param vector_score_alias: Alias for the vector search score
+        :param vector_filter: Filter to use to select which documents are considered
+         for vector similarity.
+        :param combine: How to fuse the text search and vector similarity results.
+        :param transforms: List of transformations to apply to the results.
+        :param sortby: The fields to sort by and the direction to sort.
+        :param offset: Number of results to skip.
+        :param limit: Maximum number of results to return.
+        :param load: Load document attributes from the source document.
+        :param timeout: Maximum time to wait for the query to complete.
+        :param parameters: Additional parameters to pass to the query.
+        """
+        command_arguments: CommandArgList = [index]
+
+        # SEARCH
+        command_arguments.extend([PureToken.SEARCH, search])
+
+        # SCORER
+        if scorer is not None:
+            command_arguments.extend([PrefixToken.SCORER, scorer])
+        if search_score_alias is not None:
+            command_arguments.extend([PrefixToken.YIELD_SCORE_AS, search_score_alias])
+
+        # VSIM
+        command_arguments.extend([PureToken.VSIM, vector_field, "$query_vector"])
+        if k is not None:
+            _knn_args: CommandArgList = [PrefixToken.K, k]
+            if ef_runtime:
+                _knn_args.extend([PrefixToken.EF_RUNTIME, ef_runtime])
+
+            command_arguments.extend([PureToken.KNN, len(_knn_args), *_knn_args])
+        if radius is not None:
+            _range_args: CommandArgList = [PrefixToken.RADIUS, radius]
+            if epsilon:
+                _range_args.extend([PrefixToken.EPSILON, epsilon])
+            command_arguments.extend([PureToken.RANGE, len(_range_args), *_range_args])
+        if vector_filter is not None:
+            command_arguments.extend(vector_filter.args)
+        if vector_score_alias is not None:
+            command_arguments.extend([PrefixToken.YIELD_SCORE_AS, vector_score_alias])
+
+        # COMBINE
+        if combine:
+            command_arguments.extend(combine.args)
+
+        # LIMIT
+        if limit is not None:
+            command_arguments.extend([PrefixToken.LIMIT, offset or 0, limit])
+        # SORT
+        if sortby:
+            command_arguments.append(PrefixToken.SORTBY)
+            command_arguments.append(len(sortby) * 2)
+            for sort_field, sort_order in sortby.items():
+                command_arguments.extend([sort_field, sort_order])
+        # LOAD
+        if load:
+            command_arguments.append(PrefixToken.LOAD)
+            if isinstance(load, (bytes, str)):
+                command_arguments.append(load)
+            else:
+                _load_fields: list[StringT] = []
+                for load_field in load:
+                    if isinstance(load_field, (bytes, str)):
+                        _load_fields.append(load_field)
+                    else:
+                        _load_fields.extend([load_field[0], PrefixToken.AS, load_field[1]])
+
+                command_arguments.extend([len(_load_fields), *_load_fields])
+
+        # GROUPBY/REDUCE/APPLY/FILTER
+        if transforms:
+            for step in transforms:
+                command_arguments.extend(step.args)
+
+        # PARAMS
+        _parameters: list[StringT] = list(
+            itertools.chain(*[("query_vector", vector_data)] + list((parameters or {}).items()))
+        )
+        command_arguments.extend([PureToken.PARAMS, len(_parameters), *_parameters])
+
+        if timeout:
+            command_arguments.extend([PrefixToken.TIMEOUT, normalized_milliseconds(timeout)])
+
+        return self.client.create_request(
+            CommandName.FT_HYBRID,
+            *command_arguments,
+            callback=HybridSearchCallback(),
         )
 
     @module_command(

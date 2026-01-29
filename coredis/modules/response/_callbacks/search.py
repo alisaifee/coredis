@@ -6,6 +6,7 @@ from functools import partial
 from coredis._json import json
 from coredis._utils import EncodingInsensitiveDict
 from coredis.modules.response.types import (
+    HybridResult,
     SearchAggregationResult,
     SearchDocument,
     SearchResult,
@@ -193,3 +194,14 @@ class SpellCheckCallback(
             }
         response = EncodingInsensitiveDict(response)
         return {key: OrderedDict(ChainMap(*result)) for key, result in response["results"].items()}
+
+
+class HybridSearchCallback(ResponseCallback[dict[AnyStr, ResponseType], HybridResult]):
+    def transform(self, response: dict[AnyStr, ResponseType]) -> HybridResult:
+        response = EncodingInsensitiveDict(response)
+        return HybridResult(
+            response["total_results"],
+            response["execution_time"],
+            response["warnings"],
+            response["results"],
+        )

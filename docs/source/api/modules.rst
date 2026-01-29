@@ -70,6 +70,9 @@ Search & Aggregation
 .. autoclass:: coredis.modules.search.Group
 .. autoclass:: coredis.modules.search.Reduce
 .. autoclass:: coredis.modules.search.Apply
+.. autoclass:: coredis.modules.search.RRFCombine
+.. autoclass:: coredis.modules.search.LinearCombine
+
 
 ============
 Autocomplete
