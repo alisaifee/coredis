@@ -8,13 +8,22 @@ import pytest
 
 from coredis import PureToken, Redis
 from coredis._concurrency import gather
+from coredis.commands._validators import MutuallyExclusiveParametersError
 from coredis.exceptions import ResponseError
 from coredis.modules.response.types import (
     SearchAggregationResult,
     SearchDocument,
     SearchResult,
 )
-from coredis.modules.search import Apply, Field, Filter, Group, Reduce
+from coredis.modules.search import (
+    Apply,
+    Field,
+    Filter,
+    Group,
+    LinearCombine,
+    Reduce,
+    RRFCombine,
+)
 from coredis.retry import ConstantRetryPolicy, retryable
 from tests.conftest import module_targets
 
@@ -579,6 +588,101 @@ class TestSearch:
             dialect=2,
         )
         assert results.documents[0].properties[_s("name")] == _s("chennai")
+
+    @pytest.mark.min_module_version("search", "8.4.0")
+    @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
+    @pytest.mark.parametrize(
+        "combine",
+        [
+            RRFCombine(constant=4, score_alias="rrf_score"),
+            LinearCombine(alpha=1, beta=2, score_alias="linear_score"),
+        ],
+        ids=["rrf", "linear"],
+    )
+    async def test_hybrid_search_scores(
+        self, client: Redis, city_index, index_name, query_vectors, combine, _s
+    ):
+        vector_data = query_vectors["historical landmark"].astype(numpy.float32).tobytes()
+        results = await client.search.hybrid(
+            index_name,
+            "@summary_text:landmark",
+            "@summary_vector",
+            vector_data,
+            scorer="BM25",
+            search_score_alias="query_score",
+            load=["@country", "@name", "@population"],
+            combine=combine,
+            vector_score_alias="vector_score",
+            vector_filter=Filter("@population > 5000000"),
+            sortby={f"@{combine.score_alias}": PureToken.DESC},
+            limit=2,
+        )
+        assert results.total_results > 2
+        top_result = results.results[0]
+        assert top_result[_s("name")] == _s("tehran")
+        assert {
+            _s("query_score"),
+            _s("vector_score"),
+            _s(combine.score_alias),
+        } < top_result.keys()
+        assert {_s("country"), _s("name"), _s("population")} < top_result.keys()
+
+    @pytest.mark.min_module_version("search", "8.4.0")
+    @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
+    @pytest.mark.parametrize(
+        "vsim_options",
+        [
+            {"k": 10},
+            {"radius": 50},
+        ],
+        ids=["knn", "range"],
+    )
+    async def test_hybrid_search_vsim_options(
+        self, client: Redis, city_index, index_name, query_vectors, vsim_options, _s
+    ):
+        vector_data = query_vectors["historical landmark"].astype(numpy.float32).tobytes()
+        results = await client.search.hybrid(
+            index_name, "@summary_text:landmark", "@summary_vector", vector_data, **vsim_options
+        )
+        assert results.total_results > 1
+
+    @pytest.mark.min_module_version("search", "8.4.0")
+    @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
+    @pytest.mark.parametrize(
+        "extra_args",
+        [
+            {"k": 10, "radius": 50},
+        ],
+        ids=["knn+range"],
+    )
+    async def test_hybrid_search_exclusive_arguments(
+        self, client: Redis, city_index, index_name, query_vectors, extra_args, _s
+    ):
+        vector_data = query_vectors["historical landmark"].astype(numpy.float32).tobytes()
+        with pytest.raises(MutuallyExclusiveParametersError):
+            await client.search.hybrid(
+                index_name, "@summary_text:landmark", "@summary_vector", vector_data, **extra_args
+            )
+
+    @pytest.mark.min_module_version("search", "8.4.0")
+    @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
+    async def test_hybrid_search_with_aggregate(
+        self, client: Redis, city_index, index_name, query_vectors, _s
+    ):
+        results = await client.search.hybrid(
+            index_name,
+            "olympics",
+            "@summary_vector",
+            query_vectors["historical landmark"].astype(numpy.float32).tobytes(),
+            load=["@population", "@name"],
+            transforms=[
+                Apply("floor(log(@population))", "population_log"),
+            ],
+        )
+
+        assert results.total_results > 1
+        top_result = results.results[0]
+        assert {_s("population"), _s("name"), _s("population_log")} <= top_result.keys()
 
     @pytest.mark.parametrize("index_name", ["{city}idx", "{jcity}idx"])
     async def test_synonyms(self, client: Redis, city_index, index_name, _s):
