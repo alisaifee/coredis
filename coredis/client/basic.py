@@ -18,6 +18,9 @@ from coredis._utils import logger, nativestr
 from coredis.cache import AbstractCache
 from coredis.commands import CommandRequest
 from coredis.commands._key_spec import KeySpec
+from coredis.commands._validators import (
+    mutually_inclusive_parameters,
+)
 from coredis.commands.constants import CommandFlag, CommandName
 from coredis.commands.core import CoreCommands
 from coredis.commands.function import Library
@@ -76,6 +79,7 @@ R = TypeVar("R")
 if TYPE_CHECKING:
     import coredis.pipeline
     from coredis.lock import Lock
+    from coredis.stream import Consumer, GroupConsumer, StreamParameters
 
 ClientT = TypeVar("ClientT", bound="Client[Any]")
 RedisT = TypeVar("RedisT", bound="Redis[Any]")
@@ -1151,3 +1155,113 @@ class Redis(Client[AnyStr]):
                         return await func(pipe)
             if watch_delay:
                 await sleep(watch_delay)
+
+    @overload
+    def xconsumer(
+        self,
+        streams: Parameters[KeyT],
+        *,
+        buffer_size: int = ...,
+        timeout: int | None = ...,
+        group: Literal[None] = ...,
+        consumer: Literal[None] = ...,
+        auto_create: bool = ...,
+        auto_acknowledge: bool = ...,
+        start_from_backlog: bool = ...,
+        **stream_parameters: StreamParameters,
+    ) -> Consumer[AnyStr]: ...
+    @overload
+    def xconsumer(
+        self,
+        streams: Parameters[KeyT],
+        *,
+        buffer_size: int = ...,
+        timeout: int | None = ...,
+        group: StringT = ...,
+        consumer: StringT = ...,
+        auto_create: bool = ...,
+        auto_acknowledge: bool = ...,
+        start_from_backlog: bool = ...,
+        **stream_parameters: StreamParameters,
+    ) -> GroupConsumer[AnyStr]: ...
+    @versionadded(version="6.0.0")
+    @mutually_inclusive_parameters("group", "consumer")
+    def xconsumer(
+        self,
+        streams: Parameters[KeyT],
+        *,
+        buffer_size: int = 0,
+        timeout: int | None = None,
+        group: StringT | None = None,
+        consumer: StringT | None = None,
+        auto_create: bool = True,
+        auto_acknowledge: bool = False,
+        start_from_backlog: bool = False,
+        **stream_parameters: StreamParameters,
+    ) -> Consumer[AnyStr] | GroupConsumer[AnyStr]:
+        """
+        Create a stream consumer for one or more Redis streams.
+
+        Depending on whether ``group`` and ``consumer`` are provided, this method
+        creates either a standalone stream consumer or a member of a stream
+        consumer group.
+
+        If ``group`` and ``consumer`` are not provided, a standalone stream
+        consumer is created that starts reading from the latest entry of each
+        stream provided in :paramref:`streams`.
+
+        The latest entry is determined by calling
+        :meth:`coredis.Redis.xinfo_stream` and using the :data:`last-entry`
+        attribute at the point of initializing the consumer instance or on first
+        fetch (whichever comes first). If the stream(s) do not exist at the time
+        of consumer creation, the consumer will simply start from the minimum
+        identifier (``0-0``).
+
+        If ``group`` and ``consumer`` are provided, a member of a stream consumer
+        group is created. The consumer has an identical interface as
+        :class:`coredis.stream.Consumer`.
+
+        :param streams: the stream identifiers to consume from
+        :param buffer_size: Size of buffer (per stream) to maintain. This
+         translates to the maximum number of stream entries that are fetched
+         on each request to redis.
+        :param timeout: Maximum amount of time in milliseconds to block for new
+         entries to appear on the streams the consumer is reading from.
+        :param group: The name of the group this consumer is part of
+        :param consumer: The unique name (within :paramref:`group`) of the consumer
+        :param auto_create: If True the group will be created upon initialization
+         or first fetch if it doesn't already exist.
+        :param auto_acknowledge: If ``True`` the stream entries fetched will be fetched
+         without needing to be acknowledged with :meth:`coredis.Redis.xack` to remove
+         them from the pending entries list.
+        :param start_from_backlog: If ``True`` the consumer will start by fetching any pending
+         entries from the pending entry list before considering any new messages
+         not seen by any other consumer in the :paramref:`group`
+        :param stream_parameters: Mapping of optional parameters to use
+         by stream for the streams provided in :paramref:`streams`.
+
+         .. warning:: Providing an ``identifier`` in ``stream_parameters`` has a different
+            meaning for a group consumer. If the value is any valid identifier other than ``>``
+            the consumer will only access the history of pending messages. That is, the set of
+            messages that were delivered to this consumer (identified by :paramref:`consumer`)
+            and never acknowledged.
+        """
+        from coredis.stream import Consumer, GroupConsumer
+
+        if group is not None and consumer is not None:
+            return GroupConsumer(
+                self,
+                streams,
+                group=group,
+                consumer=consumer,
+                buffer_size=buffer_size,
+                auto_create=auto_create,
+                auto_acknowledge=auto_acknowledge,
+                start_from_backlog=start_from_backlog,
+                timeout=timeout,
+                **stream_parameters,
+            )
+        else:
+            return Consumer(
+                self, streams, buffer_size=buffer_size, timeout=timeout, **stream_parameters
+            )

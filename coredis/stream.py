@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from typing import Any
+import copy
+from contextlib import asynccontextmanager
 
-from deprecated.sphinx import versionadded
+from anyio import AsyncContextManagerMixin
+from deprecated.sphinx import versionadded, versionchanged
 
 from coredis._utils import EncodingInsensitiveDict, nativestr
 from coredis.client import Client
@@ -15,12 +17,13 @@ from coredis.response.types import StreamEntry
 from coredis.tokens import PureToken
 from coredis.typing import (
     AnyStr,
+    AsyncGenerator,
     ClassVar,
-    Generator,
     Generic,
     KeyT,
     MutableMapping,
     Parameters,
+    Self,
     StringT,
     TypedDict,
     ValueT,
@@ -38,7 +41,14 @@ class State(TypedDict, total=False):
     pending: bool | None
 
 
-class Consumer(Generic[AnyStr]):
+@versionchanged(
+    version="6.0.0",
+    reason="""
+Consumer instances are no longer awaitable and must be used
+either as async context managers, or as async iterators.
+""",
+)
+class Consumer(Generic[AnyStr], AsyncContextManagerMixin):
     state: MutableMapping[KeyT, State]
     DEFAULT_START_ID: ClassVar[bytes] = b"0-0"
 
@@ -56,7 +66,7 @@ class Consumer(Generic[AnyStr]):
 
         The latest entry is determined by calling :meth:`coredis.Redis.xinfo_stream`
         and using the :data:`last-entry` attribute
-        at the point of initializing the consumer instance or on first fetch (whichever comes
+        at the point of entering the consumer context or on first fetch (whichever comes
         first). If the stream(s) do not exist at the time of consumer creation, the
         consumer will simply start from the minimum identifier (``0-0``)
 
@@ -72,35 +82,44 @@ class Consumer(Generic[AnyStr]):
         """
         self.client: Client[AnyStr] = client
         self.streams: set[KeyT] = set(streams)
-        self.state: MutableMapping[StringT, State] = EncodingInsensitiveDict(
-            {stream: stream_parameters.get(nativestr(stream), {}) for stream in streams}
+        self._buffer: MutableMapping[AnyStr, list[StreamEntry]] = EncodingInsensitiveDict({})
+        self._buffer_size = buffer_size
+        self._timeout = timeout
+
+        self._initial_state: MutableMapping[StringT, State] = EncodingInsensitiveDict(
+            {stream: dict(stream_parameters.get(nativestr(stream), {})) for stream in streams}
         )
-        self.buffer: MutableMapping[AnyStr, list[StreamEntry]] = EncodingInsensitiveDict({})
-        self.buffer_size = buffer_size
-        self.timeout = timeout
+        self._state: MutableMapping[StringT, State] = copy.deepcopy(self._initial_state)
         self._initialized = False
         self._initialized_streams: dict[StringT, bool] = {}
+
+    @asynccontextmanager
+    async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
+        try:
+            await self._initialize()
+            yield self
+        finally:
+            self._reset()
 
     def chunk_streams(self) -> list[dict[ValueT, StringT]]:
         import coredis.client
 
         if isinstance(self.client, coredis.client.RedisCluster):
             return [
-                {stream: self.state[stream].get("identifier", None) or self.DEFAULT_START_ID}
+                {stream: self._state[stream].get("identifier", None) or self.DEFAULT_START_ID}
                 for stream in self.streams
             ]
         else:
             return [
                 {
-                    stream: self.state[stream].get("identifier", None) or self.DEFAULT_START_ID
+                    stream: self._state[stream].get("identifier", None) or self.DEFAULT_START_ID
                     for stream in self.streams
                 }
             ]
 
-    async def initialize(self, partial: bool = False) -> Consumer[AnyStr]:
+    async def _initialize(self, partial: bool = False) -> None:
         if self._initialized and not partial:
-            return self
-
+            return
         for stream in self.streams:
             if partial and self._initialized_streams.get(stream):
                 continue
@@ -109,12 +128,17 @@ class Consumer(Generic[AnyStr]):
                 if info:
                     last_entry = info["last-entry"]
                     if last_entry:
-                        self.state[stream].setdefault("identifier", last_entry.identifier)
+                        self._state[stream].setdefault("identifier", last_entry.identifier)
             except ResponseError:
                 pass
             self._initialized_streams[stream] = True
         self._initialized = True
-        return self
+
+    def _reset(self) -> None:
+        self._state = copy.deepcopy(self._initial_state)
+        self._initialized_streams.clear()
+        self._initialized = False
+        self._buffer.clear()
 
     async def add_stream(self, stream: StringT, identifier: StringT | None = None) -> bool:
         """
@@ -124,12 +148,9 @@ class Consumer(Generic[AnyStr]):
         :return: ``True`` if the stream was added successfully, ``False`` otherwise
         """
         self.streams.add(stream)
-        self.state.setdefault(stream, {"identifier": identifier} if identifier else {})
-        await self.initialize(partial=True)
+        self._state.setdefault(stream, {"identifier": identifier} if identifier else {})
+        await self._initialize(partial=True)
         return stream in self._initialized_streams
-
-    def __await__(self) -> Generator[Any, None, Consumer[AnyStr]]:
-        return self.initialize().__await__()
 
     def __aiter__(self) -> Consumer[AnyStr]:
         """
@@ -156,12 +177,12 @@ class Consumer(Generic[AnyStr]):
         previously fetched and buffered, they will be returned before
         making a new request to the server.
         """
-        await self.initialize()
+        await self._initialize()
         cur = None
         cur_stream = None
-        for stream, buffer_entries in list(self.buffer.items()):
+        for stream, buffer_entries in list(self._buffer.items()):
             if buffer_entries:
-                cur_stream, cur = stream, self.buffer[stream].pop(0)
+                cur_stream, cur = stream, self._buffer[stream].pop(0)
                 break
         else:
             consumed_entries: dict[AnyStr, tuple[StreamEntry, ...]] = {}
@@ -169,8 +190,8 @@ class Consumer(Generic[AnyStr]):
                 consumed_entries.update(
                     await self.client.xread(
                         chunk,
-                        count=self.buffer_size + 1,
-                        block=(self.timeout if (self.timeout and self.timeout > 0) else None),
+                        count=self._buffer_size + 1,
+                        block=(self._timeout if (self._timeout and self._timeout > 0) else None),
                     )
                     or {}
                 )
@@ -180,11 +201,11 @@ class Consumer(Generic[AnyStr]):
                         cur = entries[0]
                         cur_stream = stream
                         if entries[1:]:
-                            self.buffer.setdefault(stream, []).extend(entries[1:])
+                            self._buffer.setdefault(stream, []).extend(entries[1:])
                     else:
-                        self.buffer.setdefault(stream, []).extend(entries)
+                        self._buffer.setdefault(stream, []).extend(entries)
         if cur and cur_stream:
-            self.state[cur_stream]["identifier"] = cur.identifier
+            self._state[cur_stream]["identifier"] = cur.identifier
         return cur_stream, cur
 
 
@@ -248,7 +269,7 @@ class GroupConsumer(Consumer[AnyStr]):
         self.auto_acknowledge = auto_acknowledge
         self.start_from_backlog = start_from_backlog
 
-    async def initialize(self, partial: bool = False) -> GroupConsumer[AnyStr]:
+    async def _initialize(self, partial: bool = False) -> None:
         if not self._initialized or partial:
             group_presence: dict[KeyT, bool] = {
                 stream: stream in self._initialized_streams for stream in self.streams
@@ -271,10 +292,10 @@ class GroupConsumer(Consumer[AnyStr]):
                         == 1
                     )
                     if group_presence[stream] and self.start_from_backlog:
-                        self.state[stream]["pending"] = True
-                        self.state[stream]["identifier"] = "0-0"
+                        self._state[stream]["pending"] = True
+                        self._state[stream]["identifier"] = "0-0"
                 except ResponseError:
-                    self.state[stream].setdefault("identifier", ">")
+                    self._state[stream].setdefault("identifier", ">")
 
             if not (self.auto_create or all(group_presence.values())):
                 missing_streams = self.streams - {
@@ -292,10 +313,9 @@ class GroupConsumer(Consumer[AnyStr]):
                     except StreamDuplicateConsumerGroupError:  # noqa
                         pass
                 self._initialized_streams[stream] = True
-                self.state[stream].setdefault("identifier", ">")
+                self._state[stream].setdefault("identifier", ">")
 
             self._initialized = True
-        return self
 
     @versionadded(version="4.12.0")
     async def add_stream(self, stream: StringT, identifier: StringT | None = ">") -> bool:
@@ -310,9 +330,6 @@ class GroupConsumer(Consumer[AnyStr]):
         """
         return await super().add_stream(stream, identifier)
 
-    def __await__(self) -> Generator[Any, None, GroupConsumer[AnyStr]]:
-        return self.initialize().__await__()
-
     def __aiter__(self) -> GroupConsumer[AnyStr]:
         """
         Returns the instance of the consumer itself which can be iterated over
@@ -326,13 +343,13 @@ class GroupConsumer(Consumer[AnyStr]):
         previously fetched and buffered, they will be returned before
         making a new request to the server.
         """
-        await self.initialize()
+        await self._initialize()
 
         cur = None
         cur_stream = None
-        for stream, buffer_entries in list(self.buffer.items()):
+        for stream, buffer_entries in list(self._buffer.items()):
             if buffer_entries:
-                cur_stream, cur = stream, self.buffer[stream].pop(0)
+                cur_stream, cur = stream, self._buffer[stream].pop(0)
                 break
         else:
             consumed_entries: dict[AnyStr, tuple[StreamEntry, ...]] = {}
@@ -341,8 +358,8 @@ class GroupConsumer(Consumer[AnyStr]):
                     await self.client.xreadgroup(
                         self.group,
                         self.consumer,
-                        count=self.buffer_size + 1,
-                        block=(self.timeout if (self.timeout and self.timeout > 0) else None),
+                        count=self._buffer_size + 1,
+                        block=(self._timeout if (self._timeout and self._timeout > 0) else None),
                         noack=self.auto_acknowledge,
                         streams=chunk,
                     )
@@ -354,16 +371,16 @@ class GroupConsumer(Consumer[AnyStr]):
                         cur = entries[0]
                         cur_stream = stream
                         if entries[1:]:
-                            self.buffer.setdefault(stream, []).extend(entries[1:])
+                            self._buffer.setdefault(stream, []).extend(entries[1:])
 
                     else:
-                        self.buffer.setdefault(stream, []).extend(entries)
-                    if self.state[stream].get("pending"):
-                        self.state[stream]["identifier"] = entries[-1].identifier
+                        self._buffer.setdefault(stream, []).extend(entries)
+                    if self._state[stream].get("pending"):
+                        self._state[stream]["identifier"] = entries[-1].identifier
                 else:
-                    if self.state[stream].get("pending"):
-                        self.state[stream].pop("identifier", None)
-                        self.state[stream].pop("pending", None)
+                    if self._state[stream].get("pending"):
+                        self._state[stream].pop("identifier", None)
+                        self._state[stream].pop("pending", None)
                         if not cur:
                             return await self.get_entry()
         return cur_stream, cur
