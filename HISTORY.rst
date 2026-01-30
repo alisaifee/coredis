@@ -3,6 +3,55 @@
 Changelog
 =========
 
+v6.0.0rc2
+---------
+Release Date: 2026-01-30
+
+* Feature
+
+  * Add :meth:`~coredis.Redis.xconsumer`  factory method to
+    create a single or group stream consumer
+  * Add a ``verify_existence`` flag to library
+    :func:`coredis.commands.function.wraps` to optionally
+    skip local validation and optimistically call it.
+  * Improve guarantees of calling subscription methods on PubStub
+    instances. Using a ``subscription_timeout`` the acknowledgement
+    of subscription to a topic or pattern can be guaranteed before
+    proceeding with listening to messages.
+  * Cluster pipelines now support ``Script`` instances
+  * Allow chaininable ``transform`` method to accept inline
+    callbacks to transform the response from the redis server
+  * Added ``retry`` chainable method to the response from
+    all commands to allow using retry policies individually
+    with a requests instead of having to apply it on all
+    requests issued by a client.
+  * Retry policies now allow infinite retries
+    & retry deadlines.
+  * ExponentionBackoffRetryPolicy now supports
+    `jitter`
+
+* Breaking change
+
+  * Stream consumers can no longer be awaited and must be used
+    as context managers to ensure initialization
+  * :meth:`coredis.Redis.pubsub`, :meth:`coredis.RedisCluster.pubsub` &
+    :meth:`coredis.RedisCluster.sharded_pubsub` now only accept keyword
+    arguments.
+
+* Compatibility
+
+  * The clients no longer check if a module is loaded at initialization.
+    Therefore a module command issued against a server that doesn't have
+    the module will not fail early and instead result in an
+    :exc:`~coredis.exceptions.UnknownCommandError` exception by raised.
+  * Add support for ``VRANGE`` vector set command (:meth:`~coredis.Redis.vrange`)
+  * Add support for ``FT.HYBRID`` search command (:meth:`~coredis.modules.Search.hybrid`)
+
+* Performance
+
+  * Fixed performance regression introduced in ``6.0.0rc1`` with sending commands
+    to the socket. Performance over concurrent workloads is now at par with 5.x or better
+
 v6.0.0rc1
 ---------
 Release Date: 2026-01-18
