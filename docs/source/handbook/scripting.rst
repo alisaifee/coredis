@@ -83,7 +83,7 @@ Library Functions
 ^^^^^^^^^^^^^^^^^
 
 Starting with :redis-version:`7.0` a more sophisticated approach to managing
-server side scripts is available through libraries and functions (See `Redis functions <https://redis.io/docs/manual/programmability/functions-intro/>`__.
+server side scripts is available through libraries and functions (See `Redis functions <https://redis.io/docs/develop/programmability/functions-intro/>`__).
 Instead of managing individual snippets of lua code, you can group related server side
 functions under a library. **coredis** exposes all function related redis commands
 through :class:`coredis.Redis` and additionally provides an abstraction via the

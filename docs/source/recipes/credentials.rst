@@ -5,7 +5,7 @@ Credential Providers
 Elasticache IAM Credential Provider
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The implementation is based on `the Elasticache IAM provider described in redis docs <https://redis-py.readthedocs.io/en/stable/examples/connection_examples.html#Connecting-to-a-redis-instance-with-ElastiCache-IAM-credential-provider\.>`__
+The implementation is based on `the Elasticache IAM provider described in redis-py's docs <https://redis.readthedocs.io/en/stable/examples/connection_examples.html#Connecting-to-a-redis-instance-with-ElastiCache-IAM-credential-provider.>`__
 
 The :class:`~coredis.recipes.ElastiCacheIAMProvider` implements the
 :class:`~coredis.credentials.AbstractCredentialProvider` interface.

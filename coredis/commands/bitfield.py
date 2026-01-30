@@ -36,7 +36,7 @@ class BitFieldOperation(Generic[AnyStr]):
 
     Offset can be num prefixed with `#` character or num directly.
 
-    Redis command documentation: `BITFIELD <https://redios.io/commands/bitfield>`__
+    Redis command documentation: `BITFIELD <https://redis.io/commands/bitfield>`__
     """
 
     def __init__(self, redis_client: AbstractExecutor, key: KeyT, readonly: bool = False) -> None:

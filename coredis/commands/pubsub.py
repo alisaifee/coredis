@@ -517,7 +517,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
     that is returned by :meth:`coredis.RedisCluster.sharded_pubsub`
 
     For details about the server architecture refer to the `Redis manual entry
-    on Sharded Pub/sub <https://redis.io/docs/manual/pubsub/#sharded-pubsub>`__.
+    on Sharded Pub/sub <https://redis.io/docs/develop/pubsub/#sharded-pubsub>`__
 
     New in :redis-version:`7.0.0`
 

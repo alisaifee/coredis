@@ -32,7 +32,7 @@ class RedisJSON(Module[AnyStr]):
     FULL_NAME = "RedisJSON"
     DESCRIPTION = """RedisJSON is a Redis module that implements a JSON data type
 and a set of commands to operate on it."""
-    DOCUMENTATION_URL = "https://redis.io/docs/stack/json/"
+    DOCUMENTATION_URL = "https://redis.io/docs/develop/data-types/json/"
 
 
 @versionadded(version="4.12")

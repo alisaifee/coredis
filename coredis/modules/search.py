@@ -53,7 +53,7 @@ class RediSearch(Module[AnyStr]):
 indexing, and full-text search for Redis. These features enable multi-field queries,
 aggregation, exact phrase matching, numeric filtering, geo filtering and vector
 similarity semantic search on top of text queries."""
-    DOCUMENTATION_URL = "https://redis.io/docs/stack/search"
+    DOCUMENTATION_URL = "https://redis.io/docs/develop/ai/search-and-query"
 
 
 @dataclasses.dataclass
@@ -111,12 +111,12 @@ class Field:
     #: The algorithm to use for indexing if the field is of type
     #: :attr:`~coredis.PureToken.VECTOR`.
     #: For more details refer to the
-    #: `Vector similarity <https://redis.io/docs/stack/search/reference/vectors/>`__
+    #: `Vector search concepts <https://redis.io/docs/develop/ai/search-and-query/vectors>`__
     #: section of the RediSearch documentation.
     algorithm: Literal["FLAT", "HSNW"] | None = None
     #: A dictionary of attributes to be used with the :paramref:`algorithm` specified.
     #: For more details refer to the
-    #: `Creation attributes per algorithm <https://redis.io/docs/stack/search/reference/vectors/#creation-attributes-per-algorithm>`__
+    #: `Vector index <https://redis.io/docs/develop/ai/search-and-query/vectors/#create-a-vector-index>`__
     #: section of the RediSearch documentation.
     attributes: dict[StringT, ValueT] | None = None
 
@@ -162,7 +162,7 @@ class Reduce:
     Reduce definition to be used with :paramref:`~coredis.modules.Search.aggregate.transformations`
     to define ``REDUCE`` steps in :meth:`~coredis.modules.Search.aggregate`
 
-    For more details refer to `GroupBy Reducers <https://redis.io/docs/stack/search/reference/aggregations/#groupby-reducers>`__
+    For more details refer to `GroupBy Reducers <https://redis.io/docs/develop/ai/search-and-query/advanced-concepts/aggregations/#groupby-reducers>`__
     in the RediSearch documentation.
     """
 
@@ -190,7 +190,7 @@ class Group:
     to specify ``GROUPBY`` steps in :meth:`~coredis.modules.Search.aggregate`
 
     For more details refer to
-    `Aggregations <https://redis.io/docs/stack/search/reference/aggregations>`__
+    `Aggregations <https://redis.io/docs/latest/develop/ai/search-and-query/advanced-concepts/aggregations/>`__
     in the RediSearch documentation.
     """
 
@@ -221,7 +221,7 @@ class Apply:
     to specify ``APPLY`` steps in :meth:`~coredis.modules.Search.aggregate`
 
     For more details refer to
-    `APPLY expressions <https://redis.io/docs/stack/search/reference/aggregations/#apply-expressions>`__
+    `APPLY expressions <https://redis.io/docs/develop/ai/search-and-query/advanced-concepts/aggregations/#apply-expressions>`__
     in the RediSearch documentation.
     """
 
@@ -242,7 +242,7 @@ class Filter:
     to specify ``FILTER`` steps in :meth:`~coredis.modules.Search.aggregate`
 
     For more details refer to
-    `FILTER expressions <https://redis.io/docs/stack/search/reference/aggregations/#filter-expressions>`__
+    `FILTER expressions <https://redis.io/docs/develop/ai/search-and-query/advanced-concepts/aggregations/#filter-expressions>`__
     in the RediSearch documentation.
     """
 

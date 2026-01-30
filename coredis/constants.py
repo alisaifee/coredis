@@ -17,7 +17,7 @@ class RESPDataType:
 
     See:
 
-    - `RESP protocol spec <https://redis.io/docs/reference/protocol-spec/>`__
+    - `RESP protocol spec <https://redis.io/docs/develop/reference/protocol-spec>`__
     - `RESP3 specification <https://github.com/antirez/RESP3/blob/master/spec.md>`__
     """
 

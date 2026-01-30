@@ -59,7 +59,7 @@ class RedisTimeSeries(Module[AnyStr]):
 data structure. It is designed to be used as a database for time series data,
 and is optimized for fast insertion and retrieval of time series data.
     """
-    DOCUMENTATION_URL = "https://redis.io/docs/stack/timeseries/"
+    DOCUMENTATION_URL = "https://redis.io/docs/develop/data-types/timeseries/"
 
 
 @versionadded(version="4.12")

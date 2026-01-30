@@ -39,7 +39,7 @@ class RedisBloom(Module[AnyStr]):
     DESCRIPTION = """RedisBloom is a Redis module that implements various probabilistic
 data structures such as BloomFilter.
     """
-    DOCUMENTATION_URL = "https://redis.io/docs/stack/bloom/"
+    DOCUMENTATION_URL = "https://redis.io/docs/develop/data-types/probabilistic"
 
 
 @versionadded(version="4.12")

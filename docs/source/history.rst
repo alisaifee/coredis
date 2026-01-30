@@ -7,7 +7,7 @@ developed and maintained by `Jason Chen <https://github.com/NoneGG>`_.
 :pypi:`aredis` already had support for cluster & sentinel and was one of the best
 performing async python clients. Since it had become unmaintained as of **October 2020**
 The initial intention of the fork was add python ``3.10`` compatibility and
-`coredis 2.x <https://github.com/alisaifee/coredis/tree/2.x>`__ was drop-in backward compatible
+:ref:`release_notes:v2.0.0` was drop-in backward compatible
 with :pypi:`aredis` and addd support up to python ``3.10``.
 
 Version :ref:`release_notes:v6.0.0rc1` was a large scale refactor that replaced all internal async task

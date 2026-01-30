@@ -29,7 +29,10 @@ RELEASE_SCRIPT = Script(script=(Path(__file__).parent / "lua/release.lua").read_
 
 class Lock(Generic[AnyStr], AsyncContextManagerMixin):
     """
-    A shared, distributed Lock using LUA scripts.
+    A shared, distributed Lock inspired by the
+    `Distributed locks <https://redis.io/docs/latest/develop/clients/patterns/distributed-locks>`__
+    documentation and the
+    `Redlock Algorithm <https://redis.io/docs/develop/clients/patterns/distributed-locks/#the-redlock-algorithm>`__
 
     The lock can be used with both :class:`coredis.Redis`
     and :class:`coredis.RedisCluster` either explicitly or as an async context
