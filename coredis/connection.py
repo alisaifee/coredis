@@ -6,6 +6,7 @@ import math
 import os
 import socket
 import ssl
+import time
 from abc import abstractmethod
 from collections import defaultdict, deque
 from contextlib import contextmanager
@@ -71,6 +72,69 @@ if TYPE_CHECKING:
 
 
 @dataclasses.dataclass
+class ConnectionStatistics:
+    """
+    Connection statistics
+    """
+
+    #: Time of socket establishment
+    connected_at: float | None = None
+    #: Time of successful handshake with the redis server
+    handshake_completed_at: float | None = None
+    #: Creation time of the statistics object
+    created_at: float = dataclasses.field(default_factory=time.time)
+    #: Current pending requests
+    requests_pending: int = 0
+    #: Total failed requests
+    requests_failed: int = 0
+    #: Total requests that completed without error
+    requests_succeeded: int = 0
+    _last_request_processed_at: float | None = dataclasses.field(init=False, default=None)
+    _oldest_pending_created_at: float | None = dataclasses.field(init=False, default=None)
+    _total_response_time: float = dataclasses.field(init=False, default=0)
+
+    @property
+    def lag(self) -> float:
+        """
+        How long the oldest pending request has been waiting
+        """
+        if self.requests_pending and self._oldest_pending_created_at:
+            return max(0.0, time.time() - self._oldest_pending_created_at)
+        return 0.0
+
+    @property
+    def average_response_time(self) -> float:
+        """
+        Simple average of request processing time
+        """
+        if self._last_request_processed_at:
+            return self._total_response_time / (self.requests_failed + self.requests_succeeded)
+        return 0.0
+
+    def _request_processed(self, request: Request) -> None:
+        now = time.time()
+        self.requests_pending -= 1
+        if request.successful:
+            self.requests_succeeded += 1
+        else:
+            self.requests_failed += 1
+        self._last_request_processed_at = now
+        self._total_response_time += now - request.created_at
+
+    def _request_created(self, request: Request) -> None:
+        self.requests_pending += 1
+        self._oldest_pending_created_at = min(
+            self._oldest_pending_created_at or math.inf, request.created_at
+        )
+
+    def _socket_connected(self) -> None:
+        self.connected_at = time.time()
+
+    def _handshake_completed(self) -> None:
+        self.handshake_completed_at = time.time()
+
+
+@dataclasses.dataclass
 class Request:
     connection: ProxyType[BaseConnection]
     command: bytes
@@ -79,9 +143,13 @@ class Request:
     raise_exceptions: bool = True
     response_timeout: float | None = None
     disconnect_on_cancellation: bool = False
+    created_at: float = dataclasses.field(default_factory=time.time)
     _event: Event = dataclasses.field(default_factory=Event)
     _exc: BaseException | None = None
     _result: ResponseType | None = None
+
+    def __post_init__(self) -> None:
+        self.connection.statistics._request_created(self)
 
     def __await__(self) -> Generator[Any, None, ResponseType]:
         return self.get_result().__await__()
@@ -89,11 +157,19 @@ class Request:
     def resolve(self, response: ResponseType) -> None:
         self._result = response
         self._event.set()
+        self.connection.statistics._request_processed(self)
 
     def fail(self, error: BaseException) -> None:
         if not self._event.is_set():
             self._exc = error
             self._event.set()
+            self.connection.statistics._request_processed(self)
+
+    @property
+    def successful(self) -> bool:
+        if self._event.is_set():
+            return self._exc is None
+        return False
 
     async def get_result(self) -> ResponseType:
         if not self._event.is_set():
@@ -243,6 +319,9 @@ class BaseConnection:
         self._connected = False
         self._transport_failed = False
 
+        # Stats
+        self.statistics = ConnectionStatistics()
+
     def __repr__(self) -> str:
         return self.describe(self._description_args())
 
@@ -298,6 +377,7 @@ class BaseConnection:
 
         try:
             self._connection = await self._connect()
+            self.statistics._socket_connected()
         except Exception as connection_error:
             self._last_error = connection_error
             if isinstance(connection_error, RedisError):
@@ -522,6 +602,8 @@ class BaseConnection:
         if self.noreply:
             await self.create_request(b"CLIENT REPLY", b"OFF", noreply=True)
             self.noreply_set = True
+
+        self.statistics._handshake_completed()
 
     async def fetch_push_message(self, block: bool = False) -> list[ResponseType]:
         """
