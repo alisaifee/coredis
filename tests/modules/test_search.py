@@ -35,7 +35,7 @@ def query_vectors():
 
 
 @pytest.fixture
-async def city_index(client: Redis):
+async def city_index(client: Redis, _s):
     data = json.loads(open("tests/modules/data/city_index.json").read())
     with client.ignore_replies():
         await client.search.create(
@@ -121,6 +121,8 @@ async def city_index(client: Redis):
                     "last_updated": "2012-12-12",
                 },
             )
+    await wait_for_index("{city}idx", client, _s)
+    await wait_for_index("{jcity}idx", client, _s)
     return data
 
 
