@@ -4,14 +4,10 @@ import pytest
 from pytest_lazy_fixtures import lf
 
 from coredis.tokens import PrefixToken
-from tests.conftest import targets
+from tests.conftest import module_targets
 
 
-@targets(
-    "redis_stack",
-    "redis_stack_raw",
-    "redis_stack_cluster",
-)
+@module_targets()
 async def test_modules_list(client, _s):
     module_info = await client.module_list()
     assert {_s("args"), _s("name"), _s("path"), _s("ver")} & module_info[0].keys()
