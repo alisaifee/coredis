@@ -178,7 +178,7 @@ mypy-args = [
   "--disable-error-code=type-var",
   "--disable-error-code=typeddict-item"
 ]
-options = { debug_level = "0" }
+options = { debug_level = "0", opt_level = "3", strip_asserts = true }
 
 [tool.mypy]
 strict = true
