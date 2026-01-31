@@ -2,14 +2,7 @@ from __future__ import annotations
 
 import re
 
-from coredis.typing import RedisValueT
-
-
-class RedisError(Exception):
-    """
-    Base exception from which all other exceptions in coredis
-    derive from.
-    """
+from coredis.typing import RedisError, RedisValueT
 
 
 class CommandSyntaxError(RedisError):
@@ -354,3 +347,6 @@ class StreamConsumerInitializationError(StreamConsumerError):
     Raised when a stream consumer could not be initialized
     based on the configuration provided
     """
+
+
+__all__ = ["RedisError"]
