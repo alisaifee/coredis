@@ -149,10 +149,13 @@ class CommandRequest(Awaitable[CommandResponseT]):
            float_value: float = await client.get("fubar").transform(lambda value: float(value))
         """
 
-        transform_func = (
-            functools.partial(self.type_adapter.deserialize, return_type=transformer)
-            if is_type_like(transformer)
-            else transformer
+        transform_func = cast(
+            Callable[..., TransformedResponse],
+            (
+                functools.partial(self.type_adapter.deserialize, return_type=transformer)
+                if is_type_like(transformer)
+                else transformer
+            ),
         )
 
         return cast(type[CommandRequest[TransformedResponse]], self.__class__)(

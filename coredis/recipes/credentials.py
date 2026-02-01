@@ -27,7 +27,7 @@ class ElastiCacheIAMProvider(AbstractCredentialProvider):
 
         self.session = aiobotocore.session.get_session()
 
-    @cached(cache=TTLCache(maxsize=128, ttl=900))  # type: ignore[misc]
+    @cached(cache=TTLCache(maxsize=128, ttl=900))  # type: ignore[untyped-decorator]
     async def get_credentials(self) -> UserPass:
         """
         Returns a short-lived token that can be used to connect to an

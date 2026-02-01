@@ -146,13 +146,16 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
         self,
         transformer: type[TransformedResponse] | Callable[[CommandResponseT], TransformedResponse],
     ) -> CommandRequest[TransformedResponse]:
-        transform_func = (
-            functools.partial(
-                self.type_adapter.deserialize,
-                return_type=transformer,
-            )
-            if is_type_like(transformer)
-            else transformer
+        transform_func = cast(
+            Callable[..., TransformedResponse],
+            (
+                functools.partial(
+                    self.type_adapter.deserialize,
+                    return_type=transformer,
+                )
+                if is_type_like(transformer)
+                else transformer
+            ),
         )
         return cast(type[PipelineCommandRequest[TransformedResponse]], self.__class__)(
             self.client,
