@@ -107,7 +107,7 @@ jobs:
         uv sync --locked --all-extras --group ci
     - name: Compile extensions
       if: ${{ matrix.extensions == 'True' }}
-      run: uv run mypyc coredis/constants.py coredis/parser.py coredis/_packer.py coredis/_utils.py
+      run: uv run mypyc coredis/constants/ coredis/parser.py coredis/_packer.py coredis/_utils.py
     - name: Tests
       env:
         COREDIS_UVLOOP: ${{ matrix.uvloop }}

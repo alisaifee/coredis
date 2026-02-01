@@ -5,10 +5,7 @@ from collections.abc import Hashable
 from io import BytesIO
 from typing import cast
 
-from anyio.streams.memory import MemoryObjectSendStream
-
 from coredis._enum import CaseAndEncodingInsensitiveEnum
-from coredis._utils import b, logger
 from coredis.constants import SYM_CRLF, RESPDataType
 from coredis.exceptions import (
     AskError,
@@ -38,10 +35,11 @@ from coredis.exceptions import (
 )
 from coredis.typing import (
     Final,
+    Literal,
     MutableSet,
-    NamedTuple,
     ResponsePrimitive,
     ResponseType,
+    StringT,
 )
 
 
@@ -88,12 +86,14 @@ class RESPNode:
     __slots__ = ("depth", "key", "node_type")
     depth: int
     key: Hashable
-    node_type: int
+    node_type: Literal[RESPDataType.PUSH, RESPDataType.ARRAY, RESPDataType.MAP, RESPDataType.SET]
 
     def __init__(
         self,
         depth: int,
-        node_type: int,
+        node_type: Literal[
+            RESPDataType.PUSH, RESPDataType.ARRAY, RESPDataType.MAP, RESPDataType.SET
+        ],
         key: (ResponsePrimitive | tuple[ResponsePrimitive, ...] | frozenset[ResponsePrimitive]),
     ):
         self.depth = depth
@@ -120,7 +120,9 @@ class RESPNode:
 class ListNode(RESPNode):
     __slots__ = ("container",)
 
-    def __init__(self, depth: int, node_type: int) -> None:
+    def __init__(
+        self, depth: int, node_type: Literal[RESPDataType.PUSH, RESPDataType.ARRAY]
+    ) -> None:
         self.container: list[ResponseType] = []
         super().__init__(depth, node_type, None)
 
@@ -160,15 +162,29 @@ class SetNode(RESPNode):
         self.container.add(self.ensure_hashable(item))
 
 
-class UnpackedResponse(NamedTuple):
-    response_type: int
-    response: ResponseType
+RESPScalar = (
+    tuple[Literal[RESPDataType.SIMPLE_STRING], StringT]
+    | tuple[Literal[RESPDataType.BULK_STRING], StringT | None]
+    | tuple[Literal[RESPDataType.VERBATIM], StringT]
+    | tuple[Literal[RESPDataType.INT], int]
+    | tuple[Literal[RESPDataType.BIGNUMBER], int]
+    | tuple[Literal[RESPDataType.DOUBLE], float]
+    | tuple[Literal[RESPDataType.BOOLEAN], bool]
+    | tuple[Literal[RESPDataType.NONE], None]
+    | tuple[Literal[RESPDataType.ERROR], RedisError]
+)
+RESPContainer = (
+    tuple[Literal[RESPDataType.ARRAY], list[ResponseType]]
+    | tuple[Literal[RESPDataType.PUSH], list[ResponseType]]
+    | tuple[Literal[RESPDataType.MAP], dict[Hashable, ResponseType]]
+    | tuple[Literal[RESPDataType.SET], MutableSet[Hashable]]
+)
+
+UnpackedResponse = RESPScalar | RESPContainer
 
 
 class Parser:
-    """
-    Interface between a connection and Unpacker
-    """
+    """ """
 
     EXCEPTION_CLASSES: dict[str, type[RedisError] | dict[str, type[RedisError]]] = {
         "ASK": AskError,
@@ -198,8 +214,7 @@ class Parser:
         "WRONGTYPE": WrongTypeError,
     }
 
-    def __init__(self, push_messages: MemoryObjectSendStream[list[ResponseType]]) -> None:
-        self.push_messages = push_messages
+    def __init__(self) -> None:
         self.localbuffer: BytesIO = BytesIO(b"")
         self.bytes_read: int = 0
         self.bytes_written: int = 0
@@ -227,42 +242,18 @@ class Parser:
         except ValueError:
             return data
 
-    def get_response(
+    def parse(
         self,
-        decode: bool,
+        decode: bool = False,
         encoding: str | None = None,
-    ) -> NotEnoughData | ResponseType:
+    ) -> UnpackedResponse | NotEnoughData:
         """
-
         :param decode: Whether to decode simple or bulk strings
-        :param push_message_types: the push message types to return if they
-         arrive. If a message arrives that does not match the filter, it will
-         be logged; otherwise, it will be put on the :data:`~coredis.connection.BaseConnection.push_messages` queue
+        :param encoding: The encoding to use if :paramref:`decode` is set
         :return: The next available parsed response read from the connection.
          If there is not enough data on the wire a ``NotEnoughData`` instance
          will be returned.
         """
-        while True:
-            response = self.parse(decode, encoding)
-            if isinstance(response, NotEnoughData):
-                return response
-            if response and response.response_type == RESPDataType.PUSH:
-                assert isinstance(response.response, list)
-                if b(response.response[0]) in PUSH_MESSAGE_TYPES:
-                    self.push_messages.send_nowait(response.response)
-                else:
-                    logger.debug(f"Unhandled push message: {response.response}")
-            else:
-                break
-        return response.response if response else None
-
-    def parse(
-        self,
-        decode_bytes: bool,
-        encoding: str | None,
-    ) -> UnpackedResponse | None | NotEnoughData:
-        parsed: UnpackedResponse | None = None
-
         while True:
             data = self.localbuffer.readline()
             if not data[-2::] == SYM_CRLF:
@@ -271,58 +262,58 @@ class Parser:
             self.bytes_read += data_len
             marker, chunk = data[0], data[1:-2]
             response: ResponseType = None
-            if marker == RESPDataType.SIMPLE_STRING:
-                response = chunk
-                if decode_bytes and encoding:
-                    response = self.try_decode(response, encoding)
-            elif marker == RESPDataType.BULK_STRING or marker == RESPDataType.VERBATIM:
-                length = int(chunk)
-                if length == -1:
-                    response = None
-                else:
-                    if (self.bytes_written - self.bytes_read) < length + 2:
-                        self.bytes_read -= data_len
-                        return NOT_ENOUGH_DATA
-                    data = self.localbuffer.read(length + 2)
-                    self.bytes_read += length + 2
-                    response = data[:-2]
-                    if marker == RESPDataType.VERBATIM:
-                        if response[:3] != b"txt":
-                            raise InvalidResponse(
-                                f"Unexpected verbatim string of type {response[:3]!r}"
-                            )
-                        response = response[4:]
-                    if decode_bytes and encoding:
+            match marker:
+                case RESPDataType.SIMPLE_STRING:
+                    response = chunk
+                    if decode and encoding:
                         response = self.try_decode(response, encoding)
-            elif marker in [RESPDataType.INT, RESPDataType.BIGNUMBER]:
-                response = int(chunk)
-            elif marker == RESPDataType.DOUBLE:
-                response = float(chunk)
-            elif marker == RESPDataType.NONE:
-                response = None
-            elif marker == RESPDataType.BOOLEAN:
-                response = chunk[0] == ord(b"t")
-            elif (
-                marker == RESPDataType.ARRAY
-                or marker == RESPDataType.PUSH
-                or marker == RESPDataType.MAP
-                or marker == RESPDataType.SET
-            ):
-                length = int(chunk)
-                if length >= 0:
-                    if marker in {RESPDataType.ARRAY, RESPDataType.PUSH}:
-                        self.nodes.append(ListNode(length, marker))
-                    elif marker == RESPDataType.MAP:
-                        self.nodes.append(DictNode(length))
+                case RESPDataType.BULK_STRING | RESPDataType.VERBATIM:
+                    length = int(chunk)
+                    if length == -1:
+                        response = None
                     else:
-                        self.nodes.append(SetNode(length))
-                    if length > 0:
-                        continue
-            elif marker == RESPDataType.ERROR:
-                response = cast(ResponseType, self.parse_error(bytes(chunk).decode()))
-            else:
-                raise InvalidResponse(f"Protocol Error: {chr(marker)}, {bytes(chunk)!r}")
-
+                        if (self.bytes_written - self.bytes_read) < length + 2:
+                            self.bytes_read -= data_len
+                            return NOT_ENOUGH_DATA
+                        data = self.localbuffer.read(length + 2)
+                        self.bytes_read += length + 2
+                        response = data[:-2]
+                        if marker == RESPDataType.VERBATIM:
+                            if response[:3] != b"txt":
+                                raise InvalidResponse(
+                                    f"Unexpected verbatim string of type {response[:3]!r}"
+                                )
+                            response = response[4:]
+                        if decode and encoding:
+                            response = self.try_decode(response, encoding)
+                case RESPDataType.INT | RESPDataType.BIGNUMBER:
+                    response = int(chunk)
+                case RESPDataType.DOUBLE:
+                    response = float(chunk)
+                case RESPDataType.NONE:
+                    response = None
+                case RESPDataType.BOOLEAN:
+                    response = chunk[0] == ord(b"t")
+                case RESPDataType.ARRAY | RESPDataType.PUSH | RESPDataType.MAP | RESPDataType.SET:
+                    length = int(chunk)
+                    if length >= 0:
+                        match marker:
+                            case RESPDataType.ARRAY:
+                                self.nodes.append(ListNode(length, RESPDataType.ARRAY))
+                            case RESPDataType.PUSH:
+                                self.nodes.append(ListNode(length, RESPDataType.PUSH))
+                            case RESPDataType.MAP:
+                                self.nodes.append(DictNode(length))
+                            case RESPDataType.SET:
+                                self.nodes.append(SetNode(length))
+                        if length > 0:
+                            continue
+                case RESPDataType.ERROR:
+                    response = self.parse_error(bytes(chunk).decode())
+                case _:
+                    raise InvalidResponse(
+                        f"Protocol Error: Unknown RESP data type: {chr(marker)!r}"
+                    )
             if self.nodes:
                 if self.nodes[-1].depth > 0:
                     self.nodes[-1].append(response)
@@ -335,10 +326,10 @@ class Parser:
 
             if len(self.nodes) == 1 and self.nodes[-1].depth == 0:
                 node = self.nodes.pop()
-                parsed = UnpackedResponse(node.node_type, node.container)
+                parsed = cast(UnpackedResponse, (RESPDataType(node.node_type), node.container))
                 break
             if not self.nodes:
-                parsed = UnpackedResponse(marker, response)
+                parsed = cast(UnpackedResponse, (RESPDataType(marker), response))
                 break
 
         if self.bytes_read == self.bytes_written:

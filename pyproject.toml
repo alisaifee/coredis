@@ -152,7 +152,7 @@ dependencies = [
 ]
 require-runtime-dependencies = true
 include = [
-  "coredis/constants.py",
+  "coredis/constants/",
   "coredis/parser.py",
   "coredis/_packer.py",
   "coredis/_utils.py",

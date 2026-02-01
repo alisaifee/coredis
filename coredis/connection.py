@@ -36,6 +36,7 @@ import coredis
 from coredis._packer import Packer
 from coredis._utils import logger, nativestr
 from coredis.commands.constants import CommandName
+from coredis.constants import RESPDataType
 from coredis.credentials import (
     AbstractCredentialProvider,
     UserPass,
@@ -229,7 +230,7 @@ class BaseConnection:
             math.inf
         )
 
-        self._parser = Parser(self._push_message_buffer_in)
+        self._parser = Parser()
         self._packer: Packer = Packer(self.encoding)
 
         self._requests: deque[Request] = deque()
@@ -373,8 +374,9 @@ class BaseConnection:
         while True:
             decode = self._requests[0].decode if self._requests else self.decode_responses
             # Try to parse a complete response from already-fed bytes
-            response = self._parser.get_response(
-                decode, self._requests[0].encoding if self._requests else self.encoding
+            response = self._parser.parse(
+                decode=decode,
+                encoding=self._requests[0].encoding if self._requests else self.encoding,
             )
             if isinstance(response, NotEnoughData):
                 # Need more bytes; read once, feed, and retry
@@ -389,14 +391,16 @@ class BaseConnection:
                         raise
                     self._parser.feed(data)
                 continue  # loop back and try parsing again
-
-            # We have a full response for `head`; now pop and complete it
-            if self._requests:
-                request = self._requests.popleft()
-                if request.raise_exceptions and isinstance(response, RedisError):
-                    request.fail(response)
-                else:
-                    request.resolve(response)
+            if response[0] == RESPDataType.PUSH:
+                self._push_message_buffer_in.send_nowait(response[1])
+            else:
+                # We have a full response for `head`; now pop and complete it
+                if self._requests:
+                    request = self._requests.popleft()
+                    if request.raise_exceptions and isinstance(response[1], RedisError):
+                        request.fail(response[1])
+                    else:
+                        request.resolve(response[1])
 
     async def _writer_task(self) -> None:
         """
