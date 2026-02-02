@@ -12,12 +12,10 @@ from anyio import (
     Event,
     create_memory_object_stream,
     create_task_group,
-    fail_after,
     move_on_after,
     sleep,
 )
 from anyio.abc import TaskStatus
-from anyio.streams.stapled import StapledObjectStream
 from deprecated.sphinx import versionadded
 
 from coredis._utils import b, hash_slot, nativestr
@@ -199,11 +197,9 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
     async def _consumer(self) -> None:
         while True:
-            if response := await self._retry_policy.call_with_retries(
-                lambda: self.parse_response(block=True),
-            ):
-                msg = await self.handle_message(response)
-                await self._send_stream.send(msg)
+            response = await self.connection.fetch_push_message()
+            msg = await self.handle_message(response)
+            self._send_stream.send_nowait(msg)
 
     async def psubscribe(
         self,
@@ -320,18 +316,6 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         TODO: evaluate whether this should remain async
         """
         await self.connection.create_request(command, *args, noreply=True)
-
-    async def parse_response(
-        self, block: bool = True, timeout: float | None = None
-    ) -> list[ResponseType]:
-        """
-        Parses the response from a publish/subscribe command
-
-        :meta private:
-        """
-        timeout = timeout if timeout and timeout > 0 else None
-        with fail_after(timeout):
-            return await self.connection.fetch_push_message(block=block)
 
     async def handle_message(self, response: list[ResponseType]) -> PubSubMessage | None:
         """
@@ -558,9 +542,6 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         self.shard_connections: dict[str, BaseConnection] = {}
         self.node_channel_mapping: dict[str, list[StringT]] = {}
         self.read_from_replicas = read_from_replicas
-        self._shard_messages = StapledObjectStream(
-            *create_memory_object_stream[list[ResponseType]]()
-        )
         super().__init__(
             connection_pool,
             ignore_subscribe_messages,
@@ -668,7 +649,6 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
             }
             async with create_task_group() as tg:
                 self._current_scope = tg.cancel_scope
-                tg.start_soon(self._consumer)
                 [
                     tg.start_soon(self._shard_listener, connection)
                     for connection in self.shard_connections.values()
@@ -683,16 +663,8 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
     async def _shard_listener(self, connection: BaseConnection) -> None:
         while True:
-            with move_on_after(2):
-                message = await connection.fetch_push_message(True)
-                await self._shard_messages.send(message)
-
-    async def parse_response(
-        self, block: bool = True, timeout: float | None = None
-    ) -> list[ResponseType]:
-        timeout = timeout if timeout and timeout > 0 else None
-        with fail_after(timeout):
-            return await self._shard_messages.receive()
+            message = await connection.fetch_push_message()
+            self._send_stream.send_nowait(await self.handle_message(message))
 
     def reset(self) -> None:
         for connection in self.shard_connections.values():
