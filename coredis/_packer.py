@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from coredis.constants import SYM_CRLF, SYM_DOLLAR, SYM_EMPTY, SYM_STAR
+from coredis.constants.resp import SYM_CRLF, SYM_DOLLAR, SYM_EMPTY, SYM_STAR
 from coredis.typing import RedisValueT
 
 

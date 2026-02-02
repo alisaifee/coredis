@@ -37,7 +37,7 @@ import coredis
 from coredis._packer import Packer
 from coredis._utils import logger, nativestr
 from coredis.commands.constants import CommandName
-from coredis.constants import RESPDataType
+from coredis.constants.resp import DataType
 from coredis.credentials import (
     AbstractCredentialProvider,
     UserPass,
@@ -404,7 +404,7 @@ class BaseConnection:
             encoding=self._requests[0].encoding if self._requests else self.encoding,
         )
         while not isinstance(response, NotEnoughData):
-            if response[0] == RESPDataType.PUSH:
+            if response[0] == DataType.PUSH:
                 self._push_message_buffer_in.send_nowait(response[1])
             else:
                 if self._requests:

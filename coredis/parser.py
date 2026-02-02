@@ -6,7 +6,7 @@ from io import BytesIO
 from typing import cast
 
 from coredis._enum import CaseAndEncodingInsensitiveEnum
-from coredis.constants import SYM_CRLF, RESPDataType
+from coredis.constants.resp import SYM_CRLF, SYM_TRUE, DataType
 from coredis.exceptions import (
     AskError,
     AuthenticationFailureError,
@@ -86,14 +86,12 @@ class RESPNode:
     __slots__ = ("depth", "key", "node_type")
     depth: int
     key: Hashable
-    node_type: Literal[RESPDataType.PUSH, RESPDataType.ARRAY, RESPDataType.MAP, RESPDataType.SET]
+    node_type: Literal[DataType.PUSH, DataType.ARRAY, DataType.MAP, DataType.SET]
 
     def __init__(
         self,
         depth: int,
-        node_type: Literal[
-            RESPDataType.PUSH, RESPDataType.ARRAY, RESPDataType.MAP, RESPDataType.SET
-        ],
+        node_type: Literal[DataType.PUSH, DataType.ARRAY, DataType.MAP, DataType.SET],
         key: (ResponsePrimitive | tuple[ResponsePrimitive, ...] | frozenset[ResponsePrimitive]),
     ):
         self.depth = depth
@@ -120,9 +118,7 @@ class RESPNode:
 class ListNode(RESPNode):
     __slots__ = ("container",)
 
-    def __init__(
-        self, depth: int, node_type: Literal[RESPDataType.PUSH, RESPDataType.ARRAY]
-    ) -> None:
+    def __init__(self, depth: int, node_type: Literal[DataType.PUSH, DataType.ARRAY]) -> None:
         self.container: list[ResponseType] = []
         super().__init__(depth, node_type, None)
 
@@ -136,7 +132,7 @@ class DictNode(RESPNode):
 
     def __init__(self, depth: int) -> None:
         self.container: dict[Hashable, ResponseType] = {}
-        super().__init__(depth * 2, RESPDataType.MAP, None)
+        super().__init__(depth * 2, DataType.MAP, None)
 
     def append(self, item: ResponseType) -> None:
         self.depth -= 1
@@ -152,7 +148,7 @@ class SetNode(RESPNode):
 
     def __init__(self, depth: int) -> None:
         self.container: MutableSet[Hashable] = set()
-        super().__init__(depth, RESPDataType.SET, None)
+        super().__init__(depth, DataType.SET, None)
 
     def append(
         self,
@@ -163,21 +159,21 @@ class SetNode(RESPNode):
 
 
 RESPScalar = (
-    tuple[Literal[RESPDataType.SIMPLE_STRING], StringT]
-    | tuple[Literal[RESPDataType.BULK_STRING], StringT | None]
-    | tuple[Literal[RESPDataType.VERBATIM], StringT]
-    | tuple[Literal[RESPDataType.INT], int]
-    | tuple[Literal[RESPDataType.BIGNUMBER], int]
-    | tuple[Literal[RESPDataType.DOUBLE], float]
-    | tuple[Literal[RESPDataType.BOOLEAN], bool]
-    | tuple[Literal[RESPDataType.NONE], None]
-    | tuple[Literal[RESPDataType.ERROR], RedisError]
+    tuple[Literal[DataType.SIMPLE_STRING], StringT]
+    | tuple[Literal[DataType.BULK_STRING], StringT | None]
+    | tuple[Literal[DataType.VERBATIM], StringT]
+    | tuple[Literal[DataType.INT], int]
+    | tuple[Literal[DataType.BIGNUMBER], int]
+    | tuple[Literal[DataType.DOUBLE], float]
+    | tuple[Literal[DataType.BOOLEAN], bool]
+    | tuple[Literal[DataType.NONE], None]
+    | tuple[Literal[DataType.ERROR], RedisError]
 )
 RESPContainer = (
-    tuple[Literal[RESPDataType.ARRAY], list[ResponseType]]
-    | tuple[Literal[RESPDataType.PUSH], list[ResponseType]]
-    | tuple[Literal[RESPDataType.MAP], dict[Hashable, ResponseType]]
-    | tuple[Literal[RESPDataType.SET], MutableSet[Hashable]]
+    tuple[Literal[DataType.ARRAY], list[ResponseType]]
+    | tuple[Literal[DataType.PUSH], list[ResponseType]]
+    | tuple[Literal[DataType.MAP], dict[Hashable, ResponseType]]
+    | tuple[Literal[DataType.SET], MutableSet[Hashable]]
 )
 
 UnpackedResponse = RESPScalar | RESPContainer
@@ -263,11 +259,11 @@ class Parser:
             marker, chunk = data[0], data[1:-2]
             response: ResponseType = None
             match marker:
-                case RESPDataType.SIMPLE_STRING:
+                case DataType.SIMPLE_STRING:
                     response = chunk
                     if decode and encoding:
                         response = self.try_decode(response, encoding)
-                case RESPDataType.BULK_STRING | RESPDataType.VERBATIM:
+                case DataType.BULK_STRING | DataType.VERBATIM:
                     length = int(chunk)
                     if length == -1:
                         response = None
@@ -278,7 +274,7 @@ class Parser:
                         data = self.localbuffer.read(length + 2)
                         self.bytes_read += length + 2
                         response = data[:-2]
-                        if marker == RESPDataType.VERBATIM:
+                        if marker == DataType.VERBATIM:
                             if response[:3] != b"txt":
                                 raise InvalidResponse(
                                     f"Unexpected verbatim string of type {response[:3]!r}"
@@ -286,29 +282,29 @@ class Parser:
                             response = response[4:]
                         if decode and encoding:
                             response = self.try_decode(response, encoding)
-                case RESPDataType.INT | RESPDataType.BIGNUMBER:
+                case DataType.INT | DataType.BIGNUMBER:
                     response = int(chunk)
-                case RESPDataType.DOUBLE:
+                case DataType.DOUBLE:
                     response = float(chunk)
-                case RESPDataType.NONE:
+                case DataType.NONE:
                     response = None
-                case RESPDataType.BOOLEAN:
-                    response = chunk[0] == ord(b"t")
-                case RESPDataType.ARRAY | RESPDataType.PUSH | RESPDataType.MAP | RESPDataType.SET:
+                case DataType.BOOLEAN:
+                    response = chunk[0] == ord(SYM_TRUE)
+                case DataType.ARRAY | DataType.PUSH | DataType.MAP | DataType.SET:
                     length = int(chunk)
                     if length >= 0:
                         match marker:
-                            case RESPDataType.ARRAY:
-                                self.nodes.append(ListNode(length, RESPDataType.ARRAY))
-                            case RESPDataType.PUSH:
-                                self.nodes.append(ListNode(length, RESPDataType.PUSH))
-                            case RESPDataType.MAP:
+                            case DataType.ARRAY:
+                                self.nodes.append(ListNode(length, DataType.ARRAY))
+                            case DataType.PUSH:
+                                self.nodes.append(ListNode(length, DataType.PUSH))
+                            case DataType.MAP:
                                 self.nodes.append(DictNode(length))
-                            case RESPDataType.SET:
+                            case DataType.SET:
                                 self.nodes.append(SetNode(length))
                         if length > 0:
                             continue
-                case RESPDataType.ERROR:
+                case DataType.ERROR:
                     response = self.parse_error(bytes(chunk).decode())
                 case _:
                     raise InvalidResponse(
@@ -326,10 +322,10 @@ class Parser:
 
             if len(self.nodes) == 1 and self.nodes[-1].depth == 0:
                 node = self.nodes.pop()
-                parsed = cast(UnpackedResponse, (RESPDataType(node.node_type), node.container))
+                parsed = cast(UnpackedResponse, (DataType(node.node_type), node.container))
                 break
             if not self.nodes:
-                parsed = cast(UnpackedResponse, (RESPDataType(marker), response))
+                parsed = cast(UnpackedResponse, (DataType(marker), response))
                 break
 
         if self.bytes_read == self.bytes_written:
