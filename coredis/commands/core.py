@@ -7078,13 +7078,17 @@ class CoreCommands(CommandMixin[AnyStr]):
         ),
     )
     def flushall(
-        self, async_: Literal[PureToken.ASYNC, PureToken.SYNC] | None = None
+        self, flush_type: Literal[PureToken.ASYNC, PureToken.SYNC] | None = None
     ) -> CommandRequest[bool]:
-        """Deletes all keys in all databases on the current host"""
+        """
+        Deletes all keys in all databases on the current host
+
+        :param flush_type: Whether to perform an asynchronous or synchronous flush
+        """
         command_arguments: CommandArgList = []
 
-        if async_:
-            command_arguments.append(async_)
+        if flush_type:
+            command_arguments.append(flush_type)
 
         return self.create_request(
             CommandName.FLUSHALL, *command_arguments, callback=SimpleStringCallback()
@@ -7099,13 +7103,17 @@ class CoreCommands(CommandMixin[AnyStr]):
         ),
     )
     def flushdb(
-        self, async_: Literal[PureToken.ASYNC, PureToken.SYNC] | None = None
+        self, flush_type: Literal[PureToken.ASYNC, PureToken.SYNC] | None = None
     ) -> CommandRequest[bool]:
-        """Deletes all keys in the current database"""
+        """
+        Deletes all keys in the current database
+
+        :param flush_type: Whether to perform an asynchronous or synchronous flush
+        """
         command_arguments: CommandArgList = []
 
-        if async_:
-            command_arguments.append(async_)
+        if flush_type:
+            command_arguments.append(flush_type)
 
         return self.create_request(
             CommandName.FLUSHDB, *command_arguments, callback=SimpleStringCallback()
