@@ -46,6 +46,8 @@ DOCKER_TAG_MAPPING = {
     "7.4": {"default": "7.4", "stack": "7.4.0-v3"},
     "8.0": {"default": "8.0", "stack": "latest", "valkey": "8"},
     "8.2": {"default": "8.2", "stack": "latest", "sentinel": "latest"},
+    "8.4": {"default": "8.4", "stack": "latest", "sentinel": "latest"},
+    "8.6": {"default": "8.6-rc1", "stack": "latest", "sentinel": "latest"},
     "latest": {"default": "latest", "stack": "latest"},
     "next": {"default": "latest"},
 }
