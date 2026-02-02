@@ -107,7 +107,7 @@ class TestFunctions:
 
     async def test_dump_restore(self, client, simple_library, _s):
         dump = await client.function_dump()
-        assert await client.function_flush(async_=PureToken.SYNC)
+        assert await client.function_flush(flush_type=PureToken.SYNC)
         assert await client.function_list() == {}
         assert await client.function_restore(dump, policy=PureToken.FLUSH)
         function_list = await client.function_list()

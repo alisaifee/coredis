@@ -6263,15 +6263,15 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def script_flush(
         self,
-        sync_type: Literal[PureToken.ASYNC, PureToken.SYNC] | None = None,
+        flush_type: Literal[PureToken.ASYNC, PureToken.SYNC] | None = None,
     ) -> CommandRequest[bool]:
         """
         Flushes all scripts from the script cache
         """
         command_arguments: CommandArgList = []
 
-        if sync_type:
-            command_arguments = [sync_type]
+        if flush_type:
+            command_arguments = [flush_type]
 
         return self.create_request(
             CommandName.SCRIPT_FLUSH, *command_arguments, callback=BoolCallback()
@@ -6411,15 +6411,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         ),
     )
     def function_flush(
-        self, async_: Literal[PureToken.ASYNC, PureToken.SYNC] | None = None
+        self, flush_type: Literal[PureToken.ASYNC, PureToken.SYNC] | None = None
     ) -> CommandRequest[bool]:
         """
         Delete all functions
         """
         command_arguments: CommandArgList = []
 
-        if async_ is not None:
-            command_arguments.append(async_)
+        if flush_type is not None:
+            command_arguments.append(flush_type)
 
         return self.create_request(
             CommandName.FUNCTION_FLUSH,
