@@ -527,20 +527,14 @@ class BaseConnection:
             await self.create_request(b"CLIENT REPLY", b"OFF", noreply=True)
             self.noreply_set = True
 
-    async def fetch_push_message(self, block: bool = False) -> list[ResponseType]:
+    async def fetch_push_message(self) -> list[ResponseType]:
         """
         Read the next pending response
         """
-        if block:
-            timeout = self._stream_timeout if not block else None
-            with fail_after(timeout):
-                try:
-                    return await self._push_message_buffer_out.receive()
-                except (EndOfStream, BrokenResourceError, ClosedResourceError) as err:
-                    raise ConnectionError(
-                        "Connection lost while waiting for push messages"
-                    ) from err
-        return self._push_message_buffer_out.receive_nowait()
+        try:
+            return await self._push_message_buffer_out.receive()
+        except (EndOfStream, BrokenResourceError, ClosedResourceError) as err:
+            raise ConnectionError("Connection lost while waiting for push messages") from err
 
     def create_request(
         self,

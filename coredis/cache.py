@@ -398,7 +398,7 @@ class NodeTrackingCache(TrackingCache):
     async def _consumer(self) -> None:
         while True:
             if self._connection:
-                response = await self._connection.fetch_push_message(True)
+                response = await self._connection.fetch_push_message()
                 self.__last_checkin = time.monotonic()
                 messages = cast(list[StringT], response[1] or [])
                 for key in messages:
