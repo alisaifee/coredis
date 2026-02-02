@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import copy
 from contextlib import asynccontextmanager
-from typing import AnyStr, AsyncGenerator, ClassVar, Generic, MutableMapping, Self, TypedDict
 
 from anyio import AsyncContextManagerMixin
 from deprecated.sphinx import versionadded, versionchanged
@@ -17,7 +16,19 @@ from coredis.exceptions import (
     StreamDuplicateConsumerGroupError,
 )
 from coredis.response.types import StreamEntry
-from coredis.typing import KeyT, Parameters, StringT, ValueT
+from coredis.typing import (
+    AnyStr,
+    AsyncGenerator,
+    ClassVar,
+    Generic,
+    KeyT,
+    MutableMapping,
+    Parameters,
+    Self,
+    StringT,
+    TypedDict,
+    ValueT,
+)
 
 
 class StreamParameters(TypedDict):

@@ -5,7 +5,7 @@ import math
 import time
 from collections import defaultdict
 from contextlib import AsyncExitStack, asynccontextmanager
-from typing import TYPE_CHECKING, AsyncGenerator, cast
+from typing import TYPE_CHECKING, cast
 
 from anyio import (
     TASK_STATUS_IGNORED,
@@ -40,6 +40,7 @@ from coredis.retry import (
 )
 from coredis.typing import (
     AnyStr,
+    AsyncGenerator,
     Awaitable,
     Callable,
     Generic,
