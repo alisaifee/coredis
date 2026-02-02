@@ -74,7 +74,7 @@ R = TypeVar("R")
 
 if TYPE_CHECKING:
     import coredis.patterns.pipeline
-    from coredis.lock import Lock
+    from coredis.patterns.lock import Lock
     from coredis.patterns.streams import Consumer, GroupConsumer, StreamParameters
 
 
@@ -1241,14 +1241,14 @@ class RedisCluster(
 
         :param name: key for the lock
         :param timeout: indicates a maximum life for the lock.
-         By default, it will remain locked until :meth:`~coredis.lock.Lock.release`
+         By default, it will remain locked until :meth:`~coredis.patterns.lock.Lock.release`
          is called.
 
         :param sleep: indicates the amount of time to sleep per loop iteration
          when the lock is in blocking mode and another client is currently
          holding the lock.
 
-        :param blocking: indicates whether calling :meth:`~coredis.lock.Lock.acquire` should block until
+        :param blocking: indicates whether calling :meth:`~coredis.patterns.lock.Lock.acquire` should block until
          the lock has been acquired or to fail immediately, causing :meth:`acquire`
          to return ``False`` and the lock not being acquired. Defaults to ``True``.
 
@@ -1256,7 +1256,7 @@ class RedisCluster(
          spend trying to acquire the lock. A value of ``None`` indicates
          continue trying forever.
         """
-        from coredis.lock import Lock
+        from coredis.patterns.lock import Lock
 
         return Lock(self, name, timeout, sleep, blocking, blocking_timeout)
 

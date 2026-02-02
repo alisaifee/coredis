@@ -1,6 +1,6 @@
 Locks
 -----
-:mod:`coredis.lock`
+:mod:`coredis.patterns.lock`
 
 ``coredis`` ships with an implementation (:class:`~coredis.lock.Lock`) of distributed locking that can be used
 with a single redis instance or a cluster. The lock object can either be used as an async
@@ -47,9 +47,9 @@ The implementation uses the following LUA scripts:
 
 #. Release the lock
 
-   .. literalinclude:: ../../../coredis/lock/lua/release.lua
+   .. literalinclude:: ../../../coredis/patterns/lock/lua/release.lua
 
 #. Extend the lock
 
-   .. literalinclude:: ../../../coredis/lock/lua/extend.lua
+   .. literalinclude:: ../../../coredis/patterns/lock/lua/extend.lua
 

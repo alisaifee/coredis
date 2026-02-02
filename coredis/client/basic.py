@@ -84,7 +84,7 @@ R = TypeVar("R")
 
 if TYPE_CHECKING:
     import coredis.patterns.pipeline
-    from coredis.lock import Lock
+    from coredis.patterns.lock import Lock
     from coredis.patterns.streams import Consumer, GroupConsumer, StreamParameters
 
 ClientT = TypeVar("ClientT", bound="Client[Any]")
@@ -1141,7 +1141,7 @@ class Redis(Client[AnyStr]):
          continue trying forever. ``blocking_timeout`` can be specified as a
          :class:`float` or :class:`int`, both representing the number of seconds to wait.
         """
-        from coredis.lock import Lock
+        from coredis.patterns.lock import Lock
 
         return Lock(self, name, timeout, sleep, blocking, blocking_timeout)
 

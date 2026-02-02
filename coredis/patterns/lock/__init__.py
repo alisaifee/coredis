@@ -42,7 +42,7 @@ class Lock(Generic[AnyStr], AsyncContextManagerMixin):
         import asyncio
         import coredis
         from coredis.exceptions import LockError
-        from coredis.lock import Lock
+        from coredis.patterns.lock import Lock
         client = coredis.Redis()
         async with client:
             async with Lock(client, "mylock", timeout=1.0):
