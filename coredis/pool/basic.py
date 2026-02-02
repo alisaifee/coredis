@@ -8,6 +8,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from anyio import (
     TASK_STATUS_IGNORED,
+    CapacityLimiter,
     create_task_group,
     fail_after,
 )
@@ -216,6 +217,14 @@ class ConnectionPool:
         # TODO: Use the `max_failures` argument of tracking cache
         self.cache: TrackingCache | None = NodeTrackingCache(_cache) if _cache else None
         self._connections: Queue[BaseConnection] = Queue(self.max_connections)
+        # This should be used by the connection to limit entering busy loops
+        # and not yielding to other connections in the pool. The main
+        # observed scenario where this can happen is if the connection pool
+        # is being used by multiple push message consumers that are constantly
+        # receiving data in the read task.
+        self._connection_processing_budget = CapacityLimiter(1)
+        self.connection_kwargs["processing_budget"] = self._connection_processing_budget
+
         self._counter = 0
 
     async def __aenter__(self) -> Self:

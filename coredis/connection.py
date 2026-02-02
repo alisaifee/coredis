@@ -16,6 +16,7 @@ from anyio import (
     TASK_STATUS_IGNORED,
     BrokenResourceError,
     CancelScope,
+    CapacityLimiter,
     ClosedResourceError,
     EndOfStream,
     Event,
@@ -189,6 +190,7 @@ class BaseConnection:
         noevict: bool = False,
         notouch: bool = False,
         max_idle_time: int | None = None,
+        processing_budget: CapacityLimiter = CapacityLimiter(1),
     ):
         self._stream_timeout = stream_timeout
         self.username: str | None = None
@@ -243,6 +245,9 @@ class BaseConnection:
         self._last_error: BaseException | None = None
         self._connected = False
         self._transport_failed = False
+
+        # To be used in the read task for cpu bound processing after data is received
+        self._processing_budget = processing_budget
 
     def __repr__(self) -> str:
         return self.describe(self._description_args())
@@ -372,35 +377,48 @@ class BaseConnection:
         FIFO order.
         """
         while True:
-            decode = self._requests[0].decode if self._requests else self.decode_responses
-            # Try to parse a complete response from already-fed bytes
-            response = self._parser.parse(
-                decode=decode,
-                encoding=self._requests[0].encoding if self._requests else self.encoding,
-            )
-            if isinstance(response, NotEnoughData):
-                # Need more bytes; read once, feed, and retry
-                with fail_after(self.max_idle_time):
-                    try:
-                        data = await self.connection.receive()
-                    except (EndOfStream, ClosedResourceError, BrokenResourceError) as err:
-                        self._transport_failed = True
-                        raise ConnectionError("Connection lost while receiving response") from err
-                    except Exception:
-                        self._transport_failed = True
-                        raise
-                    self._parser.feed(data)
-                continue  # loop back and try parsing again
+            with fail_after(self.max_idle_time):
+                try:
+                    data = await self.connection.receive()
+                except (EndOfStream, ClosedResourceError, BrokenResourceError) as err:
+                    self._transport_failed = True
+                    raise ConnectionError("Connection lost while receiving response") from err
+                except Exception:
+                    self._transport_failed = True
+                    raise
+                # If we're receiving data without any inflight requests
+                # this can only be caused by incoming push messages.
+                # These need to be limited to avoid each
+                # connection resulting in a hot loop without any guaranteed
+                # associated downstream consuming at the same rate.
+                if not self._requests:
+                    async with self._processing_budget:
+                        self._data_received(data)
+                else:
+                    self._data_received(data)
+
+    def _data_received(self, data: bytes) -> None:
+        self._parser.feed(data)
+        decode = self._requests[0].decode if self._requests else self.decode_responses
+        response = self._parser.parse(
+            decode=decode,
+            encoding=self._requests[0].encoding if self._requests else self.encoding,
+        )
+        while not isinstance(response, NotEnoughData):
             if response[0] == RESPDataType.PUSH:
                 self._push_message_buffer_in.send_nowait(response[1])
             else:
-                # We have a full response for `head`; now pop and complete it
                 if self._requests:
                     request = self._requests.popleft()
                     if request.raise_exceptions and isinstance(response[1], RedisError):
                         request.fail(response[1])
                     else:
                         request.resolve(response[1])
+            decode = self._requests[0].decode if self._requests else self.decode_responses
+            response = self._parser.parse(
+                decode=decode,
+                encoding=self._requests[0].encoding if self._requests else self.encoding,
+            )
 
     async def _writer_task(self) -> None:
         """
@@ -628,6 +646,7 @@ class Connection(BaseConnection):
         noevict: bool = False,
         notouch: bool = False,
         max_idle_time: int | None = None,
+        processing_budget: CapacityLimiter = CapacityLimiter(1),
     ):
         super().__init__(
             stream_timeout,
@@ -638,6 +657,7 @@ class Connection(BaseConnection):
             noevict=noevict,
             notouch=notouch,
             max_idle_time=max_idle_time,
+            processing_budget=processing_budget,
         )
         self.host = host
         self.port = port
