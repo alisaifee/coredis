@@ -192,5 +192,5 @@ only routes messages for channels that reside on the node (which in turn means t
 can use a dedicated connection per node to drain messages).
 
 Additionally, the :paramref:`~coredis.RedisCluster.sharded_pubsub.read_from_replicas`
-parameter can be set to ``True`` when constructing a :class:`~coredis.commands.pubsub.ShardedPubSub` instance
+parameter can be set to ``True`` when constructing a :class:`~coredis.patterns.pubsub.ShardedPubSub` instance
 to further increase throughput by letting the consumer use read replicas.

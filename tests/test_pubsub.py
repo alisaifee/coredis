@@ -7,7 +7,7 @@ import anyio
 import pytest
 
 from coredis.client.basic import Redis
-from coredis.commands.pubsub import PubSub
+from coredis.patterns.pubsub import PubSub
 from tests.conftest import targets
 
 

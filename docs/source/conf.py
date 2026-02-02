@@ -93,7 +93,7 @@ autodoc_type_aliases = {
     "ResponsePrimitive": "~coredis.typing.ResponsePrimitive",
     "ResponseType": "~coredis.typing.ResponseType",
     "Parameters": "~coredis.typing.Parameters",
-    "SubscriptionCallback": "~coredis.commands.pubsub.SubscriptionCallback",
+    "SubscriptionCallback": "~coredis.patterns.pubsub.SubscriptionCallback",
 }
 autosectionlabel_maxdepth = 3
 autosectionlabel_prefix_document = True

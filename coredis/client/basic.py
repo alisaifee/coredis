@@ -24,7 +24,6 @@ from coredis.commands._validators import (
 from coredis.commands.constants import CommandFlag, CommandName
 from coredis.commands.core import CoreCommands
 from coredis.commands.function import Library
-from coredis.commands.pubsub import PubSub, SubscriptionCallback
 from coredis.commands.script import Script
 from coredis.commands.sentinel import SentinelCommands
 from coredis.config import Config
@@ -42,6 +41,7 @@ from coredis.exceptions import (
 )
 from coredis.globals import CACHEABLE_COMMANDS, COMMAND_FLAGS, READONLY_COMMANDS
 from coredis.modules import ModuleMixin
+from coredis.patterns.pubsub import PubSub, SubscriptionCallback
 from coredis.pool import ConnectionPool
 from coredis.response._callbacks import (
     AsyncPreProcessingCallback,

@@ -2,18 +2,18 @@ PubSub
 ------
 .. autosummary::
 
-   ~coredis.commands.PubSub
-   ~coredis.commands.ClusterPubSub
-   ~coredis.commands.ShardedPubSub
-   ~coredis.commands.pubsub.SubscriptionCallback
+   ~coredis.patterns.pubsub.PubSub
+   ~coredis.patterns.pubsub.ClusterPubSub
+   ~coredis.patterns.pubsub.ShardedPubSub
+   ~coredis.patterns.pubsub.SubscriptionCallback
 
-.. autoclass:: coredis.commands.PubSub
+.. autoclass:: coredis.patterns.pubsub.PubSub
    :class-doc-from: both
 
-.. autoclass:: coredis.commands.ClusterPubSub
+.. autoclass:: coredis.patterns.pubsub.ClusterPubSub
    :class-doc-from: both
 
-.. autoclass:: coredis.commands.ShardedPubSub
+.. autoclass:: coredis.patterns.pubsub.ShardedPubSub
    :class-doc-from: both
 
-.. autodata:: coredis.commands.pubsub.SubscriptionCallback
+.. autodata:: coredis.patterns.pubsub.SubscriptionCallback

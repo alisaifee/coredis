@@ -20,7 +20,6 @@ from coredis.client.basic import Client, Redis
 from coredis.commands._key_spec import KeySpec
 from coredis.commands._validators import mutually_inclusive_parameters
 from coredis.commands.constants import CommandName, NodeFlag
-from coredis.commands.pubsub import ClusterPubSub, ShardedPubSub, SubscriptionCallback
 from coredis.connection import RedisSSLContext
 from coredis.exceptions import (
     AskError,
@@ -33,6 +32,7 @@ from coredis.exceptions import (
     TryAgainError,
 )
 from coredis.globals import CACHEABLE_COMMANDS, MODULE_GROUPS, READONLY_COMMANDS
+from coredis.patterns.pubsub import ClusterPubSub, ShardedPubSub, SubscriptionCallback
 from coredis.pool import ClusterConnectionPool
 from coredis.pool.nodemanager import ManagedNode
 from coredis.response._callbacks import AsyncPreProcessingCallback, NoopCallback
