@@ -215,7 +215,7 @@ class ConnectionPool:
         self.decode_responses = bool(self.connection_kwargs.get("decode_responses", False))
         self.encoding = str(self.connection_kwargs.get("encoding", "utf-8"))
         # TODO: Use the `max_failures` argument of tracking cache
-        self.cache: TrackingCache | None = NodeTrackingCache(_cache) if _cache else None
+        self.cache: TrackingCache | None = NodeTrackingCache(self, _cache) if _cache else None
         self._connections: Queue[BaseConnection] = Queue(self.max_connections)
         # This should be used by the connection to limit concurrently entering
         # CPU hotspots to ensure all fairness between connections in the pool.
@@ -235,7 +235,7 @@ class ConnectionPool:
             if self.cache:
                 # TODO: handle cache failure so that the pool doesn't die
                 #  if the cache fails.
-                await self._task_group.start(self.cache.run, self)
+                await self._task_group.start(self.cache.run)
         else:
             self._counter += 1
         return self

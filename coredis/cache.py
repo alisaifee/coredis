@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import time
+import weakref
 from abc import ABC, abstractmethod
 from collections import Counter
 from contextlib import AsyncExitStack
@@ -277,16 +278,15 @@ class TrackingCache(AbstractCache):
 
     _cache: AbstractCache
 
-    def __init__(self, cache: AbstractCache) -> None:
+    def __init__(self, connection_pool: ConnectionPool, cache: AbstractCache) -> None:
         self._cache = cache
         self._retry_policy = ExponentialBackoffRetryPolicy(
             (ConnectionError,), retries=None, base_delay=1, max_delay=16, jitter=True
         )
+        self._connection_pool = weakref.proxy(connection_pool)
 
     @abstractmethod
-    async def run(
-        self, pool: ConnectionPool, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
-    ) -> None:
+    async def run(self, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
         pass
 
     @abstractmethod
@@ -333,8 +333,15 @@ class NodeTrackingCache(TrackingCache):
 
     _connection: coredis.connection.BaseConnection | None
 
-    def __init__(self, cache: AbstractCache | None = None, max_idle_seconds: int = 5) -> None:
+    def __init__(
+        self,
+        connection_pool: ConnectionPool,
+        cache: AbstractCache | None = None,
+        max_idle_seconds: int = 5,
+    ) -> None:
         """
+        :param connection_pool: Connection pool used to acquire
+         a connection for the tracking connection
         :param cache: AbstractCache instance to wrap
         :param max_idle_seconds: Maximum duration (in seconds) to tolerate no
          updates from the server before performing a keepalive check with a
@@ -342,7 +349,7 @@ class NodeTrackingCache(TrackingCache):
          the cache is considered unhealthy (as reflected by the ``healthy``
          property).
         """
-        super().__init__(cache or LRUCache())
+        super().__init__(connection_pool, cache or LRUCache())
         self.client_id: int | None = None
         self._last_checkin: float = 0
         self._max_idle_seconds = max_idle_seconds
@@ -362,9 +369,7 @@ class NodeTrackingCache(TrackingCache):
             and (time.monotonic() - self._last_checkin) < self._max_idle_seconds
         )
 
-    async def run(
-        self, pool: ConnectionPool, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
-    ) -> None:
+    async def run(self, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
         """
         Run a single connection that listens for invalidation messages,
         with reconnection logic.
@@ -373,7 +378,7 @@ class NodeTrackingCache(TrackingCache):
 
         async def _run() -> None:
             nonlocal started
-            async with pool.acquire() as self._connection:
+            async with self._connection_pool.acquire() as self._connection:
                 if self._connection.tracking_client_id:
                     await self._connection.update_tracking_client(False)
                 self.client_id = self._connection.client_id
@@ -424,9 +429,14 @@ class ClusterTrackingCache(TrackingCache):
             return cache.client_id
         return None
 
-    def __init__(self, cache: AbstractCache | None = None, max_idle_seconds: int = 5) -> None:
+    def __init__(
+        self,
+        connection_pool: ConnectionPool,
+        cache: AbstractCache | None = None,
+        max_idle_seconds: int = 5,
+    ) -> None:
         """ """
-        super().__init__(cache or LRUCache())
+        super().__init__(connection_pool, cache or LRUCache())
         self.node_caches: dict[str, NodeTrackingCache] = {}
         self._nodes: list[coredis.client.Redis[Any]] = []
         self._max_idle_seconds = max_idle_seconds
@@ -435,14 +445,13 @@ class ClusterTrackingCache(TrackingCache):
     def healthy(self) -> bool:
         return all(cache.healthy for cache in self.node_caches.values())
 
-    async def run(
-        self, pool: ConnectionPool, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED
-    ) -> None:
+    async def run(self, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
         from coredis.pool.cluster import ClusterConnectionPool
 
-        assert isinstance(pool, ClusterConnectionPool)
+        assert isinstance(self._connection_pool, ClusterConnectionPool)
         self._nodes = [
-            pool.nodes.get_redis_link(node.host, node.port) for node in pool.nodes.all_nodes()
+            self._connection_pool.nodes.get_redis_link(node.host, node.port)
+            for node in self._connection_pool.nodes.all_nodes()
         ]
         async with AsyncExitStack() as stack:
             nodes = []
@@ -454,9 +463,11 @@ class ClusterTrackingCache(TrackingCache):
 
                 for node in nodes:
                     node_cache = NodeTrackingCache(
-                        cache=self._cache, max_idle_seconds=self._max_idle_seconds
+                        node.connection_pool,
+                        cache=self._cache,
+                        max_idle_seconds=self._max_idle_seconds,
                     )
-                    await tg.start(node_cache.run, node.connection_pool)
+                    await tg.start(node_cache.run)
                     assert node_cache._connection
                     self.node_caches[node_cache._connection.location] = node_cache
                 task_status.started()
