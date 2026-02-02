@@ -86,10 +86,8 @@ def wrap_pipeline_method(
 .. note:: Pipeline variant of :meth:`coredis.Redis.{func.__name__}` that does not execute
   immediately and instead pushes the command into a stack for batch send.
 
-  The return value can be retrieved either as part of the tuple returned by
-  :meth:`~{kls.__name__}.execute` or by awaiting the :class:`~coredis.commands.CommandRequest`
-  instance after calling :meth:`~{kls.__name__}.execute`
-
+  The return value can be retrieved by awaiting the response after the pipeline context
+  has exited.
 {wrapper.__doc__}
 """
     return wrapper
@@ -139,7 +137,7 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
             execution_parameters=execution_parameters,
         )
         if not parent:
-            client.pipeline_execute_command(self)  # type: ignore[arg-type]
+            client._pipeline_execute_command(self)  # type: ignore[arg-type]
         self.parent = parent
 
     def transform(
@@ -179,7 +177,7 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
 
             return _transformed().__await__()
         exc = ResponseError(
-            "Result not set! Either a transaction failed, or you're awaiting a pipeline command before calling execute."
+            "Result not set! Either a transaction failed, or you're awaiting a pipeline command before it has excuted"
         )
         if self.client._raise_on_error:
             raise exc
@@ -380,7 +378,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
 
     Any command raising an exception does *not* halt the execution of
     subsequent commands in the pipeline. Instead, the exception is caught
-    and its instance is placed into the response list returned by :meth:`execute`
+    and will be returned when awaiting the command that failed.
     """
 
     QUEUED_RESPONSES = {b"QUEUED", "QUEUED"}
@@ -451,7 +449,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         if not self._connection:
             self._connection = await self.client.connection_pool.get_connection()
         self.watches.extend(keys)
-        await self.immediate_execute_command(
+        await self._immediate_execute_command(
             RedisCommand(CommandName.WATCH, arguments=tuple(self.watches))
         )
         self.explicit_transaction = True
@@ -466,7 +464,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
     ) -> Awaitable[R]:
         raise NotImplementedError
 
-    async def immediate_execute_command(
+    async def _immediate_execute_command(
         self,
         command: RedisCommandP,
         callback: Callable[..., R] = NoopCallback(),
@@ -486,12 +484,12 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         )
         return callback(await request)
 
-    def pipeline_execute_command(
+    def _pipeline_execute_command(
         self,
         command: PipelineCommandRequest[R],
     ) -> None:
         """
-        Queue a command for execution on the next `execute()` call.
+        Queue a command for execution
 
         :meta private:
         """
@@ -539,7 +537,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
                         f"Abnormal response in pipeline for command {cmd.name!r}: {resp!r}"
                     )
             except (RedisError, TimeoutError) as e:
-                self.annotate_exception(e, i + 1, cmd.name, cmd.arguments)
+                self._annotate_exception(e, i + 1, cmd.name, cmd.arguments)
                 errors.append((i + 1, e))
 
         try:
@@ -561,7 +559,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
 
         # find any errors in the response and raise if necessary
         if self._raise_on_error:
-            self.raise_first_error(commands, response)
+            self._raise_first_error(commands, response)
 
         # We have to run response callbacks manually
         data: list[Any] = []
@@ -613,20 +611,20 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
                 cmd.response = await_result(re)
                 response.append(re)
         if self._raise_on_error:
-            self.raise_first_error(commands, response)
+            self._raise_first_error(commands, response)
 
         return tuple(response)
 
-    def raise_first_error(
+    def _raise_first_error(
         self, commands: list[PipelineCommandRequest[Any]], response: ResponseType
     ) -> None:
         assert isinstance(response, list)
         for i, r in enumerate(response):
             if isinstance(r, (RedisError, TimeoutError)):
-                self.annotate_exception(r, i + 1, commands[i].name, commands[i].arguments)
+                self._annotate_exception(r, i + 1, commands[i].name, commands[i].arguments)
                 raise r
 
-    def annotate_exception(
+    def _annotate_exception(
         self,
         exception: RedisError | TimeoutError | None,
         number: int,
@@ -639,18 +637,18 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
             msg = f"Command # {number} ({cmd} {args}) of pipeline caused error: {str(exception.args[0])}"
             exception.args = (msg,) + exception.args[1:]
 
-    async def load_scripts(self) -> None:
+    async def _load_scripts(self) -> None:
         # make sure all scripts that are about to be run on this pipeline exist
         scripts = list(self.scripts)
         shas = [s.sha for s in scripts]
-        exists = await self.immediate_execute_command(
+        exists = await self._immediate_execute_command(
             RedisCommand(CommandName.SCRIPT_EXISTS, tuple(shas)), callback=BoolsCallback()
         )
 
         if not all(exists):
             for s, exist in zip(scripts, exists):
                 if not exist:
-                    s.sha = await self.immediate_execute_command(
+                    s.sha = await self._immediate_execute_command(
                         RedisCommand(CommandName.SCRIPT_LOAD, (s.script,)),
                         callback=AnyStrCallback[AnyStr](),
                     )
@@ -665,7 +663,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
             self._connection = await self.client.connection_pool.get_connection()
 
         if self.scripts:
-            await self.load_scripts()
+            await self._load_scripts()
         if self._transaction or self.explicit_transaction:
             exec = self._execute_transaction
         else:
@@ -773,22 +771,22 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
     ) -> Awaitable[R]:
         raise NotImplementedError
 
-    def pipeline_execute_command(
+    def _pipeline_execute_command(
         self,
         command: ClusterPipelineCommandRequest[Any],
     ) -> None:
         command.position = len(self.command_stack)
         self.command_stack.append(command)
 
-    def raise_first_error(self) -> None:
+    def _raise_first_error(self) -> None:
         for c in self.command_stack:
             r = c.result
 
             if isinstance(r, (RedisError, TimeoutError)):
-                self.annotate_exception(r, c.position + 1, c.name, c.arguments)
+                self._annotate_exception(r, c.position + 1, c.name, c.arguments)
                 raise r
 
-    def annotate_exception(
+    def _annotate_exception(
         self,
         exception: RedisError | TimeoutError | None,
         number: int,
@@ -810,11 +808,11 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
         if not self.command_stack:
             return ()
         if self.scripts:
-            await self.load_scripts()
+            await self._load_scripts()
         if self._transaction or self.explicit_transaction:
-            execute = self.send_cluster_transaction
+            execute = self._send_cluster_transaction
         else:
-            execute = self.send_cluster_commands
+            execute = self._send_cluster_commands
         try:
             return await execute(self._raise_on_error)
         finally:
@@ -830,7 +828,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
         self.explicit_transaction = False
 
     @retryable(policy=ConstantRetryPolicy((ClusterDownError,), retries=3, delay=0.1))
-    async def send_cluster_transaction(self, raise_on_error: bool = True) -> tuple[object, ...]:
+    async def _send_cluster_transaction(self, raise_on_error: bool = True) -> tuple[object, ...]:
         """
         :meta private:
         """
@@ -871,7 +869,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
                 raise WatchError
 
             if raise_on_error:
-                self.raise_first_error()
+                self._raise_first_error()
 
             return tuple(
                 n.result
@@ -880,7 +878,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
             )
 
     @retryable(policy=ConstantRetryPolicy((ClusterDownError,), retries=3, delay=0.1))
-    async def send_cluster_commands(
+    async def _send_cluster_commands(
         self, raise_on_error: bool = True, allow_redirections: bool = True
     ) -> tuple[object, ...]:
         """
@@ -937,7 +935,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
             c.response = await_result(r)
             response.append(r)
         if raise_on_error:
-            self.raise_first_error()
+            self._raise_first_error()
         return tuple(response)
 
     def _determine_slot(
@@ -960,7 +958,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
             raise ClusterCrossSlotError(command=command, keys=keys)
         return slots.pop()
 
-    async def load_scripts(self) -> None:
+    async def _load_scripts(self) -> None:
         shas = [s.sha for s in self.scripts]
         exists = await self.client.execute_command(
             RedisCommand(CommandName.SCRIPT_EXISTS, tuple(shas)), callback=BoolsCallback()
