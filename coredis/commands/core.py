@@ -6817,17 +6817,20 @@ class CoreCommands(CommandMixin[AnyStr]):
     def client_unblock(
         self,
         client_id: int,
-        timeout_error: Literal[PureToken.TIMEOUT, PureToken.ERROR] | None = None,
+        unblock_type: Literal[PureToken.TIMEOUT, PureToken.ERROR] | None = None,
     ) -> CommandRequest[bool]:
         """
         Unblock a client blocked in a blocking command from a different connection
 
+        :param client_id:  The id of the client to unblock
+        :param unblock_type: Whether to unblock the client with a timeout error
+         or just an error.
         :return: Whether the client was unblocked
         """
         command_arguments: CommandArgList = [client_id]
 
-        if timeout_error is not None:
-            command_arguments.append(timeout_error)
+        if unblock_type is not None:
+            command_arguments.append(unblock_type)
 
         return self.create_request(
             CommandName.CLIENT_UNBLOCK, *command_arguments, callback=BoolCallback()
