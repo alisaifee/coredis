@@ -387,9 +387,8 @@ class BaseConnection:
                     self._transport_failed = True
                     raise
                 # If we're receiving data without any inflight requests
-                # this can only be caused by incoming push messages.
-                # These need to be limited to avoid each
-                # connection resulting in a hot loop without any guaranteed
+                # (push messages) tjhese need to be limited to avoid each
+                # connection resulting in a hot read loop without any guaranteed
                 # associated downstream consuming at the same rate.
                 if not self._requests:
                     async with self._processing_budget:

@@ -217,9 +217,9 @@ class ConnectionPool:
         # TODO: Use the `max_failures` argument of tracking cache
         self.cache: TrackingCache | None = NodeTrackingCache(_cache) if _cache else None
         self._connections: Queue[BaseConnection] = Queue(self.max_connections)
-        # This should be used by the connection to limit entering busy loops
-        # and not yielding to other connections in the pool. The main
-        # observed scenario where this can happen is if the connection pool
+        # This should be used by the connection to limit concurrently entering
+        # CPU hotspots to ensure all fairness between connections in the pool.
+        # The main observed scenario where this can happen is if the connection pool
         # is being used by multiple push message consumers that are constantly
         # receiving data in the read task.
         self._connection_processing_budget = CapacityLimiter(1)
