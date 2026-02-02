@@ -21,11 +21,6 @@ class Packer:
     def pack_command(self, command: bytes, *args: RedisValueT) -> list[bytes]:
         "Pack a series of arguments into the Redis protocol"
         output: list[bytes] = []
-        # the client might have included 1 or more literal arguments in
-        # the command name, e.g., 'CONFIG GET'. The Redis server expects these
-        # arguments to be sent separately, so split the first argument
-        # manually. All of these arguements get wrapped in the Token class
-        # to prevent them from being encoded.
         cleaned_args = args
         if b" " in command:
             cleaned_args = tuple(s for s in command.split()) + cleaned_args

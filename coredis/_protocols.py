@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 from coredis.response._callbacks import NoopCallback
 from coredis.typing import (
     TYPE_CHECKING,
