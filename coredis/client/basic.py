@@ -6,7 +6,7 @@ import random
 import warnings
 from collections import defaultdict
 from ssl import SSLContext
-from typing import TYPE_CHECKING, Any, Coroutine, cast, overload
+from typing import TYPE_CHECKING, Any, cast, overload
 
 from anyio import AsyncContextManagerMixin, sleep
 from deprecated.sphinx import versionadded
@@ -60,6 +60,7 @@ from coredis.typing import (
     AnyStr,
     AsyncGenerator,
     AsyncIterator,
+    Awaitable,
     Callable,
     ExecutionParameters,
     Generic,
@@ -1147,7 +1148,7 @@ class Redis(Client[AnyStr]):
 
     async def transaction(
         self,
-        func: Callable[[coredis.patterns.pipeline.Pipeline[AnyStr]], Coroutine[Any, Any, R]],
+        func: Callable[[coredis.patterns.pipeline.Pipeline[AnyStr]], Awaitable[R]],
         *watches: KeyT,
         watch_delay: float | None = None,
     ) -> R:
