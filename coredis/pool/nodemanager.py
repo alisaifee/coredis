@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from coredis import Redis
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(unsafe_hash=True)
 class ManagedNode:
     """
     Represents a cluster node (primary or replica) in a redis cluster

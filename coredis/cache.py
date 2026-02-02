@@ -336,13 +336,16 @@ class NodeTrackingCache(TrackingCache):
     def __init__(self, cache: AbstractCache | None = None, max_idle_seconds: int = 5) -> None:
         """
         :param cache: AbstractCache instance to wrap
-        :param max_idle_seconds: Maximum duration to tolerate no
-         updates from the server before marking the cache as unhealthy.
+        :param max_idle_seconds: Maximum duration (in seconds) to tolerate no
+         updates from the server before performing a keepalive check with a
+         ``PING``. If no updates or successful ping occur within this period,
+         the cache is considered unhealthy (as reflected by the ``healthy``
+         property).
         """
         super().__init__(cache or LRUCache())
         self.client_id: int | None = None
-        self.__last_checkin: float = 0
-        self.__max_idle_seconds = max_idle_seconds
+        self._last_checkin: float = 0
+        self._max_idle_seconds = max_idle_seconds
         self._connection = None
 
     def get_client_id(
@@ -356,7 +359,7 @@ class NodeTrackingCache(TrackingCache):
         return bool(
             self._connection is not None
             and self._connection.is_connected
-            and (time.monotonic() - self.__last_checkin) < self.__max_idle_seconds
+            and (time.monotonic() - self._last_checkin) < self._max_idle_seconds
         )
 
     async def run(
@@ -380,7 +383,7 @@ class NodeTrackingCache(TrackingCache):
                     if not started:
                         task_status.started()
                         started = True
-                        self.__last_checkin = time.monotonic()
+                        self._last_checkin = time.monotonic()
                     else:  # flush cache
                         self.reset()
 
@@ -388,18 +391,19 @@ class NodeTrackingCache(TrackingCache):
 
     async def _keepalive(self) -> None:
         while True:
-            if self._connection and await self._connection.create_request(CommandName.PING) in {
-                b"OK",
-                "OK",
-            }:
-                self.__last_checkin = time.monotonic()
-            await sleep(min(1, self.__max_idle_seconds - 1))
+            if (idle := time.monotonic() - self._last_checkin) >= self._max_idle_seconds:
+                if self._connection and await self._connection.create_request(CommandName.PING) in {
+                    b"OK",
+                    "OK",
+                }:
+                    self._last_checkin = time.monotonic()
+            await sleep(max(1, self._max_idle_seconds - idle))
 
     async def _consumer(self) -> None:
         while True:
             if self._connection:
                 response = await self._connection.fetch_push_message()
-                self.__last_checkin = time.monotonic()
+                self._last_checkin = time.monotonic()
                 messages = cast(list[StringT], response[1] or [])
                 for key in messages:
                     self._cache.invalidate(key)

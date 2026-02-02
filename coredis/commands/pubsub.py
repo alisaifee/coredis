@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import inspect
 import math
+import time
 from collections import defaultdict
 from contextlib import AsyncExitStack, asynccontextmanager
 from typing import TYPE_CHECKING, AsyncGenerator, cast
@@ -20,7 +21,7 @@ from deprecated.sphinx import versionadded
 
 from coredis._utils import b, hash_slot, nativestr
 from coredis.commands.constants import CommandName
-from coredis.connection import BaseConnection
+from coredis.connection import BaseConnection, ClusterConnection
 from coredis.exceptions import ConnectionError, PubSubError
 from coredis.parser import (
     PUBLISH_MESSAGE_TYPES,
@@ -54,6 +55,7 @@ from coredis.typing import (
 
 if TYPE_CHECKING:
     import coredis.pool
+    from coredis.pool.nodemanager import ManagedNode
 
 T = TypeVar("T")
 PoolT = TypeVar("PoolT", bound="coredis.pool.ConnectionPool")
@@ -81,6 +83,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         patterns: Parameters[StringT] | None = None,
         pattern_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         subscription_timeout: float = 1,
+        max_idle_seconds: float = 5,
     ):
         """
         :param connection_pool: Connection pool used to acquire
@@ -100,6 +103,9 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
          on channel matching the pattern.
         :param subscription_timeout: Maximum amount of time in seconds to wait for
          acknowledgement of subscriptions.
+         :param max_idle_seconds: Maximum duration (in seconds) to tolerate no
+          messages from the server before performing a keepalive check with a
+         ``PING``.
         """
         self.connection_pool = connection_pool
         self.ignore_subscribe_messages = ignore_subscribe_messages
@@ -123,9 +129,10 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         self._subscription_waiters: dict[StringT, list[Event]] = defaultdict(list)
         self._subscription_timeout: float = subscription_timeout
 
+        self._last_checkin: float = 0
+        self._max_idle_seconds = max_idle_seconds
         self.channels = {}
         self.patterns = {}
-        self.tries = 0
 
     @property
     def connection(self) -> BaseConnection:
@@ -190,12 +197,18 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
     async def _keepalive(self) -> None:
         while True:
-            self.connection.create_request(CommandName.PING, noreply=True)
-            await sleep(15)
+            if (idle := time.monotonic() - self._last_checkin) >= self._max_idle_seconds:
+                if self._connection and await self._connection.create_request(CommandName.PING) in {
+                    b"OK",
+                    "OK",
+                }:
+                    self._last_checkin = time.monotonic()
+            await sleep(max(1, self._max_idle_seconds - idle))
 
     async def _consumer(self) -> None:
         while True:
             response = await self.connection.fetch_push_message()
+            self._last_checkin = time.monotonic()
             msg = await self.handle_message(response)
             self._send_stream.send_nowait(msg)
 
@@ -521,7 +534,8 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         read_from_replicas: bool = False,
         channels: Parameters[StringT] | None = None,
         channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
-        subscription_timeout: float = 1e-1,
+        subscription_timeout: float = 1,
+        max_idle_seconds: float = 5,
     ):
         """
         :param connection_pool: Connection pool used to acquire
@@ -536,10 +550,14 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
          on the specific channel.
         :param subscription_timeout: Maximum amount of time in seconds to wait for
          acknowledgement of subscriptions.
+         :param max_idle_seconds: Maximum duration (in seconds) to tolerate no
+          messages from the cluster before performing a keepalive check with a
+         ``PING``.
         """
         self.shard_connections: dict[str, BaseConnection] = {}
         self.node_channel_mapping: dict[str, list[StringT]] = {}
         self.read_from_replicas = read_from_replicas
+        self._last_checkins: dict[ManagedNode, float] = defaultdict(lambda: 0)
         super().__init__(
             connection_pool,
             ignore_subscribe_messages,
@@ -547,6 +565,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
             channels=channels,
             channel_handlers=channel_handlers,
             subscription_timeout=subscription_timeout,
+            max_idle_seconds=max_idle_seconds,
         )
 
     async def subscribe(
@@ -648,7 +667,11 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
             async with create_task_group() as tg:
                 self._current_scope = tg.cancel_scope
                 [
-                    tg.start_soon(self._shard_listener, connection)
+                    tg.start_soon(self._shard_consumer, connection)
+                    for connection in self.shard_connections.values()
+                ]
+                [
+                    tg.start_soon(self._shard_keepalive, connection)
                     for connection in self.shard_connections.values()
                 ]
                 if not started:
@@ -659,10 +682,25 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
         await self._retry_policy.call_with_retries(_run)
 
-    async def _shard_listener(self, connection: BaseConnection) -> None:
+    async def _shard_consumer(self, connection: BaseConnection) -> None:
+        assert isinstance(connection, ClusterConnection)
         while True:
             message = await connection.fetch_push_message()
+            self._last_checkins[connection.node] = time.monotonic()
             self._send_stream.send_nowait(await self.handle_message(message))
+
+    async def _shard_keepalive(self, connection: BaseConnection) -> None:
+        assert isinstance(connection, ClusterConnection)
+        while True:
+            if (
+                idle := time.monotonic() - self._last_checkins[connection.node]
+            ) >= self._max_idle_seconds:
+                if await connection.create_request(CommandName.PING) in {
+                    b"OK",
+                    "OK",
+                }:
+                    self._last_checkins[connection.node] = time.monotonic()
+            await sleep(max(1, self._max_idle_seconds - idle))
 
     def reset(self) -> None:
         for connection in self.shard_connections.values():

@@ -1093,7 +1093,7 @@ class RedisCluster(
             ConstantRetryPolicy((TimeoutError,), retries=2, delay=0.1),
         ),
         subscription_timeout: float = 1,
-        **kwargs: Any,
+        max_idle_seconds: float = 5,
     ) -> ClusterPubSub[AnyStr]:
         """
         Return a Pub/Sub instance that can be used to consume messages that get
@@ -1114,6 +1114,9 @@ class RedisCluster(
         :param retry_policy: An explicit retry policy to use in the subscriber.
         :param subscription_timeout: Maximum amount of time in seconds to wait for
          acknowledgement of subscriptions.
+        :param max_idle_seconds: Maximum duration (in seconds) to tolerate no
+         messages from the cluster before performing a keepalive check with a
+        ``PING``.
         """
         return ClusterPubSub[AnyStr](
             self.connection_pool,
@@ -1124,7 +1127,7 @@ class RedisCluster(
             patterns=patterns,
             pattern_handlers=pattern_handlers,
             subscription_timeout=subscription_timeout,
-            **kwargs,
+            max_idle_seconds=max_idle_seconds,
         )
 
     @versionadded(version="3.6.0")
@@ -1143,7 +1146,7 @@ class RedisCluster(
             ConstantRetryPolicy((TimeoutError,), retries=2, delay=0.1),
         ),
         subscription_timeout: float = 1,
-        **kwargs: Any,
+        max_idle_seconds: float = 5,
     ) -> ShardedPubSub[AnyStr]:
         """
         Return a Pub/Sub instance that can be used to consume messages from
@@ -1167,6 +1170,9 @@ class RedisCluster(
         :param retry_policy: An explicit retry policy to use in the subscriber.
         :param subscription_timeout: Maximum amount of time in seconds to wait for
          acknowledgement of subscriptions.
+        :param max_idle_seconds: Maximum duration (in seconds) to tolerate no
+         messages from the cluster before performing a keepalive check with a
+        ``PING``.
 
         New in :redis-version:`7.0.0`
         """
@@ -1179,7 +1185,7 @@ class RedisCluster(
             channels=channels,
             channel_handlers=channel_handlers,
             subscription_timeout=subscription_timeout,
-            **kwargs,
+            max_idle_seconds=max_idle_seconds,
         )
 
     def pipeline(
