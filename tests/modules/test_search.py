@@ -233,6 +233,21 @@ class TestSchema:
         ]
         assert await client.search.create("idx", fields, on=on, **schema_args)
 
+    @pytest.mark.min_module_version("search", "8.0.0")
+    @pytest.mark.parametrize("on", [PureToken.HASH, PureToken.JSON])
+    @pytest.mark.parametrize(
+        "schema_args",
+        [
+            {"indexall": True},
+        ],
+        ids=lambda val: str(val),
+    )
+    async def test_index_options_extended(self, client: Redis, on, schema_args):
+        fields = [
+            Field("field", PureToken.TEXT),
+        ]
+        assert await client.search.create("idx", fields, on=on, **schema_args)
+
     @pytest.mark.parametrize("on", [PureToken.HASH, PureToken.JSON])
     @pytest.mark.parametrize(
         "schema_args, exception, matcher",

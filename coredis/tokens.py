@@ -1080,6 +1080,16 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``FT.CREATE``
+    DISABLE = b"DISABLE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    ENABLE = b"ENABLE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
     GEO = b"GEO"
 
     #: Used by:
@@ -2028,6 +2038,11 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``FT.HYBRID``
     #:  - ``FT.SEARCH``
     AS = b"AS"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
+    INDEXALL = b"INDEXALL"
 
     #: Used by:
     #:

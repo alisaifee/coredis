@@ -332,6 +332,7 @@ class Search(ModuleGroup[AnyStr]):
         module=MODULE,
         version_introduced="1.0.0",
         group=COMMAND_GROUP,
+        arguments={"indexall": {"version_introduced": "8.0"}},
     )
     def create(
         self,
@@ -354,6 +355,7 @@ class Search(ModuleGroup[AnyStr]):
         nofreqs: bool | None = None,
         stopwords: Parameters[StringT] | None = None,
         skipinitialscan: bool | None = None,
+        indexall: bool | None = None,
     ) -> CommandRequest[bool]:
         """
         Creates an index with the given spec
@@ -378,6 +380,8 @@ class Search(ModuleGroup[AnyStr]):
         :param nofreqs: If ``True``, term frequencies will not be stored.
         :param stopwords: A list of stopwords to ignore.
         :param skipinitialscan: If ``True``, the initial scan of the index will be skipped.
+        :param indexall: If ``True`` maintains an inverted index of all document IDs to
+         optimize wildcard queries in heavy update scenarios.
         """
         command_arguments: CommandArgList = [index]
         if on:
@@ -415,7 +419,8 @@ class Search(ModuleGroup[AnyStr]):
             command_arguments.extend([PrefixToken.STOPWORDS, len(_stop), *_stop])
         if skipinitialscan:
             command_arguments.append(PureToken.SKIPINITIALSCAN)
-
+        if indexall:
+            command_arguments.extend([PrefixToken.INDEXALL, PureToken.ENABLE])
         field_args: CommandArgList = [PureToken.SCHEMA]
         for field in schema:
             field_args.extend(field.args)
