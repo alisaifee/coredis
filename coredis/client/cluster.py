@@ -36,7 +36,12 @@ from coredis.globals import CACHEABLE_COMMANDS, MODULE_GROUPS, READONLY_COMMANDS
 from coredis.pool import ClusterConnectionPool
 from coredis.pool.nodemanager import ManagedNode
 from coredis.response._callbacks import AsyncPreProcessingCallback, NoopCallback
-from coredis.retry import CompositeRetryPolicy, ConstantRetryPolicy, RetryPolicy
+from coredis.retry import (
+    CompositeRetryPolicy,
+    ConstantRetryPolicy,
+    ExponentialBackoffRetryPolicy,
+    RetryPolicy,
+)
 from coredis.typing import (
     AnyStr,
     AsyncGenerator,
@@ -1081,7 +1086,12 @@ class RedisCluster(
         patterns: Parameters[StringT] | None = None,
         pattern_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         ignore_subscribe_messages: bool = False,
-        retry_policy: RetryPolicy | None = None,
+        retry_policy: RetryPolicy | None = CompositeRetryPolicy(
+            ExponentialBackoffRetryPolicy(
+                (ConnectionError,), retries=None, base_delay=0.1, max_delay=16, jitter=True
+            ),
+            ConstantRetryPolicy((TimeoutError,), retries=2, delay=0.1),
+        ),
         subscription_timeout: float = 1,
         **kwargs: Any,
     ) -> ClusterPubSub[AnyStr]:
@@ -1126,7 +1136,12 @@ class RedisCluster(
         channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         ignore_subscribe_messages: bool = False,
         read_from_replicas: bool = False,
-        retry_policy: RetryPolicy | None = None,
+        retry_policy: RetryPolicy | None = CompositeRetryPolicy(
+            ExponentialBackoffRetryPolicy(
+                (ConnectionError,), retries=None, base_delay=0.1, max_delay=16, jitter=True
+            ),
+            ConstantRetryPolicy((TimeoutError,), retries=2, delay=0.1),
+        ),
         subscription_timeout: float = 1,
         **kwargs: Any,
     ) -> ShardedPubSub[AnyStr]:

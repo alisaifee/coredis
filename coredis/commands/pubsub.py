@@ -71,7 +71,9 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         connection_pool: PoolT,
         ignore_subscribe_messages: bool = False,
         retry_policy: RetryPolicy | None = CompositeRetryPolicy(
-            ConstantRetryPolicy((ConnectionError,), retries=3, delay=0.1),
+            ExponentialBackoffRetryPolicy(
+                (ConnectionError,), retries=None, base_delay=0.1, max_delay=16, jitter=True
+            ),
             ConstantRetryPolicy((TimeoutError,), retries=2, delay=0.1),
         ),
         channels: Parameters[StringT] | None = None,
@@ -121,10 +123,6 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         self._subscription_waiters: dict[StringT, list[Event]] = defaultdict(list)
         self._subscription_timeout: float = subscription_timeout
 
-        # Used specifically in the forever run task
-        self._runner_retry_policy = ExponentialBackoffRetryPolicy(
-            (ConnectionError,), retries=None, base_delay=1, max_delay=16, jitter=True
-        )
         self.channels = {}
         self.patterns = {}
         self.tries = 0
@@ -188,7 +186,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
                         if self.patterns:
                             await self.psubscribe(*self.patterns.keys())
 
-        await self._runner_retry_policy.call_with_retries(_run)
+        await self._retry_policy.call_with_retries(_run)
 
     async def _keepalive(self) -> None:
         while True:
@@ -491,7 +489,7 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                         if self.patterns:
                             await self.psubscribe(*self.patterns.keys())
 
-        await self._runner_retry_policy.call_with_retries(_run)
+        await self._retry_policy.call_with_retries(_run)
 
 
 @versionadded(version="3.6.0")
@@ -659,7 +657,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                 elif self.channels:  # resubscribe
                     await self.subscribe(*self.channels.keys())
 
-        await self._runner_retry_policy.call_with_retries(_run)
+        await self._retry_policy.call_with_retries(_run)
 
     async def _shard_listener(self, connection: BaseConnection) -> None:
         while True:

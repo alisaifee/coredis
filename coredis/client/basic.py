@@ -49,7 +49,13 @@ from coredis.response._callbacks import (
     ResponseCallback,
 )
 from coredis.response.types import ScoredMember
-from coredis.retry import ConstantRetryPolicy, NoRetryPolicy, RetryPolicy
+from coredis.retry import (
+    CompositeRetryPolicy,
+    ConstantRetryPolicy,
+    ExponentialBackoffRetryPolicy,
+    NoRetryPolicy,
+    RetryPolicy,
+)
 from coredis.typing import (
     AnyStr,
     AsyncGenerator,
@@ -1037,7 +1043,12 @@ class Redis(Client[AnyStr]):
         patterns: Parameters[StringT] | None = None,
         pattern_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         ignore_subscribe_messages: bool = False,
-        retry_policy: RetryPolicy | None = None,
+        retry_policy: RetryPolicy | None = CompositeRetryPolicy(
+            ExponentialBackoffRetryPolicy(
+                (ConnectionError,), retries=None, base_delay=0.1, max_delay=16, jitter=True
+            ),
+            ConstantRetryPolicy((TimeoutError,), retries=2, delay=0.1),
+        ),
         subscription_timeout: float = 1,
         **kwargs: Any,
     ) -> PubSub[AnyStr]:
