@@ -156,7 +156,7 @@ REDIS_ARGUMENT_TYPE_OVERRIDES = {
     },
     "SORT": {"gets": KeyT},
     "SORT_RO": {"gets": KeyT},
-    "XADD": {"field_values": dict[StringT, RedisValueT], "threshold": Optional[int]},
+    "XADD": {"field_values": dict[StringT, RedisValueT], "threshold": int | None},
     "XAUTOCLAIM": {"min_idle_time": int | datetime.timedelta},
     "XCLAIM": {
         "min_idle_time": int | datetime.timedelta,
@@ -205,9 +205,9 @@ REDIS_RETURN_OVERRIDES = {
     "ACL GETUSER": dict[AnyStr, list[AnyStr]],
     "ACL LIST": tuple[AnyStr, ...],
     "ACL LOG": bool | tuple[dict[AnyStr, AnyStr], ...],
-    "BZPOPMAX": Optional[tuple[AnyStr, AnyStr, float]],
-    "BZPOPMIN": Optional[tuple[AnyStr, AnyStr, float]],
-    "BZMPOP": Optional[tuple[AnyStr, ScoredMembers]],
+    "BZPOPMAX": tuple[AnyStr, AnyStr, float] | None,
+    "BZPOPMIN": tuple[AnyStr, AnyStr, float] | None,
+    "BZMPOP": tuple[AnyStr, ScoredMembers] | None,
     "CLIENT LIST": tuple[ClientInfo, ...],
     "CLIENT INFO": ClientInfo,
     "CLUSTER BUMPEPOCH": AnyStr,
@@ -237,7 +237,7 @@ REDIS_RETURN_OVERRIDES = {
     "FUNCTION STATS": dict[AnyStr, AnyStr | dict[AnyStr, dict[AnyStr, ResponsePrimitive]]],
     "FUNCTION LIST": dict[str, LibraryDefinition],
     "GEODIST": float | None,
-    "GEOPOS": tuple[Optional[GeoCoordinates], ...],
+    "GEOPOS": tuple[GeoCoordinates | None, ...],
     "GEOSEARCH": int | tuple[AnyStr | GeoSearchResult, ...],
     "GEORADIUSBYMEMBER": int | tuple[AnyStr | GeoSearchResult, ...],
     "GEORADIUS": int | tuple[AnyStr | GeoSearchResult, ...],
@@ -262,7 +262,7 @@ REDIS_RETURN_OVERRIDES = {
     "PSETEX": bool,
     "PEXPIRETIME": "datetime.datetime",
     "PUBSUB NUMSUB": OrderedDict[AnyStr, int],
-    "RPOPLPUSH": Optional[AnyStr],
+    "RPOPLPUSH": AnyStr | None,
     "RESET": None,
     "ROLE": RoleInfo,
     "SCAN": tuple[int, tuple[AnyStr, ...]],
@@ -271,7 +271,7 @@ REDIS_RETURN_OVERRIDES = {
     "SLOWLOG GET": tuple[SlowLogInfo, ...],
     "SSCAN": tuple[int, set[AnyStr]],
     "TIME": "datetime.datetime",
-    "TYPE": Optional[AnyStr],
+    "TYPE": AnyStr | None,
     "XCLAIM": tuple[AnyStr, ...] | tuple[StreamEntry, ...],
     "XAUTOCLAIM": (
         tuple[AnyStr, tuple[AnyStr, ...]]
@@ -284,11 +284,11 @@ REDIS_RETURN_OVERRIDES = {
     "XPENDING": tuple[StreamPendingExt, ...] | StreamPending,
     "XRANGE": tuple[StreamEntry, ...],
     "XREVRANGE": tuple[StreamEntry, ...],
-    "XREADGROUP": Optional[dict[AnyStr, tuple[StreamEntry, ...]]],
-    "XREAD": Optional[dict[AnyStr, tuple[StreamEntry, ...]]],
+    "XREADGROUP": dict[AnyStr, tuple[StreamEntry, ...]] | None,
+    "XREAD": dict[AnyStr, tuple[StreamEntry, ...]] | None,
     "ZDIFF": tuple[AnyStr | ScoredMember, ...],
     "ZINTER": tuple[AnyStr | ScoredMember, ...],
-    "ZMPOP": Optional[tuple[AnyStr, ScoredMembers]],
+    "ZMPOP": tuple[AnyStr, ScoredMembers] | None,
     "ZPOPMAX": ScoredMember | ScoredMembers,
     "ZPOPMIN": ScoredMember | ScoredMembers,
     "ZRANDMEMBER": AnyStr | list[AnyStr] | ScoredMembers | None,
@@ -442,16 +442,15 @@ def render_annotation(annotation):
 
                     if none_seen:
                         if len(args) > 1:
-                            return sanitized_rendered_type(f"Optional[{Union[tuple(args)]}]")
+                            return sanitized_rendered_type(f"{Union[tuple(args)]} | None")
                         else:
-                            return sanitized_rendered_type(f"Optiona[{args[0]}]")
+                            return sanitized_rendered_type(f"{args[0]} | None")
 
                 else:
                     sub_annotations = [render_annotation(arg) for arg in annotation.__args__]
                     sub = ", ".join([k for k in sub_annotations if k])
 
                     return sanitized_rendered_type(f"{annotation.__name__}[{sub}]")
-
         return sanitized_rendered_type(str(annotation))
 
 
@@ -495,9 +494,9 @@ def sanitize_parameter(p, eval_forward_annotations=True):
                 a for a in annotation_args if getattr(a, "__name__", "NotNoneType") != "NoneType"
             ]
             if len(new_args) == 1:
-                v = re.sub(r"Union\[([\w,\s\[\]\.]+), NoneType\]", "Optional[\\1]", v)
+                v = re.sub(r"Union\[([\w,\s\[\]\.]+), NoneType\]", "\\1 | None", v)
             else:
-                v = re.sub(r"Union\[([\w,\s\[\]\.]+), NoneType\]", "Optional[Union[\\1]]", v)
+                v = re.sub(r"Union\[([\w,\s\[\]\.]+), NoneType\]", "Union[\\1] | None", v)
     return v
 
 
@@ -673,7 +672,7 @@ def is_deprecated(command, kls):
 
 
 def sanitized(x, command=None, ignore_reserved_words=False):
-    if not x[0].isalpha() and x[0] == x:
+    if x and not x[0].isalpha() and x[0] == x:
         return sanitized(unicodedata.name(x))
     cleansed_name = (
         x.lower().strip().replace("-", "_").replace(":", "_").replace(" ", "_").replace(".", "_")
@@ -770,7 +769,7 @@ def get_type_annotation(arg, command, parent=None, default=None):
             and default is None
             or (parent and (parent.get("optional") or parent.get("partof") == "oneof"))
         ):
-            return Optional[literal_type]
+            return literal_type | None
 
         return literal_type
     else:
@@ -837,7 +836,7 @@ def get_argument(
                 extra["default"] = ARGUMENT_DEFAULTS.get(command["name"], {}).get(name)
 
                 if extra.get("default") is None:
-                    annotation = Optional[annotation]
+                    annotation = annotation | None
             param_list.append(inspect.Parameter(name, arg_type, annotation=annotation, **extra))
 
             if relevant_min_version(arg.get("since", None)):
@@ -940,11 +939,11 @@ def get_argument(
             or parent.get("type") == "oneof"
             or parent.get("partof") == "oneof"
         ):
-            type_annotation = Optional[type_annotation]
+            type_annotation = type_annotation | None
             extra_params = {"default": None}
 
         if is_arg_optional(arg, command, parent) and not arg.get("multiple"):
-            type_annotation = Optional[type_annotation]
+            type_annotation = type_annotation | None
             extra_params = {"default": None}
         else:
             default = ARGUMENT_DEFAULTS_NON_OPTIONAL.get(command["name"], {}).get(name)
@@ -969,7 +968,7 @@ def get_argument(
                     type_annotation = Parameters[type_annotation]
                     extra_params["default"] = default
                 elif is_arg_optional(arg, command, parent) and extra_params.get("default") is None:
-                    type_annotation = Optional[Parameters[type_annotation]]
+                    type_annotation = Parameters[type_annotation] | None
                     extra_params["default"] = None
                 else:
                     type_annotation = Parameters[type_annotation]
@@ -1274,9 +1273,6 @@ def generate_method_details(kls, method, module=None, debug=False):
             )
             method_details["rec_signature"] = rec_signature
         except:
-            import pdb
-
-            pdb.set_trace()
             raise Exception(method["name"], [(k.name, k.kind) for k in rec_params])
 
         method_details["readonly"] = READONLY_OVERRIDES.get(
@@ -1370,6 +1366,13 @@ def generate_compatibility_section(
      {% else %}
      - async def {{method["name"]}}{{render_signature(method["current_signature"], True)}}:
      + async def {{method["name"]}}{{render_signature(method["rec_signature"], True)}}:
+        {%- if method["diff_plus"] %}
+           + {{ method["diff_plus"] }}
+        {%- endif %}
+        {%- if method["diff_minus"] %}
+           - {{ method["diff_minus"] }}
+        {%- endif %}
+     
      {% endif %}
          \"\"\"
          {% for line in (implementation.__doc__ or "").split("\n") -%}
@@ -1797,7 +1800,7 @@ def generate_compatibility_section(
 def code_gen(ctx, debug: bool):
     cur_dir = os.path.split(__file__)[0]
     ctx.ensure_object(dict)
-    if debug:
+    if False:  # debug:
         if not os.path.isdir("/var/tmp/redis-doc"):
             os.system("git clone git@github.com:redis/docs /var/tmp/redis-doc")
         else:
