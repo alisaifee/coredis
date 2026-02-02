@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from anyio.streams.memory import MemoryObjectSendStream
-from typing_extensions import runtime_checkable
 
 from coredis.response._callbacks import NoopCallback
 from coredis.typing import (
@@ -12,7 +10,6 @@ from coredis.typing import (
     Protocol,
     R,
     RedisCommandP,
-    ResponseType,
     TypeVar,
     Unpack,
     ValueT,
@@ -40,10 +37,3 @@ class AbstractExecutor(Protocol):
         callback: Callable[..., R],
         execution_parameters: ExecutionParameters | None = None,
     ) -> CommandRequest[R]: ...
-
-
-@runtime_checkable
-class ConnectionP(Protocol):
-    decode_responses: bool
-    encoding: str
-    push_messages: MemoryObjectSendStream[ResponseType]
