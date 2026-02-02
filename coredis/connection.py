@@ -500,12 +500,12 @@ class BaseConnection:
             self.server_version = nativestr(resp3[b"version"])
             self.client_id = int(resp3[b"id"])
             if self.server_version >= "7.2":
-                self.create_request(
+                await self.create_request(
                     b"CLIENT SETINFO",
                     b"LIB-NAME",
                     b"coredis",
                 )
-                self.create_request(
+                await self.create_request(
                     b"CLIENT SETINFO",
                     b"LIB-VER",
                     coredis.__version__,
