@@ -85,7 +85,7 @@ R = TypeVar("R")
 if TYPE_CHECKING:
     import coredis.pipeline
     from coredis.lock import Lock
-    from coredis.stream import Consumer, GroupConsumer, StreamParameters
+    from coredis.patterns.streams import Consumer, GroupConsumer, StreamParameters
 
 ClientT = TypeVar("ClientT", bound="Client[Any]")
 RedisT = TypeVar("RedisT", bound="Redis[Any]")
@@ -1233,7 +1233,7 @@ class Redis(Client[AnyStr]):
 
         If ``group`` and ``consumer`` are provided, a member of a stream consumer
         group is created. The consumer has an identical interface as
-        :class:`coredis.stream.Consumer`.
+        :class:`coredis.patterns.streams.Consumer`.
 
         :param streams: the stream identifiers to consume from
         :param buffer_size: Size of buffer (per stream) to maintain. This
@@ -1260,7 +1260,7 @@ class Redis(Client[AnyStr]):
             messages that were delivered to this consumer (identified by :paramref:`consumer`)
             and never acknowledged.
         """
-        from coredis.stream import Consumer, GroupConsumer
+        from coredis.patterns.streams import Consumer, GroupConsumer
 
         if group is not None and consumer is not None:
             return GroupConsumer(

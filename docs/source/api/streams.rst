@@ -1,17 +1,17 @@
 Stream Consumers
 ----------------
-:mod:`coredis.streams`
+:mod:`coredis.patterns.streams`
 
-.. autoclass:: coredis.stream.Consumer
+.. autoclass:: coredis.patterns.streams.Consumer
    :class-doc-from: both
    :show-inheritance:
    :special-members: __aiter__, __anext__
 
-.. autoclass:: coredis.stream.GroupConsumer
+.. autoclass:: coredis.patterns.streams.GroupConsumer
    :class-doc-from: both
    :show-inheritance:
    :special-members: __aiter__, __anext__
 
-.. autoclass:: coredis.stream.StreamParameters
+.. autoclass:: coredis.patterns.streams.StreamParameters
    :show-inheritance:
    :no-inherited-members:

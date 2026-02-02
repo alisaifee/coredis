@@ -6,7 +6,7 @@ import anyio
 import pytest
 
 from coredis.exceptions import StreamConsumerInitializationError
-from coredis.stream import Consumer, GroupConsumer
+from coredis.patterns.streams import Consumer, GroupConsumer
 from tests.conftest import targets
 
 
