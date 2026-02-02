@@ -73,7 +73,7 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 if TYPE_CHECKING:
-    import coredis.pipeline
+    import coredis.patterns.pipeline
     from coredis.lock import Lock
     from coredis.patterns.streams import Consumer, GroupConsumer, StreamParameters
 
@@ -1194,7 +1194,7 @@ class RedisCluster(
         *,
         raise_on_error: bool = True,
         timeout: float | None = None,
-    ) -> coredis.pipeline.ClusterPipeline[AnyStr]:
+    ) -> coredis.patterns.pipeline.ClusterPipeline[AnyStr]:
         """
         Returns a new pipeline object that can queue multiple commands for
         batch execution. Pipelines in cluster mode only provide a subset of the
@@ -1218,7 +1218,7 @@ class RedisCluster(
 
         """
 
-        from coredis.pipeline import ClusterPipeline
+        from coredis.patterns.pipeline import ClusterPipeline
 
         return ClusterPipeline[AnyStr](
             client=self,

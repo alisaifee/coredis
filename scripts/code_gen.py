@@ -20,7 +20,6 @@ from packaging import version
 
 import coredis
 import coredis.client
-import coredis.pipeline
 from coredis._utils import b
 from coredis.commands.constants import *  # noqa
 from coredis.globals import CACHEABLE_COMMANDS
@@ -1372,7 +1371,7 @@ def generate_compatibility_section(
         {%- if method["diff_minus"] %}
            - {{ method["diff_minus"] }}
         {%- endif %}
-     
+
      {% endif %}
          \"\"\"
          {% for line in (implementation.__doc__ or "").split("\n") -%}

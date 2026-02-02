@@ -11,7 +11,7 @@ from coredis.exceptions import (
     ResponseError,
     WatchError,
 )
-from coredis.pipeline import ClusterPipeline
+from coredis.patterns.pipeline import ClusterPipeline
 from tests.conftest import targets
 
 

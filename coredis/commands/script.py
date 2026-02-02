@@ -96,7 +96,7 @@ class Script(Generic[AnyStr]):
         :param callback: a custom callback to call on the raw response from redis before
          returning it.
         """
-        from coredis.pipeline import ClusterPipeline, Pipeline
+        from coredis.patterns.pipeline import ClusterPipeline, Pipeline
 
         if client is None:
             client = self.registered_client

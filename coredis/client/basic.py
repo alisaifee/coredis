@@ -83,7 +83,7 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 if TYPE_CHECKING:
-    import coredis.pipeline
+    import coredis.patterns.pipeline
     from coredis.lock import Lock
     from coredis.patterns.streams import Consumer, GroupConsumer, StreamParameters
 
@@ -1094,7 +1094,7 @@ class Redis(Client[AnyStr]):
         *,
         raise_on_error: bool = True,
         timeout: float | None = None,
-    ) -> coredis.pipeline.Pipeline[AnyStr]:
+    ) -> coredis.patterns.pipeline.Pipeline[AnyStr]:
         """
         Returns a new pipeline object that can queue multiple commands for
         batch execution.
@@ -1106,7 +1106,7 @@ class Redis(Client[AnyStr]):
         :param timeout: If specified this value will take precedence over
          :paramref:`Redis.stream_timeout`
         """
-        from coredis.pipeline import Pipeline
+        from coredis.patterns.pipeline import Pipeline
 
         return Pipeline[AnyStr](self, transaction, raise_on_error, timeout)
 
@@ -1147,7 +1147,7 @@ class Redis(Client[AnyStr]):
 
     async def transaction(
         self,
-        func: Callable[[coredis.pipeline.Pipeline[AnyStr]], Coroutine[Any, Any, R]],
+        func: Callable[[coredis.patterns.pipeline.Pipeline[AnyStr]], Coroutine[Any, Any, R]],
         *watches: KeyT,
         watch_delay: float | None = None,
     ) -> R:
@@ -1156,7 +1156,7 @@ class Redis(Client[AnyStr]):
         transaction while watching all keys specified in :paramref:`watches`.
 
         :param func: callable should expect a single argument which is a
-         :class:`coredis.pipeline.Pipeline` object retrieved by calling
+         :class:`coredis.patterns.pipeline.Pipeline` object retrieved by calling
          :meth:`~coredis.Redis.pipeline`.
         :param watches: The keys to watch during the transaction
         :param watch_delay: Time in seconds to wait after each watch error before retrying
