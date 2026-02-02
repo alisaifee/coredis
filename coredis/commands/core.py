@@ -1010,7 +1010,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_reset(
         self,
-        hard_soft: Literal[PureToken.HARD, PureToken.SOFT] | None = None,
+        reset_type: Literal[PureToken.HARD, PureToken.SOFT] | None = None,
     ) -> CommandRequest[bool]:
         """
         Reset a Redis Cluster node
@@ -1018,8 +1018,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         command_arguments: CommandArgList = []
 
-        if hard_soft is not None:
-            command_arguments.append(hard_soft)
+        if reset_type is not None:
+            command_arguments.append(reset_type)
 
         return self.create_request(
             CommandName.CLUSTER_RESET,
