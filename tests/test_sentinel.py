@@ -179,7 +179,7 @@ class TestSentinelCommand:
             with pytest.raises(ReadOnlyError):
                 await p.set("fubar", 1)
 
-    @pytest.mark.parametrize("client_arguments", [{"cache": coredis.cache.LRUCache()}])
+    @pytest.mark.parametrize("client_arguments", [{"cache": coredis.patterns.cache.LRUCache()}])
     async def test_sentinel_cache(self, client: Sentinel, client_arguments, mocker, _s):
         primary = client.primary_for("mymaster")
         async with primary:

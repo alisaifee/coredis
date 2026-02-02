@@ -12,10 +12,10 @@ from anyio.abc import TaskStatus
 from typing_extensions import Self
 
 from coredis._concurrency import Queue, QueueFull
-from coredis.cache import AbstractCache, ClusterTrackingCache
 from coredis.connection import BaseConnection, ClusterConnection, Connection
 from coredis.exceptions import RedisClusterException, RedisError
 from coredis.globals import READONLY_COMMANDS
+from coredis.patterns.cache import AbstractCache, ClusterTrackingCache
 from coredis.pool.basic import ConnectionPool
 from coredis.pool.nodemanager import ManagedNode, NodeManager
 from coredis.typing import (

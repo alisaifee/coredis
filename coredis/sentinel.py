@@ -10,7 +10,6 @@ from typing_extensions import Self, override
 
 from coredis import Redis
 from coredis._utils import nativestr
-from coredis.cache import AbstractCache
 from coredis.connection import Connection
 from coredis.exceptions import (
     ConnectionError,
@@ -18,6 +17,7 @@ from coredis.exceptions import (
     ReplicaNotFoundError,
     ResponseError,
 )
+from coredis.patterns.cache import AbstractCache
 from coredis.pool import ConnectionPool
 from coredis.typing import (
     AnyStr,

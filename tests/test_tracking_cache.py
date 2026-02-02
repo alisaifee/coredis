@@ -5,9 +5,9 @@ from contextlib import AsyncExitStack
 import pytest
 from anyio import sleep
 
-from coredis.cache import LRUCache
 from coredis.client.basic import Redis
 from coredis.client.cluster import RedisCluster
+from coredis.patterns.cache import LRUCache
 from coredis.pool.cluster import ClusterConnectionPool
 from tests.conftest import targets
 

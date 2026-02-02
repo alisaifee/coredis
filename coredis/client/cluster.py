@@ -15,7 +15,6 @@ from deprecated.sphinx import versionadded, versionchanged
 
 from coredis._concurrency import gather
 from coredis._utils import b, hash_slot
-from coredis.cache import AbstractCache
 from coredis.client.basic import Client, Redis
 from coredis.commands._key_spec import KeySpec
 from coredis.commands._validators import mutually_inclusive_parameters
@@ -32,6 +31,7 @@ from coredis.exceptions import (
     TryAgainError,
 )
 from coredis.globals import CACHEABLE_COMMANDS, MODULE_GROUPS, READONLY_COMMANDS
+from coredis.patterns.cache import AbstractCache
 from coredis.patterns.pubsub import ClusterPubSub, ShardedPubSub, SubscriptionCallback
 from coredis.pool import ClusterConnectionPool
 from coredis.pool.nodemanager import ManagedNode

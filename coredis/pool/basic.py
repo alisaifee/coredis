@@ -17,7 +17,6 @@ from typing_extensions import Self
 
 from coredis._concurrency import Queue
 from coredis._utils import query_param_to_bool
-from coredis.cache import AbstractCache, NodeTrackingCache, TrackingCache
 from coredis.connection import (
     BaseConnection,
     Connection,
@@ -25,6 +24,7 @@ from coredis.connection import (
     UnixDomainSocketConnection,
 )
 from coredis.exceptions import RedisError
+from coredis.patterns.cache import AbstractCache, NodeTrackingCache, TrackingCache
 from coredis.typing import Callable, ClassVar, TypeVar
 
 _CPT = TypeVar("_CPT", bound="ConnectionPool")

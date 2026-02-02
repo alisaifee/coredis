@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from coredis.cache import LRUCache
 from coredis.commands.constants import CommandName
+from coredis.patterns.cache import LRUCache
 
 
 class TestLRUCache:

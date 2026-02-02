@@ -17,9 +17,9 @@ from pytest_lazy_fixtures import lf
 import coredis
 import coredis.sentinel
 from coredis._utils import EncodingInsensitiveDict, b, hash_slot, nativestr
-from coredis.cache import LRUCache
 from coredis.client.basic import Redis
 from coredis.credentials import UserPassCredentialProvider
+from coredis.patterns.cache import LRUCache
 from coredis.response._callbacks import NoopCallback
 from coredis.typing import (
     RUNTIME_TYPECHECKS,

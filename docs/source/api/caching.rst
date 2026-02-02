@@ -1,26 +1,26 @@
 Caching
 -------
-:mod:`coredis.cache`
+:mod:`coredis.patterns.cache`
 
 Built in caches
 ^^^^^^^^^^^^^^^
 
-.. autoclass:: coredis.cache.LRUCache
+.. autoclass:: coredis.patterns.cache.LRUCache
    :class-doc-from: both
 
 Implementing a custom cache
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 All caches accepted by :class:`~coredis.Redis` or :class:`~coredis.RedisCluster`
-must implement :class:`~coredis.cache.AbstractCache`
+must implement :class:`~coredis.patterns.cache.AbstractCache`
 
-.. autoclass:: coredis.cache.AbstractCache
-.. autoclass:: coredis.cache.CacheStats
+.. autoclass:: coredis.patterns.cache.AbstractCache
+.. autoclass:: coredis.patterns.cache.CacheStats
 
 Internal cache wrappers
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-.. autoclass:: coredis.cache.NodeTrackingCache
+.. autoclass:: coredis.patterns.cache.NodeTrackingCache
    :class-doc-from: both
 
-.. autoclass:: coredis.cache.ClusterTrackingCache
+.. autoclass:: coredis.patterns.cache.ClusterTrackingCache
    :class-doc-from: both

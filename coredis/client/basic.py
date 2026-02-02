@@ -15,7 +15,6 @@ from packaging.version import InvalidVersion, Version
 from typing_extensions import Self
 
 from coredis._utils import logger, nativestr
-from coredis.cache import AbstractCache
 from coredis.commands import CommandRequest
 from coredis.commands._key_spec import KeySpec
 from coredis.commands._validators import (
@@ -41,6 +40,7 @@ from coredis.exceptions import (
 )
 from coredis.globals import CACHEABLE_COMMANDS, COMMAND_FLAGS, READONLY_COMMANDS
 from coredis.modules import ModuleMixin
+from coredis.patterns.cache import AbstractCache
 from coredis.patterns.pubsub import PubSub, SubscriptionCallback
 from coredis.pool import ConnectionPool
 from coredis.response._callbacks import (
