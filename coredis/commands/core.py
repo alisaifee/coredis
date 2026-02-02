@@ -8163,6 +8163,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         filter: StringT | None = ...,
         filter_ef: int | None = ...,
         truth: bool | None = ...,
+        nothread: bool | None = ...,
     ) -> CommandRequest[tuple[AnyStr, ...]]: ...
     @overload
     def vsim(
@@ -8178,6 +8179,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         filter: StringT | None = ...,
         filter_ef: int | None = ...,
         truth: bool | None = ...,
+        nothread: bool | None = ...,
     ) -> CommandRequest[dict[AnyStr, float]]: ...
     @overload
     def vsim(
@@ -8193,6 +8195,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         filter: StringT | None = ...,
         filter_ef: int | None = ...,
         truth: bool | None = ...,
+        nothread: bool | None = ...,
     ) -> CommandRequest[dict[AnyStr, JsonType]]: ...
     @overload
     def vsim(
@@ -8209,6 +8212,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         filter: StringT | None = ...,
         filter_ef: int | None = ...,
         truth: bool | None = ...,
+        nothread: bool | None = ...,
     ) -> CommandRequest[dict[AnyStr, tuple[float, JsonType]]]: ...
 
     @versionadded(version="5.0.0")
@@ -8236,6 +8240,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         filter: StringT | None = None,
         filter_ef: int | None = None,
         truth: bool | None = None,
+        nothread: bool | None = None,
     ) -> CommandRequest[
         tuple[AnyStr, ...]
         | dict[AnyStr, float]
@@ -8258,6 +8263,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param filter: Expression to restrict matching elements
         :param filter_ef: limits the number of filtering attempts
         :param truth: forces an exact linear scan of all elements bypassing the HSNW graph
+        :param nothread: execute the search in the main thread instead of a background thread
         :return: the matching elements or a mapping of the matching elements to their scores
          if :paramref:`withscores` is ``True`` and/or their attributes if :paramref:`withattribs`
          is ``True``
@@ -8288,6 +8294,8 @@ class CoreCommands(CommandMixin[AnyStr]):
             command_arguments.extend([PrefixToken.FILTER_EF, filter_ef])
         if truth:
             command_arguments.append(PureToken.TRUTH)
+        if nothread:
+            command_arguments.append(PureToken.NOTHREAD)
         return self.create_request(
             CommandName.VSIM,
             *command_arguments,
