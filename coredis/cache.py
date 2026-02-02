@@ -424,11 +424,6 @@ class ClusterTrackingCache(TrackingCache):
     in the cluster to listen to invalidation events
     """
 
-    def get_client_id(self, connection: coredis.connection.BaseConnection) -> int | None:
-        if cache := self.node_caches.get(connection.location):
-            return cache.client_id
-        return None
-
     def __init__(
         self,
         connection_pool: ConnectionPool,
@@ -440,6 +435,11 @@ class ClusterTrackingCache(TrackingCache):
         self.node_caches: dict[str, NodeTrackingCache] = {}
         self._nodes: list[coredis.client.Redis[Any]] = []
         self._max_idle_seconds = max_idle_seconds
+
+    def get_client_id(self, connection: coredis.connection.BaseConnection) -> int | None:
+        if cache := self.node_caches.get(connection.location):
+            return cache.client_id
+        return None
 
     @property
     def healthy(self) -> bool:
