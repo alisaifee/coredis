@@ -231,6 +231,26 @@ class TestTimeseries:
         info = await client.timeseries.info("ts1{a}")
         assert not info[_s("rules")]
 
+    @pytest.mark.min_module_version("timeseries", "8.5")
+    async def test_count_all(self, client: Redis):
+        await client.timeseries.create("ts1{a}")
+        await client.timeseries.create("ts2{a}")
+        await client.timeseries.create("ts3{a}")
+        await client.timeseries.createrule("ts1{a}", "ts2{a}", PureToken.COUNTALL, 50)
+        await client.timeseries.createrule("ts1{a}", "ts3{a}", PureToken.COUNTNAN, 50)
+
+        await client.timeseries.add("ts1{a}", 10, 10)
+        await client.timeseries.add("ts1{a}", 20, math.nan)
+        await client.timeseries.add("ts1{a}", 30, 20)
+        await client.timeseries.add("ts1{a}", 40, 20)
+        await client.timeseries.add("ts1{a}", 50, 20)
+        assert ((0, 4.0), (50, 1.0)) == await client.timeseries.range(
+            "ts1{a}", 0, 50, aggregator=PureToken.COUNTALL, bucketduration=50
+        )
+
+        assert (0, 4.0) == await client.timeseries.get("ts2{a}")
+        assert (0, 1.0) == await client.timeseries.get("ts3{a}")
+
     async def test_del_range(self, client: Redis):
         try:
             await client.timeseries.delete("test", 0, 100)

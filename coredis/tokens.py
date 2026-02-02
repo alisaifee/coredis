@@ -945,6 +945,24 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``TS.CREATERULE``
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    #:  - ``TS.RANGE``
+    #:  - ``TS.REVRANGE``
+    COUNTALL = b"COUNTALL"
+
+    #: Used by:
+    #:
+    #:  - ``TS.CREATERULE``
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    #:  - ``TS.RANGE``
+    #:  - ``TS.REVRANGE``
+    COUNTNAN = b"COUNTNAN"
+
+    #: Used by:
+    #:
     #:  - ``FT.HYBRID``
     #:  - ``TS.CREATERULE``
     #:  - ``TS.MRANGE``
