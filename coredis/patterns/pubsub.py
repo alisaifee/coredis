@@ -209,7 +209,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         while True:
             response = await self.connection.fetch_push_message()
             self._last_checkin = time.monotonic()
-            msg = await self.handle_message(response)
+            msg = await self._handle_message(response)
             self._send_stream.send_nowait(msg)
 
     async def psubscribe(
@@ -225,10 +225,10 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         :meth:`listen`.
         """
         new_patterns: MutableMapping[StringT, SubscriptionCallback | None] = {}
-        new_patterns.update(dict.fromkeys(map(self.encode, patterns)))
+        new_patterns.update(dict.fromkeys(map(self._encode, patterns)))
 
         for handled_pattern, handler in pattern_handlers.items():
-            new_patterns[self.encode(handled_pattern)] = handler
+            new_patterns[self._encode(handled_pattern)] = handler
 
         waiters: dict[StringT, Event] = {pattern: Event() for pattern in new_patterns}
         for pattern, event in waiters.items():
@@ -262,10 +262,10 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         """
 
         new_channels: MutableMapping[StringT, SubscriptionCallback | None] = {}
-        new_channels.update(dict.fromkeys(map(self.encode, channels)))
+        new_channels.update(dict.fromkeys(map(self._encode, channels)))
 
         for handled_channel, handler in channel_handlers.items():
-            new_channels[self.encode(handled_channel)] = handler
+            new_channels[self._encode(handled_channel)] = handler
 
         waiters: dict[StringT, Event] = {channel: Event() for channel in new_channels}
 
@@ -305,7 +305,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
             )
         return None
 
-    def encode(self, value: StringT) -> StringT:
+    def _encode(self, value: StringT) -> StringT:
         """
         Encodes the value so that it's identical to what we'll read off the
         connection
@@ -328,7 +328,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         """
         await self.connection.create_request(command, *args, noreply=True)
 
-    async def handle_message(self, response: list[ResponseType]) -> PubSubMessage | None:
+    async def _handle_message(self, response: list[ResponseType]) -> PubSubMessage | None:
         """
         Parses a pub/sub message. If the channel or pattern was subscribed to
         with a message handler, the handler is invoked instead of a parsed
@@ -583,10 +583,10 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         """
 
         new_channels: MutableMapping[StringT, SubscriptionCallback | None] = {}
-        new_channels.update(dict.fromkeys(map(self.encode, channels)))
+        new_channels.update(dict.fromkeys(map(self._encode, channels)))
 
         for handled_channel, handler in channel_handlers.items():
-            new_channels[self.encode(handled_channel)] = handler
+            new_channels[self._encode(handled_channel)] = handler
 
         waiters: dict[StringT, Event] = {channel: Event() for channel in new_channels}
 
@@ -649,7 +649,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
             await self.unsubscribe()
             self.channels.clear()
             self._current_scope.cancel()
-            self.reset()
+            self._reset()
 
     async def run(self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
         started = False
@@ -687,7 +687,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         while True:
             message = await connection.fetch_push_message()
             self._last_checkins[connection.node] = time.monotonic()
-            self._send_stream.send_nowait(await self.handle_message(message))
+            self._send_stream.send_nowait(await self._handle_message(message))
 
     async def _shard_keepalive(self, connection: BaseConnection) -> None:
         assert isinstance(connection, ClusterConnection)
@@ -702,7 +702,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                     self._last_checkins[connection.node] = time.monotonic()
             await sleep(max(1, self._max_idle_seconds - idle))
 
-    def reset(self) -> None:
+    def _reset(self) -> None:
         for connection in self.shard_connections.values():
             connection.clear_connect_callbacks()
         self.shard_connections.clear()
