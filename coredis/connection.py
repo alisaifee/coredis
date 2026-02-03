@@ -359,7 +359,8 @@ class BaseConnection:
                 # If a connection had successfully been established (including handshake)
                 # errors should no longer be raised and it is the responsibility of the
                 # downstream to ensure that `is_connected` is tested before using a connection
-                logger.info("Connection closed unexpectedly!")
+                if self._last_error:
+                    logger.info("Connection closed unexpectedly!", exc_info=True)
                 self._connected = False
 
     def terminate(self, reason: str | None = None) -> None:
