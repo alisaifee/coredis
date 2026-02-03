@@ -200,8 +200,8 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         while True:
             if (idle := time.monotonic() - self._last_checkin) >= self._max_idle_seconds:
                 if self._connection and await self._connection.create_request(CommandName.PING) in {
-                    b"OK",
-                    "OK",
+                    b"PONG",
+                    "PONG",
                 }:
                     self._last_checkin = time.monotonic()
             await sleep(max(1, self._max_idle_seconds - idle))
@@ -327,7 +327,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
         TODO: evaluate whether this should remain async
         """
-        await self.connection.create_request(command, *args, noreply=True)
+        self.connection.send_command(command, *args)
 
     async def _handle_message(self, response: list[ResponseType]) -> PubSubMessage | None:
         """
@@ -635,7 +635,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         node = self.connection_pool.nodes.node_from_slot(slot)
         if node and node.node_id:
             key = node.node_id
-            await self.shard_connections[key].create_request(command, *args, noreply=True)
+            self.shard_connections[key].send_command(command, *args)
             return
         raise PubSubError(f"Unable to determine shard for channel {args[0]!r}")
 
@@ -696,10 +696,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
             if (
                 idle := time.monotonic() - self._last_checkins[connection.node]
             ) >= self._max_idle_seconds:
-                if await connection.create_request(CommandName.PING) in {
-                    b"OK",
-                    "OK",
-                }:
+                if await connection.create_request(CommandName.PING) in {b"PONG", "PONG"}:
                     self._last_checkins[connection.node] = time.monotonic()
             await sleep(max(1, self._max_idle_seconds - idle))
 

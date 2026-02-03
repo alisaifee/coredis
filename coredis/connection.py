@@ -223,15 +223,18 @@ class BaseConnection:
         self._task_group: TaskGroup | None = None
         # The actual connection to the server
         self._connection: ByteStream | None = None
-        # Memory object stream that collects any unread push message types
+        # buffer for any unread push message types
         self._push_message_buffer_in, self._push_message_buffer_out = create_memory_object_stream[
             list[ResponseType]
         ](math.inf)
-        # Memory object stream for buffering writes to the socket
+        # buffer for writes to the socket
         self._write_buffer_in, self._write_buffer_out = create_memory_object_stream[list[bytes]](
             math.inf
         )
-
+        #  for writes to the socket
+        self._write_buffer_in, self._write_buffer_out = create_memory_object_stream[list[bytes]](
+            math.inf
+        )
         self._parser = Parser()
         self._packer: Packer = Packer(self.encoding)
 
@@ -554,6 +557,21 @@ class BaseConnection:
         except (EndOfStream, BrokenResourceError, ClosedResourceError) as err:
             raise ConnectionError("Connection lost while waiting for push messages") from err
 
+    def send_command(
+        self,
+        command: bytes,
+        *args: RedisValueT,
+    ) -> None:
+        """
+        Queue a command to send to the server without
+        associating a request to it. At the moment this is only useful in
+        pubsub scenarios where commands such as ``SUBSCRIBE``, ``UNSUBSCRIBE``
+        etc do not result in a response but can also not safely be used
+        with ``CLIENT REPLY SKIP``.
+        """
+        with self.ensure_connection():
+            self._write_buffer_in.send_nowait(self._packer.pack_command(command, *args))
+
     def create_request(
         self,
         command: bytes,
@@ -566,7 +584,8 @@ class BaseConnection:
         disconnect_on_cancellation: bool = False,
     ) -> Request:
         """
-        Queue a command to send to the server
+        Queue a command to send to the server and create an
+        associated request that can awaited for the response.
         """
         with self.ensure_connection():
             cmd_list = []

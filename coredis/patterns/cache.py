@@ -398,8 +398,8 @@ class NodeTrackingCache(TrackingCache):
         while True:
             if (idle := time.monotonic() - self._last_checkin) >= self._max_idle_seconds:
                 if self._connection and await self._connection.create_request(CommandName.PING) in {
-                    b"OK",
-                    "OK",
+                    b"PONG",
+                    "PONG",
                 }:
                     self._last_checkin = time.monotonic()
             await sleep(max(1, self._max_idle_seconds - idle))
