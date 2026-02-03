@@ -337,7 +337,7 @@ class NodeTrackingCache(TrackingCache):
         self,
         connection_pool: ConnectionPool,
         cache: AbstractCache | None = None,
-        max_idle_seconds: int = 5,
+        max_idle_seconds: float = 15,
     ) -> None:
         """
         :param connection_pool: Connection pool used to acquire
@@ -428,7 +428,7 @@ class ClusterTrackingCache(TrackingCache):
         self,
         connection_pool: ConnectionPool,
         cache: AbstractCache | None = None,
-        max_idle_seconds: int = 5,
+        max_idle_seconds: float = 15,
     ) -> None:
         """ """
         super().__init__(connection_pool, cache or LRUCache())

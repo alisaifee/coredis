@@ -1051,7 +1051,7 @@ class Redis(Client[AnyStr]):
             ConstantRetryPolicy((TimeoutError,), retries=2, delay=0.1),
         ),
         subscription_timeout: float = 1,
-        max_idle_seconds: float = 5,
+        max_idle_seconds: float = 15,
     ) -> PubSub[AnyStr]:
         """
         Return a Pub/Sub instance that can be used to subscribe to channels

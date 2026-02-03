@@ -84,7 +84,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         patterns: Parameters[StringT] | None = None,
         pattern_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         subscription_timeout: float = 1,
-        max_idle_seconds: float = 5,
+        max_idle_seconds: float = 15,
     ):
         """
         :param connection_pool: Connection pool used to acquire
@@ -536,7 +536,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         channels: Parameters[StringT] | None = None,
         channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         subscription_timeout: float = 1,
-        max_idle_seconds: float = 5,
+        max_idle_seconds: float = 15,
     ):
         """
         :param connection_pool: Connection pool used to acquire

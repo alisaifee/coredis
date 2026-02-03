@@ -1093,7 +1093,7 @@ class RedisCluster(
             ConstantRetryPolicy((TimeoutError,), retries=2, delay=0.1),
         ),
         subscription_timeout: float = 1,
-        max_idle_seconds: float = 5,
+        max_idle_seconds: float = 15,
     ) -> ClusterPubSub[AnyStr]:
         """
         Return a Pub/Sub instance that can be used to consume messages that get
@@ -1146,7 +1146,7 @@ class RedisCluster(
             ConstantRetryPolicy((TimeoutError,), retries=2, delay=0.1),
         ),
         subscription_timeout: float = 1,
-        max_idle_seconds: float = 5,
+        max_idle_seconds: float = 15,
     ) -> ShardedPubSub[AnyStr]:
         """
         Return a Pub/Sub instance that can be used to consume messages from
