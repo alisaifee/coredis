@@ -379,7 +379,8 @@ class Pipeline(Client[AnyStr]):
     @property
     def results(self) -> tuple[Any, ...] | None:
         """
-        The results of the pipeline execution
+        The results of the pipeline execution which can be accessed
+        after the pipeline has completed.
         """
         if self.command_stack:
             raise RuntimeError("Pipeline results are not available before it completes execution")
@@ -699,7 +700,8 @@ class ClusterPipeline(Client[AnyStr]):
     @property
     def results(self) -> tuple[Any, ...] | None:
         """
-        The results of the pipeline execution
+        The results of the pipeline execution which can be accessed
+        after the pipeline has completed.
         """
         if self.command_stack:
             raise RuntimeError("Pipeline results are not available before it completes")
