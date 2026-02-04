@@ -173,8 +173,15 @@ class RedisSSLContext:
 
 class BaseConnection:
     """
-    Base connection class which interacts with the underlying connection
-    established with the redis server.
+    Base class for Redis connections.
+
+    Manages a low-level connection to a single Redis server:
+    sending commands, queuing requests, receiving and parsing responses,
+    handling RESP3 push messages, and connection lifecycle management.
+
+    Subclasses must implement the :meth:`_connect` method to establish the underlying
+    transport (TCP, UNIX socket, etc.).
+
     """
 
     description: ClassVar[str] = "BaseConnection"
@@ -193,6 +200,18 @@ class BaseConnection:
         max_idle_time: int | None = None,
         processing_budget: CapacityLimiter = CapacityLimiter(1),
     ):
+        """
+        :param stream_timeout: Default timeout for receiving a response
+         for requests created through this connection.
+        :param encoding: Default encoding for command responses.
+        :param decode_responses: Whether to automatically decode responses.
+        :param client_name: Optional name to register with the server.
+        :param noreply: If True, disables replies for all commands.
+        :param noevict: If True, sets CLIENT NO-EVICT on the connection.
+        :param notouch: If True, sets CLIENT NO-TOUCH on the connection.
+        :param max_idle_time: Maximum idle time in seconds before the connection is closed.
+        :param processing_budget: limiter to throttle CPU-bound processing.
+        """
         self._stream_timeout = stream_timeout
         self.username: str | None = None
         self.password: str | None = ""
@@ -292,7 +311,11 @@ class BaseConnection:
         self._connect_callbacks = list()
 
     @abstractmethod
-    async def _connect(self) -> ByteStream: ...
+    async def _connect(self) -> ByteStream:
+        """
+        Establish and return the underlying transport connection to the Redis server.
+        """
+        ...
 
     async def run(self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
         """
