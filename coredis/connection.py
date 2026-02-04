@@ -580,8 +580,8 @@ class BaseConnection:
         connection is lost and will raise an :exc:`~coredis.exceptions.ConnectionError`
         """
         try:
-            async for response in self._push_message_buffer_out:
-                yield response
+            while True:
+                yield await self._push_message_buffer_out.receive()
         except (EndOfStream, BrokenResourceError, ClosedResourceError) as err:
             raise ConnectionError("Connection lost while waiting for push messages") from err
 
