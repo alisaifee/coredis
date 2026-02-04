@@ -3,8 +3,8 @@ Pipelines
 
 Pipelines expose an identical API to :class:`~coredis.Redis`, however
 the awaitable returned by calling a pipeline method can only be awaited
-after the entire pipeline has successfully executed, that is, after
-exiting the pipeline's async context manager:
+after the entire pipeline has successfully executed, that is, **after
+exiting the pipeline's async context manager**:
 
 For example:
 
@@ -22,8 +22,17 @@ For example:
         # results can be retrieved from the returns of each command
         # notice this is OUTSIDE of the pipeline block
         assert await asyncio.gather(*commands) == (True, True, True, {b"bar", b"foo"})
+        # or via the `.results` property (this returns `tuple[Any]`)
+        assert pipe.results == (True, True, True, {b"bar", b"foo"})
 
+.. important:: The awaitables returned by calling a command on the pipeline instance retain
+   the expected static types. For example::
 
+     async with client.pipeline(raise_on_error=False) as pipe:
+         pipe.set("foo", 1)
+         value = pipe.incr("foo")
+
+     v: int = await value
 Atomicity & Transactions
 ^^^^^^^^^^^^^^^^^^^^^^^^
 In addition, pipelines can also ensure the buffered commands are executed

@@ -6,9 +6,9 @@ import textwrap
 from abc import ABCMeta
 from concurrent.futures import CancelledError
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, cast
+from typing import Any, cast
 
-from anyio import AsyncContextManagerMixin, sleep
+from anyio import AsyncContextManagerMixin
 
 from coredis._utils import b, hash_slot, nativestr
 from coredis.client import Client, RedisCluster
@@ -42,6 +42,7 @@ from coredis.response._callbacks import (
 from coredis.retry import ConstantRetryPolicy, retryable
 from coredis.typing import (
     AnyStr,
+    AsyncGenerator,
     Awaitable,
     Callable,
     ExecutionParameters,
@@ -92,23 +93,24 @@ def wrap_pipeline_method(
     return wrapper
 
 
-class Awaitablize(Awaitable[T]):
-    __slots__ = ("_result",)
+class PipelineResult(Awaitable[T]):
+    __slots__ = "_result"
 
     def __init__(self, result: T) -> None:
         self._result = result
 
-    def __await__(self) -> Generator[Any, None, T]:
-        async def _coro() -> T:
-            await sleep(0)  # checkpoint
+    @property
+    def value(self) -> T:
+        if isinstance(self._result, Exception):
+            raise self._result
+        else:
             return self._result
 
-        # create the coroutine when awaited to avoid Python warning on GC
+    def __await__(self) -> Generator[Any, None, T]:
+        async def _coro() -> T:
+            return self.value
+
         return _coro().__await__()
-
-
-def await_result(result: T) -> Awaitable[T]:
-    return Awaitablize(result)
 
 
 class PipelineCommandRequest(CommandRequest[CommandResponseT]):
@@ -164,8 +166,8 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
         )
 
     def __await__(self) -> Generator[None, None, CommandResponseT]:
-        if hasattr(self, "response"):
-            return self.response.__await__()
+        if hasattr(self, "_response"):
+            return self._response.__await__()
         elif self.parent:
 
             async def _transformed() -> CommandResponseT:
@@ -175,16 +177,7 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
                     return self.callback(r)
 
             return _transformed().__await__()
-        exc = ResponseError(
-            "Result not set! Either a transaction failed, or you're awaiting a pipeline command before it has excuted"
-        )
-        if self.client._raise_on_error:
-            raise exc
-
-        async def _get_exc() -> ResponseError:
-            return exc
-
-        return _get_exc().__await__()  # type: ignore
+        raise RuntimeError("You can't await a pipeline command before it completes executing")
 
 
 class ClusterPipelineCommandRequest(PipelineCommandRequest[CommandResponseT]):
@@ -228,6 +221,7 @@ class NodeCommands(AsyncContextManagerMixin):
         connection: BaseConnection | None = None,
         in_transaction: bool = False,
         timeout: float | None = None,
+        raise_on_error: bool = True,
     ):
         self.client: RedisCluster[Any] = client
         self.node = node
@@ -235,6 +229,7 @@ class NodeCommands(AsyncContextManagerMixin):
         self.commands: list[ClusterPipelineCommandRequest[Any]] = []
         self.in_transaction = in_transaction
         self.timeout = timeout
+        self._raise_on_error = raise_on_error
         self.multi_cmd: Request | None = None
         self.exec_cmd: Request | None = None
 
@@ -284,7 +279,7 @@ class NodeCommands(AsyncContextManagerMixin):
             if self.in_transaction:
                 self.exec_cmd = connection.create_request(CommandName.EXEC, timeout=self.timeout)
             for i, cmd in enumerate(commands):
-                cmd.response = requests[i]
+                cmd._response = requests[i]
         except (ConnectionError, TimeoutError) as e:
             for c in commands:
                 c.result = e
@@ -298,7 +293,7 @@ class NodeCommands(AsyncContextManagerMixin):
         for c in self.commands:
             if c.result is None:
                 try:
-                    c.result = await c.response if c.response else None
+                    c.result = await c._response if c._response else None
                 except ExecAbortError:
                     raise
                 except (ConnectionError, TimeoutError, RedisError) as e:
@@ -321,7 +316,7 @@ class NodeCommands(AsyncContextManagerMixin):
                     c.result = c.callback(
                         transaction_result[idx],
                     )
-                    c.response = await_result(c.result)
+                    c._response = PipelineResult(c.result)
             elif isinstance(multi_result, BaseException):
                 raise multi_result
 
@@ -399,9 +394,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         self.scripts: set[Script[AnyStr]] = set()
         self.timeout = timeout
         self.type_adapter = client.type_adapter
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}<{repr(self._connection)}>"
+        self._results: tuple[Any] | None = None
 
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
@@ -409,6 +402,9 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         await self._execute()
         if self._connection:
             self.client.connection_pool.release(self._connection)
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}<{repr(self._connection)}>"
 
     def create_request(
         self,
@@ -423,18 +419,6 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         return PipelineCommandRequest(
             self, name, *arguments, callback=callback, execution_parameters=execution_parameters
         )
-
-    async def clear(self) -> None:
-        """
-        Clear the pipeline and reset state.
-        """
-        self.command_stack.clear()
-        self.scripts.clear()
-        # Reset connection state if we were watching something.
-        if self.watches and self._connection:
-            await self._connection.create_request(CommandName.UNWATCH, decode=False)
-        self.watches.clear()
-        self.explicit_transaction = False
 
     @asynccontextmanager
     async def watch(self, *keys: KeyT) -> AsyncGenerator[None]:
@@ -453,6 +437,15 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         yield
         await self._execute()
 
+    @property
+    def results(self) -> tuple[Any, ...] | None:
+        """
+        The results of the pipeline execution
+        """
+        if self.command_stack:
+            raise RuntimeError("Pipeline results are not available before it completes execution")
+        return self._results
+
     def execute_command(
         self,
         command: RedisCommandP,
@@ -460,6 +453,18 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         **options: Unpack[ExecutionParameters],
     ) -> Awaitable[R]:
         raise NotImplementedError
+
+    async def clear(self) -> None:
+        """
+        Clear the pipeline and reset state.
+        """
+        self.command_stack.clear()
+        self.scripts.clear()
+        # Reset connection state if we were watching something.
+        if self.watches and self._connection:
+            await self._connection.create_request(CommandName.UNWATCH, decode=False)
+        self.watches.clear()
+        self.explicit_transaction = False
 
     async def _immediate_execute_command(
         self,
@@ -496,7 +501,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         self,
         connection: BaseConnection,
         commands: list[PipelineCommandRequest[Any]],
-    ) -> tuple[Any, ...]:
+    ) -> None:
         requests = connection.create_requests(
             [CommandInvocation(CommandName.MULTI, (), None, None)]
             + [
@@ -554,22 +559,21 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         if len(response) != len(commands):
             raise ResponseError("Wrong number of response items from pipeline execution")
 
+        # We have to run response callbacks manually
+        data: list[Any] = []
+        for r, cmd in zip(response, commands):
+            r = cmd.callback(r, **cmd.execution_parameters)
+            cmd._response = PipelineResult(r)
+            data.append(r)
+
+        self._results = tuple(data)
         # find any errors in the response and raise if necessary
         if self._raise_on_error:
             self._raise_first_error(commands, response)
 
-        # We have to run response callbacks manually
-        data: list[Any] = []
-        for r, cmd in zip(response, commands):
-            if not isinstance(r, Exception):
-                r = cmd.callback(r, **cmd.execution_parameters)
-                cmd.response = await_result(r)
-            data.append(r)
-        return tuple(data)
-
     async def _execute_pipeline(
         self, connection: BaseConnection, commands: list[PipelineCommandRequest[Any]]
-    ) -> tuple[Any, ...]:
+    ) -> None:
         # build up all commands into a single request to increase network perf
         requests = connection.create_requests(
             [
@@ -588,25 +592,24 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
             timeout=self.timeout,
         )
         for i, cmd in enumerate(commands):
-            cmd.response = requests[i]
+            cmd._response = requests[i]
 
         response: list[Any] = []
         for cmd in commands:
             try:
-                res = await cmd.response if cmd.response else None
+                res = await cmd._response if cmd._response else None
                 resp = cmd.callback(
                     res,
                     **cmd.execution_parameters,
                 )
-                cmd.response = await_result(resp)
+                cmd._response = PipelineResult(resp)
                 response.append(resp)
             except (ResponseError, TimeoutError) as re:
-                cmd.response = await_result(re)
+                cmd._response = PipelineResult(re)
                 response.append(re)
+        self._results = tuple(response)
         if self._raise_on_error:
             self._raise_first_error(commands, response)
-
-        return tuple(response)
 
     def _raise_first_error(
         self, commands: list[PipelineCommandRequest[Any]], response: ResponseType
@@ -663,7 +666,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
             exec = self._execute_pipeline
 
         try:
-            await exec(self._connection, self.command_stack)
+            return await exec(self._connection, self.command_stack)
         except (ConnectionError, TimeoutError, CancelledError) as e:
             # if we were watching a variable, the watch is no longer valid
             # since this connection has died. raise a WatchError, which
@@ -718,6 +721,12 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
         self.scripts: set[Script[AnyStr]] = set()
         self.timeout = timeout
         self.type_adapter = client.type_adapter
+        self._results: tuple[Any] | None = None
+
+    @asynccontextmanager
+    async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
+        yield self
+        await self._execute()
 
     def create_request(
         self,
@@ -751,10 +760,14 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
             await self._execute()
             await self._watched_connection.create_request(CommandName.UNWATCH, decode=False)
 
-    @asynccontextmanager
-    async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        yield self
-        await self._execute()
+    @property
+    def results(self) -> tuple[Any, ...] | None:
+        """
+        The results of the pipeline execution
+        """
+        if self.command_stack:
+            raise RuntimeError("Pipeline results are not available before it completes")
+        return self._results
 
     def execute_command(
         self,
@@ -763,6 +776,15 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
         **options: Unpack[ExecutionParameters],
     ) -> Awaitable[R]:
         raise NotImplementedError
+
+    async def clear(self) -> None:
+        """
+        Clear the pipeline and reset state.
+        """
+        self.command_stack = []
+        self.scripts.clear()
+        self.watches.clear()
+        self.explicit_transaction = False
 
     def _pipeline_execute_command(
         self,
@@ -792,14 +814,14 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
             msg = f"Command # {number} ({cmd} {args}) of pipeline caused error: {exception.args[0]}"
             exception.args = (msg,) + exception.args[1:]
 
-    async def _execute(self) -> tuple[object, ...]:
+    async def _execute(self) -> None:
         """
         Execute all queued commands in the cluster pipeline. Returns a tuple of results.
         """
         await self.connection_pool.initialize()
 
         if not self.command_stack:
-            return ()
+            return
         if self.scripts:
             await self._load_scripts()
         if self._transaction or self.explicit_transaction:
@@ -807,21 +829,12 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
         else:
             execute = self._send_cluster_commands
         try:
-            return await execute(self._raise_on_error)
+            await execute(self._raise_on_error)
         finally:
             await self.clear()
 
-    async def clear(self) -> None:
-        """
-        Clear the pipeline and reset state.
-        """
-        self.command_stack = []
-        self.scripts.clear()
-        self.watches.clear()
-        self.explicit_transaction = False
-
     @retryable(policy=ConstantRetryPolicy((ClusterDownError,), retries=3, delay=0.1))
-    async def _send_cluster_transaction(self, raise_on_error: bool = True) -> tuple[object, ...]:
+    async def _send_cluster_transaction(self, raise_on_error: bool = True) -> None:
         """
         :meta private:
         """
@@ -846,6 +859,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
             in_transaction=True,
             timeout=self.timeout,
             connection=self._watched_connection,
+            raise_on_error=self._raise_on_error,
         )
         node_commands.extend(attempt)
         self.explicit_transaction = True
@@ -861,19 +875,18 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
             if node_commands.exec_cmd and await node_commands.exec_cmd is None:
                 raise WatchError
 
-            if raise_on_error:
-                self._raise_first_error()
-
-            return tuple(
+            self._results = tuple(
                 n.result
                 for n in node_commands.commands
                 if n.name not in {CommandName.MULTI, CommandName.EXEC}
             )
+            if raise_on_error:
+                self._raise_first_error()
 
     @retryable(policy=ConstantRetryPolicy((ClusterDownError,), retries=3, delay=0.1))
     async def _send_cluster_commands(
         self, raise_on_error: bool = True, allow_redirections: bool = True
-    ) -> tuple[object, ...]:
+    ) -> None:
         """
         Execute all queued commands in the cluster pipeline, handling redirections
         and retries as needed.
@@ -893,6 +906,7 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
                     self.client,
                     node,
                     timeout=self.timeout,
+                    raise_on_error=self._raise_on_error,
                 )
             nodes[node.name].append(c)
 
@@ -923,11 +937,11 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
             r = c.result
             if not isinstance(c.result, (RedisError, TimeoutError)):
                 r = c.callback(c.result)
-            c.response = await_result(r)
+            c._response = PipelineResult(r)
             response.append(r)
+        self._results = tuple(response)
         if raise_on_error:
             self._raise_first_error()
-        return tuple(response)
 
     def _determine_slot(
         self, command: bytes, *args: ValueT, **options: Unpack[ExecutionParameters]

@@ -17,6 +17,16 @@ from tests.conftest import targets
 
 @targets("redis_cluster")
 class TestPipeline:
+    async def test_incorrect_use_pipeline(self, client):
+        async with client.pipeline() as pipe:
+            a = pipe.get("a")
+            with pytest.raises(
+                RuntimeError, match="You can't await a pipeline command before it completes"
+            ):
+                await a
+            with pytest.raises(RuntimeError, match="Pipeline results are not available"):
+                pipe.results
+
     async def test_empty_pipeline(self, client):
         async with client.pipeline():
             pass
@@ -29,13 +39,17 @@ class TestPipeline:
             d = pipe.zadd("z", dict(z2=4))
             e = pipe.zincrby("z", "z1", 1)
             f = pipe.zrange("z", 0, 5, withscores=True)
-        assert await gather(a, b, c, d, e, f) == (
-            True,
-            "a1",
-            True,
-            True,
-            2.0,
-            (("z1", 2.0), ("z2", 4)),
+        assert (
+            await gather(a, b, c, d, e, f)
+            == pipe.results
+            == (
+                True,
+                "a1",
+                True,
+                True,
+                2.0,
+                (("z1", 2.0), ("z2", 4)),
+            )
         )
 
     async def test_pipeline_no_transaction(self, client):
@@ -43,10 +57,14 @@ class TestPipeline:
             a = pipe.set("a", "a1")
             b = pipe.set("b", "b1")
             c = pipe.set("c", "c1")
-        assert await gather(a, b, c) == (
-            True,
-            True,
-            True,
+        assert (
+            await gather(a, b, c)
+            == pipe.results
+            == (
+                True,
+                True,
+                True,
+            )
         )
         assert await client.get("a") == "a1"
         assert await client.get("b") == "b1"
@@ -145,7 +163,9 @@ class TestPipeline:
 
         # we can't lpush to a key that's a string value, so this should
         # be a ResponseError exception
-        assert isinstance(await c, ResponseError)
+        with pytest.raises(ResponseError):
+            await c
+        assert isinstance(pipe.results[2], ResponseError)
         assert await client.get("c") == "a"
 
         # since this isn't a transaction, the other commands after the
@@ -157,11 +177,16 @@ class TestPipeline:
         await client.set("c", "a")
         with pytest.raises(ResponseError) as ex:
             async with client.pipeline() as pipe:
-                pipe.set("a", "1")
-                pipe.set("b", "2")
-                pipe.lpush("c", ["3"])
-                pipe.set("d", "4")
+                a = pipe.set("a", "1")
+                b = pipe.set("b", "2")
+                c = pipe.lpush("c", ["3"])
+                d = pipe.set("d", "4")
         assert str(ex.value).startswith("Command # 3 (LPUSH c 3) of pipeline caused error: ")
+        assert await a is True
+        assert await b is True
+        with pytest.raises(ResponseError):
+            await c
+        assert await d is True
 
     async def test_parse_error_raised(self, client):
         with pytest.raises(ResponseError) as ex:

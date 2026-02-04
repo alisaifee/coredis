@@ -35,7 +35,7 @@ def is_type_like(obj: object) -> TypeIs[type[Any]]:
 
 
 class CommandRequest(Awaitable[CommandResponseT]):
-    response: Awaitable[CommandResponseT]
+    _response: Awaitable[CommandResponseT]
 
     def __init__(
         self,
@@ -68,12 +68,12 @@ class CommandRequest(Awaitable[CommandResponseT]):
         self.kwargs = kwargs
 
     def run(self) -> Awaitable[CommandResponseT]:
-        if not hasattr(self, "response"):
-            self.response = self.client.execute_command(
+        if not hasattr(self, "_response"):
+            self._response = self.client.execute_command(
                 self, self.callback, **self.execution_parameters
             )
 
-        return self.response
+        return self._response
 
     def retry(
         self,
