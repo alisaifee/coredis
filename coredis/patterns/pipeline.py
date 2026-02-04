@@ -1,9 +1,6 @@
 from __future__ import annotations
 
 import functools
-import inspect
-import textwrap
-from abc import ABCMeta
 from concurrent.futures import CancelledError
 from contextlib import asynccontextmanager
 from typing import Any, cast
@@ -14,7 +11,7 @@ from coredis._utils import b, hash_slot, nativestr
 from coredis.client import Client, RedisCluster
 from coredis.commands import CommandRequest, CommandResponseT
 from coredis.commands._key_spec import KeySpec
-from coredis.commands.constants import CommandName, NodeFlag
+from coredis.commands.constants import CommandName
 from coredis.commands.request import TransformedResponse, is_type_like
 from coredis.commands.script import Script
 from coredis.connection import BaseConnection, CommandInvocation, Request
@@ -72,25 +69,6 @@ ERRORS_ALLOW_RETRY = (
 )
 
 UNWATCH_COMMANDS = {CommandName.DISCARD, CommandName.EXEC, CommandName.UNWATCH}
-
-
-def wrap_pipeline_method(
-    kls: PipelineMeta, func: Callable[P, Awaitable[R]]
-) -> Callable[P, Awaitable[R]]:
-    @functools.wraps(func)
-    def wrapper(*args: P.args, **kwargs: P.kwargs) -> Awaitable[R]:
-        return func(*args, **kwargs)
-
-    wrapper.__doc__ = textwrap.dedent(wrapper.__doc__ or "")
-    wrapper.__doc__ = f"""
-.. note:: Pipeline variant of :meth:`coredis.Redis.{func.__name__}` that does not execute
-  immediately and instead pushes the command into a stack for batch send.
-
-  The return value can be retrieved by awaiting the response after the pipeline context
-  has exited.
-{wrapper.__doc__}
-"""
-    return wrapper
 
 
 class PipelineResult(Awaitable[T]):
@@ -321,46 +299,7 @@ class NodeCommands(AsyncContextManagerMixin):
                 raise multi_result
 
 
-class PipelineMeta(ABCMeta):
-    RESULT_CALLBACKS: dict[str, Callable[..., Any]]
-    NODES_FLAGS: dict[str, NodeFlag]
-
-    def __new__(
-        cls, name: str, bases: tuple[type, ...], namespace: dict[str, object]
-    ) -> PipelineMeta:
-        kls = super().__new__(cls, name, bases, namespace)
-
-        for name, method in PipelineMeta.get_methods(kls).items():
-            if getattr(method, "__coredis_command", None):
-                setattr(kls, name, wrap_pipeline_method(kls, method))
-
-        return kls
-
-    @staticmethod
-    def get_methods(kls: PipelineMeta) -> dict[str, Callable[..., Any]]:
-        return dict(k for k in inspect.getmembers(kls) if inspect.isfunction(k[1]))
-
-
-class ClusterPipelineMeta(PipelineMeta):
-    def __new__(
-        cls, name: str, bases: tuple[type, ...], namespace: dict[str, object]
-    ) -> PipelineMeta:
-        kls = super().__new__(cls, name, bases, namespace)
-        for name, method in ClusterPipelineMeta.get_methods(kls).items():
-            cmd = getattr(method, "__coredis_command", None)
-            if cmd:
-                if cmd.cluster.route:
-                    kls.NODES_FLAGS[cmd.command] = cmd.cluster.route
-                if cmd.cluster.multi_node:
-                    kls.RESULT_CALLBACKS[cmd.command] = cmd.cluster.combine or (lambda r, **_: r)
-                else:
-                    kls.RESULT_CALLBACKS[cmd.command] = lambda response, **_: list(
-                        response.values()
-                    ).pop()
-        return kls
-
-
-class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
+class Pipeline(Client[AnyStr]):
     """
     Pipeline for batching multiple commands to a Redis server.
     Supports transactions and command stacking.
@@ -682,7 +621,7 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
             await self.clear()
 
 
-class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
+class ClusterPipeline(Client[AnyStr]):
     """
     Pipeline for batching commands to a Redis Cluster.
     Handles routing, transactions, and error management across nodes.
@@ -695,9 +634,6 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
     client: RedisCluster[AnyStr]
     connection_pool: ClusterConnectionPool
     command_stack: list[ClusterPipelineCommandRequest[Any]]
-
-    RESULT_CALLBACKS: dict[str, Callable[..., Any]] = {}
-    NODES_FLAGS: dict[str, NodeFlag] = {}
 
     def __init__(
         self,
