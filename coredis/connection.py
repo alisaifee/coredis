@@ -571,8 +571,7 @@ class BaseConnection:
         Queue a command to send to the server without
         associating a request to it. At the moment this is only useful in
         pubsub scenarios where commands such as ``SUBSCRIBE``, ``UNSUBSCRIBE``
-        etc do not result in a response but can also not safely be used
-        with ``CLIENT REPLY SKIP``.
+        etc do not result in a response.
         """
         with self.ensure_connection():
             self._write_buffer_in.send_nowait(self._packer.pack_command(command, *args))
