@@ -52,6 +52,7 @@ from coredis.exceptions import (
 from coredis.parser import NotEnoughData, Parser
 from coredis.tokens import PureToken
 from coredis.typing import (
+    AsyncGenerator,
     Awaitable,
     Callable,
     ClassVar,
@@ -223,7 +224,7 @@ class BaseConnection:
         self._task_group: TaskGroup | None = None
         # The actual connection to the server
         self._connection: ByteStream | None = None
-        # buffer for any unread push message types
+        # buffer for push message types
         self._push_message_buffer_in, self._push_message_buffer_out = create_memory_object_stream[
             list[ResponseType]
         ](math.inf)
@@ -548,12 +549,16 @@ class BaseConnection:
             await self.create_request(b"CLIENT REPLY", b"OFF", noreply=True)
             self.noreply_set = True
 
-    async def fetch_push_message(self) -> list[ResponseType]:
+    @property
+    async def push_messages(self) -> AsyncGenerator[list[ResponseType], None]:
         """
-        Read the next pending response
+        Generator to retrieve RESP3 push type messages sent by the server.
+        The generator will yield each message received in order until the
+        connection is lost and will raise an :exc:`~coredis.exceptions.ConnectionError`
         """
         try:
-            return await self._push_message_buffer_out.receive()
+            async for response in self._push_message_buffer_out:
+                yield response
         except (EndOfStream, BrokenResourceError, ClosedResourceError) as err:
             raise ConnectionError("Connection lost while waiting for push messages") from err
 

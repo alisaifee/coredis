@@ -407,11 +407,11 @@ class NodeTrackingCache(TrackingCache):
     async def _consumer(self) -> None:
         while True:
             if self._connection:
-                response = await self._connection.fetch_push_message()
-                self._last_checkin = time.monotonic()
-                messages = cast(list[StringT], response[1] or [])
-                for key in messages:
-                    self._cache.invalidate(key)
+                async for response in self._connection.push_messages:
+                    self._last_checkin = time.monotonic()
+                    messages = cast(list[StringT], response[1] or [])
+                    for key in messages:
+                        self._cache.invalidate(key)
 
 
 class ClusterTrackingCache(TrackingCache):

@@ -212,10 +212,10 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
     async def _consumer(self) -> None:
         while True:
-            response = await self.connection.fetch_push_message()
-            self._last_checkin = time.monotonic()
-            msg = await self._handle_message(response)
-            self._send_stream.send_nowait(msg)
+            async for response in self.connection.push_messages:
+                self._last_checkin = time.monotonic()
+                msg = await self._handle_message(response)
+                self._send_stream.send_nowait(msg)
 
     async def psubscribe(
         self,
@@ -689,8 +689,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
     async def _shard_consumer(self, connection: BaseConnection) -> None:
         assert isinstance(connection, ClusterConnection)
-        while True:
-            message = await connection.fetch_push_message()
+        async for message in connection.push_messages:
             self._last_checkins[connection.node] = time.monotonic()
             self._send_stream.send_nowait(await self._handle_message(message))
 
