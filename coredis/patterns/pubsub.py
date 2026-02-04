@@ -157,7 +157,11 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        async with create_task_group() as tg, self._send_stream, self._receive_stream:
+        async with (
+            self._send_stream,
+            self._receive_stream,
+            create_task_group() as tg,
+        ):
             await tg.start(self.run)
             # initialize subscriptions
             if self._initial_channel_subscriptions:
