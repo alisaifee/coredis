@@ -8,7 +8,7 @@ from __future__ import annotations
 import datetime
 import itertools
 from abc import ABC, ABCMeta, abstractmethod
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 
 from coredis._utils import b, nativestr
 from coredis.exceptions import ClusterResponseError, ResponseError
@@ -20,7 +20,6 @@ from coredis.typing import (
     Iterable,
     Mapping,
     ParamSpec,
-    Protocol,
     RedisValueT,
     ResponsePrimitive,
     ResponseType,
@@ -28,7 +27,6 @@ from coredis.typing import (
     StringT,
     TypeVar,
     add_runtime_checks,
-    runtime_checkable,
 )
 
 R = TypeVar("R")
@@ -39,9 +37,6 @@ CR_co = TypeVar("CR_co", covariant=True)
 CK_co = TypeVar("CK_co", covariant=True)
 
 RESP3 = TypeVar("RESP3")
-
-if TYPE_CHECKING:
-    from coredis.client import Client
 
 
 class ResponseCallbackMeta(ABCMeta):
@@ -82,11 +77,6 @@ class ResponseCallback(ABC, Generic[RESP3, R], metaclass=ResponseCallbackMeta):
 
     def handle_exception(self, exc: BaseException) -> R | None:
         return exc  # type: ignore
-
-
-@runtime_checkable
-class AsyncPreProcessingCallback(Protocol):
-    async def pre_process(self, client: Client[Any], response: ResponseType) -> None: ...
 
 
 class NoopCallback(ResponseCallback[R, R]):

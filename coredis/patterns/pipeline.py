@@ -36,7 +36,6 @@ from coredis.pool import ClusterConnectionPool
 from coredis.pool.nodemanager import ManagedNode
 from coredis.response._callbacks import (
     AnyStrCallback,
-    AsyncPreProcessingCallback,
     BoolsCallback,
     NoopCallback,
 )
@@ -319,8 +318,6 @@ class NodeCommands(AsyncContextManagerMixin):
                         if _c.name not in {CommandName.MULTI, CommandName.EXEC}
                     ]
                 ):
-                    if isinstance(c.callback, AsyncPreProcessingCallback):
-                        await c.callback.pre_process(self.client, transaction_result[idx])
                     c.result = c.callback(
                         transaction_result[idx],
                     )
@@ -565,8 +562,6 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         data: list[Any] = []
         for r, cmd in zip(response, commands):
             if not isinstance(r, Exception):
-                if isinstance(cmd.callback, AsyncPreProcessingCallback):
-                    await cmd.callback.pre_process(self.client, r)
                 r = cmd.callback(r, **cmd.execution_parameters)
                 cmd.response = await_result(r)
             data.append(r)
@@ -599,8 +594,6 @@ class Pipeline(Client[AnyStr], metaclass=PipelineMeta):
         for cmd in commands:
             try:
                 res = await cmd.response if cmd.response else None
-                if isinstance(cmd.callback, AsyncPreProcessingCallback):
-                    await cmd.callback.pre_process(self.client, res, **cmd.execution_parameters)
                 resp = cmd.callback(
                     res,
                     **cmd.execution_parameters,
@@ -929,8 +922,6 @@ class ClusterPipeline(Client[AnyStr], metaclass=ClusterPipelineMeta):
         for c in sorted(self.command_stack, key=lambda x: x.position):
             r = c.result
             if not isinstance(c.result, (RedisError, TimeoutError)):
-                if isinstance(c.callback, AsyncPreProcessingCallback):
-                    await c.callback.pre_process(self.client, c.result)
                 r = c.callback(c.result)
             c.response = await_result(r)
             response.append(r)

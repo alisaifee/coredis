@@ -44,7 +44,6 @@ from coredis.patterns.cache import AbstractCache
 from coredis.patterns.pubsub import PubSub, SubscriptionCallback
 from coredis.pool import ConnectionPool
 from coredis.response._callbacks import (
-    AsyncPreProcessingCallback,
     NoopCallback,
     ResponseCallback,
 )
@@ -974,8 +973,6 @@ class Redis(Client[AnyStr]):
                 await self._ensure_wait_and_persist(command, connection)
                 if self.noreply:
                     return None  # type: ignore
-                if isinstance(callback, AsyncPreProcessingCallback):
-                    await callback.pre_process(self, reply)
             if pool.cache and cacheable:
                 if cache_hit and not use_cached:
                     pool.cache.feedback(

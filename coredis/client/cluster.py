@@ -35,7 +35,7 @@ from coredis.patterns.cache import AbstractCache
 from coredis.patterns.pubsub import ClusterPubSub, ShardedPubSub, SubscriptionCallback
 from coredis.pool import ClusterConnectionPool
 from coredis.pool.nodemanager import ManagedNode
-from coredis.response._callbacks import AsyncPreProcessingCallback, NoopCallback
+from coredis.response._callbacks import NoopCallback
 from coredis.retry import (
     CompositeRetryPolicy,
     ConstantRetryPolicy,
@@ -985,11 +985,6 @@ class RedisCluster(
                 if self.noreply:
                     return  # type: ignore
                 else:
-                    if isinstance(callback, AsyncPreProcessingCallback):
-                        await callback.pre_process(
-                            self,
-                            reply,
-                        )
                     response = callback(
                         cached_reply if cache_hit else reply,
                     )
