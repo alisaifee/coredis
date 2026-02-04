@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from collections import deque
-from typing import Any, Awaitable, Generic, TypeVar, overload
+from typing import Any, overload
 
 from anyio import Event, Lock, create_task_group
+
+from coredis.typing import Awaitable, Generic, TypeVar
 
 T1 = TypeVar("T1")
 T2 = TypeVar("T2")
