@@ -26,6 +26,9 @@ coredis
       :alt: Code coverage
       :class: header-badge
 
+.. attention:: To learn about breaking changes and migration steps for version 6 please
+   see :ref:`handbook/migration_guide:migrating from 5.x to 6.0`.
+
 Fast, async, fully-typed Redis client with support for cluster and sentinel
 
 The client API uses the specifications in the Redis command documentation to define the API by using the following conventions:
@@ -43,6 +46,8 @@ the `Redis command documentation <https://redis.io/commands>`__ to define the AP
 
 For higher level concepts such as :ref:`handbook/pipelines:pipelines`, :ref:`handbook/scripting:lua scripts`,
 :ref:`handbook/pubsub:pubsub` abstractions are provided to encapsulate recommended patterns.
+
+
 
 Feature Summary
 ===============

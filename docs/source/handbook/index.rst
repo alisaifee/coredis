@@ -23,6 +23,7 @@ Handbook
     typing
     response
     development
+    migration_guide
 
 This section contains details on high level concepts
 of redis that are supported by **coredis**.

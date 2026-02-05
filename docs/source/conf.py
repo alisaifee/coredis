@@ -51,6 +51,8 @@ extensions = [
     "sphinx_issues",
     "sphinx_paramlinks",
     "sphinx_sitemap",
+    "sphinx_design",
+    "sphinx_inline_tabs",
     "sphinxcontrib.programoutput",
     "sphinxext.opengraph",
 ]

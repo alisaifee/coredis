@@ -5,8 +5,10 @@
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/coredis.svg)](https://pypi.python.org/pypi/coredis/)
 
 > [!IMPORTANT]
-> The `master` branch contains the **coredis 6.x** codebase which is **not backward
-> compatible** with 5.x. If you are looking for the **5.x** implementation, please
+> To learn about breaking changes and migration steps for **version 6** please see
+> [Migrating from 5.x to 6.0](https://coredis.readthedocs.org/en/latest/handbook/migration_guide.html#migrating-from-5-x-to-6-0).
+>
+> If you are looking for the **5.x** implementation, please
 > refer to the [5.x branch](https://github.com/alisaifee/coredis/tree/5.x).
 
 # coredis
