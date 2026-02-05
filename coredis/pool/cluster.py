@@ -1,28 +1,30 @@
 from __future__ import annotations
 
-import os
 import random
 import warnings
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, cast
+from typing import Any, cast
 
 from anyio import TASK_STATUS_IGNORED, Lock, create_task_group, fail_after
 from anyio.abc import TaskStatus
 from typing_extensions import Self
 
 from coredis._concurrency import Queue, QueueFull
-from coredis.connection import BaseConnection, ClusterConnection, Connection
+from coredis.connection import BaseConnection, BaseConnectionParams, ClusterConnection, Connection
 from coredis.exceptions import RedisClusterException, RedisError
 from coredis.globals import READONLY_COMMANDS
 from coredis.patterns.cache import AbstractCache, ClusterTrackingCache
 from coredis.pool.basic import ConnectionPool
 from coredis.pool.nodemanager import ManagedNode, NodeManager
 from coredis.typing import (
+    AsyncGenerator,
     Callable,
     ClassVar,
     Iterable,
     KeyT,
     Node,
+    NotRequired,
+    Unpack,
 )
 
 
@@ -31,7 +33,16 @@ class ClusterConnectionPool(ConnectionPool):
     Custom connection pool for :class:`~coredis.RedisCluster` client
     """
 
-    #: Mapping of querystring arguments to their parser functions
+    class PoolParams(ConnectionPool.PoolParams):
+        """
+        :meta private:
+        """
+
+        skip_full_coverage_check: NotRequired[bool]
+        startup_nodes: NotRequired[Iterable[Node]]
+        max_connections_per_node: NotRequired[bool]
+        read_from_replicas: NotRequired[bool]
+
     URL_QUERY_ARGUMENT_PARSERS: ClassVar[
         dict[str, Callable[..., int | float | bool | str | None]]
     ] = {
@@ -50,6 +61,7 @@ class ClusterConnectionPool(ConnectionPool):
     def __init__(
         self,
         startup_nodes: Iterable[Node] | None = None,
+        *,
         connection_class: type[ClusterConnection] = ClusterConnection,
         max_connections: int | None = None,
         max_connections_per_node: bool = False,
@@ -60,7 +72,7 @@ class ClusterConnectionPool(ConnectionPool):
         read_from_replicas: bool = False,
         timeout: float | None = None,
         _cache: AbstractCache | None = None,
-        **connection_kwargs: Any,
+        **connection_kwargs: Unpack[BaseConnectionParams],
     ):
         """
         Cluster aware connection pool that tracks and manages sub pools for each node
@@ -100,13 +112,6 @@ class ClusterConnectionPool(ConnectionPool):
             **connection_kwargs,
         )
         self.initialized = False
-
-        if startup_nodes is None:
-            host = connection_kwargs.pop("host", None)
-            port = connection_kwargs.pop("port", None)
-
-            if host and port:
-                startup_nodes = [Node(host=str(host), port=int(port))]
         self.timeout = timeout
         self.max_connections = max_connections or 64
         self.max_connections_per_node = max_connections_per_node
@@ -119,7 +124,6 @@ class ClusterConnectionPool(ConnectionPool):
             **connection_kwargs,
         )
         self.connection_kwargs = connection_kwargs
-        self.connection_kwargs["read_from_replicas"] = read_from_replicas
         self.read_from_replicas = read_from_replicas or readonly
         # TODO: Use the `max_failures` argument of tracking cache
         self.cache = ClusterTrackingCache(self, _cache) if _cache else None
@@ -129,6 +133,33 @@ class ClusterConnectionPool(ConnectionPool):
             self.connection_kwargs["stream_timeout"] = None
         self._init_lock = Lock()
 
+    @classmethod
+    def from_url(
+        cls,
+        url: str,
+        *,
+        decode_components: bool = False,
+        **kwargs: Unpack[PoolParams],
+    ) -> ClusterConnectionPool:
+        connection_class, merged_options, extra_connection_params = cls._parse_url(
+            url, decode_components, kwargs
+        )
+        pool_args = ClusterConnectionPool.PoolParams()
+        host = cast(ClusterConnection.Params, extra_connection_params).pop("host")
+        port = cast(ClusterConnection.Params, extra_connection_params).pop("port")
+        if "startup_nodes" not in pool_args and (host is not None and port is not None):
+            pool_args["startup_nodes"] = [
+                Node(
+                    host=host,
+                    port=port,
+                )
+            ]
+        extra_connection_params.update(pool_args)
+        extra_connection_params.update(merged_options)
+        return cls(
+            **extra_connection_params,
+        )
+
     def __repr__(self) -> str:
         """
         Returns a string with all unique ip:port combinations that this pool
@@ -137,9 +168,7 @@ class ClusterConnectionPool(ConnectionPool):
 
         return "{}<{}>".format(
             type(self).__name__,
-            ", ".join(
-                [self.connection_class.describe(node.__dict__) for node in self.nodes.startup_nodes]
-            ),
+            ", ".join([node.name for node in self.nodes.startup_nodes]),
         )
 
     async def __aenter__(self) -> Self:
@@ -236,7 +265,6 @@ class ClusterConnectionPool(ConnectionPool):
 
     def __reset(self) -> None:
         """Resets the connection pool back to a clean state"""
-        self.pid = os.getpid()
         self._cluster_available_connections = {}
         self.initialized = False
 
@@ -264,6 +292,7 @@ class ClusterConnectionPool(ConnectionPool):
         connection = self.connection_class(
             host=node.host,
             port=node.port,
+            read_from_replicas=self.read_from_replicas,
             **self.connection_kwargs,
         )
         connection.node = node

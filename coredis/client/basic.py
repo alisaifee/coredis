@@ -282,7 +282,7 @@ class Client(
                 raise PersistenceError(command.name, *waitaof)
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}<{repr(self.connection_pool)}>"
+        return f"{type(self).__name__}<{self.connection_pool.location}>"
 
     async def scan_iter(
         self,

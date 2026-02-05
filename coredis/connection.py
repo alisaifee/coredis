@@ -6,8 +6,8 @@ import math
 import os
 import socket
 import ssl
-from abc import abstractmethod
-from collections import defaultdict, deque
+from abc import ABC, abstractmethod
+from collections import deque
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, cast
 from weakref import ProxyType, proxy
@@ -31,7 +31,6 @@ from anyio import (
 from anyio.abc import ByteStream, SocketAttribute, TaskGroup, TaskStatus
 from anyio.lowlevel import checkpoint
 from exceptiongroup import BaseExceptionGroup, catch
-from typing_extensions import override
 
 import coredis
 from coredis._packer import Packer
@@ -55,11 +54,13 @@ from coredis.typing import (
     AsyncGenerator,
     Awaitable,
     Callable,
-    ClassVar,
     Generator,
+    NotRequired,
     RedisValueT,
     ResponseType,
+    TypedDict,
     TypeVar,
+    Unpack,
 )
 
 CERT_REQS = {
@@ -71,6 +72,48 @@ R = TypeVar("R")
 
 if TYPE_CHECKING:
     from coredis.pool.nodemanager import ManagedNode
+
+
+class BaseConnectionParams(TypedDict):
+    """
+    The common parameters accepted by :class:`coredis.connection.BaseConnection`
+    """
+
+    #: Maximum time to wait for receiving a response
+    #: for requests created through this connection.
+    stream_timeout: NotRequired[float | None]
+    #: Maximum time to wait for establishing a connection
+    connect_timeout: NotRequired[float | None]
+
+    #: Default encoding for command responses.
+    encoding: NotRequired[str]
+    #: Whether to automatically decode responses.
+    decode_responses: NotRequired[bool]
+
+    #: Optional name to register with the server.
+    client_name: NotRequired[str | None]
+    #: If True, disables replies for all commands.
+    noreply: NotRequired[bool]
+    #: If True, sets CLIENT NO-EVICT on the connection.
+    noevict: NotRequired[bool]
+    #: If True, sets CLIENT NO-TOUCH on the connection.
+    notouch: NotRequired[bool]
+    #: Maximum idle time in seconds before the connection is closed.
+    max_idle_time: NotRequired[int | None]
+
+    #: Limiter to throttle CPU-bound processing.
+    processing_budget: NotRequired[CapacityLimiter]
+
+    #: The username to use for authenticating against the redis server
+    username: NotRequired[str | None]
+    #: The password to use for authenticating against the redis server
+    password: NotRequired[str | None]
+    #: If provided the connection handshake will include authentication using this provider.
+    credential_provider: NotRequired[AbstractCredentialProvider]
+    #: If provided the connection will immediately switch to this db as part of the handshake
+    db: NotRequired[int | None]
+    #: For TLS connections, the ssl context to use when performing the TLS handshake
+    ssl_context: NotRequired[ssl.SSLContext]
 
 
 @dataclasses.dataclass
@@ -171,7 +214,7 @@ class RedisSSLContext:
         return self.context
 
 
-class BaseConnection:
+class BaseConnection(ABC):
     """
     Base class for Redis connections.
 
@@ -184,61 +227,85 @@ class BaseConnection:
 
     """
 
-    description: ClassVar[str] = "BaseConnection"
-    locator: ClassVar[str] = ""
+    Params = BaseConnectionParams
+    """
+    :meta private:
+    """
 
     def __init__(
         self,
+        *,
         stream_timeout: float | None = None,
+        connect_timeout: float | None = None,
+        max_idle_time: int | None = None,
         encoding: str = "utf-8",
         decode_responses: bool = False,
-        *,
+        credential_provider: AbstractCredentialProvider | None = None,
+        username: str | None = None,
+        password: str | None = None,
         client_name: str | None = None,
+        db: int | None = 0,
         noreply: bool = False,
         noevict: bool = False,
         notouch: bool = False,
-        max_idle_time: int | None = None,
         processing_budget: CapacityLimiter = CapacityLimiter(1),
+        ssl_context: ssl.SSLContext | None = None,
     ):
         """
-        :param stream_timeout: Default timeout for receiving a response
+        :param stream_timeout: Maximum time to wait for receiving a response
          for requests created through this connection.
+        :param connect_timeout: Maximum time to wait for establishing a connection
+        :param max_idle_time: Maximum idle time in seconds before the connection is closed.
         :param encoding: Default encoding for command responses.
         :param decode_responses: Whether to automatically decode responses.
+        :param credential_provider: If provided the connection handshake will include
+         authentication using this provider.
+        :param username: The username to use for authenticating against the redis server
+        :param password: The password to use for authenticating against the redis server
         :param client_name: Optional name to register with the server.
+        :param db: If provided the connection will immediately switch to this db as part
+         of the handshake
         :param noreply: If True, disables replies for all commands.
         :param noevict: If True, sets CLIENT NO-EVICT on the connection.
         :param notouch: If True, sets CLIENT NO-TOUCH on the connection.
-        :param max_idle_time: Maximum idle time in seconds before the connection is closed.
         :param processing_budget: limiter to throttle CPU-bound processing.
+        :param ssl_context: For TLS connections, the ssl context to use when performing
+         the TLS handshake.
         """
         self._stream_timeout = stream_timeout
-        self.username: str | None = None
-        self.password: str | None = ""
-        self.credential_provider: AbstractCredentialProvider | None = None
-        self.db: int | None = None
-        self.pid: int = os.getpid()
-        self._description_args: Callable[..., dict[str, str | int | None]] = lambda: dict()
+        self._connect_timeout = connect_timeout
+        # maximum time to wait for data from the server before
+        # closing the connection
+        self._max_idle_time = max_idle_time
+
+        self._username = username
+        self._password = password
+        self._credential_provider = credential_provider
+
+        self._db = db
+
+        self._encoding = encoding
+        self._decode_responses = decode_responses
+
         self._connect_callbacks: list[
             (Callable[[BaseConnection], Awaitable[None]] | Callable[[BaseConnection], None])
         ] = list()
-        self.encoding = encoding
-        self.decode_responses = decode_responses
+
+        # server version as reported by the server
         self.server_version: str | None = None
+        # name used to identify thie connection with the redis server
         self.client_name = client_name
         # id for this connection as returned by the redis server
         self.client_id: int | None = None
         # client id that the redis server should send any redirected notifications to
         self.tracking_client_id: int | None = None
 
-        # maximum time to wait for data from the server before
-        # closing the connection
-        self.max_idle_time = max_idle_time
+        self._noreply = noreply
+        self._noreply_set = False
+        self._noevict = noevict
+        self._notouch = notouch
 
-        self.noreply = noreply
-        self.noreply_set = False
-        self.noevict = noevict
-        self.notouch = notouch
+        self._ssl_context = ssl_context
 
         self._task_group: TaskGroup | None = None
         # The actual connection to the server
@@ -256,7 +323,7 @@ class BaseConnection:
             math.inf
         )
         self._parser = Parser()
-        self._packer: Packer = Packer(self.encoding)
+        self._packer: Packer = Packer(self._encoding)
 
         self._requests: deque[Request] = deque()
         self._connection_cancel_scope: CancelScope | None = None
@@ -273,15 +340,14 @@ class BaseConnection:
         self._processing_budget = processing_budget
 
     def __repr__(self) -> str:
-        return self.describe(self._description_args())
+        return self.describe()
 
-    @classmethod
-    def describe(cls, description_args: dict[str, Any]) -> str:
-        return cls.description.format_map(defaultdict(lambda: None, description_args))
+    @abstractmethod
+    def describe(self) -> str: ...
 
     @property
-    def location(self) -> str:
-        return self.locator.format_map(defaultdict(lambda: None, self._description_args()))
+    @abstractmethod
+    def location(self) -> str: ...
 
     @property
     def connection(self) -> ByteStream:
@@ -405,7 +471,7 @@ class BaseConnection:
         FIFO order.
         """
         while True:
-            with fail_after(self.max_idle_time):
+            with fail_after(self._max_idle_time):
                 try:
                     data = await self.connection.receive()
                 except (EndOfStream, ClosedResourceError, BrokenResourceError) as err:
@@ -426,10 +492,10 @@ class BaseConnection:
 
     def _data_received(self, data: bytes) -> None:
         self._parser.feed(data)
-        decode = self._requests[0].decode if self._requests else self.decode_responses
+        decode = self._requests[0].decode if self._requests else self._decode_responses
         response = self._parser.parse(
             decode=decode,
-            encoding=self._requests[0].encoding if self._requests else self.encoding,
+            encoding=self._requests[0].encoding if self._requests else self._encoding,
         )
         while not isinstance(response, NotEnoughData):
             if response[0] == DataType.PUSH:
@@ -441,10 +507,10 @@ class BaseConnection:
                         request.fail(response[1])
                     else:
                         request.resolve(response[1])
-            decode = self._requests[0].decode if self._requests else self.decode_responses
+            decode = self._requests[0].decode if self._requests else self._decode_responses
             response = self._parser.parse(
                 decode=decode,
-                encoding=self._requests[0].encoding if self._requests else self.encoding,
+                encoding=self._requests[0].encoding if self._requests else self._encoding,
             )
 
     async def _writer_task(self) -> None:
@@ -486,17 +552,17 @@ class BaseConnection:
             return False
 
     async def try_legacy_auth(self) -> None:
-        if self.credential_provider:
-            creds = await self.credential_provider.get_credentials()
+        if self._credential_provider:
+            creds = await self._credential_provider.get_credentials()
             params = [creds.password]
             if isinstance(creds, UserPass):
                 params.insert(0, creds.username)
-        elif not self.password:
+        elif not self._password:
             return
         else:
-            params = [self.password]
-            if self.username:
-                params.insert(0, self.username)
+            params = [self._password]
+            if self._username:
+                params.insert(0, self._username)
         await self.create_request(b"AUTH", *params, decode=False)
 
     async def perform_handshake(self) -> None:
@@ -505,11 +571,11 @@ class BaseConnection:
 
         hello_command_args: list[int | str | bytes] = [3]
         if creds := (
-            await self.credential_provider.get_credentials()
-            if self.credential_provider
+            await self._credential_provider.get_credentials()
+            if self._credential_provider
             else (
-                await UserPassCredentialProvider(self.username, self.password).get_credentials()
-                if (self.username or self.password)
+                await UserPassCredentialProvider(self._username, self._password).get_credentials()
+                if (self._username or self._password)
                 else None
             )
         ):
@@ -551,9 +617,9 @@ class BaseConnection:
     async def on_connect(self) -> None:
         await self.perform_handshake()
 
-        if self.db:
-            if await self.create_request(b"SELECT", self.db, decode=False) != b"OK":
-                raise ConnectionError(f"Invalid Database {self.db}")
+        if self._db:
+            if await self.create_request(b"SELECT", self._db, decode=False) != b"OK":
+                raise ConnectionError(f"Invalid Database {self._db}")
 
         if self.client_name is not None:
             if (
@@ -562,15 +628,15 @@ class BaseConnection:
             ):
                 raise ConnectionError(f"Failed to set client name: {self.client_name}")
 
-        if self.noevict:
+        if self._noevict:
             await self.create_request(b"CLIENT NO-EVICT", b"ON")
 
-        if self.notouch:
+        if self._notouch:
             await self.create_request(b"CLIENT NO-TOUCH", b"ON")
 
-        if self.noreply:
+        if self._noreply:
             await self.create_request(b"CLIENT REPLY", b"OFF", noreply=True)
-            self.noreply_set = True
+            self._noreply_set = True
 
     @property
     async def push_messages(self) -> AsyncGenerator[list[ResponseType], None]:
@@ -616,21 +682,21 @@ class BaseConnection:
         """
         with self.ensure_connection():
             cmd_list = []
-            if noreply and not self.noreply:
+            if noreply and not self._noreply:
                 cmd_list = self._packer.pack_command(CommandName.CLIENT_REPLY, PureToken.SKIP)
             cmd_list.extend(self._packer.pack_command(command, *args))
             request_timeout: float | None = timeout or self._stream_timeout
             request = Request(
                 proxy(self),
                 command,
-                bool(decode) if decode is not None else self.decode_responses,
-                encoding or self.encoding,
+                bool(decode) if decode is not None else self._decode_responses,
+                encoding or self._encoding,
                 raise_exceptions,
                 request_timeout,
                 disconnect_on_cancellation,
             )
             # modifying buffer and requests should happen atomically
-            if not (self.noreply_set or noreply):
+            if not (self._noreply_set or noreply):
                 self._requests.append(request)
             else:
                 request.resolve(None)
@@ -653,8 +719,8 @@ class BaseConnection:
                 Request(
                     proxy(self),
                     cmd.command,
-                    bool(cmd.decode) if cmd.decode is not None else self.decode_responses,
-                    cmd.encoding or self.encoding,
+                    bool(cmd.decode) if cmd.decode is not None else self._decode_responses,
+                    cmd.encoding or self._encoding,
                     raise_exceptions,
                     request_timeout,
                     disconnect_on_cancellation,
@@ -668,172 +734,99 @@ class BaseConnection:
 
 
 class Connection(BaseConnection):
-    description: ClassVar[str] = "Connection<host={host},port={port},db={db}>"
-    locator: ClassVar[str] = "host={host},port={port}"
+    class Params(BaseConnectionParams):
+        """
+        :meta private:
+        """
+
+        host: NotRequired[str]
+        port: NotRequired[int]
 
     def __init__(
         self,
         host: str = "127.0.0.1",
         port: int = 6379,
-        username: str | None = None,
-        password: str | None = None,
-        credential_provider: AbstractCredentialProvider | None = None,
-        db: int | None = 0,
-        stream_timeout: float | None = None,
-        connect_timeout: float | None = None,
-        ssl_context: ssl.SSLContext | None = None,
-        encoding: str = "utf-8",
-        decode_responses: bool = False,
+        *,
         socket_keepalive: bool | None = None,
         socket_keepalive_options: dict[int, int | bytes] | None = None,
-        *,
-        client_name: str | None = None,
-        noreply: bool = False,
-        noevict: bool = False,
-        notouch: bool = False,
-        max_idle_time: int | None = None,
-        processing_budget: CapacityLimiter = CapacityLimiter(1),
+        **kwargs: Unpack[BaseConnectionParams],
     ):
-        super().__init__(
-            stream_timeout,
-            encoding,
-            decode_responses,
-            client_name=client_name,
-            noreply=noreply,
-            noevict=noevict,
-            notouch=notouch,
-            max_idle_time=max_idle_time,
-            processing_budget=processing_budget,
-        )
+        super().__init__(**kwargs)
         self.host = host
         self.port = port
-        self.username: str | None = username
-        self.password: str | None = password
-        self.credential_provider: AbstractCredentialProvider | None = credential_provider
-        self.db: int | None = db
-        self.ssl_context = ssl_context
-        self._connect_timeout = connect_timeout
-        self._description_args: Callable[..., dict[str, str | int | None]] = lambda: {
-            "host": self.host,
-            "port": self.port,
-            "db": self.db,
-        }
-        self.socket_keepalive = socket_keepalive
-        self.socket_keepalive_options: dict[int, int | bytes] = socket_keepalive_options or {}
+        self._socket_keepalive = socket_keepalive
+        self._socket_keepalive_options: dict[int, int | bytes] = socket_keepalive_options or {}
 
-    @override
     async def _connect(self) -> ByteStream:
         with fail_after(self._connect_timeout):
-            if self.ssl_context:
+            if self._ssl_context:
                 connection: ByteStream = await connect_tcp(
                     self.host,
                     self.port,
                     tls=True,
-                    ssl_context=self.ssl_context,
+                    ssl_context=self._ssl_context,
                     tls_standard_compatible=False,
                 )
             else:
                 connection = await connect_tcp(self.host, self.port)
             sock = connection.extra(SocketAttribute.raw_socket, default=None)
             if sock is not None:
-                if self.socket_keepalive:  # TCP_KEEPALIVE
+                if self._socket_keepalive:  # TCP_KEEPALIVE
                     sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-                    for k, v in self.socket_keepalive_options.items():
+                    for k, v in self._socket_keepalive_options.items():
                         sock.setsockopt(socket.SOL_TCP, k, v)
             return connection
 
+    def describe(self) -> str:
+        return f"Connection<host={self.host},port={self.port},db={self._db}>"
+
+    @property
+    def location(self) -> str:
+        return f"host={self.host},port={self.port}"
+
 
 class UnixDomainSocketConnection(BaseConnection):
-    description: ClassVar[str] = "UnixDomainSocketConnection<path={path},db={db}>"
-    locator: ClassVar[str] = "path={path}"
+    class Params(BaseConnectionParams):
+        """
+        :meta private:
+        """
 
-    def __init__(
-        self,
-        path: str = "",
-        username: str | None = None,
-        password: str | None = None,
-        credential_provider: AbstractCredentialProvider | None = None,
-        db: int = 0,
-        stream_timeout: float | None = None,
-        connect_timeout: float | None = None,
-        encoding: str = "utf-8",
-        decode_responses: bool = False,
-        *,
-        client_name: str | None = None,
-        max_idle_time: int | None = None,
-        **_: RedisValueT,
-    ) -> None:
-        super().__init__(
-            stream_timeout,
-            encoding,
-            decode_responses,
-            client_name=client_name,
-            max_idle_time=max_idle_time,
-        )
+        path: str
+
+    def __init__(self, path: str = "", **kwargs: Unpack[BaseConnectionParams]) -> None:
+        super().__init__(**kwargs)
         self.path = path
-        self.db = db
-        self.username = username
-        self.password = password
-        self.credential_provider = credential_provider
-        self._connect_timeout = connect_timeout
-        self._description_args = lambda: {"path": self.path, "db": self.db}
 
-    @override
     async def _connect(self) -> ByteStream:
         with fail_after(self._connect_timeout):
             return await connect_unix(self.path)
+
+    def describe(self) -> str:
+        return f"UnixDomainSocketConnection<path={self.path},db={self._db}>"
+
+    @property
+    def location(self) -> str:
+        return f"path={self.path}"
 
 
 class ClusterConnection(Connection):
     "Manages TCP communication to and from a Redis server"
 
-    description: ClassVar[str] = "ClusterConnection<host={host},port={port}>"
-    locator: ClassVar[str] = "host={host},port={port}"
     node: ManagedNode
 
     def __init__(
         self,
         host: str = "127.0.0.1",
         port: int = 6379,
-        username: str | None = None,
-        password: str | None = None,
-        credential_provider: AbstractCredentialProvider | None = None,
-        db: int | None = 0,
-        stream_timeout: float | None = None,
-        connect_timeout: float | None = None,
-        ssl_context: ssl.SSLContext | None = None,
-        encoding: str = "utf-8",
-        decode_responses: bool = False,
-        socket_keepalive: bool | None = None,
-        socket_keepalive_options: dict[int, int | bytes] | None = None,
         *,
-        client_name: str | None = None,
         read_from_replicas: bool = False,
-        noreply: bool = False,
-        noevict: bool = False,
-        notouch: bool = False,
-        max_idle_time: int | None = None,
+        **kwargs: Unpack[BaseConnectionParams],
     ) -> None:
         self.read_from_replicas = read_from_replicas
         super().__init__(
             host=host,
             port=port,
-            username=username,
-            password=password,
-            credential_provider=credential_provider,
-            db=db,
-            stream_timeout=stream_timeout,
-            connect_timeout=connect_timeout,
-            ssl_context=ssl_context,
-            encoding=encoding,
-            decode_responses=decode_responses,
-            socket_keepalive=socket_keepalive,
-            socket_keepalive_options=socket_keepalive_options,
-            client_name=client_name,
-            noreply=noreply,
-            noevict=noevict,
-            notouch=notouch,
-            max_idle_time=max_idle_time,
+            **kwargs,
         )
 
         async def _on_connect(*_: Any) -> None:
@@ -846,3 +839,10 @@ class ClusterConnection(Connection):
                 assert (await self.create_request(b"READONLY", decode=False)) == b"OK"
 
         self.register_connect_callback(_on_connect)
+
+    def describe(self) -> str:
+        return f"ClusterConnection<path={self.host},db={self.port}>"
+
+    @property
+    def location(self) -> str:
+        return f"host={self.host},port={self.port}"

@@ -8,9 +8,9 @@ from anyio import AsyncContextManagerMixin, ConnectionFailed
 from anyio.abc import ByteStream
 from typing_extensions import Self, override
 
-from coredis import Redis
+from coredis import BaseConnection, Redis
 from coredis._utils import nativestr
-from coredis.connection import Connection
+from coredis.connection import BaseConnectionParams, Connection
 from coredis.exceptions import (
     ConnectionError,
     PrimaryNotFoundError,
@@ -27,11 +27,14 @@ from coredis.typing import (
     ResponsePrimitive,
     StringT,
     TypeAdapter,
+    Unpack,
 )
 
 
 class SentinelManagedConnection(Connection, Generic[AnyStr]):
-    def __init__(self, connection_pool: SentinelConnectionPool, **kwargs: Any):
+    def __init__(
+        self, connection_pool: SentinelConnectionPool, **kwargs: Unpack[BaseConnectionParams]
+    ):
         self.connection_pool: SentinelConnectionPool = connection_pool
         super().__init__(**kwargs)
 
@@ -69,17 +72,19 @@ class SentinelConnectionPool(ConnectionPool):
         sentinel_manager: Sentinel[Any],
         is_primary: bool = True,
         check_connection: bool = False,
-        **kwargs: Any,
+        _cache: AbstractCache | None = None,
+        **kwargs: Unpack[BaseConnectionParams],
     ):
+        super().__init__(_cache=_cache, **kwargs)
         self.is_primary = is_primary
-        kwargs["connection_class"] = SentinelManagedConnection
-        super().__init__(**kwargs)
-        self.connection_kwargs["connection_pool"] = self
         self.service_name = nativestr(service_name)
         self.sentinel_manager = sentinel_manager
         self.check_connection = check_connection
         self.primary_address: tuple[str, int] | None = None
         self.replica_counter: int | None = None
+
+    def _construct_connection(self) -> BaseConnection:
+        return SentinelManagedConnection(connection_pool=self, **self.connection_kwargs)
 
     def __repr__(self) -> str:
         return (
@@ -222,15 +227,12 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
             yield self
 
     def __repr__(self) -> str:
-        sentinel_addresses: list[str] = []
-        for sentinel in self.sentinels:
-            sentinel_addresses.append(
-                "{}:{}".format(
-                    sentinel.connection_pool.connection_kwargs["host"],
-                    sentinel.connection_pool.connection_kwargs["port"],
-                )
-            )
-        return "{}<sentinels=[{}]>".format(type(self).__name__, ",".join(sentinel_addresses))
+        sentinels = [
+            f"{connection_args['host']}:{connection_args['port']}"  # type: ignore
+            for sentinel in self.sentinels
+            if (connection_args := sentinel.connection_pool.connection_kwargs)
+        ]
+        return f"{type(self).__name__}<sentinels=[{','.join(sentinels)}]>"
 
     def __check_primary_state(
         self,
