@@ -217,8 +217,8 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         async with AsyncExitStack() as stack:
-            for s in self.sentinels:
-                await stack.enter_async_context(s.__asynccontextmanager__())
+            for sentinel in self.sentinels:
+                await stack.enter_async_context(sentinel)
             yield self
 
     def __repr__(self) -> str:
