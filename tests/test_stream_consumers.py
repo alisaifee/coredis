@@ -50,6 +50,12 @@ class TestStreamConsumers:
                 int(entry.field_values[_s("id")]) for entry in consumed[_s("b")]
             ]
 
+    async def test_single_consumer_no_entries(self, client, _s):
+        async with Consumer(client, ["a", "b"]) as consumer:
+            async for stream, entry in consumer:
+                assert False
+            assert (None, None) == await consumer.get_entry()
+
     async def test_single_consumer(self, client, _s):
         async with Consumer(client, ["a", "b"]) as consumer:
             [await client.xadd("a", {"id": i}) for i in range(10)]
@@ -134,6 +140,14 @@ class TestStreamConsumers:
             assert list(range(10, 15)) == [
                 int(entry.field_values[_s("id")]) for entry in consumed[_s("b")]
             ]
+
+    async def test_single_group_consumer_no_entries(self, client, _s):
+        async with GroupConsumer(
+            client, ["a", "b"], "group-a", "consumer-a", auto_acknowledge=True
+        ) as consumer:
+            async for stream, entry in consumer:
+                assert False
+            assert (None, None) == await consumer.get_entry()
 
     async def test_single_group_consumer(self, client, _s):
         with pytest.raises(StreamConsumerInitializationError):

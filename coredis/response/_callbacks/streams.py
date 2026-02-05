@@ -117,12 +117,12 @@ class StreamInfoCallback(ResponseCallback[ResponseType, StreamInfo]):
             e1: StreamEntry | None = None
             en: StreamEntry | None = None
 
-            if len(res.get(k1, [])) > 0:
+            if len(res.get(k1, []) or []) > 0:
                 v = res.get(k1)
                 e1 = StreamEntry(v[0], flat_pairs_to_ordered_dict(v[1]))
                 res.pop(k1)
 
-            if len(res.get(kn, [])) > 0:
+            if len(res.get(kn, []) or []) > 0:
                 v = res.get(kn)
                 en = StreamEntry(v[0], flat_pairs_to_ordered_dict(v[1]))
                 res.pop(kn)
