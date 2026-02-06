@@ -310,6 +310,17 @@ class TestConnectionPoolURLParsing:
             "password": "mypassword",
         }
 
+    def test_password_from_kwargs(self):
+        pool = coredis.ConnectionPool.from_url("redis://user:@localhost", password="password")
+        assert pool.connection_class == coredis.Connection
+        assert pool.connection_kwargs == {
+            "host": "localhost",
+            "port": 6379,
+            "db": 0,
+            "username": "user",
+            "password": "password",
+        }
+
     def test_quoted_password(self):
         pool = coredis.ConnectionPool.from_url(
             "redis://:%2Fmypass%2F%2B word%3D%24+@localhost", decode_components=True

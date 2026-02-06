@@ -112,8 +112,8 @@ class ConnectionPool:
                 else:
                     url_options[name] = value[0]
 
-        username: str | None = parsed_url.username
-        password: str | None = parsed_url.password
+        username: str | None = parsed_url.username or kwargs.get("username", parsed_url.username)
+        password: str | None = parsed_url.password or kwargs.get("password", parsed_url.password)
         path: str | None = parsed_url.path
         hostname: str | None = parsed_url.hostname
 
