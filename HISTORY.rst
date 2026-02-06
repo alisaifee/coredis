@@ -90,6 +90,16 @@ Release Date: 2026-01-18
   * Remove ``Monitor`` wrapper.
   * Remove ``RedisGraph`` module support.
 
+v5.7.0
+------
+Release Date: 2026-02-05
+
+* Bug Fix
+
+  * Ensure username and password provided as keyword arguments
+    to `from_url` are used if there are none found in the url
+    itself.
+
 v5.6.0
 ------
 Release Date: 2026-01-19
@@ -2155,6 +2165,7 @@ v1.0.1
 * fix bug of `PubSub.run_in_thread`
 * add more examples
 * change `Script.register` to `Script.execute`
+
 
 
 
