@@ -9,7 +9,7 @@ credentials stored in external credential providers such as AWS IAM.
 
 Using the Credential Provider
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-**coredis** comes with a basic implementation of the :class:`coredis.credentials.AbstractCredentialProvider`
+**coredis** comes with a basic implementation of the :class:`~coredis.credentials.AbstractCredentialProvider`
 interface. This is :class:`~coredis.credentials.UserPassCredentialProvider`. It allows a user
 to specify a username and/or password that will be used to authenticate with a redis instance.
 When the :meth:`~coredis.credentials.AbstractCredentialProvider.get_credentials` is called, the

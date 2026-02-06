@@ -117,7 +117,7 @@ coredis ships with three types of connections.
 Custom connection classes
 =========================
 You can create your own connection subclasses by deriving from
-:class:`coredis.connection.BaseConnection` as well. This may be useful if
+:class:`~coredis.connection.BaseConnection` as well. This may be useful if
 you want to control the socket behavior within an async framework. To
 instantiate a client class using your own connection, you need to create
 a connection pool, passing your class to the connection_class argument.

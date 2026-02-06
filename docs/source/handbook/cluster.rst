@@ -1,8 +1,8 @@
 Redis Cluster
 -------------
 If your infrastructure contains a :term:`Redis Cluster`, **coredis** provides
-a :class:`coredis.RedisCluster` client than can be used with the same API
-as :class:`coredis.Redis` but with awareness of distributing the operations
+a :class:`~coredis.RedisCluster` client than can be used with the same API
+as :class:`~coredis.Redis` but with awareness of distributing the operations
 to the appropriate shards.
 
 For operations that operate on single keys the client simply routes the command

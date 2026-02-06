@@ -89,7 +89,7 @@ As are :class:`set` and :class:`tuple`
 ==========================
 Inline Transform Callables
 ==========================
-If you prefer not to use :class:`coredis.typing.TypeAdapter` to register serializers & deserializers
+If you prefer not to use :class:`~coredis.typing.TypeAdapter` to register serializers & deserializers
 you can also provide a callable directly to :meth:`~coredis.commands.CommandRequest.transform`:
 
 .. code-block:: python

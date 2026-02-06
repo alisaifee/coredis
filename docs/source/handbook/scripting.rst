@@ -9,7 +9,7 @@ scenarios. Therefore, coredis exposes a :class:`~coredis.commands.Script`
 class that makes scripting much easier to use.
 
 To create a Script instance, use the :meth:`~coredis.Redis.register_script` function on a client
-instance passing the LUA code as the first argument. :meth:`coredis.Redis.register_script` returns
+instance passing the LUA code as the first argument. :meth:`~coredis.Redis.register_script` returns
 a :class:`~coredis.commands.Script` instance that you can use throughout your code.
 
 The following trivial LUA script accepts two parameters: the name of a key and
@@ -216,9 +216,9 @@ Using the same example ``mylib`` lua library, this could be mapped to a python c
             ...
 
 The above example uses default arguments with :meth:`~coredis.commands.Library.wraps` to show
-what is possible by simply using the :data:`coredis.typing.KeyT` annotation to map arguments
+what is possible by simply using the :data:`~coredis.typing.KeyT` annotation to map arguments
 of the decorated methods to ``keys`` and the remaining arguments as ``args``. Refer to the
-API documentation of :meth:`coredis.commands.function.wraps` for details on how to customize
+API documentation of :meth:`~coredis.commands.function.wraps` for details on how to customize
 the key/argument mapping behavior.
 
 This can now be used as you would expect::

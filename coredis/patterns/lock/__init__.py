@@ -34,8 +34,8 @@ class Lock(Generic[AnyStr], AsyncContextManagerMixin):
     documentation and the
     `Redlock Algorithm <https://redis.io/docs/develop/clients/patterns/distributed-locks/#the-redlock-algorithm>`__
 
-    The lock can be used with both :class:`coredis.Redis`
-    and :class:`coredis.RedisCluster` either explicitly or as an async context
+    The lock can be used with both :class:`~coredis.Redis`
+    and :class:`~coredis.RedisCluster` either explicitly or as an async context
     manager::
 
 
@@ -134,7 +134,7 @@ class Lock(Generic[AnyStr], AsyncContextManagerMixin):
         """
         Use :rediscommand:`SET` with the ``NX`` option
         to acquire a lock. If the lock is being used with a cluster client
-        the :meth:`coredis.RedisCluster.ensure_replication` context manager
+        the :meth:`~coredis.RedisCluster.ensure_replication` context manager
         will be used to ensure that the command was replicated to atleast
         half the replicas of the shard where the lock would be acquired.
 

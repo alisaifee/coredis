@@ -2,9 +2,9 @@ PubSub
 ------
 PubSub is implemented through the following classes:
 
-- Single Redis Server: :class:`coredis.commands.PubSub`
-- Redis Cluster: :class:`coredis.commands.ClusterPubSub`
-- Redis Cluster (with sharded pubsub): :class:`coredis.commands.ShardedPubSub`
+- Single Redis Server: :class:`~coredis.patterns.pubsub.PubSub`
+- Redis Cluster: :class:`~coredis.patterns.pubsub.ClusterPubSub`
+- Redis Cluster (with sharded pubsub): :class:`~coredis.patterns.pubsub.ShardedPubSub`
 
 Creating an instance can be done through the :meth:`coredis.Redis.pubsub`,
 :meth:`coredis.RedisCluster.pubsub`, :meth:`coredis.RedisCluster.sharded_pubsub` methods
@@ -14,8 +14,8 @@ Subscription management
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 Channels or patterns can either be subscribed to on instantiation through
-constructor parameters or explicitly through the :meth:`~coredis.commands.PubSub.subscribe`
-or :meth:`~coredis.commands.PubSub.psubscribe` methods.
+constructor parameters or explicitly through the :meth:`~coredis.patterns.pubsub.PubSub.subscribe`
+or :meth:`~coredis.patterns.pubsub.PubSub.psubscribe` methods.
 
 Upon instantiation::
 
@@ -41,8 +41,8 @@ The async context manager automatically manages unsubscribing and cleanup on exi
     # back to the connection pool when the context manager exits.
 
 If desired unsubscription can also be done explicitly by calling
-:meth:`~coredis.commands.PubSub.unsubscribe` for channels
-and :meth:`~coredis.commands.PubSub.punsubscribe` for patterns.
+:meth:`~coredis.patterns.pubsub.PubSub.unsubscribe` for channels
+and :meth:`~coredis.patterns.pubsub.PubSub.punsubscribe` for patterns.
 
 In the following example if any of the channels that the client was initially subscribed
 to contain a ``STOP`` message the consumer will unsubscribe from the channel and continue
@@ -63,9 +63,9 @@ Consuming Messages
 
 Messages received on the subscribed topics or patterns can be read either by
 using the pubsub instance itself as an async iterator or explicitly by calling
-the :meth:`~coredis.commands.PubSub.get_message` method.
+the :meth:`~coredis.patterns.pubsub.PubSub.get_message` method.
 
-Every message read from a :class:`~coredis.commands.PubSub` instance
+Every message read from a :class:`~coredis.patterns.pubsub.PubSub` instance
 will be a typed dictionary defined as:
 
 .. autoclass:: coredis.response.types.PubSubMessage
@@ -82,7 +82,7 @@ With the iterator::
 .. note:: Unsubscribing from all subscribed channels will result in the iterator
    ending (i.e. raising :exc:`StopAsyncIteration`)
 
-Explicitly with :meth:`~coredis.commands.PubSub.get_message`::
+Explicitly with :meth:`~coredis.patterns.pubsub.PubSub.get_message`::
 
     while True:
         message = await consumer.get_message()
@@ -90,12 +90,12 @@ Explicitly with :meth:`~coredis.commands.PubSub.get_message`::
             # do something with the message
 
 
-.. note:: When using :meth:`~coredis.commands.PubSub.get_message` the return
-   could be ``None`` either if :paramref:`~coredis.commands.PubSub.get_message.timeout` is
+.. note:: When using :meth:`~coredis.patterns.pubsub.PubSub.get_message` the return
+   could be ``None`` either if :paramref:`~coredis.patterns.pubsub.PubSub.get_message.timeout` is
    exceeded without receiving a message or:
 
    - **if** the message was a subscription / unsubscription response and the instance was created
-     with :paramref:`coredis.commands.PubSub.ignore_subscribe_messages` set to ``True``
+     with :paramref:`~coredis.patterns.pubsub.PubSub.ignore_subscribe_messages` set to ``True``
    - **if** the message was received on a channel or pattern that has a handler registered (See :ref:`handbook/pubsub:callbacks` below)
 
 Callbacks
@@ -108,7 +108,7 @@ with its value being the callback function.
 
 When a message is read on a channel or pattern with a message handler, the
 message dictionary is created and passed to the message handler. In this case,
-a ``None`` value is returned from :meth:`~coredis.commands.PubSub.get_message`
+a ``None`` value is returned from :meth:`~coredis.patterns.pubsub.PubSub.get_message`
 since the message was already handled.
 
 .. code-block:: python
@@ -156,10 +156,10 @@ supported:
 Cluster Pub/Sub
 ^^^^^^^^^^^^^^^
 
-The :class:`coredis.RedisCluster` client exposes two ways of building a :term:`Pub/Sub`
+The :class:`~coredis.RedisCluster` client exposes two ways of building a :term:`Pub/Sub`
 application.
 
-:meth:`coredis.RedisCluster.pubsub` returns an instance of :class:`coredis.commands.ClusterPubSub`
+:meth:`~coredis.RedisCluster.pubsub` returns an instance of :class:`~coredis.patterns.pubsub.ClusterPubSub`
 which exposes identical functionality to the non clustered client. This is possible
 without worrying about sharding as the :rediscommand:`PUBLISH` command in clustered redis results
 in messages being broadcasted to every node in the cluster.
@@ -181,11 +181,11 @@ to route keys to shards.
 .. note:: There is no corresponding support for pattern based subscriptions
    (as you might have guessed, it wouldn't be possible to shard those).
 
-Access to Sharded Pub/Sub is available through the :meth:`coredis.RedisCluster.sharded_pubsub`
+Access to Sharded Pub/Sub is available through the :meth:`~coredis.RedisCluster.sharded_pubsub`
 method which exposes the same api and functionality (except for pattern support) as the other previously mentioned `PubSub` classes.
 
 To publish a messages that is meant to be consumed by a Sharded Pub/Sub consumer use
-:meth:`coredis.Redis.spublish` instead of :meth:`coredis.Redis.publish`
+:meth:`~coredis.Redis.spublish` instead of :meth:`~coredis.Redis.publish`
 
 :term:`Sharded Pub/Sub` can provide much better performance as each node in the cluster
 only routes messages for channels that reside on the node (which in turn means that **coredis**

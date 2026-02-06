@@ -9,7 +9,7 @@ abstractions for building stream consumers.
 Simple Consumer
 ^^^^^^^^^^^^^^^
 
-The :class:`~coredis.patterns.streams.Consumer` returned by :meth:`coredis.Redis.xconsumer` can be used as an
+The :class:`~coredis.patterns.streams.Consumer` returned by :meth:`~coredis.Redis.xconsumer` can be used as an
 independent consumer that can read from one or many streams. The consumer has limited scope
 and can be configured with a collection of :paramref:`~coredis.Redis.xconsumer.streams`
 to read from which by default starts from the latest entry observed upon initialization.
@@ -83,7 +83,7 @@ the performance characteristics of your application such as:
 Group Consumer
 ^^^^^^^^^^^^^^
 
-:class:`~coredis.patterns.streams.GroupConsumer` returned by :meth:`coredis.Redis.xconsumer` when
+:class:`~coredis.patterns.streams.GroupConsumer` returned by :meth:`~coredis.Redis.xconsumer` when
 :paramref:`~coredis.Redis.xconsumer.group` and :paramref:`~coredis.Redis.xconsumer.consumer`
 are both provided, has an identical interface as that provided by the standalone consumer.
 It differs significantly however, in the use cases for which it is applicable.

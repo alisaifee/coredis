@@ -428,8 +428,8 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
 class PubSub(BasePubSub[AnyStr, "coredis.pool.ConnectionPool"]):
     """
-    Pub/Sub implementation to be used with :class:`coredis.Redis`
-    that is returned by :meth:`coredis.Redis.pubsub`
+    Pub/Sub implementation to be used with :class:`~coredis.Redis`
+    that is returned by :meth:`~coredis.Redis.pubsub`
 
     An instance of this class is both an async context manager (to
     ensure that proper clean up of connections & subscriptions happens automatically)
@@ -465,8 +465,8 @@ class PubSub(BasePubSub[AnyStr, "coredis.pool.ConnectionPool"]):
 
 class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
     """
-    Pub/Sub implementation to be used with :class:`coredis.RedisCluster`
-    that is returned by :meth:`coredis.RedisCluster.pubsub`
+    Pub/Sub implementation to be used with :class:`~coredis.RedisCluster`
+    that is returned by :meth:`~coredis.RedisCluster.pubsub`
 
     .. note:: This implementation does not particularly benefit from having
        multiple nodes in a cluster as it subscribes to messages sent to channels
@@ -476,8 +476,8 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
        any channel - which inherently limits the potential for scaling.
 
        :redis-version:`7.0` introduces the concept of Sharded Pub/Sub which
-       can be accessed by instead using :meth:`coredis.RedisCluster.sharded_pubsub`
-       which uses the implementation in :class:`coredis.commands.ShardedPubSub`.
+       can be accessed by instead using :meth:`~coredis.RedisCluster.sharded_pubsub`
+       which uses the implementation in :class:`~coredis.commands.ShardedPubSub`.
 
     An instance of this class is both an async context manager (to
     ensure that proper clean up of connections & subscriptions happens automatically)
@@ -513,8 +513,8 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 @versionadded(version="3.6.0")
 class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
     """
-    Sharded Pub/Sub implementation to be used with :class:`coredis.RedisCluster`
-    that is returned by :meth:`coredis.RedisCluster.sharded_pubsub`
+    Sharded Pub/Sub implementation to be used with :class:`~coredis.RedisCluster`
+    that is returned by :meth:`~coredis.RedisCluster.sharded_pubsub`
 
     For details about the server architecture refer to the `Redis manual entry
     on Sharded Pub/sub <https://redis.io/docs/develop/pubsub/#sharded-pubsub>`__
