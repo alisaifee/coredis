@@ -119,6 +119,7 @@ without ever seeing an entry that the other has fetched::
     #   consumer = "consumer-1",
     #   auto_acknowledge = True,
     # )
+
 .. note:: Setting the :paramref:`~coredis.Redis.xconsumer.auto_acknowledge`
    parameter ensures that the consumers don't need to explicitly acknowledge
    the entries that they fetch thus resulting in the received entries not

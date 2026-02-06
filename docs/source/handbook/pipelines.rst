@@ -33,6 +33,7 @@ For example:
          value = pipe.incr("foo")
 
      v: int = await value
+
 Atomicity & Transactions
 ^^^^^^^^^^^^^^^^^^^^^^^^
 In addition, pipelines can also ensure the buffered commands are executed

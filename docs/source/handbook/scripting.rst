@@ -214,6 +214,7 @@ Using the same example ``mylib`` lua library, this could be mapped to a python c
             as defaults if they are not found in any of the hashes at ``keys``
             """
             ...
+
 The above example uses default arguments with :meth:`~coredis.commands.Library.wraps` to show
 what is possible by simply using the :data:`coredis.typing.KeyT` annotation to map arguments
 of the decorated methods to ``keys`` and the remaining arguments as ``args``. Refer to the
