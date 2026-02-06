@@ -625,8 +625,8 @@ class Redis(Client[AnyStr]):
         Changes
           - .. versionremoved:: 6.0.0
             - :paramref:`protocol_version` removed (and therefore support for RESP2)
-          - .. versionadded:: 6.0.0
-            -  TODO: Add stuff
+          - .. versionchanged:: 6.0.0
+            -  The client is now an async context manager and must always be used as such.
           - .. versionadded:: 4.12.0
 
             - :paramref:`retry_policy`

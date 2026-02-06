@@ -17,7 +17,7 @@ from anyio import (
     sleep,
 )
 from anyio.abc import TaskStatus
-from deprecated.sphinx import versionadded
+from deprecated.sphinx import versionadded, versionchanged
 
 from coredis._utils import b, hash_slot, nativestr
 from coredis.commands.constants import CommandName
@@ -426,6 +426,10 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         self._subscribed.set()
 
 
+@versionchanged(
+    version="6.0.0",
+    reason="The class supports the async context manager protocol and must always be used as such",
+)
 class PubSub(BasePubSub[AnyStr, "coredis.pool.ConnectionPool"]):
     """
     Pub/Sub implementation to be used with :class:`~coredis.Redis`
@@ -438,31 +442,35 @@ class PubSub(BasePubSub[AnyStr, "coredis.pool.ConnectionPool"]):
 
     Recommended use::
 
-        client = coredis.Redis(decode_responses=True)
-        async for message in client.pubsub(
-          ignore_subscribe_messages=True,
-          channels=["channel-1", "channel-2"]
-        ):
-            match message["channel"]:
-                case "channel-1":
-                    print("first", message["data"])
-                case "channel-2":
-                    print("second", message["data"])
+        async with coredis.Redis(decode_responses=True) as client:
+            async with client.pubsub(
+              ignore_subscribe_messages=True,
+              channels=["channel-1", "channel-2"]
+            ) as pubsub:
+                async for message in pubsub:
+                    match message["channel"]:
+                        case "channel-1":
+                            print("first", message["data"])
+                        case "channel-2":
+                            print("second", message["data"])
 
     Or to explicitly subscribe::
 
-        client = coredis.Redis(decode_responses=True)
-        pubsub = client.pubsub()
-        async with pubsub:
-            await pubsub.subscribe("channel-1")
-            assert (await pubsub.get_message())["channel"] == "channel-1"
-            async for message in pubsub:
-                print(message["data"])
+        async with coredis.Redis(decode_responses=True) as client:
+            async with client.pubsub() as pubsub:
+                await pubsub.subscribe("channel-1")
+                assert (await pubsub.get_message())["channel"] == "channel-1"
+                async for message in pubsub:
+                    print(message["data"])
 
     For more details see :ref:`handbook/pubsub:pubsub`
     """
 
 
+@versionchanged(
+    version="6.0.0",
+    reason="The class supports the async context manager protocol and must always be used as such",
+)
 class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
     """
     Pub/Sub implementation to be used with :class:`~coredis.RedisCluster`
@@ -510,6 +518,10 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         await self._retry_policy.call_with_retries(_run)
 
 
+@versionchanged(
+    version="6.0.0",
+    reason="The class supports the async context manager protocol and must always be used as such",
+)
 @versionadded(version="3.6.0")
 class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
     """

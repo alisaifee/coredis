@@ -45,8 +45,8 @@ class State(TypedDict, total=False):
 @versionchanged(
     version="6.0.0",
     reason="""
-Consumer instances are no longer awaitable and must be used
-either as async context managers, or as async iterators.
+Consumers are no longer awaitable. They support the 
+async context manager protocol and must be used as such.
 """,
 )
 class Consumer(Generic[AnyStr], AsyncContextManagerMixin):
@@ -208,6 +208,13 @@ class Consumer(Generic[AnyStr], AsyncContextManagerMixin):
         return cur_stream, cur
 
 
+@versionchanged(
+    version="6.0.0",
+    reason="""
+Group Consumers are no longer awaitable. They support the 
+async context manager protocol and must be used as such.
+""",
+)
 class GroupConsumer(Consumer[AnyStr]):
     DEFAULT_START_ID: ClassVar[bytes] = b">"
 

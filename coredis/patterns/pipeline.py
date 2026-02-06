@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from typing import Any, cast
 
 from anyio import AsyncContextManagerMixin
+from deprecated.sphinx import versionchanged
 
 from coredis._utils import b, hash_slot, nativestr
 from coredis.client import Client, RedisCluster
@@ -299,6 +300,10 @@ class NodeCommands(AsyncContextManagerMixin):
                 raise multi_result
 
 
+@versionchanged(
+    version="6.0.0",
+    reason="Pipelines are no longer awaitable. They support the async context manager protocol and must always be used as such",
+)
 class Pipeline(Client[AnyStr]):
     """
     Pipeline for batching multiple commands to a Redis server.
@@ -622,6 +627,10 @@ class Pipeline(Client[AnyStr]):
             await self.clear()
 
 
+@versionchanged(
+    version="6.0.0",
+    reason="Cluster Pipelines are no longer awaitable. They support the async context manager protocol and must always be used as such",
+)
 class ClusterPipeline(Client[AnyStr]):
     """
     Pipeline for batching commands to a Redis Cluster.
