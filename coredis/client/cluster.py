@@ -510,7 +510,7 @@ class RedisCluster(
             **kwargs,
         )
 
-        self.refresh_table_asap: bool = False
+        self.refresh_table_asap: bool = True
         self.route_flags: dict[bytes, NodeFlag] = self.__class__.ROUTING_FLAGS.copy()
         self.split_flags: dict[bytes, NodeFlag] = self.__class__.SPLIT_FLAGS.copy()
         self.result_callbacks: dict[bytes, Callable[..., Any]] = (
@@ -643,8 +643,6 @@ class RedisCluster(
 
     @contextlib.asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        if self.refresh_table_asap:
-            self.connection_pool.initialized = False
         async with self.connection_pool:
             self.refresh_table_asap = False
             yield self
@@ -694,7 +692,7 @@ class RedisCluster(
 
     async def _ensure_initialized(self) -> None:
         if not self.connection_pool.initialized or self.refresh_table_asap:
-            await self.connection_pool.initialize()
+            await self.connection_pool.refresh_cluster_mapping(forced=True)
 
     def _determine_slots(
         self, command: bytes, *args: RedisValueT, **options: Unpack[ExecutionParameters]
@@ -758,11 +756,9 @@ class RedisCluster(
         return None
 
     async def on_connection_error(self, _: BaseException) -> None:
-        self.connection_pool.reset()
         self.refresh_table_asap = True
 
     async def on_cluster_down_error(self, _: BaseException) -> None:
-        self.connection_pool.reset()
         self.refresh_table_asap = True
 
     async def execute_command(
@@ -905,8 +901,7 @@ class RedisCluster(
             remaining_attempts -= 1
             released = False
             if self.refresh_table_asap and not slots:
-                # await self
-                pass
+                await self.connection_pool.refresh_cluster_mapping(forced=True)
             _node = None
             if asking and redirect_addr:
                 _node = pool.nodes.nodes[redirect_addr]

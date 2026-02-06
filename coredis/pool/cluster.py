@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import random
-import threading
 import warnings
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, cast
@@ -124,7 +123,7 @@ class ClusterConnectionPool(ConnectionPool):
         self.read_from_replicas = read_from_replicas or readonly
         # TODO: Use the `max_failures` argument of tracking cache
         self.cache = ClusterTrackingCache(self, _cache) if _cache else None
-        self.reset()
+        self.__reset()
 
         if "stream_timeout" not in self.connection_kwargs:
             self.connection_kwargs["stream_timeout"] = None
@@ -149,7 +148,7 @@ class ClusterConnectionPool(ConnectionPool):
             self._counter += 1
             await self._task_group.__aenter__()
             # same as parent but do initialize() before cache setup
-            await self.initialize()
+            await self.refresh_cluster_mapping()
             if self.cache:
                 # TODO: handle cache failure so that the pool doesn't die
                 #  if the cache fails.
@@ -159,16 +158,18 @@ class ClusterConnectionPool(ConnectionPool):
         return self
 
     async def __aexit__(self, *args: Any) -> None:
-        self.reset()
+        self.__reset()
         await super().__aexit__(*args)
 
-    async def initialize(self) -> None:
-        if not self.initialized:
+    async def refresh_cluster_mapping(self, forced: bool = False) -> None:
+        if not self.initialized or forced:
             async with self._init_lock:
-                if self.initialized:
+                if self.initialized and not forced:
                     return
                 await self.nodes.initialize()
-
+                for node in self._cluster_available_connections:
+                    if node not in self.nodes.nodes:
+                        self._cluster_available_connections.pop(node)
                 if not self.max_connections_per_node and self.max_connections < len(
                     self.nodes.nodes
                 ):
@@ -233,11 +234,10 @@ class ClusterConnectionPool(ConnectionPool):
         except QueueFull:
             pass
 
-    def reset(self) -> None:
+    def __reset(self) -> None:
         """Resets the connection pool back to a clean state"""
         self.pid = os.getpid()
         self._cluster_available_connections = {}
-        self._check_lock = threading.Lock()
         self.initialized = False
 
     async def __wrap_connection(

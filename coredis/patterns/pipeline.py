@@ -756,8 +756,6 @@ class ClusterPipeline(Client[AnyStr]):
         """
         Execute all queued commands in the cluster pipeline. Returns a tuple of results.
         """
-        await self.connection_pool.initialize()
-
         if not self.command_stack:
             return
         if self.scripts:
