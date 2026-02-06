@@ -45,11 +45,6 @@ to the returns documented in the client API at :ref:`api/clients:clients`.
 
    Primitives returned by redis
 
-.. type:: coredis.typing.HashableResponseType
-
-   The structure of hashable response types (i.e. those that can
-   be members of sets or keys for maps)
-
 .. type:: coredis.typing.ResponseType
 
    The total structure of any response for any redis command.
