@@ -78,7 +78,7 @@ Feature Summary
 
 * Miscellaneous
 
-  * "Pretty complete" :ref:`handbook/typing:type annotations` for public API
+  * Strict :ref:`handbook/typing:type annotations` for public API
   * :ref:`handbook/typing:runtime type checking`
 
 Installation
