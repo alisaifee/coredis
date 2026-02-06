@@ -46,6 +46,8 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
     "sphinx_copybutton",
+    "sphinx_design",
+    "sphinx_inline_tabs",
     "sphinx_issues",
     "sphinx_paramlinks",
     "sphinx_sitemap",
