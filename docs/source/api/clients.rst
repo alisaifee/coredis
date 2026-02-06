@@ -5,10 +5,7 @@ Clients
    :class-doc-from: both
 .. autoclass:: coredis.RedisCluster
    :class-doc-from: both
-
-:mod:`coredis.sentinel`
-
-.. autoclass:: coredis.sentinel.Sentinel
+.. autoclass:: coredis.Sentinel
    :class-doc-from: both
 
 Redis Command related types
