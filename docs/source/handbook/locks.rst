@@ -13,7 +13,7 @@ are available in the clients.
 As an example, let's try to implement an atomic increment operation using a
 distributed lock
 
-.. code-block:: python
+::
 
     import asyncio
     import coredis

@@ -8,7 +8,7 @@ exiting the pipeline's async context manager**:
 
 For example:
 
-.. code-block:: python
+::
 
     async def example(client):
         async with client.pipeline(transaction=True) as pipe:
@@ -39,7 +39,7 @@ Atomicity & Transactions
 In addition, pipelines can also ensure the buffered commands are executed
 atomically as a group by using the :paramref:`~coredis.Redis.pipeline.transaction` argument.
 
-.. code-block:: python
+::
 
     pipe = r.pipeline(transaction=True)
 
@@ -59,7 +59,7 @@ execution of that transaction, the entire transaction will be canceled and a
 :exc:`~coredis.exceptions.WatchError` will be raised. To implement our own client-side :rediscommand:`INCR` command, we
 could do something like this:
 
-.. code-block:: python
+::
 
     async def incr(client: coredis.Redis, key: str) -> int:
         while True:

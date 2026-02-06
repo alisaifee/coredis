@@ -97,7 +97,7 @@ Getting started
 
 .. tab:: Single Node
 
-    .. code-block:: python
+    ::
 
         import anyio
         import coredis
@@ -127,7 +127,7 @@ Getting started
 
 .. tab:: Redis Cluster
 
-    .. code-block:: python
+    ::
 
         import anyio
         import coredis
@@ -159,7 +159,7 @@ Getting started
 
 .. tab:: Sentinel
 
-    .. code-block:: python
+    ::
 
         import anyio
         from coredis.sentinel import Sentinel

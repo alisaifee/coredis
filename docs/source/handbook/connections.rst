@@ -104,7 +104,7 @@ coredis ships with three types of connections.
   Additionally, make sure the parameter is defined in your redis.conf file. It's
   commented out by default.
 
-  .. code-block:: python
+  ::
 
       r = coredis.Redis(unix_socket_path='/tmp/redis.sock')
 
@@ -124,6 +124,6 @@ a connection pool, passing your class to the connection_class argument.
 Other keyword parameters you pass to the pool will be passed to the class
 specified during initialization.
 
-.. code-block:: python
+::
 
     pool = coredis.ConnectionPool(connection_class=YourConnectionClass, ...)

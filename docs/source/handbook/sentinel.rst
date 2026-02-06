@@ -8,7 +8,7 @@ in order to use coredis's Sentinel support.
 Connecting coredis to the Sentinel instance(s) is easy. You can use a
 Sentinel connection to discover the primary and replicas network addresses:
 
-.. code-block:: python
+::
 
     from coredis.sentinel import Sentinel
     sentinel = Sentinel([('localhost', 26379)], stream_timeout=0.1)
@@ -22,7 +22,7 @@ You can also create Redis client connections from a Sentinel instance. You can
 connect to either the primary (for write operations) or a replica (for read-only
 operations).
 
-.. code-block:: python
+::
 
     primary = sentinel.primary_for('myredis', stream_timeout=0.1)
     replica = sentinel.replica_for('myredis', stream_timeout=0.1)

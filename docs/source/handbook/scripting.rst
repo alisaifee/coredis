@@ -16,7 +16,7 @@ The following trivial LUA script accepts two parameters: the name of a key and
 a multiplier value. The script fetches the value stored in the key, multiplies
 it with the multiplier value and returns the result.
 
-.. code-block:: python
+::
 
     r = coredis.Redis()
     lua = """
@@ -40,7 +40,7 @@ invoked by calling it like a function. Script instances accept the following opt
 
 Continuing the example from above:
 
-.. code-block:: python
+::
 
     await r.set('foo', 2)
     await multiply(keys=['foo'], args=[5])
@@ -55,7 +55,7 @@ script and returns the result, 10.
 Script instances can be executed using a different client instance, even one
 that points to a completely different Redis server.
 
-.. code-block:: python
+::
 
     async with coredis.Redis() as r2:
         await r2.set('foo', 3)
@@ -71,7 +71,7 @@ passed as the client argument when calling the script. Care is taken to ensure
 that the script is registered in Redis's script cache just prior to pipeline
 execution.
 
-.. code-block:: python
+::
 
     async with r.pipeline() as pipe:
         r1 = pipe.set('foo', 5)

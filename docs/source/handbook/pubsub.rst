@@ -111,7 +111,7 @@ message dictionary is created and passed to the message handler. In this case,
 a ``None`` value is returned from :meth:`~coredis.patterns.pubsub.PubSub.get_message`
 since the message was already handled.
 
-.. code-block:: python
+::
 
     def my_handler(message):
         print('MY HANDLER: ', message['data'])
@@ -142,7 +142,7 @@ cannot be delivered.
 The Pub/Sub support commands :rediscommand:`PUBSUB-CHANNELS`, :rediscommand:`PUBSUB-NUMSUB` and :rediscommand:`PUBSUB-NUMPAT` are also
 supported:
 
-.. code-block:: python
+::
 
     await client.pubsub_channels()
     # ['foo', 'bar']

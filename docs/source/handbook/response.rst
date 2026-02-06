@@ -26,7 +26,7 @@ and deserialization of the responses.
 
 For example, using :class:`~decimal.Decimal` for numeric responses:
 
-.. code-block:: python
+::
 
     from decimal import Decimal
     from coredis import Redis
@@ -68,7 +68,7 @@ Automatic Collection Handling
 Collections of types that have been registered for serialization or deserialization are implicitly
 handled by coredis.
 
-.. code-block:: python
+::
 
     async with client:
         await client.lpush("prices", [Serializable(Decimal("9.99")), Serializable(Decimal("19.99"))])
@@ -77,7 +77,7 @@ handled by coredis.
 
 :class:`dict` is similarly managed:
 
-.. code-block:: python
+::
 
     async with client:
         await client.hset("inventory", {"apples": Serializable(Decimal(5)), "oranges": Serializable(Decimal(10))})
@@ -92,7 +92,7 @@ Inline Transform Callables
 If you prefer not to use :class:`~coredis.typing.TypeAdapter` to register serializers & deserializers
 you can also provide a callable directly to :meth:`~coredis.commands.CommandRequest.transform`:
 
-.. code-block:: python
+::
 
     await client.set("value", 1)
     result = await client.get("value").transform(lambda x: float(x))
