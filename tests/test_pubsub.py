@@ -112,7 +112,6 @@ class TestPubSubSubscribeUnsubscribe:
         self, p: PubSub, encoder, sub_type, unsub_type, sub_func, unsub_func, keys
     ):
         async with p:
-            p.connection.max_idle_time = 1
             for key in keys:
                 assert await sub_func(key) is None
             # should be a message for each channel/pattern we just subscribed to
@@ -120,8 +119,7 @@ class TestPubSubSubscribeUnsubscribe:
             for i, key in enumerate(keys):
                 assert await wait_for_message(p) == make_message(sub_type, encoder(key), i + 1)
 
-            # wait for disconnect
-            await anyio.sleep(2)
+            await p.connection.connection.send_eof()
             # calling get_message again reconnects and resubscribes
             # note, we may not re-subscribe to channels in exactly the same order
             # so we have to do some extra checks to make sure we got them all
