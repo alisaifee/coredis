@@ -278,7 +278,8 @@ class ConnectionPool:
                 url_options["ssl_context"] = RedisSSLContext(
                     keyfile, certfile, cert_reqs, ca_certs, check_hostname
                 ).get()
-            url_options["db"] = url_options.get("db", kwargs.get("db", None))
+            if db := url_options.get("db", kwargs.get("db", None)):
+                url_options["db"] = int(db)
 
         return connection_class, {**kwargs, **url_options}, tcp_params or uds_params
 
