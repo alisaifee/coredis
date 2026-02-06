@@ -42,14 +42,15 @@ class ConnectionPool:
     URL_QUERY_ARGUMENT_PARSERS: ClassVar[
         dict[str, Callable[..., int | float | bool | str | None]]
     ] = {
+        "max_connections": int,
+        "timeout": int,
         "client_name": str,
         "stream_timeout": float,
         "connect_timeout": float,
-        "max_connections": int,
         "max_idle_time": int,
-        "noreply": bool,
-        "noevict": bool,
-        "notouch": bool,
+        "noreply": query_param_to_bool,
+        "noevict": query_param_to_bool,
+        "notouch": query_param_to_bool,
     }
 
     def __init__(
@@ -212,7 +213,7 @@ class ConnectionPool:
         query_args = parse_qs(parsed_url.query)
         url_options = cls.PoolParams(
             **{  # type: ignore
-                name: cls.URL_QUERY_ARGUMENT_PARSERS.get(name, lambda value: value)(value)[0]  # type: ignore
+                name: cls.URL_QUERY_ARGUMENT_PARSERS.get(name, lambda value: value)(value[0])  # type: ignore
                 for name, value in query_args.items()
                 if name in cls.PoolParams.__annotations__ and value
             }
@@ -278,9 +279,8 @@ class ConnectionPool:
                     keyfile, certfile, cert_reqs, ca_certs, check_hostname
                 ).get()
             url_options["db"] = url_options.get("db", kwargs.get("db", None))
-        url_options.update(kwargs)
 
-        return connection_class, url_options, tcp_params or uds_params
+        return connection_class, {**kwargs, **url_options}, tcp_params or uds_params
 
     def _construct_connection(self) -> BaseConnection:
         return self.connection_class(**self.connection_kwargs)

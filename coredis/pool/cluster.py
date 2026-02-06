@@ -10,6 +10,7 @@ from anyio.abc import TaskStatus
 from typing_extensions import Self
 
 from coredis._concurrency import Queue, QueueFull
+from coredis._utils import query_param_to_bool
 from coredis.connection import BaseConnection, BaseConnectionParams, ClusterConnection, Connection
 from coredis.exceptions import RedisClusterException, RedisError
 from coredis.globals import READONLY_COMMANDS
@@ -47,10 +48,10 @@ class ClusterConnectionPool(ConnectionPool):
         dict[str, Callable[..., int | float | bool | str | None]]
     ] = {
         **ConnectionPool.URL_QUERY_ARGUMENT_PARSERS,
-        "max_connections_per_node": bool,
+        "max_connections_per_node": query_param_to_bool,
         "reinitialize_steps": int,
-        "skip_full_coverage_check": bool,
-        "read_from_replicas": bool,
+        "skip_full_coverage_check": query_param_to_bool,
+        "read_from_replicas": query_param_to_bool,
     }
 
     nodes: NodeManager
