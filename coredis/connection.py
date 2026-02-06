@@ -248,8 +248,8 @@ class BaseConnection(ABC):
         noreply: bool = False,
         noevict: bool = False,
         notouch: bool = False,
-        processing_budget: CapacityLimiter = CapacityLimiter(1),
         ssl_context: ssl.SSLContext | None = None,
+        processing_budget: CapacityLimiter = CapacityLimiter(1),
     ):
         """
         :param stream_timeout: Maximum time to wait for receiving a response
@@ -268,9 +268,9 @@ class BaseConnection(ABC):
         :param noreply: If True, disables replies for all commands.
         :param noevict: If True, sets CLIENT NO-EVICT on the connection.
         :param notouch: If True, sets CLIENT NO-TOUCH on the connection.
-        :param processing_budget: limiter to throttle CPU-bound processing.
         :param ssl_context: For TLS connections, the ssl context to use when performing
          the TLS handshake.
+        :param processing_budget: limiter to throttle CPU-bound processing.
         """
         self._stream_timeout = stream_timeout
         self._connect_timeout = connect_timeout
@@ -314,6 +314,10 @@ class BaseConnection(ABC):
         self._push_message_buffer_in, self._push_message_buffer_out = create_memory_object_stream[
             list[ResponseType]
         ](math.inf)
+        # buffer for streaming messages
+        self._streamed_message_buffer_in, self._streamed_message_buffer_out = (
+            create_memory_object_stream[ResponseType](math.inf)
+        )
         # buffer for writes to the socket
         self._write_buffer_in, self._write_buffer_out = create_memory_object_stream[list[bytes]](
             math.inf
@@ -425,6 +429,8 @@ class BaseConnection(ABC):
                     self._write_buffer_out,
                     self._push_message_buffer_in,
                     self._push_message_buffer_out,
+                    self._streamed_message_buffer_in,
+                    self._streamed_message_buffer_out,
                     create_task_group() as self._task_group,
                 ):
                     self._task_group.start_soon(self._reader_task)
@@ -515,6 +521,8 @@ class BaseConnection(ABC):
                         request.fail(response[1])
                     else:
                         request.resolve(response[1])
+                else:
+                    self._streamed_message_buffer_in.send_nowait(response[1])
             decode = self._requests[0].decode if self._requests else self._decode_responses
             response = self._parser.parse(
                 decode=decode,
@@ -658,6 +666,20 @@ class BaseConnection(ABC):
                 yield await self._push_message_buffer_out.receive()
         except (EndOfStream, BrokenResourceError, ClosedResourceError) as err:
             raise ConnectionError("Connection lost while waiting for push messages") from err
+
+    @property
+    async def streamed_messages(self) -> AsyncGenerator[ResponseType, None]:
+        """
+        Generator to retrieve messages received from the server that were not
+        sent as a response to a request made through this connection.
+        The generator will yield each message received in order until the
+        connection is lost and will raise an :exc:`~coredis.exceptions.ConnectionError`
+        """
+        try:
+            while True:
+                yield await self._streamed_message_buffer_out.receive()
+        except (EndOfStream, BrokenResourceError, ClosedResourceError) as err:
+            raise ConnectionError("Connection lost") from err
 
     def send_command(
         self,
