@@ -22,6 +22,6 @@ context manager. For example::
                 assert await client.get("fubar") == "baz"
 
 
-.. note:: In certain cases (exclusively for utility commands such as :meth:`coredis.Redis.info`)
+.. note:: In certain cases (exclusively for utility commands such as :meth:`~coredis.Redis.info`)
    inspecting the response string is necessary to destructure it into a usable shape
    and the response from the API will always be decoded to unicode strings.

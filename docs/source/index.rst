@@ -78,7 +78,7 @@ Feature Summary
 
 * Miscellaneous
 
-  * "Pretty complete" :ref:`handbook/typing:type annotations` for public API
+  * Strict :ref:`handbook/typing:type annotations` for public API
   * :ref:`handbook/typing:runtime type checking`
 
 Installation
@@ -95,58 +95,86 @@ especially when dealing with large bulk responses.
 Getting started
 ===============
 
-Single Node or Cluster client
------------------------------
+.. tab:: Single Node
 
-.. code-block:: python
+    ::
 
-    import anyio
-    import coredis
+        import anyio
+        import coredis
 
-    async def main() -> None:
-        client = coredis.Redis(host='127.0.0.1', port=6379, db=0, decode_responses=True)
-        # or cluster
-        # client = coredis.RedisCluster(startup_nodes=[{"host": "127.0.0.1", "port": 6379}], decode_responses=True)
-        async with client:
-            await client.flushdb()
+        async def main() -> None:
+            client = coredis.Redis(host='127.0.0.1', port=6379, db=0, decode_responses=True)
+            async with client:
+                await client.flushdb()
 
-            await client.set("foo", 1)
-            assert await client.exists(["foo"]) == 1
-            assert await client.incr("foo") == 2
-            assert await client.expire("foo", 1)
-            await anyio.sleep(0.1)
-            assert await client.ttl("foo") == 1
-            await anyio.sleep(1)
-            assert not await client.exists(["foo"])
+                await client.set("foo", 1)
+                assert await client.exists(["foo"]) == 1
+                assert await client.incr("foo") == 2
+                assert await client.expire("foo", 1)
+                await anyio.sleep(0.1)
+                assert await client.ttl("foo") == 1
+                await anyio.sleep(1)
+                assert not await client.exists(["foo"])
 
-            async with client.pipeline() as pipeline:
-                pipeline.incr("foo")
-                value = pipeline.get("foo")
-                pipeline.delete(["foo"])
+                async with client.pipeline() as pipeline:
+                    pipeline.incr("foo")
+                    value = pipeline.get("foo")
+                    pipeline.delete(["foo"])
 
-            assert await value == "1"
+                assert await value == "1"
 
-    anyio.run(main, backend="asyncio") # or trio
+        anyio.run(main, backend="asyncio") # or trio
 
-Sentinel
---------
+.. tab:: Redis Cluster
 
-.. code-block:: python
+    ::
 
-    import anyio
-    from coredis.sentinel import Sentinel
+        import anyio
+        import coredis
 
-    async def main() -> None:
-        sentinel = Sentinel(sentinels=[("localhost", 26379)])
-        async with sentinel:
-            primary = sentinel.primary_for("myservice")
-            replica = sentinel.replica_for("myservice")
+        async def main() -> None:
+            client = coredis.RedisCluster(
+                startup_nodes[{"host": "127.0.0.1", "port": 7000}], db=0, decode_responses=True
+            )
+            async with client:
+                await client.flushdb()
 
-            async with primary, replica:
-                assert await primary.set("fubar", 1)
-                assert int(await replica.get("fubar")) == 1
+                await client.set("foo", 1)
+                assert await client.exists(["foo"]) == 1
+                assert await client.incr("foo") == 2
+                assert await client.expire("foo", 1)
+                await anyio.sleep(0.1)
+                assert await client.ttl("foo") == 1
+                await anyio.sleep(1)
+                assert not await client.exists(["foo"])
 
-    anyio.run(main, backend="asyncio") # or trio
+                async with client.pipeline() as pipeline:
+                    pipeline.incr("foo")
+                    value = pipeline.get("foo")
+                    pipeline.delete(["foo"])
+
+                assert await value == "1"
+
+        anyio.run(main, backend="asyncio") # or trio
+
+.. tab:: Sentinel
+
+    ::
+
+        import anyio
+        from coredis.sentinel import Sentinel
+
+        async def main() -> None:
+            sentinel = Sentinel(sentinels=[("localhost", 26379)])
+            async with sentinel:
+                primary = sentinel.primary_for("myservice")
+                replica = sentinel.replica_for("myservice")
+
+                async with primary, replica:
+                    assert await primary.set("fubar", 1)
+                    assert int(await replica.get("fubar")) == 1
+
+        anyio.run(main, backend="asyncio") # or trio
 
 
 Compatibility

@@ -45,8 +45,8 @@ class State(TypedDict, total=False):
 @versionchanged(
     version="6.0.0",
     reason="""
-Consumer instances are no longer awaitable and must be used
-either as async context managers, or as async iterators.
+Consumers are no longer awaitable. They support the 
+async context manager protocol and must be used as such.
 """,
 )
 class Consumer(Generic[AnyStr], AsyncContextManagerMixin):
@@ -65,7 +65,7 @@ class Consumer(Generic[AnyStr], AsyncContextManagerMixin):
         Standalone stream consumer that starts reading from the latest entry
         of each stream provided in :paramref:`streams`.
 
-        The latest entry is determined by calling :meth:`coredis.Redis.xinfo_stream`
+        The latest entry is determined by calling :meth:`~coredis.Redis.xinfo_stream`
         and using the :data:`last-entry` attribute
         at the point of entering the consumer context or on first fetch (whichever comes
         first). If the stream(s) do not exist at the time of consumer creation, the
@@ -208,6 +208,13 @@ class Consumer(Generic[AnyStr], AsyncContextManagerMixin):
         return cur_stream, cur
 
 
+@versionchanged(
+    version="6.0.0",
+    reason="""
+Group Consumers are no longer awaitable. They support the 
+async context manager protocol and must be used as such.
+""",
+)
 class GroupConsumer(Consumer[AnyStr]):
     DEFAULT_START_ID: ClassVar[bytes] = b">"
 
@@ -226,7 +233,7 @@ class GroupConsumer(Consumer[AnyStr]):
     ):
         """
         A member of a stream consumer group. The consumer has an identical
-        interface as :class:`coredis.patterns.streams.Consumer`.
+        interface as :class:`~coredis.patterns.streams.Consumer`.
 
         :param client: The redis client to use
         :param streams: The stream identifiers to consume from
@@ -235,7 +242,7 @@ class GroupConsumer(Consumer[AnyStr]):
         :param auto_create: If True the group will be created upon initialization
          or first fetch if it doesn't already exist.
         :param auto_acknowledge: If ``True`` the stream entries fetched will be fetched
-         without needing to be acknowledged with :meth:`coredis.Redis.xack` to remove
+         without needing to be acknowledged with :meth:`~coredis.Redis.xack` to remove
          them from the pending entries list.
         :param start_from_backlog: If ``True`` the consumer will start by fetching any pending
          entries from the pending entry list before considering any new messages

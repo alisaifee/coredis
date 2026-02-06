@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 @dataclasses.dataclass
 class CacheStats:
     """
-    Summary of statics to be used by instances of :class:`coredis.patterns.cache.AbstractCache`
+    Summary of statics to be used by instances of :class:`~coredis.patterns.cache.AbstractCache`
     The individual counters exposed are not guaranteed to retain fine grained per key
     metrics but the totals (returned by :attr:`coredis.patterns.cache.CacheStats.summary`) will be maintained
     aggregated.
@@ -107,7 +107,7 @@ class CacheStats:
 class AbstractCache(ABC):
     """
     Abstract class representing a local cache that can be used by
-    :class:`coredis.Redis` or :class:`coredis.RedisCluster`
+    :class:`~coredis.Redis` or :class:`coredis.RedisCluster`
     """
 
     @abstractmethod
@@ -184,7 +184,7 @@ class LRUCache(AbstractCache):
     ) -> None:
         """
         Implementation of an LRU cache that can be used
-        with :class:`coredis.Redis`  or :class:`coredis.RedisCluster`
+        with :class:`~coredis.Redis`  or :class:`coredis.RedisCluster`
 
         :param max_keys: maximum keys to cache. A negative value represents and unbounded cache.
         :param confidence: 0 - 100. Lower values will result in the client discarding

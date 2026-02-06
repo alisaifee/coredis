@@ -9,14 +9,14 @@ scenarios. Therefore, coredis exposes a :class:`~coredis.commands.Script`
 class that makes scripting much easier to use.
 
 To create a Script instance, use the :meth:`~coredis.Redis.register_script` function on a client
-instance passing the LUA code as the first argument. :meth:`coredis.Redis.register_script` returns
+instance passing the LUA code as the first argument. :meth:`~coredis.Redis.register_script` returns
 a :class:`~coredis.commands.Script` instance that you can use throughout your code.
 
 The following trivial LUA script accepts two parameters: the name of a key and
 a multiplier value. The script fetches the value stored in the key, multiplies
 it with the multiplier value and returns the result.
 
-.. code-block:: python
+::
 
     r = coredis.Redis()
     lua = """
@@ -40,7 +40,7 @@ invoked by calling it like a function. Script instances accept the following opt
 
 Continuing the example from above:
 
-.. code-block:: python
+::
 
     await r.set('foo', 2)
     await multiply(keys=['foo'], args=[5])
@@ -55,7 +55,7 @@ script and returns the result, 10.
 Script instances can be executed using a different client instance, even one
 that points to a completely different Redis server.
 
-.. code-block:: python
+::
 
     async with coredis.Redis() as r2:
         await r2.set('foo', 3)
@@ -71,7 +71,7 @@ passed as the client argument when calling the script. Care is taken to ensure
 that the script is registered in Redis's script cache just prior to pipeline
 execution.
 
-.. code-block:: python
+::
 
     async with r.pipeline() as pipe:
         r1 = pipe.set('foo', 5)
@@ -214,10 +214,11 @@ Using the same example ``mylib`` lua library, this could be mapped to a python c
             as defaults if they are not found in any of the hashes at ``keys``
             """
             ...
+
 The above example uses default arguments with :meth:`~coredis.commands.Library.wraps` to show
-what is possible by simply using the :data:`coredis.typing.KeyT` annotation to map arguments
+what is possible by simply using the :data:`~coredis.typing.KeyT` annotation to map arguments
 of the decorated methods to ``keys`` and the remaining arguments as ``args``. Refer to the
-API documentation of :meth:`coredis.commands.function.wraps` for details on how to customize
+API documentation of :meth:`~coredis.commands.function.wraps` for details on how to customize
 the key/argument mapping behavior.
 
 This can now be used as you would expect::

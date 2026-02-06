@@ -2,10 +2,10 @@ Locks
 -----
 :mod:`coredis.patterns.lock`
 
-``coredis`` ships with an implementation (:class:`~coredis.lock.Lock`) of distributed locking that can be used
+``coredis`` ships with an implementation (:class:`~coredis.patterns.lock.Lock`) of distributed locking that can be used
 with a single redis instance or a cluster. The lock object can either be used as an async
-context manager or acquired explicitly using the :meth:`~coredis.lock.Lock.acquire` method (
-and subsequently released using :meth:`~coredis.lock.Lock.release`).
+context manager or acquired explicitly using the :meth:`~coredis.patterns.lock.Lock.acquire` method (
+and subsequently released using :meth:`~coredis.patterns.lock.Lock.release`).
 
 For convenience, factory methods :meth:`coredis.Redis.lock` & :meth:`coredis.RedisCluster.lock`
 are available in the clients.
@@ -13,7 +13,7 @@ are available in the clients.
 As an example, let's try to implement an atomic increment operation using a
 distributed lock
 
-.. code-block:: python
+::
 
     import asyncio
     import coredis
@@ -39,7 +39,7 @@ Implementation
 The implementation is based on `the distributed locking pattern described in redis docs <https://redis.io/docs/latest/develop/use/patterns/distributed-locks/>`__
 
 When used with a :class:`~coredis.RedisCluster` instance, acquiring the lock includes
-ensuring that the token set by the :meth:`~coredis.lock.Lock.acquire` method
+ensuring that the token set by the :meth:`~coredis.pattens.lock.Lock.acquire` method
 is replicated to atleast ``n/2`` replicas using the :meth:`~coredis.RedisCluster.ensure_replication`
 context manager.
 

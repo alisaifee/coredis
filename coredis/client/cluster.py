@@ -312,8 +312,9 @@ class RedisCluster(
           - .. versionremoved:: 6.0.0
             - :paramref:`protocol_version` removed (and therefore support for RESP2)
 
-          - .. versionadded:: 6.0.0
-            -
+          - .. versionchanged:: 6.0.0
+            -  The cluster client is now an async context manager and must always be used as such.
+
           - .. versionadded:: 4.12.0
 
             - :paramref:`retry_policy`
@@ -1305,7 +1306,7 @@ class RedisCluster(
         stream provided in :paramref:`streams`.
 
         The latest entry is determined by calling
-        :meth:`coredis.Redis.xinfo_stream` and using the :data:`last-entry`
+        :meth:`~coredis.RedisCluster.xinfo_stream` and using the :data:`last-entry`
         attribute at the point of initializing the consumer instance or on first
         fetch (whichever comes first). If the stream(s) do not exist at the time
         of consumer creation, the consumer will simply start from the minimum
@@ -1326,7 +1327,7 @@ class RedisCluster(
         :param auto_create: If True the group will be created upon initialization
          or first fetch if it doesn't already exist.
         :param auto_acknowledge: If ``True`` the stream entries fetched will be fetched
-         without needing to be acknowledged with :meth:`coredis.Redis.xack` to remove
+         without needing to be acknowledged with :meth:`~coredis.RedisCluster.xack` to remove
          them from the pending entries list.
         :param start_from_backlog: If ``True`` the consumer will start by fetching any pending
          entries from the pending entry list before considering any new messages

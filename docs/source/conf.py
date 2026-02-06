@@ -46,6 +46,8 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
     "sphinx_copybutton",
+    "sphinx_design",
+    "sphinx_inline_tabs",
     "sphinx_issues",
     "sphinx_paramlinks",
     "sphinx_sitemap",
@@ -88,6 +90,7 @@ autodoc_typehints_format = "short"
 autodoc_preserve_defaults = True
 autodoc_type_aliases = {
     "KeyT": "~coredis.typing.KeyT",
+    "ValueT": "~coredis.typing.ValueT",
     "RedisValueT": "~coredis.typing.RedisValueT",
     "StringT": "~coredis.typing.StringT",
     "ResponsePrimitive": "~coredis.typing.ResponsePrimitive",
