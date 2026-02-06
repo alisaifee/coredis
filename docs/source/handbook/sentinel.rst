@@ -1,12 +1,12 @@
 Sentinel support
 ----------------
 
-coredis can be used together with `Redis Sentinel <http://redis.io/topics/sentinel>`_
-to discover Redis nodes. You need to have at least one Sentinel daemon running
-in order to use coredis's Sentinel support.
+coredis can be used together with :term:`Redis Sentinel` to discover Redis nodes.
+You need to have at least one Sentinel daemon running in order to use coredis'
+Sentinel support.
 
 Connecting coredis to the Sentinel instance(s) is easy. You can use a
-Sentinel connection to discover the primary and replicas network addresses:
+Sentinel connection to discover the primary and replicas nodes:
 
 ::
 
@@ -31,8 +31,9 @@ operations).
         await replica.get('foo')
         # 'bar'
 
-The primary and replica objects are normal :class:`~coredis.Redis` instances with
+The primary and replica instances are normal :class:`~coredis.Redis` instances with
 their connection pool bound to the Sentinel instance via :class:`~coredis.sentinel.SentinelConnectionPool`.
+
 When a Sentinel backed client attempts to establish a connection, it first queries the Sentinel servers to
 determine an appropriate host to connect to. If no server is found,
 a :exc:`~coredis.exceptions.PrimaryNotFoundError` or :exc:`~coredis.exceptions.ReplicaNotFoundError` is raised.

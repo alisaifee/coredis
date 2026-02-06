@@ -33,6 +33,11 @@ Glossary
      that implement new Redis commands with features similar to what can be done inside
      the core itself.
 
+   Redis Sentinel
+     Redis Sentinel provides high availability for Redis when not using a :term:`Redis Cluster`.
+     For more details see `High availability with Redis Sentinel
+     <https://redis.io/docs/operate/oss_and_stack/management/sentinel/>`_
+
    RESP
      Redis clients use Redis serialization protocol (RESP) specification to communicate
      with the Redis server. For more detials see `RESP protocol spec <https://redis.io/docs/develop/reference/protocol-spec/>`__
