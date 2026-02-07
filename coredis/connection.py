@@ -322,10 +322,7 @@ class BaseConnection(ABC):
         self._write_buffer_in, self._write_buffer_out = create_memory_object_stream[list[bytes]](
             math.inf
         )
-        #  for writes to the socket
-        self._write_buffer_in, self._write_buffer_out = create_memory_object_stream[list[bytes]](
-            math.inf
-        )
+        # RESP parser/packer
         self._parser = Parser()
         self._packer: Packer = Packer(self._encoding)
 
