@@ -327,7 +327,7 @@ class TestServer:
     async def test_quit(self, client):
         assert await client.quit()
         await anyio.sleep(0.1)
-        assert not client.connection_pool.peek_available().is_connected
+        assert not client.connection_pool.peek_available().usable
 
 
 async def test_failover(fake_redis):

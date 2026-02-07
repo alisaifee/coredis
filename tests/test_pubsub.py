@@ -119,7 +119,7 @@ class TestPubSubSubscribeUnsubscribe:
             for i, key in enumerate(keys):
                 assert await wait_for_message(p) == make_message(sub_type, encoder(key), i + 1)
 
-            await p.connection.connection.send_eof()
+            await p.connection.stream.send_eof()
             # calling get_message again reconnects and resubscribes
             # note, we may not re-subscribe to channels in exactly the same order
             # so we have to do some extra checks to make sure we got them all

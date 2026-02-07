@@ -260,7 +260,7 @@ class ClusterConnectionPool(ConnectionPool):
         """Releases the connection back to the pool"""
         assert isinstance(connection, ClusterConnection)
         try:
-            if connection.is_connected:
+            if connection.usable:
                 self.__node_pool(connection.node.name).put_nowait(connection)
         except QueueFull:
             pass
@@ -332,7 +332,7 @@ class ClusterConnectionPool(ConnectionPool):
         with fail_after(self.timeout):
             connection = await self.__node_pool(node.name).get()
 
-        if not connection or not connection.is_connected:
+        if not connection or not connection.usable:
             connection = await self.__make_node_connection(node)
 
         return cast(ClusterConnection, connection)

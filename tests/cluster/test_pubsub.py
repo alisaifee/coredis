@@ -137,9 +137,9 @@ class TestPubSubSubscribeUnsubscribe:
 
             assert expected == received
             if sharded:
-                [await c.connection.send_eof() for c in p.shard_connections.values()]
+                [await c.stream.send_eof() for c in p.shard_connections.values()]
             else:
-                await p.connection.connection.send_eof()
+                await p.connection.stream.send_eof()
 
             messages = []
             await anyio.sleep(1)

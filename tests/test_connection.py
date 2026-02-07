@@ -13,7 +13,7 @@ from coredis.credentials import UserPassCredentialProvider
 
 
 async def check_request(connection, command, args, response):
-    assert connection._connection is not None
+    assert connection.stream is not None
     request = connection.create_request(command, *args)
     assert await request == response
 
@@ -40,7 +40,7 @@ async def test_connect_tls(redis_ssl):
     assert str(conn) == "Connection<host=localhost,port=8379,db=0>"
     async with create_task_group() as tg:
         await tg.start(conn.run)
-        assert isinstance(conn.connection, TLSStream)
+        assert isinstance(conn.stream, TLSStream)
         await check_request(conn, b"PING", (), b"PONG")
         tg.cancel_scope.cancel()
 
@@ -65,7 +65,7 @@ async def test_connect_tcp_keepalive_options(redis_basic):
     )
     async with create_task_group() as tg:
         await tg.start(conn.run)
-        sock = conn.connection.extra(SocketAttribute.raw_socket)
+        sock = conn.stream.extra(SocketAttribute.raw_socket)
         assert sock.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE) == 1
         for k, v in ((socket.TCP_KEEPINTVL, 1), (socket.TCP_KEEPCNT, 3)):
             assert sock.getsockopt(socket.SOL_TCP, k) == v
@@ -80,7 +80,7 @@ async def test_connect_tcp_keepalive_options_mac(redis_basic):
     )
     async with create_task_group() as tg:
         await tg.start(conn.run)
-        sock = conn.connection.extra(SocketAttribute.raw_socket)
+        sock = conn.stream.extra(SocketAttribute.raw_socket)
         assert sock.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE) == 8
         for k, v in ((socket.TCP_KEEPINTVL, 1), (socket.TCP_KEEPCNT, 3)):
             assert sock.getsockopt(socket.SOL_TCP, k) == v
@@ -124,24 +124,24 @@ async def test_request_cancellation(redis_basic):
         with move_on_after(0.01):
             await request
         await sleep(0.01)
-        assert not conn.is_connected
+        assert not conn.usable
 
 
 async def test_termination(redis_basic):
     conn = Connection()
     async with create_task_group() as tg:
         await tg.start(conn.run)
-        assert conn.is_connected
+        assert conn.usable
         conn.terminate()
         await sleep(0.01)
-        assert not conn.is_connected
+        assert not conn.usable
 
 
 async def test_connection_rerun(redis_basic):
     conn = Connection()
     async with create_task_group() as tg:
         await tg.start(conn.run)
-        assert conn.is_connected
+        assert conn.usable
         with pytest.raises(RuntimeError, match="cannot be reused"):
             await tg.start(conn.run)
         tg.cancel_scope.cancel()

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import functools
 import inspect
 import math
 import os
@@ -8,8 +9,7 @@ import socket
 import ssl
 from abc import ABC, abstractmethod
 from collections import deque
-from contextlib import contextmanager
-from typing import Any, cast
+from typing import Any, Concatenate, cast
 from weakref import ProxyType, proxy
 
 from anyio import (
@@ -39,11 +39,9 @@ from coredis.commands.constants import CommandName
 from coredis.constants.resp import DataType
 from coredis.credentials import (
     AbstractCredentialProvider,
-    UserPass,
     UserPassCredentialProvider,
 )
 from coredis.exceptions import (
-    AuthenticationRequiredError,
     ConnectionError,
     RedisError,
     UnknownCommandError,
@@ -57,6 +55,8 @@ from coredis.typing import (
     Generator,
     ManagedNode,
     NotRequired,
+    P,
+    R,
     RedisValueT,
     ResponseType,
     TypedDict,
@@ -69,7 +69,6 @@ CERT_REQS = {
     "optional": ssl.CERT_OPTIONAL,
     "required": ssl.CERT_REQUIRED,
 }
-R = TypeVar("R")
 
 ConnectionT = TypeVar("ConnectionT", bound="BaseConnection")
 
@@ -232,6 +231,22 @@ class BaseConnection(ABC):
     :meta private:
     """
 
+    @staticmethod
+    def _ensure_usable(
+        function: Callable[Concatenate[ConnectionT, P], R],
+    ) -> Callable[Concatenate[ConnectionT, P], R]:
+        @functools.wraps(function)
+        def _connection_ensured(slf: ConnectionT, /, *args: P.args, **kwargs: P.kwargs) -> R:
+            if (not slf._handshake_attempted and slf.transport_healthy) or slf.usable:
+                return function(slf, *args, **kwargs)
+            raise ConnectionError("Connection not usable") from slf._last_error
+
+        _connection_ensured.__doc__ = f"""{_connection_ensured.__doc__}
+:raises: :exc:`coredis.exceptions.ConnectionError` if the connection is
+ not usable.
+"""
+        return _connection_ensured
+
     def __init__(
         self,
         *,
@@ -309,7 +324,7 @@ class BaseConnection(ABC):
 
         self._task_group: TaskGroup | None = None
         # The actual connection to the server
-        self._connection: ByteStream | None = None
+        self.stream: ByteStream | None = None
         # buffer for push message types
         self._push_message_buffer_in, self._push_message_buffer_out = create_memory_object_stream[
             list[ResponseType]
@@ -318,23 +333,21 @@ class BaseConnection(ABC):
         self._streamed_message_buffer_in, self._streamed_message_buffer_out = (
             create_memory_object_stream[ResponseType](math.inf)
         )
-        # buffer for writes to the socket
+        # RESP parser/packer
+        #  for writes to the socket
         self._write_buffer_in, self._write_buffer_out = create_memory_object_stream[list[bytes]](
             math.inf
         )
-        # RESP parser/packer
         self._parser = Parser()
         self._packer: Packer = Packer(self._encoding)
 
         self._requests: deque[Request] = deque()
         self._connection_cancel_scope: CancelScope | None = None
 
-        # whether the `HELLO` handshake needs to be performed
-        self._needs_handshake = True
-
-        # Error flags
+        # Error & State flags
         self._last_error: BaseException | None = None
-        self._connected = False
+        self._ready = False
+        self._handshake_attempted = False
         self._transport_failed = False
         self._terminated = False
 
@@ -352,26 +365,19 @@ class BaseConnection(ABC):
     def location(self) -> str: ...
 
     @property
-    def connection(self) -> ByteStream:
-        if not self._connection:
-            raise ConnectionError("Connection not initialized correctly!") from self._last_error
-        return self._connection
-
-    @contextmanager
-    def ensure_connection(self) -> Generator[ByteStream]:
-        yield self.connection
+    def transport_healthy(self) -> bool:
+        """
+        Whether the underlying transport stream is healthy
+        """
+        return self.stream is not None and not self._transport_failed and not self._terminated
 
     @property
-    def is_connected(self) -> bool:
+    def usable(self) -> bool:
         """
         Whether the connection is established and initial handshakes were
         performed without error
         """
-        return (
-            self._connected
-            and self._connection is not None
-            and not (self._transport_failed or self._terminated)
-        )
+        return self.transport_healthy and self._ready
 
     def register_connect_callback(
         self,
@@ -401,8 +407,60 @@ class BaseConnection(ABC):
         if self._task_group:
             raise RuntimeError("Connection cannot be reused")
 
+        def handle_errors(error: BaseExceptionGroup) -> None:
+            # TODO: change _last_error to use the whole exception group
+            #  once python 3.10 support is dropped and the library
+            #  consistently uses exception groups
+            self._last_error = self._last_error or error.exceptions[-1]
+
         try:
-            self._connection = await self._connect()
+            self.stream = await self._connect()
+            try:
+                with catch({Exception: handle_errors}):
+                    async with (
+                        self.stream,
+                        self._write_buffer_in,
+                        self._write_buffer_out,
+                        self._push_message_buffer_in,
+                        self._push_message_buffer_out,
+                        self._streamed_message_buffer_in,
+                        self._streamed_message_buffer_out,
+                        create_task_group() as self._task_group,
+                    ):
+                        self._task_group.start_soon(self._reader_task)
+                        self._task_group.start_soon(self._writer_task)
+                        # setup connection
+                        await self.perform_handshake()
+                        for callback in self._connect_callbacks:
+                            task = callback(self)
+                            if inspect.isawaitable(task):
+                                await task
+                        task_status.started()
+            finally:
+                disconnect_exc = self._last_error or ConnectionError("Connection lost!")
+                self._parser.on_disconnect()
+                while self._requests:
+                    request = self._requests.popleft()
+                    request.fail(disconnect_exc)
+                self.stream = None
+                if self._ready:
+                    # If a connection had successfully been established (including handshake)
+                    # errors should no longer be raised and it is the responsibility of the
+                    # downstream to ensure that `is_connected` is tested before using a connection
+                    if self._last_error:
+                        logger.info("Connection closed unexpectedly!", exc_info=True)
+                    self._ready = False
+                else:
+                    # If a RedisError (raised ourselves) has resulted in an exception
+                    # before a connection was completely established raise that.
+                    # This is due to known handshake errors.
+                    if isinstance(self._last_error, RedisError):
+                        raise self._last_error
+                    else:
+                        logger.exception("Connection attempt failed unexpectedly!")
+                        raise ConnectionError(
+                            "Unable to establish a connection"
+                        ) from self._last_error
         except Exception as connection_error:
             self._last_error = connection_error
             if isinstance(connection_error, RedisError):
@@ -411,58 +469,6 @@ class BaseConnection(ABC):
                 # Wrap any other errors with a ConnectionError so that upstreams (pools) can
                 # handle them explicitly as being part of connection creation if they want.
                 raise ConnectionError("Unable to establish a connection") from connection_error
-
-        def handle_errors(error: BaseExceptionGroup) -> None:
-            # TODO: change _last_error to use the whole exception group
-            #  once python 3.10 support is dropped and the library
-            #  consistently uses exception groups
-            self._last_error = self._last_error or error.exceptions[-1]
-
-        try:
-            with catch({Exception: handle_errors}):
-                async with (
-                    self.connection,
-                    self._write_buffer_in,
-                    self._write_buffer_out,
-                    self._push_message_buffer_in,
-                    self._push_message_buffer_out,
-                    self._streamed_message_buffer_in,
-                    self._streamed_message_buffer_out,
-                    create_task_group() as self._task_group,
-                ):
-                    self._task_group.start_soon(self._reader_task)
-                    self._task_group.start_soon(self._writer_task)
-                    # setup connection
-                    await self.on_connect()
-                    for callback in self._connect_callbacks:
-                        task = callback(self)
-                        if inspect.isawaitable(task):
-                            await task
-                    self._connected = True
-                    task_status.started()
-        finally:
-            disconnect_exc = self._last_error or ConnectionError("Connection lost!")
-            self._parser.on_disconnect()
-            while self._requests:
-                request = self._requests.popleft()
-                request.fail(disconnect_exc)
-            self._connection = None
-            if not self._connected:
-                # If a RedisError (raised ourselves) has resulted in an exception
-                # before a connection was completely established raise that.
-                # This is due to known handshake errors.
-                if isinstance(self._last_error, RedisError):
-                    raise self._last_error
-                else:
-                    logger.exception("Connection attempt failed unexpectedly!")
-                    raise ConnectionError("Unable to establish a connection") from self._last_error
-            else:
-                # If a connection had successfully been established (including handshake)
-                # errors should no longer be raised and it is the responsibility of the
-                # downstream to ensure that `is_connected` is tested before using a connection
-                if self._last_error:
-                    logger.info("Connection closed unexpectedly!", exc_info=True)
-                self._connected = False
 
     def terminate(self, reason: str | None = None) -> None:
         """
@@ -481,10 +487,10 @@ class BaseConnection(ABC):
         Listen on the socket and run the parser, completing pending requests in
         FIFO order.
         """
-        while True:
+        while self.stream is not None:
             with fail_after(self._max_idle_time):
                 try:
-                    data = await self.connection.receive()
+                    data = await self.stream.receive()
                 except (EndOfStream, ClosedResourceError, BrokenResourceError) as err:
                     self._transport_failed = True
                     raise ConnectionError("Connection lost while receiving response") from err
@@ -530,14 +536,14 @@ class BaseConnection(ABC):
         """
         Continually empty the buffer and send the data to the server.
         """
-        while True:
+        while self.stream is not None:
             requests = await self._write_buffer_out.receive()
             while self._write_buffer_out.statistics().current_buffer_used > 0:
                 requests.extend(self._write_buffer_out.receive_nowait())
                 await checkpoint()
             data = b"".join(requests)
             try:
-                await self.connection.send(data)
+                await self.stream.send(data)
             except (ClosedResourceError, BrokenResourceError) as err:
                 self._transport_failed = True
                 raise ConnectionError("Connection lost while sending request") from err
@@ -564,42 +570,27 @@ class BaseConnection(ABC):
         except Exception:  # noqa
             return False
 
-    async def try_legacy_auth(self) -> None:
-        if self._credential_provider:
-            creds = await self._credential_provider.get_credentials()
-            params = [creds.password]
-            if isinstance(creds, UserPass):
-                params.insert(0, creds.username)
-        elif not self._password:
-            return
-        else:
-            params = [self._password]
-            if self._username:
-                params.insert(0, self._username)
-        await self.create_request(b"AUTH", *params, decode=False)
-
     async def perform_handshake(self) -> None:
-        if not self._needs_handshake:
-            return
-
-        hello_command_args: list[int | str | bytes] = [3]
-        if creds := (
-            await self._credential_provider.get_credentials()
-            if self._credential_provider
-            else (
-                await UserPassCredentialProvider(self._username, self._password).get_credentials()
-                if (self._username or self._password)
-                else None
-            )
-        ):
-            hello_command_args.extend(
-                [
-                    "AUTH",
-                    creds.username,
-                    creds.password or b"",
-                ]
-            )
         try:
+            hello_command_args: list[int | str | bytes] = [3]
+            if creds := (
+                await self._credential_provider.get_credentials()
+                if self._credential_provider
+                else (
+                    await UserPassCredentialProvider(
+                        self._username, self._password
+                    ).get_credentials()
+                    if (self._username or self._password)
+                    else None
+                )
+            ):
+                hello_command_args.extend(
+                    [
+                        "AUTH",
+                        creds.username,
+                        creds.password or b"",
+                    ]
+                )
             hello_resp = await self.create_request(b"HELLO", *hello_command_args, decode=False)
             assert isinstance(hello_resp, (list, dict))
             resp3 = cast(dict[bytes, RedisValueT], hello_resp)
@@ -617,46 +608,39 @@ class BaseConnection(ABC):
                     b"LIB-VER",
                     coredis.__version__,
                 )
-            self._needs_handshake = False
-        except AuthenticationRequiredError:
-            await self.try_legacy_auth()
-            self.server_version = None
-            self.client_id = None
-        except UnknownCommandError:  # noqa
-            raise ConnectionError(
-                "Unable to use RESP3 due to missing `HELLO` implementation the server."
-            )
 
-    async def on_connect(self) -> None:
-        await self.perform_handshake()
+            if self._db:
+                if await self.create_request(b"SELECT", self._db, decode=False) != b"OK":
+                    raise ConnectionError(f"Invalid Database {self._db}")
 
-        if self._db:
-            if await self.create_request(b"SELECT", self._db, decode=False) != b"OK":
-                raise ConnectionError(f"Invalid Database {self._db}")
+            if self.client_name is not None:
+                if (
+                    await self.create_request(b"CLIENT SETNAME", self.client_name, decode=False)
+                    != b"OK"
+                ):
+                    raise ConnectionError(f"Failed to set client name: {self.client_name}")
 
-        if self.client_name is not None:
-            if (
-                await self.create_request(b"CLIENT SETNAME", self.client_name, decode=False)
-                != b"OK"
-            ):
-                raise ConnectionError(f"Failed to set client name: {self.client_name}")
+            if self._noevict:
+                await self.create_request(b"CLIENT NO-EVICT", b"ON")
 
-        if self._noevict:
-            await self.create_request(b"CLIENT NO-EVICT", b"ON")
+            if self._notouch:
+                await self.create_request(b"CLIENT NO-TOUCH", b"ON")
 
-        if self._notouch:
-            await self.create_request(b"CLIENT NO-TOUCH", b"ON")
-
-        if self._noreply:
-            await self.create_request(b"CLIENT REPLY", b"OFF", noreply=True)
-            self._noreply_set = True
+            if self._noreply:
+                await self.create_request(b"CLIENT REPLY", b"OFF", noreply=True)
+                self._noreply_set = True
+            self._ready = True
+        finally:
+            self._handshake_attempted = True
 
     @property
+    @_ensure_usable
     async def push_messages(self) -> AsyncGenerator[list[ResponseType], None]:
         """
         Generator to retrieve RESP3 push type messages sent by the server.
         The generator will yield each message received in order until the
         connection is lost and will raise an :exc:`~coredis.exceptions.ConnectionError`
+        to signal that the generator has ended.
         """
         try:
             while True:
@@ -665,12 +649,14 @@ class BaseConnection(ABC):
             raise ConnectionError("Connection lost while waiting for push messages") from err
 
     @property
+    @_ensure_usable
     async def streamed_messages(self) -> AsyncGenerator[ResponseType, None]:
         """
         Generator to retrieve messages received from the server that were not
         sent as a response to a request made through this connection.
         The generator will yield each message received in order until the
         connection is lost and will raise an :exc:`~coredis.exceptions.ConnectionError`
+        to signal that the generator has ended.
         """
         try:
             while True:
@@ -678,6 +664,7 @@ class BaseConnection(ABC):
         except (EndOfStream, BrokenResourceError, ClosedResourceError) as err:
             raise ConnectionError("Connection lost") from err
 
+    @_ensure_usable
     def send_command(
         self,
         command: bytes,
@@ -689,9 +676,9 @@ class BaseConnection(ABC):
         pubsub scenarios where commands such as ``SUBSCRIBE``, ``UNSUBSCRIBE``
         etc do not result in a response.
         """
-        with self.ensure_connection():
-            self._write_buffer_in.send_nowait(self._packer.pack_command(command, *args))
+        self._write_buffer_in.send_nowait(self._packer.pack_command(command, *args))
 
+    @_ensure_usable
     def create_request(
         self,
         command: bytes,
@@ -707,29 +694,29 @@ class BaseConnection(ABC):
         Queue a command to send to the server and create an
         associated request that can awaited for the response.
         """
-        with self.ensure_connection():
-            cmd_list = []
-            if noreply and not self._noreply:
-                cmd_list = self._packer.pack_command(CommandName.CLIENT_REPLY, PureToken.SKIP)
-            cmd_list.extend(self._packer.pack_command(command, *args))
-            request_timeout: float | None = timeout or self._stream_timeout
-            request = Request(
-                proxy(self),
-                command,
-                bool(decode) if decode is not None else self._decode_responses,
-                encoding or self._encoding,
-                raise_exceptions,
-                request_timeout,
-                disconnect_on_cancellation,
-            )
-            # modifying buffer and requests should happen atomically
-            if not (self._noreply_set or noreply):
-                self._requests.append(request)
-            else:
-                request.resolve(None)
-            self._write_buffer_in.send_nowait(cmd_list)
-            return request
+        cmd_list = []
+        if noreply and not self._noreply:
+            cmd_list = self._packer.pack_command(CommandName.CLIENT_REPLY, PureToken.SKIP)
+        cmd_list.extend(self._packer.pack_command(command, *args))
+        request_timeout: float | None = timeout or self._stream_timeout
+        request = Request(
+            proxy(self),
+            command,
+            bool(decode) if decode is not None else self._decode_responses,
+            encoding or self._encoding,
+            raise_exceptions,
+            request_timeout,
+            disconnect_on_cancellation,
+        )
+        # modifying buffer and requests should happen atomically
+        if not (self._noreply_set or noreply):
+            self._requests.append(request)
+        else:
+            request.resolve(None)
+        self._write_buffer_in.send_nowait(cmd_list)
+        return request
 
+    @_ensure_usable
     def create_requests(
         self,
         commands: list[CommandInvocation],
@@ -740,24 +727,23 @@ class BaseConnection(ABC):
         """
         Queue multiple commands to send to the server
         """
-        with self.ensure_connection():
-            request_timeout: float | None = timeout or self._stream_timeout
-            requests = [
-                Request(
-                    proxy(self),
-                    cmd.command,
-                    bool(cmd.decode) if cmd.decode is not None else self._decode_responses,
-                    cmd.encoding or self._encoding,
-                    raise_exceptions,
-                    request_timeout,
-                    disconnect_on_cancellation,
-                )
-                for cmd in commands
-            ]
-            packed = self._packer.pack_commands([(cmd.command, *cmd.args) for cmd in commands])
-            self._write_buffer_in.send_nowait(packed)
-            self._requests.extend(requests)
-            return requests
+        request_timeout: float | None = timeout or self._stream_timeout
+        requests = [
+            Request(
+                proxy(self),
+                cmd.command,
+                bool(cmd.decode) if cmd.decode is not None else self._decode_responses,
+                cmd.encoding or self._encoding,
+                raise_exceptions,
+                request_timeout,
+                disconnect_on_cancellation,
+            )
+            for cmd in commands
+        ]
+        packed = self._packer.pack_commands([(cmd.command, *cmd.args) for cmd in commands])
+        self._write_buffer_in.send_nowait(packed)
+        self._requests.extend(requests)
+        return requests
 
 
 class Connection(BaseConnection):
@@ -847,7 +833,7 @@ class ClusterConnection(Connection):
         read_from_replicas: bool = False,
         **kwargs: Unpack[BaseConnectionParams],
     ) -> None:
-        self.read_from_replicas = read_from_replicas
+        self._read_from_replicas = read_from_replicas
         super().__init__(
             host=host,
             port=port,
@@ -855,16 +841,14 @@ class ClusterConnection(Connection):
         )
         self.node = ManagedNode(host=host, port=port)
 
-        async def _on_connect(*_: Any) -> None:
-            """
-            Initialize the connection, authenticate and select a database and send
-            `READONLY` if `read_from_replicas` is set during initialization.
-            """
-
-            if self.read_from_replicas:
-                assert (await self.create_request(b"READONLY", decode=False)) == b"OK"
-
-        self.register_connect_callback(_on_connect)
+    async def perform_handshake(self) -> None:
+        """
+        Read only cluster connections need to explicitly
+        request readonly during handshake
+        """
+        await super().perform_handshake()
+        if self._read_from_replicas:
+            assert (await self.create_request(b"READONLY", decode=False)) == b"OK"
 
     def describe(self) -> str:
         return f"ClusterConnection<path={self.host},db={self.port}>"

@@ -365,7 +365,7 @@ class NodeTrackingCache(TrackingCache):
     def healthy(self) -> bool:
         return bool(
             self._connection is not None
-            and self._connection.is_connected
+            and self._connection.usable
             and (time.monotonic() - self._last_checkin) < self._max_idle_seconds
         )
 

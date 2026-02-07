@@ -180,7 +180,7 @@ class ConnectionPool:
             # if stack has a connection, use that
             connection = await self._connections.get()
             # if None, we need to create a new connection
-            if connection is None or not connection.is_connected:
+            if connection is None or not connection.usable:
                 connection = self._construct_connection()
                 if err := await self._task_group.start(self.__wrap_connection, connection):
                     raise err
@@ -202,7 +202,7 @@ class ConnectionPool:
         """
         Checks connection for liveness and releases it back to the pool.
         """
-        if connection.is_connected:
+        if connection.usable:
             self._connections.put_nowait(connection)
 
     @classmethod
