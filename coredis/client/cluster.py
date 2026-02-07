@@ -694,6 +694,7 @@ class RedisCluster(
     async def _ensure_initialized(self) -> None:
         if not self.connection_pool.initialized or self.refresh_table_asap:
             await self.connection_pool.refresh_cluster_mapping(forced=True)
+            self.refresh_table_asap = False
 
     def _determine_slots(
         self, command: bytes, *args: RedisValueT, **options: Unpack[ExecutionParameters]
