@@ -1,13 +1,21 @@
 from __future__ import annotations
 
 import socket
+import ssl
 
 import pytest
 from anyio import create_task_group, move_on_after, sleep
 from anyio.abc import SocketAttribute
+from anyio.streams.tls import TLSStream
 
 from coredis import Connection, UnixDomainSocketConnection
 from coredis.credentials import UserPassCredentialProvider
+
+
+async def check_request(connection, command, args, response):
+    assert connection._connection is not None
+    request = connection.create_request(command, *args)
+    assert await request == response
 
 
 async def test_connect_tcp(redis_basic):
@@ -17,10 +25,23 @@ async def test_connect_tcp(redis_basic):
     assert str(conn) == "Connection<host=127.0.0.1,port=6379,db=0>"
     async with create_task_group() as tg:
         await tg.start(conn.run)
-        request = conn.create_request(b"PING")
-        res = await request
-        assert res == b"PONG"
-        assert conn._connection is not None
+        check_request(conn, b"PING", (), b"PONG")
+        tg.cancel_scope.cancel()
+
+
+async def test_connect_tls(redis_ssl):
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    ssl_context.load_cert_chain(certfile="./tests/tls/client.crt", keyfile="./tests/tls/client.key")
+    conn = Connection(host="localhost", port=8379, ssl_context=ssl_context)
+    assert conn.host == "localhost"
+    assert conn.port == 8379
+    assert str(conn) == "Connection<host=localhost,port=8379,db=0>"
+    async with create_task_group() as tg:
+        await tg.start(conn.run)
+        assert isinstance(conn.connection, TLSStream)
+        await check_request(conn, b"PING", (), b"PONG")
         tg.cancel_scope.cancel()
 
 
@@ -32,9 +53,7 @@ async def test_connect_cred_provider(redis_auth_server):
     )
     async with create_task_group() as tg:
         await tg.start(conn.run)
-        request = conn.create_request(b"PING")
-        res = await request
-        assert res == b"PONG"
+        await check_request(conn, b"PING", (), b"PONG")
         tg.cancel_scope.cancel()
 
 
@@ -83,10 +102,7 @@ async def test_connect_unix_socket(redis_uds):
         await tg.start(conn.run)
         assert conn.path == path
         assert str(conn) == f"UnixDomainSocketConnection<path={path},db=0>"
-        req = conn.create_request(b"PING")
-        res = await req
-        assert res == b"PONG"
-        assert conn._connection is not None
+        await check_request(conn, b"PING", (), b"PONG")
         tg.cancel_scope.cancel()
 
 
@@ -109,33 +125,6 @@ async def test_request_cancellation(redis_basic):
             await request
         await sleep(0.01)
         assert not conn.is_connected
-
-
-async def test_shared_pool(redis_basic):
-    clone = redis_basic.__class__(
-        decode_responses=redis_basic.decode_responses,
-        encoding=redis_basic.encoding,
-        connection_pool=redis_basic.connection_pool,
-    )
-    async with clone:
-        assert await clone.client_id() == await redis_basic.client_id()
-
-
-async def test_shared_pool_cluster(redis_cluster):
-    clone = redis_cluster.__class__(
-        decode_responses=redis_cluster.decode_responses,
-        encoding=redis_cluster.encoding,
-        connection_pool=redis_cluster.connection_pool,
-    )
-    assert clone.connection_pool is redis_cluster.connection_pool
-    await redis_cluster.get("key{a}")
-    await redis_cluster.get("key{b}")
-    before = {c for c in redis_cluster.connection_pool._connections._queue}
-    async with clone:
-        await clone.get("key{a}")
-        await clone.get("key{b}")
-        after = {c for c in clone.connection_pool._connections._queue}
-        assert before == after
 
 
 async def test_termination(redis_basic):

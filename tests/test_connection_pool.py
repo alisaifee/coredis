@@ -2,7 +2,16 @@ from __future__ import annotations
 
 import pytest
 
-from coredis import ClusterConnectionPool, Connection, ConnectionPool, UnixDomainSocketConnection
+import coredis.connection
+from coredis import (
+    ClusterConnectionPool,
+    Connection,
+    ConnectionPool,
+    UnixDomainSocketConnection,
+)
+from coredis._concurrency import gather
+from coredis.patterns.cache import LRUCache
+from tests.conftest import targets
 
 
 class CommonPoolUrlParsingExamples:
@@ -137,3 +146,68 @@ class TestClusterConnectionPoolUrlParsing(CommonPoolUrlParsingExamples):
         pool.from_url(url, **kwargs)
         for k, v in expected.items():
             assert spy.call_args.kwargs[k] == v
+
+
+@targets("redis_basic")
+class TestBasicPoolParameters:
+    @pytest.mark.parametrize("client_arguments", [{"max_connections": 2}])
+    async def test_max_connections(self, client, client_arguments, mocker):
+        connect_tcp = mocker.spy(coredis.connection, "connect_tcp")
+        await gather(*(client.blpop(["test"], timeout=1) for _ in range(3)))
+        assert connect_tcp.call_count == 1
+
+    @pytest.mark.parametrize("client_arguments", [{"max_connections": 2}])
+    async def test_timeout(self, client, client_arguments, mocker):
+        client.connection_pool.timeout = 1
+        with pytest.RaisesGroup(TimeoutError):
+            await gather(*(client.blpop(["test"], timeout=2) for _ in range(3)))
+
+
+@targets("redis_cluster")
+class TestClusterPoolParameters:
+    @pytest.mark.parametrize(
+        "client_arguments", [{"max_connections": 2, "max_connections_per_node": True}]
+    )
+    async def test_max_connections(self, client, client_arguments, mocker):
+        connect_tcp = mocker.spy(coredis.connection, "connect_tcp")
+        await gather(*(client.blpop(["test"], timeout=1) for _ in range(3)))
+        assert connect_tcp.call_count == 1
+
+    @pytest.mark.parametrize(
+        "client_arguments",
+        [{"max_connections": 2, "max_connections_per_node": True}],
+    )
+    async def test_timeout(self, client, client_arguments, mocker):
+        client.connection_pool.timeout = 1
+        with pytest.RaisesGroup(TimeoutError):
+            await gather(*(client.blpop(["test"], timeout=2) for _ in range(3)))
+
+
+@targets("redis_basic", "redis_cluster")
+class TestSharedConnectionPool:
+    async def test_shared_pool(self, client, cloner, mocker):
+        primary = await cloner(client)
+        connect_tcp = mocker.spy(coredis.connection, "connect_tcp")
+        async with primary:
+            await primary.ping()
+            assert connect_tcp.call_count > 0
+            mocker.resetall()
+            borrower = client.__class__(
+                connection_pool=primary.connection_pool,
+            )
+            assert primary.connection_pool == borrower.connection_pool
+            assert not client.connection_pool == borrower.connection_pool
+            async with borrower:
+                await borrower.ping()
+                assert not connect_tcp.call_count
+
+    @pytest.mark.parametrize("client_arguments", [{"cache": LRUCache()}])
+    async def test_shared_cache(self, client, client_arguments, mocker):
+        borrower = client.__class__(connection_pool=client.connection_pool)
+        create_request = mocker.spy(client.connection_pool.connection_class, "create_request")
+        await client.set("a", 1)
+        assert borrower.connection_pool is client.connection_pool
+        await client.get("a")
+        async with borrower:
+            await borrower.get("a")
+        create_request.assert_called_once
