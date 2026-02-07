@@ -19,6 +19,7 @@ from coredis.exceptions import (
 )
 from coredis.patterns.cache import AbstractCache
 from coredis.pool import ConnectionPool
+from coredis.retry import NoRetryPolicy, RetryPolicy
 from coredis.typing import (
     AnyStr,
     Generic,
@@ -143,6 +144,7 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
         decode_responses: Literal[False] = ...,
         cache: AbstractCache | None = None,
         type_adapter: TypeAdapter | None = ...,
+        retry_policy: RetryPolicy = ...,
         **connection_kwargs: Any,
     ) -> None: ...
 
@@ -155,6 +157,7 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
         decode_responses: Literal[True] = ...,
         cache: AbstractCache | None = None,
         type_adapter: TypeAdapter | None = None,
+        retry_policy: RetryPolicy = ...,
         **connection_kwargs: Any,
     ) -> None: ...
 
@@ -166,6 +169,7 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
         decode_responses: bool = False,
         cache: AbstractCache | None = None,
         type_adapter: TypeAdapter | None = None,
+        retry_policy: RetryPolicy = NoRetryPolicy(),
         **connection_kwargs: Any,
     ) -> None:
         """
@@ -189,6 +193,8 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
         :param type_adapter: The adapter to use for serializing / deserializing customs types
          when interacting with redis commands. If provided this adapter will be used for both
          primaries and replicas returned by this sentinel.
+        :param retry_policy: The retry policy to use when interacting with the the primary
+         and replica instances.
         :param connection_kwargs: are keyword arguments that will be used when
          establishing a connection to a Redis server (i.e. are passed on to the
          constructor of :class:`Redis` for all primary and replicas).
@@ -212,11 +218,13 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
         self.connection_kwargs = connection_kwargs
         self.__cache = cache
         self.__type_adapter = type_adapter
+        self.__retry_policy = retry_policy
         self.connection_kwargs["decode_responses"] = self.sentinel_kwargs["decode_responses"] = (
             decode_responses
         )
         self.sentinels = [
-            Redis(hostname, port, **self.sentinel_kwargs) for hostname, port in sentinels
+            Redis(hostname, port, retry_policy=self.__retry_policy, **self.sentinel_kwargs)
+            for hostname, port in sentinels
         ]
 
     @asynccontextmanager
@@ -348,6 +356,7 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
                 _cache=self.__cache,
                 **connection_kwargs,
             ),
+            retry_policy=self.__retry_policy,
             type_adapter=self.__type_adapter,
         )
 
@@ -404,5 +413,6 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
                 _cache=self.__cache,
                 **connection_kwargs,
             ),
+            retry_policy=self.__retry_policy,
             type_adapter=self.__type_adapter,
         )
