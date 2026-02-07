@@ -26,6 +26,13 @@ class CommandNotSupportedError(RedisError):
 
 
 class ConnectionError(RedisError):
+    """
+    Raised when a connection to Redis cannot be established or is lost.
+
+    This exception indicates a failure in the underlying network connection,
+    protocol handshake, or connection configuration
+    """
+
     pass
 
 
