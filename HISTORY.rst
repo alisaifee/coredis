@@ -3,6 +3,36 @@
 Changelog
 =========
 
+v6.0.0rc3
+---------
+Release Date: 2026-02-06
+
+* Renamed submodules
+
+  * Move Pub/Sub, Pipeline, Stream, Cache and Lock submodules
+    to :mod:`coredis.patterns`.
+    * ``coredis.commands.pubsub`` -> ``coredis.patterns.pubsub``
+    * ``coredis.pipeline`` -> ``coredis.patterns.pipeline``
+    * ``coredis.stream`` -> ``coredis.patterns.streams``
+    * ``coredis.cache`` -> ``coredis.patterns.cache``
+    * ``coredis.lock`` -> ``coredis.patterns.lock``
+
+* Compatibility
+
+  * Add ``countall`` and ``countnan`` aggregation types to
+    :class:`~coredis.modules.TimeSeries`
+  * Add ``indexall`` argument to :meth:`~coredis.modules.Search.create`
+  * Add ``nothread`` argument to :meth:`~coredis.Redis.vsim`
+
+* Performance
+
+  * Improve pub/sub performance that had regressed in
+    6.0.0rc1 & 6.0.0rc2 when compared with 5.x. The root
+    of the slowdown was the change in reading from the connection
+    explicitly versus being fed the data sequentially by the eventloop
+    in the previous asyncio implementation. Performance is now back
+    to (or better) than 5.x
+
 v6.0.0rc2
 ---------
 Release Date: 2026-01-30
