@@ -173,7 +173,7 @@ in the cluster will have to process the published messages for all channels.
 Sharded Pub/Sub
 ^^^^^^^^^^^^^^^
 
-As of :redis-version:`7.0.0` support for :term:`Sharded Pub/Sub` has been added
+:term:`Redis Cluster` also supports :term:`Sharded Pub/Sub`
 through the :rediscommand:`SSUBSCRIBE`, :rediscommand:`SUNSUBSCRIBE` and :rediscommand:`SPUBLISH` commands
 which restricts publishing of messages to individual shards based on the same algorithm used
 to route keys to shards.

@@ -25,7 +25,7 @@ Fast, async, fully-typed Redis client with support for cluster and sentinel
 - [Redis Stack modules](https://coredis.readthedocs.org/en/latest/handbook/modules.html) support
 - [Redis PubSub](https://coredis.readthedocs.org/en/latest/handbook/pubsub.html)
 - [Pipelining](https://coredis.readthedocs.org/en/latest/handbook/pipelines.html)
-- [Lua scripts](https://coredis.readthedocs.org/en/latest/handbook/scripting.html#lua_scripting) and [Redis functions](https://coredis.readthedocs.org/en/latest/handbook/scripting.html#library-functions) \[`>= Redis 7.0`\] support, with optional types
+- [Lua scripts](https://coredis.readthedocs.org/en/latest/handbook/scripting.html#lua_scripting) and [Redis functions](https://coredis.readthedocs.org/en/latest/handbook/scripting.html#library-functions) with support for typing
 - Convenient [Stream Consumers](https://coredis.readthedocs.org/en/latest/handbook/streams.html) implementation
 - Comprehensive documentation
 - Optional [runtime type validation](https://coredis.readthedocs.org/en/latest/handbook/typing.html#runtime-type-checking) (via [beartype](https://github.com/beartype/beartype))
