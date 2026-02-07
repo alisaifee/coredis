@@ -210,7 +210,6 @@ Support for Redis API compatible databases
 
 - `Dragonfly <https://dragonflydb.io/>`__
 - `Valkey <https://valkey.io/>`__
-- `Redict <https://redict.io/>`__
 
 Compatibility tests for the above are included in the
 continuous integration test matrix `here <https://github.com/alisaifee/coredis/actions/workflows/main.yml>`__.

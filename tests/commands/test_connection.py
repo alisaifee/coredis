@@ -14,7 +14,6 @@ from tests.conftest import targets
     "redis_basic",
     "redis_basic_raw",
     "valkey",
-    "redict",
 )
 class TestConnection:
     async def test_bgsave(self, client):
@@ -237,7 +236,6 @@ class TestConnection:
             assert await client.client_getname() == _s("redis_py_test")
 
     @pytest.mark.novalkey
-    @pytest.mark.noredict
     async def test_client_pause(self, client, cloner):
         key = "key_should_expire"
         async with await cloner(client) as another_client:

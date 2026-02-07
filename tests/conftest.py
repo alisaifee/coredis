@@ -41,7 +41,6 @@ DOCKER_TAG_MAPPING = {
         "default": "7",
         "sentinel": "7.0.15",
         "stack": "7.0.6-RC9",
-        "redict": "7-alpine",
     },
     "7.2": {"default": "7.2", "stack": "7.2.0-v15"},
     "7.4": {"default": "7.4", "stack": "7.4.0-v3"},
@@ -126,8 +125,6 @@ async def get_version(client):
 
                 if "dragonfly_version" in client_info:
                     SERVER_TYPES[str(client)] = "dragonfly"
-                if "redict_version" in client_info:
-                    SERVER_TYPES[str(client)] = "redict"
                 if "valkey" == client_info.get("server_name"):
                     SERVER_TYPES[str(client)] = "valkey"
 
@@ -199,9 +196,6 @@ async def check_test_constraints(request, client):
 
         if marker.name == "novalkey" and SERVER_TYPES.get(str(client)) == "valkey":
             return pytest.skip("Skipped for Valkey")
-
-        if marker.name == "noredict" and SERVER_TYPES.get(str(client)) == "redict":
-            return pytest.skip("Skipped for redict")
 
         if marker.name == "nopypy" and PY_IMPLEMENTATION == "PyPy":
             return pytest.skip("Skipped for PyPy")
@@ -331,7 +325,6 @@ def docker_tags():
         "REDIS_STACK_VERSION": "stack",
         "DRAGONFLY_VERSION": "dragonfly",
         "VALKEY_VERSION": "valkey",
-        "REDICT_VERSION": "redict",
     }.items():
         os.environ.setdefault(env, mapping.get(key, mapping.get("default")))
 
@@ -474,13 +467,6 @@ def valkey_server(docker_services):
     docker_services.start("valkey")
     docker_services.wait_for_service("valkey", 6379, ping_socket)
     yield ["localhost", 12379]
-
-
-@pytest.fixture(scope="session")
-def redict_server(docker_services):
-    docker_services.start("redict")
-    docker_services.wait_for_service("redict", 6379, ping_socket)
-    yield ["localhost", 13379]
 
 
 @pytest.fixture
@@ -960,21 +946,6 @@ async def valkey(valkey_server, request):
         yield client
 
 
-@pytest.fixture
-async def redict(redict_server, request):
-    client = coredis.Redis(
-        "localhost",
-        13379,
-        decode_responses=True,
-        **get_client_test_args(request),
-    )
-    await check_test_constraints(request, client)
-    async with client:
-        await client.flushall()
-        await set_default_test_config(client, variant="redict")
-        yield client
-
-
 @pytest.fixture(scope="session")
 def docker_services_project_name():
     return "coredis"
@@ -1126,9 +1097,4 @@ def pytest_collection_modifyitems(items):
 
                 for token in tokens:
                     item.add_marker(getattr(pytest.mark, token))
-            elif client_name.startswith("redict"):
-                item.add_marker(getattr(pytest.mark, "redict"))
-                tokens = client_name.replace("redict_", "").split("_")
-
-                for token in tokens:
                     item.add_marker(getattr(pytest.mark, token))

@@ -13,7 +13,6 @@ from tests.conftest import server_deprecation_warning, targets
     "redis_cluster",
     "redis_cluster_raw",
     "valkey",
-    "redict",
 )
 class TestGeo:
     async def test_geoadd(self, client: Redis[str], _s):

@@ -13,7 +13,7 @@ from coredis.typing import Serializable
 from tests.conftest import targets
 
 
-@targets("redis_basic", "dragonfly", "valkey", "redict")
+@targets("redis_basic", "dragonfly", "valkey")
 class TestPipeline:
     async def test_incorrect_use_pipeline(self, client):
         async with client.pipeline() as pipe:

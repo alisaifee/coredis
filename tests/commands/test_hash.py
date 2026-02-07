@@ -20,7 +20,6 @@ from tests.conftest import server_deprecation_warning, targets
     "redis_cluster_cached",
     "dragonfly",
     "valkey",
-    "redict",
 )
 class TestHash:
     async def test_hget_and_hset(self, client, _s):

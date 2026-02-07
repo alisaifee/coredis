@@ -29,7 +29,6 @@ async def get_stream_message(client, stream, message_id):
     "redis_cluster_raw",
     "dragonfly",
     "valkey",
-    "redict",
 )
 class TestStreams:
     async def test_xadd_with_wrong_id(self, client, _s):

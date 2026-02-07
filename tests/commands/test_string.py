@@ -18,7 +18,6 @@ from tests.conftest import server_deprecation_warning, targets
     "redis_cluster_cached",
     "dragonfly",
     "valkey",
-    "redict",
 )
 class TestString:
     async def test_append(self, client, _s):

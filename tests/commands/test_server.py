@@ -18,7 +18,6 @@ from tests.conftest import targets
     "redis_basic_raw",
     "redis_cluster",
     "valkey",
-    "redict",
 )
 class TestServer:
     async def slowlog(self, client, _s):
@@ -243,7 +242,6 @@ class TestServer:
         assert await client.latency_doctor()
 
     @pytest.mark.nocluster
-    @pytest.mark.noredict
     @pytest.mark.novalkey
     async def test_latency_all(self, client, _s):
         await client.execute_command(RedisCommand(b"debug", ("sleep", 0.05)))
@@ -260,7 +258,6 @@ class TestServer:
         assert latest[_s("command")][2] == approx(50, 60)
 
     @pytest.mark.nocluster
-    @pytest.mark.noredict
     @pytest.mark.novalkey
     async def test_latency_graph(self, client, _s):
         await client.execute_command(RedisCommand(b"debug", ("sleep", 0.05)))

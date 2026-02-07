@@ -284,8 +284,3 @@ services:
     command: redis-server --port 6379 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes
     ports:
       - '12379:6379'
-  redict:
-    image: "registry.redict.io/redict:${REDICT_VERSION:-alpine}"
-    command: redict-server --port 6379 ${DEFAULT_ARGS---enable-debug-command yes} --appendonly yes
-    ports:
-      - '13379:6379'

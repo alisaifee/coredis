@@ -27,7 +27,6 @@ from tests.conftest import targets
     "redis_ssl_no_client_auth",
     "dragonfly",
     "valkey",
-    "redict",
 )
 class TestClient:
     @pytest.fixture(autouse=True)

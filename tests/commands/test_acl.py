@@ -20,7 +20,6 @@ async def teardown(client):
     "redis_cluster",
     "redis_cluster_raw",
     "valkey",
-    "redict",
 )
 class TestACL:
     async def test_acl_cat(self, client, _s):
@@ -50,7 +49,6 @@ class TestACL:
             await client.acl_load()
 
     @pytest.mark.novalkey
-    @pytest.mark.noredict
     @pytest.mark.nocluster
     async def test_acl_log(self, client, _s):
         with pytest.warns(UserWarning):

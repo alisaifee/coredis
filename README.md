@@ -121,7 +121,6 @@ coredis is additionally tested against:
 **coredis** is known to work with the following databases that have redis protocol compatibility:
 
 - [Dragonfly](https://dragonflydb.io/)
-- [Redict](https://redict.io/)
 - [Valkey](https://github.com/valkey-io/valkey)
 
 ## References

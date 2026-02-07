@@ -18,7 +18,6 @@ from tests.conftest import targets
     "redis_cached",
     "redis_cluster_cached",
     "valkey",
-    "redict",
 )
 class TestGeneric:
     async def test_sort_basic(self, client, _s):
@@ -179,7 +178,6 @@ class TestGeneric:
         assert await client.get("b{foo}") is None
 
     @pytest.mark.novalkey
-    @pytest.mark.noredict
     async def test_dump_and_restore_with_ttl(self, client, _s):
         await client.set("a", "foo")
         dumped = await client.dump("a")
@@ -211,7 +209,6 @@ class TestGeneric:
         assert freq_now > freq
 
     @pytest.mark.novalkey
-    @pytest.mark.noredict
     @pytest.mark.max_server_version("7.4")
     async def test_dump_and_restore_with_idle_time(self, client, _s):
         await client.set("a", "foo")
@@ -234,7 +231,6 @@ class TestGeneric:
 
     @pytest.mark.nocluster
     @pytest.mark.novalkey
-    @pytest.mark.noredict
     async def test_migrate_single_key_with_auth(self, client, redis_auth, _s):
         async with redis_auth.connection_pool.acquire() as auth_connection:
             await client.set("a", "1")
@@ -312,7 +308,6 @@ class TestGeneric:
 
     @pytest.mark.nocluster
     @pytest.mark.novalkey
-    @pytest.mark.noredict
     async def test_migrate_multiple_keys_with_auth(self, client, redis_auth, _s):
         async with redis_auth.connection_pool.acquire() as auth_connection:
             await client.set("a", "1")
@@ -361,7 +356,6 @@ class TestGeneric:
         assert await client.object_encoding("b") == _s("listpack")
 
     @pytest.mark.novalkey
-    @pytest.mark.noredict
     async def test_object_freq(self, client, _s):
         await client.set("a", "foo")
         with pytest.raises(ResponseError):
@@ -370,7 +364,6 @@ class TestGeneric:
         assert isinstance(await client.object_freq("a"), int)
 
     @pytest.mark.novalkey
-    @pytest.mark.noredict
     async def test_object_idletime(self, client, _s):
         await client.set("a", "foo")
         assert isinstance(await client.object_idletime("a"), int)

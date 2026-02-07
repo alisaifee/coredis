@@ -48,7 +48,7 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13", "3.14"]
         redis-version: ["7.2", "7.4", "8.0", "8.2", "8.4", "latest"]
-        test_params: ["-m '(not (dragonfly or valkey or redict))'"]
+        test_params: ["-m '(not (dragonfly or valkey))'"]
         uvloop: ["False"]
         orjson: ["False"]
         anyio-backend: ["asyncio"]
@@ -58,22 +58,22 @@ jobs:
         include:
           - python-version: "3.13"
             redis-version: next
-            test_params: "-m '(not (dragonfly or valkey or redict))'"
+            test_params: "-m '(not (dragonfly or valkey))'"
             runtime_type_checks: "True"
             label: ""
           - python-version: "3.13"
             redis-version: "latest"
-            test_params: "-m '(not (dragonfly or valkey or redict))'"
+            test_params: "-m '(not (dragonfly or valkey))'"
             runtime_type_checks: "True"
             extensions: "False"
           - python-version: "3.13"
             redis-version: "latest"
-            test_params: "-m '(not (dragonfly or valkey or redict))'"
+            test_params: "-m '(not (dragonfly or valkey))'"
             runtime_type_checks: "True"
             uvloop: "True"
           - python-version: "3.13"
             redis-version: "latest"
-            test_params: "-m '(not (dragonfly or valkey or redict))'"
+            test_params: "-m '(not (dragonfly or valkey))'"
             runtime_type_checks: "True"
             anyio-backend: "trio"
           - python-version: "3.13"
@@ -84,13 +84,9 @@ jobs:
             redis-version: "latest"
             test_params: "-m valkey"
             label: "Valkey: latest"
-          - python-version: "3.13"
-            redis-version: "7.0"
-            test_params: "-m redict"
-            label: "Redict"
           - python-version: "pypy-3.10"
             redis-version: "8.0"
-            test_params: "-m '(not (dragonfly or valkey or redict))' tests/commands tests/test_tracking_cache.py"
+            test_params: "-m '(not (dragonfly or valkey))' tests/commands tests/test_tracking_cache.py"
             runtime_type_checks: "False"
             extensions: "False"
             uvloop: "False"
