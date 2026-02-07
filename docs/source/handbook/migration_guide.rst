@@ -16,7 +16,7 @@ anyio integration
     All async operations now run on :mod:`anyio`. This enables structured concurrency,
     ensuring tasks, connections, and background resources are tied to explicit lifetimes.
     Many classes of bugs related to leaked connections or cancelled tasks are eliminated.
-    Both :mod:``asyncio`` and :mod:``trio`` backends are supported.
+    Both :mod:`asyncio` and :mod:`trio` backends are supported.
 
 Async context-managed classes
     All user-facing classes representing Redis concepts (clients, connection pools, Pub/Sub,
