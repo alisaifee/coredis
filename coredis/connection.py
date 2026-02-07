@@ -9,7 +9,7 @@ import ssl
 from abc import ABC, abstractmethod
 from collections import deque
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 from weakref import ProxyType, proxy
 
 from anyio import (
@@ -55,6 +55,7 @@ from coredis.typing import (
     Awaitable,
     Callable,
     Generator,
+    ManagedNode,
     NotRequired,
     RedisValueT,
     ResponseType,
@@ -70,8 +71,7 @@ CERT_REQS = {
 }
 R = TypeVar("R")
 
-if TYPE_CHECKING:
-    from coredis.pool.nodemanager import ManagedNode
+ConnectionT = TypeVar("ConnectionT", bound="BaseConnection")
 
 
 class BaseConnectionParams(TypedDict):
@@ -837,9 +837,7 @@ class UnixDomainSocketConnection(BaseConnection):
 
 
 class ClusterConnection(Connection):
-    "Manages TCP communication to and from a Redis server"
-
-    node: ManagedNode
+    "Manages TCP communication to and from a Redis Cluster node"
 
     def __init__(
         self,
@@ -855,6 +853,7 @@ class ClusterConnection(Connection):
             port=port,
             **kwargs,
         )
+        self.node = ManagedNode(host=host, port=port)
 
         async def _on_connect(*_: Any) -> None:
             """

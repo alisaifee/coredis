@@ -31,7 +31,6 @@ from coredis.exceptions import (
     WatchError,
 )
 from coredis.pool import ClusterConnectionPool
-from coredis.pool.nodemanager import ManagedNode
 from coredis.response._callbacks import (
     AnyStrCallback,
     BoolsCallback,
@@ -47,6 +46,7 @@ from coredis.typing import (
     Generator,
     Iterable,
     KeyT,
+    ManagedNode,
     ParamSpec,
     RedisCommand,
     RedisCommandP,

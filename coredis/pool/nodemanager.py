@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 import random
 import warnings
 from typing import TYPE_CHECKING, Any
@@ -16,6 +15,7 @@ from coredis.typing import (
     Iterable,
     Iterator,
     Literal,
+    ManagedNode,
     Node,
     RedisValueT,
     StringT,
@@ -26,22 +26,6 @@ HASH_SLOTS_SET = set(range(HASH_SLOTS))
 
 if TYPE_CHECKING:
     from coredis import Redis
-
-
-@dataclasses.dataclass(unsafe_hash=True)
-class ManagedNode:
-    """
-    Represents a cluster node (primary or replica) in a redis cluster
-    """
-
-    host: str
-    port: int
-    server_type: Literal["primary", "replica"] | None = None
-    node_id: str | None = None
-
-    @property
-    def name(self) -> str:
-        return f"{self.host}:{self.port}"
 
 
 class NodeManager:

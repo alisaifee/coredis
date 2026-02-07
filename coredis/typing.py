@@ -102,6 +102,22 @@ class Node(TypedDict):
     port: int
 
 
+@dataclasses.dataclass(unsafe_hash=True)
+class ManagedNode:
+    """
+    Represents a cluster node (primary or replica) in a redis cluster
+    """
+
+    host: str
+    port: int
+    server_type: Literal["primary", "replica"] | None = None
+    node_id: str | None = None
+
+    @property
+    def name(self) -> str:
+        return f"{self.host}:{self.port}"
+
+
 class RedisCommandP(Protocol):
     """
     Protocol of a redis command with all associated arguments

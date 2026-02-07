@@ -34,7 +34,6 @@ from coredis.globals import CACHEABLE_COMMANDS, MODULE_GROUPS, READONLY_COMMANDS
 from coredis.patterns.cache import AbstractCache
 from coredis.patterns.pubsub import ClusterPubSub, ShardedPubSub, SubscriptionCallback
 from coredis.pool import ClusterConnectionPool
-from coredis.pool.nodemanager import ManagedNode
 from coredis.response._callbacks import NoopCallback
 from coredis.retry import (
     CompositeRetryPolicy,
@@ -54,6 +53,7 @@ from coredis.typing import (
     Iterator,
     KeyT,
     Literal,
+    ManagedNode,
     Mapping,
     Node,
     Parameters,

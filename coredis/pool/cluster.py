@@ -16,13 +16,14 @@ from coredis.exceptions import RedisClusterException, RedisError
 from coredis.globals import READONLY_COMMANDS
 from coredis.patterns.cache import AbstractCache, ClusterTrackingCache
 from coredis.pool.basic import ConnectionPool
-from coredis.pool.nodemanager import ManagedNode, NodeManager
+from coredis.pool.nodemanager import NodeManager
 from coredis.typing import (
     AsyncGenerator,
     Callable,
     ClassVar,
     Iterable,
     KeyT,
+    ManagedNode,
     Node,
     NotRequired,
     Unpack,
@@ -296,7 +297,6 @@ class ClusterConnectionPool(ConnectionPool):
             read_from_replicas=self.read_from_replicas,
             **self.connection_kwargs,
         )
-        connection.node = node
         if err := await self._task_group.start(self.__wrap_connection, connection):
             raise err
         return connection

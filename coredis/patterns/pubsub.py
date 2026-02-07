@@ -44,6 +44,7 @@ from coredis.typing import (
     Awaitable,
     Callable,
     Generic,
+    ManagedNode,
     Mapping,
     MutableMapping,
     Parameters,
@@ -56,7 +57,6 @@ from coredis.typing import (
 
 if TYPE_CHECKING:
     import coredis.pool
-    from coredis.pool.nodemanager import ManagedNode
 
 T = TypeVar("T")
 PoolT = TypeVar("PoolT", bound="coredis.pool.ConnectionPool")
