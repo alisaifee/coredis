@@ -175,10 +175,9 @@ class TestClusterPoolParameters:
 
     @pytest.mark.parametrize(
         "client_arguments",
-        [{"max_connections": 2, "max_connections_per_node": True}],
+        [{"max_connections": 2, "max_connections_per_node": True, "pool_timeout": 1}],
     )
     async def test_timeout(self, client, client_arguments, mocker):
-        client.connection_pool.timeout = 1
         with pytest.RaisesGroup(TimeoutError):
             await gather(*(client.blpop(["test"], timeout=2) for _ in range(3)))
 

@@ -115,6 +115,7 @@ class Client(
         credential_provider: AbstractCredentialProvider | None = None,
         stream_timeout: float | None = None,
         connect_timeout: float | None = None,
+        pool_timeout: float | None = None,
         connection_pool: ConnectionPool | None = None,
         connection_pool_cls: type[ConnectionPool] = ConnectionPool,
         unix_socket_path: str | None = None,
@@ -148,6 +149,7 @@ class Client(
                 "encoding": encoding,
                 "stream_timeout": stream_timeout,
                 "connect_timeout": connect_timeout,
+                "timeout": pool_timeout,
                 "max_connections": max_connections,
                 "decode_responses": decode_responses,
                 "max_idle_time": max_idle_time,
@@ -521,6 +523,7 @@ class Redis(Client[AnyStr]):
         credential_provider: AbstractCredentialProvider | None = ...,
         stream_timeout: float | None = ...,
         connect_timeout: float | None = ...,
+        pool_timeout: float | None = ...,
         connection_pool: ConnectionPool | None = ...,
         connection_pool_cls: type[ConnectionPool] = ...,
         unix_socket_path: str | None = ...,
@@ -558,6 +561,7 @@ class Redis(Client[AnyStr]):
         credential_provider: AbstractCredentialProvider | None = ...,
         stream_timeout: float | None = ...,
         connect_timeout: float | None = ...,
+        pool_timeout: float | None = ...,
         connection_pool: ConnectionPool | None = ...,
         connection_pool_cls: type[ConnectionPool] = ...,
         unix_socket_path: str | None = ...,
@@ -594,6 +598,7 @@ class Redis(Client[AnyStr]):
         credential_provider: AbstractCredentialProvider | None = None,
         stream_timeout: float | None = None,
         connect_timeout: float | None = None,
+        pool_timeout: float | None = None,
         connection_pool: ConnectionPool | None = None,
         connection_pool_cls: type[ConnectionPool] = ConnectionPool,
         unix_socket_path: str | None = None,
@@ -692,6 +697,8 @@ class Redis(Client[AnyStr]):
         :param credential_provider: CredentialProvider to get authentication credentials
         :param stream_timeout: Timeout (seconds) when reading responses from the server
         :param connect_timeout: Timeout (seconds) for establishing a connection to the server
+        :param pool_timeout: Timeout (seconds) for acquiring a connection from the
+         connection pool
         :param connection_pool: The connection pool instance to use. If not provided
          a new pool will be assigned to this client.
         :param connection_pool_cls: The connection pool class to use when constructing
@@ -752,6 +759,7 @@ class Redis(Client[AnyStr]):
             credential_provider=credential_provider,
             stream_timeout=stream_timeout,
             connect_timeout=connect_timeout,
+            pool_timeout=pool_timeout,
             connection_pool=connection_pool,
             connection_pool_cls=connection_pool_cls,
             unix_socket_path=unix_socket_path,
