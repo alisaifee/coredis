@@ -143,10 +143,11 @@ class CommandRequest(Awaitable[CommandResponseT]):
            def _(value: bytes) -> int:
                return int(value)
 
-           await client.set("fubar", 1)
-           raw: bytes = await client.get("fubar")
-           int_value: int = await client.get("fubar").transform(int)
-           float_value: float = await client.get("fubar").transform(lambda value: float(value))
+           async with client:
+               await client.set("fubar", 1)
+               raw: bytes = await client.get("fubar")
+               int_value: int = await client.get("fubar").transform(int)
+               float_value: float = await client.get("fubar").transform(lambda value: float(value))
         """
 
         transform_func = cast(

@@ -157,11 +157,10 @@ class Serializable(Generic[R]):
       class MyThing:
           ...
 
-      client = coredis.Redis()
-
-      # This will pass type checking but will fail with an :exc:`LookupError`
-      # at runtime
-      await client.set("fubar", coredis.typing.Serializable(MyThing()))
+      async with coredis.Redis() as client:
+          # This will pass type checking but will fail with an :exc:`LookupError`
+          # at runtime
+          await client.set("fubar", coredis.typing.Serializable(MyThing()))
 
       # however, if a serializer is registered, the above would succeed
       @client.type_adapter.serializer
@@ -207,13 +206,13 @@ class TypeAdapter:
       def mapping_to_decimal_mapping(mapping: Mapping[str|bytes, str|bytes]) -> dict[str|bytes, Decimal]:
           return {key: value_to_decimal(value) for key, value in mapping.items()}
 
-      client = coredis.Redis(type_adapter=adapter, decode_responses=True)
-      await client.set("key", Serializable(Decimal(1.5)))
-      await client.lpush("list", [Serializable(Decimal(1.5))])
-      await client.hset("dict", {"first": Serializable(Decimal(1.5))})
-      assert Decimal(1.5) == await client.get("key").transform(Decimal)
-      assert [Decimal(1.5)] == await client.lrange("list", 0, 0).transform(list[Decimal])
-      assert {"first": Decimal(1.5)} == await client.hgetall("dict").transform(dict[str, Decimal])
+      async with coredis.Redis(type_adapter=adapter, decode_responses=True) as client:
+          await client.set("key", Serializable(Decimal(1.5)))
+          await client.lpush("list", [Serializable(Decimal(1.5))])
+          await client.hset("dict", {"first": Serializable(Decimal(1.5))})
+          assert Decimal(1.5) == await client.get("key").transform(Decimal)
+          assert [Decimal(1.5)] == await client.lrange("list", 0, 0).transform(list[Decimal])
+          assert {"first": Decimal(1.5)} == await client.hgetall("dict").transform(dict[str, Decimal])
     """
 
     def __init__(

@@ -43,9 +43,10 @@ class Script(Generic[AnyStr]):
     Example::
 
         client = coredis.Redis()
-        await client.set("test", "co")
-        concat = client.register_script("return redis.call('GET', KEYS[1]) + ARGV[1]")
-        assert await concat(['test'], ['redis']) == "coredis"
+        async with client:
+            await client.set("test", "co")
+            concat = client.register_script("return redis.call('GET', KEYS[1]) + ARGV[1]")
+            assert await concat(['test'], ['redis']) == "coredis"
     """
 
     #: SHA of this script once it's registered with the redis server
