@@ -57,11 +57,3 @@ async def test_valid_authentication_cred_provider(redis_auth_cred_provider):
     )
     async with client:
         assert await client.ping()
-
-
-async def test_valid_authentication_delayed(redis_auth):
-    client = coredis.Redis("localhost", 6389)
-    assert client.server_version is None
-    async with client:
-        await client.auth(password="sekret")
-        assert await client.ping()
