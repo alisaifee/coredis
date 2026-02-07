@@ -335,6 +335,7 @@ class BaseConnection(ABC):
         self._last_error: BaseException | None = None
         self._connected = False
         self._transport_failed = False
+        self._terminated = False
 
         # To be used in the read task for cpu bound processing after data is received
         self._processing_budget = processing_budget
@@ -365,7 +366,11 @@ class BaseConnection(ABC):
         Whether the connection is established and initial handshakes were
         performed without error
         """
-        return self._connected and self._connection is not None and not self._transport_failed
+        return (
+            self._connected
+            and self._connection is not None
+            and not (self._transport_failed or self._terminated)
+        )
 
     def register_connect_callback(
         self,
@@ -458,10 +463,13 @@ class BaseConnection(ABC):
 
     def terminate(self, reason: str | None = None) -> None:
         """
-        Terminates the connection prematurely
+        Terminates the connection prematurely due to internal
+        reasons (basically a request pending on the connection has been
+        cancelled or timed out leaving the connection unusable)
 
         :meta private:
         """
+        self._terminated = True
         if self._task_group:
             self._task_group.cancel_scope.cancel(reason)
 
