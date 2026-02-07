@@ -21,6 +21,7 @@ from coredis.client.basic import Redis
 from coredis.credentials import UserPassCredentialProvider
 from coredis.patterns.cache import LRUCache
 from coredis.response._callbacks import NoopCallback
+from coredis.retry import NoRetryPolicy
 from coredis.typing import (
     RUNTIME_TYPECHECKS,
     Callable,
@@ -225,10 +226,10 @@ async def set_default_test_config(client, variant=None):
 
 
 def get_client_test_args(request) -> dict[str, int]:
+    defaults = {"stream_timeout": 5, "connect_timeout": 1, "retry_policy": NoRetryPolicy()}
     if "client_arguments" in request.fixturenames:
-        return request.getfixturevalue("client_arguments")
-
-    return {"stream_timeout": 5, "connect_timeout": 1}
+        defaults.update(request.getfixturevalue("client_arguments"))
+    return defaults
 
 
 def get_remapped_slots(request):
