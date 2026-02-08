@@ -15,7 +15,8 @@ from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName
 from coredis.commands.request import TransformedResponse, is_type_like
 from coredis.commands.script import Script
-from coredis.connection import BaseConnection, CommandInvocation, Request
+from coredis.connection._base import BaseConnection, CommandInvocation
+from coredis.connection._request import Request
 from coredis.exceptions import (
     AskError,
     ClusterCrossSlotError,

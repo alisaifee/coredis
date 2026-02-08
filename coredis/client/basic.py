@@ -26,11 +26,11 @@ from coredis.commands.function import Library
 from coredis.commands.script import Script
 from coredis.commands.sentinel import SentinelCommands
 from coredis.config import Config
-from coredis.connection import (
+from coredis.connection._base import (
     BaseConnection,
     RedisSSLContext,
-    UnixDomainSocketConnection,
 )
+from coredis.connection._uds import UnixDomainSocketConnection
 from coredis.credentials import AbstractCredentialProvider
 from coredis.exceptions import (
     ConnectionError,

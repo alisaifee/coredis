@@ -15,13 +15,9 @@ from typing_extensions import Self
 
 from coredis._concurrency import Queue
 from coredis._utils import query_param_to_bool
-from coredis.connection import (
-    BaseConnection,
-    BaseConnectionParams,
-    Connection,
-    RedisSSLContext,
-    UnixDomainSocketConnection,
-)
+from coredis.connection._base import BaseConnection, BaseConnectionParams, RedisSSLContext
+from coredis.connection._tcp import Connection
+from coredis.connection._uds import UnixDomainSocketConnection
 from coredis.exceptions import RedisError
 from coredis.patterns.cache import AbstractCache, NodeTrackingCache, TrackingCache
 from coredis.typing import AsyncGenerator, Callable, ClassVar, NotRequired, TypeVar, Unpack

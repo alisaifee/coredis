@@ -19,7 +19,7 @@ from coredis.client.basic import Client, Redis
 from coredis.commands._key_spec import KeySpec
 from coredis.commands._validators import mutually_inclusive_parameters
 from coredis.commands.constants import CommandName, NodeFlag
-from coredis.connection import RedisSSLContext
+from coredis.connection._base import RedisSSLContext
 from coredis.exceptions import (
     AskError,
     BusyLoadingError,

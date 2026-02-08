@@ -5,12 +5,10 @@ import functools
 import inspect
 import math
 import os
-import socket
 import ssl
 from abc import ABC, abstractmethod
 from collections import deque
-from typing import Any, Concatenate, cast
-from weakref import ProxyType, proxy
+from typing import AsyncGenerator, Awaitable, Callable, Concatenate, TypedDict, TypeVar, cast
 
 from anyio import (
     TASK_STATUS_IGNORED,
@@ -19,58 +17,27 @@ from anyio import (
     CapacityLimiter,
     ClosedResourceError,
     EndOfStream,
-    Event,
-    connect_tcp,
-    connect_unix,
     create_memory_object_stream,
     create_task_group,
     fail_after,
-    get_cancelled_exc_class,
-    move_on_after,
 )
-from anyio.abc import ByteStream, SocketAttribute, TaskGroup, TaskStatus
+from anyio.abc import ByteStream, TaskGroup, TaskStatus
 from anyio.lowlevel import checkpoint
 from exceptiongroup import BaseExceptionGroup, catch
+from typing_extensions import NotRequired
 
 import coredis
 from coredis._packer import Packer
 from coredis._utils import logger, nativestr
 from coredis.commands.constants import CommandName
 from coredis.constants.resp import DataType
-from coredis.credentials import (
-    AbstractCredentialProvider,
-    UserPassCredentialProvider,
-)
-from coredis.exceptions import (
-    ConnectionError,
-    RedisError,
-    UnknownCommandError,
-)
+from coredis.credentials import AbstractCredentialProvider, UserPassCredentialProvider
+from coredis.exceptions import ConnectionError, UnknownCommandError
 from coredis.parser import NotEnoughData, Parser
 from coredis.tokens import PureToken
-from coredis.typing import (
-    AsyncGenerator,
-    Awaitable,
-    Callable,
-    Generator,
-    ManagedNode,
-    NotRequired,
-    P,
-    R,
-    RedisValueT,
-    ResponseType,
-    TypedDict,
-    TypeVar,
-    Unpack,
-)
+from coredis.typing import P, R, RedisError, RedisValueT, ResponseType
 
-CERT_REQS = {
-    "none": ssl.CERT_NONE,
-    "optional": ssl.CERT_OPTIONAL,
-    "required": ssl.CERT_REQUIRED,
-}
-
-ConnectionT = TypeVar("ConnectionT", bound="BaseConnection")
+from ._request import Request
 
 
 class BaseConnectionParams(TypedDict):
@@ -115,74 +82,7 @@ class BaseConnectionParams(TypedDict):
     ssl_context: NotRequired[ssl.SSLContext]
 
 
-@dataclasses.dataclass(slots=True)
-class Request:
-    connection: dataclasses.InitVar[BaseConnection]
-    command: bytes
-    args: tuple[RedisValueT, ...]
-    decode: bool
-    encoding: str | None = None
-    raise_exceptions: bool = True
-    response_timeout: float | None = None
-    disconnect_on_cancellation: bool = False
-    expects_response: bool = True
-
-    _connection: ProxyType[BaseConnection] = dataclasses.field(init=False)
-    _event: Event = dataclasses.field(init=False, default_factory=Event)
-    _exc: BaseException | None = dataclasses.field(init=False, default=None)
-    _result: ResponseType | None = dataclasses.field(init=False, default=None)
-
-    def __post_init__(self, connection: BaseConnection) -> None:
-        if not self.expects_response:
-            self.resolve(None)
-        self._connection = proxy(connection)
-
-    def __await__(self) -> Generator[Any, None, ResponseType]:
-        return self.get_result().__await__()
-
-    def resolve(self, response: ResponseType) -> None:
-        self._result = response
-        self._event.set()
-
-    def fail(self, error: BaseException) -> None:
-        if not self._event.is_set():
-            self._exc = error
-            self._event.set()
-
-    async def get_result(self) -> ResponseType:
-        if not self._event.is_set():
-            try:
-                with move_on_after(self.response_timeout) as scope:
-                    await self._event.wait()
-                if scope.cancelled_caught and not self._event.is_set():
-                    reason = (
-                        f"{nativestr(self.command)} timed out after {self.response_timeout} seconds"
-                    )
-                    self._exc = TimeoutError(reason)
-                    self._handle_response_cancellation(reason)
-            except get_cancelled_exc_class():
-                self._handle_response_cancellation(f"{nativestr(self.command)} was cancelled")
-                raise
-        return self._result_or_exc()
-
-    def _handle_response_cancellation(self, reason: str) -> None:
-        if self._connection and self.disconnect_on_cancellation:
-            self._connection.terminate(reason)
-
-    def _result_or_exc(self) -> ResponseType:
-        if self._exc is not None:
-            if self.raise_exceptions:
-                raise self._exc
-            return self._exc  # type: ignore
-        return self._result
-
-
-@dataclasses.dataclass
-class CommandInvocation:
-    command: bytes
-    args: tuple[RedisValueT, ...]
-    decode: bool | None
-    encoding: str | None
+ConnectionT = TypeVar("ConnectionT", bound="BaseConnection")
 
 
 class RedisSSLContext:
@@ -220,6 +120,13 @@ class RedisSSLContext:
             self.context.check_hostname = self.check_hostname
             self.context.verify_mode = self.cert_reqs
         return self.context
+
+
+CERT_REQS = {
+    "none": ssl.CERT_NONE,
+    "optional": ssl.CERT_OPTIONAL,
+    "required": ssl.CERT_REQUIRED,
+}
 
 
 class BaseConnection(ABC):
@@ -780,113 +687,9 @@ class BaseConnection(ABC):
         return requests
 
 
-class Connection(BaseConnection):
-    class Params(BaseConnectionParams):
-        """
-        :meta private:
-        """
-
-        host: NotRequired[str]
-        port: NotRequired[int]
-
-    def __init__(
-        self,
-        host: str = "127.0.0.1",
-        port: int = 6379,
-        *,
-        socket_keepalive: bool | None = None,
-        socket_keepalive_options: dict[int, int | bytes] | None = None,
-        **kwargs: Unpack[BaseConnectionParams],
-    ):
-        super().__init__(**kwargs)
-        self.host = host
-        self.port = port
-        self._socket_keepalive = socket_keepalive
-        self._socket_keepalive_options: dict[int, int | bytes] = socket_keepalive_options or {}
-
-    async def _connect(self) -> ByteStream:
-        with fail_after(self._connect_timeout):
-            if self._ssl_context:
-                connection: ByteStream = await connect_tcp(
-                    self.host,
-                    self.port,
-                    tls=True,
-                    ssl_context=self._ssl_context,
-                    tls_standard_compatible=False,
-                )
-            else:
-                connection = await connect_tcp(self.host, self.port)
-            sock = connection.extra(SocketAttribute.raw_socket, default=None)
-            if sock is not None:
-                if self._socket_keepalive:  # TCP_KEEPALIVE
-                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-                    for k, v in self._socket_keepalive_options.items():
-                        sock.setsockopt(socket.SOL_TCP, k, v)
-            return connection
-
-    def describe(self) -> str:
-        return f"Connection<host={self.host},port={self.port},db={self._db}>"
-
-    @property
-    def location(self) -> str:
-        return f"host={self.host},port={self.port}"
-
-
-class UnixDomainSocketConnection(BaseConnection):
-    class Params(BaseConnectionParams):
-        """
-        :meta private:
-        """
-
-        path: str
-
-    def __init__(self, path: str = "", **kwargs: Unpack[BaseConnectionParams]) -> None:
-        super().__init__(**kwargs)
-        self.path = path
-
-    async def _connect(self) -> ByteStream:
-        with fail_after(self._connect_timeout):
-            return await connect_unix(self.path)
-
-    def describe(self) -> str:
-        return f"UnixDomainSocketConnection<path={self.path},db={self._db}>"
-
-    @property
-    def location(self) -> str:
-        return f"path={self.path}"
-
-
-class ClusterConnection(Connection):
-    "Manages TCP communication to and from a Redis Cluster node"
-
-    def __init__(
-        self,
-        host: str = "127.0.0.1",
-        port: int = 6379,
-        *,
-        read_from_replicas: bool = False,
-        **kwargs: Unpack[BaseConnectionParams],
-    ) -> None:
-        self._read_from_replicas = read_from_replicas
-        super().__init__(
-            host=host,
-            port=port,
-            **kwargs,
-        )
-        self.node = ManagedNode(host=host, port=port)
-
-    async def perform_handshake(self) -> None:
-        """
-        Read only cluster connections need to explicitly
-        request readonly during handshake
-        """
-        await super().perform_handshake()
-        if self._read_from_replicas:
-            assert (await self.create_request(b"READONLY", decode=False)) == b"OK"
-
-    def describe(self) -> str:
-        return f"ClusterConnection<path={self.host},db={self.port}>"
-
-    @property
-    def location(self) -> str:
-        return f"host={self.host},port={self.port}"
+@dataclasses.dataclass
+class CommandInvocation:
+    command: bytes
+    args: tuple[RedisValueT, ...]
+    decode: bool | None
+    encoding: str | None
