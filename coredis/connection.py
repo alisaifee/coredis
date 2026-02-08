@@ -115,18 +115,27 @@ class BaseConnectionParams(TypedDict):
     ssl_context: NotRequired[ssl.SSLContext]
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(slots=True)
 class Request:
-    connection: ProxyType[BaseConnection]
+    connection: dataclasses.InitVar[BaseConnection]
     command: bytes
+    args: tuple[RedisValueT, ...]
     decode: bool
     encoding: str | None = None
     raise_exceptions: bool = True
     response_timeout: float | None = None
     disconnect_on_cancellation: bool = False
-    _event: Event = dataclasses.field(default_factory=Event)
-    _exc: BaseException | None = None
-    _result: ResponseType | None = None
+    expects_response: bool = True
+
+    _connection: ProxyType[BaseConnection] = dataclasses.field(init=False)
+    _event: Event = dataclasses.field(init=False, default_factory=Event)
+    _exc: BaseException | None = dataclasses.field(init=False, default=None)
+    _result: ResponseType | None = dataclasses.field(init=False, default=None)
+
+    def __post_init__(self, connection: BaseConnection) -> None:
+        if not self.expects_response:
+            self.resolve(None)
+        self._connection = proxy(connection)
 
     def __await__(self) -> Generator[Any, None, ResponseType]:
         return self.get_result().__await__()
@@ -157,8 +166,8 @@ class Request:
         return self._result_or_exc()
 
     def _handle_response_cancellation(self, reason: str) -> None:
-        if self.connection and self.disconnect_on_cancellation:
-            self.connection.terminate(reason)
+        if self._connection and self.disconnect_on_cancellation:
+            self._connection.terminate(reason)
 
     def _result_or_exc(self) -> ResponseType:
         if self._exc is not None:
@@ -335,7 +344,7 @@ class BaseConnection(ABC):
         )
         # RESP parser/packer
         #  for writes to the socket
-        self._write_buffer_in, self._write_buffer_out = create_memory_object_stream[list[bytes]](
+        self._write_buffer_in, self._write_buffer_out = create_memory_object_stream[list[Request]](
             math.inf
         )
         self._parser = Parser()
@@ -541,7 +550,11 @@ class BaseConnection(ABC):
             while self._write_buffer_out.statistics().current_buffer_used > 0:
                 requests.extend(self._write_buffer_out.receive_nowait())
                 await checkpoint()
-            data = b"".join(requests)
+            data = b"".join(
+                self._packer.pack_commands(
+                    [(request.command, *request.args) for request in requests]
+                )
+            )
             try:
                 await self.stream.send(data)
             except (ClosedResourceError, BrokenResourceError) as err:
@@ -676,7 +689,17 @@ class BaseConnection(ABC):
         pubsub scenarios where commands such as ``SUBSCRIBE``, ``UNSUBSCRIBE``
         etc do not result in a response.
         """
-        self._write_buffer_in.send_nowait(self._packer.pack_command(command, *args))
+        self._write_buffer_in.send_nowait(
+            [
+                Request(
+                    connection=self,
+                    command=command,
+                    args=args,
+                    decode=False,
+                    expects_response=False,
+                )
+            ]
+        )
 
     @_ensure_usable
     def create_request(
@@ -694,26 +717,37 @@ class BaseConnection(ABC):
         Queue a command to send to the server and create an
         associated request that can awaited for the response.
         """
-        cmd_list = []
-        if noreply and not self._noreply:
-            cmd_list = self._packer.pack_command(CommandName.CLIENT_REPLY, PureToken.SKIP)
-        cmd_list.extend(self._packer.pack_command(command, *args))
+        requests = []
         request_timeout: float | None = timeout or self._stream_timeout
+        expects_response = not (self._noreply_set or noreply)
+        if noreply and not self._noreply:
+            requests.append(
+                Request(
+                    connection=self,
+                    command=CommandName.CLIENT_REPLY,
+                    args=(PureToken.SKIP,),
+                    decode=bool(decode) if decode is not None else self._decode_responses,
+                    encoding=encoding or self._encoding,
+                    raise_exceptions=raise_exceptions,
+                    expects_response=False,
+                    disconnect_on_cancellation=disconnect_on_cancellation,
+                )
+            )
         request = Request(
-            proxy(self),
-            command,
-            bool(decode) if decode is not None else self._decode_responses,
-            encoding or self._encoding,
-            raise_exceptions,
-            request_timeout,
-            disconnect_on_cancellation,
+            connection=self,
+            command=command,
+            args=args,
+            decode=bool(decode) if decode is not None else self._decode_responses,
+            encoding=encoding or self._encoding,
+            raise_exceptions=raise_exceptions,
+            response_timeout=request_timeout,
+            expects_response=expects_response,
+            disconnect_on_cancellation=disconnect_on_cancellation,
         )
-        # modifying buffer and requests should happen atomically
-        if not (self._noreply_set or noreply):
+        requests.append(request)
+        self._write_buffer_in.send_nowait(requests)
+        if expects_response:
             self._requests.append(request)
-        else:
-            request.resolve(None)
-        self._write_buffer_in.send_nowait(cmd_list)
         return request
 
     @_ensure_usable
@@ -730,18 +764,18 @@ class BaseConnection(ABC):
         request_timeout: float | None = timeout or self._stream_timeout
         requests = [
             Request(
-                proxy(self),
-                cmd.command,
-                bool(cmd.decode) if cmd.decode is not None else self._decode_responses,
-                cmd.encoding or self._encoding,
-                raise_exceptions,
-                request_timeout,
-                disconnect_on_cancellation,
+                connection=self,
+                command=cmd.command,
+                args=cmd.args,
+                decode=bool(cmd.decode) if cmd.decode is not None else self._decode_responses,
+                encoding=cmd.encoding or self._encoding,
+                raise_exceptions=raise_exceptions,
+                response_timeout=request_timeout,
+                disconnect_on_cancellation=disconnect_on_cancellation,
             )
             for cmd in commands
         ]
-        packed = self._packer.pack_commands([(cmd.command, *cmd.args) for cmd in commands])
-        self._write_buffer_in.send_nowait(packed)
+        self._write_buffer_in.send_nowait(requests)
         self._requests.extend(requests)
         return requests
 
