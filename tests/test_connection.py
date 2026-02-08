@@ -25,7 +25,7 @@ async def test_connect_tcp(redis_basic):
     assert str(conn) == "Connection<host=127.0.0.1,port=6379,db=0>"
     async with create_task_group() as tg:
         await tg.start(conn.run)
-        check_request(conn, b"PING", (), b"PONG")
+        await check_request(conn, b"PING", (), b"PONG")
         tg.cancel_scope.cancel()
 
 
