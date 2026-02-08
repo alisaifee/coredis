@@ -152,7 +152,7 @@ class TestClusterConnectionPoolUrlParsing(CommonPoolUrlParsingExamples):
 class TestBasicPoolParameters:
     @pytest.mark.parametrize("client_arguments", [{"max_connections": 2}])
     async def test_max_connections(self, client, client_arguments, mocker):
-        connect_tcp = mocker.spy(coredis.connection, "connect_tcp")
+        connect_tcp = mocker.spy(coredis.connection._tcp, "connect_tcp")
         await gather(*(client.blpop(["test"], timeout=1) for _ in range(3)))
         assert connect_tcp.call_count == 1
 
@@ -169,7 +169,7 @@ class TestClusterPoolParameters:
         "client_arguments", [{"max_connections": 2, "max_connections_per_node": True}]
     )
     async def test_max_connections(self, client, client_arguments, mocker):
-        connect_tcp = mocker.spy(coredis.connection, "connect_tcp")
+        connect_tcp = mocker.spy(coredis.connection._tcp, "connect_tcp")
         await gather(*(client.blpop(["test"], timeout=1) for _ in range(3)))
         assert connect_tcp.call_count == 1
 
@@ -187,7 +187,7 @@ class TestClusterPoolParameters:
 class TestSharedConnectionPool:
     async def test_shared_pool(self, client, cloner, mocker):
         primary = await cloner(client)
-        connect_tcp = mocker.spy(coredis.connection, "connect_tcp")
+        connect_tcp = mocker.spy(coredis.connection._tcp, "connect_tcp")
         async with primary:
             await primary.ping()
             assert connect_tcp.call_count > 0
