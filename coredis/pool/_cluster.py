@@ -15,8 +15,8 @@ from coredis.connection import BaseConnection, BaseConnectionParams, ClusterConn
 from coredis.exceptions import RedisClusterException, RedisError
 from coredis.globals import READONLY_COMMANDS
 from coredis.patterns.cache import AbstractCache, ClusterTrackingCache
-from coredis.pool.basic import ConnectionPool
-from coredis.pool.nodemanager import NodeManager
+from coredis.pool._basic import ConnectionPool
+from coredis.pool._nodemanager import NodeManager
 from coredis.typing import (
     AsyncGenerator,
     Callable,

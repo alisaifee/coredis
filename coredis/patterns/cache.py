@@ -28,7 +28,7 @@ from coredis.typing import (
 
 if TYPE_CHECKING:
     import coredis.client
-    from coredis.pool.basic import ConnectionPool
+    from coredis.pool._basic import ConnectionPool
 
 
 @dataclasses.dataclass
@@ -446,7 +446,7 @@ class ClusterTrackingCache(TrackingCache):
         return all(cache.healthy for cache in self.node_caches.values())
 
     async def run(self, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
-        from coredis.pool.cluster import ClusterConnectionPool
+        from coredis.pool._cluster import ClusterConnectionPool
 
         assert isinstance(self._connection_pool, ClusterConnectionPool)
         self._nodes = [

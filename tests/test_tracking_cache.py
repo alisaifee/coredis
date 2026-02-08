@@ -8,7 +8,7 @@ from anyio import sleep
 from coredis.client.basic import Redis
 from coredis.client.cluster import RedisCluster
 from coredis.patterns.cache import LRUCache
-from coredis.pool.cluster import ClusterConnectionPool
+from coredis.pool._cluster import ClusterConnectionPool
 from tests.conftest import targets
 
 
