@@ -37,7 +37,6 @@ For example::
         pipe.bf.reserve("bf", 0.001, 1000)
         pipe.cf.reserve("cf", 1000)
         pipe.timeseries.add("ts", 1, 1)
-        pipe.graph.query("graph", "CREATE (:Node {name: 'Node'})")
 
 
 RedisJSON
