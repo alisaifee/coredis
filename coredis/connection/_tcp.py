@@ -4,7 +4,8 @@ import socket
 
 from anyio import connect_tcp, fail_after
 from anyio.abc import ByteStream, SocketAttribute
-from typing_extensions import NotRequired, Unpack
+
+from coredis.typing import NotRequired, Unpack
 
 from ._base import BaseConnection, BaseConnectionParams
 

@@ -8,7 +8,7 @@ import os
 import ssl
 from abc import ABC, abstractmethod
 from collections import deque
-from typing import AsyncGenerator, Awaitable, Callable, Concatenate, TypedDict, TypeVar, cast
+from typing import cast
 
 from anyio import (
     TASK_STATUS_IGNORED,
@@ -24,7 +24,6 @@ from anyio import (
 from anyio.abc import ByteStream, TaskGroup, TaskStatus
 from anyio.lowlevel import checkpoint
 from exceptiongroup import BaseExceptionGroup, catch
-from typing_extensions import NotRequired
 
 import coredis
 from coredis._packer import Packer
@@ -35,7 +34,20 @@ from coredis.credentials import AbstractCredentialProvider, UserPassCredentialPr
 from coredis.exceptions import ConnectionError, UnknownCommandError
 from coredis.parser import NotEnoughData, Parser
 from coredis.tokens import PureToken
-from coredis.typing import P, R, RedisError, RedisValueT, ResponseType
+from coredis.typing import (
+    AsyncGenerator,
+    Awaitable,
+    Callable,
+    Concatenate,
+    NotRequired,
+    P,
+    R,
+    RedisError,
+    RedisValueT,
+    ResponseType,
+    TypedDict,
+    TypeVar,
+)
 
 from ._request import Request
 

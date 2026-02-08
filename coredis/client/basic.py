@@ -12,7 +12,6 @@ from anyio import AsyncContextManagerMixin, sleep
 from deprecated.sphinx import versionadded
 from exceptiongroup import catch
 from packaging.version import InvalidVersion, Version
-from typing_extensions import Self
 
 from coredis._utils import logger, nativestr
 from coredis.commands import CommandRequest
@@ -71,6 +70,7 @@ from coredis.typing import (
     ParamSpec,
     RedisCommandP,
     RedisValueT,
+    Self,
     StringT,
     T_co,
     TypeAdapter,

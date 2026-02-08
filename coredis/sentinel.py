@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import random
 from contextlib import AsyncExitStack, asynccontextmanager
-from typing import Any, AsyncGenerator, AsyncIterator, overload
+from typing import Any, overload
 
 from anyio import AsyncContextManagerMixin, ConnectionFailed
 from anyio.abc import ByteStream
-from typing_extensions import Self, override
 
 from coredis import BaseConnection, Redis
 from coredis._utils import nativestr
@@ -22,10 +21,13 @@ from coredis.pool import ConnectionPool
 from coredis.retry import NoRetryPolicy, RetryPolicy
 from coredis.typing import (
     AnyStr,
+    AsyncGenerator,
+    AsyncIterator,
     Generic,
     Iterable,
     Literal,
     ResponsePrimitive,
+    Self,
     StringT,
     TypeAdapter,
     Unpack,
@@ -47,7 +49,6 @@ class SentinelManagedConnection(Connection, Generic[AnyStr]):
             host_info = ""
         return f"{type(self).__name__}<service={pool.service_name}{host_info}>"
 
-    @override
     async def _connect(self) -> ByteStream:
         if self.connection_pool.is_primary:
             self.host, self.port = await self.connection_pool.get_primary_address()

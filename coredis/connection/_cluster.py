@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from typing_extensions import Unpack
-
-from coredis.typing import ManagedNode
+from coredis.typing import ManagedNode, Unpack
 
 from ._base import BaseConnectionParams
 from ._tcp import Connection

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from anyio import connect_unix, fail_after
 from anyio.abc import ByteStream
-from typing_extensions import Unpack
+
+from coredis.typing import Unpack
 
 from ._base import BaseConnection, BaseConnectionParams
 

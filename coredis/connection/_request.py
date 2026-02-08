@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import dataclasses
 from _weakref import ProxyType, proxy
-from typing import TYPE_CHECKING, Any, Generator
+from typing import TYPE_CHECKING, Any
 
 from anyio import Event, get_cancelled_exc_class, move_on_after
 
 from coredis._utils import nativestr
-from coredis.typing import RedisValueT, ResponseType
+from coredis.typing import Generator, RedisValueT, ResponseType
 
 if TYPE_CHECKING:
     from ._base import BaseConnection

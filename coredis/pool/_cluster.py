@@ -7,7 +7,6 @@ from typing import Any, cast
 
 from anyio import TASK_STATUS_IGNORED, Lock, create_task_group, fail_after
 from anyio.abc import TaskStatus
-from typing_extensions import Self
 
 from coredis._concurrency import Queue, QueueFull
 from coredis._utils import query_param_to_bool
@@ -26,6 +25,7 @@ from coredis.typing import (
     ManagedNode,
     Node,
     NotRequired,
+    Self,
     Unpack,
 )
 
