@@ -144,7 +144,7 @@ intersphinx_mapping = {
 
 # Workaround for https://github.com/sphinx-doc/sphinx/issues/9560
 from sphinx.domains.python import PythonDomain
-from sphinx.ext.autodoc import ClassDocumenter, Documenter, _
+from sphinx.ext.autodoc import ClassDocumenter, Documenter
 
 assert PythonDomain.object_types["data"].roles == ("data", "obj")
 PythonDomain.object_types["data"].roles = ("data", "class", "obj")

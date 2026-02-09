@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 from collections.abc import Hashable
-from typing import Any, TypeAlias
+from typing import Any
 
-from .typing import MutableSet, RedisError, ResponsePrimitive
+from .typing import MutableSet, RedisError, StringT, TypeAliasType
+
+#: Primitives returned by redis
+ResponsePrimitive = TypeAliasType("ResponsePrimitive", StringT | int | float | bool | None)
 
 #: Represents the total structure of any response for any redis command.
-ResponseType: TypeAlias = (
+ResponseType = TypeAliasType(
+    "ResponseType",
     ResponsePrimitive
     | list[Any]
     | MutableSet[Hashable]
@@ -14,7 +18,7 @@ ResponseType: TypeAlias = (
         Hashable,
         Any,
     ]
-    | RedisError
+    | RedisError,
 )
 #: Type alias for valid python types that can be represented as json
-JsonType: TypeAlias = str | int | float | bool | dict[str, Any] | list[Any] | None
+JsonType = TypeAliasType("JsonType", str | int | float | bool | dict[str, Any] | list[Any] | None)

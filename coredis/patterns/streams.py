@@ -102,7 +102,7 @@ class Consumer(Generic[AnyStr], AsyncContextManagerMixin):
         finally:
             self._reset()
 
-    def chunk_streams(self) -> list[dict[ValueT, StringT]]:
+    def chunk_streams(self) -> list[dict[KeyT, ValueT]]:
         if isinstance(self.client, coredis.client.RedisCluster):
             return [
                 {stream: self._state[stream].get("identifier", None) or self.DEFAULT_START_ID}

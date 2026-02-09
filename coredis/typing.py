@@ -25,7 +25,6 @@ from collections.abc import (
 from types import GenericAlias, ModuleType, UnionType
 from typing import (
     TYPE_CHECKING,
-    Annotated,
     Any,
     AnyStr,
     ClassVar,
@@ -36,6 +35,8 @@ from typing import (
     NamedTuple,
     ParamSpec,
     Protocol,
+    TypeAlias,
+    TypeAliasType,
     TypedDict,
     TypeGuard,
     TypeVar,
@@ -156,7 +157,7 @@ class ExecutionParameters(TypedDict):
 
 
 #: Represents the acceptable types of a redis key
-KeyT = Annotated[str | bytes, "KeyT"]
+KeyT = TypeAliasType("KeyT", str | bytes)
 
 
 class Serializable(Generic[R]):
@@ -513,18 +514,21 @@ class TypeAdapter:
 #: Additionally any object wrapped in a :class:`Serializable` will be
 #: accepted and will be serialized using an appropriate type adapter
 #: registered with the client. See :ref:`api/typing:custom types` for more details.
-ValueT = str | bytes | int | float | Serializable[Any]
-
+ValueT = TypeAliasType("ValueT", str | bytes | int | float | Serializable[Any])
 #: The canonical type used for input parameters that represent "strings"
 #: that are transmitted to redis.
-StringT = str | bytes
+StringT = TypeAliasType("StringT", str | bytes)
+
+#: Used for dictionary keys for all commands that accept :class:`~typing.Mapping`
+#: as a parameter to allow any :class:`~coredis.typing.ValueT` as a key
+MappingKeyT = TypeVar("MappingKeyT", bound=ValueT)
 
 CommandArgList = list[ValueT]
 
 #: Primitive types that we can expect to be sent to redis with
 #: simple serialization. The internals of coredis
 #: pass around arguments to redis commands as this type.
-RedisValueT = str | bytes | int | float
+RedisValueT = TypeAliasType("RedisValueT", str | bytes | int | float)
 
 #: Restricted union of container types accepted as arguments to apis
 #: that accept a variable number values for an argument (such as keys, values).
@@ -546,15 +550,17 @@ RedisValueT = str | bytes | int | float
 #:     length({"1": 2})            # invalid
 #:     length("123")               # invalid
 #:     length(b"123")              # invalid
-Parameters = list[T_co] | Set[T_co] | tuple[T_co, ...] | ValuesView[T_co] | Iterator[T_co]
+Parameters = TypeAliasType(
+    "Parameters",
+    list[T_co] | Set[T_co] | tuple[T_co, ...] | ValuesView[T_co] | Iterator[T_co],
+    type_params=(T_co,),
+)
 
-#: Primitives returned by redis
-ResponsePrimitive = StringT | int | float | bool | None
 
 if sys.version_info >= (3, 12):
-    from ._py_312_typing import JsonType, ResponseType
+    from ._py_312_typing import JsonType, ResponsePrimitive, ResponseType
 else:
-    from ._py_311_typing import JsonType, ResponseType
+    from ._py_311_typing import JsonType, ResponsePrimitive, ResponseType
 
 
 __all__ = [
@@ -577,6 +583,7 @@ __all__ = [
     "JsonType",
     "KeyT",
     "Literal",
+    "MappingKeyT",
     "Mapping",
     "ModuleType",
     "MutableMapping",
@@ -598,6 +605,8 @@ __all__ = [
     "Self",
     "Sequence",
     "StringT",
+    "TypeAlias",
+    "TypeAliasType",
     "TypeGuard",
     "TypeIs",
     "TypedDict",

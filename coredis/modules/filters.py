@@ -668,7 +668,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    def incrby(self, key: KeyT, items: Mapping[AnyStr, int]) -> CommandRequest[tuple[int, ...]]:
+    def incrby(self, key: KeyT, items: Mapping[StringT, int]) -> CommandRequest[tuple[int, ...]]:
         """
         Increases the count of one or more items by increment
 
@@ -831,7 +831,7 @@ class TopK(ModuleGroup[AnyStr]):
         module=MODULE,
     )
     def incrby(
-        self, key: KeyT, items: Mapping[AnyStr, int]
+        self, key: KeyT, items: Mapping[StringT, int]
     ) -> CommandRequest[tuple[AnyStr | None, ...]]:
         """
         Increases the count of one or more items by increment

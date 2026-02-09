@@ -8,11 +8,13 @@ Input types
 The API uses the following type aliases to describe the unions of acceptable types
 for parameters to redis command wrappers.
 
-.. autodata:: coredis.typing.KeyT
-.. autodata:: coredis.typing.ValueT
-.. autodata:: coredis.typing.RedisValueT
-.. autodata:: coredis.typing.StringT
-.. autodata:: coredis.typing.JsonType
+.. autotype:: coredis.typing.KeyT
+.. autotype:: coredis.typing.ValueT
+.. autotype:: coredis.typing.RedisValueT
+.. autotype:: coredis.typing.StringT
+.. autodata:: coredis.typing.MappingKeyT
+
+.. autotype:: coredis.typing.JsonType
 
 For methods that accept non optional variable number of keys or values, coredis does **NOT**
 use **positional** or **keyword varargs** and expects a "container" to be passed in for the argument.
@@ -21,7 +23,7 @@ Common examples of such APIs are :meth:`~coredis.Redis.delete` and :meth:`~cored
 Instead of accepting :class:`~collections.abc.Iterable`, a union of select containers from the standard
 library are accepted via :data:`~coredis.typing.Parameters`.
 
-.. autodata:: coredis.typing.Parameters
+.. autotype:: coredis.typing.Parameters
 
 Custom types
 ^^^^^^^^^^^^
@@ -41,13 +43,9 @@ In most cases these are not exposed through the client API and are only meant
 for internal pre-validation before the parsed response is transformed or narrowed
 to the returns documented in the client API at :ref:`api/clients:clients`.
 
-.. type:: coredis.typing.ResponsePrimitive
+.. autotype:: coredis.typing.ResponsePrimitive
 
-   Primitives returned by redis
-
-.. type:: coredis.typing.ResponseType
-
-   The total structure of any response for any redis command.
+.. autotype:: coredis.typing.ResponseType
 
 Response Types
 ^^^^^^^^^^^^^^

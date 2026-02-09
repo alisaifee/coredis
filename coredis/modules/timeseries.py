@@ -11,6 +11,7 @@ from coredis.typing import (
     KeyT,
     Literal,
     Mapping,
+    MappingKeyT,
     Parameters,
     RedisValueT,
     ResponseType,
@@ -90,7 +91,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
                 PureToken.SUM,
             ]
         ) = None,
-        labels: Mapping[StringT, ValueT] | None = None,
+        labels: Mapping[MappingKeyT, ValueT] | None = None,
     ) -> CommandRequest[bool]:
         """
         Create a new time series with the given key.
@@ -163,7 +164,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
     def alter(
         self,
         key: KeyT,
-        labels: Mapping[StringT, StringT] | None = None,
+        labels: Mapping[MappingKeyT, StringT] | None = None,
         retention: int | None = None,
         chunk_size: int | None = None,
         duplicate_policy: None
@@ -233,7 +234,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
                 PureToken.SUM,
             ]
         ) = None,
-        labels: Mapping[StringT, ValueT] | None = None,
+        labels: Mapping[MappingKeyT, ValueT] | None = None,
     ) -> CommandRequest[int]:
         """
         Add a sample to a time series.
@@ -307,7 +308,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         value: int | float,
-        labels: Mapping[StringT, RedisValueT] | None = None,
+        labels: Mapping[MappingKeyT, RedisValueT] | None = None,
         timestamp: datetime | int | StringT | None = None,
         retention: int | timedelta | None = None,
         uncompressed: bool | None = None,
@@ -361,7 +362,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         value: int | float,
-        labels: Mapping[StringT, RedisValueT] | None = None,
+        labels: Mapping[MappingKeyT, RedisValueT] | None = None,
         timestamp: datetime | int | StringT | None = None,
         retention: int | timedelta | None = None,
         uncompressed: bool | None = None,
