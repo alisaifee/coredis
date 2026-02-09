@@ -3,6 +3,115 @@
 Changelog
 =========
 
+v6.0.0
+------
+Release Date: 2026-02-08
+
+This release is a major architectural rewrite focused on structured concurrency,
+predictable resource lifetimes, and safer defaults. See the
+`Migration guide <https://coredis.readthedocs.io/en/latest/handbook/migration_guide.html#migrating_5_to_6.html>`_
+for upgrade instructions.
+
+* Features
+
+  * **Migrate entire library to :pypi:`anyio`, adding structured concurrency and :mod:`trio` support**
+  * **Command API**
+
+    * Allow chainable :meth:`~coredis.commands.CommandRequest.transform` method to accept inline callbacks
+      to transform command responses
+    * Added :meth:`~coredis.commands.CommandRequest.retry` chainable method to the response from all commands
+      to allow using retry policies individually with a request instead of having to apply it on all requests
+      issued by a client
+
+  * **Pipeline**
+
+    * Pipelines execute automatically when their context exits -  results are accessible in a type-safe way
+    * Cluster pipelines now support :class:`~coredis.commands.Script` instances
+
+  * **Scripting**
+
+    * :class:`~coredis.commands.Script` and :class:`~coredis.commands.Function` can now be called with
+      optional callbacks to transform the raw response from redis before returning it. This is supported
+      by their associated :attr:`~coredis.commands.Script.wraps` decorators as well.
+    * Responses from :class:`~coredis.commands.Script` and :class:`~coredis.commands.Function` instances can now
+      also be used with :meth:`~coredis.commands.CommandRequest.transform` or :meth:`~coredis.commands.CommandRequest.retry`.
+    * Add a :paramref:`~coredis.commands.function.wraps.verify_existence` flag to library
+      :func:`coredis.commands.function.wraps` to optionally skip local validation and optimistically call it
+
+  * **Retry Policies**
+
+    * Retry policies now allow infinite retries & retry deadlines.
+    * Retry policies now support retrying when the raised :exc:`ExceptionGroup` contains a matching exception
+    * :class:`~coredis.retry.ExponentialBackoffRetryPolicy` now supports :paramref:`~coredis.retry.ExponentialBackoffRetryPolicy.jitter`
+
+  * **Miscellaneous**
+
+    * :meth:`~coredis.Redis.lock` added as a convenient accessor
+      for the Lua-based lock: :class:`~coredis.patterns.lock.Lock` (Previously found in :class:`coredis.recipes.LuaLock`)
+    * Add :meth:`~coredis.Redis.xconsumer` factory method to create a single or group stream consumer
+    * Improve guarantees of calling subscription methods on :class:`~coredis.patterns.pubsub.PubSub` instances.
+      Using a :paramref:`~coredis.patterns.pubsub.PubSub.subscription_timeout`, the acknowledgement
+      of subscription to a topic or pattern can be guaranteed before proceeding with listening to messages
+
+* Breaking Changes
+
+  * All classes (clients, connection pools, PubSub, pipelines, stream consumers, Sentinel clients) must be
+    used with their async context managers for initialization/cleanup. This ensures a predictable and
+    unified resource lifecycle management model.
+  * Users should replace :class:`~coredis.cache.TrackingCache` with :class:`~coredis.patterns.cache.LRUCache` when
+    providing a cache instance to the clients. Cache size can no longer be bound by byte size and only
+    :paramref:`~coredis.patterns.cache.LRUCache.max_keys` is supported
+  * Connection pools are now always blocking. Non-blocking commands are multiplexed over shared connections and released
+    back to the pool immediately after being queued and thus most workloads naturally converge to using a **single active connection**.
+    Pool exhaustion mainly occurs when the workload relies on blocking operations (e.g. pubsub, pipelines, blocking list commands),
+    making a unified blocking model simpler and more predictable. The explicit blocking variants :class:`~coredis.BlockingConnectionPool`
+    and :class:`~coredis.BlockingClusterConnectionPool` have been removed.
+  * Connection pool acquisition timeouts now raise :exc:`TimeoutError` instead of
+    :exc:`~coredis.exceptions.ConnectionError`.
+  * **Pipeline**
+
+    * Pipeline instances can no longer be awaited and must be used as async context managers
+    * Pipelines no longer expose an explicit :meth:`~coredis.patterns.pipeline.Pipeline.execute` method and instead
+      execute automatically when their context exits
+    * :meth:`~coredis.Redis.pipeline` is no longer an async method
+    * The ``watches`` parameter has been removed from the pipeline constructor
+    * Drop support for explicit management of ``WATCH``,
+      ``UNWATCH``, ``MULTI`` in pipelines. This is replaced by the :meth:`~coredis.patterns.pipeline.Pipeline.watch` context manager.
+
+  * Stream consumers can no longer be awaited and must be used as async context managers to ensure initialization
+  * :meth:`~coredis.Redis.pubsub`, :meth:`~coredis.RedisCluster.pubsub` &
+    :meth:`~coredis.RedisCluster.sharded_pubsub` now only accept keyword arguments
+  * When defining type stubs for FFI for Lua scripts or library functions, keys can only be distinguished
+    from arguments by annotating them with :class:`~coredis.typing.KeyT`
+  * **Module reorganization**
+
+    * Move Pub/Sub, Pipeline, Stream, Cache and Lock submodules to :mod:`coredis.patterns`
+    * :mod:`coredis.commands.pubsub` → :mod:`coredis.patterns.pubsub`
+    * :mod:`coredis.pipeline` → :mod:`coredis.patterns.pipeline`
+    * :mod:`coredis.stream` → :mod:`coredis.patterns.streams`
+    * :mod:`coredis.cache` → :mod:`coredis.patterns.cache`
+    * :mod:`coredis.lock` → :mod:`coredis.patterns.lock`
+
+* Removals
+
+  * Drop support for :term:`RESP` version ``2``
+  * Remove :class:`~coredis.commands.Monitor` wrapper
+  * Remove :class:`~coredis.modules.RedisGraph` module support
+
+* Compatibility
+
+  * The clients no longer check if a module is loaded at initialization. Therefore a module command issued
+    against a server that doesn't have the module will not fail early and instead result in an
+    :exc:`~coredis.exceptions.UnknownCommandError` exception being raised
+  * Add :attr:`~coredis.modules.response.aggregation.AggregationType.COUNTALL` and
+    :attr:`~coredis.modules.response.aggregation.AggregationType.COUNTNAN` aggregation types to
+    :class:`~coredis.modules.TimeSeries`
+  * Add :paramref:`~coredis.modules.Search.create.indexall` argument to :meth:`~coredis.modules.Search.create`
+  * Add :paramref:`~coredis.Redis.vsim.nothread` argument to :meth:`~coredis.Redis.vsim`
+  * Add support for :rediscommand:`VRANGE` vector set command (:meth:`~coredis.Redis.vrange`)
+  * Add support for :rediscommand:`FT.HYBRID` search command (:meth:`~coredis.modules.Search.hybrid`)
+
+
 v6.0.0rc3
 ---------
 Release Date: 2026-02-06
