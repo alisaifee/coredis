@@ -1,8 +1,0 @@
-include LICENSE
-include README.md
-include HISTORY.rst
-exclude __pycache__
-recursive-exclude tests *
-recursive-include coredis *.pyi
-recursive-include coredis *.lua
-include coredis/_version.py
