@@ -36,7 +36,6 @@ from typing import (
     ParamSpec,
     Protocol,
     TypeAlias,
-    TypeAliasType,
     TypedDict,
     TypeGuard,
     TypeVar,
@@ -64,6 +63,7 @@ from beartype.door import is_bearable, is_subhint
 from typing_extensions import (
     NotRequired,
     Self,
+    TypeAliasType,
     TypeIs,
     Unpack,
 )
