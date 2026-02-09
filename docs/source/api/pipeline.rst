@@ -4,7 +4,8 @@ Pipeline Support
 
 :term:`Pipelining` and :term:`Transactions` are exposed by the following classes
 that are returned by :meth:`coredis.Redis.pipeline` and :meth:`coredis.RedisCluster.pipeline`.
-For examples refer to :ref:`handbook/pipelines:pipelines`.
+
+For examples refer to the :ref:`handbook/pipelines:pipelines` handbook entry.
 
 .. autoclass:: coredis.patterns.pipeline.Pipeline
    :class-doc-from: both

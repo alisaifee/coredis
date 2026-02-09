@@ -313,9 +313,10 @@ class Pipeline(Client[AnyStr]):
     All commands executed within a pipeline are wrapped with MULTI and EXEC
     calls when :paramref:`transaction` is ``True``.
 
-    Any command raising an exception does *not* halt the execution of
-    subsequent commands in the pipeline. Instead, the exception is caught
-    and will be returned when awaiting the command that failed.
+    Any command raising an exception does **not** halt the execution of
+    subsequent commands in the pipeline, however the firest exception encountered
+    will be raised when exiting the pipeline if :paramref:`raise_on_error` is ``True``.
+    If not the exception is caught and will be returned when awaiting the command that failed.
     """
 
     QUEUED_RESPONSES = {b"QUEUED", "QUEUED"}
@@ -327,6 +328,12 @@ class Pipeline(Client[AnyStr]):
         raise_on_error: bool = True,
         timeout: float | None = None,
     ) -> None:
+        """
+        :param transaction: Whether to wrap the commands in the pipeline in a ``MULTI``, ``EXEC``
+        :param raise_on_error: Whether to raise the first error encounterd in the pipeline after
+         executing it
+        :param timeout: Time in seconds to wait for the pipeline results to return
+        """
         self.client: Client[AnyStr] = client
         self._connection: BaseConnection | None = None
         self._transaction = transaction
@@ -368,7 +375,9 @@ class Pipeline(Client[AnyStr]):
     @asynccontextmanager
     async def watch(self, *keys: KeyT) -> AsyncGenerator[None]:
         """
-        The given keys will be watched for changes within this context.
+        The given keys will be watched for changes within this context and the
+        commands stacked within the context will be automatically executed when the
+        context exits.
         """
         if self.command_stack:
             raise WatchError("Unable to add a watch after pipeline commands have been added")
@@ -400,7 +409,7 @@ class Pipeline(Client[AnyStr]):
     ) -> Awaitable[R]:
         raise NotImplementedError
 
-    async def clear(self) -> None:
+    async def _clear(self) -> None:
         """
         Clear the pipeline and reset state.
         """
@@ -625,7 +634,7 @@ class Pipeline(Client[AnyStr]):
                 ) from e
             raise
         finally:
-            await self.clear()
+            await self._clear()
 
 
 @versionchanged(
@@ -634,12 +643,14 @@ class Pipeline(Client[AnyStr]):
 )
 class ClusterPipeline(Client[AnyStr]):
     """
-    Pipeline for batching commands to a Redis Cluster.
-    Handles routing, transactions, and error management across nodes.
+    Pipeline for batching multiple commands to a Redis Cluster
+    Supports transactions only when all keys map to the same shard, and therefore
+    :paramref:`transactions` is set to ``False`` by default due to the limited scope.
 
-    .. warning:: Unlike :class:`Pipeline`, :paramref:`transaction` is ``False`` by
-       default as there is limited support for transactions in redis cluster
-       (only keys in the same slot can be part of a transaction).
+    Any command raising an exception does **not** halt the execution of
+    subsequent commands in the pipeline, however the firest exception encountered
+    will be raised when exiting the pipeline if :paramref:`raise_on_error` is ``True``.
+    If not the exception is caught and will be returned when awaiting the command that failed.
     """
 
     client: RedisCluster[AnyStr]
@@ -653,6 +664,12 @@ class ClusterPipeline(Client[AnyStr]):
         transaction: bool = False,
         timeout: float | None = None,
     ) -> None:
+        """
+        :param transaction: Whether to wrap the commands in the pipeline in a ``MULTI``, ``EXEC``
+        :param raise_on_error: Whether to raise the first error encounterd in the pipeline after
+         executing it
+        :param timeout: Time in seconds to wait for the pipeline results to return
+        """
         self.command_stack = []
         self.refresh_table_asap = False
         self.client = client
@@ -691,6 +708,11 @@ class ClusterPipeline(Client[AnyStr]):
 
     @asynccontextmanager
     async def watch(self, *keys: KeyT) -> AsyncGenerator[None]:
+        """
+        The given keys will be watched for changes within this context and the
+        commands stacked within the context will be automatically executed when the
+        context exits.
+        """
         if self.command_stack:
             raise WatchError("Unable to add a watch after pipeline commands have been added")
         try:
@@ -725,7 +747,7 @@ class ClusterPipeline(Client[AnyStr]):
     ) -> Awaitable[R]:
         raise NotImplementedError
 
-    async def clear(self) -> None:
+    async def _clear(self) -> None:
         """
         Clear the pipeline and reset state.
         """
@@ -777,7 +799,7 @@ class ClusterPipeline(Client[AnyStr]):
         try:
             await execute(self._raise_on_error)
         finally:
-            await self.clear()
+            await self._clear()
 
     @retryable(policy=ConstantRetryPolicy((ClusterDownError,), retries=3, delay=0.1))
     async def _send_cluster_transaction(self, raise_on_error: bool = True) -> None:
