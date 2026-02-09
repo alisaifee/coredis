@@ -29,6 +29,9 @@ coredis
 .. attention:: To learn about breaking changes and migration steps for version 6 please
    see :ref:`handbook/migration_guide:migrating from 5.x to 6.0`.
 
+.. note:: The documentation for ``5.x`` can be found `here <https://coredis.readthedocs.org/en/5.x/>`__
+
+
 Fast, async, fully-typed Redis client with support for cluster and sentinel
 
 The client API uses the specifications in the Redis command documentation to define the API by using the following conventions:
