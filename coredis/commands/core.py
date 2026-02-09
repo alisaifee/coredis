@@ -2189,7 +2189,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return self.create_request(CommandName.HLEN, key, callback=IntCallback())
 
     @redis_command(CommandName.HSET, group=CommandGroup.HASH, flags={CommandFlag.FAST})
-    def hset(self, key: KeyT, field_values: Mapping[StringT, ValueT]) -> CommandRequest[int]:
+    def hset(self, key: KeyT, field_values: Mapping[ValueT, ValueT]) -> CommandRequest[int]:
         """
         Sets ``field`` to ``value`` within hash :paramref:`key`
 
@@ -2209,7 +2209,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     def hsetex(
         self,
         key: KeyT,
-        field_values: Mapping[StringT, ValueT],
+        field_values: Mapping[ValueT, ValueT],
         condition: Literal[PureToken.FNX, PureToken.FXX] | None = None,
         ex: int | datetime.timedelta | None = None,
         px: int | datetime.timedelta | None = None,
@@ -2274,7 +2274,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         deprecation_reason="Use :meth:`hset` with multiple field-value pairs",
         flags={CommandFlag.FAST},
     )
-    def hmset(self, key: KeyT, field_values: Mapping[StringT, ValueT]) -> CommandRequest[bool]:
+    def hmset(self, key: KeyT, field_values: Mapping[ValueT, ValueT]) -> CommandRequest[bool]:
         """
         Sets key to value within hash :paramref:`key` for each corresponding
         key and value from the ``field_values`` dict.
@@ -5225,7 +5225,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     def xadd(
         self,
         key: KeyT,
-        field_values: Mapping[StringT, ValueT],
+        field_values: Mapping[ValueT, ValueT],
         identifier: ValueT | None = None,
         nomkstream: bool | None = None,
         trim_strategy: Literal[PureToken.MAXLEN, PureToken.MINID] | None = None,
@@ -7949,7 +7949,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             combine=ClusterBoolCombine(),
         ),
     )
-    def config_set(self, parameter_values: Mapping[StringT, ValueT]) -> CommandRequest[bool]:
+    def config_set(self, parameter_values: Mapping[ValueT, ValueT]) -> CommandRequest[bool]:
         """Sets configuration parameters to the given values"""
 
         return self.create_request(

@@ -223,6 +223,11 @@ module = "coredis._version"
 ignore_errors = true
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = "coredis._json"
+ignore_errors = true
+ignore_missing_imports = true
+
 [tool.ruff]
 line-length=100
 exclude = ["doc/**","_version.py","coredis/_py_312_typing.py"]
