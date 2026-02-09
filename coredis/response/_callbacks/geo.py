@@ -49,7 +49,7 @@ class GeoCoordinatessCallback(ResponseCallback[ResponseType, tuple[GeoCoordinate
     ) -> tuple[GeoCoordinates | None, ...]:
         return tuple(
             map(
-                lambda ll: (GeoCoordinates(float(ll[0]), float(ll[1])) if ll is not None else None),
+                lambda ll: GeoCoordinates(float(ll[0]), float(ll[1])) if ll is not None else None,
                 response,
             )
         )

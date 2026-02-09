@@ -92,9 +92,9 @@ class TestTransformers:
         )
         client.type_adapter.register_deserializer(
             MutableMapping[Any, int],
-            lambda v: {k: int(v) for k, v in v.items()}
-            if isinstance(v, dict)
-            else {"value": int(v)},
+            lambda v: (
+                {k: int(v) for k, v in v.items()} if isinstance(v, dict) else {"value": int(v)}
+            ),
         )
 
         await client.set("fubar", 1)

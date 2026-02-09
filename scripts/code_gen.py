@@ -2365,7 +2365,7 @@ def cluster_key_extraction(path):
                     )
 
     readonly = {}
-    fixed_args = {"first": ["args[1],"], "second": ["args[2],"], "all": ["args[1:]"]}
+    fixed_args = {"first": ["(args[1],)"], "second": ["(args[2],)"], "all": ["args[1:]"]}
     all = {"OBJECT": ["(args[2],)"], "DEBUG OBJECT": ["(args[1],)"]}
 
     for mode, commands in lookups.items():
@@ -2503,12 +2503,12 @@ from coredis.typing import Callable, ClassVar, RedisValueT
 class KeySpec:
     READONLY: ClassVar[dict[bytes, Callable[[tuple[RedisValueT, ...]], tuple[RedisValueT, ...]]]] = {{ '{' }}
     {% for command, exprs in readonly.items() %}
-        b"{{command}}": lambda args: ({{exprs | join("+")}}),
+        b"{{command}}": lambda args: {{exprs | join("+")}},
     {% endfor %}
     {{ '}' }}
     ALL: ClassVar[dict[bytes, Callable[[tuple[RedisValueT, ...]], tuple[RedisValueT, ...]]]] = {{ '{' }}
     {% for command, exprs in all.items() %}
-        b"{{command}}": lambda args: ({{exprs | join("+")}}) ,
+        b"{{command}}": lambda args: {{exprs | join("+")}},
     {% endfor %}
     {{ '}' }}
 
