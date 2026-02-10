@@ -8,10 +8,10 @@ Input types
 The API uses the following type aliases to describe the unions of acceptable types
 for parameters to redis command wrappers.
 
-.. autotype:: coredis.typing.KeyT
-.. autotype:: coredis.typing.ValueT
-.. autotype:: coredis.typing.RedisValueT
-.. autotype:: coredis.typing.StringT
+.. autodata:: coredis.typing.KeyT
+.. autodata:: coredis.typing.ValueT
+.. autodata:: coredis.typing.RedisValueT
+.. autodata:: coredis.typing.StringT
 .. autodata:: coredis.typing.MappingKeyT
 
 .. autotype:: coredis.typing.JsonType
@@ -23,7 +23,7 @@ Common examples of such APIs are :meth:`~coredis.Redis.delete` and :meth:`~cored
 Instead of accepting :class:`~collections.abc.Iterable`, a union of select containers from the standard
 library are accepted via :data:`~coredis.typing.Parameters`.
 
-.. autotype:: coredis.typing.Parameters
+.. autodata:: coredis.typing.Parameters
 
 Custom types
 ^^^^^^^^^^^^

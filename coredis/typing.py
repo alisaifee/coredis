@@ -63,7 +63,6 @@ from beartype.door import is_bearable, is_subhint
 from typing_extensions import (
     NotRequired,
     Self,
-    TypeAliasType,
     TypeIs,
     Unpack,
 )
@@ -157,7 +156,7 @@ class ExecutionParameters(TypedDict):
 
 
 #: Represents the acceptable types of a redis key
-KeyT = TypeAliasType("KeyT", str | bytes)
+KeyT: TypeAlias = str | bytes
 
 
 class Serializable(Generic[R]):
@@ -514,10 +513,10 @@ class TypeAdapter:
 #: Additionally any object wrapped in a :class:`Serializable` will be
 #: accepted and will be serialized using an appropriate type adapter
 #: registered with the client. See :ref:`api/typing:custom types` for more details.
-ValueT = TypeAliasType("ValueT", str | bytes | int | float | Serializable[Any])
+ValueT: TypeAlias = str | bytes | int | float | Serializable[Any]
 #: The canonical type used for input parameters that represent "strings"
 #: that are transmitted to redis.
-StringT = TypeAliasType("StringT", str | bytes)
+StringT: TypeAlias = str | bytes
 
 #: Used for dictionary keys for all commands that accept :class:`~typing.Mapping`
 #: as a parameter to allow any :class:`~coredis.typing.ValueT` as a key
@@ -528,7 +527,7 @@ CommandArgList = list[ValueT]
 #: Primitive types that we can expect to be sent to redis with
 #: simple serialization. The internals of coredis
 #: pass around arguments to redis commands as this type.
-RedisValueT = TypeAliasType("RedisValueT", str | bytes | int | float)
+RedisValueT: TypeAlias = str | bytes | int | float
 
 #: Restricted union of container types accepted as arguments to apis
 #: that accept a variable number values for an argument (such as keys, values).
@@ -550,12 +549,7 @@ RedisValueT = TypeAliasType("RedisValueT", str | bytes | int | float)
 #:     length({"1": 2})            # invalid
 #:     length("123")               # invalid
 #:     length(b"123")              # invalid
-Parameters = TypeAliasType(
-    "Parameters",
-    list[T_co] | Set[T_co] | tuple[T_co, ...] | ValuesView[T_co] | Iterator[T_co],
-    type_params=(T_co,),
-)
-
+Parameters = list[T_co] | Set[T_co] | tuple[T_co, ...] | ValuesView[T_co] | Iterator[T_co]
 
 if sys.version_info >= (3, 12):
     from ._py_312_typing import JsonType, ResponsePrimitive, ResponseType
@@ -605,8 +599,6 @@ __all__ = [
     "Self",
     "Sequence",
     "StringT",
-    "TypeAlias",
-    "TypeAliasType",
     "TypeGuard",
     "TypeIs",
     "TypedDict",
