@@ -535,10 +535,9 @@ class RedisCluster(
     @classmethod
     @overload
     def from_url(
-        cls: type[RedisCluster[bytes]],
+        cls,
         url: str,
         *,
-        db: int | None = ...,
         skip_full_coverage_check: bool = ...,
         decode_responses: Literal[False] = ...,
         verify_version: bool = ...,
@@ -554,10 +553,9 @@ class RedisCluster(
     @classmethod
     @overload
     def from_url(
-        cls: type[RedisCluster[str]],
+        cls,
         url: str,
         *,
-        db: int | None = ...,
         skip_full_coverage_check: bool = ...,
         decode_responses: Literal[True],
         verify_version: bool = ...,
@@ -575,7 +573,6 @@ class RedisCluster(
         cls: type[RedisClusterT],
         url: str,
         *,
-        db: int | None = None,
         skip_full_coverage_check: bool = False,
         decode_responses: bool = False,
         verify_version: bool = True,
@@ -619,7 +616,6 @@ class RedisCluster(
                 type_adapter=type_adapter,
                 connection_pool=ClusterConnectionPool.from_url(
                     url,
-                    db=db,
                     skip_full_coverage_check=skip_full_coverage_check,
                     decode_responses=decode_responses,
                     noreply=noreply,
@@ -638,7 +634,6 @@ class RedisCluster(
                 type_adapter=type_adapter,
                 connection_pool=ClusterConnectionPool.from_url(
                     url,
-                    db=db,
                     skip_full_coverage_check=skip_full_coverage_check,
                     decode_responses=decode_responses,
                     noreply=noreply,
