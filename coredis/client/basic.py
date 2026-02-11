@@ -135,10 +135,9 @@ class Client(
         notouch: bool = False,
         type_adapter: TypeAdapter | None = None,
         cache: AbstractCache | None = None,
-        **kwargs: Any,
     ):
         if not connection_pool:
-            kwargs = {
+            kwargs: ConnectionPool.PoolParams = {
                 "db": db,
                 "username": username,
                 "password": password,
@@ -160,13 +159,13 @@ class Client(
             if unix_socket_path is not None:
                 kwargs.update(
                     {
-                        "path": unix_socket_path,
+                        "path": unix_socket_path,  # type: ignore
                         "connection_class": UnixDomainSocketConnection,
                     }
                 )
             else:
                 # TCP specific options
-                kwargs.update({"host": host, "port": port})
+                kwargs.update({"host": host, "port": port})  # type: ignore
 
                 if ssl_context is not None:
                     kwargs["ssl_context"] = ssl_context
@@ -542,7 +541,6 @@ class Redis(Client[AnyStr]):
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         type_adapter: TypeAdapter | None = ...,
-        **kwargs: Any,
     ) -> None: ...
 
     @overload
@@ -580,7 +578,6 @@ class Redis(Client[AnyStr]):
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         type_adapter: TypeAdapter | None = ...,
-        **kwargs: Any,
     ) -> None: ...
 
     def __init__(
@@ -619,7 +616,6 @@ class Redis(Client[AnyStr]):
             (ConnectionError, TimeoutError), retries=2, delay=0.01
         ),
         type_adapter: TypeAdapter | None = None,
-        **kwargs: Any,
     ) -> None:
         """
 
@@ -778,7 +774,6 @@ class Redis(Client[AnyStr]):
             retry_policy=retry_policy,
             type_adapter=type_adapter,
             cache=cache,
-            **kwargs,
         )
         self._decodecontext: contextvars.ContextVar[bool | None,] = contextvars.ContextVar(
             "decode", default=None

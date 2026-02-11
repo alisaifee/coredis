@@ -244,6 +244,7 @@ class TestLibrary:
             _s("fubar"),
         ]
 
+    @pytest.mark.clusteronly
     @pytest.mark.parametrize("client_arguments", [{"readonly": True}])
     async def test_subclass_wrap_ro_defaults(
         self, client, simple_library, _s, client_arguments, mocker

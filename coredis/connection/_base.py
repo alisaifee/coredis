@@ -87,11 +87,11 @@ class BaseConnectionParams(TypedDict):
     #: The password to use for authenticating against the redis server
     password: NotRequired[str | None]
     #: If provided the connection handshake will include authentication using this provider.
-    credential_provider: NotRequired[AbstractCredentialProvider]
+    credential_provider: NotRequired[AbstractCredentialProvider | None]
     #: If provided the connection will immediately switch to this db as part of the handshake
     db: NotRequired[int | None]
     #: For TLS connections, the ssl context to use when performing the TLS handshake
-    ssl_context: NotRequired[ssl.SSLContext]
+    ssl_context: NotRequired[ssl.SSLContext | None]
 
 
 ConnectionT = TypeVar("ConnectionT", bound="BaseConnection")

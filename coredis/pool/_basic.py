@@ -30,6 +30,7 @@ class ConnectionPool:
         :meta private:
         """
 
+        connection_class: NotRequired[type[BaseConnection]]
         max_connections: NotRequired[int | None]
         timeout: NotRequired[float | None]
         _cache: NotRequired[AbstractCache | None]
