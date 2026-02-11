@@ -269,6 +269,7 @@ class TestLibrary:
         assert fcall.call_count == 1
         assert fcall_ro.call_count == 1
 
+    @pytest.mark.clusteronly
     @pytest.mark.parametrize("client_arguments", [{"readonly": True}])
     async def test_subclass_wrap_ro_forced(
         self, client, simple_library, _s, client_arguments, mocker
