@@ -85,15 +85,6 @@ class TestFunctions:
         assert await client.fcall("echo_key", ["a"], []) == _s("a")
         assert await client.fcall("return_arg", ["a"], [2]) == 20
 
-    @pytest.mark.clusteronly
-    @pytest.mark.parametrize("client_arguments", [{"read_from_replicas": True}])
-    async def test_fcall_ro(self, client, simple_library, _s, client_arguments, mocker):
-        get_primary_node_by_slot = mocker.spy(client.connection_pool, "get_primary_node_by_slots")
-        await client.fcall_ro("echo_key", ["a"], []) == _s("a")
-        with pytest.raises(ResponseError):
-            await client.fcall_ro("return_arg", ["a"], [2])
-        get_primary_node_by_slot.assert_not_called()
-
     async def test_function_delete(self, client, simple_library, _s):
         assert _s("coredis") in await client.function_list()
         assert await client.function_delete("coredis")
@@ -115,6 +106,20 @@ class TestFunctions:
         assert function_list[_s("coredis")][_s("functions")][_s("echo_key")][_s("flags")] == {
             _s("no-writes")
         }
+
+
+@targets(
+    "redis_cluster",
+    "redis_cluster_raw",
+)
+class TestReadonlyFunctions:
+    @pytest.mark.parametrize("client_arguments", [{"read_from_replicas": True}])
+    async def test_fcall_ro(self, client, simple_library, _s, client_arguments, mocker):
+        get_primary_node_by_slot = mocker.spy(client.connection_pool, "get_primary_node_by_slots")
+        await client.fcall_ro("echo_key", ["a"], []) == _s("a")
+        with pytest.raises(ResponseError):
+            await client.fcall_ro("return_arg", ["a"], [2])
+        get_primary_node_by_slot.assert_not_called()
 
 
 @targets(
@@ -148,15 +153,6 @@ class TestLibrary:
         library = await client.get_library("coredis")
         assert await library["echo_key"](args=(1, 2, 3), keys=["A"]) == _s("A")
         assert await library["return_arg"](args=(1.0, 2.0, 3.0), keys=["A"]) == 10
-
-    @pytest.mark.parametrize("client_arguments", [{"readonly": True}])
-    async def test_call_library_function_ro(
-        self, client, simple_library, _s, client_arguments, mocker
-    ):
-        fcall = mocker.spy(client, "fcall")
-        library = await client.get_library("coredis")
-        assert await library["echo_key"](args=(1, 2, 3), keys=["A"]) == _s("A")
-        fcall.assert_not_called()
 
     @pytest.mark.nocluster
     async def test_call_library_update(self, client, simple_library):
@@ -244,56 +240,6 @@ class TestLibrary:
             _s("fubar"),
         ]
 
-    @pytest.mark.clusteronly
-    @pytest.mark.parametrize("client_arguments", [{"readonly": True}])
-    async def test_subclass_wrap_ro_defaults(
-        self, client, simple_library, _s, client_arguments, mocker
-    ):
-        class Coredis(Library):
-            def __init__(self, client):
-                super().__init__(client, "coredis")
-
-            @wraps(readonly=True)
-            def echo_key(self, key: KeyT) -> CommandRequest[StringT]: ...
-
-            @wraps()
-            def return_arg(self, value: RedisValueT) -> CommandRequest[RedisValueT]: ...
-
-        fcall = mocker.spy(client, "fcall")
-        fcall_ro = mocker.spy(client, "fcall_ro")
-
-        lib = await Coredis(client)
-        assert await lib.echo_key("bar") == _s("bar")
-        assert await lib.return_arg(1) == 10
-
-        assert fcall.call_count == 1
-        assert fcall_ro.call_count == 1
-
-    @pytest.mark.clusteronly
-    @pytest.mark.parametrize("client_arguments", [{"readonly": True}])
-    async def test_subclass_wrap_ro_forced(
-        self, client, simple_library, _s, client_arguments, mocker
-    ):
-        class Coredis(Library):
-            def __init__(self, client):
-                super().__init__(client, "coredis")
-
-            @wraps(readonly=True)
-            def echo_key(self, key: KeyT) -> CommandRequest[StringT]: ...
-
-            @wraps(readonly=True)
-            def return_arg(self, value: RedisValueT) -> CommandRequest[RedisValueT]: ...
-
-        fcall = mocker.spy(client, "fcall")
-        fcall_ro = mocker.spy(client, "fcall_ro")
-        lib = await Coredis(client)
-        assert await lib.echo_key("bar") == _s("bar")
-        with pytest.raises(ResponseError):
-            await lib.return_arg(1) == 10
-
-        assert fcall.call_count == 0
-        assert fcall_ro.call_count == 2
-
     async def test_pipeline_execution(self, client, simple_library, _s):
         class Coredis(Library):
             def __init__(self, client):
@@ -336,3 +282,66 @@ class TestLibrary:
             assert await lib.return_arg(1) == 10
         with pytest.raises(ResponseError):
             assert await lib.nonexistent()
+
+
+@targets(
+    "redis_cluster",
+    "redis_cluster_raw",
+)
+class TestReadonlyLibrary:
+    @pytest.mark.parametrize("client_arguments", [{"read_from_replicas": True}])
+    async def test_call_library_function_ro(
+        self, client, simple_library, _s, client_arguments, mocker
+    ):
+        fcall = mocker.spy(client, "fcall")
+        library = await client.get_library("coredis")
+        assert await library["echo_key"](args=(1, 2, 3), keys=["A"]) == _s("A")
+        fcall.assert_not_called()
+
+    @pytest.mark.parametrize("client_arguments", [{"read_from_replicas": True}])
+    async def test_subclass_wrap_ro_defaults(
+        self, client, simple_library, _s, client_arguments, mocker
+    ):
+        class Coredis(Library):
+            def __init__(self, client):
+                super().__init__(client, "coredis")
+
+            @wraps(readonly=True)
+            def echo_key(self, key: KeyT) -> CommandRequest[StringT]: ...
+
+            @wraps()
+            def return_arg(self, value: RedisValueT) -> CommandRequest[RedisValueT]: ...
+
+        fcall = mocker.spy(client, "fcall")
+        fcall_ro = mocker.spy(client, "fcall_ro")
+
+        lib = await Coredis(client)
+        assert await lib.echo_key("bar") == _s("bar")
+        assert await lib.return_arg(1) == 10
+
+        assert fcall.call_count == 1
+        assert fcall_ro.call_count == 1
+
+    @pytest.mark.parametrize("client_arguments", [{"read_from_replicas": True}])
+    async def test_subclass_wrap_ro_forced(
+        self, client, simple_library, _s, client_arguments, mocker
+    ):
+        class Coredis(Library):
+            def __init__(self, client):
+                super().__init__(client, "coredis")
+
+            @wraps(readonly=True)
+            def echo_key(self, key: KeyT) -> CommandRequest[StringT]: ...
+
+            @wraps(readonly=True)
+            def return_arg(self, value: RedisValueT) -> CommandRequest[RedisValueT]: ...
+
+        fcall = mocker.spy(client, "fcall")
+        fcall_ro = mocker.spy(client, "fcall_ro")
+        lib = await Coredis(client)
+        assert await lib.echo_key("bar") == _s("bar")
+        with pytest.raises(ResponseError):
+            await lib.return_arg(1) == 10
+
+        assert fcall.call_count == 0
+        assert fcall_ro.call_count == 2
