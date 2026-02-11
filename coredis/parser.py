@@ -5,7 +5,6 @@ from collections.abc import Hashable
 from io import BytesIO
 from typing import cast
 
-from coredis._enum import CaseAndEncodingInsensitiveEnum
 from coredis.constants.resp import SYM_CRLF, SYM_TRUE, DataType
 from coredis.exceptions import (
     AskError,
@@ -48,38 +47,6 @@ class NotEnoughData:
 
 
 NOT_ENOUGH_DATA: Final[NotEnoughData] = NotEnoughData()
-
-
-class PubSubMessageTypes(CaseAndEncodingInsensitiveEnum):
-    MESSAGE = b"message"
-    PMESSAGE = b"pmessage"
-    SMESSAGE = b"smessage"
-    SUBSCRIBE = b"subscribe"
-    UNSUBSCRIBE = b"unsubscribe"
-    PSUBSCRIBE = b"psubscribe"
-    PUNSUBSCRIBE = b"punsubscribe"
-    SSUBSCRIBE = b"ssubscribe"
-    SUNSUBSCRIBE = b"sunsubscribe"
-
-
-PUBLISH_MESSAGE_TYPES = {
-    PubSubMessageTypes.MESSAGE.value,
-    PubSubMessageTypes.PMESSAGE.value,
-    PubSubMessageTypes.SMESSAGE.value,
-}
-SUBSCRIBE_MESSAGE_TYPES = {
-    PubSubMessageTypes.SUBSCRIBE.value,
-    PubSubMessageTypes.PSUBSCRIBE.value,
-    PubSubMessageTypes.SSUBSCRIBE.value,
-}
-UNSUBSCRIBE_MESSAGE_TYPES = {
-    PubSubMessageTypes.UNSUBSCRIBE.value,
-    PubSubMessageTypes.PUNSUBSCRIBE.value,
-    PubSubMessageTypes.SUNSUBSCRIBE.value,
-}
-SUBUNSUB_MESSAGE_TYPES = SUBSCRIBE_MESSAGE_TYPES | UNSUBSCRIBE_MESSAGE_TYPES
-INVALIDATION_TYPES = {b"invalidate"}
-PUSH_MESSAGE_TYPES = PUBLISH_MESSAGE_TYPES | SUBUNSUB_MESSAGE_TYPES | INVALIDATION_TYPES
 
 
 class RESPNode:
