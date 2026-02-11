@@ -618,12 +618,16 @@ class Redis(Client[AnyStr]):
         type_adapter: TypeAdapter | None = None,
     ) -> None:
         """
-
         Changes
+
           - .. versionremoved:: 6.0.0
+
             - :paramref:`protocol_version` removed (and therefore support for RESP2)
+
           - .. versionchanged:: 6.0.0
+
             -  The client is now an async context manager and must always be used as such.
+
           - .. versionadded:: 4.12.0
 
             - :paramref:`retry_policy`
@@ -1070,7 +1074,7 @@ class Redis(Client[AnyStr]):
          acknowledgement of subscriptions.
         :param max_idle_seconds: Maximum duration (in seconds) to tolerate no
          messages from the server before performing a keepalive check with a
-        ``PING``.
+         ``PING``.
         """
 
         return PubSub[AnyStr](

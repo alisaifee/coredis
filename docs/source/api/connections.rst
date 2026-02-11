@@ -44,4 +44,4 @@ All connection classes derive from the same base-class:
    :show-inheritance:
    :class-doc-from: both
 
-.. autotypeddict:: coredis.connection.BaseConnectionParams
+.. autoclass:: coredis.connection.BaseConnectionParams

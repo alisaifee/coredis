@@ -320,9 +320,11 @@ class RedisCluster(
 
         Changes
           - .. versionremoved:: 6.0.0
+
             - :paramref:`protocol_version` removed (and therefore support for RESP2)
 
           - .. versionchanged:: 6.0.0
+
             -  The cluster client is now an async context manager and must always be used as such.
 
           - .. versionadded:: 4.12.0
@@ -1116,7 +1118,7 @@ class RedisCluster(
          acknowledgement of subscriptions.
         :param max_idle_seconds: Maximum duration (in seconds) to tolerate no
          messages from the cluster before performing a keepalive check with a
-        ``PING``.
+         ``PING``.
         """
         return ClusterPubSub[AnyStr](
             self.connection_pool,
@@ -1172,7 +1174,7 @@ class RedisCluster(
          acknowledgement of subscriptions.
         :param max_idle_seconds: Maximum duration (in seconds) to tolerate no
          messages from the cluster before performing a keepalive check with a
-        ``PING``.
+         ``PING``.
 
         New in :redis-version:`7.0.0`
         """

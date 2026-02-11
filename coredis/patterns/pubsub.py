@@ -104,8 +104,8 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
          on channel matching the pattern.
         :param subscription_timeout: Maximum amount of time in seconds to wait for
          acknowledgement of subscriptions.
-         :param max_idle_seconds: Maximum duration (in seconds) to tolerate no
-          messages from the server before performing a keepalive check with a
+        :param max_idle_seconds: Maximum duration (in seconds) to tolerate no
+         messages from the server before performing a keepalive check with a
          ``PING``.
         """
         self.connection_pool = connection_pool
@@ -567,9 +567,9 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
          on the specific channel.
         :param subscription_timeout: Maximum amount of time in seconds to wait for
          acknowledgement of subscriptions.
-         :param max_idle_seconds: Maximum duration (in seconds) to tolerate no
-          messages from the cluster before performing a keepalive check with a
-         ``PING``.
+        :param max_idle_seconds: Maximum duration (in seconds) to tolerate no
+         messages from the cluster before performing a keepalive check with a
+         `PING``.
         """
         self.shard_connections: dict[str, BaseConnection] = {}
         self.node_channel_mapping: dict[str, list[StringT]] = {}
