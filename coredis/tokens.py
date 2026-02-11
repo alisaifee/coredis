@@ -207,6 +207,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``CLIENT PAUSE``
+    #:  - ``CLUSTER MIGRATION``
     ALL = b"ALL"
 
     #: Used by:
@@ -311,6 +312,16 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``CLUSTER SYNCSLOTS``
+    SNAPSHOT_EOF = b"SNAPSHOT-EOF"
+
+    #: Used by:
+    #:
+    #:  - ``CLUSTER SYNCSLOTS``
+    STREAM_EOF = b"STREAM-EOF"
+
+    #: Used by:
+    #:
     #:  - ``COPY``
     #:  - ``FUNCTION LOAD``
     #:  - ``FUNCTION RESTORE``
@@ -355,6 +366,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``HPEXPIRE``
     #:  - ``HPEXPIREAT``
     #:  - ``JSON.SET``
+    #:  - ``MSETEX``
     #:  - ``PEXPIRE``
     #:  - ``PEXPIREAT``
     #:  - ``SET``
@@ -371,6 +383,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``HPEXPIRE``
     #:  - ``HPEXPIREAT``
     #:  - ``JSON.SET``
+    #:  - ``MSETEX``
     #:  - ``PEXPIRE``
     #:  - ``PEXPIREAT``
     #:  - ``SET``
@@ -519,6 +532,16 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``HOTKEYS START``
+    CPU = b"CPU"
+
+    #: Used by:
+    #:
+    #:  - ``HOTKEYS START``
+    NET = b"NET"
+
+    #: Used by:
+    #:
     #:  - ``HRANDFIELD``
     WITHVALUES = b"WITHVALUES"
 
@@ -540,6 +563,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``HSETEX``
+    #:  - ``MSETEX``
     #:  - ``SET``
     KEEPTTL = b"KEEPTTL"
 
@@ -654,6 +678,16 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``XADD``
+    IDMP = b"IDMP"
+
+    #: Used by:
+    #:
+    #:  - ``XADD``
+    IDMPAUTO = b"IDMPAUTO"
+
+    #: Used by:
+    #:
+    #:  - ``XADD``
     #:  - ``XTRIM``
     MAXLEN = b"MAXLEN"
 
@@ -673,6 +707,16 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``XAUTOCLAIM``
     #:  - ``XCLAIM``
     JUSTID = b"JUSTID"
+
+    #: Used by:
+    #:
+    #:  - ``XCFGSET``
+    IDMP_DURATION = b"IDMP-DURATION"
+
+    #: Used by:
+    #:
+    #:  - ``XCFGSET``
+    IDMP_MAXSIZE = b"IDMP-MAXSIZE"
 
     #: Used by:
     #:
@@ -1361,6 +1405,11 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``FT.PROFILE``
+    HYBRID = b"HYBRID"
+
+    #: Used by:
+    #:
+    #:  - ``FT.PROFILE``
     LIMITED = b"LIMITED"
 
     #: Used by:
@@ -1466,6 +1515,7 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``GEORADIUS_RO``
     #:  - ``GEOSEARCH``
     #:  - ``GEOSEARCHSTORE``
+    #:  - ``HOTKEYS START``
     #:  - ``HSCAN``
     #:  - ``LMPOP``
     #:  - ``LPOS``
@@ -1495,6 +1545,7 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``CLIENT KILL``
     #:  - ``CLIENT LIST``
+    #:  - ``CLUSTER MIGRATION``
     IDENTIFIER = b"ID"
 
     #: Used by:
@@ -1547,6 +1598,21 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``CLUSTER MIGRATION``
+    CANCEL = b"CANCEL"
+
+    #: Used by:
+    #:
+    #:  - ``CLUSTER MIGRATION``
+    IMPORT = b"IMPORT"
+
+    #: Used by:
+    #:
+    #:  - ``CLUSTER MIGRATION``
+    STATUS = b"STATUS"
+
+    #: Used by:
+    #:
     #:  - ``CLUSTER SETSLOT``
     IMPORTING = b"IMPORTING"
 
@@ -1589,6 +1655,31 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``CLUSTER SYNCSLOTS``
+    ACK = b"ACK"
+
+    #: Used by:
+    #:
+    #:  - ``CLUSTER SYNCSLOTS``
+    CONF = b"CONF"
+
+    #: Used by:
+    #:
+    #:  - ``CLUSTER SYNCSLOTS``
+    FAIL = b"FAIL"
+
+    #: Used by:
+    #:
+    #:  - ``CLUSTER SYNCSLOTS``
+    RDBCHANNEL = b"RDBCHANNEL"
+
+    #: Used by:
+    #:
+    #:  - ``CLUSTER SYNCSLOTS``
+    SYNC = b"SYNC"
+
+    #: Used by:
+    #:
     #:  - ``COMMAND LIST``
     ACLCAT = b"ACLCAT"
 
@@ -1611,6 +1702,30 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``COPY``
     DB = b"DB"
+
+    #: Used by:
+    #:
+    #:  - ``DELEX``
+    #:  - ``SET``
+    IFDEQ = b"IFDEQ"
+
+    #: Used by:
+    #:
+    #:  - ``DELEX``
+    #:  - ``SET``
+    IFDNE = b"IFDNE"
+
+    #: Used by:
+    #:
+    #:  - ``DELEX``
+    #:  - ``SET``
+    IFEQ = b"IFEQ"
+
+    #: Used by:
+    #:
+    #:  - ``DELEX``
+    #:  - ``SET``
+    IFNE = b"IFNE"
 
     #: Used by:
     #:
@@ -1672,6 +1787,7 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``GETEX``
     #:  - ``HGETEX``
     #:  - ``HSETEX``
+    #:  - ``MSETEX``
     #:  - ``SET``
     EX = b"EX"
 
@@ -1680,6 +1796,7 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``GETEX``
     #:  - ``HGETEX``
     #:  - ``HSETEX``
+    #:  - ``MSETEX``
     #:  - ``SET``
     EXAT = b"EXAT"
 
@@ -1688,6 +1805,7 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``GETEX``
     #:  - ``HGETEX``
     #:  - ``HSETEX``
+    #:  - ``MSETEX``
     #:  - ``SET``
     PX = b"PX"
 
@@ -1696,6 +1814,7 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``GETEX``
     #:  - ``HGETEX``
     #:  - ``HSETEX``
+    #:  - ``MSETEX``
     #:  - ``SET``
     PXAT = b"PXAT"
 
@@ -1726,6 +1845,26 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``HSETEX``
     #:  - ``HTTL``
     FIELDS = b"FIELDS"
+
+    #: Used by:
+    #:
+    #:  - ``HOTKEYS START``
+    DURATION = b"DURATION"
+
+    #: Used by:
+    #:
+    #:  - ``HOTKEYS START``
+    METRICS = b"METRICS"
+
+    #: Used by:
+    #:
+    #:  - ``HOTKEYS START``
+    SAMPLE = b"SAMPLE"
+
+    #: Used by:
+    #:
+    #:  - ``HOTKEYS START``
+    SLOTS = b"SLOTS"
 
     #: Used by:
     #:
@@ -1800,6 +1939,11 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``TRIMSLOTS``
+    RANGES = b"RANGES"
+
+    #: Used by:
+    #:
     #:  - ``XACKDEL``
     #:  - ``XDELEX``
     IDS = b"IDS"
@@ -1842,6 +1986,11 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``XREAD``
     #:  - ``XREADGROUP``
     STREAMS = b"STREAMS"
+
+    #: Used by:
+    #:
+    #:  - ``XREADGROUP``
+    CLAIM = b"CLAIM"
 
     #: Used by:
     #:

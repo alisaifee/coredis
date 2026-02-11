@@ -538,7 +538,7 @@ def get_token_mapping():
                         if arg.get("type", None) == "pure-token":
                             tokens.append(
                                 (
-                                    sanitized(arg["name"], ignore_reserved_words=True),
+                                    sanitized(arg["name"].replace("-token", ""), ignore_reserved_words=True),
                                     arg["token"].upper(),
                                 )
                             )
@@ -1799,7 +1799,7 @@ def generate_compatibility_section(
 def code_gen(ctx, debug: bool):
     cur_dir = os.path.split(__file__)[0]
     ctx.ensure_object(dict)
-    if False:  # debug:
+    if debug:
         if not os.path.isdir("/var/tmp/redis-doc"):
             os.system("git clone git@github.com:redis/docs /var/tmp/redis-doc")
         else:
@@ -1811,7 +1811,7 @@ def code_gen(ctx, debug: bool):
 
         core_command_file = os.path.join(cur_dir, "commands.json")
         os.system("docker-compose down --remove-orphans")
-        os.system("REDIS_VERSION=8.2 docker-compose up redis-basic -d")
+        os.system("REDIS_VERSION=8.6 docker-compose up redis-basic -d")
         script = open("/var/tmp/redis/utils/generate-commands-json.py").read()
         script = script.replace("docs.pop('summary')", "docs.pop('summary', None)")
         script = script.replace("docs.pop('since')", "docs.pop('since', None)")

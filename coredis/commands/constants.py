@@ -88,6 +88,12 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     COMMAND_LIST = b"COMMAND LIST"  # Since redis: 7.0.0
     LATENCY_HISTOGRAM = b"LATENCY HISTOGRAM"  # Since redis: 7.0.0
     MODULE_LOADEX = b"MODULE LOADEX"  # Since redis: 7.0.0
+    TRIMSLOTS = b"TRIMSLOTS"  # Since redis: 8.4.0
+    HOTKEYS = b"HOTKEYS"  # Since redis: 8.6.0
+    HOTKEYS_GET = b"HOTKEYS GET"  # Since redis: 8.6.0
+    HOTKEYS_RESET = b"HOTKEYS RESET"  # Since redis: 8.6.0
+    HOTKEYS_START = b"HOTKEYS START"  # Since redis: 8.6.0
+    HOTKEYS_STOP = b"HOTKEYS STOP"  # Since redis: 8.6.0
     SLAVEOF = b"SLAVEOF"  # Deprecated in redis: 5.0.0
 
     #: Commands for string
@@ -108,6 +114,9 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     GETDEL = b"GETDEL"  # Since redis: 6.2.0
     GETEX = b"GETEX"  # Since redis: 6.2.0
     LCS = b"LCS"  # Since redis: 7.0.0
+    DELEX = b"DELEX"  # Since redis: 8.4.0
+    DIGEST = b"DIGEST"  # Since redis: 8.4.0
+    MSETEX = b"MSETEX"  # Since redis: 8.4.0
     GETSET = b"GETSET"  # Deprecated in redis: 6.2.0
     SETNX = b"SETNX"  # Deprecated in redis: 2.6.12
     SUBSTR = b"SUBSTR"  # Deprecated in redis: 2.0.0
@@ -146,6 +155,8 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     CLUSTER_SHARDS = b"CLUSTER SHARDS"  # Since redis: 7.0.0
     CLUSTER_MYSHARDID = b"CLUSTER MYSHARDID"  # Since redis: 7.2.0
     CLUSTER_SLOT_STATS = b"CLUSTER SLOT-STATS"  # Since redis: 8.2.0
+    CLUSTER_MIGRATION = b"CLUSTER MIGRATION"  # Since redis: 8.4.0
+    CLUSTER_SYNCSLOTS = b"CLUSTER SYNCSLOTS"  # Since redis: 8.4.0
     CLUSTER_SLAVES = b"CLUSTER SLAVES"  # Deprecated in redis: 5.0.0
     CLUSTER_SLOTS = b"CLUSTER SLOTS"  # Deprecated in redis: 7.0.0
 
@@ -425,6 +436,7 @@ class CommandName(CaseAndEncodingInsensitiveEnum):
     XGROUP_CREATECONSUMER = b"XGROUP CREATECONSUMER"  # Since redis: 6.2.0
     XACKDEL = b"XACKDEL"  # Since redis: 8.2.0
     XDELEX = b"XDELEX"  # Since redis: 8.2.0
+    XCFGSET = b"XCFGSET"  # Since redis: 8.6.0
 
     #: Commands for vector_set
     VADD = b"VADD"  # Since redis: 8.0.0

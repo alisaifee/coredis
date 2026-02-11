@@ -830,6 +830,36 @@ Returns a substring from a string value.
 
 
 
+DELEX [X]
+*********
+
+Conditionally removes the specified key based on value or digest comparison.
+
+- Documentation: `DELEX <https://redis.io/commands/delex>`_
+
+- Not Implemented
+
+
+DIGEST [X]
+**********
+
+Returns the XXH3 hash of a string value.
+
+- Documentation: `DIGEST <https://redis.io/commands/digest>`_
+
+- Not Implemented
+
+
+MSETEX [X]
+**********
+
+Atomically sets multiple string keys with a shared expiration in a single operation. Supports flexible argument parsing where condition and expiration flags can appear in any order.
+
+- Documentation: `MSETEX <https://redis.io/commands/msetex>`_
+
+- Not Implemented
+
+
 
 
 
@@ -3078,6 +3108,16 @@ Deletes messages from the beginning of a stream.
 
 
 
+XCFGSET [X]
+***********
+
+Sets the IDMP configuration parameters for a stream.
+
+- Documentation: `XCFGSET <https://redis.io/commands/xcfgset>`_
+
+- Not Implemented
+
+
 
 
 
@@ -4796,12 +4836,62 @@ Returns the server time.
 
 
 
+HOTKEYS GET [X]
+***************
+
+Returns lists of top K hotkeys depending on metrics chosen in HOTKEYS START command.
+
+- Documentation: `HOTKEYS GET <https://redis.io/commands/hotkeys-get>`_
+
+- Not Implemented
+
+
+HOTKEYS RESET [X]
+*****************
+
+Release the resources used for hotkey tracking.
+
+- Documentation: `HOTKEYS RESET <https://redis.io/commands/hotkeys-reset>`_
+
+- Not Implemented
+
+
+HOTKEYS START [X]
+*****************
+
+Starts hotkeys tracking.
+
+- Documentation: `HOTKEYS START <https://redis.io/commands/hotkeys-start>`_
+
+- Not Implemented
+
+
+HOTKEYS STOP [X]
+****************
+
+Stops hotkeys tracking.
+
+- Documentation: `HOTKEYS STOP <https://redis.io/commands/hotkeys-stop>`_
+
+- Not Implemented
+
+
 MONITOR [X]
 ***********
 
 Listens for all requests received by the server in real-time.
 
 - Documentation: `MONITOR <https://redis.io/commands/monitor>`_
+
+- Not Implemented
+
+
+TRIMSLOTS [X]
+*************
+
+Trim the keys that belong to specified slots.
+
+- Documentation: `TRIMSLOTS <https://redis.io/commands/trimslots>`_
 
 - Not Implemented
 
@@ -5666,6 +5756,16 @@ Enables read-write queries for a connection to a Reids Cluster replica node.
 
 
 
+CLUSTER MIGRATION [X]
+*********************
+
+Start, monitor and cancel slot migration.
+
+- Documentation: `CLUSTER MIGRATION <https://redis.io/commands/cluster-migration>`_
+
+- Not Implemented
+
+
 CLUSTER MYSHARDID [X]
 *********************
 
@@ -5682,6 +5782,16 @@ CLUSTER SLOT-STATS [X]
 Return an array of slot usage statistics for slots assigned to the current node.
 
 - Documentation: `CLUSTER SLOT-STATS <https://redis.io/commands/cluster-slot-stats>`_
+
+- Not Implemented
+
+
+CLUSTER SYNCSLOTS [X]
+*********************
+
+Internal command for atomic slot migration protocol between cluster nodes.
+
+- Documentation: `CLUSTER SYNCSLOTS <https://redis.io/commands/cluster-syncslots>`_
 
 - Not Implemented
 

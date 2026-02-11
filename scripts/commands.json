@@ -2835,6 +2835,89 @@
             "no_async_loading"
         ]
     },
+    "CLUSTER MIGRATION": {
+        "summary": "Start, monitor and cancel slot migration.",
+        "since": "8.4.0",
+        "group": "cluster",
+        "complexity": "O(N) where N is the total number of the slots between the start slot and end slot arguments.",
+        "acl_categories": [
+            "@admin",
+            "@slow",
+            "@dangerous"
+        ],
+        "arity": -4,
+        "arguments": [
+            {
+                "name": "subcommand",
+                "type": "oneof",
+                "arguments": [
+                    {
+                        "name": "import",
+                        "type": "block",
+                        "token": "IMPORT",
+                        "multiple": true,
+                        "arguments": [
+                            {
+                                "name": "start-slot",
+                                "type": "integer",
+                                "display_text": "start-slot"
+                            },
+                            {
+                                "name": "end-slot",
+                                "type": "integer",
+                                "display_text": "end-slot"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "cancel",
+                        "type": "oneof",
+                        "token": "CANCEL",
+                        "arguments": [
+                            {
+                                "name": "task-id",
+                                "type": "string",
+                                "display_text": "task-id",
+                                "token": "ID"
+                            },
+                            {
+                                "name": "all",
+                                "type": "pure-token",
+                                "display_text": "all",
+                                "token": "ALL"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "status",
+                        "type": "oneof",
+                        "token": "STATUS",
+                        "arguments": [
+                            {
+                                "name": "task-id",
+                                "type": "string",
+                                "display_text": "task-id",
+                                "token": "ID",
+                                "optional": true
+                            },
+                            {
+                                "name": "all",
+                                "type": "pure-token",
+                                "display_text": "all",
+                                "token": "ALL",
+                                "optional": true
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "command_flags": [
+            "admin",
+            "stale",
+            "no_async_loading"
+        ]
+    },
     "CLUSTER MYID": {
         "summary": "Returns the ID of a node.",
         "since": "3.0.0",
@@ -3219,6 +3302,123 @@
         ],
         "doc_flags": [
             "deprecated"
+        ],
+        "hints": [
+            "nondeterministic_output"
+        ]
+    },
+    "CLUSTER SYNCSLOTS": {
+        "summary": "Internal command for atomic slot migration protocol between cluster nodes.",
+        "since": "8.4.0",
+        "group": "cluster",
+        "complexity": "O(1)",
+        "acl_categories": [
+            "@admin",
+            "@slow",
+            "@dangerous"
+        ],
+        "arity": -3,
+        "arguments": [
+            {
+                "name": "subcommand",
+                "type": "oneof",
+                "arguments": [
+                    {
+                        "name": "sync",
+                        "type": "block",
+                        "token": "SYNC",
+                        "arguments": [
+                            {
+                                "name": "task-id",
+                                "type": "string",
+                                "display_text": "task-id"
+                            },
+                            {
+                                "name": "slot-range",
+                                "type": "block",
+                                "multiple": true,
+                                "arguments": [
+                                    {
+                                        "name": "start-slot",
+                                        "type": "integer",
+                                        "display_text": "start-slot"
+                                    },
+                                    {
+                                        "name": "end-slot",
+                                        "type": "integer",
+                                        "display_text": "end-slot"
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "name": "task-id",
+                        "type": "string",
+                        "display_text": "task-id",
+                        "token": "RDBCHANNEL"
+                    },
+                    {
+                        "name": "snapshot-eof",
+                        "type": "pure-token",
+                        "display_text": "snapshot-eof",
+                        "token": "SNAPSHOT-EOF"
+                    },
+                    {
+                        "name": "stream-eof",
+                        "type": "pure-token",
+                        "display_text": "stream-eof",
+                        "token": "STREAM-EOF"
+                    },
+                    {
+                        "name": "ack",
+                        "type": "block",
+                        "token": "ACK",
+                        "arguments": [
+                            {
+                                "name": "state",
+                                "type": "string",
+                                "display_text": "state"
+                            },
+                            {
+                                "name": "offset",
+                                "type": "integer",
+                                "display_text": "offset"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "error",
+                        "type": "string",
+                        "display_text": "error",
+                        "token": "FAIL"
+                    },
+                    {
+                        "name": "conf",
+                        "type": "block",
+                        "token": "CONF",
+                        "arguments": [
+                            {
+                                "name": "option",
+                                "type": "string",
+                                "display_text": "option",
+                                "multiple": true
+                            },
+                            {
+                                "name": "value",
+                                "type": "string",
+                                "display_text": "value",
+                                "multiple": true
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "command_flags": [
+            "admin",
+            "stale",
+            "no_async_loading"
         ],
         "hints": [
             "nondeterministic_output"
@@ -3849,6 +4049,126 @@
         "hints": [
             "request_policy:multi_shard",
             "response_policy:agg_sum"
+        ]
+    },
+    "DELEX": {
+        "summary": "Conditionally removes the specified key based on value or digest comparison.",
+        "since": "8.4.0",
+        "group": "string",
+        "complexity": "O(1) for IFEQ/IFNE, O(N) for IFDEQ/IFDNE where N is the length of the string value.",
+        "acl_categories": [
+            "@write",
+            "@string",
+            "@fast"
+        ],
+        "arity": -2,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RW": true,
+                "delete": true,
+                "variable_flags": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "condition",
+                "type": "oneof",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "ifeq-value",
+                        "type": "string",
+                        "display_text": "ifeq-value",
+                        "token": "IFEQ"
+                    },
+                    {
+                        "name": "ifne-value",
+                        "type": "string",
+                        "display_text": "ifne-value",
+                        "token": "IFNE"
+                    },
+                    {
+                        "name": "ifdeq-digest",
+                        "type": "integer",
+                        "display_text": "ifdeq-digest",
+                        "token": "IFDEQ"
+                    },
+                    {
+                        "name": "ifdne-digest",
+                        "type": "integer",
+                        "display_text": "ifdne-digest",
+                        "token": "IFDNE"
+                    }
+                ]
+            }
+        ],
+        "command_flags": [
+            "write",
+            "fast"
+        ]
+    },
+    "DIGEST": {
+        "summary": "Returns the XXH3 hash of a string value.",
+        "since": "8.4.0",
+        "group": "string",
+        "complexity": "O(N) where N is the length of the string value.",
+        "acl_categories": [
+            "@read",
+            "@string",
+            "@fast"
+        ],
+        "arity": 2,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RO": true,
+                "access": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            }
+        ],
+        "command_flags": [
+            "readonly",
+            "fast"
         ]
     },
     "DISCARD": {
@@ -7918,6 +8238,162 @@
             "deprecated"
         ]
     },
+    "HOTKEYS": {
+        "summary": "A container for hotkeys tracking commands.",
+        "since": "8.6.0",
+        "group": "server",
+        "complexity": "Depends on subcommand.",
+        "acl_categories": [
+            "@slow"
+        ],
+        "arity": -2
+    },
+    "HOTKEYS GET": {
+        "summary": "Returns lists of top K hotkeys depending on metrics chosen in HOTKEYS START command.",
+        "since": "8.6.0",
+        "group": "server",
+        "complexity": "O(K) where K is the number of hotkeys returned.",
+        "acl_categories": [
+            "@admin",
+            "@slow",
+            "@dangerous"
+        ],
+        "arity": 2,
+        "command_flags": [
+            "admin",
+            "noscript"
+        ],
+        "hints": [
+            "nondeterministic_output",
+            "request_policy:special",
+            "response_policy:special"
+        ]
+    },
+    "HOTKEYS RESET": {
+        "summary": "Release the resources used for hotkey tracking.",
+        "since": "8.6.0",
+        "group": "server",
+        "complexity": "O(1)",
+        "acl_categories": [
+            "@admin",
+            "@slow",
+            "@dangerous"
+        ],
+        "arity": 2,
+        "command_flags": [
+            "admin",
+            "noscript"
+        ],
+        "hints": [
+            "request_policy:special"
+        ]
+    },
+    "HOTKEYS START": {
+        "summary": "Starts hotkeys tracking.",
+        "since": "8.6.0",
+        "group": "server",
+        "complexity": "O(1)",
+        "acl_categories": [
+            "@admin",
+            "@slow",
+            "@dangerous"
+        ],
+        "arity": -2,
+        "arguments": [
+            {
+                "name": "metrics",
+                "type": "block",
+                "token": "METRICS",
+                "arguments": [
+                    {
+                        "name": "count",
+                        "type": "integer",
+                        "display_text": "count"
+                    },
+                    {
+                        "name": "cpu",
+                        "type": "pure-token",
+                        "display_text": "cpu",
+                        "token": "CPU",
+                        "optional": true
+                    },
+                    {
+                        "name": "net",
+                        "type": "pure-token",
+                        "display_text": "net",
+                        "token": "NET",
+                        "optional": true
+                    }
+                ]
+            },
+            {
+                "name": "k",
+                "type": "integer",
+                "display_text": "k",
+                "token": "COUNT",
+                "optional": true
+            },
+            {
+                "name": "seconds",
+                "type": "integer",
+                "display_text": "seconds",
+                "token": "DURATION",
+                "optional": true
+            },
+            {
+                "name": "ratio",
+                "type": "integer",
+                "display_text": "ratio",
+                "token": "SAMPLE",
+                "optional": true
+            },
+            {
+                "name": "slots",
+                "type": "block",
+                "token": "SLOTS",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "count",
+                        "type": "integer",
+                        "display_text": "count"
+                    },
+                    {
+                        "name": "slot",
+                        "type": "integer",
+                        "display_text": "slot",
+                        "multiple": true
+                    }
+                ]
+            }
+        ],
+        "command_flags": [
+            "admin",
+            "noscript"
+        ],
+        "hints": [
+            "request_policy:special"
+        ]
+    },
+    "HOTKEYS STOP": {
+        "summary": "Stops hotkeys tracking.",
+        "since": "8.6.0",
+        "group": "server",
+        "complexity": "O(1)",
+        "acl_categories": [
+            "@admin",
+            "@slow",
+            "@dangerous"
+        ],
+        "arity": 2,
+        "command_flags": [
+            "admin",
+            "noscript"
+        ],
+        "hints": [
+            "request_policy:special"
+        ]
+    },
     "HPERSIST": {
         "summary": "Removes the expiration time for each specified field",
         "since": "7.4.0",
@@ -10807,6 +11283,128 @@
             "response_policy:all_succeeded"
         ]
     },
+    "MSETEX": {
+        "summary": "Atomically sets multiple string keys with a shared expiration in a single operation. Supports flexible argument parsing where condition and expiration flags can appear in any order.",
+        "since": "8.4.0",
+        "group": "string",
+        "complexity": "O(N) where N is the number of keys to set.",
+        "acl_categories": [
+            "@write",
+            "@string",
+            "@slow"
+        ],
+        "arity": -4,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "keynum",
+                    "spec": {
+                        "keynumidx": 0,
+                        "firstkey": 1,
+                        "keystep": 2
+                    }
+                },
+                "OW": true,
+                "update": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "numkeys",
+                "type": "integer",
+                "display_text": "numkeys"
+            },
+            {
+                "name": "data",
+                "type": "block",
+                "multiple": true,
+                "arguments": [
+                    {
+                        "name": "key",
+                        "type": "key",
+                        "display_text": "key",
+                        "key_spec_index": 0
+                    },
+                    {
+                        "name": "value",
+                        "type": "string",
+                        "display_text": "value"
+                    }
+                ]
+            },
+            {
+                "name": "condition",
+                "type": "oneof",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "nx",
+                        "type": "pure-token",
+                        "display_text": "nx",
+                        "token": "NX"
+                    },
+                    {
+                        "name": "xx",
+                        "type": "pure-token",
+                        "display_text": "xx",
+                        "token": "XX"
+                    }
+                ]
+            },
+            {
+                "name": "expiration",
+                "type": "oneof",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "seconds",
+                        "type": "integer",
+                        "display_text": "seconds",
+                        "token": "EX"
+                    },
+                    {
+                        "name": "milliseconds",
+                        "type": "integer",
+                        "display_text": "milliseconds",
+                        "token": "PX"
+                    },
+                    {
+                        "name": "unix-time-seconds",
+                        "type": "unix-time",
+                        "display_text": "unix-time-seconds",
+                        "token": "EXAT"
+                    },
+                    {
+                        "name": "unix-time-milliseconds",
+                        "type": "unix-time",
+                        "display_text": "unix-time-milliseconds",
+                        "token": "PXAT"
+                    },
+                    {
+                        "name": "keepttl",
+                        "type": "pure-token",
+                        "display_text": "keepttl",
+                        "token": "KEEPTTL"
+                    }
+                ]
+            }
+        ],
+        "command_flags": [
+            "write",
+            "denyoom",
+            "movablekeys"
+        ],
+        "hints": [
+            "request_policy:multi_shard",
+            "response_policy:all_succeeded"
+        ]
+    },
     "MSETNX": {
         "summary": "Atomically modifies the string values of one or more keys only when all keys don't exist.",
         "since": "1.0.1",
@@ -13280,6 +13878,10 @@
             [
                 "7.0.0",
                 "Allowed the `NX` and `GET` options to be used together."
+            ],
+            [
+                "8.4.0",
+                "Added 'IFEQ', 'IFNE', 'IFDEQ', 'IFDNE' options."
             ]
         ],
         "acl_categories": [
@@ -13340,6 +13942,34 @@
                         "type": "pure-token",
                         "display_text": "xx",
                         "token": "XX"
+                    },
+                    {
+                        "name": "ifeq-value",
+                        "type": "string",
+                        "display_text": "ifeq-value",
+                        "token": "IFEQ",
+                        "since": "8.4.0"
+                    },
+                    {
+                        "name": "ifne-value",
+                        "type": "string",
+                        "display_text": "ifne-value",
+                        "token": "IFNE",
+                        "since": "8.4.0"
+                    },
+                    {
+                        "name": "ifdeq-digest",
+                        "type": "integer",
+                        "display_text": "ifdeq-digest",
+                        "token": "IFDEQ",
+                        "since": "8.4.0"
+                    },
+                    {
+                        "name": "ifdne-digest",
+                        "type": "integer",
+                        "display_text": "ifdne-digest",
+                        "token": "IFDNE",
+                        "since": "8.4.0"
                     }
                 ]
             },
@@ -15249,6 +15879,53 @@
             "response_policy:agg_sum"
         ]
     },
+    "TRIMSLOTS": {
+        "summary": "Trim the keys that belong to specified slots.",
+        "since": "8.4.0",
+        "group": "server",
+        "complexity": "O(N) where N is the total number of keys in all databases",
+        "acl_categories": [
+            "@keyspace",
+            "@write",
+            "@slow",
+            "@dangerous"
+        ],
+        "arity": -5,
+        "arguments": [
+            {
+                "name": "ranges",
+                "type": "block",
+                "token": "RANGES",
+                "arguments": [
+                    {
+                        "name": "numranges",
+                        "type": "integer",
+                        "display_text": "numranges"
+                    },
+                    {
+                        "name": "slots",
+                        "type": "block",
+                        "multiple": true,
+                        "arguments": [
+                            {
+                                "name": "startslot",
+                                "type": "integer",
+                                "display_text": "startslot"
+                            },
+                            {
+                                "name": "endslot",
+                                "type": "integer",
+                                "display_text": "endslot"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "command_flags": [
+            "write"
+        ]
+    },
     "TTL": {
         "summary": "Returns the expiration time in seconds of a key.",
         "since": "1.0.0",
@@ -15786,6 +16463,52 @@
                 ]
             },
             {
+                "name": "idmp",
+                "type": "oneof",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "idmpauto-with-pid",
+                        "type": "block",
+                        "arguments": [
+                            {
+                                "name": "idmpauto-token",
+                                "type": "pure-token",
+                                "display_text": "idmpauto-token",
+                                "token": "IDMPAUTO"
+                            },
+                            {
+                                "name": "pid",
+                                "type": "string",
+                                "display_text": "pid"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "idmp-with-pid-iid",
+                        "type": "block",
+                        "arguments": [
+                            {
+                                "name": "idmp-token",
+                                "type": "pure-token",
+                                "display_text": "idmp-token",
+                                "token": "IDMP"
+                            },
+                            {
+                                "name": "pid",
+                                "type": "string",
+                                "display_text": "pid"
+                            },
+                            {
+                                "name": "iid",
+                                "type": "string",
+                                "display_text": "iid"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
                 "name": "trim",
                 "type": "block",
                 "optional": true,
@@ -15972,6 +16695,86 @@
         ],
         "hints": [
             "nondeterministic_output"
+        ]
+    },
+    "XCFGSET": {
+        "summary": "Sets the IDMP configuration parameters for a stream.",
+        "since": "8.6.0",
+        "group": "stream",
+        "complexity": "O(1)",
+        "acl_categories": [
+            "@write",
+            "@stream",
+            "@fast"
+        ],
+        "arity": -2,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RW": true,
+                "update": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "idmp-duration-block",
+                "type": "block",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "idmp-duration-token",
+                        "type": "pure-token",
+                        "display_text": "idmp-duration-token",
+                        "token": "IDMP-DURATION"
+                    },
+                    {
+                        "name": "duration",
+                        "type": "integer",
+                        "display_text": "duration"
+                    }
+                ]
+            },
+            {
+                "name": "idmp-maxsize-block",
+                "type": "block",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "idmp-maxsize-token",
+                        "type": "pure-token",
+                        "display_text": "idmp-maxsize-token",
+                        "token": "IDMP-MAXSIZE"
+                    },
+                    {
+                        "name": "maxsize",
+                        "type": "integer",
+                        "display_text": "maxsize"
+                    }
+                ]
+            }
+        ],
+        "command_flags": [
+            "write",
+            "fast"
         ]
     },
     "XCLAIM": {
@@ -16713,6 +17516,10 @@
             [
                 "7.2.0",
                 "Added the `active-time` field, and changed the meaning of `seen-time`."
+            ],
+            [
+                "8.6.0",
+                "Added the `idmp-duration`, `idmp-maxsize`, `pids-tracked`, `iids-tracked`, `iids-added` and `iids-duplicates` fields for IDMP tracking."
             ]
         ],
         "acl_categories": [
@@ -17112,6 +17919,13 @@
                 "type": "integer",
                 "display_text": "milliseconds",
                 "token": "BLOCK",
+                "optional": true
+            },
+            {
+                "name": "min-idle-time",
+                "type": "integer",
+                "display_text": "min-idle-time",
+                "token": "CLAIM",
                 "optional": true
             },
             {
