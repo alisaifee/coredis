@@ -4,7 +4,6 @@ import contextlib
 import contextvars
 import random
 import warnings
-from collections import defaultdict
 from ssl import SSLContext
 from typing import TYPE_CHECKING, Any, cast, overload
 
@@ -44,7 +43,6 @@ from coredis.patterns.pubsub import PubSub, SubscriptionCallback
 from coredis.pool import ConnectionPool
 from coredis.response._callbacks import (
     NoopCallback,
-    ResponseCallback,
 )
 from coredis.response.types import ScoredMember
 from coredis.retry import (
@@ -102,7 +100,6 @@ class Client(
     decode_responses: bool
     encoding: str
     server_version: Version | None
-    callback_storage: dict[type[ResponseCallback[Any, Any]], dict[str, Any]]
     type_adapter: TypeAdapter
 
     def __init__(
@@ -200,7 +197,6 @@ class Client(
             contextvars.ContextVar("waitaof", default=None)
         )
         self.retry_policy = retry_policy
-        self.callback_storage = defaultdict(dict)
         self.type_adapter = type_adapter or TypeAdapter()
 
     def create_request(
