@@ -499,6 +499,55 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.MSETNX, *dict_to_flat_list(key_values), callback=BoolCallback()
         )
 
+    @mutually_exclusive_parameters("ex", "px", "exat", "pxat", "keepttl")
+    @redis_command(CommandName.MSETEX, group=CommandGroup.STRING, version_introduced="8.4.0")
+    def msetex(
+        self,
+        key_values: Mapping[KeyT, ValueT],
+        *,
+        condition: Literal[PureToken.NX, PureToken.XX] | None = None,
+        ex: int | datetime.timedelta | None = None,
+        px: int | datetime.timedelta | None = None,
+        exat: int | datetime.datetime | None = None,
+        pxat: int | datetime.datetime | None = None,
+        keepttl: bool | None = None,
+    ) -> CommandRequest[bool]:
+        """
+        Atomically sets multiple string keys with an optional shared expiration in a single operation.
+
+        :param condition: Condition to use when setting the keys
+        :param ex: Number of seconds to expire in
+        :param px: Number of milliseconds to expire in
+        :param exat: Expiry time with seconds granularity
+        :param pxat: Expiry time with milliseconds granularity
+        :param keepttl: Retain the time to live associated with the keys
+
+        :return: Whether all the keys were set
+        """
+        command_arguments: CommandArgList = [len(key_values), *dict_to_flat_list(key_values)]
+        if condition is not None:
+            command_arguments.append(condition)
+        if ex is not None:
+            command_arguments.append(PrefixToken.EX)
+            command_arguments.append(normalized_seconds(ex))
+
+        if px is not None:
+            command_arguments.append(PrefixToken.PX)
+            command_arguments.append(normalized_milliseconds(px))
+
+        if exat is not None:
+            command_arguments.append(PrefixToken.EXAT)
+            command_arguments.append(normalized_time_seconds(exat))
+
+        if pxat is not None:
+            command_arguments.append(PrefixToken.PXAT)
+            command_arguments.append(normalized_time_milliseconds(pxat))
+
+        if keepttl:
+            command_arguments.append(PureToken.KEEPTTL)
+
+        return self.create_request(CommandName.MSETEX, *command_arguments, callback=BoolCallback())
+
     @redis_command(
         CommandName.PSETEX,
         group=CommandGroup.STRING,

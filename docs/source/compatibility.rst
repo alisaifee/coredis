@@ -738,6 +738,22 @@ Atomically creates or modifies the string values of one or more keys.
 
 
 
+MSETEX
+******
+
+Atomically sets multiple string keys with a shared expiration in a single operation. Supports flexible argument parsing where condition and expiration flags can appear in any order.
+
+- Documentation: `MSETEX <https://redis.io/commands/msetex>`_
+- Implementation: :meth:`~coredis.Redis.msetex`
+
+- New in redis: 8.4.0
+
+
+
+
+
+
+
 MSETNX
 ******
 
@@ -860,16 +876,6 @@ Returns a substring from a string value.
 
 - Supports client caching: yes
 
-
-
-MSETEX [X]
-**********
-
-Atomically sets multiple string keys with a shared expiration in a single operation. Supports flexible argument parsing where condition and expiration flags can appear in any order.
-
-- Documentation: `MSETEX <https://redis.io/commands/msetex>`_
-
-- Not Implemented
 
 
 

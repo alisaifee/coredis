@@ -159,6 +159,22 @@ class TestString:
             assert await client.get(k) == _s(v)
         assert await client.get("d") is None
 
+    @pytest.mark.min_server_version("8.4.0")
+    async def test_msetex(self, client, redis_server_time, _s):
+        d = {"a{foo}": "1", "b{foo}": "2", "c{foo}": "3"}
+        assert await client.msetex(d)
+        assert not await client.msetex(d, condition=PureToken.NX)
+        assert await client.msetex(d, condition=PureToken.XX)
+        assert await client.msetex(d, condition=PureToken.XX, ex=3)
+        assert await client.pttl("a{foo}") <= 3000
+        assert await client.msetex(d, condition=PureToken.XX, px=2000)
+        assert await client.pttl("a{foo}") <= 2000
+        expire_at = await redis_server_time(client) + datetime.timedelta(seconds=1)
+        assert await client.msetex(d, condition=PureToken.XX, exat=expire_at)
+        assert await client.pttl("a{foo}") <= 1000
+        assert await client.msetex(d, condition=PureToken.XX, pxat=expire_at)
+        assert await client.pttl("a{foo}") <= 1000
+
     async def test_psetex(self, client, _s):
         assert await client.psetex("a", 1000, "value")
         assert await client.get("a") == _s("value")
