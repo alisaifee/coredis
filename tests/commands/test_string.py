@@ -240,6 +240,23 @@ class TestString:
         assert await client.set("a", "1", condition=PureToken.XX, px=10000)
         assert 0 < await client.ttl("a") <= 10
 
+    @pytest.mark.min_server_version("8.4.0")
+    async def test_set_equality_condition(self, client, _s):
+        await client.set("a", 1)
+        assert not await client.set("a", 1, ifeq=2)
+        assert not await client.set("a", 1, ifne=1)
+        assert await client.set("a", 2, ifeq=1)
+        assert await client.get("a") == _s("2")
+
+    @pytest.mark.min_server_version("8.4.0")
+    async def test_set_digest_equality_condition(self, client, _s):
+        await client.set("a", 1)
+        digest = await client.digest("a")
+        assert not await client.set("a", 1, ifdne=digest)
+        assert not await client.set("a", 1, ifdeq="a" * 16)
+        assert await client.set("a", 2, ifdeq=digest)
+        assert await client.get("a") == _s("2")
+
     async def test_setex(self, client, _s):
         assert await client.setex("a", "1", 60)
         assert await client.get("a") == _s("1")

@@ -533,6 +533,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         exat: int | datetime.datetime | None = ...,
         pxat: int | datetime.datetime | None = ...,
         keepttl: bool | None = ...,
+        ifeq: ValueT | None = ...,
+        ifne: ValueT | None = ...,
+        ifdeq: ValueT | None = ...,
+        ifdne: ValueT | None = ...,
     ) -> CommandRequest[bool]: ...
 
     @overload
@@ -548,9 +552,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         exat: int | datetime.datetime | None = ...,
         pxat: int | datetime.datetime | None = ...,
         keepttl: bool | None = ...,
+        ifeq: ValueT | None = ...,
+        ifne: ValueT | None = ...,
+        ifdeq: ValueT | None = ...,
+        ifdne: ValueT | None = ...,
     ) -> CommandRequest[AnyStr | None]: ...
 
     @mutually_exclusive_parameters("ex", "px", "exat", "pxat", "keepttl")
+    @mutually_exclusive_parameters("condition", "ifeq", "ifne", "ifdeq", "ifdne")
     @redis_command(
         CommandName.SET,
         group=CommandGroup.STRING,
@@ -558,6 +567,10 @@ class CoreCommands(CommandMixin[AnyStr]):
             "exat": {"version_introduced": "6.2.0"},
             "pxat": {"version_introduced": "6.2.0"},
             "get": {"version_introduced": "6.2.0"},
+            "ifeq": {"version_introduced": "8.4.0"},
+            "ifne": {"version_introduced": "8.4.0"},
+            "ifdeq": {"version_introduced": "8.4.0"},
+            "ifdne": {"version_introduced": "8.4.0"},
         },
     )
     def set(
@@ -572,6 +585,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         exat: int | datetime.datetime | None = None,
         pxat: int | datetime.datetime | None = None,
         keepttl: bool | None = None,
+        ifeq: ValueT | None = None,
+        ifne: ValueT | None = None,
+        ifdeq: ValueT | None = None,
+        ifdne: ValueT | None = None,
     ) -> CommandRequest[AnyStr | bool | None]:
         """
         Set the string value of a key
@@ -585,6 +602,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param exat: Expiry time with seconds granularity
         :param pxat: Expiry time with milliseconds granularity
         :param keepttl: Retain the time to live associated with the key
+        :param ifeq: Set the key only if it's current value is equal to this value
+        :param ifne: Set the key only if it's current value is **not*** equal to this value
+        :param ifdeq: Set the key only if it's current hash digest is equal to this value
+        :param ifdne: Set the key only if it's current hash digest is **not** equal to this value
 
         :return: Whether the operation was performed successfully.
 
@@ -618,6 +639,14 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         if condition:
             command_arguments.append(condition)
+        if ifeq is not None:
+            command_arguments.extend([PrefixToken.IFEQ, ifeq])
+        if ifne is not None:
+            command_arguments.extend([PrefixToken.IFNE, ifne])
+        if ifdeq is not None:
+            command_arguments.extend([PrefixToken.IFDEQ, ifdeq])
+        if ifdne is not None:
+            command_arguments.extend([PrefixToken.IFDNE, ifdne])
 
         return self.create_request(
             CommandName.SET,
