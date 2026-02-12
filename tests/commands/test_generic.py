@@ -165,6 +165,16 @@ class TestGeneric:
             _s("apple juice"),
         ]
 
+    @pytest.mark.min_server_version("8.4.0")
+    async def test_digest(self, client, _s):
+        assert await client.digest("a") is None
+        await client.set("a", 1)
+        digest = await client.digest("a")
+        await client.set("a", 2)
+        assert digest != await client.digest("a")
+        await client.set("a", 1)
+        assert digest == await client.digest("a")
+
     async def test_delete(self, client, _s):
         assert await client.delete(["a"]) == 0
         await client.set("a", "foo")

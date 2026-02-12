@@ -538,6 +538,22 @@ Decrements a number from the integer value of a key. Uses 0 as initial value if 
 
 
 
+DIGEST
+******
+
+Returns the XXH3 hash of a string value.
+
+- Documentation: `DIGEST <https://redis.io/commands/digest>`_
+- Implementation: :meth:`~coredis.Redis.digest`
+
+- New in redis: 8.4.0
+
+
+
+
+
+
+
 GET
 ***
 
@@ -836,16 +852,6 @@ DELEX [X]
 Conditionally removes the specified key based on value or digest comparison.
 
 - Documentation: `DELEX <https://redis.io/commands/delex>`_
-
-- Not Implemented
-
-
-DIGEST [X]
-**********
-
-Returns the XXH3 hash of a string value.
-
-- Documentation: `DIGEST <https://redis.io/commands/digest>`_
 
 - Not Implemented
 

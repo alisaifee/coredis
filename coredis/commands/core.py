@@ -2579,6 +2579,19 @@ class CoreCommands(CommandMixin[AnyStr]):
         return self.create_request(CommandName.DEL, *keys, callback=IntCallback())
 
     @redis_command(
+        CommandName.DIGEST,
+        group=CommandGroup.GENERIC,
+        version_introduced="8.4.0",
+    )
+    def digest(self, key: KeyT) -> CommandRequest[AnyStr | None]:
+        """
+        Get the hash digest for the value stored in the specified key as a hexadecimal string
+        """
+        return self.create_request(
+            CommandName.DIGEST, key, callback=OptionalAnyStrCallback[AnyStr]()
+        )
+
+    @redis_command(
         CommandName.DUMP,
         group=CommandGroup.GENERIC,
         flags={CommandFlag.READONLY},
