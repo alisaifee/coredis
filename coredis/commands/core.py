@@ -5213,6 +5213,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @mutually_inclusive_parameters("trim_strategy", "threshold")
+    @mutually_exclusive_parameters("idmpauto", "idmp")
     @redis_command(
         CommandName.XADD,
         group=CommandGroup.STREAM,
@@ -5220,6 +5221,8 @@ class CoreCommands(CommandMixin[AnyStr]):
             "nomkstream": {"version_introduced": "6.2.0"},
             "limit": {"version_introduced": "6.2.0"},
             "condition": {"version_introduced": "8.2.0"},
+            "idmpauto": {"version_introduced": "8.6.0"},
+            "idmp": {"version_introduced": "8.6.0"},
         },
         flags={CommandFlag.FAST},
     )
@@ -5227,8 +5230,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self,
         key: KeyT,
         field_values: Mapping[MappingKeyT, ValueT],
+        *,
         identifier: ValueT | None = None,
         nomkstream: bool | None = None,
+        idmpauto: StringT | None = None,
+        idmp: tuple[StringT, StringT] | None = None,
         trim_strategy: Literal[PureToken.MAXLEN, PureToken.MINID] | None = None,
         threshold: int | None = None,
         trim_operator: Literal[PureToken.EQUAL, PureToken.APPROXIMATELY] | None = None,
@@ -5239,7 +5245,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         Appends a new entry to a stream
 
         :return: The identifier of the added entry. The identifier is the one auto-generated
-         if ``*`` is passed as :paramref:`identifier`, otherwise the it justs returns
+         if ``*`` is passed as :paramref:`identifier`, otherwise it justs returns
          the same identifier specified
 
          Returns ``None`` when used with :paramref:`nomkstream` and the key doesn't exist.
@@ -5251,6 +5257,13 @@ class CoreCommands(CommandMixin[AnyStr]):
             command_arguments.append(PureToken.NOMKSTREAM)
         if condition is not None:
             command_arguments.append(condition)
+
+        if idmpauto is not None:
+            command_arguments.extend([PureToken.IDMPAUTO, idmpauto])
+        if idmp is not None:
+            command_arguments.append(PureToken.IDMP)
+            command_arguments.extend(idmp)
+
         if trim_strategy == PureToken.MAXLEN:
             command_arguments.append(trim_strategy)
 
@@ -5823,6 +5836,31 @@ class CoreCommands(CommandMixin[AnyStr]):
             *command_arguments,
             callback=AutoClaimCallback[AnyStr](justid=justid),
         )
+
+    @mutually_exclusive_parameters("idmp_duration", "idmp_maxsize")
+    @redis_command(
+        CommandName.XCFGSET,
+        group=CommandGroup.STREAM,
+        version_introduced="8.6.0",
+    )
+    def xcfgset(
+        self,
+        key: KeyT,
+        idmp_duration: int | datetime.timedelta | None = None,
+        idmp_maxsize: int | None = None,
+    ) -> CommandRequest[bool]:
+        """
+        Sets the IDMP (Idempotent Message Processing) configuration parameters for a stream.
+        """
+        command_arguments: CommandArgList = [key]
+        if idmp_duration is not None:
+            command_arguments.append(PureToken.IDMP_DURATION)
+            command_arguments.append(normalized_seconds(idmp_duration))
+        if idmp_maxsize is not None:
+            command_arguments.append(PureToken.IDMP_MAXSIZE)
+            command_arguments.append(normalized_seconds(idmp_maxsize))
+
+        return self.create_request(CommandName.XCFGSET, *command_arguments, callback=BoolCallback())
 
     @redis_command(
         CommandName.BITCOUNT,

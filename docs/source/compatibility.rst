@@ -2844,6 +2844,22 @@ Changes, or acquires, ownership of messages in a consumer group, as if the messa
 
 
 
+XCFGSET
+*******
+
+Sets the IDMP configuration parameters for a stream.
+
+- Documentation: `XCFGSET <https://redis.io/commands/xcfgset>`_
+- Implementation: :meth:`~coredis.Redis.xcfgset`
+
+- New in redis: 8.6.0
+
+
+
+
+
+
+
 XCLAIM
 ******
 
@@ -3106,16 +3122,6 @@ Deletes messages from the beginning of a stream.
 
 
 
-
-
-XCFGSET [X]
-***********
-
-Sets the IDMP configuration parameters for a stream.
-
-- Documentation: `XCFGSET <https://redis.io/commands/xcfgset>`_
-
-- Not Implemented
 
 
 

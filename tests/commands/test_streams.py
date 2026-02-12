@@ -102,6 +102,24 @@ class TestStreams:
         length = await client.xlen("test_stream")
         assert length == 10
 
+    @pytest.mark.min_server_version("8.6")
+    async def test_xadd_with_idmpauto(self, client, _s):
+        assert await client.xadd(
+            "test_stream", field_values={"k1": "v1", "k2": "1"}, idmpauto="producer1"
+        ) == await client.xadd(
+            "test_stream", field_values={"k1": "v1", "k2": "1"}, idmpauto="producer1"
+        )
+        info = await client.xinfo_stream("test_stream")
+        assert info["first-entry"] == info["last-entry"]
+
+    @pytest.mark.min_server_version("8.6")
+    async def test_xadd_with_idmp(self, client, _s):
+        assert await client.xadd(
+            "test_stream", field_values={"k1": "v1", "k2": "1"}, idmp=("producer1", "one")
+        ) == await client.xadd(
+            "test_stream", field_values={"k1": "v1", "k2": "1"}, idmp=("producer1", "one")
+        )
+
     async def test_xclaim(self, client, _s):
         stream = "stream"
         group = "group"
@@ -544,3 +562,15 @@ class TestStreams:
         assert await client.xdelex("test_stream", [ids[1]], PureToken.KEEPREF) == (1,)
         assert await client.xdelex("test_stream", [ids[2]], PureToken.DELREF) == (1,)
         assert await client.xdelex("test_stream", [ids[3]], PureToken.ACKED) == (1,)
+
+    @pytest.mark.min_server_version("8.6")
+    async def test_xcfgset(self, client, _s):
+        with pytest.raises(ResponseError):
+            await client.xcfgset("test", idmp_duration=10)
+        identifier = await client.xadd("test", {"fu": 1}, idmpauto="producer1")
+        assert await client.xcfgset("test", idmp_duration=10)
+        assert identifier != (
+            new_identifier := await client.xadd("test", {"fu": 1}, idmpauto="producer1")
+        )
+        assert await client.xcfgset("test", idmp_maxsize=1)
+        assert new_identifier != await client.xadd("test", {"fu": 1}, idmpauto="producer1")
