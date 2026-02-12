@@ -2578,6 +2578,36 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self.create_request(CommandName.DEL, *keys, callback=IntCallback())
 
+    @mutually_exclusive_parameters("ifeq", "ifne", "ifdeq", "ifdne")
+    @redis_command(
+        CommandName.DELEX,
+        group=CommandGroup.GENERIC,
+        version_introduced="8.4.0",
+    )
+    def delex(
+        self,
+        key: KeyT,
+        *,
+        ifeq: ValueT | None = None,
+        ifne: ValueT | None = None,
+        ifdeq: ValueT | None = None,
+        ifdne: ValueT | None = None,
+    ) -> CommandRequest[bool]:
+        """
+        Conditionally removes the specified key based on value or hash digest comparison.
+        """
+        command_arguments: CommandArgList = [key]
+        if ifeq is not None:
+            command_arguments.extend([PrefixToken.IFEQ, ifeq])
+        if ifne is not None:
+            command_arguments.extend([PrefixToken.IFNE, ifne])
+        if ifdeq is not None:
+            command_arguments.extend([PrefixToken.IFDEQ, ifdeq])
+        if ifdne is not None:
+            command_arguments.extend([PrefixToken.IFDNE, ifdne])
+
+        return self.create_request(CommandName.DELEX, *command_arguments, callback=BoolCallback())
+
     @redis_command(
         CommandName.DIGEST,
         group=CommandGroup.GENERIC,

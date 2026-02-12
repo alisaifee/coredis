@@ -187,6 +187,18 @@ class TestGeneric:
         assert await client.get("a{foo}") is None
         assert await client.get("b{foo}") is None
 
+    @pytest.mark.min_server_version("8.4.0")
+    async def test_delex(self, client, _s):
+        assert not await client.delex("test")
+        await client.set("a", 1)
+        await client.set("b", 1)
+        await client.set("c", 1)
+        digest = await client.digest("a")
+        assert not await client.delex("a", ifeq=2)
+        assert not await client.delex("a", ifdeq="A" * 16)
+        assert not await client.delex("a", ifne=1)
+        assert not await client.delex("a", ifdne=digest)
+
     @pytest.mark.novalkey
     async def test_dump_and_restore_with_ttl(self, client, _s):
         await client.set("a", "foo")

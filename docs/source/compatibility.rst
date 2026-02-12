@@ -538,6 +538,22 @@ Decrements a number from the integer value of a key. Uses 0 as initial value if 
 
 
 
+DELEX
+*****
+
+Conditionally removes the specified key based on value or digest comparison.
+
+- Documentation: `DELEX <https://redis.io/commands/delex>`_
+- Implementation: :meth:`~coredis.Redis.delex`
+
+- New in redis: 8.4.0
+
+
+
+
+
+
+
 DIGEST
 ******
 
@@ -844,16 +860,6 @@ Returns a substring from a string value.
 
 - Supports client caching: yes
 
-
-
-DELEX [X]
-*********
-
-Conditionally removes the specified key based on value or digest comparison.
-
-- Documentation: `DELEX <https://redis.io/commands/delex>`_
-
-- Not Implemented
 
 
 MSETEX [X]
