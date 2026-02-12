@@ -80,7 +80,6 @@ test = [
   "pytest-lazy-fixtures",
   "pytest-mock",
   "pytest-reverse",
-  "pytest-mypy-plugins",
   "redis[hiredis]",
   "aiobotocore>=2.15.2",
   "asyncache>=0.3.1",
