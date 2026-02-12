@@ -261,29 +261,29 @@ class TestPubSubSubscribeUnsubscribe:
     async def test_subscribe_timeout(self, redis_cluster):
         async with redis_cluster.pubsub(subscription_timeout=1e-4) as pubsub:
             with pytest.raises(TimeoutError, match="Subscription timed out"):
-                await pubsub.subscribe(*(f"topic{k}" for k in range(100)))
+                await pubsub.subscribe(*(f"topic{k}" for k in range(200)))
         async with redis_cluster.pubsub(subscription_timeout=1e-4) as pubsub:
             with pytest.raises(TimeoutError, match="Subscription timed out"):
-                await pubsub.psubscribe(*(f"topic{k}-*" for k in range(100)))
+                await pubsub.psubscribe(*(f"topic{k}-*" for k in range(200)))
         async with redis_cluster.pubsub(subscription_timeout=1) as pubsub:
             await pubsub.subscribe(*(f"topic{k}" for k in range(100)))
         with pytest.RaisesGroup(pytest.RaisesExc(TimeoutError, match="Subscription timed out")):
             async with redis_cluster.pubsub(
                 subscription_timeout=1e-4,
-                channels=[f"topic{k}" for k in range(100)],
+                channels=[f"topic{k}" for k in range(200)],
             ) as pubsub:
                 pass
 
     async def test_shareded_subscribe_timeout(self, redis_cluster):
         async with redis_cluster.sharded_pubsub(subscription_timeout=1e-4) as pubsub:
             with pytest.raises(TimeoutError, match="Subscription timed out"):
-                await pubsub.subscribe(*(f"topic{k}" for k in range(100)))
+                await pubsub.subscribe(*(f"topic{k}" for k in range(200)))
         async with redis_cluster.sharded_pubsub(subscription_timeout=1) as pubsub:
             await pubsub.subscribe(*(f"topic{k}" for k in range(100)))
         with pytest.RaisesGroup(pytest.RaisesExc(TimeoutError, match="Subscription timed out")):
             async with redis_cluster.sharded_pubsub(
                 subscription_timeout=1e-4,
-                channels=[f"topic{k}" for k in range(100)],
+                channels=[f"topic{k}" for k in range(200)],
             ) as pubsub:
                 pass
 
