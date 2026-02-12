@@ -652,7 +652,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param pxat: Expiry time with milliseconds granularity
         :param keepttl: Retain the time to live associated with the key
         :param ifeq: Set the key only if it's current value is equal to this value
-        :param ifne: Set the key only if it's current value is **not*** equal to this value
+        :param ifne: Set the key only if it's current value is **not** equal to this value
         :param ifdeq: Set the key only if it's current hash digest is equal to this value
         :param ifdne: Set the key only if it's current hash digest is **not** equal to this value
 
