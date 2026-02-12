@@ -115,6 +115,7 @@ coredis is additionally tested against:
 - 3.13
 - 3.14
 - PyPy 3.10
+- PyPy 3.11
 
 ### Redis API compatible databases
 

@@ -61,59 +61,66 @@ jobs:
         extensions: ["True"]
         label: [""]
         include:
-          - python-version: "3.13"
+          - python-version: "3.14"
             redis-version: "8.2"
             test_params: "-m '(not (dragonfly or valkey))'"
             runtime_type_checks: "True"
             label: ""
-          - python-version: "3.13"
+          - python-version: "3.14"
             redis-version: next
             test_params: "-m '(not (dragonfly or valkey))'"
             runtime_type_checks: "True"
             label: ""
-          - python-version: "3.13"
+          - python-version: "3.14"
             redis-version: latest
             test_params: "-m '(not (dragonfly or valkey))'"
             extensions: "False"
             runtime_type_checks: "True"
             label: ""
-          - python-version: "3.13"
+          - python-version: "3.14"
             redis-version: latest
             test_params: "-m '(not (dragonfly or valkey))'"
             runtime_type_checks: "True"
             anyio-backend: "trio"
             label: ""
-          - python-version: "3.13"
+          - python-version: "3.14"
             redis-version: latest
             test_params: "-m '(not (dragonfly or valkey))'"
             runtime_type_checks: "True"
             orjson: "True"
             label: ""
-          - python-version: "3.13"
+          - python-version: "3.14"
             redis-version: latest
             test_params: "-m '(not (dragonfly or valkey))'"
             runtime_type_checks: "True"
             uvloop: "True"
             label: ""
-          - python-version: "3.13"
+          - python-version: "3.14"
             redis-version: 7.4
             test_params: "-m '(not (dragonfly or valkey))'"
             runtime_type_checks: "False"
             label: ""
-          - python-version: "3.13"
+          - python-version: "3.14"
             redis-version: latest
             test_params: "-m dragonfly"
             label: "Dragonfly"
-          - python-version: "3.13"
+          - python-version: "3.14"
             redis-version: 8.0
             test_params: "-m valkey"
             label: "Valkey 8"
-          - python-version: "3.13"
+          - python-version: "3.14"
             redis-version: latest
             test_params: "-m valkey"
             label: "Valkey latest"
+          - python-version: "pypy-3.11"
+            redis-version: 8.6
+            test_params: "-m '(not (dragonfly or valkey))' tests/commands tests/test_tracking_cache.py"
+            runtime_type_checks: "False"
+            extensions: "False"
+            uvloop: "False"
+            label: ""
           - python-version: "pypy-3.10"
-            redis-version: 8.0
+            redis-version: 8.6
             test_params: "-m '(not (dragonfly or valkey))' tests/commands tests/test_tracking_cache.py"
             runtime_type_checks: "False"
             extensions: "False"

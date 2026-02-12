@@ -47,7 +47,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13", "3.14"]
-        redis-version: ["7.2", "7.4", "8.0", "8.2", "8.4", "latest"]
+        redis-version: ["7.2", "7.4", "8.0", "8.2", "8.4", "8.6", "latest"]
         test_params: ["-m '(not (dragonfly or valkey))'"]
         uvloop: ["False"]
         orjson: ["False"]
@@ -56,36 +56,36 @@ jobs:
         extensions: ["True"]
         label: [""]
         include:
-          - python-version: "3.13"
+          - python-version: "3.14"
             redis-version: next
             test_params: "-m '(not (dragonfly or valkey))'"
             runtime_type_checks: "True"
             label: ""
-          - python-version: "3.13"
+          - python-version: "3.14"
             redis-version: "latest"
             test_params: "-m '(not (dragonfly or valkey))'"
             runtime_type_checks: "True"
             extensions: "False"
-          - python-version: "3.13"
+          - python-version: "3.14"
             redis-version: "latest"
             test_params: "-m '(not (dragonfly or valkey))'"
             runtime_type_checks: "True"
             uvloop: "True"
-          - python-version: "3.13"
+          - python-version: "3.14"
             redis-version: "latest"
             test_params: "-m '(not (dragonfly or valkey))'"
             runtime_type_checks: "True"
             anyio-backend: "trio"
-          - python-version: "3.13"
+          - python-version: "3.14"
             redis-version: "latest"
             test_params: "-m dragonfly"
             label: "Dragonfly"
-          - python-version: "3.13"
+          - python-version: "3.14"
             redis-version: "latest"
             test_params: "-m valkey"
             label: "Valkey: latest"
-          - python-version: "pypy-3.10"
-            redis-version: "8.0"
+          - python-version: "pypy-3.11"
+            redis-version: "8.6"
             test_params: "-m '(not (dragonfly or valkey))' tests/commands tests/test_tracking_cache.py"
             runtime_type_checks: "False"
             extensions: "False"
