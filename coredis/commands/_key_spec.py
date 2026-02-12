@@ -373,7 +373,7 @@ class KeySpec:
         b"ZUNION": lambda args: args[2 : 2 + int(args[1])],
         b"ZUNIONSTORE": lambda args: args[3 : 3 + int(args[2])] + (args[1],),
         b"MSET": lambda args: args[1 : (len(args)) : 2],
-        b"MSETEX": lambda args: args[2 : 2 + int(args[1])],
+        b"MSETEX": lambda args: args[2 : 2 + int(args[1]) : 2],
         b"MSETNX": lambda args: args[1 : (len(args)) : 2],
         b"PSETEX": lambda args: (args[1],),
         b"RESTORE": lambda args: (args[1],),

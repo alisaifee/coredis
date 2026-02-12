@@ -2294,7 +2294,12 @@ def cluster_key_extraction(path):
             elif find_spec["type"] == "keynum":
                 first_key = find_spec["spec"]["firstkey"]
                 keynumidx = find_spec["spec"]["keynumidx"]
-                return f"args[{start_index + first_key}: {start_index + first_key}+int(args[{keynumidx + start_index}])]"
+                finder = f"args[{start_index + first_key}: {start_index + first_key}+int(args[{keynumidx + start_index}])"
+                if keystep > 1:
+                    finder += f":{keystep}]"
+                else:
+                    finder += "]"
+                return finder
             else:
                 raise RuntimeError(f"Don't know how to handle {search_spec} with {find_spec}")
 
