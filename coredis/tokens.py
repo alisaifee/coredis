@@ -678,16 +678,6 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``XADD``
-    IDMP = b"IDMP"
-
-    #: Used by:
-    #:
-    #:  - ``XADD``
-    IDMPAUTO = b"IDMPAUTO"
-
-    #: Used by:
-    #:
-    #:  - ``XADD``
     #:  - ``XTRIM``
     MAXLEN = b"MAXLEN"
 
@@ -707,16 +697,6 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``XAUTOCLAIM``
     #:  - ``XCLAIM``
     JUSTID = b"JUSTID"
-
-    #: Used by:
-    #:
-    #:  - ``XCFGSET``
-    IDMP_DURATION = b"IDMP-DURATION"
-
-    #: Used by:
-    #:
-    #:  - ``XCFGSET``
-    IDMP_MAXSIZE = b"IDMP-MAXSIZE"
 
     #: Used by:
     #:
@@ -1947,6 +1927,26 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``XACKDEL``
     #:  - ``XDELEX``
     IDS = b"IDS"
+
+    #: Used by:
+    #:
+    #:  - ``XADD``
+    IDMP = b"IDMP"
+
+    #: Used by:
+    #:
+    #:  - ``XADD``
+    IDMPAUTO = b"IDMPAUTO"
+
+    #: Used by:
+    #:
+    #:  - ``XCFGSET``
+    IDMP_DURATION = b"IDMP-DURATION"
+
+    #: Used by:
+    #:
+    #:  - ``XCFGSET``
+    IDMP_MAXSIZE = b"IDMP-MAXSIZE"
 
     #: Used by:
     #:

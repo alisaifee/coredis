@@ -5259,9 +5259,9 @@ class CoreCommands(CommandMixin[AnyStr]):
             command_arguments.append(condition)
 
         if idmpauto is not None:
-            command_arguments.extend([PureToken.IDMPAUTO, idmpauto])
+            command_arguments.extend([PrefixToken.IDMPAUTO, idmpauto])
         if idmp is not None:
-            command_arguments.append(PureToken.IDMP)
+            command_arguments.append(PrefixToken.IDMP)
             command_arguments.extend(idmp)
 
         if trim_strategy == PureToken.MAXLEN:
@@ -5854,11 +5854,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         command_arguments: CommandArgList = [key]
         if idmp_duration is not None:
-            command_arguments.append(PureToken.IDMP_DURATION)
+            command_arguments.append(PrefixToken.IDMP_DURATION)
             command_arguments.append(normalized_seconds(idmp_duration))
         if idmp_maxsize is not None:
-            command_arguments.append(PureToken.IDMP_MAXSIZE)
-            command_arguments.append(normalized_seconds(idmp_maxsize))
+            command_arguments.append(PrefixToken.IDMP_MAXSIZE)
+            command_arguments.append(idmp_maxsize)
 
         return self.create_request(CommandName.XCFGSET, *command_arguments, callback=BoolCallback())
 

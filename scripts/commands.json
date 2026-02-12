@@ -16468,32 +16468,15 @@
                 "optional": true,
                 "arguments": [
                     {
-                        "name": "idmpauto-with-pid",
-                        "type": "block",
-                        "arguments": [
-                            {
-                                "name": "idmpauto-token",
-                                "type": "pure-token",
-                                "display_text": "idmpauto-token",
-                                "token": "IDMPAUTO"
-                            },
-                            {
-                                "name": "pid",
-                                "type": "string",
-                                "display_text": "pid"
-                            }
-                        ]
+                        "name": "pid",
+                        "token": "IDMPAUTO",
+                        "type": "string"
                     },
                     {
-                        "name": "idmp-with-pid-iid",
+                        "name": "idmp",
                         "type": "block",
+                        "token": "IDMP",
                         "arguments": [
-                            {
-                                "name": "idmp-token",
-                                "type": "pure-token",
-                                "display_text": "idmp-token",
-                                "token": "IDMP"
-                            },
                             {
                                 "name": "pid",
                                 "type": "string",
@@ -16736,40 +16719,16 @@
                 "key_spec_index": 0
             },
             {
-                "name": "idmp-duration-block",
-                "type": "block",
+                "name": "idmp-duration",
+                "token": "IDMP-DURATION",
                 "optional": true,
-                "arguments": [
-                    {
-                        "name": "idmp-duration-token",
-                        "type": "pure-token",
-                        "display_text": "idmp-duration-token",
-                        "token": "IDMP-DURATION"
-                    },
-                    {
-                        "name": "duration",
-                        "type": "integer",
-                        "display_text": "duration"
-                    }
-                ]
+                "type": "integer"
             },
             {
-                "name": "idmp-maxsize-block",
-                "type": "block",
+                "name": "idmp-maxsize",
+                "token": "IDMP-MAXSIZE",
                 "optional": true,
-                "arguments": [
-                    {
-                        "name": "idmp-maxsize-token",
-                        "type": "pure-token",
-                        "display_text": "idmp-maxsize-token",
-                        "token": "IDMP-MAXSIZE"
-                    },
-                    {
-                        "name": "maxsize",
-                        "type": "integer",
-                        "display_text": "maxsize"
-                    }
-                ]
+                "type": "integer"
             }
         ],
         "command_flags": [
