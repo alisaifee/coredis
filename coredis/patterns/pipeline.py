@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import functools
-from concurrent.futures import CancelledError
 from contextlib import asynccontextmanager
 from typing import Any, cast
 
@@ -622,12 +621,7 @@ class Pipeline(Client[AnyStr]):
 
         try:
             return await exec(self._connection, self.command_stack)
-        except (ConnectionError, TimeoutError, CancelledError) as e:
-            # if we were watching a variable, the watch is no longer valid
-            # since this connection has died. raise a WatchError, which
-            # indicates the user should retry his transaction. If this is more
-            # than a temporary failure, the WATCH that the user next issues
-            # will fail, propegating the real ConnectionError
+        except (ConnectionError, TimeoutError) as e:
             if self.watches:
                 raise WatchError(
                     "A connection error occured while watching one or more keys"
