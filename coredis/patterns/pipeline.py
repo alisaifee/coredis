@@ -819,7 +819,7 @@ class ClusterPipeline(Client[AnyStr]):
             raise ClusterTransactionError("No slots found for transaction")
         node = self.connection_pool.get_node_by_slot(slots.pop())
         if self._watched_node and node != self._watched_node:
-            raise ClusterTransactionError("Watched keys are bogus")
+            raise ClusterTransactionError("Multiple slots involved in transaction")
 
         node_commands = NodeCommands(
             self.client,
@@ -830,18 +830,16 @@ class ClusterPipeline(Client[AnyStr]):
             raise_on_error=self._raise_on_error,
         )
         node_commands.extend(attempt)
-        self.explicit_transaction = True
         async with node_commands:
             node_commands.write()
             try:
                 await node_commands.read()
             except ExecAbortError:
-                if self.explicit_transaction:
-                    await node_commands.connection.create_request(CommandName.DISCARD)
-            # If at least one watched key is modified before EXEC, the transaction aborts and EXEC returns null.
+                await node_commands.connection.create_request(CommandName.DISCARD)
 
+            # If at least one watched key is modified before EXEC, the transaction aborts and EXEC returns null.
             if node_commands.exec_cmd and await node_commands.exec_cmd is None:
-                raise WatchError
+                raise WatchError("Watched variable changed.")
 
             self._results = tuple(
                 n.result
