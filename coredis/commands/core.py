@@ -5415,7 +5415,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     def xlen(self, key: KeyT) -> CommandRequest[int]:
-        """ """
+        """
+        Returns the number of entries inside a stream
+        """
 
         return self.create_request(CommandName.XLEN, key, callback=IntCallback())
 
@@ -5492,14 +5494,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         block: int | datetime.timedelta | None = None,
     ) -> CommandRequest[dict[AnyStr, tuple[StreamEntry, ...]] | None]:
         """
-        Return never seen elements in multiple streams, with IDs greater than
-        the ones reported by the caller for each stream. Can block.
+        Reads entries from :paramref:`stream` with IDs greater than those provided
+        in the mapping.
 
         :return: Mapping of streams to stream entries.
          Field and values are guaranteed to be reported in the same order they were
          added by :meth:`xadd`.
 
-         When :paramref:`block` is used, on timeout ``None`` is returned.
+         When :paramref:`block` is used and the timeout is exceeded, ``None`` is returned.
         """
         command_arguments: CommandArgList = []
 
@@ -5534,7 +5536,16 @@ class CoreCommands(CommandMixin[AnyStr]):
         block: int | datetime.timedelta | None = None,
         noack: bool | None = None,
     ) -> CommandRequest[dict[AnyStr, tuple[StreamEntry, ...]] | None]:
-        """ """
+        """
+        Reads entries from :paramref:`stream` with IDs greater than those provided in the mapping,
+        owned by the consumer group identified by :paramref:`group` & :paramref:`consumer`.
+
+        :return: Mapping of streams to stream entries.
+         Field and values are guaranteed to be reported in the same order they were
+         added by :meth:`xadd`.
+
+         When :paramref:`block` is used and the timeout is exceeded, ``None`` is returned.
+        """
         command_arguments: CommandArgList = [PrefixToken.GROUP, group, consumer]
 
         if block is not None:
@@ -5617,7 +5628,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         limit: int | None = None,
         condition: Literal[PureToken.KEEPREF, PureToken.DELREF, PureToken.ACKED] | None = None,
     ) -> CommandRequest[int]:
-        """ """
+        """
+        Trims the stream by evicting older entries
+        """
         command_arguments: CommandArgList = [trim_strategy]
 
         if trim_operator:
