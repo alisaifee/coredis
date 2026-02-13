@@ -192,7 +192,7 @@ class BaseConnection(ABC):
         noevict: bool = False,
         notouch: bool = False,
         ssl_context: ssl.SSLContext | None = None,
-        processing_budget: CapacityLimiter = CapacityLimiter(1),
+        processing_budget: CapacityLimiter | None = None,
     ):
         """
         :param stream_timeout: Maximum time to wait for receiving a response
@@ -280,7 +280,7 @@ class BaseConnection(ABC):
         self._terminated = False
 
         # To be used in the read task for cpu bound processing after data is received
-        self._processing_budget = processing_budget
+        self._processing_budget = processing_budget or CapacityLimiter(1)
 
     def __repr__(self) -> str:
         return self.describe()
