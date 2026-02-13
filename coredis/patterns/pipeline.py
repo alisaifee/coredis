@@ -150,10 +150,8 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
         elif self.parent:
 
             async def _transformed() -> CommandResponseT:
-                if (r := await self.parent) == self.client:  # type: ignore
-                    return r  # type: ignore
-                else:
-                    return self.callback(r)
+                r = await self.parent  # type: ignore
+                return self.callback(r)
 
             return _transformed().__await__()
         raise RuntimeError("You can't await a pipeline command before it completes executing")
