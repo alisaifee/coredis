@@ -914,6 +914,7 @@ class RedisCluster(
             released = False
             if self.refresh_table_asap and not slots:
                 await self.connection_pool.refresh_cluster_mapping(forced=True)
+                self.refresh_table_asap = False
             _node = None
             if asking and redirect_addr:
                 _node = pool.nodes.nodes[redirect_addr]
