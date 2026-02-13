@@ -3,6 +3,39 @@
 Changelog
 =========
 
+v6.1.0
+------
+Release Date: 2026-02-12
+
+* Bug Fix
+
+  * Fix incorrect initialization of connection capacity limiter
+    resulting in module level shared capacity limiter.
+  * Fix broken recovery from moved errors in cluster retry mechanism
+  * Remove bloat in source distribution and only
+    package relevant source files
+
+* Compatibility
+
+  * Add support for :rediscommand:`DELEX` (:meth:`~coredis.Redis.delex`)
+  * Add support for :rediscommand:`DIGEST` (:meth:`~coredis.Redis.digest`)
+  * Add support for :rediscommand:`MSETEX` (:meth:`~coredis.Redis.msetex`)
+  * Update :meth:`~coredis.Redis.set` to support conditional
+    setting of values and expiration based on value or digest
+    equality
+  * Add support for idempotent stream producers in
+    :meth:`~coredis.Redis.xadd`
+  * Add support for :rediscommand:`XCFGET` (:meth:`~coredis.Redis.xcfgset`)
+
+* Usability
+
+  * Remove ambiguous "Any" kwargs in clients, connection pools
+    and connection constructors and tighten the acceptable
+    parameters.
+  * Broaden acceptable types for commands that take
+    mappings as arguments to allow for covariance in
+    the mapping key
+
 v6.0.0
 ------
 Release Date: 2026-02-08
@@ -110,7 +143,6 @@ for upgrade instructions.
   * Add :paramref:`~coredis.Redis.vsim.nothread` argument to :meth:`~coredis.Redis.vsim`
   * Add support for :rediscommand:`VRANGE` vector set command (:meth:`~coredis.Redis.vrange`)
   * Add support for :rediscommand:`FT.HYBRID` search command (:meth:`~coredis.modules.Search.hybrid`)
-
 
 v6.0.0rc3
 ---------
