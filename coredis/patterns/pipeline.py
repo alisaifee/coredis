@@ -311,7 +311,7 @@ class Pipeline(Client[AnyStr]):
     calls when :paramref:`transaction` is ``True``.
 
     Any command raising an exception does **not** halt the execution of
-    subsequent commands in the pipeline, however the firest exception encountered
+    subsequent commands in the pipeline, however the first exception encountered
     will be raised when exiting the pipeline if :paramref:`raise_on_error` is ``True``.
     If not the exception is caught and will be returned when awaiting the command that failed.
     """
@@ -622,7 +622,7 @@ class Pipeline(Client[AnyStr]):
         except (ConnectionError, TimeoutError) as e:
             if self.watches:
                 raise WatchError(
-                    "A connection error occured while watching one or more keys"
+                    "A connection error occurred while watching one or more keys"
                 ) from e
             raise
         finally:
@@ -640,7 +640,7 @@ class ClusterPipeline(Client[AnyStr]):
     :paramref:`transactions` is set to ``False`` by default due to the limited scope.
 
     Any command raising an exception does **not** halt the execution of
-    subsequent commands in the pipeline, however the firest exception encountered
+    subsequent commands in the pipeline, however the first exception encountered
     will be raised when exiting the pipeline if :paramref:`raise_on_error` is ``True``.
     If not the exception is caught and will be returned when awaiting the command that failed.
     """
