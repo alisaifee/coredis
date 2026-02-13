@@ -830,8 +830,10 @@ class ClusterPipeline(Client[AnyStr]):
                 await node_commands.connection.create_request(CommandName.DISCARD)
 
             # If at least one watched key is modified before EXEC, the transaction aborts and EXEC returns null.
-            if node_commands.exec_cmd and await node_commands.exec_cmd is None:
-                raise WatchError("Watched variable changed.")
+            if node_commands.exec_cmd:
+                exec_result = await node_commands.exec_cmd
+                if exec_result is None:
+                    raise WatchError("Watched variable changed.")
 
             self._results = tuple(
                 n.result
