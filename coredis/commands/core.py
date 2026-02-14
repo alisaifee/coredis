@@ -1533,12 +1533,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         change: bool | None = None,
     ) -> CommandRequest[int]:
         """
-        Add one or more geospatial items in the geospatial index represented
-        using a sorted set
+        Add one or more geospatial items (longitude, latitude, name) to the index at key.
 
-        :return: Number of elements added. If ``change`` is ``True`` the return
-         is the number of elements that were changed.
-
+        :param key: The key name (sorted set holding the index).
+        :param longitude_latitude_members: One or more (longitude, latitude, member) tuples.
+        :param condition: NX (only add new) or XX (only update existing).
+        :param change: If true, return the number of elements changed (not just added).
+        :return: The number of elements added; or, if change is true, the number changed.
         """
         command_arguments: CommandArgList = [key]
 
@@ -1565,9 +1566,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         unit: Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI] | None = None,
     ) -> CommandRequest[float | None]:
         """
-        Returns the distance between two members of a geospatial index
+        Return the distance between two members in the geospatial index.
 
-        :return: Distance in the unit specified by :paramref:`unit`
+        :param key: The key name.
+        :param member1: First member name.
+        :param member2: Second member name.
+        :param unit: M, KM, FT, or MI; default is meters.
+        :return: The distance in the requested unit, or ``None`` if a member is missing.
         """
         command_arguments: CommandArgList = [key, member1, member2]
 
@@ -1586,7 +1591,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def geohash(self, key: KeyT, members: Parameters[ValueT]) -> CommandRequest[tuple[AnyStr, ...]]:
         """
-        Returns members of a geospatial index as standard geohash strings
+        Return geohash strings for the given members in the geospatial index.
+
+        :param key: The key name.
+        :param members: One or more member names.
+        :return: A tuple of geohash strings (same order as members).
         """
 
         return self.create_request(
@@ -1603,10 +1612,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, members: Parameters[ValueT]
     ) -> CommandRequest[tuple[GeoCoordinates | None, ...]]:
         """
-        Returns longitude and latitude of members of a geospatial index
+        Return longitude and latitude for the given members in the geospatial index.
 
-        :return: pairs of longitude/latitudes. Missing members are represented
-         by ``None`` entries.
+        :param key: The key name.
+        :param members: One or more member names.
+        :return: A tuple of (lon, lat) pairs; ``None`` for missing members.
         """
 
         return self.create_request(
@@ -1723,19 +1733,22 @@ class CoreCommands(CommandMixin[AnyStr]):
         storedist: KeyT | None = None,
     ) -> CommandRequest[int | tuple[AnyStr | GeoSearchResult, ...]]:
         """
-        Query a geospatial index to fetch members within the borders of the area
-        specified with center location at :paramref:`longitude` and :paramref:`latitude`
-        and the maximum distance from the center (:paramref:`radius`).
+        Query a geospatial index for members within radius of a center (deprecated: use geosearch).
 
-
-        :return:
-
-         - If no ``with{coord,dist,hash}`` options are provided the return
-           is simply the names of places matched (optionally ordered if `order` is provided).
-         - If any of the ``with{coord,dist,hash}`` options are set each result entry contains
-           `(name, distance, geohash, coordinate pair)``
-         - If a key for ``store`` or ``storedist`` is provided, the return is the count of places
-           stored.
+        :param key: The key name.
+        :param longitude: Center longitude.
+        :param latitude: Center latitude.
+        :param radius: Maximum distance from center.
+        :param unit: M, KM, FT, or MI.
+        :param withcoord: If true, include coordinates in results.
+        :param withdist: If true, include distance in results.
+        :param withhash: If true, include geohash in results.
+        :param count: Limit number of results.
+        :param any_: If true (with count), stop at first count matches.
+        :param order: ASC or DESC by distance.
+        :param store: Store results in this key (sorted set).
+        :param storedist: Store results with distances in this key.
+        :return: Member names; or (name, dist, hash, coords) if with*; or count if store/storedist.
         """
 
         return self._georadiusgeneric(
@@ -1783,18 +1796,21 @@ class CoreCommands(CommandMixin[AnyStr]):
         storedist: KeyT | None = None,
     ) -> CommandRequest[int | tuple[AnyStr | GeoSearchResult, ...]]:
         """
-        This command is exactly like :meth:`~Redis.georadius` with the sole difference
-        that instead of searching from a coordinate, it searches from a member
-        already existing in the index.
+        Query a geospatial index for members within radius of an existing member (deprecated: use geosearch).
 
-        :return:
-
-         - If no ``with{coord,dist,hash}`` options are provided the return
-           is simply the names of places matched (optionally ordered if `order` is provided).
-         - If any of the ``with{coord,dist,hash}`` options are set each result entry contains
-           `(name, distance, geohash, coordinate pair)``
-         - If a key for ``store`` or ``storedist`` is provided, the return is the count of places
-           stored.
+        :param key: The key name.
+        :param member: Member to use as center.
+        :param radius: Maximum distance from member.
+        :param unit: M, KM, FT, or MI.
+        :param withcoord: If true, include coordinates in results.
+        :param withdist: If true, include distance in results.
+        :param withhash: If true, include geohash in results.
+        :param count: Limit number of results.
+        :param any_: If true (with count), stop at first count matches.
+        :param order: ASC or DESC by distance.
+        :param store: Store results in this key (sorted set).
+        :param storedist: Store results with distances in this key.
+        :return: Member names; or (name, dist, hash, coords) if with*; or count if store/storedist.
         """
 
         return self._georadiusgeneric(
@@ -1907,13 +1923,24 @@ class CoreCommands(CommandMixin[AnyStr]):
         withhash: bool | None = None,
     ) -> CommandRequest[int | tuple[AnyStr | GeoSearchResult, ...]]:
         """
+        Query a geospatial index by center (member or lon/lat) and radius or bounding box.
 
-        :return:
-
-         - If no ``with{coord,dist,hash}`` options are provided the return
-           is simply the names of places matched (optionally ordered if `order` is provided).
-         - If any of the ``with{coord,dist,hash}`` options are set each result entry contains
-           `(name, distance, geohash, coordinate pair)``
+        :param key: The key name.
+        :param member: Use this member as center (alternative to longitude/latitude).
+        :param longitude: Center longitude (with latitude).
+        :param latitude: Center latitude (with longitude).
+        :param radius: Maximum distance; use with circle_unit.
+        :param circle_unit: M, KM, FT, or MI for radius.
+        :param width: Box width; use with height and box_unit.
+        :param height: Box height; use with width and box_unit.
+        :param box_unit: M, KM, FT, or MI for box.
+        :param order: ASC or DESC by distance.
+        :param count: Limit number of results.
+        :param any_: If true (with count), stop at first count matches.
+        :param withcoord: If true, include coordinates in results.
+        :param withdist: If true, include distance in results.
+        :param withhash: If true, include geohash in results.
+        :return: Member names; or (name, dist, hash, coords) if with* options are set.
         """
 
         return self._geosearchgeneric(
@@ -1960,7 +1987,23 @@ class CoreCommands(CommandMixin[AnyStr]):
         storedist: bool | None = None,
     ) -> CommandRequest[int]:
         """
-        :return: The number of elements stored in the resulting set
+        Query a geospatial index and store the result in a sorted set at destination.
+
+        :param destination: Key where the result is stored.
+        :param source: Source geospatial index key.
+        :param member: Use this member as center (alternative to longitude/latitude).
+        :param longitude: Center longitude (with latitude).
+        :param latitude: Center latitude (with longitude).
+        :param radius: Maximum distance; use with circle_unit.
+        :param circle_unit: M, KM, FT, or MI for radius.
+        :param width: Box width; use with height and box_unit.
+        :param height: Box height; use with width and box_unit.
+        :param box_unit: M, KM, FT, or MI for box.
+        :param order: ASC or DESC by distance.
+        :param count: Limit number of results.
+        :param any_: If true (with count), stop at first count matches.
+        :param storedist: If true, store distances as scores.
+        :return: The number of elements stored in the resulting set.
         """
 
         return self._geosearchgeneric(
