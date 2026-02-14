@@ -2131,7 +2131,13 @@ class CoreCommands(CommandMixin[AnyStr]):
     @ensure_iterable_valid("fields")
     @redis_command(CommandName.HDEL, group=CommandGroup.HASH, flags={CommandFlag.FAST})
     def hdel(self, key: KeyT, fields: Parameters[StringT]) -> CommandRequest[int]:
-        """Deletes ``fields`` from hash :paramref:`key`"""
+        """
+        Delete one or more fields from a hash.
+
+        :param key: The key name.
+        :param fields: One or more field names to remove.
+        :return: The number of fields that were removed.
+        """
 
         return self.create_request(CommandName.HDEL, key, *fields, callback=IntCallback())
 
@@ -2143,7 +2149,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def hexists(self, key: KeyT, field: StringT) -> CommandRequest[bool]:
         """
-        Returns a boolean indicating if ``field`` exists within hash :paramref:`key`
+        Return whether a field exists in a hash.
+
+        :param key: The key name.
+        :param field: The field name.
+        :return: ``True`` if the field exists, ``False`` otherwise.
         """
 
         return self.create_request(CommandName.HEXISTS, key, field, callback=BoolCallback())
@@ -2158,7 +2168,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX] | None = None,
     ) -> CommandRequest[tuple[int, ...]]:
         """
-        Set expiry for hash field using relative time to expire (seconds)
+        Set a TTL in seconds for one or more hash fields.
+
+        :param key: The key name.
+        :param seconds: TTL in seconds (or timedelta).
+        :param fields: One or more field names.
+        :param condition: Optional GT, LT, NX, or XX.
+        :return: A tuple of 1 for each field that was set, 0 for each that was not.
         """
         command_arguments: CommandArgList = [key, normalized_seconds(seconds)]
 
@@ -2178,7 +2194,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, fields: Parameters[StringT]
     ) -> CommandRequest[tuple[int, ...]]:
         """
-        Returns the expiration time of a hash field as a Unix timestamp, in seconds.
+        Return the expiration Unix timestamp in seconds for one or more hash fields.
+
+        :param key: The key name.
+        :param fields: One or more field names.
+        :return: A tuple of Unix timestamps (-1 if no expiry, -2 if field missing).
         """
         command_arguments: CommandArgList = [key, PrefixToken.FIELDS, len(list(fields))]
         command_arguments.extend(fields)
@@ -2193,7 +2213,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, fields: Parameters[StringT]
     ) -> CommandRequest[tuple[int, ...]]:
         """
-        Returns the expiration time of a hash field as a Unix timestamp, in msec.
+        Return the expiration Unix timestamp in milliseconds for one or more hash fields.
+
+        :param key: The key name.
+        :param fields: One or more field names.
+        :return: A tuple of Unix timestamps in ms (-1 if no expiry, -2 if field missing).
         """
         command_arguments: CommandArgList = [key, PrefixToken.FIELDS, len(list(fields))]
 
@@ -2213,7 +2237,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX] | None = None,
     ) -> CommandRequest[tuple[int, ...]]:
         """
-        Set expiry for hash field using relative time to expire (milliseconds)
+        Set a TTL in milliseconds for one or more hash fields.
+
+        :param key: The key name.
+        :param milliseconds: TTL in milliseconds (or timedelta).
+        :param fields: One or more field names.
+        :param condition: Optional GT, LT, NX, or XX.
+        :return: A tuple of 1 for each field that was set, 0 for each that was not.
         """
         command_arguments: CommandArgList = [key, normalized_milliseconds(milliseconds)]
 
@@ -2237,7 +2267,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX] | None = None,
     ) -> CommandRequest[tuple[int, ...]]:
         """
-        Set expiry for hash field using an absolute Unix timestamp (seconds)
+        Set an absolute expiration Unix timestamp (seconds) for one or more hash fields.
+
+        :param key: The key name.
+        :param unix_time_seconds: Expiration as Unix timestamp in seconds (or datetime).
+        :param fields: One or more field names.
+        :param condition: Optional GT, LT, NX, or XX.
+        :return: A tuple of 1 for each field that was set, 0 for each that was not.
         """
         command_arguments: CommandArgList = [key, normalized_time_seconds(unix_time_seconds)]
         if condition is not None:
@@ -2260,7 +2296,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX] | None = None,
     ) -> CommandRequest[tuple[int, ...]]:
         """
-        Set expiry for hash field using an absolute Unix timestamp (milliseconds)
+        Set an absolute expiration Unix timestamp (milliseconds) for one or more hash fields.
+
+        :param key: The key name.
+        :param unix_time_milliseconds: Expiration as Unix timestamp in ms (or datetime).
+        :param fields: One or more field names.
+        :param condition: Optional GT, LT, NX, or XX.
+        :return: A tuple of 1 for each field that was set, 0 for each that was not.
         """
         command_arguments: CommandArgList = [
             key,
@@ -2281,7 +2323,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.HPERSIST, version_introduced="7.4.0", group=CommandGroup.HASH)
     def hpersist(self, key: KeyT, fields: Parameters[StringT]) -> CommandRequest[tuple[int, ...]]:
         """
-        Removes the expiration time for each specified field
+        Remove the expiration from one or more hash fields.
+
+        :param key: The key name.
+        :param fields: One or more field names.
+        :return: A tuple of 1 for each field that had TTL removed, 0 for each that did not.
         """
         command_arguments: CommandArgList = [key, PrefixToken.FIELDS, len(list(fields))]
         command_arguments.extend(fields)
@@ -2297,7 +2343,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     def hget(self, key: KeyT, field: StringT) -> CommandRequest[AnyStr | None]:
-        """Returns the value of ``field`` within the hash :paramref:`key`"""
+        """
+        Return the value of a field in a hash.
+
+        :param key: The key name.
+        :param field: The field name.
+        :return: The field value, or ``None`` if the field or key does not exist.
+        """
 
         return self.create_request(
             CommandName.HGET, key, field, callback=OptionalAnyStrCallback[AnyStr]()
@@ -2310,7 +2362,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         flags={CommandFlag.READONLY},
     )
     def hgetall(self, key: KeyT) -> CommandRequest[dict[AnyStr, AnyStr]]:
-        """Returns a Python dict of the hash's name/value pairs"""
+        """
+        Return all fields and values in a hash as a mapping.
+
+        :param key: The key name.
+        :return: A mapping of field names to values.
+        """
 
         return self.create_request(CommandName.HGETALL, key, callback=HGetAllCallback[AnyStr]())
 
@@ -2335,9 +2392,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param fields: The fields to get values for
         :param ex: Set the expiry of the fields to ``ex`` seconds
         :param px: Set the expiry of the fields to ``px`` milliseconds
-        :param exat: Set the expiry of the fields to the specified time (in seconds)
-        :param exat: Set the expiry of the fields to the specified time (in milliseconds)
-        :param persist: Remove TTL from the fields
+        :param exat: Set the expiry of the fields to the specified Unix time (seconds).
+        :param pxat: Set the expiry of the fields to the specified Unix time (milliseconds).
+        :param persist: Remove TTL from the fields.
         :return: the values of each of the fields requested (Missing fields are returned
          as ``None``)
         """
@@ -2384,7 +2441,14 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(CommandName.HINCRBY, group=CommandGroup.HASH, flags={CommandFlag.FAST})
     def hincrby(self, key: KeyT, field: StringT, increment: int) -> CommandRequest[int]:
-        """Increments the value of ``field`` in hash :paramref:`key` by ``increment``"""
+        """
+        Increment the integer value of a hash field by the given amount.
+
+        :param key: The key name.
+        :param field: The field name.
+        :param increment: The amount to add.
+        :return: The value of the field after the increment.
+        """
 
         return self.create_request(
             CommandName.HINCRBY, key, field, increment, callback=IntCallback()
@@ -2395,8 +2459,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, field: StringT, increment: int | float
     ) -> CommandRequest[float]:
         """
-        Increments the value of ``field`` in hash :paramref:`key` by floating
-        ``increment``
+        Increment the float value of a hash field by the given amount.
+
+        :param key: The key name.
+        :param field: The field name.
+        :param increment: The amount to add.
+        :return: The value of the field after the increment.
         """
 
         return self.create_request(
@@ -2410,7 +2478,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         flags={CommandFlag.READONLY},
     )
     def hkeys(self, key: KeyT) -> CommandRequest[tuple[AnyStr, ...]]:
-        """Returns the list of keys within hash :paramref:`key`"""
+        """
+        Return all field names in a hash.
+
+        :param key: The key name.
+        :return: A tuple of field names.
+        """
 
         return self.create_request(CommandName.HKEYS, key, callback=TupleCallback[AnyStr]())
 
@@ -2421,16 +2494,23 @@ class CoreCommands(CommandMixin[AnyStr]):
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     def hlen(self, key: KeyT) -> CommandRequest[int]:
-        """Returns the number of elements in hash :paramref:`key`"""
+        """
+        Return the number of fields in a hash.
+
+        :param key: The key name.
+        :return: The number of fields.
+        """
 
         return self.create_request(CommandName.HLEN, key, callback=IntCallback())
 
     @redis_command(CommandName.HSET, group=CommandGroup.HASH, flags={CommandFlag.FAST})
     def hset(self, key: KeyT, field_values: Mapping[MappingKeyT, ValueT]) -> CommandRequest[int]:
         """
-        Sets ``field`` to ``value`` within hash :paramref:`key`
+        Set one or more field-value pairs in a hash.
 
-        :return: number of fields that were added
+        :param key: The key name.
+        :param field_values: Mapping of field names to values.
+        :return: The number of fields that were added (new fields only).
         """
 
         return self.create_request(
@@ -2464,9 +2544,9 @@ class CoreCommands(CommandMixin[AnyStr]):
          if ``FXX`` only set the fields if **all** of them already exists
         :param ex: Set the expiry of the fields to ``ex`` seconds
         :param px: Set the expiry of the fields to ``px`` milliseconds
-        :param exat: Set the expiry of the fields to the specified time (in seconds)
-        :param exat: Set the expiry of the fields to the specified time (in milliseconds)
-        :param keepttl: Retain the TTL already associated with the fields
+        :param exat: Set the expiry of the fields to the specified Unix time (seconds).
+        :param pxat: Set the expiry of the fields to the specified Unix time (milliseconds).
+        :param keepttl: Retain the TTL already associated with the fields.
         :return: ``True`` if all the fields were successfully set
         """
         command_arguments: CommandArgList = [key]
@@ -2496,10 +2576,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.HSETNX, group=CommandGroup.HASH, flags={CommandFlag.FAST})
     def hsetnx(self, key: KeyT, field: StringT, value: ValueT) -> CommandRequest[bool]:
         """
-        Sets ``field`` to ``value`` within hash :paramref:`key` if ``field`` does not
-        exist.
+        Set a hash field only if it does not already exist.
 
-        :return: whether the field was created
+        :param key: The key name.
+        :param field: The field name.
+        :param value: The value to set.
+        :return: ``True`` if the field was set, ``False`` if it already existed.
         """
 
         return self.create_request(CommandName.HSETNX, key, field, value, callback=BoolCallback())
@@ -2513,8 +2595,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def hmset(self, key: KeyT, field_values: Mapping[MappingKeyT, ValueT]) -> CommandRequest[bool]:
         """
-        Sets key to value within hash :paramref:`key` for each corresponding
-        key and value from the ``field_values`` dict.
+        Set multiple field-value pairs in a hash (deprecated: use hset).
+
+        :param key: The key name.
+        :param field_values: Mapping of field names to values.
+        :return: ``True`` on success.
         """
 
         command_arguments: CommandArgList = [key]
@@ -2536,7 +2621,13 @@ class CoreCommands(CommandMixin[AnyStr]):
     def hmget(
         self, key: KeyT, fields: Parameters[StringT]
     ) -> CommandRequest[tuple[AnyStr | None, ...]]:
-        """Returns values ordered identically to ``fields``"""
+        """
+        Return the values of multiple hash fields in one call.
+
+        :param key: The key name.
+        :param fields: One or more field names.
+        :return: A tuple of values in the same order as fields; ``None`` for missing fields.
+        """
 
         return self.create_request(
             CommandName.HMGET, key, *fields, callback=TupleCallback[AnyStr | None]()
@@ -2546,7 +2637,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.HTTL, version_introduced="7.4.0", group=CommandGroup.HASH)
     def httl(self, key: KeyT, fields: Parameters[StringT]) -> CommandRequest[tuple[int, ...]]:
         """
-        Returns the TTL in seconds of a hash field.
+        Return the TTL in seconds for one or more hash fields.
+
+        :param key: The key name.
+        :param fields: One or more field names.
+        :return: A tuple of TTLs in seconds (-1 if no expiry, -2 if field or key missing).
         """
         command_arguments: CommandArgList = []
 
@@ -2563,7 +2658,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.HPTTL, version_introduced="7.4.0", group=CommandGroup.HASH)
     def hpttl(self, key: KeyT, fields: Parameters[StringT]) -> CommandRequest[tuple[int, ...]]:
         """
-        Returns the TTL in milliseconds of a hash field.
+        Return the TTL in milliseconds for one or more hash fields.
+
+        :param key: The key name.
+        :param fields: One or more field names.
+        :return: A tuple of TTLs in milliseconds (-1 if no expiry, -2 if field or key missing).
         """
         command_arguments: CommandArgList = []
 
@@ -2584,9 +2683,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def hvals(self, key: KeyT) -> CommandRequest[tuple[AnyStr, ...]]:
         """
-        Get all the values in a hash
+        Return all values in a hash.
 
-        :return: list of values in the hash, or an empty list when :paramref:`key` does not exist.
+        :param key: The key name.
+        :return: A tuple of values; empty if the key does not exist.
         """
 
         return self.create_request(CommandName.HVALS, key, callback=TupleCallback[AnyStr]())
@@ -2625,12 +2725,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         novalues: bool | None = None,
     ) -> CommandRequest[tuple[int, dict[AnyStr, AnyStr] | tuple[AnyStr, ...]]]:
         """
-        Incrementally return key/value slices in a hash. Also returns a
-        cursor pointing to the scan position.
+        Incrementally iterate over fields (and optionally values) in a hash.
 
-        :param match: allows for filtering the keys by pattern
-        :param count: allows for hint the minimum number of returns
-        :param novalues: when True only the field names are returned
+        :param key: The key name.
+        :param cursor: Cursor for iteration (0 to start); use returned cursor for next page.
+        :param match: Optional glob pattern to filter field names.
+        :param count: Hint for minimum number of entries per iteration.
+        :param novalues: If true, return only field names (no values).
+        :return: A tuple of (next_cursor, mapping_or_tuple); next_cursor 0 means done.
         """
         command_arguments: CommandArgList = [key, cursor or "0"]
 
@@ -2656,10 +2758,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def hstrlen(self, key: KeyT, field: StringT) -> CommandRequest[int]:
         """
-        Get the length of the value of a hash field
+        Return the length of the string value of a hash field.
 
-        :return: the string length of the value associated with ``field``,
-         or zero when ``field`` is not present in the hash or :paramref:`key` does not exist at all.
+        :param key: The key name.
+        :param field: The field name.
+        :return: The length in bytes, or 0 if the field or key does not exist.
         """
 
         return self.create_request(CommandName.HSTRLEN, key, field, callback=IntCallback())
@@ -2695,16 +2798,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         withvalues: bool | None = None,
     ) -> CommandRequest[AnyStr | tuple[AnyStr, ...] | dict[AnyStr, AnyStr] | None]:
         """
-        Return a random field from the hash value stored at key.
+        Return one or more random fields from a hash, optionally with values.
 
-        :return:  Without the additional :paramref:`count` argument, the command returns a randomly
-         selected field, or ``None`` when :paramref:`key` does not exist.
-         When the additional :paramref:`count` argument is passed, the command returns fields,
-         or an empty tuple when :paramref:`key` does not exist.
-
-         If ``withvalues``  is ``True``, the reply is a mapping of fields and
-         their values from the hash.
-
+        :param key: The key name.
+        :param count: If set, return up to this many distinct fields (negative allows duplicates).
+        :param withvalues: If true, return a mapping of fields to values instead of just fields.
+        :return: A single field, a tuple of fields, a dict (if withvalues), or ``None`` if key is empty.
         """
         command_arguments: CommandArgList = [key]
         options = {"withvalues": withvalues, "count": count}
