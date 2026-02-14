@@ -2889,7 +2889,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         replace: bool | None = None,
     ) -> CommandRequest[bool]:
         """
-        Copy a key
+        Copy a key to another key, optionally in another database.
+
+        :param source: The source key name.
+        :param destination: The destination key name.
+        :param db: If set, copy to this database index on the same server.
+        :param replace: If true, overwrite destination if it exists.
+        :return: ``True`` on success.
         """
         command_arguments: CommandArgList = [source, destination]
 
@@ -2913,8 +2919,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def delete(self, keys: Parameters[KeyT]) -> CommandRequest[int]:
         """
-        Delete one or more keys specified by ``keys``
+        Delete one or more keys.
 
+        :param keys: One or more key names to delete.
         :return: The number of keys that were removed.
         """
 
@@ -2936,7 +2943,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         ifdne: ValueT | None = None,
     ) -> CommandRequest[bool]:
         """
-        Conditionally removes the specified key based on value or hash digest comparison.
+        Remove a key only if its value or hash digest matches the given condition.
+
+        :param key: The key name.
+        :param ifeq: Remove only if current value equals this value.
+        :param ifne: Remove only if current value does not equal this value.
+        :param ifdeq: Remove only if current hash digest equals this value.
+        :param ifdne: Remove only if current hash digest does not equal this value.
+        :return: ``True`` if the key was removed.
         """
         command_arguments: CommandArgList = [key]
         if ifeq is not None:
@@ -2957,7 +2971,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def digest(self, key: KeyT) -> CommandRequest[AnyStr | None]:
         """
-        Get the hash digest for the value stored in the specified key as a hexadecimal string
+        Return the hash digest of the value stored at key as a hexadecimal string.
+
+        :param key: The key name.
+        :return: The hex digest string, or ``None`` if the key does not exist.
         """
         return self.create_request(
             CommandName.DIGEST, key, callback=OptionalAnyStrCallback[AnyStr]()
@@ -2970,9 +2987,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def dump(self, key: KeyT) -> CommandRequest[bytes]:
         """
-        Return a serialized version of the value stored at the specified key.
+        Return a serialized version of the value stored at key.
 
-        :return: the serialized value
+        :param key: The key name.
+        :return: The serialized value as bytes (use with restore).
         """
 
         return self.create_request(
@@ -2991,9 +3009,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def exists(self, keys: Parameters[KeyT]) -> CommandRequest[int]:
         """
-        Determine if a key exists
+        Return how many of the given keys exist.
 
-        :return: the number of keys that exist from those specified as arguments.
+        :param keys: One or more key names to check.
+        :return: The number of keys that exist.
         """
 
         return self.create_request(CommandName.EXISTS, *keys, callback=IntCallback())
@@ -3011,12 +3030,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT] | None = None,
     ) -> CommandRequest[bool]:
         """
-        Set a key's time to live in seconds
+        Set a key's time to live in seconds.
 
-
-
-        :return: if the timeout was set or not set.
-         e.g. key doesn't exist, or operation skipped due to the provided arguments.
+        :param key: The key name.
+        :param seconds: TTL in seconds (or timedelta).
+        :param condition: Optional NX, XX, GT, or LT.
+        :return: ``True`` if the timeout was set, ``False`` otherwise (e.g. key does not exist).
         """
 
         command_arguments: CommandArgList = [key, normalized_seconds(seconds)]
@@ -3039,12 +3058,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT] | None = None,
     ) -> CommandRequest[bool]:
         """
-        Set the expiration for a key to a specific time
+        Set the expiration for a key to an absolute Unix timestamp in seconds.
 
-
-        :return: if the timeout was set or no.
-         e.g. key doesn't exist, or operation skipped due to the provided arguments.
-
+        :param key: The key name.
+        :param unix_time_seconds: Expiration time as Unix timestamp (or datetime).
+        :param condition: Optional NX, XX, GT, or LT.
+        :return: ``True`` if the timeout was set, ``False`` otherwise.
         """
 
         command_arguments: CommandArgList = [
@@ -3068,14 +3087,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def expiretime(self, key: KeyT) -> CommandRequest[datetime.datetime]:
         """
-        Get the expiration Unix timestamp for a key
+        Return the expiration Unix timestamp for a key in seconds.
 
-        :return: Expiration Unix timestamp in seconds, or a negative value in
-         order to signal an error.
-
-         * The command returns ``-1`` if the key exists but has no associated expiration time.
-         * The command returns ``-2`` if the key does not exist.
-
+        :param key: The key name.
+        :return: Expiration as datetime; -1 if key has no expiry, -2 if key does not exist.
         """
 
         return self.create_request(CommandName.EXPIRETIME, key, callback=ExpiryCallback())
@@ -3091,9 +3106,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def keys(self, pattern: StringT = "*") -> CommandRequest[_Set[AnyStr]]:
         """
-        Find all keys matching the given pattern
+        Return all key names matching the given glob pattern.
 
-        :return: keys matching ``pattern``.
+        :param pattern: Glob pattern (e.g. ``*``, ``user:*``).
+        :return: A set of matching key names.
         """
 
         return self.create_request(CommandName.KEYS, pattern, callback=SetCallback[AnyStr]())
@@ -3115,10 +3131,19 @@ class CoreCommands(CommandMixin[AnyStr]):
         password: StringT | None = None,
     ) -> CommandRequest[bool]:
         """
-        Atomically transfer key(s) from a Redis instance to another one.
+        Atomically transfer one or more keys from this instance to another Redis instance.
 
-
-        :return: If all keys were found in the source instance.
+        :param host: Host of the target instance.
+        :param port: Port of the target instance.
+        :param destination_db: Database index on the target.
+        :param timeout: Maximum idle time for the connection in milliseconds.
+        :param keys: One or more key names to migrate.
+        :param copy: If true, copy the key instead of moving it.
+        :param replace: If true, replace existing keys on the target.
+        :param auth: Password for the target (legacy).
+        :param username: Username for ACL auth on the target.
+        :param password: Password for ACL auth on the target.
+        :return: ``True`` on success; indicates keys were found and transferred.
         """
 
         if not keys:
@@ -3156,7 +3181,13 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(CommandName.MOVE, group=CommandGroup.GENERIC, flags={CommandFlag.FAST})
     def move(self, key: KeyT, db: int) -> CommandRequest[bool]:
-        """Move a key to another database"""
+        """
+        Move a key from the currently selected database to the specified database.
+
+        :param key: The key name.
+        :param db: The target database index.
+        :return: ``True`` if the key was moved, ``False`` if it already existed in the target db.
+        """
 
         return self.create_request(CommandName.MOVE, key, db, callback=BoolCallback())
 
@@ -3167,9 +3198,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def object_encoding(self, key: KeyT) -> CommandRequest[AnyStr | None]:
         """
-        Return the internal encoding for the object stored at :paramref:`key`
+        Return the internal encoding for the object stored at key.
 
-        :return: the encoding of the object, or ``None`` if the key doesn't exist
+        :param key: The key name.
+        :return: The encoding string (e.g. int, ziplist), or ``None`` if the key does not exist.
         """
 
         return self.create_request(
@@ -3183,10 +3215,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def object_freq(self, key: KeyT) -> CommandRequest[int]:
         """
-        Return the logarithmic access frequency counter for the object
-        stored at :paramref:`key`
+        Return the logarithmic access frequency counter for the object stored at key (LFU).
 
-        :return: The counter's value.
+        :param key: The key name.
+        :return: The counter value.
         """
 
         return self.create_request(CommandName.OBJECT_FREQ, key, callback=IntCallback())
@@ -3198,9 +3230,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def object_idletime(self, key: KeyT) -> CommandRequest[int]:
         """
-        Return the time in seconds since the last access to the object
-        stored at :paramref:`key`
+        Return the time in seconds since the last access to the object stored at key.
 
+        :param key: The key name.
         :return: The idle time in seconds.
         """
 
@@ -3213,8 +3245,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def object_refcount(self, key: KeyT) -> CommandRequest[int]:
         """
-        Return the reference count of the object stored at :paramref:`key`
+        Return the reference count of the object stored at key.
 
+        :param key: The key name.
         :return: The number of references.
         """
 
@@ -3222,7 +3255,12 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(CommandName.PERSIST, group=CommandGroup.GENERIC, flags={CommandFlag.FAST})
     def persist(self, key: KeyT) -> CommandRequest[bool]:
-        """Removes an expiration on :paramref:`key`"""
+        """
+        Remove the expiration from a key so it no longer expires.
+
+        :param key: The key name.
+        :return: ``True`` if the expiration was removed, ``False`` if the key had no expiry.
+        """
 
         return self.create_request(CommandName.PERSIST, key, callback=BoolCallback())
 
@@ -3239,10 +3277,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT] | None = None,
     ) -> CommandRequest[bool]:
         """
-        Set a key's time to live in milliseconds
+        Set a key's time to live in milliseconds.
 
-        :return: if the timeout was set or not.
-         e.g. key doesn't exist, or operation skipped due to the provided arguments.
+        :param key: The key name.
+        :param milliseconds: TTL in milliseconds (or timedelta).
+        :param condition: Optional NX, XX, GT, or LT.
+        :return: ``True`` if the timeout was set, ``False`` otherwise.
         """
         command_arguments: CommandArgList = [key, normalized_milliseconds(milliseconds)]
 
@@ -3264,10 +3304,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT] | None = None,
     ) -> CommandRequest[bool]:
         """
-        Set the expiration for a key as a UNIX timestamp specified in milliseconds
+        Set the expiration for a key to an absolute Unix timestamp in milliseconds.
 
-        :return: if the timeout was set or not.
-         e.g. key doesn't exist, or operation skipped due to the provided arguments.
+        :param key: The key name.
+        :param unix_time_milliseconds: Expiration as Unix timestamp in ms (or datetime).
+        :param condition: Optional NX, XX, GT, or LT.
+        :return: ``True`` if the timeout was set, ``False`` otherwise.
         """
 
         command_arguments: CommandArgList = [
@@ -3291,14 +3333,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def pexpiretime(self, key: KeyT) -> CommandRequest[datetime.datetime]:
         """
-        Get the expiration Unix timestamp for a key in milliseconds
+        Return the expiration Unix timestamp for a key in milliseconds.
 
-        :return: Expiration Unix timestamp in milliseconds, or a negative value
-         in order to signal an error
-
-         * The command returns ``-1`` if the key exists but has no associated expiration time.
-         * The command returns ``-2`` if the key does not exist.
-
+        :param key: The key name.
+        :return: Expiration as datetime (ms); -1 if no expiry, -2 if key does not exist.
         """
 
         return self.create_request(
@@ -3314,9 +3352,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def pttl(self, key: KeyT) -> CommandRequest[int]:
         """
-        Returns the number of milliseconds until the key :paramref:`key` will expire
+        Return the number of milliseconds until the key will expire.
 
-        :return: TTL in milliseconds, or a negative value in order to signal an error
+        :param key: The key name.
+        :return: TTL in milliseconds; -1 if key has no expiry, -2 if key does not exist.
         """
 
         return self.create_request(CommandName.PTTL, key, callback=IntCallback())
@@ -3329,9 +3368,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def randomkey(self) -> CommandRequest[AnyStr | None]:
         """
-        Returns the name of a random key
+        Return a random key name from the currently selected database.
 
-        :return: the random key, or ``None`` when the database is empty.
+        :return: A key name, or ``None`` when the database is empty.
         """
 
         return self.create_request(CommandName.RANDOMKEY, callback=OptionalAnyStrCallback[AnyStr]())
@@ -3342,7 +3381,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def rename(self, key: KeyT, newkey: KeyT) -> CommandRequest[bool]:
         """
-        Rekeys key :paramref:`key` to ``newkey``
+        Rename a key to a new name (overwrites newkey if it exists).
+
+        :param key: The current key name.
+        :param newkey: The new key name.
+        :return: ``True`` on success.
         """
 
         return self.create_request(CommandName.RENAME, key, newkey, callback=BoolCallback())
@@ -3350,9 +3393,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.RENAMENX, group=CommandGroup.GENERIC, flags={CommandFlag.FAST})
     def renamenx(self, key: KeyT, newkey: KeyT) -> CommandRequest[bool]:
         """
-        Rekeys key :paramref:`key` to ``newkey`` if ``newkey`` doesn't already exist
+        Rename a key only if the new name does not already exist.
 
-        :return: False when ``newkey`` already exists.
+        :param key: The current key name.
+        :param newkey: The new key name.
+        :return: ``True`` if the key was renamed, ``False`` if newkey already exists.
         """
 
         return self.create_request(CommandName.RENAMENX, key, newkey, callback=BoolCallback())
@@ -3372,7 +3417,16 @@ class CoreCommands(CommandMixin[AnyStr]):
         freq: int | None = None,
     ) -> CommandRequest[bool]:
         """
-        Create a key using the provided serialized value, previously obtained using DUMP.
+        Create a key from a serialized value (e.g. from dump).
+
+        :param key: The key name to create.
+        :param ttl: TTL in milliseconds, or datetime for absolute expiry if absttl.
+        :param serialized_value: The serialized value (bytes from dump).
+        :param replace: If true, overwrite existing key.
+        :param absttl: If true, ttl is an absolute Unix timestamp in ms.
+        :param idletime: Optional idle time in seconds before eviction.
+        :param freq: Optional access frequency for LFU eviction.
+        :return: ``True`` on success.
         """
 
         command_arguments: CommandArgList = [
@@ -3418,12 +3472,17 @@ class CoreCommands(CommandMixin[AnyStr]):
         store: KeyT | None = None,
     ) -> CommandRequest[tuple[AnyStr, ...] | int]:
         """
-        Sort the elements in a list, set or sorted set
+        Sort elements in a list, set, or sorted set, optionally storing the result.
 
-        :return: sorted elements.
-
-         When the :paramref:`store` option is specified the command returns the number of
-         sorted elements in the destination list.
+        :param key: The key name.
+        :param gets: Optional keys or patterns to retrieve external values (e.g. *->field).
+        :param by: Optional pattern for weight key (e.g. *_weight).
+        :param offset: Skip this many elements (use with count for LIMIT).
+        :param count: Return this many elements (use with offset).
+        :param order: ASC or DESC.
+        :param alpha: If true, sort lexicographically.
+        :param store: If set, store the result in this key instead of returning.
+        :return: A tuple of sorted elements, or the number of stored elements if store is set.
         """
 
         command_arguments: CommandArgList = [key]
@@ -3514,10 +3573,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def touch(self, keys: Parameters[KeyT]) -> CommandRequest[int]:
         """
-        Alters the last access time of a key(s).
-        Returns the number of existing keys specified.
+        Update the last access time of one or more keys (only existing keys are counted).
 
-        :return: The number of keys that were touched.
+        :param keys: One or more key names.
+        :return: The number of keys that existed and were touched.
         """
 
         return self.create_request(CommandName.TOUCH, *keys, callback=IntCallback())
@@ -3529,9 +3588,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def ttl(self, key: KeyT) -> CommandRequest[int]:
         """
-        Get the time to live for a key in seconds
+        Return the time to live for a key in seconds.
 
-        :return: TTL in seconds, or a negative value in order to signal an error
+        :param key: The key name.
+        :return: TTL in seconds; -1 if key has no expiry, -2 if key does not exist.
         """
 
         return self.create_request(CommandName.TTL, key, callback=IntCallback())
@@ -3545,9 +3605,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def unlink(self, keys: Parameters[KeyT]) -> CommandRequest[int]:
         """
-        Delete a key asynchronously in another thread.
-        Otherwise it is just as :meth:`delete`, but non blocking.
+        Delete keys asynchronously in a background thread (non-blocking).
 
+        :param keys: One or more key names to unlink.
         :return: The number of keys that were unlinked.
         """
 
