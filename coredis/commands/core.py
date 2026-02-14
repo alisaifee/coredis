@@ -171,9 +171,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.APPEND, group=CommandGroup.STRING, flags={CommandFlag.FAST})
     def append(self, key: KeyT, value: ValueT) -> CommandRequest[int]:
         """
-        Append a value to a key
+        Append a value to a key.
 
-        :return: the length of the string after the append operation.
+        :param key: The key name.
+        :param value: The value to append.
+        :return: The length of the string after the append operation.
         """
 
         return self.create_request(CommandName.APPEND, key, value, callback=IntCallback())
@@ -181,9 +183,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.DECR, group=CommandGroup.STRING, flags={CommandFlag.FAST})
     def decr(self, key: KeyT) -> CommandRequest[int]:
         """
-        Decrement the integer value of a key by one
+        Decrement the integer value of a key by one.
 
-        :return: the value of :paramref:`key` after the decrement
+        :param key: The key name.
+        :return: The value of the key after the decrement.
         """
 
         return self.decrby(key, 1)
@@ -191,9 +194,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.DECRBY, group=CommandGroup.STRING, flags={CommandFlag.FAST})
     def decrby(self, key: KeyT, decrement: int) -> CommandRequest[int]:
         """
-        Decrement the integer value of a key by the given number
+        Decrement the integer value of a key by the given amount.
 
-        :return: the value of :paramref:`key` after the decrement
+        :param key: The key name.
+        :param decrement: The amount to subtract.
+        :return: The value of the key after the decrement.
         """
 
         return self.create_request(CommandName.DECRBY, key, decrement, callback=IntCallback())
@@ -206,10 +211,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def get(self, key: KeyT) -> CommandRequest[AnyStr | None]:
         """
-        Get the value of a key
+        Get the string value of a key.
 
-        :return: the value of :paramref:`key`, or ``None`` when :paramref:`key`
-         does not exist.
+        :param key: The key name.
+        :return: The value of the key, or ``None`` if the key does not exist.
         """
 
         return self.create_request(
@@ -226,11 +231,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def getdel(self, key: KeyT) -> CommandRequest[AnyStr | None]:
         """
-        Get the value of a key and delete the key
+        Get the value of a key and delete the key.
 
-
-        :return: the value of :paramref:`key`, ``None`` when :paramref:`key`
-         does not exist, or an error if the key's value type isn't a string.
+        :param key: The key name.
+        :return: The value of the key, or ``None`` if the key does not exist.
+         Raises an error if the key exists but is not a string.
         """
 
         return self.create_request(
@@ -254,23 +259,18 @@ class CoreCommands(CommandMixin[AnyStr]):
         persist: bool | None = None,
     ) -> CommandRequest[AnyStr | None]:
         """
-        Get the value of a key and optionally set its expiration
+        Get the value of a key and optionally set or remove its expiration.
 
+        Similar to GET but supports expiry options. Time parameters may be
+        :class:`datetime.timedelta` or :class:`datetime.datetime` or integers.
 
-        GETEX is similar to GET, but is a write command with
-        additional options. All time parameters can be given as
-        :class:`datetime.timedelta` or integers.
-
-        :param key: name of the key
-        :param ex: sets an expire flag on key :paramref:`key` for ``ex`` seconds.
-        :param px: sets an expire flag on key :paramref:`key` for ``px`` milliseconds.
-        :param exat: sets an expire flag on key :paramref:`key` for ``ex`` seconds,
-         specified in unix time.
-        :param pxat: sets an expire flag on key :paramref:`key` for ``ex`` milliseconds,
-         specified in unix time.
-        :param persist: remove the time to live associated with :paramref:`key`.
-
-        :return: the value of :paramref:`key`, or ``None`` when :paramref:`key` does not exist.
+        :param key: The key name.
+        :param ex: Set key to expire after this many seconds (relative).
+        :param px: Set key to expire after this many milliseconds (relative).
+        :param exat: Set key to expire at this Unix timestamp in seconds (absolute).
+        :param pxat: Set key to expire at this Unix timestamp in milliseconds (absolute).
+        :param persist: If true, remove the time-to-live from the key.
+        :return: The value of the key, or ``None`` if the key does not exist.
         """
 
         command_arguments: CommandArgList = []
@@ -309,10 +309,15 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def getrange(self, key: KeyT, start: int, end: int) -> CommandRequest[AnyStr]:
         """
-        Get a substring of the string stored at a key
+        Return a substring of the string stored at a key.
 
-        :return: The substring of the string value stored at :paramref:`key`,
-         determined by the offsets ``start`` and ``end`` (both are inclusive)
+        Offsets are zero-based; negative offsets count from the end of the string.
+        Both start and end are inclusive.
+
+        :param key: The key name.
+        :param start: Start offset (inclusive).
+        :param end: End offset (inclusive).
+        :return: The substring determined by the given offsets.
         """
 
         return self.create_request(
@@ -330,8 +335,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Set the string value of a key and return its old value
 
-        :return: the old value stored at :paramref:`key`, or ``None`` when
-         :paramref:`key` did not exist.
+        :return: The previous value of the key, or ``None`` if the key did not exist.
         """
 
         return self.create_request(
@@ -341,10 +345,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.INCR, group=CommandGroup.STRING, flags={CommandFlag.FAST})
     def incr(self, key: KeyT) -> CommandRequest[int]:
         """
-        Increment the integer value of a key by one
+        Increment the integer value of a key by one.
 
-        :return: the value of :paramref:`key` after the increment.
-         If no key exists, the value will be initialized as 1.
+        :param key: The key name.
+        :return: The value of the key after the increment (1 if the key did not exist).
         """
 
         return self.create_request(
@@ -356,10 +360,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.INCRBY, group=CommandGroup.STRING, flags={CommandFlag.FAST})
     def incrby(self, key: KeyT, increment: int) -> CommandRequest[int]:
         """
-        Increment the integer value of a key by the given amount
+        Increment the integer value of a key by the given amount.
 
-        :return: the value of :paramref:`key` after the increment
-          If no key exists, the value will be initialized as ``increment``
+        :param key: The key name.
+        :param increment: The amount to add.
+        :return: The value of the key after the increment (increment if key did not exist).
         """
 
         return self.create_request(CommandName.INCRBY, key, increment, callback=IntCallback())
@@ -367,10 +372,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.INCRBYFLOAT, group=CommandGroup.STRING, flags={CommandFlag.FAST})
     def incrbyfloat(self, key: KeyT, increment: int | float) -> CommandRequest[float]:
         """
-        Increment the float value of a key by the given amount
+        Increment the float value of a key by the given amount.
 
-        :return: the value of :paramref:`key` after the increment.
-         If no key exists, the value will be initialized as ``increment``
+        :param key: The key name.
+        :param increment: The amount to add.
+        :return: The value of the key after the increment (increment if key did not exist).
         """
 
         return self.create_request(
@@ -417,16 +423,16 @@ class CoreCommands(CommandMixin[AnyStr]):
         withmatchlen: bool | None = None,
     ) -> CommandRequest[AnyStr] | CommandRequest[int] | CommandRequest[LCSResult]:
         """
-        Find the longest common substring
+        Find the longest common substring between two string keys.
 
-        :return: The matched string if no other arguments are given.
-         The returned values vary depending on different arguments.
-
-         - If ``len_`` is provided the length of the longest match
-         - If ``idx`` is ``True`` all the matches with the start/end positions
-           of both keys. Optionally, if ``withmatchlen`` is ``True`` each match
-           will contain the length of the match.
-
+        :param key1: First key name.
+        :param key2: Second key name.
+        :param len_: If true, return only the length of the longest match.
+        :param idx: If true, return matches with start/end positions in both keys.
+        :param minmatchlen: Minimum match length to include.
+        :param withmatchlen: If true (with idx), include length in each match.
+        :return: The matched string (default), the length (if len_), or match
+         positions and optionally lengths (if idx). Type depends on arguments.
         """
         command_arguments: CommandArgList = [key1, key2]
 
@@ -467,7 +473,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def mget(self, keys: Parameters[KeyT]) -> CommandRequest[tuple[AnyStr | None, ...]]:
         """
-        Returns values ordered identically to ``keys``
+        Get the values of multiple keys in a single call.
+
+        :param keys: One or more key names.
+        :return: A tuple of values in the same order as keys; ``None`` for missing keys.
         """
 
         return self.create_request(CommandName.MGET, *keys, callback=TupleCallback[AnyStr | None]())
@@ -478,7 +487,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def mset(self, key_values: Mapping[KeyT, ValueT]) -> CommandRequest[bool]:
         """
-        Sets multiple keys to multiple values
+        Set multiple keys to their respective values in one operation.
+
+        :param key_values: Mapping of key names to string values.
+        :return: Always ``True`` on success.
         """
 
         return self.create_request(
@@ -490,9 +502,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.MSETNX, group=CommandGroup.STRING)
     def msetnx(self, key_values: Mapping[KeyT, ValueT]) -> CommandRequest[bool]:
         """
-        Set multiple keys to multiple values, only if none of the keys exist
+        Set multiple keys to multiple values only if none of the keys exist.
 
-        :return: Whether all the keys were set
+        :param key_values: Mapping of key names to string values.
+        :return: ``True`` if all keys were set, ``False`` if any key already existed.
         """
 
         return self.create_request(
@@ -513,16 +526,16 @@ class CoreCommands(CommandMixin[AnyStr]):
         keepttl: bool | None = None,
     ) -> CommandRequest[bool]:
         """
-        Atomically sets multiple string keys with an optional shared expiration in a single operation.
+        Atomically set multiple string keys with an optional shared expiration.
 
-        :param condition: Condition to use when setting the keys
-        :param ex: Number of seconds to expire in
-        :param px: Number of milliseconds to expire in
-        :param exat: Expiry time with seconds granularity
-        :param pxat: Expiry time with milliseconds granularity
-        :param keepttl: Retain the time to live associated with the keys
-
-        :return: Whether all the keys were set
+        :param key_values: Mapping of key names to string values.
+        :param condition: Optional NX (only if not exists) or XX (only if exists).
+        :param ex: Expire keys after this many seconds (relative).
+        :param px: Expire keys after this many milliseconds (relative).
+        :param exat: Expire keys at this Unix timestamp in seconds (absolute).
+        :param pxat: Expire keys at this Unix timestamp in milliseconds (absolute).
+        :param keepttl: If true, retain existing TTL on keys that have one.
+        :return: ``True`` if all keys were set.
         """
         command_arguments: CommandArgList = [len(key_values), *dict_to_flat_list(key_values)]
         if condition is not None:
@@ -559,7 +572,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         value: ValueT,
     ) -> CommandRequest[bool]:
         """
-        Set the value and expiration in milliseconds of a key
+        Set the value of a key with an expiration in milliseconds.
+
+        :param key: The key name.
+        :param milliseconds: TTL in milliseconds (or timedelta).
+        :param value: The string value to set.
+        :return: Always ``True`` on success.
         """
 
         return self.create_request(
@@ -640,27 +658,22 @@ class CoreCommands(CommandMixin[AnyStr]):
         ifdne: ValueT | None = None,
     ) -> CommandRequest[AnyStr | bool | None]:
         """
-        Set the string value of a key
+        Set the string value of a key with optional condition and expiration.
 
-        :param condition: Condition to use when setting the key
-        :param get: Return the old string stored at key, or nil if key did not exist.
-         An error is returned and the command is aborted if the value stored at
-         key is not a string.
-        :param ex: Number of seconds to expire in
-        :param px: Number of milliseconds to expire in
-        :param exat: Expiry time with seconds granularity
-        :param pxat: Expiry time with milliseconds granularity
-        :param keepttl: Retain the time to live associated with the key
-        :param ifeq: Set the key only if it's current value is equal to this value
-        :param ifne: Set the key only if it's current value is **not** equal to this value
-        :param ifdeq: Set the key only if it's current hash digest is equal to this value
-        :param ifdne: Set the key only if it's current hash digest is **not** equal to this value
-
-        :return: Whether the operation was performed successfully.
-
-         .. warning:: If the command is issued with the ``get`` argument, the old string value
-            stored at :paramref:`key` is return regardless of success or failure
-            - except if the :paramref:`key` was not found.
+        :param key: The key name.
+        :param value: The string value to set.
+        :param condition: NX (set only if not exists) or XX (set only if exists).
+        :param get: If true, return the previous value (or ``None``); aborts if not a string.
+        :param ex: Expire after this many seconds (relative).
+        :param px: Expire after this many milliseconds (relative).
+        :param exat: Expire at this Unix timestamp in seconds (absolute).
+        :param pxat: Expire at this Unix timestamp in milliseconds (absolute).
+        :param keepttl: If true, retain the existing TTL.
+        :param ifeq: Set only if current value equals this value.
+        :param ifne: Set only if current value does not equal this value.
+        :param ifdeq: Set only if current hash digest equals this value.
+        :param ifdne: Set only if current hash digest does not equal this value.
+        :return: ``True``/``False`` for set; when ``get`` is true, the previous value or ``None``.
         """
         command_arguments: CommandArgList = [key, value]
 
@@ -714,7 +727,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         seconds: int | datetime.timedelta,
     ) -> CommandRequest[bool]:
         """
-        Set the value of key :paramref:`key` to ``value`` that expires in ``seconds``
+        Set the value of a key with an expiration in seconds.
+
+        :param key: The key name.
+        :param value: The string value to set.
+        :param seconds: TTL in seconds (or timedelta).
+        :return: Always ``True`` on success.
         """
 
         return self.create_request(
@@ -728,7 +746,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.SETNX, group=CommandGroup.STRING, flags={CommandFlag.FAST})
     def setnx(self, key: KeyT, value: ValueT) -> CommandRequest[bool]:
         """
-        Sets the value of key :paramref:`key` to ``value`` if key doesn't exist
+        Set the value of a key only if the key does not exist.
+
+        :param key: The key name.
+        :param value: The string value to set.
+        :return: ``True`` if the key was set, ``False`` if it already existed.
         """
 
         return self.create_request(CommandName.SETNX, key, value, callback=BoolCallback())
@@ -736,15 +758,15 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.SETRANGE, group=CommandGroup.STRING)
     def setrange(self, key: KeyT, offset: int, value: ValueT) -> CommandRequest[int]:
         """
-        Overwrite bytes in the value of :paramref:`key` starting at ``offset`` with
-        ``value``. If ``offset`` plus the length of ``value`` exceeds the
-        length of the original value, the new value will be larger than before.
+        Overwrite part of the string value at a key starting at the given offset.
 
-        If ``offset`` exceeds the length of the original value, null bytes
-        will be used to pad between the end of the previous value and the start
-        of what's being injected.
+        If offset plus value length exceeds the current length, the string is extended.
+        If offset is past the end, the gap is padded with zero bytes.
 
-        :return: the length of the string after it was modified by the command.
+        :param key: The key name.
+        :param offset: Byte offset at which to start overwriting (zero-based).
+        :param value: The string to write.
+        :return: The length of the string after the operation.
         """
 
         return self.create_request(CommandName.SETRANGE, key, offset, value, callback=IntCallback())
@@ -757,9 +779,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def strlen(self, key: KeyT) -> CommandRequest[int]:
         """
-        Get the length of the value stored in a key
+        Return the length of the string value stored at a key.
 
-        :return: the length of the string at :paramref:`key`, or ``0`` when :paramref:`key` does not
+        :param key: The key name.
+        :return: The length of the string in bytes, or ``0`` if the key does not exist.
         """
 
         return self.create_request(CommandName.STRLEN, key, callback=IntCallback())
@@ -774,11 +797,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def substr(self, key: KeyT, start: int, end: int) -> CommandRequest[AnyStr]:
         """
-        Get a substring of the string stored at a key
+        Return a substring of the string stored at a key (deprecated: use getrange).
 
-        :return: the substring of the string value stored at key, determined by the offsets
-         ``start`` and ``end`` (both are inclusive). Negative offsets can be used in order to
-         provide an offset starting from the end of the string.
+        :param key: The key name.
+        :param start: Start offset (inclusive). Negative values count from the end.
+        :param end: End offset (inclusive). Negative values count from the end.
+        :return: The substring in the given range.
         """
 
         return self.create_request(
