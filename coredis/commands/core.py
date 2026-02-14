@@ -673,7 +673,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param ifne: Set only if current value does not equal this value.
         :param ifdeq: Set only if current hash digest equals this value.
         :param ifdne: Set only if current hash digest does not equal this value.
-        :return: ``True``/``False`` for set; when ``get`` is true, the previous value or ``None``.
+        :return: ``True``/``False`` for set. If :paramref:`get`` is ``True`` the previous value
+         or ``None`` if the key didn't exist.
         """
         command_arguments: CommandArgList = [key, value]
 
@@ -1060,7 +1061,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         Return the hash slot number for the specified key.
 
         :param key: The key name.
-        :return: The slot number (0-16383).
+        :return: The slot number
         """
 
         return self.create_request(CommandName.CLUSTER_KEYSLOT, key, callback=IntCallback())
@@ -1539,7 +1540,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param longitude_latitude_members: One or more (longitude, latitude, member) tuples.
         :param condition: NX (only add new) or XX (only update existing).
         :param change: If true, return the number of elements changed (not just added).
-        :return: The number of elements added; or, if change is true, the number changed.
+        :return: The number of elements added; or, if :paramref:`change` is ``True``, the number changed.
         """
         command_arguments: CommandArgList = [key]
 
@@ -1616,7 +1617,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :param key: The key name.
         :param members: One or more member names.
-        :return: A tuple of (lon, lat) pairs; ``None`` for missing members.
+        :return: A tuple of ``(lon, lat)`` pairs or ``None`` for missing members.
         """
 
         return self.create_request(
@@ -1748,7 +1749,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param order: ASC or DESC by distance.
         :param store: Store results in this key (sorted set).
         :param storedist: Store results with distances in this key.
-        :return: Member names; or (name, dist, hash, coords) if with*; or count if store/storedist.
+        :return:
+         - Member names (default)
+         - ``(name, dist, hash, coords)`` if ``with{coord,dist,hash}`` is provided.
+         - Count of stored results if ``store`` or ``storedist`` are provided
         """
 
         return self._georadiusgeneric(
@@ -1810,7 +1814,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param order: ASC or DESC by distance.
         :param store: Store results in this key (sorted set).
         :param storedist: Store results with distances in this key.
-        :return: Member names; or (name, dist, hash, coords) if with*; or count if store/storedist.
+        :return:
+         - Member names (default)
+         - ``(name, dist, hash, coords)`` if ``with{coord,dist,hash}`` is provided.
+         - Count of stored results if ``store`` or ``storedist`` are provided
         """
 
         return self._georadiusgeneric(
@@ -1940,7 +1947,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param withcoord: If true, include coordinates in results.
         :param withdist: If true, include distance in results.
         :param withhash: If true, include geohash in results.
-        :return: Member names; or (name, dist, hash, coords) if with* options are set.
+        :return:
+         - Member names (default)
+         - ``(name, dist, hash, coords)`` if ``with{coord,dist,hash}`` is provided.
         """
 
         return self._geosearchgeneric(
@@ -2626,7 +2635,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :param key: The key name.
         :param fields: One or more field names.
-        :return: A tuple of values in the same order as fields; ``None`` for missing fields.
+        :return: A tuple of values in the same order as fields.
+         ``None`` for missing fields.
         """
 
         return self.create_request(
@@ -2686,7 +2696,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         Return all values in a hash.
 
         :param key: The key name.
-        :return: A tuple of values; empty if the key does not exist.
+        :return: A tuple of values. Empty tuple if the key does not exist.
         """
 
         return self.create_request(CommandName.HVALS, key, callback=TupleCallback[AnyStr]())
@@ -2732,7 +2742,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param match: Optional glob pattern to filter field names.
         :param count: Hint for minimum number of entries per iteration.
         :param novalues: If true, return only field names (no values).
-        :return: A tuple of (next_cursor, mapping_or_tuple); next_cursor 0 means done.
+        :return:
+         - A tuple of ``(next_cursor, mapping)``.
+         - If ``novalues`` is set, a tuple of ``(next_cursor, fields)``
+
+         ``next_cursor`` 0 means done.
         """
         command_arguments: CommandArgList = [key, cursor or "0"]
 
@@ -3090,7 +3104,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         Return the expiration Unix timestamp for a key in seconds.
 
         :param key: The key name.
-        :return: Expiration as datetime; -1 if key has no expiry, -2 if key does not exist.
+        :return: Expiration as datetime. -1 if key has no expiry, -2 if key does not exist.
         """
 
         return self.create_request(CommandName.EXPIRETIME, key, callback=ExpiryCallback())
@@ -3143,7 +3157,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param auth: Password for the target (legacy).
         :param username: Username for ACL auth on the target.
         :param password: Password for ACL auth on the target.
-        :return: ``True`` on success; indicates keys were found and transferred.
+        :return: ``True`` on success indicates keys were found and transferred.
         """
 
         if not keys:
@@ -3336,7 +3350,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         Return the expiration Unix timestamp for a key in milliseconds.
 
         :param key: The key name.
-        :return: Expiration as datetime (ms); -1 if no expiry, -2 if key does not exist.
+        :return: Expiration as datetime (ms). -1 if no expiry, -2 if key does not exist.
         """
 
         return self.create_request(
@@ -3355,7 +3369,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         Return the number of milliseconds until the key will expire.
 
         :param key: The key name.
-        :return: TTL in milliseconds; -1 if key has no expiry, -2 if key does not exist.
+        :return: TTL in milliseconds. -1 if key has no expiry, -2 if key does not exist.
         """
 
         return self.create_request(CommandName.PTTL, key, callback=IntCallback())
@@ -3591,7 +3605,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         Return the time to live for a key in seconds.
 
         :param key: The key name.
-        :return: TTL in seconds; -1 if key has no expiry, -2 if key does not exist.
+        :return: TTL in seconds. -1 if key has no expiry, -2 if key does not exist.
         """
 
         return self.create_request(CommandName.TTL, key, callback=IntCallback())
@@ -3686,7 +3700,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param match: Optional glob pattern to filter keys.
         :param count: Hint for minimum number of keys per iteration.
         :param type_: Optional key type filter (e.g. string, list, set).
-        :return: A tuple of (next_cursor, tuple_of_keys); next_cursor 0 means done.
+        :return: A tuple of ``(next_cursor, tuple_of_keys)``. ``next_cursor`` 0 means done.
         """
         command_arguments: CommandArgList = [cursor or b"0"]
 
