@@ -9062,9 +9062,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param filter_ef: limits the number of filtering attempts
         :param truth: forces an exact linear scan of all elements bypassing the HSNW graph
         :param nothread: execute the search in the main thread instead of a background thread
-        :return: the matching elements or a mapping of the matching elements to their scores
-         if :paramref:`withscores` is ``True`` and/or their attributes if :paramref:`withattribs`
-         is ``True``
+        :return: Matching elements; optionally with scores (if withscores) and/or attributes (if withattribs).
         """
         command_arguments: CommandArgList = [key]
         if values is not None:
@@ -9142,9 +9140,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param element: The name of the vector to retrieve
         :param raw: Whether to return the raw result
 
-        :return: A tuple of floating point values representing the vector.
-         if :paramref:`raw` is ``True`` the raw vector along with its metadata
-         will be returned as a :class:`~coredis.response.types.VectorData` mapping.
+        :return: Tuple of floats for the vector; if raw is True, VectorData with metadata.
         """
         command_arguments: CommandArgList = [key, element]
         if raw:
@@ -9181,10 +9177,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param element: The element to find neighbours for
         :param withscores: Whether to return scores with neighbours
 
-        :return: A tuple containing tuples of connected neighbours for each layer of the HSNW graph.
-         If :paramref:`withscores` is ``True`` each layer will instead be a mapping
-         of neighbours to scores. The last entry of the top level tuple is the lowest layer of
-         the HSNW graph.
+        :return: Tuple of layers, each a tuple of neighbours (or mapping to scores if withscores); last is lowest layer.
         """
         command_arguments: CommandArgList = [key, element]
 
@@ -9263,9 +9256,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param count: The number of random elements to return
 
 
-        :return: A random element from the set or a list of
-         random elements if :paramref:`count` is specificied.
-         If :paramref:`count` is negative, duplicates may occur.
+        :return: A random element, or a tuple of elements if count is specified; negative count allows duplicates.
         """
         command_arguments: CommandArgList = [key]
         if count is not None:
