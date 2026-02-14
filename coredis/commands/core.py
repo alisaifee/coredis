@@ -3709,12 +3709,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         timeout: int | float,
     ) -> CommandRequest[AnyStr | None]:
         """
-        Pop an element from a list, push it to another list and return it;
-        or block until one is available
+        Pop an element from a list, push it to another list, and return it; block until one is available.
 
-
-        :return: the element being popped from :paramref:`source` and pushed to
-         :paramref:`destination`
+        :param source: Source list key.
+        :param destination: Destination list key.
+        :param wherefrom: LEFT or RIGHT (end to pop from).
+        :param whereto: LEFT or RIGHT (end to push to).
+        :param timeout: Block timeout in seconds (0 = indefinitely).
+        :return: The element that was moved, or ``None`` if timeout was reached.
         """
         command_arguments: CommandArgList = [
             source,
@@ -3744,14 +3746,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[list[AnyStr | list[AnyStr]] | None]:
         """
-        Pop elements from the first non empty list, or block until one is available
+        Pop elements from the first non-empty list among the given keys, or block until one is available.
 
-        :return:
-
-         - A ``None`` when no element could be popped, and timeout is reached.
-         - A two-element array with the first element being the name of the key
-           from which elements were popped, and the second element is an array of elements.
-
+        :param keys: One or more list key names.
+        :param timeout: Block timeout in seconds (0 = indefinitely).
+        :param where: LEFT or RIGHT (end to pop from).
+        :param count: Maximum number of elements to pop.
+        :return: ``None`` if timeout reached; otherwise [key_name, [elements]].
         """
         _keys: list[KeyT] = list(keys)
         command_arguments: CommandArgList = [timeout, len(_keys), *_keys, where]
@@ -3771,14 +3772,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, keys: Parameters[KeyT], timeout: int | float
     ) -> CommandRequest[list[AnyStr] | None]:
         """
-        Remove and get the first element in a list, or block until one is available
+        Remove and return the first element from the first non-empty list, or block until one is available.
 
-        :return:
-
-         - ``None`` when no element could be popped and the timeout expired.
-         - A list with the first element being the name of the key
-           where an element was popped and the second element being the value of the
-           popped element.
+        :param keys: One or more list key names.
+        :param timeout: Block timeout in seconds (0 = indefinitely).
+        :return: ``None`` if timeout reached; otherwise [key_name, element].
         """
 
         return self.create_request(
@@ -3791,14 +3789,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, keys: Parameters[KeyT], timeout: int | float
     ) -> CommandRequest[list[AnyStr] | None]:
         """
-        Remove and get the last element in a list, or block until one is available
+        Remove and return the last element from the first non-empty list, or block until one is available.
 
-        :return:
-
-         - ``None`` when no element could be popped and the timeout expired.
-         - A list with the first element being the name of the key
-           where an element was popped and the second element being the value of the
-           popped element.
+        :param keys: One or more list key names.
+        :param timeout: Block timeout in seconds (0 = indefinitely).
+        :return: ``None`` if timeout reached; otherwise [key_name, element].
         """
 
         return self.create_request(
@@ -3816,11 +3811,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, source: KeyT, destination: KeyT, timeout: int | float
     ) -> CommandRequest[AnyStr | None]:
         """
-        Pop an element from a list, push it to another list and return it;
-        or block until one is available
+        Pop from the tail of source, push to the head of destination, and return the element; block until one is available (deprecated: use blmove).
 
-        :return: the element being popped from :paramref:`source` and pushed to
-         :paramref:`destination`.
+        :param source: Source list key.
+        :param destination: Destination list key.
+        :param timeout: Block timeout in seconds (0 = indefinitely).
+        :return: The element that was moved, or ``None`` if timeout was reached.
         """
 
         return self.create_request(
@@ -3839,10 +3835,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def lindex(self, key: KeyT, index: int) -> CommandRequest[AnyStr | None]:
         """
+        Return the element at index in the list.
 
-        Get an element from a list by its index
-
-        :return: the requested element, or ``None`` when ``index`` is out of range.
+        :param key: The key name.
+        :param index: Zero-based index.
+        :return: The element at that index, or ``None`` if index is out of range.
         """
 
         return self.create_request(
@@ -3858,11 +3855,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         element: ValueT,
     ) -> CommandRequest[int]:
         """
-        Inserts element in the list stored at key either before or after the reference
-        value pivot.
+        Insert an element in the list before or after a pivot value.
 
-        :return: the length of the list after the insert operation, or ``-1`` when
-         the value pivot was not found.
+        :param key: The key name.
+        :param where: AFTER or BEFORE the pivot.
+        :param pivot: The reference value to insert relative to.
+        :param element: The value to insert.
+        :return: The length of the list after the insert, or -1 if pivot was not found.
         """
 
         return self.create_request(
@@ -3877,7 +3876,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def llen(self, key: KeyT) -> CommandRequest[int]:
         """
-        :return: the length of the list at :paramref:`key`.
+        Return the length of the list stored at key.
+
+        :param key: The key name.
+        :return: The length of the list (0 if key does not exist).
         """
 
         return self.create_request(CommandName.LLEN, key, callback=IntCallback())
@@ -3891,9 +3893,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         whereto: Literal[PureToken.LEFT, PureToken.RIGHT],
     ) -> CommandRequest[AnyStr | None]:
         """
-        Pop an element from a list, push it to another list and return it
+        Atomically pop an element from one list and push it to another.
 
-        :return: the element being popped and pushed.
+        :param source: Source list key.
+        :param destination: Destination list key.
+        :param wherefrom: LEFT or RIGHT (end to pop from).
+        :param whereto: LEFT or RIGHT (end to push to).
+        :return: The element that was moved.
         """
         command_arguments: CommandArgList = [source, destination, wherefrom, whereto]
 
@@ -3911,13 +3917,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[list[AnyStr | list[AnyStr]] | None]:
         """
-        Pop elements from the first non empty list
+        Pop elements from the first non-empty list among the given keys.
 
-        :return:
-
-         - A ```None``` when no element could be popped.
-         - A two-element array with the first element being the name of the key
-           from which elements were popped, and the second element is an array of elements.
+        :param keys: One or more list key names.
+        :param where: LEFT or RIGHT (end to pop from).
+        :param count: Maximum number of elements to pop.
+        :return: ``None`` if all lists are empty; otherwise [key_name, [elements]].
         """
         _keys: list[KeyT] = list(keys)
         command_arguments: CommandArgList = [len(_keys), *_keys, where]
@@ -3947,11 +3952,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, count: int | None = None
     ) -> CommandRequest[AnyStr | None] | CommandRequest[list[AnyStr] | None]:
         """
-        Remove and get the first :paramref:`count` elements in a list
+        Remove and return the first element(s) from the list.
 
-        :return: the value of the first element, or ``None`` when :paramref:`key` does not exist.
-         If :paramref:`count` is provided the return is a list of popped elements,
-         or ``None`` when :paramref:`key` does not exist.
+        :param key: The key name.
+        :param count: If set, pop up to this many elements (returns a list).
+        :return: The first element, or a list of elements if count is set; ``None`` if key is empty or missing.
         """
         command_arguments: CommandArgList = []
 
@@ -3988,15 +3993,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         maxlen: int | None = None,
     ) -> CommandRequest[int | None] | CommandRequest[list[int] | None]:
         """
+        Return the index of the first (or rank-th) occurrence of element in the list.
 
-        Return the index of matching elements on a list
-
-
-        :return: The command returns the integer representing the matching element,
-         or ``None`` if there is no match.
-
-         If the :paramref:`count` argument is given a list of integers representing
-         the matching elements.
+        :param key: The key name.
+        :param element: The value to search for.
+        :param rank: Match the rank-th occurrence (positive or negative).
+        :param count: If set, return up to this many matching indices (returns a list).
+        :param maxlen: Only search this many elements from the head.
+        :return: A single index, or a list of indices if count is set; ``None`` if no match.
         """
         command_arguments: CommandArgList = [key, element]
 
@@ -4021,9 +4025,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.LPUSH, group=CommandGroup.LIST, flags={CommandFlag.FAST})
     def lpush(self, key: KeyT, elements: Parameters[ValueT]) -> CommandRequest[int]:
         """
-        Prepend one or multiple elements to a list
+        Prepend one or more elements to a list.
 
-        :return: the length of the list after the push operations.
+        :param key: The key name.
+        :param elements: One or more values to prepend.
+        :return: The length of the list after the push.
         """
         return self.create_request(CommandName.LPUSH, key, *elements, callback=IntCallback())
 
@@ -4031,9 +4037,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.LPUSHX, group=CommandGroup.LIST, flags={CommandFlag.FAST})
     def lpushx(self, key: KeyT, elements: Parameters[ValueT]) -> CommandRequest[int]:
         """
-        Prepend an element to a list, only if the list exists
+        Prepend elements to a list only if the list exists.
 
-        :return: the length of the list after the push operation.
+        :param key: The key name.
+        :param elements: One or more values to prepend.
+        :return: The length of the list after the push (0 if key did not exist).
         """
 
         return self.create_request(CommandName.LPUSHX, key, *elements, callback=IntCallback())
@@ -4046,9 +4054,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def lrange(self, key: KeyT, start: int, stop: int) -> CommandRequest[list[AnyStr]]:
         """
-        Get a range of elements from a list
+        Return a range of elements from the list (inclusive of both ends).
 
-        :return: list of elements in the specified range.
+        :param key: The key name.
+        :param start: Start index (0-based; negative counts from the end).
+        :param stop: Stop index (inclusive; negative counts from the end).
+        :return: A list of elements in the specified range.
         """
 
         return self.create_request(
@@ -4058,15 +4069,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.LREM, group=CommandGroup.LIST)
     def lrem(self, key: KeyT, count: int, element: ValueT) -> CommandRequest[int]:
         """
-        Removes the first :paramref:`count` occurrences of elements equal to ``element``
-        from the list stored at :paramref:`key`.
+        Remove occurrences of element from the list. Count controls direction and limit.
 
-        The count argument influences the operation in the following ways:
-            count > 0: Remove elements equal to value moving from head to tail.
-            count < 0: Remove elements equal to value moving from tail to head.
-            count = 0: Remove all elements equal to value.
-
-        :return: the number of removed elements.
+        :param key: The key name.
+        :param count: >0 remove from head, <0 from tail, 0 remove all matches.
+        :param element: The value to remove.
+        :return: The number of elements removed.
         """
 
         return self.create_request(CommandName.LREM, key, count, element, callback=IntCallback())
@@ -4076,7 +4084,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.LIST,
     )
     def lset(self, key: KeyT, index: int, element: ValueT) -> CommandRequest[bool]:
-        """Sets ``index`` of list :paramref:`key` to ``element``"""
+        """
+        Set the list element at index to the given value.
+
+        :param key: The key name.
+        :param index: Zero-based index.
+        :param element: The new value.
+        :return: ``True`` on success.
+        """
 
         return self.create_request(
             CommandName.LSET, key, index, element, callback=SimpleStringCallback()
@@ -4088,11 +4103,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def ltrim(self, key: KeyT, start: int, stop: int) -> CommandRequest[bool]:
         """
-        Trims the list :paramref:`key`, removing all values not within the slice
-        between ``start`` and ``stop``
+        Trim the list to the specified range (inclusive); remove elements outside the range.
 
-        ``start`` and ``stop`` can be negative numbers just like
-        Python slicing notation
+        :param key: The key name.
+        :param start: Start index (0-based; negative counts from the end).
+        :param stop: Stop index (inclusive; negative counts from the end).
+        :return: ``True`` on success.
         """
 
         return self.create_request(
@@ -4115,13 +4131,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, count: int | None = None
     ) -> CommandRequest[AnyStr | None] | CommandRequest[list[AnyStr] | None]:
         """
-        Remove and get the last elements in a list
+        Remove and return the last element(s) from the list.
 
-        :return: When called without the :paramref:`count` argument the value
-         of the last element, or ``None`` when :paramref:`key` does not exist.
-
-         When called with the :paramref:`count` argument list of popped elements,
-         or ``None`` when :paramref:`key` does not exist.
+        :param key: The key name.
+        :param count: If set, pop up to this many elements from the tail (returns a list).
+        :return: The last element, or a list if count is set; ``None`` if key is empty or missing.
         """
 
         command_arguments: CommandArgList = []
@@ -4151,9 +4165,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def rpoplpush(self, source: KeyT, destination: KeyT) -> CommandRequest[AnyStr | None]:
         """
-        Remove the last element in a list, prepend it to another list and return it
+        Atomically pop the last element from source and prepend it to destination (deprecated: use lmove).
 
-        :return: the element being popped and pushed.
+        :param source: Source list key.
+        :param destination: Destination list key.
+        :return: The element that was moved.
         """
 
         return self.create_request(
@@ -4171,9 +4187,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def rpush(self, key: KeyT, elements: Parameters[ValueT]) -> CommandRequest[int]:
         """
-        Append an element(s) to a list
+        Append one or more elements to a list.
 
-        :return: the length of the list after the push operation.
+        :param key: The key name.
+        :param elements: One or more values to append.
+        :return: The length of the list after the push.
         """
 
         return self.create_request(CommandName.RPUSH, key, *elements, callback=IntCallback())
@@ -4186,9 +4204,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def rpushx(self, key: KeyT, elements: Parameters[ValueT]) -> CommandRequest[int]:
         """
-        Append a element(s) to a list, only if the list exists
+        Append elements to a list only if the list exists.
 
-        :return: the length of the list after the push operation.
+        :param key: The key name.
+        :param elements: One or more values to append.
+        :return: The length of the list after the push (0 if key did not exist).
         """
 
         return self.create_request(CommandName.RPUSHX, key, *elements, callback=IntCallback())
