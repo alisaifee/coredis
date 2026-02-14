@@ -4221,10 +4221,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def sadd(self, key: KeyT, members: Parameters[ValueT]) -> CommandRequest[int]:
         """
-        Add one or more members to a set
+        Add one or more members to a set.
 
-        :return: the number of elements that were added to the set, not including
-         all the elements already present in the set.
+        :param key: The key name.
+        :param members: One or more values to add.
+        :return: The number of members that were added (excluding those already in the set).
         """
 
         return self.create_request(CommandName.SADD, key, *members, callback=IntCallback())
@@ -4237,10 +4238,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def scard(self, key: KeyT) -> CommandRequest[int]:
         """
-        Returns the number of members in the set
+        Return the number of members in a set.
 
-        :return the cardinality (number of elements) of the set, or ``0`` if :paramref:`key`
-         does not exist.
+        :param key: The key name.
+        :return: The cardinality of the set (0 if key does not exist).
         """
 
         return self.create_request(CommandName.SCARD, key, callback=IntCallback())
@@ -4253,9 +4254,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def sdiff(self, keys: Parameters[KeyT]) -> CommandRequest[_Set[AnyStr]]:
         """
-        Subtract multiple sets
+        Return the difference of the first set and all successive sets (members in first but not in others).
 
-        :return: members of the resulting set.
+        :param keys: One or more set key names (first is the base set).
+        :return: A set of members in the difference.
         """
 
         return self.create_request(CommandName.SDIFF, *keys, callback=SetCallback[AnyStr]())
@@ -4264,8 +4266,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.SDIFFSTORE, group=CommandGroup.SET)
     def sdiffstore(self, keys: Parameters[KeyT], destination: KeyT) -> CommandRequest[int]:
         """
-        Subtract multiple sets and store the resulting set in a key
+        Compute set difference and store the result in destination.
 
+        :param keys: One or more set key names (first is the base set).
+        :param destination: Key where the result set is stored.
+        :return: The number of elements in the resulting set.
         """
 
         return self.create_request(
@@ -4280,9 +4285,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def sinter(self, keys: Parameters[KeyT]) -> CommandRequest[_Set[AnyStr]]:
         """
-        Intersect multiple sets
+        Return the intersection of all given sets.
 
-        :return: members of the resulting set
+        :param keys: One or more set key names.
+        :return: A set of members in the intersection.
         """
 
         return self.create_request(CommandName.SINTER, *keys, callback=SetCallback[AnyStr]())
@@ -4291,9 +4297,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.SINTERSTORE, group=CommandGroup.SET)
     def sinterstore(self, keys: Parameters[KeyT], destination: KeyT) -> CommandRequest[int]:
         """
-        Intersect multiple sets and store the resulting set in a key
+        Compute set intersection and store the result in destination.
 
-        :return: the number of elements in the resulting set.
+        :param keys: One or more set key names.
+        :param destination: Key where the result set is stored.
+        :return: The number of elements in the resulting set.
         """
 
         return self.create_request(
@@ -4314,8 +4322,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         limit: int | None = None,
     ) -> CommandRequest[int]:
         """
-        Intersect multiple sets and return the cardinality of the result
+        Return the cardinality of the intersection of multiple sets.
 
+        :param keys: One or more set key names.
+        :param limit: If set, limit the result to this maximum (approximate).
         :return: The number of elements in the resulting intersection.
         """
         _keys: list[KeyT] = list(keys)
@@ -4337,9 +4347,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def sismember(self, key: KeyT, member: ValueT) -> CommandRequest[bool]:
         """
-        Determine if a given value is a member of a set
+        Return whether the given value is a member of the set.
 
-        :return: If the element is a member of the set. ``False`` if :paramref:`key` does not exist.
+        :param key: The key name.
+        :param member: The value to check.
+        :return: ``True`` if member is in the set, ``False`` otherwise or if key does not exist.
         """
 
         return self.create_request(CommandName.SISMEMBER, key, member, callback=BoolCallback())
@@ -4351,7 +4363,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         flags={CommandFlag.READONLY},
     )
     def smembers(self, key: KeyT) -> CommandRequest[_Set[AnyStr]]:
-        """Returns all members of the set"""
+        """
+        Return all members of a set.
+
+        :param key: The key name.
+        :return: A set of all members; empty set if the key does not exist.
+        """
 
         return self.create_request(CommandName.SMEMBERS, key, callback=SetCallback[AnyStr]())
 
@@ -4367,10 +4384,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, members: Parameters[ValueT]
     ) -> CommandRequest[tuple[bool, ...]]:
         """
-        Returns the membership associated with the given elements for a set
+        Return whether each given value is a member of the set.
 
-        :return: tuple representing the membership of the given elements, in the same
-         order as they are requested.
+        :param key: The key name.
+        :param members: One or more values to check.
+        :return: A tuple of booleans in the same order as members.
         """
 
         return self.create_request(CommandName.SMISMEMBER, key, *members, callback=BoolsCallback())
@@ -4382,7 +4400,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def smove(self, source: KeyT, destination: KeyT, member: ValueT) -> CommandRequest[bool]:
         """
-        Move a member from one set to another
+        Move a member from one set to another (atomic).
+
+        :param source: Source set key.
+        :param destination: Destination set key.
+        :param member: The member to move.
+        :return: ``True`` if the member was moved, ``False`` if it was not in source.
         """
 
         return self.create_request(
@@ -4398,13 +4421,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, count: int | None = None
     ) -> CommandRequest[AnyStr] | CommandRequest[_Set[AnyStr] | None]:
         """
-        Remove and return one or multiple random members from a set
+        Remove and return one or more random members from the set.
 
-        :return: When called without the :paramref:`count` argument the removed member, or ``None``
-         when :paramref:`key` does not exist.
-
-         When called with the :paramref:`count` argument the removed members, or an empty array when
-         :paramref:`key` does not exist.
+        :param key: The key name.
+        :param count: If set, remove and return up to this many members (returns a set).
+        :return: A single member, or a set if count is set; ``None`` or empty if key is empty/missing.
         """
 
         if count is not None:
@@ -4426,15 +4447,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, count: int | None = None
     ) -> CommandRequest[AnyStr | _Set[AnyStr]]:
         """
-        Get one or multiple random members from a set
+        Return one or more random members from the set (without removing).
 
-
-
-        :return: without the additional :paramref:`count` argument, the command returns a  randomly
-         selected element, or ``None`` when :paramref:`key` does not exist.
-
-         When the additional :paramref:`count` argument is passed, the command returns elements,
-         or an empty set when :paramref:`key` does not exist.
+        :param key: The key name.
+        :param count: If set, return up to this many distinct members (negative allows duplicates).
+        :return: A single member, or a set/tuple if count is set; ``None`` or empty if key is empty.
         """
         command_arguments: CommandArgList = []
 
@@ -4456,11 +4473,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def srem(self, key: KeyT, members: Parameters[ValueT]) -> CommandRequest[int]:
         """
-        Remove one or more members from a set
+        Remove one or more members from the set.
 
-
-        :return: the number of members that were removed from the set, not
-         including non existing members.
+        :param key: The key name.
+        :param members: One or more values to remove.
+        :return: The number of members that were removed.
         """
 
         return self.create_request(CommandName.SREM, key, *members, callback=IntCallback())
@@ -4473,9 +4490,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def sunion(self, keys: Parameters[KeyT]) -> CommandRequest[_Set[AnyStr]]:
         """
-        Add multiple sets
+        Return the union of all given sets.
 
-        :return: members of the resulting set.
+        :param keys: One or more set key names.
+        :return: A set of all members in the union.
         """
 
         return self.create_request(CommandName.SUNION, *keys, callback=SetCallback[AnyStr]())
@@ -4484,10 +4502,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.SUNIONSTORE, group=CommandGroup.SET)
     def sunionstore(self, keys: Parameters[KeyT], destination: KeyT) -> CommandRequest[int]:
         """
-        Add multiple sets and store the resulting set in a key
+        Compute set union and store the result in destination.
 
-        :return: the number of elements in the resulting set.
-
+        :param keys: One or more set key names.
+        :param destination: Key where the result set is stored.
+        :return: The number of elements in the resulting set.
         """
 
         return self.create_request(
@@ -4508,11 +4527,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[tuple[int, _Set[AnyStr]]]:
         """
-        Incrementally returns subsets of elements in a set. Also returns a
-        cursor pointing to the scan position.
+        Incrementally iterate over members of a set using a cursor.
 
-        :param match: is for filtering the keys by pattern
-        :param count: is for hint the minimum number of returns
+        :param key: The key name.
+        :param cursor: Cursor for iteration (0 to start); use returned cursor for next page.
+        :param match: Optional glob pattern to filter members.
+        :param count: Hint for minimum number of members per iteration.
+        :return: A tuple of (next_cursor, set_of_members); next_cursor 0 means done.
         """
         command_arguments: CommandArgList = [key, cursor or "0"]
 
