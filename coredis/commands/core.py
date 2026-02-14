@@ -6671,26 +6671,24 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def publish(self, channel: StringT, message: ValueT) -> CommandRequest[int]:
         """
-        Publish :paramref:`message` on :paramref:`channel`.
+        Publish a message to a channel.
 
-        :return: the number of subscribers the message was delivered to.
+        :param channel: Channel name.
+        :param message: Message to send.
+        :return: Number of subscribers that received the message.
         """
-
         return self.create_request(CommandName.PUBLISH, channel, message, callback=IntCallback())
 
     @versionadded(version="3.6.0")
     @redis_command(CommandName.SPUBLISH, group=CommandGroup.PUBSUB, version_introduced="7.0.0")
     def spublish(self, channel: StringT, message: ValueT) -> CommandRequest[int]:
         """
-        Publish :paramref:`message` on shard :paramref:`channel`.
+        Publish a message to a shard channel.
 
-        :return: the number of shard subscribers the message was delivered to.
-
-        .. note:: The number only represents subscribers listening to the exact
-           node the message was published to, which means that if a subscriber
-           is listening on a replica node, it will not be included in the count.
+        :param channel: Shard channel name.
+        :param message: Message to send.
+        :return: Number of shard subscribers that received the message (exact node only).
         """
-
         return self.create_request(CommandName.SPUBLISH, channel, message, callback=IntCallback())
 
     @redis_command(
@@ -6703,9 +6701,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def pubsub_channels(self, pattern: StringT | None = None) -> CommandRequest[_Set[AnyStr]]:
         """
-        Return channels that have at least one subscriber
-        """
+        Return channel names that have at least one subscriber.
 
+        :param pattern: Optional glob pattern (default ``*``).
+        :return: Set of channel names.
+        """
         return self.create_request(
             CommandName.PUBSUB_CHANNELS,
             pattern or b"*",
@@ -6724,9 +6724,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def pubsub_shardchannels(self, pattern: StringT | None = None) -> CommandRequest[_Set[AnyStr]]:
         """
-        Return shard channels that have at least one subscriber
-        """
+        Return shard channel names that have at least one subscriber.
 
+        :param pattern: Optional glob pattern (default ``*``).
+        :return: Set of shard channel names.
+        """
         return self.create_request(
             CommandName.PUBSUB_SHARDCHANNELS,
             pattern or b"*",
@@ -6739,11 +6741,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def pubsub_numpat(self) -> CommandRequest[int]:
         """
-        Get the count of unique patterns pattern subscriptions
+        Return the number of unique pattern subscriptions (PSUBSCRIBE) on this server.
 
-        :return: the number of patterns all the clients are subscribed to.
+        :return: Number of pattern subscriptions.
         """
-
         return self.create_request(CommandName.PUBSUB_NUMPAT, callback=IntCallback())
 
     @redis_command(
@@ -6756,9 +6757,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def pubsub_numsub(self, *channels: StringT) -> CommandRequest[dict[AnyStr, int]]:
         """
-        Get the count of subscribers for channels
+        Return the number of subscribers for each given channel.
 
-        :return: Mapping of channels to number of subscribers per channel
+        :param channels: Channel names to query (empty = all with 0).
+        :return: Mapping of channel name to subscriber count.
         """
         command_arguments: CommandArgList = []
 
@@ -6781,9 +6783,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def pubsub_shardnumsub(self, *channels: StringT) -> CommandRequest[dict[AnyStr, int]]:
         """
-        Get the count of subscribers for shard channels
+        Return the number of subscribers for each given shard channel.
 
-        :return: Ordered mapping of shard channels to number of subscribers per channel
+        :param channels: Shard channel names to query (empty = all with 0).
+        :return: Mapping of shard channel name to subscriber count.
         """
         command_arguments: CommandArgList = []
 
