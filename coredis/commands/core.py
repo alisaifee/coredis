@@ -6827,12 +6827,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         args: Parameters[ValueT] | None = None,
     ) -> CommandRequest[ResponseType]:
         """
-        Execute the Lua :paramref:`script` with the key names and argument values
-        in :paramref:`keys` and :paramref:`args`.
+        Execute a Lua script with the given keys and arguments.
 
-        :return: The result of the script as redis returns it
+        :param script: Lua script source.
+        :param keys: Key names passed to the script (KEYS[1], ...).
+        :param args: Additional arguments (ARGV[1], ...).
+        :return: Script result as returned by Redis.
         """
-
         return self._eval(CommandName.EVAL, script, keys, args)
 
     @versionadded(version="3.0.0")
@@ -6849,12 +6850,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         args: Parameters[ValueT] | None = None,
     ) -> CommandRequest[ResponseType]:
         """
-        Read-only variant of :meth:`~Redis.eval` that cannot execute commands
-        that modify data.
+        Execute a Lua script in read-only mode (no writes).
 
-        :return: The result of the script as redis returns it
+        :param script: Lua script source.
+        :param keys: Key names passed to the script (KEYS[1], ...).
+        :param args: Additional arguments (ARGV[1], ...).
+        :return: Script result as returned by Redis.
         """
-
         return self._eval(CommandName.EVAL_RO, script, keys, args)
 
     def _evalsha(
@@ -6880,13 +6882,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         args: Parameters[ValueT] | None = None,
     ) -> CommandRequest[ResponseType]:
         """
-        Execute the Lua script cached by it's :paramref:`sha` ref with the
-        key names and argument values in :paramref:`keys` and :paramref:`args`.
-        Evaluate a script from the server's cache by its :paramref:`sha1` digest.
+        Execute a Lua script from the server cache by its SHA1 digest.
 
-        :return: The result of the script as redis returns it
+        :param sha1: SHA1 digest of the script (from script_load).
+        :param keys: Key names passed to the script (KEYS[1], ...).
+        :param args: Additional arguments (ARGV[1], ...).
+        :return: Script result as returned by Redis.
         """
-
         return self._evalsha(CommandName.EVALSHA, sha1, keys, args)
 
     @versionadded(version="3.0.0")
@@ -6903,12 +6905,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         args: Parameters[ValueT] | None = None,
     ) -> CommandRequest[ResponseType]:
         """
-        Read-only variant of :meth:`~Redis.evalsha` that cannot execute commands
-        that modify data.
+        Execute a cached Lua script in read-only mode (no writes).
 
-        :return: The result of the script as redis returns it
+        :param sha1: SHA1 digest of the script (from script_load).
+        :param keys: Key names passed to the script (KEYS[1], ...).
+        :param args: Additional arguments (ARGV[1], ...).
+        :return: Script result as returned by Redis.
         """
-
         return self._evalsha(CommandName.EVALSHA_RO, sha1, keys, args)
 
     @versionadded(version="3.0.0")
@@ -6939,13 +6942,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def script_exists(self, sha1s: Parameters[StringT]) -> CommandRequest[tuple[bool, ...]]:
         """
-        Check if a script exists in the script cache by specifying the SHAs of
-        each script as :paramref:`sha1s`.
+        Check whether the given scripts exist in the server script cache.
 
-        :return: tuple of boolean values indicating if each script
-         exists in the cache.
+        :param sha1s: One or more SHA1 digests of scripts.
+        :return: Tuple of booleans, one per digest (True if cached).
         """
-
         return self.create_request(CommandName.SCRIPT_EXISTS, *sha1s, callback=BoolsCallback())
 
     @redis_command(
@@ -6962,7 +6963,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         flush_type: Literal[PureToken.ASYNC, PureToken.SYNC] | None = None,
     ) -> CommandRequest[bool]:
         """
-        Flushes all scripts from the script cache
+        Remove all scripts from the server script cache.
+
+        :param flush_type: ASYNC (default) or SYNC.
+        :return: True on success.
         """
         command_arguments: CommandArgList = []
 
@@ -6983,9 +6987,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def script_kill(self) -> CommandRequest[bool]:
         """
-        Kills the currently executing Lua script
-        """
+        Terminate the currently running Lua script (if any).
 
+        :return: True if a script was killed.
+        """
         return self.create_request(CommandName.SCRIPT_KILL, callback=SimpleStringCallback())
 
     @redis_command(
@@ -6998,9 +7003,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def script_load(self, script: StringT) -> CommandRequest[AnyStr]:
         """
-        Loads a Lua :paramref:`script` into the script cache.
+        Load a Lua script into the server script cache.
 
-        :return: The SHA1 digest of the script added into the script cache
+        :param script: The Lua script source code.
+        :return: The SHA1 digest of the script.
         """
         return self.create_request(
             CommandName.SCRIPT_LOAD, script, callback=AnyStrCallback[AnyStr]()
@@ -7019,7 +7025,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         args: Parameters[ValueT] | None = None,
     ) -> CommandRequest[ResponseType]:
         """
-        Invoke a function
+        Invoke a Redis function by name.
+
+        :param function: The function name.
+        :param keys: Optional key names that the function will access (for routing).
+        :param args: Optional arguments to pass to the function.
+        :return: The return value of the function (type depends on the function).
         """
         _keys: list[KeyT] = list(keys or [])
         command_arguments: CommandArgList = [
@@ -7045,7 +7056,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         args: Parameters[ValueT] | None = None,
     ) -> CommandRequest[ResponseType]:
         """
-        Read-only variant of :meth:`~coredis.Redis.fcall`
+        Invoke a Redis function in read-only mode (same as fcall but only for read-only functions).
+
+        :param function: The function name.
+        :param keys: Optional key names that the function will access.
+        :param args: Optional arguments to pass to the function.
+        :return: The return value of the function.
         """
         _keys: list[KeyT] = list(keys or [])
         command_arguments: CommandArgList = [
@@ -7071,7 +7087,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def function_delete(self, library_name: StringT) -> CommandRequest[bool]:
         """
-        Delete a library and all its functions.
+        Delete a library and all its functions from the server.
+
+        :param library_name: The name of the library to delete.
+        :return: ``True`` on success.
         """
 
         return self.create_request(
@@ -7087,7 +7106,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def function_dump(self) -> CommandRequest[bytes]:
         """
-        Dump all functions into a serialized binary payload
+        Return a serialized binary payload of all loaded functions.
+
+        :return: The serialized payload (use with function_restore).
         """
 
         return self.create_request(
@@ -7110,7 +7131,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, flush_type: Literal[PureToken.ASYNC, PureToken.SYNC] | None = None
     ) -> CommandRequest[bool]:
         """
-        Delete all functions
+        Delete all functions from the server.
+
+        :param flush_type: ASYNC to flush asynchronously, SYNC to block until done.
+        :return: ``True`` on success.
         """
         command_arguments: CommandArgList = []
 
@@ -7151,8 +7175,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, libraryname: StringT | None = None, withcode: bool | None = None
     ) -> CommandRequest[Mapping[AnyStr, LibraryDefinition]]:
         """
-        List information about the functions registered under
-        :paramref:`libraryname`
+        List libraries and functions (optionally filtered by library name).
+
+        :param libraryname: Optional library name to filter by.
+        :param withcode: If true, include function source code in the result.
+        :return: Mapping of library name to library definition (functions, code, etc.).
         """
         command_arguments: CommandArgList = []
 
@@ -7184,7 +7211,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         replace: bool | None = None,
     ) -> CommandRequest[AnyStr]:
         """
-        Load a library of functions.
+        Load a library of Redis functions (Lua or other engine).
+
+        :param function_code: Library source code (e.g. ``#!lua name=mylib`` ...).
+        :param replace: If true, replace existing library with the same name.
+        :return: Library name on success.
         """
         command_arguments: CommandArgList = []
 
@@ -7215,7 +7246,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         policy: Literal[PureToken.FLUSH, PureToken.APPEND, PureToken.REPLACE] | None = None,
     ) -> CommandRequest[bool]:
         """
-        Restore all the functions on the given payload
+        Restore libraries/functions from a serialized payload (from function_dump).
+
+        :param serialized_value: Serialized payload from function_dump.
+        :param policy: FLUSH (replace all), APPEND, or REPLACE.
+        :return: True on success.
         """
         command_arguments: CommandArgList = [serialized_value]
 
@@ -7243,9 +7278,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         dict[AnyStr, AnyStr | dict[AnyStr, dict[AnyStr, ResponsePrimitive]] | None]
     ]:
         """
-        Return information about the function currently running
-        """
+        Return runtime statistics for the currently running function (if any).
 
+        :return: Dict with running_script, engines, etc.; None if no function is running.
+        """
         return self.create_request(
             CommandName.FUNCTION_STATS, callback=FunctionStatsCallback[AnyStr]()
         )
