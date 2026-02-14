@@ -797,7 +797,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def substr(self, key: KeyT, start: int, end: int) -> CommandRequest[AnyStr]:
         """
-        Return a substring of the string stored at a key (deprecated: use getrange).
+        Return a substring of the string stored at a key.
 
         :param key: The key name.
         :param start: Start offset (inclusive). Negative values count from the end.
@@ -1300,7 +1300,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_slaves(self, node_id: StringT) -> CommandRequest[list[ClusterNodeDetail]]:
         """
-        List replica nodes of the specified master node (deprecated: use cluster_replicas).
+        List replica nodes of the specified master node.
 
         :param node_id: The master node ID.
         :return: A list of replica node details.
@@ -1321,7 +1321,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         self,
     ) -> CommandRequest[dict[tuple[int, int], tuple[ClusterNode, ...]]]:
         """
-        Return a mapping of cluster slot ranges to nodes (deprecated: use cluster_shards).
+        Return a mapping of cluster slot ranges to nodes.
 
         :return: A mapping of (start, end) slot ranges to node tuples.
         """
@@ -1495,7 +1495,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def quit(self) -> CommandRequest[bool]:
         """
-        Close the connection to the server (deprecated in Redis 7.2+).
+        Close the connection to the server.
 
         :return: ``True`` on success.
         """
@@ -1733,7 +1733,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         storedist: KeyT | None = None,
     ) -> CommandRequest[int | tuple[AnyStr | GeoSearchResult, ...]]:
         """
-        Query a geospatial index for members within radius of a center (deprecated: use geosearch).
+        Query a geospatial index for members within radius of a center.
 
         :param key: The key name.
         :param longitude: Center longitude.
@@ -1796,7 +1796,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         storedist: KeyT | None = None,
     ) -> CommandRequest[int | tuple[AnyStr | GeoSearchResult, ...]]:
         """
-        Query a geospatial index for members within radius of an existing member (deprecated: use geosearch).
+        Query a geospatial index for members within radius of an existing member.
 
         :param key: The key name.
         :param member: Member to use as center.
@@ -2595,7 +2595,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def hmset(self, key: KeyT, field_values: Mapping[MappingKeyT, ValueT]) -> CommandRequest[bool]:
         """
-        Set multiple field-value pairs in a hash (deprecated: use hset).
+        Set multiple field-value pairs in a hash.
 
         :param key: The key name.
         :param field_values: Mapping of field names to values.
@@ -3820,7 +3820,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, source: KeyT, destination: KeyT, timeout: int | float
     ) -> CommandRequest[AnyStr | None]:
         """
-        Pop from the tail of source, push to the head of destination, and return the element; block until one is available (deprecated: use blmove).
+        Pop from the tail of source, push to the head of destination, and return the element; block until one is available.
 
         :param source: Source list key.
         :param destination: Destination list key.
@@ -4174,7 +4174,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def rpoplpush(self, source: KeyT, destination: KeyT) -> CommandRequest[AnyStr | None]:
         """
-        Atomically pop the last element from source and prepend it to destination (deprecated: use lmove).
+        Atomically pop the last element from source and prepend it to destination.
 
         :param source: Source list key.
         :param destination: Destination list key.
@@ -5341,7 +5341,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         withscores: bool | None = None,
     ) -> CommandRequest[tuple[AnyStr | ScoredMember, ...]]:
         """
-        Return a range of members by index, highest scores first (deprecated: use zrange with rev).
+        Return a range of members by index, highest scores first.
 
         :param key: The key name.
         :param start: Start index (0-based).
@@ -5454,7 +5454,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, member: ValueT, withscore: bool | None = None
     ) -> CommandRequest[int | tuple[int, float] | None]:
         """
-        Return the rank of the member when the set is ordered high to low (deprecated: use zrange with rev).
+        Return the rank of the member when the set is ordered high to low.
 
         :param key: The key name.
         :param member: The member to look up.
