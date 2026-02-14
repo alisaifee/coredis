@@ -815,7 +815,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_addslots(self, slots: Parameters[int]) -> CommandRequest[bool]:
         """
-        Assign new hash slots to receiving node
+        Assign new hash slots to the receiving node.
+
+        :param slots: One or more slot numbers to assign.
+        :return: ``True`` on success.
         """
 
         return self.create_request(
@@ -830,7 +833,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_addslotsrange(self, slots: Parameters[tuple[int, int]]) -> CommandRequest[bool]:
         """
-        Assign new hash slots to receiving node
+        Assign ranges of hash slots to the receiving node.
+
+        :param slots: One or more (start, end) slot ranges (inclusive).
+        :return: ``True`` on success.
         """
         command_arguments: CommandArgList = []
 
@@ -847,7 +853,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.ASKING, group=CommandGroup.CLUSTER, flags={CommandFlag.FAST})
     def asking(self) -> CommandRequest[bool]:
         """
-        Sent by cluster clients after an -ASK redirect
+        Send ASK to the server (used by cluster clients after an -ASK redirect).
+
+        :return: ``True`` on success.
         """
 
         return self.create_request(CommandName.ASKING, callback=BoolCallback())
@@ -856,10 +864,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.CLUSTER_BUMPEPOCH, group=CommandGroup.CLUSTER)
     def cluster_bumpepoch(self) -> CommandRequest[AnyStr]:
         """
-        Advance the cluster config epoch
+        Advance the cluster configuration epoch.
 
-        :return: ``BUMPED`` if the epoch was incremented, or ``STILL``
-         if the node already has the greatest config epoch in the cluster.
+        :return: ``BUMPED`` if the epoch was incremented, ``STILL`` if this node already had the greatest epoch.
         """
 
         return self.create_request(CommandName.CLUSTER_BUMPEPOCH, callback=AnyStrCallback[AnyStr]())
@@ -871,8 +878,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_count_failure_reports(self, node_id: StringT) -> CommandRequest[int]:
         """
-        Return the number of failure reports active for a given node
+        Return the number of failure reports active for a given node.
 
+        :param node_id: The cluster node ID.
+        :return: The number of failure reports.
         """
 
         return self.create_request(
@@ -888,7 +897,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_countkeysinslot(self, slot: int) -> CommandRequest[int]:
         """
-        Return the number of local keys in the specified hash slot
+        Return the number of local keys in the specified hash slot.
+
+        :param slot: The hash slot number.
+        :return: The number of keys in the slot on this node.
         """
 
         return self.create_request(
@@ -908,8 +920,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_delslots(self, slots: Parameters[int]) -> CommandRequest[bool]:
         """
-        Set hash slots as unbound in the cluster.
-        It determines by itself what node the slot is in and sends it there
+        Mark the given hash slots as unbound in the cluster.
+
+        The command is routed to the node that owns each slot.
+
+        :param slots: One or more slot numbers to unbound.
+        :return: ``True`` on success.
         """
         return self.create_request(
             CommandName.CLUSTER_DELSLOTS,
@@ -927,7 +943,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_delslotsrange(self, slots: Parameters[tuple[int, int]]) -> CommandRequest[bool]:
         """
-        Set hash slots as unbound in receiving node
+        Mark the given slot ranges as unbound on the receiving node.
+
+        :param slots: One or more (start, end) slot ranges (inclusive).
+        :return: ``True`` on success.
         """
         command_arguments: CommandArgList = list(itertools.chain(*slots))
 
@@ -947,7 +966,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         options: Literal[PureToken.FORCE, PureToken.TAKEOVER] | None = None,
     ) -> CommandRequest[bool]:
         """
-        Forces a replica to perform a manual failover of its master.
+        Force a replica to perform a manual failover of its master.
+
+        :param options: Optional FORCE or TAKEOVER to alter failover behavior.
+        :return: ``True`` on success.
         """
 
         command_arguments: CommandArgList = []
@@ -968,7 +990,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_flushslots(self) -> CommandRequest[bool]:
         """
-        Delete a node's own slots information
+        Delete this node's assigned slot information (must have no keys in those slots).
+
+        :return: ``True`` on success.
         """
 
         return self.create_request(CommandName.CLUSTER_FLUSHSLOTS, callback=SimpleStringCallback())
@@ -979,8 +1003,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_forget(self, node_id: StringT) -> CommandRequest[bool]:
         """
-        remove a node via its node ID from the set of known nodes
-        of the Redis Cluster node receiving the command
+        Remove a node from the set of known nodes of the cluster node receiving the command.
+
+        :param node_id: The cluster node ID to forget.
+        :return: ``True`` on success.
         """
 
         return self.create_request(
@@ -995,10 +1021,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_getkeysinslot(self, slot: int, count: int) -> CommandRequest[tuple[AnyStr, ...]]:
         """
-        Return local key names in the specified hash slot
+        Return up to a given number of local key names in the specified hash slot.
 
-        :return: :paramref:`count` key names
-
+        :param slot: The hash slot number.
+        :param count: Maximum number of key names to return.
+        :return: A tuple of key names (up to count).
         """
         command_arguments: CommandArgList = [slot, count]
 
@@ -1016,7 +1043,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_info(self) -> CommandRequest[dict[str, str]]:
         """
-        Provides info about Redis Cluster node state
+        Return information about the Redis Cluster node state.
+
+        :return: A mapping of cluster state keys and values.
         """
 
         return self.create_request(CommandName.CLUSTER_INFO, callback=ClusterInfoCallback())
@@ -1028,7 +1057,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_keyslot(self, key: KeyT) -> CommandRequest[int]:
         """
-        Returns the hash slot of the specified key
+        Return the hash slot number for the specified key.
+
+        :param key: The key name.
+        :return: The slot number (0-16383).
         """
 
         return self.create_request(CommandName.CLUSTER_KEYSLOT, key, callback=IntCallback())
@@ -1041,11 +1073,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_links(self) -> CommandRequest[list[dict[AnyStr, ResponsePrimitive]]]:
         """
-        Returns a list of all TCP links to and from peer nodes in cluster
+        Return a list of all TCP links to and from peer nodes in the cluster.
 
-        :return: A map of maps where each map contains various attributes
-         and their values of a cluster link.
-
+        :return: A list of mappings; each mapping contains attributes and values for one cluster link.
         """
 
         return self.create_request(
@@ -1061,7 +1091,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, ip: StringT, port: int, cluster_bus_port: int | None = None
     ) -> CommandRequest[bool]:
         """
-        Force a node cluster to handshake with another node.
+        Force this cluster node to handshake with another node.
+
+        :param ip: IP address of the node to meet.
+        :param port: Port of the node to meet.
+        :param cluster_bus_port: Optional cluster bus port (if different from port).
+        :return: ``True`` on success.
         """
 
         command_arguments: CommandArgList = [ip, port]
@@ -1077,7 +1112,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.CLUSTER_MYID, group=CommandGroup.CLUSTER)
     def cluster_myid(self) -> CommandRequest[AnyStr]:
         """
-        Return the node id
+        Return this node's cluster ID.
+
+        :return: The node ID string.
         """
 
         return self.create_request(CommandName.CLUSTER_MYID, callback=AnyStrCallback[AnyStr]())
@@ -1089,7 +1126,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_nodes(self) -> CommandRequest[list[ClusterNodeDetail]]:
         """
-        Get Cluster config for the node
+        Return the current cluster configuration from the perspective of this node.
+
+        :return: A list of cluster node details.
         """
 
         return self.create_request(CommandName.CLUSTER_NODES, callback=ClusterNodesCallback())
@@ -1100,7 +1139,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_replicate(self, node_id: StringT) -> CommandRequest[bool]:
         """
-        Reconfigure a node as a replica of the specified master node
+        Reconfigure this node as a replica of the specified master node.
+
+        :param node_id: The master node ID to replicate.
+        :return: ``True`` on success.
         """
 
         return self.create_request(
@@ -1116,7 +1158,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         reset_type: Literal[PureToken.HARD, PureToken.SOFT] | None = None,
     ) -> CommandRequest[bool]:
         """
-        Reset a Redis Cluster node
+        Reset a Redis Cluster node (clears slots and peer state).
+
+        :param reset_type: HARD (full reset) or SOFT (only clear keys); default is HARD.
+        :return: ``True`` on success.
         """
 
         command_arguments: CommandArgList = []
@@ -1140,7 +1185,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_saveconfig(self) -> CommandRequest[bool]:
         """
-        Forces the node to save cluster state on disk
+        Force the node to save the cluster state to disk.
+
+        :return: ``True`` on success.
         """
 
         return self.create_request(CommandName.CLUSTER_SAVECONFIG, callback=SimpleStringCallback())
@@ -1151,7 +1198,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_set_config_epoch(self, config_epoch: int) -> CommandRequest[bool]:
         """
-        Set the configuration epoch in a new node
+        Set the configuration epoch for a new node (used during cluster creation).
+
+        :param config_epoch: The configuration epoch value.
+        :return: ``True`` on success.
         """
 
         return self.create_request(
@@ -1175,7 +1225,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         stable: bool | None = None,
     ) -> CommandRequest[bool]:
         """
-        Bind a hash slot to a specific node
+        Bind a hash slot to a specific node or set slot migration state.
+
+        :param slot: The hash slot number.
+        :param importing: Node ID from which the slot is being imported.
+        :param migrating: Node ID to which the slot is being migrated.
+        :param node: Node ID that should own the slot (assigns the slot).
+        :param stable: If true, clear importing/migrating state without assigning.
+        :return: ``True`` on success.
         """
 
         command_arguments: CommandArgList = [slot]
@@ -1205,7 +1262,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_replicas(self, node_id: StringT) -> CommandRequest[list[ClusterNodeDetail]]:
         """
-        List replica nodes of the specified master node
+        List replica nodes of the specified master node.
+
+        :param node_id: The master node ID.
+        :return: A list of replica node details.
         """
 
         return self.create_request(
@@ -1223,7 +1283,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         self,
     ) -> CommandRequest[list[dict[AnyStr, list[RedisValueT] | Mapping[AnyStr, RedisValueT]]]]:
         """
-        Get mapping of cluster slots to nodes
+        Return a mapping of cluster slots to nodes.
+
+        :return: A list of shard mappings with slot ranges and node info.
         """
         return self.create_request(
             CommandName.CLUSTER_SHARDS, callback=ClusterShardsCallback[AnyStr]()
@@ -1238,7 +1300,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_slaves(self, node_id: StringT) -> CommandRequest[list[ClusterNodeDetail]]:
         """
-        List replica nodes of the specified master node
+        List replica nodes of the specified master node (deprecated: use cluster_replicas).
+
+        :param node_id: The master node ID.
+        :return: A list of replica node details.
         """
 
         return self.create_request(
@@ -1256,7 +1321,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         self,
     ) -> CommandRequest[dict[tuple[int, int], tuple[ClusterNode, ...]]]:
         """
-        Get mapping of Cluster slot to nodes
+        Return a mapping of cluster slot ranges to nodes (deprecated: use cluster_shards).
+
+        :return: A mapping of (start, end) slot ranges to node tuples.
         """
 
         return self.create_request(CommandName.CLUSTER_SLOTS, callback=ClusterSlotsCallback())
@@ -1265,7 +1332,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.READONLY, group=CommandGroup.CLUSTER, flags={CommandFlag.FAST})
     def readonly(self) -> CommandRequest[bool]:
         """
-        Enables read queries for a connection to a cluster replica node
+        Enable read queries for this connection to a cluster replica node.
+
+        :return: ``True`` on success.
         """
         return self.create_request(CommandName.READONLY, callback=SimpleStringCallback())
 
@@ -1273,7 +1342,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.READWRITE, group=CommandGroup.CLUSTER, flags={CommandFlag.FAST})
     def readwrite(self) -> CommandRequest[bool]:
         """
-        Disables read queries for a connection to a cluster replica node
+        Disable read-only mode; use this connection for read and write to the primary.
+
+        :return: ``True`` on success.
         """
         return self.create_request(CommandName.READWRITE, callback=SimpleStringCallback())
 
