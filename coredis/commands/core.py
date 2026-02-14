@@ -1363,7 +1363,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def auth(self, password: StringT, username: StringT | None = None) -> CommandRequest[bool]:
         """
-        Authenticate to the server
+        Authenticate the connection to the server.
+
+        :param password: The password (required).
+        :param username: The username (optional).
+        :return: ``True`` on success.
         """
         command_arguments: CommandArgList = []
         command_arguments.append(password)
@@ -1385,7 +1389,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         flags={CommandFlag.FAST},
     )
     def echo(self, message: StringT) -> CommandRequest[AnyStr]:
-        "Echo the string back from the server"
+        """
+        Echo the given string back from the server.
+
+        :param message: The string to echo.
+        :return: The same string.
+        """
 
         return self.create_request(CommandName.ECHO, message, callback=AnyStrCallback[AnyStr]())
 
@@ -1404,9 +1413,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         setname: StringT | None = None,
     ) -> CommandRequest[dict[AnyStr, AnyStr]]:
         """
-        Handshake with Redis
+        Perform a handshake with Redis (protocol version, auth, client name).
 
-        :return: a mapping of server properties.
+        :param protover: Optional RESP protocol version (e.g. 2 or 3).
+        :param username: Optional username for ACL auth.
+        :param password: Optional password for ACL auth.
+        :param setname: Optional client name to set.
+        :return: A mapping of server properties (e.g. version, mode).
         """
         command_arguments: CommandArgList = []
 
@@ -1439,10 +1452,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def ping(self, message: StringT | None = None) -> CommandRequest[AnyStr]:
         """
-        Ping the server
+        Ping the server to test the connection.
 
-        :return: ``PONG``, when no argument is provided else the
-         :paramref:`message` provided
+        :param message: Optional message; if provided, server echoes it instead of PONG.
+        :return: ``PONG`` or the echoed message.
         """
         command_arguments: CommandArgList = []
 
@@ -1467,7 +1480,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def select(self, index: int) -> CommandRequest[bool]:
         """
-        Change the selected database for the current connection
+        Change the selected database for the current connection.
+
+        :param index: The database index (typically 0-15).
+        :return: ``True`` on success.
         """
         return self.create_request(CommandName.SELECT, index, callback=SimpleStringCallback())
 
@@ -1479,7 +1495,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def quit(self) -> CommandRequest[bool]:
         """
-        Close the connection
+        Close the connection to the server (deprecated in Redis 7.2+).
+
+        :return: ``True`` on success.
         """
 
         return self.create_request(CommandName.QUIT, callback=SimpleStringCallback())
@@ -1493,7 +1511,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def reset(self) -> CommandRequest[None]:
         """
-        Reset the connection
+        Reset the connection (clear client state; server may disconnect).
+
+        :return: ``None``.
         """
         return self.create_request(CommandName.RESET, callback=NoopCallback[None]())
 
