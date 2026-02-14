@@ -6538,9 +6538,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         index_unit: Literal[PureToken.BIT, PureToken.BYTE] | None = None,
     ) -> CommandRequest[int]:
         """
-        Returns the count of set bits in the value of :paramref:`key`.  Optional
-        :paramref:`start` and :paramref:`end` parameters indicate which bytes to consider
+        Return the number of set bits in the string value at key.
 
+        :param key: The key name.
+        :param start: Start byte (or bit) index (use with end).
+        :param end: End byte (or bit) index.
+        :param index_unit: BIT or BYTE for start/end interpretation.
+        :return: Count of bits set to 1 in the (optionally ranged) value.
         """
         command_arguments: CommandArgList = [key]
 
@@ -6555,23 +6559,20 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     def bitfield(self, key: KeyT) -> BitFieldOperation[AnyStr]:
         """
-        :return: a :class:`~coredis.commands.bitfield.BitFieldOperation`
-         instance to conveniently construct one or more bitfield operations on
-         :paramref:`key`.
-        """
+        Return a BitFieldOperation to build one or more bitfield ops on the key.
 
+        :param key: The key name.
+        :return: :class:`~coredis.commands.bitfield.BitFieldOperation` for chained get/set/incr.
+        """
         return BitFieldOperation[AnyStr](self, key)
 
     def bitfield_ro(self, key: KeyT) -> BitFieldOperation[AnyStr]:
         """
+        Return a read-only BitFieldOperation for bitfield GET on the key (e.g. on replica).
 
-        :return: a :class:`~coredis.commands.bitfield.BitFieldOperation`
-         instance to conveniently construct bitfield operations on a read only
-         replica against :paramref:`key`.
-
-        Raises :class:`ReadOnlyError` if a write operation is attempted
+        :param key: The key name.
+        :return: :class:`~coredis.commands.bitfield.BitFieldOperation` (read-only; write raises ReadOnlyError).
         """
-
         return BitFieldOperation[AnyStr](self, key, readonly=True)
 
     @ensure_iterable_valid("keys")
@@ -6583,10 +6584,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, keys: Parameters[KeyT], operation: StringT, destkey: KeyT
     ) -> CommandRequest[int]:
         """
-        Perform a bitwise operation using :paramref:`operation` between
-        :paramref:`keys` and store the result in :paramref:`destkey`.
-        """
+        Perform a bitwise operation (AND, OR, XOR, NOT) on keys and store result at destkey.
 
+        :param keys: One or more source key names (two or more for AND/OR/XOR; one for NOT).
+        :param operation: AND, OR, XOR, or NOT.
+        :param destkey: Key where the result is stored.
+        :return: Size in bytes of the result string.
+        """
         return self.create_request(
             CommandName.BITOP, operation, destkey, *keys, callback=IntCallback()
         )
@@ -6607,33 +6611,16 @@ class CoreCommands(CommandMixin[AnyStr]):
         index_unit: Literal[PureToken.BIT, PureToken.BYTE] | None = None,
     ) -> CommandRequest[int]:
         """
+        Return the position of the first bit set to 1 or 0 in the string value.
 
-        Return the position of the first bit set to 1 or 0 in a string.
-        :paramref:`start` and :paramref:`end` defines the search range. The range is interpreted
-        as a range of bytes and not a range of bits, so start=0 and end=2
-        means to look at the first three bytes.
-
-
-        :return: The position of the first bit set to 1 or 0 according to the request.
-         If we look for set bits (the bit argument is 1) and the string is empty or
-         composed of just zero bytes, -1 is returned.
-
-         If we look for clear bits (the bit argument is 0) and the string only contains
-         bit set to 1, the function returns the first bit not part of the string on the right.
-
-         So if the string is three bytes set to the value ``0xff`` the command ``BITPOS key 0`` will
-         return 24, since up to bit 23 all the bits are 1.
-
-         Basically, the function considers the right of the string as padded with
-         zeros if you look for clear bits and specify no range or the ``start`` argument **only**.
-
-         However, this behavior changes if you are looking for clear bits and
-         specify a range with both ``start`` and ``end``.
-
-         If no clear bit is found in the specified range, the function returns -1 as the user
-         specified a clear range and there are no 0 bits in that range.
+        :param key: The key name.
+        :param bit: 0 or 1 to search for.
+        :param start: Start byte index (use with end).
+        :param end: End byte index.
+        :param index_unit: BIT or BYTE for start/end interpretation.
+        :return: Bit position of first matching bit; -1 if no match (e.g. empty key for bit=1).
+         For bit=0 with no range or start-only, string is considered right-padded with zeros.
         """
-
         if bit not in (0, 1):
             raise RedisError("bit must be 0 or 1")
         command_arguments: CommandArgList = [key, bit]
@@ -6656,17 +6643,23 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def getbit(self, key: KeyT, offset: int) -> CommandRequest[int]:
         """
-        Returns the bit value at offset in the string value stored at key
+        Return the bit value at the given offset in the string value at key.
 
-        :return: the bit value stored at :paramref:`offset`.
+        :param key: The key name.
+        :param offset: Bit offset (0-based).
+        :return: 0 or 1; 0 if key is missing or offset is beyond the string.
         """
-
         return self.create_request(CommandName.GETBIT, key, offset, callback=IntCallback())
 
     @redis_command(CommandName.SETBIT, group=CommandGroup.BITMAP)
     def setbit(self, key: KeyT, offset: int, value: int) -> CommandRequest[int]:
         """
-        Flag the :paramref:`offset` in :paramref:`key` as :paramref:`value`.
+        Set or clear the bit at the given offset in the string value at key.
+
+        :param key: The key name.
+        :param offset: Bit offset (0-based).
+        :param value: 0 or 1 (any non-zero becomes 1).
+        :return: Previous bit value at that offset.
         """
         value = value and 1 or 0
 
