@@ -3625,10 +3625,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def wait(self, numreplicas: int, timeout: int) -> CommandRequest[int]:
         """
-        Wait for the synchronous replication of all the write commands sent in the context of
-        the current connection
+        Block until write commands are replicated to at least the given number of replicas.
 
-        :return: the number of replicas the write was replicated to
+        :param numreplicas: Minimum number of replicas that must acknowledge.
+        :param timeout: Maximum time to wait in milliseconds (0 = block indefinitely).
+        :return: The number of replicas that acknowledged the writes.
         """
 
         return self.create_request(CommandName.WAIT, numreplicas, timeout, callback=IntCallback())
@@ -3649,10 +3650,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, numlocal: int, numreplicas: int, timeout: int
     ) -> CommandRequest[tuple[int, ...]]:
         """
-        Wait for all write commands sent in the context of the current connection to be synced
-        to AOF of local host and/or replicas
+        Block until write commands are synced to AOF on the local host and/or replicas.
 
-        :return: a tuple of (numlocal, numreplicas) that the write commands were synced to
+        :param numlocal: Minimum number of local AOF syncs.
+        :param numreplicas: Minimum number of replica AOF syncs.
+        :param timeout: Maximum time to wait in milliseconds (0 = block indefinitely).
+        :return: A tuple of (numlocal, numreplicas) that were synced.
         """
 
         return self.create_request(
@@ -3677,7 +3680,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         type_: StringT | None = None,
     ) -> CommandRequest[tuple[int, tuple[AnyStr, ...]]]:
         """
-        Incrementally iterate the keys space
+        Incrementally iterate over the key space using a cursor.
+
+        :param cursor: Cursor for iteration (0 to start); use returned cursor for next page.
+        :param match: Optional glob pattern to filter keys.
+        :param count: Hint for minimum number of keys per iteration.
+        :param type_: Optional key type filter (e.g. string, list, set).
+        :return: A tuple of (next_cursor, tuple_of_keys); next_cursor 0 means done.
         """
         command_arguments: CommandArgList = [cursor or b"0"]
 
@@ -7291,7 +7300,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.CONNECTION,
     )
     def bgrewriteaof(self) -> CommandRequest[bool]:
-        """Tell the Redis server to rewrite the AOF file from data in memory"""
+        """
+        Ask the server to rewrite the AOF file from data in memory.
+
+        :return: ``True`` when the rewrite has been scheduled.
+        """
 
         return self.create_request(CommandName.BGREWRITEAOF, callback=SimpleStringCallback())
 
@@ -7301,8 +7314,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def bgsave(self, schedule: bool | None = None) -> CommandRequest[bool]:
         """
-        Tells the Redis server to save its data to disk.  Unlike save(),
-        this method is asynchronous and returns immediately.
+        Start a background save of the dataset to disk (non-blocking).
+
+        :param schedule: If true, schedule a save if none in progress.
+        :return: True when save has started or been scheduled.
         """
         command_arguments: CommandArgList = []
 
@@ -7364,12 +7379,18 @@ class CoreCommands(CommandMixin[AnyStr]):
         maxage: int | None = None,
     ) -> CommandRequest[int | bool]:
         """
-        Disconnects the client at :paramref:`ip_port`
+        Disconnect one or more clients by filter (ip:port, addr, type, user, etc.).
 
-        :return: ``True`` if the connection exists and has been closed
-         or the number of clients killed.
+        :param ip_port: Client address as ``ip:port`` (legacy form).
+        :param identifier: Client ID (from client list).
+        :param type_: NORMAL, MASTER, SLAVE, REPLICA, or PUBSUB.
+        :param user: Disconnect clients of the given user.
+        :param addr: Disconnect client at the given address.
+        :param laddr: Match local address.
+        :param skipme: If true, do not disconnect this connection.
+        :param maxage: Disconnect idle clients older than this many seconds.
+        :return: True if a single client was closed, or number of clients killed.
         """
-
         command_arguments: CommandArgList = []
 
         if ip_port:
@@ -7748,7 +7769,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     def dbsize(self) -> CommandRequest[int]:
-        """Returns the number of keys in the current database"""
+        """
+        Return the number of keys in the currently selected database.
+
+        :return: The number of keys.
+        """
 
         return self.create_request(CommandName.DBSIZE, callback=IntCallback())
 
@@ -7757,7 +7782,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SERVER,
     )
     def debug_object(self, key: KeyT) -> CommandRequest[dict[str, str | int]]:
-        """Returns version specific meta information about a given key"""
+        """
+        Return version-specific debugging information about a key (internal encoding, refcount, etc.).
+
+        :param key: The key name.
+        :return: A mapping of debug attributes.
+        """
 
         return self.create_request(CommandName.DEBUG_OBJECT, key, callback=DebugCallback())
 
@@ -7861,13 +7891,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         *sections: StringT,
     ) -> CommandRequest[dict[str, ResponseType]]:
         """
-        Get information and statistics about the server
+        Return server information and statistics.
 
-        The :paramref:`sections` option can be used to select a specific section(s)
-        of information.
-
+        :param sections: Optional section names (e.g. server, memory, stats); default all.
+        :return: Dict of section name to section data (parsed).
         """
-
         return self.create_request(
             CommandName.INFO,
             *sections,
@@ -7877,27 +7905,31 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.LASTSAVE, group=CommandGroup.SERVER, flags={CommandFlag.FAST})
     def lastsave(self) -> CommandRequest[datetime.datetime]:
         """
-        Get the time of the last successful save to disk
-        """
+        Return the time of the last successful background save to disk.
 
+        :return: Datetime of last save.
+        """
         return self.create_request(CommandName.LASTSAVE, callback=DateTimeCallback())
 
     @versionadded(version="3.0.0")
     @redis_command(CommandName.LATENCY_DOCTOR, group=CommandGroup.SERVER)
     def latency_doctor(self) -> CommandRequest[AnyStr]:
         """
-        Return a human readable latency analysis report.
-        """
+        Return a human-readable latency analysis report.
 
+        :return: Report string.
+        """
         return self.create_request(CommandName.LATENCY_DOCTOR, callback=AnyStrCallback[AnyStr]())
 
     @versionadded(version="3.0.0")
     @redis_command(CommandName.LATENCY_GRAPH, group=CommandGroup.SERVER)
     def latency_graph(self, event: StringT) -> CommandRequest[AnyStr]:
         """
-        Return a latency graph for the event.
-        """
+        Return an ASCII latency graph for the given event.
 
+        :param event: Event name (e.g. command name).
+        :return: Graph string.
+        """
         return self.create_request(
             CommandName.LATENCY_GRAPH, event, callback=AnyStrCallback[AnyStr]()
         )
@@ -7912,9 +7944,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, *commands: StringT
     ) -> CommandRequest[dict[AnyStr, dict[AnyStr, RedisValueT]]]:
         """
-        Return the cumulative distribution of latencies of a subset of commands or all.
-        """
+        Return the cumulative distribution of latencies for the given or all commands.
 
+        :param commands: Command names to include (empty = all).
+        :return: Mapping of command to latency distribution info.
+        """
         return self.create_request(
             CommandName.LATENCY_HISTOGRAM,
             *commands,
@@ -7930,9 +7964,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Return timestamp-latency samples for the event.
 
-        :return: The command returns a tuple where each element is a tuple
-         representing the timestamp and the latency of the event.
-
+        :param event: Event name.
+        :return: Tuple of (timestamp, latency) pairs.
         """
         command_arguments: CommandArgList = [event]
 
@@ -8077,7 +8110,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         force: bool | None = None,
         abort: bool | None = None,
     ) -> CommandRequest[bool]:
-        """Stops Redis server"""
+        """
+        Stop the Redis server (optionally save, nosave, now, force, or abort).
+
+        :param nosave_save: SAVE to persist before exit, NOSAVE to skip saving.
+        :param now: If true, skip RDB persistence and shut down immediately.
+        :param force: If true, skip syncing with replicas and shut down.
+        :param abort: If true, abort without saving.
+        :return: ``True`` on success (connection will close).
+        """
         command_arguments: CommandArgList = []
 
         if nosave_save:
@@ -8104,11 +8145,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def slaveof(self, host: StringT | None = None, port: int | None = None) -> CommandRequest[bool]:
         """
-        Sets the server to be a replicated slave of the instance identified
-        by the :paramref:`host` and :paramref:`port`.
-        If called without arguments, the instance is promoted to a master instead.
-        """
+        Make the server a replica of the instance at host and port; no args to promote to master.
 
+        :param host: Master host (or None with port None to promote to master).
+        :param port: Master port.
+        :return: True on success.
+        """
         if host is None and port is None:
             return self.create_request(
                 CommandName.SLAVEOF, b"NO", b"ONE", callback=SimpleStringCallback()
@@ -8122,8 +8164,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def slowlog_get(self, count: int | None = None) -> CommandRequest[tuple[SlowLogInfo, ...]]:
         """
-        Gets the entries from the slowlog. If :paramref:`count` is specified, get the
-        most recent :paramref:`count` items.
+        Return entries from the slow query log.
+
+        :param count: Limit to this many most recent entries (optional).
+        :return: Tuple of slowlog entry dicts (id, timestamp, duration, command, client, name).
         """
         command_arguments: CommandArgList = []
 
@@ -8136,7 +8180,11 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(CommandName.SLOWLOG_LEN, group=CommandGroup.SERVER)
     def slowlog_len(self) -> CommandRequest[int]:
-        """Gets the number of items in the slowlog"""
+        """
+        Return the number of entries currently in the slow log.
+
+        :return: The number of slow log entries.
+        """
 
         return self.create_request(CommandName.SLOWLOG_LEN, callback=IntCallback())
 
@@ -8145,7 +8193,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SERVER,
     )
     def slowlog_reset(self) -> CommandRequest[bool]:
-        """Removes all items in the slowlog"""
+        """
+        Remove all entries from the slow log.
+
+        :return: ``True`` on success.
+        """
 
         return self.create_request(CommandName.SLOWLOG_RESET, callback=SimpleStringCallback())
 
@@ -8167,9 +8219,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, host: StringT | None = None, port: int | None = None
     ) -> CommandRequest[bool]:
         """
-        Make the server a replica of another instance, or promote it as master.
-        """
+        Make the server a replica of the instance at host and port; no args to promote to master.
 
+        :param host: Master host (or None with port None to promote to master).
+        :param port: Master port.
+        :return: True on success.
+        """
         if host is None and port is None:
             return self.create_request(
                 CommandName.REPLICAOF, b"NO", b"ONE", callback=SimpleStringCallback()
@@ -8682,7 +8737,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         ),
     )
     def config_set(self, parameter_values: Mapping[MappingKeyT, ValueT]) -> CommandRequest[bool]:
-        """Sets configuration parameters to the given values"""
+        """
+        Set one or more server configuration parameters at runtime.
+
+        :param parameter_values: Mapping of parameter names to values.
+        :return: ``True`` on success.
+        """
 
         return self.create_request(
             CommandName.CONFIG_SET,
@@ -8699,7 +8759,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         ),
     )
     def config_resetstat(self) -> CommandRequest[bool]:
-        """Resets runtime statistics"""
+        """
+        Reset runtime statistics (keyspace hits/misses, commands processed, etc.).
+
+        :return: ``True`` on success.
+        """
 
         return self.create_request(CommandName.CONFIG_RESETSTAT, callback=SimpleStringCallback())
 
@@ -8794,9 +8858,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def module_unload(self, name: StringT) -> CommandRequest[bool]:
         """
-        Unload a module
-        """
+        Unload a module by name.
 
+        :param name: Module name to unload.
+        :return: True on success.
+        """
         return self.create_request(CommandName.MODULE_UNLOAD, name, callback=SimpleStringCallback())
 
     @redis_command(
@@ -8807,11 +8873,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def type(self, key: KeyT) -> CommandRequest[AnyStr | None]:
         """
-        Determine the type stored at key
+        Return the type of the value stored at key.
 
-        :return: type of :paramref:`key`, or ``None`` when :paramref:`key` does not exist.
+        :param key: The key name.
+        :return: One of string, list, set, zset, hash, stream, etc.; ``None`` if key does not exist.
         """
-
         return self.create_request(CommandName.TYPE, key, callback=OptionalAnyStrCallback[AnyStr]())
 
     @versionadded(version="5.0.0")
