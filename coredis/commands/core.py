@@ -2828,9 +2828,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def pfadd(self, key: KeyT, *elements: ValueT) -> CommandRequest[bool]:
         """
-        Adds the specified elements to the specified HyperLogLog.
+        Add the specified elements to the HyperLogLog at key.
 
-        :return: Whether atleast 1 HyperLogLog internal register was altered
+        :param key: The key name.
+        :param elements: One or more elements to add.
+        :return: ``True`` if at least one internal register was altered.
         """
         command_arguments: CommandArgList = [key]
 
@@ -2847,9 +2849,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def pfcount(self, keys: Parameters[KeyT]) -> CommandRequest[int]:
         """
-        Return the approximated cardinality of the set(s) observed by the HyperLogLog at key(s).
+        Return the approximated cardinality of the set(s) observed by the HyperLogLog(s) at key(s).
 
-        :return: The approximated number of unique elements observed via :meth:`pfadd`.
+        :param keys: One or more HyperLogLog key names.
+        :return: The approximated number of unique elements.
         """
 
         return self.create_request(CommandName.PFCOUNT, *keys, callback=IntCallback())
@@ -2861,7 +2864,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def pfmerge(self, destkey: KeyT, sourcekeys: Parameters[KeyT]) -> CommandRequest[bool]:
         """
-        Merge N different HyperLogLogs into a single one
+        Merge multiple HyperLogLogs into a single one at the destination key.
+
+        :param destkey: Destination key for the merged HyperLogLog.
+        :param sourcekeys: One or more source HyperLogLog key names.
+        :return: ``True`` on success.
         """
 
         return self.create_request(
