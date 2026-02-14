@@ -4563,12 +4563,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[tuple[AnyStr, tuple[ScoredMember, ...]] | None]:
         """
-        Remove and return members with scores in a sorted set or block until one is available
+        Pop members with lowest or highest scores from the first non-empty sorted set, or block until one is available.
 
-        :return:
-
-          - A ```None``` when no element could be popped.
-          - A tuple of (name of key, popped (member, score) pairs)
+        :param keys: One or more sorted set key names.
+        :param timeout: Block timeout in seconds (0 = indefinitely).
+        :param where: MIN (lowest scores) or MAX (highest scores).
+        :param count: Maximum number of members to pop.
+        :return: ``None`` if timeout reached; otherwise (key_name, [(member, score), ...]).
         """
         _keys: list[KeyT] = list(keys)
         command_arguments: CommandArgList = [timeout, len(_keys), *_keys, where]
@@ -4590,12 +4591,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, keys: Parameters[KeyT], timeout: int | float
     ) -> CommandRequest[tuple[AnyStr, AnyStr, float] | None]:
         """
-        Remove and return the member with the highest score from one or more sorted sets,
-        or block until one is available.
+        Pop the member with the highest score from the first non-empty sorted set, or block until one is available.
 
-        :return: A triplet with the first element being the name of the key
-         where a member was popped, the second element is the popped member itself,
-         and the third element is the score of the popped element.
+        :param keys: One or more sorted set key names.
+        :param timeout: Block timeout in seconds (0 = indefinitely).
+        :return: ``None`` if timeout reached; otherwise (key_name, member, score).
         """
         command_arguments: CommandArgList = [*keys, timeout]
 
@@ -4613,12 +4613,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, keys: Parameters[KeyT], timeout: int | float
     ) -> CommandRequest[tuple[AnyStr, AnyStr, float] | None]:
         """
-        Remove and return the member with the lowest score from one or more sorted sets,
-        or block until one is available
+        Pop the member with the lowest score from the first non-empty sorted set, or block until one is available.
 
-        :return: A triplet with the first element being the name of the key
-         where a member was popped, the second element is the popped member itself,
-         and the third element is the score of the popped element.
+        :param keys: One or more sorted set key names.
+        :param timeout: Block timeout in seconds (0 = indefinitely).
+        :return: ``None`` if timeout reached; otherwise (key_name, member, score).
         """
 
         command_arguments: CommandArgList = [*keys, timeout]
@@ -4643,18 +4642,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         increment: bool | None = None,
     ) -> CommandRequest[int | float]:
         """
-        Add one or more members to a sorted set, or update its score if it already exists
+        Add one or more members to a sorted set, or update their scores.
 
-        :return:
-
-         - When used without optional arguments, the number of elements added to the sorted set
-           (excluding score updates).
-         - If the ``change`` option is specified, the number of elements that were changed
-           (added or updated).
-         - If :paramref:`condition` is specified, the new score of :paramref:`member`
-           (a double precision floating point number) represented as string
-         - ``None`` if the operation is aborted
-
+        :param key: The key name.
+        :param member_scores: Mapping of member names to scores.
+        :param condition: NX (only add new) or XX (only update existing).
+        :param comparison: GT (only if new score greater) or LT (only if new score less).
+        :param change: If true, return the number of elements changed (added or updated).
+        :param increment: If true, add increment to existing score (like zincrby); return new score.
+        :return: Number of elements added; or number changed if change; or new score if increment; or ``None`` if aborted.
         """
         command_arguments: CommandArgList = []
 
@@ -4684,11 +4680,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def zcard(self, key: KeyT) -> CommandRequest[int]:
         """
-        Get the number of members in a sorted set
+        Return the number of members in the sorted set.
 
-        :return: the cardinality (number of elements) of the sorted set, or ``0``
-         if the :paramref:`key` does not exist
-
+        :param key: The key name.
+        :return: The cardinality (0 if key does not exist).
         """
 
         return self.create_request(CommandName.ZCARD, key, callback=IntCallback())
@@ -4705,9 +4700,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         max_: ValueT,
     ) -> CommandRequest[int]:
         """
-        Count the members in a sorted set with scores within the given values
+        Return the number of members in the sorted set with scores between min and max (inclusive).
 
-        :return: the number of elements in the specified score range.
+        :param key: The key name.
+        :param min_: Minimum score (inclusive).
+        :param max_: Maximum score (inclusive).
+        :return: The number of members in the score range.
         """
 
         return self.create_request(CommandName.ZCOUNT, key, min_, max_, callback=IntCallback())
@@ -4723,10 +4721,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, keys: Parameters[KeyT], withscores: bool | None = None
     ) -> CommandRequest[tuple[AnyStr | ScoredMember, ...]]:
         """
-        Subtract multiple sorted sets
+        Return the difference of the first sorted set and all successive sets (members in first but not in others).
 
-        :return: the result of the difference (optionally with their scores, in case
-         the ``withscores`` option is given).
+        :param keys: One or more sorted set key names (first is the base).
+        :param withscores: If true, include scores in the result.
+        :return: Members (and optionally scores) in the difference.
         """
         command_arguments: CommandArgList = [len(list(keys)), *keys]
 
@@ -4747,9 +4746,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def zdiffstore(self, keys: Parameters[KeyT], destination: KeyT) -> CommandRequest[int]:
         """
-        Subtract multiple sorted sets and store the resulting sorted set in a new key
+        Compute sorted set difference and store the result in destination.
 
-        :return: the number of elements in the resulting sorted set at :paramref:`destination`.
+        :param keys: One or more sorted set key names (first is the base).
+        :param destination: Key where the result is stored.
+        :return: The number of elements in the resulting sorted set.
         """
         command_arguments: CommandArgList = [len(list(keys)), *keys]
 
@@ -4767,9 +4768,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def zincrby(self, key: KeyT, member: ValueT, increment: int) -> CommandRequest[float]:
         """
-        Increment the score of a member in a sorted set
+        Increment the score of a member in the sorted set (creates the member with score 0 if missing).
 
-        :return: the new score of :paramref:`member`
+        :param key: The key name.
+        :param member: The member to update.
+        :param increment: The amount to add to the score (can be negative).
+        :return: The new score of the member.
         """
 
         return self.create_request(
@@ -4795,12 +4799,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         withscores: bool | None = None,
     ) -> CommandRequest[tuple[AnyStr | ScoredMember, ...]]:
         """
+        Return the intersection of multiple sorted sets (aggregating scores by weights and aggregate rule).
 
-        Intersect multiple sorted sets
-
-        :return: the result of intersection (optionally with their scores, in case
-         the ``withscores`` option is given).
-
+        :param keys: One or more sorted set key names.
+        :param weights: Optional multiplier for each key's scores.
+        :param aggregate: How to combine scores: SUM, MIN, or MAX.
+        :param withscores: If true, include scores in the result.
+        :return: Members (and optionally scores) in the intersection.
         """
 
         return self._zaggregate(
@@ -4817,9 +4822,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         aggregate: Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM] | None = None,
     ) -> CommandRequest[int]:
         """
-        Intersect multiple sorted sets and store the resulting sorted set in a new key
+        Compute sorted set intersection and store the result in destination.
 
-        :return: the number of elements in the resulting sorted set at :paramref:`destination`.
+        :param keys: One or more sorted set key names.
+        :param destination: Key where the result is stored.
+        :param weights: Optional multiplier for each key's scores.
+        :param aggregate: How to combine scores: SUM, MIN, or MAX.
+        :return: The number of elements in the resulting sorted set.
         """
 
         return self._zaggregate(
@@ -4840,10 +4849,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def zintercard(self, keys: Parameters[KeyT], limit: int | None = None) -> CommandRequest[int]:
         """
-        Intersect multiple sorted sets and return the cardinality of the result
+        Return the cardinality of the intersection of multiple sorted sets.
 
+        :param keys: One or more sorted set key names.
+        :param limit: If set, limit the result to this maximum (approximate).
         :return: The number of elements in the resulting intersection.
-
         """
         _keys: list[KeyT] = list(keys)
         command_arguments: CommandArgList = [len(_keys), *_keys]
@@ -4863,9 +4873,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def zlexcount(self, key: KeyT, min_: ValueT, max_: ValueT) -> CommandRequest[int]:
         """
-        Count the number of members in a sorted set between a given lexicographical range
+        Return the number of members in the sorted set between min and max (lexicographic order).
 
-        :return: the number of elements in the specified score range.
+        :param key: The key name.
+        :param min_: Minimum lex value (inclusive); use - or + for unbounded.
+        :param max_: Maximum lex value (inclusive); use - or + for unbounded.
+        :return: The number of members in the range.
         """
 
         return self.create_request(CommandName.ZLEXCOUNT, key, min_, max_, callback=IntCallback())
@@ -4884,9 +4897,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[tuple[AnyStr, tuple[ScoredMember, ...]] | None]:
         """
-        Remove and return members with scores in a sorted set
+        Pop members with lowest or highest scores from the first non-empty sorted set.
 
-        :return: A tuple of (name of key, popped (member, score) pairs)
+        :param keys: One or more sorted set key names.
+        :param where: MIN (lowest scores) or MAX (highest scores).
+        :param count: Maximum number of members to pop.
+        :return: ``None`` if all sets are empty; otherwise (key_name, [(member, score), ...]).
         """
         _keys: list[KeyT] = list(keys)
         command_arguments: CommandArgList = [len(_keys), *_keys, where]
@@ -4910,11 +4926,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, members: Parameters[ValueT]
     ) -> CommandRequest[tuple[float | None, ...]]:
         """
-        Get the score associated with the given members in a sorted set
+        Return the scores associated with the given members in the sorted set.
 
-        :return: scores or ``None`` associated with the specified :paramref:`members`
-         values (a double precision floating point number), represented as strings
-
+        :param key: The key name.
+        :param members: One or more member names.
+        :return: A tuple of scores in the same order as members; ``None`` for missing members.
         """
 
         if not members:
@@ -4930,9 +4946,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, count: int | None = None
     ) -> CommandRequest[ScoredMember | tuple[ScoredMember, ...] | None]:
         """
-        Remove and return members with the highest scores in a sorted set
+        Remove and return the member(s) with the highest scores in the sorted set.
 
-        :return: popped elements and scores.
+        :param key: The key name.
+        :param count: If set, pop up to this many members (returns a tuple of (member, score)).
+        :return: A single (member, score) pair, or a tuple of pairs if count is set; ``None`` if key is empty.
         """
         args = (count is not None) and [count] or []
         return self.create_request(
@@ -4976,17 +4994,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         withscores: bool | None = None,
     ) -> CommandRequest[AnyStr | tuple[AnyStr, ...] | tuple[ScoredMember, ...] | None]:
         """
-        Get one or multiple random elements from a sorted set
+        Return one or more random members from the sorted set (without removing).
 
-
-        :return: without :paramref:`count`, the command returns a
-         randomly selected element, or ``None`` when :paramref:`key` does not exist.
-
-         If :paramref:`count` is passed the command returns the elements,
-         or an empty tuple when :paramref:`key` does not exist.
-
-         If :paramref:`withscores` argument is used, the return is a list elements
-         and their scores from the sorted set.
+        :param key: The key name.
+        :param count: If set, return up to this many distinct members (negative allows duplicates).
+        :param withscores: If true, return (member, score) pairs.
+        :return: A single member, a tuple of members, or (member, score) tuples; ``None`` or empty if key is empty.
         """
         command_arguments: CommandArgList = [key]
         options = {}
@@ -5056,11 +5069,17 @@ class CoreCommands(CommandMixin[AnyStr]):
         withscores: bool | None = None,
     ) -> CommandRequest[tuple[AnyStr | ScoredMember, ...]]:
         """
+        Return a range of members in the sorted set by rank, score, or lexicographic order.
 
-        Return a range of members in a sorted set
-
-        :return: elements in the specified range (optionally with their scores, in case
-         :paramref:`withscores` is given).
+        :param key: The key name.
+        :param min_: Minimum rank, score, or lex (depending on sortby).
+        :param max_: Maximum rank, score, or lex (depending on sortby).
+        :param sortby: BYSCORE or BYLEX.
+        :param rev: If true, reverse the order (high to low).
+        :param offset: Skip this many elements (use with count).
+        :param count: Return this many elements (use with offset).
+        :param withscores: If true, include scores in the result.
+        :return: Members (and optionally scores) in the specified range.
         """
 
         return self._zrange(
@@ -5094,10 +5113,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[tuple[AnyStr, ...]]:
         """
+        Return a range of members in a sorted set by lexicographical range.
 
-        Return a range of members in a sorted set, by lexicographical range
-
-        :return: elements in the specified score range.
+        :param key: The key name.
+        :param min_: Minimum lex value (inclusive).
+        :param max_: Maximum lex value (inclusive).
+        :param offset: Skip this many members (use with count).
+        :param count: Return at most this many members (use with offset).
+        :return: Tuple of members in the specified lex range.
         """
 
         command_arguments: CommandArgList = [key, min_, max_]
@@ -5130,10 +5153,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[tuple[AnyStr | ScoredMember, ...]]:
         """
+        Return a range of members in a sorted set by score.
 
-        Return a range of members in a sorted set, by score
-
-        :return: elements in the specified score range (optionally with their scores).
+        :param key: The key name.
+        :param min_: Minimum score (inclusive).
+        :param max_: Maximum score (inclusive).
+        :param withscores: If true, return (member, score) pairs.
+        :param offset: Skip this many members (use with count).
+        :param count: Return at most this many members (use with offset).
+        :return: Tuple of members, or (member, score) tuples if withscores.
         """
 
         command_arguments: CommandArgList = [key, min_, max_]
@@ -5169,9 +5197,17 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[int]:
         """
-        Store a range of members from sorted set into another key
+        Store a range of members from a sorted set into another key.
 
-        :return: the number of elements in the resulting sorted set
+        :param dst: Destination key for the stored range.
+        :param src: Source sorted set key.
+        :param min_: Start of range (score or lex depending on sortby).
+        :param max_: End of range (score or lex depending on sortby).
+        :param sortby: BYSCORE or BYLEX.
+        :param rev: If true, reverse order.
+        :param offset: Skip this many members (use with count).
+        :param count: Store at most this many members (use with offset).
+        :return: Number of elements in the resulting sorted set.
         """
 
         return self._zrange(
@@ -5198,10 +5234,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, member: ValueT, withscore: bool | None = None
     ) -> CommandRequest[int | tuple[int, float] | None]:
         """
-        Determine the index of a member in a sorted set
+        Return the rank (index) of the member in the sorted set (lowest score has rank 0).
 
-        :return: the rank of :paramref:`member`. If :paramref:`withscore` is `True`
-         the return is a tuple of (rank, score).
+        :param key: The key name.
+        :param member: The member to look up.
+        :param withscore: If true, return (rank, score).
+        :return: The rank, or (rank, score) if withscore; ``None`` if member is not in the set.
         """
         command_arguments: CommandArgList = [key, member]
 
@@ -5222,10 +5260,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def zrem(self, key: KeyT, members: Parameters[ValueT]) -> CommandRequest[int]:
         """
-        Remove one or more members from a sorted set
+        Remove one or more members from the sorted set.
 
-        :return: The number of members removed from the sorted set, not including non existing
-         members.
+        :param key: The key name.
+        :param members: One or more member names to remove.
+        :return: The number of members that were removed.
         """
 
         return self.create_request(CommandName.ZREM, key, *members, callback=IntCallback())
@@ -5233,9 +5272,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.ZREMRANGEBYLEX, group=CommandGroup.SORTED_SET)
     def zremrangebylex(self, key: KeyT, min_: ValueT, max_: ValueT) -> CommandRequest[int]:
         """
-        Remove all members in a sorted set between the given lexicographical range
+        Remove all members in the sorted set between min and max (lexicographic order).
 
-        :return: the number of elements removed.
+        :param key: The key name.
+        :param min_: Minimum lex value (inclusive).
+        :param max_: Maximum lex value (inclusive).
+        :return: The number of members removed.
         """
 
         return self.create_request(
@@ -5245,9 +5287,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.ZREMRANGEBYRANK, group=CommandGroup.SORTED_SET)
     def zremrangebyrank(self, key: KeyT, start: int, stop: int) -> CommandRequest[int]:
         """
-        Remove all members in a sorted set within the given indexes
+        Remove all members in the sorted set with rank between start and stop (inclusive).
 
-        :return: the number of elements removed.
+        :param key: The key name.
+        :param start: Start rank (0-based).
+        :param stop: Stop rank (inclusive).
+        :return: The number of members removed.
         """
 
         return self.create_request(
@@ -5259,9 +5304,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, min_: int | float, max_: int | float
     ) -> CommandRequest[int]:
         """
-        Remove all members in a sorted set within the given scores
+        Remove all members in the sorted set with scores between min and max (inclusive).
 
-        :return: the number of elements removed.
+        :param key: The key name.
+        :param min_: Minimum score (inclusive).
+        :param max_: Maximum score (inclusive).
+        :return: The number of members removed.
         """
 
         return self.create_request(
@@ -5284,11 +5332,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         withscores: bool | None = None,
     ) -> CommandRequest[tuple[AnyStr | ScoredMember, ...]]:
         """
+        Return a range of members by index, highest scores first (deprecated: use zrange with rev).
 
-        Return a range of members in a sorted set, by index, with scores ordered from
-        high to low
-
-        :return: elements in the specified range (optionally with their scores).
+        :param key: The key name.
+        :param start: Start index (0-based).
+        :param stop: Stop index (inclusive).
+        :param withscores: If true, include scores in the result.
+        :return: Members (and optionally scores) in the specified range.
         """
         command_arguments: CommandArgList = [key, start, stop]
 
@@ -5319,11 +5369,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[tuple[AnyStr, ...]]:
         """
+        Return a range of members in a sorted set by lexicographical range, high to low.
 
-        Return a range of members in a sorted set, by lexicographical range, ordered from
-        higher to lower strings.
-
-        :return: elements in the specified score range
+        :param key: The key name.
+        :param max_: Maximum lex value (inclusive).
+        :param min_: Minimum lex value (inclusive).
+        :param offset: Skip this many members (use with count).
+        :param count: Return at most this many members (use with offset).
+        :return: Tuple of members in the specified lex range.
         """
 
         command_arguments: CommandArgList = [key, max_, min_]
@@ -5356,10 +5409,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[tuple[AnyStr | ScoredMember, ...]]:
         """
+        Return a range of members in a sorted set by score, high to low.
 
-        Return a range of members in a sorted set, by score, with scores ordered from high to low
-
-        :return: elements in the specified score range (optionally with their scores)
+        :param key: The key name.
+        :param max_: Maximum score (inclusive).
+        :param min_: Minimum score (inclusive).
+        :param withscores: If true, return (member, score) pairs.
+        :param offset: Skip this many members (use with count).
+        :param count: Return at most this many members (use with offset).
+        :return: Tuple of members, or (member, score) tuples if withscores.
         """
 
         command_arguments: CommandArgList = [key, max_, min_]
@@ -5387,10 +5445,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, member: ValueT, withscore: bool | None = None
     ) -> CommandRequest[int | tuple[int, float] | None]:
         """
-        Determine the index of a member in a sorted set, with scores ordered from high to low
+        Return the rank of the member when the set is ordered high to low (deprecated: use zrange with rev).
 
-        :return: the rank of :paramref:`member`. If :paramref:`withscore` is `True`
-         the return is a tuple of (rank, score).
+        :param key: The key name.
+        :param member: The member to look up.
+        :param withscore: If true, return (rank, score).
+        :return: The rank, or (rank, score) if withscore; ``None`` if member is not in the set.
         """
         command_arguments: CommandArgList = [key, member]
         if withscore:
@@ -5414,8 +5474,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[tuple[int, tuple[ScoredMember, ...]]]:
         """
-        Incrementally iterate sorted sets elements and associated scores
+        Incrementally iterate over members and scores in the sorted set using a cursor.
 
+        :param key: The key name.
+        :param cursor: Cursor for iteration (0 to start); use returned cursor for next page.
+        :param match: Optional glob pattern to filter members.
+        :param count: Hint for minimum number of entries per iteration.
+        :return: A tuple of (next_cursor, (member, score), ...); next_cursor 0 means done.
         """
         command_arguments: CommandArgList = [key, cursor or "0"]
 
@@ -5437,10 +5502,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def zscore(self, key: KeyT, member: ValueT) -> CommandRequest[float | None]:
         """
-        Get the score associated with the given member in a sorted set
+        Return the score associated with the member in the sorted set.
 
-        :return: the score of :paramref:`member` (a double precision floating point number),
-         or ``None`` if the member doesn't exist.
+        :param key: The key name.
+        :param member: The member name.
+        :return: The score, or ``None`` if the member is not in the set.
         """
 
         return self.create_request(
@@ -5462,11 +5528,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         withscores: bool | None = None,
     ) -> CommandRequest[tuple[AnyStr | ScoredMember, ...]]:
         """
+        Return the union of multiple sorted sets (aggregating scores by weights and aggregate rule).
 
-        Add multiple sorted sets
-
-        :return: the result of union (optionally with their scores, in case
-         :paramref:`withscores` is given).
+        :param keys: One or more sorted set key names.
+        :param weights: Optional multiplier for each key's scores.
+        :param aggregate: How to combine scores: SUM, MIN, or MAX.
+        :param withscores: If true, include scores in the result.
+        :return: Members (and optionally scores) in the union.
         """
 
         return self._zaggregate(
@@ -5487,9 +5555,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         aggregate: Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX] | None = None,
     ) -> CommandRequest[int]:
         """
-        Add multiple sorted sets and store the resulting sorted set in a new key
+        Compute the union of sorted sets and store the result at destination.
 
-        :return: the number of elements in the resulting sorted set at :paramref:`destination`.
+        :param keys: One or more sorted set key names.
+        :param destination: Key where the result sorted set is stored.
+        :param weights: Optional multiplier for each key's scores.
+        :param aggregate: How to combine scores: SUM, MIN, or MAX.
+        :return: Number of elements in the resulting sorted set.
         """
 
         return self._zaggregate(
