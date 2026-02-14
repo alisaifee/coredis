@@ -5757,9 +5757,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.KEEPREF, PureToken.DELREF, PureToken.ACKED] | None = None,
     ) -> CommandRequest[tuple[int, ...]]:
         """
-        Acknowledges and conditionally deletes one or multiple entries (messages) for a stream
-        consumer group at the specified key.
+        Acknowledge and optionally delete one or more stream entries for a consumer group.
 
+        :param key: The stream key.
+        :param group: Consumer group name.
+        :param identifiers: Entry IDs to acknowledge and optionally delete.
+        :param condition: KEEPREF, DELREF, or ACKED (affects reference counting).
+        :return: Tuple of 1 for each entry that was acked/deleted, 0 for others.
         """
         command_arguments: CommandArgList = [key, group]
         if condition is not None:
@@ -5800,14 +5804,20 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.KEEPREF, PureToken.DELREF, PureToken.ACKED] | None = None,
     ) -> CommandRequest[AnyStr | None]:
         """
-        Appends a new entry to a stream
+        Append a new entry to a stream.
 
-        :return: The identifier of the added entry. The identifier is the one auto-generated
-         if ``*`` is passed as :paramref:`identifier`, otherwise it justs returns
-         the same identifier specified
-
-         Returns ``None`` when used with :paramref:`nomkstream` and the key doesn't exist.
-
+        :param key: The stream key.
+        :param field_values: Field names and values for the entry.
+        :param identifier: Entry ID, or ``*`` for auto-generated.
+        :param nomkstream: If true, do not create the stream if it does not exist.
+        :param idmpauto: Auto ID mode (e.g. node-id).
+        :param idmp: Manual ID range (min, max).
+        :param trim_strategy: MAXLEN or MINID for trimming.
+        :param threshold: Limit for trim (max length or min id).
+        :param trim_operator: EQUAL or APPROXIMATELY for trim.
+        :param limit: Max entries to evict per trim (optional).
+        :param condition: KEEPREF, DELREF, or ACKED for trim.
+        :return: The entry ID (auto or specified), or ``None`` if nomkstream and key does not exist.
         """
         command_arguments: CommandArgList = []
 
@@ -5853,9 +5863,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def xlen(self, key: KeyT) -> CommandRequest[int]:
         """
-        Returns the number of entries inside a stream
-        """
+        Return the number of entries in a stream.
 
+        :param key: The stream key.
+        :return: Number of entries in the stream.
+        """
         return self.create_request(CommandName.XLEN, key, callback=IntCallback())
 
     @redis_command(
@@ -5871,9 +5883,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[tuple[StreamEntry, ...]]:
         """
-        Return a range of elements in a stream, with IDs matching the specified IDs interval
-        """
+        Return a range of stream entries by ID interval.
 
+        :param key: The stream key.
+        :param start: Start ID (inclusive); ``-`` for beginning.
+        :param end: End ID (inclusive); ``+`` for end.
+        :param count: Limit number of entries returned.
+        :return: Tuple of stream entries in the range.
+        """
         command_arguments: CommandArgList = [
             start if start is not None else "-",
             end if end is not None else "+",
@@ -5900,8 +5917,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[tuple[StreamEntry, ...]]:
         """
-        Return a range of elements in a stream, with IDs matching the specified
-        IDs interval, in reverse order (from greater to smaller IDs) compared to XRANGE
+        Return a range of stream entries by ID interval in reverse order.
+
+        :param key: The stream key.
+        :param end: End ID (inclusive); ``+`` for end.
+        :param start: Start ID (inclusive); ``-`` for beginning.
+        :param count: Limit number of entries returned.
+        :return: Tuple of stream entries in the range, high to low IDs.
         """
         command_arguments: CommandArgList = [
             end if end is not None else "+",
@@ -5931,14 +5953,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         block: int | datetime.timedelta | None = None,
     ) -> CommandRequest[dict[AnyStr, tuple[StreamEntry, ...]] | None]:
         """
-        Reads entries from :paramref:`stream` with IDs greater than those provided
-        in the mapping.
+        Read new entries from one or more streams with IDs greater than the given IDs.
 
-        :return: Mapping of streams to stream entries.
-         Field and values are guaranteed to be reported in the same order they were
-         added by :meth:`xadd`.
-
-         When :paramref:`block` is used and the timeout is exceeded, ``None`` is returned.
+        :param streams: Mapping of stream key to last-seen ID (use ``$`` for new only).
+        :param count: Max entries to return per stream.
+        :param block: Block up to this many milliseconds (or timedelta) for new data.
+        :return: Mapping of stream key to tuple of entries; ``None`` if block timeout is exceeded.
         """
         command_arguments: CommandArgList = []
 
@@ -5974,14 +5994,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         noack: bool | None = None,
     ) -> CommandRequest[dict[AnyStr, tuple[StreamEntry, ...]] | None]:
         """
-        Reads entries from :paramref:`stream` with IDs greater than those provided in the mapping,
-        owned by the consumer group identified by :paramref:`group` & :paramref:`consumer`.
+        Read entries from streams as a consumer in a group, with IDs greater than the given IDs.
 
-        :return: Mapping of streams to stream entries.
-         Field and values are guaranteed to be reported in the same order they were
-         added by :meth:`xadd`.
-
-         When :paramref:`block` is used and the timeout is exceeded, ``None`` is returned.
+        :param group: Consumer group name.
+        :param consumer: Consumer name.
+        :param streams: Mapping of stream key to last-seen ID (use ``>`` for new for this consumer).
+        :param count: Max entries to return per stream.
+        :param block: Block up to this many milliseconds (or timedelta) for new data.
+        :param noack: If true, do not add messages to PEL (no XACK needed).
+        :return: Mapping of stream key to tuple of entries; ``None`` if block timeout is exceeded.
         """
         command_arguments: CommandArgList = [PrefixToken.GROUP, group, consumer]
 
@@ -6027,8 +6048,16 @@ class CoreCommands(CommandMixin[AnyStr]):
         consumer: StringT | None = None,
     ) -> CommandRequest[tuple[StreamPendingExt, ...] | StreamPending]:
         """
-        Return information and entries from a stream consumer group pending
-        entries list, that are messages fetched but never acknowledged.
+        Return information about pending entries (fetched but not acknowledged) for a consumer group.
+
+        :param key: The stream key.
+        :param group: Consumer group name.
+        :param start: Start ID for range (use with end and count).
+        :param end: End ID for range.
+        :param count: Max entries to return.
+        :param idle: Filter by min idle time in milliseconds.
+        :param consumer: Filter by consumer name.
+        :return: Summary (total, min/max ids, consumers) or tuple of pending entry details.
         """
         command_arguments: CommandArgList = [key, group]
 
@@ -6066,7 +6095,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.KEEPREF, PureToken.DELREF, PureToken.ACKED] | None = None,
     ) -> CommandRequest[int]:
         """
-        Trims the stream by evicting older entries
+        Trim the stream by evicting older entries.
+
+        :param key: The stream key.
+        :param trim_strategy: MAXLEN (by length) or MINID (by minimum ID).
+        :param threshold: Max length or minimum ID to keep.
+        :param trim_operator: EQUAL or APPROXIMATELY for trim.
+        :param limit: Max entries to evict per call (optional).
+        :param condition: KEEPREF, DELREF, or ACKED for eviction.
+        :return: Number of entries removed.
         """
         command_arguments: CommandArgList = [trim_strategy]
 
@@ -6092,9 +6129,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def xdel(self, key: KeyT, identifiers: Parameters[ValueT]) -> CommandRequest[int]:
         """
-        Removes the specified entries from a stream, and returns the number of entries deleted
-        """
+        Remove the specified entries from a stream.
 
+        :param key: The stream key.
+        :param identifiers: Entry IDs to delete.
+        :return: Number of entries deleted.
+        """
         return self.create_request(CommandName.XDEL, key, *identifiers, callback=IntCallback())
 
     @versionadded(version="5.2.0")
@@ -6112,7 +6152,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.KEEPREF, PureToken.DELREF, PureToken.ACKED] | None = None,
     ) -> CommandRequest[tuple[int, ...]]:
         """
-        Deletes one or multiple entries from the stream at the specified key.
+        Delete one or more entries from the stream with optional condition.
+
+        :param key: The stream key.
+        :param identifiers: Entry IDs to delete.
+        :param condition: KEEPREF, DELREF, or ACKED (affects reference counting).
+        :return: Tuple of 1 for each deleted entry, 0 for skipped.
         """
         command_arguments: CommandArgList = [key]
         if condition is not None:
@@ -6132,10 +6177,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, groupname: StringT
     ) -> CommandRequest[tuple[dict[AnyStr, AnyStr], ...]]:
         """
-        Get list of all consumers that belong to :paramref:`groupname` of the
-        stream stored at :paramref:`key`
-        """
+        Return all consumers in a consumer group for the stream.
 
+        :param key: The stream key.
+        :param groupname: Consumer group name.
+        :return: Tuple of consumer info dicts (name, pending, idle, etc.).
+        """
         return self.create_request(
             CommandName.XINFO_CONSUMERS,
             key,
@@ -6150,9 +6197,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def xinfo_groups(self, key: KeyT) -> CommandRequest[tuple[dict[AnyStr, AnyStr], ...]]:
         """
-        Get list of all consumers groups of the stream stored at :paramref:`key`
-        """
+        Return all consumer groups for the stream.
 
+        :param key: The stream key.
+        :return: Tuple of group info dicts (name, consumers, pending, last-delivered-id, etc.).
+        """
         return self.create_request(CommandName.XINFO_GROUPS, key, callback=XInfoCallback[AnyStr]())
 
     @mutually_inclusive_parameters("count", leaders=["full"])
@@ -6165,11 +6214,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, full: bool | None = None, count: int | None = None
     ) -> CommandRequest[StreamInfo]:
         """
-        Get information about the stream stored at :paramref:`key`
+        Return information about the stream.
 
-        :param full: If specified the return will contained extended information
-         about the stream ( see: :class:`coredis.response.types.StreamInfo` ).
-        :param count: restrict the number of `entries` returned when using :paramref:`full`
+        :param key: The stream key.
+        :param full: If true, include extended info (see :class:`coredis.response.types.StreamInfo`).
+        :param count: When full is true, limit number of entries in the result.
+        :return: Stream info (length, groups, first/last entry, etc.; entries if full).
         """
         command_arguments: CommandArgList = []
 
@@ -6207,8 +6257,20 @@ class CoreCommands(CommandMixin[AnyStr]):
         lastid: ValueT | None = None,
     ) -> CommandRequest[tuple[AnyStr, ...] | tuple[StreamEntry, ...]]:
         """
-        Changes (or acquires) ownership of a message in a consumer group, as
-        if the message was delivered to the specified consumer.
+        Claim (or acquire) ownership of pending messages for a consumer in a group.
+
+        :param key: The stream key.
+        :param group: Consumer group name.
+        :param consumer: Consumer name to assign messages to.
+        :param min_idle_time: Only claim entries idle at least this long (ms or timedelta).
+        :param identifiers: Entry IDs to claim.
+        :param idle: Set idle time for claimed entries (ms or timedelta).
+        :param time: Set last-delivery time for claimed entries.
+        :param retrycount: Set retry count for claimed entries.
+        :param force: If true, claim even if another consumer has them.
+        :param justid: If true, return only entry IDs.
+        :param lastid: Optional last ID for the consumer (streaming).
+        :return: Tuple of claimed entry IDs, or tuple of stream entries (unless justid).
         """
         command_arguments: CommandArgList = [
             key,
@@ -6255,7 +6317,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         entriesread: int | None = None,
     ) -> CommandRequest[bool]:
         """
-        Create a consumer group.
+        Create a consumer group for the stream.
+
+        :param key: The stream key.
+        :param groupname: Name of the consumer group.
+        :param identifier: Start reading from this ID (e.g. ``0`` or ``$``); default new entries.
+        :param mkstream: If true, create the stream if it does not exist.
+        :param entriesread: Optional entries-read value for the group.
+        :return: True on success.
         """
         command_arguments: CommandArgList = [
             key,
@@ -6287,7 +6356,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Create a consumer in a consumer group.
 
-        :return: whether the consumer was created
+        :param key: The stream key.
+        :param groupname: Consumer group name.
+        :param consumername: Name of the consumer to create.
+        :return: True if the consumer was created, False if it already existed.
         """
         command_arguments: CommandArgList = [key, groupname, consumername]
 
@@ -6311,9 +6383,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         entriesread: int | None = None,
     ) -> CommandRequest[bool]:
         """
-        Set a consumer group to an arbitrary last delivered ID value.
-        """
+        Set the consumer group's last-delivered ID (e.g. to reprocess or skip).
 
+        :param key: The stream key.
+        :param groupname: Consumer group name.
+        :param identifier: New last-delivered ID (e.g. ``0`` or ``$``).
+        :param entriesread: Optional entries-read value.
+        :return: True on success.
+        """
         command_arguments: CommandArgList = [
             key,
             groupname,
@@ -6334,9 +6411,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Destroy a consumer group.
 
-        :return: The number of destroyed consumer groups
+        :param key: The stream key.
+        :param groupname: Consumer group name.
+        :return: Number of groups destroyed (1 or 0).
         """
-
         return self.create_request(
             CommandName.XGROUP_DESTROY, key, groupname, callback=IntCallback()
         )
@@ -6349,9 +6427,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Delete a consumer from a consumer group.
 
-        :return: The number of pending messages that the consumer had before it was deleted
+        :param key: The stream key.
+        :param groupname: Consumer group name.
+        :param consumername: Consumer to remove.
+        :return: Number of pending messages the consumer had before deletion.
         """
-
         return self.create_request(
             CommandName.XGROUP_DELCONSUMER,
             key,
@@ -6381,12 +6461,17 @@ class CoreCommands(CommandMixin[AnyStr]):
         | tuple[AnyStr, tuple[StreamEntry, ...], tuple[AnyStr, ...]]
     ]:
         """
-        Changes (or acquires) ownership of messages in a consumer group, as if the messages were
-        delivered to the specified consumer.
+        Transfer ownership of pending stream entries that match
+        the specified criteria to the consumer group specified.
 
-        :return: A dictionary with keys as stream identifiers and values containing
-         all the successfully claimed messages in the same format as :meth:`xrange`
-
+        :param key: The stream key.
+        :param group: Consumer group name.
+        :param consumer: Consumer name to assign messages to.
+        :param min_idle_time: Only claim entries idle at least this long (ms or timedelta).
+        :param start: Start scanning from this ID (e.g. ``0-0``).
+        :param count: Max number of entries to claim per call.
+        :param justid: If true, return only entry IDs.
+        :return: k(next_start_id, claimed_entries) or (next_start_id, claimed_entries, deleted_ids).
         """
         command_arguments: CommandArgList = [
             key,
@@ -6421,7 +6506,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         idmp_maxsize: int | None = None,
     ) -> CommandRequest[bool]:
         """
-        Sets the IDMP (Idempotent Message Processing) configuration parameters for a stream.
+        Set IDMP (Idempotent Message Processing) configuration for a stream.
+
+        :param key: The stream key.
+        :param idmp_duration: Duration for idempotency window (seconds or timedelta).
+        :param idmp_maxsize: Max size for idempotency tracking.
+        :return: True on success.
         """
         command_arguments: CommandArgList = [key]
         if idmp_duration is not None:
