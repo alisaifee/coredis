@@ -9288,6 +9288,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, start: StringT, end: StringT, count: int | None = None
     ) -> CommandRequest[tuple[AnyStr, ...]]:
         """
+        Retreives all elements inside a vector set (optionally, in small
+        batches with the use of :paramref:`count`)
+
         :param key: The key containing the vector set
         :param start: The starting point of the lexicographical range
         :param end: The ending point of the lexicographical range.
