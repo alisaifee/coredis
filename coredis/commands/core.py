@@ -673,8 +673,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param ifne: Set only if current value does not equal this value.
         :param ifdeq: Set only if current hash digest equals this value.
         :param ifdne: Set only if current hash digest does not equal this value.
-        :return: ``True``/``False`` for set. If :paramref:`get`` is ``True`` the previous value
-         or ``None`` if the key didn't exist.
+        :return: ``True``/``False`` if the set operation succeeded unless :paramref:`get` is
+         ``True``, in which case the previous value or ``None`` if the key didn't exist.
         """
         command_arguments: CommandArgList = [key, value]
 
