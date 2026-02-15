@@ -171,9 +171,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.APPEND, group=CommandGroup.STRING, flags={CommandFlag.FAST})
     def append(self, key: KeyT, value: ValueT) -> CommandRequest[int]:
         """
-        Append a value to a key
+        Append a value to a key.
 
-        :return: the length of the string after the append operation.
+        :param key: The key name.
+        :param value: The value to append.
+        :return: The length of the string after the append operation.
         """
 
         return self.create_request(CommandName.APPEND, key, value, callback=IntCallback())
@@ -181,9 +183,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.DECR, group=CommandGroup.STRING, flags={CommandFlag.FAST})
     def decr(self, key: KeyT) -> CommandRequest[int]:
         """
-        Decrement the integer value of a key by one
+        Decrement the integer value of a key by one.
 
-        :return: the value of :paramref:`key` after the decrement
+        :param key: The key name.
+        :return: The value of the key after the decrement.
         """
 
         return self.decrby(key, 1)
@@ -191,9 +194,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.DECRBY, group=CommandGroup.STRING, flags={CommandFlag.FAST})
     def decrby(self, key: KeyT, decrement: int) -> CommandRequest[int]:
         """
-        Decrement the integer value of a key by the given number
+        Decrement the integer value of a key by the given amount.
 
-        :return: the value of :paramref:`key` after the decrement
+        :param key: The key name.
+        :param decrement: The amount to subtract.
+        :return: The value of the key after the decrement.
         """
 
         return self.create_request(CommandName.DECRBY, key, decrement, callback=IntCallback())
@@ -206,10 +211,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def get(self, key: KeyT) -> CommandRequest[AnyStr | None]:
         """
-        Get the value of a key
+        Get the string value of a key.
 
-        :return: the value of :paramref:`key`, or ``None`` when :paramref:`key`
-         does not exist.
+        :param key: The key name.
+        :return: The value of the key, or ``None`` if the key does not exist.
         """
 
         return self.create_request(
@@ -226,11 +231,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def getdel(self, key: KeyT) -> CommandRequest[AnyStr | None]:
         """
-        Get the value of a key and delete the key
+        Get the value of a key and delete the key.
 
-
-        :return: the value of :paramref:`key`, ``None`` when :paramref:`key`
-         does not exist, or an error if the key's value type isn't a string.
+        :param key: The key name.
+        :return: The value of the key, or ``None`` if the key does not exist.
+         Raises an error if the key exists but is not a string.
         """
 
         return self.create_request(
@@ -254,23 +259,18 @@ class CoreCommands(CommandMixin[AnyStr]):
         persist: bool | None = None,
     ) -> CommandRequest[AnyStr | None]:
         """
-        Get the value of a key and optionally set its expiration
+        Get the value of a key and optionally set or remove its expiration.
 
+        Similar to GET but supports expiry options. Time parameters may be
+        :class:`datetime.timedelta` or :class:`datetime.datetime` or integers.
 
-        GETEX is similar to GET, but is a write command with
-        additional options. All time parameters can be given as
-        :class:`datetime.timedelta` or integers.
-
-        :param key: name of the key
-        :param ex: sets an expire flag on key :paramref:`key` for ``ex`` seconds.
-        :param px: sets an expire flag on key :paramref:`key` for ``px`` milliseconds.
-        :param exat: sets an expire flag on key :paramref:`key` for ``ex`` seconds,
-         specified in unix time.
-        :param pxat: sets an expire flag on key :paramref:`key` for ``ex`` milliseconds,
-         specified in unix time.
-        :param persist: remove the time to live associated with :paramref:`key`.
-
-        :return: the value of :paramref:`key`, or ``None`` when :paramref:`key` does not exist.
+        :param key: The key name.
+        :param ex: Set key to expire after this many seconds (relative).
+        :param px: Set key to expire after this many milliseconds (relative).
+        :param exat: Set key to expire at this Unix timestamp in seconds (absolute).
+        :param pxat: Set key to expire at this Unix timestamp in milliseconds (absolute).
+        :param persist: If ``True``, remove the time-to-live from the key.
+        :return: The value of the key, or ``None`` if the key does not exist.
         """
 
         command_arguments: CommandArgList = []
@@ -309,10 +309,15 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def getrange(self, key: KeyT, start: int, end: int) -> CommandRequest[AnyStr]:
         """
-        Get a substring of the string stored at a key
+        Return a substring of the string stored at a key.
 
-        :return: The substring of the string value stored at :paramref:`key`,
-         determined by the offsets ``start`` and ``end`` (both are inclusive)
+        Offsets are zero-based; negative offsets count from the end of the string.
+        Both start and end are inclusive.
+
+        :param key: The key name.
+        :param start: Start offset (inclusive).
+        :param end: End offset (inclusive).
+        :return: The substring determined by the given offsets.
         """
 
         return self.create_request(
@@ -330,8 +335,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Set the string value of a key and return its old value
 
-        :return: the old value stored at :paramref:`key`, or ``None`` when
-         :paramref:`key` did not exist.
+        :return: The previous value of the key, or ``None`` if the key did not exist.
         """
 
         return self.create_request(
@@ -341,10 +345,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.INCR, group=CommandGroup.STRING, flags={CommandFlag.FAST})
     def incr(self, key: KeyT) -> CommandRequest[int]:
         """
-        Increment the integer value of a key by one
+        Increment the integer value of a key by one.
 
-        :return: the value of :paramref:`key` after the increment.
-         If no key exists, the value will be initialized as 1.
+        :param key: The key name.
+        :return: The value of the key after the increment (1 if the key did not exist).
         """
 
         return self.create_request(
@@ -356,10 +360,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.INCRBY, group=CommandGroup.STRING, flags={CommandFlag.FAST})
     def incrby(self, key: KeyT, increment: int) -> CommandRequest[int]:
         """
-        Increment the integer value of a key by the given amount
+        Increment the integer value of a key by the given amount.
 
-        :return: the value of :paramref:`key` after the increment
-          If no key exists, the value will be initialized as ``increment``
+        :param key: The key name.
+        :param increment: The amount to add.
+        :return: The value of the key after the increment (increment if key did not exist).
         """
 
         return self.create_request(CommandName.INCRBY, key, increment, callback=IntCallback())
@@ -367,10 +372,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.INCRBYFLOAT, group=CommandGroup.STRING, flags={CommandFlag.FAST})
     def incrbyfloat(self, key: KeyT, increment: int | float) -> CommandRequest[float]:
         """
-        Increment the float value of a key by the given amount
+        Increment the float value of a key by the given amount.
 
-        :return: the value of :paramref:`key` after the increment.
-         If no key exists, the value will be initialized as ``increment``
+        :param key: The key name.
+        :param increment: The amount to add.
+        :return: The value of the key after the increment (increment if key did not exist).
         """
 
         return self.create_request(
@@ -417,16 +423,16 @@ class CoreCommands(CommandMixin[AnyStr]):
         withmatchlen: bool | None = None,
     ) -> CommandRequest[AnyStr] | CommandRequest[int] | CommandRequest[LCSResult]:
         """
-        Find the longest common substring
+        Find the longest common substring between two string keys.
 
-        :return: The matched string if no other arguments are given.
-         The returned values vary depending on different arguments.
-
-         - If ``len_`` is provided the length of the longest match
-         - If ``idx`` is ``True`` all the matches with the start/end positions
-           of both keys. Optionally, if ``withmatchlen`` is ``True`` each match
-           will contain the length of the match.
-
+        :param key1: First key name.
+        :param key2: Second key name.
+        :param len_: If ``True``, return only the length of the longest match.
+        :param idx: If ``True``, return matches with start/end positions in both keys.
+        :param minmatchlen: Minimum match length to include.
+        :param withmatchlen: If ``True`` (with idx), include length in each match.
+        :return: The matched string (default), the length (if len_), or match
+         positions and optionally lengths (if idx). Type depends on arguments.
         """
         command_arguments: CommandArgList = [key1, key2]
 
@@ -467,7 +473,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def mget(self, keys: Parameters[KeyT]) -> CommandRequest[tuple[AnyStr | None, ...]]:
         """
-        Returns values ordered identically to ``keys``
+        Get the values of multiple keys in a single call.
+
+        :param keys: One or more key names.
+        :return: A tuple of values in the same order as keys; ``None`` for missing keys.
         """
 
         return self.create_request(CommandName.MGET, *keys, callback=TupleCallback[AnyStr | None]())
@@ -478,7 +487,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def mset(self, key_values: Mapping[KeyT, ValueT]) -> CommandRequest[bool]:
         """
-        Sets multiple keys to multiple values
+        Set multiple keys to their respective values in one operation.
+
+        :param key_values: Mapping of key names to string values.
+        :return: Always ``True`` on success.
         """
 
         return self.create_request(
@@ -490,9 +502,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.MSETNX, group=CommandGroup.STRING)
     def msetnx(self, key_values: Mapping[KeyT, ValueT]) -> CommandRequest[bool]:
         """
-        Set multiple keys to multiple values, only if none of the keys exist
+        Set multiple keys to multiple values only if none of the keys exist.
 
-        :return: Whether all the keys were set
+        :param key_values: Mapping of key names to string values.
+        :return: ``True`` if all keys were set, ``False`` if any key already existed.
         """
 
         return self.create_request(
@@ -513,16 +526,16 @@ class CoreCommands(CommandMixin[AnyStr]):
         keepttl: bool | None = None,
     ) -> CommandRequest[bool]:
         """
-        Atomically sets multiple string keys with an optional shared expiration in a single operation.
+        Atomically set multiple string keys with an optional shared expiration.
 
-        :param condition: Condition to use when setting the keys
-        :param ex: Number of seconds to expire in
-        :param px: Number of milliseconds to expire in
-        :param exat: Expiry time with seconds granularity
-        :param pxat: Expiry time with milliseconds granularity
-        :param keepttl: Retain the time to live associated with the keys
-
-        :return: Whether all the keys were set
+        :param key_values: Mapping of key names to string values.
+        :param condition: Optional NX (only if not exists) or XX (only if exists).
+        :param ex: Expire keys after this many seconds (relative).
+        :param px: Expire keys after this many milliseconds (relative).
+        :param exat: Expire keys at this Unix timestamp in seconds (absolute).
+        :param pxat: Expire keys at this Unix timestamp in milliseconds (absolute).
+        :param keepttl: If ``True``, retain existing TTL on keys that have one.
+        :return: ``True`` if all keys were set.
         """
         command_arguments: CommandArgList = [len(key_values), *dict_to_flat_list(key_values)]
         if condition is not None:
@@ -559,7 +572,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         value: ValueT,
     ) -> CommandRequest[bool]:
         """
-        Set the value and expiration in milliseconds of a key
+        Set the value of a key with an expiration in milliseconds.
+
+        :param key: The key name.
+        :param milliseconds: TTL in milliseconds (or timedelta).
+        :param value: The string value to set.
+        :return: Always ``True`` on success.
         """
 
         return self.create_request(
@@ -640,27 +658,23 @@ class CoreCommands(CommandMixin[AnyStr]):
         ifdne: ValueT | None = None,
     ) -> CommandRequest[AnyStr | bool | None]:
         """
-        Set the string value of a key
+        Set the string value of a key with optional condition and expiration.
 
-        :param condition: Condition to use when setting the key
-        :param get: Return the old string stored at key, or nil if key did not exist.
-         An error is returned and the command is aborted if the value stored at
-         key is not a string.
-        :param ex: Number of seconds to expire in
-        :param px: Number of milliseconds to expire in
-        :param exat: Expiry time with seconds granularity
-        :param pxat: Expiry time with milliseconds granularity
-        :param keepttl: Retain the time to live associated with the key
-        :param ifeq: Set the key only if it's current value is equal to this value
-        :param ifne: Set the key only if it's current value is **not** equal to this value
-        :param ifdeq: Set the key only if it's current hash digest is equal to this value
-        :param ifdne: Set the key only if it's current hash digest is **not** equal to this value
-
-        :return: Whether the operation was performed successfully.
-
-         .. warning:: If the command is issued with the ``get`` argument, the old string value
-            stored at :paramref:`key` is return regardless of success or failure
-            - except if the :paramref:`key` was not found.
+        :param key: The key name.
+        :param value: The string value to set.
+        :param condition: NX (set only if not exists) or XX (set only if exists).
+        :param get: If ``True``, return the previous value (or ``None``); aborts if not a string.
+        :param ex: Expire after this many seconds (relative).
+        :param px: Expire after this many milliseconds (relative).
+        :param exat: Expire at this Unix timestamp in seconds (absolute).
+        :param pxat: Expire at this Unix timestamp in milliseconds (absolute).
+        :param keepttl: If ``True``, retain the existing TTL.
+        :param ifeq: Set only if current value equals this value.
+        :param ifne: Set only if current value does not equal this value.
+        :param ifdeq: Set only if current hash digest equals this value.
+        :param ifdne: Set only if current hash digest does not equal this value.
+        :return: ``True``/``False`` if the set operation succeeded unless :paramref:`get` is
+         ``True``, in which case the previous value or ``None`` if the key didn't exist.
         """
         command_arguments: CommandArgList = [key, value]
 
@@ -714,7 +728,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         seconds: int | datetime.timedelta,
     ) -> CommandRequest[bool]:
         """
-        Set the value of key :paramref:`key` to ``value`` that expires in ``seconds``
+        Set the value of a key with an expiration in seconds.
+
+        :param key: The key name.
+        :param value: The string value to set.
+        :param seconds: TTL in seconds (or timedelta).
+        :return: Always ``True`` on success.
         """
 
         return self.create_request(
@@ -728,7 +747,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.SETNX, group=CommandGroup.STRING, flags={CommandFlag.FAST})
     def setnx(self, key: KeyT, value: ValueT) -> CommandRequest[bool]:
         """
-        Sets the value of key :paramref:`key` to ``value`` if key doesn't exist
+        Set the value of a key only if the key does not exist.
+
+        :param key: The key name.
+        :param value: The string value to set.
+        :return: ``True`` if the key was set, ``False`` if it already existed.
         """
 
         return self.create_request(CommandName.SETNX, key, value, callback=BoolCallback())
@@ -736,15 +759,15 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.SETRANGE, group=CommandGroup.STRING)
     def setrange(self, key: KeyT, offset: int, value: ValueT) -> CommandRequest[int]:
         """
-        Overwrite bytes in the value of :paramref:`key` starting at ``offset`` with
-        ``value``. If ``offset`` plus the length of ``value`` exceeds the
-        length of the original value, the new value will be larger than before.
+        Overwrite part of the string value at a key starting at the given offset.
 
-        If ``offset`` exceeds the length of the original value, null bytes
-        will be used to pad between the end of the previous value and the start
-        of what's being injected.
+        If offset plus value length exceeds the current length, the string is extended.
+        If offset is past the end, the gap is padded with zero bytes.
 
-        :return: the length of the string after it was modified by the command.
+        :param key: The key name.
+        :param offset: Byte offset at which to start overwriting (zero-based).
+        :param value: The string to write.
+        :return: The length of the string after the operation.
         """
 
         return self.create_request(CommandName.SETRANGE, key, offset, value, callback=IntCallback())
@@ -757,9 +780,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def strlen(self, key: KeyT) -> CommandRequest[int]:
         """
-        Get the length of the value stored in a key
+        Return the length of the string value stored at a key.
 
-        :return: the length of the string at :paramref:`key`, or ``0`` when :paramref:`key` does not
+        :param key: The key name.
+        :return: The length of the string in bytes, or ``0`` if the key does not exist.
         """
 
         return self.create_request(CommandName.STRLEN, key, callback=IntCallback())
@@ -774,11 +798,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def substr(self, key: KeyT, start: int, end: int) -> CommandRequest[AnyStr]:
         """
-        Get a substring of the string stored at a key
+        Return a substring of the string stored at a key.
 
-        :return: the substring of the string value stored at key, determined by the offsets
-         ``start`` and ``end`` (both are inclusive). Negative offsets can be used in order to
-         provide an offset starting from the end of the string.
+        :param key: The key name.
+        :param start: Start offset (inclusive). Negative values count from the end.
+        :param end: End offset (inclusive). Negative values count from the end.
+        :return: The substring in the given range.
         """
 
         return self.create_request(
@@ -791,7 +816,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_addslots(self, slots: Parameters[int]) -> CommandRequest[bool]:
         """
-        Assign new hash slots to receiving node
+        Assign new hash slots to the receiving node.
+
+        :param slots: One or more slot numbers to assign.
+        :return: ``True`` on success.
         """
 
         return self.create_request(
@@ -806,7 +834,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_addslotsrange(self, slots: Parameters[tuple[int, int]]) -> CommandRequest[bool]:
         """
-        Assign new hash slots to receiving node
+        Assign ranges of hash slots to the receiving node.
+
+        :param slots: One or more (start, end) slot ranges (inclusive).
+        :return: ``True`` on success.
         """
         command_arguments: CommandArgList = []
 
@@ -823,7 +854,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.ASKING, group=CommandGroup.CLUSTER, flags={CommandFlag.FAST})
     def asking(self) -> CommandRequest[bool]:
         """
-        Sent by cluster clients after an -ASK redirect
+        Send ASK to the server (used by cluster clients after an -ASK redirect).
+
+        :return: ``True`` on success.
         """
 
         return self.create_request(CommandName.ASKING, callback=BoolCallback())
@@ -832,10 +865,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.CLUSTER_BUMPEPOCH, group=CommandGroup.CLUSTER)
     def cluster_bumpepoch(self) -> CommandRequest[AnyStr]:
         """
-        Advance the cluster config epoch
+        Advance the cluster configuration epoch.
 
-        :return: ``BUMPED`` if the epoch was incremented, or ``STILL``
-         if the node already has the greatest config epoch in the cluster.
+        :return: ``BUMPED`` if the epoch was incremented, ``STILL`` if this node already had the greatest epoch.
         """
 
         return self.create_request(CommandName.CLUSTER_BUMPEPOCH, callback=AnyStrCallback[AnyStr]())
@@ -847,8 +879,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_count_failure_reports(self, node_id: StringT) -> CommandRequest[int]:
         """
-        Return the number of failure reports active for a given node
+        Return the number of failure reports active for a given node.
 
+        :param node_id: The cluster node ID.
+        :return: The number of failure reports.
         """
 
         return self.create_request(
@@ -864,7 +898,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_countkeysinslot(self, slot: int) -> CommandRequest[int]:
         """
-        Return the number of local keys in the specified hash slot
+        Return the number of local keys in the specified hash slot.
+
+        :param slot: The hash slot number.
+        :return: The number of keys in the slot on this node.
         """
 
         return self.create_request(
@@ -884,8 +921,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_delslots(self, slots: Parameters[int]) -> CommandRequest[bool]:
         """
-        Set hash slots as unbound in the cluster.
-        It determines by itself what node the slot is in and sends it there
+        Mark the given hash slots as unbound in the cluster.
+
+        The command is routed to the node that owns each slot.
+
+        :param slots: One or more slot numbers to unbound.
+        :return: ``True`` on success.
         """
         return self.create_request(
             CommandName.CLUSTER_DELSLOTS,
@@ -903,7 +944,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_delslotsrange(self, slots: Parameters[tuple[int, int]]) -> CommandRequest[bool]:
         """
-        Set hash slots as unbound in receiving node
+        Mark the given slot ranges as unbound on the receiving node.
+
+        :param slots: One or more (start, end) slot ranges (inclusive).
+        :return: ``True`` on success.
         """
         command_arguments: CommandArgList = list(itertools.chain(*slots))
 
@@ -923,7 +967,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         options: Literal[PureToken.FORCE, PureToken.TAKEOVER] | None = None,
     ) -> CommandRequest[bool]:
         """
-        Forces a replica to perform a manual failover of its master.
+        Force a replica to perform a manual failover of its master.
+
+        :param options: Optional FORCE or TAKEOVER to alter failover behavior.
+        :return: ``True`` on success.
         """
 
         command_arguments: CommandArgList = []
@@ -944,7 +991,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_flushslots(self) -> CommandRequest[bool]:
         """
-        Delete a node's own slots information
+        Delete this node's assigned slot information (must have no keys in those slots).
+
+        :return: ``True`` on success.
         """
 
         return self.create_request(CommandName.CLUSTER_FLUSHSLOTS, callback=SimpleStringCallback())
@@ -955,8 +1004,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_forget(self, node_id: StringT) -> CommandRequest[bool]:
         """
-        remove a node via its node ID from the set of known nodes
-        of the Redis Cluster node receiving the command
+        Remove a node from the set of known nodes of the cluster node receiving the command.
+
+        :param node_id: The cluster node ID to forget.
+        :return: ``True`` on success.
         """
 
         return self.create_request(
@@ -971,10 +1022,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_getkeysinslot(self, slot: int, count: int) -> CommandRequest[tuple[AnyStr, ...]]:
         """
-        Return local key names in the specified hash slot
+        Return up to a given number of local key names in the specified hash slot.
 
-        :return: :paramref:`count` key names
-
+        :param slot: The hash slot number.
+        :param count: Maximum number of key names to return.
+        :return: A tuple of key names (up to count).
         """
         command_arguments: CommandArgList = [slot, count]
 
@@ -992,7 +1044,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_info(self) -> CommandRequest[dict[str, str]]:
         """
-        Provides info about Redis Cluster node state
+        Return information about the Redis Cluster node state.
+
+        :return: A mapping of cluster state keys and values.
         """
 
         return self.create_request(CommandName.CLUSTER_INFO, callback=ClusterInfoCallback())
@@ -1004,7 +1058,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_keyslot(self, key: KeyT) -> CommandRequest[int]:
         """
-        Returns the hash slot of the specified key
+        Return the hash slot number for the specified key.
+
+        :param key: The key name.
+        :return: The slot number
         """
 
         return self.create_request(CommandName.CLUSTER_KEYSLOT, key, callback=IntCallback())
@@ -1017,11 +1074,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_links(self) -> CommandRequest[list[dict[AnyStr, ResponsePrimitive]]]:
         """
-        Returns a list of all TCP links to and from peer nodes in cluster
+        Return a list of all TCP links to and from peer nodes in the cluster.
 
-        :return: A map of maps where each map contains various attributes
-         and their values of a cluster link.
-
+        :return: A list of mappings; each mapping contains attributes and values for one cluster link.
         """
 
         return self.create_request(
@@ -1037,7 +1092,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, ip: StringT, port: int, cluster_bus_port: int | None = None
     ) -> CommandRequest[bool]:
         """
-        Force a node cluster to handshake with another node.
+        Force this cluster node to handshake with another node.
+
+        :param ip: IP address of the node to meet.
+        :param port: Port of the node to meet.
+        :param cluster_bus_port: Optional cluster bus port (if different from port).
+        :return: ``True`` on success.
         """
 
         command_arguments: CommandArgList = [ip, port]
@@ -1053,7 +1113,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.CLUSTER_MYID, group=CommandGroup.CLUSTER)
     def cluster_myid(self) -> CommandRequest[AnyStr]:
         """
-        Return the node id
+        Return this node's cluster ID.
+
+        :return: The node ID string.
         """
 
         return self.create_request(CommandName.CLUSTER_MYID, callback=AnyStrCallback[AnyStr]())
@@ -1065,7 +1127,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_nodes(self) -> CommandRequest[list[ClusterNodeDetail]]:
         """
-        Get Cluster config for the node
+        Return the current cluster configuration from the perspective of this node.
+
+        :return: A list of cluster node details.
         """
 
         return self.create_request(CommandName.CLUSTER_NODES, callback=ClusterNodesCallback())
@@ -1076,7 +1140,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_replicate(self, node_id: StringT) -> CommandRequest[bool]:
         """
-        Reconfigure a node as a replica of the specified master node
+        Reconfigure this node as a replica of the specified master node.
+
+        :param node_id: The master node ID to replicate.
+        :return: ``True`` on success.
         """
 
         return self.create_request(
@@ -1092,7 +1159,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         reset_type: Literal[PureToken.HARD, PureToken.SOFT] | None = None,
     ) -> CommandRequest[bool]:
         """
-        Reset a Redis Cluster node
+        Reset a Redis Cluster node (clears slots and peer state).
+
+        :param reset_type: HARD (full reset) or SOFT (only clear keys); default is HARD.
+        :return: ``True`` on success.
         """
 
         command_arguments: CommandArgList = []
@@ -1116,7 +1186,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_saveconfig(self) -> CommandRequest[bool]:
         """
-        Forces the node to save cluster state on disk
+        Force the node to save the cluster state to disk.
+
+        :return: ``True`` on success.
         """
 
         return self.create_request(CommandName.CLUSTER_SAVECONFIG, callback=SimpleStringCallback())
@@ -1127,7 +1199,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_set_config_epoch(self, config_epoch: int) -> CommandRequest[bool]:
         """
-        Set the configuration epoch in a new node
+        Set the configuration epoch for a new node (used during cluster creation).
+
+        :param config_epoch: The configuration epoch value.
+        :return: ``True`` on success.
         """
 
         return self.create_request(
@@ -1151,7 +1226,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         stable: bool | None = None,
     ) -> CommandRequest[bool]:
         """
-        Bind a hash slot to a specific node
+        Bind a hash slot to a specific node or set slot migration state.
+
+        :param slot: The hash slot number.
+        :param importing: Node ID from which the slot is being imported.
+        :param migrating: Node ID to which the slot is being migrated.
+        :param node: Node ID that should own the slot (assigns the slot).
+        :param stable: If ``True``, clear importing/migrating state without assigning.
+        :return: ``True`` on success.
         """
 
         command_arguments: CommandArgList = [slot]
@@ -1181,7 +1263,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_replicas(self, node_id: StringT) -> CommandRequest[list[ClusterNodeDetail]]:
         """
-        List replica nodes of the specified master node
+        List replica nodes of the specified master node.
+
+        :param node_id: The master node ID.
+        :return: A list of replica node details.
         """
 
         return self.create_request(
@@ -1199,7 +1284,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         self,
     ) -> CommandRequest[list[dict[AnyStr, list[RedisValueT] | Mapping[AnyStr, RedisValueT]]]]:
         """
-        Get mapping of cluster slots to nodes
+        Return a mapping of cluster slots to nodes.
+
+        :return: A list of shard mappings with slot ranges and node info.
         """
         return self.create_request(
             CommandName.CLUSTER_SHARDS, callback=ClusterShardsCallback[AnyStr]()
@@ -1214,7 +1301,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def cluster_slaves(self, node_id: StringT) -> CommandRequest[list[ClusterNodeDetail]]:
         """
-        List replica nodes of the specified master node
+        List replica nodes of the specified master node.
+
+        :param node_id: The master node ID.
+        :return: A list of replica node details.
         """
 
         return self.create_request(
@@ -1232,7 +1322,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         self,
     ) -> CommandRequest[dict[tuple[int, int], tuple[ClusterNode, ...]]]:
         """
-        Get mapping of Cluster slot to nodes
+        Return a mapping of cluster slot ranges to nodes.
+
+        :return: A mapping of (start, end) slot ranges to node tuples.
         """
 
         return self.create_request(CommandName.CLUSTER_SLOTS, callback=ClusterSlotsCallback())
@@ -1241,7 +1333,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.READONLY, group=CommandGroup.CLUSTER, flags={CommandFlag.FAST})
     def readonly(self) -> CommandRequest[bool]:
         """
-        Enables read queries for a connection to a cluster replica node
+        Enable read queries for this connection to a cluster replica node.
+
+        :return: ``True`` on success.
         """
         return self.create_request(CommandName.READONLY, callback=SimpleStringCallback())
 
@@ -1249,7 +1343,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.READWRITE, group=CommandGroup.CLUSTER, flags={CommandFlag.FAST})
     def readwrite(self) -> CommandRequest[bool]:
         """
-        Disables read queries for a connection to a cluster replica node
+        Disable read-only mode; use this connection for read and write to the primary.
+
+        :return: ``True`` on success.
         """
         return self.create_request(CommandName.READWRITE, callback=SimpleStringCallback())
 
@@ -1268,7 +1364,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def auth(self, password: StringT, username: StringT | None = None) -> CommandRequest[bool]:
         """
-        Authenticate to the server
+        Authenticate the connection to the server.
+
+        :param password: The password (required).
+        :param username: The username (optional).
+        :return: ``True`` on success.
         """
         command_arguments: CommandArgList = []
         command_arguments.append(password)
@@ -1290,7 +1390,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         flags={CommandFlag.FAST},
     )
     def echo(self, message: StringT) -> CommandRequest[AnyStr]:
-        "Echo the string back from the server"
+        """
+        Echo the given string back from the server.
+
+        :param message: The string to echo.
+        :return: The same string.
+        """
 
         return self.create_request(CommandName.ECHO, message, callback=AnyStrCallback[AnyStr]())
 
@@ -1309,9 +1414,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         setname: StringT | None = None,
     ) -> CommandRequest[dict[AnyStr, AnyStr]]:
         """
-        Handshake with Redis
+        Perform a handshake with Redis (protocol version, auth, client name).
 
-        :return: a mapping of server properties.
+        :param protover: Optional RESP protocol version (e.g. 2 or 3).
+        :param username: Optional username for ACL auth.
+        :param password: Optional password for ACL auth.
+        :param setname: Optional client name to set.
+        :return: A mapping of server properties (e.g. version, mode).
         """
         command_arguments: CommandArgList = []
 
@@ -1344,10 +1453,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def ping(self, message: StringT | None = None) -> CommandRequest[AnyStr]:
         """
-        Ping the server
+        Ping the server to test the connection.
 
-        :return: ``PONG``, when no argument is provided else the
-         :paramref:`message` provided
+        :param message: Optional message; if provided, server echoes it instead of PONG.
+        :return: ``PONG`` or the echoed message.
         """
         command_arguments: CommandArgList = []
 
@@ -1372,7 +1481,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def select(self, index: int) -> CommandRequest[bool]:
         """
-        Change the selected database for the current connection
+        Change the selected database for the current connection.
+
+        :param index: The database index (typically 0-15).
+        :return: ``True`` on success.
         """
         return self.create_request(CommandName.SELECT, index, callback=SimpleStringCallback())
 
@@ -1384,7 +1496,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def quit(self) -> CommandRequest[bool]:
         """
-        Close the connection
+        Close the connection to the server.
+
+        :return: ``True`` on success.
         """
 
         return self.create_request(CommandName.QUIT, callback=SimpleStringCallback())
@@ -1398,7 +1512,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def reset(self) -> CommandRequest[None]:
         """
-        Reset the connection
+        Reset the connection (clear client state; server may disconnect).
+
+        :return: ``None``.
         """
         return self.create_request(CommandName.RESET, callback=NoopCallback[None]())
 
@@ -1418,12 +1534,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         change: bool | None = None,
     ) -> CommandRequest[int]:
         """
-        Add one or more geospatial items in the geospatial index represented
-        using a sorted set
+        Add one or more geospatial items (longitude, latitude, name) to the index at key.
 
-        :return: Number of elements added. If ``change`` is ``True`` the return
-         is the number of elements that were changed.
-
+        :param key: The key name (sorted set holding the index).
+        :param longitude_latitude_members: One or more (longitude, latitude, member) tuples.
+        :param condition: NX (only add new) or XX (only update existing).
+        :param change: If ``True``, return the number of elements changed (not just added).
+        :return: The number of elements added; or, if :paramref:`change` is ``True``, the number changed.
         """
         command_arguments: CommandArgList = [key]
 
@@ -1450,9 +1567,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         unit: Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI] | None = None,
     ) -> CommandRequest[float | None]:
         """
-        Returns the distance between two members of a geospatial index
+        Return the distance between two members in the geospatial index.
 
-        :return: Distance in the unit specified by :paramref:`unit`
+        :param key: The key name.
+        :param member1: First member name.
+        :param member2: Second member name.
+        :param unit: M, KM, FT, or MI; default is meters.
+        :return: The distance in the requested unit, or ``None`` if a member is missing.
         """
         command_arguments: CommandArgList = [key, member1, member2]
 
@@ -1471,7 +1592,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def geohash(self, key: KeyT, members: Parameters[ValueT]) -> CommandRequest[tuple[AnyStr, ...]]:
         """
-        Returns members of a geospatial index as standard geohash strings
+        Return geohash strings for the given members in the geospatial index.
+
+        :param key: The key name.
+        :param members: One or more member names.
+        :return: A tuple of geohash strings (same order as members).
         """
 
         return self.create_request(
@@ -1488,10 +1613,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, members: Parameters[ValueT]
     ) -> CommandRequest[tuple[GeoCoordinates | None, ...]]:
         """
-        Returns longitude and latitude of members of a geospatial index
+        Return longitude and latitude for the given members in the geospatial index.
 
-        :return: pairs of longitude/latitudes. Missing members are represented
-         by ``None`` entries.
+        :param key: The key name.
+        :param members: One or more member names.
+        :return: A tuple of ``(lon, lat)`` pairs or ``None`` for missing members.
         """
 
         return self.create_request(
@@ -1608,19 +1734,25 @@ class CoreCommands(CommandMixin[AnyStr]):
         storedist: KeyT | None = None,
     ) -> CommandRequest[int | tuple[AnyStr | GeoSearchResult, ...]]:
         """
-        Query a geospatial index to fetch members within the borders of the area
-        specified with center location at :paramref:`longitude` and :paramref:`latitude`
-        and the maximum distance from the center (:paramref:`radius`).
+        Query a geospatial index for members within radius of a center.
 
-
+        :param key: The key name.
+        :param longitude: Center longitude.
+        :param latitude: Center latitude.
+        :param radius: Maximum distance from center.
+        :param unit: M, KM, FT, or MI.
+        :param withcoord: If ``True``, include coordinates in results.
+        :param withdist: If ``True``, include distance in results.
+        :param withhash: If ``True``, include geohash in results.
+        :param count: Limit number of results.
+        :param any_: If ``True`` (with count), stop at first count matches.
+        :param order: ASC or DESC by distance.
+        :param store: Store results in this key (sorted set).
+        :param storedist: Store results with distances in this key.
         :return:
-
-         - If no ``with{coord,dist,hash}`` options are provided the return
-           is simply the names of places matched (optionally ordered if `order` is provided).
-         - If any of the ``with{coord,dist,hash}`` options are set each result entry contains
-           `(name, distance, geohash, coordinate pair)``
-         - If a key for ``store`` or ``storedist`` is provided, the return is the count of places
-           stored.
+         - Member names (default)
+         - ``(name, dist, hash, coords)`` if ``with{coord,dist,hash}`` is provided.
+         - Count of stored results if ``store`` or ``storedist`` are provided
         """
 
         return self._georadiusgeneric(
@@ -1668,18 +1800,24 @@ class CoreCommands(CommandMixin[AnyStr]):
         storedist: KeyT | None = None,
     ) -> CommandRequest[int | tuple[AnyStr | GeoSearchResult, ...]]:
         """
-        This command is exactly like :meth:`~Redis.georadius` with the sole difference
-        that instead of searching from a coordinate, it searches from a member
-        already existing in the index.
+        Query a geospatial index for members within radius of an existing member.
 
+        :param key: The key name.
+        :param member: Member to use as center.
+        :param radius: Maximum distance from member.
+        :param unit: M, KM, FT, or MI.
+        :param withcoord: If ``True``, include coordinates in results.
+        :param withdist: If ``True``, include distance in results.
+        :param withhash: If ``True``, include geohash in results.
+        :param count: Limit number of results.
+        :param any_: If ``True`` (with count), stop at first count matches.
+        :param order: ASC or DESC by distance.
+        :param store: Store results in this key (sorted set).
+        :param storedist: Store results with distances in this key.
         :return:
-
-         - If no ``with{coord,dist,hash}`` options are provided the return
-           is simply the names of places matched (optionally ordered if `order` is provided).
-         - If any of the ``with{coord,dist,hash}`` options are set each result entry contains
-           `(name, distance, geohash, coordinate pair)``
-         - If a key for ``store`` or ``storedist`` is provided, the return is the count of places
-           stored.
+         - Member names (default)
+         - ``(name, dist, hash, coords)`` if ``with{coord,dist,hash}`` is provided.
+         - Count of stored results if ``store`` or ``storedist`` are provided
         """
 
         return self._georadiusgeneric(
@@ -1792,13 +1930,26 @@ class CoreCommands(CommandMixin[AnyStr]):
         withhash: bool | None = None,
     ) -> CommandRequest[int | tuple[AnyStr | GeoSearchResult, ...]]:
         """
+        Query a geospatial index by center (member or lon/lat) and radius or bounding box.
 
+        :param key: The key name.
+        :param member: Use this member as center (alternative to longitude/latitude).
+        :param longitude: Center longitude (with latitude).
+        :param latitude: Center latitude (with longitude).
+        :param radius: Maximum distance; use with circle_unit.
+        :param circle_unit: M, KM, FT, or MI for radius.
+        :param width: Box width; use with height and box_unit.
+        :param height: Box height; use with width and box_unit.
+        :param box_unit: M, KM, FT, or MI for box.
+        :param order: ASC or DESC by distance.
+        :param count: Limit number of results.
+        :param any_: If ``True`` (with count), stop at first count matches.
+        :param withcoord: If ``True``, include coordinates in results.
+        :param withdist: If ``True``, include distance in results.
+        :param withhash: If ``True``, include geohash in results.
         :return:
-
-         - If no ``with{coord,dist,hash}`` options are provided the return
-           is simply the names of places matched (optionally ordered if `order` is provided).
-         - If any of the ``with{coord,dist,hash}`` options are set each result entry contains
-           `(name, distance, geohash, coordinate pair)``
+         - Member names (default)
+         - ``(name, dist, hash, coords)`` if ``with{coord,dist,hash}`` is provided.
         """
 
         return self._geosearchgeneric(
@@ -1845,7 +1996,23 @@ class CoreCommands(CommandMixin[AnyStr]):
         storedist: bool | None = None,
     ) -> CommandRequest[int]:
         """
-        :return: The number of elements stored in the resulting set
+        Query a geospatial index and store the result in a sorted set at destination.
+
+        :param destination: Key where the result is stored.
+        :param source: Source geospatial index key.
+        :param member: Use this member as center (alternative to longitude/latitude).
+        :param longitude: Center longitude (with latitude).
+        :param latitude: Center latitude (with longitude).
+        :param radius: Maximum distance; use with circle_unit.
+        :param circle_unit: M, KM, FT, or MI for radius.
+        :param width: Box width; use with height and box_unit.
+        :param height: Box height; use with width and box_unit.
+        :param box_unit: M, KM, FT, or MI for box.
+        :param order: ASC or DESC by distance.
+        :param count: Limit number of results.
+        :param any_: If ``True`` (with count), stop at first count matches.
+        :param storedist: If ``True``, store distances as scores.
+        :return: The number of elements stored in the resulting set.
         """
 
         return self._geosearchgeneric(
@@ -1973,7 +2140,13 @@ class CoreCommands(CommandMixin[AnyStr]):
     @ensure_iterable_valid("fields")
     @redis_command(CommandName.HDEL, group=CommandGroup.HASH, flags={CommandFlag.FAST})
     def hdel(self, key: KeyT, fields: Parameters[StringT]) -> CommandRequest[int]:
-        """Deletes ``fields`` from hash :paramref:`key`"""
+        """
+        Delete one or more fields from a hash.
+
+        :param key: The key name.
+        :param fields: One or more field names to remove.
+        :return: The number of fields that were removed.
+        """
 
         return self.create_request(CommandName.HDEL, key, *fields, callback=IntCallback())
 
@@ -1985,7 +2158,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def hexists(self, key: KeyT, field: StringT) -> CommandRequest[bool]:
         """
-        Returns a boolean indicating if ``field`` exists within hash :paramref:`key`
+        Return whether a field exists in a hash.
+
+        :param key: The key name.
+        :param field: The field name.
+        :return: ``True`` if the field exists, ``False`` otherwise.
         """
 
         return self.create_request(CommandName.HEXISTS, key, field, callback=BoolCallback())
@@ -2000,7 +2177,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX] | None = None,
     ) -> CommandRequest[tuple[int, ...]]:
         """
-        Set expiry for hash field using relative time to expire (seconds)
+        Set a TTL in seconds for one or more hash fields.
+
+        :param key: The key name.
+        :param seconds: TTL in seconds (or timedelta).
+        :param fields: One or more field names.
+        :param condition: Optional GT, LT, NX, or XX.
+        :return: A tuple of 1 for each field that was set, 0 for each that was not.
         """
         command_arguments: CommandArgList = [key, normalized_seconds(seconds)]
 
@@ -2020,7 +2203,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, fields: Parameters[StringT]
     ) -> CommandRequest[tuple[int, ...]]:
         """
-        Returns the expiration time of a hash field as a Unix timestamp, in seconds.
+        Return the expiration Unix timestamp in seconds for one or more hash fields.
+
+        :param key: The key name.
+        :param fields: One or more field names.
+        :return: A tuple of Unix timestamps (-1 if no expiry, -2 if field missing).
         """
         command_arguments: CommandArgList = [key, PrefixToken.FIELDS, len(list(fields))]
         command_arguments.extend(fields)
@@ -2035,7 +2222,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, fields: Parameters[StringT]
     ) -> CommandRequest[tuple[int, ...]]:
         """
-        Returns the expiration time of a hash field as a Unix timestamp, in msec.
+        Return the expiration Unix timestamp in milliseconds for one or more hash fields.
+
+        :param key: The key name.
+        :param fields: One or more field names.
+        :return: A tuple of Unix timestamps in ms (-1 if no expiry, -2 if field missing).
         """
         command_arguments: CommandArgList = [key, PrefixToken.FIELDS, len(list(fields))]
 
@@ -2055,7 +2246,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX] | None = None,
     ) -> CommandRequest[tuple[int, ...]]:
         """
-        Set expiry for hash field using relative time to expire (milliseconds)
+        Set a TTL in milliseconds for one or more hash fields.
+
+        :param key: The key name.
+        :param milliseconds: TTL in milliseconds (or timedelta).
+        :param fields: One or more field names.
+        :param condition: Optional GT, LT, NX, or XX.
+        :return: A tuple of 1 for each field that was set, 0 for each that was not.
         """
         command_arguments: CommandArgList = [key, normalized_milliseconds(milliseconds)]
 
@@ -2079,7 +2276,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX] | None = None,
     ) -> CommandRequest[tuple[int, ...]]:
         """
-        Set expiry for hash field using an absolute Unix timestamp (seconds)
+        Set an absolute expiration Unix timestamp (seconds) for one or more hash fields.
+
+        :param key: The key name.
+        :param unix_time_seconds: Expiration as Unix timestamp in seconds (or datetime).
+        :param fields: One or more field names.
+        :param condition: Optional GT, LT, NX, or XX.
+        :return: A tuple of 1 for each field that was set, 0 for each that was not.
         """
         command_arguments: CommandArgList = [key, normalized_time_seconds(unix_time_seconds)]
         if condition is not None:
@@ -2102,7 +2305,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.GT, PureToken.LT, PureToken.NX, PureToken.XX] | None = None,
     ) -> CommandRequest[tuple[int, ...]]:
         """
-        Set expiry for hash field using an absolute Unix timestamp (milliseconds)
+        Set an absolute expiration Unix timestamp (milliseconds) for one or more hash fields.
+
+        :param key: The key name.
+        :param unix_time_milliseconds: Expiration as Unix timestamp in ms (or datetime).
+        :param fields: One or more field names.
+        :param condition: Optional GT, LT, NX, or XX.
+        :return: A tuple of 1 for each field that was set, 0 for each that was not.
         """
         command_arguments: CommandArgList = [
             key,
@@ -2123,7 +2332,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.HPERSIST, version_introduced="7.4.0", group=CommandGroup.HASH)
     def hpersist(self, key: KeyT, fields: Parameters[StringT]) -> CommandRequest[tuple[int, ...]]:
         """
-        Removes the expiration time for each specified field
+        Remove the expiration from one or more hash fields.
+
+        :param key: The key name.
+        :param fields: One or more field names.
+        :return: A tuple of 1 for each field that had TTL removed, 0 for each that did not.
         """
         command_arguments: CommandArgList = [key, PrefixToken.FIELDS, len(list(fields))]
         command_arguments.extend(fields)
@@ -2139,7 +2352,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     def hget(self, key: KeyT, field: StringT) -> CommandRequest[AnyStr | None]:
-        """Returns the value of ``field`` within the hash :paramref:`key`"""
+        """
+        Return the value of a field in a hash.
+
+        :param key: The key name.
+        :param field: The field name.
+        :return: The field value, or ``None`` if the field or key does not exist.
+        """
 
         return self.create_request(
             CommandName.HGET, key, field, callback=OptionalAnyStrCallback[AnyStr]()
@@ -2152,7 +2371,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         flags={CommandFlag.READONLY},
     )
     def hgetall(self, key: KeyT) -> CommandRequest[dict[AnyStr, AnyStr]]:
-        """Returns a Python dict of the hash's name/value pairs"""
+        """
+        Return all fields and values in a hash as a mapping.
+
+        :param key: The key name.
+        :return: A mapping of field names to values.
+        """
 
         return self.create_request(CommandName.HGETALL, key, callback=HGetAllCallback[AnyStr]())
 
@@ -2177,9 +2401,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param fields: The fields to get values for
         :param ex: Set the expiry of the fields to ``ex`` seconds
         :param px: Set the expiry of the fields to ``px`` milliseconds
-        :param exat: Set the expiry of the fields to the specified time (in seconds)
-        :param exat: Set the expiry of the fields to the specified time (in milliseconds)
-        :param persist: Remove TTL from the fields
+        :param exat: Set the expiry of the fields to the specified Unix time (seconds).
+        :param pxat: Set the expiry of the fields to the specified Unix time (milliseconds).
+        :param persist: Remove TTL from the fields.
         :return: the values of each of the fields requested (Missing fields are returned
          as ``None``)
         """
@@ -2226,7 +2450,14 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(CommandName.HINCRBY, group=CommandGroup.HASH, flags={CommandFlag.FAST})
     def hincrby(self, key: KeyT, field: StringT, increment: int) -> CommandRequest[int]:
-        """Increments the value of ``field`` in hash :paramref:`key` by ``increment``"""
+        """
+        Increment the integer value of a hash field by the given amount.
+
+        :param key: The key name.
+        :param field: The field name.
+        :param increment: The amount to add.
+        :return: The value of the field after the increment.
+        """
 
         return self.create_request(
             CommandName.HINCRBY, key, field, increment, callback=IntCallback()
@@ -2237,8 +2468,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, field: StringT, increment: int | float
     ) -> CommandRequest[float]:
         """
-        Increments the value of ``field`` in hash :paramref:`key` by floating
-        ``increment``
+        Increment the float value of a hash field by the given amount.
+
+        :param key: The key name.
+        :param field: The field name.
+        :param increment: The amount to add.
+        :return: The value of the field after the increment.
         """
 
         return self.create_request(
@@ -2252,7 +2487,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         flags={CommandFlag.READONLY},
     )
     def hkeys(self, key: KeyT) -> CommandRequest[tuple[AnyStr, ...]]:
-        """Returns the list of keys within hash :paramref:`key`"""
+        """
+        Return all field names in a hash.
+
+        :param key: The key name.
+        :return: A tuple of field names.
+        """
 
         return self.create_request(CommandName.HKEYS, key, callback=TupleCallback[AnyStr]())
 
@@ -2263,16 +2503,23 @@ class CoreCommands(CommandMixin[AnyStr]):
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     def hlen(self, key: KeyT) -> CommandRequest[int]:
-        """Returns the number of elements in hash :paramref:`key`"""
+        """
+        Return the number of fields in a hash.
+
+        :param key: The key name.
+        :return: The number of fields.
+        """
 
         return self.create_request(CommandName.HLEN, key, callback=IntCallback())
 
     @redis_command(CommandName.HSET, group=CommandGroup.HASH, flags={CommandFlag.FAST})
     def hset(self, key: KeyT, field_values: Mapping[MappingKeyT, ValueT]) -> CommandRequest[int]:
         """
-        Sets ``field`` to ``value`` within hash :paramref:`key`
+        Set one or more field-value pairs in a hash.
 
-        :return: number of fields that were added
+        :param key: The key name.
+        :param field_values: Mapping of field names to values.
+        :return: The number of fields that were added (new fields only).
         """
 
         return self.create_request(
@@ -2306,9 +2553,9 @@ class CoreCommands(CommandMixin[AnyStr]):
          if ``FXX`` only set the fields if **all** of them already exists
         :param ex: Set the expiry of the fields to ``ex`` seconds
         :param px: Set the expiry of the fields to ``px`` milliseconds
-        :param exat: Set the expiry of the fields to the specified time (in seconds)
-        :param exat: Set the expiry of the fields to the specified time (in milliseconds)
-        :param keepttl: Retain the TTL already associated with the fields
+        :param exat: Set the expiry of the fields to the specified Unix time (seconds).
+        :param pxat: Set the expiry of the fields to the specified Unix time (milliseconds).
+        :param keepttl: Retain the TTL already associated with the fields.
         :return: ``True`` if all the fields were successfully set
         """
         command_arguments: CommandArgList = [key]
@@ -2338,10 +2585,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.HSETNX, group=CommandGroup.HASH, flags={CommandFlag.FAST})
     def hsetnx(self, key: KeyT, field: StringT, value: ValueT) -> CommandRequest[bool]:
         """
-        Sets ``field`` to ``value`` within hash :paramref:`key` if ``field`` does not
-        exist.
+        Set a hash field only if it does not already exist.
 
-        :return: whether the field was created
+        :param key: The key name.
+        :param field: The field name.
+        :param value: The value to set.
+        :return: ``True`` if the field was set, ``False`` if it already existed.
         """
 
         return self.create_request(CommandName.HSETNX, key, field, value, callback=BoolCallback())
@@ -2355,8 +2604,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def hmset(self, key: KeyT, field_values: Mapping[MappingKeyT, ValueT]) -> CommandRequest[bool]:
         """
-        Sets key to value within hash :paramref:`key` for each corresponding
-        key and value from the ``field_values`` dict.
+        Set multiple field-value pairs in a hash.
+
+        :param key: The key name.
+        :param field_values: Mapping of field names to values.
+        :return: ``True`` on success.
         """
 
         command_arguments: CommandArgList = [key]
@@ -2378,7 +2630,14 @@ class CoreCommands(CommandMixin[AnyStr]):
     def hmget(
         self, key: KeyT, fields: Parameters[StringT]
     ) -> CommandRequest[tuple[AnyStr | None, ...]]:
-        """Returns values ordered identically to ``fields``"""
+        """
+        Return the values of multiple hash fields in one call.
+
+        :param key: The key name.
+        :param fields: One or more field names.
+        :return: A tuple of values in the same order as fields.
+         ``None`` for missing fields.
+        """
 
         return self.create_request(
             CommandName.HMGET, key, *fields, callback=TupleCallback[AnyStr | None]()
@@ -2388,7 +2647,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.HTTL, version_introduced="7.4.0", group=CommandGroup.HASH)
     def httl(self, key: KeyT, fields: Parameters[StringT]) -> CommandRequest[tuple[int, ...]]:
         """
-        Returns the TTL in seconds of a hash field.
+        Return the TTL in seconds for one or more hash fields.
+
+        :param key: The key name.
+        :param fields: One or more field names.
+        :return: A tuple of TTLs in seconds (-1 if no expiry, -2 if field or key missing).
         """
         command_arguments: CommandArgList = []
 
@@ -2405,7 +2668,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.HPTTL, version_introduced="7.4.0", group=CommandGroup.HASH)
     def hpttl(self, key: KeyT, fields: Parameters[StringT]) -> CommandRequest[tuple[int, ...]]:
         """
-        Returns the TTL in milliseconds of a hash field.
+        Return the TTL in milliseconds for one or more hash fields.
+
+        :param key: The key name.
+        :param fields: One or more field names.
+        :return: A tuple of TTLs in milliseconds (-1 if no expiry, -2 if field or key missing).
         """
         command_arguments: CommandArgList = []
 
@@ -2426,9 +2693,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def hvals(self, key: KeyT) -> CommandRequest[tuple[AnyStr, ...]]:
         """
-        Get all the values in a hash
+        Return all values in a hash.
 
-        :return: list of values in the hash, or an empty list when :paramref:`key` does not exist.
+        :param key: The key name.
+        :return: A tuple of values. Empty tuple if the key does not exist.
         """
 
         return self.create_request(CommandName.HVALS, key, callback=TupleCallback[AnyStr]())
@@ -2467,12 +2735,18 @@ class CoreCommands(CommandMixin[AnyStr]):
         novalues: bool | None = None,
     ) -> CommandRequest[tuple[int, dict[AnyStr, AnyStr] | tuple[AnyStr, ...]]]:
         """
-        Incrementally return key/value slices in a hash. Also returns a
-        cursor pointing to the scan position.
+        Incrementally iterate over fields (and optionally values) in a hash.
 
-        :param match: allows for filtering the keys by pattern
-        :param count: allows for hint the minimum number of returns
-        :param novalues: when True only the field names are returned
+        :param key: The key name.
+        :param cursor: Cursor for iteration (0 to start); use returned cursor for next page.
+        :param match: Optional glob pattern to filter field names.
+        :param count: Hint for minimum number of entries per iteration.
+        :param novalues: If ``True``, return only field names (no values).
+        :return:
+         - A tuple of ``(next_cursor, mapping)``.
+         - If ``novalues`` is set, a tuple of ``(next_cursor, fields)``
+
+         ``next_cursor`` 0 means done.
         """
         command_arguments: CommandArgList = [key, cursor or "0"]
 
@@ -2498,10 +2772,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def hstrlen(self, key: KeyT, field: StringT) -> CommandRequest[int]:
         """
-        Get the length of the value of a hash field
+        Return the length of the string value of a hash field.
 
-        :return: the string length of the value associated with ``field``,
-         or zero when ``field`` is not present in the hash or :paramref:`key` does not exist at all.
+        :param key: The key name.
+        :param field: The field name.
+        :return: The length in bytes, or 0 if the field or key does not exist.
         """
 
         return self.create_request(CommandName.HSTRLEN, key, field, callback=IntCallback())
@@ -2537,16 +2812,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         withvalues: bool | None = None,
     ) -> CommandRequest[AnyStr | tuple[AnyStr, ...] | dict[AnyStr, AnyStr] | None]:
         """
-        Return a random field from the hash value stored at key.
+        Return one or more random fields from a hash, optionally with values.
 
-        :return:  Without the additional :paramref:`count` argument, the command returns a randomly
-         selected field, or ``None`` when :paramref:`key` does not exist.
-         When the additional :paramref:`count` argument is passed, the command returns fields,
-         or an empty tuple when :paramref:`key` does not exist.
-
-         If ``withvalues``  is ``True``, the reply is a mapping of fields and
-         their values from the hash.
-
+        :param key: The key name.
+        :param count: If set, return up to this many distinct fields (negative allows duplicates).
+        :param withvalues: If ``True``, return a mapping of fields to values instead of just fields.
+        :return: A single field, a tuple of fields, a dict (if withvalues), or ``None`` if key is empty.
         """
         command_arguments: CommandArgList = [key]
         options = {"withvalues": withvalues, "count": count}
@@ -2571,9 +2842,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def pfadd(self, key: KeyT, *elements: ValueT) -> CommandRequest[bool]:
         """
-        Adds the specified elements to the specified HyperLogLog.
+        Add the specified elements to the HyperLogLog at key.
 
-        :return: Whether atleast 1 HyperLogLog internal register was altered
+        :param key: The key name.
+        :param elements: One or more elements to add.
+        :return: ``True`` if at least one internal register was altered.
         """
         command_arguments: CommandArgList = [key]
 
@@ -2590,9 +2863,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def pfcount(self, keys: Parameters[KeyT]) -> CommandRequest[int]:
         """
-        Return the approximated cardinality of the set(s) observed by the HyperLogLog at key(s).
+        Return the approximated cardinality of the set(s) observed by the HyperLogLog(s) at key(s).
 
-        :return: The approximated number of unique elements observed via :meth:`pfadd`.
+        :param keys: One or more HyperLogLog key names.
+        :return: The approximated number of unique elements.
         """
 
         return self.create_request(CommandName.PFCOUNT, *keys, callback=IntCallback())
@@ -2604,7 +2878,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def pfmerge(self, destkey: KeyT, sourcekeys: Parameters[KeyT]) -> CommandRequest[bool]:
         """
-        Merge N different HyperLogLogs into a single one
+        Merge multiple HyperLogLogs into a single one at the destination key.
+
+        :param destkey: Destination key for the merged HyperLogLog.
+        :param sourcekeys: One or more source HyperLogLog key names.
+        :return: ``True`` on success.
         """
 
         return self.create_request(
@@ -2625,7 +2903,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         replace: bool | None = None,
     ) -> CommandRequest[bool]:
         """
-        Copy a key
+        Copy a key to another key, optionally in another database.
+
+        :param source: The source key name.
+        :param destination: The destination key name.
+        :param db: If set, copy to this database index on the same server.
+        :param replace: If ``True``, overwrite destination if it exists.
+        :return: ``True`` on success.
         """
         command_arguments: CommandArgList = [source, destination]
 
@@ -2649,8 +2933,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def delete(self, keys: Parameters[KeyT]) -> CommandRequest[int]:
         """
-        Delete one or more keys specified by ``keys``
+        Delete one or more keys.
 
+        :param keys: One or more key names to delete.
         :return: The number of keys that were removed.
         """
 
@@ -2672,7 +2957,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         ifdne: ValueT | None = None,
     ) -> CommandRequest[bool]:
         """
-        Conditionally removes the specified key based on value or hash digest comparison.
+        Remove a key only if its value or hash digest matches the given condition.
+
+        :param key: The key name.
+        :param ifeq: Remove only if current value equals this value.
+        :param ifne: Remove only if current value does not equal this value.
+        :param ifdeq: Remove only if current hash digest equals this value.
+        :param ifdne: Remove only if current hash digest does not equal this value.
+        :return: ``True`` if the key was removed.
         """
         command_arguments: CommandArgList = [key]
         if ifeq is not None:
@@ -2693,7 +2985,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def digest(self, key: KeyT) -> CommandRequest[AnyStr | None]:
         """
-        Get the hash digest for the value stored in the specified key as a hexadecimal string
+        Return the hash digest of the value stored at key as a hexadecimal string.
+
+        :param key: The key name.
+        :return: The hex digest string, or ``None`` if the key does not exist.
         """
         return self.create_request(
             CommandName.DIGEST, key, callback=OptionalAnyStrCallback[AnyStr]()
@@ -2706,9 +3001,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def dump(self, key: KeyT) -> CommandRequest[bytes]:
         """
-        Return a serialized version of the value stored at the specified key.
+        Return a serialized version of the value stored at key.
 
-        :return: the serialized value
+        :param key: The key name.
+        :return: The serialized value as bytes (use with restore).
         """
 
         return self.create_request(
@@ -2727,9 +3023,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def exists(self, keys: Parameters[KeyT]) -> CommandRequest[int]:
         """
-        Determine if a key exists
+        Return how many of the given keys exist.
 
-        :return: the number of keys that exist from those specified as arguments.
+        :param keys: One or more key names to check.
+        :return: The number of keys that exist.
         """
 
         return self.create_request(CommandName.EXISTS, *keys, callback=IntCallback())
@@ -2747,12 +3044,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT] | None = None,
     ) -> CommandRequest[bool]:
         """
-        Set a key's time to live in seconds
+        Set a key's time to live in seconds.
 
-
-
-        :return: if the timeout was set or not set.
-         e.g. key doesn't exist, or operation skipped due to the provided arguments.
+        :param key: The key name.
+        :param seconds: TTL in seconds (or timedelta).
+        :param condition: Optional NX, XX, GT, or LT.
+        :return: ``True`` if the timeout was set, ``False`` otherwise (e.g. key does not exist).
         """
 
         command_arguments: CommandArgList = [key, normalized_seconds(seconds)]
@@ -2775,12 +3072,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT] | None = None,
     ) -> CommandRequest[bool]:
         """
-        Set the expiration for a key to a specific time
+        Set the expiration for a key to an absolute Unix timestamp in seconds.
 
-
-        :return: if the timeout was set or no.
-         e.g. key doesn't exist, or operation skipped due to the provided arguments.
-
+        :param key: The key name.
+        :param unix_time_seconds: Expiration time as Unix timestamp (or datetime).
+        :param condition: Optional NX, XX, GT, or LT.
+        :return: ``True`` if the timeout was set, ``False`` otherwise.
         """
 
         command_arguments: CommandArgList = [
@@ -2804,14 +3101,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def expiretime(self, key: KeyT) -> CommandRequest[datetime.datetime]:
         """
-        Get the expiration Unix timestamp for a key
+        Return the expiration Unix timestamp for a key in seconds.
 
-        :return: Expiration Unix timestamp in seconds, or a negative value in
-         order to signal an error.
-
-         * The command returns ``-1`` if the key exists but has no associated expiration time.
-         * The command returns ``-2`` if the key does not exist.
-
+        :param key: The key name.
+        :return: Expiration as datetime. -1 if key has no expiry, -2 if key does not exist.
         """
 
         return self.create_request(CommandName.EXPIRETIME, key, callback=ExpiryCallback())
@@ -2827,9 +3120,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def keys(self, pattern: StringT = "*") -> CommandRequest[_Set[AnyStr]]:
         """
-        Find all keys matching the given pattern
+        Return all key names matching the given glob pattern.
 
-        :return: keys matching ``pattern``.
+        :param pattern: Glob pattern (e.g. ``*``, ``user:*``).
+        :return: A set of matching key names.
         """
 
         return self.create_request(CommandName.KEYS, pattern, callback=SetCallback[AnyStr]())
@@ -2851,10 +3145,19 @@ class CoreCommands(CommandMixin[AnyStr]):
         password: StringT | None = None,
     ) -> CommandRequest[bool]:
         """
-        Atomically transfer key(s) from a Redis instance to another one.
+        Atomically transfer one or more keys from this instance to another Redis instance.
 
-
-        :return: If all keys were found in the source instance.
+        :param host: Host of the target instance.
+        :param port: Port of the target instance.
+        :param destination_db: Database index on the target.
+        :param timeout: Maximum idle time for the connection in milliseconds.
+        :param keys: One or more key names to migrate.
+        :param copy: If ``True``, copy the key instead of moving it.
+        :param replace: If ``True``, replace existing keys on the target.
+        :param auth: Password for the target (legacy).
+        :param username: Username for ACL auth on the target.
+        :param password: Password for ACL auth on the target.
+        :return: ``True`` on success indicates keys were found and transferred.
         """
 
         if not keys:
@@ -2892,7 +3195,13 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(CommandName.MOVE, group=CommandGroup.GENERIC, flags={CommandFlag.FAST})
     def move(self, key: KeyT, db: int) -> CommandRequest[bool]:
-        """Move a key to another database"""
+        """
+        Move a key from the currently selected database to the specified database.
+
+        :param key: The key name.
+        :param db: The target database index.
+        :return: ``True`` if the key was moved, ``False`` if it already existed in the target db.
+        """
 
         return self.create_request(CommandName.MOVE, key, db, callback=BoolCallback())
 
@@ -2903,9 +3212,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def object_encoding(self, key: KeyT) -> CommandRequest[AnyStr | None]:
         """
-        Return the internal encoding for the object stored at :paramref:`key`
+        Return the internal encoding for the object stored at key.
 
-        :return: the encoding of the object, or ``None`` if the key doesn't exist
+        :param key: The key name.
+        :return: The encoding string (e.g. int, ziplist), or ``None`` if the key does not exist.
         """
 
         return self.create_request(
@@ -2919,10 +3229,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def object_freq(self, key: KeyT) -> CommandRequest[int]:
         """
-        Return the logarithmic access frequency counter for the object
-        stored at :paramref:`key`
+        Return the logarithmic access frequency counter for the object stored at key (LFU).
 
-        :return: The counter's value.
+        :param key: The key name.
+        :return: The counter value.
         """
 
         return self.create_request(CommandName.OBJECT_FREQ, key, callback=IntCallback())
@@ -2934,9 +3244,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def object_idletime(self, key: KeyT) -> CommandRequest[int]:
         """
-        Return the time in seconds since the last access to the object
-        stored at :paramref:`key`
+        Return the time in seconds since the last access to the object stored at key.
 
+        :param key: The key name.
         :return: The idle time in seconds.
         """
 
@@ -2949,8 +3259,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def object_refcount(self, key: KeyT) -> CommandRequest[int]:
         """
-        Return the reference count of the object stored at :paramref:`key`
+        Return the reference count of the object stored at key.
 
+        :param key: The key name.
         :return: The number of references.
         """
 
@@ -2958,7 +3269,12 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(CommandName.PERSIST, group=CommandGroup.GENERIC, flags={CommandFlag.FAST})
     def persist(self, key: KeyT) -> CommandRequest[bool]:
-        """Removes an expiration on :paramref:`key`"""
+        """
+        Remove the expiration from a key so it no longer expires.
+
+        :param key: The key name.
+        :return: ``True`` if the expiration was removed, ``False`` if the key had no expiry.
+        """
 
         return self.create_request(CommandName.PERSIST, key, callback=BoolCallback())
 
@@ -2975,10 +3291,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT] | None = None,
     ) -> CommandRequest[bool]:
         """
-        Set a key's time to live in milliseconds
+        Set a key's time to live in milliseconds.
 
-        :return: if the timeout was set or not.
-         e.g. key doesn't exist, or operation skipped due to the provided arguments.
+        :param key: The key name.
+        :param milliseconds: TTL in milliseconds (or timedelta).
+        :param condition: Optional NX, XX, GT, or LT.
+        :return: ``True`` if the timeout was set, ``False`` otherwise.
         """
         command_arguments: CommandArgList = [key, normalized_milliseconds(milliseconds)]
 
@@ -3000,10 +3318,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.NX, PureToken.XX, PureToken.GT, PureToken.LT] | None = None,
     ) -> CommandRequest[bool]:
         """
-        Set the expiration for a key as a UNIX timestamp specified in milliseconds
+        Set the expiration for a key to an absolute Unix timestamp in milliseconds.
 
-        :return: if the timeout was set or not.
-         e.g. key doesn't exist, or operation skipped due to the provided arguments.
+        :param key: The key name.
+        :param unix_time_milliseconds: Expiration as Unix timestamp in ms (or datetime).
+        :param condition: Optional NX, XX, GT, or LT.
+        :return: ``True`` if the timeout was set, ``False`` otherwise.
         """
 
         command_arguments: CommandArgList = [
@@ -3027,14 +3347,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def pexpiretime(self, key: KeyT) -> CommandRequest[datetime.datetime]:
         """
-        Get the expiration Unix timestamp for a key in milliseconds
+        Return the expiration Unix timestamp for a key in milliseconds.
 
-        :return: Expiration Unix timestamp in milliseconds, or a negative value
-         in order to signal an error
-
-         * The command returns ``-1`` if the key exists but has no associated expiration time.
-         * The command returns ``-2`` if the key does not exist.
-
+        :param key: The key name.
+        :return: Expiration as datetime (ms). -1 if no expiry, -2 if key does not exist.
         """
 
         return self.create_request(
@@ -3050,9 +3366,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def pttl(self, key: KeyT) -> CommandRequest[int]:
         """
-        Returns the number of milliseconds until the key :paramref:`key` will expire
+        Return the number of milliseconds until the key will expire.
 
-        :return: TTL in milliseconds, or a negative value in order to signal an error
+        :param key: The key name.
+        :return: TTL in milliseconds. -1 if key has no expiry, -2 if key does not exist.
         """
 
         return self.create_request(CommandName.PTTL, key, callback=IntCallback())
@@ -3065,9 +3382,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def randomkey(self) -> CommandRequest[AnyStr | None]:
         """
-        Returns the name of a random key
+        Return a random key name from the currently selected database.
 
-        :return: the random key, or ``None`` when the database is empty.
+        :return: A key name, or ``None`` when the database is empty.
         """
 
         return self.create_request(CommandName.RANDOMKEY, callback=OptionalAnyStrCallback[AnyStr]())
@@ -3078,7 +3395,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def rename(self, key: KeyT, newkey: KeyT) -> CommandRequest[bool]:
         """
-        Rekeys key :paramref:`key` to ``newkey``
+        Rename a key to a new name (overwrites newkey if it exists).
+
+        :param key: The current key name.
+        :param newkey: The new key name.
+        :return: ``True`` on success.
         """
 
         return self.create_request(CommandName.RENAME, key, newkey, callback=BoolCallback())
@@ -3086,9 +3407,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.RENAMENX, group=CommandGroup.GENERIC, flags={CommandFlag.FAST})
     def renamenx(self, key: KeyT, newkey: KeyT) -> CommandRequest[bool]:
         """
-        Rekeys key :paramref:`key` to ``newkey`` if ``newkey`` doesn't already exist
+        Rename a key only if the new name does not already exist.
 
-        :return: False when ``newkey`` already exists.
+        :param key: The current key name.
+        :param newkey: The new key name.
+        :return: ``True`` if the key was renamed, ``False`` if newkey already exists.
         """
 
         return self.create_request(CommandName.RENAMENX, key, newkey, callback=BoolCallback())
@@ -3108,7 +3431,16 @@ class CoreCommands(CommandMixin[AnyStr]):
         freq: int | None = None,
     ) -> CommandRequest[bool]:
         """
-        Create a key using the provided serialized value, previously obtained using DUMP.
+        Create a key from a serialized value (e.g. from dump).
+
+        :param key: The key name to create.
+        :param ttl: TTL in milliseconds, or datetime for absolute expiry if absttl.
+        :param serialized_value: The serialized value (bytes from dump).
+        :param replace: If ``True``, overwrite existing key.
+        :param absttl: If ``True``, ttl is an absolute Unix timestamp in ms.
+        :param idletime: Optional idle time in seconds before eviction.
+        :param freq: Optional access frequency for LFU eviction.
+        :return: ``True`` on success.
         """
 
         command_arguments: CommandArgList = [
@@ -3154,12 +3486,17 @@ class CoreCommands(CommandMixin[AnyStr]):
         store: KeyT | None = None,
     ) -> CommandRequest[tuple[AnyStr, ...] | int]:
         """
-        Sort the elements in a list, set or sorted set
+        Sort elements in a list, set, or sorted set, optionally storing the result.
 
-        :return: sorted elements.
-
-         When the :paramref:`store` option is specified the command returns the number of
-         sorted elements in the destination list.
+        :param key: The key name.
+        :param gets: Optional keys or patterns to retrieve external values (e.g. *->field).
+        :param by: Optional pattern for weight key (e.g. *_weight).
+        :param offset: Skip this many elements (use with count for LIMIT).
+        :param count: Return this many elements (use with offset).
+        :param order: ASC or DESC.
+        :param alpha: If ``True``, sort lexicographically.
+        :param store: If set, store the result in this key instead of returning.
+        :return: A tuple of sorted elements, or the number of stored elements if store is set.
         """
 
         command_arguments: CommandArgList = [key]
@@ -3250,10 +3587,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def touch(self, keys: Parameters[KeyT]) -> CommandRequest[int]:
         """
-        Alters the last access time of a key(s).
-        Returns the number of existing keys specified.
+        Update the last access time of one or more keys (only existing keys are counted).
 
-        :return: The number of keys that were touched.
+        :param keys: One or more key names.
+        :return: The number of keys that existed and were touched.
         """
 
         return self.create_request(CommandName.TOUCH, *keys, callback=IntCallback())
@@ -3265,9 +3602,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def ttl(self, key: KeyT) -> CommandRequest[int]:
         """
-        Get the time to live for a key in seconds
+        Return the time to live for a key in seconds.
 
-        :return: TTL in seconds, or a negative value in order to signal an error
+        :param key: The key name.
+        :return: TTL in seconds. -1 if key has no expiry, -2 if key does not exist.
         """
 
         return self.create_request(CommandName.TTL, key, callback=IntCallback())
@@ -3281,9 +3619,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def unlink(self, keys: Parameters[KeyT]) -> CommandRequest[int]:
         """
-        Delete a key asynchronously in another thread.
-        Otherwise it is just as :meth:`delete`, but non blocking.
+        Delete keys asynchronously in a background thread (non-blocking).
 
+        :param keys: One or more key names to unlink.
         :return: The number of keys that were unlinked.
         """
 
@@ -3301,10 +3639,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def wait(self, numreplicas: int, timeout: int) -> CommandRequest[int]:
         """
-        Wait for the synchronous replication of all the write commands sent in the context of
-        the current connection
+        Block until write commands are replicated to at least the given number of replicas.
 
-        :return: the number of replicas the write was replicated to
+        :param numreplicas: Minimum number of replicas that must acknowledge.
+        :param timeout: Maximum time to wait in milliseconds (0 = block indefinitely).
+        :return: The number of replicas that acknowledged the writes.
         """
 
         return self.create_request(CommandName.WAIT, numreplicas, timeout, callback=IntCallback())
@@ -3325,10 +3664,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, numlocal: int, numreplicas: int, timeout: int
     ) -> CommandRequest[tuple[int, ...]]:
         """
-        Wait for all write commands sent in the context of the current connection to be synced
-        to AOF of local host and/or replicas
+        Block until write commands are synced to AOF on the local host and/or replicas.
 
-        :return: a tuple of (numlocal, numreplicas) that the write commands were synced to
+        :param numlocal: Minimum number of local AOF syncs.
+        :param numreplicas: Minimum number of replica AOF syncs.
+        :param timeout: Maximum time to wait in milliseconds (0 = block indefinitely).
+        :return: A tuple of (numlocal, numreplicas) that were synced.
         """
 
         return self.create_request(
@@ -3353,7 +3694,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         type_: StringT | None = None,
     ) -> CommandRequest[tuple[int, tuple[AnyStr, ...]]]:
         """
-        Incrementally iterate the keys space
+        Incrementally iterate over the key space using a cursor.
+
+        :param cursor: Cursor for iteration (0 to start); use returned cursor for next page.
+        :param match: Optional glob pattern to filter keys.
+        :param count: Hint for minimum number of keys per iteration.
+        :param type_: Optional key type filter (e.g. string, list, set).
+        :return: A tuple of ``(next_cursor, tuple_of_keys)``. ``next_cursor`` 0 means done.
         """
         command_arguments: CommandArgList = [cursor or b"0"]
 
@@ -3385,12 +3732,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         timeout: int | float,
     ) -> CommandRequest[AnyStr | None]:
         """
-        Pop an element from a list, push it to another list and return it;
-        or block until one is available
+        Pop an element from a list, push it to another list, and return it; block until one is available.
 
-
-        :return: the element being popped from :paramref:`source` and pushed to
-         :paramref:`destination`
+        :param source: Source list key.
+        :param destination: Destination list key.
+        :param wherefrom: LEFT or RIGHT (end to pop from).
+        :param whereto: LEFT or RIGHT (end to push to).
+        :param timeout: Block timeout in seconds (0 = indefinitely).
+        :return: The element that was moved, or ``None`` if timeout was reached.
         """
         command_arguments: CommandArgList = [
             source,
@@ -3420,14 +3769,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[list[AnyStr | list[AnyStr]] | None]:
         """
-        Pop elements from the first non empty list, or block until one is available
+        Pop elements from the first non-empty list among the given keys, or block until one is available.
 
-        :return:
-
-         - A ``None`` when no element could be popped, and timeout is reached.
-         - A two-element array with the first element being the name of the key
-           from which elements were popped, and the second element is an array of elements.
-
+        :param keys: One or more list key names.
+        :param timeout: Block timeout in seconds (0 = indefinitely).
+        :param where: LEFT or RIGHT (end to pop from).
+        :param count: Maximum number of elements to pop.
+        :return: ``None`` if timeout reached; otherwise [key_name, [elements]].
         """
         _keys: list[KeyT] = list(keys)
         command_arguments: CommandArgList = [timeout, len(_keys), *_keys, where]
@@ -3447,14 +3795,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, keys: Parameters[KeyT], timeout: int | float
     ) -> CommandRequest[list[AnyStr] | None]:
         """
-        Remove and get the first element in a list, or block until one is available
+        Remove and return the first element from the first non-empty list, or block until one is available.
 
-        :return:
-
-         - ``None`` when no element could be popped and the timeout expired.
-         - A list with the first element being the name of the key
-           where an element was popped and the second element being the value of the
-           popped element.
+        :param keys: One or more list key names.
+        :param timeout: Block timeout in seconds (0 = indefinitely).
+        :return: ``None`` if timeout reached; otherwise [key_name, element].
         """
 
         return self.create_request(
@@ -3467,14 +3812,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, keys: Parameters[KeyT], timeout: int | float
     ) -> CommandRequest[list[AnyStr] | None]:
         """
-        Remove and get the last element in a list, or block until one is available
+        Remove and return the last element from the first non-empty list, or block until one is available.
 
-        :return:
-
-         - ``None`` when no element could be popped and the timeout expired.
-         - A list with the first element being the name of the key
-           where an element was popped and the second element being the value of the
-           popped element.
+        :param keys: One or more list key names.
+        :param timeout: Block timeout in seconds (0 = indefinitely).
+        :return: ``None`` if timeout reached; otherwise [key_name, element].
         """
 
         return self.create_request(
@@ -3492,11 +3834,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, source: KeyT, destination: KeyT, timeout: int | float
     ) -> CommandRequest[AnyStr | None]:
         """
-        Pop an element from a list, push it to another list and return it;
-        or block until one is available
+        Pop from the tail of source, push to the head of destination, and return the element; block until one is available.
 
-        :return: the element being popped from :paramref:`source` and pushed to
-         :paramref:`destination`.
+        :param source: Source list key.
+        :param destination: Destination list key.
+        :param timeout: Block timeout in seconds (0 = indefinitely).
+        :return: The element that was moved, or ``None`` if timeout was reached.
         """
 
         return self.create_request(
@@ -3515,10 +3858,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def lindex(self, key: KeyT, index: int) -> CommandRequest[AnyStr | None]:
         """
+        Return the element at index in the list.
 
-        Get an element from a list by its index
-
-        :return: the requested element, or ``None`` when ``index`` is out of range.
+        :param key: The key name.
+        :param index: Zero-based index.
+        :return: The element at that index, or ``None`` if index is out of range.
         """
 
         return self.create_request(
@@ -3534,11 +3878,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         element: ValueT,
     ) -> CommandRequest[int]:
         """
-        Inserts element in the list stored at key either before or after the reference
-        value pivot.
+        Insert an element in the list before or after a pivot value.
 
-        :return: the length of the list after the insert operation, or ``-1`` when
-         the value pivot was not found.
+        :param key: The key name.
+        :param where: AFTER or BEFORE the pivot.
+        :param pivot: The reference value to insert relative to.
+        :param element: The value to insert.
+        :return: The length of the list after the insert, or -1 if pivot was not found.
         """
 
         return self.create_request(
@@ -3553,7 +3899,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def llen(self, key: KeyT) -> CommandRequest[int]:
         """
-        :return: the length of the list at :paramref:`key`.
+        Return the length of the list stored at key.
+
+        :param key: The key name.
+        :return: The length of the list (0 if key does not exist).
         """
 
         return self.create_request(CommandName.LLEN, key, callback=IntCallback())
@@ -3567,9 +3916,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         whereto: Literal[PureToken.LEFT, PureToken.RIGHT],
     ) -> CommandRequest[AnyStr | None]:
         """
-        Pop an element from a list, push it to another list and return it
+        Atomically pop an element from one list and push it to another.
 
-        :return: the element being popped and pushed.
+        :param source: Source list key.
+        :param destination: Destination list key.
+        :param wherefrom: LEFT or RIGHT (end to pop from).
+        :param whereto: LEFT or RIGHT (end to push to).
+        :return: The element that was moved.
         """
         command_arguments: CommandArgList = [source, destination, wherefrom, whereto]
 
@@ -3587,13 +3940,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[list[AnyStr | list[AnyStr]] | None]:
         """
-        Pop elements from the first non empty list
+        Pop elements from the first non-empty list among the given keys.
 
-        :return:
-
-         - A ```None``` when no element could be popped.
-         - A two-element array with the first element being the name of the key
-           from which elements were popped, and the second element is an array of elements.
+        :param keys: One or more list key names.
+        :param where: LEFT or RIGHT (end to pop from).
+        :param count: Maximum number of elements to pop.
+        :return: ``None`` if all lists are empty; otherwise [key_name, [elements]].
         """
         _keys: list[KeyT] = list(keys)
         command_arguments: CommandArgList = [len(_keys), *_keys, where]
@@ -3623,11 +3975,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, count: int | None = None
     ) -> CommandRequest[AnyStr | None] | CommandRequest[list[AnyStr] | None]:
         """
-        Remove and get the first :paramref:`count` elements in a list
+        Remove and return the first element(s) from the list.
 
-        :return: the value of the first element, or ``None`` when :paramref:`key` does not exist.
-         If :paramref:`count` is provided the return is a list of popped elements,
-         or ``None`` when :paramref:`key` does not exist.
+        :param key: The key name.
+        :param count: If set, pop up to this many elements (returns a list).
+        :return: The first element, or a list of elements if count is set; ``None`` if key is empty or missing.
         """
         command_arguments: CommandArgList = []
 
@@ -3664,15 +4016,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         maxlen: int | None = None,
     ) -> CommandRequest[int | None] | CommandRequest[list[int] | None]:
         """
+        Return the index of the first (or rank-th) occurrence of element in the list.
 
-        Return the index of matching elements on a list
-
-
-        :return: The command returns the integer representing the matching element,
-         or ``None`` if there is no match.
-
-         If the :paramref:`count` argument is given a list of integers representing
-         the matching elements.
+        :param key: The key name.
+        :param element: The value to search for.
+        :param rank: Match the rank-th occurrence (positive or negative).
+        :param count: If set, return up to this many matching indices (returns a list).
+        :param maxlen: Only search this many elements from the head.
+        :return: A single index, or a list of indices if count is set; ``None`` if no match.
         """
         command_arguments: CommandArgList = [key, element]
 
@@ -3697,9 +4048,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.LPUSH, group=CommandGroup.LIST, flags={CommandFlag.FAST})
     def lpush(self, key: KeyT, elements: Parameters[ValueT]) -> CommandRequest[int]:
         """
-        Prepend one or multiple elements to a list
+        Prepend one or more elements to a list.
 
-        :return: the length of the list after the push operations.
+        :param key: The key name.
+        :param elements: One or more values to prepend.
+        :return: The length of the list after the push.
         """
         return self.create_request(CommandName.LPUSH, key, *elements, callback=IntCallback())
 
@@ -3707,9 +4060,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.LPUSHX, group=CommandGroup.LIST, flags={CommandFlag.FAST})
     def lpushx(self, key: KeyT, elements: Parameters[ValueT]) -> CommandRequest[int]:
         """
-        Prepend an element to a list, only if the list exists
+        Prepend elements to a list only if the list exists.
 
-        :return: the length of the list after the push operation.
+        :param key: The key name.
+        :param elements: One or more values to prepend.
+        :return: The length of the list after the push (0 if key did not exist).
         """
 
         return self.create_request(CommandName.LPUSHX, key, *elements, callback=IntCallback())
@@ -3722,9 +4077,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def lrange(self, key: KeyT, start: int, stop: int) -> CommandRequest[list[AnyStr]]:
         """
-        Get a range of elements from a list
+        Return a range of elements from the list (inclusive of both ends).
 
-        :return: list of elements in the specified range.
+        :param key: The key name.
+        :param start: Start index (0-based; negative counts from the end).
+        :param stop: Stop index (inclusive; negative counts from the end).
+        :return: A list of elements in the specified range.
         """
 
         return self.create_request(
@@ -3734,15 +4092,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.LREM, group=CommandGroup.LIST)
     def lrem(self, key: KeyT, count: int, element: ValueT) -> CommandRequest[int]:
         """
-        Removes the first :paramref:`count` occurrences of elements equal to ``element``
-        from the list stored at :paramref:`key`.
+        Remove occurrences of element from the list. Count controls direction and limit.
 
-        The count argument influences the operation in the following ways:
-            count > 0: Remove elements equal to value moving from head to tail.
-            count < 0: Remove elements equal to value moving from tail to head.
-            count = 0: Remove all elements equal to value.
-
-        :return: the number of removed elements.
+        :param key: The key name.
+        :param count: >0 remove from head, <0 from tail, 0 remove all matches.
+        :param element: The value to remove.
+        :return: The number of elements removed.
         """
 
         return self.create_request(CommandName.LREM, key, count, element, callback=IntCallback())
@@ -3752,7 +4107,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.LIST,
     )
     def lset(self, key: KeyT, index: int, element: ValueT) -> CommandRequest[bool]:
-        """Sets ``index`` of list :paramref:`key` to ``element``"""
+        """
+        Set the list element at index to the given value.
+
+        :param key: The key name.
+        :param index: Zero-based index.
+        :param element: The new value.
+        :return: ``True`` on success.
+        """
 
         return self.create_request(
             CommandName.LSET, key, index, element, callback=SimpleStringCallback()
@@ -3764,11 +4126,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def ltrim(self, key: KeyT, start: int, stop: int) -> CommandRequest[bool]:
         """
-        Trims the list :paramref:`key`, removing all values not within the slice
-        between ``start`` and ``stop``
+        Trim the list to the specified range (inclusive); remove elements outside the range.
 
-        ``start`` and ``stop`` can be negative numbers just like
-        Python slicing notation
+        :param key: The key name.
+        :param start: Start index (0-based; negative counts from the end).
+        :param stop: Stop index (inclusive; negative counts from the end).
+        :return: ``True`` on success.
         """
 
         return self.create_request(
@@ -3791,13 +4154,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, count: int | None = None
     ) -> CommandRequest[AnyStr | None] | CommandRequest[list[AnyStr] | None]:
         """
-        Remove and get the last elements in a list
+        Remove and return the last element(s) from the list.
 
-        :return: When called without the :paramref:`count` argument the value
-         of the last element, or ``None`` when :paramref:`key` does not exist.
-
-         When called with the :paramref:`count` argument list of popped elements,
-         or ``None`` when :paramref:`key` does not exist.
+        :param key: The key name.
+        :param count: If set, pop up to this many elements from the tail (returns a list).
+        :return: The last element, or a list if count is set; ``None`` if key is empty or missing.
         """
 
         command_arguments: CommandArgList = []
@@ -3827,9 +4188,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def rpoplpush(self, source: KeyT, destination: KeyT) -> CommandRequest[AnyStr | None]:
         """
-        Remove the last element in a list, prepend it to another list and return it
+        Atomically pop the last element from source and prepend it to destination.
 
-        :return: the element being popped and pushed.
+        :param source: Source list key.
+        :param destination: Destination list key.
+        :return: The element that was moved.
         """
 
         return self.create_request(
@@ -3847,9 +4210,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def rpush(self, key: KeyT, elements: Parameters[ValueT]) -> CommandRequest[int]:
         """
-        Append an element(s) to a list
+        Append one or more elements to a list.
 
-        :return: the length of the list after the push operation.
+        :param key: The key name.
+        :param elements: One or more values to append.
+        :return: The length of the list after the push.
         """
 
         return self.create_request(CommandName.RPUSH, key, *elements, callback=IntCallback())
@@ -3862,9 +4227,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def rpushx(self, key: KeyT, elements: Parameters[ValueT]) -> CommandRequest[int]:
         """
-        Append a element(s) to a list, only if the list exists
+        Append elements to a list only if the list exists.
 
-        :return: the length of the list after the push operation.
+        :param key: The key name.
+        :param elements: One or more values to append.
+        :return: The length of the list after the push (0 if key did not exist).
         """
 
         return self.create_request(CommandName.RPUSHX, key, *elements, callback=IntCallback())
@@ -3877,10 +4244,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def sadd(self, key: KeyT, members: Parameters[ValueT]) -> CommandRequest[int]:
         """
-        Add one or more members to a set
+        Add one or more members to a set.
 
-        :return: the number of elements that were added to the set, not including
-         all the elements already present in the set.
+        :param key: The key name.
+        :param members: One or more values to add.
+        :return: The number of members that were added (excluding those already in the set).
         """
 
         return self.create_request(CommandName.SADD, key, *members, callback=IntCallback())
@@ -3893,10 +4261,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def scard(self, key: KeyT) -> CommandRequest[int]:
         """
-        Returns the number of members in the set
+        Return the number of members in a set.
 
-        :return the cardinality (number of elements) of the set, or ``0`` if :paramref:`key`
-         does not exist.
+        :param key: The key name.
+        :return: The cardinality of the set (0 if key does not exist).
         """
 
         return self.create_request(CommandName.SCARD, key, callback=IntCallback())
@@ -3909,9 +4277,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def sdiff(self, keys: Parameters[KeyT]) -> CommandRequest[_Set[AnyStr]]:
         """
-        Subtract multiple sets
+        Return the difference of the first set and all successive sets (members in first but not in others).
 
-        :return: members of the resulting set.
+        :param keys: One or more set key names (first is the base set).
+        :return: A set of members in the difference.
         """
 
         return self.create_request(CommandName.SDIFF, *keys, callback=SetCallback[AnyStr]())
@@ -3920,8 +4289,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.SDIFFSTORE, group=CommandGroup.SET)
     def sdiffstore(self, keys: Parameters[KeyT], destination: KeyT) -> CommandRequest[int]:
         """
-        Subtract multiple sets and store the resulting set in a key
+        Compute set difference and store the result in destination.
 
+        :param keys: One or more set key names (first is the base set).
+        :param destination: Key where the result set is stored.
+        :return: The number of elements in the resulting set.
         """
 
         return self.create_request(
@@ -3936,9 +4308,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def sinter(self, keys: Parameters[KeyT]) -> CommandRequest[_Set[AnyStr]]:
         """
-        Intersect multiple sets
+        Return the intersection of all given sets.
 
-        :return: members of the resulting set
+        :param keys: One or more set key names.
+        :return: A set of members in the intersection.
         """
 
         return self.create_request(CommandName.SINTER, *keys, callback=SetCallback[AnyStr]())
@@ -3947,9 +4320,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.SINTERSTORE, group=CommandGroup.SET)
     def sinterstore(self, keys: Parameters[KeyT], destination: KeyT) -> CommandRequest[int]:
         """
-        Intersect multiple sets and store the resulting set in a key
+        Compute set intersection and store the result in destination.
 
-        :return: the number of elements in the resulting set.
+        :param keys: One or more set key names.
+        :param destination: Key where the result set is stored.
+        :return: The number of elements in the resulting set.
         """
 
         return self.create_request(
@@ -3970,8 +4345,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         limit: int | None = None,
     ) -> CommandRequest[int]:
         """
-        Intersect multiple sets and return the cardinality of the result
+        Return the cardinality of the intersection of multiple sets.
 
+        :param keys: One or more set key names.
+        :param limit: If set, limit the result to this maximum (approximate).
         :return: The number of elements in the resulting intersection.
         """
         _keys: list[KeyT] = list(keys)
@@ -3993,9 +4370,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def sismember(self, key: KeyT, member: ValueT) -> CommandRequest[bool]:
         """
-        Determine if a given value is a member of a set
+        Return whether the given value is a member of the set.
 
-        :return: If the element is a member of the set. ``False`` if :paramref:`key` does not exist.
+        :param key: The key name.
+        :param member: The value to check.
+        :return: ``True`` if member is in the set, ``False`` otherwise or if key does not exist.
         """
 
         return self.create_request(CommandName.SISMEMBER, key, member, callback=BoolCallback())
@@ -4007,7 +4386,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         flags={CommandFlag.READONLY},
     )
     def smembers(self, key: KeyT) -> CommandRequest[_Set[AnyStr]]:
-        """Returns all members of the set"""
+        """
+        Return all members of a set.
+
+        :param key: The key name.
+        :return: A set of all members; empty set if the key does not exist.
+        """
 
         return self.create_request(CommandName.SMEMBERS, key, callback=SetCallback[AnyStr]())
 
@@ -4023,10 +4407,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, members: Parameters[ValueT]
     ) -> CommandRequest[tuple[bool, ...]]:
         """
-        Returns the membership associated with the given elements for a set
+        Return whether each given value is a member of the set.
 
-        :return: tuple representing the membership of the given elements, in the same
-         order as they are requested.
+        :param key: The key name.
+        :param members: One or more values to check.
+        :return: A tuple of booleans in the same order as members.
         """
 
         return self.create_request(CommandName.SMISMEMBER, key, *members, callback=BoolsCallback())
@@ -4038,7 +4423,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def smove(self, source: KeyT, destination: KeyT, member: ValueT) -> CommandRequest[bool]:
         """
-        Move a member from one set to another
+        Move a member from one set to another (atomic).
+
+        :param source: Source set key.
+        :param destination: Destination set key.
+        :param member: The member to move.
+        :return: ``True`` if the member was moved, ``False`` if it was not in source.
         """
 
         return self.create_request(
@@ -4054,13 +4444,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, count: int | None = None
     ) -> CommandRequest[AnyStr] | CommandRequest[_Set[AnyStr] | None]:
         """
-        Remove and return one or multiple random members from a set
+        Remove and return one or more random members from the set.
 
-        :return: When called without the :paramref:`count` argument the removed member, or ``None``
-         when :paramref:`key` does not exist.
-
-         When called with the :paramref:`count` argument the removed members, or an empty array when
-         :paramref:`key` does not exist.
+        :param key: The key name.
+        :param count: If set, remove and return up to this many members (returns a set).
+        :return: A single member, or a set if count is set; ``None`` or empty if key is empty/missing.
         """
 
         if count is not None:
@@ -4082,15 +4470,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, count: int | None = None
     ) -> CommandRequest[AnyStr | _Set[AnyStr]]:
         """
-        Get one or multiple random members from a set
+        Return one or more random members from the set (without removing).
 
-
-
-        :return: without the additional :paramref:`count` argument, the command returns a  randomly
-         selected element, or ``None`` when :paramref:`key` does not exist.
-
-         When the additional :paramref:`count` argument is passed, the command returns elements,
-         or an empty set when :paramref:`key` does not exist.
+        :param key: The key name.
+        :param count: If set, return up to this many distinct members (negative allows duplicates).
+        :return: A single member, or a set/tuple if count is set; ``None`` or empty if key is empty.
         """
         command_arguments: CommandArgList = []
 
@@ -4112,11 +4496,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def srem(self, key: KeyT, members: Parameters[ValueT]) -> CommandRequest[int]:
         """
-        Remove one or more members from a set
+        Remove one or more members from the set.
 
-
-        :return: the number of members that were removed from the set, not
-         including non existing members.
+        :param key: The key name.
+        :param members: One or more values to remove.
+        :return: The number of members that were removed.
         """
 
         return self.create_request(CommandName.SREM, key, *members, callback=IntCallback())
@@ -4129,9 +4513,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def sunion(self, keys: Parameters[KeyT]) -> CommandRequest[_Set[AnyStr]]:
         """
-        Add multiple sets
+        Return the union of all given sets.
 
-        :return: members of the resulting set.
+        :param keys: One or more set key names.
+        :return: A set of all members in the union.
         """
 
         return self.create_request(CommandName.SUNION, *keys, callback=SetCallback[AnyStr]())
@@ -4140,10 +4525,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.SUNIONSTORE, group=CommandGroup.SET)
     def sunionstore(self, keys: Parameters[KeyT], destination: KeyT) -> CommandRequest[int]:
         """
-        Add multiple sets and store the resulting set in a key
+        Compute set union and store the result in destination.
 
-        :return: the number of elements in the resulting set.
-
+        :param keys: One or more set key names.
+        :param destination: Key where the result set is stored.
+        :return: The number of elements in the resulting set.
         """
 
         return self.create_request(
@@ -4164,11 +4550,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[tuple[int, _Set[AnyStr]]]:
         """
-        Incrementally returns subsets of elements in a set. Also returns a
-        cursor pointing to the scan position.
+        Incrementally iterate over members of a set using a cursor.
 
-        :param match: is for filtering the keys by pattern
-        :param count: is for hint the minimum number of returns
+        :param key: The key name.
+        :param cursor: Cursor for iteration (0 to start); use returned cursor for next page.
+        :param match: Optional glob pattern to filter members.
+        :param count: Hint for minimum number of members per iteration.
+        :return: A tuple of (next_cursor, set_of_members); next_cursor 0 means done.
         """
         command_arguments: CommandArgList = [key, cursor or "0"]
 
@@ -4198,12 +4586,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[tuple[AnyStr, tuple[ScoredMember, ...]] | None]:
         """
-        Remove and return members with scores in a sorted set or block until one is available
+        Pop members with lowest or highest scores from the first non-empty sorted set, or block until one is available.
 
-        :return:
-
-          - A ```None``` when no element could be popped.
-          - A tuple of (name of key, popped (member, score) pairs)
+        :param keys: One or more sorted set key names.
+        :param timeout: Block timeout in seconds (0 = indefinitely).
+        :param where: MIN (lowest scores) or MAX (highest scores).
+        :param count: Maximum number of members to pop.
+        :return: ``None`` if timeout reached; otherwise (key_name, [(member, score), ...]).
         """
         _keys: list[KeyT] = list(keys)
         command_arguments: CommandArgList = [timeout, len(_keys), *_keys, where]
@@ -4225,12 +4614,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, keys: Parameters[KeyT], timeout: int | float
     ) -> CommandRequest[tuple[AnyStr, AnyStr, float] | None]:
         """
-        Remove and return the member with the highest score from one or more sorted sets,
-        or block until one is available.
+        Pop the member with the highest score from the first non-empty sorted set, or block until one is available.
 
-        :return: A triplet with the first element being the name of the key
-         where a member was popped, the second element is the popped member itself,
-         and the third element is the score of the popped element.
+        :param keys: One or more sorted set key names.
+        :param timeout: Block timeout in seconds (0 = indefinitely).
+        :return: ``None`` if timeout reached; otherwise (key_name, member, score).
         """
         command_arguments: CommandArgList = [*keys, timeout]
 
@@ -4248,12 +4636,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, keys: Parameters[KeyT], timeout: int | float
     ) -> CommandRequest[tuple[AnyStr, AnyStr, float] | None]:
         """
-        Remove and return the member with the lowest score from one or more sorted sets,
-        or block until one is available
+        Pop the member with the lowest score from the first non-empty sorted set, or block until one is available.
 
-        :return: A triplet with the first element being the name of the key
-         where a member was popped, the second element is the popped member itself,
-         and the third element is the score of the popped element.
+        :param keys: One or more sorted set key names.
+        :param timeout: Block timeout in seconds (0 = indefinitely).
+        :return: ``None`` if timeout reached; otherwise (key_name, member, score).
         """
 
         command_arguments: CommandArgList = [*keys, timeout]
@@ -4278,18 +4665,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         increment: bool | None = None,
     ) -> CommandRequest[int | float]:
         """
-        Add one or more members to a sorted set, or update its score if it already exists
+        Add one or more members to a sorted set, or update their scores.
 
-        :return:
-
-         - When used without optional arguments, the number of elements added to the sorted set
-           (excluding score updates).
-         - If the ``change`` option is specified, the number of elements that were changed
-           (added or updated).
-         - If :paramref:`condition` is specified, the new score of :paramref:`member`
-           (a double precision floating point number) represented as string
-         - ``None`` if the operation is aborted
-
+        :param key: The key name.
+        :param member_scores: Mapping of member names to scores.
+        :param condition: NX (only add new) or XX (only update existing).
+        :param comparison: GT (only if new score greater) or LT (only if new score less).
+        :param change: If ``True``, return the number of elements changed (added or updated).
+        :param increment: If ``True``, add increment to existing score (like zincrby); return new score.
+        :return: Number of elements added; or number changed if change; or new score if increment; or ``None`` if aborted.
         """
         command_arguments: CommandArgList = []
 
@@ -4319,11 +4703,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def zcard(self, key: KeyT) -> CommandRequest[int]:
         """
-        Get the number of members in a sorted set
+        Return the number of members in the sorted set.
 
-        :return: the cardinality (number of elements) of the sorted set, or ``0``
-         if the :paramref:`key` does not exist
-
+        :param key: The key name.
+        :return: The cardinality (0 if key does not exist).
         """
 
         return self.create_request(CommandName.ZCARD, key, callback=IntCallback())
@@ -4340,9 +4723,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         max_: ValueT,
     ) -> CommandRequest[int]:
         """
-        Count the members in a sorted set with scores within the given values
+        Return the number of members in the sorted set with scores between min and max (inclusive).
 
-        :return: the number of elements in the specified score range.
+        :param key: The key name.
+        :param min_: Minimum score (inclusive).
+        :param max_: Maximum score (inclusive).
+        :return: The number of members in the score range.
         """
 
         return self.create_request(CommandName.ZCOUNT, key, min_, max_, callback=IntCallback())
@@ -4358,10 +4744,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, keys: Parameters[KeyT], withscores: bool | None = None
     ) -> CommandRequest[tuple[AnyStr | ScoredMember, ...]]:
         """
-        Subtract multiple sorted sets
+        Return the difference of the first sorted set and all successive sets (members in first but not in others).
 
-        :return: the result of the difference (optionally with their scores, in case
-         the ``withscores`` option is given).
+        :param keys: One or more sorted set key names (first is the base).
+        :param withscores: If ``True``, include scores in the result.
+        :return: Members (and optionally scores) in the difference.
         """
         command_arguments: CommandArgList = [len(list(keys)), *keys]
 
@@ -4382,9 +4769,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def zdiffstore(self, keys: Parameters[KeyT], destination: KeyT) -> CommandRequest[int]:
         """
-        Subtract multiple sorted sets and store the resulting sorted set in a new key
+        Compute sorted set difference and store the result in destination.
 
-        :return: the number of elements in the resulting sorted set at :paramref:`destination`.
+        :param keys: One or more sorted set key names (first is the base).
+        :param destination: Key where the result is stored.
+        :return: The number of elements in the resulting sorted set.
         """
         command_arguments: CommandArgList = [len(list(keys)), *keys]
 
@@ -4402,9 +4791,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def zincrby(self, key: KeyT, member: ValueT, increment: int) -> CommandRequest[float]:
         """
-        Increment the score of a member in a sorted set
+        Increment the score of a member in the sorted set (creates the member with score 0 if missing).
 
-        :return: the new score of :paramref:`member`
+        :param key: The key name.
+        :param member: The member to update.
+        :param increment: The amount to add to the score (can be negative).
+        :return: The new score of the member.
         """
 
         return self.create_request(
@@ -4430,12 +4822,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         withscores: bool | None = None,
     ) -> CommandRequest[tuple[AnyStr | ScoredMember, ...]]:
         """
+        Return the intersection of multiple sorted sets (aggregating scores by weights and aggregate rule).
 
-        Intersect multiple sorted sets
-
-        :return: the result of intersection (optionally with their scores, in case
-         the ``withscores`` option is given).
-
+        :param keys: One or more sorted set key names.
+        :param weights: Optional multiplier for each key's scores.
+        :param aggregate: How to combine scores: SUM, MIN, or MAX.
+        :param withscores: If ``True``, include scores in the result.
+        :return: Members (and optionally scores) in the intersection.
         """
 
         return self._zaggregate(
@@ -4452,9 +4845,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         aggregate: Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM] | None = None,
     ) -> CommandRequest[int]:
         """
-        Intersect multiple sorted sets and store the resulting sorted set in a new key
+        Compute sorted set intersection and store the result in destination.
 
-        :return: the number of elements in the resulting sorted set at :paramref:`destination`.
+        :param keys: One or more sorted set key names.
+        :param destination: Key where the result is stored.
+        :param weights: Optional multiplier for each key's scores.
+        :param aggregate: How to combine scores: SUM, MIN, or MAX.
+        :return: The number of elements in the resulting sorted set.
         """
 
         return self._zaggregate(
@@ -4475,10 +4872,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def zintercard(self, keys: Parameters[KeyT], limit: int | None = None) -> CommandRequest[int]:
         """
-        Intersect multiple sorted sets and return the cardinality of the result
+        Return the cardinality of the intersection of multiple sorted sets.
 
+        :param keys: One or more sorted set key names.
+        :param limit: If set, limit the result to this maximum (approximate).
         :return: The number of elements in the resulting intersection.
-
         """
         _keys: list[KeyT] = list(keys)
         command_arguments: CommandArgList = [len(_keys), *_keys]
@@ -4498,9 +4896,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def zlexcount(self, key: KeyT, min_: ValueT, max_: ValueT) -> CommandRequest[int]:
         """
-        Count the number of members in a sorted set between a given lexicographical range
+        Return the number of members in the sorted set between min and max (lexicographic order).
 
-        :return: the number of elements in the specified score range.
+        :param key: The key name.
+        :param min_: Minimum lex value (inclusive); use - or + for unbounded.
+        :param max_: Maximum lex value (inclusive); use - or + for unbounded.
+        :return: The number of members in the range.
         """
 
         return self.create_request(CommandName.ZLEXCOUNT, key, min_, max_, callback=IntCallback())
@@ -4519,9 +4920,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[tuple[AnyStr, tuple[ScoredMember, ...]] | None]:
         """
-        Remove and return members with scores in a sorted set
+        Pop members with lowest or highest scores from the first non-empty sorted set.
 
-        :return: A tuple of (name of key, popped (member, score) pairs)
+        :param keys: One or more sorted set key names.
+        :param where: MIN (lowest scores) or MAX (highest scores).
+        :param count: Maximum number of members to pop.
+        :return: ``None`` if all sets are empty; otherwise (key_name, [(member, score), ...]).
         """
         _keys: list[KeyT] = list(keys)
         command_arguments: CommandArgList = [len(_keys), *_keys, where]
@@ -4545,11 +4949,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, members: Parameters[ValueT]
     ) -> CommandRequest[tuple[float | None, ...]]:
         """
-        Get the score associated with the given members in a sorted set
+        Return the scores associated with the given members in the sorted set.
 
-        :return: scores or ``None`` associated with the specified :paramref:`members`
-         values (a double precision floating point number), represented as strings
-
+        :param key: The key name.
+        :param members: One or more member names.
+        :return: A tuple of scores in the same order as members; ``None`` for missing members.
         """
 
         if not members:
@@ -4565,9 +4969,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, count: int | None = None
     ) -> CommandRequest[ScoredMember | tuple[ScoredMember, ...] | None]:
         """
-        Remove and return members with the highest scores in a sorted set
+        Remove and return the member(s) with the highest scores in the sorted set.
 
-        :return: popped elements and scores.
+        :param key: The key name.
+        :param count: If set, pop up to this many members (returns a tuple of (member, score)).
+        :return: A single (member, score) pair, or a tuple of pairs if count is set; ``None`` if key is empty.
         """
         args = (count is not None) and [count] or []
         return self.create_request(
@@ -4611,17 +5017,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         withscores: bool | None = None,
     ) -> CommandRequest[AnyStr | tuple[AnyStr, ...] | tuple[ScoredMember, ...] | None]:
         """
-        Get one or multiple random elements from a sorted set
+        Return one or more random members from the sorted set (without removing).
 
-
-        :return: without :paramref:`count`, the command returns a
-         randomly selected element, or ``None`` when :paramref:`key` does not exist.
-
-         If :paramref:`count` is passed the command returns the elements,
-         or an empty tuple when :paramref:`key` does not exist.
-
-         If :paramref:`withscores` argument is used, the return is a list elements
-         and their scores from the sorted set.
+        :param key: The key name.
+        :param count: If set, return up to this many distinct members (negative allows duplicates).
+        :param withscores: If ``True``, return (member, score) pairs.
+        :return: A single member, a tuple of members, or (member, score) tuples; ``None`` or empty if key is empty.
         """
         command_arguments: CommandArgList = [key]
         options = {}
@@ -4691,11 +5092,17 @@ class CoreCommands(CommandMixin[AnyStr]):
         withscores: bool | None = None,
     ) -> CommandRequest[tuple[AnyStr | ScoredMember, ...]]:
         """
+        Return a range of members in the sorted set by rank, score, or lexicographic order.
 
-        Return a range of members in a sorted set
-
-        :return: elements in the specified range (optionally with their scores, in case
-         :paramref:`withscores` is given).
+        :param key: The key name.
+        :param min_: Minimum rank, score, or lex (depending on sortby).
+        :param max_: Maximum rank, score, or lex (depending on sortby).
+        :param sortby: BYSCORE or BYLEX.
+        :param rev: If ``True``, reverse the order (high to low).
+        :param offset: Skip this many elements (use with count).
+        :param count: Return this many elements (use with offset).
+        :param withscores: If ``True``, include scores in the result.
+        :return: Members (and optionally scores) in the specified range.
         """
 
         return self._zrange(
@@ -4729,10 +5136,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[tuple[AnyStr, ...]]:
         """
+        Return a range of members in a sorted set by lexicographical range.
 
-        Return a range of members in a sorted set, by lexicographical range
-
-        :return: elements in the specified score range.
+        :param key: The key name.
+        :param min_: Minimum lex value (inclusive).
+        :param max_: Maximum lex value (inclusive).
+        :param offset: Skip this many members (use with count).
+        :param count: Return at most this many members (use with offset).
+        :return: Tuple of members in the specified lex range.
         """
 
         command_arguments: CommandArgList = [key, min_, max_]
@@ -4765,10 +5176,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[tuple[AnyStr | ScoredMember, ...]]:
         """
+        Return a range of members in a sorted set by score.
 
-        Return a range of members in a sorted set, by score
-
-        :return: elements in the specified score range (optionally with their scores).
+        :param key: The key name.
+        :param min_: Minimum score (inclusive).
+        :param max_: Maximum score (inclusive).
+        :param withscores: If ``True``, return (member, score) pairs.
+        :param offset: Skip this many members (use with count).
+        :param count: Return at most this many members (use with offset).
+        :return: Tuple of members, or (member, score) tuples if withscores.
         """
 
         command_arguments: CommandArgList = [key, min_, max_]
@@ -4804,9 +5220,17 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[int]:
         """
-        Store a range of members from sorted set into another key
+        Store a range of members from a sorted set into another key.
 
-        :return: the number of elements in the resulting sorted set
+        :param dst: Destination key for the stored range.
+        :param src: Source sorted set key.
+        :param min_: Start of range (score or lex depending on sortby).
+        :param max_: End of range (score or lex depending on sortby).
+        :param sortby: BYSCORE or BYLEX.
+        :param rev: If ``True``, reverse order.
+        :param offset: Skip this many members (use with count).
+        :param count: Store at most this many members (use with offset).
+        :return: Number of elements in the resulting sorted set.
         """
 
         return self._zrange(
@@ -4833,10 +5257,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, member: ValueT, withscore: bool | None = None
     ) -> CommandRequest[int | tuple[int, float] | None]:
         """
-        Determine the index of a member in a sorted set
+        Return the rank (index) of the member in the sorted set (lowest score has rank 0).
 
-        :return: the rank of :paramref:`member`. If :paramref:`withscore` is `True`
-         the return is a tuple of (rank, score).
+        :param key: The key name.
+        :param member: The member to look up.
+        :param withscore: If ``True``, return (rank, score).
+        :return: The rank, or (rank, score) if withscore; ``None`` if member is not in the set.
         """
         command_arguments: CommandArgList = [key, member]
 
@@ -4857,10 +5283,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def zrem(self, key: KeyT, members: Parameters[ValueT]) -> CommandRequest[int]:
         """
-        Remove one or more members from a sorted set
+        Remove one or more members from the sorted set.
 
-        :return: The number of members removed from the sorted set, not including non existing
-         members.
+        :param key: The key name.
+        :param members: One or more member names to remove.
+        :return: The number of members that were removed.
         """
 
         return self.create_request(CommandName.ZREM, key, *members, callback=IntCallback())
@@ -4868,9 +5295,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.ZREMRANGEBYLEX, group=CommandGroup.SORTED_SET)
     def zremrangebylex(self, key: KeyT, min_: ValueT, max_: ValueT) -> CommandRequest[int]:
         """
-        Remove all members in a sorted set between the given lexicographical range
+        Remove all members in the sorted set between min and max (lexicographic order).
 
-        :return: the number of elements removed.
+        :param key: The key name.
+        :param min_: Minimum lex value (inclusive).
+        :param max_: Maximum lex value (inclusive).
+        :return: The number of members removed.
         """
 
         return self.create_request(
@@ -4880,9 +5310,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.ZREMRANGEBYRANK, group=CommandGroup.SORTED_SET)
     def zremrangebyrank(self, key: KeyT, start: int, stop: int) -> CommandRequest[int]:
         """
-        Remove all members in a sorted set within the given indexes
+        Remove all members in the sorted set with rank between start and stop (inclusive).
 
-        :return: the number of elements removed.
+        :param key: The key name.
+        :param start: Start rank (0-based).
+        :param stop: Stop rank (inclusive).
+        :return: The number of members removed.
         """
 
         return self.create_request(
@@ -4894,9 +5327,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, min_: int | float, max_: int | float
     ) -> CommandRequest[int]:
         """
-        Remove all members in a sorted set within the given scores
+        Remove all members in the sorted set with scores between min and max (inclusive).
 
-        :return: the number of elements removed.
+        :param key: The key name.
+        :param min_: Minimum score (inclusive).
+        :param max_: Maximum score (inclusive).
+        :return: The number of members removed.
         """
 
         return self.create_request(
@@ -4919,11 +5355,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         withscores: bool | None = None,
     ) -> CommandRequest[tuple[AnyStr | ScoredMember, ...]]:
         """
+        Return a range of members by index, highest scores first.
 
-        Return a range of members in a sorted set, by index, with scores ordered from
-        high to low
-
-        :return: elements in the specified range (optionally with their scores).
+        :param key: The key name.
+        :param start: Start index (0-based).
+        :param stop: Stop index (inclusive).
+        :param withscores: If ``True``, include scores in the result.
+        :return: Members (and optionally scores) in the specified range.
         """
         command_arguments: CommandArgList = [key, start, stop]
 
@@ -4954,11 +5392,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[tuple[AnyStr, ...]]:
         """
+        Return a range of members in a sorted set by lexicographical range, high to low.
 
-        Return a range of members in a sorted set, by lexicographical range, ordered from
-        higher to lower strings.
-
-        :return: elements in the specified score range
+        :param key: The key name.
+        :param max_: Maximum lex value (inclusive).
+        :param min_: Minimum lex value (inclusive).
+        :param offset: Skip this many members (use with count).
+        :param count: Return at most this many members (use with offset).
+        :return: Tuple of members in the specified lex range.
         """
 
         command_arguments: CommandArgList = [key, max_, min_]
@@ -4991,10 +5432,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[tuple[AnyStr | ScoredMember, ...]]:
         """
+        Return a range of members in a sorted set by score, high to low.
 
-        Return a range of members in a sorted set, by score, with scores ordered from high to low
-
-        :return: elements in the specified score range (optionally with their scores)
+        :param key: The key name.
+        :param max_: Maximum score (inclusive).
+        :param min_: Minimum score (inclusive).
+        :param withscores: If ``True``, return (member, score) pairs.
+        :param offset: Skip this many members (use with count).
+        :param count: Return at most this many members (use with offset).
+        :return: Tuple of members, or (member, score) tuples if withscores.
         """
 
         command_arguments: CommandArgList = [key, max_, min_]
@@ -5022,10 +5468,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, member: ValueT, withscore: bool | None = None
     ) -> CommandRequest[int | tuple[int, float] | None]:
         """
-        Determine the index of a member in a sorted set, with scores ordered from high to low
+        Return the rank of the member when the set is ordered high to low.
 
-        :return: the rank of :paramref:`member`. If :paramref:`withscore` is `True`
-         the return is a tuple of (rank, score).
+        :param key: The key name.
+        :param member: The member to look up.
+        :param withscore: If ``True``, return (rank, score).
+        :return: The rank, or (rank, score) if withscore; ``None`` if member is not in the set.
         """
         command_arguments: CommandArgList = [key, member]
         if withscore:
@@ -5049,8 +5497,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[tuple[int, tuple[ScoredMember, ...]]]:
         """
-        Incrementally iterate sorted sets elements and associated scores
+        Incrementally iterate over members and scores in the sorted set using a cursor.
 
+        :param key: The key name.
+        :param cursor: Cursor for iteration (0 to start); use returned cursor for next page.
+        :param match: Optional glob pattern to filter members.
+        :param count: Hint for minimum number of entries per iteration.
+        :return: A tuple of (next_cursor, (member, score), ...); next_cursor 0 means done.
         """
         command_arguments: CommandArgList = [key, cursor or "0"]
 
@@ -5072,10 +5525,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def zscore(self, key: KeyT, member: ValueT) -> CommandRequest[float | None]:
         """
-        Get the score associated with the given member in a sorted set
+        Return the score associated with the member in the sorted set.
 
-        :return: the score of :paramref:`member` (a double precision floating point number),
-         or ``None`` if the member doesn't exist.
+        :param key: The key name.
+        :param member: The member name.
+        :return: The score, or ``None`` if the member is not in the set.
         """
 
         return self.create_request(
@@ -5097,11 +5551,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         withscores: bool | None = None,
     ) -> CommandRequest[tuple[AnyStr | ScoredMember, ...]]:
         """
+        Return the union of multiple sorted sets (aggregating scores by weights and aggregate rule).
 
-        Add multiple sorted sets
-
-        :return: the result of union (optionally with their scores, in case
-         :paramref:`withscores` is given).
+        :param keys: One or more sorted set key names.
+        :param weights: Optional multiplier for each key's scores.
+        :param aggregate: How to combine scores: SUM, MIN, or MAX.
+        :param withscores: If ``True``, include scores in the result.
+        :return: Members (and optionally scores) in the union.
         """
 
         return self._zaggregate(
@@ -5122,9 +5578,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         aggregate: Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX] | None = None,
     ) -> CommandRequest[int]:
         """
-        Add multiple sorted sets and store the resulting sorted set in a new key
+        Compute the union of sorted sets and store the result at destination.
 
-        :return: the number of elements in the resulting sorted set at :paramref:`destination`.
+        :param keys: One or more sorted set key names.
+        :param destination: Key where the result sorted set is stored.
+        :param weights: Optional multiplier for each key's scores.
+        :param aggregate: How to combine scores: SUM, MIN, or MAX.
+        :return: Number of elements in the resulting sorted set.
         """
 
         return self._zaggregate(
@@ -5320,9 +5780,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.KEEPREF, PureToken.DELREF, PureToken.ACKED] | None = None,
     ) -> CommandRequest[tuple[int, ...]]:
         """
-        Acknowledges and conditionally deletes one or multiple entries (messages) for a stream
-        consumer group at the specified key.
+        Acknowledge and optionally delete one or more stream entries for a consumer group.
 
+        :param key: The stream key.
+        :param group: Consumer group name.
+        :param identifiers: Entry IDs to acknowledge and optionally delete.
+        :param condition: KEEPREF, DELREF, or ACKED (affects reference counting).
+        :return: Tuple of 1 for each entry that was acked/deleted, 0 for others.
         """
         command_arguments: CommandArgList = [key, group]
         if condition is not None:
@@ -5363,14 +5827,20 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.KEEPREF, PureToken.DELREF, PureToken.ACKED] | None = None,
     ) -> CommandRequest[AnyStr | None]:
         """
-        Appends a new entry to a stream
+        Append a new entry to a stream.
 
-        :return: The identifier of the added entry. The identifier is the one auto-generated
-         if ``*`` is passed as :paramref:`identifier`, otherwise it justs returns
-         the same identifier specified
-
-         Returns ``None`` when used with :paramref:`nomkstream` and the key doesn't exist.
-
+        :param key: The stream key.
+        :param field_values: Field names and values for the entry.
+        :param identifier: Entry ID, or ``*`` for auto-generated.
+        :param nomkstream: If ``True``, do not create the stream if it does not exist.
+        :param idmpauto: Auto ID mode (e.g. node-id).
+        :param idmp: Manual ID range (min, max).
+        :param trim_strategy: MAXLEN or MINID for trimming.
+        :param threshold: Limit for trim (max length or min id).
+        :param trim_operator: EQUAL or APPROXIMATELY for trim.
+        :param limit: Max entries to evict per trim (optional).
+        :param condition: KEEPREF, DELREF, or ACKED for trim.
+        :return: The entry ID (auto or specified), or ``None`` if nomkstream and key does not exist.
         """
         command_arguments: CommandArgList = []
 
@@ -5416,9 +5886,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def xlen(self, key: KeyT) -> CommandRequest[int]:
         """
-        Returns the number of entries inside a stream
-        """
+        Return the number of entries in a stream.
 
+        :param key: The stream key.
+        :return: Number of entries in the stream.
+        """
         return self.create_request(CommandName.XLEN, key, callback=IntCallback())
 
     @redis_command(
@@ -5434,9 +5906,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[tuple[StreamEntry, ...]]:
         """
-        Return a range of elements in a stream, with IDs matching the specified IDs interval
-        """
+        Return a range of stream entries by ID interval.
 
+        :param key: The stream key.
+        :param start: Start ID (inclusive); ``-`` for beginning.
+        :param end: End ID (inclusive); ``+`` for end.
+        :param count: Limit number of entries returned.
+        :return: Tuple of stream entries in the range.
+        """
         command_arguments: CommandArgList = [
             start if start is not None else "-",
             end if end is not None else "+",
@@ -5463,8 +5940,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
     ) -> CommandRequest[tuple[StreamEntry, ...]]:
         """
-        Return a range of elements in a stream, with IDs matching the specified
-        IDs interval, in reverse order (from greater to smaller IDs) compared to XRANGE
+        Return a range of stream entries by ID interval in reverse order.
+
+        :param key: The stream key.
+        :param end: End ID (inclusive); ``+`` for end.
+        :param start: Start ID (inclusive); ``-`` for beginning.
+        :param count: Limit number of entries returned.
+        :return: Tuple of stream entries in the range, high to low IDs.
         """
         command_arguments: CommandArgList = [
             end if end is not None else "+",
@@ -5494,14 +5976,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         block: int | datetime.timedelta | None = None,
     ) -> CommandRequest[dict[AnyStr, tuple[StreamEntry, ...]] | None]:
         """
-        Reads entries from :paramref:`stream` with IDs greater than those provided
-        in the mapping.
+        Read new entries from one or more streams with IDs greater than the given IDs.
 
-        :return: Mapping of streams to stream entries.
-         Field and values are guaranteed to be reported in the same order they were
-         added by :meth:`xadd`.
-
-         When :paramref:`block` is used and the timeout is exceeded, ``None`` is returned.
+        :param streams: Mapping of stream key to last-seen ID (use ``$`` for new only).
+        :param count: Max entries to return per stream.
+        :param block: Block up to this many milliseconds (or timedelta) for new data.
+        :return: Mapping of stream key to tuple of entries; ``None`` if block timeout is exceeded.
         """
         command_arguments: CommandArgList = []
 
@@ -5537,14 +6017,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         noack: bool | None = None,
     ) -> CommandRequest[dict[AnyStr, tuple[StreamEntry, ...]] | None]:
         """
-        Reads entries from :paramref:`stream` with IDs greater than those provided in the mapping,
-        owned by the consumer group identified by :paramref:`group` & :paramref:`consumer`.
+        Read entries from streams as a consumer in a group, with IDs greater than the given IDs.
 
-        :return: Mapping of streams to stream entries.
-         Field and values are guaranteed to be reported in the same order they were
-         added by :meth:`xadd`.
-
-         When :paramref:`block` is used and the timeout is exceeded, ``None`` is returned.
+        :param group: Consumer group name.
+        :param consumer: Consumer name.
+        :param streams: Mapping of stream key to last-seen ID (use ``>`` for new for this consumer).
+        :param count: Max entries to return per stream.
+        :param block: Block up to this many milliseconds (or timedelta) for new data.
+        :param noack: If ``True``, do not add messages to PEL (no XACK needed).
+        :return: Mapping of stream key to tuple of entries; ``None`` if block timeout is exceeded.
         """
         command_arguments: CommandArgList = [PrefixToken.GROUP, group, consumer]
 
@@ -5590,8 +6071,16 @@ class CoreCommands(CommandMixin[AnyStr]):
         consumer: StringT | None = None,
     ) -> CommandRequest[tuple[StreamPendingExt, ...] | StreamPending]:
         """
-        Return information and entries from a stream consumer group pending
-        entries list, that are messages fetched but never acknowledged.
+        Return information about pending entries (fetched but not acknowledged) for a consumer group.
+
+        :param key: The stream key.
+        :param group: Consumer group name.
+        :param start: Start ID for range (use with end and count).
+        :param end: End ID for range.
+        :param count: Max entries to return.
+        :param idle: Filter by min idle time in milliseconds.
+        :param consumer: Filter by consumer name.
+        :return: Summary (total, min/max ids, consumers) or tuple of pending entry details.
         """
         command_arguments: CommandArgList = [key, group]
 
@@ -5629,7 +6118,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.KEEPREF, PureToken.DELREF, PureToken.ACKED] | None = None,
     ) -> CommandRequest[int]:
         """
-        Trims the stream by evicting older entries
+        Trim the stream by evicting older entries.
+
+        :param key: The stream key.
+        :param trim_strategy: MAXLEN (by length) or MINID (by minimum ID).
+        :param threshold: Max length or minimum ID to keep.
+        :param trim_operator: EQUAL or APPROXIMATELY for trim.
+        :param limit: Max entries to evict per call (optional).
+        :param condition: KEEPREF, DELREF, or ACKED for eviction.
+        :return: Number of entries removed.
         """
         command_arguments: CommandArgList = [trim_strategy]
 
@@ -5655,9 +6152,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def xdel(self, key: KeyT, identifiers: Parameters[ValueT]) -> CommandRequest[int]:
         """
-        Removes the specified entries from a stream, and returns the number of entries deleted
-        """
+        Remove the specified entries from a stream.
 
+        :param key: The stream key.
+        :param identifiers: Entry IDs to delete.
+        :return: Number of entries deleted.
+        """
         return self.create_request(CommandName.XDEL, key, *identifiers, callback=IntCallback())
 
     @versionadded(version="5.2.0")
@@ -5675,7 +6175,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         condition: Literal[PureToken.KEEPREF, PureToken.DELREF, PureToken.ACKED] | None = None,
     ) -> CommandRequest[tuple[int, ...]]:
         """
-        Deletes one or multiple entries from the stream at the specified key.
+        Delete one or more entries from the stream with optional condition.
+
+        :param key: The stream key.
+        :param identifiers: Entry IDs to delete.
+        :param condition: KEEPREF, DELREF, or ACKED (affects reference counting).
+        :return: Tuple of 1 for each deleted entry, 0 for skipped.
         """
         command_arguments: CommandArgList = [key]
         if condition is not None:
@@ -5695,10 +6200,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, groupname: StringT
     ) -> CommandRequest[tuple[dict[AnyStr, AnyStr], ...]]:
         """
-        Get list of all consumers that belong to :paramref:`groupname` of the
-        stream stored at :paramref:`key`
-        """
+        Return all consumers in a consumer group for the stream.
 
+        :param key: The stream key.
+        :param groupname: Consumer group name.
+        :return: Tuple of consumer info dicts (name, pending, idle, etc.).
+        """
         return self.create_request(
             CommandName.XINFO_CONSUMERS,
             key,
@@ -5713,9 +6220,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def xinfo_groups(self, key: KeyT) -> CommandRequest[tuple[dict[AnyStr, AnyStr], ...]]:
         """
-        Get list of all consumers groups of the stream stored at :paramref:`key`
-        """
+        Return all consumer groups for the stream.
 
+        :param key: The stream key.
+        :return: Tuple of group info dicts (name, consumers, pending, last-delivered-id, etc.).
+        """
         return self.create_request(CommandName.XINFO_GROUPS, key, callback=XInfoCallback[AnyStr]())
 
     @mutually_inclusive_parameters("count", leaders=["full"])
@@ -5728,11 +6237,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, full: bool | None = None, count: int | None = None
     ) -> CommandRequest[StreamInfo]:
         """
-        Get information about the stream stored at :paramref:`key`
+        Return information about the stream.
 
-        :param full: If specified the return will contained extended information
-         about the stream ( see: :class:`coredis.response.types.StreamInfo` ).
-        :param count: restrict the number of `entries` returned when using :paramref:`full`
+        :param key: The stream key.
+        :param full: If ``True``, include extended info (see :class:`coredis.response.types.StreamInfo`).
+        :param count: When full is true, limit number of entries in the result.
+        :return: Stream info (length, groups, first/last entry, etc.; entries if full).
         """
         command_arguments: CommandArgList = []
 
@@ -5770,8 +6280,20 @@ class CoreCommands(CommandMixin[AnyStr]):
         lastid: ValueT | None = None,
     ) -> CommandRequest[tuple[AnyStr, ...] | tuple[StreamEntry, ...]]:
         """
-        Changes (or acquires) ownership of a message in a consumer group, as
-        if the message was delivered to the specified consumer.
+        Claim (or acquire) ownership of pending messages for a consumer in a group.
+
+        :param key: The stream key.
+        :param group: Consumer group name.
+        :param consumer: Consumer name to assign messages to.
+        :param min_idle_time: Only claim entries idle at least this long (ms or timedelta).
+        :param identifiers: Entry IDs to claim.
+        :param idle: Set idle time for claimed entries (ms or timedelta).
+        :param time: Set last-delivery time for claimed entries.
+        :param retrycount: Set retry count for claimed entries.
+        :param force: If ``True``, claim even if another consumer has them.
+        :param justid: If ``True``, return only entry IDs.
+        :param lastid: Optional last ID for the consumer (streaming).
+        :return: Tuple of claimed entry IDs, or tuple of stream entries (unless justid).
         """
         command_arguments: CommandArgList = [
             key,
@@ -5818,7 +6340,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         entriesread: int | None = None,
     ) -> CommandRequest[bool]:
         """
-        Create a consumer group.
+        Create a consumer group for the stream.
+
+        :param key: The stream key.
+        :param groupname: Name of the consumer group.
+        :param identifier: Start reading from this ID (e.g. ``0`` or ``$``); default new entries.
+        :param mkstream: If ``True``, create the stream if it does not exist.
+        :param entriesread: Optional entries-read value for the group.
+        :return: ``True`` on success.
         """
         command_arguments: CommandArgList = [
             key,
@@ -5850,7 +6379,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Create a consumer in a consumer group.
 
-        :return: whether the consumer was created
+        :param key: The stream key.
+        :param groupname: Consumer group name.
+        :param consumername: Name of the consumer to create.
+        :return: ``True`` if the consumer was created, False if it already existed.
         """
         command_arguments: CommandArgList = [key, groupname, consumername]
 
@@ -5874,9 +6406,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         entriesread: int | None = None,
     ) -> CommandRequest[bool]:
         """
-        Set a consumer group to an arbitrary last delivered ID value.
-        """
+        Set the consumer group's last-delivered ID (e.g. to reprocess or skip).
 
+        :param key: The stream key.
+        :param groupname: Consumer group name.
+        :param identifier: New last-delivered ID (e.g. ``0`` or ``$``).
+        :param entriesread: Optional entries-read value.
+        :return: ``True`` on success.
+        """
         command_arguments: CommandArgList = [
             key,
             groupname,
@@ -5897,9 +6434,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Destroy a consumer group.
 
-        :return: The number of destroyed consumer groups
+        :param key: The stream key.
+        :param groupname: Consumer group name.
+        :return: Number of groups destroyed (1 or 0).
         """
-
         return self.create_request(
             CommandName.XGROUP_DESTROY, key, groupname, callback=IntCallback()
         )
@@ -5912,9 +6450,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Delete a consumer from a consumer group.
 
-        :return: The number of pending messages that the consumer had before it was deleted
+        :param key: The stream key.
+        :param groupname: Consumer group name.
+        :param consumername: Consumer to remove.
+        :return: Number of pending messages the consumer had before deletion.
         """
-
         return self.create_request(
             CommandName.XGROUP_DELCONSUMER,
             key,
@@ -5944,12 +6484,17 @@ class CoreCommands(CommandMixin[AnyStr]):
         | tuple[AnyStr, tuple[StreamEntry, ...], tuple[AnyStr, ...]]
     ]:
         """
-        Changes (or acquires) ownership of messages in a consumer group, as if the messages were
-        delivered to the specified consumer.
+        Transfer ownership of pending stream entries that match
+        the specified criteria to the consumer group specified.
 
-        :return: A dictionary with keys as stream identifiers and values containing
-         all the successfully claimed messages in the same format as :meth:`xrange`
-
+        :param key: The stream key.
+        :param group: Consumer group name.
+        :param consumer: Consumer name to assign messages to.
+        :param min_idle_time: Only claim entries idle at least this long (ms or timedelta).
+        :param start: Start scanning from this ID (e.g. ``0-0``).
+        :param count: Max number of entries to claim per call.
+        :param justid: If ``True``, return only entry IDs.
+        :return: k(next_start_id, claimed_entries) or (next_start_id, claimed_entries, deleted_ids).
         """
         command_arguments: CommandArgList = [
             key,
@@ -5984,7 +6529,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         idmp_maxsize: int | None = None,
     ) -> CommandRequest[bool]:
         """
-        Sets the IDMP (Idempotent Message Processing) configuration parameters for a stream.
+        Set IDMP (Idempotent Message Processing) configuration for a stream.
+
+        :param key: The stream key.
+        :param idmp_duration: Duration for idempotency window (seconds or timedelta).
+        :param idmp_maxsize: Max size for idempotency tracking.
+        :return: ``True`` on success.
         """
         command_arguments: CommandArgList = [key]
         if idmp_duration is not None:
@@ -6011,9 +6561,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         index_unit: Literal[PureToken.BIT, PureToken.BYTE] | None = None,
     ) -> CommandRequest[int]:
         """
-        Returns the count of set bits in the value of :paramref:`key`.  Optional
-        :paramref:`start` and :paramref:`end` parameters indicate which bytes to consider
+        Return the number of set bits in the string value at key.
 
+        :param key: The key name.
+        :param start: Start byte (or bit) index (use with end).
+        :param end: End byte (or bit) index.
+        :param index_unit: BIT or BYTE for start/end interpretation.
+        :return: Count of bits set to 1 in the (optionally ranged) value.
         """
         command_arguments: CommandArgList = [key]
 
@@ -6028,23 +6582,20 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     def bitfield(self, key: KeyT) -> BitFieldOperation[AnyStr]:
         """
-        :return: a :class:`~coredis.commands.bitfield.BitFieldOperation`
-         instance to conveniently construct one or more bitfield operations on
-         :paramref:`key`.
-        """
+        Return a BitFieldOperation to build one or more bitfield ops on the key.
 
+        :param key: The key name.
+        :return: :class:`~coredis.commands.bitfield.BitFieldOperation` for chained get/set/incr.
+        """
         return BitFieldOperation[AnyStr](self, key)
 
     def bitfield_ro(self, key: KeyT) -> BitFieldOperation[AnyStr]:
         """
+        Return a read-only BitFieldOperation for bitfield GET on the key (e.g. on replica).
 
-        :return: a :class:`~coredis.commands.bitfield.BitFieldOperation`
-         instance to conveniently construct bitfield operations on a read only
-         replica against :paramref:`key`.
-
-        Raises :class:`ReadOnlyError` if a write operation is attempted
+        :param key: The key name.
+        :return: :class:`~coredis.commands.bitfield.BitFieldOperation` (read-only; write raises ReadOnlyError).
         """
-
         return BitFieldOperation[AnyStr](self, key, readonly=True)
 
     @ensure_iterable_valid("keys")
@@ -6056,10 +6607,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, keys: Parameters[KeyT], operation: StringT, destkey: KeyT
     ) -> CommandRequest[int]:
         """
-        Perform a bitwise operation using :paramref:`operation` between
-        :paramref:`keys` and store the result in :paramref:`destkey`.
-        """
+        Perform a bitwise operation (AND, OR, XOR, NOT) on keys and store result at destkey.
 
+        :param keys: One or more source key names (two or more for AND/OR/XOR; one for NOT).
+        :param operation: AND, OR, XOR, or NOT.
+        :param destkey: Key where the result is stored.
+        :return: Size in bytes of the result string.
+        """
         return self.create_request(
             CommandName.BITOP, operation, destkey, *keys, callback=IntCallback()
         )
@@ -6080,33 +6634,16 @@ class CoreCommands(CommandMixin[AnyStr]):
         index_unit: Literal[PureToken.BIT, PureToken.BYTE] | None = None,
     ) -> CommandRequest[int]:
         """
+        Return the position of the first bit set to 1 or 0 in the string value.
 
-        Return the position of the first bit set to 1 or 0 in a string.
-        :paramref:`start` and :paramref:`end` defines the search range. The range is interpreted
-        as a range of bytes and not a range of bits, so start=0 and end=2
-        means to look at the first three bytes.
-
-
-        :return: The position of the first bit set to 1 or 0 according to the request.
-         If we look for set bits (the bit argument is 1) and the string is empty or
-         composed of just zero bytes, -1 is returned.
-
-         If we look for clear bits (the bit argument is 0) and the string only contains
-         bit set to 1, the function returns the first bit not part of the string on the right.
-
-         So if the string is three bytes set to the value ``0xff`` the command ``BITPOS key 0`` will
-         return 24, since up to bit 23 all the bits are 1.
-
-         Basically, the function considers the right of the string as padded with
-         zeros if you look for clear bits and specify no range or the ``start`` argument **only**.
-
-         However, this behavior changes if you are looking for clear bits and
-         specify a range with both ``start`` and ``end``.
-
-         If no clear bit is found in the specified range, the function returns -1 as the user
-         specified a clear range and there are no 0 bits in that range.
+        :param key: The key name.
+        :param bit: 0 or 1 to search for.
+        :param start: Start byte index (use with end).
+        :param end: End byte index.
+        :param index_unit: BIT or BYTE for start/end interpretation.
+        :return: Bit position of first matching bit; -1 if no match (e.g. empty key for bit=1).
+         For bit=0 with no range or start-only, string is considered right-padded with zeros.
         """
-
         if bit not in (0, 1):
             raise RedisError("bit must be 0 or 1")
         command_arguments: CommandArgList = [key, bit]
@@ -6129,17 +6666,23 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def getbit(self, key: KeyT, offset: int) -> CommandRequest[int]:
         """
-        Returns the bit value at offset in the string value stored at key
+        Return the bit value at the given offset in the string value at key.
 
-        :return: the bit value stored at :paramref:`offset`.
+        :param key: The key name.
+        :param offset: Bit offset (0-based).
+        :return: 0 or 1; 0 if key is missing or offset is beyond the string.
         """
-
         return self.create_request(CommandName.GETBIT, key, offset, callback=IntCallback())
 
     @redis_command(CommandName.SETBIT, group=CommandGroup.BITMAP)
     def setbit(self, key: KeyT, offset: int, value: int) -> CommandRequest[int]:
         """
-        Flag the :paramref:`offset` in :paramref:`key` as :paramref:`value`.
+        Set or clear the bit at the given offset in the string value at key.
+
+        :param key: The key name.
+        :param offset: Bit offset (0-based).
+        :param value: 0 or 1 (any non-zero becomes 1).
+        :return: Previous bit value at that offset.
         """
         value = value and 1 or 0
 
@@ -6151,26 +6694,24 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def publish(self, channel: StringT, message: ValueT) -> CommandRequest[int]:
         """
-        Publish :paramref:`message` on :paramref:`channel`.
+        Publish a message to a channel.
 
-        :return: the number of subscribers the message was delivered to.
+        :param channel: Channel name.
+        :param message: Message to send.
+        :return: Number of subscribers that received the message.
         """
-
         return self.create_request(CommandName.PUBLISH, channel, message, callback=IntCallback())
 
     @versionadded(version="3.6.0")
     @redis_command(CommandName.SPUBLISH, group=CommandGroup.PUBSUB, version_introduced="7.0.0")
     def spublish(self, channel: StringT, message: ValueT) -> CommandRequest[int]:
         """
-        Publish :paramref:`message` on shard :paramref:`channel`.
+        Publish a message to a shard channel.
 
-        :return: the number of shard subscribers the message was delivered to.
-
-        .. note:: The number only represents subscribers listening to the exact
-           node the message was published to, which means that if a subscriber
-           is listening on a replica node, it will not be included in the count.
+        :param channel: Shard channel name.
+        :param message: Message to send.
+        :return: Number of shard subscribers that received the message (exact node only).
         """
-
         return self.create_request(CommandName.SPUBLISH, channel, message, callback=IntCallback())
 
     @redis_command(
@@ -6183,9 +6724,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def pubsub_channels(self, pattern: StringT | None = None) -> CommandRequest[_Set[AnyStr]]:
         """
-        Return channels that have at least one subscriber
-        """
+        Return channel names that have at least one subscriber.
 
+        :param pattern: Optional glob pattern (default ``*``).
+        :return: Set of channel names.
+        """
         return self.create_request(
             CommandName.PUBSUB_CHANNELS,
             pattern or b"*",
@@ -6204,9 +6747,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def pubsub_shardchannels(self, pattern: StringT | None = None) -> CommandRequest[_Set[AnyStr]]:
         """
-        Return shard channels that have at least one subscriber
-        """
+        Return shard channel names that have at least one subscriber.
 
+        :param pattern: Optional glob pattern (default ``*``).
+        :return: Set of shard channel names.
+        """
         return self.create_request(
             CommandName.PUBSUB_SHARDCHANNELS,
             pattern or b"*",
@@ -6219,11 +6764,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def pubsub_numpat(self) -> CommandRequest[int]:
         """
-        Get the count of unique patterns pattern subscriptions
+        Return the number of unique pattern subscriptions (PSUBSCRIBE) on this server.
 
-        :return: the number of patterns all the clients are subscribed to.
+        :return: Number of pattern subscriptions.
         """
-
         return self.create_request(CommandName.PUBSUB_NUMPAT, callback=IntCallback())
 
     @redis_command(
@@ -6236,9 +6780,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def pubsub_numsub(self, *channels: StringT) -> CommandRequest[dict[AnyStr, int]]:
         """
-        Get the count of subscribers for channels
+        Return the number of subscribers for each given channel.
 
-        :return: Mapping of channels to number of subscribers per channel
+        :param channels: Channel names to query (empty = all with 0).
+        :return: Mapping of channel name to subscriber count.
         """
         command_arguments: CommandArgList = []
 
@@ -6261,9 +6806,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def pubsub_shardnumsub(self, *channels: StringT) -> CommandRequest[dict[AnyStr, int]]:
         """
-        Get the count of subscribers for shard channels
+        Return the number of subscribers for each given shard channel.
 
-        :return: Ordered mapping of shard channels to number of subscribers per channel
+        :param channels: Shard channel names to query (empty = all with 0).
+        :return: Mapping of shard channel name to subscriber count.
         """
         command_arguments: CommandArgList = []
 
@@ -6304,12 +6850,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         args: Parameters[ValueT] | None = None,
     ) -> CommandRequest[ResponseType]:
         """
-        Execute the Lua :paramref:`script` with the key names and argument values
-        in :paramref:`keys` and :paramref:`args`.
+        Execute a Lua script with the given keys and arguments.
 
-        :return: The result of the script as redis returns it
+        :param script: Lua script source.
+        :param keys: Key names passed to the script (KEYS[1], ...).
+        :param args: Additional arguments (ARGV[1], ...).
+        :return: Script result as returned by Redis.
         """
-
         return self._eval(CommandName.EVAL, script, keys, args)
 
     @versionadded(version="3.0.0")
@@ -6326,12 +6873,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         args: Parameters[ValueT] | None = None,
     ) -> CommandRequest[ResponseType]:
         """
-        Read-only variant of :meth:`~Redis.eval` that cannot execute commands
-        that modify data.
+        Execute a Lua script in read-only mode (no writes).
 
-        :return: The result of the script as redis returns it
+        :param script: Lua script source.
+        :param keys: Key names passed to the script (KEYS[1], ...).
+        :param args: Additional arguments (ARGV[1], ...).
+        :return: Script result as returned by Redis.
         """
-
         return self._eval(CommandName.EVAL_RO, script, keys, args)
 
     def _evalsha(
@@ -6357,13 +6905,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         args: Parameters[ValueT] | None = None,
     ) -> CommandRequest[ResponseType]:
         """
-        Execute the Lua script cached by it's :paramref:`sha` ref with the
-        key names and argument values in :paramref:`keys` and :paramref:`args`.
-        Evaluate a script from the server's cache by its :paramref:`sha1` digest.
+        Execute a Lua script from the server cache by its SHA1 digest.
 
-        :return: The result of the script as redis returns it
+        :param sha1: SHA1 digest of the script (from script_load).
+        :param keys: Key names passed to the script (KEYS[1], ...).
+        :param args: Additional arguments (ARGV[1], ...).
+        :return: Script result as returned by Redis.
         """
-
         return self._evalsha(CommandName.EVALSHA, sha1, keys, args)
 
     @versionadded(version="3.0.0")
@@ -6380,12 +6928,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         args: Parameters[ValueT] | None = None,
     ) -> CommandRequest[ResponseType]:
         """
-        Read-only variant of :meth:`~Redis.evalsha` that cannot execute commands
-        that modify data.
+        Execute a cached Lua script in read-only mode (no writes).
 
-        :return: The result of the script as redis returns it
+        :param sha1: SHA1 digest of the script (from script_load).
+        :param keys: Key names passed to the script (KEYS[1], ...).
+        :param args: Additional arguments (ARGV[1], ...).
+        :return: Script result as returned by Redis.
         """
-
         return self._evalsha(CommandName.EVALSHA_RO, sha1, keys, args)
 
     @versionadded(version="3.0.0")
@@ -6416,13 +6965,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def script_exists(self, sha1s: Parameters[StringT]) -> CommandRequest[tuple[bool, ...]]:
         """
-        Check if a script exists in the script cache by specifying the SHAs of
-        each script as :paramref:`sha1s`.
+        Check whether the given scripts exist in the server script cache.
 
-        :return: tuple of boolean values indicating if each script
-         exists in the cache.
+        :param sha1s: One or more SHA1 digests of scripts.
+        :return: Tuple of booleans, one per digest (``True`` if cached).
         """
-
         return self.create_request(CommandName.SCRIPT_EXISTS, *sha1s, callback=BoolsCallback())
 
     @redis_command(
@@ -6439,7 +6986,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         flush_type: Literal[PureToken.ASYNC, PureToken.SYNC] | None = None,
     ) -> CommandRequest[bool]:
         """
-        Flushes all scripts from the script cache
+        Remove all scripts from the server script cache.
+
+        :param flush_type: ASYNC (default) or SYNC.
+        :return: ``True`` on success.
         """
         command_arguments: CommandArgList = []
 
@@ -6460,9 +7010,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def script_kill(self) -> CommandRequest[bool]:
         """
-        Kills the currently executing Lua script
-        """
+        Terminate the currently running Lua script (if any).
 
+        :return: ``True`` if a script was killed.
+        """
         return self.create_request(CommandName.SCRIPT_KILL, callback=SimpleStringCallback())
 
     @redis_command(
@@ -6475,9 +7026,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def script_load(self, script: StringT) -> CommandRequest[AnyStr]:
         """
-        Loads a Lua :paramref:`script` into the script cache.
+        Load a Lua script into the server script cache.
 
-        :return: The SHA1 digest of the script added into the script cache
+        :param script: The Lua script source code.
+        :return: The SHA1 digest of the script.
         """
         return self.create_request(
             CommandName.SCRIPT_LOAD, script, callback=AnyStrCallback[AnyStr]()
@@ -6496,7 +7048,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         args: Parameters[ValueT] | None = None,
     ) -> CommandRequest[ResponseType]:
         """
-        Invoke a function
+        Invoke a Redis function by name.
+
+        :param function: The function name.
+        :param keys: Optional key names that the function will access (for routing).
+        :param args: Optional arguments to pass to the function.
+        :return: The return value of the function (type depends on the function).
         """
         _keys: list[KeyT] = list(keys or [])
         command_arguments: CommandArgList = [
@@ -6522,7 +7079,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         args: Parameters[ValueT] | None = None,
     ) -> CommandRequest[ResponseType]:
         """
-        Read-only variant of :meth:`~coredis.Redis.fcall`
+        Invoke a Redis function in read-only mode (same as fcall but only for read-only functions).
+
+        :param function: The function name.
+        :param keys: Optional key names that the function will access.
+        :param args: Optional arguments to pass to the function.
+        :return: The return value of the function.
         """
         _keys: list[KeyT] = list(keys or [])
         command_arguments: CommandArgList = [
@@ -6548,7 +7110,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def function_delete(self, library_name: StringT) -> CommandRequest[bool]:
         """
-        Delete a library and all its functions.
+        Delete a library and all its functions from the server.
+
+        :param library_name: The name of the library to delete.
+        :return: ``True`` on success.
         """
 
         return self.create_request(
@@ -6564,7 +7129,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def function_dump(self) -> CommandRequest[bytes]:
         """
-        Dump all functions into a serialized binary payload
+        Return a serialized binary payload of all loaded functions.
+
+        :return: The serialized payload (use with function_restore).
         """
 
         return self.create_request(
@@ -6587,7 +7154,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, flush_type: Literal[PureToken.ASYNC, PureToken.SYNC] | None = None
     ) -> CommandRequest[bool]:
         """
-        Delete all functions
+        Delete all functions from the server.
+
+        :param flush_type: ASYNC to flush asynchronously, SYNC to block until done.
+        :return: ``True`` on success.
         """
         command_arguments: CommandArgList = []
 
@@ -6628,8 +7198,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, libraryname: StringT | None = None, withcode: bool | None = None
     ) -> CommandRequest[Mapping[AnyStr, LibraryDefinition]]:
         """
-        List information about the functions registered under
-        :paramref:`libraryname`
+        List libraries and functions (optionally filtered by library name).
+
+        :param libraryname: Optional library name to filter by.
+        :param withcode: If ``True``, include function source code in the result.
+        :return: Mapping of library name to library definition (functions, code, etc.).
         """
         command_arguments: CommandArgList = []
 
@@ -6661,7 +7234,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         replace: bool | None = None,
     ) -> CommandRequest[AnyStr]:
         """
-        Load a library of functions.
+        Load a library of Redis functions (Lua or other engine).
+
+        :param function_code: Library source code (e.g. ``#!lua name=mylib`` ...).
+        :param replace: If ``True``, replace existing library with the same name.
+        :return: Library name on success.
         """
         command_arguments: CommandArgList = []
 
@@ -6692,7 +7269,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         policy: Literal[PureToken.FLUSH, PureToken.APPEND, PureToken.REPLACE] | None = None,
     ) -> CommandRequest[bool]:
         """
-        Restore all the functions on the given payload
+        Restore libraries/functions from a serialized payload (from function_dump).
+
+        :param serialized_value: Serialized payload from function_dump.
+        :param policy: FLUSH (replace all), APPEND, or REPLACE.
+        :return: ``True`` on success.
         """
         command_arguments: CommandArgList = [serialized_value]
 
@@ -6720,9 +7301,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         dict[AnyStr, AnyStr | dict[AnyStr, dict[AnyStr, ResponsePrimitive]] | None]
     ]:
         """
-        Return information about the function currently running
-        """
+        Return runtime statistics for the currently running function (if any).
 
+        :return: Dict with running_script, engines, etc.; None if no function is running.
+        """
         return self.create_request(
             CommandName.FUNCTION_STATS, callback=FunctionStatsCallback[AnyStr]()
         )
@@ -6732,7 +7314,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.CONNECTION,
     )
     def bgrewriteaof(self) -> CommandRequest[bool]:
-        """Tell the Redis server to rewrite the AOF file from data in memory"""
+        """
+        Ask the server to rewrite the AOF file from data in memory.
+
+        :return: ``True`` when the rewrite has been scheduled.
+        """
 
         return self.create_request(CommandName.BGREWRITEAOF, callback=SimpleStringCallback())
 
@@ -6742,8 +7328,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def bgsave(self, schedule: bool | None = None) -> CommandRequest[bool]:
         """
-        Tells the Redis server to save its data to disk.  Unlike save(),
-        this method is asynchronous and returns immediately.
+        Start a background save of the dataset to disk (non-blocking).
+
+        :param schedule: If ``True``, schedule a save if none in progress.
+        :return: ``True`` when save has started or been scheduled.
         """
         command_arguments: CommandArgList = []
 
@@ -6805,12 +7393,18 @@ class CoreCommands(CommandMixin[AnyStr]):
         maxage: int | None = None,
     ) -> CommandRequest[int | bool]:
         """
-        Disconnects the client at :paramref:`ip_port`
+        Disconnect one or more clients by filter (ip:port, addr, type, user, etc.).
 
-        :return: ``True`` if the connection exists and has been closed
-         or the number of clients killed.
+        :param ip_port: Client address as ``ip:port`` (legacy form).
+        :param identifier: Client ID (from client list).
+        :param type_: NORMAL, MASTER, SLAVE, REPLICA, or PUBSUB.
+        :param user: Disconnect clients of the given user.
+        :param addr: Disconnect client at the given address.
+        :param laddr: Match local address.
+        :param skipme: If ``True``, do not disconnect this connection.
+        :param maxage: Disconnect idle clients older than this many seconds.
+        :return: ``True`` if a single client was closed, or number of clients killed.
         """
-
         command_arguments: CommandArgList = []
 
         if ip_port:
@@ -7189,7 +7783,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         flags={CommandFlag.READONLY, CommandFlag.FAST},
     )
     def dbsize(self) -> CommandRequest[int]:
-        """Returns the number of keys in the current database"""
+        """
+        Return the number of keys in the currently selected database.
+
+        :return: The number of keys.
+        """
 
         return self.create_request(CommandName.DBSIZE, callback=IntCallback())
 
@@ -7198,7 +7796,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SERVER,
     )
     def debug_object(self, key: KeyT) -> CommandRequest[dict[str, str | int]]:
-        """Returns version specific meta information about a given key"""
+        """
+        Return version-specific debugging information about a key (internal encoding, refcount, etc.).
+
+        :param key: The key name.
+        :return: A mapping of debug attributes.
+        """
 
         return self.create_request(CommandName.DEBUG_OBJECT, key, callback=DebugCallback())
 
@@ -7302,13 +7905,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         *sections: StringT,
     ) -> CommandRequest[dict[str, ResponseType]]:
         """
-        Get information and statistics about the server
+        Return server information and statistics.
 
-        The :paramref:`sections` option can be used to select a specific section(s)
-        of information.
-
+        :param sections: Optional section names (e.g. server, memory, stats); default all.
+        :return: Dict of section name to section data (parsed).
         """
-
         return self.create_request(
             CommandName.INFO,
             *sections,
@@ -7318,27 +7919,31 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(CommandName.LASTSAVE, group=CommandGroup.SERVER, flags={CommandFlag.FAST})
     def lastsave(self) -> CommandRequest[datetime.datetime]:
         """
-        Get the time of the last successful save to disk
-        """
+        Return the time of the last successful background save to disk.
 
+        :return: Datetime of last save.
+        """
         return self.create_request(CommandName.LASTSAVE, callback=DateTimeCallback())
 
     @versionadded(version="3.0.0")
     @redis_command(CommandName.LATENCY_DOCTOR, group=CommandGroup.SERVER)
     def latency_doctor(self) -> CommandRequest[AnyStr]:
         """
-        Return a human readable latency analysis report.
-        """
+        Return a human-readable latency analysis report.
 
+        :return: Report string.
+        """
         return self.create_request(CommandName.LATENCY_DOCTOR, callback=AnyStrCallback[AnyStr]())
 
     @versionadded(version="3.0.0")
     @redis_command(CommandName.LATENCY_GRAPH, group=CommandGroup.SERVER)
     def latency_graph(self, event: StringT) -> CommandRequest[AnyStr]:
         """
-        Return a latency graph for the event.
-        """
+        Return an ASCII latency graph for the given event.
 
+        :param event: Event name (e.g. command name).
+        :return: Graph string.
+        """
         return self.create_request(
             CommandName.LATENCY_GRAPH, event, callback=AnyStrCallback[AnyStr]()
         )
@@ -7353,9 +7958,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, *commands: StringT
     ) -> CommandRequest[dict[AnyStr, dict[AnyStr, RedisValueT]]]:
         """
-        Return the cumulative distribution of latencies of a subset of commands or all.
-        """
+        Return the cumulative distribution of latencies for the given or all commands.
 
+        :param commands: Command names to include (empty = all).
+        :return: Mapping of command to latency distribution info.
+        """
         return self.create_request(
             CommandName.LATENCY_HISTOGRAM,
             *commands,
@@ -7371,9 +7978,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Return timestamp-latency samples for the event.
 
-        :return: The command returns a tuple where each element is a tuple
-         representing the timestamp and the latency of the event.
-
+        :param event: Event name.
+        :return: Tuple of (timestamp, latency) pairs.
         """
         command_arguments: CommandArgList = [event]
 
@@ -7518,7 +8124,15 @@ class CoreCommands(CommandMixin[AnyStr]):
         force: bool | None = None,
         abort: bool | None = None,
     ) -> CommandRequest[bool]:
-        """Stops Redis server"""
+        """
+        Stop the Redis server (optionally save, nosave, now, force, or abort).
+
+        :param nosave_save: SAVE to persist before exit, NOSAVE to skip saving.
+        :param now: If ``True``, skip RDB persistence and shut down immediately.
+        :param force: If ``True``, skip syncing with replicas and shut down.
+        :param abort: If ``True``, abort without saving.
+        :return: ``True`` on success (connection will close).
+        """
         command_arguments: CommandArgList = []
 
         if nosave_save:
@@ -7545,11 +8159,12 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def slaveof(self, host: StringT | None = None, port: int | None = None) -> CommandRequest[bool]:
         """
-        Sets the server to be a replicated slave of the instance identified
-        by the :paramref:`host` and :paramref:`port`.
-        If called without arguments, the instance is promoted to a master instead.
-        """
+        Make the server a replica of the instance at host and port; no args to promote to master.
 
+        :param host: Master host (or None with port None to promote to master).
+        :param port: Master port.
+        :return: ``True`` on success.
+        """
         if host is None and port is None:
             return self.create_request(
                 CommandName.SLAVEOF, b"NO", b"ONE", callback=SimpleStringCallback()
@@ -7563,8 +8178,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def slowlog_get(self, count: int | None = None) -> CommandRequest[tuple[SlowLogInfo, ...]]:
         """
-        Gets the entries from the slowlog. If :paramref:`count` is specified, get the
-        most recent :paramref:`count` items.
+        Return entries from the slow query log.
+
+        :param count: Limit to this many most recent entries (optional).
+        :return: Tuple of slowlog entry dicts (id, timestamp, duration, command, client, name).
         """
         command_arguments: CommandArgList = []
 
@@ -7577,7 +8194,11 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @redis_command(CommandName.SLOWLOG_LEN, group=CommandGroup.SERVER)
     def slowlog_len(self) -> CommandRequest[int]:
-        """Gets the number of items in the slowlog"""
+        """
+        Return the number of entries currently in the slow log.
+
+        :return: The number of slow log entries.
+        """
 
         return self.create_request(CommandName.SLOWLOG_LEN, callback=IntCallback())
 
@@ -7586,7 +8207,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SERVER,
     )
     def slowlog_reset(self) -> CommandRequest[bool]:
-        """Removes all items in the slowlog"""
+        """
+        Remove all entries from the slow log.
+
+        :return: ``True`` on success.
+        """
 
         return self.create_request(CommandName.SLOWLOG_RESET, callback=SimpleStringCallback())
 
@@ -7608,9 +8233,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, host: StringT | None = None, port: int | None = None
     ) -> CommandRequest[bool]:
         """
-        Make the server a replica of another instance, or promote it as master.
-        """
+        Make the server a replica of the instance at host and port; no args to promote to master.
 
+        :param host: Master host (or None with port None to promote to master).
+        :param port: Master port.
+        :return: ``True`` on success.
+        """
         if host is None and port is None:
             return self.create_request(
                 CommandName.REPLICAOF, b"NO", b"ONE", callback=SimpleStringCallback()
@@ -7814,7 +8442,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Reload the ACLs from the configured ACL file
 
-        :return: True if successful. The command may fail with an error for several reasons:
+        :return: ``True`` if successful. The command may fail with an error for several reasons:
 
          - if the file is not readable
          - if there is an error inside the file, and in such case the error will be reported to
@@ -7840,7 +8468,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         List latest events denied because of ACLs in place
 
         :return: When called to show security events a list of ACL security events.
-         When called with ``RESET`` True if the security log was cleared.
+         When called with ``RESET`` ``True`` if the security log was cleared.
 
         """
 
@@ -7877,7 +8505,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Save the current ACL rules in the configured ACL file
 
-        :return: True if successful. The command may fail with an error for several reasons:
+        :return: ``True`` if successful. The command may fail with an error for several reasons:
          - if the file cannot be written, or
          - if the server is not configured to use an external ACL file.
 
@@ -7904,7 +8532,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         Modify or create the rules for a specific ACL user
 
 
-        :return: True if successful. If the rules contain errors, the error is returned.
+        :return: ``True`` if successful. If the rules contain errors, the error is returned.
         """
         command_arguments: CommandArgList = [username]
 
@@ -8123,7 +8751,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         ),
     )
     def config_set(self, parameter_values: Mapping[MappingKeyT, ValueT]) -> CommandRequest[bool]:
-        """Sets configuration parameters to the given values"""
+        """
+        Set one or more server configuration parameters at runtime.
+
+        :param parameter_values: Mapping of parameter names to values.
+        :return: ``True`` on success.
+        """
 
         return self.create_request(
             CommandName.CONFIG_SET,
@@ -8140,7 +8773,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         ),
     )
     def config_resetstat(self) -> CommandRequest[bool]:
-        """Resets runtime statistics"""
+        """
+        Reset runtime statistics (keyspace hits/misses, commands processed, etc.).
+
+        :return: ``True`` on success.
+        """
 
         return self.create_request(CommandName.CONFIG_RESETSTAT, callback=SimpleStringCallback())
 
@@ -8235,9 +8872,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def module_unload(self, name: StringT) -> CommandRequest[bool]:
         """
-        Unload a module
-        """
+        Unload a module by name.
 
+        :param name: Module name to unload.
+        :return: ``True`` on success.
+        """
         return self.create_request(CommandName.MODULE_UNLOAD, name, callback=SimpleStringCallback())
 
     @redis_command(
@@ -8248,11 +8887,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def type(self, key: KeyT) -> CommandRequest[AnyStr | None]:
         """
-        Determine the type stored at key
+        Return the type of the value stored at key.
 
-        :return: type of :paramref:`key`, or ``None`` when :paramref:`key` does not exist.
+        :param key: The key name.
+        :return: One of string, list, set, zset, hash, stream, etc.; ``None`` if key does not exist.
         """
-
         return self.create_request(CommandName.TYPE, key, callback=OptionalAnyStrCallback[AnyStr]())
 
     @versionadded(version="5.0.0")
@@ -8437,9 +9076,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param filter_ef: limits the number of filtering attempts
         :param truth: forces an exact linear scan of all elements bypassing the HSNW graph
         :param nothread: execute the search in the main thread instead of a background thread
-        :return: the matching elements or a mapping of the matching elements to their scores
-         if :paramref:`withscores` is ``True`` and/or their attributes if :paramref:`withattribs`
-         is ``True``
+        :return: Matching elements; optionally with scores (if withscores) and/or attributes (if withattribs).
         """
         command_arguments: CommandArgList = [key]
         if values is not None:
@@ -8517,9 +9154,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param element: The name of the vector to retrieve
         :param raw: Whether to return the raw result
 
-        :return: A tuple of floating point values representing the vector.
-         if :paramref:`raw` is ``True`` the raw vector along with its metadata
-         will be returned as a :class:`~coredis.response.types.VectorData` mapping.
+        :return: Tuple of floats for the vector; if raw is True, VectorData with metadata.
         """
         command_arguments: CommandArgList = [key, element]
         if raw:
@@ -8556,10 +9191,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param element: The element to find neighbours for
         :param withscores: Whether to return scores with neighbours
 
-        :return: A tuple containing tuples of connected neighbours for each layer of the HSNW graph.
-         If :paramref:`withscores` is ``True`` each layer will instead be a mapping
-         of neighbours to scores. The last entry of the top level tuple is the lowest layer of
-         the HSNW graph.
+        :return: Tuple of layers, each a tuple of neighbours (or mapping to scores if withscores); last is lowest layer.
         """
         command_arguments: CommandArgList = [key, element]
 
@@ -8638,9 +9270,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param count: The number of random elements to return
 
 
-        :return: A random element from the set or a list of
-         random elements if :paramref:`count` is specificied.
-         If :paramref:`count` is negative, duplicates may occur.
+        :return: A random element, or a tuple of elements if count is specified; negative count allows duplicates.
         """
         command_arguments: CommandArgList = [key]
         if count is not None:
@@ -8658,6 +9288,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, start: StringT, end: StringT, count: int | None = None
     ) -> CommandRequest[tuple[AnyStr, ...]]:
         """
+        Retreives all elements inside a vector set (optionally, in small
+        batches with the use of :paramref:`count`)
+
         :param key: The key containing the vector set
         :param start: The starting point of the lexicographical range
         :param end: The ending point of the lexicographical range.
