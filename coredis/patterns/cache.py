@@ -292,7 +292,7 @@ class TrackingCache(AbstractCache):
     @abstractmethod
     def get_client_id(
         self,
-        connection: coredis.connection.BaseConnection,
+        tracked_node: str,
     ) -> int | None:
         pass
 
@@ -357,7 +357,7 @@ class NodeTrackingCache(TrackingCache):
 
     def get_client_id(
         self,
-        connection: coredis.connection.BaseConnection,
+        tracked_node: str,
     ) -> int | None:
         return self.client_id
 
@@ -436,8 +436,8 @@ class ClusterTrackingCache(TrackingCache):
         self._nodes: list[coredis.client.Redis[Any]] = []
         self._max_idle_seconds = max_idle_seconds
 
-    def get_client_id(self, connection: coredis.connection.BaseConnection) -> int | None:
-        if cache := self.node_caches.get(connection.location):
+    def get_client_id(self, tracked_node: str) -> int | None:
+        if cache := self.node_caches.get(tracked_node):
             return cache.client_id
         return None
 

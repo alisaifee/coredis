@@ -78,6 +78,8 @@ class BaseConnectionParams(TypedDict):
     notouch: NotRequired[bool]
     #: Maximum idle time in seconds before the connection is closed.
     max_idle_time: NotRequired[int | None]
+    #: The client id to send invalidation messages to
+    tracking_client_id: NotRequired[int | None]
 
     #: Limiter to throttle CPU-bound processing.
     processing_budget: NotRequired[CapacityLimiter]
@@ -191,6 +193,7 @@ class BaseConnection(ABC):
         noreply: bool = False,
         noevict: bool = False,
         notouch: bool = False,
+        tracking_client_id: int | None = None,
         ssl_context: ssl.SSLContext | None = None,
         processing_budget: CapacityLimiter | None = None,
     ):
@@ -240,8 +243,8 @@ class BaseConnection(ABC):
         self.client_name = client_name
         # id for this connection as returned by the redis server
         self.client_id: int | None = None
-        # client id that the redis server should send any redirected notifications to
-        self.tracking_client_id: int | None = None
+        # client id that the redis server should send any invalidation notifications to
+        self.tracking_client_id: int | None = tracking_client_id
 
         self._noreply = noreply
         self._noreply_set = False
@@ -551,7 +554,8 @@ class BaseConnection(ABC):
                     != b"OK"
                 ):
                     raise ConnectionError(f"Failed to set client name: {self.client_name}")
-
+            if self.tracking_client_id is not None:
+                await self.update_tracking_client(True, self.tracking_client_id)
             if self._noevict:
                 await self.create_request(b"CLIENT NO-EVICT", b"ON")
 

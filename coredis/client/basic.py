@@ -934,10 +934,10 @@ class Redis(Client[AnyStr]):
         self._ensure_server_version(connection.server_version)
         try:
             if pool.cache and pool.cache.healthy:
-                if connection.tracking_client_id != pool.cache.get_client_id(connection):
+                if connection.tracking_client_id != pool.cache.get_client_id(connection.location):
                     pool.cache.reset()
                     await connection.update_tracking_client(
-                        True, pool.cache.get_client_id(connection)
+                        True, pool.cache.get_client_id(connection.location)
                     )
                 if command.name not in READONLY_COMMANDS:
                     pool.cache.invalidate(*keys)

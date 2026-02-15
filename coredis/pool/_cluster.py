@@ -290,7 +290,6 @@ class ClusterConnectionPool(ConnectionPool):
 
     async def __make_node_connection(self, node: ManagedNode) -> Connection:
         """Creates a new connection to a node"""
-
         connection = self.connection_class(
             host=node.host,
             port=node.port,
@@ -299,6 +298,10 @@ class ClusterConnectionPool(ConnectionPool):
         )
         if err := await self._task_group.start(self.__wrap_connection, connection):
             raise err
+        if self.cache:
+            await connection.update_tracking_client(
+                True, self.cache.get_client_id(connection.location)
+            )
         return connection
 
     def __node_pool(self, node: str) -> Queue[Connection]:

@@ -180,7 +180,7 @@ class TestInvalidatingCache(CommonExamples):
         assert cache.confidence == 100
         cached = await cloner(client, cache=cache)
         async with cached:
-            assert cached.connection_pool.cache.get_client_id(cached)
+            assert cached.connection_pool.cache.get_client_id("")
             await sleep(0.2)  # can be flaky if we close immediately
 
     async def test_shared_cache(self, client, cloner, mocker, _s):
@@ -238,7 +238,7 @@ class TestClusterInvalidatingCache(CommonExamples):
         async with client:
             await client.ping()
             async with client.connection_pool.acquire(node=None) as connection:
-                assert client.connection_pool.cache.get_client_id(connection)
+                assert client.connection_pool.cache.get_client_id(connection.location)
 
     async def test_shared_cache(self, client, mocker, _s):
         cache = LRUCache()

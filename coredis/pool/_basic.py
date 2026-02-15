@@ -280,7 +280,10 @@ class ConnectionPool:
         return connection_class, {**kwargs, **url_options}, tcp_params or uds_params
 
     def _construct_connection(self) -> BaseConnection:
-        return self.connection_class(**self.connection_kwargs)
+        connection_kwargs: BaseConnectionParams = {**self.connection_kwargs}
+        if self.cache:
+            connection_kwargs["tracking_client_id"] = self.cache.get_client_id("")
+        return self.connection_class(**connection_kwargs)
 
     async def __wrap_connection(
         self,
