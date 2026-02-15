@@ -269,7 +269,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param px: Set key to expire after this many milliseconds (relative).
         :param exat: Set key to expire at this Unix timestamp in seconds (absolute).
         :param pxat: Set key to expire at this Unix timestamp in milliseconds (absolute).
-        :param persist: If true, remove the time-to-live from the key.
+        :param persist: If ``True``, remove the time-to-live from the key.
         :return: The value of the key, or ``None`` if the key does not exist.
         """
 
@@ -427,10 +427,10 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :param key1: First key name.
         :param key2: Second key name.
-        :param len_: If true, return only the length of the longest match.
-        :param idx: If true, return matches with start/end positions in both keys.
+        :param len_: If ``True``, return only the length of the longest match.
+        :param idx: If ``True``, return matches with start/end positions in both keys.
         :param minmatchlen: Minimum match length to include.
-        :param withmatchlen: If true (with idx), include length in each match.
+        :param withmatchlen: If ``True`` (with idx), include length in each match.
         :return: The matched string (default), the length (if len_), or match
          positions and optionally lengths (if idx). Type depends on arguments.
         """
@@ -534,7 +534,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param px: Expire keys after this many milliseconds (relative).
         :param exat: Expire keys at this Unix timestamp in seconds (absolute).
         :param pxat: Expire keys at this Unix timestamp in milliseconds (absolute).
-        :param keepttl: If true, retain existing TTL on keys that have one.
+        :param keepttl: If ``True``, retain existing TTL on keys that have one.
         :return: ``True`` if all keys were set.
         """
         command_arguments: CommandArgList = [len(key_values), *dict_to_flat_list(key_values)]
@@ -663,12 +663,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param key: The key name.
         :param value: The string value to set.
         :param condition: NX (set only if not exists) or XX (set only if exists).
-        :param get: If true, return the previous value (or ``None``); aborts if not a string.
+        :param get: If ``True``, return the previous value (or ``None``); aborts if not a string.
         :param ex: Expire after this many seconds (relative).
         :param px: Expire after this many milliseconds (relative).
         :param exat: Expire at this Unix timestamp in seconds (absolute).
         :param pxat: Expire at this Unix timestamp in milliseconds (absolute).
-        :param keepttl: If true, retain the existing TTL.
+        :param keepttl: If ``True``, retain the existing TTL.
         :param ifeq: Set only if current value equals this value.
         :param ifne: Set only if current value does not equal this value.
         :param ifdeq: Set only if current hash digest equals this value.
@@ -1232,7 +1232,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param importing: Node ID from which the slot is being imported.
         :param migrating: Node ID to which the slot is being migrated.
         :param node: Node ID that should own the slot (assigns the slot).
-        :param stable: If true, clear importing/migrating state without assigning.
+        :param stable: If ``True``, clear importing/migrating state without assigning.
         :return: ``True`` on success.
         """
 
@@ -1539,7 +1539,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param key: The key name (sorted set holding the index).
         :param longitude_latitude_members: One or more (longitude, latitude, member) tuples.
         :param condition: NX (only add new) or XX (only update existing).
-        :param change: If true, return the number of elements changed (not just added).
+        :param change: If ``True``, return the number of elements changed (not just added).
         :return: The number of elements added; or, if :paramref:`change` is ``True``, the number changed.
         """
         command_arguments: CommandArgList = [key]
@@ -1741,11 +1741,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param latitude: Center latitude.
         :param radius: Maximum distance from center.
         :param unit: M, KM, FT, or MI.
-        :param withcoord: If true, include coordinates in results.
-        :param withdist: If true, include distance in results.
-        :param withhash: If true, include geohash in results.
+        :param withcoord: If ``True``, include coordinates in results.
+        :param withdist: If ``True``, include distance in results.
+        :param withhash: If ``True``, include geohash in results.
         :param count: Limit number of results.
-        :param any_: If true (with count), stop at first count matches.
+        :param any_: If ``True`` (with count), stop at first count matches.
         :param order: ASC or DESC by distance.
         :param store: Store results in this key (sorted set).
         :param storedist: Store results with distances in this key.
@@ -1806,11 +1806,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param member: Member to use as center.
         :param radius: Maximum distance from member.
         :param unit: M, KM, FT, or MI.
-        :param withcoord: If true, include coordinates in results.
-        :param withdist: If true, include distance in results.
-        :param withhash: If true, include geohash in results.
+        :param withcoord: If ``True``, include coordinates in results.
+        :param withdist: If ``True``, include distance in results.
+        :param withhash: If ``True``, include geohash in results.
         :param count: Limit number of results.
-        :param any_: If true (with count), stop at first count matches.
+        :param any_: If ``True`` (with count), stop at first count matches.
         :param order: ASC or DESC by distance.
         :param store: Store results in this key (sorted set).
         :param storedist: Store results with distances in this key.
@@ -1943,10 +1943,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param box_unit: M, KM, FT, or MI for box.
         :param order: ASC or DESC by distance.
         :param count: Limit number of results.
-        :param any_: If true (with count), stop at first count matches.
-        :param withcoord: If true, include coordinates in results.
-        :param withdist: If true, include distance in results.
-        :param withhash: If true, include geohash in results.
+        :param any_: If ``True`` (with count), stop at first count matches.
+        :param withcoord: If ``True``, include coordinates in results.
+        :param withdist: If ``True``, include distance in results.
+        :param withhash: If ``True``, include geohash in results.
         :return:
          - Member names (default)
          - ``(name, dist, hash, coords)`` if ``with{coord,dist,hash}`` is provided.
@@ -2010,8 +2010,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param box_unit: M, KM, FT, or MI for box.
         :param order: ASC or DESC by distance.
         :param count: Limit number of results.
-        :param any_: If true (with count), stop at first count matches.
-        :param storedist: If true, store distances as scores.
+        :param any_: If ``True`` (with count), stop at first count matches.
+        :param storedist: If ``True``, store distances as scores.
         :return: The number of elements stored in the resulting set.
         """
 
@@ -2741,7 +2741,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param cursor: Cursor for iteration (0 to start); use returned cursor for next page.
         :param match: Optional glob pattern to filter field names.
         :param count: Hint for minimum number of entries per iteration.
-        :param novalues: If true, return only field names (no values).
+        :param novalues: If ``True``, return only field names (no values).
         :return:
          - A tuple of ``(next_cursor, mapping)``.
          - If ``novalues`` is set, a tuple of ``(next_cursor, fields)``
@@ -2816,7 +2816,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :param key: The key name.
         :param count: If set, return up to this many distinct fields (negative allows duplicates).
-        :param withvalues: If true, return a mapping of fields to values instead of just fields.
+        :param withvalues: If ``True``, return a mapping of fields to values instead of just fields.
         :return: A single field, a tuple of fields, a dict (if withvalues), or ``None`` if key is empty.
         """
         command_arguments: CommandArgList = [key]
@@ -2908,7 +2908,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param source: The source key name.
         :param destination: The destination key name.
         :param db: If set, copy to this database index on the same server.
-        :param replace: If true, overwrite destination if it exists.
+        :param replace: If ``True``, overwrite destination if it exists.
         :return: ``True`` on success.
         """
         command_arguments: CommandArgList = [source, destination]
@@ -3152,8 +3152,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param destination_db: Database index on the target.
         :param timeout: Maximum idle time for the connection in milliseconds.
         :param keys: One or more key names to migrate.
-        :param copy: If true, copy the key instead of moving it.
-        :param replace: If true, replace existing keys on the target.
+        :param copy: If ``True``, copy the key instead of moving it.
+        :param replace: If ``True``, replace existing keys on the target.
         :param auth: Password for the target (legacy).
         :param username: Username for ACL auth on the target.
         :param password: Password for ACL auth on the target.
@@ -3436,8 +3436,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param key: The key name to create.
         :param ttl: TTL in milliseconds, or datetime for absolute expiry if absttl.
         :param serialized_value: The serialized value (bytes from dump).
-        :param replace: If true, overwrite existing key.
-        :param absttl: If true, ttl is an absolute Unix timestamp in ms.
+        :param replace: If ``True``, overwrite existing key.
+        :param absttl: If ``True``, ttl is an absolute Unix timestamp in ms.
         :param idletime: Optional idle time in seconds before eviction.
         :param freq: Optional access frequency for LFU eviction.
         :return: ``True`` on success.
@@ -3494,7 +3494,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param offset: Skip this many elements (use with count for LIMIT).
         :param count: Return this many elements (use with offset).
         :param order: ASC or DESC.
-        :param alpha: If true, sort lexicographically.
+        :param alpha: If ``True``, sort lexicographically.
         :param store: If set, store the result in this key instead of returning.
         :return: A tuple of sorted elements, or the number of stored elements if store is set.
         """
@@ -4671,8 +4671,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param member_scores: Mapping of member names to scores.
         :param condition: NX (only add new) or XX (only update existing).
         :param comparison: GT (only if new score greater) or LT (only if new score less).
-        :param change: If true, return the number of elements changed (added or updated).
-        :param increment: If true, add increment to existing score (like zincrby); return new score.
+        :param change: If ``True``, return the number of elements changed (added or updated).
+        :param increment: If ``True``, add increment to existing score (like zincrby); return new score.
         :return: Number of elements added; or number changed if change; or new score if increment; or ``None`` if aborted.
         """
         command_arguments: CommandArgList = []
@@ -4747,7 +4747,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         Return the difference of the first sorted set and all successive sets (members in first but not in others).
 
         :param keys: One or more sorted set key names (first is the base).
-        :param withscores: If true, include scores in the result.
+        :param withscores: If ``True``, include scores in the result.
         :return: Members (and optionally scores) in the difference.
         """
         command_arguments: CommandArgList = [len(list(keys)), *keys]
@@ -4827,7 +4827,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param keys: One or more sorted set key names.
         :param weights: Optional multiplier for each key's scores.
         :param aggregate: How to combine scores: SUM, MIN, or MAX.
-        :param withscores: If true, include scores in the result.
+        :param withscores: If ``True``, include scores in the result.
         :return: Members (and optionally scores) in the intersection.
         """
 
@@ -5021,7 +5021,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :param key: The key name.
         :param count: If set, return up to this many distinct members (negative allows duplicates).
-        :param withscores: If true, return (member, score) pairs.
+        :param withscores: If ``True``, return (member, score) pairs.
         :return: A single member, a tuple of members, or (member, score) tuples; ``None`` or empty if key is empty.
         """
         command_arguments: CommandArgList = [key]
@@ -5098,10 +5098,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param min_: Minimum rank, score, or lex (depending on sortby).
         :param max_: Maximum rank, score, or lex (depending on sortby).
         :param sortby: BYSCORE or BYLEX.
-        :param rev: If true, reverse the order (high to low).
+        :param rev: If ``True``, reverse the order (high to low).
         :param offset: Skip this many elements (use with count).
         :param count: Return this many elements (use with offset).
-        :param withscores: If true, include scores in the result.
+        :param withscores: If ``True``, include scores in the result.
         :return: Members (and optionally scores) in the specified range.
         """
 
@@ -5181,7 +5181,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param key: The key name.
         :param min_: Minimum score (inclusive).
         :param max_: Maximum score (inclusive).
-        :param withscores: If true, return (member, score) pairs.
+        :param withscores: If ``True``, return (member, score) pairs.
         :param offset: Skip this many members (use with count).
         :param count: Return at most this many members (use with offset).
         :return: Tuple of members, or (member, score) tuples if withscores.
@@ -5227,7 +5227,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param min_: Start of range (score or lex depending on sortby).
         :param max_: End of range (score or lex depending on sortby).
         :param sortby: BYSCORE or BYLEX.
-        :param rev: If true, reverse order.
+        :param rev: If ``True``, reverse order.
         :param offset: Skip this many members (use with count).
         :param count: Store at most this many members (use with offset).
         :return: Number of elements in the resulting sorted set.
@@ -5261,7 +5261,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :param key: The key name.
         :param member: The member to look up.
-        :param withscore: If true, return (rank, score).
+        :param withscore: If ``True``, return (rank, score).
         :return: The rank, or (rank, score) if withscore; ``None`` if member is not in the set.
         """
         command_arguments: CommandArgList = [key, member]
@@ -5360,7 +5360,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param key: The key name.
         :param start: Start index (0-based).
         :param stop: Stop index (inclusive).
-        :param withscores: If true, include scores in the result.
+        :param withscores: If ``True``, include scores in the result.
         :return: Members (and optionally scores) in the specified range.
         """
         command_arguments: CommandArgList = [key, start, stop]
@@ -5437,7 +5437,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param key: The key name.
         :param max_: Maximum score (inclusive).
         :param min_: Minimum score (inclusive).
-        :param withscores: If true, return (member, score) pairs.
+        :param withscores: If ``True``, return (member, score) pairs.
         :param offset: Skip this many members (use with count).
         :param count: Return at most this many members (use with offset).
         :return: Tuple of members, or (member, score) tuples if withscores.
@@ -5472,7 +5472,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :param key: The key name.
         :param member: The member to look up.
-        :param withscore: If true, return (rank, score).
+        :param withscore: If ``True``, return (rank, score).
         :return: The rank, or (rank, score) if withscore; ``None`` if member is not in the set.
         """
         command_arguments: CommandArgList = [key, member]
@@ -5556,7 +5556,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param keys: One or more sorted set key names.
         :param weights: Optional multiplier for each key's scores.
         :param aggregate: How to combine scores: SUM, MIN, or MAX.
-        :param withscores: If true, include scores in the result.
+        :param withscores: If ``True``, include scores in the result.
         :return: Members (and optionally scores) in the union.
         """
 
@@ -5832,7 +5832,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param key: The stream key.
         :param field_values: Field names and values for the entry.
         :param identifier: Entry ID, or ``*`` for auto-generated.
-        :param nomkstream: If true, do not create the stream if it does not exist.
+        :param nomkstream: If ``True``, do not create the stream if it does not exist.
         :param idmpauto: Auto ID mode (e.g. node-id).
         :param idmp: Manual ID range (min, max).
         :param trim_strategy: MAXLEN or MINID for trimming.
@@ -6024,7 +6024,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param streams: Mapping of stream key to last-seen ID (use ``>`` for new for this consumer).
         :param count: Max entries to return per stream.
         :param block: Block up to this many milliseconds (or timedelta) for new data.
-        :param noack: If true, do not add messages to PEL (no XACK needed).
+        :param noack: If ``True``, do not add messages to PEL (no XACK needed).
         :return: Mapping of stream key to tuple of entries; ``None`` if block timeout is exceeded.
         """
         command_arguments: CommandArgList = [PrefixToken.GROUP, group, consumer]
@@ -6240,7 +6240,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         Return information about the stream.
 
         :param key: The stream key.
-        :param full: If true, include extended info (see :class:`coredis.response.types.StreamInfo`).
+        :param full: If ``True``, include extended info (see :class:`coredis.response.types.StreamInfo`).
         :param count: When full is true, limit number of entries in the result.
         :return: Stream info (length, groups, first/last entry, etc.; entries if full).
         """
@@ -6290,8 +6290,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param idle: Set idle time for claimed entries (ms or timedelta).
         :param time: Set last-delivery time for claimed entries.
         :param retrycount: Set retry count for claimed entries.
-        :param force: If true, claim even if another consumer has them.
-        :param justid: If true, return only entry IDs.
+        :param force: If ``True``, claim even if another consumer has them.
+        :param justid: If ``True``, return only entry IDs.
         :param lastid: Optional last ID for the consumer (streaming).
         :return: Tuple of claimed entry IDs, or tuple of stream entries (unless justid).
         """
@@ -6345,9 +6345,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param key: The stream key.
         :param groupname: Name of the consumer group.
         :param identifier: Start reading from this ID (e.g. ``0`` or ``$``); default new entries.
-        :param mkstream: If true, create the stream if it does not exist.
+        :param mkstream: If ``True``, create the stream if it does not exist.
         :param entriesread: Optional entries-read value for the group.
-        :return: True on success.
+        :return: ``True`` on success.
         """
         command_arguments: CommandArgList = [
             key,
@@ -6382,7 +6382,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param key: The stream key.
         :param groupname: Consumer group name.
         :param consumername: Name of the consumer to create.
-        :return: True if the consumer was created, False if it already existed.
+        :return: ``True`` if the consumer was created, False if it already existed.
         """
         command_arguments: CommandArgList = [key, groupname, consumername]
 
@@ -6412,7 +6412,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param groupname: Consumer group name.
         :param identifier: New last-delivered ID (e.g. ``0`` or ``$``).
         :param entriesread: Optional entries-read value.
-        :return: True on success.
+        :return: ``True`` on success.
         """
         command_arguments: CommandArgList = [
             key,
@@ -6493,7 +6493,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param min_idle_time: Only claim entries idle at least this long (ms or timedelta).
         :param start: Start scanning from this ID (e.g. ``0-0``).
         :param count: Max number of entries to claim per call.
-        :param justid: If true, return only entry IDs.
+        :param justid: If ``True``, return only entry IDs.
         :return: k(next_start_id, claimed_entries) or (next_start_id, claimed_entries, deleted_ids).
         """
         command_arguments: CommandArgList = [
@@ -6534,7 +6534,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param key: The stream key.
         :param idmp_duration: Duration for idempotency window (seconds or timedelta).
         :param idmp_maxsize: Max size for idempotency tracking.
-        :return: True on success.
+        :return: ``True`` on success.
         """
         command_arguments: CommandArgList = [key]
         if idmp_duration is not None:
@@ -6968,7 +6968,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         Check whether the given scripts exist in the server script cache.
 
         :param sha1s: One or more SHA1 digests of scripts.
-        :return: Tuple of booleans, one per digest (True if cached).
+        :return: Tuple of booleans, one per digest (``True`` if cached).
         """
         return self.create_request(CommandName.SCRIPT_EXISTS, *sha1s, callback=BoolsCallback())
 
@@ -6989,7 +6989,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         Remove all scripts from the server script cache.
 
         :param flush_type: ASYNC (default) or SYNC.
-        :return: True on success.
+        :return: ``True`` on success.
         """
         command_arguments: CommandArgList = []
 
@@ -7012,7 +7012,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Terminate the currently running Lua script (if any).
 
-        :return: True if a script was killed.
+        :return: ``True`` if a script was killed.
         """
         return self.create_request(CommandName.SCRIPT_KILL, callback=SimpleStringCallback())
 
@@ -7201,7 +7201,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         List libraries and functions (optionally filtered by library name).
 
         :param libraryname: Optional library name to filter by.
-        :param withcode: If true, include function source code in the result.
+        :param withcode: If ``True``, include function source code in the result.
         :return: Mapping of library name to library definition (functions, code, etc.).
         """
         command_arguments: CommandArgList = []
@@ -7237,7 +7237,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         Load a library of Redis functions (Lua or other engine).
 
         :param function_code: Library source code (e.g. ``#!lua name=mylib`` ...).
-        :param replace: If true, replace existing library with the same name.
+        :param replace: If ``True``, replace existing library with the same name.
         :return: Library name on success.
         """
         command_arguments: CommandArgList = []
@@ -7273,7 +7273,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :param serialized_value: Serialized payload from function_dump.
         :param policy: FLUSH (replace all), APPEND, or REPLACE.
-        :return: True on success.
+        :return: ``True`` on success.
         """
         command_arguments: CommandArgList = [serialized_value]
 
@@ -7330,8 +7330,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Start a background save of the dataset to disk (non-blocking).
 
-        :param schedule: If true, schedule a save if none in progress.
-        :return: True when save has started or been scheduled.
+        :param schedule: If ``True``, schedule a save if none in progress.
+        :return: ``True`` when save has started or been scheduled.
         """
         command_arguments: CommandArgList = []
 
@@ -7401,9 +7401,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param user: Disconnect clients of the given user.
         :param addr: Disconnect client at the given address.
         :param laddr: Match local address.
-        :param skipme: If true, do not disconnect this connection.
+        :param skipme: If ``True``, do not disconnect this connection.
         :param maxage: Disconnect idle clients older than this many seconds.
-        :return: True if a single client was closed, or number of clients killed.
+        :return: ``True`` if a single client was closed, or number of clients killed.
         """
         command_arguments: CommandArgList = []
 
@@ -8128,9 +8128,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         Stop the Redis server (optionally save, nosave, now, force, or abort).
 
         :param nosave_save: SAVE to persist before exit, NOSAVE to skip saving.
-        :param now: If true, skip RDB persistence and shut down immediately.
-        :param force: If true, skip syncing with replicas and shut down.
-        :param abort: If true, abort without saving.
+        :param now: If ``True``, skip RDB persistence and shut down immediately.
+        :param force: If ``True``, skip syncing with replicas and shut down.
+        :param abort: If ``True``, abort without saving.
         :return: ``True`` on success (connection will close).
         """
         command_arguments: CommandArgList = []
@@ -8163,7 +8163,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :param host: Master host (or None with port None to promote to master).
         :param port: Master port.
-        :return: True on success.
+        :return: ``True`` on success.
         """
         if host is None and port is None:
             return self.create_request(
@@ -8237,7 +8237,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :param host: Master host (or None with port None to promote to master).
         :param port: Master port.
-        :return: True on success.
+        :return: ``True`` on success.
         """
         if host is None and port is None:
             return self.create_request(
@@ -8442,7 +8442,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Reload the ACLs from the configured ACL file
 
-        :return: True if successful. The command may fail with an error for several reasons:
+        :return: ``True`` if successful. The command may fail with an error for several reasons:
 
          - if the file is not readable
          - if there is an error inside the file, and in such case the error will be reported to
@@ -8468,7 +8468,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         List latest events denied because of ACLs in place
 
         :return: When called to show security events a list of ACL security events.
-         When called with ``RESET`` True if the security log was cleared.
+         When called with ``RESET`` ``True`` if the security log was cleared.
 
         """
 
@@ -8505,7 +8505,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         Save the current ACL rules in the configured ACL file
 
-        :return: True if successful. The command may fail with an error for several reasons:
+        :return: ``True`` if successful. The command may fail with an error for several reasons:
          - if the file cannot be written, or
          - if the server is not configured to use an external ACL file.
 
@@ -8532,7 +8532,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         Modify or create the rules for a specific ACL user
 
 
-        :return: True if successful. If the rules contain errors, the error is returned.
+        :return: ``True`` if successful. If the rules contain errors, the error is returned.
         """
         command_arguments: CommandArgList = [username]
 
@@ -8875,7 +8875,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         Unload a module by name.
 
         :param name: Module name to unload.
-        :return: True on success.
+        :return: ``True`` on success.
         """
         return self.create_request(CommandName.MODULE_UNLOAD, name, callback=SimpleStringCallback())
 
