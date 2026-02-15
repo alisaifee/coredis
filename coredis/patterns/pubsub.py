@@ -227,7 +227,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         expect a pattern name as the key and a callable as the value. A
         pattern's callable will be invoked automatically when a message is
         received on that pattern rather than producing a message via
-        :meth:`listen`.
+        :meth:`get_message` or the iterator.
         """
         new_patterns: MutableMapping[StringT, SubscriptionCallback | None] = {}
         new_patterns.update(dict.fromkeys(map(self._encode, patterns)))
@@ -262,8 +262,8 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         Subscribes to channels. Channels supplied as keyword arguments expect
         a channel name as the key and a callable as the value. A channel's
         callable will be invoked automatically when a message is received on
-        that channel rather than producing a message via :meth:`listen` or
-        :meth:`get_message`.
+        that channel rather than producing a message via :meth:`get_message`
+        or the iterator.
         """
 
         new_channels: MutableMapping[StringT, SubscriptionCallback | None] = {}
@@ -595,8 +595,8 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         :param channel_handlers: Channels supplied as keyword arguments expect
          a channel name as the key and a callable as the value. A channel's
          callable will be invoked automatically when a message is received on
-         that channel rather than producing a message via :meth:`listen` or
-         :meth:`get_message`.
+         that channel rather than producing a message via :meth:`get_message`
+         or the iterator.
         """
 
         new_channels: MutableMapping[StringT, SubscriptionCallback | None] = {}
