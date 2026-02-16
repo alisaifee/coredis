@@ -549,7 +549,7 @@ RedisValueT: TypeAlias = str | bytes | int | float
 #:     length({"1": 2})            # invalid
 #:     length("123")               # invalid
 #:     length(b"123")              # invalid
-Parameters = list[T_co] | Set[T_co] | tuple[T_co, ...] | ValuesView[T_co] | Iterator[T_co]
+Parameters = Sequence[T_co] | Set[T_co] | tuple[T_co, ...] | ValuesView[T_co] | Iterator[T_co]
 
 if sys.version_info >= (3, 12):
     from ._py_312_typing import JsonType, ResponsePrimitive, ResponseType
