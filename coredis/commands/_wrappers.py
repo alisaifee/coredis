@@ -144,12 +144,12 @@ Compatibility:
 """
         if version_deprecated and deprecation_reason:
             wrapped.__doc__ += f"""
-- Deprecated in :redis-version:`{version_deprecated}`
-      {deprecation_reason.strip()}
+.. caution:: Deprecated in :redis-version:`{version_deprecated}`
+   {deprecation_reason.strip()}
 """
         elif version_deprecated:
             wrapped.__doc__ += f"""
-- Deprecated in :redis-version:`{version_deprecated}`
+.. caution:: Deprecated in :redis-version:`{version_deprecated}`
 """
         if command_details.arguments:
             for argument, min_version in command_details.arguments.items():
