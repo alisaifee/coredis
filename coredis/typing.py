@@ -552,6 +552,7 @@ RedisValueT: TypeAlias = str | bytes | int | float
 #:     length(b"123")              # invalid
 
 
+@runtime_checkable
 class SequenceNotString(Protocol[T_co]):
     """
     Allow sequences *except* str | bytes.
