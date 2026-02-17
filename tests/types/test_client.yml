@@ -1,0 +1,53 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/typeddjango/pytest-mypy-plugins/master/pytest_mypy_plugins/schema.json
+- case: client_constructor
+  parametrized:
+    - args:
+      class: Redis
+      expected: Redis[bytes]
+    - args: decode_responses=False
+      class: Redis
+      expected: Redis[bytes]
+    - args: decode_responses=True
+      class: Redis
+      expected: Redis[str]
+    - args:
+      class: RedisCluster
+      expected: RedisCluster[bytes]
+    - args: decode_responses=False
+      class: RedisCluster
+      expected: RedisCluster[bytes]
+    - args: decode_responses=True
+      class: RedisCluster
+      expected: RedisCluster[str]
+
+  main: |
+    from typing import assert_type
+    from coredis import {{class}}
+    redis = {{class}}({{args}})
+    assert_type(redis, {{expected}})
+- case: client_from_url
+  parametrized:
+    - args: db=0
+      class: Redis
+      expected: Redis[bytes]
+    - args: decode_responses=False
+      class: Redis
+      expected: Redis[bytes]
+    - args: decode_responses=True
+      class: Redis
+      expected: Redis[str]
+    - args: read_from_replicas=False
+      class: RedisCluster
+      expected: RedisCluster[bytes]
+    - args: decode_responses=False
+      class: RedisCluster
+      expected: RedisCluster[bytes]
+    - args: decode_responses=True
+      class: RedisCluster
+      expected: RedisCluster[str]
+
+  main: |
+    from typing import assert_type
+    from coredis import {{class}}
+    redis = {{class}}.from_url("redis://locahost:6379", {{args}})
+    assert_type(redis, {{expected}})
