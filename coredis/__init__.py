@@ -15,9 +15,10 @@ from coredis.connection import (
     BaseConnection,
     ClusterConnection,
     Connection,
+    TCPConnection,
     UnixDomainSocketConnection,
 )
-from coredis.pool import ClusterConnectionPool, ConnectionPool
+from coredis.pool import BaseConnectionPool, ClusterConnectionPool, ConnectionPool
 from coredis.sentinel import Sentinel
 from coredis.tokens import PureToken
 
@@ -27,7 +28,9 @@ __all__ = [
     "RedisCluster",
     "BaseConnection",
     "Connection",
+    "TCPConnection",
     "UnixDomainSocketConnection",
+    "BaseConnectionPool",
     "ClusterConnection",
     "ConnectionPool",
     "ClusterConnectionPool",

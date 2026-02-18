@@ -4,12 +4,11 @@ import random
 from contextlib import AsyncExitStack, asynccontextmanager
 from typing import Any, overload
 
-from anyio import AsyncContextManagerMixin, ConnectionFailed
-from anyio.abc import ByteStream
+from anyio import AsyncContextManagerMixin
 
-from coredis import BaseConnection, Redis
+from coredis import Redis
 from coredis._utils import nativestr
-from coredis.connection import BaseConnectionParams, Connection
+from coredis.connection import BaseConnectionParams, TCPConnection, TCPLocation
 from coredis.exceptions import (
     ConnectionError,
     PrimaryNotFoundError,
@@ -22,7 +21,6 @@ from coredis.retry import NoRetryPolicy, RetryPolicy
 from coredis.typing import (
     AnyStr,
     AsyncGenerator,
-    AsyncIterator,
     Generic,
     Iterable,
     Literal,
@@ -34,36 +32,22 @@ from coredis.typing import (
 )
 
 
-class SentinelManagedConnection(Connection, Generic[AnyStr]):
+class SentinelManagedConnection(TCPConnection):
     def __init__(
-        self, connection_pool: SentinelConnectionPool, **kwargs: Unpack[BaseConnectionParams]
+        self, location: TCPLocation, primary_name: str, **kwargs: Unpack[BaseConnectionParams]
     ):
-        self.connection_pool: SentinelConnectionPool = connection_pool
-        super().__init__(**kwargs)
+        self.primary_name = primary_name
+        super().__init__(location=location, **kwargs)
 
     def __repr__(self) -> str:
-        pool = self.connection_pool
-        if self.host:
-            host_info = f",host={self.host},port={self.port}"
+        if self.location:
+            host_info = f",host={self.location.host},port={self.location.port}"
         else:
             host_info = ""
-        return f"{type(self).__name__}<service={pool.service_name}{host_info}>"
-
-    async def _connect(self) -> ByteStream:
-        if self.connection_pool.is_primary:
-            self.host, self.port = await self.connection_pool.get_primary_address()
-            return await super()._connect()
-        else:
-            async for replica in self.connection_pool.rotate_replicas():
-                try:
-                    self.host, self.port = replica
-                    return await super()._connect()
-                except ConnectionFailed:
-                    continue
-            raise ReplicaNotFoundError  # Never be here
+        return f"{type(self).__name__}<service={self.primary_name}{host_info}>"
 
 
-class SentinelConnectionPool(ConnectionPool):
+class SentinelConnectionPool(ConnectionPool[SentinelManagedConnection]):
     """
     Sentinel backed connection pool.
     """
@@ -77,16 +61,21 @@ class SentinelConnectionPool(ConnectionPool):
         _cache: AbstractCache | None = None,
         **kwargs: Unpack[BaseConnectionParams],
     ):
-        super().__init__(_cache=_cache, **kwargs)
+        super().__init__(connection_class=SentinelManagedConnection, _cache=_cache, **kwargs)
         self.is_primary = is_primary
         self.service_name = nativestr(service_name)
         self.sentinel_manager = sentinel_manager
         self.check_connection = check_connection
-        self.primary_address: tuple[str, int] | None = None
+        self.location: TCPLocation | None = None
+        self.replicas: list[TCPLocation] = []
         self.replica_counter: int | None = None
 
-    def _construct_connection(self) -> BaseConnection:
-        return SentinelManagedConnection(connection_pool=self, **self.connection_kwargs)
+    async def _construct_connection(self) -> SentinelManagedConnection:
+        if self.is_primary:
+            location = await self.get_primary_location()
+        else:
+            location = await self.get_replica()
+        return SentinelManagedConnection(location, self.service_name, **self.connection_kwargs)
 
     def __repr__(self) -> str:
         return (
@@ -95,28 +84,34 @@ class SentinelConnectionPool(ConnectionPool):
             f"({'primary' if self.is_primary else 'replica'})>"
         )
 
-    async def get_primary_address(self) -> tuple[str, int]:
-        primary_address = await self.sentinel_manager.discover_primary(self.service_name)
+    async def get_primary_location(self) -> TCPLocation:
+        primary_location = await self.sentinel_manager.discover_primary(self.service_name)
+        location = TCPLocation(primary_location[0], primary_location[1])
         if self.is_primary:
-            if self.primary_address != primary_address and self.primary_address is not None:
-                # Primary address changed, disconnect all clients in this pool
-                self._task_group.cancel_scope.cancel()
-            self.primary_address = primary_address
+            if self.location != location and self.location is not None:
+                # Primary location changed, disconnect all clients in this pool
+                self.disconnect()
+            self.location = location
 
-        return primary_address
+        return location
 
-    async def rotate_replicas(self) -> AsyncIterator[tuple[str, int]]:
+    async def get_replica(self) -> TCPLocation:
         """Round-robin replicas balancer"""
         replicas = await self.sentinel_manager.discover_replicas(self.service_name)
-        if replicas:
+        if not self.replicas:
+            self.replicas = [
+                TCPLocation(*replica)
+                for replica in await self.sentinel_manager.discover_replicas(self.service_name)
+            ]
+
+        if self.replicas:
             if self.replica_counter is None:
                 self.replica_counter = random.randint(0, len(replicas) - 1)
-            for _ in range(len(replicas)):
-                self.replica_counter = (self.replica_counter + 1) % len(replicas)
-                yield replicas[self.replica_counter]
+            self.replica_counter = (self.replica_counter + 1) % len(replicas)
+            return self.replicas[self.replica_counter]
         else:
             try:
-                yield await self.get_primary_address()
+                return await self.get_primary_location()
             except PrimaryNotFoundError:
                 pass
             raise ReplicaNotFoundError(f"No replica found for {self.service_name!r}")
@@ -237,11 +232,11 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
 
     def __repr__(self) -> str:
         sentinels = [
-            f"{connection_args['host']}:{connection_args['port']}"  # type: ignore
+            f"{location}"
             for sentinel in self.sentinels
-            if (connection_args := sentinel.connection_pool.connection_kwargs)
+            if (location := sentinel.connection_pool.location)
         ]
-        return f"{type(self).__name__}<sentinels=[{','.join(sentinels)}]>"
+        return f"Sentinel<sentinels=[{','.join(sentinels)}]>"
 
     def __check_primary_state(
         self,
@@ -268,10 +263,10 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
 
     async def discover_primary(self, service_name: str) -> tuple[str, int]:
         """
-        Asks sentinel servers for the Redis primary's address corresponding
+        Asks sentinel servers for the Redis primary's location corresponding
         to the service labeled :paramref:`service_name`.
 
-        :return: A pair (address, port) or raises :exc:`~coredis.exceptions.PrimaryNotFoundError`
+        :return: A pair (location, port) or raises :exc:`~coredis.exceptions.PrimaryNotFoundError`
          if no primary is found.
         """
         for sentinel_no, sentinel in enumerate(self.sentinels):
@@ -330,9 +325,9 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
         Returns a redis client instance for the :paramref:`service_name` primary.
 
         A :class:`coredis.sentinel.SentinelConnectionPool` class is used to
-        retrive the primary's address before establishing a new connection.
+        retrive the primary's location before establishing a new connection.
 
-        NOTE: If the primary's address has changed, any cached connections to
+        NOTE: If the primary's location has changed, any cached connections to
         the old primary are closed.
 
         By default clients will be a :class:`~coredis.Redis` instances.
@@ -390,7 +385,7 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
         Returns redis client instance for the :paramref:`service_name` replica(s).
 
         A SentinelConnectionPool class is used to retrieve the replica's
-        address before establishing a new connection.
+        location before establishing a new connection.
 
         By default clients will be a redis.Redis instance. Specify a
         different class to the :paramref:`redis_class` argument if you desire

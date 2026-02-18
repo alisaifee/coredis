@@ -1033,13 +1033,15 @@ def cloner():
             c = client.__class__(
                 decode_responses=client.decode_responses,
                 encoding=client.encoding,
-                connection_pool=pool or client.connection_pool.__class__(_cache=cache, **c_kwargs),
+                connection_pool=pool
+                or client.connection_pool.__class__(
+                    location=(pool or client.connection_pool).location, _cache=cache, **c_kwargs
+                ),
                 **kwargs,
             )
         else:
             c = client.__class__(
-                client.connection_pool.nodes.startup_nodes[0].host,
-                client.connection_pool.nodes.startup_nodes[0].port,
+                startup_nodes=client.connection_pool.startup_nodes,
                 decode_responses=client.decode_responses,
                 encoding=client.encoding,
                 cache=cache,

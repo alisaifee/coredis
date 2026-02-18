@@ -508,20 +508,9 @@ class RedisCluster(
             )
 
         super().__init__(
-            username=username,
-            password=password,
-            credential_provider=credential_provider,
-            stream_timeout=stream_timeout,
-            connect_timeout=connect_timeout,
-            pool_timeout=pool_timeout,
             connection_pool=pool,
-            connection_pool_cls=connection_pool_cls,
-            encoding=encoding,
-            decode_responses=decode_responses,
             verify_version=verify_version,
             noreply=noreply,
-            noevict=noevict,
-            notouch=notouch,
             retry_policy=retry_policy,
             type_adapter=type_adapter,
         )

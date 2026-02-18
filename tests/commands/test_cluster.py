@@ -118,9 +118,9 @@ class TestCluster:
 
     async def test_cluster_meet(self, client, _s):
         node = list(client.primaries)[0]
-        other = list(client.primaries)[1].connection_pool.connection_kwargs
+        other = list(client.primaries)[1].connection_pool.location
         async with node:
-            assert await node.cluster_meet(other["host"], other["port"])
+            assert await node.cluster_meet(other.host, other.port)
             with pytest.raises(ResponseError, match="Invalid node address"):
                 await node.cluster_meet("bogus", 6666)
 

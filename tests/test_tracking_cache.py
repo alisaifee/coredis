@@ -115,7 +115,7 @@ class CommonExamples:
 
     async def test_shared_cache_and_client_cache(self, client):
         kwargs = client.connection_pool.connection_kwargs
-        pool = client.connection_pool.__class__(**kwargs)
+        pool = client.connection_pool.__class__(location=client.connection_pool.location, **kwargs)
         with pytest.raises(Exception, match="mutually exclusive"):
             _ = client.__class__(
                 decode_responses=client.decode_responses,
@@ -206,7 +206,9 @@ class TestInvalidatingCache(CommonExamples):
     async def test_shared_cache_via_pool(self, client, cloner, mocker, _s):
         cache = LRUCache()
         kwargs = client.connection_pool.connection_kwargs
-        pool = client.connection_pool.__class__(_cache=cache, **kwargs)
+        pool = client.connection_pool.__class__(
+            location=client.connection_pool.location, _cache=cache, **kwargs
+        )
         clones = [await cloner(client, connection_pool=pool) for _ in range(5)]
         async with AsyncExitStack() as stack:
             for c in clones:
@@ -265,7 +267,7 @@ class TestClusterInvalidatingCache(CommonExamples):
     async def test_shared_cache_via_pool(self, client, mocker, _s):
         cache = LRUCache()
         pool = ClusterConnectionPool(
-            startup_nodes=[{"host": "localhost", "port": 7000}],
+            startup_nodes=client.connection_pool.startup_nodes,
             _cache=cache,
             decode_responses=client.decode_responses,
         )

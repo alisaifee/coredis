@@ -1,58 +1,60 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from typing import Any
-from urllib.parse import parse_qs, unquote, urlparse
+from typing import Any, cast
 
 from anyio import (
     TASK_STATUS_IGNORED,
     CapacityLimiter,
-    create_task_group,
     fail_after,
 )
 from anyio.abc import TaskStatus
 
 from coredis._concurrency import Queue
-from coredis._utils import query_param_to_bool
-from coredis.connection._base import BaseConnection, BaseConnectionParams, RedisSSLContext
-from coredis.connection._tcp import Connection
-from coredis.connection._uds import UnixDomainSocketConnection
+from coredis.connection._base import (
+    BaseConnectionParams,
+    ConnectionT,
+    Location,
+)
+from coredis.connection._tcp import TCPConnection, TCPLocation
+from coredis.connection._uds import UnixDomainSocketConnection, UnixDomainSocketLocation
 from coredis.exceptions import RedisError
 from coredis.patterns.cache import AbstractCache, NodeTrackingCache, TrackingCache
-from coredis.typing import AsyncGenerator, Callable, ClassVar, NotRequired, Self, TypeVar, Unpack
+from coredis.typing import (
+    AsyncGenerator,
+    Callable,
+    ClassVar,
+    NotRequired,
+    Self,
+    Unpack,
+)
 
-_CPT = TypeVar("_CPT", bound="ConnectionPool")
+from ._base import BaseConnectionPool, BaseConnectionPoolParams
 
 
-class ConnectionPool:
-    class PoolParams(BaseConnectionParams):
-        """
-        :meta private:
-        """
+class ConnectionPoolParams(BaseConnectionPoolParams[ConnectionT]):
+    """
+    :meta private:
+    """
 
-        connection_class: NotRequired[type[BaseConnection]]
-        max_connections: NotRequired[int | None]
-        timeout: NotRequired[float | None]
-        _cache: NotRequired[AbstractCache | None]
+    _cache: NotRequired[AbstractCache | None]
 
+
+class ConnectionPool(BaseConnectionPool[ConnectionT]):
     URL_QUERY_ARGUMENT_PARSERS: ClassVar[
         dict[str, Callable[..., int | float | bool | str | None]]
     ] = {
-        "max_connections": int,
-        "timeout": int,
-        "client_name": str,
-        "stream_timeout": float,
-        "connect_timeout": float,
-        "max_idle_time": int,
-        "noreply": query_param_to_bool,
-        "noevict": query_param_to_bool,
-        "notouch": query_param_to_bool,
+        **BaseConnectionPool.URL_QUERY_ARGUMENT_PARSERS,
     }
 
     def __init__(
         self,
         *,
-        connection_class: type[BaseConnection] = Connection,
+        connection_class: type[ConnectionT] | None = None,
+        location: Location | None = None,
+        # Retained for backward compatibility
+        host: str | None = None,
+        port: int | None = None,
         max_connections: int | None = None,
         timeout: float | None = None,
         _cache: AbstractCache | None = None,
@@ -69,15 +71,29 @@ class ConnectionPool:
         :param connection_kwargs: arguments to pass to the :paramref:`connection_class`
          constructor when creating a new connection
         """
-        self.connection_class = connection_class
-        self.connection_kwargs = connection_kwargs
-        self.max_connections = max_connections or 64
-        self.timeout = timeout
-        self.decode_responses = bool(self.connection_kwargs.get("decode_responses", False))
-        self.encoding = str(self.connection_kwargs.get("encoding", "utf-8"))
+        if connection_class is None:
+            if isinstance(location, TCPLocation):
+                connection_class = cast(type[ConnectionT], TCPConnection)
+            elif isinstance(location, UnixDomainSocketLocation):
+                connection_class = cast(type[ConnectionT], UnixDomainSocketConnection)
+            elif host is not None and port is not None:
+                connection_class = cast(type[ConnectionT], TCPConnection)
+                location = TCPLocation(host, port)
+        if not connection_class:
+            raise RuntimeError("Unable to initialize pool without a `connection_class`")
+        super().__init__(
+            connection_class=connection_class,
+            location=location,
+            max_connections=max_connections,
+            timeout=timeout,
+            **connection_kwargs,
+        )
         # TODO: Use the `max_failures` argument of tracking cache
-        self.cache: TrackingCache | None = NodeTrackingCache(self, _cache) if _cache else None
-        self._connections: Queue[BaseConnection] = Queue(self.max_connections)
+        self.cache: TrackingCache[Any] | None = NodeTrackingCache(self, _cache) if _cache else None
+        # The pool of available connections
+        self._available_connections: Queue[ConnectionT] = Queue(self.max_connections)
+        # All connections that are still active
+        self._online_connections: set[ConnectionT] = set()
         # This should be used by the connection to limit concurrently entering
         # CPU hotspots to ensure all fairness between connections in the pool.
         # The main observed scenario where this can happen is if the connection pool
@@ -85,19 +101,15 @@ class ConnectionPool:
         # receiving data in the read task.
         self._connection_processing_budget = CapacityLimiter(1)
         self.connection_kwargs["processing_budget"] = self._connection_processing_budget
-        # Rubbish hack just so that we can provide a useful __repr__ for this pool.
-        self.location = self._construct_connection().location
-        # reference count for context manager to support this pool being re-entered.
-        self._counter = 0
 
     @classmethod
     def from_url(
-        cls: type[_CPT],
+        cls: type[Self],
         url: str,
         *,
         decode_components: bool = False,
-        **kwargs: Unpack[PoolParams],
-    ) -> _CPT:
+        **kwargs: Unpack[ConnectionPoolParams[Any]],
+    ) -> Self:
         """
         Returns a connection pool configured from the given URL.
 
@@ -136,155 +148,80 @@ class ConnectionPool:
 
         .. note:: In the case of conflicting arguments, querystring arguments always win.
         """
-        connection_class, merged_options, extra_connection_params = cls._parse_url(
-            url, decode_components, kwargs
+        location, merged_options = cls._parse_url(
+            url, decode_components, kwargs, ConnectionPoolParams
         )
-        extra_connection_params.update(merged_options)
-        return cls(
-            connection_class=connection_class,
-            **extra_connection_params,
-        )
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}<{self.location}>"
-
-    async def __aenter__(self) -> Self:
-        if self._counter == 0:
-            self._task_group = create_task_group()
-            self._counter += 1
-            await self._task_group.__aenter__()
-            if self.cache:
-                # TODO: handle cache failure so that the pool doesn't die
-                #  if the cache fails.
-                await self._task_group.start(self.cache.run)
+        if isinstance(location, UnixDomainSocketLocation):
+            merged_options["connection_class"] = UnixDomainSocketConnection
         else:
-            self._counter += 1
-        return self
+            merged_options["connection_class"] = TCPConnection
+        return cls(
+            location=location,
+            **merged_options,
+        )
 
-    async def __aexit__(self, *args: Any) -> None:
-        self._counter -= 1
-        if self._counter == 0:
-            self._task_group.cancel_scope.cancel()
-            await self._task_group.__aexit__(*args)
+    async def _initialize(self) -> None:
+        if self.cache:
+            # TODO: handle cache failure so that the pool doesn't die
+            #  if the cache fails.
+            await self._task_group.start(self.cache.run)
 
-    async def get_connection(self, **_: Any) -> BaseConnection:
+    async def get_connection(self, **_: Any) -> ConnectionT:
         """
         Gets or create a connection from the pool. Be careful to only release the
         connection AFTER all commands are sent, or race conditions are possible.
         """
         with fail_after(self.timeout):
             # if stack has a connection, use that
-            connection = await self._connections.get()
+            connection = await self._available_connections.get()
             # if None, we need to create a new connection
             if connection is None or not connection.usable:
-                connection = self._construct_connection()
+                connection = await self._construct_connection()
                 if err := await self._task_group.start(self.__wrap_connection, connection):
                     raise err
+                self._online_connections.add(connection)
             return connection
 
     @asynccontextmanager
-    async def acquire(self, **_: Any) -> AsyncGenerator[BaseConnection]:
+    async def acquire(self, **_: Any) -> AsyncGenerator[ConnectionT]:
         """
         Gets or creates a connection from the pool, then release it afterwards.
         Multiplexing is automatic if you exit the context manager before
-        waiting for command results. Be careful to only release the connection
-        AFTER all commands are sent, or race conditions are possible.
+        waiting for command results.
+
+        .. caution:: Do not explicitly release connections acquired
+           using this context manager.
         """
         connection = await self.get_connection()
         yield connection
         self.release(connection)
 
-    def release(self, connection: BaseConnection) -> None:
+    def release(self, connection: ConnectionT) -> None:
         """
         Checks connection for liveness and releases it back to the pool.
         """
         if connection.usable:
-            self._connections.put_nowait(connection)
+            self._available_connections.put_nowait(connection)
 
-    @classmethod
-    def _parse_url(
-        cls, url: str, decode_components: bool, kwargs: PoolParams
-    ) -> tuple[type[BaseConnection], PoolParams, BaseConnectionParams]:
-        parsed_url = urlparse(url)
-        query_args = parse_qs(parsed_url.query)
-        url_options = cls.PoolParams(
-            **{  # type: ignore
-                name: cls.URL_QUERY_ARGUMENT_PARSERS.get(name, lambda value: value)(value[0])  # type: ignore
-                for name, value in query_args.items()
-                if name in cls.PoolParams.__annotations__ and value
-            }
-        )
+    def disconnect(self) -> None:
+        """
+        Disconnect all active connections in the pool
+        """
+        for connection in self._online_connections:
+            connection.terminate()
+        self._online_connections.clear()
 
-        username: str | None = parsed_url.username
-        password: str | None = parsed_url.password
-        path: str = parsed_url.path
-        hostname: str | None = parsed_url.hostname
+    def _reset(self) -> None:
+        # TODO: seems like something should be cleared?
+        pass
 
-        if decode_components:
-            username = unquote(username) if username else None
-            password = unquote(password) if password else None
-            path = unquote(path)
-            hostname = unquote(hostname) if hostname else None
-
-        # We only support redis:// and unix:// schemes.
-        connection_class: type[BaseConnection] = Connection
-
-        if username:
-            url_options["username"] = username
-        if password:
-            url_options["password"] = password
-
-        tcp_params = Connection.Params()
-        uds_params = UnixDomainSocketConnection.Params({"path": ""})
-
-        if parsed_url.scheme == "unix":
-            connection_class = UnixDomainSocketConnection
-            uds_params["path"] = path
-        else:
-            if hostname:
-                tcp_params["host"] = hostname
-            tcp_params["port"] = int(parsed_url.port or 6379)
-
-            # If there's a path argument, use it as the db argument if a
-            # querystring value wasn't specified
-
-            if "db" not in url_options and path:
-                try:
-                    url_options["db"] = int(path.replace("/", ""))
-                except (AttributeError, ValueError):
-                    pass
-            if parsed_url.scheme == "rediss" and "ssl_context" not in kwargs:
-                ssl_args: dict[str, str | None] = {
-                    k: value[0]
-                    for k, value in query_args.items()
-                    if k
-                    in {
-                        "ssl_keyfile",
-                        "ssl_certfile",
-                        "ssl_check_hostname",
-                        "ssl_ca_certs",
-                        "ssl_cert_reqs",
-                    }
-                }
-                keyfile = ssl_args.get("ssl_keyfile", None)
-                certfile = ssl_args.get("ssl_certfile", None)
-                check_hostname = query_param_to_bool(ssl_args.get("ssl_check_hostname", None))
-                cert_reqs = ssl_args.get("ssl_cert_reqs", None)
-                ca_certs = ssl_args.get("ssl_ca_certs", None)
-                url_options["ssl_context"] = RedisSSLContext(
-                    keyfile, certfile, cert_reqs, ca_certs, check_hostname
-                ).get()
-            if db := url_options.get("db", kwargs.get("db", None)):
-                url_options["db"] = int(db)
-
-        return connection_class, {**kwargs, **url_options}, tcp_params or uds_params
-
-    def _construct_connection(self) -> BaseConnection:
-        return self.connection_class(**self.connection_kwargs)
+    async def _construct_connection(self) -> ConnectionT:
+        assert self.location
+        return self.connection_class(self.location, **self.connection_kwargs)
 
     async def __wrap_connection(
         self,
-        connection: BaseConnection,
+        connection: ConnectionT,
         *,
         task_status: TaskStatus[None | Exception] = TASK_STATUS_IGNORED,
     ) -> None:
@@ -295,6 +232,7 @@ class ConnectionPool:
             # As these are clear signals that an error case was handled by the connection
             task_status.started(error)
         finally:
-            if connection in self._connections:
-                self._connections.remove(connection)
-                self._connections.append_nowait(None)
+            self._online_connections.discard(connection)
+            if connection in self._available_connections:
+                self._available_connections.remove(connection)
+                self._available_connections.append_nowait(None)

@@ -51,6 +51,17 @@ from coredis.typing import (
 
 from ._request import Request
 
+ConnectionT = TypeVar("ConnectionT", bound="BaseConnection")
+
+
+@dataclasses.dataclass(unsafe_hash=True)
+class Location:
+    """
+    Abstract location
+    """
+
+    ...
+
 
 class BaseConnectionParams(TypedDict):
     """
@@ -92,9 +103,6 @@ class BaseConnectionParams(TypedDict):
     db: NotRequired[int | None]
     #: For TLS connections, the ssl context to use when performing the TLS handshake
     ssl_context: NotRequired[ssl.SSLContext | None]
-
-
-ConnectionT = TypeVar("ConnectionT", bound="BaseConnection")
 
 
 class RedisSSLContext:
@@ -177,6 +185,7 @@ class BaseConnection(ABC):
 
     def __init__(
         self,
+        location: Location,
         *,
         stream_timeout: float | None = None,
         connect_timeout: float | None = None,
@@ -195,6 +204,7 @@ class BaseConnection(ABC):
         processing_budget: CapacityLimiter | None = None,
     ):
         """
+        :param location: The location of the server this connection is connecting to
         :param stream_timeout: Maximum time to wait for receiving a response
          for requests created through this connection.
         :param connect_timeout: Maximum time to wait for establishing a connection
@@ -215,6 +225,8 @@ class BaseConnection(ABC):
          the TLS handshake.
         :param processing_budget: limiter to throttle CPU-bound processing.
         """
+        self.location = location
+
         self._stream_timeout = stream_timeout
         self._connect_timeout = connect_timeout
         # maximum time to wait for data from the server before
@@ -287,10 +299,6 @@ class BaseConnection(ABC):
 
     @abstractmethod
     def describe(self) -> str: ...
-
-    @property
-    @abstractmethod
-    def location(self) -> str: ...
 
     @property
     def transport_healthy(self) -> bool:
