@@ -36,7 +36,6 @@ from typing import (
     ParamSpec,
     Protocol,
     TypeAlias,
-    TypedDict,
     TypeGuard,
     TypeVar,
     cast,
@@ -65,6 +64,7 @@ from typing_extensions import (
     NotRequired,
     Self,
     TypeIs,
+    TypedDict,
     Unpack,
 )
 
