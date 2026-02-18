@@ -63,8 +63,8 @@ from beartype.door import is_bearable, is_subhint
 from typing_extensions import (
     NotRequired,
     Self,
-    TypeIs,
     TypedDict,
+    TypeIs,
     Unpack,
 )
 
