@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import functools
 import inspect
-from typing import Any
 
 from coredis.config import Config
 from coredis.exceptions import CommandSyntaxError
@@ -122,36 +121,6 @@ def mutually_inclusive_parameters(
                     raise MutuallyInclusiveParametersMissing(_inclusive_params, _leaders, details)
                 elif not _leaders and params and len(params) != len(_inclusive_params):
                     raise MutuallyInclusiveParametersMissing(_inclusive_params, _leaders, details)
-            return func(*args, **kwargs)
-
-        return wrapped if not Config.optimized else func
-
-    return wrapper
-
-
-def ensure_iterable_valid(
-    argument: str,
-) -> Callable[[Callable[P, R]], Callable[P, R]]:
-    def iterable_valid(value: Any) -> bool:
-        return isinstance(value, Iterable) and not isinstance(value, (str, bytes))
-
-    def wrapper(
-        func: Callable[P, R],
-    ) -> Callable[P, R]:
-        sig = inspect.signature(func)
-        expected_type = sig.parameters[argument].annotation
-
-        @functools.wraps(func)
-        def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
-            if Config.optimized:
-                return func(*args, **kwargs)
-            bound = sig.bind_partial(*args, **kwargs)
-            value = bound.arguments.get(argument)
-            if not iterable_valid(value):
-                raise TypeError(
-                    f"{func.__name__} parameter {argument}={value!r} violates expected iterable of type {expected_type}"
-                )
-
             return func(*args, **kwargs)
 
         return wrapped if not Config.optimized else func
