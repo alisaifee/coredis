@@ -602,7 +602,7 @@ class RedisCluster(
             - ``rediss://[:password]@localhost:6379``
 
         :paramref:`url` and :paramref:`kwargs` are passed as is to
-        the :func:`coredis.ConnectionPool.from_url`.
+        the :func:`coredis.pool.ClusterConnectionPool.from_url`.
         """
         if decode_responses:
             return cls(

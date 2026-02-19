@@ -83,7 +83,7 @@ to ensure proper initialization and cleanup.
 
    * :class:`~coredis.Redis` and :class:`~coredis.RedisCluster`
    * :class:`~coredis.Sentinel`
-   * :class:`~coredis.ConnectionPool` and :class:`~coredis.ClusterConnectionPool`
+   * :class:`~coredis.pool.ConnectionPool` and :class:`~coredis.pool.ClusterConnectionPool`
    * :class:`~coredis.patterns.pubsub.PubSub`
    * :class:`~coredis.patterns.pipeline.Pipeline`
    * :class:`~coredis.patterns.streams.Consumer` & :class:`~coredis.patterns.streams.GroupConsumer`
@@ -203,10 +203,10 @@ Connection Pool
 .. important::
 
    * Connection pool instances must be used as async context managers
-   * :class:`~coredis.pool.BlockingConnectionPool` removed — :class:`~coredis.ConnectionPool` is now blocking
-   * :class:`~coredis.pool.BlockingClusterConnectionPool` removed — :class:`~coredis.ClusterConnectionPool` is now blocking
+   * :class:`~coredis.pool.BlockingConnectionPool` removed — :class:`~coredis.pool.ConnectionPool` is now blocking
+   * :class:`~coredis.pool.BlockingClusterConnectionPool` removed — :class:`~coredis.pool.ClusterConnectionPool` is now blocking
    * :exc:`TimeoutError` is now raised when a connection cannot be acquired from the pool
-     within the :paramref:`~coredis.ConnectionPool.timeout` instead of
+     within the :paramref:`~coredis.pool.ConnectionPool.timeout` instead of
      :exc:`~coredis.exceptions.ConnectionError`. (This would normally only happen if all
      the connections in the pool are being used for blocking commands, as non blocking commands
      are multiplexed over shared connections)
@@ -250,12 +250,12 @@ Connection Pool
 
         async def main():
             async with coredis.Redis(
-                connection_pool=coredis.ConnectionPool(max_connections=2)
+                connection_pool=coredis.pool.ConnectionPool(max_connections=2)
             ) as client:
                 print(await asyncio.gather(*(client.blpop(["fubar"], timeout=1) for _ in range(3))))
 
             async with coredis.Redis(
-                connection_pool=coredis.ConnectionPool(max_connections=2, timeout=1)
+                connection_pool=coredis.pool.ConnectionPool(max_connections=2, timeout=1)
             ) as client:
                 try:
                     print(await asyncio.gather(*(client.blpop(["fubar"], timeout=5) for _ in range(3))))
@@ -611,7 +611,7 @@ Migration Checklist
 
 * ☐ :class:`~coredis.Redis` and :class:`~coredis.RedisCluster` clients must be used as async context managers
 * ☐ Replace all instances of ``coredis.BlockingConnectionPool`` and ``coredis.BlockingClusterConnectionPool``
-  with :class:`~coredis.ConnectionPool` or :class:`~coredis.ClusterConnectionPool`.
+  with :class:`~coredis.pool.ConnectionPool` or :class:`~coredis.pool.ClusterConnectionPool`.
 * ☐ Pipelines must be used as async context managers; remove all explicit ``execute()`` calls.
 * ☐ PubSub consumers must be used as async context managers
 * ☐ Stream consumers must be used as async context managers
@@ -621,7 +621,7 @@ Migration Checklist
 * ☐ Update stream consumer imports from :mod:`coredis.stream` to :mod:`coredis.patterns.streams`
 * ☐ Update lock imports from :mod:`coredis.recipes.locks` to :mod:`coredis.patterns.lock`
 * ☐ Replace all usage of ``BlockingConnectionPool`` / ``BlockingClusterConnectionPool`` with
-  :class:`~coredis.ConnectionPool` or :class:`~coredis.ClusterConnectionPool`
+  :class:`~coredis.pool.ConnectionPool` or :class:`~coredis.pool.ClusterConnectionPool`
 * ☐ Add :class:`~coredis.typing.KeyT` type annotations to scripts and library function keys
 * ☐ Replace ``Library.wraps`` with :func:`~coredis.commands.function.wraps`
 * ☐ Replace ``LuaLock`` usage with :meth:`~coredis.Redis.lock` or :class:`~coredis.patterns.lock.Lock`
