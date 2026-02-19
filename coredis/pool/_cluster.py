@@ -42,7 +42,7 @@ class ClusterConnectionPoolParams(ConnectionPoolParams[ClusterConnection]):
     """
 
     #: The initial collection of nodes to use to map the cluster solts to individual primary & replica nodes.
-    startup_nodes: NotRequired[Iterable[Node]]
+    startup_nodes: NotRequired[Iterable[Node | TCPLocation]]
     #: Skips the check of cluster-require-full-coverage config, useful for clusters
     #: without the :rediscommand:`CONFIG` command (For example with AWS Elasticache)
     skip_full_coverage_check: NotRequired[bool]
@@ -77,7 +77,7 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
 
     def __init__(
         self,
-        startup_nodes: Iterable[Node] | None = None,
+        startup_nodes: Iterable[Node | TCPLocation],
         *,
         connection_class: type[ClusterConnection] = ClusterConnection,
         max_connections: int | None = None,
@@ -96,6 +96,11 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         in the redis cluster
 
         Changes
+          - .. versiondeprecated:: 6.2.0
+
+            - :paramref:`startup_nodes` should not be passed as dictionaries
+               and instead migrate to use instances of :class:`~coredis.connection.TCPLocation`
+
           - .. versionchanged:: 4.4.0
 
             - :paramref:`nodemanager_follow_cluster` now defaults to ``True``
@@ -132,8 +137,19 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         self.timeout = timeout
         self.max_connections = max_connections or 64
         self.max_connections_per_node = max_connections_per_node
+        # TODO: Remove support for Node
+        if any(isinstance(node, dict) for node in startup_nodes):
+            warnings.warn(
+                "Use coredis.connection.TCPLocation to specify startup nodes",
+                DeprecationWarning,
+            )
+
+        self.startup_nodes = [
+            node if isinstance(node, TCPLocation) else TCPLocation(node["host"], node["port"])
+            for node in startup_nodes
+        ]
         self.nodes = NodeManager(
-            startup_nodes,
+            startup_nodes=self.startup_nodes,
             reinitialize_steps=reinitialize_steps,
             skip_full_coverage_check=skip_full_coverage_check,
             max_connections=self.max_connections,
@@ -142,7 +158,6 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         )
         self.connection_kwargs = connection_kwargs
         self.read_from_replicas = read_from_replicas or readonly
-        self.startup_nodes = startup_nodes
         # TODO: Use the `max_failures` argument of tracking cache
         self.cache = ClusterTrackingCache(self, _cache) if _cache else None
         self._reset()

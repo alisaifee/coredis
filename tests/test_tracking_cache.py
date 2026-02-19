@@ -113,9 +113,9 @@ class CommonExamples:
             cache.reset()
             assert cache.confidence == 50
 
-    async def test_shared_cache_and_client_cache(self, client):
-        kwargs = client.connection_pool.connection_kwargs
-        pool = client.connection_pool.__class__(location=client.connection_pool.location, **kwargs)
+    async def test_shared_cache_and_client_cache(self, client, cloner):
+        clone = await cloner(client)
+        pool = clone.connection_pool
         with pytest.raises(Exception, match="mutually exclusive"):
             _ = client.__class__(
                 decode_responses=client.decode_responses,

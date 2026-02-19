@@ -13,7 +13,11 @@ from ._base import BaseConnection, BaseConnectionParams, Location
 
 @dataclasses.dataclass(unsafe_hash=True)
 class TCPLocation(Location):
+    """Location of a redis instance listening on a tcp port"""
+
+    #: hostname of the server
     host: str
+    #: the port the server is listening on
     port: int
 
 

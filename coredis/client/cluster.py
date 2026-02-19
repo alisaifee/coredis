@@ -20,6 +20,7 @@ from coredis.commands._key_spec import KeySpec
 from coredis.commands._validators import mutually_inclusive_parameters
 from coredis.commands.constants import CommandName, NodeFlag
 from coredis.connection._base import RedisSSLContext
+from coredis.connection._tcp import TCPLocation
 from coredis.credentials import AbstractCredentialProvider
 from coredis.exceptions import (
     AskError,
@@ -232,7 +233,7 @@ class RedisCluster(
         host: str | None = ...,
         port: int | None = ...,
         *,
-        startup_nodes: Iterable[Node] | None = ...,
+        startup_nodes: Iterable[Node | TCPLocation] | None = ...,
         username: str | None = ...,
         password: str | None = ...,
         credential_provider: AbstractCredentialProvider | None = ...,
@@ -272,7 +273,7 @@ class RedisCluster(
         host: str | None = None,
         port: int | None = None,
         *,
-        startup_nodes: Iterable[Node] | None = None,
+        startup_nodes: Iterable[Node | TCPLocation] | None = None,
         username: str | None = None,
         password: str | None = None,
         credential_provider: AbstractCredentialProvider | None = None,

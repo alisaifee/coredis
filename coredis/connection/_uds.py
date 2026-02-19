@@ -12,6 +12,9 @@ from ._base import BaseConnection, BaseConnectionParams, Location
 
 @dataclasses.dataclass(unsafe_hash=True)
 class UnixDomainSocketLocation(Location):
+    """Location of a redis instance listening on a unix domain socket"""
+
+    #: The absolute path of the socket
     path: str
 
 

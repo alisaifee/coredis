@@ -5,6 +5,7 @@ import warnings
 from typing import TYPE_CHECKING, Any
 
 from coredis._utils import b, hash_slot, nativestr
+from coredis.connection import TCPLocation
 from coredis.exceptions import (
     ConnectionError,
     RedisClusterException,
@@ -16,7 +17,6 @@ from coredis.typing import (
     Iterator,
     Literal,
     ManagedNode,
-    Node,
     RedisValueT,
     StringT,
 )
@@ -35,7 +35,7 @@ class NodeManager:
 
     def __init__(
         self,
-        startup_nodes: Iterable[Node] | None = None,
+        startup_nodes: Iterable[TCPLocation] | None = None,
         reinitialize_steps: int | None = None,
         skip_full_coverage_check: bool = False,
         nodemanager_follow_cluster: bool = True,
@@ -59,7 +59,7 @@ class NodeManager:
         self.startup_nodes: list[ManagedNode] = (
             []
             if startup_nodes is None
-            else list(ManagedNode(n["host"], n["port"]) for n in startup_nodes if n)
+            else list(ManagedNode(n.host, n.port) for n in startup_nodes if n)
         )
         self.startup_nodes_reachable = False
         self.orig_startup_nodes = list(self.startup_nodes)

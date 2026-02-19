@@ -65,3 +65,19 @@ All connection classes derive from the same base-class:
 
 .. autoclass:: coredis.connection.BaseConnectionParams
    :show-inheritance:
+
+Location classes
+^^^^^^^^^^^^^^^^
+All classes that accept a ``location`` parameter to configure the
+location of a redis server require either a:
+
+.. autoclass:: coredis.connection.TCPLocation
+
+or
+
+.. autoclass:: coredis.connection.UnixDomainSocketLocation
+
+If a class can handle both ``tcp`` & ``unix domain sockets`` it will
+accept the base class:
+
+.. autoclass:: coredis.connection.Location

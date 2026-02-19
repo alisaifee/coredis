@@ -40,10 +40,10 @@ else raise a :exc:`~coredis.exceptions.ReplicationError`::
 
     import asyncio
     from coredis import RedisCluster
-
+    from coredis.connection import TCPLocation
 
     async def test():
-        async with RedisCluster("localhost", 7000, startup_nodes=[...]) as client:
+        async with RedisCluster(startup_nodes=[TCPLocation("127.0.0.1", 7000)]) as client:
             with client.ensure_replication(replicas=2):
                 await client.set("fubar", 1)
 
