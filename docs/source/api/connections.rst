@@ -7,22 +7,40 @@ Connection Pools
 
 :mod:`coredis`
 
-.. autoclass:: coredis.ConnectionPool
+.. autoclass:: coredis.pool.ConnectionPool
    :class-doc-from: both
 
-.. autoclass:: coredis.ClusterConnectionPool
+.. autoclass:: coredis.pool.ConnectionPoolParams
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: coredis.pool.ClusterConnectionPool
    :class-doc-from: both
+   :show-inheritance:
+
+.. autoclass:: coredis.pool.ClusterConnectionPoolParams
+   :undoc-members:
+   :inherited-members: TypedDict
    :show-inheritance:
 
 .. autoclass:: coredis.sentinel.SentinelConnectionPool
    :class-doc-from: both
    :show-inheritance:
 
+All connection pools derive from the same base-class:
+
+.. autoclass:: coredis.pool.BaseConnectionPool
+   :class-doc-from: both
+
+.. autoclass:: coredis.pool.BaseConnectionPoolParams
+   :undoc-members:
+   :show-inheritance:
+
 Connection Classes
 ^^^^^^^^^^^^^^^^^^
 :mod:`coredis`
 
-.. autoclass:: coredis.Connection
+.. autoclass:: coredis.TCPConnection
    :show-inheritance:
    :class-doc-from: both
 
@@ -45,3 +63,4 @@ All connection classes derive from the same base-class:
    :class-doc-from: both
 
 .. autoclass:: coredis.connection.BaseConnectionParams
+   :show-inheritance:

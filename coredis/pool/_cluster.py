@@ -38,12 +38,19 @@ from ._base import BaseConnectionPool
 
 class ClusterConnectionPoolParams(ConnectionPoolParams[ClusterConnection]):
     """
-    :meta private:
+    Parameters accepted by :class:`coredis.pool.ClusterConnectionPool`
     """
 
-    skip_full_coverage_check: NotRequired[bool]
+    #: The initial collection of nodes to use to map the cluster solts to individual primary & replica nodes.
     startup_nodes: NotRequired[Iterable[Node]]
+    #: Skips the check of cluster-require-full-coverage config, useful for clusters
+    #: without the :rediscommand:`CONFIG` command (For example with AWS Elasticache)
+    skip_full_coverage_check: NotRequired[bool]
+    #: Whether to use the value of ``max_connections``
+    #: on a per node basis or cluster wide. If ``False``  the per-node connection pools will have
+    #: a maximum size of :paramref:`max_connections` divided by the number of nodes in the cluster.
     max_connections_per_node: NotRequired[bool]
+    #: If ``True`` connections to replicas will be returned for readonly commands
     read_from_replicas: NotRequired[bool]
 
 

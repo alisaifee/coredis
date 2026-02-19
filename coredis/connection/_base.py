@@ -73,6 +73,7 @@ class BaseConnectionParams(TypedDict):
     stream_timeout: NotRequired[float | None]
     #: Maximum time to wait for establishing a connection
     connect_timeout: NotRequired[float | None]
+    """Maximum time to wait for establishing a connection"""
 
     #: Default encoding for command responses.
     encoding: NotRequired[str]

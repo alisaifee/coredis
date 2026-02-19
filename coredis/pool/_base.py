@@ -36,8 +36,16 @@ BaseConnectionPoolParamsT = TypeVar(
 
 
 class BaseConnectionPoolParams(BaseConnectionParams, Generic[ConnectionT]):
+    """
+    Connection pool parameters accepted by :class:`coredis.pool.BaseConnectionPool`
+    """
+    #: The connection class to use when creating new connections
     connection_class: NotRequired[type[ConnectionT]]
+    #: Maximum connections to grow the pool.
+    #: Once the limit is reached clients will block to wait for a connection
+    #: to be returned to the pool.
     max_connections: NotRequired[int | None]
+    #: Number of seconds to block when trying to obtain a connection.
     timeout: NotRequired[float | None]
 
 

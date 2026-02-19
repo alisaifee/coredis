@@ -59,7 +59,7 @@ extensions = [
 
 autodoc_default_options = {
     "members": True,
-    "inherited-members": True,
+    "inherited-members": "dict, object, TypedDict",
     "inherit-docstrings": True,
     "member-order": "bysource",
 }

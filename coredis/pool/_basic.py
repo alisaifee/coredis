@@ -34,9 +34,10 @@ from ._base import BaseConnectionPool, BaseConnectionPoolParams
 
 class ConnectionPoolParams(BaseConnectionPoolParams[ConnectionT]):
     """
-    :meta private:
+    Parameters accepted by :class:`coredis.pool.ConnectionPool`
     """
 
+    #: :meta private:
     _cache: NotRequired[AbstractCache | None]
 
 
@@ -52,12 +53,12 @@ class ConnectionPool(BaseConnectionPool[ConnectionT]):
         *,
         connection_class: type[ConnectionT] | None = None,
         location: Location | None = None,
-        # Retained for backward compatibility
-        host: str | None = None,
-        port: int | None = None,
         max_connections: int | None = None,
         timeout: float | None = None,
         _cache: AbstractCache | None = None,
+        # host/port retained for backward compatibility
+        host: str | None = None,
+        port: int | None = None,
         **connection_kwargs: Unpack[BaseConnectionParams],
     ) -> None:
         """
