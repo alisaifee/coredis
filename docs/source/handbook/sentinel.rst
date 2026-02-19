@@ -10,7 +10,7 @@ Sentinel connection to discover the primary and replicas nodes:
 
 ::
 
-    from coredis.sentinel import Sentinel
+    from coredis import Sentinel
     sentinel = Sentinel([('localhost', 26379)], stream_timeout=0.1)
     async with sentinel:
         await sentinel.discover_primary('myredis')

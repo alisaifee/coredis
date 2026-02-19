@@ -39,6 +39,7 @@ class BaseConnectionPoolParams(BaseConnectionParams, Generic[ConnectionT]):
     """
     Connection pool parameters accepted by :class:`coredis.pool.BaseConnectionPool`
     """
+
     #: The connection class to use when creating new connections
     connection_class: NotRequired[type[ConnectionT]]
     #: Maximum connections to grow the pool.
