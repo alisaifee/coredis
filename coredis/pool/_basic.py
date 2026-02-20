@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from typing import Any, cast
+from typing import Any, cast, overload
 
 from anyio import (
     TASK_STATUS_IGNORED,
@@ -47,6 +47,54 @@ class ConnectionPool(BaseConnectionPool[ConnectionT]):
     ] = {
         **BaseConnectionPool.URL_QUERY_ARGUMENT_PARSERS,
     }
+
+    @overload
+    def __init__(
+        self: ConnectionPool[ConnectionT],
+        *,
+        connection_class: type[ConnectionT],
+        location: Location | None = ...,
+        max_connections: int | None = ...,
+        timeout: float | None = ...,
+        _cache: AbstractCache | None = ...,
+        **connection_kwargs: Unpack[BaseConnectionParams],
+    ): ...
+    @overload
+    def __init__(
+        self: ConnectionPool[TCPConnection],
+        *,
+        connection_class: None = ...,
+        location: TCPLocation,
+        max_connections: int | None = ...,
+        timeout: float | None = ...,
+        _cache: AbstractCache | None = ...,
+        **connection_kwargs: Unpack[BaseConnectionParams],
+    ): ...
+    @overload
+    def __init__(
+        self: ConnectionPool[UnixDomainSocketConnection],
+        *,
+        connection_class: None = ...,
+        location: UnixDomainSocketLocation,
+        max_connections: int | None = ...,
+        timeout: float | None = ...,
+        _cache: AbstractCache | None = ...,
+        **connection_kwargs: Unpack[BaseConnectionParams],
+    ): ...
+    @overload
+    def __init__(
+        self: ConnectionPool[TCPConnection],
+        *,
+        connection_class: None = ...,
+        location: None = ...,
+        # Retained for backward compatibility
+        host: str = ...,
+        port: int = ...,
+        max_connections: int | None = ...,
+        timeout: float | None = ...,
+        _cache: AbstractCache | None = ...,
+        **connection_kwargs: Unpack[BaseConnectionParams],
+    ): ...
 
     def __init__(
         self,
@@ -103,6 +151,17 @@ class ConnectionPool(BaseConnectionPool[ConnectionT]):
         self._connection_processing_budget = CapacityLimiter(1)
         self.connection_kwargs["processing_budget"] = self._connection_processing_budget
 
+    @overload
+    @classmethod
+    def from_url(
+        cls: type[ConnectionPool[Any]],
+        url: str,
+        *,
+        decode_components: bool = False,
+        **kwargs: Unpack[ConnectionPoolParams[Any]],
+    ) -> ConnectionPool[TCPConnection] | ConnectionPool[UnixDomainSocketConnection]: ...
+
+    @overload
     @classmethod
     def from_url(
         cls: type[Self],
@@ -110,7 +169,16 @@ class ConnectionPool(BaseConnectionPool[ConnectionT]):
         *,
         decode_components: bool = False,
         **kwargs: Unpack[ConnectionPoolParams[Any]],
-    ) -> Self:
+    ) -> Self: ...
+
+    @classmethod
+    def from_url(
+        cls: type[Self],
+        url: str,
+        *,
+        decode_components: bool = False,
+        **kwargs: Unpack[ConnectionPoolParams[Any]],
+    ) -> Self | ConnectionPool[TCPConnection] | ConnectionPool[UnixDomainSocketConnection]:
         """
         Returns a connection pool configured from the given URL.
 
