@@ -20,141 +20,121 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
     - uses: actions/checkout@v3
-    - name: Install uv and Python
-      uses: astral-sh/setup-uv@v6
+    - uses: ./.github/actions/lint
+      name: Run Linters
       with:
-        enable-cache: true
         python-version: ${{ matrix.python-version }}
-    - name: Setup uv venv
-      run: |
-        uv sync --locked --all-extras --group dev
-    - name: Lint with ruff
-      run: |
-        uv run ruff check --select I coredis tests
-        uv run ruff check coredis tests
-    - name: Check types
-      run: |
-        uv run mypy coredis
-    - name: Check auto generated sources
-      run: |
-        make templated-sources
-        if [ ! -z "$(git diff coredis)" ];
-        then
-          echo "Auto-generated source are not up to date"
-          git diff
-          exit 1
-        fi;
   test:
-    name: Test (Python ${{ matrix.python-version }}, Anyio ${{ matrix.anyio-backend || 'asyncio' }}, Redis ${{ matrix.redis-version }}${{ matrix.uvloop == 'True' && ', uvloop' || ''}}${{ matrix.orjson == 'True' && ', orjson' || ''}}${{ matrix.extensions == 'True' && ', compiled' || ''}}${{ matrix.label && format(', {0}', matrix.label) || '' }})
+    name: Test (Python ${{ matrix.python-version }}, Anyio ${{ matrix.anyio-backend || 'asyncio' }}, Redis ${{ matrix.redis-version }}${{ matrix.uvloop == 'True' && ', uvloop' || ''}}${{ matrix.orjson == 'True' && ', orjson' || ''}}${{ matrix.compiled == 'True' && ', compiled' || ''}}${{ matrix.label && format(', {0}', matrix.label) || '' }})
     runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.redis-version == 'next' }}
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-        redis-version: ["7.2", "7.4", "8.0", "8.2", "8.4", "8.6", "latest"]
-        test_params: ["-m '(not (dragonfly or valkey))'"]
-        orjson: ["False"]
-        uvloop: ["False"]
+        redis-version: ["7.2", "8.6", "latest"]
+        test-params: ["-m '(not (dragonfly or valkey))'"]
+        orjson: [false]
+        uvloop: [false]
         anyio-backend: ["asyncio"]
-        runtime_type_checks: ["True"]
-        extensions: ["True"]
+        runtime_type_checks: [true]
+        compiled: [true]
         label: [""]
         include:
           - python-version: "3.14"
+            redis-version: "7.4"
+            test-params: "-m '(not (dragonfly or valkey))'"
+            compiled: true
+            runtime-type-checks: true
+            label: ""
+          - python-version: "3.14"
+            redis-version: "8.0"
+            test-params: "-m '(not (dragonfly or valkey))'"
+            compiled: true
+            runtime-type-checks: true
+            label: ""
+          - python-version: "3.14"
             redis-version: "8.2"
-            test_params: "-m '(not (dragonfly or valkey))'"
-            runtime_type_checks: "True"
+            test-params: "-m '(not (dragonfly or valkey))'"
+            compiled: true
+            runtime-type-checks: true
+            label: ""
+          - python-version: "3.14"
+            redis-version: "8.4"
+            test-params: "-m '(not (dragonfly or valkey))'"
+            compiled: true
+            runtime-type-checks: true
             label: ""
           - python-version: "3.14"
             redis-version: next
-            test_params: "-m '(not (dragonfly or valkey))'"
-            runtime_type_checks: "True"
+            test-params: "-m '(not (dragonfly or valkey))'"
+            compiled: true
+            runtime-type-checks: true
             label: ""
           - python-version: "3.14"
             redis-version: latest
-            test_params: "-m '(not (dragonfly or valkey))'"
-            extensions: "False"
-            runtime_type_checks: "True"
-            label: ""
-          - python-version: "3.14"
-            redis-version: latest
-            test_params: "-m '(not (dragonfly or valkey))'"
-            runtime_type_checks: "True"
+            test-params: "-m '(not (dragonfly or valkey))'"
+            runtime-type-checks: true
             anyio-backend: "trio"
             label: ""
           - python-version: "3.14"
             redis-version: latest
-            test_params: "-m '(not (dragonfly or valkey))'"
-            runtime_type_checks: "True"
-            orjson: "True"
+            test-params: "-m '(not (dragonfly or valkey))'"
+            runtime-type-checks: true
+            orjson: true
             label: ""
           - python-version: "3.14"
             redis-version: latest
-            test_params: "-m '(not (dragonfly or valkey))'"
-            runtime_type_checks: "True"
-            uvloop: "True"
-            label: ""
-          - python-version: "3.14"
-            redis-version: 7.4
-            test_params: "-m '(not (dragonfly or valkey))'"
-            runtime_type_checks: "False"
+            test-params: "-m '(not (dragonfly or valkey))'"
+            runtime-type-checks: true
+            uvloop: true
             label: ""
           - python-version: "3.14"
             redis-version: latest
-            test_params: "-m dragonfly"
+            test-params: "-m '(not (dragonfly or valkey))'"
+            runtime-type-checks: false
+            label: ""
+          - python-version: "3.14"
+            redis-version: latest
+            test-params: "-m '(not (dragonfly or valkey))'"
+            compiled: false
+            label: ""
+          - python-version: "3.14"
+            redis-version: latest
+            test-params: "-m dragonfly"
             label: "Dragonfly"
           - python-version: "3.14"
             redis-version: 8.0
-            test_params: "-m valkey"
+            test-params: "-m valkey"
             label: "Valkey 8"
           - python-version: "3.14"
             redis-version: latest
-            test_params: "-m valkey"
+            test-params: "-m valkey"
             label: "Valkey latest"
-          - python-version: "pypy-3.11"
-            redis-version: 8.6
-            test_params: "-m '(not (dragonfly or valkey))' tests/commands tests/test_tracking_cache.py"
-            runtime_type_checks: "False"
-            extensions: "False"
-            uvloop: "False"
-            label: ""
           - python-version: "pypy-3.10"
-            redis-version: 8.6
-            test_params: "-m '(not (dragonfly or valkey))' tests/commands tests/test_tracking_cache.py"
-            runtime_type_checks: "False"
-            extensions: "False"
-            uvloop: "False"
+            redis-version: latest
+            test-params: "-m '(not (dragonfly or valkey))' tests/commands tests/test_tracking_cache.py"
+            runtime-type-checks: false
+            compiled: false
+            uvloop: false
+            label: ""
+          - python-version: "pypy-3.11"
+            redis-version: latest
+            test-params: "-m '(not (dragonfly or valkey))' tests/commands tests/test_tracking_cache.py"
+            runtime-type-checks: false
+            compiled: false
+            uvloop: false
             label: ""
 
     steps:
     - uses: actions/checkout@v3
-    - name: Install uv and Python
-      uses: astral-sh/setup-uv@v6
+    - uses: ./.github/actions/test
+      name: Run tests
       with:
-        enable-cache: true
+        test-params: ${{ matrix.test-params }}
         python-version: ${{ matrix.python-version }}
-    - name: Setup uv venv
-      run: |
-        uv sync --locked --all-extras --group ci
-    - name: Compile extensions
-      if: ${{ matrix.extensions == 'True' }}
-      run: uv run mypyc coredis/constants/ coredis/parser.py coredis/_packer.py coredis/_utils.py
-    - name: Tests with coverage
-      env:
-        COREDIS_UVLOOP: ${{ matrix.uvloop }}
-        COREDIS_ANYIO_BACKEND: ${{ matrix.anyio-backend }}
-        HOST_OS: linux
-        CI: "True"
-        COREDIS_REDIS_VERSION: ${{matrix.redis-version}}
-        COREDIS_RUNTIME_CHECKS: ${{matrix.runtime_type_checks}}
-        PYTEST_SENTRY_DSN: ${{ matrix.extensions != 'True' && secrets.SENTRY_DSN || ''}}
-        COMPOSE_PARALLEL_LIMIT: 1
-        UV_GROUP: ${{ matrix.orjson == 'True' && 'orjson' || 'dev' }}
-      run: |
-        echo "Runtime checks: $COREDIS_RUNTIME_CHECKS"
-        echo "UVLoop: $COREDIS_UVLOOP"
-        echo "CI: $CI"
-        uv run --group $UV_GROUP pytest --timeout=60 --reverse --reruns 2 --cov=coredis --cov-report=xml ${{ matrix.test_params }}
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v5
+        redis-version: ${{ matrix.redis-version }}
+        compiled: ${{ matrix.compiled }}
+        runtime-type-checks: ${{ matrix.runtime-type-checks }}
+        orjson: ${{ matrix.orjson }}
+        uvloop: ${{ matrix.uvloop }}

@@ -1,0 +1,72 @@
+name: Publish
+on:
+  workflow_call:
+jobs:
+  upload_pypi:
+    runs-on: ubuntu-latest"
+    if: github.repository_owner == 'alisaifee' && github.ref == 'refs/heads/master'
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "*wheels*"
+          merge-multiple: true
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: src_dist
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository_url: https://test.pypi.org/legacy/
+          skip_existing: true
+          verbose: true
+  upload_pypi_release:
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'alisaifee' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "*wheels*"
+          merge-multiple: true
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: src_dist
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github_release:
+    needs: [upload_pypi_release]
+    name: Create Release
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Download wheels
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "*wheels*"
+          merge-multiple: true
+          path: dist
+      - name: Download source dist
+        uses: actions/download-artifact@v4
+        with:
+          name: src_dist
+          path: dist
+      - name: Generate release notes
+        run: |
+          ./scripts/github_release_notes.sh > release_notes.md
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "dist/*"
+          bodyFile: release_notes.md
+          token: ${{ secrets.GITHUB_TOKEN }}
+

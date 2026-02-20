@@ -1,0 +1,105 @@
+name: Build & Release
+on:
+  workflow_call:
+jobs:
+  generate_wheels_matrix:
+    name: Generate wheels matrix
+    runs-on: ubuntu-latest
+    outputs:
+      include: ${{ steps.set-matrix.outputs.include }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Install cibuildwheel and pypyp
+        run: |
+          pipx install cibuildwheel==3.2.0
+          pipx install pypyp==1.3
+      - id: set-matrix
+        run: |
+          MATRIX=$(
+            {
+              cibuildwheel --print-build-identifiers --platform linux . \
+              | pyp 'json.dumps({"only": x, "os": "ubuntu-latest"})' \
+              && cibuildwheel --print-build-identifiers --platform macos . \
+              | pyp 'json.dumps({"only": x, "os": "macos-latest"})'
+            } | pyp 'json.dumps(list(map(json.loads, lines)))'
+          )
+          echo "include=$MATRIX" | tee -a $GITHUB_OUTPUT
+        env:
+          CIBW_ARCHS_LINUX: auto aarch64
+          CIBW_ARCHS_MACOS: auto arm64
+          CIBW_SKIP: '*musllinux* pp*'
+  build_wheels:
+    needs: [generate_wheels_matrix]
+    name: Build wheel on ${{ matrix.only }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          ${{ fromJson(needs.generate_wheels_matrix.outputs.include) }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Setup uv venv
+        run: |
+          uv sync --locked --all-extras --group dev
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v2
+      - name: Build wheel
+        uses: pypa/cibuildwheel@v3.2.0
+        with:
+          only: ${{ matrix.only }}
+        env:
+          CIBW_BUILD_VERBOSITY: 3
+          CIBW_BUILD_FRONTEND: "build[uv]"
+          CIBW_TEST_COMMAND: "uv run python -c 'import coredis'"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{matrix.only}}
+          path: ./wheelhouse/*.whl
+  build_pure_wheel:
+    name: Build pure python wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Build wheels
+        env:
+          PURE_PYTHON: true
+        run: |
+          uv build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pure_wheels
+          path: ./dist/*.whl
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Build sdist
+        run: |
+          uv build --sdist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: src_dist
+          path: dist/*.tar.gz
