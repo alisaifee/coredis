@@ -8,8 +8,8 @@ from .pool._sentinel import SentinelConnectionPool
 
 warnings.warn(
     (
-        "The coredis.sentinel submodule has been moved to coredis.{client,pool,connection}"
-        "The Sentinel client should be imported from the top level ``coredis`` module."
+        "The coredis.sentinel submodule has been moved to coredis.{client,pool,connection}."
+        " The Sentinel client should be imported from the top level ``coredis`` module."
     ),
     DeprecationWarning,
     stacklevel=2,
