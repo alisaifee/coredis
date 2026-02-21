@@ -71,7 +71,7 @@ class SentinelConnectionPool(ConnectionPool[SentinelManagedConnection]):
         """
         Returns the location of a replica using a round robin approach
         """
-        replicas = await self.sentinel_manager.discover_replicas(self.service_name)
+
         if not self.replicas:
             self.replicas = [
                 TCPLocation(*replica)
@@ -80,8 +80,9 @@ class SentinelConnectionPool(ConnectionPool[SentinelManagedConnection]):
 
         if self.replicas:
             if self.replica_counter is None:
-                self.replica_counter = random.randint(0, len(replicas) - 1)
-            self.replica_counter = (self.replica_counter + 1) % len(replicas)
+                self.replica_counter = random.randint(0, len(self.replicas) - 1)
+            self.replica_counter = (self.replica_counter + 1) % len(self.replicas)
+
             return self.replicas[self.replica_counter]
         else:
             try:
