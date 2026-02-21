@@ -3,7 +3,7 @@ on:
   workflow_call:
 jobs:
   upload_pypi:
-    runs-on: ubuntu-latest"
+    runs-on: ubuntu-latest
     if: github.repository_owner == 'alisaifee' && github.ref == 'refs/heads/master'
     permissions:
       id-token: write
