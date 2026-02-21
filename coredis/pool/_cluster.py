@@ -142,6 +142,7 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
             warnings.warn(
                 "Use coredis.connection.TCPLocation to specify startup nodes",
                 DeprecationWarning,
+                stacklevel=2,
             )
 
         self.startup_nodes = [
