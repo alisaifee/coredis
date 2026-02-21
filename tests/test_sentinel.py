@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 import coredis
+from coredis import Sentinel
 from coredis.connection import TCPLocation
 from coredis.exceptions import (
     PrimaryNotFoundError,
@@ -12,7 +13,6 @@ from coredis.exceptions import (
     ReplicaNotFoundError,
     ReplicationError,
 )
-from coredis import Sentinel
 from tests.conftest import targets
 
 
