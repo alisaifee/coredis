@@ -214,7 +214,7 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
                 if self.initialized and not forced:
                     return
                 await self.nodes.initialize()
-                for node in self._cluster_available_connections:
+                for node in list(self._cluster_available_connections.keys()):
                     if ManagedNode(node.host, node.port).name not in self.nodes.nodes:
                         self._cluster_available_connections.pop(node)
                 if not self.max_connections_per_node and self.max_connections < len(
