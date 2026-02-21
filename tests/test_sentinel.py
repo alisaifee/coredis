@@ -47,7 +47,7 @@ async def test_discover_primary_error(redis_sentinel: Sentinel, mocker):
             await primary.ping()
 
 
-async def test_replica_for_slave_not_found_error(redis_sentinel: Sentinel, mocker):
+async def test_replica_not_found_error(redis_sentinel: Sentinel, mocker):
     sentinel_replicas = mocker.patch.object(
         redis_sentinel.sentinels[0], "sentinel_replicas", new_callable=AsyncMock
     )
