@@ -29,7 +29,7 @@ from coredis.exceptions import (
     ClusterError,
     ConnectionError,
     MovedError,
-    RedisClusterException,
+    RedisClusterError,
     TryAgainError,
 )
 from coredis.globals import CACHEABLE_COMMANDS, MODULE_GROUPS, READONLY_COMMANDS
@@ -1002,7 +1002,7 @@ class RedisCluster(
                                 value=reply,
                             )
                     return response
-            except (RedisClusterException, BusyLoadingError, get_cancelled_exc_class()):
+            except (RedisClusterError, BusyLoadingError, get_cancelled_exc_class()):
                 raise
             except MovedError as e:
                 # Reinitialize on ever x number of MovedError.

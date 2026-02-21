@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from coredis.exceptions import RedisClusterException
+from coredis.exceptions import RedisClusterError
 from tests.conftest import targets
 
 pytestmarks = pytest.mark.asyncio
@@ -47,17 +47,17 @@ class TestCommandSplit:
 )
 class TestCommandSplitDisabled:
     async def test_delete(self, client, cross_slot_keys, client_arguments):
-        with pytest.raises(RedisClusterException):
+        with pytest.raises(RedisClusterError):
             await client.delete(cross_slot_keys)
 
     async def test_exists(self, client, cross_slot_keys, client_arguments):
-        with pytest.raises(RedisClusterException):
+        with pytest.raises(RedisClusterError):
             await client.exists(cross_slot_keys)
 
     async def test_touch(self, client, cross_slot_keys, client_arguments):
-        with pytest.raises(RedisClusterException):
+        with pytest.raises(RedisClusterError):
             await client.touch(cross_slot_keys)
 
     async def test_unlink(self, client, cross_slot_keys, client_arguments):
-        with pytest.raises(RedisClusterException):
+        with pytest.raises(RedisClusterError):
             await client.unlink(cross_slot_keys)

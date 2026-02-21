@@ -6,7 +6,7 @@ from coredis._concurrency import gather
 from coredis.exceptions import (
     NoScriptError,
     NotBusyError,
-    RedisClusterException,
+    RedisClusterError,
     ResponseError,
 )
 from tests.conftest import targets
@@ -87,7 +87,7 @@ class TestScripting:
         local value2 = redis.call('GET', KEYS[2])
         return value * value2
         """
-        with pytest.raises(RedisClusterException):
+        with pytest.raises(RedisClusterError):
             await client.eval(script, ["A{foo}", "B{bar}"])
 
     async def test_evalsha(self, client):

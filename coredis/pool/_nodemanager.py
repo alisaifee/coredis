@@ -8,7 +8,7 @@ from coredis._utils import b, hash_slot, nativestr
 from coredis.connection import TCPLocation
 from coredis.exceptions import (
     ConnectionError,
-    RedisClusterException,
+    RedisClusterError,
     RedisError,
     ResponseError,
 )
@@ -230,7 +230,7 @@ class NodeManager:
                                 f"{tmp_slots[i][0].name} vs {node.name} on slot: {i}",
                             )
                             if len(disagreements) > 5:
-                                raise RedisClusterException(
+                                raise RedisClusterError(
                                     "startup_nodes could not agree on a valid slots cache."
                                     f" {', '.join(disagreements)}"
                                 )
@@ -252,14 +252,14 @@ class NodeManager:
                 details = " Underlying errors:\n" + "\n".join(
                     [f"- {err} [{','.join(nodes)}]" for err, nodes in startup_node_errors.items()]
                 )
-            raise RedisClusterException(
+            raise RedisClusterError(
                 "Redis Cluster cannot be connected. "
                 "Please provide at least one reachable node."
                 f"{details}"
             )
 
         if not all_slots_covered:
-            raise RedisClusterException(
+            raise RedisClusterError(
                 "Not all slots are covered after query all startup_nodes. "
                 f"{len(tmp_slots)} of {HASH_SLOTS} covered..."
             )

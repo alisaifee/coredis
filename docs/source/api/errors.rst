@@ -15,6 +15,8 @@ Authentication & Authorization
 
 Cluster Errors
 ^^^^^^^^^^^^^^
+.. autoexception:: coredis.exceptions.RedisClusterError
+   :no-inherited-members:
 .. autoexception:: coredis.exceptions.AskError
    :no-inherited-members:
 .. autoexception:: coredis.exceptions.ClusterCrossSlotError
@@ -30,8 +32,6 @@ Cluster Errors
 .. autoexception:: coredis.exceptions.ClusterTransactionError
    :no-inherited-members:
 .. autoexception:: coredis.exceptions.MovedError
-   :no-inherited-members:
-.. autoexception:: coredis.exceptions.RedisClusterException
    :no-inherited-members:
 .. autoexception:: coredis.exceptions.TryAgainError
    :no-inherited-members:

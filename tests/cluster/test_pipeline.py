@@ -7,7 +7,7 @@ from coredis.exceptions import (
     AuthorizationError,
     ClusterCrossSlotError,
     ClusterTransactionError,
-    RedisClusterException,
+    RedisClusterError,
     ResponseError,
     WatchError,
 )
@@ -218,7 +218,7 @@ class TestPipeline:
         ],
     )
     async def test_no_key_command(self, client, function, args, kwargs):
-        with pytest.raises(RedisClusterException) as exc:
+        with pytest.raises(RedisClusterError) as exc:
             async with client.pipeline() as pipe:
                 function(pipe, *args, **kwargs)
         exc.match("No way to dispatch (.*?) to Redis Cluster. Missing key")

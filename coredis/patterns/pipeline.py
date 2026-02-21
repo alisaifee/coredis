@@ -24,7 +24,7 @@ from coredis.exceptions import (
     ConnectionError,
     ExecAbortError,
     MovedError,
-    RedisClusterException,
+    RedisClusterError,
     RedisError,
     ResponseError,
     TryAgainError,
@@ -709,7 +709,7 @@ class ClusterPipeline(Client[AnyStr]):
             raise WatchError("Unable to add a watch after pipeline commands have been added")
         try:
             self._watched_node = self.connection_pool.get_node_by_keys(list(keys))
-        except RedisClusterException:
+        except RedisClusterError:
             raise ClusterTransactionError("Keys for watch don't hash to the same node")
         self.watches.extend(keys)
         async with self.connection_pool.acquire(
@@ -914,7 +914,7 @@ class ClusterPipeline(Client[AnyStr]):
         ) or KeySpec.extract_keys(command, *args)  # type: ignore
 
         if not keys:
-            raise RedisClusterException(
+            raise RedisClusterError(
                 f"No way to dispatch {nativestr(command)} to Redis Cluster. Missing key"
             )
         slots = {hash_slot(b(key)) for key in keys}

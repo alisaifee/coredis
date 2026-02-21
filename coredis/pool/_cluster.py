@@ -15,7 +15,7 @@ from coredis.connection import (
     ClusterConnection,
 )
 from coredis.connection._tcp import TCPLocation
-from coredis.exceptions import RedisClusterException, RedisError
+from coredis.exceptions import RedisClusterError, RedisError
 from coredis.globals import READONLY_COMMANDS
 from coredis.patterns.cache import AbstractCache, ClusterTrackingCache
 from coredis.pool._basic import ConnectionPoolParams
@@ -347,7 +347,7 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
 
             if connection:
                 return connection
-        raise RedisClusterException("Cant reach a single startup node.")
+        raise RedisClusterError("Cant reach a single startup node.")
 
     async def __get_connection_by_node(self, node: ManagedNode) -> ClusterConnection:
         """Gets a connection by node"""
@@ -366,7 +366,7 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         if len(nodes) == 1:
             return self.nodes.slots[slots[0]][0]
         else:
-            raise RedisClusterException(f"Unable to map slots {slots} to a single node")
+            raise RedisClusterError(f"Unable to map slots {slots} to a single node")
 
     def get_replica_node_by_slots(
         self, slots: list[int], replica_only: bool = False
@@ -383,7 +383,7 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
             else:
                 return random.choice(self.nodes.slots[slot])
         else:
-            raise RedisClusterException(f"Unable to map slots {slots} to a single node")
+            raise RedisClusterError(f"Unable to map slots {slots} to a single node")
 
     def get_node_by_slot(self, slot: int, command: bytes | None = None) -> ManagedNode:
         if self.read_from_replicas and command in READONLY_COMMANDS:
