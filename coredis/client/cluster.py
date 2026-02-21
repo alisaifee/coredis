@@ -1002,8 +1002,6 @@ class RedisCluster(
                                 value=reply,
                             )
                     return response
-            except (RedisClusterError, BusyLoadingError, get_cancelled_exc_class()):
-                raise
             except MovedError as e:
                 # Reinitialize on ever x number of MovedError.
                 # This counter will increase faster when the same client object
@@ -1020,6 +1018,8 @@ class RedisCluster(
                     await sleep(0.05)
             except AskError as e:
                 redirect_addr, asking = f"{e.host}:{e.port}", True
+            except (RedisClusterError, BusyLoadingError, get_cancelled_exc_class()):
+                raise
             finally:
                 if r and not released:
                     pool.release(r)
