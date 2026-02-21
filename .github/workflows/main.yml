@@ -89,10 +89,11 @@ jobs:
         orjson: ${{ matrix.orjson }}
         uvloop: ${{ matrix.uvloop }}
   build:
-    needs: lint
+    needs: [lint]
     name: "Build"
     uses: ./.github/workflows/build.yml
   upload_pypi:
+    needs: [build]
     runs-on: ubuntu-latest
     if: github.repository_owner == 'alisaifee' && github.ref == 'refs/heads/master'
     permissions:
@@ -113,6 +114,7 @@ jobs:
           skip_existing: true
           verbose: true
   upload_pypi_release:
+    needs: [build]
     runs-on: ubuntu-latest
     if: github.repository_owner == 'alisaifee' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     permissions:
