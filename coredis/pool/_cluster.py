@@ -371,17 +371,19 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
     def get_replica_node_by_slots(
         self, slots: list[int], replica_only: bool = False
     ) -> ManagedNode:
-        nodes = {self.nodes.slots[slot][0].node_id for slot in slots}
+        nodes_from_slots = {self.nodes.slots[slot][0].node_id for slot in slots}
 
-        if len(nodes) == 1:
+        if len(nodes_from_slots) == 1:
+            # Since all slots map to the same node we can just use the first
             slot = slots[0]
-
+            candidates = self.nodes.slots.get(slot, [])
             if replica_only:
-                return random.choice(
-                    [node for node in self.nodes.slots[slot] if node.server_type != "primary"]
-                )
-            else:
-                return random.choice(self.nodes.slots[slot])
+                candidates = [node for node in candidates if node.server_type != "primary"]
+                # *TODO* perhaps if a primary is available and all replicas are down we could
+                # return a primary.
+            if not candidates:
+                raise RedisClusterError(f"No nodes available for slot {slot}")
+            return random.choice(candidates)
         else:
             raise RedisClusterError(f"Unable to map slots {slots} to a single node")
 
