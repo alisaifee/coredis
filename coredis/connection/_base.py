@@ -52,6 +52,12 @@ from coredis.typing import (
 
 from ._request import Request
 
+CERT_REQS = {
+    "none": ssl.CERT_NONE,
+    "optional": ssl.CERT_OPTIONAL,
+    "required": ssl.CERT_REQUIRED,
+}
+
 ConnectionT = TypeVar("ConnectionT", bound="BaseConnection")
 
 
@@ -143,11 +149,12 @@ class RedisSSLContext:
         return self.context
 
 
-CERT_REQS = {
-    "none": ssl.CERT_NONE,
-    "optional": ssl.CERT_OPTIONAL,
-    "required": ssl.CERT_REQUIRED,
-}
+@dataclasses.dataclass
+class CommandInvocation:
+    command: bytes
+    args: tuple[RedisValueT, ...]
+    decode: bool | None
+    encoding: str | None
 
 
 class BaseConnection(ABC):
@@ -718,11 +725,3 @@ class BaseConnection(ABC):
         self._write_buffer_in.send_nowait(requests)
         self._requests.extend(requests)
         return requests
-
-
-@dataclasses.dataclass
-class CommandInvocation:
-    command: bytes
-    args: tuple[RedisValueT, ...]
-    decode: bool | None
-    encoding: str | None
