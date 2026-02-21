@@ -10,6 +10,7 @@ from coredis import (
     UnixDomainSocketConnection,
 )
 from coredis._concurrency import gather
+from coredis.connection import ClusterConnection, TCPLocation, UnixDomainSocketLocation
 from coredis.patterns.cache import LRUCache
 from tests.conftest import targets
 
@@ -27,9 +28,9 @@ class CommonPoolUrlParsingExamples:
         ],
     )
     def test_authentication_parameters(
-        self, pool, url, kwargs, username, password, decode_components
+        self, pool_cls, url, kwargs, username, password, decode_components
     ):
-        connection_args = pool.from_url(url, decode_components=True, **kwargs).connection_kwargs
+        connection_args = pool_cls.from_url(url, decode_components=True, **kwargs).connection_kwargs
         assert connection_args.get("username") == username
         assert connection_args.get("password") == password
 
@@ -47,8 +48,8 @@ class CommonPoolUrlParsingExamples:
             ("redis://localhost?notouch=0", {}, {"notouch": False}),
         ],
     )
-    def test_connection_parameters(self, pool, url, kwargs, expected):
-        connection_args = pool.from_url(url, **kwargs).connection_kwargs
+    def test_connection_parameters(self, pool_cls, url, kwargs, expected):
+        connection_args = pool_cls.from_url(url, **kwargs).connection_kwargs
         for k, v in expected.items():
             assert connection_args[k] == v
 
@@ -65,14 +66,14 @@ class CommonPoolUrlParsingExamples:
             ("redis://localhost:6379", {"db": 1}, 1),
         ],
     )
-    def test_db(self, pool, url, kwargs, db):
-        connection_args = pool.from_url(url, **kwargs).connection_kwargs
+    def test_db(self, pool_cls, url, kwargs, db):
+        connection_args = pool_cls.from_url(url, **kwargs).connection_kwargs
         assert connection_args.get("db") == db
 
 
 class TestConnectionPoolUrlParsing(CommonPoolUrlParsingExamples):
     @pytest.fixture
-    def pool(self):
+    def pool_cls(self):
         return ConnectionPool
 
     @pytest.mark.parametrize(
@@ -83,8 +84,10 @@ class TestConnectionPoolUrlParsing(CommonPoolUrlParsingExamples):
             ("unix://a:@/var/tmp/redis.sock", {}, "a", None),
         ],
     )
-    def test_uds_authentication_parameters(self, pool, url, kwargs, username, password):
-        connection_args = pool.from_url(url, **kwargs).connection_kwargs
+    def test_uds_authentication_parameters(self, pool_cls, url, kwargs, username, password):
+        pool = pool_cls.from_url(url, **kwargs)
+        assert pool.connection_class == UnixDomainSocketConnection
+        connection_args = pool.connection_kwargs
         assert connection_args.get("username") == username
         assert connection_args.get("password") == password
 
@@ -104,16 +107,16 @@ class TestConnectionPoolUrlParsing(CommonPoolUrlParsingExamples):
             ),
         ],
     )
-    def test_pool_parameters(self, pool, url, kwargs, expected, mocker):
-        spy = mocker.spy(pool, "__init__")
-        pool.from_url(url, **kwargs)
+    def test_pool_parameters(self, pool_cls, url, kwargs, expected, mocker):
+        spy = mocker.spy(pool_cls, "__init__")
+        pool_cls.from_url(url, **kwargs)
         for k, v in expected.items():
             assert spy.call_args.kwargs[k] == v
 
 
 class TestClusterConnectionPoolUrlParsing(CommonPoolUrlParsingExamples):
     @pytest.fixture
-    def pool(self):
+    def pool_cls(self):
         return ClusterConnectionPool
 
     @pytest.mark.parametrize(
@@ -141,9 +144,9 @@ class TestClusterConnectionPoolUrlParsing(CommonPoolUrlParsingExamples):
             ),
         ],
     )
-    def test_cluster_pool_parameters(self, pool, url, kwargs, expected, mocker):
-        spy = mocker.spy(pool, "__init__")
-        pool.from_url(url, **kwargs)
+    def test_cluster_pool_parameters(self, pool_cls, url, kwargs, expected, mocker):
+        spy = mocker.spy(pool_cls, "__init__")
+        pool_cls.from_url(url, **kwargs)
         for k, v in expected.items():
             assert spy.call_args.kwargs[k] == v
 
@@ -163,6 +166,27 @@ class TestBasicPoolParameters:
             await gather(*(client.blpop(["test"], timeout=2) for _ in range(3)))
 
 
+class TestBasicConnectionPoolConstruction:
+    async def test_construction_with_tcp_location(self, redis_basic_server):
+        async with coredis.ConnectionPool(
+            host=redis_basic_server[0], port=redis_basic_server[1]
+        ) as pool:
+            async with pool.acquire() as connection:
+                assert isinstance(connection, TCPConnection)
+
+    async def test_construction_with_host_port(self, redis_basic_server):
+        async with coredis.ConnectionPool(location=TCPLocation(*redis_basic_server)) as pool:
+            async with pool.acquire() as connection:
+                assert isinstance(connection, TCPConnection)
+
+    async def test_construction_with_uds_location(self, redis_uds_server):
+        async with coredis.ConnectionPool(
+            location=UnixDomainSocketLocation(redis_uds_server)
+        ) as pool:
+            async with pool.acquire() as connection:
+                assert isinstance(connection, UnixDomainSocketConnection)
+
+
 @targets("redis_cluster")
 class TestClusterPoolParameters:
     @pytest.mark.parametrize(
@@ -180,6 +204,15 @@ class TestClusterPoolParameters:
     async def test_timeout(self, client, client_arguments, mocker):
         with pytest.RaisesGroup(TimeoutError):
             await gather(*(client.blpop(["test"], timeout=2) for _ in range(3)))
+
+
+class TestClusterConnectionPoolConstruction:
+    async def test_construction_with_startup_nodes(self, redis_cluster_server):
+        async with coredis.ClusterConnectionPool(
+            startup_nodes=[TCPLocation(*redis_cluster_server)]
+        ) as pool:
+            async with pool.acquire() as connection:
+                assert isinstance(connection, ClusterConnection)
 
 
 @targets("redis_basic", "redis_cluster")
