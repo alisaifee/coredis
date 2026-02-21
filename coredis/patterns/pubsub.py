@@ -715,8 +715,6 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
             await sleep(max(1, self._max_idle_seconds - idle))
 
     def _reset(self) -> None:
-        for connection in self.shard_connections.values():
-            connection.clear_connect_callbacks()
         self.shard_connections.clear()
         self.channels = {}
         self.patterns = {}

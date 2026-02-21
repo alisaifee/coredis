@@ -45,6 +45,7 @@ from coredis.typing import (
     RedisError,
     RedisValueT,
     ResponseType,
+    Self,
     TypedDict,
     TypeVar,
 )
@@ -243,7 +244,7 @@ class BaseConnection(ABC):
         self._decode_responses = decode_responses
 
         self._connect_callbacks: list[
-            (Callable[[BaseConnection], Awaitable[None]] | Callable[[BaseConnection], None])
+            (Callable[[Self], Awaitable[None]] | Callable[[Self], None])
         ] = list()
 
         # server version as reported by the server
@@ -317,12 +318,23 @@ class BaseConnection(ABC):
 
     def register_connect_callback(
         self,
-        callback: (Callable[[BaseConnection], None] | Callable[[BaseConnection], Awaitable[None]]),
+        callback: (Callable[[Self], None] | Callable[[Self], Awaitable[None]]),
     ) -> None:
+        """
+        Registers a callback that will be executed after the initial handshake
+        is performed and before the connection is marked usable for regular
+        commands.
+
+        .. caution:: Any exception raised by a connect callback will not be
+           handled and will result in an unusable connection.
+        """
         self._connect_callbacks.append(callback)
 
-    def clear_connect_callbacks(self) -> None:
-        self._connect_callbacks = list()
+    async def _trigger_connect_callbacks(self: Self) -> None:
+        for callback in self._connect_callbacks:
+            task = callback(self)
+            if inspect.isawaitable(task):
+                await task
 
     @abstractmethod
     async def _connect(self) -> ByteStream:
@@ -366,11 +378,11 @@ class BaseConnection(ABC):
                         self._task_group.start_soon(self._reader_task)
                         self._task_group.start_soon(self._writer_task)
                         # setup connection
-                        await self.perform_handshake()
-                        for callback in self._connect_callbacks:
-                            task = callback(self)
-                            if inspect.isawaitable(task):
-                                await task
+                        await self.__perform_handshake()
+                        # *CAUTION* (and also maybe *FIXME*).
+                        # There should be no code executed that could raise an
+                        # exception after this line and before the task is marked
+                        # as started.
                         task_status.started()
             finally:
                 disconnect_exc = self._last_error or ConnectionError("Connection lost!")
@@ -510,7 +522,7 @@ class BaseConnection(ABC):
         except Exception:  # noqa
             return False
 
-    async def perform_handshake(self) -> None:
+    async def __perform_handshake(self) -> None:
         try:
             hello_command_args: list[int | str | bytes] = [3]
             if creds := (
@@ -569,6 +581,7 @@ class BaseConnection(ABC):
             if self._noreply:
                 await self.create_request(b"CLIENT REPLY", b"OFF", noreply=True)
                 self._noreply_set = True
+            await self._trigger_connect_callbacks()
             self._ready = True
         finally:
             self._handshake_attempted = True
