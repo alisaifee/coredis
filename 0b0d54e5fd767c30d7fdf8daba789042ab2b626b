@@ -1,0 +1,4 @@
+* Documentation
+
+  * Updated all redis command methods to have consistent docstrings
+    for parameters & return types
