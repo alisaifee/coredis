@@ -34,13 +34,15 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
     """
     Example use::
 
-        from coredis.sentinel import Sentinel
-        sentinel = Sentinel([('localhost', 26379)], stream_timeout=0.1)
+        from coredis import Sentinel
+        from coredis.connection import TCPLocation
         async def test():
-            primary = await sentinel.primary_for('my-instance', stream_timeout=0.1)
-            await primary.set('foo', 'bar')
-            replica = await sentinel.replica_for('my-instance', stream_timeout=0.1)
-            await replica.get('foo')
+            async with Sentinel([TCPLocation('localhost', 26379)], stream_timeout=0.1) as sentinel:
+                primary = sentinel.primary_for('my-instance', stream_timeout=0.1)
+                replica = sentinel.replica_for('my-instance', stream_timeout=0.1)
+                async with primary, replica:
+                    await primary.set('foo', 'bar')
+                    await replica.get('foo')
 
     """
 
