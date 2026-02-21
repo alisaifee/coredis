@@ -414,7 +414,7 @@ class BaseConnection(ABC):
                     else:
                         logger.exception("Connection attempt failed unexpectedly!")
                         raise ConnectionError(
-                            "Unable to establish a connection"
+                            f"Unable to establish a connection to {self.location}"
                         ) from self._last_error
         except Exception as connection_error:
             self._last_error = connection_error
@@ -423,7 +423,9 @@ class BaseConnection(ABC):
             else:
                 # Wrap any other errors with a ConnectionError so that upstreams (pools) can
                 # handle them explicitly as being part of connection creation if they want.
-                raise ConnectionError("Unable to establish a connection") from connection_error
+                raise ConnectionError(
+                    f"Unable to establish a connection to {self.location}"
+                ) from connection_error
 
     def terminate(self, reason: str | None = None) -> None:
         """
