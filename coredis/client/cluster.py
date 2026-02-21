@@ -20,6 +20,7 @@ from coredis.commands._key_spec import KeySpec
 from coredis.commands._validators import mutually_inclusive_parameters
 from coredis.commands.constants import CommandName, NodeFlag
 from coredis.connection._base import RedisSSLContext
+from coredis.connection._tcp import TCPLocation
 from coredis.credentials import AbstractCredentialProvider
 from coredis.exceptions import (
     AskError,
@@ -232,7 +233,7 @@ class RedisCluster(
         host: str | None = ...,
         port: int | None = ...,
         *,
-        startup_nodes: Iterable[Node] | None = ...,
+        startup_nodes: Iterable[Node | TCPLocation] | None = ...,
         username: str | None = ...,
         password: str | None = ...,
         credential_provider: AbstractCredentialProvider | None = ...,
@@ -272,7 +273,7 @@ class RedisCluster(
         host: str | None = None,
         port: int | None = None,
         *,
-        startup_nodes: Iterable[Node] | None = None,
+        startup_nodes: Iterable[Node | TCPLocation] | None = None,
         username: str | None = None,
         password: str | None = None,
         credential_provider: AbstractCredentialProvider | None = None,
@@ -508,20 +509,9 @@ class RedisCluster(
             )
 
         super().__init__(
-            username=username,
-            password=password,
-            credential_provider=credential_provider,
-            stream_timeout=stream_timeout,
-            connect_timeout=connect_timeout,
-            pool_timeout=pool_timeout,
             connection_pool=pool,
-            connection_pool_cls=connection_pool_cls,
-            encoding=encoding,
-            decode_responses=decode_responses,
             verify_version=verify_version,
             noreply=noreply,
-            noevict=noevict,
-            notouch=notouch,
             retry_policy=retry_policy,
             type_adapter=type_adapter,
         )
@@ -613,7 +603,7 @@ class RedisCluster(
             - ``rediss://[:password]@localhost:6379``
 
         :paramref:`url` and :paramref:`kwargs` are passed as is to
-        the :func:`coredis.ConnectionPool.from_url`.
+        the :func:`coredis.pool.ClusterConnectionPool.from_url`.
         """
         if decode_responses:
             return cls(

@@ -5,8 +5,8 @@ import pytest
 import coredis.connection
 from coredis import (
     ClusterConnectionPool,
-    Connection,
     ConnectionPool,
+    TCPConnection,
     UnixDomainSocketConnection,
 )
 from coredis._concurrency import gather
@@ -94,9 +94,9 @@ class TestConnectionPoolUrlParsing(CommonPoolUrlParsingExamples):
             (
                 "redis://localhost?max_connections=5",
                 {},
-                {"max_connections": 5, "connection_class": Connection},
+                {"max_connections": 5, "connection_class": TCPConnection},
             ),
-            ("redis://localhost?timeout=5", {}, {"timeout": 5, "connection_class": Connection}),
+            ("redis://localhost?timeout=5", {}, {"timeout": 5, "connection_class": TCPConnection}),
             (
                 "unix://localhost?timeout=5",
                 {},

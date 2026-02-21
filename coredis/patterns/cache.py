@@ -17,9 +17,13 @@ from anyio.abc import TaskStatus
 
 from coredis._utils import b, make_hashable
 from coredis.commands.constants import CommandName
+from coredis.connection._base import BaseConnection, ConnectionT
+from coredis.connection._cluster import ClusterConnection
+from coredis.connection._tcp import TCPLocation
 from coredis.exceptions import ConnectionError
 from coredis.retry import ExponentialBackoffRetryPolicy
 from coredis.typing import (
+    Generic,
     OrderedDict,
     RedisValueT,
     ResponseType,
@@ -28,7 +32,7 @@ from coredis.typing import (
 
 if TYPE_CHECKING:
     import coredis.client
-    from coredis.pool._basic import ConnectionPool
+    from coredis.pool._base import BaseConnectionPool
 
 
 @dataclasses.dataclass
@@ -270,7 +274,7 @@ class LRUCache(AbstractCache):
         return True
 
 
-class TrackingCache(AbstractCache):
+class TrackingCache(AbstractCache, Generic[ConnectionT]):
     """
     Abstract layout of a tracking cache to be used internally
     by coredis clients (Redis/RedisCluster)
@@ -278,7 +282,9 @@ class TrackingCache(AbstractCache):
 
     _cache: AbstractCache
 
-    def __init__(self, connection_pool: ConnectionPool, cache: AbstractCache) -> None:
+    def __init__(
+        self, connection_pool: BaseConnectionPool[ConnectionT], cache: AbstractCache
+    ) -> None:
         self._cache = cache
         self._retry_policy = ExponentialBackoffRetryPolicy(
             (ConnectionError,), retries=None, base_delay=1, max_delay=16, jitter=True
@@ -292,7 +298,7 @@ class TrackingCache(AbstractCache):
     @abstractmethod
     def get_client_id(
         self,
-        connection: coredis.connection.BaseConnection,
+        connection: ConnectionT,
     ) -> int | None:
         pass
 
@@ -324,18 +330,18 @@ class TrackingCache(AbstractCache):
         self._cache.feedback(command, key, *args, match=match)
 
 
-class NodeTrackingCache(TrackingCache):
+class NodeTrackingCache(TrackingCache[ConnectionT]):
     """
     Wraps an AbstractCache instance to use server assisted client caching
     to ensure local cache entries are invalidated if any operations are
     performed on the keys by another client.
     """
 
-    _connection: coredis.connection.BaseConnection | None
+    _connection: ConnectionT | None
 
     def __init__(
         self,
-        connection_pool: ConnectionPool,
+        connection_pool: BaseConnectionPool[ConnectionT],
         cache: AbstractCache | None = None,
         max_idle_seconds: float = 15,
     ) -> None:
@@ -357,7 +363,7 @@ class NodeTrackingCache(TrackingCache):
 
     def get_client_id(
         self,
-        connection: coredis.connection.BaseConnection,
+        connection: BaseConnection,
     ) -> int | None:
         return self.client_id
 
@@ -414,7 +420,7 @@ class NodeTrackingCache(TrackingCache):
                         self._cache.invalidate(key)
 
 
-class ClusterTrackingCache(TrackingCache):
+class ClusterTrackingCache(TrackingCache[ClusterConnection]):
     """
     An LRU cache for redis cluster that uses server assisted client caching
     to ensure local cache entries are invalidated if any operations are performed
@@ -426,17 +432,17 @@ class ClusterTrackingCache(TrackingCache):
 
     def __init__(
         self,
-        connection_pool: ConnectionPool,
+        connection_pool: BaseConnectionPool[ClusterConnection],
         cache: AbstractCache | None = None,
         max_idle_seconds: float = 15,
     ) -> None:
         """ """
         super().__init__(connection_pool, cache or LRUCache())
-        self.node_caches: dict[str, NodeTrackingCache] = {}
+        self.node_caches: dict[TCPLocation, NodeTrackingCache[ClusterConnection]] = {}
         self._nodes: list[coredis.client.Redis[Any]] = []
         self._max_idle_seconds = max_idle_seconds
 
-    def get_client_id(self, connection: coredis.connection.BaseConnection) -> int | None:
+    def get_client_id(self, connection: ClusterConnection) -> int | None:
         if cache := self.node_caches.get(connection.location):
             return cache.client_id
         return None
@@ -446,9 +452,6 @@ class ClusterTrackingCache(TrackingCache):
         return all(cache.healthy for cache in self.node_caches.values())
 
     async def run(self, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
-        from coredis.pool._cluster import ClusterConnectionPool
-
-        assert isinstance(self._connection_pool, ClusterConnectionPool)
         self._nodes = [
             self._connection_pool.nodes.get_redis_link(node.host, node.port)
             for node in self._connection_pool.nodes.all_nodes()

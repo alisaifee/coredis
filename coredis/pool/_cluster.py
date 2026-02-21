@@ -3,18 +3,22 @@ from __future__ import annotations
 import random
 import warnings
 from contextlib import asynccontextmanager
-from typing import Any, cast
+from typing import Any
 
-from anyio import TASK_STATUS_IGNORED, Lock, create_task_group, fail_after
+from anyio import TASK_STATUS_IGNORED, Lock, fail_after
 from anyio.abc import TaskStatus
 
 from coredis._concurrency import Queue, QueueFull
 from coredis._utils import query_param_to_bool
-from coredis.connection import BaseConnection, BaseConnectionParams, ClusterConnection, Connection
+from coredis.connection import (
+    BaseConnectionParams,
+    ClusterConnection,
+)
+from coredis.connection._tcp import TCPLocation
 from coredis.exceptions import RedisClusterException, RedisError
 from coredis.globals import READONLY_COMMANDS
 from coredis.patterns.cache import AbstractCache, ClusterTrackingCache
-from coredis.pool._basic import ConnectionPool
+from coredis.pool._basic import ConnectionPoolParams
 from coredis.pool._nodemanager import NodeManager
 from coredis.typing import (
     AsyncGenerator,
@@ -29,26 +33,36 @@ from coredis.typing import (
     Unpack,
 )
 
+from ._base import BaseConnectionPool
 
-class ClusterConnectionPool(ConnectionPool):
+
+class ClusterConnectionPoolParams(ConnectionPoolParams[ClusterConnection]):
+    """
+    Parameters accepted by :class:`coredis.pool.ClusterConnectionPool`
+    """
+
+    #: The initial collection of nodes to use to map the cluster solts to individual primary & replica nodes.
+    startup_nodes: NotRequired[Iterable[Node | TCPLocation]]
+    #: Skips the check of cluster-require-full-coverage config, useful for clusters
+    #: without the :rediscommand:`CONFIG` command (For example with AWS Elasticache)
+    skip_full_coverage_check: NotRequired[bool]
+    #: Whether to use the value of ``max_connections``
+    #: on a per node basis or cluster wide. If ``False``  the per-node connection pools will have
+    #: a maximum size of :paramref:`max_connections` divided by the number of nodes in the cluster.
+    max_connections_per_node: NotRequired[bool]
+    #: If ``True`` connections to replicas will be returned for readonly commands
+    read_from_replicas: NotRequired[bool]
+
+
+class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
     """
     Custom connection pool for :class:`~coredis.RedisCluster` client
     """
 
-    class PoolParams(ConnectionPool.PoolParams):
-        """
-        :meta private:
-        """
-
-        skip_full_coverage_check: NotRequired[bool]
-        startup_nodes: NotRequired[Iterable[Node]]
-        max_connections_per_node: NotRequired[bool]
-        read_from_replicas: NotRequired[bool]
-
     URL_QUERY_ARGUMENT_PARSERS: ClassVar[
         dict[str, Callable[..., int | float | bool | str | None]]
     ] = {
-        **ConnectionPool.URL_QUERY_ARGUMENT_PARSERS,
+        **BaseConnectionPool.URL_QUERY_ARGUMENT_PARSERS,
         "max_connections_per_node": query_param_to_bool,
         "reinitialize_steps": int,
         "skip_full_coverage_check": query_param_to_bool,
@@ -58,11 +72,12 @@ class ClusterConnectionPool(ConnectionPool):
     nodes: NodeManager
     connection_class: type[ClusterConnection]
 
-    _cluster_available_connections: dict[str, Queue[Connection]]
+    _cluster_available_connections: dict[TCPLocation, Queue[ClusterConnection]]
+    _online_connections: set[ClusterConnection]
 
     def __init__(
         self,
-        startup_nodes: Iterable[Node] | None = None,
+        startup_nodes: Iterable[Node | TCPLocation],
         *,
         connection_class: type[ClusterConnection] = ClusterConnection,
         max_connections: int | None = None,
@@ -81,6 +96,11 @@ class ClusterConnectionPool(ConnectionPool):
         in the redis cluster
 
         Changes
+          - .. versiondeprecated:: 6.2.0
+
+            - :paramref:`startup_nodes` should not be passed as dictionaries
+               and instead migrate to use instances of :class:`~coredis.connection.TCPLocation`
+
           - .. versionchanged:: 4.4.0
 
             - :paramref:`nodemanager_follow_cluster` now defaults to ``True``
@@ -117,8 +137,19 @@ class ClusterConnectionPool(ConnectionPool):
         self.timeout = timeout
         self.max_connections = max_connections or 64
         self.max_connections_per_node = max_connections_per_node
+        # TODO: Remove support for Node
+        if any(isinstance(node, dict) for node in startup_nodes):
+            warnings.warn(
+                "Use coredis.connection.TCPLocation to specify startup nodes",
+                DeprecationWarning,
+            )
+
+        self.startup_nodes = [
+            node if isinstance(node, TCPLocation) else TCPLocation(node["host"], node["port"])
+            for node in startup_nodes
+        ]
         self.nodes = NodeManager(
-            startup_nodes,
+            startup_nodes=self.startup_nodes,
             reinitialize_steps=reinitialize_steps,
             skip_full_coverage_check=skip_full_coverage_check,
             max_connections=self.max_connections,
@@ -129,7 +160,7 @@ class ClusterConnectionPool(ConnectionPool):
         self.read_from_replicas = read_from_replicas or readonly
         # TODO: Use the `max_failures` argument of tracking cache
         self.cache = ClusterTrackingCache(self, _cache) if _cache else None
-        self.__reset()
+        self._reset()
 
         if "stream_timeout" not in self.connection_kwargs:
             self.connection_kwargs["stream_timeout"] = None
@@ -137,29 +168,25 @@ class ClusterConnectionPool(ConnectionPool):
 
     @classmethod
     def from_url(
-        cls,
+        cls: type[Self],
         url: str,
         *,
         decode_components: bool = False,
-        **kwargs: Unpack[PoolParams],
-    ) -> ClusterConnectionPool:
-        connection_class, merged_options, extra_connection_params = cls._parse_url(
-            url, decode_components, kwargs
+        **kwargs: Unpack[ClusterConnectionPoolParams],
+    ) -> Self:
+        """
+        Returns a cluster connection pool configured from the given URL.
+        """
+        location, merged_options = cls._parse_url(
+            url, decode_components, kwargs, ClusterConnectionPoolParams
         )
-        pool_args = ClusterConnectionPool.PoolParams()
-        host = cast(ClusterConnection.Params, extra_connection_params).pop("host")
-        port = cast(ClusterConnection.Params, extra_connection_params).pop("port")
-        if "startup_nodes" not in pool_args and (host is not None and port is not None):
-            pool_args["startup_nodes"] = [
-                Node(
-                    host=host,
-                    port=port,
-                )
-            ]
-        extra_connection_params.update(pool_args)
-        extra_connection_params.update(merged_options)
+        if "startup_nodes" not in merged_options and location:
+            assert isinstance(location, TCPLocation)
+            merged_options["startup_nodes"] = [Node(host=location.host, port=location.port)]
+        merged_options["connection_class"] = ClusterConnection
+
         return cls(
-            **extra_connection_params,
+            **merged_options,
         )
 
     def __repr__(self) -> str:
@@ -173,24 +200,12 @@ class ClusterConnectionPool(ConnectionPool):
             ", ".join([node.name for node in self.nodes.startup_nodes]),
         )
 
-    async def __aenter__(self) -> Self:
-        if self._counter == 0:
-            self._task_group = create_task_group()
-            self._counter += 1
-            await self._task_group.__aenter__()
-            # same as parent but do initialize() before cache setup
-            await self.refresh_cluster_mapping()
-            if self.cache:
-                # TODO: handle cache failure so that the pool doesn't die
-                #  if the cache fails.
-                await self._task_group.start(self.cache.run)
-        else:
-            self._counter += 1
-        return self
-
-    async def __aexit__(self, *args: Any) -> None:
-        self.__reset()
-        await super().__aexit__(*args)
+    async def _initialize(self) -> None:
+        await self.refresh_cluster_mapping()
+        if self.cache:
+            # TODO: handle cache failure so that the pool doesn't die
+            #  if the cache fails.
+            await self._task_group.start(self.cache.run)
 
     async def refresh_cluster_mapping(self, forced: bool = False) -> None:
         if not self.initialized or forced:
@@ -199,7 +214,7 @@ class ClusterConnectionPool(ConnectionPool):
                     return
                 await self.nodes.initialize()
                 for node in self._cluster_available_connections:
-                    if node not in self.nodes.nodes:
+                    if ManagedNode(node.host, node.port).name not in self.nodes.nodes:
                         self._cluster_available_connections.pop(node)
                 if not self.max_connections_per_node and self.max_connections < len(
                     self.nodes.nodes
@@ -215,7 +230,7 @@ class ClusterConnectionPool(ConnectionPool):
 
     async def get_connection(
         self, node: ManagedNode | None = None, primary: bool = True, **options: Any
-    ) -> BaseConnection:
+    ) -> ClusterConnection:
         """
         Acquires a connection from the cluster pool. If no node
         is specified a random node is picked. The connection
@@ -227,7 +242,7 @@ class ClusterConnectionPool(ConnectionPool):
         :param node:  The node for which to get a connection from
         :param primary: If False a connection from the replica will be returned
         """
-        connection: BaseConnection
+        connection: ClusterConnection
         if node:
             connection = await self.__get_connection_by_node(node)
         else:
@@ -240,15 +255,13 @@ class ClusterConnectionPool(ConnectionPool):
         node: ManagedNode | None = None,
         primary: bool = True,
         **options: Any,
-    ) -> AsyncGenerator[BaseConnection]:
+    ) -> AsyncGenerator[ClusterConnection]:
         """
         Acquires a connection from the cluster pool. If no node
         is specified a random node is picked. The connection
         will be automatically released back to the pool when
         the context manager exits.
 
-        :param shared: Whether the connection can be shared with other
-         requests or is required for dedicated/blocking use.
         :param node:  The node for which to get a connection from
         :param primary: If False a connection from the replica will be returned
         """
@@ -256,18 +269,24 @@ class ClusterConnectionPool(ConnectionPool):
         yield connection
         self.release(connection)
 
-    def release(self, connection: BaseConnection) -> None:
+    def release(self, connection: ClusterConnection) -> None:
         """Releases the connection back to the pool"""
         assert isinstance(connection, ClusterConnection)
         try:
             if connection.usable:
-                self.__node_pool(connection.node.name).put_nowait(connection)
+                self.__node_pool(connection.location).put_nowait(connection)
         except QueueFull:
             pass
 
-    def __reset(self) -> None:
+    def disconnect(self) -> None:
+        for connection in self._online_connections:
+            connection.terminate()
+        self._online_connections.clear()
+
+    def _reset(self) -> None:
         """Resets the connection pool back to a clean state"""
         self._cluster_available_connections = {}
+        self._online_connections = set()
         self.initialized = False
 
     async def __wrap_connection(
@@ -283,39 +302,40 @@ class ClusterConnectionPool(ConnectionPool):
             # As these are clear signals that an error case was handled by the connection
             task_status.started(error)
         finally:
-            node_pool = self.__node_pool(connection.node.name)
+            node_pool = self.__node_pool(connection.location)
+            self._online_connections.discard(connection)
             if connection in node_pool:
                 node_pool.remove(connection)
                 node_pool.append_nowait(None)
 
-    async def __make_node_connection(self, node: ManagedNode) -> Connection:
+    async def __make_node_connection(self, location: TCPLocation) -> ClusterConnection:
         """Creates a new connection to a node"""
 
         connection = self.connection_class(
-            host=node.host,
-            port=node.port,
+            location=location,
             read_from_replicas=self.read_from_replicas,
             **self.connection_kwargs,
         )
         if err := await self._task_group.start(self.__wrap_connection, connection):
             raise err
+        self._online_connections.add(connection)
         return connection
 
-    def __node_pool(self, node: str) -> Queue[Connection]:
-        if self._cluster_available_connections.get(node) is None:
-            self._cluster_available_connections[node] = self.__default_node_queue()
-        return self._cluster_available_connections[node]
+    def __node_pool(self, location: TCPLocation) -> Queue[ClusterConnection]:
+        if self._cluster_available_connections.get(location) is None:
+            self._cluster_available_connections[location] = self.__default_node_queue()
+        return self._cluster_available_connections[location]
 
     def __default_node_queue(
         self,
-    ) -> Queue[Connection]:
+    ) -> Queue[ClusterConnection]:
         q_size = max(
             1,
             self.max_connections
             if self.max_connections_per_node
             else self.max_connections // len(self.nodes.nodes),
         )
-        return Queue[Connection](q_size)
+        return Queue[ClusterConnection](q_size)
 
     async def __get_random_connection(self, primary: bool = False) -> ClusterConnection:
         """Opens new connection to random redis server in the cluster"""
@@ -329,13 +349,14 @@ class ClusterConnectionPool(ConnectionPool):
 
     async def __get_connection_by_node(self, node: ManagedNode) -> ClusterConnection:
         """Gets a connection by node"""
+        location = TCPLocation(node.host, node.port)
         with fail_after(self.timeout):
-            connection = await self.__node_pool(node.name).get()
+            connection = await self.__node_pool(location).get()
 
         if not connection or not connection.usable:
-            connection = await self.__make_node_connection(node)
+            connection = await self.__make_node_connection(location)
 
-        return cast(ClusterConnection, connection)
+        return connection
 
     def get_primary_node_by_slots(self, slots: list[int]) -> ManagedNode:
         nodes = {self.nodes.slots[slot][0].node_id for slot in slots}

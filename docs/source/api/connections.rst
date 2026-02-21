@@ -3,45 +3,81 @@ Connections & Connection Pooling
 
 Connection Pools
 ^^^^^^^^^^^^^^^^
-.. currentmodule:: coredis
+.. currentmodule:: coredis.pool
 
-:mod:`coredis`
+:mod:`coredis.pool`
 
-.. autoclass:: coredis.ConnectionPool
+.. autoclass:: coredis.pool.ConnectionPool
    :class-doc-from: both
 
-.. autoclass:: coredis.ClusterConnectionPool
+.. autoclass:: coredis.pool.ConnectionPoolParams
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: coredis.pool.ClusterConnectionPool
    :class-doc-from: both
    :show-inheritance:
 
-.. autoclass:: coredis.sentinel.SentinelConnectionPool
+.. autoclass:: coredis.pool.ClusterConnectionPoolParams
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: coredis.pool.SentinelConnectionPool
    :class-doc-from: both
+   :show-inheritance:
+
+All connection pools derive from the same base-class:
+
+.. autoclass:: coredis.pool.BaseConnectionPool
+   :class-doc-from: both
+
+.. autoclass:: coredis.pool.BaseConnectionPoolParams
+   :undoc-members:
    :show-inheritance:
 
 Connection Classes
 ^^^^^^^^^^^^^^^^^^
-:mod:`coredis`
+.. currentmodule:: coredis.connection
 
-.. autoclass:: coredis.Connection
+:mod:`coredis.connection`
+
+.. autoclass:: coredis.connection.TCPConnection
    :show-inheritance:
    :class-doc-from: both
 
-.. autoclass:: coredis.UnixDomainSocketConnection
+.. autoclass:: coredis.connection.UnixDomainSocketConnection
    :show-inheritance:
    :class-doc-from: both
 
-.. autoclass:: coredis.ClusterConnection
+.. autoclass:: coredis.connection.ClusterConnection
    :show-inheritance:
    :class-doc-from: both
 
-.. autoclass:: coredis.sentinel.SentinelManagedConnection
+.. autoclass:: coredis.connection.SentinelManagedConnection
    :show-inheritance:
    :class-doc-from: both
 
 All connection classes derive from the same base-class:
 
-.. autoclass:: coredis.BaseConnection
+.. autoclass:: coredis.connection.BaseConnection
    :show-inheritance:
    :class-doc-from: both
 
 .. autoclass:: coredis.connection.BaseConnectionParams
+   :show-inheritance:
+
+Location classes
+^^^^^^^^^^^^^^^^
+All classes that accept a ``location`` parameter to configure the
+location of a redis server require either a:
+
+.. autoclass:: coredis.connection.TCPLocation
+
+or
+
+.. autoclass:: coredis.connection.UnixDomainSocketLocation
+
+If a class can handle both ``tcp`` & ``unix domain sockets`` it will
+accept the base class:
+
+.. autoclass:: coredis.connection.Location

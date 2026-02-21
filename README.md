@@ -47,7 +47,7 @@ import coredis
 async def main() -> None:
     client = coredis.Redis(host='127.0.0.1', port=6379, db=0, decode_responses=True)
     # or cluster
-    # client = coredis.RedisCluster(startup_nodes=[{"host": "127.0.0.1", "port": 6379}], decode_responses=True)
+    # client = coredis.RedisCluster(startup_nodes=[coredis.connection.TCPLocation("127.0.0.1", 6379)], decode_responses=True)
     async with client:
         await client.flushdb()
 

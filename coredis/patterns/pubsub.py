@@ -5,7 +5,7 @@ import math
 import time
 from collections import defaultdict
 from contextlib import AsyncExitStack, asynccontextmanager
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from anyio import (
     TASK_STATUS_IGNORED,
@@ -21,7 +21,7 @@ from deprecated.sphinx import versionadded, versionchanged
 
 from coredis._utils import b, hash_slot, nativestr
 from coredis.commands.constants import CommandName
-from coredis.connection import BaseConnection, ClusterConnection
+from coredis.connection import BaseConnection, ClusterConnection, TCPLocation
 from coredis.constants.pubsub import (
     PUBLISH_MESSAGE_TYPES,
     SUBSCRIBE_MESSAGE_TYPES,
@@ -44,7 +44,6 @@ from coredis.typing import (
     Awaitable,
     Callable,
     Generic,
-    ManagedNode,
     Mapping,
     MutableMapping,
     Parameters,
@@ -59,7 +58,7 @@ if TYPE_CHECKING:
     import coredis.pool
 
 T = TypeVar("T")
-PoolT = TypeVar("PoolT", bound="coredis.pool.ConnectionPool")
+PoolT = TypeVar("PoolT", bound="coredis.pool.BaseConnectionPool[Any]")
 #: Callables for message handler callbacks. The callbacks
 #:  can be sync or async.
 SubscriptionCallback = Callable[[PubSubMessage], Awaitable[None]] | Callable[[PubSubMessage], None]
@@ -430,7 +429,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
     version="6.0.0",
     reason="The class supports the async context manager protocol and must always be used as such",
 )
-class PubSub(BasePubSub[AnyStr, "coredis.pool.ConnectionPool"]):
+class PubSub(BasePubSub[AnyStr, "coredis.pool.ConnectionPool[BaseConnection]"]):
     """
     Pub/Sub implementation to be used with :class:`~coredis.Redis`
     that is returned by :meth:`~coredis.Redis.pubsub`
@@ -574,7 +573,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         self.shard_connections: dict[str, BaseConnection] = {}
         self.node_channel_mapping: dict[str, list[StringT]] = {}
         self.read_from_replicas = read_from_replicas
-        self._last_checkins: dict[ManagedNode, float] = defaultdict(lambda: 0)
+        self._last_checkins: dict[TCPLocation, float] = defaultdict(lambda: 0)
         super().__init__(
             connection_pool,
             ignore_subscribe_messages,
@@ -702,17 +701,17 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
     async def _shard_consumer(self, connection: BaseConnection) -> None:
         assert isinstance(connection, ClusterConnection)
         async for message in connection.push_messages:
-            self._last_checkins[connection.node] = time.monotonic()
+            self._last_checkins[connection.location] = time.monotonic()
             self._send_stream.send_nowait(await self._handle_message(message))
 
     async def _shard_keepalive(self, connection: BaseConnection) -> None:
         assert isinstance(connection, ClusterConnection)
         while True:
             if (
-                idle := time.monotonic() - self._last_checkins[connection.node]
+                idle := time.monotonic() - self._last_checkins[connection.location]
             ) >= self._max_idle_seconds:
                 if await connection.create_request(CommandName.PING) in {b"PONG", "PONG"}:
-                    self._last_checkins[connection.node] = time.monotonic()
+                    self._last_checkins[connection.location] = time.monotonic()
             await sleep(max(1, self._max_idle_seconds - idle))
 
     def _reset(self) -> None:

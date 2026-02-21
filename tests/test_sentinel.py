@@ -5,13 +5,14 @@ from unittest.mock import AsyncMock
 import pytest
 
 import coredis
+from coredis.connection import TCPLocation
 from coredis.exceptions import (
     PrimaryNotFoundError,
     ReadOnlyError,
     ReplicaNotFoundError,
     ReplicationError,
 )
-from coredis.sentinel import Sentinel, SentinelConnectionPool
+from coredis.sentinel import Sentinel
 from tests.conftest import targets
 
 
@@ -61,25 +62,6 @@ async def test_replica_for_slave_not_found_error(redis_sentinel: Sentinel, mocke
             await replica.ping()
 
 
-async def test_replica_round_robin(redis_sentinel: Sentinel, mocker, host_ip):
-    pool = SentinelConnectionPool("mymaster", redis_sentinel)
-    sentinel_replicas = mocker.patch.object(
-        redis_sentinel.sentinels[0], "sentinel_replicas", new_callable=AsyncMock
-    )
-    sentinel_replicas.return_value = [
-        {"ip": "replica0", "port": 6379, "is_odown": False, "is_sdown": False},
-        {"ip": "replica1", "port": 6379, "is_odown": False, "is_sdown": False},
-    ]
-    async for rotator in pool.rotate_replicas():
-        assert rotator in {("replica0", 6379), ("replica1", 6379)}
-    sentinel_replicas.return_value = [
-        {"ip": "replica0", "port": 6379, "is_odown": False, "is_sdown": False},
-        {"ip": "replica1", "port": 6379, "is_odown": False, "is_sdown": True},
-    ]
-    async for rotator in pool.rotate_replicas():
-        assert rotator in {("replica0", 6379)}
-
-
 async def test_autodecode(redis_sentinel_server: tuple[str, int]):
     sentinel = Sentinel(sentinels=[redis_sentinel_server], decode_responses=True)
     async with sentinel:
@@ -97,7 +79,7 @@ class TestSentinelCommand:
         primary = client.primary_for("mymaster")
         async with primary:
             assert await primary.ping()
-            assert primary.connection_pool.primary_address == (host_ip, 6380)
+            assert primary.connection_pool.location == TCPLocation(host_ip, 6380)
 
         # Use internal connection check
         primary = client.primary_for("mymaster", check_connection=True)
@@ -161,13 +143,12 @@ class TestSentinelCommand:
 
     async def test_no_replicas(self, client: Sentinel, mocker):
         p = client.replica_for("mymaster")
-        replica_rotate = mocker.patch.object(p.connection_pool, "rotate_replicas")
+        get_replica = mocker.patch.object(p.connection_pool, "get_replica")
 
-        async def async_iter(items):
-            for item in items:
-                yield item
+        def raise_no_replica():
+            raise ReplicaNotFoundError()
 
-        replica_rotate.return_value = async_iter([])
+        get_replica.side_effect = raise_no_replica
         async with p:
             with pytest.raises(ReplicaNotFoundError):
                 await p.ping()

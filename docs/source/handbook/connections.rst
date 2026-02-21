@@ -17,7 +17,7 @@ or :paramref:`coredis.RedisCluster.connection_pool` parameter::
 
     import coredis
 
-    pool = coredis.ConnectionPool(max_connections=8)
+    pool = coredis.pool.ConnectionPool(max_connections=8)
     client1 = coredis.Redis(connection_pool=pool)
     client2 = coredis.Redis(connection_pool=pool)
 
@@ -93,7 +93,7 @@ Connection types
 ----------------
 coredis ships with three types of connections.
 
-- The default, :class:`coredis.connection.Connection`, is a normal TCP socket-based connection.
+- The default, :class:`coredis.connection.TCPConnection`, is a normal TCP socket-based connection.
 
 - :class:`~coredis.connection.UnixDomainSocketConnection` allows
   for clients running on the same device as the server to connect via a Unix domain socket.
@@ -126,4 +126,4 @@ specified during initialization.
 
 ::
 
-    pool = coredis.ConnectionPool(connection_class=YourConnectionClass, ...)
+    pool = coredis.pool.ConnectionPool(connection_class=YourConnectionClass, ...)

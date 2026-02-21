@@ -142,7 +142,10 @@ Getting started
 
         async def main() -> None:
             client = coredis.RedisCluster(
-                startup_nodes[{"host": "127.0.0.1", "port": 7000}], db=0, decode_responses=True
+                startup_nodes=[
+                    coredis.connection.TCPLocation("127.0.0.1", 7000)
+                ],
+                db=0, decode_responses=True
             )
             async with client:
                 await client.flushdb()
