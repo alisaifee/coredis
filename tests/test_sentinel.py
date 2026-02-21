@@ -12,6 +12,7 @@ from coredis.exceptions import (
     ReadOnlyError,
     ReplicaNotFoundError,
     ReplicationError,
+    StalePrimaryError,
 )
 from tests.conftest import targets
 
@@ -40,10 +41,31 @@ async def test_discover_primary_error(redis_sentinel: Sentinel, mocker):
             "is_master": True,
             "is_sdown": True,
             "is_odown": True,
+            "num-other-sentinels": 0,
         }
     }
     async with redis_sentinel.primary_for("mymaster") as primary:
         with pytest.raises(PrimaryNotFoundError):
+            await primary.ping()
+
+
+async def test_discover_primary_stale(redis_sentinel: Sentinel, mocker):
+    replicas = await redis_sentinel.discover_replicas("mymaster")
+    sentinel_masters = mocker.patch.object(
+        redis_sentinel.sentinels[0], "sentinel_masters", new_callable=AsyncMock
+    )
+    sentinel_masters.return_value = {
+        "mymaster": {
+            "ip": replicas[0][0],
+            "port": replicas[0][1],
+            "is_master": True,
+            "is_sdown": False,
+            "is_odown": False,
+            "num-other-sentinels": 0,
+        }
+    }
+    async with redis_sentinel.primary_for("mymaster") as primary:
+        with pytest.raises(StalePrimaryError):
             await primary.ping()
 
 

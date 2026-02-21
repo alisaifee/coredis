@@ -42,6 +42,10 @@ Sentinel Errors
    :no-inherited-members:
 .. autoexception:: coredis.exceptions.ReplicaNotFoundError
    :no-inherited-members:
+.. autoexception:: coredis.exceptions.StalePrimaryError
+   :no-inherited-members:
+.. autoexception:: coredis.exceptions.SentinelError
+   :no-inherited-members:
 
 Scripting Errors
 ^^^^^^^^^^^^^^^^

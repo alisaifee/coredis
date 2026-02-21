@@ -44,7 +44,10 @@ class SentinelConnectionPool(ConnectionPool[SentinelManagedConnection]):
             location = await self.get_primary_location()
         else:
             location = await self.get_replica()
-        return SentinelManagedConnection(location, self.service_name, **self.connection_kwargs)
+
+        return SentinelManagedConnection(
+            location, self.service_name, self.is_primary, **self.connection_kwargs
+        )
 
     def __repr__(self) -> str:
         return (

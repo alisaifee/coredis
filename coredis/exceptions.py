@@ -288,6 +288,13 @@ class PrimaryNotFoundError(SentinelError):
     """
 
 
+class StalePrimaryError(SentinelError):
+    """
+    Raised when a primary discovered through a sentinel
+    is not a primary as it has been demoted to a replica
+    """
+
+
 class ReplicaNotFoundError(SentinelError):
     """
     Raised when a replica cannot be located in a
