@@ -60,7 +60,12 @@ runs:
     - name: Upload coverage to Codecov
       if: ${{ inputs.coverage == 'true' }}
       uses: codecov/codecov-action@v5
-    - name: Upload test results to Codecov
+      with:
+        report_type: coverage
+        files: ./junit.xml
+    - name: Upload test coverage to Codecov
       if: ${{ inputs.coverage == 'true' }}
-      uses: codecov/test-results-action@v1
-
+      uses: codecov/codecov-action@v5
+      with:
+        report_type: test_results
+        files: ./junit.xml
