@@ -20,6 +20,9 @@ class TCPLocation(Location):
     #: the port the server is listening on
     port: int
 
+    def __repr__(self) -> str:
+        return f"<host={self.host},port={self.port}>"
+
 
 class TCPConnection(BaseConnection):
     location: TCPLocation

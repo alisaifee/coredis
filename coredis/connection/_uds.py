@@ -17,6 +17,9 @@ class UnixDomainSocketLocation(Location):
     #: The absolute path of the socket
     path: str
 
+    def __repr__(self) -> str:
+        return f"<path={self.path}>"
+
 
 class UnixDomainSocketConnection(BaseConnection):
     location: UnixDomainSocketLocation
