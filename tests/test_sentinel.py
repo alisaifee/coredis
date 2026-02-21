@@ -31,19 +31,10 @@ async def test_discover_primary(redis_sentinel: Sentinel, host_ip):
 async def test_discover_primary_error(redis_sentinel: Sentinel, mocker):
     with pytest.raises(PrimaryNotFoundError):
         await redis_sentinel.discover_primary("xxx")
-    sentinel_masters = mocker.patch.object(
-        redis_sentinel.sentinels[0], "sentinel_masters", new_callable=AsyncMock
+    sentinel_get_master_addr_by_name = mocker.patch.object(
+        redis_sentinel.sentinels[0], "sentinel_get_master_addr_by_name", new_callable=AsyncMock
     )
-    sentinel_masters.return_value = {
-        "mymaster": {
-            "ip": "127.0.0.1",
-            "port": 6380,
-            "is_master": True,
-            "is_sdown": True,
-            "is_odown": True,
-            "num-other-sentinels": 0,
-        }
-    }
+    sentinel_get_master_addr_by_name.return_value = None
     async with redis_sentinel.primary_for("mymaster") as primary:
         with pytest.raises(PrimaryNotFoundError):
             await primary.ping()
@@ -51,19 +42,10 @@ async def test_discover_primary_error(redis_sentinel: Sentinel, mocker):
 
 async def test_discover_primary_stale(redis_sentinel: Sentinel, mocker):
     replicas = await redis_sentinel.discover_replicas("mymaster")
-    sentinel_masters = mocker.patch.object(
-        redis_sentinel.sentinels[0], "sentinel_masters", new_callable=AsyncMock
+    sentinel_get_master_addr_by_name = mocker.patch.object(
+        redis_sentinel.sentinels[0], "sentinel_get_master_addr_by_name", new_callable=AsyncMock
     )
-    sentinel_masters.return_value = {
-        "mymaster": {
-            "ip": replicas[0][0],
-            "port": replicas[0][1],
-            "is_master": True,
-            "is_sdown": False,
-            "is_odown": False,
-            "num-other-sentinels": 0,
-        }
-    }
+    sentinel_get_master_addr_by_name.return_value = replicas[0]
     async with redis_sentinel.primary_for("mymaster") as primary:
         with pytest.raises(StalePrimaryError):
             await primary.ping()
@@ -73,11 +55,11 @@ async def test_replica_not_found_error(redis_sentinel: Sentinel, mocker):
     sentinel_replicas = mocker.patch.object(
         redis_sentinel.sentinels[0], "sentinel_replicas", new_callable=AsyncMock
     )
-    sentinel_masters = mocker.patch.object(
-        redis_sentinel.sentinels[0], "sentinel_masters", new_callable=AsyncMock
+    sentinel_get_master_addr_by_name = mocker.patch.object(
+        redis_sentinel.sentinels[0], "sentinel_get_master_addr_by_name", new_callable=AsyncMock
     )
     sentinel_replicas.return_value = []
-    sentinel_masters.return_value = {}
+    sentinel_get_master_addr_by_name.return_value = None
     replica = redis_sentinel.replica_for("mymaster", db=9)
     async with replica:
         with pytest.raises(ReplicaNotFoundError):

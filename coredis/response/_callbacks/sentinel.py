@@ -122,15 +122,17 @@ class SentinelsStateCallback(
 
 class GetPrimaryCallback(
     ResponseCallback[
-        list[ResponsePrimitive],
+        list[ResponsePrimitive] | None,
         tuple[str, int] | None,
     ]
 ):
     def transform(
         self,
-        response: list[ResponsePrimitive],
+        response: list[ResponsePrimitive] | None,
     ) -> tuple[str, int] | None:
-        return nativestr(response[0]), int(response[1]) if response else None
+        if response:
+            return nativestr(response[0]), int(response[1])
+        return None
 
 
 class SentinelInfoCallback(

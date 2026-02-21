@@ -135,7 +135,7 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
             warnings.warn(
                 "Use coredis.connection.TCPLocation to specify sentinels",
                 DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
         sentinel_locations = [
             location if isinstance(location, TCPLocation) else TCPLocation(*location)
@@ -164,17 +164,8 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
             for sentinel in self.sentinels
             if (location := sentinel.connection_pool.location)
         ]
-        return f"Sentinel<sentinels=[{','.join(sentinels)}]>"
 
-    def __check_primary_state(
-        self,
-        state: dict[str, ResponsePrimitive],
-    ) -> bool:
-        if not state["is_master"] or state["is_sdown"] or state["is_odown"]:
-            return False
-        if int(state["num-other-sentinels"] or 0) < self.min_other_sentinels:
-            return False
-        return True
+        return f"Sentinel<sentinels=[{','.join(sentinels)}]>"
 
     def __filter_replicas(
         self, replicas: Iterable[dict[str, ResponsePrimitive]]
@@ -197,18 +188,18 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
         :return: A pair (location, port) or raises :exc:`~coredis.exceptions.PrimaryNotFoundError`
          if no primary is found.
         """
-        for sentinel_no, sentinel in enumerate(self.sentinels):
+
+        for idx, sentinel in enumerate(self.sentinels):
             try:
-                primaries = await sentinel.sentinel_masters()
+                primary_location = await sentinel.sentinel_get_master_addr_by_name(service_name)
             except (ConnectionError, TimeoutError):
                 continue
-            state = primaries.get(service_name)
-
-            if state and self.__check_primary_state(state):
-                # Put this sentinel at the top of the list
-                self.sentinels[0] = sentinel
-                self.sentinels[sentinel_no] = self.sentinels[0]
-                return nativestr(state["ip"]), int(state["port"] or -1)
+            if not primary_location:
+                continue
+            # Put this sentinel at the top of the list
+            sentinel = self.sentinels.pop(idx)
+            self.sentinels.insert(0, sentinel)
+            return nativestr(primary_location[0]), primary_location[1]
         raise PrimaryNotFoundError(f"No primary found for {service_name!r}")
 
     async def discover_replicas(self, service_name: str) -> list[tuple[str, int]]:
