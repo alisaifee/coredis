@@ -163,7 +163,7 @@ class NodeManager:
 
         nodes = self.orig_startup_nodes
         replicas: set[str] = set()
-        startup_node_errors: dict[str, list[str]] = {}
+        startup_node_errors: dict[Exception, list[str]] = {}
 
         # With this option the client will attempt to connect to any of the previous set of nodes
         # instead of the original set of startup nodes
@@ -172,14 +172,14 @@ class NodeManager:
 
         for node in nodes:
             cluster_slots = {}
-            try:
-                if node:
-                    async with self.get_redis_link(host=node.host, port=node.port) as r:
+            if node:
+                async with self.get_redis_link(host=node.host, port=node.port) as r:
+                    try:
                         cluster_slots = await r.cluster_slots()
                         self.startup_nodes_reachable = True
-            except RedisError as err:
-                startup_node_errors.setdefault(str(err), []).append(node.name)
-                continue
+                    except RedisError as err:
+                        startup_node_errors.setdefault(err, []).append(node.name)
+                        continue
 
             all_slots_covered = True
             # If there's only one server in the cluster, its ``host`` is ''
@@ -244,18 +244,12 @@ class NodeManager:
                 break
 
         if not self.startup_nodes_reachable:
-            details = ""
-            # collapse any startup nodes by error representation
-            if startup_node_errors:
-                details = " Underlying errors:\n" + "\n".join(
-                    [f"- {err} [{','.join(nodes)}]" for err, nodes in startup_node_errors.items()]
-                )
-            raise RedisClusterError(
-                "Redis Cluster cannot be connected. "
-                "Please provide at least one reachable node."
-                f"{details}"
+            startup_error = RedisClusterError(
+                "Redis Cluster cannot be connected. Please provide at least one reachable node."
             )
-
+            if startup_node_errors:
+                startup_error.__cause__ = list(startup_node_errors.keys())[-1]
+            raise startup_error
         if not all_slots_covered:
             raise RedisClusterError(
                 "Not all slots are covered after query all startup_nodes. "
@@ -276,17 +270,20 @@ class NodeManager:
                 await self.initialize()
 
     async def node_require_full_coverage(self, node: ManagedNode) -> bool:
-        try:
-            async with self.get_redis_link(host=node.host, port=node.port) as r_node:
-                node_config = await r_node.config_get(["cluster-require-full-coverage"])
-                return "yes" in node_config.values()
-        except ResponseError as err:
-            warnings.warn(
-                "Unable to determine whether the cluster requires full coverage "
-                f"due to response error from `CONFIG GET`: {err}. To suppress this "
-                "warning use skip_full_coverage=True when initializing the client."
-            )
-            return False
+        async with self.get_redis_link(host=node.host, port=node.port) as r_node:
+            try:
+                with r_node.decoding(False):
+                    node_config = await r_node.config_get(["cluster-require-full-coverage"])
+                    return b"yes" in node_config.values()
+            except ResponseError as err:
+                warnings.warn(
+                    "Unable to determine whether the cluster requires full coverage "
+                    f"due to response error from `CONFIG GET`: {err}. To suppress this "
+                    "warning use skip_full_coverage=True when initializing the client."
+                )
+                return False
+            except ConnectionError:
+                return False
 
     async def cluster_require_full_coverage(self, nodes_cache: dict[str, ManagedNode]) -> bool:
         """
@@ -297,11 +294,8 @@ class NodeManager:
         nodes = nodes_cache or self.nodes
 
         for node in nodes.values():
-            try:
-                if await self.node_require_full_coverage(node):
-                    return True
-            except ConnectionError:
-                continue
+            if await self.node_require_full_coverage(node):
+                return True
         return False
 
     def set_node(
