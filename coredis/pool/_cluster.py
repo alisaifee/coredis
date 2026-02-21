@@ -308,12 +308,13 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
                 node_pool.remove(connection)
                 node_pool.append_nowait(None)
 
-    async def __make_node_connection(self, location: TCPLocation) -> ClusterConnection:
+    async def __make_node_connection(self, node: ManagedNode) -> ClusterConnection:
         """Creates a new connection to a node"""
 
+        location = TCPLocation(node.host, node.port)
         connection = self.connection_class(
             location=location,
-            read_from_replicas=self.read_from_replicas,
+            read_from_replicas=self.read_from_replicas and node.server_type == "replica",
             **self.connection_kwargs,
         )
         if err := await self._task_group.start(self.__wrap_connection, connection):
@@ -354,7 +355,7 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
             connection = await self.__node_pool(location).get()
 
         if not connection or not connection.usable:
-            connection = await self.__make_node_connection(location)
+            connection = await self.__make_node_connection(node)
 
         return connection
 
@@ -385,13 +386,13 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
 
     def get_node_by_slot(self, slot: int, command: bytes | None = None) -> ManagedNode:
         if self.read_from_replicas and command in READONLY_COMMANDS:
-            return self.get_replica_node_by_slots([slot])
+            return self.get_replica_node_by_slots([slot], replica_only=True)
 
         return self.get_primary_node_by_slots([slot])
 
     def get_node_by_slots(self, slots: list[int], command: bytes | None = None) -> ManagedNode:
         if self.read_from_replicas and command in READONLY_COMMANDS:
-            return self.get_replica_node_by_slots(slots)
+            return self.get_replica_node_by_slots(slots, replica_only=True)
 
         return self.get_primary_node_by_slots(slots)
 
