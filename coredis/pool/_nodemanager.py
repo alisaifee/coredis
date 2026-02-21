@@ -141,8 +141,6 @@ class NodeManager:
             "stream_timeout",
             "connect_timeout",
             "ssl_context",
-            "parser_class",
-            "loop",
         )
         connection_kwargs = {k: v for k, v in self.connection_kwargs.items() if k in allowed_keys}
         return Redis(host=host, port=port, **connection_kwargs)
