@@ -3,12 +3,7 @@ from __future__ import annotations
 import pytest
 
 import coredis.connection
-from coredis import (
-    ClusterConnectionPool,
-    ConnectionPool,
-    TCPConnection,
-    UnixDomainSocketConnection,
-)
+from coredis import ClusterConnectionPool, ConnectionPool, TCPConnection, UnixDomainSocketConnection
 from coredis._concurrency import gather
 from coredis.connection import ClusterConnection, TCPLocation, UnixDomainSocketLocation
 from coredis.patterns.cache import LRUCache
@@ -204,6 +199,16 @@ class TestClusterPoolParameters:
     async def test_timeout(self, client, client_arguments, mocker):
         with pytest.RaisesGroup(TimeoutError):
             await gather(*(client.blpop(["test"], timeout=2) for _ in range(3)))
+
+    @pytest.mark.parametrize(
+        "client_arguments",
+        [{"read_from_replicas": True}],
+    )
+    async def test_read_from_replicas(self, client, client_arguments, mocker, _s):
+        create_request = mocker.spy(client.connection_pool.connection_class, "create_request")
+        await client.set("fubar", 1)
+        assert _s(1) == await client.get("fubar")
+        assert any(call.args[1] == b"READONLY" for call in create_request.call_args_list)
 
 
 class TestClusterConnectionPoolConstruction:

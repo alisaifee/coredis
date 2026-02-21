@@ -18,15 +18,16 @@ class ClusterConnection(TCPConnection):
     ) -> None:
         self._read_from_replicas = read_from_replicas
         super().__init__(location, **kwargs)
+        if self._read_from_replicas:
+            self.register_connect_callback(self._set_readonly)
 
-    async def perform_handshake(self) -> None:
+    async def _set_readonly(self, connection: ClusterConnection) -> None:
         """
         Read only cluster connections need to explicitly
         request readonly during handshake
         """
-        await super().perform_handshake()
-        if self._read_from_replicas:
-            assert (await self.create_request(b"READONLY", decode=False)) == b"OK"
+        if not (await connection.create_request(b"READONLY", decode=False)) == b"OK":
+            raise ConnectionError("Could not set READONLY mode for cluster replica")
 
     def describe(self) -> str:
         return f"ClusterConnection<path={self.location.host},db={self.location.port}>"
