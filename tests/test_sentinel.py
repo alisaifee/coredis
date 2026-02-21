@@ -12,7 +12,7 @@ from coredis.exceptions import (
     ReplicaNotFoundError,
     ReplicationError,
 )
-from coredis.sentinel import Sentinel
+from coredis import Sentinel
 from tests.conftest import targets
 
 

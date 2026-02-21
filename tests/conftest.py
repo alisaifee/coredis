@@ -15,7 +15,6 @@ from packaging import version
 from pytest_lazy_fixtures import lf
 
 import coredis
-import coredis.sentinel
 from coredis._utils import EncodingInsensitiveDict, b, hash_slot, nativestr
 from coredis.client.basic import Redis
 from coredis.credentials import UserPassCredentialProvider
@@ -117,7 +116,7 @@ async def get_version(client):
                 async with node:
                     version_string = (await node.info())["redis_version"]
                     REDIS_VERSIONS[str(client)] = version.parse(version_string)
-            elif isinstance(client, coredis.sentinel.Sentinel):
+            elif isinstance(client, coredis.Sentinel):
                 version_string = (await client.sentinels[0].info())["redis_version"]
                 REDIS_VERSIONS[str(client)] = version.parse(version_string)
             else:
@@ -207,7 +206,7 @@ async def check_test_constraints(request, client):
 async def set_default_test_config(client, variant=None):
     await get_version(client)
 
-    if isinstance(client, coredis.sentinel.Sentinel):
+    if isinstance(client, coredis.Sentinel):
         if REDIS_VERSIONS[str(client)] >= version.parse("6.2.0"):
             await client.sentinels[0].sentinel_config_set("resolve-hostnames", "yes")
     else:
@@ -808,7 +807,7 @@ async def redis_sentinel(redis_sentinel_server: tuple[str, int], request):
 
 @pytest.fixture
 async def redis_sentinel_raw(redis_sentinel_server, request):
-    sentinel = coredis.sentinel.Sentinel(
+    sentinel = coredis.Sentinel(
         [redis_sentinel_server],
         sentinel_kwargs={},
         **get_client_test_args(request),
@@ -824,7 +823,7 @@ async def redis_sentinel_raw(redis_sentinel_server, request):
 
 @pytest.fixture
 async def redis_sentinel_auth(redis_sentinel_auth_server, request):
-    sentinel = coredis.sentinel.Sentinel(
+    sentinel = coredis.Sentinel(
         [redis_sentinel_auth_server],
         sentinel_kwargs={"password": "sekret"},
         password="sekret",
@@ -844,7 +843,7 @@ async def redis_sentinel_auth(redis_sentinel_auth_server, request):
 
 @pytest.fixture
 async def redis_sentinel_auth_cred_provider(redis_sentinel_auth_server, request):
-    sentinel = coredis.sentinel.Sentinel(
+    sentinel = coredis.Sentinel(
         [redis_sentinel_auth_server],
         sentinel_kwargs={"credential_provider": UserPassCredentialProvider(password="sekret")},
         credential_provider=UserPassCredentialProvider(password="sekret"),
@@ -1011,7 +1010,7 @@ def _s(client):
                 value = str(value)
 
                 return value.encode(client.encoding)
-        elif isinstance(client, coredis.sentinel.Sentinel):
+        elif isinstance(client, coredis.Sentinel):
             if client.connection_kwargs.get("decode_responses"):
                 return str(value)
             else:
