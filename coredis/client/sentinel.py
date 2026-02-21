@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import warnings
 from contextlib import AsyncExitStack, asynccontextmanager
 from typing import Any, overload
 
 from anyio import AsyncContextManagerMixin
 
 from coredis._utils import nativestr
-from coredis.exceptions import ConnectionError, PrimaryNotFoundError, ResponseError
+from coredis.connection._tcp import TCPLocation
+from coredis.exceptions import (
+    ConnectionError,
+    PrimaryNotFoundError,
+    ResponseError,
+)
 from coredis.patterns.cache import AbstractCache
 from coredis.pool._sentinel import SentinelConnectionPool
 from coredis.retry import NoRetryPolicy, RetryPolicy
@@ -41,7 +47,7 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
     @overload
     def __init__(
         self: Sentinel[bytes],
-        sentinels: Iterable[tuple[str, int]],
+        sentinels: Iterable[TCPLocation | tuple[str, int]],
         min_other_sentinels: int = ...,
         sentinel_kwargs: dict[str, Any] | None = ...,
         decode_responses: Literal[False] = ...,
@@ -54,7 +60,7 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
     @overload
     def __init__(
         self: Sentinel[str],
-        sentinels: Iterable[tuple[str, int]],
+        sentinels: Iterable[TCPLocation | tuple[str, int]],
         min_other_sentinels: int = ...,
         sentinel_kwargs: dict[str, Any] | None = ...,
         decode_responses: Literal[True] = ...,
@@ -66,7 +72,7 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
 
     def __init__(
         self,
-        sentinels: Iterable[tuple[str, int]],
+        sentinels: Iterable[TCPLocation | tuple[str, int]],
         min_other_sentinels: int = 0,
         sentinel_kwargs: dict[str, Any] | None = None,
         decode_responses: bool = False,
@@ -125,9 +131,24 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
         self.connection_kwargs["decode_responses"] = self.sentinel_kwargs["decode_responses"] = (
             decode_responses
         )
+        if any(isinstance(sentinel, tuple) for sentinel in sentinels):
+            warnings.warn(
+                "Use coredis.connection.TCPLocation to specify sentinels",
+                DeprecationWarning,
+                stacklevel=2
+            )
+        sentinel_locations = [
+            location if isinstance(location, TCPLocation) else TCPLocation(*location)
+            for location in sentinels
+        ]
         self.sentinels = [
-            Redis(hostname, port, retry_policy=self.__retry_policy, **self.sentinel_kwargs)
-            for hostname, port in sentinels
+            Redis(
+                location.host,
+                location.port,
+                retry_policy=self.__retry_policy,
+                **self.sentinel_kwargs,
+            )
+            for location in sentinel_locations
         ]
 
     @asynccontextmanager
