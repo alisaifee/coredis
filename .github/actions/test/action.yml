@@ -56,10 +56,14 @@ runs:
         echo "Runtime checks: $COREDIS_RUNTIME_CHECKS"
         echo "UVLoop: $COREDIS_UVLOOP"
         echo "CI: $CI"
-        uv run --group $UV_GROUP pytest --timeout=60 --reverse --reruns 2 --cov=coredis --junixml=junit.xml -o junit_family=legacy ${{ inputs.test-params }}
+        uv run --group $UV_GROUP pytest --timeout=60 --reverse --reruns 2 --cov=coredis --cov-report=xml --junitxml=junit.xml -o junit_family=legacy ${{ inputs.test-params }}
     - name: Upload coverage to Codecov
       if: ${{ inputs.coverage == 'true' }}
       uses: codecov/codecov-action@v5
+
     - name: Upload test coverage to Codecov
       if: ${{ inputs.coverage == 'true' && !cancelled() }}
-      uses: codecov/test-results-action@v5
+      uses: codecov/codecov-action@v5
+      with:
+        files: ./junit.xml
+        report_type: test_results
