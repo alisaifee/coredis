@@ -7,7 +7,7 @@ from typing import Any, cast
 from anyio import AsyncContextManagerMixin
 from deprecated.sphinx import versionchanged
 
-from coredis._utils import b, hash_slot, nativestr
+from coredis._utils import nativestr
 from coredis.client import Client, RedisCluster
 from coredis.commands import CommandRequest, CommandResponseT
 from coredis.commands._key_spec import KeySpec
@@ -804,7 +804,6 @@ class ClusterPipeline(Client[AnyStr]):
             slot = self._determine_slot(c.name, *c.arguments, **c.execution_parameters)
             if slot:
                 slots.add(slot)
-
             if len(slots) > 1:
                 raise ClusterTransactionError("Multiple slots involved in transaction")
         if not slots:
@@ -904,20 +903,20 @@ class ClusterPipeline(Client[AnyStr]):
             self._raise_first_error()
 
     def _determine_slot(
-        self, command: bytes, *args: ValueT, **options: Unpack[ExecutionParameters]
+        self, command: bytes, *args: RedisValueT, **options: Unpack[ExecutionParameters]
     ) -> int:
         """
         Determine the hash slot for the given command and arguments.
         """
         keys: tuple[RedisValueT, ...] = cast(
             tuple[RedisValueT, ...], options.get("keys")
-        ) or KeySpec.extract_keys(command, *args)  # type: ignore
+        ) or KeySpec.extract_keys(command, *args)
 
         if not keys:
             raise RedisClusterError(
                 f"No way to dispatch {nativestr(command)} to Redis Cluster. Missing key"
             )
-        slots = {hash_slot(b(key)) for key in keys}
+        slots = self.connection_pool.nodes.determine_slots(command, *args, **options)
 
         if len(slots) != 1:
             raise ClusterCrossSlotError(command=command, keys=keys)

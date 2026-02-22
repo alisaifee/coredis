@@ -14,7 +14,6 @@ from anyio import get_cancelled_exc_class, sleep
 from deprecated.sphinx import versionadded, versionchanged
 
 from coredis._concurrency import gather
-from coredis._utils import b, hash_slot
 from coredis.client.basic import Client, Redis
 from coredis.commands._key_spec import KeySpec
 from coredis.commands._validators import mutually_inclusive_parameters
@@ -736,30 +735,6 @@ class RedisCluster(
             await self.connection_pool.refresh_cluster_mapping(forced=True)
             self.refresh_table_asap = False
 
-    def _determine_slots(
-        self, command: bytes, *args: RedisValueT, **options: Unpack[ExecutionParameters]
-    ) -> set[int]:
-        """Determines the slots the command and args would touch"""
-        keys = cast(tuple[RedisValueT, ...], options.get("keys")) or KeySpec.extract_keys(
-            command, *args, readonly_command=self.connection_pool.read_from_replicas
-        )
-        if (
-            command
-            in {
-                CommandName.EVAL,
-                CommandName.EVAL_RO,
-                CommandName.EVALSHA,
-                CommandName.EVALSHA_RO,
-                CommandName.FCALL,
-                CommandName.FCALL_RO,
-                CommandName.PUBLISH,
-            }
-            and not keys
-        ):
-            return set()
-
-        return {hash_slot(b(key)) for key in keys}
-
     def _merge_result(
         self,
         command: bytes,
@@ -771,31 +746,6 @@ class RedisCluster(
             R,
             self.result_callbacks[command](res, **kwargs),
         )
-
-    def determine_node(
-        self, command: bytes, *args: RedisValueT, **kwargs: Unpack[ExecutionParameters]
-    ) -> list[ManagedNode] | None:
-        node_flag = self.route_flags.get(command)
-        if command in self.split_flags and self.non_atomic_cross_slot:
-            node_flag = self.split_flags[command]
-
-        if node_flag == NodeFlag.RANDOM:
-            return [self.connection_pool.nodes.random_node(primary=True)]
-        elif node_flag == NodeFlag.PRIMARIES:
-            return list(self.connection_pool.nodes.all_primaries())
-        elif node_flag == NodeFlag.ALL:
-            return list(self.connection_pool.nodes.all_nodes())
-        elif node_flag == NodeFlag.SLOT_ID and (
-            slot_arguments_range := kwargs.get("slot_arguments_range", None)
-        ):
-            slot_start, slot_end = slot_arguments_range
-            nodes = list(
-                self.connection_pool.nodes.nodes_from_slots(
-                    *cast(tuple[int, ...], args[slot_start:slot_end])
-                ).keys()
-            )
-            return [self.connection_pool.nodes.nodes[k] for k in nodes]
-        return None
 
     async def on_connection_error(self, _: BaseException) -> None:
         self.refresh_table_asap = True
@@ -832,7 +782,13 @@ class RedisCluster(
         """
         Sends a command to one or many nodes in the cluster
         """
-        nodes = self.determine_node(command.name, *command.arguments, **kwargs)
+        node_flag = self.route_flags.get(command.name)
+        if command.name in self.split_flags and self.non_atomic_cross_slot:
+            node_flag = self.split_flags[command.name]
+
+        nodes = self.connection_pool.nodes.determine_node(
+            command.name, *command.arguments, node_flag=node_flag, **kwargs
+        )
         if nodes and len(nodes) > 1:
             tasks: dict[str, Coroutine[Any, Any, R]] = {}
             node_arg_mapping = self._split_args_over_nodes(
@@ -860,7 +816,14 @@ class RedisCluster(
             node = None
             slots = None
             if not nodes:
-                slots = list(self._determine_slots(command.name, *command.arguments, **kwargs))
+                slots = list(
+                    self.connection_pool.nodes.determine_slots(
+                        command.name,
+                        *command.arguments,
+                        self.connection_pool.read_from_replicas,
+                        **kwargs,
+                    )
+                )
             else:
                 node = nodes.pop()
             return await self._execute_command_on_single_node(
