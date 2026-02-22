@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import random
 import warnings
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from coredis._utils import b, hash_slot, nativestr
+from coredis.commands._key_spec import KeySpec
+from coredis.commands.constants import CommandName, NodeFlag
 from coredis.connection import TCPLocation
 from coredis.exceptions import (
     ConnectionError,
@@ -13,12 +15,14 @@ from coredis.exceptions import (
     ResponseError,
 )
 from coredis.typing import (
+    ExecutionParameters,
     Iterable,
     Iterator,
     Literal,
     ManagedNode,
     RedisValueT,
     StringT,
+    Unpack,
 )
 
 HASH_SLOTS = 16384
@@ -68,6 +72,59 @@ class NodeManager:
         self._skip_full_coverage_check = skip_full_coverage_check
         self.nodemanager_follow_cluster = nodemanager_follow_cluster
         self.replicas_per_shard = 0
+
+    def determine_slots(
+        self,
+        command: bytes,
+        *args: RedisValueT,
+        readonly: bool = False,
+        **options: Unpack[ExecutionParameters],
+    ) -> set[int]:
+        """Determines the slots the command and args would touch"""
+        keys = cast(tuple[RedisValueT, ...], options.get("keys")) or KeySpec.extract_keys(
+            command,
+            *args,
+            readonly_command=readonly,
+        )
+        if (
+            command
+            in {
+                CommandName.EVAL,
+                CommandName.EVAL_RO,
+                CommandName.EVALSHA,
+                CommandName.EVALSHA_RO,
+                CommandName.FCALL,
+                CommandName.FCALL_RO,
+                CommandName.PUBLISH,
+            }
+            and not keys
+        ):
+            return set()
+
+        return {hash_slot(b(key)) for key in keys}
+
+    def determine_node(
+        self,
+        command: bytes,
+        *args: RedisValueT,
+        node_flag: NodeFlag | None = None,
+        **kwargs: Unpack[ExecutionParameters],
+    ) -> list[ManagedNode] | None:
+        if node_flag == NodeFlag.RANDOM:
+            return [self.random_node(primary=True)]
+        elif node_flag == NodeFlag.PRIMARIES:
+            return list(self.all_primaries())
+        elif node_flag == NodeFlag.ALL:
+            return list(self.all_nodes())
+        elif node_flag == NodeFlag.SLOT_ID and (
+            slot_arguments_range := kwargs.get("slot_arguments_range", None)
+        ):
+            slot_start, slot_end = slot_arguments_range
+            nodes = list(
+                self.nodes_from_slots(*cast(tuple[int, ...], args[slot_start:slot_end])).keys()
+            )
+            return [self.nodes[k] for k in nodes]
+        return None
 
     def keys_to_nodes_by_slot(self, *keys: RedisValueT) -> dict[str, dict[int, list[RedisValueT]]]:
         mapping: dict[str, dict[int, list[RedisValueT]]] = {}
