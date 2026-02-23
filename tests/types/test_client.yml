@@ -51,3 +51,15 @@
     from coredis import {{class}}
     redis = {{class}}.from_url("redis://locahost:6379", {{args}})
     assert_type(redis, {{expected}})
+- case: single_client_from_cluster
+  parametrized:
+    - args: decode_responses=False
+      expected: Redis[bytes]
+    - args: decode_responses=True
+      expected: Redis[str]
+  main: |
+    from typing import assert_type
+    from coredis import Redis, RedisCluster
+    cluster = RedisCluster.from_url("redis://locahost:6379", {{args}})
+    for primary in cluster.primaries:
+        assert_type(primary, {{expected}})
