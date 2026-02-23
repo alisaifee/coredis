@@ -15,6 +15,7 @@ from deprecated.sphinx import versionadded, versionchanged
 
 from coredis._concurrency import gather
 from coredis.client.basic import Client, Redis
+from coredis.cluster._node import ClusterNodeLocation
 from coredis.commands._key_spec import KeySpec
 from coredis.commands._validators import mutually_inclusive_parameters
 from coredis.commands.constants import CommandName, NodeFlag
@@ -54,7 +55,6 @@ from coredis.typing import (
     Iterator,
     KeyT,
     Literal,
-    ManagedNode,
     Mapping,
     Node,
     Parameters,
@@ -688,9 +688,7 @@ class RedisCluster(
             yield self
 
     def __repr__(self) -> str:
-        servers = list(
-            {f"{info.host}:{info.port}" for info in self.connection_pool.nodes.startup_nodes}
-        )
+        servers = list(node.name for node in self.connection_pool.nodes.all_nodes())
         servers.sort()
 
         return "{}<{}>".format(type(self).__name__, ", ".join(servers))
@@ -699,28 +697,19 @@ class RedisCluster(
     def all_nodes(self) -> Iterator[Redis[AnyStr]]:
         """ """
         for node in self.connection_pool.nodes.all_nodes():
-            yield cast(
-                Redis[AnyStr],
-                self.connection_pool.nodes.get_redis_link(node.host, node.port),
-            )
+            yield node.as_client(**self.connection_pool.connection_kwargs)
 
     @property
     def primaries(self) -> Iterator[Redis[AnyStr]]:
         """ """
         for primary in self.connection_pool.nodes.all_primaries():
-            yield cast(
-                Redis[AnyStr],
-                self.connection_pool.nodes.get_redis_link(primary.host, primary.port),
-            )
+            yield primary.as_client(**self.connection_pool.connection_kwargs)
 
     @property
     def replicas(self) -> Iterator[Redis[AnyStr]]:
         """ """
         for replica in self.connection_pool.nodes.all_replicas():
-            yield cast(
-                Redis[AnyStr],
-                self.connection_pool.nodes.get_redis_link(replica.host, replica.port),
-            )
+            yield replica.as_client(**self.connection_pool.connection_kwargs)
 
     @property
     def num_replicas_per_shard(self) -> int:
@@ -728,7 +717,9 @@ class RedisCluster(
         Number of replicas per shard of the cluster determined by
         initial cluster topology discovery
         """
-        return self.connection_pool.nodes.replicas_per_shard
+        if replicas := list(self.replicas):
+            return int((len(list(self.all_nodes)) / len(replicas)) - 1)
+        return 0
 
     async def _ensure_initialized(self) -> None:
         if not self.connection_pool.initialized or self.refresh_table_asap:
@@ -786,8 +777,9 @@ class RedisCluster(
         if command.name in self.split_flags and self.non_atomic_cross_slot:
             node_flag = self.split_flags[command.name]
 
+        readonly = command.name in READONLY_COMMANDS and self.connection_pool.read_from_replicas
         nodes = self.connection_pool.nodes.determine_node(
-            command.name, *command.arguments, node_flag=node_flag, **kwargs
+            command.name, *command.arguments, node_flag=node_flag, readonly=readonly, **kwargs
         )
         if nodes and len(nodes) > 1:
             tasks: dict[str, Coroutine[Any, Any, R]] = {}
@@ -797,13 +789,12 @@ class RedisCluster(
                 *command.arguments,
                 slot_arguments_range=kwargs.get("slot_arguments_range", None),
             )
-            node_name_map = {n.name: n for n in nodes}
-            for node_name in node_arg_mapping:
-                for portion, pargs in enumerate(node_arg_mapping[node_name]):
-                    tasks[f"{node_name}:{portion}"] = self._execute_command_on_single_node(
+            for node in node_arg_mapping:
+                for portion, pargs in enumerate(node_arg_mapping[node]):
+                    tasks[f"{node.name}:{portion}"] = self._execute_command_on_single_node(
                         RedisCommand(command.name, pargs),
                         callback=callback,
-                        node=node_name_map[node_name],
+                        node=node,
                         slots=None,
                         **kwargs,
                     )
@@ -820,7 +811,7 @@ class RedisCluster(
                     self.connection_pool.nodes.determine_slots(
                         command.name,
                         *command.arguments,
-                        self.connection_pool.read_from_replicas,
+                        readonly=readonly,
                         **kwargs,
                     )
                 )
@@ -836,13 +827,13 @@ class RedisCluster(
 
     def _split_args_over_nodes(
         self,
-        nodes: list[ManagedNode],
+        nodes: list[ClusterNodeLocation],
         command: bytes,
         *args: RedisValueT,
         slot_arguments_range: tuple[int, int] | None = None,
-    ) -> dict[str, list[tuple[RedisValueT, ...]]]:
+    ) -> dict[ClusterNodeLocation, list[tuple[RedisValueT, ...]]]:
         node_flag = self.route_flags.get(command)
-        node_arg_mapping: dict[str, list[tuple[RedisValueT, ...]]] = {}
+        node_arg_mapping: dict[ClusterNodeLocation, list[tuple[RedisValueT, ...]]] = {}
         if command in self.split_flags and self.non_atomic_cross_slot:
             keys = KeySpec.extract_keys(command, *args)
             if keys:
@@ -853,11 +844,11 @@ class RedisCluster(
                 )
 
                 for (
-                    node_name,
+                    node,
                     key_groups,
                 ) in self.connection_pool.nodes.keys_to_nodes_by_slot(*keys).items():
                     for _, node_keys in key_groups.items():
-                        node_arg_mapping.setdefault(node_name, []).append(
+                        node_arg_mapping.setdefault(node, []).append(
                             (
                                 *args[:key_start],
                                 *node_keys,  # type: ignore
@@ -877,18 +868,18 @@ class RedisCluster(
         else:
             # This command is not meant to be split across nodes and each node
             # should be called with the same arguments
-            node_arg_mapping = {node.name: [args] for node in nodes}
+            node_arg_mapping = {node: [args] for node in nodes}
         return node_arg_mapping
 
     async def _execute_command_on_single_node(
         self,
         command: RedisCommandP,
         callback: Callable[..., R] = NoopCallback(),
-        node: ManagedNode | None = None,
+        node: ClusterNodeLocation | None = None,
         slots: list[int] | None = None,
         **kwargs: Unpack[ExecutionParameters],
     ) -> R:
-        redirect_addr = None
+        redirect_location = None
         pool = self.connection_pool
         asking = False
 
@@ -909,8 +900,8 @@ class RedisCluster(
                 await self.connection_pool.refresh_cluster_mapping(forced=True)
                 self.refresh_table_asap = False
             _node = None
-            if asking and redirect_addr:
-                _node = pool.nodes.nodes[redirect_addr]
+            if asking and redirect_location:
+                _node = pool.nodes.node_from_location(redirect_location)
             elif try_random_node:
                 _node = None
                 if slots:
@@ -1012,15 +1003,13 @@ class RedisCluster(
                 # can set the variable 'reinitialize_steps' in the constructor.
                 self.refresh_table_asap = True
                 await pool.nodes.increment_reinitialize_counter()
-
-                node = pool.nodes.set_node(e.host, e.port, server_type="primary")
+                node = pool.nodes.update_primary(e.slot_id, e.host, e.port)
                 try_random_node = False
-                pool.nodes.slots[e.slot_id][0] = node
             except TryAgainError:
                 if remaining_attempts < self.MAX_RETRIES / 2:
                     await sleep(0.05)
             except AskError as e:
-                redirect_addr, asking = f"{e.host}:{e.port}", True
+                redirect_location, asking = TCPLocation(e.host, e.port), True
             except (RedisClusterError, BusyLoadingError, get_cancelled_exc_class()):
                 raise
             finally:

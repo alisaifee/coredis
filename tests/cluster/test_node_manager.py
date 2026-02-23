@@ -42,7 +42,7 @@ class TestStartupNodes:
             password="sekret",
         )
         await manager.initialize()
-        assert len(manager.nodes) > 1
+        assert len(list(manager.all_nodes())) > 1
 
     async def test_partially_down_startup_nodes(self, redis_cluster_server):
         startup_nodes = [

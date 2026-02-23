@@ -9,6 +9,7 @@ from deprecated.sphinx import versionchanged
 
 from coredis._utils import nativestr
 from coredis.client import Client, RedisCluster
+from coredis.cluster._node import ClusterNodeLocation
 from coredis.commands import CommandRequest, CommandResponseT
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName
@@ -46,7 +47,6 @@ from coredis.typing import (
     Generator,
     Iterable,
     KeyT,
-    ManagedNode,
     ParamSpec,
     RedisCommand,
     RedisCommandP,
@@ -194,7 +194,7 @@ class NodeCommands(AsyncContextManagerMixin):
     def __init__(
         self,
         client: RedisCluster[AnyStr],
-        node: ManagedNode,
+        node: ClusterNodeLocation,
         connection: BaseConnection | None = None,
         in_transaction: bool = False,
         timeout: float | None = None,
@@ -669,7 +669,7 @@ class ClusterPipeline(Client[AnyStr]):
         self.result_callbacks = client.result_callbacks
         self._raise_on_error = raise_on_error
         self._transaction = transaction
-        self._watched_node: ManagedNode | None = None
+        self._watched_node: ClusterNodeLocation | None = None
         self._watched_connection: BaseConnection | None = None
         self.watches: list[KeyT] = []
         self.explicit_transaction = False

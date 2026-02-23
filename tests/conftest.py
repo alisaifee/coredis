@@ -173,10 +173,7 @@ async def check_test_constraints(request, client):
         if marker.name == "replicated_clusteronly":
             is_cluster = isinstance(client, coredis.RedisCluster)
 
-            if not is_cluster or not any(
-                node.server_type == "replica"
-                for _, node in client.connection_pool.nodes.nodes.items()
-            ):
+            if not is_cluster or not list(client.replicas):
                 return pytest.skip("Skipped for non replicated cluster")
 
         if marker.name == "runtimechecks" and not RUNTIME_TYPECHECKS:

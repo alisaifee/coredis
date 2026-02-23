@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import random
 import warnings
 from contextlib import asynccontextmanager
 from typing import Any
@@ -10,6 +9,7 @@ from anyio.abc import TaskStatus
 
 from coredis._concurrency import Queue, QueueFull
 from coredis._utils import query_param_to_bool
+from coredis.cluster._node import ClusterNodeLocation
 from coredis.connection import (
     BaseConnectionParams,
     ClusterConnection,
@@ -26,7 +26,6 @@ from coredis.typing import (
     ClassVar,
     Iterable,
     KeyT,
-    ManagedNode,
     Node,
     NotRequired,
     Self,
@@ -153,7 +152,6 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
             startup_nodes=self.startup_nodes,
             reinitialize_steps=reinitialize_steps,
             skip_full_coverage_check=skip_full_coverage_check,
-            max_connections=self.max_connections,
             nodemanager_follow_cluster=nodemanager_follow_cluster,
             **connection_kwargs,
         )
@@ -198,7 +196,7 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
 
         return "{}<{}>".format(
             type(self).__name__,
-            ", ".join([node.name for node in self.nodes.startup_nodes]),
+            ", ".join([node.name for node in list(self.nodes.all_nodes())]),
         )
 
     async def _initialize(self) -> None:
@@ -215,22 +213,21 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
                     return
                 await self.nodes.initialize()
                 for node in list(self._cluster_available_connections.keys()):
-                    if ManagedNode(node.host, node.port).name not in self.nodes.nodes:
+                    if not self.nodes.node_from_location(node):
                         self._cluster_available_connections.pop(node)
-                if not self.max_connections_per_node and self.max_connections < len(
-                    self.nodes.nodes
-                ):
+                total_nodes = len(list(self.nodes.all_nodes()))
+                if not self.max_connections_per_node and self.max_connections < total_nodes:
                     warnings.warn(
                         f"The value of max_connections={self.max_connections} "
                         "should be atleast equal to the number of nodes "
-                        f"({len(self.nodes.nodes)}) in the cluster and has been increased by "
-                        f"{len(self.nodes.nodes) - self.max_connections} connections."
+                        f"({total_nodes}) in the cluster and has been increased by "
+                        f"{total_nodes - self.max_connections} connections."
                     )
-                    self.max_connections = len(self.nodes.nodes)
+                    self.max_connections = total_nodes
                 self.initialized = True
 
     async def get_connection(
-        self, node: ManagedNode | None = None, primary: bool = True, **options: Any
+        self, node: ClusterNodeLocation | None = None, primary: bool = True, **options: Any
     ) -> ClusterConnection:
         """
         Acquires a connection from the cluster pool. If no node
@@ -253,7 +250,7 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
     @asynccontextmanager
     async def acquire(
         self,
-        node: ManagedNode | None = None,
+        node: ClusterNodeLocation | None = None,
         primary: bool = True,
         **options: Any,
     ) -> AsyncGenerator[ClusterConnection]:
@@ -269,6 +266,43 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         connection = await self.get_connection(node=node, primary=primary, **options)
         yield connection
         self.release(connection)
+
+    def get_primary_node_by_slots(self, slots: list[int]) -> ClusterNodeLocation:
+        nodes = self.nodes.nodes_from_slots(*slots, primary=True)
+
+        if len(nodes) == 1:
+            return list(nodes.keys())[0]
+        else:
+            raise RedisClusterError(f"Unable to map slots {slots} to a single node")
+
+    def get_replica_node_by_slots(
+        self, slots: list[int], replica_only: bool = False
+    ) -> ClusterNodeLocation:
+        # first map primaries for the slots to ensure they all map to the same node
+        primaries = self.nodes.nodes_from_slots(*slots)
+        replicas = self.nodes.nodes_from_slots(*slots, primary=False)
+
+        if len(primaries) == 1:
+            return (list(replicas.keys()) or list(primaries.keys())).pop()
+        else:
+            raise RedisClusterError(f"Unable to map slots {slots} to a single node")
+
+    def get_node_by_slot(self, slot: int, command: bytes | None = None) -> ClusterNodeLocation:
+        if self.read_from_replicas and command in READONLY_COMMANDS:
+            return self.get_replica_node_by_slots([slot], replica_only=True)
+
+        return self.get_primary_node_by_slots([slot])
+
+    def get_node_by_slots(
+        self, slots: list[int], command: bytes | None = None
+    ) -> ClusterNodeLocation:
+        if self.read_from_replicas and command in READONLY_COMMANDS:
+            return self.get_replica_node_by_slots(slots, replica_only=True)
+
+        return self.get_primary_node_by_slots(slots)
+
+    def get_node_by_keys(self, keys: list[KeyT]) -> ClusterNodeLocation:
+        return self.get_node_by_slots(list(self.nodes.keys_to_slots(*keys)))
 
     def release(self, connection: ClusterConnection) -> None:
         """Releases the connection back to the pool"""
@@ -309,7 +343,7 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
                 node_pool.remove(connection)
                 node_pool.append_nowait(None)
 
-    async def __make_node_connection(self, node: ManagedNode) -> ClusterConnection:
+    async def __make_node_connection(self, node: ClusterNodeLocation) -> ClusterConnection:
         """Creates a new connection to a node"""
 
         location = TCPLocation(node.host, node.port)
@@ -335,22 +369,14 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
             1,
             self.max_connections
             if self.max_connections_per_node
-            else self.max_connections // len(self.nodes.nodes),
+            else self.max_connections // len(list(self.nodes.all_nodes())),
         )
         return Queue[ClusterConnection](q_size)
 
     async def __get_random_connection(self, primary: bool = False) -> ClusterConnection:
-        """Opens new connection to random redis server in the cluster"""
+        return await self.__get_connection_by_node(self.nodes.random_node(primary))
 
-        for node in self.nodes.random_startup_node_iter(primary):
-            connection = await self.__get_connection_by_node(node)
-
-            if connection:
-                return connection
-        raise RedisClusterError("Cant reach a single startup node.")
-
-    async def __get_connection_by_node(self, node: ManagedNode) -> ClusterConnection:
-        """Gets a connection by node"""
+    async def __get_connection_by_node(self, node: ClusterNodeLocation) -> ClusterConnection:
         location = TCPLocation(node.host, node.port)
         with fail_after(self.timeout):
             connection = await self.__node_pool(location).get()
@@ -359,45 +385,3 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
             connection = await self.__make_node_connection(node)
 
         return connection
-
-    def get_primary_node_by_slots(self, slots: list[int]) -> ManagedNode:
-        nodes = {self.nodes.slots[slot][0].node_id for slot in slots}
-
-        if len(nodes) == 1:
-            return self.nodes.slots[slots[0]][0]
-        else:
-            raise RedisClusterError(f"Unable to map slots {slots} to a single node")
-
-    def get_replica_node_by_slots(
-        self, slots: list[int], replica_only: bool = False
-    ) -> ManagedNode:
-        nodes_from_slots = {self.nodes.slots[slot][0].node_id for slot in slots}
-
-        if len(nodes_from_slots) == 1:
-            # Since all slots map to the same node we can just use the first
-            slot = slots[0]
-            candidates = self.nodes.slots.get(slot, [])
-            if replica_only:
-                candidates = [node for node in candidates if node.server_type != "primary"]
-                # *TODO* perhaps if a primary is available and all replicas are down we could
-                # return a primary.
-            if not candidates:
-                raise RedisClusterError(f"No nodes available for slot {slot}")
-            return random.choice(candidates)
-        else:
-            raise RedisClusterError(f"Unable to map slots {slots} to a single node")
-
-    def get_node_by_slot(self, slot: int, command: bytes | None = None) -> ManagedNode:
-        if self.read_from_replicas and command in READONLY_COMMANDS:
-            return self.get_replica_node_by_slots([slot], replica_only=True)
-
-        return self.get_primary_node_by_slots([slot])
-
-    def get_node_by_slots(self, slots: list[int], command: bytes | None = None) -> ManagedNode:
-        if self.read_from_replicas and command in READONLY_COMMANDS:
-            return self.get_replica_node_by_slots(slots, replica_only=True)
-
-        return self.get_primary_node_by_slots(slots)
-
-    def get_node_by_keys(self, keys: list[KeyT]) -> ManagedNode:
-        return self.get_node_by_slots(list(self.nodes.keys_to_slots(*keys)))
