@@ -1,0 +1,115 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/typeddjango/pytest-mypy-plugins/master/pytest_mypy_plugins/schema.json
+- case: hdel
+  with_client:
+      client_params: {}
+  parametrized:
+    - fields: '["a", "b", "c"]'
+    - fields: '[b"a", b"b", b"c"]'
+    - fields: '(b"a", b"b", b"c")'
+  main: |
+      fields = {{fields}}
+      deleted: int = await client.hdel("key", fields)
+- case: hexpire
+  parametrized:
+    - fields: '["test", b"test"]'
+      field_type: list[str|bytes]
+      expiry: 1
+    - fields: '[b"test", b"test"]'
+      field_type: list[bytes]
+      expiry: datetime.timedelta(seconds=1)
+    - fields: '(b"test", b"test")'
+      field_type: tuple[bytes, ...]
+      expiry: 1
+  with_client:
+  main: |
+    import datetime
+    fields: {{field_type}} = {{fields}}
+    expired: tuple[int, ...] = await client.hexpire("key", {{expiry}}, fields)
+- case: hget
+  with_client:
+      client_params: {}
+  main: |
+      value: bytes | None = await client.hget("test", "field")
+- case: hgetall
+  with_client:
+      client_params: {}
+  main: |
+      mapping: dict[bytes, bytes] = await client.hgetall("test")
+- case: hgetdel
+  parametrized:
+    - fields: '["a", "b", "c"]'
+  with_client:
+      client_params: {}
+  main: |
+      fields = {{fields}}
+      values: tuple[bytes | None, ...] = await client.hgetdel("test", fields)
+- case: hgetex
+  parametrized:
+    - fields: '["a", "b", "c"]'
+  with_client:
+      client_params: {}
+  main: |
+      fields = {{fields}}
+      values: tuple[bytes | None, ...] = await client.hgetex("test", fields)
+- case: hmget
+  parametrized:
+    - fields: '["a", "b", "c"]'
+  with_client:
+  main: |
+      fields = {{fields}}
+      values: tuple[bytes|None, ...] = await client.hmget("test", fields)
+- case: hset
+  parametrized:
+    - type: dict[str|int, str|bytes]
+      fields: {a: "b", 2: "c"}
+    - type: dict[str, int]
+      fields: {a: 1, b: 2}
+    - type: dict[str, str]
+      fields: {a: "b", c: "c"}
+  with_client:
+      client_params: {}
+  main: |
+      fields: {{type}} = {{fields}}
+      count: int = await client.hset("test", fields)
+- case: hset_invalid
+  parametrized:
+    - type: list[int|str]
+      fields: ["a", 1]
+    - type: dict[str, list[int]]
+      fields: {a: [1,2]}
+  expect_fail: true
+  with_client:
+    client_params: {}
+  main: |
+      fields: {{type}} = {{fields}}
+      count: bool = await client.hset("test", fields)
+- case: hrandfield_single
+  with_client:
+    client_params: {}
+  main: |
+      rand_field: bytes = await client.hrandfield("test")
+- case: hrandfield_multiple
+  with_client:
+    client_params: {}
+  main: |
+      rand_field: tuple[bytes, ...] = await client.hrandfield("test", count=10)
+- case: hrandfield_with_values
+  with_client:
+    client_params: {}
+  main: |
+      rand_field: dict[bytes, bytes] = await client.hrandfield("test", count=10, withvalues=True)
+- case: hscan
+  with_client:
+    client_params: {}
+  main: |
+      cursor: int
+      values: dict[bytes, bytes]
+      cursor, values = await client.hscan("key")
+
+- case: hscan_novalues
+  with_client:
+    client_params: {}
+  main: |
+      cursor: int
+      values: tuple[bytes, ...]
+      cursor, values = await client.hscan("key", novalues=True)

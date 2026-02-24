@@ -2780,6 +2780,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         self,
         key: KeyT,
         *,
+        count: None = ...,
+    ) -> CommandRequest[AnyStr]: ...
+    @overload
+    def hrandfield(
+        self,
+        key: KeyT,
+        *,
         withvalues: Literal[True],
         count: int = ...,
     ) -> CommandRequest[dict[AnyStr, AnyStr]]: ...

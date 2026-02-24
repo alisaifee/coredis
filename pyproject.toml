@@ -80,12 +80,13 @@ test = [
   "pytest-lazy-fixtures",
   "pytest-mock",
   "pytest-reverse",
+  "pytest-mypy-plugins>=3.3.0; implementation_name != 'pypy'",
   "redis[hiredis]",
   "aiobotocore>=2.15.2",
   "asyncache>=0.3.1",
   "moto",
   "trio>=0.31.0",
-  "uvloop; platform.python_implementation != 'PyPy'",
+  "uvloop; implementation_name != 'pypy'",
 ]
 
 dev = [
@@ -94,7 +95,7 @@ dev = [
   "hatch-mypyc>=0.1.0",
   "inflect>=6.0.0",
   "Jinja2==3.1.5",
-  "mypy==1.19.1; implementation_name!='pypy'",
+  "mypy==1.19.1; implementation_name != 'pypy'",
   "ruff",
   "types-deprecated",
   {include-group = "test"},
@@ -241,6 +242,53 @@ typing-modules = ["coredis.typing"]
 
 [tool.ruff.lint.isort]
 required-imports = ["from __future__ import annotations"]
+
+[tool.pytest]
+anyio_mode = "auto"
+testpaths = ["tests"]
+
+addopts = [
+    "--verbose",
+    "--tb=short",
+    "--capture=no",
+    "-rfE",
+    "-K"
+]
+markers = [
+    "auth",
+    "basic",
+    "blocking",
+    "cred",
+    "raw",
+    "cluster",
+    "nodragonfly",
+    "novalkey",
+    "dragonfly",
+    "sentinel",
+    "stack",
+    "valkey",
+    "ssl",
+    "uds",
+    "nocluster",
+    "noreplica",
+    "clusteronly",
+    "replicated_clusteronly",
+    "cached",
+    "min_python",
+    "min_module_version",
+    "max_module_version",
+    "min_server_version",
+    "max_server_version",
+    "os",
+    "nopypy",
+    "pypyonly",
+    "provider",
+    "runtimechecks",
+    "noruntimechecks"
+]
+env = [
+  "D:COREDIS_RUNTIME_CHECKS=true"
+]
 
 [tool.cibuildwheel.environment]
 HATCH_BUILD_HOOKS_ENABLE = "1"

@@ -1096,3 +1096,9 @@ def pytest_collection_modifyitems(items):
                 for token in tokens:
                     item.add_marker(getattr(pytest.mark, token))
                     item.add_marker(getattr(pytest.mark, token))
+
+
+def pytest_configure(config):
+    if config.pluginmanager.hasplugin("pytest-mypy-plugins"):
+        config.option.mypy_only_local_stub = True
+        config.option.mypy_extension_hook = "tests.types.plugin_hook.hook"
