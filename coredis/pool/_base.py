@@ -129,11 +129,11 @@ class BaseConnectionPool(ABC, Generic[ConnectionT]):
     async def __aexit__(self, *args: Any) -> None:
         self._counter -= 1
         if self._counter == 0:
-            self._reset()
             self._task_group.cancel_scope.cancel()
-            await self._task_group.__aexit__(*args)
+            self._reset()
             if self._anchor_reset_token:
                 self._anchor_active.reset(self._anchor_reset_token)
+            await self._task_group.__aexit__(*args)
 
     @abstractmethod
     async def _initialize(self) -> None:
