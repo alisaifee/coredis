@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import anyio
 import pytest
 
 import coredis.connection
@@ -237,6 +238,24 @@ class TestSharedConnectionPool:
             async with borrower:
                 await borrower.ping()
                 assert not connect_tcp.call_count
+
+    async def test_concurrent_initialization(self, client, cloner, mocker):
+        clone = await cloner(client)
+        pool = clone.connection_pool
+
+        async def ping(pool):
+            async with client.__class__(connection_pool=pool) as c:
+                await c.ping()
+
+        ping_spy = mocker.spy(client.__class__, "ping")
+
+        with pytest.raises(Exception) as exc_info:
+            async with anyio.create_task_group() as tg:
+                [tg.start_soon(ping, pool) for _ in range(10)]
+        assert exc_info.group_contains(
+            RuntimeError, match="Implicit concurrent connection pool sharing detected"
+        )
+        ping_spy.assert_called_once()
 
     @pytest.mark.parametrize("client_arguments", [{"cache": LRUCache()}])
     async def test_shared_cache(self, client, client_arguments, mocker):

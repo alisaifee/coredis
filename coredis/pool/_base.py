@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import contextvars
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
 from anyio import (
+    Lock,
     create_task_group,
 )
 from anyio.abc import TaskGroup
@@ -96,19 +98,33 @@ class BaseConnectionPool(ABC, Generic[ConnectionT]):
         self.location = location
         # reference count for context manager to support this pool being re-entered.
         self._counter = 0
+        # context to track whether the intializing task (anchor) is active
+        self._anchor_active = contextvars.ContextVar("parent_active", default=False)
+        self._anchor_reset_token: contextvars.Token[bool] | None = None
+        self._initialization_lock = Lock()
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{self.location}>"
 
     async def __aenter__(self) -> Self:
-        if self._counter == 0:
-            self._task_group = create_task_group()
-            self._counter += 1
-            await self._task_group.__aenter__()
-            await self._initialize()
-        else:
-            self._counter += 1
-        return self
+        async with self._initialization_lock:
+            if self._counter == 0:
+                self._task_group = create_task_group()
+                self._anchor_reset_token = self._anchor_active.set(True)
+                self._counter += 1
+                await self._task_group.__aenter__()
+                await self._initialize()
+            else:
+                if not self._anchor_active.get():
+                    raise RuntimeError(
+                        "Implicit concurrent connection pool sharing detected. "
+                        "You must explicitly enter the pool in a parent task "
+                        "(`async with pool:`) before spawning concurrent tasks that "
+                        "share it to ensure that cleanup occurs in the same "
+                        "task where it was initialized."
+                    )
+                self._counter += 1
+            return self
 
     async def __aexit__(self, *args: Any) -> None:
         self._counter -= 1
@@ -116,6 +132,8 @@ class BaseConnectionPool(ABC, Generic[ConnectionT]):
             self._reset()
             self._task_group.cancel_scope.cancel()
             await self._task_group.__aexit__(*args)
+            if self._anchor_reset_token:
+                self._anchor_active.reset(self._anchor_reset_token)
 
     @abstractmethod
     async def _initialize(self) -> None:
