@@ -21,7 +21,7 @@
       expected: RedisCluster[str]
 
   main: |
-    from typing import assert_type
+    from typing_extensions import assert_type
     from coredis import {{class}}
     redis = {{class}}({{args}})
     assert_type(redis, {{expected}})
@@ -47,7 +47,7 @@
       expected: RedisCluster[str]
 
   main: |
-    from typing import assert_type
+    from typing_extensions import assert_type
     from coredis import {{class}}
     redis = {{class}}.from_url("redis://locahost:6379", {{args}})
     assert_type(redis, {{expected}})
@@ -58,7 +58,7 @@
     - args: decode_responses=True
       expected: Redis[str]
   main: |
-    from typing import assert_type
+    from typing_extensions import assert_type
     from coredis import Redis, RedisCluster
     cluster = RedisCluster.from_url("redis://locahost:6379", {{args}})
     for primary in cluster.primaries:
