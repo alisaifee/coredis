@@ -363,11 +363,11 @@ class Client(
                 assert None == await client.set("fubar", 1), "noreply"
             assert True == await client.set("fubar", 1), "reply"
         """
-        self._noreplycontext.set(True)
+        noreply_reset_token = self._noreplycontext.set(True)
         try:
             yield self
         finally:
-            self._noreplycontext.set(None)
+            self._noreplycontext.reset(noreply_reset_token)
 
     @contextlib.contextmanager
     def ensure_replication(
@@ -390,11 +390,11 @@ class Client(
                 await client.set("fubar", 1)
 
         """
-        self._waitcontext.set((replicas, timeout_ms))
+        replication_reset_token = self._waitcontext.set((replicas, timeout_ms))
         try:
             yield self
         finally:
-            self._waitcontext.set(None)
+            self._waitcontext.reset(replication_reset_token)
 
     @versionadded(version="4.12.0")
     @contextlib.contextmanager
@@ -427,11 +427,11 @@ class Client(
                 await client.set("fubar", 1)
 
         """
-        self._waitaof_context.set((local, replicas, timeout_ms))
+        persistence_reset_token = self._waitaof_context.set((local, replicas, timeout_ms))
         try:
             yield self
         finally:
-            self._waitaof_context.set(None)
+            self._waitaof_context.reset(persistence_reset_token)
 
     def should_quick_release(self, command: RedisCommandP) -> bool:
         return CommandFlag.BLOCKING not in COMMAND_FLAGS[command.name]
@@ -1011,15 +1011,13 @@ class Redis(Client[AnyStr]):
                     assert await client.get("fubar") == "baz"
 
         """
-        prev_decode = self._decodecontext.get()
-        prev_encoding = self._encodingcontext.get()
-        self._decodecontext.set(mode)
-        self._encodingcontext.set(encoding)
+        decode_token = self._decodecontext.set(mode)
+        encode_token = self._encodingcontext.set(encoding)
         try:
             yield self
         finally:
-            self._decodecontext.set(prev_decode)
-            self._encodingcontext.set(prev_encoding)
+            self._decodecontext.reset(decode_token)
+            self._encodingcontext.reset(encode_token)
 
     def pubsub(
         self,
