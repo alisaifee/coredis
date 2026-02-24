@@ -95,7 +95,7 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         in the redis cluster
 
         Changes
-          - .. versiondeprecated:: 6.2.0
+          - .. deprecated:: 6.2.0
 
             - :paramref:`startup_nodes` should not be passed as dictionaries
                and instead migrate to use instances of :class:`~coredis.connection.TCPLocation`
