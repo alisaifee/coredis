@@ -21,16 +21,16 @@ class DiscoveryService:
         follow_cluster: bool = True,
         **connection_kwargs: Unpack[BaseConnectionParams],
     ) -> None:
-        self.connection_kwargs = connection_kwargs
-        self._startup_nodes: list[ClusterNodeLocation] = (
+        self.__connection_kwargs = connection_kwargs
+        self.__startup_nodes: list[ClusterNodeLocation] = (
             []
             if startup_nodes is None
             else list(ClusterNodeLocation(n.host, n.port) for n in startup_nodes if n)
         )
-        self._startup_nodes_reachable = False
-        self._initial_startup_nodes = list(self._startup_nodes)
-        self._follow_cluster = follow_cluster
-        self._skip_full_coverage_check = skip_full_coverage_check
+        self.__startup_nodes_reachable = False
+        self.__initial_startup_nodes = list(self.__startup_nodes)
+        self.__follow_cluster = follow_cluster
+        self.__skip_full_coverage_check = skip_full_coverage_check
 
     async def get_cluster_layout(self) -> ClusterLayout:
         """
@@ -41,7 +41,7 @@ class DiscoveryService:
         Maybe it should stop to try after it have correctly covered all slots or when one node is
         reached and it could execute CLUSTER SLOTS command.
         """
-        self._startup_nodes_reachable = False
+        self.__startup_nodes_reachable = False
 
         nodes_cache: dict[TCPLocation, ClusterNodeLocation] = {}
         tmp_slots: dict[int, list[ClusterNodeLocation]] = {}
@@ -51,20 +51,20 @@ class DiscoveryService:
         replicas: set[str] = set()
         startup_node_errors: dict[Exception, list[str]] = {}
 
-        nodes = self._initial_startup_nodes
+        nodes = self.__initial_startup_nodes
 
         # With this option the client will attempt to connect to any of the previous set of nodes
         # instead of the original set of startup nodes
-        if self._follow_cluster:
-            nodes = self._startup_nodes
+        if self.__follow_cluster:
+            nodes = self.__startup_nodes
 
         for node in nodes:
             cluster_slots = {}
             if node:
-                async with node.as_client(**self.connection_kwargs) as r:
+                async with node.as_client(**self.__connection_kwargs) as r:
                     try:
                         cluster_slots = await r.cluster_slots()
-                        self._startup_nodes_reachable = True
+                        self.__startup_nodes_reachable = True
                     except RedisError as err:
                         startup_node_errors.setdefault(err, []).append(node.name)
                         continue
@@ -72,12 +72,12 @@ class DiscoveryService:
             all_slots_covered = True
             # If there's only one server in the cluster, its ``host`` is ''
             # Fix it to the host in startup_nodes
-            if len(cluster_slots) == 1 and len(self._startup_nodes) == 1:
+            if len(cluster_slots) == 1 and len(self.__startup_nodes) == 1:
                 slots = cluster_slots.get((0, HASH_SLOTS - 1))
                 assert slots
                 single_node_slots = slots[0]
                 if len(single_node_slots["host"]) == 0:
-                    single_node_slots["host"] = self._startup_nodes[0].host
+                    single_node_slots["host"] = self.__startup_nodes[0].host
                     single_node_slots["server_type"] = "master"
 
             for min_slot, max_slot in cluster_slots:
@@ -125,7 +125,7 @@ class DiscoveryService:
 
                 self.refresh_table_asap = False
 
-            if not self._skip_full_coverage_check and (
+            if not self.__skip_full_coverage_check and (
                 await self._cluster_require_full_coverage(nodes_cache)
             ):
                 all_slots_covered = set(tmp_slots.keys()) == HASH_SLOTS_SET
@@ -133,7 +133,7 @@ class DiscoveryService:
             if all_slots_covered:
                 break
 
-        if not self._startup_nodes_reachable:
+        if not self.__startup_nodes_reachable:
             startup_error = RedisClusterError(
                 "Redis Cluster cannot be connected. Please provide at least one reachable node."
             )
@@ -146,8 +146,8 @@ class DiscoveryService:
                 f"{len(tmp_slots)} of {HASH_SLOTS} covered..."
             )
 
-        self._startup_nodes.clear()
-        self._startup_nodes.extend(nodes_cache.values())
+        self.__startup_nodes.clear()
+        self.__startup_nodes.extend(nodes_cache.values())
         return ClusterLayout(nodes_cache, tmp_slots)
 
     async def _cluster_require_full_coverage(
@@ -165,7 +165,7 @@ class DiscoveryService:
         return False
 
     async def _node_require_full_coverage(self, node: ClusterNodeLocation) -> bool:
-        async with node.as_client(**self.connection_kwargs) as r_node:
+        async with node.as_client(**self.__connection_kwargs) as r_node:
             try:
                 with r_node.decoding(False):
                     node_config = await r_node.config_get(["cluster-require-full-coverage"])
