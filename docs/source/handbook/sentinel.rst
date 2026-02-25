@@ -32,17 +32,21 @@ operations).
         # 'bar'
 
 The primary and replica instances are normal :class:`~coredis.Redis` instances with
-their connection pool bound to the Sentinel instance via :class:`~coredis.sentinel.SentinelConnectionPool`.
+their connection pool bound to the Sentinel instance via :class:`~coredis.pool.SentinelConnectionPool`.
 
-When a Sentinel backed client attempts to establish a connection, it first queries the Sentinel servers to
-determine an appropriate host to connect to. If no server is found,
+Failure Handling
+^^^^^^^^^^^^^^^^
+When a Sentinel backed client attempts to establish a connection, it first
+queries the Sentinel servers to determine an appropriate host to connect to. If no server is found,
 a :exc:`~coredis.exceptions.PrimaryNotFoundError` or :exc:`~coredis.exceptions.ReplicaNotFoundError` is raised.
-Both exceptions are subclasses of :exc:`~coredis.exceptions.ConnectionError`.
+Both exceptions are subclasses of :exc:`~coredis.exceptions.SentinelError`
 
 When trying to connect to a replica client, the Sentinel connection pool will
 iterate over the list of replicas until it finds one that can be connected to.
 If no replicas can be connected to, a connection will be established with the
 primary.
+
+
 
 Further Reading
 ^^^^^^^^^^^^^^^
