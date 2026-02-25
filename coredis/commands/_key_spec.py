@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from coredis._utils import b
+from coredis._utils import b, hash_slot
 from coredis.typing import Callable, ClassVar, RedisValueT
 
 
@@ -499,13 +499,11 @@ class KeySpec:
 
     @classmethod
     def extract_keys(
-        cls, *arguments: RedisValueT, readonly_command: bool = False
+        cls, command: bytes, *arguments: RedisValueT, readonly_command: bool = False
     ) -> tuple[RedisValueT, ...]:
-        if len(arguments) <= 1:
-            return ()
-
-        command = b(arguments[0])
-
+        """
+        Returns the keys from the command + arguments
+        """
         try:
             if readonly_command and command in cls.READONLY:
                 return cls.READONLY[command](arguments)
@@ -513,3 +511,13 @@ class KeySpec:
                 return cls.ALL[command](arguments)
         except KeyError:
             return ()
+
+    @classmethod
+    def affected_slots(
+        cls, command: bytes, *arguments: RedisValueT, readonly_command: bool = False
+    ) -> set[int]:
+        """
+        Returns the slots affected by the given command + arguments
+        """
+        keys = cls.extract_keys(command, *arguments, readonly_command=readonly_command)
+        return set([hash_slot(b(key)) for key in keys])
