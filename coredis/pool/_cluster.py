@@ -235,8 +235,6 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         must be returned back to the pool using the :meth:`release`
         method.
 
-        :param shared: Whether the connection can be shared with other
-         requests or is required for dedicated/blocking use.
         :param node:  The node for which to get a connection from
         :param primary: If False a connection from the replica will be returned
         """
