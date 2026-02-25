@@ -20,6 +20,14 @@ class UnixDomainSocketLocation(Location):
     def __repr__(self) -> str:
         return f"<path={self.path}>"
 
+    async def check(self) -> bool:
+        try:
+            async with await connect_unix(self.path):
+                return True
+        except OSError:
+            return False
+        return False
+
 
 class UnixDomainSocketConnection(BaseConnection):
     location: UnixDomainSocketLocation

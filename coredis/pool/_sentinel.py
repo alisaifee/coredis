@@ -84,12 +84,18 @@ class SentinelConnectionPool(ConnectionPool[SentinelManagedConnection]):
         if self.replicas:
             if self.replica_counter is None:
                 self.replica_counter = random.randint(0, len(self.replicas) - 1)
-            self.replica_counter = (self.replica_counter + 1) % len(self.replicas)
+            for _ in range(len(self.replicas)):
+                self.replica_counter = (self.replica_counter + 1) % len(self.replicas)
+                if await self.replicas[self.replica_counter].check():
+                    return self.replicas[self.replica_counter]
+            # None of the replicas were reachable so we'll need to contact the sentinels
+            # again.
+            self.replicas.clear()
+            self.replica_counter = None
 
-            return self.replicas[self.replica_counter]
-        else:
-            try:
-                return await self.get_primary_location()
-            except PrimaryNotFoundError:
-                pass
-            raise ReplicaNotFoundError(f"No replica found for {self.service_name!r}")
+        # If no replicas could be found/reached, lets try a primary for now.
+        try:
+            return await self.get_primary_location()
+        except PrimaryNotFoundError:
+            pass
+        raise ReplicaNotFoundError(f"No replica found for {self.service_name!r}")

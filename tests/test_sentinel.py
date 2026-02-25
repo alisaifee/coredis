@@ -66,6 +66,88 @@ async def test_replica_not_found_error(redis_sentinel: Sentinel, mocker):
             await replica.ping()
 
 
+@pytest.mark.parametrize("flag", ["is_odown", "is_sdown", "is_disconnected"])
+async def test_down_replicas_and_primary(redis_sentinel: Sentinel, mocker, flag):
+    sentinel_replicas = coredis.Redis.sentinel_replicas
+
+    async def mocked_sentinel_replicas(self, *args, **kwargs):
+        values = await sentinel_replicas(self, *args, **kwargs)
+        for primary in values:
+            primary[flag] = True
+        return values
+
+    mocker.patch.object(coredis.Redis, "sentinel_replicas", new=mocked_sentinel_replicas)
+    sentinel_get_master_addr_by_name = mocker.patch.object(
+        redis_sentinel.sentinels[0], "sentinel_get_master_addr_by_name", new_callable=AsyncMock
+    )
+    sentinel_get_master_addr_by_name.return_value = None
+
+    replica = redis_sentinel.replica_for("mymaster")
+    async with replica:
+        with pytest.raises(ReplicaNotFoundError):
+            await replica.ping()
+
+
+@pytest.mark.parametrize("flag", ["is_odown", "is_sdown", "is_disconnected"])
+async def test_partially_down_replicas(redis_sentinel: Sentinel, mocker, flag):
+    sentinel_replicas = coredis.Redis.sentinel_replicas
+
+    async def mocked_sentinel_replicas(self, *args, **kwargs):
+        values = await sentinel_replicas(self, *args, **kwargs)
+
+        extras = (dict(values[0]), dict(values[0]))
+        extras[0]["ip"] = "192.0.2.0"
+        extras[0]["port"] = "1234"
+        extras[0][flag] = True
+
+        extras[1]["ip"] = "192.0.2.0"
+        extras[1]["port"] = "1235"
+
+        return extras + values
+
+    mocker.patch.object(coredis.Redis, "sentinel_replicas", new=mocked_sentinel_replicas)
+    sentinel_get_master_addr_by_name = mocker.patch.object(
+        redis_sentinel.sentinels[0], "sentinel_get_master_addr_by_name", new_callable=AsyncMock
+    )
+    sentinel_get_master_addr_by_name.return_value = None
+
+    replica = redis_sentinel.replica_for("mymaster")
+    async with replica:
+        await replica.ping()
+
+
+async def test_all_replicas_unreachable(redis_sentinel: Sentinel, mocker):
+    sentinel_replicas = coredis.Redis.sentinel_replicas
+
+    async def mocked_sentinel_replicas(self, *args, **kwargs):
+        values = await sentinel_replicas(self, *args, **kwargs)
+
+        extras = (dict(values[0]), dict(values[0]))
+        extras[0]["ip"] = "192.0.2.0"
+        extras[0]["port"] = "1234"
+
+        extras[1]["ip"] = "192.0.2.0"
+        extras[1]["port"] = "1235"
+
+        return extras
+
+    mocker.patch.object(coredis.Redis, "sentinel_replicas", new=mocked_sentinel_replicas)
+
+    replica = redis_sentinel.replica_for("mymaster")
+    async with replica:
+        await replica.ping()
+
+    sentinel_get_master_addr_by_name = mocker.patch.object(
+        redis_sentinel.sentinels[0], "sentinel_get_master_addr_by_name", new_callable=AsyncMock
+    )
+    sentinel_get_master_addr_by_name.return_value = None
+
+    replica = redis_sentinel.replica_for("mymaster")
+    async with replica:
+        with pytest.raises(ReplicaNotFoundError):
+            await replica.ping()
+
+
 async def test_autodecode(redis_sentinel_server: tuple[str, int]):
     sentinel = Sentinel(sentinels=[redis_sentinel_server], decode_responses=True)
     async with sentinel:

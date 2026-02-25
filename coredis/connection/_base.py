@@ -62,12 +62,19 @@ ConnectionT = TypeVar("ConnectionT", bound="BaseConnection")
 
 
 @dataclasses.dataclass(unsafe_hash=True)
-class Location:
+class Location(ABC):
     """
     Abstract location
     """
 
     ...
+
+    @abstractmethod
+    async def check(self) -> bool:
+        """
+        Returns whether the location can be connected to
+        """
+        ...
 
 
 class BaseConnectionParams(TypedDict):

@@ -23,6 +23,14 @@ class TCPLocation(Location):
     def __repr__(self) -> str:
         return f"<host={self.host},port={self.port}>"
 
+    async def check(self) -> bool:
+        try:
+            async with await connect_tcp(self.host, self.port):
+                return True
+        except OSError:
+            return False
+        return False
+
 
 class TCPConnection(BaseConnection):
     location: TCPLocation

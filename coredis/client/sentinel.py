@@ -175,10 +175,10 @@ class Sentinel(AsyncContextManagerMixin, Generic[AnyStr]):
         """Removes replicas that are in an ODOWN or SDOWN state"""
         replicas_alive: list[tuple[str, int]] = []
         for replica in replicas:
-            if replica["is_odown"] or replica["is_sdown"]:
+            if replica["is_odown"] or replica["is_sdown"] or replica["is_disconnected"]:
                 continue
             ip, port = replica["ip"], replica["port"]
-            assert ip and port
+            assert ip is not None and port is not None
             replicas_alive.append((nativestr(ip), int(port)))
         return replicas_alive
 
