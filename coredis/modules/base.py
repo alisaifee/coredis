@@ -15,7 +15,16 @@ from ..commands._wrappers import (
 )
 from ..commands.constants import CommandFlag, CommandGroup, CommandName
 from ..commands.request import CommandRequest
-from ..globals import CACHEABLE_COMMANDS, COMMAND_FLAGS, MODULE_GROUPS, MODULES, READONLY_COMMANDS
+from ..globals import (
+    CACHEABLE_COMMANDS,
+    COMMAND_FLAGS,
+    MERGE_CALLBACKS,
+    MODULE_GROUPS,
+    MODULES,
+    READONLY_COMMANDS,
+    ROUTE_FLAGS,
+    SPLIT_FLAGS,
+)
 from ..typing import (
     AnyStr,
     Callable,
@@ -60,6 +69,12 @@ def module_command(
             READONLY_COMMANDS.add(command_name)
         if cacheable:
             CACHEABLE_COMMANDS.add(command_name)
+        if cluster.route:
+            ROUTE_FLAGS[command_name] = cluster.route
+        if cluster.split:
+            SPLIT_FLAGS[command_name] = cluster.split
+        if cluster.combine:
+            MERGE_CALLBACKS[command_name] = cluster.combine
         COMMAND_FLAGS[command_name] = flags or set()
 
         @functools.wraps(func)
