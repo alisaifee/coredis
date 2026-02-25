@@ -163,6 +163,15 @@ class TestBasicPoolParameters:
 
 
 class TestBasicConnectionPoolConstruction:
+    async def test_unintialized_pool(self, redis_basic_server):
+        pool = coredis.ConnectionPool(location=TCPLocation(*redis_basic_server))
+        with pytest.raises(RuntimeError, match="Connection pool is not initialized"):
+            async with pool.acquire() as _:
+                pass
+
+        with pytest.raises(RuntimeError, match="Connection pool is not initialized"):
+            await pool.get_connection()
+
     async def test_construction_with_tcp_location(self, redis_basic_server):
         async with coredis.ConnectionPool(location=TCPLocation(*redis_basic_server)) as pool:
             async with pool.acquire() as connection:

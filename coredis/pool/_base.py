@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextvars
+import functools
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
 from typing import Any
@@ -25,8 +26,10 @@ from coredis.typing import (
     AsyncGenerator,
     Callable,
     ClassVar,
+    Concatenate,
     Generic,
     NotRequired,
+    ParamSpec,
     Self,
     TypeVar,
     Unpack,
@@ -35,6 +38,10 @@ from coredis.typing import (
 BaseConnectionPoolParamsT = TypeVar(
     "BaseConnectionPoolParamsT", bound="BaseConnectionPoolParams[Any]"
 )
+
+ConnectionPoolT = TypeVar("ConnectionPoolT", bound="BaseConnectionPool[Any]")
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
 class BaseConnectionPoolParams(BaseConnectionParams, Generic[ConnectionT]):
@@ -69,6 +76,22 @@ class BaseConnectionPool(ABC, Generic[ConnectionT]):
     }
     _task_group: TaskGroup
 
+    @staticmethod
+    def _ensure_usable(
+        function: Callable[Concatenate[ConnectionPoolT, P], R],
+    ) -> Callable[Concatenate[ConnectionPoolT, P], R]:
+        @functools.wraps(function)
+        def _task_group_ensured(slf: ConnectionPoolT, /, *args: P.args, **kwargs: P.kwargs) -> R:
+            if hasattr(slf, "_task_group"):
+                return function(slf, *args, **kwargs)
+            raise RuntimeError(
+                "Connection pool is not initialized. "
+                "Make sure it's async context manager is entered before accessing it. "
+                "(For more details see https://coredis.readthedocs.org/handbook/connections.html#connection pools)"
+            )
+
+        return _task_group_ensured
+
     def __init__(
         self,
         *,
@@ -102,6 +125,11 @@ class BaseConnectionPool(ABC, Generic[ConnectionT]):
         self._anchor_active = contextvars.ContextVar("parent_active", default=False)
         self._anchor_reset_token: contextvars.Token[bool] | None = None
         self._initialization_lock = Lock()
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        for method in {"get_connection", "acquire"}:
+            setattr(cls, method, cls._ensure_usable(getattr(cls, method)))
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{self.location}>"

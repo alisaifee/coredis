@@ -5,7 +5,7 @@ Migrating from 5.x to 6.0
 Summary
 =======
 
-coredis ``6.0`` is a major architectural rewrite focused on structured concurrency,
+coredis ``6.0`` is a major architectural rewrite focused on :term:`Structured Concurrency`,
 predictable resource lifetimes, and safer defaults. While most APIs remain familiar,
 several core behaviors have changed.
 

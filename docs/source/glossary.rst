@@ -66,7 +66,12 @@ Glossary
      which can be used for various use cases such as timeseries,
      as queue for a Pub/Sub application architecture. For more details see the
      `Redis docs on streams <https://redis.io/docs/develop/data-types/streams/>`__
-
+   Structured Concurrency
+     Structured concurrency is a programming paradigm that binds the lifetime of concurrent subtasks
+     to a parent scope, ensuring they all complete before the parent exits.
+     It improves code readability, error handling, and debugging by treating related tasks as
+     a single unit, preventing leaked or orphaned threads, and modeling concurrency hierarchically,
+     much like structured programming.
    Transactions
      Redis Transactions allow the execution of multiple commands as a single
      isolated operation. For more details refer to the
