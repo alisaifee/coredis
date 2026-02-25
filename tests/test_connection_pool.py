@@ -163,14 +163,14 @@ class TestBasicPoolParameters:
 
 class TestBasicConnectionPoolConstruction:
     async def test_construction_with_tcp_location(self, redis_basic_server):
-        async with coredis.ConnectionPool(
-            host=redis_basic_server[0], port=redis_basic_server[1]
-        ) as pool:
+        async with coredis.ConnectionPool(location=TCPLocation(*redis_basic_server)) as pool:
             async with pool.acquire() as connection:
                 assert isinstance(connection, TCPConnection)
 
     async def test_construction_with_host_port(self, redis_basic_server):
-        async with coredis.ConnectionPool(location=TCPLocation(*redis_basic_server)) as pool:
+        async with coredis.ConnectionPool(
+            host=redis_basic_server[0], port=redis_basic_server[1]
+        ) as pool:
             async with pool.acquire() as connection:
                 assert isinstance(connection, TCPConnection)
 
