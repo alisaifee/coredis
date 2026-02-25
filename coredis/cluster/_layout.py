@@ -23,8 +23,8 @@ class ClusterLayout:
         nodes: dict[TCPLocation, ClusterNodeLocation],
         slots: dict[int, list[ClusterNodeLocation]],
     ) -> None:
-        self._slots: dict[int, list[ClusterNodeLocation]] = slots
-        self._nodes: dict[TCPLocation, ClusterNodeLocation] = nodes
+        self.__slots: dict[int, list[ClusterNodeLocation]] = slots
+        self.__nodes: dict[TCPLocation, ClusterNodeLocation] = nodes
 
     def determine_node(
         self,
@@ -69,12 +69,12 @@ class ClusterLayout:
         return slots
 
     def node_from_location(self, location: TCPLocation) -> ClusterNodeLocation | None:
-        return self._nodes.get(location)
+        return self.__nodes.get(location)
 
     def node_from_slot(self, slot: int, primary: bool = True) -> ClusterNodeLocation | None:
         primary_node: ClusterNodeLocation | None = None
         replica_nodes: list[ClusterNodeLocation] = []
-        for node in self._slots[slot]:
+        for node in self.__slots[slot]:
             if node.server_type == "primary":
                 primary_node = node
             else:
@@ -95,15 +95,15 @@ class ClusterLayout:
         return mapping
 
     def all_nodes(self) -> Iterator[ClusterNodeLocation]:
-        yield from self._nodes.values()
+        yield from self.__nodes.values()
 
     def all_primaries(self) -> Iterator[ClusterNodeLocation]:
-        for node in self._nodes.values():
+        for node in self.__nodes.values():
             if node.server_type == "primary":
                 yield node
 
     def all_replicas(self) -> Iterator[ClusterNodeLocation]:
-        for node in self._nodes.values():
+        for node in self.__nodes.values():
             if node.server_type == "replica":
                 yield node
 
@@ -111,7 +111,7 @@ class ClusterLayout:
         if primary:
             return random.choice(list(self.all_primaries()))
         else:
-            return random.choice(list(self._nodes.values()))
+            return random.choice(list(self.__nodes.values()))
 
     def update_primary(
         self,
@@ -126,15 +126,15 @@ class ClusterLayout:
             server_type="primary",
             node_id=None,
         )
-        self._nodes[TCPLocation(node.host, node.port)] = node
+        self.__nodes[TCPLocation(node.host, node.port)] = node
         current_primary: int | None = None
-        for idx, current in enumerate(self._slots.get(slot, [])):
+        for idx, current in enumerate(self.__slots.get(slot, [])):
             if current.server_type == "primary" and (
                 current.host != node.host or current.port != node.port
             ):
                 current_primary = idx
                 break
         if current_primary is not None:
-            self._slots[slot].pop(current_primary)
-        self._slots.setdefault(slot, []).append(node)
+            self.__slots[slot].pop(current_primary)
+        self.__slots.setdefault(slot, []).append(node)
         return node
