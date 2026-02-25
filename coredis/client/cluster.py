@@ -32,7 +32,14 @@ from coredis.exceptions import (
     RedisClusterError,
     TryAgainError,
 )
-from coredis.globals import CACHEABLE_COMMANDS, MODULE_GROUPS, READONLY_COMMANDS
+from coredis.globals import (
+    CACHEABLE_COMMANDS,
+    MERGE_CALLBACKS,
+    MODULE_GROUPS,
+    READONLY_COMMANDS,
+    ROUTE_FLAGS,
+    SPLIT_FLAGS,
+)
 from coredis.patterns.cache import AbstractCache
 from coredis.patterns.pubsub import ClusterPubSub, ShardedPubSub, SubscriptionCallback
 from coredis.pool import ClusterConnectionPool
@@ -62,7 +69,6 @@ from coredis.typing import (
     RedisCommand,
     RedisCommandP,
     RedisValueT,
-    ResponseType,
     Self,
     StringT,
     TypeAdapter,
@@ -80,9 +86,6 @@ if TYPE_CHECKING:
 
 
 class ClusterMeta(ABCMeta):
-    ROUTING_FLAGS: dict[bytes, NodeFlag]
-    SPLIT_FLAGS: dict[bytes, NodeFlag]
-    RESULT_CALLBACKS: dict[bytes, Callable[..., ResponseType]]
     NODE_FLAG_DOC_MAPPING = {
         NodeFlag.PRIMARIES: "all primaries",
         NodeFlag.REPLICAS: "all replicas",
@@ -114,7 +117,6 @@ class ClusterMeta(ABCMeta):
                     """
                 else:
                     if cmd.cluster.route:
-                        kls.ROUTING_FLAGS[cmd.command] = cmd.cluster.route
                         aggregate_note = ""
                         if cmd.cluster.multi_node:
                             if cmd.cluster.combine:
@@ -129,7 +131,6 @@ class ClusterMeta(ABCMeta):
    The command will be run on **{cls.NODE_FLAG_DOC_MAPPING[cmd.cluster.route]}** {aggregate_note}
                         """
                     elif cmd.cluster.split and cmd.cluster.combine:
-                        kls.SPLIT_FLAGS[cmd.command] = cmd.cluster.split
                         doc_addition = f"""
 .. admonition:: Cluster note
 
@@ -139,12 +140,9 @@ class ClusterMeta(ABCMeta):
 
    To disable this behavior set :paramref:`RedisCluster.non_atomic_cross_slot` to ``False``
                     """
-                    if cmd.cluster.multi_node:
-                        kls.RESULT_CALLBACKS[cmd.command] = cmd.cluster.combine
             if doc_addition and not hasattr(method, "__cluster_docs") and cmd:
                 if not getattr(method, "__coredis_module", None):
                     if not cmd.cluster.enabled:
-
                         def __w(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
                             @functools.wraps(func)
                             def _w(*a: P.args, **k: P.kwargs) -> Awaitable[R]:
@@ -181,9 +179,6 @@ class RedisCluster(
     metaclass=ClusterMeta,
 ):
     MAX_RETRIES = 16
-    ROUTING_FLAGS: dict[bytes, NodeFlag] = {}
-    SPLIT_FLAGS: dict[bytes, NodeFlag] = {}
-    RESULT_CALLBACKS: dict[bytes, Callable[..., Any]] = {}
 
     connection_pool: ClusterConnectionPool
 
@@ -560,11 +555,6 @@ class RedisCluster(
         )
 
         self.refresh_table_asap: bool = True
-        self.route_flags: dict[bytes, NodeFlag] = self.__class__.ROUTING_FLAGS.copy()
-        self.split_flags: dict[bytes, NodeFlag] = self.__class__.SPLIT_FLAGS.copy()
-        self.result_callbacks: dict[bytes, Callable[..., Any]] = (
-            self.__class__.RESULT_CALLBACKS.copy()
-        )
         self.non_atomic_cross_slot = non_atomic_cross_slot
         self._decodecontext: contextvars.ContextVar[bool | None,] = contextvars.ContextVar(
             "decode", default=None
@@ -736,10 +726,10 @@ class RedisCluster(
         res: dict[str, R],
         **kwargs: Unpack[ExecutionParameters],
     ) -> R:
-        assert command in self.result_callbacks
+        assert command in MERGE_CALLBACKS
         return cast(
             R,
-            self.result_callbacks[command](res, **kwargs),
+            MERGE_CALLBACKS[command](res, **kwargs),
         )
 
     async def on_connection_error(self, _: BaseException) -> None:
@@ -777,9 +767,9 @@ class RedisCluster(
         """
         Sends a command to one or many nodes in the cluster
         """
-        node_flag = self.route_flags.get(command.name)
-        if command.name in self.split_flags and self.non_atomic_cross_slot:
-            node_flag = self.split_flags[command.name]
+        node_flag = ROUTE_FLAGS.get(command.name)
+        if command.name in SPLIT_FLAGS and self.non_atomic_cross_slot:
+            node_flag = SPLIT_FLAGS[command.name]
 
         readonly = command.name in READONLY_COMMANDS and self.connection_pool.read_from_replicas
         nodes = self.connection_pool.nodes.determine_node(
@@ -833,9 +823,9 @@ class RedisCluster(
         *args: RedisValueT,
         slot_arguments_range: tuple[int, int] | None = None,
     ) -> dict[ClusterNodeLocation, list[tuple[RedisValueT, ...]]]:
-        node_flag = self.route_flags.get(command)
+        node_flag = ROUTE_FLAGS.get(command)
         node_arg_mapping: dict[ClusterNodeLocation, list[tuple[RedisValueT, ...]]] = {}
-        if command in self.split_flags and self.non_atomic_cross_slot:
+        if command in SPLIT_FLAGS and self.non_atomic_cross_slot:
             keys = KeySpec.extract_keys(command, *args)
             if keys:
                 key_start: int = args.index(keys[0])

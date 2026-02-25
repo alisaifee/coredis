@@ -666,7 +666,6 @@ class ClusterPipeline(Client[AnyStr]):
         self.refresh_table_asap = False
         self.client = client
         self.connection_pool = client.connection_pool
-        self.result_callbacks = client.result_callbacks
         self._raise_on_error = raise_on_error
         self._transaction = transaction
         self._watched_node: ClusterNodeLocation | None = None
@@ -860,6 +859,7 @@ class ClusterPipeline(Client[AnyStr]):
         for c in attempt:
             slot = self._determine_slot(c.name, *c.arguments)
             node = self.connection_pool.get_node_by_slot(slot)
+
             if node.name not in nodes:
                 nodes[node.name] = NodeCommands(
                     self.client,
