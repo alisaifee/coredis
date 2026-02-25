@@ -506,9 +506,9 @@ class KeySpec:
         """
         try:
             if readonly_command and command in cls.READONLY:
-                return cls.READONLY[command](arguments)
+                return cls.READONLY[command]((command,) + arguments)
             else:
-                return cls.ALL[command](arguments)
+                return cls.ALL[command]((command,) + arguments)
         except KeyError:
             return ()
 

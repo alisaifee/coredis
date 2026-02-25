@@ -4,8 +4,7 @@ import random
 from typing import cast
 
 from coredis._utils import b, hash_slot, nativestr
-from coredis.commands._key_spec import KeySpec
-from coredis.commands.constants import CommandName, NodeFlag
+from coredis.commands.constants import NodeFlag
 from coredis.connection import TCPLocation
 from coredis.typing import (
     ExecutionParameters,
@@ -26,36 +25,6 @@ class ClusterLayout:
     ) -> None:
         self._slots: dict[int, list[ClusterNodeLocation]] = slots
         self._nodes: dict[TCPLocation, ClusterNodeLocation] = nodes
-
-    def determine_slots(
-        self,
-        command: bytes,
-        *args: RedisValueT,
-        readonly: bool = False,
-        **options: Unpack[ExecutionParameters],
-    ) -> set[int]:
-        """Determines the slots the command and args would touch"""
-        keys = cast(tuple[RedisValueT, ...], options.get("keys")) or KeySpec.extract_keys(
-            command,
-            *args,
-            readonly_command=readonly,
-        )
-        if (
-            command
-            in {
-                CommandName.EVAL,
-                CommandName.EVAL_RO,
-                CommandName.EVALSHA,
-                CommandName.EVALSHA_RO,
-                CommandName.FCALL,
-                CommandName.FCALL_RO,
-                CommandName.PUBLISH,
-            }
-            and not keys
-        ):
-            return set()
-
-        return {hash_slot(b(key)) for key in keys}
 
     def determine_node(
         self,

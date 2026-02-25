@@ -916,7 +916,7 @@ class ClusterPipeline(Client[AnyStr]):
             raise RedisClusterError(
                 f"No way to dispatch {nativestr(command)} to Redis Cluster. Missing key"
             )
-        slots = self.connection_pool.nodes.determine_slots(command, *args, **options)
+        slots = KeySpec.affected_slots(command, *args)
 
         if len(slots) != 1:
             raise ClusterCrossSlotError(command=command, keys=keys)

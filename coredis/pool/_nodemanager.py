@@ -83,17 +83,6 @@ class NodeManager:
     ) -> ClusterNodeLocation:
         return self.cluster_layout.update_primary(slot, host, port)
 
-    def determine_slots(
-        self,
-        command: bytes,
-        *args: RedisValueT,
-        readonly: bool = False,
-        **options: Unpack[ExecutionParameters],
-    ) -> set[int]:
-        """Determines the slots the command and args would touch"""
-
-        return self.cluster_layout.determine_slots(command, *args, readonly=readonly, **options)
-
     def determine_node(
         self,
         command: bytes,

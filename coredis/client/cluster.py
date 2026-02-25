@@ -808,11 +808,8 @@ class RedisCluster(
             slots = None
             if not nodes:
                 slots = list(
-                    self.connection_pool.nodes.determine_slots(
-                        command.name,
-                        *command.arguments,
-                        readonly=readonly,
-                        **kwargs,
+                    KeySpec.affected_slots(
+                        command.name, *command.arguments, readonly_command=readonly
                     )
                 )
             else:
