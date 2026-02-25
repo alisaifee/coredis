@@ -44,9 +44,9 @@ class TestStartupNodes:
         await manager.initialize()
         assert len(list(manager.all_nodes())) > 1
 
-    async def test_partially_down_startup_nodes(self, redis_cluster_server):
+    async def test_partially_down_startup_nodes(self, redis_cluster_server, free_tcp_port_factory):
         startup_nodes = [
-            TCPLocation("192.0.2.0", 7001),
+            TCPLocation("127.0.0.1", free_tcp_port_factory()),
             TCPLocation(*redis_cluster_server),
         ]
         manager = NodeManager(startup_nodes, connect_timeout=0.1)

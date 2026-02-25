@@ -116,19 +116,19 @@ async def test_partially_down_replicas(redis_sentinel: Sentinel, mocker, flag):
         await replica.ping()
 
 
-async def test_all_replicas_unreachable(redis_sentinel: Sentinel, mocker):
+async def test_all_replicas_unreachable(redis_sentinel: Sentinel, mocker, free_tcp_port_factory):
     sentinel_replicas = coredis.Redis.sentinel_replicas
 
     async def mocked_sentinel_replicas(self, *args, **kwargs):
         values = await sentinel_replicas(self, *args, **kwargs)
 
         extras = (dict(values[0]), dict(values[0]))
-        extras[0]["ip"] = "192.0.2.0"
-        extras[0]["port"] = "1234"
+        extras[0]["ip"] = "127.0.0.1"
+        extras[0]["port"] = free_tcp_port_factory()
 
-        extras[1]["ip"] = "192.0.2.0"
-        extras[1]["port"] = "1235"
-
+        extras[1]["ip"] = "127.0.0.1"
+        extras[1]["port"] = free_tcp_port_factory()
+        print(extras)
         return extras
 
     mocker.patch.object(coredis.Redis, "sentinel_replicas", new=mocked_sentinel_replicas)
