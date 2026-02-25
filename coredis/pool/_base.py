@@ -119,9 +119,9 @@ class BaseConnectionPool(ABC, Generic[ConnectionT]):
                     raise RuntimeError(
                         "Implicit concurrent connection pool sharing detected. "
                         "You must explicitly enter the pool in a parent task "
-                        "(`async with pool:`) before spawning concurrent tasks that "
-                        "share it to ensure that cleanup occurs in the same "
-                        "task where it was initialized."
+                        "before spawning concurrent tasks that "
+                        "share it. (For more details see "
+                        "https://coredis.readthedocs.io/en/stable/handbook/connections.html#sharing-a-connection-pool)"
                     )
                 self._counter += 1
             return self
