@@ -2265,6 +2265,7 @@ def implementation(ctx, command, group, module, expr, debug=False):
 def cluster_key_extraction(path):
     commands = get_commands()
     lookups = {}
+    fallbacks = {}
 
     def _index_finder(command, search_spec, find_spec):
         if search_spec["type"] == "index":
@@ -2344,160 +2345,171 @@ def cluster_key_extraction(path):
         if version.parse(command["since"] or DEFAULT_VERSION) > MAX_SUPPORTED_VERSION:
             continue
         key_specs = command.get("key_specs", [])
-        for spec in key_specs:
-            mode = (
-                "RO"
-                if spec.get("RO", False)
-                else ("OW" if spec.get("OW", False) else "RW" if spec.get("RW", False) else "RM")
-            )
-            begin_search = spec.get("begin_search", {})
-            find_keys = spec.get("find_keys", {})
-            if begin_search and find_keys:
-                search_type = begin_search["type"]
-                if search_type == "index":
-                    lookups.setdefault(mode, {}).setdefault(name, []).append(
-                        _index_finder(name, begin_search, find_keys)
-                    )
-                elif search_type == "keyword":
-                    lookups.setdefault(mode, {}).setdefault(name, []).append(
-                        _kw_finder(name, begin_search, find_keys)
-                    )
-                elif search_type == "unknown":
-                    pass
-                else:
-                    raise RuntimeError(
-                        f"Don't know how to handle {search_type} for {name} ({spec})"
-                    )
+        if key_specs:
+            for spec in key_specs:
+                mode = (
+                    "RO"
+                    if spec.get("RO", False)
+                    else ("OW" if spec.get("OW", False) else "RW" if spec.get("RW", False) else "RM")
+                )
+                begin_search = spec.get("begin_search", {})
+                find_keys = spec.get("find_keys", {})
+                if begin_search and find_keys:
+                    search_type = begin_search["type"]
+                    if search_type == "index":
+                        lookups.setdefault(mode, {}).setdefault(name, []).append(
+                            _index_finder(name, begin_search, find_keys)
+                        )
+                    elif search_type == "keyword":
+                        lookups.setdefault(mode, {}).setdefault(name, []).append(
+                            _kw_finder(name, begin_search, find_keys)
+                        )
+                    elif search_type == "unknown":
+                        pass
+                    else:
+                        raise RuntimeError(
+                            f"Don't know how to handle {search_type} for {name} ({spec})"
+                        )
+        else:
+            arguments = command.get("arguments", [])
+            arg_pos = []
+            for idx, arg in enumerate(arguments):
+                if arg.get("type") == "key":
+                    arg_pos.append(idx)
+            if len(arg_pos) == 1:
+                fallbacks[name] = [f"(args[{arg_pos[0]}],)"]
 
     readonly = {}
     fixed_args = {"first": ["(args[1],)"], "second": ["(args[2],)"], "all": ["args[1:]"]}
-    all = {"OBJECT": ["(args[2],)"], "DEBUG OBJECT": ["(args[1],)"]}
+    key_specs = dict(fallbacks)
+    key_specs.update({"OBJECT": ["(args[2],)"], "DEBUG OBJECT": ["(args[1],)"]})
 
     for mode, commands in lookups.items():
         for command, exprs in commands.items():
             if mode == "RO":
                 readonly[command] = exprs
-            all.setdefault(command, []).extend(exprs)
+            key_specs.setdefault(command, []).extend(exprs)
 
     # RedisJSON
-    all["JSON.DEBUG MEMORY"] = fixed_args["first"]
-    all["JSON.DEL"] = fixed_args["first"]
-    all["JSON.FORGET"] = fixed_args["first"]
-    all["JSON.GET"] = fixed_args["first"]
-    all["JSON.SET"] = fixed_args["first"]
-    all["JSON.NUMINCRBY"] = fixed_args["first"]
-    all["JSON.STRAPPEND"] = fixed_args["first"]
-    all["JSON.STRLEN"] = fixed_args["first"]
-    all["JSON.ARRAPPEND"] = fixed_args["first"]
-    all["JSON.ARRINDEX"] = fixed_args["first"]
-    all["JSON.ARRINSERT"] = fixed_args["first"]
-    all["JSON.ARRLEN"] = fixed_args["first"]
-    all["JSON.ARRPOP"] = fixed_args["first"]
-    all["JSON.ARRTRIM"] = fixed_args["first"]
-    all["JSON.OBJKEYS"] = fixed_args["first"]
-    all["JSON.OBJLEN"] = fixed_args["first"]
-    all["JSON.TYPE"] = fixed_args["first"]
-    all["JSON.RESP"] = fixed_args["first"]
-    all["JSON.TOGGLE"] = fixed_args["first"]
-    all["JSON.CLEAR"] = fixed_args["first"]
-    all["JSON.NUMMULTBY"] = fixed_args["first"]
-    all["JSON.MERGE"] = fixed_args["first"]
-    all["JSON.MSET"] = ["args[1::3]"]
+    key_specs["JSON.DEBUG MEMORY"] = fixed_args["first"]
+    key_specs["JSON.DEL"] = fixed_args["first"]
+    key_specs["JSON.FORGET"] = fixed_args["first"]
+    key_specs["JSON.GET"] = fixed_args["first"]
+    key_specs["JSON.SET"] = fixed_args["first"]
+    key_specs["JSON.NUMINCRBY"] = fixed_args["first"]
+    key_specs["JSON.STRAPPEND"] = fixed_args["first"]
+    key_specs["JSON.STRLEN"] = fixed_args["first"]
+    key_specs["JSON.ARRAPPEND"] = fixed_args["first"]
+    key_specs["JSON.ARRINDEX"] = fixed_args["first"]
+    key_specs["JSON.ARRINSERT"] = fixed_args["first"]
+    key_specs["JSON.ARRLEN"] = fixed_args["first"]
+    key_specs["JSON.ARRPOP"] = fixed_args["first"]
+    key_specs["JSON.ARRTRIM"] = fixed_args["first"]
+    key_specs["JSON.OBJKEYS"] = fixed_args["first"]
+    key_specs["JSON.OBJLEN"] = fixed_args["first"]
+    key_specs["JSON.TYPE"] = fixed_args["first"]
+    key_specs["JSON.RESP"] = fixed_args["first"]
+    key_specs["JSON.TOGGLE"] = fixed_args["first"]
+    key_specs["JSON.CLEAR"] = fixed_args["first"]
+    key_specs["JSON.NUMMULTBY"] = fixed_args["first"]
+    key_specs["JSON.MERGE"] = fixed_args["first"]
+    key_specs["JSON.MSET"] = ["args[1::3]"]
 
     # bf
-    all["BF.RESERVE"] = fixed_args["first"]
-    all["BF.ADD"] = fixed_args["first"]
-    all["BF.MADD"] = fixed_args["first"]
-    all["BF.INSERT"] = fixed_args["first"]
-    all["BF.EXISTS"] = fixed_args["first"]
-    all["BF.MEXISTS"] = fixed_args["first"]
-    all["BF.SCANDUMP"] = fixed_args["first"]
-    all["BF.LOADCHUNK"] = fixed_args["first"]
-    all["BF.INFO"] = fixed_args["first"]
-    all["BF.CARD"] = fixed_args["first"]
-    all["CF.RESERVE"] = fixed_args["first"]
-    all["CF.ADD"] = fixed_args["first"]
-    all["CF.ADDNX"] = fixed_args["first"]
-    all["CF.INSERT"] = fixed_args["first"]
-    all["CF.INSERTNX"] = fixed_args["first"]
-    all["CF.EXISTS"] = fixed_args["first"]
-    all["CF.MEXISTS"] = fixed_args["first"]
-    all["CF.DEL"] = fixed_args["first"]
-    all["CF.COUNT"] = fixed_args["first"]
-    all["CF.SCANDUMP"] = fixed_args["first"]
-    all["CF.LOADCHUNK"] = fixed_args["first"]
-    all["CF.INFO"] = fixed_args["first"]
-    all["CMS.INITBYDIM"] = fixed_args["first"]
-    all["CMS.INITBYPROB"] = fixed_args["first"]
-    all["CMS.INCRBY"] = fixed_args["first"]
-    all["CMS.QUERY"] = fixed_args["first"]
-    all["CMS.INFO"] = fixed_args["first"]
-    all["CMS.MERGE"] = ["(args[1],) + args[3 : 3 + int(args[2])]"]
-    all["TOPK.RESERVE"] = fixed_args["first"]
-    all["TOPK.ADD"] = fixed_args["first"]
-    all["TOPK.INCRBY"] = fixed_args["first"]
-    all["TOPK.QUERY"] = fixed_args["first"]
-    all["TOPK.LIST"] = fixed_args["first"]
-    all["TOPK.INFO"] = fixed_args["first"]
-    all["TOPK.COUNT"] = fixed_args["first"]
-    all["TDIGEST.CREATE"] = fixed_args["first"]
-    all["TDIGEST.RESET"] = fixed_args["first"]
-    all["TDIGEST.ADD"] = fixed_args["first"]
-    all["TDIGEST.MERGE"] = ["(args[1],) + args[3 : 3 + int(args[2])]"]
-    all["TDIGEST.MIN"] = fixed_args["first"]
-    all["TDIGEST.MAX"] = fixed_args["first"]
-    all["TDIGEST.QUANTILE"] = fixed_args["first"]
-    all["TDIGEST.CDF"] = fixed_args["first"]
-    all["TDIGEST.TRIMMED_MEAN"] = fixed_args["first"]
-    all["TDIGEST.RANK"] = fixed_args["first"]
-    all["TDIGEST.REVRANK"] = fixed_args["first"]
-    all["TDIGEST.BYRANK"] = fixed_args["first"]
-    all["TDIGEST.BYREVRANK"] = fixed_args["first"]
-    all["TDIGEST.INFO"] = fixed_args["first"]
+    key_specs["BF.RESERVE"] = fixed_args["first"]
+    key_specs["BF.ADD"] = fixed_args["first"]
+    key_specs["BF.MADD"] = fixed_args["first"]
+    key_specs["BF.INSERT"] = fixed_args["first"]
+    key_specs["BF.EXISTS"] = fixed_args["first"]
+    key_specs["BF.MEXISTS"] = fixed_args["first"]
+    key_specs["BF.SCANDUMP"] = fixed_args["first"]
+    key_specs["BF.LOADCHUNK"] = fixed_args["first"]
+    key_specs["BF.INFO"] = fixed_args["first"]
+    key_specs["BF.CARD"] = fixed_args["first"]
+    key_specs["CF.RESERVE"] = fixed_args["first"]
+    key_specs["CF.ADD"] = fixed_args["first"]
+    key_specs["CF.ADDNX"] = fixed_args["first"]
+    key_specs["CF.INSERT"] = fixed_args["first"]
+    key_specs["CF.INSERTNX"] = fixed_args["first"]
+    key_specs["CF.EXISTS"] = fixed_args["first"]
+    key_specs["CF.MEXISTS"] = fixed_args["first"]
+    key_specs["CF.DEL"] = fixed_args["first"]
+    key_specs["CF.COUNT"] = fixed_args["first"]
+    key_specs["CF.SCANDUMP"] = fixed_args["first"]
+    key_specs["CF.LOADCHUNK"] = fixed_args["first"]
+    key_specs["CF.INFO"] = fixed_args["first"]
+    key_specs["CMS.INITBYDIM"] = fixed_args["first"]
+    key_specs["CMS.INITBYPROB"] = fixed_args["first"]
+    key_specs["CMS.INCRBY"] = fixed_args["first"]
+    key_specs["CMS.QUERY"] = fixed_args["first"]
+    key_specs["CMS.INFO"] = fixed_args["first"]
+    key_specs["CMS.MERGE"] = ["(args[1],) + args[3 : 3 + int(args[2])]"]
+    key_specs["TOPK.RESERVE"] = fixed_args["first"]
+    key_specs["TOPK.ADD"] = fixed_args["first"]
+    key_specs["TOPK.INCRBY"] = fixed_args["first"]
+    key_specs["TOPK.QUERY"] = fixed_args["first"]
+    key_specs["TOPK.LIST"] = fixed_args["first"]
+    key_specs["TOPK.INFO"] = fixed_args["first"]
+    key_specs["TOPK.COUNT"] = fixed_args["first"]
+    key_specs["TDIGEST.CREATE"] = fixed_args["first"]
+    key_specs["TDIGEST.RESET"] = fixed_args["first"]
+    key_specs["TDIGEST.ADD"] = fixed_args["first"]
+    key_specs["TDIGEST.MERGE"] = ["(args[1],) + args[3 : 3 + int(args[2])]"]
+    key_specs["TDIGEST.MIN"] = fixed_args["first"]
+    key_specs["TDIGEST.MAX"] = fixed_args["first"]
+    key_specs["TDIGEST.QUANTILE"] = fixed_args["first"]
+    key_specs["TDIGEST.CDF"] = fixed_args["first"]
+    key_specs["TDIGEST.TRIMMED_MEAN"] = fixed_args["first"]
+    key_specs["TDIGEST.RANK"] = fixed_args["first"]
+    key_specs["TDIGEST.REVRANK"] = fixed_args["first"]
+    key_specs["TDIGEST.BYRANK"] = fixed_args["first"]
+    key_specs["TDIGEST.BYREVRANK"] = fixed_args["first"]
+    key_specs["TDIGEST.INFO"] = fixed_args["first"]
 
     # timeseries
-    all["TS.CREATE"] = fixed_args["first"]
-    all["TS.CREATERULE"] = ["args[1:3]"]
-    all["TS.ALTER"] = fixed_args["first"]
-    all["TS.ADD"] = fixed_args["first"]
-    all["TS.MADD"] = ["args[1:-1:3]"]
-    all["TS.INCRBY"] = fixed_args["first"]
-    all["TS.DECRBY"] = fixed_args["first"]
-    all["TS.DELETERULE"] = ["args[1:3]"]
-    all["TS.GET"] = fixed_args["first"]
-    all["TS.INFO"] = fixed_args["first"]
-    all["TS.REVRANGE"] = fixed_args["first"]
-    all["TS.RANGE"] = fixed_args["first"]
-    all["TS.DEL"] = fixed_args["first"]
+    key_specs["TS.CREATE"] = fixed_args["first"]
+    key_specs["TS.CREATERULE"] = ["args[1:3]"]
+    key_specs["TS.ALTER"] = fixed_args["first"]
+    key_specs["TS.ADD"] = fixed_args["first"]
+    key_specs["TS.MADD"] = ["args[1:-1:3]"]
+    key_specs["TS.INCRBY"] = fixed_args["first"]
+    key_specs["TS.DECRBY"] = fixed_args["first"]
+    key_specs["TS.DELETERULE"] = ["args[1:3]"]
+    key_specs["TS.GET"] = fixed_args["first"]
+    key_specs["TS.INFO"] = fixed_args["first"]
+    key_specs["TS.REVRANGE"] = fixed_args["first"]
+    key_specs["TS.RANGE"] = fixed_args["first"]
+    key_specs["TS.DEL"] = fixed_args["first"]
 
     # Search
-    all["FT.CREATE"] = fixed_args["first"]
-    all["FT.INFO"] = fixed_args["first"]
-    all["FT.ALTER"] = fixed_args["first"]
-    all["FT.ALIASADD"] = fixed_args["first"]
-    all["FT.ALIASUPDATE"] = fixed_args["first"]
-    all["FT.ALIASDEL"] = fixed_args["first"]
-    all["FT.TAGVALS"] = fixed_args["first"]
-    all["FT.CONFIG GET"] = fixed_args["first"]
-    all["FT.CONFIG SET"] = fixed_args["first"]
-    all["FT.SEARCH"] = fixed_args["first"]
-    all["FT.HYBRID"] = fixed_args["first"]
-    all["FT.AGGREGATE"] = fixed_args["first"]
-    all["FT.CURSOR GET"] = fixed_args["first"]
-    all["FT.CURSOR DEL"] = fixed_args["first"]
-    all["FT.SYNUPDATE"] = fixed_args["first"]
-    all["FT.SYNDUMP"] = fixed_args["first"]
-    all["FT.SPELLCHECK"] = fixed_args["first"]
-    all["FT.DICTADD"] = fixed_args["first"]
-    all["FT.DICTDEL"] = fixed_args["first"]
-    all["FT.DICTDUMP"] = fixed_args["first"]
-    all["FT.DROPINDEX"] = fixed_args["first"]
+    key_specs["FT.CREATE"] = fixed_args["first"]
+    key_specs["FT.INFO"] = fixed_args["first"]
+    key_specs["FT.EXPLAIN"] = fixed_args["first"]
+    key_specs["FT.ALTER"] = fixed_args["first"]
+    key_specs["FT.ALIASADD"] = fixed_args["first"]
+    key_specs["FT.ALIASUPDATE"] = fixed_args["first"]
+    key_specs["FT.ALIASDEL"] = fixed_args["first"]
+    key_specs["FT.TAGVALS"] = fixed_args["first"]
+    key_specs["FT.CONFIG GET"] = fixed_args["first"]
+    key_specs["FT.CONFIG SET"] = fixed_args["first"]
+    key_specs["FT.SEARCH"] = fixed_args["first"]
+    key_specs["FT.HYBRID"] = fixed_args["first"]
+    key_specs["FT.AGGREGATE"] = fixed_args["first"]
+    key_specs["FT.CURSOR GET"] = fixed_args["first"]
+    key_specs["FT.CURSOR DEL"] = fixed_args["first"]
+    key_specs["FT.SYNUPDATE"] = fixed_args["first"]
+    key_specs["FT.SYNDUMP"] = fixed_args["first"]
+    key_specs["FT.SPELLCHECK"] = fixed_args["first"]
+    key_specs["FT.DICTADD"] = fixed_args["first"]
+    key_specs["FT.DICTDEL"] = fixed_args["first"]
+    key_specs["FT.DICTDUMP"] = fixed_args["first"]
+    key_specs["FT.DROPINDEX"] = fixed_args["first"]
 
     # Autocomplete
-    all["FT.SUGADD"] = fixed_args["first"]
-    all["FT.SUGDEL"] = fixed_args["first"]
-    all["FT.SUGGET"] = fixed_args["first"]
-    all["FT.SUGLEN"] = fixed_args["first"]
+    key_specs["FT.SUGADD"] = fixed_args["first"]
+    key_specs["FT.SUGDEL"] = fixed_args["first"]
+    key_specs["FT.SUGGET"] = fixed_args["first"]
+    key_specs["FT.SUGLEN"] = fixed_args["first"]
 
     key_spec_template = """
 from __future__ import annotations
@@ -2512,7 +2524,7 @@ class KeySpec:
     {% endfor %}
     {{ '}' }}
     ALL: ClassVar[dict[bytes, Callable[[tuple[RedisValueT, ...]], tuple[RedisValueT, ...]]]] = {{ '{' }}
-    {% for command, exprs in all.items() %}
+    {% for command, exprs in key_specs.items() %}
         b"{{command}}": lambda args: {{exprs | join("+")}},
     {% endfor %}
     {{ '}' }}
@@ -2545,7 +2557,7 @@ class KeySpec:
         sanitized=sanitized,
     )
     tmpl = env.from_string(key_spec_template)
-    response = tmpl.render(all=all, readonly=readonly)
+    response = tmpl.render(key_specs=key_specs, readonly=readonly)
     with open(path, "w") as file:
         file.write(response)
     format_file_in_place(path)
