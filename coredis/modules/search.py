@@ -75,6 +75,7 @@ class Field:
         PureToken.TAG,
         PureToken.NUMERIC,
         PureToken.GEO,
+        PureToken.GEOSHAPE,
         PureToken.VECTOR,
     ]
 

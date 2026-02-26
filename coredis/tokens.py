@@ -1137,6 +1137,11 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``FT.CREATE``
+    GEOSHAPE = b"GEOSHAPE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.CREATE``
     HASH = b"HASH"
 
     #: Used by:
@@ -2624,6 +2629,11 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``FT.HYBRID``
     RADIUS = b"RADIUS"
+
+    #: Used by:
+    #:
+    #:  - ``FT.HYBRID``
+    SHARD_K_RATIO = b"SHARD_K_RATIO"
 
     #: Used by:
     #:
