@@ -663,7 +663,6 @@ class ClusterPipeline(Client[AnyStr]):
         :param timeout: Time in seconds to wait for the pipeline results to return
         """
         self.command_stack = []
-        self.refresh_table_asap = False
         self.client = client
         self.connection_pool = client.connection_pool
         self._raise_on_error = raise_on_error
