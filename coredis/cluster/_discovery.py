@@ -124,8 +124,6 @@ class DiscoveryService:
                                     f" {', '.join(disagreements)}"
                                 )
 
-                self.refresh_table_asap = False
-
             if not self.__skip_full_coverage_check and (
                 await self._cluster_require_full_coverage(nodes_cache)
             ):
