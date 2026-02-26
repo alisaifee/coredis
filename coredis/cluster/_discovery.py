@@ -71,15 +71,6 @@ class DiscoveryService:
                         continue
 
             all_slots_covered = True
-            # If there's only one server in the cluster, its ``host`` is ''
-            # Fix it to the host in startup_nodes
-            if len(cluster_slots) == 1 and len(self.__startup_nodes) == 1:
-                slots = cluster_slots.get((0, HASH_SLOTS - 1))
-                assert slots
-                single_node_slots = slots[0]
-                if len(single_node_slots["host"]) == 0:
-                    single_node_slots["host"] = self.__startup_nodes[0].host
-                    single_node_slots["server_type"] = "master"
 
             for min_slot, max_slot in cluster_slots:
                 _nodes = cluster_slots.get((min_slot, max_slot))
