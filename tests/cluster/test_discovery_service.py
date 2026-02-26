@@ -3,58 +3,48 @@ from __future__ import annotations
 import pytest
 
 import coredis
+from coredis.cluster._discovery import DiscoveryService
 from coredis.connection import TCPLocation
 from coredis.exceptions import AuthenticationError, RedisClusterError, ResponseError
-from coredis.pool._nodemanager import NodeManager
 
 
-class TestStartupNodes:
-    async def test_initialization(self, redis_cluster_server, mocker):
-        startup_nodes = [TCPLocation(*redis_cluster_server)]
-        manager = NodeManager(startup_nodes, connect_timeout=0.1, reinitialize_steps=5)
-        await manager.initialize()
-        initialize_spy = mocker.spy(manager, "initialize")
-        [await manager.increment_reinitialize_counter() for _ in range(5)]
-        assert initialize_spy.call_count == 1
-        [await manager.increment_reinitialize_counter() for _ in range(5)]
-        assert initialize_spy.call_count == 2
-
+class TestDiscoveryService:
     @pytest.mark.parametrize("username, password", ([None, None], ["wrong", "password"]))
     async def test_authenticated_cluster_invalid_credentials(
         self, redis_cluster_auth_server, username, password
     ):
-        manager = NodeManager(
+        service = DiscoveryService(
             [TCPLocation(*redis_cluster_auth_server)],
             username=username,
             password=password,
         )
         with pytest.raises(RedisClusterError) as exc:
-            await manager.initialize()
+            await service.get_cluster_layout()
         assert isinstance(exc.value.__cause__, AuthenticationError)
 
     async def test_authenticated_cluster(
         self,
         redis_cluster_auth_server,
     ):
-        manager = NodeManager(
+        service = DiscoveryService(
             [TCPLocation(*redis_cluster_auth_server)],
             username=None,
             password="sekret",
         )
-        await manager.initialize()
-        assert len(list(manager.all_nodes())) > 1
+        nodes, slots = await service.get_cluster_layout()
+        assert len(nodes) > 1
 
     async def test_partially_down_startup_nodes(self, redis_cluster_server, free_tcp_port_factory):
         startup_nodes = [
             TCPLocation("127.0.0.1", free_tcp_port_factory()),
             TCPLocation(*redis_cluster_server),
         ]
-        manager = NodeManager(startup_nodes, connect_timeout=0.1)
-        await manager.initialize()
+        service = DiscoveryService(startup_nodes, connect_timeout=0.1)
+        await service.get_cluster_layout()
         startup_nodes.pop(-1)
-        manager = NodeManager(startup_nodes, connect_timeout=0.1)
+        service = DiscoveryService(startup_nodes, connect_timeout=0.1)
         with pytest.raises(RedisClusterError):
-            await manager.initialize()
+            await service.get_cluster_layout()
 
     async def test_partial_slot_coverage(self, redis_cluster_server, mocker):
         startup_nodes = [TCPLocation(*redis_cluster_server)]
@@ -68,13 +58,13 @@ class TestStartupNodes:
             return value
 
         mocker.patch.object(coredis.Redis, "cluster_slots", new=mocked_cluster_slots)
-        manager = NodeManager(
+        service = DiscoveryService(
             startup_nodes,
             connect_timeout=0.1,
             skip_full_coverage_check=False,
         )
         with pytest.raises(RedisClusterError, match="Not all slots are covered"):
-            await manager.initialize()
+            await service.get_cluster_layout()
 
     async def test_partial_slot_coverage_allowed(self, redis_cluster_server, mocker):
         startup_nodes = [TCPLocation(*redis_cluster_server)]
@@ -88,7 +78,7 @@ class TestStartupNodes:
             return value
 
         mocker.patch.object(coredis.Redis, "cluster_slots", new=mocked_cluster_slots)
-        manager = NodeManager(
+        service = DiscoveryService(
             startup_nodes,
             connect_timeout=0.1,
             skip_full_coverage_check=False,
@@ -98,15 +88,15 @@ class TestStartupNodes:
             raise ResponseError()
 
         mocker.patch.object(coredis.Redis, "config_get", new=mocked_config_get)
-        await manager.initialize()
+        await service.get_cluster_layout()
         mocker.resetall()
 
-        manager = NodeManager(
+        service = DiscoveryService(
             startup_nodes,
             connect_timeout=0.1,
             skip_full_coverage_check=True,
         )
-        await manager.initialize()
+        await service.get_cluster_layout()
 
     async def test_slot_coverage_disagreement(self, redis_cluster_server, mocker):
         startup_nodes = [
@@ -136,11 +126,11 @@ class TestStartupNodes:
             return value
 
         mocker.patch.object(coredis.Redis, "cluster_slots", new=mocked_cluster_slots)
-        manager = NodeManager(
+        service = DiscoveryService(
             startup_nodes,
             connect_timeout=0.1,
             skip_full_coverage_check=False,
         )
 
         with pytest.raises(RedisClusterError, match="could not agree on a valid slots cache"):
-            await manager.initialize()
+            await service.get_cluster_layout()

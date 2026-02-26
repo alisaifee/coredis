@@ -6,7 +6,6 @@ from coredis.connection import BaseConnectionParams, TCPLocation
 from coredis.exceptions import RedisClusterError, RedisError, ResponseError
 from coredis.typing import Final, Iterable, Unpack
 
-from ._layout import ClusterLayout
 from ._node import ClusterNodeLocation
 
 HASH_SLOTS: Final = 16384
@@ -32,7 +31,9 @@ class DiscoveryService:
         self.__follow_cluster = follow_cluster
         self.__skip_full_coverage_check = skip_full_coverage_check
 
-    async def get_cluster_layout(self) -> ClusterLayout:
+    async def get_cluster_layout(
+        self,
+    ) -> tuple[list[ClusterNodeLocation], dict[int, list[ClusterNodeLocation]]]:
         """
         Initializes the slots cache by asking all startup nodes what the
         current cluster configuration is.
@@ -148,7 +149,7 @@ class DiscoveryService:
 
         self.__startup_nodes.clear()
         self.__startup_nodes.extend(nodes_cache.values())
-        return ClusterLayout(nodes_cache, tmp_slots)
+        return list(nodes_cache.values()), tmp_slots
 
     async def _cluster_require_full_coverage(
         self, nodes: dict[TCPLocation, ClusterNodeLocation]

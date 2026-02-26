@@ -706,10 +706,8 @@ class ClusterPipeline(Client[AnyStr]):
         """
         if self.command_stack:
             raise WatchError("Unable to add a watch after pipeline commands have been added")
-        try:
-            self._watched_node = self.connection_pool.get_node_by_keys(list(keys))
-        except RedisClusterError:
-            raise ClusterTransactionError("Keys for watch don't hash to the same node")
+        watched_nodes = self.connection_pool.cluster_layout.nodes_for_request(b"WATCH", keys)
+        self._watched_node = list(watched_nodes.keys()).pop()
         self.watches.extend(keys)
         async with self.connection_pool.acquire(
             node=self._watched_node
@@ -807,7 +805,7 @@ class ClusterPipeline(Client[AnyStr]):
                 raise ClusterTransactionError("Multiple slots involved in transaction")
         if not slots:
             raise ClusterTransactionError("No slots found for transaction")
-        node = self.connection_pool.get_node_by_slot(slots.pop())
+        node = self.connection_pool.cluster_layout.node_for_slot(slots.pop())
         if self._watched_node and node != self._watched_node:
             raise ClusterTransactionError("Multiple slots involved in transaction")
 
@@ -857,8 +855,7 @@ class ClusterPipeline(Client[AnyStr]):
         # Group commands by node for efficient network usage.
         nodes: dict[str, NodeCommands] = {}
         for c in attempt:
-            slot = self._determine_slot(c.name, *c.arguments)
-            node = self.connection_pool.get_node_by_slot(slot)
+            node = self.connection_pool.cluster_layout.node_for_request(c.name, c.arguments)
 
             if node.name not in nodes:
                 nodes[node.name] = NodeCommands(
@@ -881,7 +878,9 @@ class ClusterPipeline(Client[AnyStr]):
             key=lambda x: x.position,
         )
         if attempt and allow_redirections:
-            await self.connection_pool.nodes.increment_reinitialize_counter(len(attempt))
+            self.connection_pool.cluster_layout.register_errors(
+                *(c.result for c in attempt if isinstance(c.result, Exception))
+            )
             for c in attempt:
                 try:
                     c.result = await self.client.execute_command(
