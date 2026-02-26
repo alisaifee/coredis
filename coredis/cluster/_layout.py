@@ -40,9 +40,9 @@ class ClusterLayout:
          to refresh the layout. After this threshold, this instance will give up
          trying to keep the layout fresh and the monitor task will raise an error.
         """
-        self.__slots: dict[int, list[ClusterNodeLocation]] = {}
-        self.__nodes: dict[TCPLocation, ClusterNodeLocation] = {}
-        self.__discovery_service = discovery_service
+        self._slots: dict[int, list[ClusterNodeLocation]] = {}
+        self._nodes: dict[TCPLocation, ClusterNodeLocation] = {}
+        self._discovery_service = discovery_service
         self._error_reported: Event = Event()
         self._errors: dict[ClusterNodeLocation, Counter[type[Exception]]] = {}
         self._error_threshold = error_threshold
@@ -50,7 +50,7 @@ class ClusterLayout:
         self._maximum_staleness = maximum_staleness
 
     async def initialize(self) -> None:
-        await self.__refresh()
+        await self._refresh()
 
     def node_for_request(
         self,
@@ -90,7 +90,7 @@ class ClusterLayout:
         commands that can be split over multiple nodes safely, the arguments will
         be separated into chunks per slot.
         """
-        if not self.__nodes:
+        if not self._nodes:
             raise RedisClusterError("No known nodes in cluster")
 
         nodes: dict[ClusterNodeLocation, list[tuple[RedisValueT, ...]]] = {}
@@ -163,12 +163,12 @@ class ClusterLayout:
         return nodes
 
     def node_for_location(self, location: TCPLocation) -> ClusterNodeLocation | None:
-        return self.__nodes.get(location)
+        return self._nodes.get(location)
 
     def node_for_slot(self, slot: int, primary: bool = True) -> ClusterNodeLocation:
         primary_node: ClusterNodeLocation | None = None
         replica_nodes: list[ClusterNodeLocation] = []
-        for node in self.__slots.get(slot, []):
+        for node in self._slots.get(slot, []):
             if node.server_type == "primary":
                 primary_node = node
             else:
@@ -192,17 +192,17 @@ class ClusterLayout:
 
     @property
     def nodes(self) -> Iterator[ClusterNodeLocation]:
-        yield from self.__nodes.values()
+        yield from self._nodes.values()
 
     @property
     def primaries(self) -> Iterator[ClusterNodeLocation]:
-        for node in self.__nodes.values():
+        for node in self._nodes.values():
             if node.server_type == "primary":
                 yield node
 
     @property
     def replicas(self) -> Iterator[ClusterNodeLocation]:
-        for node in self.__nodes.values():
+        for node in self._nodes.values():
             if node.server_type == "replica":
                 yield node
 
@@ -225,11 +225,11 @@ class ClusterLayout:
             server_type="primary",
             node_id=None,
         )
-        for idx, current in enumerate(self.__slots.get(slot, [])):
+        for idx, current in enumerate(self._slots.get(slot, [])):
             if current.server_type == "primary":
                 if current.host != node.host or current.port != node.port:
-                    self.__slots[slot][idx] = node
-                    self.__nodes[TCPLocation(node.host, node.port)] = node
+                    self._slots[slot][idx] = node
+                    self._nodes[TCPLocation(node.host, node.port)] = node
                 else:
                     node = current
                 break
@@ -243,7 +243,7 @@ class ClusterLayout:
                     node.priority -= 1
             self._errors.setdefault(node, Counter()).update([type(e) for e in errors])
         else:
-            for node in self.__nodes.values():
+            for node in self._nodes.values():
                 self._errors.setdefault(node, Counter()).update([type(e) for e in errors])
 
     async def monitor(self, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
@@ -258,7 +258,7 @@ class ClusterLayout:
                         f"Error threshold {self._error_threshold} met, refreshing cluster layout"
                     )
                     try:
-                        await self.__refresh()
+                        await self._refresh()
                         self._errors.clear()
                         self._error_reported = Event()
                         break
@@ -267,11 +267,11 @@ class ClusterLayout:
                             raise RedisClusterError("Unable to refresh cluster layout") from err
                         await checkpoint()
 
-    async def __refresh(self) -> None:
-        nodes, slots = await self.__discovery_service.get_cluster_layout()
+    async def _refresh(self) -> None:
+        nodes, slots = await self._discovery_service.get_cluster_layout()
         self._last_refresh = time.monotonic()
-        self.__nodes.clear()
+        self._nodes.clear()
         for node in nodes:
-            self.__nodes[TCPLocation(node.host, node.port)] = node
-        self.__slots.clear()
-        self.__slots.update(slots)
+            self._nodes[TCPLocation(node.host, node.port)] = node
+        self._slots.clear()
+        self._slots.update(slots)
