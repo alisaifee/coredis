@@ -10,7 +10,7 @@ from abc import ABCMeta
 from ssl import SSLContext
 from typing import TYPE_CHECKING, Any, cast, overload
 
-from anyio import get_cancelled_exc_class, sleep
+from anyio import sleep
 from deprecated.sphinx import versionadded, versionchanged
 
 from coredis._concurrency import gather
@@ -24,12 +24,11 @@ from coredis.connection._tcp import TCPLocation
 from coredis.credentials import AbstractCredentialProvider
 from coredis.exceptions import (
     AskError,
-    BusyLoadingError,
     ClusterDownError,
     ClusterError,
     ConnectionError,
     MovedError,
-    RedisClusterError,
+    RedisError,
     TryAgainError,
 )
 from coredis.globals import (
@@ -675,7 +674,6 @@ class RedisCluster(
     @contextlib.asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         async with self.connection_pool:
-            self.refresh_table_asap = False
             yield self
 
     def __repr__(self) -> str:
@@ -712,11 +710,6 @@ class RedisCluster(
             return int((len(list(self.all_nodes)) / len(replicas)) - 1)
         return 0
 
-    async def _ensure_initialized(self) -> None:
-        if not self.connection_pool.initialized or self.refresh_table_asap:
-            await self.connection_pool.refresh_cluster_mapping(forced=True)
-            self.refresh_table_asap = False
-
     def _merge_result(
         self,
         command: bytes,
@@ -729,11 +722,8 @@ class RedisCluster(
             MERGE_CALLBACKS[command](res, **kwargs),
         )
 
-    async def on_connection_error(self, _: BaseException) -> None:
-        self.refresh_table_asap = True
-
-    async def on_cluster_down_error(self, _: BaseException) -> None:
-        self.refresh_table_asap = True
+    async def on_retry_error(self, error: Exception) -> None:
+        self.connection_pool.cluster_layout.report_errors(None, error)
 
     async def execute_command(
         self,
@@ -748,11 +738,7 @@ class RedisCluster(
 
         return await self.retry_policy.call_with_retries(
             lambda: self._execute_command(command, callback=callback, **kwargs),
-            failure_hook={
-                ConnectionError: self.on_connection_error,
-                ClusterDownError: self.on_cluster_down_error,
-            },
-            before_hook=self._ensure_initialized,
+            failure_hook=self.on_retry_error,
         )
 
     async def _execute_command(
@@ -920,7 +906,7 @@ class RedisCluster(
                 # is shared between multiple threads. To reduce the frequency you
                 # can set the variable 'reinitialize_steps' in the constructor.
                 self.refresh_table_asap = True
-                self.connection_pool.cluster_layout.register_errors(e)
+                self.connection_pool.cluster_layout.report_errors(_node, e)
                 node = self.connection_pool.cluster_layout.update_primary(e.slot_id, e.host, e.port)
                 try_random_node = False
             except TryAgainError:
@@ -928,7 +914,8 @@ class RedisCluster(
                     await sleep(0.05)
             except AskError as e:
                 redirect_location, asking = TCPLocation(e.host, e.port), True
-            except (RedisClusterError, BusyLoadingError, get_cancelled_exc_class()):
+            except RedisError as err:
+                self.connection_pool.cluster_layout.report_errors(_node, err)
                 raise
             finally:
                 if r and not released:
@@ -1279,7 +1266,6 @@ class RedisCluster(
         count: int | None = None,
         type_: StringT | None = None,
     ) -> AsyncIterator[AnyStr]:
-        await self._ensure_initialized()
         for node in self.primaries:
             async with node:
                 cursor = None

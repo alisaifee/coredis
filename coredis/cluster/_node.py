@@ -19,6 +19,7 @@ class ClusterNodeLocation(TCPLocation):
 
     server_type: Literal["primary", "replica"] | None = None
     node_id: str | None = None
+    priority: int = 100
 
     @property
     def name(self) -> str:

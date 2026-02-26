@@ -152,7 +152,8 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
                 skip_full_coverage_check=skip_full_coverage_check,
                 follow_cluster=nodemanager_follow_cluster,
                 **connection_kwargs,
-            )
+            ),
+            error_threshold=reinitialize_steps or 2,
         )
         self.connection_kwargs = connection_kwargs
         self.read_from_replicas = read_from_replicas or readonly
@@ -199,18 +200,24 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         )
 
     async def _initialize(self) -> None:
+        await self.cluster_layout.initialize()
         await self.refresh_cluster_mapping()
+        await self._task_group.start(self.cluster_layout.monitor)
         if self.cache:
             # TODO: handle cache failure so that the pool doesn't die
             #  if the cache fails.
             await self._task_group.start(self.cache.run)
 
     async def refresh_cluster_mapping(self, forced: bool = False) -> None:
+        # FIXME: This might not be needed anymore since the cluster layout
+        # is expected to refresh itself in the background. The only
+        # valuable thing this does is release dead nodes sub pools which
+        # are probably empty anyways.
+
         if not self.initialized or forced:
             async with self._init_lock:
                 if self.initialized and not forced:
                     return
-                await self.cluster_layout.refresh()
                 for node in list(self._cluster_available_connections.keys()):
                     if not self.cluster_layout.node_for_location(node):
                         self._cluster_available_connections.pop(node)

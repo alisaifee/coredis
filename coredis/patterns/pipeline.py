@@ -850,11 +850,10 @@ class ClusterPipeline(Client[AnyStr]):
         :meta private:
         """
         # On first send, queue all commands. On retry, only failed ones.
-        attempt = sorted(self.command_stack, key=lambda x: x.position)
-
+        attempt: dict[ClusterPipelineCommandRequest[Any], ClusterNodeLocation] = {}
         # Group commands by node for efficient network usage.
         nodes: dict[str, NodeCommands] = {}
-        for c in attempt:
+        for c in sorted(self.command_stack, key=lambda x: x.position):
             node = self.connection_pool.cluster_layout.node_for_request(c.name, c.arguments)
 
             if node.name not in nodes:
@@ -865,6 +864,7 @@ class ClusterPipeline(Client[AnyStr]):
                     raise_on_error=self._raise_on_error,
                 )
             nodes[node.name].append(c)
+            attempt[c] = node
 
         # Write to all nodes, then read from all nodes in sequence.
         for n in nodes.values():
@@ -873,15 +873,16 @@ class ClusterPipeline(Client[AnyStr]):
                 await n.read()
 
         # Retry MOVED/ASK/connection errors one by one if allowed.
-        attempt = sorted(
-            (c for c in attempt if isinstance(c.result, ERRORS_ALLOW_RETRY)),
-            key=lambda x: x.position,
-        )
-        if attempt and allow_redirections:
-            self.connection_pool.cluster_layout.register_errors(
-                *(c.result for c in attempt if isinstance(c.result, Exception))
+        attempt = dict(
+            sorted(
+                (c for c in attempt.items() if isinstance(c[0].result, ERRORS_ALLOW_RETRY)),
+                key=lambda x: x[0].position,
             )
-            for c in attempt:
+        )
+
+        if attempt and allow_redirections:
+            for c, node in attempt.items():
+                self.connection_pool.cluster_layout.report_errors(node, c.result)
                 try:
                     c.result = await self.client.execute_command(
                         RedisCommand(c.name, c.arguments), **c.execution_parameters
