@@ -114,6 +114,10 @@ class ClusterLayout:
                 f"Unable to map {command.decode('latin-1')} by keys {keys}"
             )
         if slots_to_keys:
+            # Commands that contain keys can not be performed when they affect
+            # multiple slots. Support for splitting only exists for certain commands
+            # that have a stable key position and where the order of responses does
+            # not matter.
             if not split and len(slots_to_keys) > 1:
                 raise ClusterCrossSlotError(command=command, keys=keys)
 
@@ -125,12 +129,6 @@ class ClusterLayout:
                         (*arguments[:key_start], *slot_keys, *arguments[1 + key_end :])
                     )
 
-                # Commands that contain keys can not be performed when they affect
-                # multiple slots. Support for splitting only exists for certain commands
-                # that have a stable key position and where the order of responses does
-                # not matter.
-                # if not split and len(nodes) > 1:
-                #    raise ClusterCrossSlotError(command=command, keys=keys)
 
         # The remaining branches apply to non keyed commands
         elif node_flag == NodeFlag.RANDOM:
