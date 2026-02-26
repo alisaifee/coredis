@@ -897,6 +897,9 @@ class RedisCluster(
                             )
                     return response
             except MovedError as e:
+                # TODO: perhaps the error reporting and getting a new potential node
+                #  can be done in a single step (this might even be useful for handling
+                #  connectivity errors to broken replicas
                 self.connection_pool.cluster_layout.report_errors(_node, e)
                 node = self.connection_pool.cluster_layout.update_primary(e.slot_id, e.host, e.port)
                 try_random_node = False
