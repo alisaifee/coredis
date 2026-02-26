@@ -1,12 +1,22 @@
 from __future__ import annotations
 
 import random
+import time
+from collections import Counter
 
-from coredis._utils import nativestr
+from anyio import TASK_STATUS_IGNORED, Event
+from anyio.abc import TaskStatus
+from anyio.lowlevel import checkpoint
+
+from coredis._utils import logger, nativestr
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName, NodeFlag
 from coredis.connection import TCPLocation
-from coredis.exceptions import ClusterCrossSlotError, RedisClusterError
+from coredis.exceptions import (
+    ClusterCrossSlotError,
+    RedisClusterError,
+    ResponseError,
+)
 from coredis.globals import READONLY_COMMANDS, ROUTE_FLAGS, SPLIT_FLAGS
 from coredis.typing import ExecutionParameters, Iterator, RedisValueT, StringT
 
@@ -18,18 +28,29 @@ class ClusterLayout:
     def __init__(
         self,
         discovery_service: DiscoveryService,
+        error_threshold: int = 15,
+        maximum_staleness: int = 30,
     ) -> None:
+        """
+        :param discovery_service: The discovery service to use to get the cluster
+         layout
+        :param error_threshold: Maximum number of errors to observe before forcing
+         a refresh of the layout
+        :param maximum_staleness: The maximum seconds to tolerate errors while trying
+         to refresh the layout. After this threshold, this instance will give up
+         trying to keep the layout fresh and the monitor task will raise an error.
+        """
         self.__slots: dict[int, list[ClusterNodeLocation]] = {}
         self.__nodes: dict[TCPLocation, ClusterNodeLocation] = {}
         self.__discovery_service = discovery_service
+        self._error_reported: Event = Event()
+        self._errors: dict[ClusterNodeLocation, Counter[type[Exception]]] = {}
+        self._error_threshold = error_threshold
+        self._last_refresh: float = -1
+        self._maximum_staleness = maximum_staleness
 
-    async def refresh(self) -> None:
-        nodes, slots = await self.__discovery_service.get_cluster_layout()
-        self.__nodes.clear()
-        for node in nodes:
-            self.__nodes[TCPLocation(node.host, node.port)] = node
-        self.__slots.clear()
-        self.__slots.update(slots)
+    async def initialize(self) -> None:
+        await self.__refresh()
 
     def node_for_request(
         self,
@@ -150,7 +171,7 @@ class ClusterLayout:
     def node_for_slot(self, slot: int, primary: bool = True) -> ClusterNodeLocation:
         primary_node: ClusterNodeLocation | None = None
         replica_nodes: list[ClusterNodeLocation] = []
-        for node in self.__slots[slot]:
+        for node in self.__slots.get(slot, []):
             if node.server_type == "primary":
                 primary_node = node
             else:
@@ -158,7 +179,7 @@ class ClusterLayout:
         if primary and primary_node:
             return primary_node
         elif replica_nodes:
-            return random.choice(replica_nodes)
+            return list(sorted(replica_nodes, key=lambda v: v.priority))[-1]
         raise RedisClusterError(
             f"Unable to map slot {slot} to a {'primary' if primary else 'replica'} node"
         )
@@ -207,18 +228,53 @@ class ClusterLayout:
             server_type="primary",
             node_id=None,
         )
-        self.__nodes[TCPLocation(node.host, node.port)] = node
-        current_primary: int | None = None
         for idx, current in enumerate(self.__slots.get(slot, [])):
-            if current.server_type == "primary" and (
-                current.host != node.host or current.port != node.port
-            ):
-                current_primary = idx
+            if current.server_type == "primary":
+                if current.host != node.host or current.port != node.port:
+                    self.__slots[slot][idx] = node
+                    self.__nodes[TCPLocation(node.host, node.port)] = node
+                else:
+                    node = current
                 break
-        if current_primary is not None:
-            self.__slots[slot].pop(current_primary)
-        self.__slots.setdefault(slot, []).append(node)
         return node
 
-    def register_errors(self, *errors: Exception) -> None:
-        pass
+    def report_errors(self, node: ClusterNodeLocation | None, *errors: Exception) -> None:
+        self._error_reported.set()
+        if node:
+            for error in errors:
+                if not isinstance(error, ResponseError):
+                    node.priority -= 1
+            self._errors.setdefault(node, Counter()).update([type(e) for e in errors])
+        else:
+            for node in self.__nodes.values():
+                self._errors.setdefault(node, Counter()).update([type(e) for e in errors])
+
+    async def monitor(self, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
+        task_status.started()
+        while True:
+            await self._error_reported.wait()
+            total_errors = 0
+            for node, counter in self._errors.items():
+                total_errors += counter.total()
+                if total_errors >= self._error_threshold:
+                    logger.info(
+                        f"Error threshold {self._error_threshold} met, refreshing cluster layout"
+                    )
+                    try:
+                        await self.__refresh()
+                        self._errors.clear()
+                        self._error_reported = Event()
+                        break
+                    except Exception as err:
+                        if time.monotonic() - self._last_refresh > self._maximum_staleness:
+                            raise RedisClusterError("Unable to refresh cluster layout") from err
+                        await checkpoint()
+
+    async def __refresh(self) -> None:
+        nodes, slots = await self.__discovery_service.get_cluster_layout()
+        self._last_refresh = time.monotonic()
+        self.__nodes.clear()
+        for node in nodes:
+            self.__nodes[TCPLocation(node.host, node.port)] = node
+        self.__slots.clear()
+        self.__slots.update(slots)
