@@ -420,6 +420,7 @@ class KeySpec:
         b"JSON.CLEAR": lambda args: (args[1],),
         b"JSON.NUMMULTBY": lambda args: (args[1],),
         b"JSON.MERGE": lambda args: (args[1],),
+        b"JSON.MGET": lambda args: (args[1],),
         b"JSON.MSET": lambda args: args[1::3],
         b"BF.RESERVE": lambda args: (args[1],),
         b"BF.ADD": lambda args: (args[1],),

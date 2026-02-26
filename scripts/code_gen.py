@@ -2413,6 +2413,7 @@ def cluster_key_extraction(path):
     key_specs["JSON.CLEAR"] = fixed_args["first"]
     key_specs["JSON.NUMMULTBY"] = fixed_args["first"]
     key_specs["JSON.MERGE"] = fixed_args["first"]
+    key_specs["JSON.MGET"] = fixed_args["first"]
     key_specs["JSON.MSET"] = ["args[1::3]"]
 
     # bf
