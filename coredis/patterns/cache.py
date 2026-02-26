@@ -454,7 +454,7 @@ class ClusterTrackingCache(TrackingCache[ClusterConnection]):
     async def run(self, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
         self._nodes = [
             node.as_client(**self._connection_pool.connection_kwargs)
-            for node in self._connection_pool.nodes.all_nodes()
+            for node in self._connection_pool.cluster_layout.nodes
         ]
         async with AsyncExitStack() as stack:
             nodes = []

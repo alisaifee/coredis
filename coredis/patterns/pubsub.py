@@ -647,7 +647,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         assert isinstance(args[0], (bytes, str))
         channel = nativestr(args[0])
         slot = hash_slot(b(channel))
-        node = self.connection_pool.nodes.node_from_slot(slot)
+        node = self.connection_pool.cluster_layout.node_for_slot(slot)
         if node and node.node_id:
             key = node.node_id
             self.shard_connections[key].send_command(command, *args)
@@ -677,7 +677,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                 node.node_id: await stack.enter_async_context(
                     self.connection_pool.acquire(node=node)
                 )
-                for node in self.connection_pool.nodes.all_primaries()
+                for node in self.connection_pool.cluster_layout.primaries
                 if node.node_id
             }
             async with create_task_group() as tg:

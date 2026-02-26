@@ -239,9 +239,9 @@ async def remapped_slots(client, request):
     moves = {}
 
     for slot in slots:
-        sources[slot] = client.connection_pool.nodes.node_from_slot(slot)
+        sources[slot] = client.connection_pool.cluster_layout.node_for_slot(slot)
         destinations[slot] = [
-            k for k in client.connection_pool.nodes.all_primaries() if k != sources[slot]
+            k for k in client.connection_pool.cluster_layout.primaries if k != sources[slot]
         ][0]
         originals[slot] = sources[slot].node_id
         moves[slot] = destinations[slot].node_id

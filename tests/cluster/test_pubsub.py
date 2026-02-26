@@ -82,7 +82,9 @@ class TestPubSubSubscribeUnsubscribe:
 
             for i, key in enumerate(keys):
                 if sharded:
-                    node_key = p.connection_pool.nodes.node_from_slot(hash_slot(b(key))).node_id
+                    node_key = p.connection_pool.cluster_layout.node_for_slot(
+                        hash_slot(b(key))
+                    ).node_id
                 else:
                     node_key = "legacy"
                 counter[node_key] += 1
@@ -96,7 +98,9 @@ class TestPubSubSubscribeUnsubscribe:
                 assert await unsub_func(key) is None
             for i, key in enumerate(keys):
                 if sharded:
-                    node_key = p.connection_pool.nodes.node_from_slot(hash_slot(b(key))).node_id
+                    node_key = p.connection_pool.cluster_layout.node_for_slot(
+                        hash_slot(b(key))
+                    ).node_id
                 else:
                     node_key = "legacy"
                 counter[node_key] -= 1
@@ -128,7 +132,9 @@ class TestPubSubSubscribeUnsubscribe:
             received = set()
             for i, key in enumerate(keys):
                 if sharded:
-                    node_key = p.connection_pool.nodes.node_from_slot(hash_slot(b(key))).node_id
+                    node_key = p.connection_pool.cluster_layout.node_for_slot(
+                        hash_slot(b(key))
+                    ).node_id
                 else:
                     node_key = "legacy"
                 counter[node_key] += 1
