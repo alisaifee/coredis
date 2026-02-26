@@ -550,7 +550,6 @@ class RedisCluster(
             type_adapter=type_adapter,
         )
 
-        self.refresh_table_asap: bool = True
         self.non_atomic_cross_slot = non_atomic_cross_slot
         self._decodecontext: contextvars.ContextVar[bool | None,] = contextvars.ContextVar(
             "decode", default=None
@@ -804,9 +803,6 @@ class RedisCluster(
         while remaining_attempts > 0:
             remaining_attempts -= 1
             released = False
-            if self.refresh_table_asap:
-                await self.connection_pool.refresh_cluster_mapping(forced=True)
-                self.refresh_table_asap = False
             _node = None
             if asking and redirect_location:
                 _node = self.connection_pool.cluster_layout.node_for_location(redirect_location)
@@ -901,11 +897,6 @@ class RedisCluster(
                             )
                     return response
             except MovedError as e:
-                # Reinitialize on ever x number of MovedError.
-                # This counter will increase faster when the same client object
-                # is shared between multiple threads. To reduce the frequency you
-                # can set the variable 'reinitialize_steps' in the constructor.
-                self.refresh_table_asap = True
                 self.connection_pool.cluster_layout.report_errors(_node, e)
                 node = self.connection_pool.cluster_layout.update_primary(e.slot_id, e.host, e.port)
                 try_random_node = False

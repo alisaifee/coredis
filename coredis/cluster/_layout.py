@@ -129,7 +129,6 @@ class ClusterLayout:
                         (*arguments[:key_start], *slot_keys, *arguments[1 + key_end :])
                     )
 
-
         # The remaining branches apply to non keyed commands
         elif node_flag == NodeFlag.RANDOM:
             nodes = {self.random_node(primary=not prefer_replica): []}

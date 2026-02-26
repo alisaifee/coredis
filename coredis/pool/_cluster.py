@@ -200,37 +200,21 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         )
 
     async def _initialize(self) -> None:
+        total_nodes = len(list(self.cluster_layout.nodes))
+        if not self.max_connections_per_node and self.max_connections < total_nodes:
+            warnings.warn(
+                f"The value of max_connections={self.max_connections} "
+                "should be atleast equal to the number of nodes "
+                f"({total_nodes}) in the cluster and has been increased by "
+                f"{total_nodes - self.max_connections} connections."
+            )
+            self.max_connections = total_nodes
         await self.cluster_layout.initialize()
-        await self.refresh_cluster_mapping()
         await self._task_group.start(self.cluster_layout.monitor)
         if self.cache:
             # TODO: handle cache failure so that the pool doesn't die
             #  if the cache fails.
             await self._task_group.start(self.cache.run)
-
-    async def refresh_cluster_mapping(self, forced: bool = False) -> None:
-        # FIXME: This might not be needed anymore since the cluster layout
-        # is expected to refresh itself in the background. The only
-        # valuable thing this does is release dead nodes sub pools which
-        # are probably empty anyways.
-
-        if not self.initialized or forced:
-            async with self._init_lock:
-                if self.initialized and not forced:
-                    return
-                for node in list(self._cluster_available_connections.keys()):
-                    if not self.cluster_layout.node_for_location(node):
-                        self._cluster_available_connections.pop(node)
-                total_nodes = len(list(self.cluster_layout.nodes))
-                if not self.max_connections_per_node and self.max_connections < total_nodes:
-                    warnings.warn(
-                        f"The value of max_connections={self.max_connections} "
-                        "should be atleast equal to the number of nodes "
-                        f"({total_nodes}) in the cluster and has been increased by "
-                        f"{total_nodes - self.max_connections} connections."
-                    )
-                    self.max_connections = total_nodes
-                self.initialized = True
 
     async def get_connection(
         self, node: ClusterNodeLocation | None = None, primary: bool = True, **options: Any
