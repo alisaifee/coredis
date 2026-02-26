@@ -20,16 +20,16 @@ class DiscoveryService:
         follow_cluster: bool = True,
         **connection_kwargs: Unpack[BaseConnectionParams],
     ) -> None:
-        self.__connection_kwargs = connection_kwargs
-        self.__startup_nodes: list[ClusterNodeLocation] = (
+        self._connection_kwargs = connection_kwargs
+        self._startup_nodes: list[ClusterNodeLocation] = (
             []
             if startup_nodes is None
             else list(ClusterNodeLocation(n.host, n.port) for n in startup_nodes if n)
         )
-        self.__startup_nodes_reachable = False
-        self.__initial_startup_nodes = list(self.__startup_nodes)
-        self.__follow_cluster = follow_cluster
-        self.__skip_full_coverage_check = skip_full_coverage_check
+        self._startup_nodes_reachable = False
+        self._initial_startup_nodes = list(self._startup_nodes)
+        self._follow_cluster = follow_cluster
+        self._skip_full_coverage_check = skip_full_coverage_check
 
     async def get_cluster_layout(
         self,
@@ -42,7 +42,7 @@ class DiscoveryService:
         Maybe it should stop to try after it have correctly covered all slots or when one node is
         reached and it could execute CLUSTER SLOTS command.
         """
-        self.__startup_nodes_reachable = False
+        self._startup_nodes_reachable = False
 
         nodes_cache: dict[TCPLocation, ClusterNodeLocation] = {}
         tmp_slots: dict[int, list[ClusterNodeLocation]] = {}
@@ -52,20 +52,20 @@ class DiscoveryService:
         replicas: set[str] = set()
         startup_node_errors: dict[Exception, list[str]] = {}
 
-        nodes = self.__initial_startup_nodes
+        nodes = self._initial_startup_nodes
 
         # With this option the client will attempt to connect to any of the previous set of nodes
         # instead of the original set of startup nodes
-        if self.__follow_cluster:
-            nodes = self.__startup_nodes
+        if self._follow_cluster:
+            nodes = self._startup_nodes
 
         for node in nodes:
             cluster_slots = {}
             if node:
-                async with node.as_client(**self.__connection_kwargs) as r:
+                async with node.as_client(**self._connection_kwargs) as r:
                     try:
                         cluster_slots = await r.cluster_slots()
-                        self.__startup_nodes_reachable = True
+                        self._startup_nodes_reachable = True
                     except RedisError as err:
                         startup_node_errors.setdefault(err, []).append(node.name)
                         continue
@@ -115,7 +115,7 @@ class DiscoveryService:
                                     f" {', '.join(disagreements)}"
                                 )
 
-            if not self.__skip_full_coverage_check and (
+            if not self._skip_full_coverage_check and (
                 await self._cluster_require_full_coverage(nodes_cache)
             ):
                 all_slots_covered = set(tmp_slots.keys()) == HASH_SLOTS_SET
@@ -123,7 +123,7 @@ class DiscoveryService:
             if all_slots_covered:
                 break
 
-        if not self.__startup_nodes_reachable:
+        if not self._startup_nodes_reachable:
             startup_error = RedisClusterError(
                 "Redis Cluster cannot be connected. Please provide at least one reachable node."
             )
@@ -136,8 +136,8 @@ class DiscoveryService:
                 f"{len(tmp_slots)} of {HASH_SLOTS} covered..."
             )
 
-        self.__startup_nodes.clear()
-        self.__startup_nodes.extend(nodes_cache.values())
+        self._startup_nodes.clear()
+        self._startup_nodes.extend(nodes_cache.values())
         return list(nodes_cache.values()), tmp_slots
 
     async def _cluster_require_full_coverage(
@@ -155,7 +155,7 @@ class DiscoveryService:
         return False
 
     async def _node_require_full_coverage(self, node: ClusterNodeLocation) -> bool:
-        async with node.as_client(**self.__connection_kwargs) as r_node:
+        async with node.as_client(**self._connection_kwargs) as r_node:
             try:
                 with r_node.decoding(False):
                     node_config = await r_node.config_get(["cluster-require-full-coverage"])
