@@ -274,9 +274,6 @@ class ClusterLayout:
 
     async def _refresh(self) -> None:
         nodes, slots = await self._discovery_service.get_cluster_layout()
+        nodes_by_location = {TCPLocation(node.host, node.port): node for node in nodes}
+        self._nodes, self._slots = nodes_by_location, slots
         self._last_refresh = time.monotonic()
-        self._nodes.clear()
-        for node in nodes:
-            self._nodes[TCPLocation(node.host, node.port)] = node
-        self._slots.clear()
-        self._slots.update(slots)
