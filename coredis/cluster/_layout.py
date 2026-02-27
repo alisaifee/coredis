@@ -275,6 +275,8 @@ class ClusterLayout:
                 except Exception as err:
                     if now - self._last_refresh > self._maximum_staleness:
                         raise RedisClusterError("Unable to refresh cluster layout") from err
+                    else:
+                        logger.exception("Unable to refresh cluster. Will retry", exc_info=True)
                     await checkpoint()
             await checkpoint()
 
