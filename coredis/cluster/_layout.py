@@ -5,7 +5,7 @@ import random
 import time
 from collections import Counter, defaultdict
 
-from anyio import TASK_STATUS_IGNORED, Event, WouldBlock, create_memory_object_stream
+from anyio import TASK_STATUS_IGNORED, WouldBlock, create_memory_object_stream
 from anyio.abc import TaskStatus
 from anyio.lowlevel import checkpoint
 
@@ -47,7 +47,6 @@ class ClusterLayout:
         self._slots: defaultdict[int, list[ClusterNodeLocation]] = defaultdict(list)
         self._nodes: dict[TCPLocation, ClusterNodeLocation] = {}
         self._discovery_service = discovery_service
-        self._error_reported: Event = Event()
         self._error_stream = create_memory_object_stream[
             tuple[ClusterNodeLocation | None, Exception]
         ](error_threshold * 2)
@@ -226,7 +225,6 @@ class ClusterLayout:
             location, ClusterNodeLocation(location.host, location.port, server_type="primary")
         )
         slot_nodes = self._slots[error.slot_id]
-
         for idx, current in enumerate(slot_nodes):
             if (is_errored := (current == errored_node)) or current.is_primary:
                 if redirect_node in slot_nodes and is_errored:

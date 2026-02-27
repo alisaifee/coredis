@@ -217,15 +217,15 @@ class TestClusterLayout:
 
     async def test_error_burst(self, redis_cluster_server, discovery_service, mocker):
         layout = ClusterLayout(discovery_service, error_threshold=10, maximum_staleness=1)
-        refresh = mocker.spy(layout, "_refresh")
         await layout.initialize()
         async with create_task_group() as tg:
             await tg.start(layout.monitor)
 
+            refresh = mocker.spy(layout, "_refresh")
             nodes = layout.nodes
             [layout.report_errors(None, ConnectionError()) for _ in range(100)]
             await sleep(0.5)
-            assert refresh.call_count < 10
+            assert refresh.call_count == 2
             assert layout.nodes == nodes
 
             tg.cancel_scope.cancel()
