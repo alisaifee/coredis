@@ -200,7 +200,8 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         )
 
     async def _initialize(self) -> None:
-        total_nodes = len(list(self.cluster_layout.nodes))
+        await self.cluster_layout.initialize()
+        total_nodes = len(self.cluster_layout.nodes)
         if not self.max_connections_per_node and self.max_connections < total_nodes:
             warnings.warn(
                 f"The value of max_connections={self.max_connections} "
@@ -209,7 +210,6 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
                 f"{total_nodes - self.max_connections} connections."
             )
             self.max_connections = total_nodes
-        await self.cluster_layout.initialize()
         await self._task_group.start(self.cluster_layout.monitor)
         await self._task_group.start(self._cleanup)
         if self.cache:
@@ -276,7 +276,6 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         """Resets the connection pool back to a clean state"""
         self._cluster_available_connections = {}
         self._online_connections = set()
-        self.initialized = False
 
     async def _wrap_connection(
         self,
@@ -347,8 +346,8 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
     async def _cleanup(self, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
         task_status.started()
         while True:
-            for location, pool in list(self._cluster_available_connections.items()):
-                if list(self.cluster_layout.nodes):
+            if self.cluster_layout.nodes:
+                for location, pool in list(self._cluster_available_connections.items()):
                     if not self.cluster_layout.node_for_location(location):
                         dead_queue = self._cluster_available_connections.pop(location)
                         connections = []
@@ -356,7 +355,7 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
                             if c := dead_queue.get_nowait():
                                 connections.append(c)
                         except QueueEmpty:
-                            break
+                            pass
                         logger.info(
                             f"Node for {location} is no longer in cluster layout, releasing from connection pool (connections: {len(connections)}"
                         )

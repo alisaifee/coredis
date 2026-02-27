@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import warnings
+from collections import defaultdict
 
 from coredis.connection import BaseConnectionParams, TCPLocation
-from coredis.exceptions import RedisClusterError, RedisError, ResponseError
+from coredis.exceptions import ConnectionError, RedisClusterError, RedisError, ResponseError
 from coredis.typing import Final, Iterable, Unpack
 
 from ._node import ClusterNodeLocation
@@ -33,7 +34,7 @@ class DiscoveryService:
 
     async def get_cluster_layout(
         self,
-    ) -> tuple[list[ClusterNodeLocation], dict[int, list[ClusterNodeLocation]]]:
+    ) -> tuple[list[ClusterNodeLocation], defaultdict[int, list[ClusterNodeLocation]]]:
         """
         Initializes the slots cache by asking all startup nodes what the
         current cluster configuration is.
@@ -45,7 +46,7 @@ class DiscoveryService:
         self._startup_nodes_reachable = False
 
         nodes_cache: dict[TCPLocation, ClusterNodeLocation] = {}
-        tmp_slots: dict[int, list[ClusterNodeLocation]] = {}
+        tmp_slots: defaultdict[int, list[ClusterNodeLocation]] = defaultdict(list)
 
         all_slots_covered = False
         disagreements: list[str] = []
@@ -95,7 +96,7 @@ class DiscoveryService:
 
                     for i in range(min_slot, max_slot + 1):
                         if i not in tmp_slots:
-                            tmp_slots[i] = [primary_node]
+                            tmp_slots[i].append(primary_node)
                             for replica_node in replica_nodes:
                                 nodes_cache[TCPLocation(replica_node.host, replica_node.port)] = (
                                     replica_node
@@ -113,7 +114,9 @@ class DiscoveryService:
                                         "startup_nodes could not agree on a valid slots cache."
                                         f" {', '.join(disagreements)}"
                                     )
-            if not self._skip_full_coverage_check and (
+            if not (nodes_cache and tmp_slots):
+                all_slots_covered = False
+            elif not self._skip_full_coverage_check and (
                 await self._cluster_require_full_coverage(nodes_cache)
             ):
                 all_slots_covered = set(tmp_slots.keys()) == HASH_SLOTS_SET
@@ -130,8 +133,8 @@ class DiscoveryService:
             raise startup_error
         if not all_slots_covered:
             raise RedisClusterError(
-                "Not all slots are covered after query all startup_nodes. "
-                f"{len(tmp_slots)} of {HASH_SLOTS} covered..."
+                "Not all slots are covered after attempting to query all startup nodes. "
+                f"{len(tmp_slots)} of {HASH_SLOTS} covered."
             )
 
         self._startup_nodes.clear()
