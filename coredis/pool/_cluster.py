@@ -50,6 +50,9 @@ class ClusterConnectionPoolParams(ConnectionPoolParams[ClusterConnection]):
     max_connections_per_node: NotRequired[bool]
     #: If ``True`` connections to replicas will be returned for readonly commands
     read_from_replicas: NotRequired[bool]
+    #: Interval (in seconds) for performing a cleanup of the pool to
+    #: remove any connections that are no longer in the cluster layout.
+    gc_interval: NotRequired[int]
 
 
 class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
@@ -65,6 +68,7 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         "reinitialize_steps": int,
         "skip_full_coverage_check": query_param_to_bool,
         "read_from_replicas": query_param_to_bool,
+        "gc_interval": int,
     }
 
     connection_class: type[ClusterConnection]
@@ -85,6 +89,7 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         readonly: bool = False,
         read_from_replicas: bool = False,
         timeout: float | None = None,
+        gc_interval: int = 30,
         _cache: AbstractCache | None = None,
         **connection_kwargs: Unpack[BaseConnectionParams],
     ):
@@ -123,6 +128,8 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
          along side the cluster if the cluster nodes move around alot.
         :param read_from_replicas: If ``True`` connections to replicas will be returned for readonly
          commands
+        :param gc_interval: Interval (in seconds) for performing a cleanup of the pool to
+         remove any connections that are no longer in the cluster layout.
         :param connection_kwargs: arguments to pass to the :paramref:`connection_class`
          constructor when creating a new connection
         """
@@ -131,7 +138,7 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
             **connection_kwargs,
         )
         self._initialized = False
-        self._cleanup_interval = 60
+        self._gc_interval = gc_interval
         self.timeout = timeout
         self.max_connections = max_connections or 64
         self.max_connections_per_node = max_connections_per_node
@@ -352,8 +359,9 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
                         dead_queue = self._cluster_available_connections.pop(location)
                         connections = []
                         try:
-                            if c := dead_queue.get_nowait():
-                                connections.append(c)
+                            while True:
+                                if c := dead_queue.get_nowait():
+                                    connections.append(c)
                         except QueueEmpty:
                             pass
                         logger.info(
@@ -361,4 +369,4 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
                         )
                         for connection in connections:
                             connection.invalidate()
-            await sleep(self._cleanup_interval)
+            await sleep(self._gc_interval)
