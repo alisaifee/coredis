@@ -69,52 +69,50 @@ class DiscoveryService:
                     except RedisError as err:
                         startup_node_errors.setdefault(err, []).append(node.name)
                         continue
-
             all_slots_covered = True
 
             for min_slot, max_slot in cluster_slots:
                 _nodes = cluster_slots.get((min_slot, max_slot))
-                assert _nodes
-                primary_node = ClusterNodeLocation(
-                    host=_nodes[0]["host"],
-                    port=_nodes[0]["port"],
-                    server_type="primary",
-                    node_id=_nodes[0]["node_id"],
-                )
-                replica_nodes = [
-                    ClusterNodeLocation(
-                        host=n["host"],
-                        port=n["port"],
-                        server_type="replica",
-                        node_id=n["node_id"],
+                if _nodes:
+                    primary_node = ClusterNodeLocation(
+                        host=_nodes[0]["host"],
+                        port=_nodes[0]["port"],
+                        server_type="primary",
+                        node_id=_nodes[0]["node_id"],
                     )
-                    for n in _nodes[1:]
-                ]
+                    replica_nodes = [
+                        ClusterNodeLocation(
+                            host=n["host"],
+                            port=n["port"],
+                            server_type="replica",
+                            node_id=n["node_id"],
+                        )
+                        for n in _nodes[1:]
+                    ]
 
-                primary_node.host = primary_node.host or node.host
-                nodes_cache[TCPLocation(primary_node.host, primary_node.port)] = primary_node
+                    primary_node.host = primary_node.host or node.host
+                    nodes_cache[TCPLocation(primary_node.host, primary_node.port)] = primary_node
 
-                for i in range(min_slot, max_slot + 1):
-                    if i not in tmp_slots:
-                        tmp_slots[i] = [primary_node]
-                        for replica_node in replica_nodes:
-                            nodes_cache[TCPLocation(replica_node.host, replica_node.port)] = (
-                                replica_node
-                            )
-                            tmp_slots[i].append(replica_node)
-                            replicas.add(replica_node.name)
-                    else:
-                        # Validate that 2 nodes want to use the same slot cache setup
-                        if tmp_slots[i][0].name != node.name:
-                            disagreements.append(
-                                f"{tmp_slots[i][0].name} vs {node.name} on slot: {i}",
-                            )
-                            if len(disagreements) > 5:
-                                raise RedisClusterError(
-                                    "startup_nodes could not agree on a valid slots cache."
-                                    f" {', '.join(disagreements)}"
+                    for i in range(min_slot, max_slot + 1):
+                        if i not in tmp_slots:
+                            tmp_slots[i] = [primary_node]
+                            for replica_node in replica_nodes:
+                                nodes_cache[TCPLocation(replica_node.host, replica_node.port)] = (
+                                    replica_node
                                 )
-
+                                tmp_slots[i].append(replica_node)
+                                replicas.add(replica_node.name)
+                        else:
+                            # Validate that 2 nodes want to use the same slot cache setup
+                            if tmp_slots[i][0].name != node.name:
+                                disagreements.append(
+                                    f"{tmp_slots[i][0].name} vs {node.name} on slot: {i}",
+                                )
+                                if len(disagreements) > 5:
+                                    raise RedisClusterError(
+                                        "startup_nodes could not agree on a valid slots cache."
+                                        f" {', '.join(disagreements)}"
+                                    )
             if not self._skip_full_coverage_check and (
                 await self._cluster_require_full_coverage(nodes_cache)
             ):
