@@ -56,7 +56,7 @@ class ClusterLayout:
         self,
         command: bytes,
         arguments: tuple[RedisValueT, ...],
-        prefer_replica: bool = False,
+        primary: bool = True,
         execution_parameters: ExecutionParameters = {},
     ) -> ClusterNodeLocation:
         """
@@ -65,7 +65,7 @@ class ClusterLayout:
         nodes = self.nodes_for_request(
             command,
             arguments,
-            prefer_replica=prefer_replica,
+            primary=primary,
             execution_parameters=execution_parameters,
         )
         if not nodes or len(nodes) > 1:
@@ -78,7 +78,7 @@ class ClusterLayout:
         self,
         command: bytes,
         arguments: tuple[RedisValueT, ...],
-        prefer_replica: bool = False,
+        primary: bool = True,
         allow_cross_slot: bool = False,
         execution_parameters: ExecutionParameters = {},
     ) -> dict[ClusterNodeLocation, list[tuple[RedisValueT, ...]]]:
@@ -97,7 +97,7 @@ class ClusterLayout:
 
         nodes: dict[ClusterNodeLocation, list[tuple[RedisValueT, ...]]] = {}
         slots_to_keys = KeySpec.slots_to_keys(
-            command, *arguments, readonly_command=command in READONLY_COMMANDS and prefer_replica
+            command, *arguments, readonly_command=command in READONLY_COMMANDS and not primary
         )
         keys = KeySpec.extract_keys(command, *arguments)
         node_flag = ROUTE_FLAGS.get(command)
@@ -124,7 +124,7 @@ class ClusterLayout:
                 raise ClusterCrossSlotError(command=command, keys=keys)
 
             for slot, slot_keys in slots_to_keys.items():
-                node = self.node_for_slot(slot, not prefer_replica)
+                node = self.node_for_slot(slot, primary)
                 nodes.setdefault(node, [])
                 if split:
                     nodes[node].append(
@@ -133,7 +133,7 @@ class ClusterLayout:
 
         # The remaining branches apply to non keyed commands
         elif node_flag == NodeFlag.RANDOM:
-            nodes = {self.random_node(primary=not prefer_replica): [arguments]}
+            nodes = {self.random_node(primary=primary): [arguments]}
         elif node_flag == NodeFlag.PRIMARIES:
             nodes = {node: [arguments] for node in self.primaries}
         elif node_flag == NodeFlag.ALL:
@@ -157,7 +157,7 @@ class ClusterLayout:
             # If the scripting call doesn not contain any keys, pick a random
             # node
             if not nodes:
-                nodes = {self.random_node(primary=not prefer_replica): [arguments]}
+                nodes = {self.random_node(primary=primary): [arguments]}
         return nodes
 
     def node_for_location(self, location: TCPLocation) -> ClusterNodeLocation | None:
@@ -167,7 +167,7 @@ class ClusterLayout:
         primary_node: ClusterNodeLocation | None = None
         replica_nodes: list[ClusterNodeLocation] = []
         for node in self._slots.get(slot, []):
-            if node.server_type == "primary":
+            if node.is_primary:
                 primary_node = node
             else:
                 replica_nodes.append(node)
@@ -192,20 +192,16 @@ class ClusterLayout:
         return mapping
 
     @property
-    def nodes(self) -> Iterator[ClusterNodeLocation]:
-        yield from self._nodes.values()
+    def nodes(self) -> list[ClusterNodeLocation]:
+        return [node for node in self._nodes.values()]
 
     @property
-    def primaries(self) -> Iterator[ClusterNodeLocation]:
-        for node in self._nodes.values():
-            if node.server_type == "primary":
-                yield node
+    def primaries(self) -> list[ClusterNodeLocation]:
+        return [node for node in self._nodes.values() if node.is_primary]
 
     @property
-    def replicas(self) -> Iterator[ClusterNodeLocation]:
-        for node in self._nodes.values():
-            if node.server_type == "replica":
-                yield node
+    def replicas(self) -> list[ClusterNodeLocation]:
+        return [node for node in self._nodes.values() if node.server_type == "replica"]
 
     def random_node(self, primary: bool = True) -> ClusterNodeLocation:
         if primary:
@@ -227,7 +223,7 @@ class ClusterLayout:
             node_id=None,
         )
         for idx, current in enumerate(self._slots.get(slot, [])):
-            if current.server_type == "primary":
+            if current.is_primary:
                 if current.host != node.host or current.port != node.port:
                     self._slots[slot][idx] = node
                     self._nodes[TCPLocation(node.host, node.port)] = node

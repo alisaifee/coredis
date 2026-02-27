@@ -25,6 +25,10 @@ class ClusterNodeLocation(TCPLocation):
     def name(self) -> str:
         return f"{self.host}:{self.port}"
 
+    @property
+    def is_primary(self) -> bool:
+        return self.server_type == "primary"
+
     def as_client(
         self, **client_args: Unpack[ConnectionPoolParams[ClusterConnection]]
     ) -> Redis[Any]:

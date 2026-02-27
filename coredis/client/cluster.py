@@ -755,7 +755,7 @@ class RedisCluster(
         nodes = self.connection_pool.cluster_layout.nodes_for_request(
             command.name,
             command.arguments,
-            prefer_replica=prefer_replica,
+            primary=not prefer_replica,
             allow_cross_slot=self.non_atomic_cross_slot,
             execution_parameters=kwargs,
         )
