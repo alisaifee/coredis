@@ -4,11 +4,11 @@ import warnings
 from contextlib import asynccontextmanager
 from typing import Any
 
-from anyio import TASK_STATUS_IGNORED, Lock, fail_after
+from anyio import TASK_STATUS_IGNORED, fail_after, sleep
 from anyio.abc import TaskStatus
 
-from coredis._concurrency import Queue, QueueFull
-from coredis._utils import query_param_to_bool
+from coredis._concurrency import Queue, QueueEmpty, QueueFull
+from coredis._utils import logger, query_param_to_bool
 from coredis.cluster._discovery import DiscoveryService
 from coredis.cluster._layout import ClusterLayout
 from coredis.cluster._node import ClusterNodeLocation
@@ -130,7 +130,8 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
             connection_class=connection_class,
             **connection_kwargs,
         )
-        self.initialized = False
+        self._initialized = False
+        self._cleanup_interval = 60
         self.timeout = timeout
         self.max_connections = max_connections or 64
         self.max_connections_per_node = max_connections_per_node
@@ -163,7 +164,6 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
 
         if "stream_timeout" not in self.connection_kwargs:
             self.connection_kwargs["stream_timeout"] = None
-        self._init_lock = Lock()
 
     @classmethod
     def from_url(
@@ -211,6 +211,7 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
             self.max_connections = total_nodes
         await self.cluster_layout.initialize()
         await self._task_group.start(self.cluster_layout.monitor)
+        await self._task_group.start(self._cleanup)
         if self.cache:
             # TODO: handle cache failure so that the pool doesn't die
             #  if the cache fails.
@@ -230,9 +231,9 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         """
         connection: ClusterConnection
         if node:
-            connection = await self.__get_connection_by_node(node)
+            connection = await self._get_connection_by_node(node)
         else:
-            connection = await self.__get_random_connection(primary=primary)
+            connection = await self._get_random_connection(primary=primary)
         return connection
 
     @asynccontextmanager
@@ -260,7 +261,7 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         assert isinstance(connection, ClusterConnection)
         try:
             if connection.reusable:
-                self.__node_pool(connection.location).put_nowait(connection)
+                self._node_pool(connection.location).put_nowait(connection)
             else:
                 connection.invalidate()
         except QueueFull:
@@ -277,7 +278,7 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         self._online_connections = set()
         self.initialized = False
 
-    async def __wrap_connection(
+    async def _wrap_connection(
         self,
         connection: ClusterConnection,
         *,
@@ -290,13 +291,13 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
             # As these are clear signals that an error case was handled by the connection
             task_status.started(error)
         finally:
-            node_pool = self.__node_pool(connection.location)
+            node_pool = self._node_pool(connection.location)
             self._online_connections.discard(connection)
             if connection in node_pool:
                 node_pool.remove(connection)
                 node_pool.append_nowait(None)
 
-    async def __make_node_connection(self, node: ClusterNodeLocation) -> ClusterConnection:
+    async def _make_node_connection(self, node: ClusterNodeLocation) -> ClusterConnection:
         """Creates a new connection to a node"""
 
         location = TCPLocation(node.host, node.port)
@@ -305,17 +306,17 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
             read_from_replicas=self.read_from_replicas and node.server_type == "replica",
             **self.connection_kwargs,
         )
-        if err := await self._task_group.start(self.__wrap_connection, connection):
+        if err := await self._task_group.start(self._wrap_connection, connection):
             raise err
         self._online_connections.add(connection)
         return connection
 
-    def __node_pool(self, location: TCPLocation) -> Queue[ClusterConnection]:
+    def _node_pool(self, location: TCPLocation) -> Queue[ClusterConnection]:
         if self._cluster_available_connections.get(location) is None:
-            self._cluster_available_connections[location] = self.__default_node_queue()
+            self._cluster_available_connections[location] = self._default_node_queue()
         return self._cluster_available_connections[location]
 
-    def __default_node_queue(
+    def _default_node_queue(
         self,
     ) -> Queue[ClusterConnection]:
         q_size = max(
@@ -326,18 +327,39 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         )
         return Queue[ClusterConnection](q_size)
 
-    async def __get_random_connection(self, primary: bool = False) -> ClusterConnection:
-        return await self.__get_connection_by_node(self.cluster_layout.random_node(primary))
+    async def _get_random_connection(self, primary: bool = False) -> ClusterConnection:
+        return await self._get_connection_by_node(self.cluster_layout.random_node(primary))
 
-    async def __get_connection_by_node(self, node: ClusterNodeLocation) -> ClusterConnection:
+    async def _get_connection_by_node(self, node: ClusterNodeLocation) -> ClusterConnection:
         location = TCPLocation(node.host, node.port)
         with fail_after(self.timeout):
-            connection = await self.__node_pool(location).get()
+            connection = await self._node_pool(location).get()
 
         if not connection or not connection.usable:
             try:
-                connection = await self.__make_node_connection(node)
-            except:
-                self.__node_pool(location).append_nowait(None)
+                connection = await self._make_node_connection(node)
+            except Exception:
+                self._node_pool(location).append_nowait(None)
                 raise
+
         return connection
+
+    async def _cleanup(self, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
+        task_status.started()
+        while True:
+            for location, pool in list(self._cluster_available_connections.items()):
+                if list(self.cluster_layout.nodes):
+                    if not self.cluster_layout.node_for_location(location):
+                        dead_queue = self._cluster_available_connections.pop(location)
+                        connections = []
+                        try:
+                            if c := dead_queue.get_nowait():
+                                connections.append(c)
+                        except QueueEmpty:
+                            break
+                        logger.info(
+                            f"Node for {location} is no longer in cluster layout, releasing from connection pool (connections: {len(connections)}"
+                        )
+                        for connection in connections:
+                            connection.invalidate()
+            await sleep(self._cleanup_interval)
