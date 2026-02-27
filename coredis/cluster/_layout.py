@@ -133,11 +133,11 @@ class ClusterLayout:
 
         # The remaining branches apply to non keyed commands
         elif node_flag == NodeFlag.RANDOM:
-            nodes = {self.random_node(primary=not prefer_replica): []}
+            nodes = {self.random_node(primary=not prefer_replica): [arguments]}
         elif node_flag == NodeFlag.PRIMARIES:
-            nodes = {node: [] for node in self.primaries}
+            nodes = {node: [arguments] for node in self.primaries}
         elif node_flag == NodeFlag.ALL:
-            nodes = {node: [] for node in self.nodes}
+            nodes = {node: [arguments] for node in self.nodes}
         elif node_flag == NodeFlag.SLOT_ID and (
             slot_arguments_range := execution_parameters.get("slot_arguments_range", None)
         ):
@@ -157,11 +157,7 @@ class ClusterLayout:
             # If the scripting call doesn not contain any keys, pick a random
             # node
             if not nodes:
-                nodes = {self.random_node(primary=not prefer_replica): []}
-        # Populate arguments for all nodes if they haven't been populated
-        for node in nodes:
-            if not nodes[node]:
-                nodes[node] = [arguments]
+                nodes = {self.random_node(primary=not prefer_replica): [arguments]}
         return nodes
 
     def node_for_location(self, location: TCPLocation) -> ClusterNodeLocation | None:
