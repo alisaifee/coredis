@@ -2377,7 +2377,7 @@ def cluster_key_extraction(path):
                 if arg.get("type") == "key":
                     arg_pos.append(idx)
             if len(arg_pos) == 1:
-                fallbacks[name] = [f"(args[{arg_pos[0]}],)"]
+                fallbacks[name] = [f"(args[{1+arg_pos[0]}],)"]
 
     readonly = {}
     fixed_args = {"first": ["(args[1],)"], "second": ["(args[2],)"], "all": ["args[1:]"]}
