@@ -44,7 +44,7 @@ class ClusterLayout:
         self._nodes: dict[TCPLocation, ClusterNodeLocation] = {}
         self._discovery_service = discovery_service
         self._error_reported: Event = Event()
-        self._errors: dict[ClusterNodeLocation, Counter[type[Exception]]] = {}
+        self._errors: dict[ClusterNodeLocation | None, Counter[type[Exception]]] = {}
         self._error_threshold = error_threshold
         self._last_refresh: float = -1
         self._maximum_staleness = maximum_staleness
@@ -91,7 +91,9 @@ class ClusterLayout:
         be separated into chunks per slot.
         """
         if not self._nodes:
-            raise RedisClusterError("No known nodes in cluster")
+            error = RedisClusterError("No known nodes in cluster")
+            self.report_errors(None, error)
+            raise error
 
         nodes: dict[ClusterNodeLocation, list[tuple[RedisValueT, ...]]] = {}
         slots_to_keys = KeySpec.slots_to_keys(
@@ -177,6 +179,9 @@ class ClusterLayout:
             return primary_node
         elif replica_nodes:
             return list(sorted(replica_nodes, key=lambda v: v.priority))[-1]
+        # Last resort, if there is no replica, return the primary
+        elif primary_node:
+            return primary_node
         raise RedisClusterError(
             f"Unable to map slot {slot} to a {'primary' if primary else 'replica'} node"
         )
@@ -236,36 +241,42 @@ class ClusterLayout:
         return node
 
     def report_errors(self, node: ClusterNodeLocation | None, *errors: Exception) -> None:
-        self._error_reported.set()
         if node:
             for error in errors:
                 if not isinstance(error, ResponseError):
                     node.priority -= 1
             self._errors.setdefault(node, Counter()).update([type(e) for e in errors])
         else:
-            for node in self._nodes.values():
-                self._errors.setdefault(node, Counter()).update([type(e) for e in errors])
+            if self._nodes:
+                for node in self._nodes.values():
+                    self._errors.setdefault(node, Counter()).update([type(e) for e in errors])
+            else:
+                self._errors.setdefault(None, Counter()).update([type(e) for e in errors])
+
+        self._error_reported.set()
 
     async def monitor(self, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
         task_status.started()
         while True:
+            now = time.monotonic()
             await self._error_reported.wait()
             total_errors = 0
-            for node, counter in self._errors.items():
+            for _, counter in list(self._errors.items()):
                 total_errors += counter.total()
-                if total_errors >= self._error_threshold:
-                    logger.info(
-                        f"Error threshold {self._error_threshold} met, refreshing cluster layout"
-                    )
-                    try:
-                        await self._refresh()
-                        self._errors.clear()
-                        self._error_reported = Event()
-                        break
-                    except Exception as err:
-                        if time.monotonic() - self._last_refresh > self._maximum_staleness:
-                            raise RedisClusterError("Unable to refresh cluster layout") from err
-                        await checkpoint()
+            if total_errors >= self._error_threshold:
+                logger.info(
+                    f"Error threshold {self._error_threshold} met, refreshing cluster layout"
+                )
+                try:
+                    await self._refresh()
+                    self._errors.clear()
+                    self._error_reported = Event()
+                    break
+                except Exception as err:
+                    if now - self._last_refresh > self._maximum_staleness:
+                        raise RedisClusterError("Unable to refresh cluster layout") from err
+                    await checkpoint()
+            await checkpoint()
 
     async def _refresh(self) -> None:
         nodes, slots = await self._discovery_service.get_cluster_layout()
