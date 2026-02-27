@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 import time
-from collections import Counter
+from collections import Counter, defaultdict
 
 from anyio import TASK_STATUS_IGNORED, Event
 from anyio.abc import TaskStatus
@@ -18,7 +18,7 @@ from coredis.exceptions import (
     ResponseError,
 )
 from coredis.globals import READONLY_COMMANDS, ROUTE_FLAGS, SPLIT_FLAGS
-from coredis.typing import ExecutionParameters, Iterator, RedisValueT, StringT
+from coredis.typing import ExecutionParameters, RedisValueT, StringT
 
 from ._discovery import DiscoveryService
 from ._node import ClusterNodeLocation
@@ -185,10 +185,10 @@ class ClusterLayout:
     def nodes_for_slots(
         self, *slots: int, primary: bool = True
     ) -> dict[ClusterNodeLocation, list[int]]:
-        mapping: dict[ClusterNodeLocation, list[int]] = {}
+        mapping: dict[ClusterNodeLocation, list[int]] = defaultdict(list)
         for slot in slots:
             if node := self.node_for_slot(slot, primary):
-                mapping.setdefault(node, []).append(slot)
+                mapping[node].append(slot)
         return mapping
 
     @property
