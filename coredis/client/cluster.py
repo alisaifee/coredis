@@ -794,27 +794,19 @@ class RedisCluster(
         redirect_location = None
         asking = False
 
-        try_random_node = False
-        try_random_type = NodeFlag.ALL
         remaining_attempts = int(self.MAX_RETRIES)
         quick_release = self.should_quick_release(command)
         should_block = not quick_release or self.requires_wait or self.requires_waitaof
-
+        attempt_node: ClusterNodeLocation | None = node
         while remaining_attempts > 0:
             remaining_attempts -= 1
             released = False
-            _node = None
-            if asking and redirect_location:
-                _node = self.connection_pool.cluster_layout.node_for_location(redirect_location)
-            elif try_random_node:
-                _node = None
-            elif node:
-                _node = node
-            else:
-                raise
-            r = await self.connection_pool.get_connection(
-                _node, primary=not node and try_random_type == NodeFlag.PRIMARIES
-            )
+            if redirect_location:
+                attempt_node = self.connection_pool.cluster_layout.node_for_location(
+                    redirect_location
+                )
+                redirect_location = None
+            r = await self.connection_pool.get_connection(attempt_node, primary=node.is_primary)
             try:
                 if asking:
                     await r.create_request(CommandName.ASKING, noreply=self.noreply, decode=False)
@@ -897,19 +889,16 @@ class RedisCluster(
                             )
                     return response
             except MovedError as e:
-                # TODO: perhaps the error reporting and getting a new potential node
-                #  can be done in a single step (this might even be useful for handling
-                #  connectivity errors to broken replicas
-                self.connection_pool.cluster_layout.report_errors(_node, e)
-                node = self.connection_pool.cluster_layout.update_primary(e.slot_id, e.host, e.port)
-                try_random_node = False
+                self.connection_pool.cluster_layout.report_errors(attempt_node, e)
+                redirect_location = TCPLocation(e.host, e.port)
+                attempt_node = None
             except TryAgainError:
                 if remaining_attempts < self.MAX_RETRIES / 2:
                     await sleep(0.05)
             except AskError as e:
                 redirect_location, asking = TCPLocation(e.host, e.port), True
             except RedisError as err:
-                self.connection_pool.cluster_layout.report_errors(_node, err)
+                self.connection_pool.cluster_layout.report_errors(attempt_node, err)
                 raise
             finally:
                 if r and not released:
