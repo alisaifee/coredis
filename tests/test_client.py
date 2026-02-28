@@ -53,6 +53,7 @@ class TestClient:
     async def test_set_client_name(self, client, client_arguments):
         assert (await client.client_info())["name"] == "coredis"
 
+    @pytest.mark.nodragonfly
     async def test_noreply_client(self, client, cloner, _s):
         async with await cloner(client, noreply=True) as noreply:
             assert not await noreply.set("fubar", 1)
