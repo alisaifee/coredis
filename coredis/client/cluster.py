@@ -504,13 +504,15 @@ class RedisCluster(
         if connection_pool:
             pool = connection_pool
         else:
-            startup_nodes = [] if startup_nodes is None else list(startup_nodes)
+            startup_nodes = list(
+                node if isinstance(node, TCPLocation) else TCPLocation(node["host"], node["port"])
+                for node in startup_nodes or []
+            )
 
             # Support host/port as argument
-
-            if host:
+            if host and not startup_nodes:
                 startup_nodes.append(
-                    Node(
+                    TCPLocation(
                         host=host,
                         port=port if port else 7000,
                     )
