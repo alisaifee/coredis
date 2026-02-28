@@ -9,6 +9,13 @@ from deprecated.sphinx import versionadded
 from coredis._json import json
 from coredis._utils import dict_to_flat_list, tuples_to_flat_list
 from coredis.commands import CommandMixin
+from coredis.commands._routing import (
+    FanoutStrategy,
+    KeyRangeStrategy,
+    PairStrategy,
+    RandomStrategy,
+    SlotRangeStrategy,
+)
 from coredis.commands._utils import (
     normalized_milliseconds,
     normalized_seconds,
@@ -39,6 +46,7 @@ from coredis.response._callbacks import (
     BoolsCallback,
     ClusterAlignedBoolsCombine,
     ClusterBoolCombine,
+    ClusterConcatenateTuples,
     ClusterEnsureConsistent,
     ClusterFirstNonException,
     ClusterMergeMapping,
@@ -468,6 +476,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.MGET,
         group=CommandGroup.STRING,
         flags={CommandFlag.READONLY, CommandFlag.FAST},
+        cluster=ClusterCommandConfig(
+            routing_strategy=KeyRangeStrategy(None, ClusterConcatenateTuples())
+        ),
     )
     def mget(self, keys: Parameters[KeyT]) -> CommandRequest[tuple[AnyStr | None, ...]]:
         """
@@ -482,6 +493,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.MSET,
         group=CommandGroup.STRING,
+        cluster=ClusterCommandConfig(
+            routing_strategy=PairStrategy(NodeFlag.PRIMARIES, ClusterBoolCombine())
+        ),
     )
     def mset(self, key_values: Mapping[KeyT, ValueT]) -> CommandRequest[bool]:
         """
@@ -497,7 +511,13 @@ class CoreCommands(CommandMixin[AnyStr]):
             callback=SimpleStringCallback(),
         )
 
-    @redis_command(CommandName.MSETNX, group=CommandGroup.STRING)
+    @redis_command(
+        CommandName.MSETNX,
+        group=CommandGroup.STRING,
+        cluster=ClusterCommandConfig(
+            routing_strategy=PairStrategy(NodeFlag.PRIMARIES, ClusterBoolCombine())
+        ),
+    )
     def msetnx(self, key_values: Mapping[KeyT, ValueT]) -> CommandRequest[bool]:
         """
         Set multiple keys to multiple values only if none of the keys exist.
@@ -511,7 +531,19 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @mutually_exclusive_parameters("ex", "px", "exat", "pxat", "keepttl")
-    @redis_command(CommandName.MSETEX, group=CommandGroup.STRING, version_introduced="8.4.0")
+    @redis_command(
+        CommandName.MSETEX,
+        group=CommandGroup.STRING,
+        version_introduced="8.4.0",
+        cluster=ClusterCommandConfig(
+            routing_strategy=PairStrategy(
+                NodeFlag.PRIMARIES,
+                ClusterBoolCombine(),
+                key_step=2,
+                add_count=True,
+            )
+        ),
+    )
     def msetex(
         self,
         key_values: Mapping[KeyT, ValueT],
@@ -557,7 +589,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         if keepttl:
             command_arguments.append(PureToken.KEEPTTL)
 
-        return self.create_request(CommandName.MSETEX, *command_arguments, callback=BoolCallback())
+        return self.create_request(
+            CommandName.MSETEX,
+            *command_arguments,
+            callback=BoolCallback(),
+        )
 
     @redis_command(
         CommandName.PSETEX,
@@ -873,7 +909,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.CLUSTER_COUNT_FAILURE_REPORTS,
         group=CommandGroup.CLUSTER,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def cluster_count_failure_reports(self, node_id: StringT) -> CommandRequest[int]:
         """
@@ -892,7 +928,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.CLUSTER_COUNTKEYSINSLOT,
         group=CommandGroup.CLUSTER,
-        cluster=ClusterCommandConfig(route=NodeFlag.SLOT_ID),
+        cluster=ClusterCommandConfig(routing_strategy=SlotRangeStrategy()),
     )
     def cluster_countkeysinslot(self, slot: int) -> CommandRequest[int]:
         """
@@ -905,7 +941,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return self.create_request(
             CommandName.CLUSTER_COUNTKEYSINSLOT,
             slot,
-            execution_parameters={"slot_arguments_range": (0, 1)},
+            execution_parameters={"slot_arguments_range": (0, 0)},
             callback=IntCallback(),
         )
 
@@ -913,8 +949,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CLUSTER_DELSLOTS,
         group=CommandGroup.CLUSTER,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.SLOT_ID,
-            combine=ClusterBoolCombine(),
+            routing_strategy=SlotRangeStrategy(ClusterBoolCombine()),
         ),
     )
     def cluster_delslots(self, slots: Parameters[int]) -> CommandRequest[bool]:
@@ -930,7 +965,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.CLUSTER_DELSLOTS,
             *slots,
             callback=SimpleStringCallback(),
-            execution_parameters={"slot_arguments_range": (0, len(list(slots)))},
+            execution_parameters={"slot_arguments_range": (0, len(list(slots)) - 1)},
         )
 
     @versionadded(version="3.1.1")
@@ -938,7 +973,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CLUSTER_DELSLOTSRANGE,
         version_introduced="7.0.0",
         group=CommandGroup.CLUSTER,
-        cluster=ClusterCommandConfig(route=NodeFlag.SLOT_ID, combine=ClusterBoolCombine()),
+        cluster=ClusterCommandConfig(routing_strategy=SlotRangeStrategy(ClusterBoolCombine())),
     )
     def cluster_delslotsrange(self, slots: Parameters[tuple[int, int]]) -> CommandRequest[bool]:
         """
@@ -952,7 +987,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return self.create_request(
             CommandName.CLUSTER_DELSLOTSRANGE,
             *command_arguments,
-            execution_parameters={"slot_arguments_range": (0, len(command_arguments))},
+            execution_parameters={"slot_arguments_range": (0, len(command_arguments) - 1)},
             callback=SimpleStringCallback(),
         )
 
@@ -1016,7 +1051,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.CLUSTER_GETKEYSINSLOT,
         group=CommandGroup.CLUSTER,
-        cluster=ClusterCommandConfig(route=NodeFlag.SLOT_ID),
+        cluster=ClusterCommandConfig(routing_strategy=SlotRangeStrategy()),
     )
     def cluster_getkeysinslot(self, slot: int, count: int) -> CommandRequest[tuple[AnyStr, ...]]:
         """
@@ -1031,14 +1066,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         return self.create_request(
             CommandName.CLUSTER_GETKEYSINSLOT,
             *command_arguments,
-            execution_parameters={"slot_arguments_range": (0, 1)},
+            execution_parameters={"slot_arguments_range": (0, 0)},
             callback=TupleCallback[AnyStr](),
         )
 
     @redis_command(
         CommandName.CLUSTER_INFO,
         group=CommandGroup.CLUSTER,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def cluster_info(self) -> CommandRequest[dict[str, str]]:
         """
@@ -1052,7 +1087,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.CLUSTER_KEYSLOT,
         group=CommandGroup.CLUSTER,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def cluster_keyslot(self, key: KeyT) -> CommandRequest[int]:
         """
@@ -1084,7 +1119,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.CLUSTER_MEET,
         group=CommandGroup.CLUSTER,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def cluster_meet(
         self, ip: StringT, port: int, cluster_bus_port: int | None = None
@@ -1121,7 +1156,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.CLUSTER_NODES,
         group=CommandGroup.CLUSTER,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def cluster_nodes(self) -> CommandRequest[list[ClusterNodeDetail]]:
         """
@@ -1178,8 +1213,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CLUSTER_SAVECONFIG,
         group=CommandGroup.CLUSTER,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.ALL,
-            combine=ClusterBoolCombine(),
+            routing_strategy=FanoutStrategy(route=NodeFlag.ALL, merge_callback=ClusterBoolCombine())
         ),
     )
     def cluster_saveconfig(self) -> CommandRequest[bool]:
@@ -1257,7 +1291,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.CLUSTER_REPLICAS,
         group=CommandGroup.CLUSTER,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def cluster_replicas(self, node_id: StringT) -> CommandRequest[list[ClusterNodeDetail]]:
         """
@@ -1276,7 +1310,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CLUSTER_SHARDS,
         version_introduced="7.0.0",
         group=CommandGroup.CLUSTER,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def cluster_shards(
         self,
@@ -1295,7 +1329,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_deprecated="5.0.0",
         deprecation_reason="Use :meth:`cluster_replicas`",
         group=CommandGroup.CLUSTER,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def cluster_slaves(self, node_id: StringT) -> CommandRequest[list[ClusterNodeDetail]]:
         """
@@ -1312,7 +1346,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.CLUSTER_SLOTS,
         group=CommandGroup.CLUSTER,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
         version_deprecated="7.0.0",
         deprecation_reason="Use :meth:`cluster_shards`",
     )
@@ -1382,8 +1416,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ECHO,
         group=CommandGroup.CONNECTION,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.ALL,
-            combine=ClusterEnsureConsistent(),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.ALL, merge_callback=ClusterEnsureConsistent()
+            )
         ),
         flags={CommandFlag.FAST},
     )
@@ -1444,8 +1479,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.PING,
         group=CommandGroup.CONNECTION,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.PRIMARIES,
-            combine=ClusterEnsureConsistent(),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.PRIMARIES, merge_callback=ClusterEnsureConsistent()
+            ),
         ),
         flags={CommandFlag.FAST},
     )
@@ -2927,7 +2963,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.DEL,
         group=CommandGroup.GENERIC,
-        cluster=ClusterCommandConfig(split=NodeFlag.PRIMARIES, combine=ClusterSum()),
+        cluster=ClusterCommandConfig(
+            routing_strategy=KeyRangeStrategy(NodeFlag.PRIMARIES, ClusterSum())
+        ),
     )
     def delete(self, keys: Parameters[KeyT]) -> CommandRequest[int]:
         """
@@ -3015,7 +3053,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.EXISTS,
         group=CommandGroup.GENERIC,
-        cluster=ClusterCommandConfig(split=NodeFlag.PRIMARIES, combine=ClusterSum()),
+        cluster=ClusterCommandConfig(
+            routing_strategy=KeyRangeStrategy(NodeFlag.PRIMARIES, ClusterSum())
+        ),
         flags={CommandFlag.FAST, CommandFlag.READONLY},
     )
     def exists(self, keys: Parameters[KeyT]) -> CommandRequest[int]:
@@ -3110,8 +3150,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.KEYS,
         group=CommandGroup.GENERIC,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.PRIMARIES,
-            combine=ClusterMergeSets(),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.PRIMARIES, merge_callback=ClusterMergeSets()
+            )
         ),
         flags={CommandFlag.READONLY},
     )
@@ -3374,7 +3415,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.RANDOMKEY,
         group=CommandGroup.GENERIC,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
         flags={CommandFlag.READONLY},
     )
     def randomkey(self) -> CommandRequest[AnyStr | None]:
@@ -3578,7 +3619,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.TOUCH,
         group=CommandGroup.GENERIC,
-        cluster=ClusterCommandConfig(split=NodeFlag.PRIMARIES, combine=ClusterSum()),
+        cluster=ClusterCommandConfig(
+            routing_strategy=KeyRangeStrategy(NodeFlag.PRIMARIES, ClusterSum())
+        ),
         flags={CommandFlag.FAST, CommandFlag.READONLY},
     )
     def touch(self, keys: Parameters[KeyT]) -> CommandRequest[int]:
@@ -3609,7 +3652,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.UNLINK,
         group=CommandGroup.GENERIC,
-        cluster=ClusterCommandConfig(split=NodeFlag.PRIMARIES, combine=ClusterSum()),
+        cluster=ClusterCommandConfig(
+            routing_strategy=KeyRangeStrategy(NodeFlag.PRIMARIES, ClusterSum())
+        ),
         flags={CommandFlag.FAST},
     )
     def unlink(self, keys: Parameters[KeyT]) -> CommandRequest[int]:
@@ -4516,7 +4561,6 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SSCAN,
         group=CommandGroup.SET,
-        cluster=ClusterCommandConfig(combine=ClusterEnsureConsistent()),
         flags={CommandFlag.READONLY},
     )
     def sscan(
@@ -6650,7 +6694,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.PUBLISH,
         group=CommandGroup.PUBSUB,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.RANDOM,
+            routing_strategy=RandomStrategy(),
         ),
     )
     def publish(self, channel: StringT, message: ValueT) -> CommandRequest[int]:
@@ -6679,8 +6723,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.PUBSUB_CHANNELS,
         group=CommandGroup.PUBSUB,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.ALL,
-            combine=ClusterMergeSets(),
+            routing_strategy=FanoutStrategy(route=NodeFlag.ALL, merge_callback=ClusterMergeSets())
         ),
     )
     def pubsub_channels(self, pattern: StringT | None = None) -> CommandRequest[_Set[AnyStr]]:
@@ -6702,8 +6745,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.PUBSUB,
         version_introduced="7.0.0",
         cluster=ClusterCommandConfig(
-            route=NodeFlag.ALL,
-            combine=ClusterMergeSets(),
+            routing_strategy=FanoutStrategy(route=NodeFlag.ALL, merge_callback=ClusterMergeSets())
         ),
     )
     def pubsub_shardchannels(self, pattern: StringT | None = None) -> CommandRequest[_Set[AnyStr]]:
@@ -6735,8 +6777,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.PUBSUB_NUMSUB,
         group=CommandGroup.PUBSUB,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.ALL,
-            combine=ClusterMergeMapping[AnyStr, int](value_combine=sum),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.ALL,
+                merge_callback=ClusterMergeMapping[AnyStr, int](value_combine=sum),
+            )
         ),
     )
     def pubsub_numsub(self, *channels: StringT) -> CommandRequest[dict[AnyStr, int]]:
@@ -6761,8 +6805,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.PUBSUB_SHARDNUMSUB,
         group=CommandGroup.PUBSUB,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.ALL,
-            combine=ClusterMergeMapping[AnyStr, int](value_combine=sum),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.ALL,
+                merge_callback=ClusterMergeMapping[AnyStr, int](value_combine=sum),
+            ),
         ),
     )
     def pubsub_shardnumsub(self, *channels: StringT) -> CommandRequest[dict[AnyStr, int]]:
@@ -6919,8 +6965,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.SCRIPT_EXISTS,
         group=CommandGroup.SCRIPTING,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.PRIMARIES,
-            combine=ClusterAlignedBoolsCombine(),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.PRIMARIES, merge_callback=ClusterAlignedBoolsCombine()
+            ),
         ),
     )
     def script_exists(self, sha1s: Parameters[StringT]) -> CommandRequest[tuple[bool, ...]]:
@@ -6937,8 +6984,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SCRIPTING,
         arguments={"sync_type": {"version_introduced": "6.2.0"}},
         cluster=ClusterCommandConfig(
-            route=NodeFlag.ALL,
-            combine=ClusterBoolCombine(),
+            routing_strategy=FanoutStrategy(route=NodeFlag.ALL, merge_callback=ClusterBoolCombine())
         ),
     )
     def script_flush(
@@ -6964,8 +7010,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.SCRIPT_KILL,
         group=CommandGroup.SCRIPTING,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.PRIMARIES,
-            combine=ClusterFirstNonException[bool](),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.PRIMARIES, merge_callback=ClusterFirstNonException[bool]()
+            ),
         ),
     )
     def script_kill(self) -> CommandRequest[bool]:
@@ -6980,8 +7027,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.SCRIPT_LOAD,
         group=CommandGroup.SCRIPTING,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.ALL,
-            combine=ClusterEnsureConsistent(),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.ALL, merge_callback=ClusterEnsureConsistent()
+            ),
         ),
     )
     def script_load(self, script: StringT) -> CommandRequest[AnyStr]:
@@ -7064,8 +7112,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="7.0.0",
         group=CommandGroup.SCRIPTING,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.PRIMARIES,
-            combine=ClusterEnsureConsistent(),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.PRIMARIES, merge_callback=ClusterEnsureConsistent()
+            ),
         ),
     )
     def function_delete(self, library_name: StringT) -> CommandRequest[bool]:
@@ -7085,7 +7134,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.FUNCTION_DUMP,
         version_introduced="7.0.0",
         group=CommandGroup.SCRIPTING,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def function_dump(self) -> CommandRequest[bytes]:
         """
@@ -7106,8 +7155,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="7.0.0",
         group=CommandGroup.SCRIPTING,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.PRIMARIES,
-            combine=ClusterEnsureConsistent(),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.PRIMARIES, merge_callback=ClusterEnsureConsistent()
+            ),
         ),
     )
     def function_flush(
@@ -7136,8 +7186,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="7.0.0",
         group=CommandGroup.SCRIPTING,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.PRIMARIES,
-            combine=ClusterFirstNonException[bool](),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.PRIMARIES, merge_callback=ClusterFirstNonException[bool]()
+            ),
         ),
     )
     def function_kill(self) -> CommandRequest[bool]:
@@ -7152,7 +7203,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.FUNCTION_LIST,
         version_introduced="7.0.0",
         group=CommandGroup.SCRIPTING,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def function_list(
         self, libraryname: StringT | None = None, withcode: bool | None = None
@@ -7184,8 +7235,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="7.0.0",
         group=CommandGroup.SCRIPTING,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.PRIMARIES,
-            combine=ClusterEnsureConsistent(),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.PRIMARIES, merge_callback=ClusterEnsureConsistent()
+            ),
         ),
     )
     def function_load(
@@ -7219,8 +7271,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="7.0.0",
         group=CommandGroup.SCRIPTING,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.PRIMARIES,
-            combine=ClusterEnsureConsistent(),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.PRIMARIES, merge_callback=ClusterEnsureConsistent()
+            ),
         ),
     )
     def function_restore(
@@ -7252,7 +7305,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="7.0.0",
         group=CommandGroup.SCRIPTING,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.RANDOM,
+            routing_strategy=RandomStrategy(),
         ),
     )
     def function_stats(
@@ -7809,8 +7862,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.FLUSHALL,
         group=CommandGroup.SERVER,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.PRIMARIES,
-            combine=ClusterEnsureConsistent(),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.PRIMARIES, merge_callback=ClusterEnsureConsistent()
+            ),
         ),
     )
     def flushall(
@@ -7834,8 +7888,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.FLUSHDB,
         group=CommandGroup.SERVER,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.PRIMARIES,
-            combine=ClusterEnsureConsistent(),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.PRIMARIES, merge_callback=ClusterEnsureConsistent()
+            ),
         ),
     )
     def flushdb(
@@ -7858,7 +7913,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.INFO,
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def info(
         self,
@@ -8005,7 +8060,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.MEMORY_PURGE,
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(route=NodeFlag.ALL, combine=ClusterBoolCombine()),
+        cluster=ClusterCommandConfig(
+            routing_strategy=FanoutStrategy(route=NodeFlag.ALL, merge_callback=ClusterBoolCombine())
+        ),
     )
     def memory_purge(self) -> CommandRequest[bool]:
         """
@@ -8057,7 +8114,11 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SAVE,
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(route=NodeFlag.ALL, combine=ClusterEnsureConsistent()),
+        cluster=ClusterCommandConfig(
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.ALL, merge_callback=ClusterEnsureConsistent()
+            )
+        ),
     )
     def save(self) -> CommandRequest[bool]:
         """
@@ -8258,7 +8319,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ACL_CAT,
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def acl_cat(self, categoryname: StringT | None = None) -> CommandRequest[tuple[AnyStr, ...]]:
         """
@@ -8285,8 +8346,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.ALL,
-            combine=ClusterEnsureConsistent(),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.ALL, merge_callback=ClusterEnsureConsistent()
+            ),
         ),
     )
     def acl_deluser(self, usernames: Parameters[StringT]) -> CommandRequest[int]:
@@ -8307,7 +8369,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="7.0.0",
         group=CommandGroup.SERVER,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.RANDOM,
+            routing_strategy=RandomStrategy(),
         ),
     )
     def acl_dryrun(
@@ -8332,7 +8394,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ACL_GENPASS,
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def acl_genpass(self, bits: int | None = None) -> CommandRequest[AnyStr]:
         """
@@ -8360,7 +8422,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.RANDOM,
+            routing_strategy=RandomStrategy(),
         ),
     )
     def acl_getuser(
@@ -8381,7 +8443,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ACL_LIST,
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def acl_list(self) -> CommandRequest[tuple[AnyStr, ...]]:
         """
@@ -8395,7 +8457,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ACL_LOAD,
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(route=NodeFlag.ALL, combine=ClusterEnsureConsistent()),
+        cluster=ClusterCommandConfig(
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.ALL, merge_callback=ClusterEnsureConsistent()
+            )
+        ),
     )
     def acl_load(self) -> CommandRequest[bool]:
         """
@@ -8456,8 +8522,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.ALL,
-            combine=ClusterEnsureConsistent(),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.ALL, merge_callback=ClusterEnsureConsistent()
+            ),
         ),
     )
     def acl_save(self) -> CommandRequest[bool]:
@@ -8478,8 +8545,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.ALL,
-            combine=ClusterEnsureConsistent(),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.ALL, merge_callback=ClusterEnsureConsistent()
+            ),
         ),
     )
     def acl_setuser(
@@ -8509,7 +8577,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ACL_USERS,
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def acl_users(self) -> CommandRequest[tuple[AnyStr, ...]]:
         """
@@ -8523,7 +8591,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ACL_WHOAMI,
         version_introduced="6.0.0",
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def acl_whoami(self) -> CommandRequest[AnyStr]:
         """
@@ -8539,7 +8607,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.COMMAND,
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def command(self) -> CommandRequest[dict[str, Command]]:
         """
@@ -8555,7 +8623,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.COMMAND_COUNT,
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def command_count(self) -> CommandRequest[int]:
         """
@@ -8571,7 +8639,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.COMMAND_DOCS,
         version_introduced="7.0.0",
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def command_docs(
         self, *command_names: StringT
@@ -8590,7 +8658,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.COMMAND_GETKEYS,
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def command_getkeys(
         self, command: StringT, arguments: Parameters[ValueT]
@@ -8613,7 +8681,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.COMMAND_GETKEYSANDFLAGS,
         version_introduced="7.0.0",
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def command_getkeysandflags(
         self, command: StringT, arguments: Parameters[ValueT]
@@ -8635,7 +8703,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.COMMAND_INFO,
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def command_info(self, *command_names: StringT) -> CommandRequest[dict[str, Command]]:
         """
@@ -8654,7 +8722,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.COMMAND_LIST,
         version_introduced="7.0.0",
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def command_list(
         self,
@@ -8702,8 +8770,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CONFIG_SET,
         group=CommandGroup.SERVER,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.ALL,
-            combine=ClusterBoolCombine(),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.ALL, merge_callback=ClusterBoolCombine()
+            ),
         ),
     )
     def config_set(self, parameter_values: Mapping[MappingKeyT, ValueT]) -> CommandRequest[bool]:
@@ -8724,8 +8793,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.CONFIG_RESETSTAT,
         group=CommandGroup.SERVER,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.ALL,
-            combine=ClusterBoolCombine(),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.ALL, merge_callback=ClusterBoolCombine()
+            ),
         ),
     )
     def config_resetstat(self) -> CommandRequest[bool]:
@@ -8749,7 +8819,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.MODULE_LIST,
         group=CommandGroup.SERVER,
-        cluster=ClusterCommandConfig(route=NodeFlag.RANDOM),
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def module_list(self) -> CommandRequest[tuple[dict[AnyStr, ResponsePrimitive], ...]]:
         """
@@ -8766,8 +8836,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.MODULE_LOAD,
         group=CommandGroup.SERVER,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.ALL,
-            combine=ClusterBoolCombine(),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.ALL, merge_callback=ClusterBoolCombine()
+            ),
         ),
     )
     def module_load(self, path: StringT, *args: str | bytes | int | float) -> CommandRequest[bool]:
@@ -8789,8 +8860,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.SERVER,
         version_introduced="7.0.0",
         cluster=ClusterCommandConfig(
-            route=NodeFlag.ALL,
-            combine=ClusterBoolCombine(),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.ALL, merge_callback=ClusterBoolCombine()
+            ),
         ),
     )
     def module_loadex(
@@ -8822,8 +8894,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.MODULE_UNLOAD,
         group=CommandGroup.SERVER,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.ALL,
-            combine=ClusterBoolCombine(),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.ALL, merge_callback=ClusterBoolCombine()
+            ),
         ),
     )
     def module_unload(self, name: StringT) -> CommandRequest[bool]:

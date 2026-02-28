@@ -648,11 +648,11 @@ class CommandGroup(enum.Enum):
 
 
 class NodeFlag(enum.Enum):
-    ALL = "all"
-    PRIMARIES = "primaries"
-    REPLICAS = "replicas"
-    RANDOM = "random"
-    SLOT_ID = "slot-id"
+    ALL = "all nodes in the cluster"
+    PRIMARIES = "all primaries in the cluster"
+    REPLICAS = "all replicas in the cluster"
+    RANDOM = "a random node in the cluster"
+    SLOT_ID = "node(s) based on the slot id(s) in the command arguments"
 
 
 class CommandFlag(enum.Enum):

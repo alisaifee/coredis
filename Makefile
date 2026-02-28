@@ -14,7 +14,9 @@ DEBUG := False
 
 coverage-docs:
 	rm -rf docs/source/compatibility.rst
+	rm -rf docs/source/handbook/cluster_routing.rst 
 	PYTHONPATH=${CURDIR} uv run python -m scripts.code_gen --debug=${DEBUG} coverage-doc
+	PYTHONPATH=${CURDIR} uv run python -m scripts.code_gen --debug=${DEBUG} cluster-routing-doc
 
 templated-sources:
 	PYTHONPATH=${CURDIR} uv run python -m scripts.code_gen token-enum

@@ -17,8 +17,9 @@ from coredis._concurrency import gather
 from coredis.client.basic import Client, Redis
 from coredis.cluster._node import ClusterNodeLocation
 from coredis.commands._key_spec import KeySpec
+from coredis.commands._routing import NodeExecution
 from coredis.commands._validators import mutually_inclusive_parameters
-from coredis.commands.constants import CommandName, NodeFlag
+from coredis.commands.constants import CommandName
 from coredis.connection._base import RedisSSLContext
 from coredis.connection._tcp import TCPLocation
 from coredis.credentials import AbstractCredentialProvider
@@ -33,9 +34,9 @@ from coredis.exceptions import (
 )
 from coredis.globals import (
     CACHEABLE_COMMANDS,
-    MERGE_CALLBACKS,
     MODULE_GROUPS,
     READONLY_COMMANDS,
+    ROUTING_STRATEGIES,
 )
 from coredis.patterns.cache import AbstractCache
 from coredis.patterns.pubsub import ClusterPubSub, ShardedPubSub, SubscriptionCallback
@@ -82,14 +83,6 @@ if TYPE_CHECKING:
 
 
 class ClusterMeta(ABCMeta):
-    NODE_FLAG_DOC_MAPPING = {
-        NodeFlag.PRIMARIES: "all primaries",
-        NodeFlag.REPLICAS: "all replicas",
-        NodeFlag.RANDOM: "a random node",
-        NodeFlag.ALL: "all nodes",
-        NodeFlag.SLOT_ID: "one or more nodes based on the slots provided",
-    }
-
     def __new__(
         cls, name: str, bases: tuple[type, ...], namespace: dict[str, object]
     ) -> ClusterMeta:
@@ -112,33 +105,22 @@ class ClusterMeta(ABCMeta):
 .. warning:: Not supported in cluster mode
                     """
                 else:
-                    if cmd.cluster.route:
-                        aggregate_note = ""
-                        if cmd.cluster.multi_node:
-                            if cmd.cluster.combine:
-                                aggregate_note = f"and return {cmd.cluster.combine.response_policy}"
-                            else:
-                                aggregate_note = (
-                                    "and a mapping of nodes to results will be returned"
-                                )
+                    if cmd.cluster.routing_strategy:
                         doc_addition = f"""
 .. admonition:: Cluster note
 
-   The command will be run on **{cls.NODE_FLAG_DOC_MAPPING[cmd.cluster.route]}** {aggregate_note}
-                        """
-                    elif cmd.cluster.split and cmd.cluster.combine:
-                        doc_addition = f"""
-.. admonition:: Cluster note
+   The command will be **{cmd.cluster.routing_strategy.description}**
+   and return {cmd.cluster.routing_strategy.merge_callback.response_policy}.
 
-   The command will be run on **{cls.NODE_FLAG_DOC_MAPPING[cmd.cluster.split]}**
-   by distributing the keys to the appropriate nodes and return
-   {cmd.cluster.combine.response_policy}.
-
-   To disable this behavior set :paramref:`RedisCluster.non_atomic_cross_slot` to ``False``
                     """
+                        if cmd.cluster.routing_strategy.cross_slot:
+                            doc_addition += """
+   To disable this behavior set :paramref:`RedisCluster.non_atomic_cross_slot` to ``False``
+                                            """
             if doc_addition and not hasattr(method, "__cluster_docs") and cmd:
                 if not getattr(method, "__coredis_module", None):
                     if not cmd.cluster.enabled:
+
                         def __w(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
                             @functools.wraps(func)
                             def _w(*a: P.args, **k: P.kwargs) -> Awaitable[R]:
@@ -712,18 +694,6 @@ class RedisCluster(
             return int((len(list(self.all_nodes)) / len(replicas)) - 1)
         return 0
 
-    def _merge_result(
-        self,
-        command: bytes,
-        res: dict[str, R],
-        **kwargs: Unpack[ExecutionParameters],
-    ) -> R:
-        assert command in MERGE_CALLBACKS
-        return cast(
-            R,
-            MERGE_CALLBACKS[command](res, **kwargs),
-        )
-
     async def on_retry_error(self, error: Exception) -> None:
         self.connection_pool.cluster_layout.report_errors(None, error)
 
@@ -755,33 +725,56 @@ class RedisCluster(
         prefer_replica = (
             command.name in READONLY_COMMANDS and self.connection_pool.read_from_replicas
         )
-        nodes = self.connection_pool.cluster_layout.nodes_for_request(
-            command.name,
-            command.arguments,
-            primary=not prefer_replica,
-            allow_cross_slot=self.non_atomic_cross_slot,
-            execution_parameters=kwargs,
+        affected_slots = len(
+            KeySpec.affected_slots(
+                command.name, *command.arguments, readonly_command=prefer_replica
+            )
         )
-        if nodes and len(nodes) > 1:
-            tasks: dict[str, Coroutine[Any, Any, R]] = {}
-            for node in nodes:
-                for portion, pargs in enumerate(nodes[node]):
-                    tasks[f"{node.name}:{portion}"] = self._execute_command_on_single_node(
-                        node,
-                        RedisCommand(command.name, pargs),
-                        callback=callback,
-                        **kwargs,
-                    )
-
-            results = await gather(*tasks.values(), return_exceptions=True)
-            if self.noreply:
-                return None  # type: ignore
-            return self._merge_result(command.name, dict(zip(tasks.keys(), results)))
-        else:
-            assert len(nodes) == 1, (nodes, command.name, command.arguments)
-            node = list(nodes.keys()).pop()
+        if affected_slots == 1:
+            node = self.connection_pool.cluster_layout.node_for_request(
+                command.name,
+                command.arguments,
+                primary=not prefer_replica,
+                execution_parameters=kwargs,
+            )
             return await self._execute_command_on_single_node(
                 node,
+                command,
+                callback=callback,
+                **kwargs,
+            )
+        elif (routing_strategy := ROUTING_STRATEGIES.get(command.name)) and (
+            self.non_atomic_cross_slot or not routing_strategy.cross_slot
+        ):
+            node_executions = routing_strategy.distribute(
+                self.connection_pool.cluster_layout,
+                command.name,
+                command.arguments,
+                prefer_replica,
+                execution_parameters=kwargs,
+            )
+            node_command_executions: dict[NodeExecution[R], Coroutine[Any, Any, R]] = {}
+            for portion, execution in enumerate(node_executions):
+                node_command_executions[execution] = self._execute_command_on_single_node(
+                    execution.node,
+                    RedisCommand(command.name, execution.arguments),
+                    callback=callback,
+                    **kwargs,
+                )
+
+            results = await gather(*node_command_executions.values(), return_exceptions=True)
+            if self.noreply:
+                return None  # type: ignore
+            else:
+                for execution, result in zip(node_command_executions.keys(), results):
+                    execution.result = result
+                return cast(
+                    R,
+                    routing_strategy.combine(node_executions=node_executions),
+                )
+        else:
+            return await self._execute_command_on_single_node(
+                self.connection_pool.cluster_layout.random_node(not prefer_replica),
                 command,
                 callback=callback,
                 **kwargs,
@@ -814,7 +807,7 @@ class RedisCluster(
                 if asking:
                     await r.create_request(CommandName.ASKING, noreply=self.noreply, decode=False)
                     asking = False
-                keys = KeySpec.extract_keys(command.name, *command.arguments)
+                keys = KeySpec.extract_keys(command.name, *command.arguments)[0]
                 cacheable = (
                     self.connection_pool.cache
                     and command.name in CACHEABLE_COMMANDS

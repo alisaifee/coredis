@@ -3,9 +3,16 @@ from __future__ import annotations
 from deprecated.sphinx import versionadded
 
 from .._json import json
-from ..commands.constants import CommandFlag, CommandGroup, CommandName
+from ..commands._routing import (
+    KeyRangeStrategy,
+    PairStrategy,
+)
+from ..commands._wrappers import ClusterCommandConfig
+from ..commands.constants import CommandFlag, CommandGroup, CommandName, NodeFlag
 from ..commands.request import CommandRequest
 from ..response._callbacks import (
+    ClusterBoolCombine,
+    ClusterConcatenateLists,
     IntCallback,
     NoopCallback,
     OneOrManyCallback,
@@ -201,6 +208,9 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
         flags={CommandFlag.READONLY},
+        cluster=ClusterCommandConfig(
+            routing_strategy=KeyRangeStrategy(None, ClusterConcatenateLists())
+        ),
     )
     def mget(self, keys: Parameters[KeyT], path: StringT) -> CommandRequest[JsonType]:
         """
@@ -222,6 +232,9 @@ class Json(ModuleGroup[AnyStr]):
         group=COMMAND_GROUP,
         version_introduced="2.6.0",
         module=MODULE,
+        cluster=ClusterCommandConfig(
+            routing_strategy=PairStrategy(NodeFlag.PRIMARIES, ClusterBoolCombine(), key_step=3)
+        ),
     )
     def mset(self, triplets: Parameters[tuple[KeyT, StringT, JsonType]]) -> CommandRequest[bool]:
         """

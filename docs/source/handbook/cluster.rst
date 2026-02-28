@@ -2,30 +2,27 @@ Redis Cluster
 -------------
 If your infrastructure contains a :term:`Redis Cluster`, **coredis** provides
 a :class:`~coredis.RedisCluster` client than can be used with the same API
-as :class:`~coredis.Redis` but with awareness of distributing the operations
-to the appropriate shards.
+as :class:`~coredis.Redis` but with awareness of routing the operations
+to the appropriate node in the cluster.
 
-For operations that operate on single keys the client simply routes the command
-to the appropriate node.
+Request routing
+^^^^^^^^^^^^^^^
 
-There are, however a few other categories of operations that cannot simply be used with redis cluster
-by just routing it to the appropriate node. The API docs will call out any exceptional
-handling that **coredis** performs to allow application developers to use the APIs transparently
-when possible.
+For operations that operate on single keys the :class:`~coredis.RedisCluster` client
+simply routes the command to the appropriate node that is serving the slot that contains the key.
 
-Examples of such APIs are:
+There are other categories of operations that cannot **simply** be used with redis cluster
+by just routing it to the appropriate node by a single key (such as commands that don't contain keys, or
+contain multiple keys). **coredis** uses a few routing strategies detailed below, to handle some of these
+operations so that the methods in :class:`~coredis.RedisCluster` can be used in a consistent manner.
 
-- .. automethod:: coredis.RedisCluster.keys
-     :noindex:
+.. danger:: For write operations that interact with multiple slots, this means that even if **coredis** is
+   able to distribute the operation through sub requests - the actual atomicity of the request is lost
+   as a failure on one node will leave the successful nodes in an inconsistent state. If the risk of this
+   scenario is unacceptable the automatic routing for cross slot commands can be disabled by setting
+   :paramref:`~coredis.RedisCluster.non_atomic_cross_slot` to ``False``.
 
-- .. automethod:: coredis.RedisCluster.exists
-     :noindex:
-
-- .. automethod:: coredis.RedisCluster.delete
-     :noindex:
-
-- .. automethod:: coredis.RedisCluster.script_load
-     :noindex:
+.. include:: cluster_routing.rst
 
 Replication
 ^^^^^^^^^^^

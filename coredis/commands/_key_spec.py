@@ -5,539 +5,657 @@ from coredis.typing import Callable, ClassVar, RedisValueT
 
 
 class KeySpec:
-    READONLY: ClassVar[
-        dict[bytes, Callable[[tuple[RedisValueT, ...]], tuple[RedisValueT, ...]]]
+    READONLY_VARIANTS: ClassVar[
+        dict[
+            bytes,
+            Callable[
+                [tuple[RedisValueT, ...]],
+                list[tuple[tuple[RedisValueT, ...], int | None, int | None]],
+            ],
+        ]
     ] = {
-        b"BITCOUNT": lambda args: (args[1],),
-        b"BITFIELD_RO": lambda args: (args[1],),
-        b"BITOP": lambda args: args[3 : (len(args))],
-        b"BITPOS": lambda args: (args[1],),
-        b"COPY": lambda args: (args[1],),
-        b"DIGEST": lambda args: (args[1],),
-        b"DUMP": lambda args: (args[1],),
-        b"EVALSHA_RO": lambda args: args[3 : 3 + int(args[2])],
-        b"EVAL_RO": lambda args: args[3 : 3 + int(args[2])],
-        b"EXISTS": lambda args: args[1 : (len(args))],
-        b"EXPIRETIME": lambda args: (args[1],),
-        b"FCALL_RO": lambda args: args[3 : 3 + int(args[2])],
-        b"GEODIST": lambda args: (args[1],),
-        b"GEOHASH": lambda args: (args[1],),
-        b"GEOPOS": lambda args: (args[1],),
-        b"GEORADIUS": lambda args: (args[1],),
-        b"GEORADIUSBYMEMBER": lambda args: (args[1],),
-        b"GEORADIUSBYMEMBER_RO": lambda args: (args[1],),
-        b"GEORADIUS_RO": lambda args: (args[1],),
-        b"GEOSEARCH": lambda args: (args[1],),
-        b"GEOSEARCHSTORE": lambda args: (args[2],),
-        b"GET": lambda args: (args[1],),
-        b"GETBIT": lambda args: (args[1],),
-        b"GETRANGE": lambda args: (args[1],),
-        b"HEXISTS": lambda args: (args[1],),
-        b"HEXPIRETIME": lambda args: (args[1],),
-        b"HGET": lambda args: (args[1],),
-        b"HGETALL": lambda args: (args[1],),
-        b"HKEYS": lambda args: (args[1],),
-        b"HLEN": lambda args: (args[1],),
-        b"HMGET": lambda args: (args[1],),
-        b"HPEXPIRETIME": lambda args: (args[1],),
-        b"HPTTL": lambda args: (args[1],),
-        b"HRANDFIELD": lambda args: (args[1],),
-        b"HSCAN": lambda args: (args[1],),
-        b"HSTRLEN": lambda args: (args[1],),
-        b"HTTL": lambda args: (args[1],),
-        b"HVALS": lambda args: (args[1],),
-        b"LCS": lambda args: args[1:3],
-        b"LINDEX": lambda args: (args[1],),
-        b"LLEN": lambda args: (args[1],),
-        b"LPOS": lambda args: (args[1],),
-        b"LRANGE": lambda args: (args[1],),
-        b"MEMORY USAGE": lambda args: (args[1],),
-        b"MGET": lambda args: args[1 : (len(args))],
-        b"OBJECT ENCODING": lambda args: (args[1],),
-        b"OBJECT FREQ": lambda args: (args[1],),
-        b"OBJECT IDLETIME": lambda args: (args[1],),
-        b"OBJECT REFCOUNT": lambda args: (args[1],),
-        b"PEXPIRETIME": lambda args: (args[1],),
-        b"PFMERGE": lambda args: args[2 : (len(args))],
-        b"PTTL": lambda args: (args[1],),
-        b"SCARD": lambda args: (args[1],),
-        b"SDIFF": lambda args: args[1 : (len(args))],
-        b"SDIFFSTORE": lambda args: args[2 : (len(args))],
-        b"SINTER": lambda args: args[1 : (len(args))],
-        b"SINTERCARD": lambda args: args[2 : 2 + int(args[1])],
-        b"SINTERSTORE": lambda args: args[2 : (len(args))],
-        b"SISMEMBER": lambda args: (args[1],),
-        b"SMEMBERS": lambda args: (args[1],),
-        b"SMISMEMBER": lambda args: (args[1],),
-        b"SORT": lambda args: (args[1],),
-        b"SORT_RO": lambda args: (args[1],),
-        b"SRANDMEMBER": lambda args: (args[1],),
-        b"SSCAN": lambda args: (args[1],),
-        b"STRLEN": lambda args: (args[1],),
-        b"SUBSTR": lambda args: (args[1],),
-        b"SUNION": lambda args: args[1 : (len(args))],
-        b"SUNIONSTORE": lambda args: args[2 : (len(args))],
-        b"TOUCH": lambda args: args[1 : (len(args))],
-        b"TTL": lambda args: (args[1],),
-        b"TYPE": lambda args: (args[1],),
-        b"WATCH": lambda args: args[1 : (len(args))],
-        b"XINFO CONSUMERS": lambda args: (args[1],),
-        b"XINFO GROUPS": lambda args: (args[1],),
-        b"XINFO STREAM": lambda args: (args[1],),
-        b"XLEN": lambda args: (args[1],),
-        b"XPENDING": lambda args: (args[1],),
-        b"XRANGE": lambda args: (args[1],),
-        b"XREAD": lambda args: (
-            (lambda kwpos: tuple(args[1 + kwpos : len(args) - (len(args) - (kwpos + 1)) // 2]))(
-                args.index(b"STREAMS", 1)
+        b"BITCOUNT": lambda args: [((args[1],), 1, 1)],
+        b"BITFIELD_RO": lambda args: [((args[1],), 1, 1)],
+        b"BITOP": lambda args: [(args[3 : len(args)], 3, len(args) - 1)],
+        b"BITPOS": lambda args: [((args[1],), 1, 1)],
+        b"COPY": lambda args: [((args[1],), 1, 1)],
+        b"DIGEST": lambda args: [((args[1],), 1, 1)],
+        b"DUMP": lambda args: [((args[1],), 1, 1)],
+        b"EVALSHA_RO": lambda args: [
+            (args[3 : 3 + (int(args[2]) * 1)], 3, 3 + (int(args[2]) * 1) - 1)
+        ],
+        b"EVAL_RO": lambda args: [
+            (args[3 : 3 + (int(args[2]) * 1)], 3, 3 + (int(args[2]) * 1) - 1)
+        ],
+        b"EXISTS": lambda args: [(args[1 : len(args)], 1, len(args) - 1)],
+        b"EXPIRETIME": lambda args: [((args[1],), 1, 1)],
+        b"FCALL_RO": lambda args: [
+            (args[3 : 3 + (int(args[2]) * 1)], 3, 3 + (int(args[2]) * 1) - 1)
+        ],
+        b"GEODIST": lambda args: [((args[1],), 1, 1)],
+        b"GEOHASH": lambda args: [((args[1],), 1, 1)],
+        b"GEOPOS": lambda args: [((args[1],), 1, 1)],
+        b"GEORADIUS": lambda args: [((args[1],), 1, 1)],
+        b"GEORADIUSBYMEMBER": lambda args: [((args[1],), 1, 1)],
+        b"GEORADIUSBYMEMBER_RO": lambda args: [((args[1],), 1, 1)],
+        b"GEORADIUS_RO": lambda args: [((args[1],), 1, 1)],
+        b"GEOSEARCH": lambda args: [((args[1],), 1, 1)],
+        b"GEOSEARCHSTORE": lambda args: [((args[2],), 2, 2)],
+        b"GET": lambda args: [((args[1],), 1, 1)],
+        b"GETBIT": lambda args: [((args[1],), 1, 1)],
+        b"GETRANGE": lambda args: [((args[1],), 1, 1)],
+        b"HEXISTS": lambda args: [((args[1],), 1, 1)],
+        b"HEXPIRETIME": lambda args: [((args[1],), 1, 1)],
+        b"HGET": lambda args: [((args[1],), 1, 1)],
+        b"HGETALL": lambda args: [((args[1],), 1, 1)],
+        b"HKEYS": lambda args: [((args[1],), 1, 1)],
+        b"HLEN": lambda args: [((args[1],), 1, 1)],
+        b"HMGET": lambda args: [((args[1],), 1, 1)],
+        b"HPEXPIRETIME": lambda args: [((args[1],), 1, 1)],
+        b"HPTTL": lambda args: [((args[1],), 1, 1)],
+        b"HRANDFIELD": lambda args: [((args[1],), 1, 1)],
+        b"HSCAN": lambda args: [((args[1],), 1, 1)],
+        b"HSTRLEN": lambda args: [((args[1],), 1, 1)],
+        b"HTTL": lambda args: [((args[1],), 1, 1)],
+        b"HVALS": lambda args: [((args[1],), 1, 1)],
+        b"LCS": lambda args: [(args[1:3], 1, 3 - 1)],
+        b"LINDEX": lambda args: [((args[1],), 1, 1)],
+        b"LLEN": lambda args: [((args[1],), 1, 1)],
+        b"LPOS": lambda args: [((args[1],), 1, 1)],
+        b"LRANGE": lambda args: [((args[1],), 1, 1)],
+        b"MEMORY USAGE": lambda args: [((args[1],), 1, 1)],
+        b"MGET": lambda args: [(args[1 : len(args)], 1, len(args) - 1)],
+        b"OBJECT ENCODING": lambda args: [((args[1],), 1, 1)],
+        b"OBJECT FREQ": lambda args: [((args[1],), 1, 1)],
+        b"OBJECT IDLETIME": lambda args: [((args[1],), 1, 1)],
+        b"OBJECT REFCOUNT": lambda args: [((args[1],), 1, 1)],
+        b"PEXPIRETIME": lambda args: [((args[1],), 1, 1)],
+        b"PFMERGE": lambda args: [(args[2 : len(args)], 2, len(args) - 1)],
+        b"PTTL": lambda args: [((args[1],), 1, 1)],
+        b"SCARD": lambda args: [((args[1],), 1, 1)],
+        b"SDIFF": lambda args: [(args[1 : len(args)], 1, len(args) - 1)],
+        b"SDIFFSTORE": lambda args: [(args[2 : len(args)], 2, len(args) - 1)],
+        b"SINTER": lambda args: [(args[1 : len(args)], 1, len(args) - 1)],
+        b"SINTERCARD": lambda args: [
+            (args[2 : 2 + (int(args[1]) * 1)], 2, 2 + (int(args[1]) * 1) - 1)
+        ],
+        b"SINTERSTORE": lambda args: [(args[2 : len(args)], 2, len(args) - 1)],
+        b"SISMEMBER": lambda args: [((args[1],), 1, 1)],
+        b"SMEMBERS": lambda args: [((args[1],), 1, 1)],
+        b"SMISMEMBER": lambda args: [((args[1],), 1, 1)],
+        b"SORT": lambda args: [((args[1],), 1, 1)],
+        b"SORT_RO": lambda args: [((args[1],), 1, 1)],
+        b"SRANDMEMBER": lambda args: [((args[1],), 1, 1)],
+        b"SSCAN": lambda args: [((args[1],), 1, 1)],
+        b"STRLEN": lambda args: [((args[1],), 1, 1)],
+        b"SUBSTR": lambda args: [((args[1],), 1, 1)],
+        b"SUNION": lambda args: [(args[1 : len(args)], 1, len(args) - 1)],
+        b"SUNIONSTORE": lambda args: [(args[2 : len(args)], 2, len(args) - 1)],
+        b"TOUCH": lambda args: [(args[1 : len(args)], 1, len(args) - 1)],
+        b"TTL": lambda args: [((args[1],), 1, 1)],
+        b"TYPE": lambda args: [((args[1],), 1, 1)],
+        b"WATCH": lambda args: [(args[1 : len(args)], 1, len(args) - 1)],
+        b"XINFO CONSUMERS": lambda args: [((args[1],), 1, 1)],
+        b"XINFO GROUPS": lambda args: [((args[1],), 1, 1)],
+        b"XINFO STREAM": lambda args: [((args[1],), 1, 1)],
+        b"XLEN": lambda args: [((args[1],), 1, 1)],
+        b"XPENDING": lambda args: [((args[1],), 1, 1)],
+        b"XRANGE": lambda args: [((args[1],), 1, 1)],
+        b"XREAD": lambda args: [
+            (
+                (
+                    lambda kwpos: (
+                        tuple(args[1 + kwpos : len(args) - (len(args) - (kwpos + 1)) // 2]),
+                        1 + kwpos,
+                        len(args) - (len(args) - (kwpos + 1)) // 2 - 1,
+                    )
+                )(args.index(b"STREAMS", 1))
+                if b"STREAMS" in args
+                else ((), None, None)
             )
-            if b"STREAMS" in args
-            else ()
-        ),
-        b"XREADGROUP": lambda args: (
-            (lambda kwpos: tuple(args[1 + kwpos : len(args) - (len(args) - (kwpos + 1)) // 2]))(
-                args.index(b"STREAMS", 4)
+        ],
+        b"XREADGROUP": lambda args: [
+            (
+                (
+                    lambda kwpos: (
+                        tuple(args[1 + kwpos : len(args) - (len(args) - (kwpos + 1)) // 2]),
+                        1 + kwpos,
+                        len(args) - (len(args) - (kwpos + 1)) // 2 - 1,
+                    )
+                )(args.index(b"STREAMS", 4))
+                if b"STREAMS" in args
+                else ((), None, None)
             )
-            if b"STREAMS" in args
-            else ()
-        ),
-        b"XREVRANGE": lambda args: (args[1],),
-        b"ZCARD": lambda args: (args[1],),
-        b"ZCOUNT": lambda args: (args[1],),
-        b"ZDIFF": lambda args: args[2 : 2 + int(args[1])],
-        b"ZDIFFSTORE": lambda args: args[3 : 3 + int(args[2])],
-        b"ZINTER": lambda args: args[2 : 2 + int(args[1])],
-        b"ZINTERCARD": lambda args: args[2 : 2 + int(args[1])],
-        b"ZINTERSTORE": lambda args: args[3 : 3 + int(args[2])],
-        b"ZLEXCOUNT": lambda args: (args[1],),
-        b"ZMSCORE": lambda args: (args[1],),
-        b"ZRANDMEMBER": lambda args: (args[1],),
-        b"ZRANGE": lambda args: (args[1],),
-        b"ZRANGEBYLEX": lambda args: (args[1],),
-        b"ZRANGEBYSCORE": lambda args: (args[1],),
-        b"ZRANGESTORE": lambda args: (args[2],),
-        b"ZRANK": lambda args: (args[1],),
-        b"ZREVRANGE": lambda args: (args[1],),
-        b"ZREVRANGEBYLEX": lambda args: (args[1],),
-        b"ZREVRANGEBYSCORE": lambda args: (args[1],),
-        b"ZREVRANK": lambda args: (args[1],),
-        b"ZSCAN": lambda args: (args[1],),
-        b"ZSCORE": lambda args: (args[1],),
-        b"ZUNION": lambda args: args[2 : 2 + int(args[1])],
-        b"ZUNIONSTORE": lambda args: args[3 : 3 + int(args[2])],
+        ],
+        b"XREVRANGE": lambda args: [((args[1],), 1, 1)],
+        b"ZCARD": lambda args: [((args[1],), 1, 1)],
+        b"ZCOUNT": lambda args: [((args[1],), 1, 1)],
+        b"ZDIFF": lambda args: [(args[2 : 2 + (int(args[1]) * 1)], 2, 2 + (int(args[1]) * 1) - 1)],
+        b"ZDIFFSTORE": lambda args: [
+            (args[3 : 3 + (int(args[2]) * 1)], 3, 3 + (int(args[2]) * 1) - 1)
+        ],
+        b"ZINTER": lambda args: [(args[2 : 2 + (int(args[1]) * 1)], 2, 2 + (int(args[1]) * 1) - 1)],
+        b"ZINTERCARD": lambda args: [
+            (args[2 : 2 + (int(args[1]) * 1)], 2, 2 + (int(args[1]) * 1) - 1)
+        ],
+        b"ZINTERSTORE": lambda args: [
+            (args[3 : 3 + (int(args[2]) * 1)], 3, 3 + (int(args[2]) * 1) - 1)
+        ],
+        b"ZLEXCOUNT": lambda args: [((args[1],), 1, 1)],
+        b"ZMSCORE": lambda args: [((args[1],), 1, 1)],
+        b"ZRANDMEMBER": lambda args: [((args[1],), 1, 1)],
+        b"ZRANGE": lambda args: [((args[1],), 1, 1)],
+        b"ZRANGEBYLEX": lambda args: [((args[1],), 1, 1)],
+        b"ZRANGEBYSCORE": lambda args: [((args[1],), 1, 1)],
+        b"ZRANGESTORE": lambda args: [((args[2],), 2, 2)],
+        b"ZRANK": lambda args: [((args[1],), 1, 1)],
+        b"ZREVRANGE": lambda args: [((args[1],), 1, 1)],
+        b"ZREVRANGEBYLEX": lambda args: [((args[1],), 1, 1)],
+        b"ZREVRANGEBYSCORE": lambda args: [((args[1],), 1, 1)],
+        b"ZREVRANK": lambda args: [((args[1],), 1, 1)],
+        b"ZSCAN": lambda args: [((args[1],), 1, 1)],
+        b"ZSCORE": lambda args: [((args[1],), 1, 1)],
+        b"ZUNION": lambda args: [(args[2 : 2 + (int(args[1]) * 1)], 2, 2 + (int(args[1]) * 1) - 1)],
+        b"ZUNIONSTORE": lambda args: [
+            (args[3 : 3 + (int(args[2]) * 1)], 3, 3 + (int(args[2]) * 1) - 1)
+        ],
     }
-    ALL: ClassVar[dict[bytes, Callable[[tuple[RedisValueT, ...]], tuple[RedisValueT, ...]]]] = {
-        b"VADD": lambda args: (args[1],),
-        b"VREM": lambda args: (args[1],),
-        b"VSIM": lambda args: (args[1],),
-        b"VDIM": lambda args: (args[1],),
-        b"VCARD": lambda args: (args[1],),
-        b"VEMB": lambda args: (args[1],),
-        b"VLINKS": lambda args: (args[1],),
-        b"VINFO": lambda args: (args[1],),
-        b"VSETATTR": lambda args: (args[1],),
-        b"VGETATTR": lambda args: (args[1],),
-        b"VRANDMEMBER": lambda args: (args[1],),
-        b"VISMEMBER": lambda args: (args[1],),
-        b"VRANGE": lambda args: (args[1],),
-        b"OBJECT": lambda args: (args[2],),
-        b"DEBUG OBJECT": lambda args: (args[1],),
-        b"APPEND": lambda args: (args[1],),
-        b"BITCOUNT": lambda args: (args[1],),
-        b"BITFIELD": lambda args: (args[1],),
-        b"BITFIELD_RO": lambda args: (args[1],),
-        b"BITOP": lambda args: (args[2],) + args[3 : (len(args))],
-        b"BITPOS": lambda args: (args[1],),
-        b"BLMOVE": lambda args: (args[1],) + (args[2],),
-        b"BLMPOP": lambda args: args[3 : 3 + int(args[2])],
-        b"BLPOP": lambda args: args[1 : (len(args) - 1)],
-        b"BRPOP": lambda args: args[1 : (len(args) - 1)],
-        b"BRPOPLPUSH": lambda args: (args[1],) + (args[2],),
-        b"BZMPOP": lambda args: args[3 : 3 + int(args[2])],
-        b"BZPOPMAX": lambda args: args[1 : (len(args) - 1)],
-        b"BZPOPMIN": lambda args: args[1 : (len(args) - 1)],
-        b"COPY": lambda args: (args[1],) + (args[2],),
-        b"DECR": lambda args: (args[1],),
-        b"DECRBY": lambda args: (args[1],),
-        b"DEL": lambda args: args[1 : (len(args))],
-        b"DELEX": lambda args: (args[1],),
-        b"DIGEST": lambda args: (args[1],),
-        b"DUMP": lambda args: (args[1],),
-        b"EVAL": lambda args: args[3 : 3 + int(args[2])],
-        b"EVALSHA": lambda args: args[3 : 3 + int(args[2])],
-        b"EVALSHA_RO": lambda args: args[3 : 3 + int(args[2])],
-        b"EVAL_RO": lambda args: args[3 : 3 + int(args[2])],
-        b"EXISTS": lambda args: args[1 : (len(args))],
-        b"EXPIRE": lambda args: (args[1],),
-        b"EXPIREAT": lambda args: (args[1],),
-        b"EXPIRETIME": lambda args: (args[1],),
-        b"FCALL": lambda args: args[3 : 3 + int(args[2])],
-        b"FCALL_RO": lambda args: args[3 : 3 + int(args[2])],
-        b"GEOADD": lambda args: (args[1],),
-        b"GEODIST": lambda args: (args[1],),
-        b"GEOHASH": lambda args: (args[1],),
-        b"GEOPOS": lambda args: (args[1],),
-        b"GEORADIUS": lambda args: (
-            (args[1],)
-            + (
-                (lambda kwpos: tuple((args[kwpos + 1],)))(args.index(b"STORE", 6))
+    COMMANDS: ClassVar[
+        dict[
+            bytes,
+            Callable[
+                [tuple[RedisValueT, ...]],
+                list[tuple[tuple[RedisValueT, ...], int | None, int | None]],
+            ],
+        ]
+    ] = {
+        b"VADD": lambda args: [((args[1],), 1, 1)],
+        b"VREM": lambda args: [((args[1],), 1, 1)],
+        b"VSIM": lambda args: [((args[1],), 1, 1)],
+        b"VDIM": lambda args: [((args[1],), 1, 1)],
+        b"VCARD": lambda args: [((args[1],), 1, 1)],
+        b"VEMB": lambda args: [((args[1],), 1, 1)],
+        b"VLINKS": lambda args: [((args[1],), 1, 1)],
+        b"VINFO": lambda args: [((args[1],), 1, 1)],
+        b"VSETATTR": lambda args: [((args[1],), 1, 1)],
+        b"VGETATTR": lambda args: [((args[1],), 1, 1)],
+        b"VRANDMEMBER": lambda args: [((args[1],), 1, 1)],
+        b"VISMEMBER": lambda args: [((args[1],), 1, 1)],
+        b"VRANGE": lambda args: [((args[1],), 1, 1)],
+        b"OBJECT": lambda args: [((args[2],), 2, 2)],
+        b"DEBUG OBJECT": lambda args: [((args[1],), 1, 1)],
+        b"APPEND": lambda args: [((args[1],), 1, 1)],
+        b"BITCOUNT": lambda args: [((args[1],), 1, 1)],
+        b"BITFIELD": lambda args: [((args[1],), 1, 1)],
+        b"BITFIELD_RO": lambda args: [((args[1],), 1, 1)],
+        b"BITOP": lambda args: [((args[2],), 2, 2), (args[3 : len(args)], 3, len(args) - 1)],
+        b"BITPOS": lambda args: [((args[1],), 1, 1)],
+        b"BLMOVE": lambda args: [((args[1],), 1, 1), ((args[2],), 2, 2)],
+        b"BLMPOP": lambda args: [(args[3 : 3 + (int(args[2]) * 1)], 3, 3 + (int(args[2]) * 1) - 1)],
+        b"BLPOP": lambda args: [(args[1 : len(args) - 1], 1, len(args) - 1 - 1)],
+        b"BRPOP": lambda args: [(args[1 : len(args) - 1], 1, len(args) - 1 - 1)],
+        b"BRPOPLPUSH": lambda args: [((args[1],), 1, 1), ((args[2],), 2, 2)],
+        b"BZMPOP": lambda args: [(args[3 : 3 + (int(args[2]) * 1)], 3, 3 + (int(args[2]) * 1) - 1)],
+        b"BZPOPMAX": lambda args: [(args[1 : len(args) - 1], 1, len(args) - 1 - 1)],
+        b"BZPOPMIN": lambda args: [(args[1 : len(args) - 1], 1, len(args) - 1 - 1)],
+        b"COPY": lambda args: [((args[1],), 1, 1), ((args[2],), 2, 2)],
+        b"DECR": lambda args: [((args[1],), 1, 1)],
+        b"DECRBY": lambda args: [((args[1],), 1, 1)],
+        b"DEL": lambda args: [(args[1 : len(args)], 1, len(args) - 1)],
+        b"DELEX": lambda args: [((args[1],), 1, 1)],
+        b"DIGEST": lambda args: [((args[1],), 1, 1)],
+        b"DUMP": lambda args: [((args[1],), 1, 1)],
+        b"EVAL": lambda args: [(args[3 : 3 + (int(args[2]) * 1)], 3, 3 + (int(args[2]) * 1) - 1)],
+        b"EVALSHA": lambda args: [
+            (args[3 : 3 + (int(args[2]) * 1)], 3, 3 + (int(args[2]) * 1) - 1)
+        ],
+        b"EVALSHA_RO": lambda args: [
+            (args[3 : 3 + (int(args[2]) * 1)], 3, 3 + (int(args[2]) * 1) - 1)
+        ],
+        b"EVAL_RO": lambda args: [
+            (args[3 : 3 + (int(args[2]) * 1)], 3, 3 + (int(args[2]) * 1) - 1)
+        ],
+        b"EXISTS": lambda args: [(args[1 : len(args)], 1, len(args) - 1)],
+        b"EXPIRE": lambda args: [((args[1],), 1, 1)],
+        b"EXPIREAT": lambda args: [((args[1],), 1, 1)],
+        b"EXPIRETIME": lambda args: [((args[1],), 1, 1)],
+        b"FCALL": lambda args: [(args[3 : 3 + (int(args[2]) * 1)], 3, 3 + (int(args[2]) * 1) - 1)],
+        b"FCALL_RO": lambda args: [
+            (args[3 : 3 + (int(args[2]) * 1)], 3, 3 + (int(args[2]) * 1) - 1)
+        ],
+        b"GEOADD": lambda args: [((args[1],), 1, 1)],
+        b"GEODIST": lambda args: [((args[1],), 1, 1)],
+        b"GEOHASH": lambda args: [((args[1],), 1, 1)],
+        b"GEOPOS": lambda args: [((args[1],), 1, 1)],
+        b"GEORADIUS": lambda args: [
+            ((args[1],), 1, 1),
+            (
+                (
+                    lambda kwpos: (
+                        tuple(args[1 + kwpos : kwpos + 1 + 1]),
+                        1 + kwpos,
+                        kwpos + 1 + 1 - 1,
+                    )
+                )(args.index(b"STORE", 6))
                 if b"STORE" in args
-                else ()
-            )
-            + (
-                (lambda kwpos: tuple((args[kwpos + 1],)))(args.index(b"STOREDIST", 6))
+                else ((), None, None)
+            ),
+            (
+                (
+                    lambda kwpos: (
+                        tuple(args[1 + kwpos : kwpos + 1 + 1]),
+                        1 + kwpos,
+                        kwpos + 1 + 1 - 1,
+                    )
+                )(args.index(b"STOREDIST", 6))
                 if b"STOREDIST" in args
-                else ()
-            )
-        ),
-        b"GEORADIUSBYMEMBER": lambda args: (
-            (args[1],)
-            + (
-                (lambda kwpos: tuple((args[kwpos + 1],)))(args.index(b"STORE", 5))
+                else ((), None, None)
+            ),
+        ],
+        b"GEORADIUSBYMEMBER": lambda args: [
+            ((args[1],), 1, 1),
+            (
+                (
+                    lambda kwpos: (
+                        tuple(args[1 + kwpos : kwpos + 1 + 1]),
+                        1 + kwpos,
+                        kwpos + 1 + 1 - 1,
+                    )
+                )(args.index(b"STORE", 5))
                 if b"STORE" in args
-                else ()
-            )
-            + (
-                (lambda kwpos: tuple((args[kwpos + 1],)))(args.index(b"STOREDIST", 5))
+                else ((), None, None)
+            ),
+            (
+                (
+                    lambda kwpos: (
+                        tuple(args[1 + kwpos : kwpos + 1 + 1]),
+                        1 + kwpos,
+                        kwpos + 1 + 1 - 1,
+                    )
+                )(args.index(b"STOREDIST", 5))
                 if b"STOREDIST" in args
-                else ()
-            )
-        ),
-        b"GEORADIUSBYMEMBER_RO": lambda args: (args[1],),
-        b"GEORADIUS_RO": lambda args: (args[1],),
-        b"GEOSEARCH": lambda args: (args[1],),
-        b"GEOSEARCHSTORE": lambda args: (args[1],) + (args[2],),
-        b"GET": lambda args: (args[1],),
-        b"GETBIT": lambda args: (args[1],),
-        b"GETDEL": lambda args: (args[1],),
-        b"GETEX": lambda args: (args[1],),
-        b"GETRANGE": lambda args: (args[1],),
-        b"GETSET": lambda args: (args[1],),
-        b"HDEL": lambda args: (args[1],),
-        b"HEXISTS": lambda args: (args[1],),
-        b"HEXPIRE": lambda args: (args[1],),
-        b"HEXPIREAT": lambda args: (args[1],),
-        b"HEXPIRETIME": lambda args: (args[1],),
-        b"HGET": lambda args: (args[1],),
-        b"HGETALL": lambda args: (args[1],),
-        b"HGETDEL": lambda args: (args[1],),
-        b"HGETEX": lambda args: (args[1],),
-        b"HINCRBY": lambda args: (args[1],),
-        b"HINCRBYFLOAT": lambda args: (args[1],),
-        b"HKEYS": lambda args: (args[1],),
-        b"HLEN": lambda args: (args[1],),
-        b"HMGET": lambda args: (args[1],),
-        b"HMSET": lambda args: (args[1],),
-        b"HPERSIST": lambda args: (args[1],),
-        b"HPEXPIRE": lambda args: (args[1],),
-        b"HPEXPIREAT": lambda args: (args[1],),
-        b"HPEXPIRETIME": lambda args: (args[1],),
-        b"HPTTL": lambda args: (args[1],),
-        b"HRANDFIELD": lambda args: (args[1],),
-        b"HSCAN": lambda args: (args[1],),
-        b"HSET": lambda args: (args[1],),
-        b"HSETEX": lambda args: (args[1],),
-        b"HSETNX": lambda args: (args[1],),
-        b"HSTRLEN": lambda args: (args[1],),
-        b"HTTL": lambda args: (args[1],),
-        b"HVALS": lambda args: (args[1],),
-        b"INCR": lambda args: (args[1],),
-        b"INCRBY": lambda args: (args[1],),
-        b"INCRBYFLOAT": lambda args: (args[1],),
-        b"LCS": lambda args: args[1:3],
-        b"LINDEX": lambda args: (args[1],),
-        b"LINSERT": lambda args: (args[1],),
-        b"LLEN": lambda args: (args[1],),
-        b"LMOVE": lambda args: (args[1],) + (args[2],),
-        b"LMPOP": lambda args: args[2 : 2 + int(args[1])],
-        b"LPOP": lambda args: (args[1],),
-        b"LPOS": lambda args: (args[1],),
-        b"LPUSH": lambda args: (args[1],),
-        b"LPUSHX": lambda args: (args[1],),
-        b"LRANGE": lambda args: (args[1],),
-        b"LREM": lambda args: (args[1],),
-        b"LSET": lambda args: (args[1],),
-        b"LTRIM": lambda args: (args[1],),
-        b"MEMORY USAGE": lambda args: (args[1],),
-        b"MGET": lambda args: args[1 : (len(args))],
-        b"MIGRATE": lambda args: (
-            (args[3],)
-            + (
-                (lambda kwpos: tuple(args[1 + kwpos : len(args)]))(
+                else ((), None, None)
+            ),
+        ],
+        b"GEORADIUSBYMEMBER_RO": lambda args: [((args[1],), 1, 1)],
+        b"GEORADIUS_RO": lambda args: [((args[1],), 1, 1)],
+        b"GEOSEARCH": lambda args: [((args[1],), 1, 1)],
+        b"GEOSEARCHSTORE": lambda args: [((args[1],), 1, 1), ((args[2],), 2, 2)],
+        b"GET": lambda args: [((args[1],), 1, 1)],
+        b"GETBIT": lambda args: [((args[1],), 1, 1)],
+        b"GETDEL": lambda args: [((args[1],), 1, 1)],
+        b"GETEX": lambda args: [((args[1],), 1, 1)],
+        b"GETRANGE": lambda args: [((args[1],), 1, 1)],
+        b"GETSET": lambda args: [((args[1],), 1, 1)],
+        b"HDEL": lambda args: [((args[1],), 1, 1)],
+        b"HEXISTS": lambda args: [((args[1],), 1, 1)],
+        b"HEXPIRE": lambda args: [((args[1],), 1, 1)],
+        b"HEXPIREAT": lambda args: [((args[1],), 1, 1)],
+        b"HEXPIRETIME": lambda args: [((args[1],), 1, 1)],
+        b"HGET": lambda args: [((args[1],), 1, 1)],
+        b"HGETALL": lambda args: [((args[1],), 1, 1)],
+        b"HGETDEL": lambda args: [((args[1],), 1, 1)],
+        b"HGETEX": lambda args: [((args[1],), 1, 1)],
+        b"HINCRBY": lambda args: [((args[1],), 1, 1)],
+        b"HINCRBYFLOAT": lambda args: [((args[1],), 1, 1)],
+        b"HKEYS": lambda args: [((args[1],), 1, 1)],
+        b"HLEN": lambda args: [((args[1],), 1, 1)],
+        b"HMGET": lambda args: [((args[1],), 1, 1)],
+        b"HMSET": lambda args: [((args[1],), 1, 1)],
+        b"HPERSIST": lambda args: [((args[1],), 1, 1)],
+        b"HPEXPIRE": lambda args: [((args[1],), 1, 1)],
+        b"HPEXPIREAT": lambda args: [((args[1],), 1, 1)],
+        b"HPEXPIRETIME": lambda args: [((args[1],), 1, 1)],
+        b"HPTTL": lambda args: [((args[1],), 1, 1)],
+        b"HRANDFIELD": lambda args: [((args[1],), 1, 1)],
+        b"HSCAN": lambda args: [((args[1],), 1, 1)],
+        b"HSET": lambda args: [((args[1],), 1, 1)],
+        b"HSETEX": lambda args: [((args[1],), 1, 1)],
+        b"HSETNX": lambda args: [((args[1],), 1, 1)],
+        b"HSTRLEN": lambda args: [((args[1],), 1, 1)],
+        b"HTTL": lambda args: [((args[1],), 1, 1)],
+        b"HVALS": lambda args: [((args[1],), 1, 1)],
+        b"INCR": lambda args: [((args[1],), 1, 1)],
+        b"INCRBY": lambda args: [((args[1],), 1, 1)],
+        b"INCRBYFLOAT": lambda args: [((args[1],), 1, 1)],
+        b"LCS": lambda args: [(args[1:3], 1, 3 - 1)],
+        b"LINDEX": lambda args: [((args[1],), 1, 1)],
+        b"LINSERT": lambda args: [((args[1],), 1, 1)],
+        b"LLEN": lambda args: [((args[1],), 1, 1)],
+        b"LMOVE": lambda args: [((args[1],), 1, 1), ((args[2],), 2, 2)],
+        b"LMPOP": lambda args: [(args[2 : 2 + (int(args[1]) * 1)], 2, 2 + (int(args[1]) * 1) - 1)],
+        b"LPOP": lambda args: [((args[1],), 1, 1)],
+        b"LPOS": lambda args: [((args[1],), 1, 1)],
+        b"LPUSH": lambda args: [((args[1],), 1, 1)],
+        b"LPUSHX": lambda args: [((args[1],), 1, 1)],
+        b"LRANGE": lambda args: [((args[1],), 1, 1)],
+        b"LREM": lambda args: [((args[1],), 1, 1)],
+        b"LSET": lambda args: [((args[1],), 1, 1)],
+        b"LTRIM": lambda args: [((args[1],), 1, 1)],
+        b"MEMORY USAGE": lambda args: [((args[1],), 1, 1)],
+        b"MGET": lambda args: [(args[1 : len(args)], 1, len(args) - 1)],
+        b"MIGRATE": lambda args: [
+            ((args[3],), 3, 3),
+            (
+                (lambda kwpos: (tuple(args[1 + kwpos : len(args)]), 1 + kwpos, len(args) - 1))(
                     len(args) - list(reversed(args)).index(b"KEYS", 1) - 1
                 )
                 if b"KEYS" in args
-                else ()
+                else ((), None, None)
+            ),
+        ],
+        b"MOVE": lambda args: [((args[1],), 1, 1)],
+        b"MSET": lambda args: [(args[1 : len(args) : 2], 1, len(args) - 2)],
+        b"MSETEX": lambda args: [
+            (args[2 : 2 + (int(args[1]) * 2) : 2], 2, 2 + (int(args[1]) * 2) - 2)
+        ],
+        b"MSETNX": lambda args: [(args[1 : len(args) : 2], 1, len(args) - 2)],
+        b"OBJECT ENCODING": lambda args: [((args[1],), 1, 1)],
+        b"OBJECT FREQ": lambda args: [((args[1],), 1, 1)],
+        b"OBJECT IDLETIME": lambda args: [((args[1],), 1, 1)],
+        b"OBJECT REFCOUNT": lambda args: [((args[1],), 1, 1)],
+        b"PERSIST": lambda args: [((args[1],), 1, 1)],
+        b"PEXPIRE": lambda args: [((args[1],), 1, 1)],
+        b"PEXPIREAT": lambda args: [((args[1],), 1, 1)],
+        b"PEXPIRETIME": lambda args: [((args[1],), 1, 1)],
+        b"PFADD": lambda args: [((args[1],), 1, 1)],
+        b"PFCOUNT": lambda args: [(args[1 : len(args)], 1, len(args) - 1)],
+        b"PFDEBUG": lambda args: [((args[2],), 2, 2)],
+        b"PFMERGE": lambda args: [((args[1],), 1, 1), (args[2 : len(args)], 2, len(args) - 1)],
+        b"PSETEX": lambda args: [((args[1],), 1, 1)],
+        b"PTTL": lambda args: [((args[1],), 1, 1)],
+        b"RENAME": lambda args: [((args[1],), 1, 1), ((args[2],), 2, 2)],
+        b"RENAMENX": lambda args: [((args[1],), 1, 1), ((args[2],), 2, 2)],
+        b"RESTORE": lambda args: [((args[1],), 1, 1)],
+        b"RESTORE-ASKING": lambda args: [((args[1],), 1, 1)],
+        b"RPOP": lambda args: [((args[1],), 1, 1)],
+        b"RPOPLPUSH": lambda args: [((args[1],), 1, 1), ((args[2],), 2, 2)],
+        b"RPUSH": lambda args: [((args[1],), 1, 1)],
+        b"RPUSHX": lambda args: [((args[1],), 1, 1)],
+        b"SADD": lambda args: [((args[1],), 1, 1)],
+        b"SCARD": lambda args: [((args[1],), 1, 1)],
+        b"SDIFF": lambda args: [(args[1 : len(args)], 1, len(args) - 1)],
+        b"SDIFFSTORE": lambda args: [((args[1],), 1, 1), (args[2 : len(args)], 2, len(args) - 1)],
+        b"SET": lambda args: [((args[1],), 1, 1)],
+        b"SETBIT": lambda args: [((args[1],), 1, 1)],
+        b"SETEX": lambda args: [((args[1],), 1, 1)],
+        b"SETNX": lambda args: [((args[1],), 1, 1)],
+        b"SETRANGE": lambda args: [((args[1],), 1, 1)],
+        b"SINTER": lambda args: [(args[1 : len(args)], 1, len(args) - 1)],
+        b"SINTERCARD": lambda args: [
+            (args[2 : 2 + (int(args[1]) * 1)], 2, 2 + (int(args[1]) * 1) - 1)
+        ],
+        b"SINTERSTORE": lambda args: [((args[1],), 1, 1), (args[2 : len(args)], 2, len(args) - 1)],
+        b"SISMEMBER": lambda args: [((args[1],), 1, 1)],
+        b"SMEMBERS": lambda args: [((args[1],), 1, 1)],
+        b"SMISMEMBER": lambda args: [((args[1],), 1, 1)],
+        b"SMOVE": lambda args: [((args[1],), 1, 1), ((args[2],), 2, 2)],
+        b"SORT": lambda args: [((args[1],), 1, 1)],
+        b"SORT_RO": lambda args: [((args[1],), 1, 1)],
+        b"SPOP": lambda args: [((args[1],), 1, 1)],
+        b"SPUBLISH": lambda args: [((args[1],), 1, 1)],
+        b"SRANDMEMBER": lambda args: [((args[1],), 1, 1)],
+        b"SREM": lambda args: [((args[1],), 1, 1)],
+        b"SSCAN": lambda args: [((args[1],), 1, 1)],
+        b"SSUBSCRIBE": lambda args: [(args[1 : len(args)], 1, len(args) - 1)],
+        b"STRLEN": lambda args: [((args[1],), 1, 1)],
+        b"SUBSTR": lambda args: [((args[1],), 1, 1)],
+        b"SUNION": lambda args: [(args[1 : len(args)], 1, len(args) - 1)],
+        b"SUNIONSTORE": lambda args: [((args[1],), 1, 1), (args[2 : len(args)], 2, len(args) - 1)],
+        b"SUNSUBSCRIBE": lambda args: [(args[1 : len(args)], 1, len(args) - 1)],
+        b"TOUCH": lambda args: [(args[1 : len(args)], 1, len(args) - 1)],
+        b"TTL": lambda args: [((args[1],), 1, 1)],
+        b"TYPE": lambda args: [((args[1],), 1, 1)],
+        b"UNLINK": lambda args: [(args[1 : len(args)], 1, len(args) - 1)],
+        b"WATCH": lambda args: [(args[1 : len(args)], 1, len(args) - 1)],
+        b"XACK": lambda args: [((args[1],), 1, 1)],
+        b"XACKDEL": lambda args: [((args[1],), 1, 1)],
+        b"XADD": lambda args: [((args[1],), 1, 1)],
+        b"XAUTOCLAIM": lambda args: [((args[1],), 1, 1)],
+        b"XCFGSET": lambda args: [((args[1],), 1, 1)],
+        b"XCLAIM": lambda args: [((args[1],), 1, 1)],
+        b"XDEL": lambda args: [((args[1],), 1, 1)],
+        b"XDELEX": lambda args: [((args[1],), 1, 1)],
+        b"XGROUP CREATE": lambda args: [((args[1],), 1, 1)],
+        b"XGROUP CREATECONSUMER": lambda args: [((args[1],), 1, 1)],
+        b"XGROUP DELCONSUMER": lambda args: [((args[1],), 1, 1)],
+        b"XGROUP DESTROY": lambda args: [((args[1],), 1, 1)],
+        b"XGROUP SETID": lambda args: [((args[1],), 1, 1)],
+        b"XINFO CONSUMERS": lambda args: [((args[1],), 1, 1)],
+        b"XINFO GROUPS": lambda args: [((args[1],), 1, 1)],
+        b"XINFO STREAM": lambda args: [((args[1],), 1, 1)],
+        b"XLEN": lambda args: [((args[1],), 1, 1)],
+        b"XPENDING": lambda args: [((args[1],), 1, 1)],
+        b"XRANGE": lambda args: [((args[1],), 1, 1)],
+        b"XREAD": lambda args: [
+            (
+                (
+                    lambda kwpos: (
+                        tuple(args[1 + kwpos : len(args) - (len(args) - (kwpos + 1)) // 2]),
+                        1 + kwpos,
+                        len(args) - (len(args) - (kwpos + 1)) // 2 - 1,
+                    )
+                )(args.index(b"STREAMS", 1))
+                if b"STREAMS" in args
+                else ((), None, None)
             )
-        ),
-        b"MOVE": lambda args: (args[1],),
-        b"MSET": lambda args: args[1 : (len(args)) : 2],
-        b"MSETEX": lambda args: args[2 : 2 + int(args[1]) * 2 : 2],
-        b"MSETNX": lambda args: args[1 : (len(args)) : 2],
-        b"OBJECT ENCODING": lambda args: (args[1],),
-        b"OBJECT FREQ": lambda args: (args[1],),
-        b"OBJECT IDLETIME": lambda args: (args[1],),
-        b"OBJECT REFCOUNT": lambda args: (args[1],),
-        b"PERSIST": lambda args: (args[1],),
-        b"PEXPIRE": lambda args: (args[1],),
-        b"PEXPIREAT": lambda args: (args[1],),
-        b"PEXPIRETIME": lambda args: (args[1],),
-        b"PFADD": lambda args: (args[1],),
-        b"PFCOUNT": lambda args: args[1 : (len(args))],
-        b"PFDEBUG": lambda args: (args[2],),
-        b"PFMERGE": lambda args: (args[1],) + args[2 : (len(args))],
-        b"PSETEX": lambda args: (args[1],),
-        b"PTTL": lambda args: (args[1],),
-        b"RENAME": lambda args: (args[1],) + (args[2],),
-        b"RENAMENX": lambda args: (args[1],) + (args[2],),
-        b"RESTORE": lambda args: (args[1],),
-        b"RESTORE-ASKING": lambda args: (args[1],),
-        b"RPOP": lambda args: (args[1],),
-        b"RPOPLPUSH": lambda args: (args[1],) + (args[2],),
-        b"RPUSH": lambda args: (args[1],),
-        b"RPUSHX": lambda args: (args[1],),
-        b"SADD": lambda args: (args[1],),
-        b"SCARD": lambda args: (args[1],),
-        b"SDIFF": lambda args: args[1 : (len(args))],
-        b"SDIFFSTORE": lambda args: (args[1],) + args[2 : (len(args))],
-        b"SET": lambda args: (args[1],),
-        b"SETBIT": lambda args: (args[1],),
-        b"SETEX": lambda args: (args[1],),
-        b"SETNX": lambda args: (args[1],),
-        b"SETRANGE": lambda args: (args[1],),
-        b"SINTER": lambda args: args[1 : (len(args))],
-        b"SINTERCARD": lambda args: args[2 : 2 + int(args[1])],
-        b"SINTERSTORE": lambda args: (args[1],) + args[2 : (len(args))],
-        b"SISMEMBER": lambda args: (args[1],),
-        b"SMEMBERS": lambda args: (args[1],),
-        b"SMISMEMBER": lambda args: (args[1],),
-        b"SMOVE": lambda args: (args[1],) + (args[2],),
-        b"SORT": lambda args: (args[1],),
-        b"SORT_RO": lambda args: (args[1],),
-        b"SPOP": lambda args: (args[1],),
-        b"SPUBLISH": lambda args: (args[1],),
-        b"SRANDMEMBER": lambda args: (args[1],),
-        b"SREM": lambda args: (args[1],),
-        b"SSCAN": lambda args: (args[1],),
-        b"SSUBSCRIBE": lambda args: args[1 : (len(args))],
-        b"STRLEN": lambda args: (args[1],),
-        b"SUBSTR": lambda args: (args[1],),
-        b"SUNION": lambda args: args[1 : (len(args))],
-        b"SUNIONSTORE": lambda args: (args[1],) + args[2 : (len(args))],
-        b"SUNSUBSCRIBE": lambda args: args[1 : (len(args))],
-        b"TOUCH": lambda args: args[1 : (len(args))],
-        b"TTL": lambda args: (args[1],),
-        b"TYPE": lambda args: (args[1],),
-        b"UNLINK": lambda args: args[1 : (len(args))],
-        b"WATCH": lambda args: args[1 : (len(args))],
-        b"XACK": lambda args: (args[1],),
-        b"XACKDEL": lambda args: (args[1],),
-        b"XADD": lambda args: (args[1],),
-        b"XAUTOCLAIM": lambda args: (args[1],),
-        b"XCFGSET": lambda args: (args[1],),
-        b"XCLAIM": lambda args: (args[1],),
-        b"XDEL": lambda args: (args[1],),
-        b"XDELEX": lambda args: (args[1],),
-        b"XGROUP CREATE": lambda args: (args[1],),
-        b"XGROUP CREATECONSUMER": lambda args: (args[1],),
-        b"XGROUP DELCONSUMER": lambda args: (args[1],),
-        b"XGROUP DESTROY": lambda args: (args[1],),
-        b"XGROUP SETID": lambda args: (args[1],),
-        b"XINFO CONSUMERS": lambda args: (args[1],),
-        b"XINFO GROUPS": lambda args: (args[1],),
-        b"XINFO STREAM": lambda args: (args[1],),
-        b"XLEN": lambda args: (args[1],),
-        b"XPENDING": lambda args: (args[1],),
-        b"XRANGE": lambda args: (args[1],),
-        b"XREAD": lambda args: (
-            (lambda kwpos: tuple(args[1 + kwpos : len(args) - (len(args) - (kwpos + 1)) // 2]))(
-                args.index(b"STREAMS", 1)
+        ],
+        b"XREADGROUP": lambda args: [
+            (
+                (
+                    lambda kwpos: (
+                        tuple(args[1 + kwpos : len(args) - (len(args) - (kwpos + 1)) // 2]),
+                        1 + kwpos,
+                        len(args) - (len(args) - (kwpos + 1)) // 2 - 1,
+                    )
+                )(args.index(b"STREAMS", 4))
+                if b"STREAMS" in args
+                else ((), None, None)
             )
-            if b"STREAMS" in args
-            else ()
-        ),
-        b"XREADGROUP": lambda args: (
-            (lambda kwpos: tuple(args[1 + kwpos : len(args) - (len(args) - (kwpos + 1)) // 2]))(
-                args.index(b"STREAMS", 4)
-            )
-            if b"STREAMS" in args
-            else ()
-        ),
-        b"XREVRANGE": lambda args: (args[1],),
-        b"XSETID": lambda args: (args[1],),
-        b"XTRIM": lambda args: (args[1],),
-        b"ZADD": lambda args: (args[1],),
-        b"ZCARD": lambda args: (args[1],),
-        b"ZCOUNT": lambda args: (args[1],),
-        b"ZDIFF": lambda args: args[2 : 2 + int(args[1])],
-        b"ZDIFFSTORE": lambda args: (args[1],) + args[3 : 3 + int(args[2])],
-        b"ZINCRBY": lambda args: (args[1],),
-        b"ZINTER": lambda args: args[2 : 2 + int(args[1])],
-        b"ZINTERCARD": lambda args: args[2 : 2 + int(args[1])],
-        b"ZINTERSTORE": lambda args: (args[1],) + args[3 : 3 + int(args[2])],
-        b"ZLEXCOUNT": lambda args: (args[1],),
-        b"ZMPOP": lambda args: args[2 : 2 + int(args[1])],
-        b"ZMSCORE": lambda args: (args[1],),
-        b"ZPOPMAX": lambda args: (args[1],),
-        b"ZPOPMIN": lambda args: (args[1],),
-        b"ZRANDMEMBER": lambda args: (args[1],),
-        b"ZRANGE": lambda args: (args[1],),
-        b"ZRANGEBYLEX": lambda args: (args[1],),
-        b"ZRANGEBYSCORE": lambda args: (args[1],),
-        b"ZRANGESTORE": lambda args: (args[1],) + (args[2],),
-        b"ZRANK": lambda args: (args[1],),
-        b"ZREM": lambda args: (args[1],),
-        b"ZREMRANGEBYLEX": lambda args: (args[1],),
-        b"ZREMRANGEBYRANK": lambda args: (args[1],),
-        b"ZREMRANGEBYSCORE": lambda args: (args[1],),
-        b"ZREVRANGE": lambda args: (args[1],),
-        b"ZREVRANGEBYLEX": lambda args: (args[1],),
-        b"ZREVRANGEBYSCORE": lambda args: (args[1],),
-        b"ZREVRANK": lambda args: (args[1],),
-        b"ZSCAN": lambda args: (args[1],),
-        b"ZSCORE": lambda args: (args[1],),
-        b"ZUNION": lambda args: args[2 : 2 + int(args[1])],
-        b"ZUNIONSTORE": lambda args: (args[1],) + args[3 : 3 + int(args[2])],
-        b"JSON.DEBUG MEMORY": lambda args: (args[1],),
-        b"JSON.DEL": lambda args: (args[1],),
-        b"JSON.FORGET": lambda args: (args[1],),
-        b"JSON.GET": lambda args: (args[1],),
-        b"JSON.SET": lambda args: (args[1],),
-        b"JSON.NUMINCRBY": lambda args: (args[1],),
-        b"JSON.STRAPPEND": lambda args: (args[1],),
-        b"JSON.STRLEN": lambda args: (args[1],),
-        b"JSON.ARRAPPEND": lambda args: (args[1],),
-        b"JSON.ARRINDEX": lambda args: (args[1],),
-        b"JSON.ARRINSERT": lambda args: (args[1],),
-        b"JSON.ARRLEN": lambda args: (args[1],),
-        b"JSON.ARRPOP": lambda args: (args[1],),
-        b"JSON.ARRTRIM": lambda args: (args[1],),
-        b"JSON.OBJKEYS": lambda args: (args[1],),
-        b"JSON.OBJLEN": lambda args: (args[1],),
-        b"JSON.TYPE": lambda args: (args[1],),
-        b"JSON.RESP": lambda args: (args[1],),
-        b"JSON.TOGGLE": lambda args: (args[1],),
-        b"JSON.CLEAR": lambda args: (args[1],),
-        b"JSON.NUMMULTBY": lambda args: (args[1],),
-        b"JSON.MERGE": lambda args: (args[1],),
-        b"JSON.MGET": lambda args: (args[1],),
-        b"JSON.MSET": lambda args: args[1::3],
-        b"BF.RESERVE": lambda args: (args[1],),
-        b"BF.ADD": lambda args: (args[1],),
-        b"BF.MADD": lambda args: (args[1],),
-        b"BF.INSERT": lambda args: (args[1],),
-        b"BF.EXISTS": lambda args: (args[1],),
-        b"BF.MEXISTS": lambda args: (args[1],),
-        b"BF.SCANDUMP": lambda args: (args[1],),
-        b"BF.LOADCHUNK": lambda args: (args[1],),
-        b"BF.INFO": lambda args: (args[1],),
-        b"BF.CARD": lambda args: (args[1],),
-        b"CF.RESERVE": lambda args: (args[1],),
-        b"CF.ADD": lambda args: (args[1],),
-        b"CF.ADDNX": lambda args: (args[1],),
-        b"CF.INSERT": lambda args: (args[1],),
-        b"CF.INSERTNX": lambda args: (args[1],),
-        b"CF.EXISTS": lambda args: (args[1],),
-        b"CF.MEXISTS": lambda args: (args[1],),
-        b"CF.DEL": lambda args: (args[1],),
-        b"CF.COUNT": lambda args: (args[1],),
-        b"CF.SCANDUMP": lambda args: (args[1],),
-        b"CF.LOADCHUNK": lambda args: (args[1],),
-        b"CF.INFO": lambda args: (args[1],),
-        b"CMS.INITBYDIM": lambda args: (args[1],),
-        b"CMS.INITBYPROB": lambda args: (args[1],),
-        b"CMS.INCRBY": lambda args: (args[1],),
-        b"CMS.QUERY": lambda args: (args[1],),
-        b"CMS.INFO": lambda args: (args[1],),
-        b"CMS.MERGE": lambda args: (args[1],) + args[3 : 3 + int(args[2])],
-        b"TOPK.RESERVE": lambda args: (args[1],),
-        b"TOPK.ADD": lambda args: (args[1],),
-        b"TOPK.INCRBY": lambda args: (args[1],),
-        b"TOPK.QUERY": lambda args: (args[1],),
-        b"TOPK.LIST": lambda args: (args[1],),
-        b"TOPK.INFO": lambda args: (args[1],),
-        b"TOPK.COUNT": lambda args: (args[1],),
-        b"TDIGEST.CREATE": lambda args: (args[1],),
-        b"TDIGEST.RESET": lambda args: (args[1],),
-        b"TDIGEST.ADD": lambda args: (args[1],),
-        b"TDIGEST.MERGE": lambda args: (args[1],) + args[3 : 3 + int(args[2])],
-        b"TDIGEST.MIN": lambda args: (args[1],),
-        b"TDIGEST.MAX": lambda args: (args[1],),
-        b"TDIGEST.QUANTILE": lambda args: (args[1],),
-        b"TDIGEST.CDF": lambda args: (args[1],),
-        b"TDIGEST.TRIMMED_MEAN": lambda args: (args[1],),
-        b"TDIGEST.RANK": lambda args: (args[1],),
-        b"TDIGEST.REVRANK": lambda args: (args[1],),
-        b"TDIGEST.BYRANK": lambda args: (args[1],),
-        b"TDIGEST.BYREVRANK": lambda args: (args[1],),
-        b"TDIGEST.INFO": lambda args: (args[1],),
-        b"TS.CREATE": lambda args: (args[1],),
-        b"TS.CREATERULE": lambda args: args[1:3],
-        b"TS.ALTER": lambda args: (args[1],),
-        b"TS.ADD": lambda args: (args[1],),
-        b"TS.MADD": lambda args: args[1:-1:3],
-        b"TS.INCRBY": lambda args: (args[1],),
-        b"TS.DECRBY": lambda args: (args[1],),
-        b"TS.DELETERULE": lambda args: args[1:3],
-        b"TS.GET": lambda args: (args[1],),
-        b"TS.INFO": lambda args: (args[1],),
-        b"TS.REVRANGE": lambda args: (args[1],),
-        b"TS.RANGE": lambda args: (args[1],),
-        b"TS.DEL": lambda args: (args[1],),
-        b"FT.CREATE": lambda args: (args[1],),
-        b"FT.INFO": lambda args: (args[1],),
-        b"FT.EXPLAIN": lambda args: (args[1],),
-        b"FT.ALTER": lambda args: (args[1],),
-        b"FT.ALIASADD": lambda args: (args[1],),
-        b"FT.ALIASUPDATE": lambda args: (args[1],),
-        b"FT.ALIASDEL": lambda args: (args[1],),
-        b"FT.TAGVALS": lambda args: (args[1],),
-        b"FT.CONFIG GET": lambda args: (args[1],),
-        b"FT.CONFIG SET": lambda args: (args[1],),
-        b"FT.SEARCH": lambda args: (args[1],),
-        b"FT.HYBRID": lambda args: (args[1],),
-        b"FT.AGGREGATE": lambda args: (args[1],),
-        b"FT.CURSOR GET": lambda args: (args[1],),
-        b"FT.CURSOR DEL": lambda args: (args[1],),
-        b"FT.SYNUPDATE": lambda args: (args[1],),
-        b"FT.SYNDUMP": lambda args: (args[1],),
-        b"FT.SPELLCHECK": lambda args: (args[1],),
-        b"FT.DICTADD": lambda args: (args[1],),
-        b"FT.DICTDEL": lambda args: (args[1],),
-        b"FT.DICTDUMP": lambda args: (args[1],),
-        b"FT.DROPINDEX": lambda args: (args[1],),
-        b"FT.SUGADD": lambda args: (args[1],),
-        b"FT.SUGDEL": lambda args: (args[1],),
-        b"FT.SUGGET": lambda args: (args[1],),
-        b"FT.SUGLEN": lambda args: (args[1],),
+        ],
+        b"XREVRANGE": lambda args: [((args[1],), 1, 1)],
+        b"XSETID": lambda args: [((args[1],), 1, 1)],
+        b"XTRIM": lambda args: [((args[1],), 1, 1)],
+        b"ZADD": lambda args: [((args[1],), 1, 1)],
+        b"ZCARD": lambda args: [((args[1],), 1, 1)],
+        b"ZCOUNT": lambda args: [((args[1],), 1, 1)],
+        b"ZDIFF": lambda args: [(args[2 : 2 + (int(args[1]) * 1)], 2, 2 + (int(args[1]) * 1) - 1)],
+        b"ZDIFFSTORE": lambda args: [
+            ((args[1],), 1, 1),
+            (args[3 : 3 + (int(args[2]) * 1)], 3, 3 + (int(args[2]) * 1) - 1),
+        ],
+        b"ZINCRBY": lambda args: [((args[1],), 1, 1)],
+        b"ZINTER": lambda args: [(args[2 : 2 + (int(args[1]) * 1)], 2, 2 + (int(args[1]) * 1) - 1)],
+        b"ZINTERCARD": lambda args: [
+            (args[2 : 2 + (int(args[1]) * 1)], 2, 2 + (int(args[1]) * 1) - 1)
+        ],
+        b"ZINTERSTORE": lambda args: [
+            ((args[1],), 1, 1),
+            (args[3 : 3 + (int(args[2]) * 1)], 3, 3 + (int(args[2]) * 1) - 1),
+        ],
+        b"ZLEXCOUNT": lambda args: [((args[1],), 1, 1)],
+        b"ZMPOP": lambda args: [(args[2 : 2 + (int(args[1]) * 1)], 2, 2 + (int(args[1]) * 1) - 1)],
+        b"ZMSCORE": lambda args: [((args[1],), 1, 1)],
+        b"ZPOPMAX": lambda args: [((args[1],), 1, 1)],
+        b"ZPOPMIN": lambda args: [((args[1],), 1, 1)],
+        b"ZRANDMEMBER": lambda args: [((args[1],), 1, 1)],
+        b"ZRANGE": lambda args: [((args[1],), 1, 1)],
+        b"ZRANGEBYLEX": lambda args: [((args[1],), 1, 1)],
+        b"ZRANGEBYSCORE": lambda args: [((args[1],), 1, 1)],
+        b"ZRANGESTORE": lambda args: [((args[1],), 1, 1), ((args[2],), 2, 2)],
+        b"ZRANK": lambda args: [((args[1],), 1, 1)],
+        b"ZREM": lambda args: [((args[1],), 1, 1)],
+        b"ZREMRANGEBYLEX": lambda args: [((args[1],), 1, 1)],
+        b"ZREMRANGEBYRANK": lambda args: [((args[1],), 1, 1)],
+        b"ZREMRANGEBYSCORE": lambda args: [((args[1],), 1, 1)],
+        b"ZREVRANGE": lambda args: [((args[1],), 1, 1)],
+        b"ZREVRANGEBYLEX": lambda args: [((args[1],), 1, 1)],
+        b"ZREVRANGEBYSCORE": lambda args: [((args[1],), 1, 1)],
+        b"ZREVRANK": lambda args: [((args[1],), 1, 1)],
+        b"ZSCAN": lambda args: [((args[1],), 1, 1)],
+        b"ZSCORE": lambda args: [((args[1],), 1, 1)],
+        b"ZUNION": lambda args: [(args[2 : 2 + (int(args[1]) * 1)], 2, 2 + (int(args[1]) * 1) - 1)],
+        b"ZUNIONSTORE": lambda args: [
+            ((args[1],), 1, 1),
+            (args[3 : 3 + (int(args[2]) * 1)], 3, 3 + (int(args[2]) * 1) - 1),
+        ],
+        b"JSON.DEBUG MEMORY": lambda args: [((args[1],), 1, 1)],
+        b"JSON.DEL": lambda args: [((args[1],), 1, 1)],
+        b"JSON.FORGET": lambda args: [((args[1],), 1, 1)],
+        b"JSON.GET": lambda args: [((args[1],), 1, 1)],
+        b"JSON.SET": lambda args: [((args[1],), 1, 1)],
+        b"JSON.NUMINCRBY": lambda args: [((args[1],), 1, 1)],
+        b"JSON.STRAPPEND": lambda args: [((args[1],), 1, 1)],
+        b"JSON.STRLEN": lambda args: [((args[1],), 1, 1)],
+        b"JSON.ARRAPPEND": lambda args: [((args[1],), 1, 1)],
+        b"JSON.ARRINDEX": lambda args: [((args[1],), 1, 1)],
+        b"JSON.ARRINSERT": lambda args: [((args[1],), 1, 1)],
+        b"JSON.ARRLEN": lambda args: [((args[1],), 1, 1)],
+        b"JSON.ARRPOP": lambda args: [((args[1],), 1, 1)],
+        b"JSON.ARRTRIM": lambda args: [((args[1],), 1, 1)],
+        b"JSON.OBJKEYS": lambda args: [((args[1],), 1, 1)],
+        b"JSON.OBJLEN": lambda args: [((args[1],), 1, 1)],
+        b"JSON.TYPE": lambda args: [((args[1],), 1, 1)],
+        b"JSON.RESP": lambda args: [((args[1],), 1, 1)],
+        b"JSON.TOGGLE": lambda args: [((args[1],), 1, 1)],
+        b"JSON.CLEAR": lambda args: [((args[1],), 1, 1)],
+        b"JSON.NUMMULTBY": lambda args: [((args[1],), 1, 1)],
+        b"JSON.MERGE": lambda args: [((args[1],), 1, 1)],
+        b"JSON.MGET": lambda args: [(args[1 : len(args) - 1], 1, len(args) - 2)],
+        b"JSON.MSET": lambda args: [(args[1::3], 1, len(args) - 1)],
+        b"BF.RESERVE": lambda args: [((args[1],), 1, 1)],
+        b"BF.ADD": lambda args: [((args[1],), 1, 1)],
+        b"BF.MADD": lambda args: [((args[1],), 1, 1)],
+        b"BF.INSERT": lambda args: [((args[1],), 1, 1)],
+        b"BF.EXISTS": lambda args: [((args[1],), 1, 1)],
+        b"BF.MEXISTS": lambda args: [((args[1],), 1, 1)],
+        b"BF.SCANDUMP": lambda args: [((args[1],), 1, 1)],
+        b"BF.LOADCHUNK": lambda args: [((args[1],), 1, 1)],
+        b"BF.INFO": lambda args: [((args[1],), 1, 1)],
+        b"BF.CARD": lambda args: [((args[1],), 1, 1)],
+        b"CF.RESERVE": lambda args: [((args[1],), 1, 1)],
+        b"CF.ADD": lambda args: [((args[1],), 1, 1)],
+        b"CF.ADDNX": lambda args: [((args[1],), 1, 1)],
+        b"CF.INSERT": lambda args: [((args[1],), 1, 1)],
+        b"CF.INSERTNX": lambda args: [((args[1],), 1, 1)],
+        b"CF.EXISTS": lambda args: [((args[1],), 1, 1)],
+        b"CF.MEXISTS": lambda args: [((args[1],), 1, 1)],
+        b"CF.DEL": lambda args: [((args[1],), 1, 1)],
+        b"CF.COUNT": lambda args: [((args[1],), 1, 1)],
+        b"CF.SCANDUMP": lambda args: [((args[1],), 1, 1)],
+        b"CF.LOADCHUNK": lambda args: [((args[1],), 1, 1)],
+        b"CF.INFO": lambda args: [((args[1],), 1, 1)],
+        b"CMS.INITBYDIM": lambda args: [((args[1],), 1, 1)],
+        b"CMS.INITBYPROB": lambda args: [((args[1],), 1, 1)],
+        b"CMS.INCRBY": lambda args: [((args[1],), 1, 1)],
+        b"CMS.QUERY": lambda args: [((args[1],), 1, 1)],
+        b"CMS.INFO": lambda args: [((args[1],), 1, 1)],
+        b"CMS.MERGE": lambda args: [((args[1],) + args[3 : 3 + int(args[2])], 1, 3 + int(args[2]))],
+        b"TOPK.RESERVE": lambda args: [((args[1],), 1, 1)],
+        b"TOPK.ADD": lambda args: [((args[1],), 1, 1)],
+        b"TOPK.INCRBY": lambda args: [((args[1],), 1, 1)],
+        b"TOPK.QUERY": lambda args: [((args[1],), 1, 1)],
+        b"TOPK.LIST": lambda args: [((args[1],), 1, 1)],
+        b"TOPK.INFO": lambda args: [((args[1],), 1, 1)],
+        b"TOPK.COUNT": lambda args: [((args[1],), 1, 1)],
+        b"TDIGEST.CREATE": lambda args: [((args[1],), 1, 1)],
+        b"TDIGEST.RESET": lambda args: [((args[1],), 1, 1)],
+        b"TDIGEST.ADD": lambda args: [((args[1],), 1, 1)],
+        b"TDIGEST.MERGE": lambda args: [
+            ((args[1],) + args[3 : 3 + int(args[2])], 1, 3 + int(args[2]))
+        ],
+        b"TDIGEST.MIN": lambda args: [((args[1],), 1, 1)],
+        b"TDIGEST.MAX": lambda args: [((args[1],), 1, 1)],
+        b"TDIGEST.QUANTILE": lambda args: [((args[1],), 1, 1)],
+        b"TDIGEST.CDF": lambda args: [((args[1],), 1, 1)],
+        b"TDIGEST.TRIMMED_MEAN": lambda args: [((args[1],), 1, 1)],
+        b"TDIGEST.RANK": lambda args: [((args[1],), 1, 1)],
+        b"TDIGEST.REVRANK": lambda args: [((args[1],), 1, 1)],
+        b"TDIGEST.BYRANK": lambda args: [((args[1],), 1, 1)],
+        b"TDIGEST.BYREVRANK": lambda args: [((args[1],), 1, 1)],
+        b"TDIGEST.INFO": lambda args: [((args[1],), 1, 1)],
+        b"TS.CREATE": lambda args: [((args[1],), 1, 1)],
+        b"TS.CREATERULE": lambda args: [(args[1:3], 1, 3)],
+        b"TS.ALTER": lambda args: [((args[1],), 1, 1)],
+        b"TS.ADD": lambda args: [((args[1],), 1, 1)],
+        b"TS.MADD": lambda args: [(args[1:-1:3], 1, -1)],
+        b"TS.INCRBY": lambda args: [((args[1],), 1, 1)],
+        b"TS.DECRBY": lambda args: [((args[1],), 1, 1)],
+        b"TS.DELETERULE": lambda args: [(args[1:3], 1, 3)],
+        b"TS.GET": lambda args: [((args[1],), 1, 1)],
+        b"TS.INFO": lambda args: [((args[1],), 1, 1)],
+        b"TS.REVRANGE": lambda args: [((args[1],), 1, 1)],
+        b"TS.RANGE": lambda args: [((args[1],), 1, 1)],
+        b"TS.DEL": lambda args: [((args[1],), 1, 1)],
+        b"FT.CREATE": lambda args: [((args[1],), 1, 1)],
+        b"FT.INFO": lambda args: [((args[1],), 1, 1)],
+        b"FT.EXPLAIN": lambda args: [((args[1],), 1, 1)],
+        b"FT.ALTER": lambda args: [((args[1],), 1, 1)],
+        b"FT.ALIASADD": lambda args: [((args[1],), 1, 1)],
+        b"FT.ALIASUPDATE": lambda args: [((args[1],), 1, 1)],
+        b"FT.ALIASDEL": lambda args: [((args[1],), 1, 1)],
+        b"FT.TAGVALS": lambda args: [((args[1],), 1, 1)],
+        b"FT.CONFIG GET": lambda args: [((args[1],), 1, 1)],
+        b"FT.CONFIG SET": lambda args: [((args[1],), 1, 1)],
+        b"FT.SEARCH": lambda args: [((args[1],), 1, 1)],
+        b"FT.HYBRID": lambda args: [((args[1],), 1, 1)],
+        b"FT.AGGREGATE": lambda args: [((args[1],), 1, 1)],
+        b"FT.CURSOR GET": lambda args: [((args[1],), 1, 1)],
+        b"FT.CURSOR DEL": lambda args: [((args[1],), 1, 1)],
+        b"FT.SYNUPDATE": lambda args: [((args[1],), 1, 1)],
+        b"FT.SYNDUMP": lambda args: [((args[1],), 1, 1)],
+        b"FT.SPELLCHECK": lambda args: [((args[1],), 1, 1)],
+        b"FT.DICTADD": lambda args: [((args[1],), 1, 1)],
+        b"FT.DICTDEL": lambda args: [((args[1],), 1, 1)],
+        b"FT.DICTDUMP": lambda args: [((args[1],), 1, 1)],
+        b"FT.DROPINDEX": lambda args: [((args[1],), 1, 1)],
+        b"FT.SUGADD": lambda args: [((args[1],), 1, 1)],
+        b"FT.SUGDEL": lambda args: [((args[1],), 1, 1)],
+        b"FT.SUGGET": lambda args: [((args[1],), 1, 1)],
+        b"FT.SUGLEN": lambda args: [((args[1],), 1, 1)],
     }
 
     @classmethod
     def extract_keys(
         cls, command: bytes, *arguments: RedisValueT, readonly_command: bool = False
-    ) -> tuple[RedisValueT, ...]:
+    ) -> tuple[tuple[RedisValueT, ...], tuple[int, int]]:
         """
         Returns the keys from the command + arguments
         """
         try:
-            if readonly_command and command in cls.READONLY:
-                return cls.READONLY[command]((command,) + arguments)
+            complete_args = (command, *arguments)
+            if readonly_command and command in cls.READONLY_VARIANTS:
+                ranges = cls.READONLY_VARIANTS[command](complete_args)
             else:
-                return cls.ALL[command]((command,) + arguments)
+                ranges = cls.COMMANDS[command](complete_args)
+            keys: list[RedisValueT] = []
+            first_key: int | None = None
+            last_key: int | None = None
+            for args, first, last in ranges:
+                keys.extend(args)
+                if first is not None:
+                    first_key = min(first_key, first) if first_key is not None else first
+                if last is not None:
+                    last_key = max(last_key, last) if last_key is not None else last
+            if first_key is not None and last_key is not None:
+                key_range = (first_key - 1, last_key - 1)
+            else:
+                key_range = (0, 0)
+            return tuple(keys), key_range
         except KeyError:
-            return ()
+            return ((), (0, 0))
 
     @classmethod
     def slots_to_keys(
         cls, command: bytes, *arguments: RedisValueT, readonly_command: bool = False
-    ) -> dict[int, list[RedisValueT]]:
+    ) -> dict[int, list[tuple[int, RedisValueT]]]:
         """
-        Returns a mapping of slots to keys given the command and arguments
+        Returns a mapping of slots to tuples of (original_index, key)
         """
-        keys = cls.extract_keys(command, *arguments, readonly_command=readonly_command)
-        mapping: dict[int, list[RedisValueT]] = {}
-        for key in keys:
-            mapping.setdefault(hash_slot(b(key)), []).append(key)
+        keys = cls.extract_keys(command, *arguments, readonly_command=readonly_command)[0]
+        mapping: dict[int, list[tuple[int, RedisValueT]]] = {}
+        for idx, key in enumerate(keys):
+            mapping.setdefault(hash_slot(b(key)), []).append((idx, key))
         return mapping
 
     @classmethod
@@ -547,5 +665,5 @@ class KeySpec:
         """
         Returns all slots affected by the command
         """
-        keys = cls.extract_keys(command, *arguments, readonly_command=readonly_command)
+        keys = cls.extract_keys(command, *arguments, readonly_command=readonly_command)[0]
         return set(hash_slot(b(key)) for key in keys)
