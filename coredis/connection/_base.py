@@ -51,6 +51,7 @@ from coredis.typing import (
 )
 
 from ._request import Request
+from ._statistics import ConnectionStatistics
 
 CERT_REQS = {
     "none": ssl.CERT_NONE,
@@ -241,6 +242,7 @@ class BaseConnection(ABC):
         :param processing_budget: limiter to throttle CPU-bound processing.
         """
         self.location = location
+        self.statistics = ConnectionStatistics()
 
         self._stream_timeout = stream_timeout
         self._connect_timeout = connect_timeout
@@ -377,6 +379,7 @@ class BaseConnection(ABC):
 
         try:
             self.stream = await self._connect()
+            self.statistics.connected()
             try:
                 with catch({Exception: handle_errors}):
                     async with (
@@ -455,6 +458,7 @@ class BaseConnection(ABC):
             with fail_after(self._max_idle_time):
                 try:
                     data = await self.stream.receive()
+                    self.statistics.data_received(len(data))
                 except (EndOfStream, ClosedResourceError, BrokenResourceError) as err:
                     self._transport_failed = True
                     raise ConnectionError("Connection lost while receiving response") from err
@@ -512,6 +516,7 @@ class BaseConnection(ABC):
             )
             try:
                 await self.stream.send(data)
+                self.statistics.data_sent(len(data))
             except (ClosedResourceError, BrokenResourceError) as err:
                 self._transport_failed = True
                 raise ConnectionError("Connection lost while sending request") from err

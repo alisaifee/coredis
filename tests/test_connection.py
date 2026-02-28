@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import socket
 import ssl
 
@@ -27,6 +28,22 @@ async def test_connect_tcp(redis_basic):
     async with create_task_group() as tg:
         await tg.start(conn.run)
         await check_request(conn, b"PING", (), b"PONG")
+        tg.cancel_scope.cancel()
+
+
+async def test_connection_statistics(redis_basic):
+    conn = TCPConnection(location=redis_basic.connection_pool.location)
+    assert math.isnan(conn.statistics.rtt)
+    assert math.isnan(conn.statistics.ttfb)
+    async with create_task_group() as tg:
+        await tg.start(conn.run)
+        assert conn.statistics.rtt > 0
+        assert conn.statistics.ttfb > 0
+        assert conn.statistics.requests_pending == 0
+        requests = [conn.create_request(b"PING") for _ in range(10)]
+        assert conn.statistics.requests_pending == 10
+        [await r for r in requests]
+        assert conn.statistics.requests_pending == 0
         tg.cancel_scope.cancel()
 
 

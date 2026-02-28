@@ -31,19 +31,22 @@ class Request:
     _result: ResponseType | None = dataclasses.field(init=False, default=None)
 
     def __post_init__(self, connection: BaseConnection) -> None:
+        self._connection = proxy(connection)
+        self._connection.statistics.request_created()
         if not self.expects_response:
             self.resolve(None)
-        self._connection = proxy(connection)
 
     def __await__(self) -> Generator[Any, None, ResponseType]:
         return self.get_result().__await__()
 
     def resolve(self, response: ResponseType) -> None:
+        self._connection.statistics.request_resolved()
         self._result = response
         self._event.set()
 
     def fail(self, error: BaseException) -> None:
         if not self._event.is_set():
+            self._connection.statistics.request_resolved()
             self._exc = error
             self._event.set()
 
