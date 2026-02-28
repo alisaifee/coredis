@@ -247,6 +247,7 @@ class ConnectionPool(BaseConnectionPool[ConnectionT]):
             if connection is None or not connection.usable:
                 connection = await self._construct_connection()
                 if err := await self._task_group.start(self.__wrap_connection, connection):
+                    self._available_connections.append_nowait(None)
                     raise err
                 self._online_connections.add(connection)
             return connection

@@ -382,6 +382,9 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
             connection = await self.__node_pool(location).get()
 
         if not connection or not connection.usable:
-            connection = await self.__make_node_connection(node)
-
+            try:
+                connection = await self.__make_node_connection(node)
+            except:
+                self.__node_pool(location).append_nowait(None)
+                raise
         return connection
