@@ -306,14 +306,16 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         """Releases the connection back to the pool"""
         assert isinstance(connection, ClusterConnection)
         try:
-            if connection.usable:
+            if connection.reusable:
                 self.__node_pool(connection.location).put_nowait(connection)
+            else:
+                connection.invalidate()
         except QueueFull:
             pass
 
     def disconnect(self) -> None:
         for connection in self._online_connections:
-            connection.terminate()
+            connection.invalidate()
         self._online_connections.clear()
 
     def _reset(self) -> None:

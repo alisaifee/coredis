@@ -332,6 +332,24 @@ class BaseConnection(ABC):
         """
         return self.transport_healthy and self._ready
 
+    @property
+    def reusable(self) -> bool:
+        """
+        Whether the connection can be reused
+
+        This property should be tested before returning a connection
+        to a connection pool for reuse. In scenarios such as after using a connection
+        for receiving push messages there might still be unconsumed messages in the
+        internal buffer.
+
+        If the connection is not reusable, invalidate it with a call to :meth:`invalidate`
+        and discard it
+        """
+        return self.usable and (
+            self._push_message_buffer_in.statistics().current_buffer_used == 0
+            and self._streamed_message_buffer_in.statistics().current_buffer_used == 0
+        )
+
     def register_connect_callback(
         self,
         callback: (Callable[[Self], None] | Callable[[Self], Awaitable[None]]),
@@ -437,13 +455,16 @@ class BaseConnection(ABC):
                     f"Unable to establish a connection to {self.location}"
                 ) from connection_error
 
-    def terminate(self, reason: str | None = None) -> None:
+    def invalidate(self, reason: str | None = None) -> None:
         """
-        Terminates the connection prematurely due to internal
-        reasons (basically a request pending on the connection has been
-        cancelled or timed out leaving the connection unusable)
+        Forcefully mark the connection as unusable and release any associated resources.
 
-        :meta private:
+        Call this when the connection state can no longer be trusted — for example,
+        after a cancelled or timed-out request, or when unconsumed messages remain
+        in the buffer. An invalidated connection should never be returned to the pool.
+
+        .. note:: Calling this method on an already disconnected connection is safe
+           and has no side effects
         """
         self._terminated = True
         if self._task_group:

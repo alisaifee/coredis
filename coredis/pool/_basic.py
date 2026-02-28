@@ -269,15 +269,17 @@ class ConnectionPool(BaseConnectionPool[ConnectionT]):
         """
         Checks connection for liveness and releases it back to the pool.
         """
-        if connection.usable:
+        if connection.reusable:
             self._available_connections.put_nowait(connection)
+        else:
+            connection.invalidate()
 
     def disconnect(self) -> None:
         """
         Disconnect all active connections in the pool
         """
         for connection in self._online_connections:
-            connection.terminate()
+            connection.invalidate()
         self._online_connections.clear()
 
     def _reset(self) -> None:

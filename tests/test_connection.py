@@ -155,7 +155,7 @@ async def test_termination(redis_basic):
     async with create_task_group() as tg:
         await tg.start(conn.run)
         assert conn.usable
-        conn.terminate()
+        conn.invalidate()
         await sleep(0.01)
         assert not conn.usable
 

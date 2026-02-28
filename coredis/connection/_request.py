@@ -68,7 +68,7 @@ class Request:
 
     def _handle_response_cancellation(self, reason: str) -> None:
         if self._connection and self.disconnect_on_cancellation:
-            self._connection.terminate(reason)
+            self._connection.invalidate(reason)
 
     def _result_or_exc(self) -> ResponseType:
         if self._exc is not None:
