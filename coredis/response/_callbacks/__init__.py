@@ -8,7 +8,7 @@ from __future__ import annotations
 import datetime
 import itertools
 from abc import ABC, ABCMeta, abstractmethod
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from coredis._utils import b, nativestr
 from coredis.exceptions import ClusterResponseError, ResponseError
@@ -35,8 +35,10 @@ T = TypeVar("T")
 P = ParamSpec("P")
 CR_co = TypeVar("CR_co", covariant=True)
 CK_co = TypeVar("CK_co", covariant=True)
-
 RESP3 = TypeVar("RESP3")
+
+if TYPE_CHECKING:
+    from coredis.commands._routing import NodeExecution
 
 
 class ResponseCallbackMeta(ABCMeta):
@@ -88,7 +90,9 @@ class ClusterMultiNodeCallback(ABC, Generic[R], metaclass=ClusterCallbackMeta):
     def __call__(
         self,
         responses: Mapping[str, R | ResponseError | TimeoutError],
+        executions: list[NodeExecution] | None = None,
     ) -> R:
+        self.executions = executions
         return self.combine(responses)
 
     @property
@@ -96,7 +100,7 @@ class ClusterMultiNodeCallback(ABC, Generic[R], metaclass=ClusterCallbackMeta):
     def response_policy(self) -> str: ...
 
     @abstractmethod
-    def combine(self, responses: Mapping[str, R], **options: Any) -> R:
+    def combine(self, responses: Mapping[str, R | ResponseError | TimeoutError], **options: Any) -> R:
         pass
 
     @classmethod
@@ -106,11 +110,24 @@ class ClusterMultiNodeCallback(ABC, Generic[R], metaclass=ClusterCallbackMeta):
                 raise value
 
 
+class ClusterNoMerge(ClusterMultiNodeCallback[R]):
+    def combine(self, responses: Mapping[str, R], **options: Any) -> R | None:
+        values = list(responses.values())
+        self.raise_any(values)
+        assert len(responses) == 1
+        value = values[0]
+        return value
+
+    @property
+    def response_policy(self) -> str:
+        return "the response from the node"
+
+
 class ClusterBoolCombine(ClusterMultiNodeCallback[bool]):
     def __init__(self, any: bool = False):
         self.any = any
 
-    def combine(self, responses: Mapping[str, bool], **options: Any) -> bool:
+    def combine(self, responses: Mapping[str, bool | ResponseError | TimeoutError], **options: Any) -> bool:
         values = tuple(responses.values())
         self.raise_any(values)
         assert (isinstance(value, bool) for value in values)
@@ -127,8 +144,11 @@ class ClusterBoolCombine(ClusterMultiNodeCallback[bool]):
 
 class ClusterAlignedBoolsCombine(ClusterMultiNodeCallback[tuple[bool, ...]]):
     def combine(
-        self, responses: Mapping[str, tuple[bool, ...]], **options: Any
+        self,
+        responses: Mapping[str, tuple[bool, ...] | ResponseError | TimeoutError],
+        **options: Any,
     ) -> tuple[bool, ...]:
+        self.raise_any(responses.values())
         return tuple(all(k) for k in zip(*responses.values()))
 
     @property
@@ -183,7 +203,9 @@ class ClusterMergeSets(ClusterMultiNodeCallback[set[R]]):
 
 
 class ClusterSum(ClusterMultiNodeCallback[int]):
-    def combine(self, responses: Mapping[str, int | ResponseError], **options: Any) -> int:
+    def combine(
+        self, responses: Mapping[str, int | ResponseError | TimeoutError], **options: Any
+    ) -> int:
         self.raise_any(responses.values())
         return sum(responses.values())
 
@@ -214,7 +236,27 @@ class ClusterMergeMapping(ClusterMultiNodeCallback[dict[CK_co, CR_co]]):
 class ClusterConcatenateTuples(ClusterMultiNodeCallback[tuple[R, ...]]):
     def combine(self, responses: Mapping[str, tuple[R, ...]], **options: Any) -> tuple[R, ...]:
         self.raise_any(responses.values())
-        return tuple(itertools.chain(*responses.values()))
+        total = sum(len(response) for response in responses.values())
+        output: list[R | None] = [None] * total
+        for execution, result in zip(self.executions, responses.values()):
+            for position, value in zip(execution.original_indices, result):
+                output[position] = value
+        return tuple(cast(list[R], output))
+
+    @property
+    def response_policy(self) -> str:
+        return "the concatenations of the results"
+
+
+class ClusterConcatenateLists(ClusterMultiNodeCallback[list[R]]):
+    def combine(self, responses: Mapping[str, list[R]], **options: Any) -> list[R]:
+        self.raise_any(responses.values())
+        total = sum(len(response) for response in responses.values())
+        output: list[R | None] = [None] * total
+        for execution, result in zip(self.executions, responses.values()):
+            for position, value in zip(execution.original_indices, result):
+                output[position] = value
+        return cast(list[R], output)
 
     @property
     def response_policy(self) -> str:

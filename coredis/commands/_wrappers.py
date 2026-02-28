@@ -4,19 +4,15 @@ import dataclasses
 import functools
 import textwrap
 import warnings
+from typing import Any
 
 from packaging import version
 
-from coredis.commands._utils import check_version, redis_command_link
-from coredis.commands.constants import CommandFlag, CommandGroup, CommandName, NodeFlag
-from coredis.commands.request import CommandRequest
 from coredis.globals import (
     CACHEABLE_COMMANDS,
     COMMAND_FLAGS,
-    MERGE_CALLBACKS,
     READONLY_COMMANDS,
-    ROUTE_FLAGS,
-    SPLIT_FLAGS,
+    ROUTING_STRATEGIES,
 )
 from coredis.response._callbacks import ClusterMultiNodeCallback
 from coredis.typing import (
@@ -26,6 +22,11 @@ from coredis.typing import (
     R,
     add_runtime_checks,
 )
+
+from ._routing import FanoutStrategy, RandomStrategy, RoutingStrategy, SlotRangeStrategy
+from ._utils import check_version, redis_command_link
+from .constants import CommandFlag, CommandGroup, CommandName, NodeFlag
+from .request import CommandRequest
 
 
 class RedirectUsage(NamedTuple):
@@ -60,11 +61,18 @@ class ClusterCommandConfig:
     enabled: bool = True
     combine: ClusterMultiNodeCallback | None = None  # type: ignore
     route: NodeFlag | None = None
-    split: NodeFlag | None = None
+    routing_strategy: RoutingStrategy[Any] | None = None
 
     @property
     def multi_node(self) -> bool:
-        return (self.route or self.split) in [
+        flag = (
+            self.route
+            if self.route
+            else self.routing_strategy.route
+            if self.routing_strategy
+            else None
+        )
+        return flag in [
             NodeFlag.ALL,
             NodeFlag.PRIMARIES,
             NodeFlag.REPLICAS,
@@ -90,18 +98,21 @@ def redis_command(
         READONLY_COMMANDS.add(command_name)
         readonly = True
 
+    COMMAND_FLAGS[command_name] = flags or set()
+
     if not readonly and cacheable:  # noqa
         raise RuntimeError(f"Can't decorate non readonly command {command_name} with cache config")
     if cacheable:
         CACHEABLE_COMMANDS.add(command_name)
 
-    COMMAND_FLAGS[command_name] = flags or set()
-    if cluster.route:
-        ROUTE_FLAGS[command_name] = cluster.route
-    if cluster.split:
-        SPLIT_FLAGS[command_name] = cluster.split
-    if cluster.combine:
-        MERGE_CALLBACKS[command_name] = cluster.combine
+    if cluster.routing_strategy:
+        ROUTING_STRATEGIES[command_name] = cluster.routing_strategy
+    elif cluster.route == NodeFlag.SLOT_ID:
+        ROUTING_STRATEGIES[command_name] = SlotRangeStrategy(cluster.combine)
+    elif cluster.combine and cluster.route:
+        ROUTING_STRATEGIES[command_name] = FanoutStrategy(cluster.route, cluster.combine)
+    elif cluster.route == NodeFlag.RANDOM:
+        ROUTING_STRATEGIES[command_name] = RandomStrategy()
     command_details = CommandDetails(
         command_name,
         group,

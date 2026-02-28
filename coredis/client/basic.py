@@ -903,7 +903,7 @@ class Redis(Client[AnyStr]):
         pool = self.connection_pool
         quick_release = self.should_quick_release(command)
         should_block = not quick_release or self.requires_wait or self.requires_waitaof
-        keys = KeySpec.extract_keys(command.name, *command.arguments)
+        keys = KeySpec.extract_keys(command.name, *command.arguments)[0]
         cacheable = (
             command.name in CACHEABLE_COMMANDS
             and len(keys) == 1

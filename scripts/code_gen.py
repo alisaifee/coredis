@@ -2267,6 +2267,7 @@ def cluster_key_extraction(path):
 
     def _index_finder(command, search_spec, find_spec):
         if search_spec["type"] == "index":
+
             start_index = search_spec["spec"]["index"]
             command_offset = len(command.strip().split(" ")) - 1
             start_index = start_index - command_offset
@@ -2276,29 +2277,36 @@ def cluster_key_extraction(path):
                 limit = find_spec["spec"]["limit"]
                 if last_key == -1:
                     if limit > 0:
-                        finder = f"args[{start_index}:len(args)-((len(args)-({start_index}))//{limit})"
+                        last_key_index = f"len(args)-((len(args)-({start_index}))//{limit}"
                     else:
-                        finder = f"args[{start_index}:(len(args))"
+                        last_key_index=f"len(args)"
+                    finder = f"args[{start_index}:{last_key_index}"
                 elif last_key == -2:
-                    finder = f"args[{start_index}:(len(args) - 1)"
+                    last_key_index=f"len(args)-1"
+                    finder = f"args[{start_index}:{last_key_index}"
                 else:
                     if start_index == start_index + last_key:
-                        return f"(args[{start_index}],)"
-                    finder = f"args[{start_index}:{start_index + last_key + 1}"
+                        return f"((args[{start_index}],), {start_index}, {start_index})"
+                    last_key_index=f"{(start_index+last_key+1)*keystep}"
+                    finder = f"args[{start_index}:{last_key_index}"
                 if keystep > 1:
                     finder += f":{keystep}]"
                 else:
                     finder += "]"
-                return finder
+
+                return f"({finder}, {start_index}, {last_key_index}-{keystep})"
             elif find_spec["type"] == "keynum":
                 first_key = find_spec["spec"]["firstkey"]
                 keynumidx = find_spec["spec"]["keynumidx"]
-                finder = f"args[{start_index + first_key}: {start_index + first_key}+int(args[{keynumidx + start_index}])"
+                first_key_index = f"{start_index + first_key}"
+                last_key_index = f"{start_index + first_key}+(int(args[{keynumidx + start_index}])*{keystep})"
+
+                finder = f"args[{first_key_index}:{last_key_index}"
                 if keystep > 1:
-                    finder += f"*{keystep}:{keystep}]"
+                    finder += f":{keystep}]"
                 else:
                     finder += "]"
-                return finder
+                return f"({finder}, {first_key_index}, {last_key_index}-{keystep})"
             else:
                 raise RuntimeError(f"Don't know how to handle {search_spec} with {find_spec}")
 
@@ -2316,25 +2324,26 @@ def cluster_key_extraction(path):
             last_key = find_spec["spec"]["lastkey"]
             limit = find_spec["spec"]["limit"]
             keystep = find_spec["spec"]["keystep"]
-            finder = "args[1+kwpos"
+            finder = "args[1+kwpos:"
+            first_key_index="1+kwpos"
             if last_key == -1:
                 if limit > 0:
-                    lim = f":len(args)-(len(args)-(kwpos+1))//{limit}"
+                    last_key_index=f"len(args)-(len(args)-(kwpos+1))//{limit}"
                 else:
-                    lim = ":len(args)"
-                finder += f"{lim}"
+                    last_key_index = "len(args)"
             elif last_key == -2:
-                finder += ":len(args)-1"
+                last_key_index="len(args)-1"
             elif last_key == 0:
-                finder = "(args[kwpos+1],)"
+                last_key_index="kwpos+1+1"
             else:
                 raise RuntimeError("Unhandled last_key in keyword search")
+            finder=f"args[{first_key_index}:{last_key_index}"
             if keystep > 1:
                 finder += f":{keystep}]"
-            elif not last_key == 0:
+            else:
                 finder += "]"
 
-            lamb = f"((lambda kwpos: tuple({finder}))({kw_expr}) if {token} in args else ())"
+            lamb = f"((lambda kwpos: (tuple({finder}), {first_key_index}, {last_key_index}-{keystep}))({kw_expr}) if {token} in args else ((), None, None))"
             return lamb
         else:
             raise RuntimeError(f"Don't know how to handle {search_spec} with {find_spec}")
@@ -2378,13 +2387,12 @@ def cluster_key_extraction(path):
                 if arg.get("type") == "key":
                     arg_pos.append(idx)
             if len(arg_pos) == 1:
-                fallbacks[name] = [f"(args[{1+arg_pos[0]}],)"]
+                fallbacks[name] = [f"((args[{1+arg_pos[0]}],), {1+arg_pos[0]}, {1+arg_pos[0]})"]
 
     readonly = {}
-    fixed_args = {"first": ["(args[1],)"], "second": ["(args[2],)"], "all": ["args[1:]"]}
+    fixed_args = {"first": ["((args[1],),1,1)"], "second": ["((args[2],),2,2)"], "all": ["(args[1:len(args)-1],1,len(args)-1)"]}
     key_specs = dict(fallbacks)
-    key_specs.update({"OBJECT": ["(args[2],)"], "DEBUG OBJECT": ["(args[1],)"]})
-
+    key_specs.update({"OBJECT": fixed_args["second"], "DEBUG OBJECT": fixed_args["first"]})
     for command, modes in lookups.items():
         for mode, exprs in modes.items():
             if mode == "RO":
@@ -2414,8 +2422,8 @@ def cluster_key_extraction(path):
     key_specs["JSON.CLEAR"] = fixed_args["first"]
     key_specs["JSON.NUMMULTBY"] = fixed_args["first"]
     key_specs["JSON.MERGE"] = fixed_args["first"]
-    key_specs["JSON.MGET"] = fixed_args["first"]
-    key_specs["JSON.MSET"] = ["args[1::3]"]
+    key_specs["JSON.MGET"] = ["(args[1:len(args)-1], 1, len(args)-2)"]
+    key_specs["JSON.MSET"] = ["(args[1::3], 1, len(args)-1)"]
 
     # bf
     key_specs["BF.RESERVE"] = fixed_args["first"]
@@ -2445,7 +2453,7 @@ def cluster_key_extraction(path):
     key_specs["CMS.INCRBY"] = fixed_args["first"]
     key_specs["CMS.QUERY"] = fixed_args["first"]
     key_specs["CMS.INFO"] = fixed_args["first"]
-    key_specs["CMS.MERGE"] = ["(args[1],) + args[3 : 3 + int(args[2])]"]
+    key_specs["CMS.MERGE"] = ["((args[1],) + args[3 : 3 + int(args[2])], 1, 3 + int(args[2]))"]
     key_specs["TOPK.RESERVE"] = fixed_args["first"]
     key_specs["TOPK.ADD"] = fixed_args["first"]
     key_specs["TOPK.INCRBY"] = fixed_args["first"]
@@ -2456,7 +2464,7 @@ def cluster_key_extraction(path):
     key_specs["TDIGEST.CREATE"] = fixed_args["first"]
     key_specs["TDIGEST.RESET"] = fixed_args["first"]
     key_specs["TDIGEST.ADD"] = fixed_args["first"]
-    key_specs["TDIGEST.MERGE"] = ["(args[1],) + args[3 : 3 + int(args[2])]"]
+    key_specs["TDIGEST.MERGE"] = ["((args[1],) + args[3 : 3 + int(args[2])], 1, 3 + int(args[2]))"]
     key_specs["TDIGEST.MIN"] = fixed_args["first"]
     key_specs["TDIGEST.MAX"] = fixed_args["first"]
     key_specs["TDIGEST.QUANTILE"] = fixed_args["first"]
@@ -2470,13 +2478,13 @@ def cluster_key_extraction(path):
 
     # timeseries
     key_specs["TS.CREATE"] = fixed_args["first"]
-    key_specs["TS.CREATERULE"] = ["args[1:3]"]
+    key_specs["TS.CREATERULE"] = ["(args[1:3], 1, 3)"]
     key_specs["TS.ALTER"] = fixed_args["first"]
     key_specs["TS.ADD"] = fixed_args["first"]
-    key_specs["TS.MADD"] = ["args[1:-1:3]"]
+    key_specs["TS.MADD"] = ["(args[1:-1:3], 1, -1)"]
     key_specs["TS.INCRBY"] = fixed_args["first"]
     key_specs["TS.DECRBY"] = fixed_args["first"]
-    key_specs["TS.DELETERULE"] = ["args[1:3]"]
+    key_specs["TS.DELETERULE"] = ["(args[1:3], 1, 3)"]
     key_specs["TS.GET"] = fixed_args["first"]
     key_specs["TS.INFO"] = fixed_args["first"]
     key_specs["TS.REVRANGE"] = fixed_args["first"]
@@ -2519,40 +2527,56 @@ from __future__ import annotations
 from coredis._utils import b, hash_slot
 from coredis.typing import Callable, ClassVar, RedisValueT
 
+
 class KeySpec:
-    READONLY: ClassVar[dict[bytes, Callable[[tuple[RedisValueT, ...]], tuple[RedisValueT, ...]]]] = {{ '{' }}
+    READONLY_VARIANTS: ClassVar[dict[bytes, Callable[[tuple[RedisValueT, ...]], list[tuple[tuple[RedisValueT, ...], int|None, int|None]]]]] = {{ '{' }}
     {% for command, exprs in readonly.items() %}
-        b"{{command}}": lambda args: {{exprs | join("+")}},
+        b"{{command}}": lambda args: [{{exprs | join(", ")}}],
     {% endfor %}
     {{ '}' }}
-    ALL: ClassVar[dict[bytes, Callable[[tuple[RedisValueT, ...]], tuple[RedisValueT, ...]]]] = {{ '{' }}
+    COMMANDS: ClassVar[dict[bytes, Callable[[tuple[RedisValueT, ...]], list[tuple[tuple[RedisValueT, ...], int|None, int|None]]]]] = {{ '{' }}
     {% for command, exprs in key_specs.items() %}
-        b"{{command}}": lambda args: {{exprs | join("+")}},
+        b"{{command}}": lambda args: [{{exprs | join(", ")}}],
     {% endfor %}
     {{ '}' }}
 
     @classmethod
-    def extract_keys(cls, command: bytes, *arguments: RedisValueT, readonly_command: bool = False) -> tuple[RedisValueT, ...]:
+    def extract_keys(cls, command: bytes, *arguments: RedisValueT, readonly_command: bool = False) -> tuple[tuple[RedisValueT, ...], tuple[int, int]]:
         \"\"\"
         Returns the keys from the command + arguments
         \"\"\"
         try:
-            if readonly_command and command in cls.READONLY:
-                return cls.READONLY[command]((command,) + arguments)
+            complete_args = (command, *arguments)
+            if readonly_command and command in cls.READONLY_VARIANTS:
+                ranges = cls.READONLY_VARIANTS[command](complete_args)
             else:
-                return cls.ALL[command]((command,) + arguments)
+                ranges = cls.COMMANDS[command](complete_args)
+            keys: list[RedisValueT] = []
+            first_key: int | None = None
+            last_key: int | None = None
+            for (args, first, last) in ranges:
+                keys.extend(args)
+                if first is not None:
+                    first_key=min(first_key, first) if first_key is not None else first
+                if last is not None:
+                    last_key=max(last_key, last) if last_key is not None else last
+            if first_key is not None and last_key is not None:
+                key_range = (first_key-1, last_key-1)
+            else:
+                key_range = (0, 0)
+            return tuple(keys), key_range
         except KeyError:
-            return  ()
+            return  ((), (0, 0))
 
     @classmethod
-    def slots_to_keys(cls, command: bytes, *arguments: RedisValueT, readonly_command: bool = False) -> dict[int, list[RedisValueT]]:
+    def slots_to_keys(cls, command: bytes, *arguments: RedisValueT, readonly_command: bool = False) -> dict[int, list[tuple[int, RedisValueT]]]:
         \"\"\"
-        Returns a mapping of slots to keys given the command and arguments
+        Returns a mapping of slots to tuples of (original_index, key)
         \"\"\"
-        keys = cls.extract_keys(command, *arguments, readonly_command=readonly_command)
-        mapping: dict[int, list[RedisValueT]] = {}
-        for key in keys:
-            mapping.setdefault(hash_slot(b(key)), []).append(key)
+        keys = cls.extract_keys(command, *arguments, readonly_command=readonly_command)[0]
+        mapping: dict[int, list[tuple[int, RedisValueT]]] = {}
+        for idx, key in enumerate(keys):
+            mapping.setdefault(hash_slot(b(key)), []).append((idx, key))
         return mapping
 
     @classmethod
@@ -2560,7 +2584,7 @@ class KeySpec:
         \"\"\"
         Returns all slots affected by the command
         \"\"\"
-        keys = cls.extract_keys(command, *arguments, readonly_command=readonly_command)
+        keys = cls.extract_keys(command, *arguments, readonly_command=readonly_command)[0]
         return set(hash_slot(b(key)) for key in keys)
     """
     env = Environment()

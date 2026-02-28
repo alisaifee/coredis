@@ -4,7 +4,6 @@ import pytest
 from anyio import create_task_group, sleep
 
 import coredis
-from coredis._utils import hash_slot
 from coredis.cluster._discovery import DiscoveryService
 from coredis.cluster._layout import ClusterLayout
 from coredis.connection import TCPLocation
@@ -23,8 +22,6 @@ class TestClusterLayout:
         assert not list(layout.replicas)
         with pytest.raises(RedisClusterError, match="cluster layout cache is empty"):
             layout.node_for_request(b"PING", ())
-        with pytest.raises(RedisClusterError, match="cluster layout cache is empty"):
-            layout.nodes_for_request(b"PING", ())
 
         await layout.initialize()
         assert len(list(layout.nodes)) > 1
@@ -234,40 +231,11 @@ class TestClusterLayout:
         layout = ClusterLayout(discovery_service, error_threshold=1, maximum_staleness=1)
         await layout.initialize()
 
-        with pytest.raises(RedisClusterError, match="single node"):
-            layout.node_for_request(b"PING", ())
         with pytest.raises(RedisClusterError, match="don't hash to the same slot"):
             layout.node_for_request(b"MGET", ("a{a}", "a{b}", "a{c}"))
         assert layout.node_for_request(b"MGET", ("a{a}", "b{a}"))
         with pytest.raises(RedisClusterError):
             layout.node_for_request(b"DEL", ("a{a}", "b{b}", "c{c}", "d{d}"))
-
-    async def test_nodes_for_request(self, redis_cluster_server, discovery_service):
-        layout = ClusterLayout(discovery_service, error_threshold=1, maximum_staleness=1)
-        await layout.initialize()
-
-        assert list(layout.nodes_for_request(b"SAVE", ()).keys()) == list(layout.nodes)
-        assert list(layout.nodes_for_request(b"PING", ()).keys()) == list(layout.primaries)
-        assert len(list(layout.nodes_for_request(b"ACL WHOAMI", ()).keys())) == 1
-        assert len(list(layout.nodes_for_request(b"FCALL", ("test", 0)).keys())) == 1
-        assert (
-            len(
-                list(
-                    layout.nodes_for_request(
-                        b"CLUSTER DELSLOTS",
-                        (0, 16000),
-                        execution_parameters={"slot_arguments_range": (0, 1)},
-                    ).keys()
-                )
-            )
-            == 1
-        )
-        assert list(layout.nodes_for_request(b"GET", ("a{a}")).keys()) == [
-            layout.node_for_slot(hash_slot(b"a{a}"))
-        ]
-        with pytest.raises(RedisClusterError):
-            layout.nodes_for_request(b"DEL", ("a{a}", "b{b}", "c{c}", "d{d}"))
-        layout.nodes_for_request(b"DEL", ("a{a}", "b{b}", "c{c}", "d{d}"), allow_cross_slot=True)
 
     async def test_node_for_slot(self, redis_cluster_server, discovery_service):
         layout = ClusterLayout(discovery_service, error_threshold=1, maximum_staleness=1)

@@ -20,6 +20,7 @@ from coredis.typing import (
 )
 
 from .._utils import dict_to_flat_list
+from ..commands._routing import FanoutStrategy
 from ..commands._utils import normalized_milliseconds, normalized_time_milliseconds
 from ..commands._validators import (
     mutually_exclusive_parameters,
@@ -717,6 +718,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         },
         module=MODULE,
         cluster=ClusterCommandConfig(
+            routing_strategy=FanoutStrategy(NodeFlag.PRIMARIES, ClusterMergeTimeSeries()),
             route=NodeFlag.PRIMARIES,
             combine=ClusterMergeTimeSeries(),
         ),
@@ -871,7 +873,11 @@ class TimeSeries(ModuleGroup[AnyStr]):
             "empty": {"version_introduced": "1.8.0"},
         },
         module=MODULE,
-        cluster=ClusterCommandConfig(route=NodeFlag.PRIMARIES, combine=ClusterMergeTimeSeries()),
+        cluster=ClusterCommandConfig(
+            routing_strategy=FanoutStrategy(NodeFlag.PRIMARIES, ClusterMergeTimeSeries()),
+            route=NodeFlag.PRIMARIES,
+            combine=ClusterMergeTimeSeries(),
+        ),
         flags={CommandFlag.READONLY},
     )
     def mrevrange(
@@ -1033,8 +1039,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         arguments={"latest": {"version_introduced": "1.8.0"}},
         module=MODULE,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.PRIMARIES,
-            combine=ClusterMergeTimeSeries(),
+            routing_strategy=FanoutStrategy(NodeFlag.PRIMARIES, ClusterMergeTimeSeries()),
         ),
         flags={CommandFlag.READONLY},
     )
@@ -1113,8 +1118,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.PRIMARIES,
-            combine=ClusterMergeSets(),
+            routing_strategy=FanoutStrategy(NodeFlag.PRIMARIES, ClusterMergeSets()),
         ),
         flags={CommandFlag.READONLY},
     )

@@ -11,7 +11,7 @@ from anyio.lowlevel import checkpoint
 
 from coredis._utils import logger, nativestr
 from coredis.commands._key_spec import KeySpec
-from coredis.commands.constants import CommandName, NodeFlag
+from coredis.commands.constants import CommandName
 from coredis.connection import TCPLocation
 from coredis.exceptions import (
     ClusterCrossSlotError,
@@ -21,7 +21,7 @@ from coredis.exceptions import (
     RedisError,
     ResponseError,
 )
-from coredis.globals import READONLY_COMMANDS, ROUTE_FLAGS, SPLIT_FLAGS
+from coredis.globals import READONLY_COMMANDS
 from coredis.retry import ExponentialBackoffRetryPolicy
 from coredis.typing import ExecutionParameters, RedisValueT
 
@@ -65,91 +65,28 @@ class ClusterLayout:
         execution_parameters: ExecutionParameters = {},
     ) -> ClusterNodeLocation:
         """
-        Maps a request to a single node if possible.
-        """
-        nodes = self.nodes_for_request(
-            command,
-            arguments,
-            primary=primary,
-            execution_parameters=execution_parameters,
-        )
-        if not nodes or len(nodes) > 1:
-            raise RedisClusterError(
-                f"Could not map {nativestr(command)} request to a single node in the cluster"
-            )
-        return list(nodes.keys()).pop()
+        Maps a request to a single node if possible (i.e. all keys
+        in the command map to a single slot). This method will not work
+        for non keyed commands which must be handled by a routing
+        strategy.
 
-    def nodes_for_request(
-        self,
-        command: bytes,
-        arguments: tuple[RedisValueT, ...],
-        primary: bool = True,
-        allow_cross_slot: bool = False,
-        execution_parameters: ExecutionParameters = {},
-    ) -> dict[ClusterNodeLocation, list[tuple[RedisValueT, ...]]]:
-        """
-        Expands a request into the appropriate nodes it should be executed
-        on. The returned mapping contains unique nodes for execution as keys
-        mapped to a list of arguments to be used for execution. In most cases
-        the list contains just one entry, the original arguments - but for
-        commands that can be split over multiple nodes safely, the arguments will
-        be separated into chunks per slot.
+        The only exception handled by this method is scripting commands
+        (eval/fcall) because they can be called either with or without keys
+        and if there are no keys, a random node is as good a choice as any
         """
         if not self._nodes:
             raise RedisClusterError("Local cluster layout cache is empty")
 
-        nodes: dict[ClusterNodeLocation, list[tuple[RedisValueT, ...]]] = {}
         slots_to_keys = KeySpec.slots_to_keys(
             command, *arguments, readonly_command=command in READONLY_COMMANDS and not primary
         )
-        keys = KeySpec.extract_keys(command, *arguments)
-        node_flag = ROUTE_FLAGS.get(command)
-
-        # If the command can be split across multiple nodes in a non atomic
-        # request, allow returning multiple nodes for the same request
-        # but with the keys separated.
-        split = False
-        if command in SPLIT_FLAGS and allow_cross_slot:
-            split = True
-            node_flag = SPLIT_FLAGS[command]
-            if keys:
-                key_start: int = arguments.index(keys[0])
-                key_end: int = arguments.index(keys[-1])
-            assert arguments[key_start : 1 + key_end] == keys, (
-                f"Unable to map {command.decode('latin-1')} by keys {keys}"
-            )
+        keys, _ = KeySpec.extract_keys(command, *arguments)
         if slots_to_keys:
-            # Commands that contain keys can not be performed when they affect
-            # multiple slots. Support for splitting only exists for certain commands
-            # that have a stable key position and where the order of responses does
-            # not matter.
-            if not split and len(slots_to_keys) > 1:
+            if len(slots_to_keys) > 1:
                 raise ClusterCrossSlotError(command=command, keys=keys)
-
-            for slot, slot_keys in slots_to_keys.items():
-                node = self.node_for_slot(slot, primary)
-                nodes.setdefault(node, [])
-                if split:
-                    nodes[node].append(
-                        (*arguments[:key_start], *slot_keys, *arguments[1 + key_end :])
-                    )
-
-        # The remaining branches apply to non keyed commands
-        elif node_flag == NodeFlag.RANDOM:
-            nodes = {self.random_node(primary=primary): [arguments]}
-        elif node_flag == NodeFlag.PRIMARIES:
-            nodes = {node: [arguments] for node in self.primaries}
-        elif node_flag == NodeFlag.ALL:
-            nodes = {node: [arguments] for node in self.nodes}
-        elif node_flag == NodeFlag.SLOT_ID and (
-            slot_arguments_range := execution_parameters.get("slot_arguments_range", None)
-        ):
-            slot_start, slot_end = slot_arguments_range
-            arg_slots = arguments[slot_start:slot_end]
-            all_slots = set(int(k) for k in arg_slots)
-            for node, slots in self.nodes_for_slots(*all_slots).items():
-                nodes[node] = [(*slots, *arguments[slot_end:])]
-        if command in {
+            slot = list(slots_to_keys.keys())[0]
+            return self.node_for_slot(slot, primary)
+        elif command in {
             CommandName.FCALL,
             CommandName.FCALL_RO,
             CommandName.EVAL,
@@ -157,11 +94,11 @@ class ClusterLayout:
             CommandName.EVALSHA,
             CommandName.EVALSHA_RO,
         }:
-            # If the scripting call doesn not contain any keys, pick a random
-            # node
-            if not nodes:
-                nodes = {self.random_node(primary=primary): [arguments]}
-        return nodes
+            return self.random_node(primary)
+        else:
+            raise RedisClusterError(
+                f"Could not map {nativestr(command)} request to a node in the cluster"
+            )
 
     def node_for_location(self, location: TCPLocation) -> ClusterNodeLocation | None:
         return self._nodes.get(location)
@@ -225,6 +162,7 @@ class ClusterLayout:
             location, ClusterNodeLocation(location.host, location.port, server_type="primary")
         )
         slot_nodes = self._slots[error.slot_id]
+        slot_nodes[0] = redirect_node
         for idx, current in enumerate(slot_nodes):
             if (is_errored := (current == errored_node)) or current.is_primary:
                 if redirect_node in slot_nodes and is_errored:

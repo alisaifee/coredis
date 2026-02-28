@@ -705,8 +705,7 @@ class ClusterPipeline(Client[AnyStr]):
         """
         if self.command_stack:
             raise WatchError("Unable to add a watch after pipeline commands have been added")
-        watched_nodes = self.connection_pool.cluster_layout.nodes_for_request(b"WATCH", keys)
-        self._watched_node = list(watched_nodes.keys()).pop()
+        self._watched_node = self.connection_pool.cluster_layout.node_for_request(b"WATCH", keys)
         self.watches.extend(keys)
         async with self.connection_pool.acquire(
             node=self._watched_node
@@ -907,9 +906,10 @@ class ClusterPipeline(Client[AnyStr]):
         """
         Determine the hash slot for the given command and arguments.
         """
-        keys: tuple[RedisValueT, ...] = cast(
-            tuple[RedisValueT, ...], options.get("keys")
-        ) or KeySpec.extract_keys(command, *args)
+        keys: tuple[RedisValueT, ...] = (
+            cast(tuple[RedisValueT, ...], options.get("keys"))
+            or KeySpec.extract_keys(command, *args)[0]
+        )
 
         if not keys:
             raise RedisClusterError(

@@ -9,6 +9,12 @@ from deprecated.sphinx import versionadded
 from coredis._json import json
 from coredis._utils import dict_to_flat_list, tuples_to_flat_list
 from coredis.commands import CommandMixin
+from coredis.commands._routing import (
+    FanoutStrategy,
+    KeyRangeStrategy,
+    PairStrategy,
+    SlotStrategy,
+)
 from coredis.commands._utils import (
     normalized_milliseconds,
     normalized_seconds,
@@ -39,6 +45,7 @@ from coredis.response._callbacks import (
     BoolsCallback,
     ClusterAlignedBoolsCombine,
     ClusterBoolCombine,
+    ClusterConcatenateTuples,
     ClusterEnsureConsistent,
     ClusterFirstNonException,
     ClusterMergeMapping,
@@ -468,6 +475,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.MGET,
         group=CommandGroup.STRING,
         flags={CommandFlag.READONLY, CommandFlag.FAST},
+        cluster=ClusterCommandConfig(
+            routing_strategy=KeyRangeStrategy(None, ClusterConcatenateTuples())
+        ),
     )
     def mget(self, keys: Parameters[KeyT]) -> CommandRequest[tuple[AnyStr | None, ...]]:
         """
@@ -482,6 +492,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.MSET,
         group=CommandGroup.STRING,
+        cluster=ClusterCommandConfig(
+            routing_strategy=PairStrategy(NodeFlag.PRIMARIES, ClusterBoolCombine())
+        ),
     )
     def mset(self, key_values: Mapping[KeyT, ValueT]) -> CommandRequest[bool]:
         """
@@ -497,7 +510,13 @@ class CoreCommands(CommandMixin[AnyStr]):
             callback=SimpleStringCallback(),
         )
 
-    @redis_command(CommandName.MSETNX, group=CommandGroup.STRING)
+    @redis_command(
+        CommandName.MSETNX,
+        group=CommandGroup.STRING,
+        cluster=ClusterCommandConfig(
+            routing_strategy=PairStrategy(NodeFlag.PRIMARIES, ClusterBoolCombine())
+        ),
+    )
     def msetnx(self, key_values: Mapping[KeyT, ValueT]) -> CommandRequest[bool]:
         """
         Set multiple keys to multiple values only if none of the keys exist.
@@ -511,7 +530,19 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @mutually_exclusive_parameters("ex", "px", "exat", "pxat", "keepttl")
-    @redis_command(CommandName.MSETEX, group=CommandGroup.STRING, version_introduced="8.4.0")
+    @redis_command(
+        CommandName.MSETEX,
+        group=CommandGroup.STRING,
+        version_introduced="8.4.0",
+        cluster=ClusterCommandConfig(
+            routing_strategy=PairStrategy(
+                NodeFlag.PRIMARIES,
+                ClusterBoolCombine(),
+                key_step=2,
+                add_count=True,
+            )
+        ),
+    )
     def msetex(
         self,
         key_values: Mapping[KeyT, ValueT],
@@ -557,7 +588,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         if keepttl:
             command_arguments.append(PureToken.KEEPTTL)
 
-        return self.create_request(CommandName.MSETEX, *command_arguments, callback=BoolCallback())
+        return self.create_request(
+            CommandName.MSETEX,
+            *command_arguments,
+            callback=BoolCallback(),
+        )
 
     @redis_command(
         CommandName.PSETEX,
@@ -905,7 +940,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return self.create_request(
             CommandName.CLUSTER_COUNTKEYSINSLOT,
             slot,
-            execution_parameters={"slot_arguments_range": (0, 1)},
+            execution_parameters={"slot_arguments_range": (0, 0)},
             callback=IntCallback(),
         )
 
@@ -930,7 +965,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.CLUSTER_DELSLOTS,
             *slots,
             callback=SimpleStringCallback(),
-            execution_parameters={"slot_arguments_range": (0, len(list(slots)))},
+            execution_parameters={"slot_arguments_range": (0, len(list(slots)) - 1)},
         )
 
     @versionadded(version="3.1.1")
@@ -952,7 +987,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return self.create_request(
             CommandName.CLUSTER_DELSLOTSRANGE,
             *command_arguments,
-            execution_parameters={"slot_arguments_range": (0, len(command_arguments))},
+            execution_parameters={"slot_arguments_range": (0, len(command_arguments) - 1)},
             callback=SimpleStringCallback(),
         )
 
@@ -1031,7 +1066,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return self.create_request(
             CommandName.CLUSTER_GETKEYSINSLOT,
             *command_arguments,
-            execution_parameters={"slot_arguments_range": (0, 1)},
+            execution_parameters={"slot_arguments_range": (0, 0)},
             callback=TupleCallback[AnyStr](),
         )
 
@@ -2927,7 +2962,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.DEL,
         group=CommandGroup.GENERIC,
-        cluster=ClusterCommandConfig(split=NodeFlag.PRIMARIES, combine=ClusterSum()),
+        cluster=ClusterCommandConfig(
+            routing_strategy=SlotStrategy(NodeFlag.PRIMARIES, ClusterSum())
+        ),
     )
     def delete(self, keys: Parameters[KeyT]) -> CommandRequest[int]:
         """
@@ -3015,7 +3052,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.EXISTS,
         group=CommandGroup.GENERIC,
-        cluster=ClusterCommandConfig(split=NodeFlag.PRIMARIES, combine=ClusterSum()),
+        cluster=ClusterCommandConfig(
+            routing_strategy=SlotStrategy(NodeFlag.PRIMARIES, ClusterSum())
+        ),
         flags={CommandFlag.FAST, CommandFlag.READONLY},
     )
     def exists(self, keys: Parameters[KeyT]) -> CommandRequest[int]:
@@ -3578,7 +3617,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.TOUCH,
         group=CommandGroup.GENERIC,
-        cluster=ClusterCommandConfig(split=NodeFlag.PRIMARIES, combine=ClusterSum()),
+        cluster=ClusterCommandConfig(
+            routing_strategy=SlotStrategy(NodeFlag.PRIMARIES, ClusterSum())
+        ),
         flags={CommandFlag.FAST, CommandFlag.READONLY},
     )
     def touch(self, keys: Parameters[KeyT]) -> CommandRequest[int]:
@@ -3609,7 +3650,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.UNLINK,
         group=CommandGroup.GENERIC,
-        cluster=ClusterCommandConfig(split=NodeFlag.PRIMARIES, combine=ClusterSum()),
+        cluster=ClusterCommandConfig(
+            routing_strategy=SlotStrategy(NodeFlag.PRIMARIES, ClusterSum())
+        ),
         flags={CommandFlag.FAST},
     )
     def unlink(self, keys: Parameters[KeyT]) -> CommandRequest[int]:
@@ -7809,8 +7852,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.FLUSHALL,
         group=CommandGroup.SERVER,
         cluster=ClusterCommandConfig(
-            route=NodeFlag.PRIMARIES,
-            combine=ClusterEnsureConsistent(),
+            routing_strategy=FanoutStrategy(
+                route=NodeFlag.PRIMARIES, merge_callback=ClusterEnsureConsistent()
+            ),
         ),
     )
     def flushall(

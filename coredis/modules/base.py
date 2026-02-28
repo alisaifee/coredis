@@ -8,22 +8,21 @@ from typing import TYPE_CHECKING, Any, cast
 from packaging import version
 
 from .._protocols import AbstractExecutor
+from ..commands._routing import FanoutStrategy, RandomStrategy
 from ..commands._utils import redis_command_link
 from ..commands._wrappers import (
     ClusterCommandConfig,
     CommandDetails,
 )
-from ..commands.constants import CommandFlag, CommandGroup, CommandName
+from ..commands.constants import CommandFlag, CommandGroup, CommandName, NodeFlag
 from ..commands.request import CommandRequest
 from ..globals import (
     CACHEABLE_COMMANDS,
     COMMAND_FLAGS,
-    MERGE_CALLBACKS,
     MODULE_GROUPS,
     MODULES,
     READONLY_COMMANDS,
-    ROUTE_FLAGS,
-    SPLIT_FLAGS,
+    ROUTING_STRATEGIES,
 )
 from ..typing import (
     AnyStr,
@@ -67,15 +66,17 @@ def module_command(
         runtime_checkable = add_runtime_checks(func)
         if flags and CommandFlag.READONLY in flags:
             READONLY_COMMANDS.add(command_name)
+        COMMAND_FLAGS[command_name] = flags or set()
+
         if cacheable:
             CACHEABLE_COMMANDS.add(command_name)
-        if cluster.route:
-            ROUTE_FLAGS[command_name] = cluster.route
-        if cluster.split:
-            SPLIT_FLAGS[command_name] = cluster.split
-        if cluster.combine:
-            MERGE_CALLBACKS[command_name] = cluster.combine
-        COMMAND_FLAGS[command_name] = flags or set()
+
+        if cluster.routing_strategy:
+            ROUTING_STRATEGIES[command_name] = cluster.routing_strategy
+        elif cluster.combine and cluster.route:
+            ROUTING_STRATEGIES[command_name] = FanoutStrategy(cluster.route, cluster.combine)
+        elif cluster.route == NodeFlag.RANDOM:
+            ROUTING_STRATEGIES[command_name] = RandomStrategy()
 
         @functools.wraps(func)
         def wrapped(*args: P.args, **kwargs: P.kwargs) -> CommandRequest[R]:
