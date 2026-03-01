@@ -2264,8 +2264,6 @@ def implementation(ctx, command, group, module, expr, debug=False):
 @code_gen.command()
 def cluster_key_extraction(path):
     commands = get_commands()
-    lookups = {}
-    fallbacks = {}
 
     def _index_finder(command, search_spec, find_spec):
         if search_spec["type"] == "index":
@@ -2278,7 +2276,7 @@ def cluster_key_extraction(path):
                 limit = find_spec["spec"]["limit"]
                 if last_key == -1:
                     if limit > 0:
-                        finder = f"args[{start_index}:len(args)-((len(args)-({start_index}+1))//{limit})]"
+                        finder = f"args[{start_index}:len(args)-((len(args)-({start_index}))//{limit})"
                     else:
                         finder = f"args[{start_index}:(len(args))"
                 elif last_key == -2:
@@ -2286,7 +2284,7 @@ def cluster_key_extraction(path):
                 else:
                     if start_index == start_index + last_key:
                         return f"(args[{start_index}],)"
-                    finder = f"args[{start_index}:{start_index + last_key}"
+                    finder = f"args[{start_index}:{start_index + last_key + 1}"
                 if keystep > 1:
                     finder += f":{keystep}]"
                 else:
@@ -2297,7 +2295,7 @@ def cluster_key_extraction(path):
                 keynumidx = find_spec["spec"]["keynumidx"]
                 finder = f"args[{start_index + first_key}: {start_index + first_key}+int(args[{keynumidx + start_index}])"
                 if keystep > 1:
-                    finder += f":{keystep}]"
+                    finder += f"*{keystep}:{keystep}]"
                 else:
                     finder += "]"
                 return finder
@@ -2341,6 +2339,9 @@ def cluster_key_extraction(path):
         else:
             raise RuntimeError(f"Don't know how to handle {search_spec} with {find_spec}")
 
+    lookups = {}
+    fallbacks = {}
+
     for name, command in commands.items():
         if version.parse(command["since"] or DEFAULT_VERSION) > MAX_SUPPORTED_VERSION:
             continue
@@ -2357,11 +2358,11 @@ def cluster_key_extraction(path):
                 if begin_search and find_keys:
                     search_type = begin_search["type"]
                     if search_type == "index":
-                        lookups.setdefault(mode, {}).setdefault(name, []).append(
+                        lookups.setdefault(name, {}).setdefault(mode, []).append(
                             _index_finder(name, begin_search, find_keys)
                         )
                     elif search_type == "keyword":
-                        lookups.setdefault(mode, {}).setdefault(name, []).append(
+                        lookups.setdefault(name, {}).setdefault(mode, []).append(
                             _kw_finder(name, begin_search, find_keys)
                         )
                     elif search_type == "unknown":
@@ -2384,8 +2385,8 @@ def cluster_key_extraction(path):
     key_specs = dict(fallbacks)
     key_specs.update({"OBJECT": ["(args[2],)"], "DEBUG OBJECT": ["(args[1],)"]})
 
-    for mode, commands in lookups.items():
-        for command, exprs in commands.items():
+    for command, modes in lookups.items():
+        for mode, exprs in modes.items():
             if mode == "RO":
                 readonly[command] = exprs
             key_specs.setdefault(command, []).extend(exprs)
