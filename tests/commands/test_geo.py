@@ -648,7 +648,6 @@ class TestGeo:
                 _s("place1"),
             )
 
-    @pytest.mark.nocluster
     async def test_georadius_store(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
@@ -659,19 +658,18 @@ class TestGeo:
             ),
         ]
 
-        await client.geoadd("barcelona", values)
+        await client.geoadd("barcelona{city}", values)
         with server_deprecation_warning("Use :meth:`geosearch`", client, "6.2"):
             await client.georadius(
-                "barcelona",
+                "barcelona{city}",
                 2.191,
                 41.433,
                 1000,
-                store="places_barcelona",
+                store="places_barcelona{city}",
                 unit=PureToken.M,
             )
-        assert await client.zrange("places_barcelona", 0, -1) == (_s("place1"),)
+        assert await client.zrange("places_barcelona{city}", 0, -1) == (_s("place1"),)
 
-    @pytest.mark.nocluster
     async def test_georadius_storedist(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
@@ -682,18 +680,18 @@ class TestGeo:
             ),
         ]
 
-        await client.geoadd("barcelona", values)
+        await client.geoadd("barcelona{city}", values)
         with server_deprecation_warning("Use :meth:`geosearch`", client, "6.2"):
             await client.georadius(
-                "barcelona",
+                "barcelona{city}",
                 2.191,
                 41.433,
                 1000,
-                storedist="places_barcelona",
+                storedist="places_barcelona{city}",
                 unit=PureToken.M,
             )
         # instead of save the geo score, the distance is saved.
-        assert await client.zscore("places_barcelona", "place1") == 88.05060698409301
+        assert await client.zscore("places_barcelona{city}", "place1") == 88.05060698409301
 
     async def test_georadiusmember(self, client, _s):
         values = [
