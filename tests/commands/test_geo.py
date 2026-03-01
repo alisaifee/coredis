@@ -138,30 +138,29 @@ class TestGeo:
         assert locations[0].longitude == 2.1909382939338684
         assert locations[0].latitude == 41.4337902818408352
 
-    @pytest.mark.nocluster
     async def test_geosearch(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
             (2.1873744593677, 41.406342043777, "上海市"),
             (2.583333, 41.316667, "place3"),
         ]
-        await client.geoadd("barcelona", values)
+        await client.geoadd("barcelona{city}", values)
         assert await client.geosearch(
-            "barcelona",
+            "barcelona{city}",
             longitude=2.191,
             latitude=41.433,
             radius=1000,
             circle_unit=PureToken.M,
         ) == (_s("place1"),)
         assert await client.geosearch(
-            "barcelona",
+            "barcelona{city}",
             longitude=2.187,
             latitude=41.406,
             radius=1000,
             circle_unit=PureToken.M,
         ) == (_s("上海市"),)
         assert await client.geosearch(
-            "barcelona",
+            "barcelona{city}",
             longitude=2.191,
             latitude=41.433,
             height=1000,
@@ -169,7 +168,7 @@ class TestGeo:
             box_unit=PureToken.M,
         ) == (_s("place1"),)
         assert await client.geosearch(
-            "barcelona", member="place3", radius=100, circle_unit=PureToken.KM
+            "barcelona{city}", member="place3", radius=100, circle_unit=PureToken.KM
         ) == (
             _s("上海市"),
             _s("place1"),
@@ -177,11 +176,11 @@ class TestGeo:
         )
         # test count
         assert await client.geosearch(
-            "barcelona", member="place3", radius=100, circle_unit=PureToken.KM, count=2
+            "barcelona{city}", member="place3", radius=100, circle_unit=PureToken.KM, count=2
         ) == (_s("place3"), _s("上海市"))
         assert (
             await client.geosearch(
-                "barcelona",
+                "barcelona{city}",
                 member="place3",
                 radius=100,
                 circle_unit=PureToken.KM,
@@ -377,7 +376,6 @@ class TestGeo:
                 any_=True,
             )
 
-    @pytest.mark.nocluster
     async def test_geosearchstore(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
@@ -387,18 +385,17 @@ class TestGeo:
                 "place2",
             ),
         ]
-        await client.geoadd("barcelona", values)
+        await client.geoadd("barcelona{city}", values)
         await client.geosearchstore(
-            "places_barcelona",
-            "barcelona",
+            "places_barcelona{city}",
+            "barcelona{city}",
             longitude=2.191,
             latitude=41.433,
             radius=1000,
             circle_unit=PureToken.M,
         )
-        assert await client.zrange("places_barcelona", 0, -1) == (_s("place1"),)
+        assert await client.zrange("places_barcelona{city}", 0, -1) == (_s("place1"),)
 
-    @pytest.mark.nocluster
     async def test_geosearchstoredist(self, client, _s):
         values = [
             (2.1909389952632, 41.433791470673, "place1"),
@@ -409,10 +406,10 @@ class TestGeo:
             ),
         ]
 
-        await client.geoadd("barcelona", values)
+        await client.geoadd("barcelona{city}", values)
         await client.geosearchstore(
-            "places_barcelona",
-            "barcelona",
+            "places_barcelona{city}",
+            "barcelona{city}",
             longitude=2.191,
             latitude=41.433,
             radius=1000,
@@ -420,7 +417,7 @@ class TestGeo:
             storedist=True,
         )
         # instead of save the geo score, the distance is saved.
-        assert await client.zscore("places_barcelona", "place1") == 88.05060698409301
+        assert await client.zscore("places_barcelona{city}", "place1") == 88.05060698409301
 
     async def test_georadius(self, client, _s):
         values = [
