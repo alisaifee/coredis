@@ -1,0 +1,10 @@
+* Bug Fix
+
+  * Fix failure to recover from errors during cluster discovery
+
+    Due to the the 5.x - 6.0 migration any errors raised while calling
+    the cluster commands for discovering cluster topology were not caught
+    as they were raised as exception groups from the client context. This effectively
+    meant that the redis cluster implementation was completely broken for any
+    non trivial deployment where startup nodes or discovered nodes could be down
+    during the initialization phase.
