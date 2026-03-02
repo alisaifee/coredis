@@ -1,0 +1,8 @@
+* Usability
+
+  * Improve cluster exception heirarchy
+
+     - Rename ``RedisClusterException`` to :exc:`coredis.exceptions.RedisClusterError`
+       for consistency. (Alias is maintained for backward compatibility)
+     - Ensure all cluster exceptions do derive from the base
+       :exc:`coredis.exceptions.RedisClusterError`
