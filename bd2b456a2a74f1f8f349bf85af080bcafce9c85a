@@ -1,0 +1,5 @@
+* Bug Fix
+
+  * Handle pool depletion (and therefore a subsequent stall on getting a
+    connection from the pool) in case of repeated connection establishment
+    errors.
