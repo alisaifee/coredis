@@ -1,0 +1,9 @@
+* Bug Fix
+
+  * Due to randomly picking between replicas and primaries for readonly
+    commands when ``read_from_replicas`` was ``True`` - new connections for a slot
+    that ended up using a primary instead of a replica could have had the
+    ``READONLY`` command sent which would result in that connection being
+    unusable for write commands. This change also effectively discludes
+    primaries from readonly commands when ``read_from_replicas`` is set to
+    True which is what the user probably expects to happen.
