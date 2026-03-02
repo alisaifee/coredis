@@ -1,0 +1,21 @@
+* Reliability
+
+  * Improve resiliency of sentinel primary
+
+    Using the ``SENTINEL_MASTERS`` is not the recommended
+    approach in the redis sentinel client implementation guide
+    (https://redis.io/docs/latest/develop/reference/sentinel-clients/#step-2-ask-for-the-master-address)
+    and it has been recommended to use ``GET_MASTER_ADDR-BY-NAME``.
+
+    Testing under repeated failovers it appears that the ``SENTINEL MASTERS``
+    command would often return a stale primary that had been demoted to a
+    replica which would result in ReadOnlyError in previous versions (thus
+    leaving the client broken since the ReadOnlyError would not result in a
+    disconnection). The ``GET_MASTER_ADDR_BY_NAME`` command appears to have a
+    more consistent response - however it is still possible that a stale
+    primary is returned. In this case a :exc:`coredis.exceptions.StalePrimaryError`
+    will now be raised on a new connection (failover should result in all active connections
+    being closed by the server, as noted in: https://redis.io/docs/latest/develop/reference/sentinel-clients/#sentinel-failover-disconnection)
+
+    Automatically recovering from stale primary errors can easily be
+    done by using a to a retry policy for the :exc:`coredis.exceptions.StalePrimary` error
