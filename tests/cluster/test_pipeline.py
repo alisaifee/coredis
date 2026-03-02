@@ -221,7 +221,7 @@ class TestPipeline:
         with pytest.raises(RedisClusterError) as exc:
             async with client.pipeline() as pipe:
                 function(pipe, *args, **kwargs)
-        exc.match("No way to dispatch (.*?) to Redis Cluster. Missing key")
+        exc.match("Could not map .* to a single node in the cluster")
 
     @pytest.mark.parametrize(
         "function, args, kwargs",
@@ -234,7 +234,7 @@ class TestPipeline:
         with pytest.raises(ClusterCrossSlotError) as exc:
             async with client.pipeline() as pipe:
                 function(pipe, *args, **kwargs)
-        exc.match("Keys in request don't hash to the same slot")
+        exc.match("Keys .* don't hash to the same slot")
 
     @pytest.mark.parametrize(
         "function, args, kwargs, expectation",
@@ -266,7 +266,7 @@ class TestPipeline:
 
                 pipe.set("x{baz}", 1)
                 pipe.brpoplpush("list{baz}", "list{foo}", 1.0)
-        exc.match("Keys in request don't hash to the same slot")
+        exc.match("Keys .* don't hash to the same slot")
         assert await client.get("x{foo}") is None
         assert await client.get("x{bar}") is None
         assert await client.get("x{baz}") is None

@@ -6649,6 +6649,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.PUBLISH,
         group=CommandGroup.PUBSUB,
+        cluster=ClusterCommandConfig(
+            route=NodeFlag.RANDOM,
+        ),
     )
     def publish(self, channel: StringT, message: ValueT) -> CommandRequest[int]:
         """

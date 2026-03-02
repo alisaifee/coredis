@@ -17,37 +17,37 @@ from tests.conftest import targets
 )
 class TestCluster:
     async def test_addslots(self, client, _s):
-        node = client.connection_pool.get_primary_node_by_slots([1])
+        node = client.connection_pool.cluster_layout.node_for_slot(1)
         async with node.as_client(**client.connection_pool.connection_kwargs) as node_client:
             with pytest.raises(ResponseError, match="Slot 1 is already busy"):
                 await node_client.cluster_addslots([1])
 
     async def test_addslots_range(self, client, _s):
-        node = client.connection_pool.get_primary_node_by_slots([1])
+        node = client.connection_pool.cluster_layout.node_for_slot(1)
         async with node.as_client(**client.connection_pool.connection_kwargs) as node_client:
             with pytest.raises(ResponseError, match="Slot 1 is already busy"):
                 await node_client.cluster_addslotsrange([(1, 2)])
 
     async def test_asking(self, client, _s):
-        node = client.connection_pool.get_primary_node_by_slots([1])
+        node = client.connection_pool.cluster_layout.node_for_slot(1)
         async with node.as_client(**client.connection_pool.connection_kwargs) as node_client:
             assert await node_client.asking()
 
     async def test_count_failure_reports(self, client, _s):
-        node = client.connection_pool.get_primary_node_by_slots([1])
+        node = client.connection_pool.cluster_layout.node_for_slot(1)
         assert 0 == await client.cluster_count_failure_reports(node.node_id)
         with pytest.raises(ResponseError, match="Unknown node"):
             await client.cluster_count_failure_reports("bogus")
 
     async def test_cluster_delslots(self, client, _s):
-        node = client.connection_pool.get_primary_node_by_slots([1])
+        node = client.connection_pool.cluster_layout.node_for_slot(1)
         assert await client.cluster_delslots([1])
         async with node.as_client(**client.connection_pool.connection_kwargs) as node_client:
             assert await node_client.cluster_addslots([1])
 
     async def test_cluster_delslots_range(self, client, _s):
-        node = client.connection_pool.get_primary_node_by_slots([1])
-        node_last = client.connection_pool.get_primary_node_by_slots([16000])
+        node = client.connection_pool.cluster_layout.node_for_slot(1)
+        node_last = client.connection_pool.cluster_layout.node_for_slot(16000)
         assert await client.cluster_delslotsrange([(1, 2), (16000, 16001)])
         async with node.as_client(**client.connection_pool.connection_kwargs) as node_client:
             assert await node_client.cluster_addslots([1, 2])
@@ -58,7 +58,7 @@ class TestCluster:
     async def test_readonly_explicit(self, client, _s):
         await client.set("fubar", 1)
         slot = hash_slot(b"fubar")
-        node = client.connection_pool.get_replica_node_by_slots([slot], replica_only=True)
+        node = client.connection_pool.cluster_layout.node_for_slot(slot, primary=False)
         async with node.as_client(**client.connection_pool.connection_kwargs) as node_client:
             with pytest.raises(MovedError):
                 await node_client.get("fubar")
@@ -132,7 +132,7 @@ class TestCluster:
         for node in client.replicas:
             async with node:
                 ids.append(await node.cluster_myid())
-        known_nodes = (_s(node.node_id) for node in client.connection_pool.nodes.all_nodes())
+        known_nodes = (_s(node.node_id) for node in client.connection_pool.cluster_layout.nodes)
         assert set(ids) == set(known_nodes)
 
     async def test_cluster_shards(self, client, _s):

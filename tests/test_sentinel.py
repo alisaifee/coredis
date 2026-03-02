@@ -128,7 +128,6 @@ async def test_all_replicas_unreachable(redis_sentinel: Sentinel, mocker, free_t
 
         extras[1]["ip"] = "127.0.0.1"
         extras[1]["port"] = free_tcp_port_factory()
-        print(extras)
         return extras
 
     mocker.patch.object(coredis.Redis, "sentinel_replicas", new=mocked_sentinel_replicas)

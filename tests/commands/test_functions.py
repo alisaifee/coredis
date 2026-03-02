@@ -115,11 +115,11 @@ class TestFunctions:
 class TestReadonlyFunctions:
     @pytest.mark.parametrize("client_arguments", [{"read_from_replicas": True}])
     async def test_fcall_ro(self, client, simple_library, _s, client_arguments, mocker):
-        get_primary_node_by_slot = mocker.spy(client.connection_pool, "get_primary_node_by_slots")
+        get_connection = mocker.spy(client.connection_pool, "get_connection")
         await client.fcall_ro("echo_key", ["a"], []) == _s("a")
+        assert get_connection.call_args[0][0].server_type == "replica"
         with pytest.raises(ResponseError):
             await client.fcall_ro("return_arg", ["a"], [2])
-        get_primary_node_by_slot.assert_not_called()
 
 
 @targets(

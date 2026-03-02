@@ -663,10 +663,8 @@ class ClusterPipeline(Client[AnyStr]):
         :param timeout: Time in seconds to wait for the pipeline results to return
         """
         self.command_stack = []
-        self.refresh_table_asap = False
         self.client = client
         self.connection_pool = client.connection_pool
-        self.result_callbacks = client.result_callbacks
         self._raise_on_error = raise_on_error
         self._transaction = transaction
         self._watched_node: ClusterNodeLocation | None = None
@@ -707,10 +705,8 @@ class ClusterPipeline(Client[AnyStr]):
         """
         if self.command_stack:
             raise WatchError("Unable to add a watch after pipeline commands have been added")
-        try:
-            self._watched_node = self.connection_pool.get_node_by_keys(list(keys))
-        except RedisClusterError:
-            raise ClusterTransactionError("Keys for watch don't hash to the same node")
+        watched_nodes = self.connection_pool.cluster_layout.nodes_for_request(b"WATCH", keys)
+        self._watched_node = list(watched_nodes.keys()).pop()
         self.watches.extend(keys)
         async with self.connection_pool.acquire(
             node=self._watched_node
@@ -808,7 +804,7 @@ class ClusterPipeline(Client[AnyStr]):
                 raise ClusterTransactionError("Multiple slots involved in transaction")
         if not slots:
             raise ClusterTransactionError("No slots found for transaction")
-        node = self.connection_pool.get_node_by_slot(slots.pop())
+        node = self.connection_pool.cluster_layout.node_for_slot(slots.pop())
         if self._watched_node and node != self._watched_node:
             raise ClusterTransactionError("Multiple slots involved in transaction")
 
@@ -853,13 +849,12 @@ class ClusterPipeline(Client[AnyStr]):
         :meta private:
         """
         # On first send, queue all commands. On retry, only failed ones.
-        attempt = sorted(self.command_stack, key=lambda x: x.position)
-
+        attempt: dict[ClusterPipelineCommandRequest[Any], ClusterNodeLocation] = {}
         # Group commands by node for efficient network usage.
         nodes: dict[str, NodeCommands] = {}
-        for c in attempt:
-            slot = self._determine_slot(c.name, *c.arguments)
-            node = self.connection_pool.get_node_by_slot(slot)
+        for c in sorted(self.command_stack, key=lambda x: x.position):
+            node = self.connection_pool.cluster_layout.node_for_request(c.name, c.arguments)
+
             if node.name not in nodes:
                 nodes[node.name] = NodeCommands(
                     self.client,
@@ -868,6 +863,7 @@ class ClusterPipeline(Client[AnyStr]):
                     raise_on_error=self._raise_on_error,
                 )
             nodes[node.name].append(c)
+            attempt[c] = node
 
         # Write to all nodes, then read from all nodes in sequence.
         for n in nodes.values():
@@ -876,13 +872,16 @@ class ClusterPipeline(Client[AnyStr]):
                 await n.read()
 
         # Retry MOVED/ASK/connection errors one by one if allowed.
-        attempt = sorted(
-            (c for c in attempt if isinstance(c.result, ERRORS_ALLOW_RETRY)),
-            key=lambda x: x.position,
+        attempt = dict(
+            sorted(
+                (c for c in attempt.items() if isinstance(c[0].result, ERRORS_ALLOW_RETRY)),
+                key=lambda x: x[0].position,
+            )
         )
+
         if attempt and allow_redirections:
-            await self.connection_pool.nodes.increment_reinitialize_counter(len(attempt))
-            for c in attempt:
+            for c, node in attempt.items():
+                self.connection_pool.cluster_layout.report_errors(node, c.result)
                 try:
                     c.result = await self.client.execute_command(
                         RedisCommand(c.name, c.arguments), **c.execution_parameters

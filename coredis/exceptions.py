@@ -165,7 +165,13 @@ class ClusterCrossSlotError(RedisClusterError, ResponseError):
         command: bytes | None = None,
         keys: tuple[RedisValueT, ...] | None = None,
     ) -> None:
-        super().__init__(message or "Keys in request don't hash to the same slot")
+        if not message:
+            message = (
+                f"Keys {keys} for '{command.decode('utf-8')}' don't hash to the same slot"
+                if command
+                else "Keys in request don't hash to the same slot"
+            )
+        super().__init__(message)
         self.command = command
         self.keys = keys
 
