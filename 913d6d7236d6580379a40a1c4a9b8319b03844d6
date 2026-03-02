@@ -1,0 +1,17 @@
+* Bug Fix
+
+  * Fix initialization races and add early failure for unsafe concurrent sharing
+
+     * Add initialization lock preventing a race
+       where a herd of concurrent tasks could try to use the pool before
+       it was fully initialized
+
+     * Since AnyIO strictly requires that a cancel scope (in this case the task group
+       of the connection pool) be exited by the exact same task that created it, there
+       was a very easily reproducable scenario where an uninitialized pool
+       shared by concurrent tasks would be initialized (counter=1) by a short lived task
+       which would exit before the other tasks sharing the pool do. This
+       would result in the last task (the task that decrements counter to 0)
+       to try and cancel the task group and fail.
+
+       The pool now fails early with a better error.
