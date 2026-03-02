@@ -1,0 +1,5 @@
+* Performance
+
+  * Remove runtime validation of iterable parameters for redis commands
+    as there is already sufficient static type validation along with
+    opt in runtime validation with beartype.
