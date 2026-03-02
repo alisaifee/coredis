@@ -92,8 +92,7 @@ class PipelineResult(Awaitable[T]):
 
 class PipelineCommandRequest(CommandRequest[CommandResponseT]):
     """
-    Command request used within a pipeline. Handles immediate execution for WATCH or
-    watched commands outside explicit transactions, otherwise queues the command.
+    Command request returned by a pipeline command
     """
 
     client: Pipeline[Any]
