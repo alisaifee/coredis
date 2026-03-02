@@ -528,11 +528,24 @@ class KeySpec:
             return ()
 
     @classmethod
+    def slots_to_keys(
+        cls, command: bytes, *arguments: RedisValueT, readonly_command: bool = False
+    ) -> dict[int, list[RedisValueT]]:
+        """
+        Returns a mapping of slots to keys given the command and arguments
+        """
+        keys = cls.extract_keys(command, *arguments, readonly_command=readonly_command)
+        mapping: dict[int, list[RedisValueT]] = {}
+        for key in keys:
+            mapping.setdefault(hash_slot(b(key)), []).append(key)
+        return mapping
+
+    @classmethod
     def affected_slots(
         cls, command: bytes, *arguments: RedisValueT, readonly_command: bool = False
     ) -> set[int]:
         """
-        Returns the slots affected by the given command + arguments
+        Returns all slots affected by the command
         """
         keys = cls.extract_keys(command, *arguments, readonly_command=readonly_command)
-        return set([hash_slot(b(key)) for key in keys])
+        return set(hash_slot(b(key)) for key in keys)

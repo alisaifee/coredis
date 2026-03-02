@@ -10,7 +10,14 @@ from packaging import version
 from coredis.commands._utils import check_version, redis_command_link
 from coredis.commands.constants import CommandFlag, CommandGroup, CommandName, NodeFlag
 from coredis.commands.request import CommandRequest
-from coredis.globals import CACHEABLE_COMMANDS, COMMAND_FLAGS, READONLY_COMMANDS
+from coredis.globals import (
+    CACHEABLE_COMMANDS,
+    COMMAND_FLAGS,
+    MERGE_CALLBACKS,
+    READONLY_COMMANDS,
+    ROUTE_FLAGS,
+    SPLIT_FLAGS,
+)
 from coredis.response._callbacks import ClusterMultiNodeCallback
 from coredis.typing import (
     Callable,
@@ -89,7 +96,12 @@ def redis_command(
         CACHEABLE_COMMANDS.add(command_name)
 
     COMMAND_FLAGS[command_name] = flags or set()
-
+    if cluster.route:
+        ROUTE_FLAGS[command_name] = cluster.route
+    if cluster.split:
+        SPLIT_FLAGS[command_name] = cluster.split
+    if cluster.combine:
+        MERGE_CALLBACKS[command_name] = cluster.combine
     command_details = CommandDetails(
         command_name,
         group,

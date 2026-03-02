@@ -7,6 +7,7 @@ import coredis.connection
 from coredis import ClusterConnectionPool, ConnectionPool, TCPConnection, UnixDomainSocketConnection
 from coredis._concurrency import gather
 from coredis.connection import ClusterConnection, TCPLocation, UnixDomainSocketLocation
+from coredis.exceptions import ConnectionError
 from coredis.patterns.cache import LRUCache
 from tests.conftest import targets
 
@@ -228,6 +229,51 @@ class TestClusterConnectionPoolConstruction:
         ) as pool:
             async with pool.acquire() as connection:
                 assert isinstance(connection, ClusterConnection)
+
+
+class TestCluserConnectionPoolLayoutCache:
+    async def test_layout_initialization(self, redis_cluster_server):
+        async with coredis.ClusterConnectionPool(
+            startup_nodes=[TCPLocation(*redis_cluster_server)]
+        ) as pool:
+            assert pool.cluster_layout is not None
+            assert pool.cluster_layout.nodes
+            assert pool.cluster_layout.primaries
+            assert pool.cluster_layout.replicas
+
+    async def test_layout_refresh(self, redis_cluster_server, mocker):
+        async with coredis.ClusterConnectionPool(
+            startup_nodes=[TCPLocation(*redis_cluster_server)], reinitialize_steps=5
+        ) as pool:
+            refresh = mocker.spy(pool.cluster_layout, "_refresh")
+            node = pool.cluster_layout.node_for_slot(1)
+
+            [pool.cluster_layout.report_errors(node, ConnectionError()) for _ in range(5)]
+            await anyio.sleep(0.1)
+            assert refresh.call_count == 1
+
+    async def test_garbage_collection(self, redis_cluster_server, mocker):
+        cluster_slots = coredis.Redis.cluster_slots
+
+        async def remove_replica_for_slot_1(self, *args, **kwargs):
+            values = await cluster_slots(self, *args, **kwargs)
+            slot_range, nodes = list(values.items())[0]
+            values[slot_range] = nodes[:1]
+            return values
+
+        async with coredis.ClusterConnectionPool(
+            startup_nodes=[TCPLocation(*redis_cluster_server)],
+            reinitialize_steps=5,
+            gc_interval=1,
+        ) as pool:
+            node = pool.cluster_layout.node_for_slot(1, primary=False)
+            replica_connection = await pool.get_connection(node)
+            pool.release(replica_connection)
+            mocker.patch.object(coredis.Redis, "cluster_slots", new=remove_replica_for_slot_1)
+            [pool.cluster_layout.report_errors(node, ConnectionError()) for _ in range(5)]
+            assert replica_connection.usable
+            await anyio.sleep(1)
+            assert not replica_connection.usable
 
 
 @targets("redis_basic", "redis_cluster")

@@ -11,11 +11,11 @@ pytestmarks = pytest.mark.asyncio
 @pytest.fixture
 async def cross_slot_keys(client):
     for k in {"a", "b", "c"}:
-        for shard in {"a", "b", "c", "d", "e", "f"}:
+        for shard in {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"}:
             await client.set(f"{k}{{{shard}}}", 1)
     keys = await client.keys("*")
     for k in {"d", "e", "f"}:
-        for shard in {"a", "b", "c", "d", "e", "f"}:
+        for shard in {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"}:
             keys.add(f"{k}{{{shard}}}")
     return keys
 
@@ -26,17 +26,17 @@ async def cross_slot_keys(client):
 )
 class TestCommandSplit:
     async def test_delete(self, client, cross_slot_keys):
-        assert await client.delete(cross_slot_keys) == 18
+        assert await client.delete(cross_slot_keys) == 36
         assert not await client.keys("*")
 
     async def test_exists(self, client, cross_slot_keys):
-        assert await client.exists(cross_slot_keys) == 18
+        assert await client.exists(cross_slot_keys) == 36
 
     async def test_touch(self, client, cross_slot_keys):
-        assert await client.touch(cross_slot_keys) == 18
+        assert await client.touch(cross_slot_keys) == 36
 
     async def test_unlink(self, client, cross_slot_keys):
-        assert await client.unlink(cross_slot_keys) == 18
+        assert await client.unlink(cross_slot_keys) == 36
         assert not await client.keys("*")
 
 
