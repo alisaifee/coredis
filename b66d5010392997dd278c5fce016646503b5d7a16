@@ -1,0 +1,14 @@
+* Chores
+
+  * Improve generic structure of connection pools and connection types
+    to provide a clearer separation of which parameters are acceptable
+    for initializing which connection / connection pool type.
+    ConnectionPools are now generic around the connection type they
+    pool (invariant)
+
+  * Standardize server location types across the code base to use
+    ``coredis.connection.Location``
+
+  * Clearly separate sentinel connection pool, connection and client
+    and move them to appropriate sub packages (coredis.connection &
+    coredis.pool)
