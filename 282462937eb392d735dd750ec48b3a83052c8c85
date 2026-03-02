@@ -1,0 +1,7 @@
+* Bug Fix
+
+  * Ensure connections are reusable before returning to the pool
+    as a connection used for pubsub which still has messages being
+    received could in exception circumstances, be returned to the pool
+    and then attached to a new pubsub consumer. This would result in
+    stale messages being consumed by the new consumer.
