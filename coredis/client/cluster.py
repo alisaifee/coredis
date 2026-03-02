@@ -570,9 +570,10 @@ class RedisCluster(
         noreply: bool = ...,
         noevict: bool = ...,
         notouch: bool = ...,
+        non_atomic_cross_slot: bool = ...,
+        cache: AbstractCache | None = ...,
         retry_policy: RetryPolicy = ...,
         type_adapter: TypeAdapter | None = ...,
-        cache: AbstractCache | None = ...,
         **kwargs: Any,
     ) -> RedisCluster[bytes]: ...
 
@@ -588,9 +589,10 @@ class RedisCluster(
         noreply: bool = ...,
         noevict: bool = ...,
         notouch: bool = ...,
+        non_atomic_cross_slot: bool = ...,
+        cache: AbstractCache | None = ...,
         retry_policy: RetryPolicy = ...,
         type_adapter: TypeAdapter | None = ...,
-        cache: AbstractCache | None = ...,
         **kwargs: Any,
     ) -> RedisCluster[str]: ...
 
@@ -605,6 +607,7 @@ class RedisCluster(
         noreply: bool = False,
         noevict: bool = False,
         notouch: bool = False,
+        non_atomic_cross_slot: bool = True,
         cache: AbstractCache | None = None,
         retry_policy: RetryPolicy = CompositeRetryPolicy(
             ConstantRetryPolicy((ClusterDownError,), retries=2, delay=0.1),
