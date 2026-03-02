@@ -1,0 +1,6 @@
+* Bug Fix
+
+  * Fix inconsistent wrapping of non single key cluster methods
+    in coroutines instead of returning an awaitable.
+    These commands would therefore not have been
+    usable in a consistent manner as the basic redis client.
