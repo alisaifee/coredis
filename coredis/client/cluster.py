@@ -141,28 +141,30 @@ class ClusterMeta(ABCMeta):
                     """
                     if cmd.cluster.multi_node:
                         kls.RESULT_CALLBACKS[cmd.command] = cmd.cluster.combine
-            if doc_addition and not hasattr(method, "__cluster_docs"):
+            if doc_addition and not hasattr(method, "__cluster_docs") and cmd:
                 if not getattr(method, "__coredis_module", None):
+                    if not cmd.cluster.enabled:
 
-                    def __w(
-                        func: Callable[P, Awaitable[R]], enabled: bool
-                    ) -> Callable[P, Awaitable[R]]:
-                        @functools.wraps(func)
-                        async def _w(*a: P.args, **k: P.kwargs) -> R:
-                            if not enabled:
+                        def __w(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
+                            @functools.wraps(func)
+                            def _w(*a: P.args, **k: P.kwargs) -> Awaitable[R]:
                                 raise NotImplementedError(
                                     f"{func.__name__} is disabled for cluster client"
                                 )
-                            return await func(*a, **k)
 
-                        _w.__doc__ = f"""{textwrap.dedent(method.__doc__ or "")}
-{doc_addition}
-                    """
-                        return _w
+                            _w.__doc__ = f"""{textwrap.dedent(method.__doc__ or "")}
+    {doc_addition}
+                            """
+                            return _w
 
-                    wrapped = __w(method, cmd.cluster.enabled if cmd else True)
-                    setattr(wrapped, "__cluster_docs", doc_addition)
-                    setattr(kls, method_name, wrapped)
+                        wrapped = __w(method)
+                        setattr(wrapped, "__cluster_docs", doc_addition)
+                        setattr(kls, method_name, wrapped)
+                    else:
+                        setattr(method, "__cluster_docs", doc_addition)
+                        method.__doc__ = f"""{textwrap.dedent(method.__doc__ or "")}
+    {doc_addition}
+                        """
                 else:
                     method.__doc__ = f"""{textwrap.dedent(method.__doc__ or "")}
 {doc_addition}
