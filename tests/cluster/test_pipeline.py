@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
 
 from coredis._concurrency import gather
@@ -12,6 +14,7 @@ from coredis.exceptions import (
     WatchError,
 )
 from coredis.patterns.pipeline import ClusterPipeline
+from coredis.typing import Serializable
 from tests.conftest import targets
 
 
@@ -51,6 +54,17 @@ class TestPipeline:
                 (("z1", 2.0), ("z2", 4)),
             )
         )
+
+    async def test_pipeline_transforms(self, client):
+        client.type_adapter.register(
+            Decimal,
+            lambda v: str(v),
+            lambda v: Decimal(v if isinstance(v, str) else v.decode("utf-8")),
+        )
+        async with client.pipeline() as pipe:
+            a = pipe.set("a", Serializable(Decimal(1.23)))
+            b = pipe.get("a").transform(Decimal)
+        assert (True, Decimal(1.23)) == await gather(a, b)
 
     async def test_pipeline_no_transaction(self, client):
         async with client.pipeline(transaction=False) as pipe:

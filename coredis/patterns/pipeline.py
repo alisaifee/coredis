@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import functools
 from contextlib import asynccontextmanager
 from typing import Any, cast
 
@@ -13,7 +12,6 @@ from coredis.cluster._node import ClusterNodeLocation
 from coredis.commands import CommandRequest, CommandResponseT
 from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName
-from coredis.commands.request import TransformedResponse, is_type_like
 from coredis.commands.script import Script
 from coredis.connection._base import BaseConnection, CommandInvocation
 from coredis.connection._request import Request
@@ -98,69 +96,33 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
     watched commands outside explicit transactions, otherwise queues the command.
     """
 
-    client: Pipeline[Any] | ClusterPipeline[Any]
+    client: Pipeline[Any]
 
     def __init__(
         self,
-        client: Pipeline[Any] | ClusterPipeline[Any],
+        client: Pipeline[Any],
         name: bytes,
         *arguments: ValueT,
         callback: Callable[..., CommandResponseT],
         execution_parameters: ExecutionParameters | None = None,
-        parent: CommandRequest[Any] | None = None,
     ) -> None:
         super().__init__(
-            client,
-            name,
-            *arguments,
-            callback=callback,
-            execution_parameters=execution_parameters,
+            client, name, *arguments, callback=callback, execution_parameters=execution_parameters
         )
-        if not parent:
-            client._pipeline_execute_command(self)  # type: ignore[arg-type]
-        self.parent = parent
-
-    def transform(
-        self,
-        transformer: type[TransformedResponse] | Callable[[CommandResponseT], TransformedResponse],
-    ) -> CommandRequest[TransformedResponse]:
-        transform_func = cast(
-            Callable[..., TransformedResponse],
-            (
-                functools.partial(
-                    self.type_adapter.deserialize,
-                    return_type=transformer,
-                )
-                if is_type_like(transformer)
-                else transformer
-            ),
-        )
-        return cast(type[PipelineCommandRequest[TransformedResponse]], self.__class__)(
-            self.client,
-            self.name,
-            *self.arguments,
-            callback=lambda resp, **k: transform_func(resp),
-            execution_parameters=self.execution_parameters,
-            parent=self,
-        )
+        client._pipeline_execute_command(self)
 
     def __await__(self) -> Generator[None, None, CommandResponseT]:
         if hasattr(self, "_response"):
             return self._response.__await__()
-        elif self.parent:
-
-            async def _transformed() -> CommandResponseT:
-                r = await self.parent  # type: ignore
-                return self.callback(r)
-
-            return _transformed().__await__()
         raise RuntimeError("You can't await a pipeline command before it completes executing")
 
 
-class ClusterPipelineCommandRequest(PipelineCommandRequest[CommandResponseT]):
+class ClusterPipelineCommandRequest(CommandRequest[CommandResponseT]):
     """
     Command request for cluster pipelines, tracks position and result for cluster routing.
     """
+
+    client: ClusterPipeline[Any]
 
     def __init__(
         self,
@@ -169,19 +131,19 @@ class ClusterPipelineCommandRequest(PipelineCommandRequest[CommandResponseT]):
         *arguments: ValueT,
         callback: Callable[..., CommandResponseT],
         execution_parameters: ExecutionParameters | None = None,
-        parent: CommandRequest[Any] | None = None,
     ) -> None:
+        super().__init__(
+            client, name, *arguments, callback=callback, execution_parameters=execution_parameters
+        )
         self.position: int = 0
         self.result: Any = None
         self.asking: bool = False
-        super().__init__(
-            client,
-            name,
-            *arguments,
-            callback=callback,
-            execution_parameters=execution_parameters,
-            parent=parent,
-        )
+        client._pipeline_execute_command(self)
+
+    def __await__(self) -> Generator[None, None, CommandResponseT]:
+        if hasattr(self, "_response"):
+            return self._response.__await__()
+        raise RuntimeError("You can't await a pipeline command before it completes executing")
 
 
 class NodeCommands(AsyncContextManagerMixin):

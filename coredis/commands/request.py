@@ -149,23 +149,9 @@ class CommandRequest(Awaitable[CommandResponseT]):
                int_value: int = await client.get("fubar").transform(int)
                float_value: float = await client.get("fubar").transform(lambda value: float(value))
         """
-
-        transform_func = cast(
-            Callable[..., TransformedResponse],
-            (
-                functools.partial(self.type_adapter.deserialize, return_type=transformer)
-                if is_type_like(transformer)
-                else transformer
-            ),
-        )
-
-        return cast(type[CommandRequest[TransformedResponse]], self.__class__)(
-            self.client,
-            self.name,
-            *self.arguments,
-            callback=lambda resp, **kwargs: transform_func(self.callback(resp, **kwargs)),
-            execution_parameters=self.execution_parameters,
-            **self.kwargs,
+        return TransformedCommandRequest(
+            self,
+            transformer=transformer,
         )
 
     @property
@@ -179,6 +165,44 @@ class CommandRequest(Awaitable[CommandResponseT]):
 
     def __await__(self) -> Generator[Any, Any, CommandResponseT]:
         return self.run().__await__()
+
+
+class TransformedCommandRequest(CommandRequest[TransformedResponse]):
+    def __init__(
+        self,
+        parent: CommandRequest[CommandResponseT],
+        transformer: type[TransformedResponse] | Callable[[CommandResponseT], TransformedResponse],
+    ) -> None:
+        """
+        A command request object that has a tranformed response based
+        on the :paramref:`transformer` parameter.
+
+        :param parent: The original command request that the transformer will
+         be applied to.
+        :param transformer: A type that was registered with the client
+         using :meth:`~coredis.typing.TypeAdapter.register_deserializer`
+         or decorated by :meth:`~coredis.typing.TypeAdapter.deserializer`
+         or a callable that takes a single argument (the original response)
+         and returns the transformed response.
+        """
+        self.transformer = transformer
+        self.parent = parent
+        self.client = parent.client
+        self.transform_func = cast(
+            Callable[..., TransformedResponse],
+            (
+                functools.partial(self.type_adapter.deserialize, return_type=self.transformer)
+                if is_type_like(self.transformer)
+                else self.transformer
+            ),
+        )
+
+    def __await__(self) -> Generator[Any, Any, TransformedResponse]:
+        async def _parent() -> TransformedResponse:
+            original = await self.parent
+            return self.transform_func(original)
+
+        return _parent().__await__()
 
 
 class RetryableCommandRequest(CommandRequest[CommandResponseT]):
