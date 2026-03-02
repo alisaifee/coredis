@@ -1,0 +1,3 @@
+* Compatibility
+
+  * Add ``GEOSHAPE`` index type for search
