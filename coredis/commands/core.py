@@ -3440,7 +3440,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: ``True`` on success.
         """
 
-        return self.create_request(CommandName.RENAME, key, newkey, callback=BoolCallback())
+        return self.create_request(CommandName.RENAME, key, newkey, callback=SimpleStringCallback())
 
     @redis_command(CommandName.RENAMENX, group=CommandGroup.GENERIC, flags={CommandFlag.FAST})
     def renamenx(self, key: KeyT, newkey: KeyT) -> CommandRequest[bool]:
