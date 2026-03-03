@@ -475,7 +475,8 @@ class Pipeline(Client[AnyStr]):
         # We have to run response callbacks manually
         data: list[Any] = []
         for r, cmd in zip(response, commands):
-            r = cmd.callback(r, **cmd.execution_parameters)
+            if not isinstance(r, Exception):
+                r = cmd.callback(r, **cmd.execution_parameters)
             cmd._response = PipelineResult(r)
             data.append(r)
 
