@@ -893,7 +893,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: ``True`` on success.
         """
 
-        return self.create_request(CommandName.ASKING, callback=BoolCallback())
+        return self.create_request(CommandName.ASKING, callback=SimpleStringCallback())
 
     @versionadded(version="3.0.0")
     @redis_command(CommandName.CLUSTER_BUMPEPOCH, group=CommandGroup.CLUSTER)
