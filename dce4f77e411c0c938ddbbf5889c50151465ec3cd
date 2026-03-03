@@ -1,0 +1,18 @@
+* Chores
+
+  * Replace NodeManager with a ClusterLayout that owns both the live
+    topology view and a background monitor task to keep the local cluster
+    layout cache refreshed. DiscoveryService becomes a pure query object.
+
+    The connection pool now no longer interacts directly with the cluster layout
+    on the request path and simply accepts any ClusterNodeLocation when a
+    connection is requested and manages that connection in a subpool.
+    Periodically a garbage collection task will remove any sub pools (and connections
+    that are in the pool) that no longer exist in the cluster layout.
+
+    Any "querying" for nodes by clients (regular client, pipeline, pubsub etc) should
+    only use the cluster_layout attribute of the connection pool directly.
+
+    The ClusterLayout instance is owned by the connection pool since it uses
+    the connection pools task group to run its monitor task and the monitor task's
+    lifecycle is somewhat logically tied to that of the connection pool.
