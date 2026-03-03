@@ -6547,7 +6547,9 @@ class CoreCommands(CommandMixin[AnyStr]):
             command_arguments.append(PrefixToken.IDMP_MAXSIZE)
             command_arguments.append(idmp_maxsize)
 
-        return self.create_request(CommandName.XCFGSET, *command_arguments, callback=BoolCallback())
+        return self.create_request(
+            CommandName.XCFGSET, *command_arguments, callback=SimpleStringCallback()
+        )
 
     @redis_command(
         CommandName.BITCOUNT,
