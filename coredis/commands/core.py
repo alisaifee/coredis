@@ -78,7 +78,6 @@ from coredis.response._callbacks.cluster import (
 )
 from coredis.response._callbacks.command import (
     CommandCallback,
-    CommandDocCallback,
     CommandKeyFlagCallback,
 )
 from coredis.response._callbacks.connection import ClientTrackingInfoCallback
@@ -8653,7 +8652,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return self.create_request(
             CommandName.COMMAND_DOCS,
             *command_names,
-            callback=CommandDocCallback[AnyStr](),
+            callback=DictCallback[AnyStr, dict[AnyStr, ResponseType]](),
         )
 
     @versionadded(version="3.0.0")

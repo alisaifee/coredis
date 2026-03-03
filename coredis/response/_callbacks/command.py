@@ -1,26 +1,35 @@
 from __future__ import annotations
 
+from typing import Any, cast
+
 from coredis._utils import nativestr
 from coredis.response._callbacks import ResponseCallback
 from coredis.response.types import Command
 from coredis.typing import (
     AnyStr,
+    Hashable,
     ResponsePrimitive,
     ResponseType,
+    StringT,
 )
 
 
-class CommandCallback(ResponseCallback[list[ResponseType], dict[str, Command]]):
+class CommandCallback(
+    ResponseCallback[
+        list[list[ResponsePrimitive | dict[Hashable, ResponseType] | set[Hashable]]],
+        dict[str, Command],
+    ]
+):
     def transform(
         self,
-        response: list[ResponseType],
+        response: list[list[ResponsePrimitive | dict[Hashable, ResponseType] | set[Hashable]]],
     ) -> dict[str, Command]:
         commands: dict[str, Command] = {}
 
         for command in response:
-            assert isinstance(command, list)
-
             if command:
+                # FIXME: giving up for now.
+                command = cast(list[Any], command)
                 name = nativestr(command[0])
 
                 if len(command) >= 6:
@@ -48,22 +57,11 @@ class CommandCallback(ResponseCallback[list[ResponseType], dict[str, Command]]):
         return commands
 
 
-class CommandKeyFlagCallback(ResponseCallback[list[ResponseType], dict[AnyStr, set[AnyStr]]]):
-    def transform(
-        self,
-        response: list[ResponseType],
-    ) -> dict[AnyStr, set[AnyStr]]:
-        return {k[0]: set(k[1]) for k in response}
-
-
-class CommandDocCallback(
-    ResponseCallback[
-        dict[ResponsePrimitive, ResponseType],
-        dict[AnyStr, dict[AnyStr, ResponseType]],
-    ]
+class CommandKeyFlagCallback(
+    ResponseCallback[list[list[StringT | set[StringT]]], dict[AnyStr, set[AnyStr]]]
 ):
     def transform(
         self,
-        response: dict[ResponsePrimitive, ResponseType],
-    ) -> dict[AnyStr, dict[AnyStr, ResponseType]]:
-        return response  # noqa
+        response: list[list[StringT | set[StringT]]],
+    ) -> dict[AnyStr, set[AnyStr]]:
+        return {cast(AnyStr, k[0]): set(cast(set[AnyStr], k[1])) for k in response}
