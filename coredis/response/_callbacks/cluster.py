@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 from coredis._utils import nativestr
 from coredis.response._callbacks import ResponseCallback
 from coredis.response.types import ClusterNode, ClusterNodeDetail
@@ -8,45 +10,57 @@ from coredis.typing import (
     Mapping,
     RedisValueT,
     ResponsePrimitive,
-    ResponseType,
+    StringT,
 )
 
 
-class ClusterLinksCallback(ResponseCallback[ResponseType, list[dict[AnyStr, ResponsePrimitive]]]):
+class ClusterLinksCallback(
+    ResponseCallback[list[dict[AnyStr, ResponsePrimitive]], list[dict[AnyStr, ResponsePrimitive]]]
+):
     def transform(
         self,
-        response: ResponseType,
+        response: list[dict[AnyStr, ResponsePrimitive]],
     ) -> list[dict[AnyStr, ResponsePrimitive]]:
         return response
 
 
-class ClusterInfoCallback(ResponseCallback[ResponseType, dict[str, str]]):
+class ClusterInfoCallback(ResponseCallback[StringT, dict[str, str]]):
     def transform(
         self,
-        response: ResponseType,
+        response: StringT,
     ) -> dict[str, str]:
         response_str = nativestr(response)
         return dict([line.split(":") for line in response_str.splitlines() if line])
 
 
 class ClusterSlotsCallback(
-    ResponseCallback[ResponseType, dict[tuple[int, int], tuple[ClusterNode, ...]]]
+    ResponseCallback[
+        list[list[ResponsePrimitive | list[ResponsePrimitive | dict[StringT, ResponsePrimitive]]]],
+        dict[tuple[int, int], tuple[ClusterNode, ...]],
+    ]
 ):
     def transform(
         self,
-        response: ResponseType,
+        response: list[
+            list[ResponsePrimitive | list[ResponsePrimitive | dict[StringT, ResponsePrimitive]]]
+        ],
     ) -> dict[tuple[int, int], tuple[ClusterNode, ...]]:
         res: dict[tuple[int, int], tuple[ClusterNode, ...]] = {}
 
         for slot_info in response:
-            min_slot, max_slot = map(int, slot_info[:2])
-            nodes = slot_info[2:]
+            min_slot = cast(int, slot_info[0])
+            max_slot = cast(int, slot_info[1])
+            nodes = [
+                cast(tuple[StringT, int, StringT], tuple(node[:3]))
+                for node in slot_info[2:]
+                if isinstance(node, list)
+            ]
             res[(min_slot, max_slot)] = tuple(self.parse_node(node) for node in nodes)
             res[(min_slot, max_slot)][0]["server_type"] = "master"
 
         return res
 
-    def parse_node(self, node: list[int | str]) -> ClusterNode:
+    def parse_node(self, node: tuple[StringT, int, StringT | None]) -> ClusterNode:
         return ClusterNode(
             host=nativestr(node[0]),
             port=int(node[1]),
@@ -55,10 +69,10 @@ class ClusterSlotsCallback(
         )
 
 
-class ClusterNodesCallback(ResponseCallback[ResponseType, list[ClusterNodeDetail]]):
+class ClusterNodesCallback(ResponseCallback[StringT | list[StringT], list[ClusterNodeDetail]]):
     def transform(
         self,
-        response: ResponseType,
+        response: StringT | list[StringT],
     ) -> list[ClusterNodeDetail]:
         resp: list[str] | str
 
@@ -142,12 +156,12 @@ class ClusterNodesCallback(ResponseCallback[ResponseType, list[ClusterNodeDetail
 
 class ClusterShardsCallback(
     ResponseCallback[
-        ResponseType,
+        list[dict[AnyStr, list[RedisValueT] | Mapping[AnyStr, RedisValueT]]],
         list[dict[AnyStr, list[RedisValueT] | Mapping[AnyStr, RedisValueT]]],
     ]
 ):
     def transform(
         self,
-        response: ResponseType,
+        response: list[dict[AnyStr, list[RedisValueT] | Mapping[AnyStr, RedisValueT]]],
     ) -> list[dict[AnyStr, list[RedisValueT] | Mapping[AnyStr, RedisValueT]]]:
         return response
