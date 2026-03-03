@@ -4,13 +4,12 @@ from coredis.response._callbacks import ResponseCallback
 from coredis.typing import (
     AnyStr,
     ResponsePrimitive,
-    Sequence,
 )
 
 
 class ACLLogCallback(
     ResponseCallback[
-        list[Sequence[ResponsePrimitive] | None],
+        list[dict[AnyStr, ResponsePrimitive] | None],
         tuple[dict[AnyStr, ResponsePrimitive] | None, ...],
     ]
 ):
