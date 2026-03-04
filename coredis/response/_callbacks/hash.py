@@ -6,31 +6,27 @@ from coredis.response._callbacks import ResponseCallback
 from coredis.response._utils import flat_pairs_to_dict
 from coredis.typing import (
     AnyStr,
-    ResponseType,
+    ResponsePrimitive,
     StringT,
-    TypeGuard,
 )
 
 
 class HScanCallback(
     ResponseCallback[
-        list[ResponseType],
+        list[ResponsePrimitive | list[ResponsePrimitive]],
         tuple[int, dict[AnyStr, AnyStr] | tuple[AnyStr, ...]],
     ]
 ):
-    def guard(self, response: list[ResponseType]) -> TypeGuard[tuple[StringT, list[AnyStr]]]:
-        return isinstance(response[0], (str, bytes)) and isinstance(response[1], list)
-
     def transform(
         self,
-        response: list[ResponseType],
+        response: list[ResponsePrimitive | list[ResponsePrimitive]],
     ) -> tuple[int, dict[AnyStr, AnyStr] | tuple[AnyStr, ...]]:
-        assert self.guard(response)
-        cursor, r = response
+        cursor = int(cast(StringT, response[0]))
+        results = cast(list[AnyStr], response[1])
         if self.options.get("novalues"):
-            return int(cursor), tuple(r)
+            return cursor, tuple(results)
         else:
-            return int(cursor), flat_pairs_to_dict(r)
+            return cursor, flat_pairs_to_dict(results)
 
 
 class HRandFieldCallback(
@@ -46,12 +42,10 @@ class HRandFieldCallback(
         if not response:
             return None
         if self.options.get("count"):
-            assert isinstance(response, list)
             if self.options.get("withvalues"):
                 return dict(cast(list[tuple[AnyStr, AnyStr]], response))
             return tuple(cast(tuple[AnyStr, AnyStr], response))
-        assert isinstance(response, (str, bytes))
-        return response
+        return cast(AnyStr, response)
 
 
 class HGetAllCallback(ResponseCallback[dict[AnyStr, AnyStr], dict[AnyStr, AnyStr]]):
