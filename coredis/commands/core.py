@@ -7005,7 +7005,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             command_arguments = [flush_type]
 
         return self.create_request(
-            CommandName.SCRIPT_FLUSH, *command_arguments, callback=BoolCallback()
+            CommandName.SCRIPT_FLUSH, *command_arguments, callback=SimpleStringCallback()
         )
 
     @redis_command(
