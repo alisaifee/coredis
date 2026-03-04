@@ -264,11 +264,11 @@ class SlowLogInfo(NamedTuple):
     #: The amount of time needed for its execution, in microseconds.
     duration: int
     #: The array composing the arguments of the command.
-    command: tuple[StringT, ...]
-    #: Client IP address and port
-    client_addr: tuple[StringT, int]
+    command: list[StringT]
+    #: Client IP address:port
+    client_addr: StringT
     #: Client name
-    client_name: str
+    client_name: StringT
 
 
 class LCSMatch(NamedTuple):

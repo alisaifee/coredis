@@ -28,18 +28,17 @@ class CommandCallback(
 
         for command in response:
             if command:
-                # FIXME: giving up for now.
-                command = cast(list[Any], command)
-                name = nativestr(command[0])
+                detail = cast(list[Any], command)
+                name = nativestr(detail[0])
 
                 if len(command) >= 6:
                     commands[name] = {
-                        "name": command[0],
-                        "arity": command[1],
-                        "flags": command[2],
-                        "first-key": command[3],
-                        "last-key": command[4],
-                        "step": command[5],
+                        "name": detail[0],
+                        "arity": detail[1],
+                        "flags": detail[2],
+                        "first-key": detail[3],
+                        "last-key": detail[4],
+                        "step": detail[5],
                         "acl-categories": None,
                         "tips": None,
                         "key-specifications": None,
@@ -47,12 +46,12 @@ class CommandCallback(
                     }
 
                 if len(command) >= 7:
-                    commands[name]["acl-categories"] = command[6]
+                    commands[name]["acl-categories"] = detail[6]
 
                 if len(command) >= 8:
-                    commands[name]["tips"] = command[7]
-                    commands[name]["key-specifications"] = command[8]
-                    commands[name]["sub-commands"] = command[9]
+                    commands[name]["tips"] = detail[7]
+                    commands[name]["key-specifications"] = detail[8]
+                    commands[name]["sub-commands"] = detail[9]
 
         return commands
 

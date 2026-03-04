@@ -98,7 +98,6 @@ from coredis.response._callbacks.server import (
     DebugCallback,
     InfoCallback,
     LatencyCallback,
-    LatencyHistogramCallback,
     RoleCallback,
     SlowlogCallback,
     TimeCallback,
@@ -7972,7 +7971,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def latency_histogram(
         self, *commands: StringT
-    ) -> CommandRequest[dict[AnyStr, dict[AnyStr, RedisValueT]]]:
+    ) -> CommandRequest[dict[AnyStr, dict[AnyStr, RedisValueT | dict[AnyStr, RedisValueT]]]]:
         """
         Return the cumulative distribution of latencies for the given or all commands.
 
@@ -7982,7 +7981,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return self.create_request(
             CommandName.LATENCY_HISTOGRAM,
             *commands,
-            callback=LatencyHistogramCallback[AnyStr](),
+            callback=DictCallback[AnyStr, dict[AnyStr, RedisValueT | dict[AnyStr, RedisValueT]]](),
         )
 
     @versionadded(version="3.0.0")
