@@ -109,7 +109,6 @@ from coredis.response._callbacks.sorted_set import (
     ZAddCallback,
     ZMembersOrScoredMembers,
     ZMPopCallback,
-    ZMScoreCallback,
     ZRandMemberCallback,
     ZRankCallback,
     ZScanCallback,
@@ -4968,7 +4967,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         if not members:
             raise DataError("ZMSCORE members must be a non-empty list")
 
-        return self.create_request(CommandName.ZMSCORE, key, *members, callback=ZMScoreCallback())
+        return self.create_request(
+            CommandName.ZMSCORE, key, *members, callback=TupleCallback[float | None]()
+        )
 
     @redis_command(
         CommandName.ZPOPMAX,
