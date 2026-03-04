@@ -80,7 +80,7 @@ from coredis.response._callbacks.command import (
     CommandCallback,
     CommandKeyFlagCallback,
 )
-from coredis.response._callbacks.geo import GeoCoordinatessCallback, GeoSearchCallback
+from coredis.response._callbacks.geo import GeoCoordinatesCallback, GeoSearchCallback
 from coredis.response._callbacks.hash import (
     HGetAllCallback,
     HRandFieldCallback,
@@ -1651,7 +1651,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.GEOPOS, key, *members, callback=GeoCoordinatessCallback()
+            CommandName.GEOPOS, key, *members, callback=GeoCoordinatesCallback()
         )
 
     @overload
