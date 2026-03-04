@@ -182,7 +182,7 @@ class TestConnectionPoolFailedInitialization:
             async with pool:
                 pass
 
-        assert pool._counter == 0
+        assert pool._task_group.cancel_scope.cancel_called
 
         if sniffio.current_async_library() == "trio":
             import trio
