@@ -25,7 +25,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
   test:
-    name: Test (Python ${{ matrix.python-version }}, Anyio ${{ matrix.anyio-backend || 'asyncio' }}, Redis ${{ matrix.redis-version }}${{ matrix.uvloop == 'True' && ', uvloop' || ''}}${{ matrix.orjson == 'True' && ', orjson' || ''}}${{ matrix.compiled == 'True' && ', compiled' || ''}}${{ matrix.label && format(', {0}', matrix.label) || '' }})
+    name: Test (Python ${{ matrix.python-version }}, Anyio ${{ matrix.anyio-backend || 'asyncio' }}, Redis ${{ matrix.redis-version }}${{ matrix.uvloop == true && ', uvloop' || ''}}${{ matrix.orjson == true && ', orjson' || ''}}${{ matrix.compiled == true && ', compiled' || ''}}${{ matrix.label && format(', {0}', matrix.label) || '' }})
     runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.redis-version == 'next' }}
     strategy:
