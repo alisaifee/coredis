@@ -141,7 +141,11 @@ class BaseConnectionPool(ABC, Generic[ConnectionT]):
                 self._anchor_reset_token = self._anchor_active.set(True)
                 self._counter += 1
                 await self._task_group.__aenter__()
-                await self._initialize()
+                try:
+                    await self._initialize()
+                except BaseException:
+                    await self.__aexit__(None, None, None)
+                    raise
             else:
                 if not self._anchor_active.get():
                     raise RuntimeError(

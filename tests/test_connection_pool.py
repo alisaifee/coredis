@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import anyio
 import pytest
+import sniffio
 
 import coredis.connection
 from coredis import ClusterConnectionPool, ConnectionPool, TCPConnection, UnixDomainSocketConnection
@@ -161,6 +162,32 @@ class TestBasicPoolParameters:
         client.connection_pool.timeout = 1
         with pytest.RaisesGroup(TimeoutError):
             await gather(*(client.blpop(["test"], timeout=2) for _ in range(3)))
+
+
+class TestConnectionPoolFailedInitialization:
+    async def test_failed_cluster_pool_aenter_cleans_up_task_group(self):
+        """When ClusterConnectionPool.__aenter__ fails to connect, the internally
+        managed task group must be cleaned up. Otherwise, under Trio the orphaned
+        nursery corrupts the task's nursery stack, making it impossible to continue
+        after catching the error.
+        """
+        pool = ClusterConnectionPool(
+            startup_nodes=[TCPLocation("localhost", 1)],
+            skip_full_coverage_check=True,
+            connect_timeout=0.5,
+            stream_timeout=0.5,
+        )
+
+        with pytest.raises(BaseException):
+            async with pool:
+                pass
+
+        assert pool._counter == 0
+
+        if sniffio.current_async_library() == "trio":
+            import trio
+
+            assert len(trio.lowlevel.current_task()._child_nurseries) == 0
 
 
 class TestBasicConnectionPoolConstruction:
