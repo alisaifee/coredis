@@ -80,7 +80,6 @@ from coredis.response._callbacks.command import (
     CommandCallback,
     CommandKeyFlagCallback,
 )
-from coredis.response._callbacks.connection import ClientTrackingInfoCallback
 from coredis.response._callbacks.geo import GeoCoordinatessCallback, GeoSearchCallback
 from coredis.response._callbacks.hash import (
     HGetAllCallback,
@@ -7744,7 +7743,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self.create_request(
             CommandName.CLIENT_TRACKINGINFO,
-            callback=ClientTrackingInfoCallback[AnyStr](),
+            callback=DictCallback[AnyStr, AnyStr | _Set[AnyStr] | list[AnyStr]](),
         )
 
     @versionadded(version="3.2.0")
