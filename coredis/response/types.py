@@ -356,4 +356,4 @@ class VectorData(TypedDict):
     #: The L2 norm of the vector before normalization
     l2_norm: float
     #: If the vector is quantized as q8, the quantization range
-    quantization_range: float
+    quantization_range: float | None

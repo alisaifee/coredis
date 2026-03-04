@@ -1,15 +1,20 @@
 from __future__ import annotations
 
+from typing import cast
+
 from coredis._json import json
 from coredis._utils import nativestr
 from coredis.response._callbacks import ResponseCallback
 from coredis.response.types import VectorData
-from coredis.typing import AnyStr, JsonType, ResponsePrimitive
+from coredis.typing import AnyStr, JsonType, ResponsePrimitive, StringT
 
 
 class VSimCallback(
     ResponseCallback[
-        list[AnyStr] | dict[AnyStr, float | list[float | JsonType]],
+        list[AnyStr]
+        | dict[AnyStr, float]
+        | dict[AnyStr, AnyStr]
+        | dict[AnyStr, list[float | AnyStr]],
         tuple[AnyStr, ...]
         | dict[AnyStr, float]
         | dict[AnyStr, JsonType]
@@ -33,31 +38,35 @@ class VSimCallback(
             assert isinstance(response, dict)
             match withscores, withattribs:
                 case None | False, True:
-                    return {k: json.loads(v) for k, v in response.items()}
+                    return {
+                        k: json.loads(v) for k, v in cast(dict[AnyStr, StringT], response).items()
+                    }
                 case True, True:
-                    return {k: (v[0], json.loads(v[1])) for k, v in response.items()}
+                    return {
+                        k: (v[0], json.loads(v[1]))
+                        for k, v in cast(dict[AnyStr, tuple[float, StringT]], response).items()
+                    }
                 case _:
-                    return response
+                    return cast(tuple[AnyStr, ...], response)
         else:
             return tuple(response)
 
 
 class VLinksCallback(
     ResponseCallback[
-        list[list[AnyStr] | dict[AnyStr, float]] | None,
-        tuple[tuple[AnyStr, ...] | dict[AnyStr, float], ...] | None,
+        list[list[AnyStr]] | list[dict[AnyStr, float]] | None,
+        tuple[tuple[AnyStr, ...], ...] | tuple[dict[AnyStr, float], ...] | None,
     ],
 ):
     def transform(
         self,
-        response: list[list[AnyStr] | dict[AnyStr, float]] | None,
-    ) -> tuple[tuple[AnyStr, ...] | dict[AnyStr, float], ...] | None:
+        response: list[list[AnyStr]] | list[dict[AnyStr, float]] | None,
+    ) -> tuple[tuple[AnyStr, ...], ...] | tuple[dict[AnyStr, float], ...] | None:
         if response:
             if self.options.get("withscores"):
-                assert isinstance(response[0], dict)
-                return tuple(response)
+                return tuple(cast(list[dict[AnyStr, float]], response))
             else:
-                return tuple(tuple(layer) for layer in response)
+                return tuple(tuple(layer) for layer in cast(list[list[AnyStr]], response))
         return None
 
 
@@ -75,12 +84,12 @@ class VEmbCallback(
             if self.options.get("raw"):
                 return VectorData(
                     quantization=nativestr(response[0]),
-                    blob=response[1],
-                    l2_norm=response[2],
-                    quantization_range=response[3] if len(response) == 4 else None,
+                    blob=cast(bytes, response[1]),
+                    l2_norm=cast(float, response[2]),
+                    quantization_range=cast(float, response[3]) if len(response) == 4 else None,
                 )
             else:
-                return tuple(response)
+                return cast(tuple[float, ...], tuple(response))
         return None
 
 
