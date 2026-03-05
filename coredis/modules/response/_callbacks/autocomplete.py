@@ -1,19 +1,21 @@
 from __future__ import annotations
 
+from typing import cast
+
 from coredis.modules.response.types import AutocompleteSuggestion
 from coredis.response._callbacks import ResponseCallback
-from coredis.typing import AnyStr, ResponseType
+from coredis.typing import AnyStr, StringT
 
 
 class AutocompleteCallback(
     ResponseCallback[
-        list[ResponseType],
+        list[StringT | float | None],
         tuple[AutocompleteSuggestion[AnyStr], ...] | tuple[()],
     ]
 ):
     def transform(
         self,
-        response: list[ResponseType],
+        response: list[StringT | float | None],
     ) -> tuple[AutocompleteSuggestion[AnyStr], ...] | tuple[()]:
         if not response:
             return ()
@@ -31,10 +33,10 @@ class AutocompleteCallback(
             section = response[k : k + step]
             score = section[score_idx] if score_idx else None
             results.append(
-                AutocompleteSuggestion(
-                    section[0],
+                AutocompleteSuggestion[AnyStr](
+                    cast(AnyStr, section[0]),
                     float(score) if score else None,
-                    section[payload_idx] if payload_idx else None,
+                    cast(AnyStr, section[payload_idx]) if payload_idx else None,
                 )
             )
 
