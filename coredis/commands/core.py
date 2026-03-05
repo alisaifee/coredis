@@ -120,7 +120,6 @@ from coredis.response._callbacks.streams import (
     PendingCallback,
     StreamInfoCallback,
     StreamRangeCallback,
-    XInfoCallback,
 )
 from coredis.response._callbacks.strings import LCSCallback, StringSetCallback
 from coredis.response._callbacks.vector_sets import (
@@ -6200,7 +6199,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def xinfo_consumers(
         self, key: KeyT, groupname: StringT
-    ) -> CommandRequest[tuple[dict[AnyStr, AnyStr], ...]]:
+    ) -> CommandRequest[tuple[dict[AnyStr, AnyStr | int | None], ...]]:
         """
         Return all consumers in a consumer group for the stream.
 
@@ -6212,7 +6211,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.XINFO_CONSUMERS,
             key,
             groupname,
-            callback=XInfoCallback[AnyStr](),
+            callback=TupleCallback[dict[AnyStr, AnyStr | int | None]](),
         )
 
     @redis_command(
@@ -6220,14 +6219,20 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.STREAM,
         flags={CommandFlag.READONLY},
     )
-    def xinfo_groups(self, key: KeyT) -> CommandRequest[tuple[dict[AnyStr, AnyStr], ...]]:
+    def xinfo_groups(
+        self, key: KeyT
+    ) -> CommandRequest[tuple[dict[AnyStr, AnyStr | int | None], ...]]:
         """
         Return all consumer groups for the stream.
 
         :param key: The stream key.
         :return: Tuple of group info dicts (name, consumers, pending, last-delivered-id, etc.).
         """
-        return self.create_request(CommandName.XINFO_GROUPS, key, callback=XInfoCallback[AnyStr]())
+        return self.create_request(
+            CommandName.XINFO_GROUPS,
+            key,
+            callback=TupleCallback[dict[AnyStr, AnyStr | int | None]](),
+        )
 
     @mutually_inclusive_parameters("count", leaders=["full"])
     @redis_command(
