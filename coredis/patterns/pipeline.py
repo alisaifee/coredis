@@ -757,9 +757,7 @@ class ClusterPipeline(Client[AnyStr]):
         attempt = sorted(self.command_stack, key=lambda x: x.position)
         slots: set[int] = set()
         for c in attempt:
-            slot = self._determine_slot(c.name, *c.arguments, **c.execution_parameters)
-            if slot:
-                slots.add(slot)
+            slots.add(self._determine_slot(c.name, *c.arguments, **c.execution_parameters))
             if len(slots) > 1:
                 raise ClusterTransactionError("Multiple slots involved in transaction")
         if not slots:
