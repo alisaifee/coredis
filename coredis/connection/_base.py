@@ -338,7 +338,7 @@ class BaseConnection(ABC):
         Whether the connection can be reused
 
         This property should be tested before returning a connection
-        to a connection pool for reuse. In scenarios such as after using a connection
+        from the connection pool for reuse. In scenarios such as after using a connection
         for receiving push messages there might still be unconsumed messages in the
         internal buffer.
 

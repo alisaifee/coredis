@@ -243,8 +243,11 @@ class ConnectionPool(BaseConnectionPool[ConnectionT]):
         with fail_after(self.timeout):
             # if stack has a connection, use that
             connection = await self._available_connections.get()
-            # if None, we need to create a new connection
-            if connection is None or not connection.usable:
+            if connection is None or not connection.reusable:
+                # If the connection was in the pool but is "dirty" it should be
+                # invalidated (to avoid leaking) and discarded.
+                if connection:
+                    connection.invalidate()
                 connection = await self._construct_connection()
                 if err := await self._task_group.start(self.__wrap_connection, connection):
                     self._available_connections.append_nowait(None)
@@ -270,10 +273,8 @@ class ConnectionPool(BaseConnectionPool[ConnectionT]):
         """
         Checks connection for liveness and releases it back to the pool.
         """
-        if connection.reusable:
+        if connection.usable:
             self._available_connections.put_nowait(connection)
-        else:
-            connection.invalidate()
 
     def disconnect(self) -> None:
         """

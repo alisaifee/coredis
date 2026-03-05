@@ -267,10 +267,8 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         """Releases the connection back to the pool"""
         assert isinstance(connection, ClusterConnection)
         try:
-            if connection.reusable:
+            if connection.usable:
                 self._node_pool(connection.location).put_nowait(connection)
-            else:
-                connection.invalidate()
         except QueueFull:
             pass
 
@@ -341,7 +339,11 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         with fail_after(self.timeout):
             connection = await self._node_pool(location).get()
 
-        if not connection or not connection.usable:
+        if not connection or not connection.reusable:
+            # If the connection was in the pool but is "dirty" it should be
+            # invalidated (to avoid leaking) and discarded.
+            if connection:
+                connection.invalidate()
             try:
                 connection = await self._make_node_connection(node)
             except Exception:
