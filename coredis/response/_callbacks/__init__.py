@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import datetime
 import itertools
-from abc import ABC, ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from typing import Any, cast
 
 from coredis._utils import b
@@ -37,27 +37,13 @@ CK_co = TypeVar("CK_co", covariant=True)
 RESP3 = TypeVar("RESP3")
 
 
-class ResponseCallbackMeta(ABCMeta):
-    def __new__(
-        cls, name: str, bases: tuple[type, ...], namespace: dict[str, str]
-    ) -> ResponseCallbackMeta:
-        kls = super().__new__(cls, name, bases, namespace)
-        setattr(kls, "transform", add_runtime_checks(getattr(kls, "transform")))
-        return kls
-
-
-class ClusterCallbackMeta(ABCMeta):
-    def __new__(
-        cls, name: str, bases: tuple[type, ...], namespace: dict[str, str]
-    ) -> ClusterCallbackMeta:
-        kls = super().__new__(cls, name, bases, namespace)
-        setattr(kls, "combine", add_runtime_checks(getattr(kls, "combine")))
-        return kls
-
-
-class ResponseCallback(ABC, Generic[RESP3, R], metaclass=ResponseCallbackMeta):
+class ResponseCallback(ABC, Generic[RESP3, R]):
     def __init__(self, **options: Any) -> None:
         self.options = options
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        setattr(cls, "transform", add_runtime_checks(getattr(cls, "transform")))
 
     def __call__(
         self,
@@ -78,7 +64,11 @@ class NoopCallback(ResponseCallback[R, R]):
         return response
 
 
-class ClusterMultiNodeCallback(ABC, Generic[R], metaclass=ClusterCallbackMeta):
+class ClusterMultiNodeCallback(ABC, Generic[R]):
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        setattr(cls, "combine", add_runtime_checks(getattr(cls, "combine")))
+
     def __call__(
         self,
         key_positions: list[tuple[int, ...]],
