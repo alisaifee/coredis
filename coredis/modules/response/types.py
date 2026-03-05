@@ -67,8 +67,8 @@ class SearchAggregationResult(Generic[AnyStr]):
 class HybridResult(Generic[AnyStr]):
     total_results: int
     execution_time: float
-    warnings: list[StringT]
-    results: list[dict[StringT, StringT]]
+    warnings: list[AnyStr]
+    results: list[dict[AnyStr, AnyStr]]
 
 
 @dataclasses.dataclass

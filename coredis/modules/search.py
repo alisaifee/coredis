@@ -1253,7 +1253,7 @@ class Search(ModuleGroup[AnyStr]):
         return self.client.create_request(
             CommandName.FT_HYBRID,
             *command_arguments,
-            callback=HybridSearchCallback(),
+            callback=HybridSearchCallback[AnyStr](),
         )
 
     @module_command(
